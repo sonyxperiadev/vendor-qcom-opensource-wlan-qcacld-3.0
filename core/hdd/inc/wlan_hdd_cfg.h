@@ -1905,6 +1905,29 @@ typedef enum {
 
 #endif
 
+/*
+ * <ini>
+ * gTDLSEnableDeferTime - Timer to defer for enabling TDLS on P2P listen.
+ * @Min: 2000
+ * @Max: 6000
+ * @Default: 5000
+ *
+ * This ini is used to set the timer to defer for enabling TDLS on P2P
+ * listen (value in milliseconds).
+ *
+ * Related: gEnableTDLSSupport.
+ *
+ * Supported Feature: TDLS
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+#define CFG_TDLS_ENABLE_DEFER_TIMER                "gTDLSEnableDeferTime"
+#define CFG_TDLS_ENABLE_DEFER_TIMER_MIN            (2000)
+#define CFG_TDLS_ENABLE_DEFER_TIMER_MAX            (6000)
+#define CFG_TDLS_ENABLE_DEFER_TIMER_DEFAULT        (5000)
+
 /* Enable/Disable LPWR Image(cMEM uBSP) Transition */
 #define CFG_ENABLE_LPWR_IMG_TRANSITION_NAME        "gEnableLpwrImgTransition"
 #define CFG_ENABLE_LPWR_IMG_TRANSITION_MIN         (0)
@@ -2101,6 +2124,23 @@ typedef enum {
 #define CFG_POWERSAVE_OFFLOAD_DEFAULT             (CFG_POWERSAVE_OFFLOAD_MIN)
 
 #ifdef WLAN_FEATURE_FASTPATH
+
+/*
+ * <ini>
+ * gEnableFastPath - Control to enable fastpath feature
+ *
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This ini is used to enable fastpath feature
+ *
+ * Supported Feature: Wlan Fastpath Feature
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
 #define CFG_ENABLE_FASTPATH                      "gEnableFastPath"
 #define CFG_ENABLE_FASTPATH_MIN                  (0)
 #define CFG_ENABLE_FASTPATH_MAX                  (1)
@@ -2321,52 +2361,252 @@ typedef enum {
 #define CFG_SET_TXPOWER_LIMIT5G_DEFAULT            (30)
 
 #ifdef QCA_LL_LEGACY_TX_FLOW_CONTROL
+
+/*
+ * <ini>
+ * TxFlowLowWaterMark - Low watermark for pausing network queues
+ *
+ * @Min: 0
+ * @Max: 1000
+ * @Default: 300
+ *
+ * This ini specifies the low watermark of data packets transmitted
+ * before pausing netif queues in tx flow path. It is only applicable
+ * where legacy flow control is used i.e.for Rome.
+ *
+ * Related: TxFlowHighWaterMarkOffset, TxFlowMaxQueueDepth,
+ *          TxLbwFlowLowWaterMark, TxLbwFlowHighWaterMarkOffset,
+ *          TxLbwFlowMaxQueueDepth, TxHbwFlowLowWaterMark,
+ *          TxHbwFlowHighWaterMarkOffset, TxHbwFlowMaxQueueDepth
+ *
+ * Supported Feature: Dynamic Flow Control
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
 #define CFG_LL_TX_FLOW_LWM                         "TxFlowLowWaterMark"
 #define CFG_LL_TX_FLOW_LWM_MIN                     (0)
 #define CFG_LL_TX_FLOW_LWM_MAX                     (1000)
-
 #define CFG_LL_TX_FLOW_LWM_DEFAULT                 (300)
 
+/*
+ * <ini>
+ * TxFlowHighWaterMarkOffset - High Watermark offset to unpause Netif queues
+ * @Min: 0
+ * @Max: 300
+ * @Default: 94
+ *
+ * This ini specifies the offset to upause the netif queues
+ * when they are paused due to insufficient descriptors as guided by
+ * ini TxFlowLowWaterMark. It is only applicable where legacy flow control
+ * is used i.e.for Rome.
+ *
+ * Related: TxFlowLowWaterMark, TxFlowMaxQueueDepth,
+ *          TxLbwFlowLowWaterMark, TxLbwFlowHighWaterMarkOffset,
+ *          TxLbwFlowMaxQueueDepth, TxHbwFlowLowWaterMark,
+ *          TxHbwFlowHighWaterMarkOffset, TxHbwFlowMaxQueueDepth
+ *
+ * Supported Feature: Dynamic Flow Control
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
 #define CFG_LL_TX_FLOW_HWM_OFFSET                  "TxFlowHighWaterMarkOffset"
 #define CFG_LL_TX_FLOW_HWM_OFFSET_MIN              (0)
 #define CFG_LL_TX_FLOW_HWM_OFFSET_MAX              (300)
-
 #define CFG_LL_TX_FLOW_HWM_OFFSET_DEFAULT          (94)
 
+/*
+ * <ini>
+ * TxFlowMaxQueueDepth - Max pause queue depth.
+ *
+ * @Min: 400
+ * @Max: 3500
+ * @Default: 1500
+ *
+ * This ini specifies the max queue pause depth.It is only applicable
+ * where legacy flow control is used i.e.for Rome.
+ *
+ * Related: TxFlowLowWaterMark, TxFlowHighWaterMarkOffset,
+ *          TxLbwFlowLowWaterMark, TxLbwFlowHighWaterMarkOffset,
+ *          TxLbwFlowMaxQueueDepth, TxHbwFlowLowWaterMark,
+ *          TxHbwFlowHighWaterMarkOffset, TxHbwFlowMaxQueueDepth
+ *
+ * Supported Feature: Dynamic Flow Control
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
 #define CFG_LL_TX_FLOW_MAX_Q_DEPTH                 "TxFlowMaxQueueDepth"
 #define CFG_LL_TX_FLOW_MAX_Q_DEPTH_MIN             (400)
 #define CFG_LL_TX_FLOW_MAX_Q_DEPTH_MAX             (3500)
 #define CFG_LL_TX_FLOW_MAX_Q_DEPTH_DEFAULT         (1500)
 
+/*
+ * <ini>
+ * TxLbwFlowLowWaterMark - Low watermark for pausing network queues
+ *                         in low bandwidth band
+ * @Min: 0
+ * @Max: 1000
+ * @Default: 450
+ *
+ * This ini specifies the low watermark of data packets transmitted
+ * before pausing netif queues in tx flow path in low bandwidth band.
+ * It is only applicable where legacy flow control is used i.e.for Rome.
+ *
+ * Related: TxFlowLowWaterMark, TxFlowHighWaterMarkOffset,
+ *          TxFlowMaxQueueDepth, TxLbwFlowHighWaterMarkOffset,
+ *          TxLbwFlowMaxQueueDepth, TxHbwFlowLowWaterMark,
+ *          TxHbwFlowHighWaterMarkOffset, TxHbwFlowMaxQueueDepth
+ *
+ * Supported Feature: Dynamic Flow Control
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
 #define CFG_LL_TX_LBW_FLOW_LWM                     "TxLbwFlowLowWaterMark"
 #define CFG_LL_TX_LBW_FLOW_LWM_MIN                 (0)
 #define CFG_LL_TX_LBW_FLOW_LWM_MAX                 (1000)
-
 #define CFG_LL_TX_LBW_FLOW_LWM_DEFAULT             (450)
 
+/*
+ * <ini>
+ * TxLbwFlowHighWaterMarkOffset - High Watermark offset to unpause Netif queues
+ *                                in low bandwidth band.
+ * @Min: 0
+ * @Max: 300
+ * @Default: 50
+ *
+ * This ini specifies the offset to upause the netif queues
+ * when they are paused due to insufficient descriptors as guided by
+ * ini TxLbwFlowLowWaterMark in low bandwidth band. It is only applicable
+ * where legacy flow control is used i.e.for Rome.
+ *
+ * Related: TxFlowLowWaterMark, TxFlowHighWaterMarkOffset,
+ *          TxFlowMaxQueueDepth, TxLbwFlowLowWaterMark,
+ *          TxLbwFlowMaxQueueDepth, TxHbwFlowLowWaterMark,
+ *          TxHbwFlowHighWaterMarkOffset, TxHbwFlowMaxQueueDepth
+ *
+ * Supported Feature: Dynamic Flow Control
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
 #define CFG_LL_TX_LBW_FLOW_HWM_OFFSET              "TxLbwFlowHighWaterMarkOffset"
 #define CFG_LL_TX_LBW_FLOW_HWM_OFFSET_MIN          (0)
 #define CFG_LL_TX_LBW_FLOW_HWM_OFFSET_MAX          (300)
-
 #define CFG_LL_TX_LBW_FLOW_HWM_OFFSET_DEFAULT      (50)
 
+/*
+ * <ini>
+ * TxLbwFlowMaxQueueDepth - Max pause queue depth in low bandwidth band
+ *
+ * @Min: 400
+ * @Max: 3500
+ * @Default: 750
+ *
+ * This ini specifies the max queue pause depth in low bandwidth band.
+ * It is only applicable where legacy flow control is used i.e.for Rome.
+ *
+ * Related: TxFlowLowWaterMark, TxFlowHighWaterMarkOffset,
+ *          TxFlowMaxQueueDepth, TxLbwFlowLowWaterMark,
+ *          TxLbwFlowHighWaterMarkOffset, TxHbwFlowLowWaterMark,
+ *          TxHbwFlowHighWaterMarkOffset, TxHbwFlowMaxQueueDepth
+ *
+ * Supported Feature: Dynamic Flow Control
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
 #define CFG_LL_TX_LBW_FLOW_MAX_Q_DEPTH             "TxLbwFlowMaxQueueDepth"
 #define CFG_LL_TX_LBW_FLOW_MAX_Q_DEPTH_MIN         (400)
 #define CFG_LL_TX_LBW_FLOW_MAX_Q_DEPTH_MAX         (3500)
 #define CFG_LL_TX_LBW_FLOW_MAX_Q_DEPTH_DEFAULT     (750)
 
+/*
+ * <ini>
+ * TxHbwFlowLowWaterMark - Low watermark for pausing network queues
+ *                         in high bandwidth band
+ * @Min: 0
+ * @Max: 1000
+ * @Default: 406
+ *
+ * This ini specifies the threshold of data packets transmitted
+ * before pausing netif queues.It is only applicable where
+ * legacy flow control is used i.e.for Rome.
+ *
+ * Related: TxFlowLowWaterMark, TxFlowHighWaterMarkOffset,
+ *          TxFlowMaxQueueDepth, TxLbwFlowLowWaterMark,
+ *          TxLbwFlowHighWaterMarkOffset, TxLbwFlowMaxQueueDepth,
+ *          TxHbwFlowHighWaterMarkOffset, TxHbwFlowMaxQueueDepth
+ *
+ * Supported Feature: Dynamic Flow Control
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
 #define CFG_LL_TX_HBW_FLOW_LWM                     "TxHbwFlowLowWaterMark"
 #define CFG_LL_TX_HBW_FLOW_LWM_MIN                 (0)
 #define CFG_LL_TX_HBW_FLOW_LWM_MAX                 (1000)
-
 #define CFG_LL_TX_HBW_FLOW_LWM_DEFAULT             (406)
 
+/*
+ * <ini>
+ * TxHbwFlowHighWaterMarkOffset - High Watermark offset to unpause Netif queues
+ *                                in high bandwidth band.
+ * @Min: 0
+ * @Max: 300
+ * @Default: 94
+ *
+ * This ini specifies the offset to upause the netif queues
+ * when they are paused due to insufficient descriptors as guided by
+ * ini TxHbwFlowLowWaterMark in high bandwidth band. It is only applicable
+ * where legacy flow control is used i.e.for Rome.
+ *
+ * Related: TxFlowLowWaterMark, TxFlowHighWaterMarkOffset,
+ *          TxFlowMaxQueueDepth, TxLbwFlowLowWaterMark,
+ *          TxLbwFlowHighWaterMarkOffset, TxLbwFlowMaxQueueDepth,
+ *          TxHbwFlowLowWaterMark, TxHbwFlowMaxQueueDepth
+ *
+ * Supported Feature: Dynamic Flow Control
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
 #define CFG_LL_TX_HBW_FLOW_HWM_OFFSET              "TxHbwFlowHighWaterMarkOffset"
 #define CFG_LL_TX_HBW_FLOW_HWM_OFFSET_MIN          (0)
 #define CFG_LL_TX_HBW_FLOW_HWM_OFFSET_MAX          (300)
-
 #define CFG_LL_TX_HBW_FLOW_HWM_OFFSET_DEFAULT      (94)
 
+/*
+ * <ini>
+ * TxHbwFlowMaxQueueDepth - Max pause queue depth in high bandwidth band
+ * @Min: 4000
+ * @Max: 3500
+ * @Default: 1500
+ *
+ * This ini specifies the max queue pause depth in high bandwidth band.
+ * It is only applicable where legacy flow control is used i.e.for Rome.
+ *
+ * Related: TxFlowLowWaterMark, TxFlowHighWaterMarkOffset,
+ *          TxFlowMaxQueueDepth, TxLbwFlowLowWaterMark,
+ *          TxLbwFlowHighWaterMarkOffset, TxLbwFlowMaxQueueDepth,
+ *          TxHbwFlowLowWaterMark, TxHbwFlowHighWaterMarkOffset
+ *
+ * Supported Feature: Dynamic Flow Control
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
 #define CFG_LL_TX_HBW_FLOW_MAX_Q_DEPTH             "TxHbwFlowMaxQueueDepth"
 #define CFG_LL_TX_HBW_FLOW_MAX_Q_DEPTH_MIN         (400)
 #define CFG_LL_TX_HBW_FLOW_MAX_Q_DEPTH_MAX         (3500)
@@ -2375,15 +2615,54 @@ typedef enum {
 
 #ifdef QCA_LL_TX_FLOW_CONTROL_V2
 
-#define CFG_LL_TX_FLOW_STOP_QUEUE_TH		   "TxFlowStopQueueThreshold"
-#define CFG_LL_TX_FLOW_STOP_QUEUE_TH_DEFAULT	   (15)
-#define CFG_LL_TX_FLOW_STOP_QUEUE_TH_MIN	   (0)
-#define CFG_LL_TX_FLOW_STOP_QUEUE_TH_MAX	   (50)
+/*
+ * <ini>
+ * TxFlowStopQueueThreshold - Stop queue Threshold to pause
+ *                            Netif queues when it reaches
+ * @Min: 0
+ * @Max: 50
+ * @Default: 15
+ *
+ * This ini specifies the threshold of data packets transmitted
+ * before pausing netif queues.
+ *
+ * Related: TxFlowStartQueueOffset
+ *
+ * Supported Feature: Dynamic Flow Control
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
+#define CFG_LL_TX_FLOW_STOP_QUEUE_TH               "TxFlowStopQueueThreshold"
+#define CFG_LL_TX_FLOW_STOP_QUEUE_TH_DEFAULT       (15)
+#define CFG_LL_TX_FLOW_STOP_QUEUE_TH_MIN           (0)
+#define CFG_LL_TX_FLOW_STOP_QUEUE_TH_MAX           (50)
 
-#define CFG_LL_TX_FLOW_START_QUEUE_OFFSET	   "TxFlowStartQueueOffset"
+/*
+ * <ini>
+ * TxFlowStartQueueOffset - Start queue offset to unpause
+ *                          Netif queues
+ * @Min: 0
+ * @Max: 30
+ * @Default: 11
+ *
+ * This ini specifies the offset to upause the netif queues
+ * when they are paused due to insufficient descriptors as guided by
+ * ini TxFlowStopQueueThreshold.
+ *
+ * Related: TxFlowStopQueueThreshold
+ *
+ * Supported Feature: Dynamic Flow Control
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
+#define CFG_LL_TX_FLOW_START_QUEUE_OFFSET          "TxFlowStartQueueOffset"
 #define CFG_LL_TX_FLOW_START_QUEUE_OFFSET_DEFAULT  (10)
-#define CFG_LL_TX_FLOW_START_QUEUE_OFFSET_MIN	   (0)
-#define CFG_LL_TX_FLOW_START_QUEUE_OFFSET_MAX	   (30)
+#define CFG_LL_TX_FLOW_START_QUEUE_OFFSET_MIN      (0)
+#define CFG_LL_TX_FLOW_START_QUEUE_OFFSET_MAX      (30)
 
 #endif /* QCA_LL_TX_FLOW_CONTROL_V2 */
 
@@ -2462,37 +2741,121 @@ typedef enum {
 #define CFG_BUS_BANDWIDTH_COMPUTE_INTERVAL_MAX     (10000)
 
 /*
- * Dynamic configuration of tcp delack is enabled by default.
- * User can set gTcpDelAckEnable flag to 0 in the INI file to disable dynamic
- * reconfiguration of tcp delack. This does not disable the update of receive
- * histogram
+ * <ini>
+ * gTcpDelAckEnable - Control to enable Dynamic Configuration of Tcp Delayed Ack
+ * @Min: 0
+ * @Max: 1
+ * @Default: 1
+ *
+ * This ini is used to enable Dynamic Configuration of Tcp Delayed Ack
+ *
+ * Related: gTcpDelAckThresholdHigh, gTcpDelAckThresholdLow,
+ *          gTcpDelAckTimerCount
+ *
+ * Supported Feature: Tcp Delayed Ack
+ *
+ * Usage: Internal
+ *
+ * </ini>
  */
 #define CFG_ENABLE_TCP_DELACK                      "gTcpDelAckEnable"
 #define CFG_ENABLE_TCP_DELACK_DEFAULT              (1)
 #define CFG_ENABLE_TCP_DELACK_MIN                  (0)
 #define CFG_ENABLE_TCP_DELACK_MAX                  (1)
 
+
+/*
+ * <ini>
+ * gTcpDelAckThresholdHigh - High Threshold inorder to trigger TCP Del Ack
+ *                                          indication
+ * @Min: 0
+ * @Max: 16000
+ * @Default: 500
+ *
+ * This ini is used to mention the High Threshold inorder to trigger TCP Del Ack
+ * indication i.e the threshold of packets received over a period of 100 ms.
+ * i.e to have a low RX throughput requirement
+ * Related: gTcpDelAckEnable, gTcpDelAckThresholdLow, gTcpDelAckTimerCount
+ *
+ * Supported Feature: Tcp Delayed Ack
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
 #define CFG_TCP_DELACK_THRESHOLD_HIGH              "gTcpDelAckThresholdHigh"
 #define CFG_TCP_DELACK_THRESHOLD_HIGH_DEFAULT      (500)
 #define CFG_TCP_DELACK_THRESHOLD_HIGH_MIN          (0)
 #define CFG_TCP_DELACK_THRESHOLD_HIGH_MAX          (16000)
 
+/*
+ * <ini>
+ * gTcpDelAckThresholdLow - Low Threshold inorder to trigger TCP Del Ack
+ *                                          indication
+ * @Min: 0
+ * @Max: 10000
+ * @Default: 1000
+ *
+ * This ini is used to mention the Low Threshold inorder to trigger TCP Del Ack
+ * indication i.e the threshold of packets received over a period of 100 ms.
+ * i.e to have a low RX throughput requirement
+ *
+ * Related: gTcpDelAckEnable, gTcpDelAckThresholdHigh, gTcpDelAckTimerCount
+ *
+ * Supported Feature: Tcp Delayed Ack
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
 #define CFG_TCP_DELACK_THRESHOLD_LOW               "gTcpDelAckThresholdLow"
 #define CFG_TCP_DELACK_THRESHOLD_LOW_DEFAULT       (1000)
 #define CFG_TCP_DELACK_THRESHOLD_LOW_MIN           (0)
 #define CFG_TCP_DELACK_THRESHOLD_LOW_MAX           (10000)
 
+/*
+ * <ini>
+ * gTcpDelAckTimerCount - Del Ack Timer Count  inorder to trigger TCP Del Ack
+ *                                      indication
+ * @Min: 1
+ * @Max: 1000
+ * @Default: 30
+ *
+ * This ini is used to mention the Del Ack Timer Count inorder to
+ * trigger TCP Del Ack indication i.e number of 100 ms periods
+ *
+ * Related: gTcpDelAckEnable, gTcpDelAckThresholdHigh, gTcpDelAckThresholdLow
+ *
+ * Supported Feature: Tcp Delayed Ack
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
 #define CFG_TCP_DELACK_TIMER_COUNT                 "gTcpDelAckTimerCount"
 #define CFG_TCP_DELACK_TIMER_COUNT_DEFAULT         (30)
 #define CFG_TCP_DELACK_TIMER_COUNT_MIN             (1)
 #define CFG_TCP_DELACK_TIMER_COUNT_MAX             (1000)
 
 
-/* TCP_TX_HIGH_TPUT_THRESHOLD specifies the threshold of packets transmitted
+/*
+ * <ini>
+ * gTcpTxHighTputThreshold - High Threshold inorder to trigger High
+ *                                          Tx Throughput requirement.
+ * @Min: 0
+ * @Max: 16000
+ * @Default: 500
+ *
+ * This ini specifies the threshold of packets transmitted
  * over a period of 100 ms beyond which TCP can be considered to have a high
  * TX throughput requirement. The driver uses this condition to tweak TCP TX
- * specific parameters (via cnss-daemon).
- * default  - 500
+ * specific parameters (via cnss-daemon)
+ *
+ * Supported Feature: To tweak TCP TX n/w parameters
+ *
+ * Usage: Internal
+ *
+ * </ini>
  */
 #define CFG_TCP_TX_HIGH_TPUT_THRESHOLD_NAME         "gTcpTxHighTputThreshold"
 #define CFG_TCP_TX_HIGH_TPUT_THRESHOLD_DEFAULT      (500)
@@ -2778,15 +3141,42 @@ typedef enum {
 #define CFG_CONC_SYSTEM_PREF_MAX           (2)
 #define CFG_CONC_SYSTEM_PREF_DEFAULT       (0)
 
+/*
+ * <ini>
+ * TSOEnable - Control to enable tso feature
+ *
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This ini is used to enable TSO feature
+ *
+ * Supported Feature: TSO Feature
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
 #define CFG_TSO_ENABLED_NAME           "TSOEnable"
 #define CFG_TSO_ENABLED_MIN            (0)
 #define CFG_TSO_ENABLED_MAX            (1)
 #define CFG_TSO_ENABLED_DEFAULT        (0)
 
 /*
- * Configuration option to enable or disable LRO (Large Receive Offload)
- *  in the WLAN driver
- *  Set 1 - enable, 0 - disable
+ * <ini>
+ * LROEnable - Control to enable lro feature
+ *
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This ini is used to enable LRO feature
+ *
+ * Supported Feature: LRO
+ *
+ * Usage: Internal
+ *
+ * </ini>
  */
 #define CFG_LRO_ENABLED_NAME           "LROEnable"
 #define CFG_LRO_ENABLED_MIN            (0)
@@ -3388,7 +3778,7 @@ enum dot11p_mode {
 #define CFG_ADAPTIVE_DWELL_MODE_ENABLED_NAME      "adaptive_dwell_mode_enabled"
 #define CFG_ADAPTIVE_DWELL_MODE_ENABLED_MIN       (0)
 #define CFG_ADAPTIVE_DWELL_MODE_ENABLED_MAX       (1)
-#define CFG_ADAPTIVE_DWELL_MODE_ENABLED_DEFAULT   (0)
+#define CFG_ADAPTIVE_DWELL_MODE_ENABLED_DEFAULT   (1)
 
 /*
  * This parameter will set default adaptive mode, will be used if any of the
@@ -3398,7 +3788,7 @@ enum dot11p_mode {
 #define CFG_GLOBAL_ADAPTIVE_DWELL_MODE_NAME       "global_adapt_dwelltime_mode"
 #define CFG_GLOBAL_ADAPTIVE_DWELL_MODE_MIN        (0)
 #define CFG_GLOBAL_ADAPTIVE_DWELL_MODE_MAX        (4)
-#define CFG_GLOBAL_ADAPTIVE_DWELL_MODE_DEFAULT    (0)
+#define CFG_GLOBAL_ADAPTIVE_DWELL_MODE_DEFAULT    (1)
 
 /*
  * This parameter will set the weight to calculate the average low pass
@@ -3532,11 +3922,22 @@ enum dot11p_mode {
 #define CFG_SAP_MAX_INACTIVITY_OVERRIDE_DEFAULT  (0)
 
 /*
- * This parameter determines that which defered method will be use in rx path
- * If no bits are set then rx path processing will happen in tasklet context.
- * Bit 0: rx_thread enable
- * Bit 1: RPS enable
- * Bit 2: NAPI enable
+ * <ini>
+ * rx_mode - Control to decide rx mode
+ *
+ * @Min: 0
+ * @Max: (CFG_ENABLE_RX_THREAD | CFG_ENABLE_RPS | CFG_ENABLE_NAPI)
+ * @Default: MDM_PLATFORM   -  0
+ *           HELIUMPLUS     -  CFG_ENABLE_NAPI
+ *           Other cases    -  (CFG_ENABLE_RX_THREAD | CFG_ENABLE_NAPI)
+ *
+ * This ini is used to decide mode for the rx path
+ *
+ * Supported Feature: NAPI
+ *
+ * Usage: Internal
+ *
+ * </ini>
  */
 #define CFG_RX_MODE_NAME     "rx_mode"
 #define CFG_RX_MODE_MIN      (0)
@@ -4311,6 +4712,8 @@ struct hdd_config {
 	bool flow_steering_enable;
 	bool active_mode_offload;
 	bool bpf_packet_filter_enable;
+	/* parameter for defer timer for enabling TDLS on p2p listen */
+	uint16_t tdls_enable_defer_time;
 	uint32_t fine_time_meas_cap;
 	uint8_t max_scan_count;
 #ifdef WLAN_FEATURE_FASTPATH
