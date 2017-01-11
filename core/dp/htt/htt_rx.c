@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -124,17 +124,21 @@ static void htt_rx_hash_deinit(struct htt_pdev_t *pdev)
 
 	uint32_t i;
 	struct htt_rx_hash_entry *hash_entry;
+	struct htt_rx_hash_bucket **hash_table;
 	struct htt_list_node *list_iter = NULL;
 
 	if (NULL == pdev->rx_ring.hash_table)
 		return;
 
 	qdf_spin_lock_bh(&(pdev->rx_ring.rx_hash_lock));
+	hash_table = pdev->rx_ring.hash_table;
+	pdev->rx_ring.hash_table = NULL;
+	qdf_spin_unlock_bh(&(pdev->rx_ring.rx_hash_lock));
 
 	for (i = 0; i < RX_NUM_HASH_BUCKETS; i++) {
 		/* Free the hash entries in hash bucket i */
-		list_iter = pdev->rx_ring.hash_table[i]->listhead.next;
-		while (list_iter != &pdev->rx_ring.hash_table[i]->listhead) {
+		list_iter = hash_table[i]->listhead.next;
+		while (list_iter != &hash_table[i]->listhead) {
 			hash_entry =
 				(struct htt_rx_hash_entry *)((char *)list_iter -
 							     pdev->rx_ring.
@@ -156,13 +160,11 @@ static void htt_rx_hash_deinit(struct htt_pdev_t *pdev)
 				qdf_mem_free(hash_entry);
 		}
 
-		qdf_mem_free(pdev->rx_ring.hash_table[i]);
+		qdf_mem_free(hash_table[i]);
 
 	}
-	qdf_mem_free(pdev->rx_ring.hash_table);
-	pdev->rx_ring.hash_table = NULL;
+	qdf_mem_free(hash_table);
 
-	qdf_spin_unlock_bh(&(pdev->rx_ring.rx_hash_lock));
 	qdf_spinlock_destroy(&(pdev->rx_ring.rx_hash_lock));
 
 }
@@ -406,13 +408,17 @@ static void htt_rx_ring_refill_retry(void *arg)
 }
 #endif
 
-static void htt_rx_ring_fill_n(struct htt_pdev_t *pdev, int num)
+/* full_reorder_offload case: this function is called with lock held */
+static int htt_rx_ring_fill_n(struct htt_pdev_t *pdev, int num)
 {
 	int idx;
 	QDF_STATUS status;
 	struct htt_host_rx_desc_base *rx_desc;
+	int filled = 0;
 
 	idx = *(pdev->rx_ring.alloc_idx.vaddr);
+
+moretofill:
 	while (num > 0) {
 		qdf_dma_addr_t paddr;
 		qdf_nbuf_t rx_netbuf;
@@ -502,14 +508,21 @@ static void htt_rx_ring_fill_n(struct htt_pdev_t *pdev, int num)
 
 		num--;
 		idx++;
+		filled++;
 		idx &= pdev->rx_ring.size_mask;
+	}
+	if (qdf_atomic_read(&pdev->rx_ring.refill_debt) > 0) {
+		num = qdf_atomic_read(&pdev->rx_ring.refill_debt);
+		/* Ideally the following gives 0, but sub is safer */
+		qdf_atomic_sub(num, &pdev->rx_ring.refill_debt);
+		goto moretofill;
 	}
 
 fail:
 	*(pdev->rx_ring.alloc_idx.vaddr) = idx;
 	htt_rx_dbg_rxbuf_indupd(pdev, idx);
 
-	return;
+	return filled;
 }
 
 static inline unsigned htt_rx_ring_elems(struct htt_pdev_t *pdev)
@@ -581,6 +594,9 @@ void htt_rx_detach(struct htt_pdev_t *pdev)
 				   pdev->rx_ring.base_paddr,
 				   qdf_get_dma_mem_context((&pdev->rx_ring.buf),
 							   memctx));
+
+	/* destroy the rx-parallelization refill spinlock */
+	qdf_spinlock_destroy(&(pdev->rx_ring.refill_lock));
 }
 #endif
 
@@ -2808,6 +2824,31 @@ void htt_rx_msdu_buff_replenish(htt_pdev_handle pdev)
 	qdf_atomic_inc(&pdev->rx_ring.refill_ref_cnt);
 }
 
+#define RX_RING_REFILL_DEBT_MAX 128
+int htt_rx_msdu_buff_in_order_replenish(htt_pdev_handle pdev, uint32_t num)
+{
+	int filled = 0;
+
+	if (!qdf_spin_trylock_bh(&(pdev->rx_ring.refill_lock))) {
+		if (qdf_atomic_read(&pdev->rx_ring.refill_debt)
+			 < RX_RING_REFILL_DEBT_MAX) {
+			qdf_atomic_add(num, &pdev->rx_ring.refill_debt);
+			return filled; /* 0 */
+		}
+		/*
+		 * else:
+		 * If we have quite a debt, then it is better for the lock
+		 * holder to finish its work and then acquire the lock and
+		 * fill our own part.
+		 */
+		qdf_spin_lock_bh(&(pdev->rx_ring.refill_lock));
+	}
+	filled = htt_rx_ring_fill_n(pdev, num);
+	qdf_spin_unlock_bh(&(pdev->rx_ring.refill_lock));
+
+	return filled;
+}
+
 #define AR600P_ASSEMBLE_HW_RATECODE(_rate, _nss, _pream)     \
 	(((_pream) << 6) | ((_nss) << 4) | (_rate))
 
@@ -3007,6 +3048,7 @@ static int htt_rx_hash_init(struct htt_pdev_t *pdev)
 {
 	int i, j;
 	int rc = 0;
+	void *allocation;
 
 	HTT_ASSERT2(QDF_IS_PWR2(RX_NUM_HASH_BUCKETS));
 
@@ -3025,10 +3067,13 @@ static int htt_rx_hash_init(struct htt_pdev_t *pdev)
 
 	for (i = 0; i < RX_NUM_HASH_BUCKETS; i++) {
 
+		qdf_spin_unlock_bh(&(pdev->rx_ring.rx_hash_lock));
 		/* pre-allocate bucket and pool of entries for this bucket */
-		pdev->rx_ring.hash_table[i] = qdf_mem_malloc(
-			(sizeof(struct htt_rx_hash_bucket) +
+		allocation = qdf_mem_malloc((sizeof(struct htt_rx_hash_bucket) +
 			(RX_ENTRIES_SIZE * sizeof(struct htt_rx_hash_entry))));
+		qdf_spin_lock_bh(&(pdev->rx_ring.rx_hash_lock));
+		pdev->rx_ring.hash_table[i] = allocation;
+
 
 		HTT_RX_HASH_COUNT_RESET(pdev->rx_ring.hash_table[i]);
 
@@ -3194,6 +3239,11 @@ int htt_rx_attach(struct htt_pdev_t *pdev)
 	*/
 	qdf_atomic_init(&pdev->rx_ring.refill_ref_cnt);
 	qdf_atomic_inc(&pdev->rx_ring.refill_ref_cnt);
+
+	/* Initialize the refill_lock and debt (for rx-parallelization) */
+	qdf_spinlock_create(&(pdev->rx_ring.refill_lock));
+	qdf_atomic_init(&pdev->rx_ring.refill_debt);
+
 
 	/* Initialize the Rx refill retry timer */
 	qdf_timer_init(pdev->osdev,

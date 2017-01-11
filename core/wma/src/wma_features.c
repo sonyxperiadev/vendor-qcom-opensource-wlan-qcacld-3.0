@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -113,6 +113,49 @@ static const uint8_t arp_mask[] = {0xff, 0xff};
 static const uint8_t ns_ptrn[] = {0x86, 0xDD};
 static const uint8_t discvr_ptrn[] = {0xe0, 0x00, 0x00, 0xf8};
 static const uint8_t discvr_mask[] = {0xf0, 0x00, 0x00, 0xf8};
+
+#ifdef FEATURE_WLAN_DIAG_SUPPORT
+/**
+ * qdf_wma_wow_wakeup_stats_event()- send wow wakeup stats
+ * @tp_wma_handle wma: WOW wakeup packet counter
+ *
+ * This function sends wow wakeup stats diag event
+ *
+ * Return: void.
+ */
+static void qdf_wma_wow_wakeup_stats_event(tp_wma_handle wma)
+{
+	WLAN_HOST_DIAG_EVENT_DEF(WowStats,
+	struct host_event_wlan_powersave_wow_stats);
+	qdf_mem_zero(&WowStats, sizeof(WowStats));
+
+	WowStats.wow_bcast_wake_up_count = wma->wow_bcast_wake_up_count;
+	WowStats.wow_ipv4_mcast_wake_up_count =
+					wma->wow_ipv4_mcast_wake_up_count;
+	WowStats.wow_ipv6_mcast_wake_up_count =
+					wma->wow_ipv6_mcast_wake_up_count;
+	WowStats.wow_ipv6_mcast_ra_stats = wma->wow_ipv6_mcast_ra_stats;
+	WowStats.wow_ipv6_mcast_ns_stats = wma->wow_ipv6_mcast_ns_stats;
+	WowStats.wow_ipv6_mcast_na_stats = wma->wow_ipv6_mcast_na_stats;
+	WowStats.wow_pno_match_wake_up_count = wma->wow_pno_match_wake_up_count;
+	WowStats.wow_pno_complete_wake_up_count =
+					wma->wow_pno_complete_wake_up_count;
+	WowStats.wow_gscan_wake_up_count = wma->wow_gscan_wake_up_count;
+	WowStats.wow_low_rssi_wake_up_count =  wma->wow_low_rssi_wake_up_count;
+	WowStats.wow_rssi_breach_wake_up_count =
+					wma->wow_rssi_breach_wake_up_count;
+	WowStats.wow_icmpv4_count = wma->wow_icmpv4_count;
+	WowStats.wow_icmpv6_count = wma->wow_icmpv6_count;
+	WowStats.wow_oem_response_wake_up_count =
+					wma->wow_oem_response_wake_up_count;
+	WLAN_HOST_DIAG_EVENT_REPORT(&WowStats, EVENT_WLAN_POWERSAVE_WOW_STATS);
+}
+#else
+static void qdf_wma_wow_wakeup_stats_event(tp_wma_handle wma)
+{
+	return;
+}
+#endif
 
 #ifdef FEATURE_WLAN_AUTO_SHUTDOWN
 /**
@@ -1622,8 +1665,7 @@ int wma_csa_offload_handler(void *handle, uint8_t *event, uint32_t len)
 	 * basic sanity check: requested channel should not be 0
 	 * and equal to home channel
 	 */
-	if ((0 == csa_offload_event->channel) ||
-	    (cur_chan == csa_offload_event->channel)) {
+	if (0 == csa_offload_event->channel) {
 		WMA_LOGE("CSA Event with channel %d. Ignore !!",
 			 csa_offload_event->channel);
 		qdf_mem_free(csa_offload_event);
@@ -2359,6 +2401,16 @@ static const u8 *wma_wow_wake_reason_str(A_INT32 wake_reason)
 		return "ACTION_FRAME_RECV";
 	case WOW_REASON_BPF_ALLOW:
 		return "WOW_REASON_BPF_ALLOW";
+	case WOW_REASON_NAN_DATA:
+		return "WOW_REASON_NAN_DATA";
+	case WOW_REASON_TDLS_CONN_TRACKER_EVENT:
+		return "WOW_REASON_TDLS_CONN_TRACKER_EVENT";
+	case WOW_REASON_CRITICAL_LOG:
+		return "WOW_REASON_CRITICAL_LOG";
+	case WOW_REASON_P2P_LISTEN_OFFLOAD:
+		return "WOW_REASON_P2P_LISTEN_OFFLOAD";
+	case WOW_REASON_NAN_EVENT_WAKE_HOST:
+		return "WOW_REASON_NAN_EVENT_WAKE_HOST";
 	}
 	return "unknown";
 }
@@ -3167,6 +3219,7 @@ int wma_wow_wakeup_host_event(void *handle, uint8_t *event,
 			 wma_wow_wake_reason_str(wake_info->wake_reason),
 			 wake_info->wake_reason, wake_info->vdev_id);
 		qdf_wow_wakeup_host_event(wake_info->wake_reason);
+		qdf_wma_wow_wakeup_stats_event(wma);
 	}
 
 	qdf_event_set(&wma->wma_resume_event);
@@ -3676,6 +3729,53 @@ static QDF_STATUS wma_configure_ssdp(tp_wma_handle wma, uint8_t vdev_id)
 }
 
 /**
+ * wma_register_action_frame_patterns() - register action frame map to fw
+ * @handle: Pointer to wma handle
+ * @vdev_id: VDEV ID
+ *
+ * This is called to push action frames wow patterns from local
+ * cache to firmware.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS wma_register_action_frame_patterns(WMA_HANDLE handle,
+						uint8_t vdev_id)
+{
+	tp_wma_handle wma = handle;
+	struct action_wakeup_set_param cmd = {0};
+	int32_t err;
+	int i = 0;
+
+	cmd.vdev_id = vdev_id;
+	cmd.operation = WOW_ACTION_WAKEUP_OPERATION_SET;
+
+	cmd.action_category_map[i++] = ALLOWED_ACTION_FRAMES_BITMAP0;
+	cmd.action_category_map[i++] = ALLOWED_ACTION_FRAMES_BITMAP1;
+	cmd.action_category_map[i++] = ALLOWED_ACTION_FRAMES_BITMAP2;
+	cmd.action_category_map[i++] = ALLOWED_ACTION_FRAMES_BITMAP3;
+	cmd.action_category_map[i++] = ALLOWED_ACTION_FRAMES_BITMAP4;
+	cmd.action_category_map[i++] = ALLOWED_ACTION_FRAMES_BITMAP5;
+	cmd.action_category_map[i++] = ALLOWED_ACTION_FRAMES_BITMAP6;
+	cmd.action_category_map[i++] = ALLOWED_ACTION_FRAMES_BITMAP7;
+
+	for (i = 0; i < WMI_SUPPORTED_ACTION_CATEGORY_ELE_LIST; i++) {
+		if (i < ALLOWED_ACTION_FRAME_MAP_WORDS)
+			WMA_LOGD("%s: %d action Wakeup pattern 0x%x in fw",
+				__func__, i, cmd.action_category_map[i]);
+		else
+			cmd.action_category_map[i] = 0;
+	}
+
+	err = wmi_unified_action_frame_patterns_cmd(wma->wmi_handle, &cmd);
+	if (err) {
+		WMA_LOGE("Failed to config wow action frame map, ret %d", err);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
  * wma_wow_sta() - set WOW patterns in sta mode
  * @wma: wma handle
  * @vdev_id: vdev id
@@ -3901,15 +4001,6 @@ QDF_STATUS wma_enable_wow_in_fw(WMA_HANDLE handle, uint32_t wow_flags)
 
 	WMA_LOGD("Credits:%d; Pending_Cmds: %d",
 		 host_credits, wmi_pending_cmds);
-
-	if (host_credits < WMI_WOW_REQUIRED_CREDITS) {
-		WMA_LOGE("%s: Host Doesn't have enough credits to Post WMI_WOW_ENABLE_CMDID! "
-			"Credits:%d, pending_cmds:%d\n", __func__, host_credits,
-			wmi_pending_cmds);
-#ifndef QCA_WIFI_3_0_EMU
-		goto error;
-#endif
-	}
 
 	param.enable = true;
 	param.can_suspend_link = htc_can_suspend_link(wma->htc_handle);
@@ -8251,6 +8342,16 @@ QDF_STATUS wma_get_wakelock_stats(struct sir_wake_lock_stats *wake_lock_stats)
 	wake_lock_stats->wow_icmpv4_count = wma_handle->wow_icmpv4_count;
 	wake_lock_stats->wow_icmpv6_count =
 			wma_handle->wow_icmpv6_count;
+	wake_lock_stats->wow_rssi_breach_wake_up_count =
+			wma_handle->wow_rssi_breach_wake_up_count;
+	wake_lock_stats->wow_low_rssi_wake_up_count =
+			wma_handle->wow_low_rssi_wake_up_count;
+	wake_lock_stats->wow_gscan_wake_up_count =
+			wma_handle->wow_gscan_wake_up_count;
+	wake_lock_stats->wow_pno_complete_wake_up_count =
+			wma_handle->wow_pno_complete_wake_up_count;
+	wake_lock_stats->wow_pno_match_wake_up_count =
+			wma_handle->wow_pno_match_wake_up_count;
 
 	return QDF_STATUS_SUCCESS;
 }

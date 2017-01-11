@@ -1,4 +1,4 @@
-				/*
+/*
  * Copyright (c) 2013-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
@@ -262,7 +262,13 @@ enum ds_mode {
 #define WMA_VDEV_START_REQUEST_TIMEOUT (6000)   /* 6 seconds */
 #define WMA_VDEV_STOP_REQUEST_TIMEOUT  (6000)   /* 6 seconds */
 
-#define WMA_TGT_INVALID_SNR 0x127
+/*
+ * The firmware value has been changed recently to 0x127
+ * But, to maintain backward compatibility, the old
+ * value is also preserved.
+ */
+#define WMA_TGT_INVALID_SNR_OLD (-1)
+#define WMA_TGT_INVALID_SNR_NEW 0x127
 
 #define WMA_TX_Q_RECHECK_TIMER_WAIT      2      /* 2 ms */
 #define WMA_TX_Q_RECHECK_TIMER_MAX_WAIT  20     /* 20 ms */
@@ -1407,6 +1413,7 @@ struct extended_caps {
  * @wmi_cmd_rsp_wake_lock: wmi command response wake lock
  * @wmi_cmd_rsp_runtime_lock: wmi command response bus lock
  * @saved_chan: saved channel list sent as part of WMI_SCAN_CHAN_LIST_CMDID
+ * @fw_mem_dump_enabled: Fw memory dump support
  */
 typedef struct {
 	void *wmi_handle;
@@ -1610,6 +1617,8 @@ typedef struct {
 	tp_wma_packetdump_cb wma_mgmt_tx_packetdump_cb;
 	tp_wma_packetdump_cb wma_mgmt_rx_packetdump_cb;
 	tSirLLStatsResults *link_stats_results;
+	bool fw_mem_dump_enabled;
+	tSirAddonPsReq ps_setting;
 } t_wma_handle, *tp_wma_handle;
 
 /**
@@ -1822,6 +1831,8 @@ typedef struct {
  * @WMA_VDEV_IBSS_PS_SET_1RX_CHAIN_IN_ATIM_WINDOW: set IBSS power save ATIM
  * @WMA_VDEV_DFS_CONTROL_CMDID: DFS control command
  * @WMA_VDEV_TXRX_GET_IPA_UC_FW_STATS_CMDID: get IPA microcontroller fw stats
+ * @WMA_VDEV_TXRX_GET_IPA_UC_SHARING_STATS_CMDID: get IPA uC wifi-sharing stats
+ * @WMA_VDEV_TXRX_SET_IPA_UC_QUOTA_CMDID: set IPA uC quota limit
  *
  * wma command ids for configuration request which
  * does not involve sending a wmi command.
@@ -1841,6 +1852,8 @@ enum wma_cfg_cmd_id {
 	WMA_VDEV_IBSS_PS_SET_1RX_CHAIN_IN_ATIM_WINDOW,
 	WMA_VDEV_DFS_CONTROL_CMDID,
 	WMA_VDEV_TXRX_GET_IPA_UC_FW_STATS_CMDID,
+	WMA_VDEV_TXRX_GET_IPA_UC_SHARING_STATS_CMDID,
+	WMA_VDEV_TXRX_SET_IPA_UC_QUOTA_CMDID,
 	WMA_CMD_ID_MAX
 };
 
@@ -2280,6 +2293,7 @@ static inline QDF_STATUS wma_lro_config_cmd(tp_wma_handle wma_handle,
 	return QDF_STATUS_SUCCESS;
 }
 #endif
+bool wma_is_current_hwmode_dbs(void);
 void
 wma_indicate_err(enum ol_rx_err_type err_type,
 	 struct ol_error_info *err_info);
@@ -2319,7 +2333,6 @@ QDF_STATUS wma_create_peer(tp_wma_handle wma, ol_txrx_pdev_handle pdev,
 			   u_int32_t peer_type, u_int8_t vdev_id,
 			   bool roam_synch_in_progress);
 
-#endif
 struct wma_ini_config *wma_get_ini_handle(tp_wma_handle wma_handle);
 WLAN_PHY_MODE wma_chan_phy_mode(u8 chan, enum phy_ch_width chan_width,
 	u8 dot11_mode);
@@ -2340,3 +2353,4 @@ void wma_update_sta_inactivity_timeout(tp_wma_handle wma,
 
 QDF_STATUS wma_send_udp_resp_offload_cmd(tp_wma_handle wma_handle,
 					struct udp_resp_offload *udp_response);
+#endif

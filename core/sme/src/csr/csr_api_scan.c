@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -5388,7 +5388,19 @@ static void csr_scan_copy_request_valid_channels_only(tpAniSirGlobal mac_ctx,
 						break;
 					}
 				}
-				if (is_unsafe_chan) {
+				if (is_unsafe_chan &&
+					((CSR_IS_CHANNEL_24GHZ(
+						src_req->ChannelInfo.
+						ChannelList[index]) &&
+					mac_ctx->roam.configParam.
+					sta_roam_policy.sap_operating_band ==
+						eCSR_BAND_24) ||
+						(CDS_IS_CHANNEL_5GHZ(
+							src_req->ChannelInfo.
+							ChannelList[index]) &&
+					mac_ctx->roam.configParam.
+					sta_roam_policy.sap_operating_band ==
+						eCSR_BAND_5G))) {
 					QDF_TRACE(QDF_MODULE_ID_SME,
 						QDF_TRACE_LEVEL_INFO,
 					      FL("ignoring unsafe channel %d"),
@@ -5407,25 +5419,25 @@ static void csr_scan_copy_request_valid_channels_only(tpAniSirGlobal mac_ctx,
 }
 
 /**
- * csr_scan_filter_ibss_chnl_band() - filter all channels which matches IBSS
+ * csr_scan_filter_given_chnl_band() - filter all channels which matches given
  *                                    channel's band
  * @mac_ctx: pointer to mac context
- * @ibss_channel: Given IBSS channel
+ * @channel: Given channel
  * @dst_req: destination scan request
  *
- * when ever IBSS connection already exist, STA should not scan the channels
- * which fall under same band as IBSS channel's band. this routine will filter
- * out those channels
+ * when ever particular connection already exist, STA should not scan the
+ * channels which fall under same band as given channel's band.
+ * this routine will filter out those channels
  *
  * Return: true if success otherwise false for any failure
  */
-static bool csr_scan_filter_ibss_chnl_band(tpAniSirGlobal mac_ctx,
-			uint8_t ibss_channel, tCsrScanRequest *dst_req) {
+static bool csr_scan_filter_given_chnl_band(tpAniSirGlobal mac_ctx,
+			uint8_t channel, tCsrScanRequest *dst_req) {
 	uint8_t valid_chnl_list[WNI_CFG_VALID_CHANNEL_LIST_LEN] = {0};
 	uint32_t filter_chnl_len = 0, i = 0;
 	uint32_t valid_chnl_len = WNI_CFG_VALID_CHANNEL_LIST_LEN;
 
-	if (ibss_channel == 0) {
+	if (!channel) {
 		sms_log(mac_ctx, LOG1,
 			FL("Nothing to filter as no IBSS session"));
 		return true;
@@ -5455,17 +5467,17 @@ static bool csr_scan_filter_ibss_chnl_band(tpAniSirGlobal mac_ctx,
 	}
 	for (i = 0; i < valid_chnl_len; i++) {
 		/*
-		 * Don't allow DSRC channel when IBSS concurrent connection
-		 * is up
+		 * Don't allow DSRC channel when IBSS or SAP DFS concurrent
+		 * connection is up
 		 */
 		if (valid_chnl_list[i] >= CDS_MIN_11P_CHANNEL)
 			continue;
-		if (CDS_IS_CHANNEL_5GHZ(ibss_channel) &&
+		if (CDS_IS_CHANNEL_5GHZ(channel) &&
 			CDS_IS_CHANNEL_24GHZ(valid_chnl_list[i])) {
 			valid_chnl_list[filter_chnl_len] =
 					valid_chnl_list[i];
 			filter_chnl_len++;
-		} else if (CDS_IS_CHANNEL_24GHZ(ibss_channel) &&
+		} else if (CDS_IS_CHANNEL_24GHZ(channel) &&
 			CDS_IS_CHANNEL_5GHZ(valid_chnl_list[i])) {
 			valid_chnl_list[filter_chnl_len] =
 					valid_chnl_list[i];
@@ -5517,7 +5529,7 @@ QDF_STATUS csr_scan_copy_request(tpAniSirGlobal mac_ctx,
 	uint32_t index = 0;
 	uint32_t new_index = 0;
 	enum channel_state channel_state;
-	uint8_t ibss_channel = 0;
+	uint8_t channel = 0;
 
 	bool skip_dfs_chnl =
 			mac_ctx->roam.configParam.initial_scan_no_dfs_chnl ||
@@ -5622,17 +5634,36 @@ QDF_STATUS csr_scan_copy_request(tpAniSirGlobal mac_ctx,
 	 * request comes from STA adapter then we need to filter
 	 * out IBSS channel's band otherwise it will cause issue
 	 * in IBSS+STA concurrency
+	 *
+	 * If DFS SAP/GO concurrent connection exist, and if the scan
+	 * request comes from STA adapter then we need to filter
+	 * out SAP/GO channel's band otherwise it will cause issue in
+	 * SAP+STA concurrency
 	 */
-	if (true == cds_is_ibss_conn_exist(&ibss_channel)) {
+	if (cds_is_ibss_conn_exist(&channel)) {
 		sms_log(mac_ctx, LOG1,
 			FL("Conc IBSS exist, channel list will be modified"));
+	} else if (cds_is_any_dfs_beaconing_session_present(&channel)) {
+		/*
+		 * 1) if agile & DFS scans are supported
+		 * 2) if hardware is DBS capable
+		 * 3) if current hw mode is non-dbs
+		 * if all above 3 conditions are true then don't skip any
+		 * channel from scan list
+		 */
+		if (true != wma_is_current_hwmode_dbs() &&
+		    wma_get_dbs_plus_agile_scan_config() &&
+		    wma_get_single_mac_scan_with_dfs_config())
+			channel = 0;
+		else
+			sms_log(mac_ctx, LOG1,
+				FL("Conc DFS SAP/GO exist, channel list will be modified"));
 	}
 
-	if ((ibss_channel > 0) &&
-		(false == csr_scan_filter_ibss_chnl_band(mac_ctx,
-				ibss_channel, dst_req))) {
+	if ((channel > 0) &&
+	    (!csr_scan_filter_given_chnl_band(mac_ctx, channel, dst_req))) {
 		sms_log(mac_ctx, LOGE,
-			FL("Can't filter channels due to IBSS"));
+			FL("Can't filter channels due to IBSS/SAP DFS"));
 		goto complete;
 	}
 
@@ -5703,9 +5734,19 @@ void csr_scan_call_callback(tpAniSirGlobal pMac, tSmeCmd *pCommand,
 			    eCsrScanStatus scanStatus)
 {
 	if (pCommand->u.scanCmd.callback) {
+		/*
+		 * In case of eCsrScanForSsid scan, scan is aborted as host gets
+		 * the desired AP, this doesn't necessaryly mean that scan is
+		 * failed, send abort indication to upper layers only if scan
+		 * status is not success
+		 */
 		if (pCommand->u.scanCmd.abort_scan_indication) {
-			sms_log(pMac, LOG1, FL("scanDone due to abort"));
-			scanStatus = eCSR_SCAN_ABORT;
+			if ((pCommand->u.scanCmd.reason != eCsrScanForSsid) ||
+			   (scanStatus != eCSR_SCAN_SUCCESS)) {
+				sms_log(pMac, LOG1,
+				       FL("scanDone due to abort"));
+				scanStatus = eCSR_SCAN_ABORT;
+			}
 		}
 		pCommand->u.scanCmd.callback(pMac, pCommand->u.scanCmd.pContext,
 					     pCommand->sessionId,
@@ -6187,6 +6228,42 @@ static void csr_roam_copy_channellist(tpAniSirGlobal mac_ctx,
 }
 
 /**
+ * csr_ssid_scan_done_callback() - Callback to indicate
+ *                            scan is done for ssid scan
+ * @halHandle: handle to hal
+ * @context: SSID scan context
+ * @scanId: Scan id for the scheduled scan
+ * @status: scan done status
+ *
+ * Return - QDF_STATUS
+ */
+static QDF_STATUS csr_ssid_scan_done_callback(tHalHandle halHandle,
+		void *context,
+		uint8_t sessionId,
+		uint32_t scanId,
+		eCsrScanStatus status)
+{
+	struct csr_scan_for_ssid_context *scan_context =
+		(struct csr_scan_for_ssid_context *)context;
+
+	if (NULL == scan_context) {
+		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
+				FL("scan for ssid context not found"));
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (eCSR_SCAN_ABORT == status)
+		csr_roam_call_callback(scan_context->mac_ctx,
+				scan_context->session_id,
+				NULL, scan_context->roam_id,
+				eCSR_ROAM_ASSOCIATION_FAILURE,
+				eCSR_ROAM_RESULT_SCAN_FOR_SSID_FAILURE);
+	qdf_mem_free(scan_context);
+	return QDF_STATUS_SUCCESS;
+}
+
+
+/**
  * csr_scan_for_ssid() -  Function usually used for BSSs that suppresses SSID
  * @mac_ctx: Pointer to Global Mac structure
  * @profile: pointer to tCsrRoamProfile
@@ -6210,6 +6287,7 @@ QDF_STATUS csr_scan_for_ssid(tpAniSirGlobal mac_ctx, uint32_t session_id,
 	tpCsrNeighborRoamControlInfo neighbor_roaminfo =
 		&mac_ctx->roam.neighborRoamInfo[session_id];
 	tCsrSSIDs *ssids = NULL;
+	struct csr_scan_for_ssid_context *context;
 
 	sms_log(mac_ctx, LOG2, FL("called"));
 
@@ -6239,14 +6317,24 @@ QDF_STATUS csr_scan_for_ssid(tpAniSirGlobal mac_ctx, uint32_t session_id,
 					scan_cmd->u.scanCmd.pToRoamProfile,
 					profile);
 
+	context = qdf_mem_malloc(sizeof(*context));
+	if (NULL == context) {
+		sms_log(mac_ctx, LOGE,
+			"Failed to allocate memory for ssid scan context");
+		goto error;
+	}
+	context->mac_ctx = mac_ctx;
+	context->session_id = session_id;
+	context->roam_id = roam_id;
+
 	if (!QDF_IS_STATUS_SUCCESS(status))
 		goto error;
 
 	scan_cmd->u.scanCmd.roamId = roam_id;
 	scan_cmd->command = eSmeCommandScan;
 	scan_cmd->sessionId = (uint8_t) session_id;
-	scan_cmd->u.scanCmd.callback = NULL;
-	scan_cmd->u.scanCmd.pContext = NULL;
+	scan_cmd->u.scanCmd.callback = csr_ssid_scan_done_callback;
+	scan_cmd->u.scanCmd.pContext = context;
 	scan_cmd->u.scanCmd.reason = eCsrScanForSsid;
 
 	/* let it wrap around */

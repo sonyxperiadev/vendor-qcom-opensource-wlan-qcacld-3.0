@@ -1192,23 +1192,19 @@ QDF_STATUS wlansap_clear_acl(void *pCtx)
 		return QDF_STATUS_E_RESOURCES;
 	}
 
-	if (pSapCtx->denyMacList != NULL) {
-		for (i = 0; i < (pSapCtx->nDenyMac - 1); i++) {
-			qdf_mem_zero((pSapCtx->denyMacList + i)->bytes,
-				     QDF_MAC_ADDR_SIZE);
-
-		}
+	for (i = 0; i < (pSapCtx->nDenyMac - 1); i++) {
+		qdf_mem_zero((pSapCtx->denyMacList + i)->bytes,
+			     QDF_MAC_ADDR_SIZE);
 	}
+
 	sap_print_acl(pSapCtx->denyMacList, pSapCtx->nDenyMac);
 	pSapCtx->nDenyMac = 0;
 
-	if (pSapCtx->acceptMacList != NULL) {
-		for (i = 0; i < (pSapCtx->nAcceptMac - 1); i++) {
-			qdf_mem_zero((pSapCtx->acceptMacList + i)->bytes,
-				     QDF_MAC_ADDR_SIZE);
-
-		}
+	for (i = 0; i < (pSapCtx->nAcceptMac - 1); i++) {
+		qdf_mem_zero((pSapCtx->acceptMacList + i)->bytes,
+			     QDF_MAC_ADDR_SIZE);
 	}
+
 	sap_print_acl(pSapCtx->acceptMacList, pSapCtx->nAcceptMac);
 	pSapCtx->nAcceptMac = 0;
 
@@ -2642,6 +2638,8 @@ wlansap_channel_change_request(void *pSapCtx, uint8_t target_channel)
 						ch_params->center_freq_seg0;
 	sapContext->csr_roamProfile.ch_params.center_freq_seg1 =
 						ch_params->center_freq_seg1;
+	sapContext->csr_roamProfile.supported_rates.numRates = 0;
+	sapContext->csr_roamProfile.extended_rates.numRates = 0;
 
 	qdf_ret_status = sme_roam_channel_change_req(hHal, sapContext->bssid,
 				ch_params, &sapContext->csr_roamProfile);

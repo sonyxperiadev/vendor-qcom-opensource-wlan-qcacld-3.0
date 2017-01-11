@@ -763,6 +763,7 @@ void htt_rx_dbg_rxbuf_deinit(struct htt_pdev_t *pdev)
 {
 	if (pdev->rx_buff_list)
 		qdf_mem_free(pdev->rx_buff_list);
+	qdf_spinlock_destroy(&(pdev->rx_buff_list_lock));
 }
 #else
 static inline
@@ -784,7 +785,7 @@ void htt_rx_dbg_rxbuf_reset(struct htt_pdev_t *pdev,
 	return;
 }
 static inline
-void htt_rx_dbg_rxbuf_indupt(struct htt_pdev_t *pdev,
+void htt_rx_dbg_rxbuf_indupd(struct htt_pdev_t *pdev,
 			     int    alloc_index)
 {
 	return;

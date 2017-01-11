@@ -266,7 +266,8 @@ static uint8_t wma_get_mcs_idx(uint16_t maxRate, uint8_t rate_flags,
 				goto rate_found;
 			}
 		}
-		if (rate_flags & eHAL_TX_RATE_HT20) {
+		if ((rate_flags & eHAL_TX_RATE_HT20) ||
+			(rate_flags & eHAL_TX_RATE_HT40)) {
 			/* check for ht20 nss1/2 rate set */
 			match_rate = wma_mcs_rate_match(maxRate, &is_sgi, nss,
 					mcs_nss1[index].ht20_rate[0],
@@ -311,7 +312,6 @@ static struct wma_target_req *wma_peek_vdev_req(tp_wma_handle wma,
 	if (QDF_STATUS_SUCCESS != qdf_list_peek_front(&wma->vdev_resp_queue,
 							&node2)) {
 		qdf_spin_unlock_bh(&wma->vdev_respq_lock);
-		WMA_LOGE(FL("unable to get target req from vdev resp queue"));
 		return NULL;
 	}
 
@@ -1334,6 +1334,7 @@ static void wma_vdev_stats_lost_link_helper(tp_wma_handle wma,
 	int32_t rssi;
 	struct wma_target_req *req_msg;
 	static const uint8_t zero_mac[QDF_MAC_ADDR_SIZE] = {0};
+	int8_t bcn_snr, dat_snr;
 
 	node = &wma->interfaces[vdev_stats->vdev_id];
 	if (node->vdev_up &&
@@ -1345,17 +1346,18 @@ static void wma_vdev_stats_lost_link_helper(tp_wma_handle wma,
 			WMA_LOGD(FL("cannot find DELETE_BSS request message"));
 			return;
 		 }
+		bcn_snr = vdev_stats->vdev_snr.bcn_snr;
+		dat_snr = vdev_stats->vdev_snr.dat_snr;
 		WMA_LOGD(FL("get vdev id %d, beancon snr %d, data snr %d"),
-			vdev_stats->vdev_id,
-			vdev_stats->vdev_snr.bcn_snr,
-			vdev_stats->vdev_snr.dat_snr);
-		if (WMA_TGT_INVALID_SNR != vdev_stats->vdev_snr.bcn_snr)
-			rssi = vdev_stats->vdev_snr.bcn_snr;
-		else if (WMA_TGT_INVALID_SNR != vdev_stats->vdev_snr.dat_snr)
-			rssi = vdev_stats->vdev_snr.dat_snr;
+			vdev_stats->vdev_id, bcn_snr, dat_snr);
+		if ((bcn_snr != WMA_TGT_INVALID_SNR_OLD) &&
+				(bcn_snr != WMA_TGT_INVALID_SNR_NEW))
+			rssi = bcn_snr;
+		else if ((dat_snr != WMA_TGT_INVALID_SNR_OLD) &&
+				(dat_snr != WMA_TGT_INVALID_SNR_NEW))
+			rssi = dat_snr;
 		else
-			rssi = WMA_TGT_INVALID_SNR;
-
+			rssi = WMA_TGT_INVALID_SNR_OLD;
 		/* Get the absolute rssi value from the current rssi value */
 		rssi = rssi + WMA_TGT_NOISE_FLOOR_DBM;
 		wma_lost_link_info_handler(wma, vdev_stats->vdev_id, rssi);
@@ -1414,24 +1416,28 @@ static void wma_update_vdev_stats(tp_wma_handle wma,
 			summary_stats->rts_succ_cnt = vdev_stats->rts_succ_cnt;
 			summary_stats->rts_fail_cnt = vdev_stats->rts_fail_cnt;
 			/* Update SNR and RSSI in SummaryStats */
-			if (bcn_snr != WMA_TGT_INVALID_SNR) {
+			if ((bcn_snr != WMA_TGT_INVALID_SNR_OLD) &&
+					(bcn_snr != WMA_TGT_INVALID_SNR_NEW)) {
 				summary_stats->snr = bcn_snr;
 				summary_stats->rssi =
 					bcn_snr + WMA_TGT_NOISE_FLOOR_DBM;
-			} else if (dat_snr != WMA_TGT_INVALID_SNR) {
+			} else if ((dat_snr != WMA_TGT_INVALID_SNR_OLD) &&
+					(dat_snr != WMA_TGT_INVALID_SNR_NEW)) {
 				summary_stats->snr = dat_snr;
 				summary_stats->rssi =
 					bcn_snr + WMA_TGT_NOISE_FLOOR_DBM;
 			} else {
-				summary_stats->snr = WMA_TGT_INVALID_SNR;
+				summary_stats->snr = WMA_TGT_INVALID_SNR_OLD;
 				summary_stats->rssi = 0;
 			}
 		}
 	}
 
 	if (pGetRssiReq && pGetRssiReq->sessionId == vdev_stats->vdev_id) {
-		if ((bcn_snr == WMA_TGT_INVALID_SNR) &&
-			(dat_snr == WMA_TGT_INVALID_SNR)) {
+		if ((bcn_snr == WMA_TGT_INVALID_SNR_OLD ||
+				bcn_snr == WMA_TGT_INVALID_SNR_NEW) &&
+				(dat_snr == WMA_TGT_INVALID_SNR_OLD ||
+				 dat_snr == WMA_TGT_INVALID_SNR_NEW)) {
 			/*
 			 * Firmware sends invalid snr till it sees
 			 * Beacon/Data after connection since after
@@ -1440,11 +1446,12 @@ static void wma_update_vdev_stats(tp_wma_handle wma,
 			 * rssi during connection.
 			 */
 			WMA_LOGE("Invalid SNR from firmware");
-
 		} else {
-			if (bcn_snr != WMA_TGT_INVALID_SNR) {
+			if (bcn_snr != WMA_TGT_INVALID_SNR_OLD &&
+				bcn_snr != WMA_TGT_INVALID_SNR_NEW) {
 				rssi = bcn_snr;
-			} else if (dat_snr != WMA_TGT_INVALID_SNR) {
+			} else if (dat_snr != WMA_TGT_INVALID_SNR_OLD &&
+					dat_snr != WMA_TGT_INVALID_SNR_NEW) {
 				rssi = dat_snr;
 			}
 
@@ -1471,11 +1478,14 @@ static void wma_update_vdev_stats(tp_wma_handle wma,
 
 	if (node->psnr_req) {
 		tAniGetSnrReq *p_snr_req = node->psnr_req;
-
-		if (bcn_snr != WMA_TGT_INVALID_SNR)
+		if ((bcn_snr != WMA_TGT_INVALID_SNR_OLD) &&
+				(bcn_snr != WMA_TGT_INVALID_SNR_NEW))
 			p_snr_req->snr = bcn_snr;
-		else
+		else if ((dat_snr != WMA_TGT_INVALID_SNR_OLD) &&
+				(dat_snr != WMA_TGT_INVALID_SNR_NEW))
 			p_snr_req->snr = dat_snr;
+		else
+			p_snr_req->snr = WMA_TGT_INVALID_SNR_OLD;
 
 		sme_msg.type = eWNI_SME_SNR_IND;
 		sme_msg.bodyptr = p_snr_req;
@@ -1620,9 +1630,11 @@ static void wma_update_per_chain_rssi_stats(tp_wma_handle wma,
 		dat_snr = rssi_stats->rssi_avg_data[i];
 		WMA_LOGD("chain %d beacon snr %d data snr %d",
 			i, bcn_snr, dat_snr);
-		if (dat_snr != WMA_TGT_INVALID_SNR)
+		if ((dat_snr != WMA_TGT_INVALID_SNR_OLD) &&
+				(dat_snr != WMA_TGT_INVALID_SNR_NEW))
 			rssi_per_chain_stats->rssi[i] = dat_snr;
-		else if (bcn_snr != WMA_TGT_INVALID_SNR)
+		else if ((bcn_snr != WMA_TGT_INVALID_SNR_OLD) &&
+				(bcn_snr != WMA_TGT_INVALID_SNR_NEW))
 			rssi_per_chain_stats->rssi[i] = bcn_snr;
 		else
 			/*
@@ -3286,6 +3298,26 @@ QDF_STATUS wma_get_current_hw_mode(struct sir_hw_mode_params *hw_mode)
 		return QDF_STATUS_E_FAILURE;
 	}
 	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * wma_is_current_hwmode_dbs() - Check if current hw mode is DBS
+ *
+ * Checks if current hardware mode of the system is DBS or no
+ *
+ * Return: true or false
+ */
+bool wma_is_current_hwmode_dbs(void)
+{
+	struct sir_hw_mode_params hw_mode;
+
+	if (!wma_is_hw_dbs_capable())
+		return false;
+	if (QDF_STATUS_SUCCESS != wma_get_current_hw_mode(&hw_mode))
+		return false;
+	if (hw_mode.dbs_cap)
+		return true;
+	return false;
 }
 
 /**

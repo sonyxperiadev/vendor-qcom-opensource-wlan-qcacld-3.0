@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -2960,6 +2960,59 @@ typedef struct {
 	uint8_t data[1];
 } tSirPrefNetworkFoundInd, *tpSirPrefNetworkFoundInd;
 #endif /* FEATURE_WLAN_SCAN_PNO */
+
+/*
+ * ALLOWED_ACTION_FRAMES_BITMAP
+ *
+ * Bitmask is based on the below. The frames with 0's
+ * set to their corresponding bit can be dropped in FW.
+ *
+ * -----------------------------+-----+-------+
+ *         Type                 | Bit | Allow |
+ * -----------------------------+-----+-------+
+ * SIR_MAC_ACTION_SPECTRUM_MGMT    0      1
+ * SIR_MAC_ACTION_QOS_MGMT         1      1
+ * SIR_MAC_ACTION_DLP              2      0
+ * SIR_MAC_ACTION_BLKACK           3      0
+ * SIR_MAC_ACTION_PUBLIC_USAGE     4      1
+ * SIR_MAC_ACTION_RRM              5      1
+ * SIR_MAC_ACTION_FAST_BSS_TRNST   6      0
+ * SIR_MAC_ACTION_HT               7      0
+ * SIR_MAC_ACTION_SA_QUERY         8      1
+ * SIR_MAC_ACTION_PROT_DUAL_PUB    9      1
+ * SIR_MAC_ACTION_WNM             10      1
+ * SIR_MAC_ACTION_UNPROT_WNM      11      0
+ * SIR_MAC_ACTION_TDLS            12      0
+ * SIR_MAC_ACITON_MESH            13      0
+ * SIR_MAC_ACTION_MHF             14      0
+ * SIR_MAC_SELF_PROTECTED         15      0
+ * SIR_MAC_ACTION_WME             17      1
+ * SIR_MAC_ACTION_FST             18      1
+ * SIR_MAC_ACTION_VHT             21      1
+ * ----------------------------+------+-------+
+ */
+#define ALLOWED_ACTION_FRAMES_BITMAP0 \
+		((1 << SIR_MAC_ACTION_SPECTRUM_MGMT) | \
+		 (1 << SIR_MAC_ACTION_QOS_MGMT) | \
+		 (1 << SIR_MAC_ACTION_PUBLIC_USAGE) | \
+		 (1 << SIR_MAC_ACTION_RRM) | \
+		 (1 << SIR_MAC_ACTION_SA_QUERY) | \
+		 (1 << SIR_MAC_ACTION_PROT_DUAL_PUB) | \
+		 (1 << SIR_MAC_ACTION_WNM) | \
+		 (1 << SIR_MAC_ACTION_WME) | \
+		 (1 << SIR_MAC_ACTION_FST) | \
+		 (1 << SIR_MAC_ACTION_VHT))
+
+#define ALLOWED_ACTION_FRAMES_BITMAP1   0x0
+#define ALLOWED_ACTION_FRAMES_BITMAP2   0x0
+#define ALLOWED_ACTION_FRAMES_BITMAP3   0x0
+#define ALLOWED_ACTION_FRAMES_BITMAP4   0x0
+#define ALLOWED_ACTION_FRAMES_BITMAP5   0x0
+#define ALLOWED_ACTION_FRAMES_BITMAP6   0x0
+#define ALLOWED_ACTION_FRAMES_BITMAP7   0x0
+
+#define ALLOWED_ACTION_FRAME_MAP_WORDS (SIR_MAC_ACTION_MAX / 32)
+
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 typedef struct {
@@ -6132,6 +6185,11 @@ struct sir_bpf_get_offload {
  * @wow_ipv6_mcast_na_stats: ipv6 multicast na stats
  * @wow_icmpv4_count: ipv4 icmp packet count
  * @wow_icmpv6_count: ipv6 icmp packet count
+ * @wow_rssi_breach_wake_up_count: rssi breach wakeup count
+ * @wow_low_rssi_wake_up_count: low rssi wakeup count
+ * @wow_gscan_wake_up_count: gscan wakeup count
+ * @wow_pno_complete_wake_up_count: pno complete wakeup count
+ * @wow_pno_match_wake_up_count: pno match wakeup count
  */
 struct sir_wake_lock_stats {
 	uint32_t wow_ucast_wake_up_count;
@@ -6143,6 +6201,11 @@ struct sir_wake_lock_stats {
 	uint32_t wow_ipv6_mcast_na_stats;
 	uint32_t wow_icmpv4_count;
 	uint32_t wow_icmpv6_count;
+	uint32_t wow_rssi_breach_wake_up_count;
+	uint32_t wow_low_rssi_wake_up_count;
+	uint32_t wow_gscan_wake_up_count;
+	uint32_t wow_pno_complete_wake_up_count;
+	uint32_t wow_pno_match_wake_up_count;
 };
 
 /**
@@ -6320,6 +6383,28 @@ struct ndp_app_info {
 };
 
 /**
+ * struct ndp_scid - structure to hold sceurity context identifier
+ * @scid_len: length of scid
+ * @scid: scid
+ *
+ */
+struct ndp_scid {
+	uint32_t scid_len;
+	uint8_t *scid;
+};
+
+/**
+ * struct ndp_pmk - structure to hold pairwise master key
+ * @pmk_len: length of pairwise master key
+ * @pmk: buffer containing pairwise master key
+ *
+ */
+struct ndp_pmk {
+	uint32_t pmk_len;
+	uint8_t *pmk;
+};
+
+/**
  * struct ndi_create_req - ndi create request params
  * @transaction_id: unique identifier
  * @iface_name: interface name
@@ -6358,22 +6443,28 @@ struct ndi_delete_rsp {
  * @transaction_id: unique identifier
  * @vdev_id: session id of the interface over which ndp is being created
  * @channel: suggested channel for ndp creation
+ * @channel_cfg: channel config, 0=no channel, 1=optional, 2=mandatory
  * @service_instance_id: Service identifier
  * @peer_discovery_mac_addr: Peer's discovery mac address
  * @self_ndi_mac_addr: self NDI mac address
  * @ndp_config: ndp configuration params
  * @ndp_info: ndp application info
+ * @ncs_sk_type: indicates NCS_SK_128 or NCS_SK_256
+ * @pmk: pairwise master key
  *
  */
 struct ndp_initiator_req {
 	uint32_t transaction_id;
 	uint32_t vdev_id;
 	uint32_t channel;
+	uint32_t channel_cfg;
 	uint32_t service_instance_id;
 	struct qdf_mac_addr peer_discovery_mac_addr;
 	struct qdf_mac_addr self_ndi_mac_addr;
 	struct ndp_cfg ndp_config;
 	struct ndp_app_info ndp_info;
+	uint32_t ncs_sk_type;
+	struct ndp_pmk pmk;
 };
 
 /**
@@ -6405,6 +6496,8 @@ struct ndp_initiator_rsp {
  * @ndp_accept_policy: accept policy configured by the upper layer
  * @ndp_config: ndp configuration params
  * @ndp_info: ndp application info
+ * @ncs_sk_type: indicates NCS_SK_128 or NCS_SK_256
+ * @scid: security context identifier
  *
  */
 struct ndp_indication_event {
@@ -6417,6 +6510,8 @@ struct ndp_indication_event {
 	enum ndp_accept_policy policy;
 	struct ndp_cfg ndp_config;
 	struct ndp_app_info ndp_info;
+	uint32_t ncs_sk_type;
+	struct ndp_scid scid;
 };
 
 /**
@@ -6427,6 +6522,8 @@ struct ndp_indication_event {
  * @ndp_rsp: response to the ndp create request
  * @ndp_config: ndp configuration params
  * @ndp_info: ndp application info
+ * @pmk: pairwise master key
+ * @ncs_sk_type: indicates NCS_SK_128 or NCS_SK_256
  *
  */
 struct ndp_responder_req {
@@ -6436,6 +6533,8 @@ struct ndp_responder_req {
 	enum ndp_response_code ndp_rsp;
 	struct ndp_cfg ndp_config;
 	struct ndp_app_info ndp_info;
+	struct ndp_pmk pmk;
+	uint32_t ncs_sk_type;
 };
 
 /**
