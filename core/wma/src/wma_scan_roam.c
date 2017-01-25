@@ -265,6 +265,9 @@ QDF_STATUS wma_get_buf_start_scan_cmd(tp_wma_handle wma_handle,
 	else
 		WMA_LOGD("OFDM_RATES not included in 11B mode");
 
+	if (scan_req->p2pScanType)
+		scan_req->scan_adaptive_dwell_mode = WMI_DWELL_MODE_STATIC;
+
 	WMI_SCAN_SET_DWELL_MODE(cmd->scan_ctrl_flags,
 			scan_req->scan_adaptive_dwell_mode);
 
@@ -1732,6 +1735,7 @@ QDF_STATUS wma_process_roaming_config(tp_wma_handle wma_handle,
 
 	if (NULL == pMac) {
 		WMA_LOGE("%s: pMac is NULL", __func__);
+		qdf_mem_free(roam_req);
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -3029,6 +3033,7 @@ QDF_STATUS wma_pno_start(tp_wma_handle wma, tpSirPNOScanReq pno)
 	params->enable = pno->enable;
 	params->modePNO = (enum pno_mode) pno->modePNO;
 	params->ucNetworksCount = pno->ucNetworksCount;
+	params->do_passive_scan = pno->do_passive_scan;
 	params->sessionId = pno->sessionId;
 	params->fast_scan_period = pno->fast_scan_period;
 	params->slow_scan_period = pno->slow_scan_period;

@@ -4089,6 +4089,14 @@ REG_TABLE_ENTRY g_registry_table[] = {
 		     CFG_SIFS_BURST_DURATION_DEFAULT,
 		     CFG_SIFS_BURST_DURATION_MIN,
 		     CFG_SIFS_BURST_DURATION_MAX),
+
+	REG_VARIABLE(CFG_ENABLE_PHY_REG_NAME, WLAN_PARAM_HexInteger,
+		     struct hdd_config, enable_phy_reg_retention,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_PHY_REG_DEFAULT,
+		     CFG_PHY_REG_MIN,
+		     CFG_PHY_REG_MAX),
+
 	REG_VARIABLE(CFG_OPTIMIZE_CA_EVENT_NAME, WLAN_PARAM_Integer,
 			struct hdd_config, goptimize_chan_avoid_event,
 			VAR_FLAGS_OPTIONAL |
@@ -4189,6 +4197,18 @@ REG_TABLE_ENTRY g_registry_table[] = {
 		CFG_PER_ROAM_REST_TIME_DEFAULT,
 		CFG_PER_ROAM_REST_TIME_MIN,
 		CFG_PER_ROAM_REST_TIME_MAX),
+	REG_VARIABLE(CFG_MAX_SCHED_SCAN_PLAN_INT_NAME, WLAN_PARAM_Integer,
+		struct hdd_config, max_sched_scan_plan_interval,
+		VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		CFG_MAX_SCHED_SCAN_PLAN_INT_DEFAULT,
+		CFG_MAX_SCHED_SCAN_PLAN_INT_MIN,
+		CFG_MAX_SCHED_SCAN_PLAN_INT_MAX),
+	REG_VARIABLE(CFG_MAX_SCHED_SCAN_PLAN_ITRNS_NAME, WLAN_PARAM_Integer,
+		struct hdd_config, max_sched_scan_plan_iterations,
+		VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		CFG_MAX_SCHED_SCAN_PLAN_ITRNS_DEFAULT,
+		CFG_MAX_SCHED_SCAN_PLAN_ITRNS_MIN,
+		CFG_MAX_SCHED_SCAN_PLAN_ITRNS_MAX),
 };
 
 /**
@@ -5662,6 +5682,9 @@ void hdd_cfg_print(hdd_context_t *pHddCtx)
 	hdd_info("Name = [%s] Value = [%u]",
 		CFG_CRASH_FW_TIMEOUT_NAME,
 		pHddCtx->config->fw_timeout_crash);
+	hdd_info("Name = [%s] Value = [%u]",
+		CFG_ENABLE_PHY_REG_NAME,
+		pHddCtx->config->enable_phy_reg_retention);
 	hdd_per_roam_print_ini_config(pHddCtx);
 }
 

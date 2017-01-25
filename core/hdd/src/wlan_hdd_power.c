@@ -1475,7 +1475,7 @@ QDF_STATUS hdd_wlan_shutdown(void)
 	hdd_reset_all_adapters(pHddCtx);
 
 	/* Flush cached rx frame queue */
-	cds_flush_cache_rx_queue();
+	ol_txrx_flush_cache_rx_queue();
 
 	/* De-register the HDD callbacks */
 	hdd_deregister_cb(pHddCtx);
@@ -1583,6 +1583,10 @@ QDF_STATUS hdd_wlan_re_init(void)
 
 	/* Restart all adapters */
 	hdd_start_all_adapters(pHddCtx);
+
+	pHddCtx->last_scan_reject_session_id = 0xFF;
+	pHddCtx->last_scan_reject_reason = 0;
+	pHddCtx->last_scan_reject_timestamp = 0;
 
 	pHddCtx->hdd_mcastbcast_filter_set = false;
 	pHddCtx->btCoexModeSet = false;

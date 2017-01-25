@@ -775,16 +775,18 @@ QDF_STATUS csr_update_channel_list(tpAniSirGlobal pMac)
 			else
 				pChanList->chanParam[num_channel].dfsSet =
 					true;
-			QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_INFO,
-				"channel:%d, pwr=%d, DFS=%d\n",
-				pChanList->chanParam[num_channel].chanId,
-				pChanList->chanParam[num_channel].pwr,
-				pChanList->chanParam[num_channel].dfsSet);
 			if (cds_is_5_mhz_enabled())
 				pChanList->chanParam[num_channel].quarter_rate
 					= 1;
 			else if (cds_is_10_mhz_enabled())
 				pChanList->chanParam[num_channel].half_rate = 1;
+			QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_INFO,
+				"channel:%d, pwr=%d, DFS=%d qrate %d hrate %d ",
+				pChanList->chanParam[num_channel].chanId,
+				pChanList->chanParam[num_channel].pwr,
+				pChanList->chanParam[num_channel].dfsSet,
+				pChanList->chanParam[num_channel].quarter_rate,
+				pChanList->chanParam[num_channel].half_rate);
 			num_channel++;
 		}
 	}
@@ -3157,7 +3159,7 @@ static QDF_STATUS csr_init11d_info(tpAniSirGlobal pMac, tCsr11dinfo *ps11dinfo)
 			count++;
 		}
 		if (count) {
-			csr_save_to_channel_power2_g_5_g(pMac,
+			status = csr_save_to_channel_power2_g_5_g(pMac,
 							 count *
 							 sizeof(tSirMacChanInfo),
 							 pChanInfoStart);
@@ -10198,6 +10200,8 @@ csr_roam_prepare_filter_from_profile(tpAniSirGlobal mac_ctx,
 		scan_fltr->MDID.mdiePresent = 1;
 		scan_fltr->MDID.mobilityDomain = profile->MDID.mobilityDomain;
 	}
+	qdf_mem_copy(scan_fltr->bssid_hint.bytes,
+		profile->bssid_hint.bytes, QDF_MAC_ADDR_SIZE);
 
 #ifdef WLAN_FEATURE_11W
 	/* Management Frame Protection */
@@ -15778,6 +15782,8 @@ QDF_STATUS csr_roam_close_session(tpAniSirGlobal pMac, uint32_t sessionId,
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	if (CSR_IS_SESSION_VALID(pMac, sessionId)) {
 		tCsrRoamSession *pSession = CSR_GET_SESSION(pMac, sessionId);
+		/* Vdev going down stop roaming */
+		pSession->fCancelRoaming = true;
 		if (fSync) {
 			csr_cleanup_session(pMac, sessionId);
 		} else {
@@ -17327,7 +17333,11 @@ csr_create_roam_scan_offload_request(tpAniSirGlobal mac_ctx,
 		(csr_is_auth_type_ese(req_buf->
 			ConnectedNetwork.authentication)));
 	QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
-			FL("LFR3:IsEseAssoc=%d\n"), req_buf->IsESEAssoc);
+			FL("IsEseAssoc=%d middle of roaming %d ese_neighbor_list_recvd %d cur no of chan %d"),
+			req_buf->IsESEAssoc,
+			req_buf->middle_of_roaming,
+			ese_neighbor_list_recvd,
+			curr_ch_lst_info->numOfChannels);
 #endif
 	if (ese_neighbor_list_recvd || curr_ch_lst_info->numOfChannels == 0) {
 		/*
@@ -17338,6 +17348,9 @@ csr_create_roam_scan_offload_request(tpAniSirGlobal mac_ctx,
 			status = csr_fetch_ch_lst_from_ini(mac_ctx, roam_info,
 							   req_buf);
 			if (!QDF_IS_STATUS_SUCCESS(status)) {
+				QDF_TRACE(QDF_MODULE_ID_SME,
+						QDF_TRACE_LEVEL_DEBUG,
+						FL("Fetch channel list from ini failed"));
 				qdf_mem_free(req_buf);
 				return NULL;
 			}
@@ -17374,6 +17387,8 @@ csr_create_roam_scan_offload_request(tpAniSirGlobal mac_ctx,
 	/* Maintain the Valid Channels List */
 	status = csr_fetch_valid_ch_lst(mac_ctx, req_buf);
 	if (!QDF_IS_STATUS_SUCCESS(status)) {
+		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
+			FL("Fetch channel list fail"));
 		qdf_mem_free(req_buf);
 		return NULL;
 	}
@@ -17842,6 +17857,9 @@ csr_roam_offload_scan(tpAniSirGlobal mac_ctx, uint8_t session_id,
 	uint8_t i;
 	uint8_t op_channel;
 
+	QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
+			"RSO Command %d, Session id %d, Reason %d",
+			command, session_id, reason);
 	if (NULL == session) {
 		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
 			  FL("session is null"));
@@ -17864,6 +17882,7 @@ csr_roam_offload_scan(tpAniSirGlobal mac_ctx, uint8_t session_id,
 		 * expecting any WMI commands when the roam synch is in progress
 		 */
 		b_roam_scan_offload_started = false;
+		sms_log(mac_ctx, LOG1, FL("Roam sync in progress"));
 		return QDF_STATUS_SUCCESS;
 	}
 #endif

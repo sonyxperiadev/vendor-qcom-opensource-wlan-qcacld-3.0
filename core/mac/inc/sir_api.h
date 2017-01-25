@@ -2873,7 +2873,7 @@ typedef struct sAniIbssRouteTable {
 
 
 /* Set PNO */
-#define SIR_PNO_MAX_PLAN_REQUEST   1
+#define SIR_PNO_MAX_PLAN_REQUEST   2
 #define SIR_PNO_MAX_NETW_CHANNELS  26
 #define SIR_PNO_MAX_NETW_CHANNELS_EX  60
 #define SIR_PNO_MAX_SUPP_NETWORKS  16
@@ -2908,6 +2908,7 @@ typedef struct {
  * struct sSirPNOScanReq - PNO Scan request structure
  * @enable: flag to enable or disable
  * @modePNO: PNO Mode
+ * @do_passive_scan: Flag to request passive scan to fw
  * @ucNetworksCount: Number of networks
  * @aNetworks: Preferred network list
  * @sessionId: Session identifier
@@ -2922,6 +2923,7 @@ typedef struct {
 typedef struct sSirPNOScanReq {
 	uint8_t enable;
 	eSirPNOMode modePNO;
+	bool    do_passive_scan;
 	uint8_t ucNetworksCount;
 	tSirNetworkType aNetworks[SIR_PNO_MAX_SUPP_NETWORKS];
 	uint8_t sessionId;
@@ -6552,6 +6554,7 @@ struct ndp_responder_rsp_event {
 	uint32_t status;
 	uint32_t reason;
 	struct qdf_mac_addr peer_mac_addr;
+	bool create_peer;
 };
 
 /**

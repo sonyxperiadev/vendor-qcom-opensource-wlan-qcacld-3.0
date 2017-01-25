@@ -8434,14 +8434,15 @@ const struct wiphy_vendor_command hdd_wiphy_vendor_commands[] = {
 	{
 		.info.vendor_id = QCA_NL80211_VENDOR_ID,
 		.info.subcmd = QCA_NL80211_VENDOR_SUBCMD_EXTSCAN_GET_VALID_CHANNELS,
-		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
+			 WIPHY_VENDOR_CMD_NEED_NETDEV | WIPHY_VENDOR_CMD_NEED_RUNNING,
 		.doit = wlan_hdd_cfg80211_extscan_get_valid_channels
 	},
 	{
 		.info.vendor_id = QCA_NL80211_VENDOR_ID,
 		.info.subcmd = QCA_NL80211_VENDOR_SUBCMD_EXTSCAN_GET_CAPABILITIES,
 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
-			 WIPHY_VENDOR_CMD_NEED_NETDEV | WIPHY_VENDOR_CMD_NEED_RUNNING,
+			 WIPHY_VENDOR_CMD_NEED_NETDEV,
 		.doit = wlan_hdd_cfg80211_extscan_get_capabilities
 	},
 	{
@@ -8967,8 +8968,7 @@ const struct wiphy_vendor_command hdd_wiphy_vendor_commands[] = {
 		.info.vendor_id = QCA_NL80211_VENDOR_ID,
 		.info.subcmd = QCA_NL80211_VENDOR_SUBCMD_GET_BUS_SIZE,
 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
-			 WIPHY_VENDOR_CMD_NEED_NETDEV |
-			 WIPHY_VENDOR_CMD_NEED_RUNNING,
+			 WIPHY_VENDOR_CMD_NEED_NETDEV,
 		.doit = wlan_hdd_cfg80211_get_bus_size
 	},
 	{
@@ -9016,6 +9016,40 @@ const struct wiphy_vendor_command hdd_wiphy_vendor_commands[] = {
 		.doit = wlan_hdd_cfg80211_set_sar_power_limits
 	},
 };
+
+#if ((LINUX_VERSION_CODE > KERNEL_VERSION(4, 4, 0)) || \
+	defined(CFG80211_MULTI_SCAN_PLAN_BACKPORT)) && \
+	defined(FEATURE_WLAN_SCAN_PNO)
+/**
+ * hdd_config_sched_scan_plans_to_wiphy() - configure sched scan plans to wiphy
+ * @wiphy: pointer to wiphy
+ * @config: pointer to config
+ *
+ * Return: None
+ */
+static void hdd_config_sched_scan_plans_to_wiphy(struct wiphy *wiphy,
+						 struct hdd_config *config)
+{
+	if (config->configPNOScanSupport) {
+		wiphy->flags |= WIPHY_FLAG_SUPPORTS_SCHED_SCAN;
+		wiphy->max_sched_scan_ssids = SIR_PNO_MAX_SUPP_NETWORKS;
+		wiphy->max_match_sets = SIR_PNO_MAX_SUPP_NETWORKS;
+		wiphy->max_sched_scan_ie_len = SIR_MAC_MAX_IE_LENGTH;
+		wiphy->max_sched_scan_plans = SIR_PNO_MAX_PLAN_REQUEST;
+		if (config->max_sched_scan_plan_interval)
+			wiphy->max_sched_scan_plan_interval =
+				config->max_sched_scan_plan_interval;
+		if (config->max_sched_scan_plan_iterations)
+			wiphy->max_sched_scan_plan_iterations =
+				config->max_sched_scan_plan_iterations;
+	}
+}
+#else
+static void hdd_config_sched_scan_plans_to_wiphy(struct wiphy *wiphy,
+						 struct hdd_config *config)
+{
+}
+#endif
 
 /**
  * hdd_cfg80211_wiphy_alloc() - Allocate wiphy context
@@ -9163,17 +9197,7 @@ int wlan_hdd_cfg80211_init(struct device *dev,
 	wiphy_ext_feature_set(wiphy, NL80211_EXT_FEATURE_VHT_IBSS);
 #endif
 
-#ifdef FEATURE_WLAN_SCAN_PNO
-	if (pCfg->configPNOScanSupport) {
-		wiphy->flags |= WIPHY_FLAG_SUPPORTS_SCHED_SCAN;
-		wiphy->max_sched_scan_ssids = SIR_PNO_MAX_SUPP_NETWORKS;
-		wiphy->max_match_sets = SIR_PNO_MAX_SUPP_NETWORKS;
-		wiphy->max_sched_scan_ie_len = SIR_MAC_MAX_IE_LENGTH;
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)) || defined(WITH_BACKPORTS)
-		wiphy->max_sched_scan_plans = SIR_PNO_MAX_PLAN_REQUEST;
-#endif
-	}
-#endif /*FEATURE_WLAN_SCAN_PNO */
+	hdd_config_sched_scan_plans_to_wiphy(wiphy, pCfg);
 
 #if  defined QCA_WIFI_FTM
 	if (cds_get_conparam() != QDF_GLOBAL_FTM_MODE) {
@@ -11795,6 +11819,12 @@ static int wlan_hdd_cfg80211_connect_start(hdd_adapter_t *pAdapter,
 			     ssid, ssid_len);
 
 		pRoamProfile->do_not_roam = !pAdapter->fast_roaming_allowed;
+		/* cleanup bssid hint */
+		qdf_mem_zero(pRoamProfile->bssid_hint.bytes,
+			QDF_MAC_ADDR_SIZE);
+		qdf_mem_zero((void *)(pRoamProfile->BSSIDs.bssid),
+			QDF_MAC_ADDR_SIZE);
+
 		if (bssid) {
 			pRoamProfile->BSSIDs.numOfBSSIDs = 1;
 			pRoamProfile->do_not_roam = true;
@@ -11810,9 +11840,8 @@ static int wlan_hdd_cfg80211_connect_start(hdd_adapter_t *pAdapter,
 					bssid, QDF_MAC_ADDR_SIZE);
 			hdd_info("bssid is given by upper layer %pM", bssid);
 		} else if (bssid_hint) {
-			pRoamProfile->BSSIDs.numOfBSSIDs = 1;
-			qdf_mem_copy((void *)(pRoamProfile->BSSIDs.bssid),
-						bssid_hint, QDF_MAC_ADDR_SIZE);
+			qdf_mem_copy(pRoamProfile->bssid_hint.bytes,
+				bssid_hint, QDF_MAC_ADDR_SIZE);
 			/*
 			 * Save BSSID in a separate variable as
 			 * pRoamProfile's BSSID is getting zeroed out in the
@@ -11823,10 +11852,6 @@ static int wlan_hdd_cfg80211_connect_start(hdd_adapter_t *pAdapter,
 					bssid_hint, QDF_MAC_ADDR_SIZE);
 			hdd_info("bssid_hint is given by upper layer %pM",
 					bssid_hint);
-		} else {
-			qdf_mem_zero((void *)(pRoamProfile->BSSIDs.bssid),
-				     QDF_MAC_ADDR_SIZE);
-			hdd_info("no bssid given by upper layer");
 		}
 
 		hdd_notice("Connect to SSID: %.*s operating Channel: %u",
@@ -11936,7 +11961,7 @@ static int wlan_hdd_cfg80211_connect_start(hdd_adapter_t *pAdapter,
 			return -EINVAL;
 		}
 
-		if (true == cds_is_connection_in_progress()) {
+		if (true == cds_is_connection_in_progress(NULL, NULL)) {
 			hdd_err("Connection refused: conn in progress");
 			return -EINVAL;
 		}

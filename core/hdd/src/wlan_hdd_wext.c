@@ -932,8 +932,95 @@ static const hdd_freq_chan_map_t freq_chan_map[] = {
 
 /* Private ioctls (with no sub-ioctls) */
 /* note that they must be odd so that they have "get" semantics */
+/*
+ * <ioctl>
+ * addTspec - Add TSPEC for each AC
+ *
+ * @INPUT: 19 TSPEC params
+ *	@[arg0]: handle
+ *	@[arg1]: tid
+ *	@[arg2]: dir
+ *	@[arg3]: psb
+ *	@[arg4]: up
+ *	@[arg5]: nomMsduSize
+ *	@[arg6]: maxMsduSize
+ *	@[arg7]: minDataRate
+ *	@[arg8]: meanDataRate
+ *	@[arg9]: peakDataRate
+ *	@[arg10]: maxBurstSize
+ *	@[arg11]: minPhyRate
+ *	@[arg12]: sba
+ *	@[arg13]: minServiceIntv
+ *	@[arg14]: suspendIntv
+ *	@[arg15]: burstSizeDefn
+ *	@[arg16]: ackPolicy
+ *	@[arg17]: inactivityPeriod
+ *	@[arg18]: maxServiceIntv
+ *
+ * @OUTPUT: Success/Failure
+ *
+ * This IOCTL is used to add TSPEC for each AC.
+ *
+ * @E.g: iwpriv wlan0 addTspec <handle> <tid> <dir> <psb> <up> <nomMsduSize>
+ *				<maxMsduSize> <minDataRate> <meanDataRate>
+ *				<peakDataRate> <maxBurstSize> <minPhyRate>
+ *				<sba> <minServiceIntv> <suspendIntv>
+ *				<burstSizeDefn> <ackPolicy> <inactivityPeriod>
+ *				<maxServiceIntv>
+ * iwpriv wlan0 addTspec 7001 6 2 1 6 0x80D0 0x80D0 0x14500 0x14500 0x14500
+ *			 0 0x5B8D80 0x2001 20 2000 0 0 0 2000
+ * wlan0     addTspec:3
+ *
+ * Supported Feature: WMM
+ *
+ * Usage: Internal/External
+ *
+ * </ioctl>
+ */
 #define WLAN_PRIV_ADD_TSPEC (SIOCIWFIRSTPRIV +  9)
+/*
+ * <ioctl>
+ * delTspec - Delete TSPEC entry for each AC
+ *
+ * @INPUT: 1 TSPEC param
+ *	@[arg0]: handle
+ *
+ * @OUTPUT: Success/Failure
+ *
+ * This IOCTL is used to delete TSPEC entry for each AC.
+ *
+ * @E.g: iwpriv wlan0 delTspec <handle>
+ * iwpriv wlan0 delTspec 7001
+ * wlan0     delTspec:16
+ *
+ * Supported Feature: WMM
+ *
+ * Usage: Internal/External
+ *
+ * </ioctl>
+ */
 #define WLAN_PRIV_DEL_TSPEC (SIOCIWFIRSTPRIV + 11)
+/*
+ * <ioctl>
+ * getTspec - Get TSPEC entry for each AC
+ *
+ * @INPUT: 1 TSPEC param
+ *	@[arg0]: handle
+ *
+ * @OUTPUT: Success/Failure
+ *
+ * This IOCTL is used to get TSPEC entry for each AC.
+ *
+ * @E.g: iwpriv wlan0 getTspec <handle>
+ * iwpriv wlan0 getTspec 7001
+ * wlan0     delTspec:18
+ *
+ * Supported Feature: WMM
+ *
+ * Usage: Internal/External
+ *
+ * </ioctl>
+ */
 #define WLAN_PRIV_GET_TSPEC (SIOCIWFIRSTPRIV + 13)
 
 /* (SIOCIWFIRSTPRIV + 8)  is currently unused */
@@ -2230,6 +2317,9 @@ void hdd_clear_roam_profile_ie(hdd_adapter_t *pAdapter)
 	pWextState->roamProfile.AuthType.authType[0] =
 		eCSR_AUTH_TYPE_OPEN_SYSTEM;
 
+	qdf_mem_zero(pWextState->roamProfile.bssid_hint.bytes,
+		QDF_MAC_ADDR_SIZE);
+
 #ifdef WLAN_FEATURE_11W
 	pWextState->roamProfile.MFPEnabled = false;
 	pWextState->roamProfile.MFPRequired = 0;
@@ -3360,6 +3450,13 @@ static int __iw_set_genie(struct net_device *dev,
 
 		hdd_notice("IE[0x%X], LEN[%d]", elementId, eLen);
 
+		if (remLen < eLen) {
+			hdd_err("Remaining len: %u less than ie len: %u",
+				remLen, eLen);
+			ret = -EINVAL;
+			goto exit;
+		}
+
 		switch (elementId) {
 		case IE_EID_VENDOR:
 			if ((IE_LEN_SIZE + IE_EID_SIZE + IE_VENDOR_OUI_SIZE) > eLen) {  /* should have at least OUI */
@@ -3439,8 +3536,11 @@ static int __iw_set_genie(struct net_device *dev,
 			hdd_err("Set UNKNOWN IE %X", elementId);
 			goto exit;
 		}
-		genie += eLen;
 		remLen -= eLen;
+
+		/* Move genie only if next element is present */
+		if (remLen >= 2)
+			genie += eLen;
 	}
 exit:
 	EXIT();
