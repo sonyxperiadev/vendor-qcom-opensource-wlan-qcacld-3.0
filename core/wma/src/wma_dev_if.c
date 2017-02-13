@@ -60,7 +60,6 @@
 #endif /* REMOVE_PKT_LOG */
 
 #include "dbglog_host.h"
-/* FIXME: Inclusion of .c looks odd but this is how it is in internal codebase */
 #include "csr_api.h"
 
 #include "dfs.h"
@@ -571,7 +570,7 @@ static QDF_STATUS wma_handle_vdev_detach(tp_wma_handle wma_handle,
 					 &wma_handle->wmi_cmd_rsp_wake_lock,
 					 WMA_FW_RSP_EVENT_WAKE_LOCK_DURATION);
 		qdf_runtime_pm_prevent_suspend(
-					wma_handle->wmi_cmd_rsp_runtime_lock);
+					&wma_handle->wmi_cmd_rsp_runtime_lock);
 	}
 	WMA_LOGD("Call txrx detach with callback for vdev %d", vdev_id);
 	ol_txrx_vdev_detach(iface->handle, NULL, NULL);
@@ -1171,6 +1170,10 @@ void wma_remove_peer(tp_wma_handle wma, uint8_t *bssid,
 		peer_addr = peer_mac_addr;
 	}
 
+	wma_peer_debug_log(vdev_id, DEBUG_PEER_DELETE_SEND,
+			   DEBUG_INVALID_PEER_ID, peer_addr, peer,
+			   0,
+			   qdf_atomic_read(&peer->ref_cnt));
 	wmi_unified_peer_delete_send(wma->wmi_handle, peer_addr,
 						vdev_id);
 
@@ -1244,6 +1247,9 @@ QDF_STATUS wma_create_peer(tp_wma_handle wma, ol_txrx_pdev_handle pdev,
 		  __func__, peer, qdf_atomic_read(&peer->ref_cnt),
 		  peer_addr, vdev_id,
 		  wma->interfaces[vdev_id].peer_count);
+	wma_peer_debug_log(vdev_id, DEBUG_PEER_CREATE_SEND,
+			   DEBUG_INVALID_PEER_ID, peer_addr, peer, 0,
+			   qdf_atomic_read(&peer->ref_cnt));
 
 	mac_addr_raw = ol_txrx_get_vdev_mac_addr(vdev);
 	if (mac_addr_raw == NULL) {
@@ -1410,6 +1416,42 @@ static void wma_cleanup_target_req_param(struct wma_target_req *tgt_req)
 		qdf_mem_free(tgt_req->user_data);
 		tgt_req->user_data = NULL;
 	}
+}
+
+/**
+ * wma_config_active_bpf_mode() - Config active BPF mode in FW
+ * @wma: the WMA handle
+ * @vdev_id: the Id of the vdev for which the configuration should be applied
+ *
+ * Return: QDF status
+ */
+static QDF_STATUS wma_config_active_bpf_mode(t_wma_handle *wma, uint8_t vdev_id)
+{
+	const FW_ACTIVE_BPF_MODE mcbc_mode = FW_ACTIVE_BPF_MODE_FORCE_ENABLE;
+	FW_ACTIVE_BPF_MODE uc_mode;
+
+	WMA_LOGI("Configuring Active BPF Mode %d for vdev %u",
+		 wma->active_bpf_mode, vdev_id);
+
+	switch (wma->active_bpf_mode) {
+	case ACTIVE_BPF_DISABLED:
+		uc_mode = FW_ACTIVE_BPF_MODE_DISABLE;
+		break;
+	case ACTIVE_BPF_ENABLED:
+		uc_mode = FW_ACTIVE_BPF_MODE_FORCE_ENABLE;
+		break;
+	case ACTIVE_BPF_ADAPTIVE:
+		uc_mode = FW_ACTIVE_BPF_MODE_ADAPTIVE_ENABLE;
+		break;
+	default:
+		WMA_LOGE("Invalid Active BPF Mode %d; Using 'disabled'",
+			 wma->active_bpf_mode);
+		uc_mode = FW_ACTIVE_BPF_MODE_DISABLE;
+		break;
+	}
+
+	return wmi_unified_set_active_bpf_mode_cmd(wma->wmi_handle, vdev_id,
+						   uc_mode, mcbc_mode);
 }
 
 /**
@@ -1875,6 +1917,13 @@ ol_txrx_vdev_handle wma_vdev_attach(tp_wma_handle wma_handle,
 					self_sta_req->session_id);
 	wma_register_wow_default_patterns(wma_handle, self_sta_req->session_id);
 
+	if (self_sta_req->type == WMI_VDEV_TYPE_STA) {
+		status = wma_config_active_bpf_mode(wma_handle,
+						    self_sta_req->session_id);
+		if (QDF_IS_STATUS_ERROR(status))
+			WMA_LOGE("Failed to configure active BPF mode");
+	}
+
 end:
 	self_sta_req->status = status;
 
@@ -2272,7 +2321,7 @@ int wma_vdev_delete_handler(void *handle, uint8_t *cmd_param_info,
 	}
 	qdf_wake_lock_release(&wma->wmi_cmd_rsp_wake_lock,
 				WIFI_POWER_EVENT_WAKELOCK_WMI_CMD_RSP);
-	qdf_runtime_pm_allow_suspend(wma->wmi_cmd_rsp_runtime_lock);
+	qdf_runtime_pm_allow_suspend(&wma->wmi_cmd_rsp_runtime_lock);
 	/* Send response to upper layers */
 	wma_vdev_detach_callback(req_msg->user_data);
 	qdf_mc_timer_stop(&req_msg->event_timeout);
@@ -2316,6 +2365,10 @@ int wma_peer_delete_handler(void *handle, uint8_t *cmd_param_info,
 	WMI_MAC_ADDR_TO_CHAR_ARRAY(&event->peer_macaddr, macaddr);
 	WMA_LOGE(FL("Peer Delete Response, vdev %d Peer %pM"),
 			event->vdev_id, macaddr);
+	wma_peer_debug_log(event->vdev_id, DEBUG_PEER_DELETE_RESP,
+			   DEBUG_INVALID_PEER_ID, macaddr, NULL,
+			   0,
+			   0);
 	req_msg = wma_find_remove_req_msgtype(wma, event->vdev_id,
 					WMA_DELETE_STA_REQ);
 	if (!req_msg) {
@@ -2325,7 +2378,7 @@ int wma_peer_delete_handler(void *handle, uint8_t *cmd_param_info,
 
 	qdf_wake_lock_release(&wma->wmi_cmd_rsp_wake_lock,
 				WIFI_POWER_EVENT_WAKELOCK_WMI_CMD_RSP);
-	qdf_runtime_pm_allow_suspend(wma->wmi_cmd_rsp_runtime_lock);
+	qdf_runtime_pm_allow_suspend(&wma->wmi_cmd_rsp_runtime_lock);
 		/* Cleanup timeout handler */
 	qdf_mc_timer_stop(&req_msg->event_timeout);
 	qdf_mc_timer_destroy(&req_msg->event_timeout);
@@ -2668,7 +2721,7 @@ void wma_vdev_resp_timer(void *data)
 			qdf_wake_lock_release(&wma->wmi_cmd_rsp_wake_lock,
 				WIFI_POWER_EVENT_WAKELOCK_WMI_CMD_RSP);
 			qdf_runtime_pm_allow_suspend(
-				wma->wmi_cmd_rsp_runtime_lock);
+				&wma->wmi_cmd_rsp_runtime_lock);
 		}
 		params->status = QDF_STATUS_E_TIMEOUT;
 
@@ -4202,7 +4255,7 @@ static void wma_delete_sta_req_ap_mode(tp_wma_handle wma,
 				      WIFI_POWER_EVENT_WAKELOCK_WMI_CMD_RSP);
 		qdf_wake_lock_timeout_acquire(&wma->wmi_cmd_rsp_wake_lock,
 				      WMA_FW_RSP_EVENT_WAKE_LOCK_DURATION);
-		qdf_runtime_pm_prevent_suspend(wma->wmi_cmd_rsp_runtime_lock);
+		qdf_runtime_pm_prevent_suspend(&wma->wmi_cmd_rsp_runtime_lock);
 		return;
 	}
 

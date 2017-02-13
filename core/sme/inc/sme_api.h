@@ -471,6 +471,28 @@ QDF_STATUS sme_roam_update_apwparsni_es(tHalHandle hHal, uint8_t sessionId,
 QDF_STATUS sme_change_mcc_beacon_interval(tHalHandle hHal, uint8_t sessionId);
 QDF_STATUS sme_set_host_offload(tHalHandle hHal, uint8_t sessionId,
 		tpSirHostOffloadReq pRequest);
+
+/**
+ * sme_enable_non_arp_broadcast_filter(): API to enable Broadcast filter
+ * when target goes to wow suspend/resume mode
+ * @hal: The handle returned by mac_open.
+ * @session_id: Session Identifier
+ *
+ * Return QDF_STATUS
+ */
+QDF_STATUS sme_enable_non_arp_broadcast_filter(tHalHandle hal,
+						uint8_t session_id);
+/**
+ * sme_disable_nonarp_broadcast_filter(): API to disable Broadcast filter
+ * when target goes to wow suspend/resume mode
+ * @hal: The handle returned by mac_open.
+ * @session_id: Session Identifier
+ *
+ * Return QDF_STATUS
+ */
+QDF_STATUS sme_disable_nonarp_broadcast_filter(tHalHandle hal,
+						uint8_t session_id);
+
 QDF_STATUS sme_set_keep_alive(tHalHandle hHal, uint8_t sessionId,
 		tpSirKeepAliveReq pRequest);
 QDF_STATUS sme_get_operation_channel(tHalHandle hHal, uint32_t *pChannel,
@@ -481,8 +503,6 @@ QDF_STATUS sme_register_mgmt_frame(tHalHandle hHal, uint8_t sessionId,
 QDF_STATUS sme_deregister_mgmt_frame(tHalHandle hHal, uint8_t sessionId,
 		uint16_t frameType, uint8_t *matchData,
 		uint16_t matchLen);
-QDF_STATUS sme_configure_rxp_filter(tHalHandle hHal,
-		tpSirWlanSetRxpFilters wlanRxpFilterParam);
 QDF_STATUS sme_ConfigureAppsCpuWakeupState(tHalHandle hHal, bool isAppsAwake);
 QDF_STATUS sme_configure_suspend_ind(tHalHandle hHal,
 		uint32_t conn_state_mask,
@@ -1430,5 +1450,20 @@ static inline QDF_STATUS sme_set_udp_resp_offload(struct udp_resp_offload
  * Return: QDF_STATUS
  */
 QDF_STATUS sme_get_rcpi(tHalHandle hal, struct sme_rcpi_req *rcpi);
+
+/**
+ * sme_get_beacon_frm() - gets the bss descriptor from scan cache and prepares
+ * beacon frame
+ * @hal: handle returned by mac_open
+ * @profile: current connected profile
+ * @bssid: bssid to look for in scan cache
+ * @frame_buf: frame buffer to populate
+ * @frame_len: length of constructed frame
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS sme_get_beacon_frm(tHalHandle hal, tCsrRoamProfile *profile,
+			    const tSirMacAddr bssid,
+			    uint8_t **frame_buf, uint32_t *frame_len);
 
 #endif /* #if !defined( __SME_API_H ) */

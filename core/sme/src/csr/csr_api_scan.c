@@ -4037,8 +4037,11 @@ error:
 		qdf_mem_free(save_cmd->u.roamCmd.pRoamBssEntry);
 	if (save_cmd->u.scanCmd.u.scanRequest.SSIDs.SSIDList)
 		qdf_mem_free(save_cmd->u.scanCmd.u.scanRequest.SSIDs.SSIDList);
-	if (save_cmd->u.scanCmd.pToRoamProfile)
+	if (save_cmd->u.scanCmd.pToRoamProfile) {
+		csr_release_profile(mac_ctx,
+				    save_cmd->u.scanCmd.pToRoamProfile);
 		qdf_mem_free(save_cmd->u.scanCmd.pToRoamProfile);
+	}
 
 	return QDF_STATUS_E_FAILURE;
 }
@@ -4051,6 +4054,7 @@ csr_handle_nxt_cmd(tpAniSirGlobal mac_ctx, tSmeCmd *pCommand,
 {
 	QDF_STATUS status, ret;
 	tSmeCmd *save_cmd = NULL;
+	tSmeCmd *saved_scan_cmd;
 
 	switch (*nxt_cmd) {
 	case eCsrNext11dScan1Success:
@@ -4115,9 +4119,30 @@ csr_handle_nxt_cmd(tpAniSirGlobal mac_ctx, tSmeCmd *pCommand,
 					SIR_UPDATE_REASON_HIDDEN_STA);
 		sms_log(mac_ctx, LOG1, FL("chan: %d session: %d status: %d"),
 					chan, pCommand->sessionId, ret);
-		if (mac_ctx->sme.saved_scan_cmd) {
-			qdf_mem_free(mac_ctx->sme.saved_scan_cmd);
-			mac_ctx->sme.saved_scan_cmd = NULL;
+		saved_scan_cmd = (tSmeCmd *)mac_ctx->sme.saved_scan_cmd;
+		if (saved_scan_cmd) {
+			csr_release_profile(mac_ctx, saved_scan_cmd->u.scanCmd.
+					    pToRoamProfile);
+			if (saved_scan_cmd->u.scanCmd.pToRoamProfile) {
+				qdf_mem_free(saved_scan_cmd->u.scanCmd.
+					     pToRoamProfile);
+				saved_scan_cmd->u.scanCmd.
+					pToRoamProfile = NULL;
+			}
+			if (saved_scan_cmd->u.scanCmd.u.scanRequest.SSIDs.
+			    SSIDList) {
+				qdf_mem_free(saved_scan_cmd->u.scanCmd.u.
+					     scanRequest.SSIDs.SSIDList);
+				saved_scan_cmd->u.scanCmd.u.scanRequest.SSIDs.
+					SSIDList = NULL;
+			}
+			if (saved_scan_cmd->u.roamCmd.pRoamBssEntry) {
+				qdf_mem_free(saved_scan_cmd->u.roamCmd.
+					     pRoamBssEntry);
+				saved_scan_cmd->u.roamCmd.pRoamBssEntry = NULL;
+			}
+			qdf_mem_free(saved_scan_cmd);
+			saved_scan_cmd = NULL;
 			sms_log(mac_ctx, LOGE,
 				FL("memory should have been free. Check!"));
 		}
@@ -7426,9 +7451,47 @@ QDF_STATUS csr_scan_save_roam_offload_ap_to_scan_cache(tpAniSirGlobal pMac,
 	sms_log(pMac, LOG1, FL("LFR3:Add BSSID to scan cache" MAC_ADDRESS_STR),
 		MAC_ADDR_ARRAY(scan_res_ptr->Result.BssDescriptor.bssId));
 	csr_scan_add_result(pMac, scan_res_ptr, ies_local_ptr, session_id);
+	if ((scan_res_ptr->Result.pvIes == NULL) && ies_local_ptr)
+		qdf_mem_free(ies_local_ptr);
 	return QDF_STATUS_SUCCESS;
 }
 #endif
+
+/**
+ * csr_get_fst_bssdescr_ptr() - This function returns the pointer to first bss
+ * description from scan handle
+ * @result_handle: an object for the result.
+ *
+ * Return: first bss descriptor from the scan handle.
+ */
+tpSirBssDescription csr_get_fst_bssdescr_ptr(tScanResultHandle result_handle)
+{
+	tListElem *first_element = NULL;
+	tCsrScanResult *scan_result = NULL;
+	tScanResultList *bss_list = (tScanResultList *)result_handle;
+
+	if (NULL == bss_list) {
+		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
+			FL("Empty bss_list"));
+		return NULL;
+	}
+	if (csr_ll_is_list_empty(&bss_list->List, LL_ACCESS_NOLOCK)) {
+		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
+			FL("bss_list->List is empty"));
+		qdf_mem_free(bss_list);
+		return NULL;
+	}
+	first_element = csr_ll_peek_head(&bss_list->List, LL_ACCESS_NOLOCK);
+	if (NULL == first_element) {
+		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
+			FL("peer head return NULL"));
+		return NULL;
+	}
+
+	scan_result = GET_BASE_ADDR(first_element, tCsrScanResult, Link);
+
+	return &scan_result->Result.BssDescriptor;
+}
 
 /**
  * csr_get_bssdescr_from_scan_handle() - This function to extract

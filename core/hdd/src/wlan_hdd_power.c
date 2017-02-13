@@ -419,7 +419,6 @@ static void hdd_enable_ns_offload(hdd_adapter_t *adapter)
 	uint8_t ipv6_addr[SIR_MAC_NUM_TARGET_IPV6_NS_OFFLOAD_NA]
 					[SIR_MAC_IPV6_ADDR_LEN] = { {0,} };
 	uint8_t ipv6_addr_type[SIR_MAC_NUM_TARGET_IPV6_NS_OFFLOAD_NA] = { 0 };
-	hdd_context_t *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	tSirHostOffloadReq offloadReq;
 	QDF_STATUS status;
 	uint32_t count = 0;
@@ -490,8 +489,6 @@ static void hdd_enable_ns_offload(hdd_adapter_t *adapter)
 			&offloadReq.nsOffloadInfo.targetIPv6Addr[i], i);
 	}
 
-	hdd_info("configuredMcastBcastFilter: %d",
-		hdd_ctx->configuredMcastBcastFilter);
 	hdd_wlan_offload_event(SIR_IPV6_NS_OFFLOAD, SIR_OFFLOAD_ENABLE);
 	offloadReq.offloadType =  SIR_IPV6_NS_OFFLOAD;
 	offloadReq.enableOrDisable = SIR_OFFLOAD_ENABLE;
@@ -579,12 +576,6 @@ static void __hdd_ipv6_notifier_work_queue(struct work_struct *work)
 		return;
 	}
 
-	if (false == pHddCtx->sus_res_mcastbcast_filter_valid) {
-		pHddCtx->sus_res_mcastbcast_filter =
-			pHddCtx->configuredMcastBcastFilter;
-		pHddCtx->sus_res_mcastbcast_filter_valid = true;
-	}
-
 	/* check if the device is in NAN data mode */
 	if (WLAN_HDD_IS_NDI(pAdapter))
 		ndi_connected = WLAN_HDD_IS_NDI_CONNECTED(pAdapter);
@@ -662,10 +653,152 @@ void hdd_conf_hostoffload(hdd_adapter_t *pAdapter, bool fenable)
 		    pHddCtx->ns_offload_enable)
 			hdd_conf_ns_offload(pAdapter, fenable);
 	}
+
+	/*
+	 * Filter Non-Arp HW broadcast filter when target goes to
+	 * wow suspend/resume mode
+	 */
+	if (pHddCtx->config->hw_broadcast_filter) {
+		if (fenable) {
+			hdd_info("set hw broadcast fliter");
+			hdd_set_non_arp_hw_broadcast_filter(pAdapter);
+		} else {
+			hdd_info("clear hw broadcast fliter");
+			hdd_clear_non_arp_hw_broadcast_filter(pAdapter);
+		}
+	}
+
 	EXIT();
 	return;
 }
 #endif
+
+/**
+ * hdd_lookup_ifaddr() - Lookup interface address data by name
+ * @adapter: the adapter whose name should be searched for
+ *
+ * return in_ifaddr pointer on success, NULL for failure
+ */
+static struct in_ifaddr *hdd_lookup_ifaddr(hdd_adapter_t *adapter)
+{
+	struct in_ifaddr *ifa;
+	struct in_device *in_dev;
+
+	if (!adapter) {
+		hdd_err("adapter is null");
+		return NULL;
+	}
+
+	in_dev = __in_dev_get_rtnl(adapter->dev);
+	if (!in_dev) {
+		hdd_err("Failed to get in_device");
+		return NULL;
+	}
+
+	/* lookup address data by interface name */
+	for (ifa = in_dev->ifa_list; ifa; ifa = ifa->ifa_next) {
+		if (!strcmp(adapter->dev->name, ifa->ifa_label))
+			return ifa;
+	}
+
+	return NULL;
+}
+
+/**
+ * hdd_populate_ipv4_addr() - Populates the adapter's IPv4 address
+ * @adapter: the adapter whose IPv4 address is desired
+ * @ipv4_addr: the address of the array to copy the IPv4 address into
+ *
+ * return: zero for success; non-zero for failure
+ */
+static int hdd_populate_ipv4_addr(hdd_adapter_t *adapter, uint8_t *ipv4_addr)
+{
+	struct in_ifaddr *ifa;
+	int i;
+
+	if (!adapter) {
+		hdd_err("adapter is null");
+		return -EINVAL;
+	}
+
+	if (!ipv4_addr) {
+		hdd_err("ipv4_addr is null");
+		return -EINVAL;
+	}
+
+	ifa = hdd_lookup_ifaddr(adapter);
+	if (!ifa || !ifa->ifa_local) {
+		hdd_err("ipv4 address not found");
+		return -EINVAL;
+	}
+
+	/* convert u32 to byte array */
+	for (i = 0; i < 4; i++)
+		ipv4_addr[i] = (ifa->ifa_local >> i * 8) & 0xff;
+
+	return 0;
+}
+
+/**
+ * hdd_set_grat_arp_keepalive() - Enable grat APR keepalive
+ * @adapter: the HDD adapter to configure
+ *
+ * This configures gratuitous APR keepalive based on the adapter's current
+ * connection information, specifically IPv4 address and BSSID
+ *
+ * return: zero for success, non-zero for failure
+ */
+static int hdd_set_grat_arp_keepalive(hdd_adapter_t *adapter)
+{
+	QDF_STATUS status;
+	int exit_code;
+	hdd_context_t *hdd_ctx;
+	hdd_station_ctx_t *sta_ctx;
+	tSirKeepAliveReq req = {
+		.packetType = SIR_KEEP_ALIVE_UNSOLICIT_ARP_RSP,
+		.destIpv4Addr = {0xff, 0xff, 0xff, 0xff},
+		.dest_macaddr = QDF_MAC_ADDR_BROADCAST_INITIALIZER,
+	};
+
+	if (!adapter) {
+		hdd_err("adapter is null");
+		return -EINVAL;
+	}
+
+	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	if (!hdd_ctx) {
+		hdd_err("hdd_ctx is null");
+		return -EINVAL;
+	}
+
+	sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
+	if (!sta_ctx) {
+		hdd_err("sta_ctx is null");
+		return -EINVAL;
+	}
+
+	exit_code = hdd_populate_ipv4_addr(adapter, req.hostIpv4Addr);
+	if (exit_code) {
+		hdd_err("Failed to populate ipv4 address");
+		return exit_code;
+	}
+
+	qdf_copy_macaddr(&req.bssid, &sta_ctx->conn_info.bssId);
+	req.timePeriod = hdd_ctx->config->infraStaKeepAlivePeriod;
+	req.sessionId = adapter->sessionId;
+
+	hdd_info("Setting gratuitous ARP keepalive; ipv4_addr:%u.%u.%u.%u",
+		 req.hostIpv4Addr[0], req.hostIpv4Addr[1],
+		 req.hostIpv4Addr[2], req.hostIpv4Addr[3]);
+
+	status = sme_set_keep_alive(hdd_ctx->hHal, req.sessionId, &req);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		hdd_err("Failed to set keepalive");
+		return qdf_status_to_os_return(status);
+	}
+
+	return 0;
+}
 
 /**
  * __hdd_ipv4_notifier_work_queue() - IPv4 notification work function
@@ -683,10 +816,13 @@ static void __hdd_ipv4_notifier_work_queue(struct work_struct *work)
 	hdd_adapter_t *pAdapter =
 		container_of(work, hdd_adapter_t, ipv4NotifierWorkQueue);
 	hdd_context_t *pHddCtx;
+	hdd_station_ctx_t *sta_ctx;
 	int status;
-	bool ndi_connected = false;
+	bool ndi_connected;
+	bool sta_associated;
 
 	hdd_info("Configuring ARP Offload");
+
 	pHddCtx = WLAN_HDD_GET_CTX(pAdapter);
 	status = wlan_hdd_validate_context(pHddCtx);
 	if (status)
@@ -697,25 +833,24 @@ static void __hdd_ipv4_notifier_work_queue(struct work_struct *work)
 		return;
 	}
 
-	if (false == pHddCtx->sus_res_mcastbcast_filter_valid) {
-		pHddCtx->sus_res_mcastbcast_filter =
-			pHddCtx->configuredMcastBcastFilter;
-		pHddCtx->sus_res_mcastbcast_filter_valid = true;
-	}
+	ndi_connected = WLAN_HDD_IS_NDI(pAdapter) &&
+		WLAN_HDD_IS_NDI_CONNECTED(pAdapter);
 
-	/* check if the device is in NAN data mode */
-	if (WLAN_HDD_IS_NDI(pAdapter))
-		ndi_connected = WLAN_HDD_IS_NDI_CONNECTED(pAdapter);
+	sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(pAdapter);
+	sta_associated = sta_ctx->conn_info.connState ==
+		eConnectionState_Associated;
 
-	if (eConnectionState_Associated ==
-	     (WLAN_HDD_GET_STATION_CTX_PTR(pAdapter))->conn_info.connState ||
-		ndi_connected)
-		/*
-		 * This invocation being part of the IPv4 registration callback,
-		 * we are passing second parameter as 2 to avoid registration
-		 * of IPv4 notifier again.
-		 */
-		hdd_conf_arp_offload(pAdapter, true);
+	if (!ndi_connected && !sta_associated)
+		return;
+
+	/*
+	 * This invocation being part of the IPv4 registration callback,
+	 * we are passing second parameter as 2 to avoid registration
+	 * of IPv4 notifier again.
+	 */
+	hdd_conf_arp_offload(pAdapter, true);
+
+	hdd_set_grat_arp_keepalive(pAdapter);
 }
 
 /**
@@ -748,9 +883,6 @@ static int __wlan_hdd_ipv4_changed(struct notifier_block *nb,
 				 unsigned long data, void *arg)
 {
 	struct in_ifaddr *ifa = (struct in_ifaddr *)arg;
-	struct in_ifaddr **ifap = NULL;
-	struct in_device *in_dev;
-
 	struct net_device *ndev = ifa->ifa_dev->dev;
 	hdd_adapter_t *pAdapter = WLAN_HDD_GET_PRIV_PTR(ndev);
 	hdd_context_t *pHddCtx;
@@ -788,19 +920,9 @@ static int __wlan_hdd_ipv4_changed(struct notifier_block *nb,
 			return NOTIFY_DONE;
 		}
 
-		in_dev = __in_dev_get_rtnl(pAdapter->dev);
-		if (in_dev) {
-			for (ifap = &in_dev->ifa_list; (ifa = *ifap) != NULL;
-			     ifap = &ifa->ifa_next) {
-				if (!strcmp(pAdapter->dev->name,
-					    ifa->ifa_label)) {
-					break;  /* found */
-				}
-			}
-		}
-		if (ifa && ifa->ifa_local) {
+		ifa = hdd_lookup_ifaddr(pAdapter);
+		if (ifa && ifa->ifa_local)
 			schedule_work(&pAdapter->ipv4NotifierWorkQueue);
-		}
 	}
 	EXIT();
 	return NOTIFY_DONE;
@@ -841,9 +963,7 @@ int wlan_hdd_ipv4_changed(struct notifier_block *nb,
  */
 QDF_STATUS hdd_conf_arp_offload(hdd_adapter_t *pAdapter, bool fenable)
 {
-	struct in_ifaddr **ifap = NULL;
-	struct in_ifaddr *ifa = NULL;
-	struct in_device *in_dev;
+	struct in_ifaddr *ifa;
 	int i = 0;
 	tSirHostOffloadReq offLoadRequest;
 	hdd_context_t *pHddCtx = WLAN_HDD_GET_CTX(pAdapter);
@@ -861,38 +981,14 @@ QDF_STATUS hdd_conf_arp_offload(hdd_adapter_t *pAdapter, bool fenable)
 	}
 
 	if (fenable) {
-		in_dev = __in_dev_get_rtnl(pAdapter->dev);
-		if (in_dev) {
-			for (ifap = &in_dev->ifa_list; (ifa = *ifap) != NULL;
-			     ifap = &ifa->ifa_next) {
-				if (!strcmp(pAdapter->dev->name,
-					    ifa->ifa_label)) {
-					break;  /* found */
-				}
-			}
-		}
+		ifa = hdd_lookup_ifaddr(pAdapter);
 		if (ifa && ifa->ifa_local) {
 			offLoadRequest.offloadType = SIR_IPV4_ARP_REPLY_OFFLOAD;
 			offLoadRequest.enableOrDisable = SIR_OFFLOAD_ENABLE;
 			hdd_wlan_offload_event(SIR_IPV4_ARP_REPLY_OFFLOAD,
-				SIR_OFFLOAD_ENABLE);
+					       SIR_OFFLOAD_ENABLE);
 
-			hdd_notice("Enabled");
-
-			if (((HDD_MCASTBCASTFILTER_FILTER_ALL_BROADCAST ==
-			      pHddCtx->sus_res_mcastbcast_filter) ||
-			     (HDD_MCASTBCASTFILTER_FILTER_ALL_MULTICAST_BROADCAST
-			      == pHddCtx->sus_res_mcastbcast_filter))
-			    && (true ==
-				pHddCtx->sus_res_mcastbcast_filter_valid)) {
-				offLoadRequest.enableOrDisable =
-					SIR_OFFLOAD_ARP_AND_BCAST_FILTER_ENABLE;
-				hdd_notice("offload: inside arp offload conditional check");
-			}
-			hdd_wlan_offload_event(
-				SIR_OFFLOAD_ARP_AND_BCAST_FILTER_ENABLE,
-				SIR_OFFLOAD_ENABLE);
-			hdd_notice("offload: arp filter programmed = %d",
+			hdd_notice("Enable ARP offload: filter programmed = %d",
 			       offLoadRequest.enableOrDisable);
 
 			/* converting u32 to IPV4 address */
@@ -936,91 +1032,28 @@ QDF_STATUS hdd_conf_arp_offload(hdd_adapter_t *pAdapter, bool fenable)
 	}
 }
 
-/**
- * hdd_mcbc_filter_modification() - MCBC Filter Modifier
- * @pHddCtx: Global Hdd Context
- * @pMcBcFilter: Multicast/Broadcast filter to be modified
- *
- * This function is called before setting mcbc filters
- * to modify filter value considering different offloads
- *
- * Return: None.
- */
-static void hdd_mcbc_filter_modification(hdd_context_t *pHddCtx,
-					 uint8_t *pMcBcFilter)
+int hdd_set_non_arp_hw_broadcast_filter(hdd_adapter_t *adapter)
 {
-	if (NULL == pHddCtx) {
-		hdd_err("NULL HDD context passed");
-		return;
+	if (QDF_STATUS_SUCCESS !=
+		sme_enable_non_arp_broadcast_filter(
+			WLAN_HDD_GET_HAL_CTX(adapter), adapter->sessionId)) {
+		hdd_err("Failed to enable broadcast filter");
+		return -EINVAL;
 	}
 
-	*pMcBcFilter = pHddCtx->configuredMcastBcastFilter;
-	if (pHddCtx->config->fhostArpOffload) {
-		/* ARP offload is enabled, do not block bcast packets at RXP
-		 * Will be using Bitmasking to reset the filter. As we have
-		 * disable Broadcast filtering, Anding with the negation
-		 * of Broadcast BIT
-		 */
-		*pMcBcFilter &= ~(HDD_MCASTBCASTFILTER_FILTER_ALL_BROADCAST);
-		hdd_info("ARP offload is enabled");
-	}
-#ifdef WLAN_NS_OFFLOAD
-	if (pHddCtx->config->fhostNSOffload) {
-		/* NS offload is enabled, do not block mcast packets at RXP
-		 * Will be using Bitmasking to reset the filter. As we have
-		 * disable Multicast filtering, Anding with the negation
-		 * of Multicast BIT
-		 */
-		hdd_info("NS offload is enabled");
-		*pMcBcFilter &= ~(HDD_MCASTBCASTFILTER_FILTER_ALL_MULTICAST);
-	}
-#endif
-
-	pHddCtx->configuredMcastBcastFilter = *pMcBcFilter;
+	return 0;
 }
 
-/**
- * hdd_conf_mcastbcast_filter() - Configure multicast/broadcast filter
- * @pHddCtx: Global HDD context
- * @setfilter: true if filter is being set, false if filter is being cleared
- *
- * Return: None.
- */
-void hdd_conf_mcastbcast_filter(hdd_context_t *pHddCtx, bool setfilter)
+int hdd_clear_non_arp_hw_broadcast_filter(hdd_adapter_t *adapter)
 {
-	QDF_STATUS qdf_ret_status = QDF_STATUS_E_FAILURE;
-	tpSirWlanSetRxpFilters wlanRxpFilterParam =
-		qdf_mem_malloc(sizeof(tSirWlanSetRxpFilters));
-	if (NULL == wlanRxpFilterParam) {
-		hdd_alert("qdf_mem_malloc failed ");
-		return;
-	}
-	hdd_notice("Configuring Mcast/Bcast Filter Setting. setfilter %d", setfilter);
-	if (true == setfilter) {
-		hdd_mcbc_filter_modification(pHddCtx,
-					     &wlanRxpFilterParam->
-					     configuredMcstBcstFilterSetting);
-	} else {
-		/*Use the current configured value to clear */
-		wlanRxpFilterParam->configuredMcstBcstFilterSetting =
-			pHddCtx->configuredMcastBcastFilter;
+	if (QDF_STATUS_SUCCESS !=
+		sme_disable_nonarp_broadcast_filter(
+			WLAN_HDD_GET_HAL_CTX(adapter), adapter->sessionId)) {
+		hdd_err("Failed to disable broadcast filter");
+		return -EINVAL;
 	}
 
-	wlanRxpFilterParam->setMcstBcstFilter = setfilter;
-	qdf_ret_status =
-		sme_configure_rxp_filter(pHddCtx->hHal, wlanRxpFilterParam);
-
-	if (setfilter && (QDF_STATUS_SUCCESS == qdf_ret_status))
-		pHddCtx->hdd_mcastbcast_filter_set = true;
-
-	hdd_notice("%s to post set/reset filter to lower mac with status %d configuredMcstBcstFilterSetting = %d setMcstBcstFilter = %d",
-		(QDF_STATUS_SUCCESS != qdf_ret_status) ? "Failed" : "Success",
-		qdf_ret_status,
-		wlanRxpFilterParam->configuredMcstBcstFilterSetting,
-		wlanRxpFilterParam->setMcstBcstFilter);
-
-	if (QDF_STATUS_SUCCESS != qdf_ret_status)
-		qdf_mem_free(wlanRxpFilterParam);
+	return 0;
 }
 
 #ifdef WLAN_FEATURE_PACKET_FILTERING
@@ -1132,23 +1165,6 @@ int wlan_hdd_set_mc_addr_list(hdd_adapter_t *pAdapter, uint8_t set)
 #endif
 
 /**
- * hdd_update_mcastbcast_filter(): cache multi and broadcast filter for suspend
- * @hdd_ctx: hdd context
- *
- * Cache the configured filter to be used in suspend resume.
- */
-static void hdd_update_mcastbcast_filter(hdd_context_t *hdd_ctx)
-{
-	if (false == hdd_ctx->sus_res_mcastbcast_filter_valid) {
-		hdd_ctx->sus_res_mcastbcast_filter =
-			hdd_ctx->configuredMcastBcastFilter;
-		hdd_ctx->sus_res_mcastbcast_filter_valid = true;
-		hdd_info("configuredMCastBcastFilter saved = %d",
-			hdd_ctx->configuredMcastBcastFilter);
-	}
-}
-
-/**
  * hdd_conf_suspend_ind() - Send Suspend notification
  * @pHddCtx: HDD Global context
  * @pAdapter: adapter being suspended
@@ -1171,12 +1187,9 @@ static void hdd_send_suspend_ind(hdd_context_t *pHddCtx,
 		sme_configure_suspend_ind(pHddCtx->hHal, conn_state_mask,
 					  callback, callbackContext);
 
-	if (QDF_STATUS_SUCCESS == qdf_ret_status) {
-		pHddCtx->hdd_mcastbcast_filter_set = true;
-	} else {
+	if (QDF_STATUS_SUCCESS != qdf_ret_status)
 		hdd_err("sme_configure_suspend_ind returned failure %d",
 		       qdf_ret_status);
-	}
 }
 
 /**
@@ -1200,17 +1213,6 @@ static void hdd_conf_resume_ind(hdd_adapter_t *pAdapter)
 	hdd_notice("send wlan resume indication");
 	/* Disable supported OffLoads */
 	hdd_conf_hostoffload(pAdapter, false);
-	pHddCtx->hdd_mcastbcast_filter_set = false;
-
-	if (true == pHddCtx->sus_res_mcastbcast_filter_valid) {
-		pHddCtx->configuredMcastBcastFilter =
-			pHddCtx->sus_res_mcastbcast_filter;
-		pHddCtx->sus_res_mcastbcast_filter_valid = false;
-	}
-
-	hdd_notice("offload: in hdd_conf_resume_ind, restoring configuredMcastBcastFilter");
-	hdd_notice("configuredMcastBcastFilter = %d",
-	       pHddCtx->configuredMcastBcastFilter);
 }
 
 /**
@@ -1265,8 +1267,6 @@ hdd_suspend_wlan(void (*callback)(void *callbackContext, bool suspended),
 			 cds_get_driver_state());
 		return;
 	}
-
-	hdd_update_mcastbcast_filter(pHddCtx);
 
 	status = hdd_get_front_adapter(pHddCtx, &pAdapterNode);
 	while (NULL != pAdapterNode && QDF_STATUS_SUCCESS == status) {
@@ -1589,7 +1589,6 @@ QDF_STATUS hdd_wlan_re_init(void)
 	pHddCtx->last_scan_reject_reason = 0;
 	pHddCtx->last_scan_reject_timestamp = 0;
 
-	pHddCtx->hdd_mcastbcast_filter_set = false;
 	pHddCtx->btCoexModeSet = false;
 
 	/* Allow the phone to go to sleep */
@@ -2123,7 +2122,7 @@ static void hdd_stop_dhcp_ind(hdd_adapter_t *adapter)
 			  adapter->macAddressCurrent.bytes,
 			  adapter->sessionId);
 	hdd_allow_suspend(WIFI_POWER_EVENT_WAKELOCK_DHCP);
-	qdf_runtime_pm_allow_suspend(adapter->connect_rpm_ctx.connect);
+	qdf_runtime_pm_allow_suspend(&adapter->connect_rpm_ctx.connect);
 }
 
 /**
@@ -2140,7 +2139,7 @@ static void hdd_start_dhcp_ind(hdd_adapter_t *adapter)
 	hdd_context_t *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 
 	hdd_err("DHCP start indicated through power save");
-	qdf_runtime_pm_prevent_suspend(adapter->connect_rpm_ctx.connect);
+	qdf_runtime_pm_prevent_suspend(&adapter->connect_rpm_ctx.connect);
 	hdd_prevent_suspend_timeout(1000, WIFI_POWER_EVENT_WAKELOCK_DHCP);
 	sme_dhcp_start_ind(hdd_ctx->hHal, adapter->device_mode,
 			   adapter->macAddressCurrent.bytes,

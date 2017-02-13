@@ -154,7 +154,7 @@ static void hdd_hostapd_channel_allow_suspend(hdd_adapter_t *pAdapter,
 		hdd_err("DFS: allowing suspend (chan %d)", channel);
 		qdf_wake_lock_release(&pHddCtx->sap_dfs_wakelock,
 				      WIFI_POWER_EVENT_WAKELOCK_DFS);
-		qdf_runtime_pm_allow_suspend(pHddCtx->runtime_context.dfs);
+		qdf_runtime_pm_allow_suspend(&pHddCtx->runtime_context.dfs);
 
 	}
 }
@@ -190,7 +190,7 @@ static void hdd_hostapd_channel_prevent_suspend(hdd_adapter_t *pAdapter,
 	/* Acquire wakelock if we have at least one DFS channel in use */
 	if (atomic_inc_return(&pHddCtx->sap_dfs_ref_cnt) == 1) {
 		hdd_err("DFS: preventing suspend (chan %d)", channel);
-		qdf_runtime_pm_prevent_suspend(pHddCtx->runtime_context.dfs);
+		qdf_runtime_pm_prevent_suspend(&pHddCtx->runtime_context.dfs);
 		qdf_wake_lock_acquire(&pHddCtx->sap_dfs_wakelock,
 				      WIFI_POWER_EVENT_WAKELOCK_DFS);
 	}
@@ -4979,6 +4979,12 @@ static int __iw_set_ap_genie(struct net_device *dev,
 		return 0;
 	}
 
+	if (wrqu->data.length > DOT11F_IE_RSN_MAX_LEN) {
+		hdd_err("%s: WPARSN Ie input length is more than max[%d]",
+			__func__, wrqu->data.length);
+		return QDF_STATUS_E_INVAL;
+	}
+
 	switch (genie[0]) {
 	case DOT11F_EID_WPA:
 	case DOT11F_EID_RSN:
@@ -7794,7 +7800,7 @@ static int __wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy,
 					struct net_device *dev)
 {
 	hdd_adapter_t *pAdapter = WLAN_HDD_GET_PRIV_PTR(dev);
-	hdd_context_t *pHddCtx = NULL;
+	hdd_context_t *pHddCtx = wiphy_priv(wiphy);
 	hdd_scaninfo_t *pScanInfo = NULL;
 	hdd_adapter_t *staAdapter = NULL;
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
@@ -7810,6 +7816,11 @@ static int __wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy,
 
 	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
 		hdd_err("Command not allowed in FTM mode");
+		return -EINVAL;
+	}
+
+	if (pHddCtx->driver_status == DRIVER_MODULES_CLOSED) {
+		hdd_err("Driver module is closed; dropping request");
 		return -EINVAL;
 	}
 
@@ -7831,7 +7842,6 @@ static int __wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy,
 		hdd_device_mode_to_string(pAdapter->device_mode),
 		pAdapter->device_mode);
 
-	pHddCtx = WLAN_HDD_GET_CTX(pAdapter);
 	ret = wlan_hdd_validate_context(pHddCtx);
 	if (0 != ret)
 		return ret;

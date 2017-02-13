@@ -85,6 +85,7 @@
 #include <cds_concurrency.h>
 #include "epping_main.h"
 #include <a_types.h>
+#include "wma_api.h"
 
 #ifdef CONFIG_HL_SUPPORT
 
@@ -960,6 +961,111 @@ ol_txrx_peer_tx_queue_free(struct ol_txrx_pdev_t *pdev,
 }
 #endif
 
+#if defined(FEATURE_TSO) && defined(FEATURE_TSO_DEBUG)
+static void ol_txrx_tso_stats_init(ol_txrx_pdev_handle pdev)
+{
+	qdf_spinlock_create(&pdev->stats.pub.tx.tso.tso_stats_lock);
+}
+
+static void ol_txrx_tso_stats_deinit(ol_txrx_pdev_handle pdev)
+{
+	qdf_spinlock_destroy(&pdev->stats.pub.tx.tso.tso_stats_lock);
+}
+
+static void ol_txrx_stats_display_tso(ol_txrx_pdev_handle pdev)
+{
+	int msdu_idx;
+	int seg_idx;
+
+	QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
+		"TSO Statistics:");
+	QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
+		"TSO pkts %lld, bytes %lld\n",
+		pdev->stats.pub.tx.tso.tso_pkts.pkts,
+		pdev->stats.pub.tx.tso.tso_pkts.bytes);
+
+	QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
+			"TSO Histogram for numbers of segments:\n"
+			"Single segment	%d\n"
+			"  2-5 segments	%d\n"
+			" 6-10 segments	%d\n"
+			"11-15 segments	%d\n"
+			"16-20 segments	%d\n"
+			"  20+ segments	%d\n",
+			pdev->stats.pub.tx.tso.tso_hist.pkts_1,
+			pdev->stats.pub.tx.tso.tso_hist.pkts_2_5,
+			pdev->stats.pub.tx.tso.tso_hist.pkts_6_10,
+			pdev->stats.pub.tx.tso.tso_hist.pkts_11_15,
+			pdev->stats.pub.tx.tso.tso_hist.pkts_16_20,
+			pdev->stats.pub.tx.tso.tso_hist.pkts_20_plus);
+
+	QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
+			"TSO History Buffer: Total size %d, current_index %d",
+			NUM_MAX_TSO_MSDUS,
+			TXRX_STATS_TSO_MSDU_IDX(pdev));
+
+	for (msdu_idx = 0; msdu_idx < NUM_MAX_TSO_MSDUS; msdu_idx++) {
+		if (TXRX_STATS_TSO_MSDU_TOTAL_LEN(pdev, msdu_idx) == 0)
+			continue;
+		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
+			"jumbo pkt idx: %d num segs %d gso_len %d total_len %d nr_frags %d",
+			msdu_idx,
+			TXRX_STATS_TSO_MSDU_NUM_SEG(pdev, msdu_idx),
+			TXRX_STATS_TSO_MSDU_GSO_SIZE(pdev, msdu_idx),
+			TXRX_STATS_TSO_MSDU_TOTAL_LEN(pdev, msdu_idx),
+			TXRX_STATS_TSO_MSDU_NR_FRAGS(pdev, msdu_idx));
+
+		for (seg_idx = 0;
+			 ((seg_idx < TXRX_STATS_TSO_MSDU_NUM_SEG(pdev, msdu_idx)) &&
+			  (seg_idx < NUM_MAX_TSO_SEGS));
+			 seg_idx++) {
+			struct qdf_tso_seg_t tso_seg =
+				 TXRX_STATS_TSO_SEG(pdev, msdu_idx, seg_idx);
+
+			QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
+				 "seg idx: %d", seg_idx);
+			QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
+				 "tso_enable: %d",
+				 tso_seg.tso_flags.tso_enable);
+			QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
+				 "fin %d syn %d rst %d psh %d ack %d urg %d ece %d cwr %d ns %d",
+				 tso_seg.tso_flags.fin, tso_seg.tso_flags.syn,
+				 tso_seg.tso_flags.rst, tso_seg.tso_flags.psh,
+				 tso_seg.tso_flags.ack, tso_seg.tso_flags.urg,
+				 tso_seg.tso_flags.ece, tso_seg.tso_flags.cwr,
+				 tso_seg.tso_flags.ns);
+			QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
+				 "tcp_seq_num: 0x%x ip_id: %d",
+				 tso_seg.tso_flags.tcp_seq_num,
+				 tso_seg.tso_flags.ip_id);
+		}
+	}
+}
+#else
+static void ol_txrx_stats_display_tso(ol_txrx_pdev_handle pdev)
+{
+	QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
+	 "TSO is not supported\n");
+}
+
+static void ol_txrx_tso_stats_init(ol_txrx_pdev_handle pdev)
+{
+	/*
+	 * keeping the body empty and not keeping an error print as print will
+	 * will show up everytime during driver load if TSO is not enabled.
+	 */
+}
+
+static void ol_txrx_tso_stats_deinit(ol_txrx_pdev_handle pdev)
+{
+	/*
+	 * keeping the body empty and not keeping an error print as print will
+	 * will show up everytime during driver unload if TSO is not enabled.
+	 */
+}
+
+#endif /* defined(FEATURE_TSO) && defined(FEATURE_TSO_DEBUG) */
+
 /**
  * ol_txrx_pdev_attach() - allocate txrx pdev
  * @ctrl_pdev: cfg pdev
@@ -992,6 +1098,7 @@ ol_txrx_pdev_attach(ol_pdev_handle ctrl_pdev,
 		pdev->sec_types[i] = (enum ol_sec_type)i;
 
 	TXRX_STATS_INIT(pdev);
+	ol_txrx_tso_stats_init(pdev);
 
 	TAILQ_INIT(&pdev->vdev_list);
 
@@ -1029,6 +1136,7 @@ fail2:
 		qdf_spinlock_destroy(&pdev->tx_queue_spinlock);
 
 fail1:
+	ol_txrx_tso_stats_deinit(pdev);
 	qdf_mem_free(pdev);
 
 fail0:
@@ -1696,6 +1804,8 @@ void ol_txrx_pdev_detach(ol_txrx_pdev_handle pdev, int force)
 
 	ol_txrx_peer_find_detach(pdev);
 
+	ol_txrx_tso_stats_deinit(pdev);
+
 	qdf_spinlock_destroy(&pdev->tx_mutex);
 	qdf_spinlock_destroy(&pdev->peer_ref_mutex);
 	qdf_spinlock_destroy(&pdev->last_real_peer_mutex);
@@ -2169,6 +2279,7 @@ ol_txrx_peer_attach(ol_txrx_vdev_handle vdev, uint8_t *peer_mac_addr)
 				"error waiting for peer(%d) deletion, status %d\n",
 				vdev->wait_on_peer_id, (int) rc);
 			/* Added for debugging only */
+			wma_peer_debug_dump();
 			QDF_BUG(0);
 			vdev->wait_on_peer_id = OL_TXRX_INVALID_LOCAL_PEER_ID;
 			return NULL;
@@ -2821,6 +2932,9 @@ int ol_txrx_peer_unref_delete(ol_txrx_peer_handle peer)
 		return -EINVAL;
 	}
 
+	wma_peer_debug_log(vdev->vdev_id, DEBUG_PEER_UNREF_DELETE,
+			   DEBUG_INVALID_PEER_ID, &peer->mac_addr.raw, peer, 0,
+			   qdf_atomic_read(&peer->ref_cnt));
 
 	/*
 	 * Hold the lock all the way from checking if the peer ref count
@@ -2866,6 +2980,11 @@ int ol_txrx_peer_unref_delete(ol_txrx_peer_handle peer)
 			   peer->mac_addr.raw,
 			   qdf_atomic_read(&peer->ref_cnt));
 
+		wma_peer_debug_log(vdev->vdev_id, DEBUG_DELETING_PEER_OBJ,
+				   DEBUG_INVALID_PEER_ID,
+				   &peer->mac_addr.raw, peer, 0,
+				   qdf_atomic_read(&peer->ref_cnt));
+
 		peer_id = peer->local_id;
 		/* remove the reference to the peer from the hash table */
 		ol_txrx_peer_find_hash_remove(pdev, peer);
@@ -2892,7 +3011,6 @@ int ol_txrx_peer_unref_delete(ol_txrx_peer_handle peer)
 			qdf_mc_timer_stop(&peer->peer_unmap_timer);
 			qdf_mc_timer_destroy(&peer->peer_unmap_timer);
 		}
-
 		/* check whether the parent vdev has no peers left */
 		if (TAILQ_EMPTY(&vdev->peer_list)) {
 			/*
@@ -3038,6 +3156,7 @@ void peer_unmap_timer_handler(void *data)
 		 peer->mac_addr.raw[0], peer->mac_addr.raw[1],
 		 peer->mac_addr.raw[2], peer->mac_addr.raw[3],
 		 peer->mac_addr.raw[4], peer->mac_addr.raw[5]);
+	wma_peer_debug_dump();
 	QDF_BUG(0);
 }
 
@@ -3708,84 +3827,6 @@ void ol_txrx_peer_display(ol_txrx_peer_handle peer, int indent)
 	}
 }
 #endif /* TXRX_DEBUG_LEVEL */
-
-#if defined(FEATURE_TSO) && defined(FEATURE_TSO_DEBUG)
-static void ol_txrx_stats_display_tso(ol_txrx_pdev_handle pdev)
-{
-	int msdu_idx;
-	int seg_idx;
-
-	QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
-		"TSO Statistics:");
-	QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
-		"TSO pkts %lld, bytes %lld\n",
-		pdev->stats.pub.tx.tso.tso_pkts.pkts,
-		pdev->stats.pub.tx.tso.tso_pkts.bytes);
-
-	QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
-			"TSO Histogram for numbers of segments:\n"
-			"Single segment	%d\n"
-			"  2-5 segments	%d\n"
-			" 6-10 segments	%d\n"
-			"11-15 segments	%d\n"
-			"16-20 segments	%d\n"
-			"  20+ segments	%d\n",
-			pdev->stats.pub.tx.tso.tso_hist.pkts_1,
-			pdev->stats.pub.tx.tso.tso_hist.pkts_2_5,
-			pdev->stats.pub.tx.tso.tso_hist.pkts_6_10,
-			pdev->stats.pub.tx.tso.tso_hist.pkts_11_15,
-			pdev->stats.pub.tx.tso.tso_hist.pkts_16_20,
-			pdev->stats.pub.tx.tso.tso_hist.pkts_20_plus);
-
-	QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
-			"TSO History Buffer: Total size %d, current_index %d",
-			NUM_MAX_TSO_MSDUS,
-			TXRX_STATS_TSO_MSDU_IDX(pdev));
-
-	for (msdu_idx = 0; msdu_idx < NUM_MAX_TSO_MSDUS; msdu_idx++) {
-		if (TXRX_STATS_TSO_MSDU_TOTAL_LEN(pdev, msdu_idx) == 0)
-			continue;
-		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
-			"jumbo pkt idx: %d num segs %d gso_len %d total_len %d nr_frags %d",
-			msdu_idx,
-			TXRX_STATS_TSO_MSDU_NUM_SEG(pdev, msdu_idx),
-			TXRX_STATS_TSO_MSDU_GSO_SIZE(pdev, msdu_idx),
-			TXRX_STATS_TSO_MSDU_TOTAL_LEN(pdev, msdu_idx),
-			TXRX_STATS_TSO_MSDU_NR_FRAGS(pdev, msdu_idx));
-
-		for (seg_idx = 0;
-			 ((seg_idx < TXRX_STATS_TSO_MSDU_NUM_SEG(pdev, msdu_idx)) &&
-			  (seg_idx < NUM_MAX_TSO_SEGS));
-			 seg_idx++) {
-			struct qdf_tso_seg_t tso_seg =
-				 TXRX_STATS_TSO_SEG(pdev, msdu_idx, seg_idx);
-
-			QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
-				 "seg idx: %d", seg_idx);
-			QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
-				 "tso_enable: %d",
-				 tso_seg.tso_flags.tso_enable);
-			QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
-				 "fin %d syn %d rst %d psh %d ack %d urg %d ece %d cwr %d ns %d",
-				 tso_seg.tso_flags.fin, tso_seg.tso_flags.syn,
-				 tso_seg.tso_flags.rst, tso_seg.tso_flags.psh,
-				 tso_seg.tso_flags.ack, tso_seg.tso_flags.urg,
-				 tso_seg.tso_flags.ece, tso_seg.tso_flags.cwr,
-				 tso_seg.tso_flags.ns);
-			QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
-				 "tcp_seq_num: 0x%x ip_id: %d",
-				 tso_seg.tso_flags.tcp_seq_num,
-				 tso_seg.tso_flags.ip_id);
-		}
-	}
-}
-#else
-static void ol_txrx_stats_display_tso(ol_txrx_pdev_handle pdev)
-{
-	QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
-	 "TSO is not supported\n");
-}
-#endif
 
 /**
  * ol_txrx_stats() - update ol layer stats

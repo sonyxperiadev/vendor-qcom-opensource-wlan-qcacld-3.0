@@ -2313,17 +2313,15 @@ static void hdd_ipa_uc_op_cb(struct op_msg_type *op_msg, void *usr_ctxt)
 			uc_fw_stat->rx_num_ind_drop_no_buf +
 			uc_fw_stat->rx_num_pkts_indicated);
 		qdf_mutex_release(&hdd_ipa->ipa_lock);
-	} else if (hdd_ipa_uc_op_metering(hdd_ctx, op_msg)) {
-		HDD_IPA_LOG(LOGE, "Invalid message: op_code=%d, reason=%d",
-			    msg->op_code, hdd_ipa->stat_req_reason);
 	} else if (msg->op_code == HDD_IPA_UC_OPCODE_UC_READY) {
 		qdf_mutex_acquire(&hdd_ipa->ipa_lock);
 		hdd_ipa_uc_loaded_handler(hdd_ipa);
 		qdf_mutex_release(&hdd_ipa->ipa_lock);
-	} else {
-		HDD_IPA_LOG(LOGE, "INVALID REASON %d",
-			    hdd_ipa->stat_req_reason);
+	} else if (hdd_ipa_uc_op_metering(hdd_ctx, op_msg)) {
+		HDD_IPA_LOG(LOGE, "Invalid message: op_code=%d, reason=%d",
+			    msg->op_code, hdd_ipa->stat_req_reason);
 	}
+
 	qdf_mem_free(op_msg);
 }
 
@@ -3929,6 +3927,13 @@ static void __hdd_ipa_w2i_cb(void *priv, enum ipa_dp_evt_type evt,
 
 		iface_context = &hdd_ipa->iface_context[iface_id];
 		adapter = iface_context->adapter;
+		if (!adapter) {
+			HDD_IPA_LOG(QDF_TRACE_LEVEL_ERROR,
+				    "IPA_RECEIVE: Adapter is NULL");
+			HDD_IPA_INCREASE_INTERNAL_DROP_COUNT(hdd_ipa);
+			kfree_skb(skb);
+			return;
+		}
 
 		HDD_IPA_DBG_DUMP(QDF_TRACE_LEVEL_DEBUG,
 				"w2i -- skb",
@@ -4005,8 +4010,6 @@ void hdd_ipa_nbuf_cb(qdf_nbuf_t skb)
 	struct ipa_rx_data *ipa_tx_desc;
 	struct hdd_ipa_tx_desc *tx_desc;
 	uint16_t id;
-
-	HDD_IPA_LOG(QDF_TRACE_LEVEL_DEBUG, "%x", QDF_NBUF_CB_TX_IPA_PRIV(skb));
 
 	if (!qdf_nbuf_ipa_owned_get(skb)) {
 		dev_kfree_skb_any(skb);

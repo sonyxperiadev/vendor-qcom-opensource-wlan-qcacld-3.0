@@ -2079,12 +2079,17 @@ void wma_process_roam_invoke(WMA_HANDLE handle,
 	if (!wma_handle || !wma_handle->wmi_handle) {
 		WMA_LOGE("%s: WMA is closed, can not send roam invoke",
 				__func__);
-		return;
+		goto free_frame_buf;
 	}
 	ch_hz = (A_UINT32)cds_chan_to_freq(roaminvoke->channel);
 	wmi_unified_roam_invoke_cmd(wma_handle->wmi_handle,
 				(struct wmi_roam_invoke_cmd *)roaminvoke,
 				ch_hz);
+free_frame_buf:
+	if (roaminvoke->frame_len) {
+		qdf_mem_free(roaminvoke->frame_buf);
+		roaminvoke->frame_buf = NULL;
+	}
 
 	return;
 }
@@ -2100,11 +2105,16 @@ void wma_process_roam_synch_fail(WMA_HANDLE handle,
 				 struct roam_offload_synch_fail *synch_fail)
 {
 	tp_wma_handle wma_handle = (tp_wma_handle) handle;
+
 	if (!wma_handle || !wma_handle->wmi_handle) {
 		WMA_LOGE("%s: WMA is closed, can not clean-up roam synch",
 			__func__);
 		return;
 	}
+
+	wma_peer_debug_log(synch_fail->session_id, DEBUG_ROAM_SYNCH_FAIL,
+			   DEBUG_INVALID_PEER_ID, NULL, NULL, 0, 0);
+
 	/* Hand Off Failure could happen as an exception, when a roam synch
 	 * indication is posted to Host, but a roam synch complete is not
 	 * posted to the firmware.So, clear the roam synch in progress
@@ -2322,6 +2332,9 @@ int wma_roam_synch_event_handler(void *handle, uint8_t *event,
 		return status;
 	}
 
+	wma_peer_debug_log(synch_event->vdev_id, DEBUG_ROAM_SYNCH_IND,
+			   DEBUG_INVALID_PEER_ID, NULL, NULL, 0, 0);
+
 	DPTRACE(qdf_dp_trace_record_event(QDF_DP_TRACE_EVENT_RECORD,
 		synch_event->vdev_id, QDF_PROTO_TYPE_EVENT, QDF_ROAM_SYNCH));
 
@@ -2332,17 +2345,20 @@ int wma_roam_synch_event_handler(void *handle, uint8_t *event,
 	}
 	WMA_LOGE("LFR3: Received WMA_ROAM_OFFLOAD_SYNCH_IND");
 
+	qdf_wake_lock_timeout_acquire(&wma->wow_wake_lock,
+				      WMA_ROAM_HO_WAKE_LOCK_DURATION);
+
 	wma->interfaces[synch_event->vdev_id].roam_synch_in_progress = true;
 	len = sizeof(roam_offload_synch_ind) +
 	      synch_event->bcn_probe_rsp_len + synch_event->reassoc_rsp_len +
 	      synch_event->reassoc_req_len;
-	roam_synch_ind_ptr =
-		(roam_offload_synch_ind *) qdf_mem_malloc(len);
+	roam_synch_ind_ptr = (roam_offload_synch_ind *)qdf_mem_malloc(len);
 	if (!roam_synch_ind_ptr) {
 		WMA_LOGE("%s: failed to allocate memory for roam_synch_event",
 			 __func__);
 		QDF_ASSERT(roam_synch_ind_ptr != NULL);
-		return -ENOMEM;
+		status = -ENOMEM;
+		goto cleanup_label;
 	}
 	qdf_mem_zero(roam_synch_ind_ptr, len);
 	wma_fill_roam_synch_buffer(wma, roam_synch_ind_ptr, param_buf);
@@ -2359,7 +2375,7 @@ int wma_roam_synch_event_handler(void *handle, uint8_t *event,
 	if (NULL == bss_desc_ptr) {
 		WMA_LOGE("LFR3: mem alloc failed!");
 		QDF_ASSERT(bss_desc_ptr != NULL);
-		status =  -ENOMEM;
+		status = -ENOMEM;
 		goto cleanup_label;
 	}
 	qdf_mem_zero(bss_desc_ptr, sizeof(tSirBssDescription) + ie_len);
@@ -2385,8 +2401,11 @@ int wma_roam_synch_event_handler(void *handle, uint8_t *event,
 		wma->interfaces[synch_event->vdev_id].roam_synch_delay);
 	wma->csr_roam_synch_cb((tpAniSirGlobal)wma->mac_context,
 		roam_synch_ind_ptr, bss_desc_ptr, SIR_ROAM_SYNCH_NAPI_OFF);
+
+	status = 0;
+
 cleanup_label:
-	if (roam_synch_ind_ptr->join_rsp)
+	if (roam_synch_ind_ptr && roam_synch_ind_ptr->join_rsp)
 		qdf_mem_free(roam_synch_ind_ptr->join_rsp);
 	if (roam_synch_ind_ptr)
 		qdf_mem_free(roam_synch_ind_ptr);
@@ -2394,7 +2413,7 @@ cleanup_label:
 		qdf_mem_free(bss_desc_ptr);
 	wma->interfaces[synch_event->vdev_id].roam_synch_in_progress = false;
 
-	return 0;
+	return status;
 }
 
 /**
@@ -2736,6 +2755,9 @@ void wma_process_roam_synch_complete(WMA_HANDLE handle, uint8_t vdev_id)
 
 	DPTRACE(qdf_dp_trace_record_event(QDF_DP_TRACE_EVENT_RECORD,
 		vdev_id, QDF_PROTO_TYPE_EVENT, QDF_ROAM_COMPLETE));
+
+	wma_peer_debug_log(vdev_id, DEBUG_ROAM_SYNCH_CNF,
+			   DEBUG_INVALID_PEER_ID, NULL, NULL, 0, 0);
 
 	WMA_LOGE("LFR3: Posting WMA_ROAM_OFFLOAD_SYNCH_CNF");
 	return;
@@ -5712,6 +5734,10 @@ int wma_roam_event_callback(WMA_HANDLE handle, uint8_t *event_buf,
 
 	DPTRACE(qdf_dp_trace_record_event(QDF_DP_TRACE_EVENT_RECORD,
 		wmi_event->vdev_id, QDF_PROTO_TYPE_EVENT, QDF_ROAM_EVENTID));
+
+	wma_peer_debug_log(wmi_event->vdev_id, DEBUG_ROAM_EVENT,
+			   DEBUG_INVALID_PEER_ID, NULL, NULL,
+			   wmi_event->reason, wmi_event->rssi);
 
 	switch (wmi_event->reason) {
 	case WMI_ROAM_REASON_BMISS:

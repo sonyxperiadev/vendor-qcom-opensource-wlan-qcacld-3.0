@@ -176,7 +176,7 @@ ifeq ($(KERNEL_BUILD), 0)
 
 ifneq ($(CONFIG_ROME_IF),sdio)
 	#Flag to enable memdump feature
-	CONFIG_WLAN_FEATURE_MEMDUMP := n
+	CONFIG_WLAN_FEATURE_MEMDUMP := y
 
 	#Flag to enable DISA
 	CONFIG_WLAN_FEATURE_DISA := y
@@ -1008,7 +1008,7 @@ ifeq ($(CONFIG_PLD_USB_CNSS), y)
 PLD_OBJS +=	$(PLD_SRC_DIR)/pld_usb.o
 endif
 
-TARGET_INC :=	-I$(WLAN_ROOT)/target/inc
+TARGET_INC := -I$(WLAN_ROOT)/../fw-api/fw
 
 LINUX_INC :=	-Iinclude/linux
 
