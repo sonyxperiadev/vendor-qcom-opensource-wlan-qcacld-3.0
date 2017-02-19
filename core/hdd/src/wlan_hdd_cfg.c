@@ -2178,6 +2178,12 @@ REG_TABLE_ENTRY g_registry_table[] = {
 		     CFG_MAX_HT_MCS_FOR_TX_DATA_DEFAULT,
 		     CFG_MAX_HT_MCS_FOR_TX_DATA_MIN,
 		     CFG_MAX_HT_MCS_FOR_TX_DATA_MAX),
+	REG_VARIABLE(CFG_DISABLE_ABG_RATE_FOR_TX_DATA, WLAN_PARAM_Integer,
+		     struct hdd_config, disable_abg_rate_txdata,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_DISABLE_ABG_RATE_FOR_TX_DATA_DEFAULT,
+		     CFG_DISABLE_ABG_RATE_FOR_TX_DATA_MIN,
+		     CFG_DISABLE_ABG_RATE_FOR_TX_DATA_MAX),
 
 	REG_VARIABLE(CFG_ENABLE_FIRST_SCAN_2G_ONLY_NAME, WLAN_PARAM_Integer,
 		     struct hdd_config, enableFirstScan2GOnly,
@@ -6964,6 +6970,13 @@ bool hdd_update_config_cfg(hdd_context_t *hdd_ctx)
 		status = false;
 		hdd_err("Couldn't pass on WNI_CFG_MAX_HT_MCS_TX_DATA to CCM");
 	}
+	if (sme_cfg_set_int(hdd_ctx->hHal, WNI_CFG_DISABLE_ABG_RATE_FOR_TX_DATA,
+			    config->disable_abg_rate_txdata) ==
+			    QDF_STATUS_E_FAILURE) {
+		status = false;
+		hdd_err("Couldn't pass on WNI_CFG_DISABLE_ABG_RATE_FOR_TX_DATA to CCM");
+	}
+
 	return status;
 }
 #ifdef FEATURE_WLAN_SCAN_PNO
