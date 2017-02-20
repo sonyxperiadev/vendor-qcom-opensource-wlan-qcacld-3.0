@@ -1399,6 +1399,7 @@ void ol_rx_frames_free(htt_pdev_handle htt_pdev, qdf_nbuf_t frames)
 	}
 }
 
+#ifndef CONFIG_HL_SUPPORT
 void
 ol_rx_in_order_indication_handler(ol_txrx_pdev_handle pdev,
 				  qdf_nbuf_t rx_ind_msg,
@@ -1496,6 +1497,7 @@ ol_rx_in_order_indication_handler(ol_txrx_pdev_handle pdev,
 
 	peer->rx_opt_proc(vdev, peer, tid, head_msdu);
 }
+#endif
 
 /**
  * ol_rx_pkt_dump_call() - updates status and
@@ -1593,6 +1595,7 @@ void ol_rx_log_packet(htt_pdev_handle htt_pdev,
 		qdf_dp_trace_log_pkt(peer->vdev->vdev_id, msdu, QDF_RX);
 }
 
+#ifndef CONFIG_HL_SUPPORT
 void
 ol_rx_offload_paddr_deliver_ind_handler(htt_pdev_handle htt_pdev,
 					uint32_t msdu_count,
@@ -1639,6 +1642,7 @@ ol_rx_offload_paddr_deliver_ind_handler(htt_pdev_handle htt_pdev,
 	}
 	htt_rx_msdu_buff_replenish(htt_pdev);
 }
+#endif
 
 /**
  * ol_htt_mon_note_chan() - Update monitor channel information
