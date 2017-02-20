@@ -2331,6 +2331,9 @@ htt_rx_restitch_mpdu_from_msdus(htt_pdev_handle pdev,
 		if (!mpdu_buf)
 			goto mpdu_stitch_fail;
 
+		if (!mpdu_buf)
+			goto mpdu_stitch_fail;
+
 		prev_buf = mpdu_buf;
 
 		frag_list_sum_len = 0;
