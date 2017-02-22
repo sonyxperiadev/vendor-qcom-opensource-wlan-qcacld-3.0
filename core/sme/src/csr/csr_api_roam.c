@@ -362,7 +362,7 @@ QDF_STATUS csr_init_chan_list(tpAniSirGlobal mac, uint8_t *alpha2)
 	mac->scan.countryCodeDefault[1] = alpha2[1];
 	mac->scan.countryCodeDefault[2] = alpha2[2];
 
-	sms_log(mac, LOGE, FL("init time country code %.2s"),
+	sms_log(mac, LOG1, FL("init time country code %.2s"),
 		mac->scan.countryCodeDefault);
 
 	mac->scan.domainIdDefault = 0;

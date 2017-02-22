@@ -1669,8 +1669,8 @@ lim_populate_own_rate_set(tpAniSirGlobal mac_ctx,
 
 		lim_log(mac_ctx, LOG2, FL("MCS Rate Set Bitmap: "));
 		for (i = 0; i < SIR_MAC_MAX_SUPPORTED_MCS_SET; i++)
-			PELOG2(lim_log(mac_ctx, LOG2, FL("%x "),
-				       rates->supportedMCSSet[i]);)
+			lim_log(mac_ctx, LOG2, FL("%x "),
+				rates->supportedMCSSet[i]);
 	}
 	lim_populate_vht_mcs_set(mac_ctx, rates, vht_caps,
 			session_entry, session_entry->nss);
@@ -1806,12 +1806,10 @@ lim_populate_peer_rate_set(tpAniSirGlobal pMac,
 				pRates->supportedMCSSet[i] &=
 					pSupportedMCSSet[i];
 		}
-		PELOG2(lim_log(pMac, LOG2, FL("MCS Rate Set Bitmap: "));)
+		lim_log(pMac, LOG2, FL("MCS Rate Set Bitmap: "));
 		for (i = 0; i < SIR_MAC_MAX_SUPPORTED_MCS_SET; i++)
-			PELOG2(lim_log
-				       (pMac, LOG2, FL("%x "),
+			lim_log(pMac, LOG2, FL("%x "),
 				       pRates->supportedMCSSet[i]);
-			       )
 
 		psessionEntry->supported_nss_1x1 =
 			((pRates->supportedMCSSet[1] != 0) ? false : true);
@@ -3678,7 +3676,7 @@ tSirRetStatus lim_sta_send_add_bss(tpAniSirGlobal pMac, tpSirAssocRsp pAssocRsp,
 				lsigTXOPProtectionFullSupport;
 			pAddBssParams->fRIFSMode = pAssocRsp->HTInfo.rifsMode;
 
-			lim_log(pMac, LOGE,
+			lim_log(pMac, LOG1,
 				FL("htOperMode: %d dualCTSProtection: %d txChannelWidth: %d center_freq_0: %d "),
 				pAddBssParams->htOperMode,
 				pAddBssParams->dualCTSProtection,
@@ -3694,7 +3692,7 @@ tSirRetStatus lim_sta_send_add_bss(tpAniSirGlobal pMac, tpSirAssocRsp pAssocRsp,
 	}
 
 	pAddBssParams->currentOperChannel = bssDescription->channelId;
-	lim_log(pMac, LOGE, FL("currentOperChannel %d"),
+	lim_log(pMac, LOG1, FL("currentOperChannel %d"),
 		pAddBssParams->currentOperChannel);
 	if (psessionEntry->vhtCapability && (pAssocRsp->VHTCaps.present)) {
 		pAddBssParams->vhtCapable = pAssocRsp->VHTCaps.present;
@@ -3720,7 +3718,7 @@ tSirRetStatus lim_sta_send_add_bss(tpAniSirGlobal pMac, tpSirAssocRsp pAssocRsp,
 					vht_caps, psessionEntry);
 	}
 
-	lim_log(pMac, LOGE, FL("vhtCapable %d TxChannelWidth %d center_freq_0 %d center_freq_1 %d"),
+	lim_log(pMac, LOG1, FL("vhtCapable %d TxChannelWidth %d center_freq_0 %d center_freq_1 %d"),
 			pAddBssParams->vhtCapable, pAddBssParams->ch_width,
 			pAddBssParams->ch_center_freq_seg0,
 			pAddBssParams->ch_center_freq_seg1);
@@ -3828,12 +3826,12 @@ tSirRetStatus lim_sta_send_add_bss(tpAniSirGlobal pMac, tpSirAssocRsp pAssocRsp,
 			pAddBssParams->staContext.ch_width =
 					psessionEntry->ch_width;
 
-			lim_log(pMac, LOGE, FL(
+			lim_log(pMac, LOG1, FL(
 					"StaCtx: vhtCap %d ChBW %d TxBF %d"),
 					pAddBssParams->staContext.vhtCapable,
 					pAddBssParams->staContext.ch_width,
 					sta_context->vhtTxBFCapable);
-			lim_log(pMac, LOGE, FL("StaContext su_tx_bfer %d"),
+			lim_log(pMac, LOG1, FL("StaContext su_tx_bfer %d"),
 					sta_context->enable_su_tx_bformer);
 		} else {
 			sta_context->ch_width =	CH_WIDTH_20MHZ;
@@ -3915,7 +3913,7 @@ tSirRetStatus lim_sta_send_add_bss(tpAniSirGlobal pMac, tpSirAssocRsp pAssocRsp,
 			pAddBssParams->staContext.rifsMode =
 				pAssocRsp->HTInfo.rifsMode;
 
-		lim_log(pMac, LOGE, FL(
+		lim_log(pMac, LOG2, FL(
 				"StaCtx: ChBW %d mimoPS %d maxAmsduSize %d"),
 				pAddBssParams->staContext.ch_width,
 				pAddBssParams->staContext.mimoPS,
@@ -4274,7 +4272,7 @@ tSirRetStatus lim_sta_send_add_bss_pre_assoc(tpAniSirGlobal pMac, uint8_t update
 	} else {
 		pAddBssParams->vhtCapable = 0;
 	}
-	lim_log(pMac, LOGE, FL("vhtCapable %d vhtTxChannelWidthSet %d center_freq_seg0 - %d, center_freq_seg1 - %d"),
+	lim_log(pMac, LOG1, FL("vhtCapable %d vhtTxChannelWidthSet %d center_freq_seg0 - %d, center_freq_seg1 - %d"),
 		pAddBssParams->vhtCapable, pAddBssParams->ch_width,
 		pAddBssParams->ch_center_freq_seg0,
 		pAddBssParams->ch_center_freq_seg1);
