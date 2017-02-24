@@ -416,15 +416,14 @@ typedef struct hdd_pmf_stats_s {
 #endif
 
 struct hdd_arp_stats_s {
-	uint16_t tx_count;
-	uint16_t rx_count;
+	uint16_t tx_arp_req_count;
+	uint16_t rx_arp_rsp_count;
 	uint16_t tx_dropped;
 	uint16_t rx_dropped;
 	uint16_t rx_delivered;
 	uint16_t rx_refused;
 	uint16_t tx_host_fw_sent;
 	uint16_t rx_host_drop_reorder;
-	uint16_t tx_fw_cnt;
 	uint16_t rx_fw_cnt;
 	uint16_t tx_ack_cnt;
 };
@@ -1690,6 +1689,7 @@ struct hdd_context_s {
 	bool imps_enabled;
 	int user_configured_pkt_filter_rules;
 	struct hdd_nud_stats_context nud_stats_context;
+	uint32_t track_arp_ip;
 };
 
 /*---------------------------------------------------------------------------
