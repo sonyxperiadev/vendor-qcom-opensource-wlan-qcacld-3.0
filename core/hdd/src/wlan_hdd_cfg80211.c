@@ -3504,6 +3504,7 @@ static int __wlan_hdd_cfg80211_keymgmt_set_key(struct wiphy *wiphy,
 	hdd_adapter_t *hdd_adapter_ptr = WLAN_HDD_GET_PRIV_PTR(dev);
 	hdd_context_t *hdd_ctx_ptr;
 	int status;
+	struct pmkid_mode_bits pmkid_modes;
 
 	ENTER_DEV(dev);
 
@@ -3527,10 +3528,13 @@ static int __wlan_hdd_cfg80211_keymgmt_set_key(struct wiphy *wiphy,
 	status = wlan_hdd_validate_context(hdd_ctx_ptr);
 	if (status)
 		return status;
+
+	hdd_get_pmkid_modes(hdd_ctx_ptr, &pmkid_modes);
+
 	sme_update_roam_key_mgmt_offload_enabled(hdd_ctx_ptr->hHal,
 			hdd_adapter_ptr->sessionId,
 			true,
-			hdd_is_okc_mode_enabled(hdd_ctx_ptr));
+			&pmkid_modes);
 	qdf_mem_zero(&local_pmk, SIR_ROAM_SCAN_PSK_SIZE);
 	qdf_mem_copy(local_pmk, data, data_len);
 	sme_roam_set_psk_pmk(WLAN_HDD_GET_HAL_CTX(hdd_adapter_ptr),
@@ -8374,6 +8378,21 @@ nla_policy qca_wlan_vendor_attr[QCA_WLAN_VENDOR_ATTR_MAX+1] = {
 						 .len = QDF_MAC_ADDR_SIZE},
 };
 
+void wlan_hdd_rso_cmd_status_cb(void *ctx, struct rso_cmd_status *rso_status)
+{
+	hdd_context_t *hdd_ctx = (hdd_context_t *)ctx;
+	hdd_adapter_t *adapter;
+
+	adapter = hdd_get_adapter_by_vdev(hdd_ctx, rso_status->vdev_id);
+	if (!adapter) {
+		hdd_err("adapter NULL");
+		return;
+	}
+
+	adapter->lfr_fw_status.is_disabled = rso_status->status;
+	complete(&adapter->lfr_fw_status.disable_lfr_event);
+}
+
 /**
  * __wlan_hdd_cfg80211_set_fast_roaming() - enable/disable roaming
  * @wiphy: Pointer to wireless phy
@@ -8393,9 +8412,10 @@ static int __wlan_hdd_cfg80211_set_fast_roaming(struct wiphy *wiphy,
 	struct net_device *dev = wdev->netdev;
 	hdd_adapter_t *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
 	struct nlattr *tb[QCA_WLAN_VENDOR_ATTR_MAX + 1];
-	uint32_t is_fast_roam_enabled;
+	uint32_t is_fast_roam_enabled, enable_lfr_fw;
 	int ret;
 	QDF_STATUS qdf_status;
+	unsigned long rc;
 
 	ENTER_DEV(dev);
 
@@ -8431,14 +8451,36 @@ static int __wlan_hdd_cfg80211_set_fast_roaming(struct wiphy *wiphy,
 			adapter->dev->name);
 		return -EINVAL;
 	}
+
 	/* Update roaming */
+	enable_lfr_fw = (is_fast_roam_enabled && adapter->fast_roaming_allowed);
 	qdf_status = sme_config_fast_roaming(hdd_ctx->hHal, adapter->sessionId,
-				      (is_fast_roam_enabled &&
-				       adapter->fast_roaming_allowed));
+					     enable_lfr_fw);
 	if (qdf_status != QDF_STATUS_SUCCESS)
 		hdd_err("sme_config_fast_roaming failed with status=%d",
 				qdf_status);
 	ret = qdf_status_to_os_return(qdf_status);
+
+	INIT_COMPLETION(adapter->lfr_fw_status.disable_lfr_event);
+	if (QDF_IS_STATUS_SUCCESS(qdf_status) && !enable_lfr_fw) {
+
+		/*
+		 * wait only for LFR disable in fw as LFR enable
+		 * is always success
+		 */
+		rc = wait_for_completion_timeout(
+				&adapter->lfr_fw_status.disable_lfr_event,
+				msecs_to_jiffies(WAIT_TIME_RSO_CMD_STATUS));
+		if (!rc) {
+			hdd_err("Timed out waiting for RSO CMD status");
+			return -ETIMEDOUT;
+		}
+
+		if (!adapter->lfr_fw_status.is_disabled) {
+			hdd_err("Roam disable attempt in FW fails");
+			return -EBUSY;
+		}
+	}
 
 	EXIT();
 	return ret;
@@ -11542,29 +11584,34 @@ int wlan_hdd_cfg80211_update_bss(struct wiphy *wiphy,
  * @preauth: Preauth flag
  *
  * This function is used to notify the supplicant of a new PMKSA candidate.
+ * PMK value is notified to supplicant whether PMK caching or OKC is enabled
+ * in firmware or not. Supplicant needs this value becaue it uses PMK caching
+ * by default.
  *
  * Return: 0 for success, non-zero for failure
  */
-int wlan_hdd_cfg80211_pmksa_candidate_notify(hdd_adapter_t *pAdapter,
-					     tCsrRoamInfo *pRoamInfo,
+int wlan_hdd_cfg80211_pmksa_candidate_notify(hdd_adapter_t *adapter,
+					     tCsrRoamInfo *roam_info,
 					     int index, bool preauth)
 {
-	struct net_device *dev = pAdapter->dev;
-	hdd_context_t *pHddCtx = (hdd_context_t *) pAdapter->pHddCtx;
+	struct net_device *dev = adapter->dev;
+	hdd_context_t *hdd_ctx = (hdd_context_t *) adapter->pHddCtx;
+	struct pmkid_mode_bits pmkid_modes;
 
 	ENTER();
 	hdd_notice("is going to notify supplicant of:");
 
-	if (NULL == pRoamInfo) {
+	if (NULL == roam_info) {
 		hdd_alert("pRoamInfo is NULL");
 		return -EINVAL;
 	}
 
-	if (true == hdd_is_okc_mode_enabled(pHddCtx)) {
+	hdd_get_pmkid_modes(hdd_ctx, &pmkid_modes);
+	if (pmkid_modes.fw_okc) {
 		hdd_notice(MAC_ADDRESS_STR,
-		       MAC_ADDR_ARRAY(pRoamInfo->bssid.bytes));
+		       MAC_ADDR_ARRAY(roam_info->bssid.bytes));
 		cfg80211_pmksa_candidate_notify(dev, index,
-						pRoamInfo->bssid.bytes,
+						roam_info->bssid.bytes,
 						preauth, GFP_KERNEL);
 	}
 	return 0;
