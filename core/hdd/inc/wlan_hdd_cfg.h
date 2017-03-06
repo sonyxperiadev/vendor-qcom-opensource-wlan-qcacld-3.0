@@ -5506,7 +5506,7 @@ typedef enum {
  * gMCAddrListEnable - Enable/Disable Multicast MAC Address List feature
  * @Min: 0
  * @Max: 1
- * @Default: 1
+ * @Default: 0
  *
  * This ini is used to set default MAC Address
  * Default: Enable
@@ -5523,7 +5523,7 @@ typedef enum {
 #define CFG_MC_ADDR_LIST_ENABLE_NAME          "gMCAddrListEnable"
 #define CFG_MC_ADDR_LIST_ENABLE_MIN           (0)
 #define CFG_MC_ADDR_LIST_ENABLE_MAX           (1)
-#define CFG_MC_ADDR_LIST_ENABLE_DEFAULT       (1)
+#define CFG_MC_ADDR_LIST_ENABLE_DEFAULT       (0)
 
 /*
  * <ini>
