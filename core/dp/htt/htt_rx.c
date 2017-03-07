@@ -348,7 +348,7 @@ htt_rx_msdu_first_msdu_flag_ll(htt_pdev_handle pdev, void *msdu_desc)
 static qdf_dma_addr_t
 htt_rx_paddr_mark_high_bits(qdf_dma_addr_t paddr)
 {
-#ifdef HELIUMPLUS_PADDR64
+#ifdef ENABLE_DEBUG_ADDRESS_MARKING
 	if (sizeof(qdf_dma_addr_t) > 4) {
 		/* clear high bits, leave lower 37 bits (paddr) */
 		paddr &= 0x01FFFFFFFFF;
@@ -359,7 +359,7 @@ htt_rx_paddr_mark_high_bits(qdf_dma_addr_t paddr)
 	return paddr;
 }
 
-#ifdef HELIUMPLUS_PADDR64
+#ifdef ENABLE_DEBUG_ADDRESS_MARKING
 static qdf_dma_addr_t
 htt_rx_paddr_unmark_high_bits(qdf_dma_addr_t paddr)
 {
@@ -409,7 +409,7 @@ htt_rx_in_ord_paddr_get(uint32_t *u32p)
 {
 	return HTT_RX_IN_ORD_PADDR_IND_PADDR_GET(*u32p);
 }
-#endif /* HELIUMPLUS_PADDR64 */
+#endif /* ENABLE_DEBUG_ADDRESS_MARKING */
 #endif /* CONFIG_HL_SUPPORT*/
 
 /* full_reorder_offload case: this function is called with lock held */
@@ -1133,10 +1133,10 @@ htt_rx_amsdu_pop_ll(htt_pdev_handle pdev,
 		 * Check if this MSDU completes a MPDU.
 		 */
 		rx_desc = htt_rx_desc(msdu);
-#if defined(HELIUMPLUS_PADDR64)
+#if defined(HELIUMPLUS)
 		if (HTT_WIFI_IP(pdev, 2, 0))
 			pad_bytes = rx_desc->msdu_end.l3_header_padding;
-#endif /* defined(HELIUMPLUS_PADDR64) */
+#endif /* defined(HELIUMPLUS) */
 		/*
 		 * Make the netbuf's data pointer point to the payload rather
 		 * than the descriptor.

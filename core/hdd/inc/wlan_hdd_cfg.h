@@ -4941,13 +4941,13 @@ typedef enum {
 #define CFG_ENABLE_FW_DEBUG_LOG_LEVEL          "gFwDebugLogLevel"
 #define CFG_ENABLE_FW_DEBUG_LOG_LEVEL_MIN      (0)
 #define CFG_ENABLE_FW_DEBUG_LOG_LEVEL_MAX      (255)
-#define CFG_ENABLE_FW_DEBUG_LOG_LEVEL_DEFAULT  (4)
+#define CFG_ENABLE_FW_DEBUG_LOG_LEVEL_DEFAULT  (3)
 
 /* For valid values of log levels check enum DBGLOG_LOG_LVL and
  * for valid values of module ids check enum WLAN_MODULE_ID.
  */
 #define CFG_ENABLE_FW_MODULE_LOG_LEVEL    "gFwDebugModuleLoglevel"
-#define CFG_ENABLE_FW_MODULE_LOG_DEFAULT  ""
+#define CFG_ENABLE_FW_MODULE_LOG_DEFAULT  "2,1,5,1,8,1,9,1,11,1,18,1,27,1,31,1,36,1,47,1"
 
 /*
  * <ini>
@@ -8440,8 +8440,8 @@ enum dot11p_mode {
  */
 #define CFG_ADAPT_DWELL_PASMON_INTVAL_NAME     "adapt_dwell_passive_mon_intval"
 #define CFG_ADAPT_DWELL_PASMON_INTVAL_MIN      (0)
-#define CFG_ADAPT_DWELL_PASMON_INTVAL_MAX      (10)
-#define CFG_ADAPT_DWELL_PASMON_INTVAL_DEFAULT  (25)
+#define CFG_ADAPT_DWELL_PASMON_INTVAL_MAX      (25)
+#define CFG_ADAPT_DWELL_PASMON_INTVAL_DEFAULT  (10)
 
 /*
  * This parameter will set % of wifi activity used in passive scan 0-100.
@@ -8727,6 +8727,162 @@ enum dot11p_mode {
 #define CFG_RX_WAKELOCK_TIMEOUT_DEFAULT  (50)
 #define CFG_RX_WAKELOCK_TIMEOUT_MIN      (0)
 #define CFG_RX_WAKELOCK_TIMEOUT_MAX      (100)
+
+/*
+ * <ini>
+ * enable_5g_band_pref - Enable preference for 5G from INI.
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ * This ini is used to enable 5G preference parameters.
+ *
+ * Related: 5g_rssi_boost_threshold, 5g_rssi_boost_factor, 5g_max_rssi_boost
+ * 5g_rssi_penalize_threshold, 5g_rssi_penalize_factor, 5g_max_rssi_penalize
+ *
+ * Supported Feature: 5G band preference
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+
+#define CFG_ENABLE_5G_BAND_PREF_NAME             "enable_5g_band_pref"
+#define CFG_ENABLE_5G_BAND_PREF_MIN              (0)
+#define CFG_ENABLE_5G_BAND_PREF_MAX              (1)
+#define CFG_ENABLE_5G_BAND_PREF_DEFAULT          (0)
+
+/*
+ * <ini>
+ * 5g_rssi_boost_threshold - A_band_boost_threshold above which 5 GHz is favored.
+ * @Min: -55
+ * @Max: -70
+ * @Default: -60
+ * This ini is used to set threshold for 5GHz band preference.
+ *
+ * Related: 5g_rssi_boost_factor, 5g_max_rssi_boost
+ * 5g_rssi_penalize_threshold, 5g_rssi_penalize_factor, 5g_max_rssi_penalize
+ *
+ * Supported Feature: 5G band preference
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_5G_RSSI_BOOST_THRESHOLD_NAME         "5g_rssi_boost_threshold"
+#define CFG_5G_RSSI_BOOST_THRESHOLD_MIN          (-55)
+#define CFG_5G_RSSI_BOOST_THRESHOLD_MAX          (-70)
+#define CFG_5G_RSSI_BOOST_THRESHOLD_DEFAULT      (-60)
+
+/*
+ * <ini>
+ * 5g_rssi_boost_factor - Factor by which 5GHz RSSI is boosted.
+ * @Min: 0
+ * @Max: 2
+ * @Default: 1
+ * This ini is used to set the 5Ghz boost factor.
+ *
+ * Related: 5g_rssi_boost_threshold, 5g_max_rssi_boost
+ * 5g_rssi_penalize_threshold, 5g_rssi_penalize_factor, 5g_max_rssi_penalize
+ *
+ * Supported Feature: 5G band preference
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_5G_RSSI_BOOST_FACTOR_NAME            "5g_rssi_boost_factor"
+#define CFG_5G_RSSI_BOOST_FACTOR_MIN             (0)
+#define CFG_5G_RSSI_BOOST_FACTOR_MAX             (2)
+#define CFG_5G_RSSI_BOOST_FACTOR_DEFAULT         (1)
+
+/*
+ * <ini>
+ * 5g_max_rssi_boost - Maximum boost that can be applied to 5GHz RSSI.
+ * @Min: 0
+ * @Max: 20
+ * @Default: 10
+ * This ini is used to set maximum boost which can be given to a 5Ghz network.
+ *
+ * Related: 5g_rssi_boost_threshold, 5g_rssi_boost_factor
+ * 5g_rssi_penalize_threshold, 5g_rssi_penalize_factor, 5g_max_rssi_penalize
+ *
+ * Supported Feature: 5G band preference
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_5G_MAX_RSSI_BOOST_NAME               "5g_max_rssi_boost"
+#define CFG_5G_MAX_RSSI_BOOST_MIN                (0)
+#define CFG_5G_MAX_RSSI_BOOST_MAX                (20)
+#define CFG_5G_MAX_RSSI_BOOST_DEFAULT            (10)
+
+/*
+ * <ini>
+ * 5g_rssi_penalize_threshold - A_band_penalize_threshold above which
+ * 5 GHz is not favored.
+ * @Min: -65
+ * @Max: -80
+ * @Default: -70
+ * This ini is used to set threshold for 5GHz band preference.
+ *
+ * Related: 5g_rssi_penalize_factor, 5g_max_rssi_penalize
+ * 5g_rssi_boost_threshold, 5g_rssi_boost_factor, 5g_max_rssi_boost
+ *
+ * Supported Feature: 5G band preference
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_5G_RSSI_PENALIZE_THRESHOLD_NAME      "5g_rssi_penalize_threshold"
+#define CFG_5G_RSSI_PENALIZE_THRESHOLD_MIN       (-65)
+#define CFG_5G_RSSI_PENALIZE_THRESHOLD_MAX       (-80)
+#define CFG_5G_RSSI_PENALIZE_THRESHOLD_DEFAULT   (-70)
+
+/*
+ * <ini>
+ * 5g_rssi_penalize_factor - Factor by which 5GHz RSSI is penalizeed.
+ * @Min: 0
+ * @Max: 2
+ * @Default: 1
+ * This ini is used to set the 5Ghz penalize factor.
+ *
+ * Related: 5g_rssi_penalize_threshold, 5g_max_rssi_penalize
+ * 5g_rssi_boost_threshold, 5g_rssi_boost_factor, 5g_max_rssi_boost
+ *
+ * Supported Feature: 5G band preference
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_5G_RSSI_PENALIZE_FACTOR_NAME         "5g_rssi_penalize_factor"
+#define CFG_5G_RSSI_PENALIZE_FACTOR_MIN          (0)
+#define CFG_5G_RSSI_PENALIZE_FACTOR_MAX          (2)
+#define CFG_5G_RSSI_PENALIZE_FACTOR_DEFAULT      (1)
+
+/*
+ * <ini>
+ * 5g_max_rssi_penalize - Maximum penalty that can be applied to 5GHz RSSI.
+ * @Min: 0
+ * @Max: 20
+ * @Default: 10
+ * This ini is used to set maximum penalty which can be given to a 5Ghz network.
+ *
+ * Related: 5g_rssi_penalize_threshold, 5g_rssi_penalize_factor
+ * 5g_rssi_boost_threshold, 5g_rssi_boost_factor, 5g_max_rssi_boost
+ *
+ * Supported Feature: 5G band preference
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_5G_MAX_RSSI_PENALIZE_NAME            "5g_max_rssi_penalize"
+#define CFG_5G_MAX_RSSI_PENALIZE_MIN             (0)
+#define CFG_5G_MAX_RSSI_PENALIZE_MAX             (20)
+#define CFG_5G_MAX_RSSI_PENALIZE_DEFAULT         (10)
 
 #ifdef WLAN_FEATURE_UDP_RESPONSE_OFFLOAD
 /*
@@ -9580,7 +9736,7 @@ enum dot11p_mode {
  * g_enable_bcast_probe_rsp - Enable Broadcast probe response.
  * @Min: 0
  * @Max: 1
- * @Default: 0
+ * @Default: 1
  *
  * This ini is used to enable/disable broadcast probe response
  *
@@ -9595,14 +9751,14 @@ enum dot11p_mode {
 #define CFG_ENABLE_BCAST_PROBE_RESP_NAME    "g_enable_bcast_probe_rsp"
 #define CFG_ENABLE_BCAST_PROBE_RESP_MIN     (0)
 #define CFG_ENABLE_BCAST_PROBE_RESP_MAX     (1)
-#define CFG_ENABLE_BCAST_PROBE_RESP_DEFAULT (0)
+#define CFG_ENABLE_BCAST_PROBE_RESP_DEFAULT (1)
 
 /*
  * <ini>
  * g_qcn_ie_support - QCN IE Support
  * @Min: 0 (disabled)
  * @Max: 1 (enabled)
- * @Default: 0 (disabled)
+ * @Default: 1 (enabled)
  *
  * This config item is used to support QCN IE in probe/assoc/reassoc request
  * for STA mode. QCN IE support is not added for SAP mode.
@@ -9618,7 +9774,7 @@ enum dot11p_mode {
 #define CFG_QCN_IE_SUPPORT_NAME    "g_qcn_ie_support"
 #define CFG_QCN_IE_SUPPORT_MIN      0
 #define CFG_QCN_IE_SUPPORT_MAX      1
-#define CFG_QCN_IE_SUPPORT_DEFAULT  0
+#define CFG_QCN_IE_SUPPORT_DEFAULT  1
 
 /*
  * <ini>
@@ -10353,6 +10509,15 @@ struct hdd_config {
 	bool enable_bcast_probe_rsp;
 	bool qcn_ie_support;
 	uint8_t fils_max_chan_guard_time;
+	/* 5G preference parameters for boosting RSSI */
+	bool                        enable_5g_band_pref;
+	int8_t                      rssi_boost_threshold_5g;
+	uint8_t                     rssi_boost_factor_5g;
+	uint8_t                     max_rssi_boost_5g;
+	/* 5G preference parameters for dropping RSSI */
+	int8_t                      rssi_penalize_threshold_5g;
+	uint8_t                     rssi_penalize_factor_5g;
+	uint8_t                     max_rssi_penalize_5g;
 };
 
 #define VAR_OFFSET(_Struct, _Var) (offsetof(_Struct, _Var))

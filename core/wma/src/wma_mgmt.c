@@ -48,6 +48,7 @@
 #include "qdf_types.h"
 #include "qdf_mem.h"
 #include "ol_txrx_peer_find.h"
+#include "ol_txrx.h"
 
 #include "wma_types.h"
 #include "lim_api.h"
@@ -2830,7 +2831,7 @@ void wma_hidden_ssid_vdev_restart(tp_wma_handle wma_handle,
 			   OL_TXQ_PAUSE_REASON_VDEV_STOP);
 	wma_handle->interfaces[pReq->sessionId].pause_bitmap |=
 							(1 << PAUSE_TYPE_HOST);
-	if (wmi_unified_vdev_stop_send(wma_handle->wmi_handle, pReq->sessionId)) {
+	if (wma_send_vdev_stop_to_fw(wma_handle, pReq->sessionId)) {
 		WMA_LOGE("%s: %d Failed to send vdev stop", __func__, __LINE__);
 		qdf_atomic_set(&intr[pReq->sessionId].vdev_restart_params.
 			       hidden_ssid_restart_in_progress, 0);
@@ -3092,7 +3093,7 @@ int wma_process_rmf_frame(tp_wma_handle wma_handle,
 static bool wma_is_pkt_drop_candidate(tp_wma_handle wma_handle,
 				      uint8_t *peer_addr, uint8_t subtype)
 {
-	struct ol_txrx_peer_t *peer;
+	struct ol_txrx_peer_t *peer = NULL;
 	struct ol_txrx_pdev_t *pdev_ctx;
 	uint8_t peer_id;
 	bool should_drop = false;
@@ -3116,7 +3117,7 @@ static bool wma_is_pkt_drop_candidate(tp_wma_handle wma_handle,
 		goto end;
 	}
 
-	peer = ol_txrx_find_peer_by_addr(pdev_ctx, peer_addr, &peer_id);
+	peer = ol_txrx_find_peer_by_addr_inc_ref(pdev_ctx, peer_addr, &peer_id);
 	if (!peer) {
 		if (SIR_MAC_MGMT_ASSOC_REQ != subtype) {
 			WMA_LOGI(
@@ -3165,6 +3166,8 @@ static bool wma_is_pkt_drop_candidate(tp_wma_handle wma_handle,
 	}
 
 end:
+	if (peer)
+		OL_TXRX_PEER_UNREF_DELETE(peer);
 	return should_drop;
 }
 
