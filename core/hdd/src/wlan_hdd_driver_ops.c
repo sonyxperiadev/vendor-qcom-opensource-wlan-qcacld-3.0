@@ -463,7 +463,7 @@ static void wlan_hdd_shutdown(void)
 	void *hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
 
 	if (cds_is_load_or_unload_in_progress()) {
-		hdd_err("Load/unload in progress, ignore SSR shutdown");
+		hdd_warn("Load/unload in progress, ignore SSR shutdown");
 		return;
 	}
 	/* this is for cases, where shutdown invoked from platform */

@@ -1084,7 +1084,7 @@ hdd_send_new_ap_channel_info(struct net_device *dev, hdd_adapter_t *pAdapter,
 	 * Send the Channel event, the supplicant needs this to generate
 	 * the Adjacent AP report.
 	 */
-	hdd_warn("Sending up an SIOCGIWFREQ, channelId(%d)",
+	hdd_info("Sending up an SIOCGIWFREQ, channelId(%d)",
 		 descriptor->channelId);
 	memset(&wrqu, '\0', sizeof(wrqu));
 	wrqu.freq.m = descriptor->channelId;
@@ -1223,12 +1223,12 @@ static void hdd_send_association_event(struct net_device *dev,
 			    P2P_CLIENT_CONNECTING_STATE_1) {
 				global_p2p_connection_status =
 					P2P_CLIENT_CONNECTED_STATE_1;
-				hdd_err("[P2P State] Changing state from Connecting state to Connected State for 8-way Handshake");
+				hdd_warn("[P2P State] Changing state from Connecting state to Connected State for 8-way Handshake");
 			} else if (global_p2p_connection_status ==
 				   P2P_CLIENT_CONNECTING_STATE_2) {
 				global_p2p_connection_status =
 					P2P_CLIENT_COMPLETED_STATE;
-				hdd_err("[P2P State] Changing state from Connecting state to P2P Client Connection Completed");
+				hdd_warn("[P2P State] Changing state from Connecting state to P2P Client Connection Completed");
 			}
 		}
 #endif
@@ -1597,7 +1597,7 @@ static QDF_STATUS hdd_dis_connect_handler(hdd_adapter_t *pAdapter,
 	hdd_wmm_adapter_clear(pAdapter);
 	sme_ft_reset(WLAN_HDD_GET_HAL_CTX(pAdapter), pAdapter->sessionId);
 	if (hdd_remove_beacon_filter(pAdapter) != 0)
-		hdd_err("hdd_remove_beacon_filter() failed");
+		hdd_warn("hdd_remove_beacon_filter() failed");
 
 	if (eCSR_ROAM_IBSS_LEAVE == roamStatus) {
 		uint8_t i;
@@ -1965,7 +1965,7 @@ static void hdd_send_re_assoc_event(struct net_device *dev,
 			roam_profile.SSID.length);
 
 	if (bss == NULL)
-		hdd_err("Get BSS returned NULL");
+		hdd_warn("Get BSS returned NULL");
 	buf_ptr = buf_ssid_ie;
 	*buf_ptr = SIR_MAC_SSID_EID;
 	buf_ptr++;
@@ -2371,7 +2371,7 @@ static QDF_STATUS hdd_association_completion_handler(hdd_adapter_t *pAdapter,
 		if ((WLAN_MAX_STA_COUNT + 3) > pRoamInfo->staId)
 			pHddCtx->sta_to_adapter[pRoamInfo->staId] = pAdapter;
 		else
-			hdd_err("Wrong Staid: %d", pRoamInfo->staId);
+			hdd_warn("Wrong Staid: %d", pRoamInfo->staId);
 
 		pHddCtx->sta_to_adapter[pRoamInfo->staId] = pAdapter;
 
@@ -2456,7 +2456,7 @@ static QDF_STATUS hdd_association_completion_handler(hdd_adapter_t *pAdapter,
 						pRoamInfo->nAssocRspLength -
 						FT_ASSOC_RSP_IES_OFFSET;
 				} else {
-					hdd_err("AssocRsp is NULL");
+					hdd_warn("AssocRsp is NULL");
 					assocRsplen = 0;
 				}
 
@@ -2488,7 +2488,7 @@ static QDF_STATUS hdd_association_completion_handler(hdd_adapter_t *pAdapter,
 						    pRoamInfo->nAssocReqLength;
 					}
 				} else {
-					hdd_err("AssocReq is NULL");
+					hdd_warn("AssocReq is NULL");
 					assocReqlen = 0;
 				}
 
@@ -3290,7 +3290,7 @@ roam_roam_connect_status_update_handler(hdd_adapter_t *pAdapter,
 			WLAN_HDD_GET_STATION_CTX_PTR(pAdapter);
 		struct station_info *stainfo;
 
-		hdd_err("IBSS New Peer indication from SME "
+		hdd_info("IBSS New Peer indication from SME "
 			 "with peerMac " MAC_ADDRESS_STR " BSSID: "
 			 MAC_ADDRESS_STR " and stationID= %d",
 			 MAC_ADDR_ARRAY(pRoamInfo->peerMac.bytes),
@@ -3382,7 +3382,7 @@ roam_roam_connect_status_update_handler(hdd_adapter_t *pAdapter,
 		if (!roam_remove_ibss_station(pAdapter, pRoamInfo->staId))
 			hdd_warn("IBSS peer departed by cannot find peer in our registration table with TL");
 
-		hdd_err("IBSS Peer Departed from SME "
+		hdd_info("IBSS Peer Departed from SME "
 			 "with peerMac " MAC_ADDRESS_STR " BSSID: "
 			 MAC_ADDRESS_STR " and stationID= %d",
 			 MAC_ADDR_ARRAY(pRoamInfo->peerMac.bytes),
@@ -3516,7 +3516,7 @@ static QDF_STATUS hdd_tdls_connection_tracker_update(hdd_adapter_t *adapter,
 
 	if (eTDLS_LINK_CONNECTED ==
 	    curr_peer->link_status) {
-		hdd_err("Received CONNECTION_TRACKER_NOTIFICATION "
+		hdd_notice("Received CONNECTION_TRACKER_NOTIFICATION "
 			MAC_ADDRESS_STR
 			" staId: %d, reason: %d",
 			MAC_ADDR_ARRAY(roam_info->peerMac.bytes),
@@ -3710,7 +3710,7 @@ hdd_roam_tdls_status_update_handler(hdd_adapter_t *pAdapter,
 			     pRoamInfo->sessionId)
 			    && pRoamInfo->staId ==
 			    pHddCtx->tdlsConnInfo[staIdx].staId) {
-				hdd_warn("HDD: del STA IDX = %x",
+				hdd_notice("HDD: del STA IDX = %x",
 					 pRoamInfo->staId);
 				mutex_lock(&pHddCtx->tdls_lock);
 				curr_peer =
@@ -3758,7 +3758,7 @@ hdd_roam_tdls_status_update_handler(hdd_adapter_t *pAdapter,
 	break;
 	case eCSR_ROAM_RESULT_TEARDOWN_TDLS_PEER_IND:
 	{
-		hdd_err("Sending teardown to supplicant with reason code %u",
+		hdd_notice("Sending teardown to supplicant with reason code %u",
 			pRoamInfo->reasonCode);
 
 		mutex_lock(&pHddCtx->tdls_lock);
@@ -4653,7 +4653,7 @@ hdd_sme_roam_callback(void *pContext, tCsrRoamInfo *pRoamInfo, uint32_t roamId,
 	 * interface down.
 	 */
 	case eCSR_ROAM_FT_REASSOC_FAILED:
-		hdd_err("Reassoc Failed with roamStatus: %d roamResult: %d SessionID: %d",
+		hdd_notice("Reassoc Failed with roamStatus: %d roamResult: %d SessionID: %d",
 			 roamStatus, roamResult, pAdapter->sessionId);
 		qdf_ret_status =
 			hdd_dis_connect_handler(pAdapter, pRoamInfo, roamId,
@@ -5485,7 +5485,7 @@ static int __iw_set_essid(struct net_device *dev,
 	if (pAdapter->device_mode != QDF_STA_MODE &&
 	    pAdapter->device_mode != QDF_IBSS_MODE &&
 	    pAdapter->device_mode != QDF_P2P_CLIENT_MODE) {
-		hdd_warn("device mode %s(%d) is not allowed",
+		hdd_info("device mode %s(%d) is not allowed",
 			 hdd_device_mode_to_string(pAdapter->device_mode),
 			 pAdapter->device_mode);
 		return -EINVAL;
