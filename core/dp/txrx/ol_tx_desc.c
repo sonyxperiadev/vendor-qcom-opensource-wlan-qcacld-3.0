@@ -104,6 +104,7 @@ ol_tx_desc_vdev_update(struct ol_tx_desc_t *tx_desc,
 		       struct ol_txrx_vdev_t *vdev)
 {
 	tx_desc->vdev = vdev;
+	tx_desc->vdev_id = vdev->vdev_id;
 }
 
 #ifdef CONFIG_PER_VDEV_TX_DESC_POOL
