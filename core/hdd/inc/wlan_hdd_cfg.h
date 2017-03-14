@@ -5506,7 +5506,7 @@ typedef enum {
  * gMCAddrListEnable - Enable/Disable Multicast MAC Address List feature
  * @Min: 0
  * @Max: 1
- * @Default: 1
+ * @Default: 0
  *
  * This ini is used to set default MAC Address
  * Default: Enable
@@ -5523,7 +5523,7 @@ typedef enum {
 #define CFG_MC_ADDR_LIST_ENABLE_NAME          "gMCAddrListEnable"
 #define CFG_MC_ADDR_LIST_ENABLE_MIN           (0)
 #define CFG_MC_ADDR_LIST_ENABLE_MAX           (1)
-#define CFG_MC_ADDR_LIST_ENABLE_DEFAULT       (1)
+#define CFG_MC_ADDR_LIST_ENABLE_DEFAULT       (0)
 
 /*
  * <ini>
@@ -7370,10 +7370,13 @@ typedef enum {
  * <ini>
  * gEnableSifsBurst - Enables Sifs Burst
  * @Min: 0
- * @Max: 1
- * @Default: DEF
+ * @Max: 3
+ * @Default: 0
  *
- * This ini is used to set default Sifs Burst
+ * Sifs burst mode configuration
+ *     0) disabled
+ *     1) enabled, but disabled for legacy mode
+ *     3) enabled
  *
  * Related: None
  *
@@ -7386,7 +7389,7 @@ typedef enum {
 
 #define CFG_ENABLE_SIFS_BURST                      "gEnableSifsBurst"
 #define CFG_ENABLE_SIFS_BURST_MIN                  (0)
-#define CFG_ENABLE_SIFS_BURST_MAX                  (1)
+#define CFG_ENABLE_SIFS_BURST_MAX                  (3)
 #define CFG_ENABLE_SIFS_BURST_DEFAULT              (0)
 
 #ifdef WLAN_FEATURE_LPSS
@@ -9793,7 +9796,7 @@ enum dot11p_mode {
  *
  * </ini>
  */
-#define CFG_QCN_IE_SUPPORT_NAME    "g_qcn_ie_support"
+#define CFG_QCN_IE_SUPPORT_NAME     "g_qcn_ie_support"
 #define CFG_QCN_IE_SUPPORT_MIN      0
 #define CFG_QCN_IE_SUPPORT_MAX      1
 #define CFG_QCN_IE_SUPPORT_DEFAULT  1
@@ -9819,6 +9822,44 @@ enum dot11p_mode {
 #define CFG_FILS_MAX_CHAN_GUARD_TIME_MIN     (0)
 #define CFG_FILS_MAX_CHAN_GUARD_TIME_MAX     (10)
 #define CFG_FILS_MAX_CHAN_GUARD_TIME_DEFAULT (0)
+
+/*
+ * <ini>
+ * g_enable_packet_filter_bitmap - Enable Packet filters before going into
+ * suspend mode
+ * @Min: 0
+ * @Max: 63
+ * @Default: 0
+ * Below is the Detailed bit map of the Filters
+ * bit-0 : IPv6 multicast
+ * bit-1 : IPv4 multicast
+ * bit-2 : IPv4 broadcast
+ * bit-3 : XID - Exchange station Identification packet, solicits the
+ * identification of the receiving station
+ * bit-4 : STP - Spanning Tree Protocol, builds logical loop free topology
+ * bit-5 : DTP/LLC/CDP
+ * DTP - Dynamic Trunking Protocol is used by Ciscoswitches to negotiate
+ * whether an interconnection between two switches should be put into access or
+ * trunk mode
+ * LLC - Logical link control, used for multiplexing, flow & error control
+ * CDP - Cisco Discovery Protocol packet contains information about the cisco
+ * devices in the network
+ *
+ * This ini support to enable above mentioned packet filters
+ * when target goes to suspend mode, clear those when resume
+ *
+ * Related: None
+ *
+ * Supported Feature: PACKET FILTERING
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+#define CFG_ENABLE_PACKET_FILTERS_NAME     "g_enable_packet_filter_bitmap"
+#define CFG_ENABLE_PACKET_FILTERS_DEFAULT  (0)
+#define CFG_ENABLE_PACKET_FILTERS_MIN      (0)
+#define CFG_ENABLE_PACKET_FILTERS_MAX      (63)
 
 /*---------------------------------------------------------------------------
    Type declarations
@@ -10342,7 +10383,7 @@ struct hdd_config {
 	uint32_t wlanLoggingNumBuf;
 #endif /* WLAN_LOGGING_SOCK_SVC_ENABLE */
 
-	bool enableSifsBurst;
+	uint8_t enableSifsBurst;
 
 #ifdef WLAN_FEATURE_LPSS
 	bool enable_lpass_support;
@@ -10541,6 +10582,8 @@ struct hdd_config {
 	int8_t                      rssi_penalize_threshold_5g;
 	uint8_t                     rssi_penalize_factor_5g;
 	uint8_t                     max_rssi_penalize_5g;
+
+	uint8_t packet_filters_bitmap;
 };
 
 #define VAR_OFFSET(_Struct, _Var) (offsetof(_Struct, _Var))
