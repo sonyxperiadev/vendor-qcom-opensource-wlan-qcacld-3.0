@@ -154,6 +154,8 @@
 
 /* rcpi request timeout in milli seconds */
 #define WLAN_WAIT_TIME_RCPI 500
+/* Maximum time(ms) to wait for RSO CMD status event */
+#define WAIT_TIME_RSO_CMD_STATUS 2000
 
 #define MAX_NUMBER_OF_ADAPTERS 4
 
@@ -1187,6 +1189,7 @@ struct hdd_adapter_s {
 	 * disconnect is being deferred.
 	 */
 	uint8_t cfg80211_disconnect_reason;
+	struct lfr_firmware_status lfr_fw_status;
 };
 
 /*
@@ -2055,7 +2058,8 @@ void hdd_connect_result(struct net_device *dev, const u8 *bssid,
 			tCsrRoamInfo *roam_info, const u8 *req_ie,
 			size_t req_ie_len, const u8 *resp_ie,
 			size_t resp_ie_len, u16 status, gfp_t gfp,
-			bool connect_timeout);
+			bool connect_timeout,
+			tSirResultCodes timeout_reason);
 
 #ifdef WLAN_FEATURE_FASTPATH
 void hdd_enable_fastpath(struct hdd_config *hdd_cfg,

@@ -356,10 +356,11 @@ void ol_tx_desc_free(struct ol_txrx_pdev_t *pdev, struct ol_tx_desc_t *tx_desc)
 {
 	qdf_spin_lock_bh(&pdev->tx_mutex);
 
+	ol_tx_desc_dup_detect_reset(pdev, tx_desc);
+
 	if (tx_desc->pkt_type == OL_TX_FRM_TSO)
 		ol_tx_tso_desc_free(pdev, tx_desc);
 
-	ol_tx_desc_dup_detect_reset(pdev, tx_desc);
 	ol_tx_desc_reset_pkt_type(tx_desc);
 	ol_tx_desc_reset_timestamp(tx_desc);
 
@@ -544,7 +545,7 @@ struct ol_tx_desc_t *ol_tx_desc_ll(struct ol_txrx_pdev_t *pdev,
 	num_frags = (num_frags > QDF_NBUF_CB_TX_MAX_EXTRA_FRAGS)
 		? QDF_NBUF_CB_TX_MAX_EXTRA_FRAGS
 		: num_frags;
-#if defined(HELIUMPLUS_PADDR64)
+#if defined(HELIUMPLUS)
 	/*
 	 * Use num_frags - 1, since 1 frag is used to store
 	 * the HTT/HTC descriptor
@@ -552,10 +553,10 @@ struct ol_tx_desc_t *ol_tx_desc_ll(struct ol_txrx_pdev_t *pdev,
 	 */
 	htt_tx_desc_num_frags(pdev->htt_pdev, tx_desc->htt_frag_desc,
 			      num_frags - 1);
-#else /* ! defined(HELIUMPLUSPADDR64) */
+#else /* ! defined(HELIUMPLUS) */
 	htt_tx_desc_num_frags(pdev->htt_pdev, tx_desc->htt_tx_desc,
 			      num_frags - 1);
-#endif /* defined(HELIUMPLUS_PADDR64) */
+#endif /* defined(HELIUMPLUS) */
 
 	if (msdu_info->tso_info.is_tso) {
 		htt_tx_desc_fill_tso_info(pdev->htt_pdev,
@@ -573,7 +574,7 @@ struct ol_tx_desc_t *ol_tx_desc_ll(struct ol_txrx_pdev_t *pdev,
 #endif
 			frag_len = qdf_nbuf_get_frag_len(netbuf, i);
 			frag_paddr = qdf_nbuf_get_frag_paddr(netbuf, i);
-#if defined(HELIUMPLUS_PADDR64)
+#if defined(HELIUMPLUS)
 			htt_tx_desc_frag(pdev->htt_pdev, tx_desc->htt_frag_desc, i - 1,
 				 frag_paddr, frag_len);
 #if defined(HELIUMPLUS_DEBUG)
@@ -582,10 +583,10 @@ struct ol_tx_desc_t *ol_tx_desc_ll(struct ol_txrx_pdev_t *pdev,
 				  i-1, frag_vaddr, frag_paddr, frag_len);
 			ol_txrx_dump_pkt(netbuf, frag_paddr, 64);
 #endif /* HELIUMPLUS_DEBUG */
-#else /* ! defined(HELIUMPLUSPADDR64) */
+#else /* ! defined(HELIUMPLUS) */
 			htt_tx_desc_frag(pdev->htt_pdev, tx_desc->htt_tx_desc, i - 1,
 							 frag_paddr, frag_len);
-#endif /* defined(HELIUMPLUS_PADDR64) */
+#endif /* defined(HELIUMPLUS) */
 		}
 	}
 
@@ -695,7 +696,7 @@ void ol_tx_desc_frame_free_nonstd(struct ol_txrx_pdev_t *pdev,
 		   (tx_desc->pkt_type != ol_tx_frm_freed)) {
 		qdf_dma_addr_t frag_desc_paddr = 0;
 
-#if defined(HELIUMPLUS_PADDR64)
+#if defined(HELIUMPLUS)
 		frag_desc_paddr = tx_desc->htt_frag_desc_paddr;
 		/* FIX THIS -
 		 * The FW currently has trouble using the host's fragments
@@ -711,7 +712,7 @@ void ol_tx_desc_frame_free_nonstd(struct ol_txrx_pdev_t *pdev,
 			  __func__, __LINE__, tx_desc->id,
 			  frag_desc_paddr);
 #endif /* HELIUMPLUS_DEBUG */
-#endif /* HELIUMPLUS_PADDR64 */
+#endif /* HELIUMPLUS */
 		htt_tx_desc_frags_table_set(pdev->htt_pdev,
 					    tx_desc->htt_tx_desc, 0,
 					    frag_desc_paddr, 1);
@@ -813,8 +814,10 @@ void ol_tso_free_segment(struct ol_txrx_pdev_t *pdev,
 		return;
 	}
 	/*this tso seg is now a part of freelist*/
+	qdf_mem_zero(tso_seg, sizeof(*tso_seg));
 	tso_seg->next = pdev->tso_seg_pool.freelist;
 	tso_seg->on_freelist = 1;
+	tso_seg->cookie = TSO_SEG_MAGIC_COOKIE;
 	pdev->tso_seg_pool.freelist = tso_seg;
 	pdev->tso_seg_pool.num_free++;
 	qdf_spin_unlock_bh(&pdev->tso_seg_pool.tso_mutex);
@@ -862,7 +865,7 @@ void ol_tso_num_seg_free(struct ol_txrx_pdev_t *pdev,
 	qdf_spin_lock_bh(&pdev->tso_num_seg_pool.tso_num_seg_mutex);
 	tso_num_seg->next = pdev->tso_num_seg_pool.freelist;
 	pdev->tso_num_seg_pool.freelist = tso_num_seg;
-	pdev->tso_num_seg_pool.num_free++;
+		pdev->tso_num_seg_pool.num_free++;
 	qdf_spin_unlock_bh(&pdev->tso_num_seg_pool.tso_num_seg_mutex);
 }
 #endif

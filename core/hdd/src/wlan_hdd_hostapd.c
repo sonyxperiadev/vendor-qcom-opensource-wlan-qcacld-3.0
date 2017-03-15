@@ -2123,12 +2123,6 @@ stopbss:
 			       qdf_status);
 		}
 
-		/* once the event is set, structure dev/pHostapdAdapter should
-		 * not be touched since they are now subject to being deleted
-		 * by another thread */
-		if (eSAP_STOP_BSS_EVENT == sapEvent)
-			qdf_event_set(&pHostapdState->qdf_stop_bss_event);
-
 		/* notify userspace that the BSS has stopped */
 		memset(&we_custom_event, '\0', sizeof(we_custom_event));
 		memcpy(&we_custom_event, stopBssEvent, event_len);
@@ -2140,6 +2134,14 @@ stopbss:
 				    (char *)we_custom_event_generic);
 		cds_decr_session_set_pcl(pHostapdAdapter->device_mode,
 					 pHostapdAdapter->sessionId);
+
+		/* once the event is set, structure dev/pHostapdAdapter should
+		 * not be touched since they are now subject to being deleted
+		 * by another thread
+		 */
+		if (eSAP_STOP_BSS_EVENT == sapEvent)
+			qdf_event_set(&pHostapdState->qdf_stop_bss_event);
+
 		cds_dump_concurrency_info();
 		/* Send SCC/MCC Switching event to IPA */
 		hdd_ipa_send_mcc_scc_msg(pHddCtx, pHddCtx->mcc_mode);
@@ -7272,8 +7274,10 @@ int wlan_hdd_cfg80211_start_bss(hdd_adapter_t *pHostapdAdapter,
 
 	ENTER();
 
-	if (!update_beacon && cds_is_connection_in_progress(NULL, NULL)) {
-		hdd_err("Can't start BSS: connection is in progress");
+	if (!update_beacon && (cds_is_connection_in_progress(NULL, NULL) ||
+		pHddCtx->btCoexModeSet)) {
+		hdd_err("Can't start BSS: connection ot btcoex(%d) is in progress",
+			pHddCtx->btCoexModeSet);
 		return -EINVAL;
 	}
 
@@ -7899,7 +7903,12 @@ static int __wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy,
 	      pAdapter->device_mode == QDF_P2P_GO_MODE)) {
 		return -EOPNOTSUPP;
 	}
-
+	/* Clear SOFTAP_INIT_DONE flag to mark stop_ap deinit. So that we do
+	 * not restart SAP after SSR as SAP is already stopped from user space.
+	 * This update is moved to start of this function to resolve stop_ap
+	 * call during SSR case. Adapter gets cleaned up as part of SSR.
+	 */
+	clear_bit(SOFTAP_INIT_DONE, &pAdapter->event_flags);
 	hdd_notice("Device_mode %s(%d)",
 		hdd_device_mode_to_string(pAdapter->device_mode),
 		pAdapter->device_mode);
@@ -7908,8 +7917,10 @@ static int __wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy,
 	if (0 != ret)
 		return ret;
 
-	if (QDF_SAP_MODE == pAdapter->device_mode)
+	if (pAdapter->device_mode == QDF_SAP_MODE) {
+		wlan_hdd_del_station(pAdapter);
 		hdd_green_ap_stop_bss(pHddCtx);
+	}
 
 	status = hdd_get_front_adapter(pHddCtx, &pAdapterNode);
 	while (NULL != pAdapterNode && QDF_STATUS_SUCCESS == status) {
@@ -8028,7 +8039,6 @@ static int __wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy,
 	}
 	/* Reset WNI_CFG_PROBE_RSP Flags */
 	wlan_hdd_reset_prob_rspies(pAdapter);
-	clear_bit(SOFTAP_INIT_DONE, &pAdapter->event_flags);
 
 #ifdef WLAN_FEATURE_P2P_DEBUG
 	if ((pAdapter->device_mode == QDF_P2P_GO_MODE) &&
@@ -8146,6 +8156,10 @@ static int __wlan_hdd_cfg80211_start_ap(struct wiphy *wiphy,
 		pAdapter, hdd_device_mode_to_string(pAdapter->device_mode),
 		pAdapter->device_mode, cds_is_sub_20_mhz_enabled());
 
+	if (pHddCtx->btCoexModeSet) {
+		hdd_info("BTCoex Mode operation in progress");
+		return -EBUSY;
+	}
 
 	if (cds_is_connection_in_progress(NULL, NULL)) {
 		hdd_err("Can't start BSS: connection is in progress");
@@ -8514,8 +8528,6 @@ void hdd_sap_indicate_disconnect_for_sta(hdd_adapter_t *adapter)
 					sap_ctx->pUsrContext);
 		}
 	}
-
-	clear_bit(SOFTAP_BSS_STARTED, &adapter->event_flags);
 
 	EXIT();
 }

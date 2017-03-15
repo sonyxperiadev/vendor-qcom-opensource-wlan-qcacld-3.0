@@ -1774,6 +1774,36 @@ int wma_link_status_event_handler(void *handle, uint8_t *cmd_param_info,
 	return 0;
 }
 
+int wma_rso_cmd_status_event_handler(wmi_roam_event_fixed_param *wmi_event)
+{
+	struct rso_cmd_status *rso_status;
+	cds_msg_t sme_msg;
+	QDF_STATUS qdf_status;
+
+	rso_status = qdf_mem_malloc(sizeof(*rso_status));
+	if (!rso_status) {
+		WMA_LOGE("%s: malloc fails for rso cmd status", __func__);
+		return -ENOMEM;
+	}
+
+	rso_status->vdev_id = wmi_event->vdev_id;
+	if (WMI_ROAM_NOTIF_SCAN_MODE_SUCCESS == wmi_event->notif)
+		rso_status->status = true;
+	else if (WMI_ROAM_NOTIF_SCAN_MODE_FAIL == wmi_event->notif)
+		rso_status->status = false;
+	sme_msg.type = eWNI_SME_RSO_CMD_STATUS_IND;
+	sme_msg.bodyptr = rso_status;
+	sme_msg.bodyval = 0;
+	WMA_LOGI("%s: Post RSO cmd status to SME",  __func__);
+
+	qdf_status = cds_mq_post_message(QDF_MODULE_ID_SME, &sme_msg);
+	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
+		WMA_LOGE("%s: fail to post RSO cmd status to SME", __func__);
+		qdf_mem_free(rso_status);
+	}
+	return 0;
+}
+
 /**
  * wma_stats_event_handler() - stats event handler
  * @handle: wma handle
@@ -4134,6 +4164,12 @@ void wma_peer_debug_dump(void)
 	uint32_t current_index;
 	struct peer_debug_rec *dbg_rec;
 	uint64_t startt = 0;
+	uint32_t delta;
+
+	if (!wma) {
+		WMA_LOGD("%s: WMA handle NULL. Exiting", __func__);
+		return;
+	}
 
 	if (!wma) {
 		WMA_LOGD("%s: WMA handle NULL. Exiting", __func__);
@@ -4162,14 +4198,22 @@ void wma_peer_debug_dump(void)
 		if (startt == 0)
 			startt = dbg_rec->time;
 
-		WMA_LOGE("index = %5d timestamp = 0x%016llx delta ms = %-9d "
+		/*
+		 * Divide by 19200 == right shift 8 bits, then divide by 75
+		 * 32 bit computation keeps both 32 and 64 bit compilers happy.
+		 * The value will roll over after approx. 33554 seconds.
+		 */
+		delta = (uint32_t) (((dbg_rec->time - startt) >> 8) &
+				    0xffffffff);
+		delta = delta / (DEBUG_CLOCK_TICKS_PER_MSEC >> 8);
+
+		WMA_LOGE("index = %5d timestamp = 0x%016llx delta ms = %-12u "
 			 "info = %-24s vdev_id = %-3d mac addr = %pM "
 			 "peer obj = 0x%p peer_id = %-4d "
 			 "arg1 = 0x%-8x arg2 = 0x%-8x",
 			 i,
 			 dbg_rec->time,
-			 ((int32_t) ((dbg_rec->time - startt) & 0xffffffff)) /
-				DEBUG_CLOCK_TICKS_PER_MSEC,
+			 delta,
 			 wma_peer_debug_string(dbg_rec->operation),
 			 (int8_t) dbg_rec->vdev_id,
 			 dbg_rec->mac_addr.bytes,
@@ -4178,4 +4222,32 @@ void wma_peer_debug_dump(void)
 			 dbg_rec->arg1,
 			 dbg_rec->arg2);
 	} while (i != current_index);
+}
+
+void wma_acquire_wmi_resp_wakelock(t_wma_handle *wma, uint32_t msec)
+{
+	cds_host_diag_log_work(&wma->wmi_cmd_rsp_wake_lock,
+			       msec,
+			       WIFI_POWER_EVENT_WAKELOCK_WMI_CMD_RSP);
+	qdf_wake_lock_timeout_acquire(&wma->wmi_cmd_rsp_wake_lock, msec);
+	qdf_runtime_pm_prevent_suspend(&wma->wmi_cmd_rsp_runtime_lock);
+}
+
+void wma_release_wmi_resp_wakelock(t_wma_handle *wma)
+{
+	qdf_wake_lock_release(&wma->wmi_cmd_rsp_wake_lock,
+			      WIFI_POWER_EVENT_WAKELOCK_WMI_CMD_RSP);
+	qdf_runtime_pm_allow_suspend(&wma->wmi_cmd_rsp_runtime_lock);
+}
+
+QDF_STATUS wma_send_vdev_stop_to_fw(t_wma_handle *wma, uint8_t vdev_id)
+{
+	QDF_STATUS status;
+
+	wma_acquire_wmi_resp_wakelock(wma, WMA_VDEV_STOP_REQUEST_TIMEOUT);
+	status = wmi_unified_vdev_stop_send(wma->wmi_handle, vdev_id);
+	if (QDF_IS_STATUS_ERROR(status))
+		wma_release_wmi_resp_wakelock(wma);
+
+	return status;
 }
