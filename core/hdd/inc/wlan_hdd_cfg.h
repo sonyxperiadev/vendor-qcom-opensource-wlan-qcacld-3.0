@@ -5523,7 +5523,7 @@ typedef enum {
 #define CFG_MC_ADDR_LIST_ENABLE_NAME          "gMCAddrListEnable"
 #define CFG_MC_ADDR_LIST_ENABLE_MIN           (0)
 #define CFG_MC_ADDR_LIST_ENABLE_MAX           (1)
-#define CFG_MC_ADDR_LIST_ENABLE_DEFAULT       (0)
+#define CFG_MC_ADDR_LIST_ENABLE_DEFAULT       (1)
 
 /*
  * <ini>
