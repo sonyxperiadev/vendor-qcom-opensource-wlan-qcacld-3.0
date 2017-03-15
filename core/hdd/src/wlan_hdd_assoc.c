@@ -1905,6 +1905,11 @@ static void hdd_send_re_assoc_event(struct net_device *dev,
 
 	qdf_mem_zero(&roam_profile, sizeof(roam_profile));
 
+	if (pAdapter->defer_disconnect) {
+		hdd_debug("Do not send roam event as discon will be processed");
+		goto done;
+	}
+
 	if (!rspRsnIe) {
 		hdd_err("Unable to allocate RSN IE");
 		goto done;
@@ -1990,10 +1995,9 @@ static void hdd_send_re_assoc_event(struct net_device *dev,
 	hdd_notice("Req RSN IE:");
 	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_HDD, QDF_TRACE_LEVEL_DEBUG,
 			   final_req_ie, (ssid_ie_len + reqRsnLength));
-	if (!pAdapter->defer_disconnect)
-		cfg80211_roamed_bss(dev, bss,
-				final_req_ie, (ssid_ie_len + reqRsnLength),
-				rspRsnIe, rspRsnLength, GFP_KERNEL);
+	cfg80211_roamed_bss(dev, bss,
+			final_req_ie, (ssid_ie_len + reqRsnLength),
+			rspRsnIe, rspRsnLength, GFP_KERNEL);
 
 	qdf_mem_copy(assoc_req_ies,
 		(u8 *)pCsrRoamInfo->pbFrames + pCsrRoamInfo->nBeaconLength,
@@ -2532,16 +2536,16 @@ static QDF_STATUS hdd_association_completion_handler(hdd_adapter_t *pAdapter,
 							QDF_TRACE_LEVEL_DEBUG,
 							pFTAssocReq,
 							assocReqlen);
-						roam_bss =
-							hdd_cfg80211_get_bss(
-								pAdapter->wdev.wiphy,
-								chan,
-								pRoamInfo->bssid.bytes,
-								pRoamInfo->u.
-								pConnectedProfile->SSID.ssId,
-								pRoamInfo->u.
-								pConnectedProfile->SSID.length);
-						if (!pAdapter->defer_disconnect)
+						if (!pAdapter->defer_disconnect) {
+							roam_bss =
+								hdd_cfg80211_get_bss(
+									pAdapter->wdev.wiphy,
+									chan,
+									pRoamInfo->bssid.bytes,
+									pRoamInfo->u.
+									pConnectedProfile->SSID.ssId,
+									pRoamInfo->u.
+									pConnectedProfile->SSID.length);
 							cfg80211_roamed_bss(dev,
 								roam_bss,
 								pFTAssocReq,
@@ -2549,7 +2553,7 @@ static QDF_STATUS hdd_association_completion_handler(hdd_adapter_t *pAdapter,
 								pFTAssocRsp,
 								assocRsplen,
 								GFP_KERNEL);
-						wlan_hdd_send_roam_auth_event(
+							wlan_hdd_send_roam_auth_event(
 								pAdapter,
 								pRoamInfo->bssid.bytes,
 								pFTAssocReq,
@@ -2557,6 +2561,7 @@ static QDF_STATUS hdd_association_completion_handler(hdd_adapter_t *pAdapter,
 								pFTAssocRsp,
 								assocRsplen,
 								pRoamInfo);
+						}
 					}
 					if (sme_get_ftptk_state
 						    (WLAN_HDD_GET_HAL_CTX(pAdapter),
