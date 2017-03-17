@@ -254,12 +254,9 @@ static int __wlan_hdd_ipv6_changed(struct notifier_block *nb,
 		if (0 != status)
 			return NOTIFY_DONE;
 		sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(pAdapter);
-		if (eConnectionState_Associated ==
-						sta_ctx->conn_info.connState) {
-			hdd_info("invoking sme_dhcp_done_ind");
-			sme_dhcp_done_ind(pHddCtx->hHal,
+		hdd_debug("invoking sme_dhcp_done_ind");
+		sme_dhcp_done_ind(pHddCtx->hHal,
 					  pAdapter->sessionId);
-		}
 		schedule_work(&pAdapter->ipv6NotifierWorkQueue);
 	}
 	EXIT();
@@ -911,12 +908,9 @@ static int __wlan_hdd_ipv4_changed(struct notifier_block *nb,
 			return NOTIFY_DONE;
 
 		sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(pAdapter);
-		if (eConnectionState_Associated ==
-						sta_ctx->conn_info.connState) {
-			hdd_info("invoking sme_dhcp_done_ind");
-			sme_dhcp_done_ind(pHddCtx->hHal,
+		hdd_debug("invoking sme_dhcp_done_ind");
+		sme_dhcp_done_ind(pHddCtx->hHal,
 					  pAdapter->sessionId);
-		}
 
 		if (!pHddCtx->config->fhostArpOffload) {
 			hdd_notice("Offload not enabled ARPOffload=%d",
