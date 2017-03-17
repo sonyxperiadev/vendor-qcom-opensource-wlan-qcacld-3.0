@@ -2919,6 +2919,7 @@ typedef struct {
  * @sessionId: Session identifier
  * @fast_scan_period: Fast Scan period
  * @slow_scan_period: Slow scan period
+ * @delay_start_time: delay in seconds to use before starting the first scan
  * @fast_scan_max_cycles: Fast scan max cycles
  * @us24GProbeTemplateLen: 2.4G probe template length
  * @p24GProbeTemplate: 2.4G probe template
@@ -2934,6 +2935,7 @@ typedef struct sSirPNOScanReq {
 	uint8_t sessionId;
 	uint32_t fast_scan_period;
 	uint32_t slow_scan_period;
+	uint32_t delay_start_time;
 	uint8_t fast_scan_max_cycles;
 
 	uint32_t        active_min_time;
@@ -6955,4 +6957,50 @@ struct sme_rcpi_req {
 	struct qdf_mac_addr mac_addr;
 };
 
+/**
+ * struct rsp_stats - arp packet stats
+ * @arp_req_enqueue: fw tx count
+ * @arp_req_tx_success: tx ack count
+ * @arp_req_tx_failure: tx ack fail count
+ * @arp_rsp_recvd: rx fw count
+ * @out_of_order_arp_rsp_drop_cnt: out of order count
+ * @dad_detected: dad detected
+ * @connect_status: connection status
+ * @ba_session_establishment_status: BA session status
+ */
+struct rsp_stats {
+	uint32_t vdev_id;
+	uint32_t arp_req_enqueue;
+	uint32_t arp_req_tx_success;
+	uint32_t arp_req_tx_failure;
+	uint32_t arp_rsp_recvd;
+	uint32_t out_of_order_arp_rsp_drop_cnt;
+	uint32_t dad_detected;
+	uint32_t connect_status;
+	uint32_t ba_session_establishment_status;
+};
+
+/**
+ * struct set_arp_stats_params - set/reset arp stats
+ * @vdev_id: session id
+ * @flag: enable/disable stats
+ * @pkt_type: type of packet(1 - arp)
+ * @ip_addr: subnet ipv4 address in case of encrypted packets
+ */
+struct set_arp_stats_params {
+	uint32_t vdev_id;
+	uint8_t flag;
+	uint8_t pkt_type;
+	uint32_t ip_addr;
+};
+
+/**
+ * struct get_arp_stats_params - get arp stats from firmware
+ * @pkt_type: packet type(1 - ARP)
+ * @vdev_id: session id
+ */
+struct get_arp_stats_params {
+	uint8_t pkt_type;
+	uint32_t vdev_id;
+};
 #endif /* __SIR_API_H */
