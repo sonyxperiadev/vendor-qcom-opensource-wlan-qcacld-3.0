@@ -254,12 +254,9 @@ static int __wlan_hdd_ipv6_changed(struct notifier_block *nb,
 		if (0 != status)
 			return NOTIFY_DONE;
 		sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(pAdapter);
-		if (eConnectionState_Associated ==
-						sta_ctx->conn_info.connState) {
-			hdd_info("invoking sme_dhcp_done_ind");
-			sme_dhcp_done_ind(pHddCtx->hHal,
+		hdd_debug("invoking sme_dhcp_done_ind");
+		sme_dhcp_done_ind(pHddCtx->hHal,
 					  pAdapter->sessionId);
-		}
 		schedule_work(&pAdapter->ipv6NotifierWorkQueue);
 	}
 	EXIT();
@@ -911,12 +908,9 @@ static int __wlan_hdd_ipv4_changed(struct notifier_block *nb,
 			return NOTIFY_DONE;
 
 		sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(pAdapter);
-		if (eConnectionState_Associated ==
-						sta_ctx->conn_info.connState) {
-			hdd_info("invoking sme_dhcp_done_ind");
-			sme_dhcp_done_ind(pHddCtx->hHal,
+		hdd_debug("invoking sme_dhcp_done_ind");
+		sme_dhcp_done_ind(pHddCtx->hHal,
 					  pAdapter->sessionId);
-		}
 
 		if (!pHddCtx->config->fhostArpOffload) {
 			hdd_notice("Offload not enabled ARPOffload=%d",
@@ -2423,11 +2417,6 @@ static int __wlan_hdd_cfg80211_get_txpower(struct wiphy *wiphy,
 		return -EINVAL;
 	}
 
-	if (wlan_hdd_validate_session_id(adapter->sessionId)) {
-		hdd_err("invalid session id: %d", adapter->sessionId);
-		return -EINVAL;
-	}
-
 	status = wlan_hdd_validate_context(pHddCtx);
 	if (0 != status) {
 		*dbm = 0;
@@ -2436,7 +2425,6 @@ static int __wlan_hdd_cfg80211_get_txpower(struct wiphy *wiphy,
 
 	/* Validate adapter sessionId */
 	if (wlan_hdd_validate_session_id(adapter->sessionId)) {
-		hdd_err("invalid session id: %d", adapter->sessionId);
 		return -ENOTSUPP;
 	}
 

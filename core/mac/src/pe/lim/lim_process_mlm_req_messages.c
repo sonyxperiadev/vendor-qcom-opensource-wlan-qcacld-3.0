@@ -743,7 +743,7 @@ static void lim_post_join_set_link_state_callback(tpAniSirGlobal mac,
 	session_entry->channelChangeReasonCode =
 			 LIM_SWITCH_CHANNEL_JOIN;
 	session_entry->pLimMlmReassocRetryReq = NULL;
-	lim_log(mac, LOGE,
+	lim_log(mac, LOG1,
 		FL("[lim_process_mlm_join_req]: suspend link success(%d) "
 		"on sessionid: %d setting channel to: %d with ch_width :%d "
 		"and maxtxPower: %d"), status, session_entry->peSessionId,
@@ -1515,12 +1515,11 @@ bool lim_check_disassoc_deauth_ack_pending(tpAniSirGlobal mac_ctx,
 	    (deauth_req && (!qdf_mem_cmp((uint8_t *) sta_mac,
 			      (uint8_t *) &deauth_req->peer_macaddr.bytes,
 			       QDF_MAC_ADDR_SIZE)))) {
-		PELOG1(lim_log(mac_ctx, LOG1,
-			       FL("Disassoc/Deauth ack pending"));)
+		lim_log(mac_ctx, LOG1, FL("Disassoc/Deauth ack pending"));
 		return true;
 	} else {
-		PELOG1(lim_log(mac_ctx, LOG1,
-			       FL("Disassoc/Deauth Ack not pending"));)
+		lim_log(mac_ctx, LOG1,
+			FL("Disassoc/Deauth Ack not pending"));
 		return false;
 	}
 }

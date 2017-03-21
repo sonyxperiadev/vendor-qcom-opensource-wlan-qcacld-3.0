@@ -2727,11 +2727,16 @@ QDF_STATUS hdd_ipa_uc_ol_init(hdd_context_t *hdd_ctx)
 			(unsigned int)pipe_out.uc_door_bell_pa,
 			ipa_ctxt->tx_pipe_handle);
 
+		/* Micro Controller Doorbell register */
 		ipa_ctxt->tx_comp_doorbell_paddr = pipe_out.uc_door_bell_pa;
 
 		/* WLAN TX PIPE Handle */
 		ipa_ctxt->tx_pipe_handle = pipe_out.clnt_hdl;
-		HDD_IPA_LOG(QDF_TRACE_LEVEL_INFO_HIGH,
+		HDD_IPA_LOG(QDF_TRACE_LEVEL_INFO,
+			"CONS DB pipe out 0x%x TX PIPE Handle 0x%x",
+			(unsigned int)pipe_out.uc_door_bell_pa,
+			ipa_ctxt->tx_pipe_handle);
+		HDD_IPA_LOG(QDF_TRACE_LEVEL_DEBUG,
 			"TX : CRBPA 0x%x, CRS %d, CERBPA 0x%x, CEDPA 0x%x,"
 			" CERZ %d, NB %d, CDBPAD 0x%x",
 			(unsigned int)pipe_in.u.dl.comp_ring_base_pa,
@@ -2786,11 +2791,11 @@ QDF_STATUS hdd_ipa_uc_ol_init(hdd_context_t *hdd_ctx)
 		}
 		ipa_ctxt->rx_ready_doorbell_paddr = pipe_out.uc_door_bell_pa;
 		ipa_ctxt->rx_pipe_handle = pipe_out.clnt_hdl;
-		HDD_IPA_LOG(QDF_TRACE_LEVEL_INFO_HIGH,
-			"PROD DB pipe out 0x%x TX PIPE Handle 0x%x",
+		HDD_IPA_LOG(QDF_TRACE_LEVEL_INFO,
+			"PROD DB pipe out 0x%x RX PIPE Handle 0x%x",
 			(unsigned int)pipe_out.uc_door_bell_pa,
-			ipa_ctxt->tx_pipe_handle);
-		HDD_IPA_LOG(QDF_TRACE_LEVEL_INFO_HIGH,
+			ipa_ctxt->rx_pipe_handle);
+		HDD_IPA_LOG(QDF_TRACE_LEVEL_DEBUG,
 			"RX : RRBPA 0x%x, RRS %d, PDIPA 0x%x, RDY_DB_PAD 0x%x",
 			(unsigned int)pipe_in.u.ul.rdy_ring_base_pa,
 			pipe_in.u.ul.rdy_ring_size,
@@ -4545,6 +4550,9 @@ static int hdd_ipa_setup_sys_pipe(struct hdd_ipa_priv *hdd_ipa)
 				    " ret: %d", i, ret);
 			goto setup_sys_pipe_fail;
 		}
+		if (!hdd_ipa->sys_pipe[i].conn_hdl)
+			HDD_IPA_LOG(QDF_TRACE_LEVEL_ERROR, "Invalid conn handle sys_pipe: %d"
+				    "conn handle: %d", i, hdd_ipa->sys_pipe[i].conn_hdl);
 		hdd_ipa->sys_pipe[i].conn_hdl_valid = 1;
 	}
 
@@ -4578,6 +4586,9 @@ static int hdd_ipa_setup_sys_pipe(struct hdd_ipa_priv *hdd_ipa)
 					"Failed for RX pipe: %d", ret);
 			goto setup_sys_pipe_fail;
 		}
+		if (!hdd_ipa->sys_pipe[i].conn_hdl)
+			HDD_IPA_LOG(QDF_TRACE_LEVEL_ERROR, "Invalid conn handle sys_pipe: %d"
+				    "conn handle: %d", i, hdd_ipa->sys_pipe[i].conn_hdl);
 		hdd_ipa->sys_pipe[HDD_IPA_RX_PIPE].conn_hdl_valid = 1;
 	}
 
