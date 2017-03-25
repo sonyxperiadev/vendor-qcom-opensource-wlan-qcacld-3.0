@@ -69,6 +69,8 @@ typedef enum {
 
 #define IS_VHT_NSS_1x1(__mcs_map)	((__mcs_map & 0xFFFC) == 0xFFFC)
 
+#define MGMT_RX_PACKETS_THRESHOLD 200
+
 #ifdef WLAN_FEATURE_11W
 typedef union uPmfSaQueryTimerId {
 	struct {
@@ -693,4 +695,14 @@ tSirRetStatus lim_strip_ie(tpAniSirGlobal mac_ctx,
 		uint8_t eid, eSizeOfLenField size_of_len_field,
 		uint8_t *oui, uint8_t out_len, uint8_t *extracted_ie,
 		uint32_t eid_max_len);
+/**
+ * lim_decrement_pending_mgmt_count: Decrement mgmt frame count
+ * @mac_ctx: Pointer to global MAC structure
+ *
+ * This function is used to decrement pe mgmt count once frame
+ * removed from queue
+ *
+ * Return: None
+ */
+void lim_decrement_pending_mgmt_count(tpAniSirGlobal mac_ctx);
 #endif /* __LIM_UTILS_H */
