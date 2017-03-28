@@ -127,6 +127,12 @@
 #define MEMORY_DEBUG_STR ""
 #endif
 
+int wlan_start_ret_val;
+static DECLARE_COMPLETION(wlan_start_comp);
+static unsigned int dev_num = 1;
+static struct cdev wlan_hdd_state_cdev;
+static struct class *class;
+static dev_t device;
 #ifndef MODULE
 static struct gwlan_loader *wlan_loader;
 static ssize_t wlan_boot_cb(struct kobject *kobj,
@@ -195,10 +201,16 @@ static const struct wiphy_wowlan_support wowlan_support_reg_init = {
 /* internal function declaration */
 
 struct sock *cesium_nl_srv_sock;
-struct completion wlan_start_comp;
 #ifdef FEATURE_WLAN_AUTO_SHUTDOWN
 void wlan_hdd_auto_shutdown_cb(void);
 #endif
+
+void hdd_start_complete(int ret)
+{
+	wlan_start_ret_val = ret;
+
+	complete(&wlan_start_comp);
+}
 
 /**
  * hdd_set_rps_cpu_mask - set RPS CPU mask for interfaces
@@ -3824,7 +3836,7 @@ QDF_STATUS hdd_stop_adapter(hdd_context_t *hdd_ctx, hdd_adapter_t *adapter,
 
 		if (wlansap_close(sap_ctx) != QDF_STATUS_SUCCESS)
 			hdd_err("Failed:WLANSAP_close");
-
+		clear_bit(SME_SESSION_OPENED, &adapter->event_flags);
 		adapter->sessionCtx.ap.sapContext = NULL;
 		mutex_unlock(&hdd_ctx->sap_lock);
 
@@ -5117,6 +5129,7 @@ static void hdd_wlan_exit(hdd_context_t *hdd_ctx)
 		 * the expectation is that by the time Request Full Power has
 		 * completed, all scans will be cancelled
 		 */
+		hdd_cleanup_scan_queue(hdd_ctx);
 		hdd_abort_mac_scan_all_adapters(hdd_ctx);
 		hdd_abort_sched_scan_all_adapters(hdd_ctx);
 		hdd_stop_all_adapters(hdd_ctx);
@@ -6801,6 +6814,7 @@ static int hdd_context_init(hdd_context_t *hdd_ctx)
 	hdd_ctx->max_intf_count = CSR_ROAM_SESSION_MAX;
 
 	hdd_init_ll_stats_ctx();
+	hdd_init_nud_stats_ctx(hdd_ctx);
 
 	init_completion(&hdd_ctx->mc_sus_event_var);
 	init_completion(&hdd_ctx->ready_to_suspend);
@@ -7291,8 +7305,23 @@ static int hdd_update_cds_config(hdd_context_t *hdd_ctx)
 	}
 
 	cds_cfg->driver_type = DRIVER_TYPE_PRODUCTION;
-	cds_cfg->powersave_offload_enabled =
-		hdd_ctx->config->enablePowersaveOffload;
+	if (!hdd_ctx->config->nMaxPsPoll ||
+			!hdd_ctx->config->enablePowersaveOffload) {
+		cds_cfg->powersave_offload_enabled =
+			hdd_ctx->config->enablePowersaveOffload;
+	} else {
+		if ((hdd_ctx->config->enablePowersaveOffload ==
+				PS_QPOWER_NODEEPSLEEP) ||
+				(hdd_ctx->config->enablePowersaveOffload ==
+				 PS_LEGACY_NODEEPSLEEP))
+			cds_cfg->powersave_offload_enabled =
+				PS_LEGACY_NODEEPSLEEP;
+		else
+			cds_cfg->powersave_offload_enabled =
+				PS_LEGACY_DEEPSLEEP;
+		hdd_info("Qpower disabled in cds config, %d",
+				cds_cfg->powersave_offload_enabled);
+	}
 	cds_cfg->sta_dynamic_dtim = hdd_ctx->config->enableDynamicDTIM;
 	cds_cfg->sta_mod_dtim = hdd_ctx->config->enableModulatedDTIM;
 	cds_cfg->sta_maxlimod_dtim = hdd_ctx->config->fMaxLIModulatedDTIM;
@@ -7487,6 +7516,7 @@ static inline void hdd_release_rtnl_lock(void) { }
 
 /* MAX iwpriv command support */
 #define PKTLOG_SET_BUFF_SIZE	3
+#define PKTLOG_CLEAR_BUFF	4
 #define MAX_PKTLOG_SIZE		16
 
 /**
@@ -7507,6 +7537,35 @@ static int hdd_pktlog_set_buff_size(hdd_context_t *hdd_ctx, int set_value2)
 	start_log.ini_triggered = cds_is_packet_log_enabled();
 	start_log.user_triggered = 1;
 	start_log.size = set_value2;
+	start_log.is_pktlog_buff_clear = false;
+
+	status = sme_wifi_start_logger(hdd_ctx->hHal, start_log);
+	if (!QDF_IS_STATUS_SUCCESS(status)) {
+		hdd_err("sme_wifi_start_logger failed(err=%d)", status);
+		EXIT();
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+/**
+ * hdd_pktlog_clear_buff() - clear pktlog buffer
+ * @hdd_ctx: hdd context
+ *
+ * Return: 0 for success or error.
+ */
+static int hdd_pktlog_clear_buff(hdd_context_t *hdd_ctx)
+{
+	struct sir_wifi_start_log start_log;
+	QDF_STATUS status;
+
+	start_log.ring_id = RING_ID_PER_PACKET_STATS;
+	start_log.verbose_level = WLAN_LOG_LEVEL_OFF;
+	start_log.ini_triggered = cds_is_packet_log_enabled();
+	start_log.user_triggered = 1;
+	start_log.size = 0;
+	start_log.is_pktlog_buff_clear = true;
 
 	status = sme_wifi_start_logger(hdd_ctx->hHal, start_log);
 	if (!QDF_IS_STATUS_SUCCESS(status)) {
@@ -7543,7 +7602,7 @@ int hdd_process_pktlog_command(hdd_context_t *hdd_ctx, uint32_t set_value,
 
 	hdd_info("set pktlog %d, set size %d", set_value, set_value2);
 
-	if (set_value > PKTLOG_SET_BUFF_SIZE) {
+	if (set_value > PKTLOG_CLEAR_BUFF) {
 		hdd_err("invalid pktlog value %d", set_value);
 		return -EINVAL;
 	}
@@ -7557,6 +7616,8 @@ int hdd_process_pktlog_command(hdd_context_t *hdd_ctx, uint32_t set_value,
 			return -EINVAL;
 		}
 		return hdd_pktlog_set_buff_size(hdd_ctx, set_value2);
+	} else if (set_value == PKTLOG_CLEAR_BUFF) {
+		return hdd_pktlog_clear_buff(hdd_ctx);
 	}
 
 	/*
@@ -7596,6 +7657,7 @@ int hdd_pktlog_enable_disable(hdd_context_t *hdd_ctx, bool enable,
 	start_log.ini_triggered = cds_is_packet_log_enabled();
 	start_log.user_triggered = user_triggered;
 	start_log.size = size;
+	start_log.is_pktlog_buff_clear = false;
 	/*
 	 * Use "is_iwpriv_command" flag to distinguish iwpriv command from other
 	 * commands. Host uses this flag to decide whether to send pktlog
@@ -8642,7 +8704,7 @@ int hdd_wlan_startup(struct device *dev)
 	qdf_mc_timer_start(&hdd_ctx->iface_change_timer,
 			   hdd_ctx->config->iface_change_wait_time);
 
-	complete(&wlan_start_comp);
+	hdd_start_complete(0);
 	goto success;
 
 err_close_adapters:
@@ -8661,10 +8723,12 @@ err_stop_modules:
 	hdd_wlan_stop_modules(hdd_ctx);
 
 err_exit_nl_srv:
-	status = cds_sched_close(hdd_ctx->pcds_context);
-	if (!QDF_IS_STATUS_SUCCESS(status)) {
-		hdd_alert("Failed to close CDS Scheduler");
-		QDF_ASSERT(QDF_IS_STATUS_SUCCESS(status));
+	if (DRIVER_MODULES_CLOSED == hdd_ctx->driver_status) {
+		status = cds_sched_close(hdd_ctx->pcds_context);
+		if (!QDF_IS_STATUS_SUCCESS(status)) {
+			hdd_err("Failed to close CDS Scheduler");
+			QDF_ASSERT(QDF_IS_STATUS_SUCCESS(status));
+		}
 	}
 
 	hdd_green_ap_deinit(hdd_ctx);
@@ -8672,11 +8736,11 @@ err_exit_nl_srv:
 
 	cds_deinit_ini_config();
 err_hdd_free_context:
+	hdd_start_complete(ret);
 	qdf_mc_timer_destroy(&hdd_ctx->iface_change_timer);
 	mutex_destroy(&hdd_ctx->iface_change_lock);
 	hdd_context_destroy(hdd_ctx);
 	QDF_BUG(1);
-
 	return -EIO;
 
 success:
@@ -8703,6 +8767,64 @@ void hdd_wlan_update_target_info(hdd_context_t *hdd_ctx, void *context)
 	}
 
 	hdd_ctx->target_type = tgt_info->target_type;
+}
+
+/**
+ * hdd_get_nud_stats_cb() - callback api to update the stats
+ *	received from the firmware
+ * @data: pointer to adapter.
+ * @rsp: pointer to data received from FW.
+ *
+ * This is called when wlan driver received response event for
+ *	get arp stats to firmware.
+ *
+ * Return: None
+ */
+static void hdd_get_nud_stats_cb(void *data, struct rsp_stats *rsp)
+{
+	hdd_context_t *hdd_ctx = (hdd_context_t *)data;
+	struct hdd_nud_stats_context *context;
+	int status;
+	hdd_adapter_t *adapter = NULL;
+
+	ENTER();
+
+	adapter = hdd_get_adapter_by_vdev(hdd_ctx, rsp->vdev_id);
+	if (NULL == adapter)
+		return;
+
+	status = wlan_hdd_validate_context(hdd_ctx);
+	if (0 != status)
+		return;
+
+	if (!rsp) {
+		hdd_err("data is null");
+		return;
+	}
+
+	hdd_notice("rsp->arp_req_enqueue :%x", rsp->arp_req_enqueue);
+	hdd_notice("rsp->arp_req_tx_success :%x", rsp->arp_req_tx_success);
+	hdd_notice("rsp->arp_req_tx_failure :%x", rsp->arp_req_tx_failure);
+	hdd_notice("rsp->arp_rsp_recvd :%x", rsp->arp_rsp_recvd);
+	hdd_notice("rsp->out_of_order_arp_rsp_drop_cnt :%x",
+		   rsp->out_of_order_arp_rsp_drop_cnt);
+	hdd_notice("rsp->dad_detected :%x", rsp->dad_detected);
+	hdd_notice("rsp->connect_status :%x", rsp->connect_status);
+	hdd_notice("rsp->ba_session_establishment_status :%x",
+		   rsp->ba_session_establishment_status);
+
+	adapter->hdd_stats.hdd_arp_stats.rx_fw_cnt = rsp->arp_rsp_recvd;
+	adapter->dad |= rsp->dad_detected;
+	adapter->con_status = rsp->connect_status;
+
+	spin_lock(&hdd_context_lock);
+	context = &hdd_ctx->nud_stats_context;
+	complete(&context->response_event);
+	spin_unlock(&hdd_context_lock);
+
+	EXIT();
+
+	return;
 }
 
 /**
@@ -8752,7 +8874,10 @@ int hdd_register_cb(hdd_context_t *hdd_ctx)
 	}
 
 	sme_set_rssi_threshold_breached_cb(hdd_ctx->hHal,
-				hdd_rssi_threshold_breached);
+					   hdd_rssi_threshold_breached);
+
+	sme_set_nud_debug_stats_cb(hdd_ctx->hHal,
+				   hdd_get_nud_stats_cb);
 
 	status = sme_bpf_offload_register_callback(hdd_ctx->hHal,
 						   hdd_get_bpf_offload_cb);
@@ -9603,6 +9728,121 @@ void hdd_deinit(void)
 
 #define HDD_WLAN_START_WAIT_TIME (CDS_WMA_TIMEOUT + 5000)
 
+static int wlan_hdd_state_ctrl_param_open(struct inode *inode,
+					  struct file *file)
+{
+	return 0;
+}
+
+static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
+						const char __user *user_buf,
+						size_t count,
+						loff_t *f_pos)
+{
+	char buf;
+	static const char wlan_off_str[] = "OFF";
+	static const char wlan_on_str[] = "ON";
+	int ret;
+	unsigned long rc;
+
+	if (copy_from_user(&buf, user_buf, 3)) {
+		pr_err("Failed to read buffer\n");
+		return -EINVAL;
+	}
+
+	if (strncmp(&buf, wlan_off_str, strlen(wlan_off_str)) == 0) {
+		pr_debug("Wifi turning off from UI\n");
+		goto exit;
+	}
+
+	if (strncmp(&buf, wlan_on_str, strlen(wlan_on_str)) != 0) {
+		pr_err("Invalid value received from framework");
+		goto exit;
+	}
+
+	if (!cds_is_driver_loaded()) {
+		rc = wait_for_completion_timeout(&wlan_start_comp,
+				msecs_to_jiffies(HDD_WLAN_START_WAIT_TIME));
+		if (!rc) {
+			hdd_alert("Timed-out waiting in wlan_hdd_state_ctrl_param_write");
+			ret = -EINVAL;
+			hdd_start_complete(ret);
+			return ret;
+		}
+
+		hdd_start_complete(0);
+	}
+
+exit:
+	return count;
+}
+
+
+const struct file_operations wlan_hdd_state_fops = {
+	.owner = THIS_MODULE,
+	.open = wlan_hdd_state_ctrl_param_open,
+	.write = wlan_hdd_state_ctrl_param_write,
+};
+
+static int  wlan_hdd_state_ctrl_param_create(void)
+{
+	unsigned int wlan_hdd_state_major = 0;
+	int ret;
+	struct device *dev;
+
+	device = MKDEV(wlan_hdd_state_major, 0);
+
+	ret = alloc_chrdev_region(&device, 0, dev_num, "qcwlanstate");
+	if (ret) {
+		pr_err("Failed to register qcwlanstate");
+		goto dev_alloc_err;
+	}
+	wlan_hdd_state_major = MAJOR(device);
+
+	class = class_create(THIS_MODULE, WLAN_MODULE_NAME);
+	if (IS_ERR(class)) {
+		pr_err("wlan_hdd_state class_create error");
+		goto class_err;
+	}
+
+	dev = device_create(class, NULL, device, NULL, WLAN_MODULE_NAME);
+	if (IS_ERR(dev)) {
+		pr_err("wlan_hdd_statedevice_create error");
+		goto err_class_destroy;
+	}
+
+	cdev_init(&wlan_hdd_state_cdev, &wlan_hdd_state_fops);
+	ret = cdev_add(&wlan_hdd_state_cdev, device, dev_num);
+	if (ret) {
+		pr_err("Failed to add cdev error");
+		goto cdev_add_err;
+	}
+
+	pr_info("wlan_hdd_state %s major(%d) initialized",
+		WLAN_MODULE_NAME, wlan_hdd_state_major);
+
+	return 0;
+
+cdev_add_err:
+	device_destroy(class, device);
+err_class_destroy:
+	class_destroy(class);
+class_err:
+	unregister_chrdev_region(device, dev_num);
+dev_alloc_err:
+	return -ENODEV;
+}
+
+static void wlan_hdd_state_ctrl_param_destroy(void)
+{
+	cdev_del(&wlan_hdd_state_cdev);
+	device_destroy(class, device);
+	class_destroy(class);
+	unregister_chrdev_region(device, dev_num);
+
+	pr_info("Device node unregistered");
+}
+
 /**
  * __hdd_module_init - Module init helper
  *
@@ -9617,6 +9857,12 @@ static int __hdd_module_init(void)
 
 	pr_err("%s: Loading driver v%s\n", WLAN_MODULE_NAME,
 		QWLAN_VERSIONSTR TIMER_MANAGER_STR MEMORY_DEBUG_STR);
+
+	ret = wlan_hdd_state_ctrl_param_create();
+	if (ret) {
+		pr_err("wlan_hdd_state_create:%x\n", ret);
+		goto err_dev_state;
+	}
 
 	pld_init();
 
@@ -9637,17 +9883,18 @@ static int __hdd_module_init(void)
 			ret);
 		goto out;
 	}
-
+	/*
+	 * This wait is temporarily introduced till
+	 * boardconfig changes for dev node are merged
+	 */
 	rc = wait_for_completion_timeout(&wlan_start_comp,
-				msecs_to_jiffies(HDD_WLAN_START_WAIT_TIME));
-
+				 msecs_to_jiffies(HDD_WLAN_START_WAIT_TIME));
 	if (!rc) {
 		hdd_alert("Timed-out waiting for wlan_hdd_register_driver");
 		ret = -ETIMEDOUT;
 		wlan_hdd_unregister_driver();
 		goto out;
 	}
-
 	pr_info("%s: driver loaded\n", WLAN_MODULE_NAME);
 
 	return 0;
@@ -9656,6 +9903,8 @@ out:
 	hdd_deinit();
 err_hdd_init:
 	pld_deinit();
+	wlan_hdd_state_ctrl_param_destroy();
+err_dev_state:
 	return ret;
 }
 
@@ -9699,7 +9948,7 @@ static void __hdd_module_exit(void)
 
 	hdd_deinit();
 	pld_deinit();
-
+	wlan_hdd_state_ctrl_param_destroy();
 	return;
 }
 

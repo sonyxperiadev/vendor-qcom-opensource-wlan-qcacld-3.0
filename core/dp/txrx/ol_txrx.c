@@ -1739,65 +1739,24 @@ A_STATUS ol_txrx_pdev_attach_target(ol_txrx_pdev_handle pdev)
 }
 
 /**
- * ol_txrx_pdev_pre_detach() - detach the data SW state
- * @pdev - the data physical device object being removed
- * @force - delete the pdev (and its vdevs and peers) even if
- * there are outstanding references by the target to the vdevs
- * and peers within the pdev
+ * ol_tx_free_descs_inuse - free tx descriptors which are in use
+ * @pdev - the physical device for which tx descs need to be freed
  *
- * This function is used when the WLAN driver is being removed to
- * detach the host data component within the driver.
+ * Cycle through the list of TX descriptors (for a pdev) which are in use,
+ * for which TX completion has not been received and free them. Should be
+ * called only when the interrupts are off and all lower layer RX is stopped.
+ * Otherwise there may be a race condition with TX completions.
  *
  * Return: None
  */
-void ol_txrx_pdev_pre_detach(ol_txrx_pdev_handle pdev, int force)
+static void ol_tx_free_descs_inuse(ol_txrx_pdev_handle pdev)
 {
 	int i;
+	void *htt_tx_desc;
+	struct ol_tx_desc_t *tx_desc;
 	int num_freed_tx_desc = 0;
 
-	/* preconditions */
-	TXRX_ASSERT2(pdev);
-
-	/* check that the pdev has no vdevs allocated */
-	TXRX_ASSERT1(TAILQ_EMPTY(&pdev->vdev_list));
-
-#ifdef QCA_SUPPORT_TX_THROTTLE
-	/* Thermal Mitigation */
-	qdf_timer_stop(&pdev->tx_throttle.phase_timer);
-	qdf_timer_free(&pdev->tx_throttle.phase_timer);
-#ifdef QCA_LL_LEGACY_TX_FLOW_CONTROL
-	qdf_timer_stop(&pdev->tx_throttle.tx_timer);
-	qdf_timer_free(&pdev->tx_throttle.tx_timer);
-#endif
-#endif
-	ol_tso_seg_list_deinit(pdev);
-	ol_tso_num_seg_list_deinit(pdev);
-
-	if (force) {
-		/*
-		 * The assertion above confirms that all vdevs within this pdev
-		 * were detached.  However, they may not have actually been
-		 * deleted.
-		 * If the vdev had peers which never received a PEER_UNMAP msg
-		 * from the target, then there are still zombie peer objects,
-		 * and the vdev parents of the zombie peers are also zombies,
-		 * hanging around until their final peer gets deleted.
-		 * Go through the peer hash table and delete any peers left.
-		 * As a side effect, this will complete the deletion of any
-		 * vdevs that are waiting for their peers to finish deletion.
-		 */
-		TXRX_PRINT(TXRX_PRINT_LEVEL_INFO1, "Force delete for pdev %p\n",
-			   pdev);
-		ol_txrx_peer_find_hash_erase(pdev);
-	}
-
-	/* to get flow pool status before freeing descs */
-	ol_tx_dump_flow_pool_info();
-
 	for (i = 0; i < pdev->tx_desc.pool_size; i++) {
-		void *htt_tx_desc;
-		struct ol_tx_desc_t *tx_desc;
-
 		tx_desc = ol_tx_desc_find(pdev, i);
 		/*
 		 * Confirm that each tx descriptor is "empty", i.e. it has
@@ -1822,7 +1781,70 @@ void ol_txrx_pdev_pre_detach(ol_txrx_pdev_handle pdev, int force)
 		"freed %d tx frames for which no resp from target",
 		num_freed_tx_desc);
 
+}
+
+/**
+ * ol_txrx_pdev_pre_detach() - detach the data SW state
+ * @pdev - the data physical device object being removed
+ * @force - delete the pdev (and its vdevs and peers) even if
+ * there are outstanding references by the target to the vdevs
+ * and peers within the pdev
+ *
+ * This function is used when the WLAN driver is being removed to
+ * detach the host data component within the driver.
+ *
+ * Return: None
+ */
+void ol_txrx_pdev_pre_detach(ol_txrx_pdev_handle pdev, int force)
+{
+	/* preconditions */
+	TXRX_ASSERT2(pdev);
+
+	/* check that the pdev has no vdevs allocated */
+	TXRX_ASSERT1(TAILQ_EMPTY(&pdev->vdev_list));
+
+#ifdef QCA_SUPPORT_TX_THROTTLE
+	/* Thermal Mitigation */
+	qdf_timer_stop(&pdev->tx_throttle.phase_timer);
+	qdf_timer_free(&pdev->tx_throttle.phase_timer);
+#ifdef QCA_LL_LEGACY_TX_FLOW_CONTROL
+	qdf_timer_stop(&pdev->tx_throttle.tx_timer);
+	qdf_timer_free(&pdev->tx_throttle.tx_timer);
+#endif
+#endif
+
+	if (force) {
+		/*
+		 * The assertion above confirms that all vdevs within this pdev
+		 * were detached.  However, they may not have actually been
+		 * deleted.
+		 * If the vdev had peers which never received a PEER_UNMAP msg
+		 * from the target, then there are still zombie peer objects,
+		 * and the vdev parents of the zombie peers are also zombies,
+		 * hanging around until their final peer gets deleted.
+		 * Go through the peer hash table and delete any peers left.
+		 * As a side effect, this will complete the deletion of any
+		 * vdevs that are waiting for their peers to finish deletion.
+		 */
+		TXRX_PRINT(TXRX_PRINT_LEVEL_INFO1, "Force delete for pdev %p\n",
+			   pdev);
+		ol_txrx_peer_find_hash_erase(pdev);
+	}
+
+	/* to get flow pool status before freeing descs */
+	ol_tx_dump_flow_pool_info();
+
+	ol_tx_free_descs_inuse(pdev);
 	ol_tx_deregister_flow_control(pdev);
+
+	/*
+	 * ol_tso_seg_list_deinit should happen after
+	 * ol_tx_deinit_tx_desc_inuse as it tries to access the tso seg freelist
+	 * which is being de-initilized in ol_tso_seg_list_deinit
+	 */
+	ol_tso_seg_list_deinit(pdev);
+	ol_tso_num_seg_list_deinit(pdev);
+
 	/* Stop the communication between HTT and target at first */
 	htt_detach_target(pdev->htt_pdev);
 
@@ -2104,6 +2126,34 @@ void ol_txrx_set_drop_unenc(ol_txrx_vdev_handle vdev, uint32_t val)
 	vdev->drop_unenc = val;
 }
 
+#if defined(CONFIG_HL_SUPPORT)
+
+static void
+ol_txrx_tx_desc_reset_vdev(ol_txrx_vdev_handle vdev)
+{
+	struct ol_txrx_pdev_t *pdev = vdev->pdev;
+	int i;
+	struct ol_tx_desc_t *tx_desc;
+
+	qdf_spin_lock_bh(&pdev->tx_mutex);
+	for (i = 0; i < pdev->tx_desc.pool_size; i++) {
+		tx_desc = ol_tx_desc_find(pdev, i);
+		if (tx_desc->vdev == vdev)
+			tx_desc->vdev = NULL;
+	}
+	qdf_spin_unlock_bh(&pdev->tx_mutex);
+}
+
+#else
+
+static void
+ol_txrx_tx_desc_reset_vdev(ol_txrx_vdev_handle vdev)
+{
+
+}
+
+#endif
+
 /**
  * ol_txrx_vdev_detach - Deallocate the specified data virtual
  * device object.
@@ -2194,6 +2244,18 @@ ol_txrx_vdev_detach(ol_txrx_vdev_handle vdev,
 		   vdev->mac_addr.raw[4], vdev->mac_addr.raw[5]);
 
 	htt_vdev_detach(pdev->htt_pdev, vdev->vdev_id);
+
+	/*
+	* The ol_tx_desc_free might access the invalid content of vdev referred
+	* by tx desc, since this vdev might be detached in another thread
+	* asynchronous.
+	*
+	* Go through tx desc pool to set corresponding tx desc's vdev to NULL
+	* when detach this vdev, and add vdev checking in the ol_tx_desc_free
+	* to avoid crash.
+	*
+	*/
+	ol_txrx_tx_desc_reset_vdev(vdev);
 
 	/*
 	 * Doesn't matter if there are outstanding tx frames -
@@ -2349,7 +2411,10 @@ ol_txrx_peer_attach(ol_txrx_vdev_handle vdev, uint8_t *peer_mac_addr)
 				vdev->wait_on_peer_id, (int) rc);
 			/* Added for debugging only */
 			wma_peer_debug_dump();
-			QDF_ASSERT(0);
+			if (cds_is_self_recovery_enabled())
+				cds_trigger_recovery(false);
+			else
+				QDF_ASSERT(0);
 			vdev->wait_on_peer_id = OL_TXRX_INVALID_LOCAL_PEER_ID;
 			return NULL;
 		}
@@ -2406,6 +2471,8 @@ ol_txrx_peer_attach(ol_txrx_vdev_handle vdev, uint8_t *peer_mac_addr)
 	OL_TXRX_PEER_INC_REF_CNT(peer);
 
 	peer->valid = 1;
+	qdf_mc_timer_init(&peer->peer_unmap_timer, QDF_TIMER_TYPE_SW,
+			  peer_unmap_timer_handler, peer);
 
 	ol_txrx_peer_find_hash_add(pdev, peer);
 
@@ -3067,10 +3134,8 @@ int ol_txrx_peer_unref_delete(ol_txrx_peer_handle peer,
 			vdev->wait_on_peer_id = OL_TXRX_INVALID_LOCAL_PEER_ID;
 		}
 
-		if (vdev->opmode == wlan_op_mode_sta) {
-			qdf_mc_timer_stop(&peer->peer_unmap_timer);
-			qdf_mc_timer_destroy(&peer->peer_unmap_timer);
-		}
+		qdf_mc_timer_destroy(&peer->peer_unmap_timer);
+
 		/* check whether the parent vdev has no peers left */
 		if (TAILQ_EMPTY(&vdev->peer_list)) {
 			/*
@@ -3082,13 +3147,23 @@ int ol_txrx_peer_unref_delete(ol_txrx_peer_handle peer,
 					vdev->delete.callback;
 				void *vdev_delete_context =
 					vdev->delete.context;
-
 				/*
 				 * Now that there are no references to the peer,
 				 * we can release the peer reference lock.
 				 */
 				qdf_spin_unlock_bh(&pdev->peer_ref_mutex);
 
+				/*
+				* The ol_tx_desc_free might access the invalid content of vdev
+				* referred by tx desc, since this vdev might be detached in
+				* another thread asynchronous.
+				*
+				* Go through tx desc pool to set corresponding tx desc's vdev
+				* to NULL when detach this vdev, and add vdev checking in the
+				* ol_tx_desc_free to avoid crash.
+				*
+				*/
+				ol_txrx_tx_desc_reset_vdev(vdev);
 				TXRX_PRINT(TXRX_PRINT_LEVEL_INFO1,
 					   "%s: deleting vdev object %p "
 					   "(%02x:%02x:%02x:%02x:%02x:%02x)"
@@ -3217,7 +3292,10 @@ void peer_unmap_timer_handler(void *data)
 		 peer->mac_addr.raw[2], peer->mac_addr.raw[3],
 		 peer->mac_addr.raw[4], peer->mac_addr.raw[5]);
 	wma_peer_debug_dump();
-	QDF_BUG(0);
+	if (cds_is_self_recovery_enabled())
+		cds_trigger_recovery(false);
+	else
+		QDF_BUG(0);
 }
 
 
@@ -3276,8 +3354,6 @@ void ol_txrx_peer_detach(ol_txrx_peer_handle peer)
 	 * Create a timer to track unmap events when the sta peer gets deleted.
 	 */
 	if (vdev->opmode == wlan_op_mode_sta) {
-		qdf_mc_timer_init(&peer->peer_unmap_timer, QDF_TIMER_TYPE_SW,
-				  peer_unmap_timer_handler, peer);
 		qdf_mc_timer_start(&peer->peer_unmap_timer,
 				   OL_TXRX_PEER_UNMAP_TIMEOUT);
 		TXRX_PRINT(TXRX_PRINT_LEVEL_ERR,

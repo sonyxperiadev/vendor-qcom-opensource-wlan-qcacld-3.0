@@ -1424,7 +1424,7 @@ static int wlan_hdd_update_scan_ies(hdd_adapter_t *adapter,
 	uint16_t elem_len;
 
 	if (!scan_info->default_scan_ies_len || !scan_info->default_scan_ies)
-		return -EINVAL;
+		return 0;
 
 	while (rem_len >= 2) {
 		current_ie = temp_ie;
@@ -2702,6 +2702,7 @@ static void hdd_config_sched_scan_plan(tpSirPNOScanReq pno_req,
 			       struct cfg80211_sched_scan_request *request,
 			       hdd_context_t *hdd_ctx)
 {
+	pno_req->delay_start_time = request->delay;
 	/*
 	 * As of now max 2 scan plans were supported by firmware
 	 * if number of scan plan supported by firmware increased below logic

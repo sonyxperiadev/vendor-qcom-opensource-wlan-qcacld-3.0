@@ -2044,7 +2044,7 @@ QDF_STATUS wma_open(void *cds_context,
 		goto err_wma_handle;
 	}
 
-	WMA_LOGA("WMA --> wmi_unified_attach - success");
+	WMA_LOGD("WMA --> wmi_unified_attach - success");
 	wmi_unified_register_event_handler(wmi_handle,
 					   WMI_SERVICE_READY_EVENTID,
 					   wma_rx_service_ready_event,
@@ -2310,6 +2310,13 @@ QDF_STATUS wma_open(void *cds_context,
 					   wma_stats_event_handler,
 					   WMA_RX_SERIALIZER_CTX);
 
+	/* register for stats response event */
+	wmi_unified_register_event_handler(wma_handle->wmi_handle,
+					   WMI_VDEV_GET_ARP_STAT_EVENTID,
+					   wma_get_arp_stats_handler,
+					   WMA_RX_SERIALIZER_CTX);
+
+
 #ifdef WLAN_POWER_DEBUGFS
 	/* register for Chip Power stats event */
 	wmi_unified_register_event_handler(wma_handle->wmi_handle,
@@ -2564,7 +2571,7 @@ QDF_STATUS wma_pre_start(void *cds_ctx)
 		goto end;
 	}
 
-	WMA_LOGA("WMA --> wmi_unified_connect_htc_service - success");
+	WMA_LOGD("WMA --> wmi_unified_connect_htc_service - success");
 
 	/* Trigger the CFG DOWNLOAD */
 	wma_msg.type = WNI_CFG_DNLD_REQ;
@@ -4397,17 +4404,17 @@ static void wma_dump_dbs_hw_mode(tp_wma_handle wma_handle)
 
 	for (i = 0; i < wma_handle->num_dbs_hw_modes; i++) {
 		param = wma_handle->hw_mode.hw_mode_list[i];
-		WMA_LOGA("%s:[%d]-MAC0: tx_ss:%d rx_ss:%d bw_idx:%d",
+		WMA_LOGD("%s:[%d]-MAC0: tx_ss:%d rx_ss:%d bw_idx:%d",
 			__func__, i,
 			WMA_HW_MODE_MAC0_TX_STREAMS_GET(param),
 			WMA_HW_MODE_MAC0_RX_STREAMS_GET(param),
 			WMA_HW_MODE_MAC0_BANDWIDTH_GET(param));
-		WMA_LOGA("%s:[%d]-MAC1: tx_ss:%d rx_ss:%d bw_idx:%d",
+		WMA_LOGD("%s:[%d]-MAC1: tx_ss:%d rx_ss:%d bw_idx:%d",
 			__func__, i,
 			WMA_HW_MODE_MAC1_TX_STREAMS_GET(param),
 			WMA_HW_MODE_MAC1_RX_STREAMS_GET(param),
 			WMA_HW_MODE_MAC1_BANDWIDTH_GET(param));
-		WMA_LOGA("%s:[%d] DBS:%d SBS:%d", __func__, i,
+		WMA_LOGD("%s:[%d] DBS:%d SBS:%d", __func__, i,
 			WMA_HW_MODE_DBS_MODE_GET(param),
 			WMA_HW_MODE_SBS_MODE_GET(param));
 	}
@@ -4537,7 +4544,7 @@ int wma_rx_service_ready_event(void *handle, uint8_t *cmd_param_info,
 		return -EINVAL;
 	}
 
-	WMA_LOGA("WMA <-- WMI_SERVICE_READY_EVENTID");
+	WMA_LOGD("WMA <-- WMI_SERVICE_READY_EVENTID");
 
 	wma_handle->num_dbs_hw_modes = ev->num_dbs_hw_modes;
 	ev_wlan_dbs_hw_mode_list = param_buf->wlan_dbs_hw_mode_list;
@@ -5450,9 +5457,9 @@ int wma_rx_service_ready_ext_event(void *handle, uint8_t *event,
 		return -EINVAL;
 	}
 
-	WMA_LOGA("WMA <-- WMI_SERVICE_READY_EXT_EVENTID");
+	WMA_LOGD("WMA <-- WMI_SERVICE_READY_EXT_EVENTID");
 
-	WMA_LOGA("%s: Defaults: scan config:%x FW mode config:%x",
+	WMA_LOGD("%s: Defaults: scan config:%x FW mode config:%x",
 			__func__, ev->default_conc_scan_config_bits,
 			ev->default_fw_config_bits);
 
@@ -5469,7 +5476,7 @@ int wma_rx_service_ready_ext_event(void *handle, uint8_t *event,
 		return -EINVAL;
 	}
 
-	WMA_LOGA("WMA --> WMI_INIT_CMDID");
+	WMA_LOGD("WMA --> WMI_INIT_CMDID");
 	status = wmi_unified_send_saved_init_cmd(wma_handle->wmi_handle);
 	if (status != EOK)
 		/* In success case, WMI layer will free after getting copy
@@ -5509,7 +5516,7 @@ int wma_rx_ready_event(void *handle, uint8_t *cmd_param_info,
 		return -EINVAL;
 	}
 
-	WMA_LOGA("WMA <-- WMI_READY_EVENTID");
+	WMA_LOGD("WMA <-- WMI_READY_EVENTID");
 
 	ev = param_buf->fixed_param;
 	/* Indicate to the waiting thread that the ready
@@ -5935,18 +5942,19 @@ static void wma_set_wifi_start_packet_stats(void *wma_handle,
 	if (start_log->size != 0) {
 		pktlog_setsize(scn, start_log->size * MEGABYTE);
 		return;
+	} else if (start_log->is_pktlog_buff_clear == true) {
+		pktlog_clearbuff(scn, start_log->is_pktlog_buff_clear);
+		return;
 	}
 
 	if (start_log->verbose_level == WLAN_LOG_LEVEL_ACTIVE) {
 		pktlog_enable(scn, log_state, start_log->ini_triggered,
 			      start_log->user_triggered,
 			      start_log->is_iwpriv_command);
-		WMA_LOGI("%s: Enabling per packet stats", __func__);
 	} else {
 		pktlog_enable(scn, 0, start_log->ini_triggered,
 				start_log->user_triggered,
 				start_log->is_iwpriv_command);
-		WMA_LOGI("%s: Disabling per packet stats", __func__);
 	}
 }
 #endif
@@ -6303,6 +6311,48 @@ void wma_mc_discard_msg(cds_msg_t *msg)
 	msg->type = 0;
 }
 
+static void wma_set_arp_req_stats(WMA_HANDLE handle,
+				  struct set_arp_stats_params *req_buf)
+{
+	int status;
+	struct set_arp_stats *arp_stats;
+	tp_wma_handle wma_handle = (tp_wma_handle) handle;
+
+	if (!wma_handle || !wma_handle->wmi_handle) {
+		WMA_LOGE("%s: WMA is closed, cannot send per roam config",
+			 __func__);
+		return;
+	}
+
+	arp_stats = (struct set_arp_stats *)req_buf;
+	status = wmi_unified_set_arp_stats_req(wma_handle->wmi_handle,
+					       arp_stats);
+	if (status != EOK)
+		WMA_LOGE("%s: failed to set arp stats to FW",
+			 __func__);
+}
+
+static void wma_get_arp_req_stats(WMA_HANDLE handle,
+				  struct get_arp_stats_params *req_buf)
+{
+	int status;
+	struct get_arp_stats *arp_stats;
+	tp_wma_handle wma_handle = (tp_wma_handle) handle;
+
+	if (!wma_handle || !wma_handle->wmi_handle) {
+		WMA_LOGE("%s: WMA is closed, cannot send per roam config",
+			 __func__);
+		return;
+	}
+
+	arp_stats = (struct get_arp_stats *)req_buf;
+	status = wmi_unified_get_arp_stats_req(wma_handle->wmi_handle,
+					       arp_stats);
+	if (status != EOK)
+		WMA_LOGE("%s: failed to send get arp stats to FW",
+			 __func__);
+}
+
 /**
  * wma_mc_process_msg() - process wma messages and call appropriate function.
  * @cds_context: cds context
@@ -6350,12 +6400,12 @@ QDF_STATUS wma_mc_process_msg(void *cds_context, cds_msg_t *msg)
 
 #ifdef FEATURE_WLAN_ESE
 	case WMA_TSM_STATS_REQ:
-		WMA_LOGA("McThread: WMA_TSM_STATS_REQ");
+		WMA_LOGD("McThread: WMA_TSM_STATS_REQ");
 		wma_process_tsm_stats_req(wma_handle, (void *)msg->bodyptr);
 		break;
 #endif /* FEATURE_WLAN_ESE */
 	case WNI_CFG_DNLD_REQ:
-		WMA_LOGA("McThread: WNI_CFG_DNLD_REQ");
+		WMA_LOGD("McThread: WNI_CFG_DNLD_REQ");
 		qdf_status = wma_wni_cfg_dnld(wma_handle);
 		if (QDF_IS_STATUS_SUCCESS(qdf_status)) {
 			cds_wma_complete_cback(cds_context);
@@ -7156,6 +7206,16 @@ QDF_STATUS wma_mc_process_msg(void *cds_context, cds_msg_t *msg)
 	case WMA_DISABLE_HW_BCAST_FILTER:
 		wma_configure_non_arp_broadcast_filter(wma_handle,
 			(struct broadcast_filter_request *) msg->bodyptr);
+		break;
+	case WMA_SET_ARP_STATS_REQ:
+		wma_set_arp_req_stats(wma_handle,
+			(struct set_arp_stats_params *)msg->bodyptr);
+		qdf_mem_free(msg->bodyptr);
+		break;
+	case WMA_GET_ARP_STATS_REQ:
+		wma_get_arp_req_stats(wma_handle,
+			(struct get_arp_stats_params *)msg->bodyptr);
+		qdf_mem_free(msg->bodyptr);
 		break;
 	default:
 		WMA_LOGE("Unhandled WMA message of type %d", msg->type);

@@ -531,6 +531,27 @@ void ol_tx_credit_completion_handler(ol_txrx_pdev_handle pdev, int credits)
 	ol_tx_flow_ct_unpause_os_q(pdev);
 }
 
+
+/**
+ * ol_tx_update_arp_stats() - update ARP packet TX stats
+ * @netbuf:  buffer
+ *
+ *
+ * Return: none
+ */
+static void ol_tx_update_arp_stats(qdf_nbuf_t netbuf,
+					enum htt_tx_status status)
+{
+	uint32_t tgt_ip = cds_get_arp_stats_gw_ip();
+
+	if (tgt_ip == qdf_nbuf_get_arp_tgt_ip(netbuf)) {
+		if (status != htt_tx_status_download_fail)
+			cds_incr_arp_stats_tx_tgt_delivered();
+		if (status == htt_tx_status_ok)
+			cds_incr_arp_stats_tx_tgt_acked();
+	}
+}
+
 /* WARNING: ol_tx_inspect_handler()'s bahavior is similar to that of
    ol_tx_completion_handler().
    * any change in ol_tx_completion_handler() must be mirrored in
@@ -562,6 +583,12 @@ ol_tx_completion_handler(ol_txrx_pdev_handle pdev,
 		tx_desc->status = status;
 		netbuf = tx_desc->netbuf;
 		QDF_NBUF_UPDATE_TX_PKT_COUNT(netbuf, QDF_NBUF_TX_PKT_FREE);
+
+		if (QDF_NBUF_CB_GET_PACKET_TYPE(netbuf) ==
+		    QDF_NBUF_CB_PACKET_TYPE_ARP) {
+			if (qdf_nbuf_data_is_arp_req(netbuf))
+				ol_tx_update_arp_stats(netbuf, status);
+		}
 
 		if (tx_desc->pkt_type != OL_TX_FRM_TSO) {
 			packetdump_cb = pdev->ol_tx_packetdump_cb;
@@ -643,7 +670,7 @@ void ol_tx_desc_update_group_credit(ol_txrx_pdev_handle pdev,
 			OL_TXQ_GROUP_VDEV_ID_MASK_GET(
 					pdev->txq_grps[i].membership);
 		is_member = OL_TXQ_GROUP_VDEV_ID_BIT_MASK_GET(vdev_id_mask,
-				tx_desc->vdev->vdev_id);
+				tx_desc->vdev_id);
 		if (is_member) {
 			ol_txrx_update_group_credit(&pdev->txq_grps[i],
 						    credit, absolute);

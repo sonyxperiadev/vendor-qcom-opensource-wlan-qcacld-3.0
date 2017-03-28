@@ -78,6 +78,7 @@
 #include "wlan_hdd_driver_ops.h"
 #include <wlan_logging_sock_svc.h>
 #include "cds_utils.h"
+#include "wlan_hdd_packet_filter_api.h"
 
 /* Preprocessor definitions and constants */
 #define HDD_SSR_BRING_UP_TIME 30000
@@ -253,12 +254,9 @@ static int __wlan_hdd_ipv6_changed(struct notifier_block *nb,
 		if (0 != status)
 			return NOTIFY_DONE;
 		sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(pAdapter);
-		if (eConnectionState_Associated ==
-						sta_ctx->conn_info.connState) {
-			hdd_info("invoking sme_dhcp_done_ind");
-			sme_dhcp_done_ind(pHddCtx->hHal,
+		hdd_debug("invoking sme_dhcp_done_ind");
+		sme_dhcp_done_ind(pHddCtx->hHal,
 					  pAdapter->sessionId);
-		}
 		schedule_work(&pAdapter->ipv6NotifierWorkQueue);
 	}
 	EXIT();
@@ -910,12 +908,9 @@ static int __wlan_hdd_ipv4_changed(struct notifier_block *nb,
 			return NOTIFY_DONE;
 
 		sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(pAdapter);
-		if (eConnectionState_Associated ==
-						sta_ctx->conn_info.connState) {
-			hdd_info("invoking sme_dhcp_done_ind");
-			sme_dhcp_done_ind(pHddCtx->hHal,
+		hdd_debug("invoking sme_dhcp_done_ind");
+		sme_dhcp_done_ind(pHddCtx->hHal,
 					  pAdapter->sessionId);
-		}
 
 		if (!pHddCtx->config->fhostArpOffload) {
 			hdd_notice("Offload not enabled ARPOffload=%d",
@@ -1271,6 +1266,7 @@ hdd_suspend_wlan(void (*callback)(void *callbackContext, bool suspended),
 		return;
 	}
 
+
 	status = hdd_get_front_adapter(pHddCtx, &pAdapterNode);
 	while (NULL != pAdapterNode && QDF_STATUS_SUCCESS == status) {
 		pAdapter = pAdapterNode->pAdapter;
@@ -1280,6 +1276,8 @@ hdd_suspend_wlan(void (*callback)(void *callbackContext, bool suspended),
 		wlan_hdd_netif_queue_control(pAdapter, WLAN_NETIF_TX_DISABLE,
 					   WLAN_CONTROL_PATH);
 
+		if (pAdapter->device_mode == QDF_STA_MODE)
+			status = hdd_enable_default_pkt_filters(pAdapter);
 		/* Configure supported OffLoads */
 		hdd_conf_hostoffload(pAdapter, true);
 
@@ -1340,6 +1338,8 @@ static void hdd_resume_wlan(void)
 					WLAN_WAKE_ALL_NETIF_QUEUE,
 					WLAN_CONTROL_PATH);
 
+		if (pAdapter->device_mode == QDF_STA_MODE)
+			status = hdd_disable_default_pkt_filters(pAdapter);
 		hdd_conf_resume_ind(pAdapter);
 
 		status = hdd_get_next_adapter(pHddCtx, pAdapterNode, &pNext);
@@ -2417,11 +2417,6 @@ static int __wlan_hdd_cfg80211_get_txpower(struct wiphy *wiphy,
 		return -EINVAL;
 	}
 
-	if (wlan_hdd_validate_session_id(adapter->sessionId)) {
-		hdd_err("invalid session id: %d", adapter->sessionId);
-		return -EINVAL;
-	}
-
 	status = wlan_hdd_validate_context(pHddCtx);
 	if (0 != status) {
 		*dbm = 0;
@@ -2430,7 +2425,6 @@ static int __wlan_hdd_cfg80211_get_txpower(struct wiphy *wiphy,
 
 	/* Validate adapter sessionId */
 	if (wlan_hdd_validate_session_id(adapter->sessionId)) {
-		hdd_err("invalid session id: %d", adapter->sessionId);
 		return -ENOTSUPP;
 	}
 
@@ -2510,6 +2504,14 @@ int hdd_set_qpower_config(hdd_context_t *hddctx, hdd_adapter_t *adapter,
 		return -EINVAL;
 	}
 
+	if (hddctx->config->nMaxPsPoll) {
+		if ((qpower == PS_QPOWER_NODEEPSLEEP) ||
+				(qpower == PS_LEGACY_NODEEPSLEEP))
+			qpower = PS_LEGACY_NODEEPSLEEP;
+		else
+			qpower = PS_LEGACY_DEEPSLEEP;
+		hdd_info("Qpower disabled, %d", qpower);
+	}
 	status = wma_set_qpower_config(adapter->sessionId, qpower);
 	if (status != QDF_STATUS_SUCCESS) {
 		hdd_err("failed to configure qpower: %d", status);

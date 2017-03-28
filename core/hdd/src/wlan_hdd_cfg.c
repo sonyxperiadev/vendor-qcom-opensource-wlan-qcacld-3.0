@@ -1829,13 +1829,6 @@ REG_TABLE_ENTRY g_registry_table[] = {
 		     CFG_TELE_BCN_MAX_LI_NUM_IDLE_BCNS_MIN,
 		     CFG_TELE_BCN_MAX_LI_NUM_IDLE_BCNS_MAX),
 
-	REG_VARIABLE(CFG_AP_DATA_AVAIL_POLL_PERIOD_NAME, WLAN_PARAM_Integer,
-		     struct hdd_config, apDataAvailPollPeriodInMs,
-		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
-		     CFG_AP_DATA_AVAIL_POLL_PERIOD_DEFAULT,
-		     CFG_AP_DATA_AVAIL_POLL_PERIOD_MIN,
-		     CFG_AP_DATA_AVAIL_POLL_PERIOD_MAX),
-
 	REG_VARIABLE(CFG_ENABLE_BYPASS_11D_NAME, WLAN_PARAM_Integer,
 		     struct hdd_config, enableBypass11d,
 		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
@@ -2171,6 +2164,28 @@ REG_TABLE_ENTRY g_registry_table[] = {
 			     CFG_DISABLE_DFS_JAPAN_W53_MIN,
 			     CFG_DISABLE_DFS_JAPAN_W53_MAX,
 			     ch_notify_set_g_disable_dfs_japan_w53, 0),
+
+	REG_VARIABLE(CFG_MAX_HT_MCS_FOR_TX_DATA, WLAN_PARAM_HexInteger,
+		     struct hdd_config, max_ht_mcs_txdata,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_MAX_HT_MCS_FOR_TX_DATA_DEFAULT,
+		     CFG_MAX_HT_MCS_FOR_TX_DATA_MIN,
+		     CFG_MAX_HT_MCS_FOR_TX_DATA_MAX),
+
+	REG_VARIABLE(CFG_DISABLE_ABG_RATE_FOR_TX_DATA, WLAN_PARAM_Integer,
+		     struct hdd_config, disable_abg_rate_txdata,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_DISABLE_ABG_RATE_FOR_TX_DATA_DEFAULT,
+		     CFG_DISABLE_ABG_RATE_FOR_TX_DATA_MIN,
+		     CFG_DISABLE_ABG_RATE_FOR_TX_DATA_MAX),
+
+	REG_VARIABLE(CFG_RATE_FOR_TX_MGMT, WLAN_PARAM_HexInteger,
+		     struct hdd_config, rate_for_tx_mgmt,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_RATE_FOR_TX_MGMT_DEFAULT,
+		     CFG_RATE_FOR_TX_MGMT_MIN,
+		     CFG_RATE_FOR_TX_MGMT_MAX),
+
 	REG_VARIABLE(CFG_ENABLE_FIRST_SCAN_2G_ONLY_NAME, WLAN_PARAM_Integer,
 		     struct hdd_config, enableFirstScan2GOnly,
 		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
@@ -4285,7 +4300,6 @@ REG_TABLE_ENTRY g_registry_table[] = {
 		CFG_ENABLE_BCAST_PROBE_RESP_DEFAULT,
 		CFG_ENABLE_BCAST_PROBE_RESP_MIN,
 		CFG_ENABLE_BCAST_PROBE_RESP_MAX),
-
 	REG_VARIABLE(CFG_QCN_IE_SUPPORT_NAME, WLAN_PARAM_Integer,
 		struct hdd_config, qcn_ie_support,
 		VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
@@ -4298,7 +4312,6 @@ REG_TABLE_ENTRY g_registry_table[] = {
 		CFG_FILS_MAX_CHAN_GUARD_TIME_DEFAULT,
 		CFG_FILS_MAX_CHAN_GUARD_TIME_MIN,
 		CFG_FILS_MAX_CHAN_GUARD_TIME_MAX),
-
 	REG_VARIABLE(CFG_ENABLE_5G_BAND_PREF_NAME, WLAN_PARAM_Integer,
 		struct hdd_config, enable_5g_band_pref,
 		VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
@@ -4347,6 +4360,19 @@ REG_TABLE_ENTRY g_registry_table[] = {
 		CFG_5G_MAX_RSSI_PENALIZE_DEFAULT,
 		CFG_5G_MAX_RSSI_PENALIZE_MIN,
 		CFG_5G_MAX_RSSI_PENALIZE_MAX),
+	REG_VARIABLE(CFG_ENABLE_PACKET_FILTERS_NAME, WLAN_PARAM_Integer,
+		struct hdd_config, packet_filters_bitmap,
+		VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		CFG_ENABLE_PACKET_FILTERS_DEFAULT,
+		CFG_ENABLE_PACKET_FILTERS_MIN,
+		CFG_ENABLE_PACKET_FILTERS_MAX),
+
+	REG_VARIABLE(CFG_DROPPED_PKT_DISCONNECT_TH_NAME, WLAN_PARAM_Integer,
+		struct hdd_config, pkt_err_disconn_th,
+		VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		CFG_DROPPED_PKT_DISCONNECT_TH_DEFAULT,
+		CFG_DROPPED_PKT_DISCONNECT_TH_MIN,
+		CFG_DROPPED_PKT_DISCONNECT_TH_MAX),
 };
 
 /**
@@ -5417,8 +5443,6 @@ void hdd_cfg_print(hdd_context_t *pHddCtx)
 		  pHddCtx->config->nTeleBcnMaxListenInterval);
 	hdd_info("Name = [maxLiNumIdleBeacons] Value = [%u] ",
 		  pHddCtx->config->nTeleBcnMaxLiNumIdleBeacons);
-	hdd_info("Name = [gApDataAvailPollInterVal] Value = [%u] ",
-		  pHddCtx->config->apDataAvailPollPeriodInMs);
 	hdd_info("Name = [gEnableBypass11d] Value = [%u] ",
 		  pHddCtx->config->enableBypass11d);
 	hdd_info("Name = [gEnableDFSChnlScan] Value = [%u] ",
@@ -5834,6 +5858,9 @@ void hdd_cfg_print(hdd_context_t *pHddCtx)
 	hdd_info("Name = [%s] Value = [%d]",
 		CFG_SAP_INTERNAL_RESTART_NAME,
 		pHddCtx->config->sap_internal_restart);
+	hdd_info("Name = [%s] value = [%u]",
+		 CFG_DROPPED_PKT_DISCONNECT_TH_NAME,
+		 pHddCtx->config->pkt_err_disconn_th);
 }
 
 
@@ -6009,7 +6036,7 @@ static void hdd_set_rx_mode_value(hdd_context_t *hdd_ctx)
 {
 	if (hdd_ctx->config->rx_mode & CFG_ENABLE_RX_THREAD &&
 		 hdd_ctx->config->rx_mode & CFG_ENABLE_RPS) {
-		hdd_err("rx_mode wrong configuration. Make it default");
+		hdd_notice("rx_mode wrong configuration. Make it default");
 		hdd_ctx->config->rx_mode = CFG_RX_MODE_DEFAULT;
 	}
 
@@ -6333,7 +6360,7 @@ QDF_STATUS hdd_hex_string_to_u16_array(char *str,
 	if (str == NULL || int_array == NULL || len == NULL)
 		return QDF_STATUS_E_INVAL;
 
-	hdd_err("str %p intArray %p intArrayMaxLen %d",
+	hdd_notice("str %p intArray %p intArrayMaxLen %d",
 		s, int_array, int_array_max_len);
 
 	*len = 0;
@@ -6778,13 +6805,6 @@ bool hdd_update_config_cfg(hdd_context_t *hdd_ctx)
 		hdd_err("Couldn't pass on WNI_CFG_HEART_BEAT_THRESHOLD to CFG");
 	}
 
-	if (sme_cfg_set_int(hdd_ctx->hHal, WNI_CFG_AP_DATA_AVAIL_POLL_PERIOD,
-		    config->apDataAvailPollPeriodInMs) ==
-		    QDF_STATUS_E_FAILURE) {
-		status = false;
-		hdd_err("Couldn't pass on WNI_CFG_AP_DATA_AVAIL_POLL_PERIOD to CFG");
-	}
-
 	if (sme_cfg_set_int(hdd_ctx->hHal, WNI_CFG_ENABLE_MC_ADDR_LIST,
 		    config->fEnableMCAddrList) == QDF_STATUS_E_FAILURE) {
 		status = false;
@@ -6945,6 +6965,28 @@ bool hdd_update_config_cfg(hdd_context_t *hdd_ctx)
 		status = false;
 		hdd_err("Couldn't pass on WNI_CFG_TGT_GTX_USR_CFG to CCM");
 	}
+
+	if (sme_cfg_set_int(hdd_ctx->hHal, WNI_CFG_MAX_HT_MCS_TX_DATA,
+			    config->max_ht_mcs_txdata) ==
+			    QDF_STATUS_E_FAILURE) {
+		status = false;
+		hdd_err("Couldn't pass on WNI_CFG_MAX_HT_MCS_TX_DATA to CCM");
+	}
+
+	if (sme_cfg_set_int(hdd_ctx->hHal, WNI_CFG_DISABLE_ABG_RATE_FOR_TX_DATA,
+			    config->disable_abg_rate_txdata) ==
+			    QDF_STATUS_E_FAILURE) {
+		status = false;
+		hdd_err("Couldn't pass on WNI_CFG_DISABLE_ABG_RATE_FOR_TX_DATA to CCM");
+	}
+
+	if (sme_cfg_set_int(hdd_ctx->hHal, WNI_CFG_RATE_FOR_TX_MGMT,
+			    config->rate_for_tx_mgmt) ==
+			    QDF_STATUS_E_FAILURE) {
+		status = false;
+		hdd_err("Couldn't pass on WNI_CFG_RATE_FOR_TX_MGMT to CCM");
+	}
+
 	return status;
 }
 #ifdef FEATURE_WLAN_SCAN_PNO
@@ -7385,7 +7427,8 @@ QDF_STATUS hdd_set_sme_config(hdd_context_t *pHddCtx)
 			pHddCtx->config->qcn_ie_support;
 	smeConfig->csrConfig.fils_max_chan_guard_time =
 			pHddCtx->config->fils_max_chan_guard_time;
-
+	smeConfig->csrConfig.pkt_err_disconn_th =
+			pHddCtx->config->pkt_err_disconn_th;
 	status = sme_update_config(pHddCtx->hHal, smeConfig);
 	if (!QDF_IS_STATUS_SUCCESS(status)) {
 		hdd_err("sme_update_config() return failure %d",

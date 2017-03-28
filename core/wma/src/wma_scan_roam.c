@@ -379,6 +379,7 @@ QDF_STATUS wma_get_buf_start_scan_cmd(tp_wma_handle wma_handle,
 			cmd->notify_scan_events |=
 				WMI_SCAN_EVENT_FOREIGN_CHANNEL;
 			cmd->repeat_probe_time = 0;
+			cmd->scan_priority = WMI_SCAN_PRIORITY_HIGH;
 			break;
 		case P2P_SCAN_TYPE_SEARCH:
 			WMA_LOGD("P2P_SCAN_TYPE_SEARCH");
@@ -414,6 +415,7 @@ QDF_STATUS wma_get_buf_start_scan_cmd(tp_wma_handle wma_handle,
 					cmd->burst_duration =
 						WMA_P2P_SCAN_MAX_BURST_DURATION;
 			}
+			cmd->scan_priority = WMI_SCAN_PRIORITY_MEDIUM;
 			break;
 		default:
 			WMA_LOGE("Invalid scan type");
@@ -438,6 +440,11 @@ QDF_STATUS wma_get_buf_start_scan_cmd(tp_wma_handle wma_handle,
 			cmd->dwell_time_passive = cmd->dwell_time_active;
 		}
 		cmd->burst_duration = 0;
+		if (CDS_IS_DFS_CH(cds_get_channel(CDS_SAP_MODE, NULL)))
+			cmd->burst_duration =
+				WMA_BURST_SCAN_MAX_NUM_OFFCHANNELS *
+				scan_req->maxChannelTime;
+		WMA_LOGI("SAP: burst_duration: %d", cmd->burst_duration);
 	}
 
 	cmd->n_probes = (cmd->repeat_probe_time > 0) ?
@@ -555,8 +562,6 @@ QDF_STATUS wma_start_scan(tp_wma_handle wma_handle,
 	WMA_LOGI("scan_id 0x%x, vdev_id %d, p2pScanType %d, msg_type 0x%x",
 		 cmd.scan_id, cmd.vdev_id, scan_req->p2pScanType, msg_type);
 
-	if (scan_req->p2pScanType)
-		cmd.scan_priority = WMI_SCAN_PRIORITY_MEDIUM;
 	/*
 	 * Cache vdev_id and scan_id because cmd is freed after calling
 	 * wmi_unified_cmd_send cmd. WMI internally frees cmd buffer after
@@ -2141,9 +2146,9 @@ void wma_process_roam_synch_fail(WMA_HANDLE handle,
  * parameters are parsed and filled into the roam synch indication
  * buffer which will be used at different layers for propagation.
  *
- * Return: None
+ * Return: Success or Failure
  */
-static void wma_fill_roam_synch_buffer(tp_wma_handle wma,
+static int wma_fill_roam_synch_buffer(tp_wma_handle wma,
 				roam_offload_synch_ind *roam_synch_ind_ptr,
 				WMI_ROAM_SYNCH_EVENTID_param_tlvs *param_buf)
 {
@@ -2171,8 +2176,12 @@ static void wma_fill_roam_synch_buffer(tp_wma_handle wma,
 		roam_synch_ind_ptr->rssi,
 		roam_synch_ind_ptr->isBeacon);
 
-	wma->csr_roam_synch_cb((tpAniSirGlobal)wma->mac_context,
-		roam_synch_ind_ptr, NULL, SIR_ROAMING_DEREGISTER_STA);
+	if (!QDF_IS_STATUS_SUCCESS(
+		wma->csr_roam_synch_cb((tpAniSirGlobal)wma->mac_context,
+		roam_synch_ind_ptr, NULL, SIR_ROAMING_DEREGISTER_STA))) {
+		WMA_LOGE("LFR3: CSR Roam synch cb failed");
+		return -EINVAL;
+	}
 	/* Beacon/Probe Rsp data */
 	roam_synch_ind_ptr->beaconProbeRespOffset =
 		sizeof(roam_offload_synch_ind);
@@ -2231,6 +2240,8 @@ static void wma_fill_roam_synch_buffer(tp_wma_handle wma,
 		    &roam_synch_ind_ptr->hw_mode_trans_ind);
 	else
 		WMA_LOGD(FL("hw_mode transition fixed param is NULL"));
+
+	return 0;
 }
 
 /**
@@ -2315,28 +2326,29 @@ int wma_roam_synch_event_handler(void *handle, uint8_t *event,
 	WMI_ROAM_SYNCH_EVENTID_param_tlvs *param_buf = NULL;
 	wmi_roam_synch_event_fixed_param *synch_event = NULL;
 	tp_wma_handle wma = (tp_wma_handle) handle;
-	roam_offload_synch_ind *roam_synch_ind_ptr;
+	roam_offload_synch_ind *roam_synch_ind_ptr = NULL;
 	tpSirBssDescription  bss_desc_ptr = NULL;
 	uint16_t ie_len = 0;
 	int status = -EINVAL;
+	tSirRoamOffloadScanReq *roam_req;
 	qdf_time_t roam_synch_received = qdf_get_system_timestamp();
 
 	WMA_LOGD("LFR3:%s", __func__);
 	if (!event) {
 		WMA_LOGE("%s: event param null", __func__);
-		return status;
+		goto cleanup_label;
 	}
 
 	param_buf = (WMI_ROAM_SYNCH_EVENTID_param_tlvs *) event;
 	if (!param_buf) {
 		WMA_LOGE("%s: received null buf from target", __func__);
-		return status;
+		goto cleanup_label;
 	}
 
 	synch_event = param_buf->fixed_param;
 	if (!synch_event) {
 		WMA_LOGE("%s: received null event data from target", __func__);
-		return status;
+		goto cleanup_label;
 	}
 
 	wma_peer_debug_log(synch_event->vdev_id, DEBUG_ROAM_SYNCH_IND,
@@ -2350,7 +2362,7 @@ int wma_roam_synch_event_handler(void *handle, uint8_t *event,
 	if (wma_is_roam_synch_in_progress(wma, synch_event->vdev_id)) {
 		WMA_LOGE("%s: Ignoring RSI since one is already in progress",
 				__func__);
-		return status;
+		goto cleanup_label;
 	}
 	WMA_LOGE("LFR3: Received WMA_ROAM_OFFLOAD_SYNCH_IND");
 
@@ -2370,7 +2382,10 @@ int wma_roam_synch_event_handler(void *handle, uint8_t *event,
 		goto cleanup_label;
 	}
 	qdf_mem_zero(roam_synch_ind_ptr, len);
-	wma_fill_roam_synch_buffer(wma, roam_synch_ind_ptr, param_buf);
+	status = wma_fill_roam_synch_buffer(wma,
+			roam_synch_ind_ptr, param_buf);
+	if (status != 0)
+		goto cleanup_label;
 	/* 24 byte MAC header and 12 byte to ssid IE */
 	if (roam_synch_ind_ptr->beaconProbeRespLength >
 			(SIR_MAC_HDR_LEN_3A + SIR_MAC_B_PR_SSID_OFFSET)) {
@@ -2388,8 +2403,13 @@ int wma_roam_synch_event_handler(void *handle, uint8_t *event,
 		goto cleanup_label;
 	}
 	qdf_mem_zero(bss_desc_ptr, sizeof(tSirBssDescription) + ie_len);
-	wma->pe_roam_synch_cb((tpAniSirGlobal)wma->mac_context,
-			roam_synch_ind_ptr, bss_desc_ptr);
+	if (QDF_IS_STATUS_ERROR(wma->pe_roam_synch_cb(
+			(tpAniSirGlobal)wma->mac_context,
+			roam_synch_ind_ptr, bss_desc_ptr))) {
+		WMA_LOGE("LFR3: PE roam synch cb failed");
+		status = -EBUSY;
+		goto cleanup_label;
+	}
 	wma_roam_update_vdev(wma, roam_synch_ind_ptr);
 	wma->csr_roam_synch_cb((tpAniSirGlobal)wma->mac_context,
 		roam_synch_ind_ptr, bss_desc_ptr, SIR_ROAM_SYNCH_PROPAGATION);
@@ -2414,6 +2434,15 @@ int wma_roam_synch_event_handler(void *handle, uint8_t *event,
 	status = 0;
 
 cleanup_label:
+	if (status != 0) {
+		if (roam_synch_ind_ptr)
+			wma->csr_roam_synch_cb((tpAniSirGlobal)wma->mac_context,
+				roam_synch_ind_ptr, NULL, SIR_ROAMING_ABORT);
+		roam_req = qdf_mem_malloc(sizeof(tSirRoamOffloadScanReq));
+		roam_req->Command = ROAM_SCAN_OFFLOAD_STOP;
+		roam_req->reason = REASON_ROAM_SYNCH_FAILED;
+		wma_process_roaming_config(wma, roam_req);
+	}
 	if (roam_synch_ind_ptr && roam_synch_ind_ptr->join_rsp)
 		qdf_mem_free(roam_synch_ind_ptr->join_rsp);
 	if (roam_synch_ind_ptr)
@@ -3086,6 +3115,7 @@ QDF_STATUS wma_pno_start(tp_wma_handle wma, tpSirPNOScanReq pno)
 	params->fast_scan_period = pno->fast_scan_period;
 	params->slow_scan_period = pno->slow_scan_period;
 	params->fast_scan_max_cycles = pno->fast_scan_max_cycles;
+	params->delay_start_time = pno->delay_start_time;
 	params->active_min_time = pno->active_min_time;
 	params->active_max_time = pno->active_max_time;
 	params->passive_min_time = pno->passive_min_time;

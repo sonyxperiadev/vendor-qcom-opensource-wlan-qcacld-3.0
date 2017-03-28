@@ -444,6 +444,10 @@ static void wma_vdev_detach_callback(void *ctx)
 
 	if (iface->staKeyParams)
 		qdf_mem_free(iface->staKeyParams);
+
+	if (iface->stats_rsp)
+		qdf_mem_free(iface->stats_rsp);
+
 	qdf_mem_zero(iface, sizeof(*iface));
 	param->status = QDF_STATUS_SUCCESS;
 	sme_msg.type = eWNI_SME_DEL_STA_SELF_RSP;
@@ -853,6 +857,8 @@ int wma_vdev_start_resp_handler(void *handle, uint8_t *cmd_param_info,
 	QDF_STATUS status;
 	int err;
 	wmi_channel_width chanwidth;
+
+	wma_release_wmi_resp_wakelock(wma);
 
 #ifdef FEATURE_AP_MCC_CH_AVOIDANCE
 	tpAniSirGlobal mac_ctx = cds_get_context(QDF_MODULE_ID_PE);
@@ -1474,6 +1480,9 @@ int wma_vdev_stop_resp_handler(void *handle, uint8_t *cmd_param_info,
 	uint8_t peer_id;
 	struct wma_txrx_node *iface;
 	int32_t status = 0;
+
+	wma_release_wmi_resp_wakelock(wma);
+
 #ifdef FEATURE_AP_MCC_CH_AVOIDANCE
 	tpAniSirGlobal mac_ctx = cds_get_context(QDF_MODULE_ID_PE);
 	if (NULL == mac_ctx) {
@@ -1509,7 +1518,6 @@ int wma_vdev_stop_resp_handler(void *handle, uint8_t *cmd_param_info,
 			return -EINVAL;
 		}
 
-		wma_release_wmi_resp_wakelock(wma);
 		wma_hidden_ssid_vdev_restart_on_vdev_stop(wma,
 							  resp_event->vdev_id);
 	}
@@ -1535,8 +1543,6 @@ int wma_vdev_stop_resp_handler(void *handle, uint8_t *cmd_param_info,
 		tpDeleteBssParams params =
 			(tpDeleteBssParams) req_msg->user_data;
 		struct beacon_info *bcn;
-
-		wma_release_wmi_resp_wakelock(wma);
 
 		if (resp_event->vdev_id > wma->max_bssid) {
 			WMA_LOGE("%s: Invalid vdev_id %d", __func__,
@@ -1638,8 +1644,6 @@ int wma_vdev_stop_resp_handler(void *handle, uint8_t *cmd_param_info,
 	} else if (req_msg->msg_type == WMA_SET_LINK_STATE) {
 		tpLinkStateParams params =
 			(tpLinkStateParams) req_msg->user_data;
-
-		wma_release_wmi_resp_wakelock(wma);
 
 		peer = ol_txrx_find_peer_by_addr(pdev, params->bssid, &peer_id);
 		if (peer) {
@@ -1831,6 +1835,15 @@ ol_txrx_vdev_handle wma_vdev_attach(tp_wma_handle wma_handle,
 		}
 	}
 
+	WMA_LOGD("Setting WMI_VDEV_PARAM_DISCONNECT_TH: %d",
+		self_sta_req->pkt_err_disconn_th);
+	ret = wma_vdev_set_param(wma_handle->wmi_handle,
+				self_sta_req->session_id,
+				WMI_VDEV_PARAM_DISCONNECT_TH,
+				self_sta_req->pkt_err_disconn_th);
+	if (ret)
+		WMA_LOGE("Failed to set WMI_VDEV_PARAM_DISCONNECT_TH");
+
 	wma_handle->interfaces[vdev_id].is_vdev_valid = true;
 	ret = wma_vdev_set_param(wma_handle->wmi_handle,
 				self_sta_req->session_id,
@@ -1882,6 +1895,9 @@ ol_txrx_vdev_handle wma_vdev_attach(tp_wma_handle wma_handle,
 	} else {
 		WMA_LOGE("Failed to get value of HT_CAP, TX STBC unchanged");
 	}
+
+	wma_set_vdev_mgmt_rate(wma_handle, self_sta_req->session_id);
+
 	/* Initialize roaming offload state */
 	if ((self_sta_req->type == WMI_VDEV_TYPE_STA) &&
 	    (self_sta_req->sub_type == 0)) {
@@ -2212,8 +2228,7 @@ QDF_STATUS wma_vdev_start(tp_wma_handle wma,
 		wma->interfaces[params.vdev_id].pause_bitmap = 0;
 	}
 
-	return wmi_unified_vdev_start_send(wma->wmi_handle, &params);
-
+	return wma_send_vdev_start_to_fw(wma, &params);
 }
 
 /**
@@ -2413,6 +2428,8 @@ int wma_peer_delete_handler(void *handle, uint8_t *cmd_param_info,
 			WMA_LOGD(FL("Sending peer del rsp to umac"));
 			wma_send_msg(wma, WMA_DELETE_STA_RSP,
 				(void *)del_sta, QDF_STATUS_SUCCESS);
+		} else {
+			qdf_mem_free(del_sta);
 		}
 	} else if (req_msg->type == WMA_DEL_P2P_SELF_STA_RSP_START) {
 		struct del_sta_self_rsp_params *data;
@@ -4177,6 +4194,7 @@ static void wma_add_sta_req_sta_mode(tp_wma_handle wma, tpAddStaParams params)
 		status = QDF_STATUS_E_FAILURE;
 	} else {
 		wma->interfaces[params->smesessionId].vdev_up = true;
+		wma_set_vdev_mgmt_rate(wma, params->smesessionId);
 	}
 
 	qdf_atomic_set(&iface->bss_status, WMA_BSS_STATUS_STARTED);

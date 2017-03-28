@@ -666,6 +666,7 @@ typedef struct tagCsrConfig {
 	bool enable_bcast_probe_rsp;
 	bool qcn_ie_support;
 	uint8_t fils_max_chan_guard_time;
+	uint16_t pkt_err_disconn_th;
 } tCsrConfig;
 
 typedef struct tagCsrChannelPowerInfo {
@@ -999,6 +1000,7 @@ typedef struct tagCsrRoamSession {
 	bool dhcp_done;
 	uint8_t disconnect_reason;
 	uint8_t uapsd_mask;
+	qdf_mc_timer_t roaming_offload_timer;
 } tCsrRoamSession;
 
 typedef struct tagCsrRoamStruct {

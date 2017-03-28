@@ -7011,11 +7011,21 @@ static int hdd_driver_command(hdd_adapter_t *adapter,
 {
 	uint8_t *command = NULL;
 	int ret = 0;
+	hdd_context_t *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 
 	ENTER();
 
 	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
 		hdd_err("Command not allowed in FTM mode");
+		return -EINVAL;
+	}
+
+	ret = wlan_hdd_validate_context(hdd_ctx);
+	if (ret)
+		return ret;
+
+	if (hdd_ctx->driver_status == DRIVER_MODULES_CLOSED) {
+		hdd_err("Driver module is closed; command can not be processed");
 		return -EINVAL;
 	}
 
@@ -7169,7 +7179,7 @@ static int __hdd_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 			ret = hdd_driver_ioctl(adapter, ifr);
 		break;
 	default:
-		hdd_err("unknown ioctl %d", cmd);
+		hdd_warn("unknown ioctl %d", cmd);
 		ret = -EINVAL;
 		break;
 	}

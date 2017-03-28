@@ -302,6 +302,10 @@ typedef enum {
  *	(SAR) power limits. A critical regulation for FCC compliance, OEMs
  *	require methods to set SAR limits on TX power of WLAN/WWAN.
  *	enum qca_vendor_attr_sar_limits attributes are used with this command.
+ * @QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_SET
+ *	Start / Stop the NUD stats collections
+ * @QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_GET
+ *	Get the NUD stats, represented by the enum qca_attr_nud_stats_get
  */
 
 enum qca_nl80211_vendor_subcmds {
@@ -456,6 +460,8 @@ enum qca_nl80211_vendor_subcmds {
 
 	/* Set Specific Absorption Rate(SAR) Power Limits */
 	QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS = 146,
+	QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_SET = 149,
+	QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_GET = 150,
 };
 
 /**
@@ -660,6 +666,7 @@ enum qca_wlan_vendor_attr_get_station_info {
  *      P2P listen offload index
  * @QCA_NL80211_VENDOR_SUBCMD_SAP_CONDITIONAL_CHAN_SWITCH_INDEX: SAP
  *      conditional channel switch index
+ * @QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_GET_INDEX: NUD DEBUG Stats index
  */
 
 enum qca_nl80211_vendor_subcmds_index {
@@ -733,6 +740,71 @@ enum qca_nl80211_vendor_subcmds_index {
 #endif /* WLAN_FEATURE_NAN_DATAPATH */
 	QCA_NL80211_VENDOR_SUBCMD_P2P_LO_EVENT_INDEX,
 	QCA_NL80211_VENDOR_SUBCMD_SAP_CONDITIONAL_CHAN_SWITCH_INDEX,
+	QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_GET_INDEX,
+};
+
+/**
+ * enum qca_attr_nud_stats_set - attribute to vendor subcmd
+ *	QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_SET. This carry the requisite
+ *	information to start / stop the NUD stats collection.
+ * @QCA_ATTR_NUD_STATS_SET_START: set nud debug stats
+ *	Flag to Start / Stop the NUD stats collection
+ *	Start - If included , Stop - If not included
+ * @QCA_ATTR_NUD_STATS_GW_IPV4: set gatway ipv4 address
+ *	IPv4 address of Default Gateway (in network byte order)
+ */
+enum qca_attr_nud_stats_set {
+	QCA_ATTR_NUD_STATS_SET_INVALID = 0,
+	QCA_ATTR_NUD_STATS_SET_START = 1,
+	QCA_ATTR_NUD_STATS_GW_IPV4 = 2,
+	/* keep last */
+	QCA_ATTR_NUD_STATS_SET_LAST,
+	QCA_ATTR_NUD_STATS_SET_MAX =
+		QCA_ATTR_NUD_STATS_SET_LAST - 1,
+};
+
+/**
+ * enum qca_attr_nud_stats_get - attribute to vendor subcmd
+ *	QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_GET. This carry the requisite
+ *	NUD stats collected when queried.
+ * @QCA_ATTR_NUD_STATS_ARP_REQ_COUNT_FROM_NETDEV: ARP Request Count from net
+ *	dev
+ * @QCA_ATTR_NUD_STATS_ARP_REQ_COUNT_TO_LOWER_MAC: ARP Request Count sent
+ *	to lower MAC from upper MAC
+ * @QCA_ATTR_NUD_STATS_ARP_REQ_RX_COUNT_BY_LOWER_MAC: ARP Request Count
+ *	received by lower MAC from upper MAC
+ * @QCA_ATTR_NUD_STATS_ARP_REQ_COUNT_TX_SUCCESS: ARP Request Count successfully
+ *	transmitted by the device
+ * @QCA_ATTR_NUD_STATS_ARP_RSP_RX_COUNT_BY_LOWER_MAC: ARP Response Count
+ *	received by lower MAC
+ * @QCA_ATTR_NUD_STATS_ARP_RSP_RX_COUNT_BY_UPPER_MAC: ARP Response Count
+ *	received by upper MAC
+ * @QCA_ATTR_NUD_STATS_ARP_RSP_COUNT_TO_NETDEV: ARP Response Count delivered
+ *	to netdev
+ * @QCA_ATTR_NUD_STATS_ARP_RSP_COUNT_OUT_OF_ORDER_DROP: ARP Response Count
+ *	delivered to netdev
+ * @QCA_ATTR_NUD_STATS_AP_LINK_ACTIVE: Flag indicating if the Stations
+ *	Link to AP is active.
+ *	Active Link - If exists, Inactive link - If not included
+ * @QCA_ATTR_NUD_STATS_AP_LINK_DAD: Flag indicating if the Stations
+ *	Duplicate Address detected.
+ */
+enum qca_attr_nud_stats_get {
+	QCA_ATTR_NUD_STATS_GET_INVALID = 0,
+	QCA_ATTR_NUD_STATS_ARP_REQ_COUNT_FROM_NETDEV = 1,
+	QCA_ATTR_NUD_STATS_ARP_REQ_COUNT_TO_LOWER_MAC = 2,
+	QCA_ATTR_NUD_STATS_ARP_REQ_RX_COUNT_BY_LOWER_MAC = 3,
+	QCA_ATTR_NUD_STATS_ARP_REQ_COUNT_TX_SUCCESS = 4,
+	QCA_ATTR_NUD_STATS_ARP_RSP_RX_COUNT_BY_LOWER_MAC = 5,
+	QCA_ATTR_NUD_STATS_ARP_RSP_RX_COUNT_BY_UPPER_MAC = 6,
+	QCA_ATTR_NUD_STATS_ARP_RSP_COUNT_TO_NETDEV = 7,
+	QCA_ATTR_NUD_STATS_ARP_RSP_COUNT_OUT_OF_ORDER_DROP = 8,
+	QCA_ATTR_NUD_STATS_AP_LINK_ACTIVE = 9,
+	QCA_ATTR_NUD_STATS_AP_LINK_DAD = 10,
+	/* keep last */
+	QCA_ATTR_NUD_STATS_GET_LAST,
+	QCA_ATTR_NUD_STATS_GET_MAX =
+		QCA_ATTR_NUD_STATS_GET_LAST - 1,
 };
 
 /**
@@ -1667,6 +1739,15 @@ enum qca_wlan_vendor_attr_ll_stats_results {
 	 */
 	QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_TX_TIME_PER_LEVEL,
 
+	/* Unsigned 32bit value */
+	QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_RTS_SUCC_CNT,
+	/* Unsigned 32bit value */
+	QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_RTS_FAIL_CNT,
+	/* Unsigned 32bit value */
+	QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_PPDU_SUCC_CNT,
+	/* Unsigned 32bit value */
+	QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_PPDU_FAIL_CNT,
+
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_LL_STATS_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX =
@@ -2399,72 +2480,84 @@ enum qca_ignore_assoc_disallowed {
  * @QCA_WLAN_VENDOR_ATTR_CONFIG_STATS_AVG_FACTOR: stats avg. factor
  * @QCA_WLAN_VENDOR_ATTR_CONFIG_GUARD_TIME: guard time
  * @QCA_WLAN_VENDOR_ATTR_CONFIG_FINE_TIME_MEASUREMENT: fine time measurement
+ * @QCA_WLAN_VENDOR_ATTR_CONF_TX_RATE: Configure maximum TX rate dynamically
+ * @QCA_WLAN_VENDOR_ATTR_CONFIG_PENALIZE_AFTER_NCONS_BEACON_MISS:
+ *                  Configure the number of continuous Beacon Miss
+ * @QCA_WLAN_VENDOR_ATTR_CONFIG_CHANNEL_AVOIDANCE_IND:
+ *                  Configure the channel avoidance indication
  * @QCA_WLAN_VENDOR_ATTR_CONFIG_TX_MPDU_AGGREGATION:
- *      Tx aggregation size (8-bit unsigned value)
+ *                  Tx aggregation size (8-bit unsigned value)
  * @QCA_WLAN_VENDOR_ATTR_CONFIG_RX_MPDU_AGGREGATION:
- *       Rx aggregation size (8-bit unsigned value)
+ *                  Rx aggregation size (8-bit unsigned value)
  * @QCA_WLAN_VENDOR_ATTR_CONFIG_NON_AGG_RETRY:
- *                                   Non aggregrate/11g sw retry threshold
+ *                  Non aggregrate/11g sw retry threshold
  * @QCA_WLAN_VENDOR_ATTR_CONFIG_AGG_RETRY: aggregrate sw retry threshold
  * @QCA_WLAN_VENDOR_ATTR_CONFIG_MGMT_RETRY: management frame sw retry threshold
  * @QCA_WLAN_VENDOR_ATTR_CONFIG_CTRL_RETRY: control frame sw retry threshold
  * @QCA_WLAN_VENDOR_ATTR_CONFIG_PROPAGATION_DELAY:
- *			     propagation delay for 2G/5G band (units in us)
+ *                  Propagation delay for 2G/5G band (units in us)
+ * @QCA_WLAN_VENDOR_ATTR_CONFIG_TX_FAIL_COUNT:
+ *                  Configure the number of unicast TX fail packet count
  * @QCA_WLAN_VENDOR_ATTR_CONFIG_SCAN_DEFAULT_IES: Update the default scan IEs
  * @QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_COMMAND:
- *                         Unsigned 32-bit value attribute for generic commands
+ *                  Unsigned 32-bit value attribute for generic commands
  * @QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_VALUE:
  *                  Unsigned 32-bit data attribute for generic command response
  * @QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA:
  *                  Unsigned 32-bit data attribute for generic command response
  * @QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_LENGTH:
- *                                     Unsigned 32-bit length attribute for
- *                                     QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA
+ *                  Unsigned 32-bit length attribute for
+ *                  QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA
  * @QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_FLAGS:
- * Unsigned 32-bit flags attribute for QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA
+ *                  Unsigned 32-bit flags attribute for
+ *                  QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA
  * @QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY: Vendor IE access policy
- * @QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY_IE_LIST: Vendor IE to be used
- *                                                     with access policy
- * @QCA_WLAN_VENDOR_ATTR_CONFIG_IFINDEX: interface index for vdev specific
- *                                       parameters
- * @QCA_WLAN_VENDOR_ATTR_CONFIG_QPOWER: Unsigned 8bit length attribute to update
- *                                      power save config to turn off/on qpower
- * @QCA_WLAN_VENDOR_ATTR_CONFIG_IGNORE_ASSOC_DISALLOWED: Ignore Assoc Disallowed
- *                                                       [MBO]
- * @QCA_WLAN_VENDOR_ATTR_CONFIG_TX_FAIL_COUNT: Unsigned 32-bit value to
- * configure the number of unicast TX fail packet count.
- * The peer is disconnected once this threshold is reached.
+ * @QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY_IE_LIST:
+ *                  Vendor IE to be used with access policy
+ * @QCA_WLAN_VENDOR_ATTR_CONFIG_IFINDEX:
+ *                  interface index for vdev specific parameters
+ * @QCA_WLAN_VENDOR_ATTR_CONFIG_QPOWER:
+ *                  Unsigned 8bit length attribute to update power save config
+ *                  to turn off/on qpower
+ * @QCA_WLAN_VENDOR_ATTR_CONFIG_IGNORE_ASSOC_DISALLOWED:
+ *                  Ignore Assoc Disallowed[MBO]
  * @QCA_WLAN_VENDOR_ATTR_CONFIG_LAST: last config
  * @QCA_WLAN_VENDOR_ATTR_CONFIG_MAX: max config
  */
 enum qca_wlan_vendor_config {
 	QCA_WLAN_VENDOR_ATTR_CONFIG_INVALID = 0,
-	QCA_WLAN_VENDOR_ATTR_CONFIG_MODULATED_DTIM,
-	QCA_WLAN_VENDOR_ATTR_CONFIG_STATS_AVG_FACTOR,
-	QCA_WLAN_VENDOR_ATTR_CONFIG_GUARD_TIME,
-	QCA_WLAN_VENDOR_ATTR_CONFIG_FINE_TIME_MEASUREMENT,
-	QCA_WLAN_VENDOR_ATTR_CONFIG_PENALIZE_AFTER_NCONS_BEACON_MISS,
-	QCA_WLAN_VENDOR_ATTR_CONFIG_CHANNEL_AVOIDANCE_IND,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_MODULATED_DTIM = 1,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_STATS_AVG_FACTOR = 2,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_GUARD_TIME = 3,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_FINE_TIME_MEASUREMENT = 4,
+	/* Unsigned 16-bit value to configure maximum TX rate dynamically */
+	QCA_WLAN_VENDOR_ATTR_CONF_TX_RATE = 5,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_PENALIZE_AFTER_NCONS_BEACON_MISS = 6,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_CHANNEL_AVOIDANCE_IND = 7,
 
-	QCA_WLAN_VENDOR_ATTR_CONFIG_TX_MPDU_AGGREGATION,
-	QCA_WLAN_VENDOR_ATTR_CONFIG_RX_MPDU_AGGREGATION,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_TX_MPDU_AGGREGATION = 8,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_RX_MPDU_AGGREGATION = 9,
 
 	/* 8-bit unsigned value to configure the Non aggregrate/11g sw
 	 * retry threshold (0 disable, 31 max). */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_NON_AGG_RETRY,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_NON_AGG_RETRY = 10,
 	/* 8-bit unsigned value to configure the aggregrate sw
 	 * retry threshold (0 disable, 31 max). */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_AGG_RETRY,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_AGG_RETRY = 11,
 	/* 8-bit unsigned value to configure the MGMT frame
 	 * retry threshold (0 disable, 31 max). */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_MGMT_RETRY,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_MGMT_RETRY = 12,
 	/* 8-bit unsigned value to configure the CTRL frame
 	 * retry threshold (0 disable, 31 max). */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_CTRL_RETRY,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_CTRL_RETRY = 13,
 	/* 8-bit unsigned value to configure the propagation delay for
 	 * 2G/5G band (0~63, units in us) */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_PROPAGATION_DELAY,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_PROPAGATION_DELAY = 14,
 
+	/* Unsigned 32-bit value to configure the number of unicast TX fail
+	 * packet count. The peer is disconnected once this threshold is
+	 * reached. */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_TX_FAIL_COUNT = 15,
 	/* Attribute used to set scan default IEs to the driver.
 	*
 	* These IEs can be used by scan operations that will be initiated by
@@ -2475,37 +2568,36 @@ enum qca_wlan_vendor_config {
 	* driver. If a particular IE is present in the scan default IEs but not
 	* present in the scan request, then that IE should be added to the IEs
 	* sent in the Probe Request frames for that scan request. */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_SCAN_DEFAULT_IES,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_SCAN_DEFAULT_IES = 16,
 	/* Unsigned 32-bit attribute for generic commands */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_COMMAND,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_COMMAND = 17,
 	/* Unsigned 32-bit value attribute for generic commands */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_VALUE,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_VALUE = 18,
 	/* Unsigned 32-bit data attribute for generic command response */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA = 19,
 	/* Unsigned 32-bit length attribute for
 	* QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_LENGTH,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_LENGTH = 20,
 	/* Unsigned 32-bit flags attribute for
 	* QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_FLAGS,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_FLAGS = 21,
 	/* Unsigned 32-bit, defining the access policy.
 	* See enum qca_access_policy. Used with
 	* QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY_IE_LIST. */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY = 22,
 	/* Sets the list of full set of IEs for which a specific access policy
 	* has to be applied. Used along with
 	* QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY to control the access.
 	* Zero length payload can be used to clear this access constraint. */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY_IE_LIST,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY_IE_LIST = 23,
 	/* Unsigned 32-bit, specifies the interface index (netdev) for which the
 	* corresponding configurations are applied. If the interface index is
 	* not specified, the configurations are attributed to the respective
 	* wiphy. */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_IFINDEX,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_IFINDEX = 24,
 	/* Unsigned 8-bit, for setting qpower dynamically */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_QPOWER = 25,
 	QCA_WLAN_VENDOR_ATTR_CONFIG_IGNORE_ASSOC_DISALLOWED = 26,
-	QCA_WLAN_VENDOR_ATTR_CONFIG_TX_FAIL_COUNT,
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_LAST,
 	QCA_WLAN_VENDOR_ATTR_CONFIG_MAX =

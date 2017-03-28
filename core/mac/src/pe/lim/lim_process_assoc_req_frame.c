@@ -1803,6 +1803,7 @@ void lim_process_assoc_req_frame(tpAniSirGlobal mac_ctx, uint8_t *rx_pkt_info,
 				MAC_ADDRESS_STR), session->peSessionId,
 			sub_type, GET_LIM_SYSTEM_ROLE(session),
 			MAC_ADDR_ARRAY(hdr->sa));
+			return;
 		} else if (!sta_ds->rmfEnabled) {
 			/*
 			 * Do this only for non PMF case.
@@ -1811,7 +1812,7 @@ void lim_process_assoc_req_frame(tpAniSirGlobal mac_ctx, uint8_t *rx_pkt_info,
 			 */
 			lim_send_assoc_rsp_mgmt_frame(mac_ctx, eSIR_SUCCESS,
 					sta_ds->assocId, sta_ds->staAddr,
-					sta_ds->mlmStaContext.subType,
+					sub_type,
 					sta_ds, session);
 			lim_log(mac_ctx, LOGE,
 				FL("DUT already received an assoc request frame and STA is sending another assoc req.So, do not Process sessionid: %d sys sub_type=%d for role=%d from: "
@@ -1819,8 +1820,8 @@ void lim_process_assoc_req_frame(tpAniSirGlobal mac_ctx, uint8_t *rx_pkt_info,
 				session->peSessionId, sub_type,
 				session->limSystemRole,
 				MAC_ADDR_ARRAY(hdr->sa));
+			return;
 		}
-		return;
 	}
 
 	dup_entry = lim_check_sta_in_pe_entries(mac_ctx, hdr,

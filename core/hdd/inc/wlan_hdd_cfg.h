@@ -1558,6 +1558,29 @@ typedef enum {
 
 /*
  * <ini>
+ * gDroppedPktDisconnectTh - Sets dropped packet threshold in firmware
+ * @Min: 0
+ * @Max: 512
+ * @Default: 512
+ *
+ * This INI is the packet drop threshold will trigger disconnect from remote
+ * peer.
+ *
+ * Related: None
+ *
+ * Supported Feature: connection
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_DROPPED_PKT_DISCONNECT_TH_NAME      "gDroppedPktDisconnectTh"
+#define CFG_DROPPED_PKT_DISCONNECT_TH_MIN       (0)
+#define CFG_DROPPED_PKT_DISCONNECT_TH_MAX       (512)
+#define CFG_DROPPED_PKT_DISCONNECT_TH_DEFAULT   (512)
+
+/*
+ * <ini>
  * gEnableFastRoamInConcurrency - Enable LFR roaming on STA during concurrency
  * @Min: 0
  * @Max: 1
@@ -1831,7 +1854,7 @@ typedef enum {
 #define CFG_INTERFACE_CHANGE_WAIT_NAME    "gInterfaceChangeWait"
 #define CFG_INTERFACE_CHANGE_WAIT_MIN     (10)
 #define CFG_INTERFACE_CHANGE_WAIT_MAX     (500000)
-#define CFG_INTERFACE_CHANGE_WAIT_DEFAULT (100000)
+#define CFG_INTERFACE_CHANGE_WAIT_DEFAULT (15000)
 
 /*
  * <ini>
@@ -4947,7 +4970,7 @@ typedef enum {
  * for valid values of module ids check enum WLAN_MODULE_ID.
  */
 #define CFG_ENABLE_FW_MODULE_LOG_LEVEL    "gFwDebugModuleLoglevel"
-#define CFG_ENABLE_FW_MODULE_LOG_DEFAULT  "2,1,5,1,8,1,9,1,11,1,18,1,27,1,31,1,36,1,47,1"
+#define CFG_ENABLE_FW_MODULE_LOG_DEFAULT  "2,1,3,1,5,1,9,1,13,1,14,1,18,1,19,1,26,1,28,1,29,1,31,1,36,1,38,1,46,1,47,1,50,1,52,1,53,1,56,1,60,1,61,1"
 
 /*
  * <ini>
@@ -5506,7 +5529,7 @@ typedef enum {
  * gMCAddrListEnable - Enable/Disable Multicast MAC Address List feature
  * @Min: 0
  * @Max: 1
- * @Default: 1
+ * @Default: 0
  *
  * This ini is used to set default MAC Address
  * Default: Enable
@@ -5665,6 +5688,68 @@ typedef enum {
 #define CFG_TDLS_TX_STATS_PERIOD_MIN                (1000)
 #define CFG_TDLS_TX_STATS_PERIOD_MAX                (4294967295UL)
 #define CFG_TDLS_TX_STATS_PERIOD_DEFAULT            (2000)
+
+/*
+ * <ini>
+ * gMaxHTMCSForTxData - max HT mcs for TX
+ * @Min: 0
+ * @Max: 383
+ * @Default: 0
+ *
+ * This ini is used to configure the max HT mcs
+ * for tx data.
+ *
+ * Usage: External
+ *
+ * bits 0-15:  max HT mcs
+ * bits 16-31: zero to disable, otherwise enable.
+ *
+ * </ini>
+ */
+#define CFG_MAX_HT_MCS_FOR_TX_DATA          "gMaxHTMCSForTxData"
+#define CFG_MAX_HT_MCS_FOR_TX_DATA_MIN      (WNI_CFG_MAX_HT_MCS_TX_DATA_STAMIN)
+#define CFG_MAX_HT_MCS_FOR_TX_DATA_MAX      (WNI_CFG_MAX_HT_MCS_TX_DATA_STAMAX)
+#define CFG_MAX_HT_MCS_FOR_TX_DATA_DEFAULT  (WNI_CFG_MAX_HT_MCS_TX_DATA_STADEF)
+
+/*
+ * <ini>
+ * gDisableABGRateForTxData - disable abg rate for tx data
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This ini is used to disable abg rate for tx data.
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_DISABLE_ABG_RATE_FOR_TX_DATA        "gDisableABGRateForTxData"
+#define CFG_DISABLE_ABG_RATE_FOR_TX_DATA_MIN \
+	(WNI_CFG_DISABLE_ABG_RATE_FOR_TX_DATA_STAMIN)
+#define CFG_DISABLE_ABG_RATE_FOR_TX_DATA_MAX \
+	(WNI_CFG_DISABLE_ABG_RATE_FOR_TX_DATA_STAMAX)
+#define CFG_DISABLE_ABG_RATE_FOR_TX_DATA_DEFAULT \
+	(WNI_CFG_DISABLE_ABG_RATE_FOR_TX_DATA_STADEF)
+
+/*
+ * <ini>
+ * gRateForTxMgmt - rate for tx mgmt frame
+ * @Min: 0x0
+ * @Max: 0xFF
+ * @Default: 0xFF
+ *
+ * This ini is used to configure the rate for tx
+ * mgmt frame. Default 0xFF means disable.
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_RATE_FOR_TX_MGMT                  "gRateForTxMgmt"
+#define CFG_RATE_FOR_TX_MGMT_MIN              (WNI_CFG_RATE_FOR_TX_MGMT_STAMIN)
+#define CFG_RATE_FOR_TX_MGMT_MAX              (WNI_CFG_RATE_FOR_TX_MGMT_STAMAX)
+#define CFG_RATE_FOR_TX_MGMT_DEFAULT          (WNI_CFG_RATE_FOR_TX_MGMT_STADEF)
 
 /*
  * <ini>
@@ -7348,10 +7433,13 @@ typedef enum {
  * <ini>
  * gEnableSifsBurst - Enables Sifs Burst
  * @Min: 0
- * @Max: 1
- * @Default: DEF
+ * @Max: 3
+ * @Default: 0
  *
- * This ini is used to set default Sifs Burst
+ * Sifs burst mode configuration
+ *     0) disabled
+ *     1) enabled, but disabled for legacy mode
+ *     3) enabled
  *
  * Related: None
  *
@@ -7364,7 +7452,7 @@ typedef enum {
 
 #define CFG_ENABLE_SIFS_BURST                      "gEnableSifsBurst"
 #define CFG_ENABLE_SIFS_BURST_MIN                  (0)
-#define CFG_ENABLE_SIFS_BURST_MAX                  (1)
+#define CFG_ENABLE_SIFS_BURST_MAX                  (3)
 #define CFG_ENABLE_SIFS_BURST_DEFAULT              (0)
 
 #ifdef WLAN_FEATURE_LPSS
@@ -9771,7 +9859,7 @@ enum dot11p_mode {
  *
  * </ini>
  */
-#define CFG_QCN_IE_SUPPORT_NAME    "g_qcn_ie_support"
+#define CFG_QCN_IE_SUPPORT_NAME     "g_qcn_ie_support"
 #define CFG_QCN_IE_SUPPORT_MIN      0
 #define CFG_QCN_IE_SUPPORT_MAX      1
 #define CFG_QCN_IE_SUPPORT_DEFAULT  1
@@ -9797,6 +9885,44 @@ enum dot11p_mode {
 #define CFG_FILS_MAX_CHAN_GUARD_TIME_MIN     (0)
 #define CFG_FILS_MAX_CHAN_GUARD_TIME_MAX     (10)
 #define CFG_FILS_MAX_CHAN_GUARD_TIME_DEFAULT (0)
+
+/*
+ * <ini>
+ * g_enable_packet_filter_bitmap - Enable Packet filters before going into
+ * suspend mode
+ * @Min: 0
+ * @Max: 63
+ * @Default: 0
+ * Below is the Detailed bit map of the Filters
+ * bit-0 : IPv6 multicast
+ * bit-1 : IPv4 multicast
+ * bit-2 : IPv4 broadcast
+ * bit-3 : XID - Exchange station Identification packet, solicits the
+ * identification of the receiving station
+ * bit-4 : STP - Spanning Tree Protocol, builds logical loop free topology
+ * bit-5 : DTP/LLC/CDP
+ * DTP - Dynamic Trunking Protocol is used by Ciscoswitches to negotiate
+ * whether an interconnection between two switches should be put into access or
+ * trunk mode
+ * LLC - Logical link control, used for multiplexing, flow & error control
+ * CDP - Cisco Discovery Protocol packet contains information about the cisco
+ * devices in the network
+ *
+ * This ini support to enable above mentioned packet filters
+ * when target goes to suspend mode, clear those when resume
+ *
+ * Related: None
+ *
+ * Supported Feature: PACKET FILTERING
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+#define CFG_ENABLE_PACKET_FILTERS_NAME     "g_enable_packet_filter_bitmap"
+#define CFG_ENABLE_PACKET_FILTERS_DEFAULT  (0)
+#define CFG_ENABLE_PACKET_FILTERS_MIN      (0)
+#define CFG_ENABLE_PACKET_FILTERS_MAX      (63)
 
 /*---------------------------------------------------------------------------
    Type declarations
@@ -10228,6 +10354,9 @@ struct hdd_config {
 	uint8_t gDisableDfsJapanW53;
 	bool gEnableOverLapCh;
 	bool fRegChangeDefCountry;
+	uint16_t max_ht_mcs_txdata;
+	bool disable_abg_rate_txdata;
+	uint8_t rate_for_tx_mgmt;
 #ifdef QCA_LL_LEGACY_TX_FLOW_CONTROL
 	uint32_t TxFlowLowWaterMark;
 	uint32_t TxFlowHighWaterMarkOffset;
@@ -10319,7 +10448,7 @@ struct hdd_config {
 	uint32_t wlanLoggingNumBuf;
 #endif /* WLAN_LOGGING_SOCK_SVC_ENABLE */
 
-	bool enableSifsBurst;
+	uint8_t enableSifsBurst;
 
 #ifdef WLAN_FEATURE_LPSS
 	bool enable_lpass_support;
@@ -10518,6 +10647,10 @@ struct hdd_config {
 	int8_t                      rssi_penalize_threshold_5g;
 	uint8_t                     rssi_penalize_factor_5g;
 	uint8_t                     max_rssi_penalize_5g;
+
+	uint8_t packet_filters_bitmap;
+	/* threshold of packet drops at which FW initiates disconnect */
+	uint16_t pkt_err_disconn_th;
 };
 
 #define VAR_OFFSET(_Struct, _Var) (offsetof(_Struct, _Var))

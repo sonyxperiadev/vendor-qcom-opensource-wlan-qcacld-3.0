@@ -112,6 +112,7 @@ ifeq ($(KERNEL_BUILD), 0)
 	endif
 
 	ifeq ($(CONFIG_ARCH_SDM660), y)
+	CONFIG_QCACLD_FEATURE_GREEN_AP := y
 	CONFIG_QCACLD_FEATURE_METERING := y
 	endif
 
@@ -405,7 +406,8 @@ HDD_OBJS := 	$(HDD_SRC_DIR)/wlan_hdd_assoc.o \
 		$(HDD_SRC_DIR)/wlan_hdd_trace.o \
 		$(HDD_SRC_DIR)/wlan_hdd_wext.o \
 		$(HDD_SRC_DIR)/wlan_hdd_wmm.o \
-		$(HDD_SRC_DIR)/wlan_hdd_wowl.o
+		$(HDD_SRC_DIR)/wlan_hdd_wowl.o \
+		$(HDD_SRC_DIR)/wlan_hdd_packet_filter.o
 
 ifeq ($(CONFIG_WLAN_DEBUGFS), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_debugfs.o
@@ -1135,7 +1137,8 @@ CDEFINES :=	-DANI_LITTLE_BYTE_ENDIAN \
 		-DFEATURE_WLAN_EXTSCAN \
 		-DWLAN_FEATURE_MBSSID \
 		-DCONFIG_160MHZ_SUPPORT \
-		-DCONFIG_MCL
+		-DCONFIG_MCL \
+		-DWMI_CMD_STRINGS
 
 ifneq ($(CONFIG_HIF_USB), 1)
 CDEFINES += -DWLAN_LOGGING_SOCK_SVC_ENABLE
@@ -1570,6 +1573,11 @@ CDEFINES += -DAR900B
 ifeq ($(CONFIG_64BIT_PADDR),y)
 CDEFINES += -DHTT_PADDR64
 endif
+
+ifeq ($(CONFIG_SLUB_DEBUG_ON),y)
+CDEFINES += -DOL_RX_INDICATION_RECORD
+endif
+
 endif
 endif
 

@@ -698,11 +698,14 @@ static ssize_t hdd_driver_memdump_read(struct file *file, char __user *buf,
 	if (status != 0)
 		return -EINVAL;
 
+	mutex_lock(&hdd_ctx->memdump_lock);
 	if (*pos < 0) {
 		hdd_err("Invalid start offset for memdump read");
+		mutex_unlock(&hdd_ctx->memdump_lock);
 		return -EINVAL;
 	} else if (!count || (hdd_ctx->driver_dump_size &&
 				(*pos >= hdd_ctx->driver_dump_size))) {
+		mutex_unlock(&hdd_ctx->memdump_lock);
 		hdd_warn("No more data to copy");
 		return 0;
 	} else if ((*pos == 0) || (hdd_ctx->driver_dump_mem == NULL)) {
@@ -714,6 +717,7 @@ static ssize_t hdd_driver_memdump_read(struct file *file, char __user *buf,
 				qdf_mem_malloc(DRIVER_MEM_DUMP_SIZE);
 			if (!hdd_ctx->driver_dump_mem) {
 				hdd_err("qdf_mem_malloc failed");
+				mutex_unlock(&hdd_ctx->memdump_lock);
 				return -ENOMEM;
 			}
 		}
@@ -742,6 +746,7 @@ static ssize_t hdd_driver_memdump_read(struct file *file, char __user *buf,
 	if (copy_to_user(buf, hdd_ctx->driver_dump_mem + *pos,
 					no_of_bytes_read)) {
 		hdd_err("copy to user space failed");
+		mutex_unlock(&hdd_ctx->memdump_lock);
 		return -EFAULT;
 	}
 
@@ -751,6 +756,8 @@ static ssize_t hdd_driver_memdump_read(struct file *file, char __user *buf,
 	/* Entire driver memory dump copy completed */
 	if (*pos >= hdd_ctx->driver_dump_size)
 		hdd_driver_mem_cleanup();
+
+	mutex_unlock(&hdd_ctx->memdump_lock);
 
 	return no_of_bytes_read;
 }

@@ -1986,6 +1986,120 @@ lim_decide_sta_protection(tpAniSirGlobal mac_ctx,
 	}
 }
 
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+static void lim_trigger_channel_switch_through_roaming(uint32_t sme_sessionid,
+			tSirMacAddr bssid, uint8_t channel)
+{
+	struct wma_roam_invoke_cmd *fastreassoc;
+	cds_msg_t msg = {0};
+
+	fastreassoc = qdf_mem_malloc(sizeof(struct wma_roam_invoke_cmd));
+	if (NULL == fastreassoc) {
+		hdd_err("qdf_mem_malloc failed for fastreassoc");
+		return;
+	}
+	fastreassoc->vdev_id = sme_sessionid;
+	fastreassoc->channel = channel;
+	fastreassoc->bssid[0] = bssid[0];
+	fastreassoc->bssid[1] = bssid[1];
+	fastreassoc->bssid[2] = bssid[2];
+	fastreassoc->bssid[3] = bssid[3];
+	fastreassoc->bssid[4] = bssid[4];
+	fastreassoc->bssid[5] = bssid[5];
+
+	msg.type = SIR_HAL_ROAM_INVOKE;
+	msg.reserved = 0;
+	msg.bodyptr = fastreassoc;
+	if (QDF_STATUS_SUCCESS != cds_mq_post_message(QDF_MODULE_ID_WMA,
+				&msg)) {
+		qdf_mem_free(fastreassoc);
+		hdd_err("Not able to post ROAM_INVOKE_CMD message to WMA");
+	}
+}
+
+static void lim_csa_ecsa_handler(tpAniSirGlobal mac_ctx, tpPESession session)
+{
+	uint8_t old_channel, new_channel;
+
+	old_channel = session->currentOperChannel;
+	new_channel = session->gLimChannelSwitch.primaryChannel;
+	switch (session->gLimChannelSwitch.state) {
+	case eLIM_CHANNEL_SWITCH_PRIMARY_ONLY:
+		lim_log(mac_ctx, LOG1, FL("CHANNEL_SWITCH_PRIMARY_ONLY "));
+		if (!CDS_IS_SAME_BAND_CHANNELS(old_channel, new_channel)) {
+			lim_trigger_channel_switch_through_roaming(
+				session->smeSessionId, session->bssId,
+				session->gLimChannelSwitch.primaryChannel);
+		} else {
+			lim_switch_primary_channel(mac_ctx,
+				session->gLimChannelSwitch.primaryChannel,
+				session);
+		}
+		session->gLimChannelSwitch.state = eLIM_CHANNEL_SWITCH_IDLE;
+		break;
+	case eLIM_CHANNEL_SWITCH_PRIMARY_AND_SECONDARY:
+		lim_log(mac_ctx, LOG1,
+			FL("CHANNEL_SWITCH_PRIMARY_AND_SECONDARY"));
+		if (!CDS_IS_SAME_BAND_CHANNELS(old_channel, new_channel)) {
+			lim_trigger_channel_switch_through_roaming(
+				session->smeSessionId, session->bssId,
+				session->gLimChannelSwitch.primaryChannel);
+		} else {
+			lim_switch_primary_secondary_channel(mac_ctx, session,
+				session->gLimChannelSwitch.primaryChannel,
+				session->gLimChannelSwitch.ch_center_freq_seg0,
+				session->gLimChannelSwitch.ch_center_freq_seg1,
+				session->gLimChannelSwitch.ch_width);
+		}
+		session->gLimChannelSwitch.state = eLIM_CHANNEL_SWITCH_IDLE;
+		break;
+	case eLIM_CHANNEL_SWITCH_IDLE:
+	default:
+		lim_log(mac_ctx, LOGE, FL("incorrect state "));
+		if (lim_restore_pre_channel_switch_state(mac_ctx, session) !=
+				eSIR_SUCCESS)
+			lim_log(mac_ctx, LOGP,
+				FL("Can't restore state, reset the system"));
+		return;
+	}
+}
+#else
+static void lim_csa_ecsa_handler(tpAniSirGlobal mac_ctx, tpPESession session)
+{
+	uint8_t old_channel, new_channel;
+
+	old_channel = session->currentOperChannel;
+	new_channel = session->gLimChannelSwitch.primaryChannel;
+	switch (session->gLimChannelSwitch.state) {
+	case eLIM_CHANNEL_SWITCH_PRIMARY_ONLY:
+		lim_log(mac_ctx, LOG1, FL("CHANNEL_SWITCH_PRIMARY_ONLY "));
+		lim_switch_primary_channel(mac_ctx,
+			session->gLimChannelSwitch.primaryChannel,
+			session);
+		session->gLimChannelSwitch.state = eLIM_CHANNEL_SWITCH_IDLE;
+		break;
+	case eLIM_CHANNEL_SWITCH_PRIMARY_AND_SECONDARY:
+		lim_log(mac_ctx, LOG1,
+			FL("CHANNEL_SWITCH_PRIMARY_AND_SECONDARY"));
+		lim_switch_primary_secondary_channel(mac_ctx, session,
+			session->gLimChannelSwitch.primaryChannel,
+			session->gLimChannelSwitch.ch_center_freq_seg0,
+			session->gLimChannelSwitch.ch_center_freq_seg1,
+			session->gLimChannelSwitch.ch_width);
+		session->gLimChannelSwitch.state = eLIM_CHANNEL_SWITCH_IDLE;
+		break;
+	case eLIM_CHANNEL_SWITCH_IDLE:
+	default:
+		lim_log(mac_ctx, LOGE, FL("incorrect state "));
+		if (lim_restore_pre_channel_switch_state(mac_ctx, session) !=
+				eSIR_SUCCESS)
+			lim_log(mac_ctx, LOGP,
+				FL("Can't restore state, reset the system"));
+		return;
+	}
+}
+#endif
+
 /**
  * lim_process_channel_switch_timeout()
  *
@@ -2069,39 +2183,7 @@ void lim_process_channel_switch_timeout(tpAniSirGlobal pMac)
 				     false);
 	pMac->lim.dfschannelList.timeStamp[psessionEntry->currentOperChannel] =
 		0;
-	switch (psessionEntry->gLimChannelSwitch.state) {
-	case eLIM_CHANNEL_SWITCH_PRIMARY_ONLY:
-		PELOGW(lim_log(pMac, LOGW, FL("CHANNEL_SWITCH_PRIMARY_ONLY "));)
-		lim_switch_primary_channel(pMac,
-					   psessionEntry->gLimChannelSwitch.
-					   primaryChannel, psessionEntry);
-		psessionEntry->gLimChannelSwitch.state =
-			eLIM_CHANNEL_SWITCH_IDLE;
-		break;
-	case eLIM_CHANNEL_SWITCH_PRIMARY_AND_SECONDARY:
-		PELOGW(lim_log
-			       (pMac, LOGW, FL("CHANNEL_SWITCH_PRIMARY_AND_SECONDARY"));
-		       )
-		lim_switch_primary_secondary_channel(pMac, psessionEntry,
-			psessionEntry->gLimChannelSwitch.primaryChannel,
-			psessionEntry->gLimChannelSwitch.ch_center_freq_seg0,
-			psessionEntry->gLimChannelSwitch.ch_center_freq_seg1,
-			psessionEntry->gLimChannelSwitch.ch_width);
-		psessionEntry->gLimChannelSwitch.state =
-			eLIM_CHANNEL_SWITCH_IDLE;
-		break;
-
-	case eLIM_CHANNEL_SWITCH_IDLE:
-	default:
-		PELOGE(lim_log(pMac, LOGE, FL("incorrect state "));)
-		if (lim_restore_pre_channel_switch_state(pMac, psessionEntry) !=
-		    eSIR_SUCCESS) {
-			lim_log(pMac, LOGP,
-				FL
-					("Could not restore pre-channelSwitch (11h) state, resetting the system"));
-		}
-		return; /* Please note, this is 'return' and not 'break' */
-	}
+	lim_csa_ecsa_handler(pMac, psessionEntry);
 }
 
 /**
@@ -5435,6 +5517,9 @@ tSirNwType lim_get_nw_type(tpAniSirGlobal pMac, uint8_t channelNum, uint32_t typ
 					       (pMac, LOG3, FL("Beacon, nwtype=G"));
 				       )
 				nwType = eSIR_11G_NW_TYPE;
+			} else if (pBeacon->HTInfo.present ||
+				   IS_BSS_VHT_CAPABLE(pBeacon->VHTCaps)) {
+				nwType = eSIR_11G_NW_TYPE;
 			}
 		} else {
 			/* 11a packet */
@@ -5769,6 +5854,7 @@ tpPESession lim_is_ap_session_active(tpAniSirGlobal pMac)
 void lim_handle_defer_msg_error(tpAniSirGlobal pMac, tpSirMsgQ pLimMsg)
 {
 	if (SIR_BB_XPORT_MGMT_MSG == pLimMsg->type) {
+		lim_decrement_pending_mgmt_count(pMac);
 		cds_pkt_return_packet((cds_pkt_t *) pLimMsg->bodyptr);
 		pLimMsg->bodyptr = NULL;
 	} else if (pLimMsg->bodyptr != NULL) {
@@ -7377,4 +7463,17 @@ tCsrRoamSession *lim_get_session_by_macaddr(tpAniSirGlobal mac_ctx,
 	}
 
 	return NULL;
+}
+
+void lim_decrement_pending_mgmt_count(tpAniSirGlobal mac_ctx)
+{
+	qdf_spin_lock(&mac_ctx->sys.bbt_mgmt_lock);
+	if (!mac_ctx->sys.sys_bbt_pending_mgmt_count) {
+		qdf_spin_unlock(&mac_ctx->sys.bbt_mgmt_lock);
+		lim_log(mac_ctx, LOGW,
+			FL("sys_bbt_pending_mgmt_count value is 0"));
+		return;
+	}
+	mac_ctx->sys.sys_bbt_pending_mgmt_count--;
+	qdf_spin_unlock(&mac_ctx->sys.bbt_mgmt_lock);
 }
