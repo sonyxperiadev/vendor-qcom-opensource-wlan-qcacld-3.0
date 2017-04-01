@@ -1538,7 +1538,7 @@ QDF_STATUS hdd_wlan_shutdown(void)
 
 	hdd_bus_bandwidth_destroy(pHddCtx);
 
-	hdd_wlan_stop_modules(pHddCtx);
+	hdd_wlan_stop_modules(pHddCtx, false);
 
 	hdd_lpass_notify_stop(pHddCtx);
 
@@ -1658,7 +1658,7 @@ QDF_STATUS hdd_wlan_re_init(void)
 	goto success;
 
 err_cds_disable:
-	hdd_wlan_stop_modules(pHddCtx);
+	hdd_wlan_stop_modules(pHddCtx, false);
 
 err_wiphy_unregister:
 	if (pHddCtx) {
