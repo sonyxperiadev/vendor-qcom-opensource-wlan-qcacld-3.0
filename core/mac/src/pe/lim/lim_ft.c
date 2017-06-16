@@ -456,10 +456,12 @@ void lim_ft_prepare_add_bss_req(tpAniSirGlobal pMac,
 	if (!lim_is_roam_synch_in_progress(pftSessionEntry)) {
 		pftSessionEntry->limMlmState =
 			eLIM_MLM_WT_ADD_BSS_RSP_FT_REASSOC_STATE;
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace
 			(pMac, TRACE_CODE_MLM_STATE,
 			pftSessionEntry->peSessionId,
 			eLIM_MLM_WT_ADD_BSS_RSP_FT_REASSOC_STATE));
+#endif
 	}
 	pAddBssParams->halPersona = (uint8_t) pftSessionEntry->pePersona;
 
@@ -706,10 +708,12 @@ void lim_fill_ft_session(tpAniSirGlobal pMac,
 	if (!lim_is_roam_synch_in_progress(psessionEntry)) {
 		pftSessionEntry->limPrevSmeState = pftSessionEntry->limSmeState;
 		pftSessionEntry->limSmeState = eLIM_SME_WT_REASSOC_STATE;
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace(pMac,
 				TRACE_CODE_SME_STATE,
 				pftSessionEntry->peSessionId,
 				pftSessionEntry->limSmeState));
+#endif
 	}
 	pftSessionEntry->encryptType = psessionEntry->encryptType;
 #ifdef WLAN_FEATURE_11W
@@ -1070,8 +1074,9 @@ tSirRetStatus lim_process_ft_aggr_qos_req(tpAniSirGlobal pMac, uint32_t *pMsgBuf
 	 * WMA_AGGR_QOS_RSP from HAL.
 	 */
 	SET_LIM_PROCESS_DEFD_MESGS(pMac, false);
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace_msg_tx(pMac, psessionEntry->peSessionId, msg.type));
-
+#endif
 	if (eSIR_SUCCESS != wma_post_ctrl_msg(pMac, &msg)) {
 			pe_warn("wma_post_ctrl_msg() failed");
 			SET_LIM_PROCESS_DEFD_MESGS(pMac, true);
