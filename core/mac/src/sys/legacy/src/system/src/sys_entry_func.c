@@ -137,9 +137,11 @@ sys_bbt_process_message_core(tpAniSirGlobal mac_ctx, tpSirMsgQ msg,
 		if (eMGMT_DROP_NO_DROP != dropreason) {
 			pe_debug("Mgmt Frame %d being dropped, reason: %d\n",
 				subtype, dropreason);
+#ifdef LIM_TRACE_RECORD
 				MTRACE(mac_trace(mac_ctx,
 					TRACE_CODE_RX_MGMT_DROP, NO_SESSION,
 					dropreason);)
+#endif
 			goto fail;
 		}
 

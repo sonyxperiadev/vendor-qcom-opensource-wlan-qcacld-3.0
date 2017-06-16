@@ -550,8 +550,9 @@ static bool __lim_process_sme_sys_ready_ind(tpAniSirGlobal pMac, uint32_t *pMsgB
 		pMac->lim.sme_msg_callback = ready_req->sme_msg_cb;
 	}
 	pe_debug("sending WMA_SYS_READY_IND msg to HAL");
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace_msg_tx(pMac, NO_SESSION, msg.type));
-
+#endif
 	if (eSIR_SUCCESS != wma_post_ctrl_msg(pMac, &msg)) {
 		pe_err("wma_post_ctrl_msg failed");
 		return true;
@@ -1100,11 +1101,12 @@ __lim_handle_sme_start_bss_request(tpAniSirGlobal mac_ctx, uint32_t *msg_buf)
 
 		session->limPrevSmeState = session->limSmeState;
 		session->limSmeState = eLIM_SME_WT_START_BSS_STATE;
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace
 			(mac_ctx, TRACE_CODE_SME_STATE,
 			session->peSessionId,
 			session->limSmeState));
-
+#endif
 		lim_post_mlm_message(mac_ctx, LIM_MLM_START_REQ,
 			(uint32_t *) mlm_start_req);
 		return;
@@ -1944,10 +1946,11 @@ __lim_process_sme_join_req(tpAniSirGlobal mac_ctx, uint32_t *msg_buf)
 
 		session->limPrevSmeState = session->limSmeState;
 		session->limSmeState = eLIM_SME_WT_JOIN_STATE;
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace(mac_ctx, TRACE_CODE_SME_STATE,
 				session->peSessionId,
 				session->limSmeState));
-
+#endif
 		/* Indicate whether spectrum management is enabled */
 		session->spectrumMgtEnabled =
 			sme_join_req->spectrumMgtIndicator;
@@ -2271,10 +2274,11 @@ static void __lim_process_sme_reassoc_req(tpAniSirGlobal mac_ctx,
 	session_entry->limPrevSmeState = session_entry->limSmeState;
 	session_entry->limSmeState = eLIM_SME_WT_REASSOC_STATE;
 
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace(mac_ctx, TRACE_CODE_SME_STATE,
 				session_entry->peSessionId,
 				session_entry->limSmeState));
-
+#endif
 	lim_post_mlm_message(mac_ctx,
 			     LIM_MLM_REASSOC_REQ, (uint32_t *)mlm_reassoc_req);
 	return;
@@ -2405,9 +2409,11 @@ static void __lim_process_sme_disassoc_req(tpAniSirGlobal pMac, uint32_t *pMsgBu
 			psessionEntry->limSmeState = eLIM_SME_WT_DISASSOC_STATE;
 			/* Delete all TDLS peers connected before leaving BSS */
 			lim_delete_tdls_peers(pMac, psessionEntry);
+#ifdef LIM_TRACE_RECORD
 			MTRACE(mac_trace(pMac, TRACE_CODE_SME_STATE,
 				psessionEntry->peSessionId,
 				psessionEntry->limSmeState));
+#endif
 			break;
 
 		case eLIM_SME_WT_DEAUTH_STATE:
@@ -2417,10 +2423,12 @@ static void __lim_process_sme_disassoc_req(tpAniSirGlobal pMac, uint32_t *pMsgBu
 			 * its been set when PE entered WT_DEAUTH_STATE.
 			 */
 			psessionEntry->limSmeState = eLIM_SME_WT_DISASSOC_STATE;
+#ifdef LIM_TRACE_RECORD
 			MTRACE(mac_trace
 				       (pMac, TRACE_CODE_SME_STATE,
 				       psessionEntry->peSessionId,
 				       psessionEntry->limSmeState));
+#endif
 			pe_debug("Rcvd SME_DISASSOC_REQ while in SME_WT_DEAUTH_STATE");
 			break;
 
@@ -2717,9 +2725,11 @@ static void __lim_process_sme_deauth_req(tpAniSirGlobal mac_ctx,
 			session_entry->limPrevSmeState =
 				session_entry->limSmeState;
 			session_entry->limSmeState = eLIM_SME_WT_DEAUTH_STATE;
+#ifdef LIM_TRACE_RECORD
 			MTRACE(mac_trace(mac_ctx, TRACE_CODE_SME_STATE,
 				       session_entry->peSessionId,
 				       session_entry->limSmeState));
+#endif
 			/* Send Deauthentication request to MLM below */
 			break;
 		case eLIM_SME_WT_DEAUTH_STATE:
@@ -3285,10 +3295,11 @@ __lim_handle_sme_stop_bss_request(tpAniSirGlobal pMac, uint32_t *pMsgBuf)
 	prevState = psessionEntry->limSmeState;
 
 	psessionEntry->limSmeState = eLIM_SME_IDLE_STATE;
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace
 		       (pMac, TRACE_CODE_SME_STATE, psessionEntry->peSessionId,
 		       psessionEntry->limSmeState));
-
+#endif
 	/* Update SME session Id and Transaction Id */
 	psessionEntry->smeSessionId = smesessionId;
 	psessionEntry->transactionId = smetransactionId;
@@ -3348,10 +3359,11 @@ __lim_handle_sme_stop_bss_request(tpAniSirGlobal pMac, uint32_t *pMsgBuf)
 		pe_err("delBss failed for bss %d", psessionEntry->bssIdx);
 		psessionEntry->limSmeState = prevState;
 
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace
 			       (pMac, TRACE_CODE_SME_STATE, psessionEntry->peSessionId,
 			       psessionEntry->limSmeState));
-
+#endif
 		lim_send_sme_rsp(pMac, eWNI_SME_STOP_BSS_RSP,
 				 eSIR_SME_STOP_BSS_FAILURE, smesessionId,
 				 smetransactionId);
@@ -3675,10 +3687,11 @@ static void __lim_process_sme_addts_req(tpAniSirGlobal pMac, uint32_t *pMsgBuf)
 		pe_err("AddtsRsp timer change failed!");
 		goto send_failure_addts_rsp;
 	}
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace
 		       (pMac, TRACE_CODE_TIMER_ACTIVATE, psessionEntry->peSessionId,
 		       eLIM_ADDTS_RSP_TIMER));
-
+#endif
 	/* add the sessionId to the timer object */
 	pMac->lim.limTimers.gLimAddtsRspTimer.sessionId = sessionId;
 	if (tx_timer_activate(&pMac->lim.limTimers.gLimAddtsRspTimer) !=
@@ -3863,8 +3876,9 @@ __lim_process_sme_get_statistics_request(tpAniSirGlobal pMac, uint32_t *pMsgBuf)
 	msgQ.reserved = 0;
 	msgQ.bodyptr = pMsgBuf;
 	msgQ.bodyval = 0;
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace_msg_tx(pMac, NO_SESSION, msgQ.type));
-
+#endif
 	if (eSIR_SUCCESS != (wma_post_ctrl_msg(pMac, &msgQ))) {
 		qdf_mem_free(pMsgBuf);
 		pMsgBuf = NULL;
@@ -3893,8 +3907,9 @@ __lim_process_sme_get_tsm_stats_request(tpAniSirGlobal pMac, uint32_t *pMsgBuf)
 	msgQ.reserved = 0;
 	msgQ.bodyptr = pMsgBuf;
 	msgQ.bodyval = 0;
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace_msg_tx(pMac, NO_SESSION, msgQ.type));
-
+#endif
 	if (eSIR_SUCCESS != (wma_post_ctrl_msg(pMac, &msgQ))) {
 		qdf_mem_free(pMsgBuf);
 		pMsgBuf = NULL;
@@ -4437,7 +4452,9 @@ lim_send_set_max_tx_power_req(tpAniSirGlobal pMac, int8_t txPower,
 	msgQ.bodyptr = pMaxTxParams;
 	msgQ.bodyval = 0;
 	pe_debug("Post WMA_SET_MAX_TX_POWER_REQ to WMA");
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace_msg_tx(pMac, pSessionEntry->peSessionId, msgQ.type));
+#endif
 	retCode = wma_post_ctrl_msg(pMac, &msgQ);
 	if (eSIR_SUCCESS != retCode) {
 		pe_err("wma_post_ctrl_msg() failed");

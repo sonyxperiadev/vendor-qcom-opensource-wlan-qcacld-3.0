@@ -663,10 +663,10 @@ lim_send_sme_probe_req_ind(tpAniSirGlobal pMac,
 		     QDF_MAC_ADDR_SIZE);
 	qdf_mem_copy(pSirSmeProbeReqInd->WPSPBCProbeReq.peer_macaddr.bytes,
 		     peerMacAddr, QDF_MAC_ADDR_SIZE);
-
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace(pMac, TRACE_CODE_TX_SME_MSG,
 				psessionEntry->peSessionId, msgQ.type));
-
+#endif
 	if (ProbeReqIELen > sizeof(pSirSmeProbeReqInd->WPSPBCProbeReq.
 	    probeReqIE)) {
 		ProbeReqIELen = sizeof(pSirSmeProbeReqInd->WPSPBCProbeReq.

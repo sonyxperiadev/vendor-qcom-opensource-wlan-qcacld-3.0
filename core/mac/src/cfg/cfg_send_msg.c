@@ -126,7 +126,9 @@ cfg_send_host_msg(tpAniSirGlobal pMac, uint16_t msgType, uint32_t msgLen,
 	}
 
 	/* Ship it */
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace_msg_tx(pMac, NO_SESSION, mmhMsg.type));
+#endif
 	sys_process_mmh_msg(pMac, &mmhMsg);
 
 } /*** end cfg_send_host_msg() ***/
