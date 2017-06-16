@@ -1692,7 +1692,9 @@ end :
 	mmhMsg.bodyptr = NULL;
 	mmhMsg.bodyval = 0;
 
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace_msg_tx(pMac, NO_SESSION, mmhMsg.type));
+#endif
 	if (wma_post_ctrl_msg(pMac, &mmhMsg) != eSIR_SUCCESS) {
 		PELOGE(cfg_log(pMac, LOGE, FL("WMAPostMsgApi failed!"));)
 	}

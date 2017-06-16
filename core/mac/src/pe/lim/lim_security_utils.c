@@ -347,9 +347,11 @@ void lim_add_pre_auth_node(tpAniSirGlobal pMac, struct tLimPreAuthNode *pAuthNod
 void lim_release_pre_auth_node(tpAniSirGlobal pMac, tpLimPreAuthNode pAuthNode)
 {
 	pAuthNode->fFree = 1;
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace
 		       (pMac, TRACE_CODE_TIMER_DEACTIVATE, NO_SESSION,
 		       eLIM_PRE_AUTH_CLEANUP_TIMER));
+#endif
 	tx_timer_deactivate(&pAuthNode->timer);
 	pMac->lim.gLimNumPreAuthContexts--;
 } /*** end lim_release_pre_auth_node() ***/
@@ -496,10 +498,11 @@ lim_restore_from_auth_state(tpAniSirGlobal pMac, tSirResultCodes resultCode,
 
 	sessionEntry->limMlmState = sessionEntry->limPrevMlmState;
 
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace
 		       (pMac, TRACE_CODE_MLM_STATE, sessionEntry->peSessionId,
 		       sessionEntry->limMlmState));
-
+#endif
 	/*
 	 * Set the auth_ack_status status flag as success as
 	 * host have received the auth rsp and no longer auth
@@ -885,7 +888,9 @@ void lim_send_set_bss_key_req(tpAniSirGlobal pMac,
 	msgQ.bodyval = 0;
 
 	lim_log(pMac, LOGW, FL("Sending WMA_SET_BSSKEY_REQ..."));
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace_msg_tx(pMac, psessionEntry->peSessionId, msgQ.type));
+#endif
 	retCode = wma_post_ctrl_msg(pMac, &msgQ);
 	if (eSIR_SUCCESS != retCode) {
 		lim_log(pMac, LOGE,
@@ -988,10 +993,11 @@ void lim_send_set_sta_key_req(tpAniSirGlobal pMac,
 				eLIM_MLM_WT_SET_STA_KEY_STATE;
 		msgQ.type = WMA_SET_STAKEY_REQ;
 	}
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace
 		       (pMac, TRACE_CODE_MLM_STATE, sessionEntry->peSessionId,
 		       sessionEntry->limMlmState));
-
+#endif
 	/**
 	 * In the Case of WEP_DYNAMIC, ED_TKIP and ED_CCMP
 	 * the Key[0] contains the KEY, so just copy that alone,
@@ -1013,10 +1019,12 @@ void lim_send_set_sta_key_req(tpAniSirGlobal pMac,
 			pSetStaKeyParams->wepType = eSIR_WEP_STATIC;
 			sessionEntry->limMlmState =
 				eLIM_MLM_WT_SET_STA_KEY_STATE;
+#ifdef LIM_TRACE_RECORD
 			MTRACE(mac_trace
 				       (pMac, TRACE_CODE_MLM_STATE,
 				       sessionEntry->peSessionId,
 				       sessionEntry->limMlmState));
+#endif
 		} else {
 			/*This case the keys are coming from upper layer so need to fill the
 			 * key at the default wep key index and send to the HAL */
@@ -1058,7 +1066,9 @@ void lim_send_set_sta_key_req(tpAniSirGlobal pMac,
 	msgQ.bodyval = 0;
 
 	lim_log(pMac, LOG1, FL("Sending WMA_SET_STAKEY_REQ..."));
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace_msg_tx(pMac, sessionEntry->peSessionId, msgQ.type));
+#endif
 	retCode = wma_post_ctrl_msg(pMac, &msgQ);
 	if (eSIR_SUCCESS != retCode) {
 		lim_log(pMac, LOGE,

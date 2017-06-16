@@ -95,7 +95,9 @@ lim_process_mlm_rsp_messages(tpAniSirGlobal pMac, uint32_t msgType,
 		PELOGE(lim_log(pMac, LOGE, FL("Buffer is Pointing to NULL"));)
 		return;
 	}
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace(pMac, TRACE_CODE_TX_LIM_MSG, 0, msgType));
+#endif
 	switch (msgType) {
 	case LIM_MLM_AUTH_CNF:
 		lim_process_mlm_auth_cnf(pMac, pMsgBuf);
@@ -201,9 +203,11 @@ void lim_process_mlm_start_cnf(tpAniSirGlobal pMac, uint32_t *pMsgBuf)
 		 * Beacon file register.
 		 */
 		psessionEntry->limSmeState = eLIM_SME_NORMAL_STATE;
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace
 			       (pMac, TRACE_CODE_SME_STATE, psessionEntry->peSessionId,
 			       psessionEntry->limSmeState));
+#endif
 		if (psessionEntry->bssType == eSIR_INFRA_AP_MODE)
 			lim_log(pMac, LOG1,
 				FL("*** Started BSS in INFRA AP SIDE***"));
@@ -312,9 +316,11 @@ void lim_process_mlm_join_cnf(tpAniSirGlobal mac_ctx,
 
 	/*  Join failure */
 	session_entry->limSmeState = eLIM_SME_JOIN_FAILURE_STATE;
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace(mac_ctx, TRACE_CODE_SME_STATE,
 		session_entry->peSessionId,
 		session_entry->limSmeState));
+#endif
 	/* Send Join response to Host */
 	lim_handle_sme_join_result(mac_ctx, result_code,
 		((tLimMlmJoinCnf *) msg)->protStatusCode, session_entry);
@@ -453,8 +459,10 @@ static void lim_send_mlm_assoc_req(tpAniSirGlobal mac_ctx,
 	assoc_req->sessionId = session_entry->peSessionId;
 	session_entry->limPrevSmeState = session_entry->limSmeState;
 	session_entry->limSmeState = eLIM_SME_WT_ASSOC_STATE;
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace(mac_ctx, TRACE_CODE_SME_STATE,
 		session_entry->peSessionId, session_entry->limSmeState));
+#endif
 	lim_post_mlm_message(mac_ctx, LIM_MLM_ASSOC_REQ,
 		(uint32_t *) assoc_req);
 }
@@ -538,10 +546,12 @@ void lim_process_mlm_auth_cnf(tpAniSirGlobal mac_ctx, uint32_t *msg)
 			 */
 			session_entry->limSmeState =
 				session_entry->limPrevSmeState;
+#ifdef LIM_TRACE_RECORD
 			MTRACE(mac_trace
 				(mac_ctx, TRACE_CODE_SME_STATE,
 				session_entry->peSessionId,
 				session_entry->limSmeState));
+#endif
 		}
 		/* Return for success case */
 		return;
@@ -617,14 +627,18 @@ void lim_process_mlm_auth_cnf(tpAniSirGlobal mac_ctx, uint32_t *msg)
 				FL("Auth Failure occurred."));
 			session_entry->limSmeState =
 				eLIM_SME_JOIN_FAILURE_STATE;
+#ifdef LIM_TRACE_RECORD
 			MTRACE(mac_trace(mac_ctx, TRACE_CODE_SME_STATE,
 				session_entry->peSessionId,
 				session_entry->limSmeState));
+#endif
 			session_entry->limMlmState =
 				eLIM_MLM_IDLE_STATE;
+#ifdef LIM_TRACE_RECORD
 			MTRACE(mac_trace(mac_ctx, TRACE_CODE_MLM_STATE,
 				session_entry->peSessionId,
 				session_entry->limMlmState));
+#endif
 			/*
 			 * Need to send Join response with
 			 * auth failure to Host.
@@ -640,9 +654,11 @@ void lim_process_mlm_auth_cnf(tpAniSirGlobal mac_ctx, uint32_t *msg)
 			 */
 			session_entry->limSmeState =
 				session_entry->limPrevSmeState;
+#ifdef LIM_TRACE_RECORD
 			MTRACE(mac_trace(mac_ctx, TRACE_CODE_SME_STATE,
 				session_entry->peSessionId,
 				session_entry->limSmeState));
+#endif
 		}
 	}
 }
@@ -705,8 +721,10 @@ void lim_process_mlm_assoc_cnf(tpAniSirGlobal mac_ctx,
 			session_entry->limSmeState =
 				eLIM_SME_JOIN_FAILURE_STATE;
 
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace(mac_ctx, TRACE_CODE_SME_STATE,
 			session_entry->peSessionId, mac_ctx->lim.gLimSmeState));
+#endif
 		/*
 		 * Need to send Join response with
 		 * Association failure to Host.
@@ -720,9 +738,11 @@ void lim_process_mlm_assoc_cnf(tpAniSirGlobal mac_ctx,
 		lim_log(mac_ctx, LOG1, FL("SessionId:%d Associated with BSS"),
 			session_entry->peSessionId);
 		session_entry->limSmeState = eLIM_SME_LINK_EST_STATE;
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace(mac_ctx, TRACE_CODE_SME_STATE,
 			session_entry->peSessionId,
 			session_entry->limSmeState));
+#endif
 		/**
 		 * Need to send Join response with
 		 * Association success to Host.
@@ -881,8 +901,10 @@ void lim_process_mlm_assoc_ind(tpAniSirGlobal pMac, uint32_t *pMsgBuf)
 	pSirSmeAssocInd->staId = pStaDs->staIndex;
 	pSirSmeAssocInd->reassocReq = pStaDs->mlmStaContext.subType;
 	pSirSmeAssocInd->timingMeasCap = pStaDs->timingMeasCap;
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace(pMac, TRACE_CODE_TX_SME_MSG,
 			 psessionEntry->peSessionId, msgQ.type));
+#endif
 #ifdef FEATURE_WLAN_DIAG_SUPPORT_LIM    /* FEATURE_WLAN_DIAG_SUPPORT */
 	lim_diag_event_report(pMac, WLAN_PE_DIAG_ASSOC_IND_EVENT, psessionEntry, 0,
 			      0);
@@ -937,9 +959,11 @@ void lim_process_mlm_disassoc_ind(tpAniSirGlobal pMac, uint32_t *pMsgBuf)
 		break;
 	case eLIM_STA_ROLE:
 		psessionEntry->limSmeState = eLIM_SME_WT_DISASSOC_STATE;
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace
 			       (pMac, TRACE_CODE_SME_STATE, psessionEntry->peSessionId,
 			       psessionEntry->limSmeState));
+#endif
 		break;
 	default:        /* eLIM_AP_ROLE */
 		PELOG1(lim_log(pMac, LOG1,
@@ -1006,10 +1030,12 @@ void lim_process_mlm_disassoc_cnf(tpAniSirGlobal mac_ctx,
 			else
 				session_entry->limSmeState =
 					eLIM_SME_OFFLINE_STATE;
+#ifdef LIM_TRACE_RECORD
 			MTRACE(mac_trace
 				(mac_ctx, TRACE_CODE_SME_STATE,
 				session_entry->peSessionId,
 				session_entry->limSmeState));
+#endif
 		} else {
 			if (disassoc_cnf->resultCode != eSIR_SME_SUCCESS)
 				session_entry->limSmeState =
@@ -1017,9 +1043,11 @@ void lim_process_mlm_disassoc_cnf(tpAniSirGlobal mac_ctx,
 			else
 				session_entry->limSmeState =
 					eLIM_SME_IDLE_STATE;
+#ifdef LIM_TRACE_RECORD
 			MTRACE(mac_trace(mac_ctx, TRACE_CODE_SME_STATE,
 				session_entry->peSessionId,
 				session_entry->limSmeState));
+#endif
 			lim_send_sme_disassoc_ntf(mac_ctx,
 				disassoc_cnf->peerMacAddr, result_code,
 				disassoc_cnf->disassocTrigger,
@@ -1071,10 +1099,11 @@ void lim_process_mlm_deauth_ind(tpAniSirGlobal pMac, uint32_t *pMsgBuf)
 		break;
 	case eLIM_STA_ROLE:
 		psessionEntry->limSmeState = eLIM_SME_WT_DEAUTH_STATE;
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace
 			       (pMac, TRACE_CODE_SME_STATE, psessionEntry->peSessionId,
 			       psessionEntry->limSmeState));
-
+#endif
 	default:        /* eLIM_AP_ROLE */
 	{
 		PELOG1(lim_log(pMac, LOG1,
@@ -1158,10 +1187,11 @@ void lim_process_mlm_deauth_cnf(tpAniSirGlobal pMac, uint32_t *pMsgBuf)
 		} else
 			psessionEntry->limSmeState =
 				psessionEntry->limPrevSmeState;
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace
 			       (pMac, TRACE_CODE_SME_STATE, psessionEntry->peSessionId,
 			       psessionEntry->limSmeState));
-
+#endif
 		if (pMac->lim.gLimRspReqd)
 			pMac->lim.gLimRspReqd = false;
 	}
@@ -1240,11 +1270,12 @@ void lim_process_mlm_purge_sta_ind(tpAniSirGlobal pMac, uint32_t *pMsgBuf)
 		       )
 		if (LIM_IS_STA_ROLE(psessionEntry)) {
 			psessionEntry->limSmeState = eLIM_SME_IDLE_STATE;
+#ifdef LIM_TRACE_RECORD
 			MTRACE(mac_trace
 				       (pMac, TRACE_CODE_SME_STATE,
 				       psessionEntry->peSessionId,
 				       psessionEntry->limSmeState));
-
+#endif
 		}
 		if (pMlmPurgeStaInd->purgeTrigger == eLIM_PEER_ENTITY_DEAUTH) {
 			lim_send_sme_deauth_ntf(pMac,
@@ -1593,9 +1624,11 @@ void lim_process_sta_mlm_add_sta_rsp(tpAniSirGlobal mac_ctx,
 				FL("Fail to get DPH Hash Entry for AID - %d"),
 				DPH_STA_HASH_INDEX_PEER);
 		session_entry->limMlmState = eLIM_MLM_LINK_ESTABLISHED_STATE;
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace(mac_ctx, TRACE_CODE_MLM_STATE,
 			session_entry->peSessionId,
 			session_entry->limMlmState));
+#endif
 		/*
 		 * Storing the self StaIndex(Generated by HAL) in
 		 * session context, instead of storing it in DPH Hash
@@ -1770,10 +1803,11 @@ void lim_process_ap_mlm_del_bss_rsp(tpAniSirGlobal pMac, tpSirMsgQ limMsgQ,
 		goto end;
 	}
 	pMac->lim.gLimMlmState = eLIM_MLM_IDLE_STATE;
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace
 		       (pMac, TRACE_CODE_MLM_STATE, NO_SESSION,
 		       pMac->lim.gLimMlmState));
-
+#endif
 	if (eLIM_MLM_WT_DEL_BSS_RSP_STATE != psessionEntry->limMlmState) {
 		lim_log(pMac, LOGE,
 			FL("Received unexpected WMA_DEL_BSS_RSP in state %X"),
@@ -2178,9 +2212,11 @@ static void lim_process_ap_mlm_add_bss_rsp(tpAniSirGlobal pMac, tpSirMsgQ limMsg
 		psessionEntry->limMlmState = eLIM_MLM_BSS_STARTED_STATE;
 		psessionEntry->chainMask = pAddBssParams->chainMask;
 		psessionEntry->smpsMode = pAddBssParams->smpsMode;
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace
 			       (pMac, TRACE_CODE_MLM_STATE, psessionEntry->peSessionId,
 			       psessionEntry->limMlmState));
+#endif
 		if (eSIR_IBSS_MODE == pAddBssParams->bssType) {
 			/** IBSS is 'active' when we receive
 			 * Beacon frames from other STAs that are part of same IBSS.
@@ -2308,9 +2344,11 @@ lim_process_ibss_mlm_add_bss_rsp(tpAniSirGlobal pMac, tpSirMsgQ limMsgQ,
 			goto end;
 		/* Set MLME state */
 		psessionEntry->limMlmState = eLIM_MLM_BSS_STARTED_STATE;
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace
 			       (pMac, TRACE_CODE_MLM_STATE, psessionEntry->peSessionId,
 			       psessionEntry->limMlmState));
+#endif
 		/** IBSS is 'active' when we receive
 		 * Beacon frames from other STAs that are part of same IBSS.
 		 * Mark internal state as inactive until then.
@@ -2432,17 +2470,21 @@ lim_process_sta_add_bss_rsp_pre_assoc(tpAniSirGlobal mac_ctx,
 				FL("Fail: retrieve AuthFailureTimeout value"));
 		}
 		session_entry->limMlmState = eLIM_MLM_JOINED_STATE;
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace(mac_ctx, TRACE_CODE_MLM_STATE,
 			session_entry->peSessionId, eLIM_MLM_JOINED_STATE));
+#endif
 		pMlmAuthReq->sessionId = session_entry->peSessionId;
 		session_entry->limPrevSmeState = session_entry->limSmeState;
 		session_entry->limSmeState = eLIM_SME_WT_AUTH_STATE;
 		/* remember staId in case of assoc timeout/failure handling */
 		session_entry->staId = pAddBssParams->staContext.staIdx;
 
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace(mac_ctx, TRACE_CODE_SME_STATE,
 			session_entry->peSessionId,
 			session_entry->limSmeState));
+#endif
 		lim_log(mac_ctx, LOG1,
 			FL("SessionId:%d lim_post_mlm_message "
 			"LIM_MLM_AUTH_REQ with limSmeState:%d"),
@@ -2455,10 +2497,11 @@ lim_process_sta_add_bss_rsp_pre_assoc(tpAniSirGlobal mac_ctx,
 joinFailure:
 	{
 		session_entry->limSmeState = eLIM_SME_JOIN_FAILURE_STATE;
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace(mac_ctx, TRACE_CODE_SME_STATE,
 			session_entry->peSessionId,
 			session_entry->limSmeState));
-
+#endif
 		/* Send Join response to Host */
 		lim_handle_sme_join_result(mac_ctx, eSIR_SME_REFUSED,
 			eSIR_MAC_UNSPEC_FAILURE_STATUS, session_entry);
@@ -2549,9 +2592,11 @@ lim_process_sta_mlm_add_bss_rsp(tpAniSirGlobal mac_ctx,
 
 		/* Set MLME state */
 		session_entry->limMlmState = eLIM_MLM_WT_ADD_STA_RSP_STATE;
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace(mac_ctx, TRACE_CODE_MLM_STATE,
 			session_entry->peSessionId,
 			session_entry->limMlmState));
+#endif
 		/* to know the session  started for self or for  peer  */
 		session_entry->statypeForBss = STA_ENTRY_PEER;
 		/* Now, send WMA_ADD_STA_REQ */
@@ -2815,8 +2860,10 @@ void lim_process_mlm_set_sta_key_rsp(tpAniSirGlobal mac_ctx,
 	msg->bodyptr = NULL;
 	/* Restore MLME state */
 	session_entry->limMlmState = session_entry->limPrevMlmState;
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace(mac_ctx, TRACE_CODE_MLM_STATE,
 		session_entry->peSessionId, session_entry->limMlmState));
+#endif
 	if (resp_reqd) {
 		tpLimMlmSetKeysReq lpLimMlmSetKeysReq =
 			(tpLimMlmSetKeysReq) mac_ctx->lim.gpLimMlmSetKeysReq;
@@ -2910,9 +2957,11 @@ void lim_process_mlm_set_bss_key_rsp(tpAniSirGlobal mac_ctx,
 	/* Restore MLME state */
 	session_entry->limMlmState = session_entry->limPrevMlmState;
 
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace
 		(mac_ctx, TRACE_CODE_MLM_STATE, session_entry->peSessionId,
 		session_entry->limMlmState));
+#endif
 	set_key_req =
 		(tpLimMlmSetKeysReq) mac_ctx->lim.gpLimMlmSetKeysReq;
 	set_key_cnf.sessionId = session_id;
@@ -2975,9 +3024,11 @@ static void lim_process_switch_channel_re_assoc_req(tpAniSirGlobal pMac,
 		goto end;
 	}
 	/* / Start reassociation failure timer */
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace
 		       (pMac, TRACE_CODE_TIMER_ACTIVATE, psessionEntry->peSessionId,
 		       eLIM_REASSOC_FAIL_TIMER));
+#endif
 	if (tx_timer_activate(&pMac->lim.limTimers.gLimReassocFailureTimer)
 	    != TX_SUCCESS) {
 		/* / Could not start reassoc failure timer. */
@@ -3104,16 +3155,20 @@ static void lim_process_switch_channel_join_req(
 	 * timeout timer.This timer will be deactivated once
 	 * we receive probe response.
 	 */
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace(mac_ctx, TRACE_CODE_TIMER_ACTIVATE,
 		session_entry->peSessionId, eLIM_JOIN_FAIL_TIMER));
+#endif
 	if (tx_timer_activate(&mac_ctx->lim.limTimers.gLimJoinFailureTimer) !=
 		TX_SUCCESS) {
 		lim_log(mac_ctx, LOGP,
 			FL("couldn't activate Join failure timer"));
 		session_entry->limMlmState = session_entry->limPrevMlmState;
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace(mac_ctx, TRACE_CODE_MLM_STATE,
 			 session_entry->peSessionId,
 			 mac_ctx->lim.gLimMlmState));
+#endif
 		goto error;
 	}
 	/* include additional IE if there is */

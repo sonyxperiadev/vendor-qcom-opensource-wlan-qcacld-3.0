@@ -294,9 +294,10 @@ void lim_perform_ft_pre_auth(tpAniSirGlobal pMac, QDF_STATUS status,
 		lim_log(pMac, LOGE, FL("FT Auth Rsp Timer Start Failed"));
 		goto preauth_fail;
 	}
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace(pMac, TRACE_CODE_TIMER_ACTIVATE,
 		psessionEntry->peSessionId, eLIM_FT_PREAUTH_RSP_TIMER));
-
+#endif
 	lim_log(pMac, LOG1, FL("FT Auth Rsp Timer Started"));
 #ifdef FEATURE_WLAN_DIAG_SUPPORT
 	lim_diag_event_report(pMac, WLAN_PE_DIAG_ROAM_AUTH_START_EVENT,

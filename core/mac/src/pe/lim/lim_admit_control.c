@@ -956,8 +956,10 @@ lim_send_hal_msg_add_ts(tpAniSirGlobal pMac,
 	 * WMA_ADD_TS_RSP from HAL.
 	 */
 	SET_LIM_PROCESS_DEFD_MESGS(pMac, false);
-	MTRACE(mac_trace_msg_tx(pMac, sessionId, msg.type));
 
+#ifdef LIM_TRACE_RECORD
+	MTRACE(mac_trace_msg_tx(pMac, sessionId, msg.type));
+#endif
 	if (eSIR_SUCCESS != wma_post_ctrl_msg(pMac, &msg)) {
 		lim_log(pMac, LOGW, FL("wma_post_ctrl_msg() failed"));
 		SET_LIM_PROCESS_DEFD_MESGS(pMac, true);
@@ -1026,8 +1028,9 @@ lim_send_hal_msg_del_ts(tpAniSirGlobal pMac,
 #endif
 
 	lim_log(pMac, LOGW, FL("calling wma_post_ctrl_msg()"));
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace_msg_tx(pMac, sessionId, msg.type));
-
+#endif
 	if (eSIR_SUCCESS != wma_post_ctrl_msg(pMac, &msg)) {
 		lim_log(pMac, LOGW, FL("wma_post_ctrl_msg() failed"));
 		goto err;

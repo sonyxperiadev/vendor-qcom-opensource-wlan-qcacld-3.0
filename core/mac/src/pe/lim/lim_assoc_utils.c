@@ -569,9 +569,11 @@ lim_cleanup_rx_path(tpAniSirGlobal pMac, tpDphHashNode pStaDs,
 	psessionEntry->isCiscoVendorAP = false;
 
 	if (pMac->lim.gLimAddtsSent) {
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace
 			       (pMac, TRACE_CODE_TIMER_DEACTIVATE,
 			       psessionEntry->peSessionId, eLIM_ADDTS_RSP_TIMER));
+#endif
 		tx_timer_deactivate(&pMac->lim.limTimers.gLimAddtsRspTimer);
 		lim_log(pMac, LOG1,
 			FL("Reset gLimAddtsSent flag and send addts timeout to SME"));
@@ -615,9 +617,11 @@ lim_cleanup_rx_path(tpAniSirGlobal pMac, tpDphHashNode pStaDs,
 	pStaDs->mlmStaContext.mlmState = eLIM_MLM_WT_DEL_STA_RSP_STATE;
 
 	if (LIM_IS_STA_ROLE(psessionEntry)) {
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace
 		       (pMac, TRACE_CODE_MLM_STATE, psessionEntry->peSessionId,
 		       eLIM_MLM_WT_DEL_STA_RSP_STATE));
+#endif
 		psessionEntry->limMlmState = eLIM_MLM_WT_DEL_STA_RSP_STATE;
 		/* Deactivating probe after heart beat timer */
 		lim_deactivate_and_change_timer(pMac, eLIM_PROBE_AFTER_HB_TIMER);
@@ -763,10 +767,11 @@ lim_send_del_sta_cnf(tpAniSirGlobal pMac, struct qdf_mac_addr sta_dsaddr,
 		smetransactionId = psessionEntry->transactionId;
 
 		psessionEntry->limSmeState = eLIM_SME_JOIN_FAILURE_STATE;
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace
 			       (pMac, TRACE_CODE_SME_STATE, psessionEntry->peSessionId,
 			       psessionEntry->limSmeState));
-
+#endif
 		/* if it is a reassoc failure to join new AP */
 		if ((mlmStaContext.resultCode ==
 		     eSIR_SME_FT_REASSOC_TIMEOUT_FAILURE)
@@ -2492,9 +2497,10 @@ lim_add_sta(tpAniSirGlobal mac_ctx,
 
 	lim_log(mac_ctx, LOG1, FL("Sending WMA_ADD_STA_REQ for assocId %d"),
 		sta_ds->assocId);
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace_msg_tx(mac_ctx, session_entry->peSessionId,
 			 msg_q.type));
-
+#endif
 	ret_code = wma_post_ctrl_msg(mac_ctx, &msg_q);
 	if (eSIR_SUCCESS != ret_code) {
 		if (add_sta_params->respReqd)
@@ -2578,19 +2584,22 @@ lim_del_sta(tpAniSirGlobal pMac,
 			 * then mlmState is already set properly. */
 			if (eLIM_MLM_WT_ASSOC_DEL_STA_RSP_STATE !=
 				GET_LIM_STA_CONTEXT_MLM_STATE(pStaDs)) {
+#ifdef LIM_TRACE_RECORD
 				MTRACE(mac_trace
 					(pMac, TRACE_CODE_MLM_STATE,
 					 psessionEntry->peSessionId,
 					 eLIM_MLM_WT_DEL_STA_RSP_STATE));
+#endif
 				SET_LIM_STA_CONTEXT_MLM_STATE(pStaDs,
 					eLIM_MLM_WT_DEL_STA_RSP_STATE);
 			}
 			if (LIM_IS_STA_ROLE(psessionEntry)) {
+#ifdef LIM_TRACE_RECORD
 				MTRACE(mac_trace
 					(pMac, TRACE_CODE_MLM_STATE,
 					 psessionEntry->peSessionId,
 					 eLIM_MLM_WT_DEL_STA_RSP_STATE));
-
+#endif
 				psessionEntry->limMlmState =
 					eLIM_MLM_WT_DEL_STA_RSP_STATE;
 
@@ -2624,7 +2633,9 @@ lim_del_sta(tpAniSirGlobal pMac,
 		pDelStaParams->staIdx, pDelStaParams->assocId,
 		MAC_ADDR_ARRAY(pStaDs->staAddr));
 
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace_msg_tx(pMac, psessionEntry->peSessionId, msgQ.type));
+#endif
 	retCode = wma_post_ctrl_msg(pMac, &msgQ);
 	if (eSIR_SUCCESS != retCode) {
 		if (fRespReqd)
@@ -2879,8 +2890,9 @@ lim_add_sta_self(tpAniSirGlobal pMac, uint16_t staIdx, uint8_t updateSta,
 			       "Sending WMA_ADD_STA_REQ. (aid %d)"),
 		MAC_ADDR_ARRAY(pAddStaParams->staMac),
 		pAddStaParams->sessionId, pAddStaParams->assocId);
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace_msg_tx(pMac, psessionEntry->peSessionId, msgQ.type));
-
+#endif
 	retCode = wma_post_ctrl_msg(pMac, &msgQ);
 	if (eSIR_SUCCESS != retCode) {
 		lim_log(pMac, LOGE,
@@ -3219,9 +3231,10 @@ lim_check_and_announce_join_success(tpAniSirGlobal mac_ctx,
 		lim_update_sta_run_time_ht_info(mac_ctx,
 			 &beacon_probe_rsp->HTInfo, session_entry);
 	session_entry->limMlmState = eLIM_MLM_JOINED_STATE;
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace(mac_ctx, TRACE_CODE_MLM_STATE,
 			 session_entry->peSessionId, eLIM_MLM_JOINED_STATE));
-
+#endif
 	/*
 	 * update the capability info based on recently received beacon/probe
 	 * response frame
@@ -3367,10 +3380,11 @@ lim_del_bss(tpAniSirGlobal pMac, tpDphHashNode pStaDs, uint16_t bssIdx,
 	} else
 		pDelBssParams->bssIdx = bssIdx;
 	psessionEntry->limMlmState = eLIM_MLM_WT_DEL_BSS_RSP_STATE;
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace
 		       (pMac, TRACE_CODE_MLM_STATE, psessionEntry->peSessionId,
 		       eLIM_MLM_WT_DEL_BSS_RSP_STATE));
-
+#endif
 	if ((psessionEntry->peSessionId ==
 	     pMac->lim.limTimers.gLimJoinFailureTimer.sessionId)
 	    && (true ==
@@ -3403,8 +3417,9 @@ lim_del_bss(tpAniSirGlobal pMac, tpDphHashNode pStaDs, uint16_t bssIdx,
 	msgQ.bodyptr = pDelBssParams;
 	msgQ.bodyval = 0;
 
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace_msg_tx(pMac, psessionEntry->peSessionId, msgQ.type));
-
+#endif
 	retCode = wma_post_ctrl_msg(pMac, &msgQ);
 	if (eSIR_SUCCESS != retCode) {
 		SET_LIM_PROCESS_DEFD_MESGS(pMac, true);
@@ -4003,10 +4018,11 @@ tSirRetStatus lim_sta_send_add_bss(tpAniSirGlobal pMac, tpSirAssocRsp pAssocRsp,
 	else
 		psessionEntry->limMlmState =
 			eLIM_MLM_WT_ADD_BSS_RSP_REASSOC_STATE;
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace
 		       (pMac, TRACE_CODE_MLM_STATE, psessionEntry->peSessionId,
 		       psessionEntry->limMlmState));
-
+#endif
 	if (!pAddBssParams->staContext.htLdpcCapable)
 		pAddBssParams->staContext.ht_caps &=
 			~(1 << SIR_MAC_HT_CAP_ADVCODING_S);
@@ -4048,8 +4064,9 @@ tSirRetStatus lim_sta_send_add_bss(tpAniSirGlobal pMac, tpSirAssocRsp pAssocRsp,
 
 	lim_log(pMac, LOG1, FL("SessionId:%d Sending WMA_ADD_BSS_REQ"),
 		psessionEntry->peSessionId);
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace_msg_tx(pMac, psessionEntry->peSessionId, msgQ.type));
-
+#endif
 	retCode = wma_post_ctrl_msg(pMac, &msgQ);
 	if (eSIR_SUCCESS != retCode) {
 		SET_LIM_PROCESS_DEFD_MESGS(pMac, true);
@@ -4500,10 +4517,11 @@ tSirRetStatus lim_sta_send_add_bss_pre_assoc(tpAniSirGlobal pMac, uint8_t update
 	/* Set a new state for MLME */
 	psessionEntry->limMlmState = eLIM_MLM_WT_ADD_BSS_RSP_PREASSOC_STATE;
 
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace
 		       (pMac, TRACE_CODE_MLM_STATE, psessionEntry->peSessionId,
 		       psessionEntry->limMlmState));
-
+#endif
 	lim_log(pMac, LOG2, FL("staContext wmmEnabled: %d encryptType: %d "
 			       "p2pCapableSta: %d"),
 		pAddBssParams->staContext.wmmEnabled,
@@ -4534,8 +4552,9 @@ tSirRetStatus lim_sta_send_add_bss_pre_assoc(tpAniSirGlobal pMac, uint8_t update
 
 	lim_log(pMac, LOG1, FL("SessionId:%d Sending WMA_ADD_BSS_REQ"),
 		psessionEntry->peSessionId);
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace_msg_tx(pMac, psessionEntry->peSessionId, msgQ.type));
-
+#endif
 	retCode = wma_post_ctrl_msg(pMac, &msgQ);
 	if (eSIR_SUCCESS != retCode) {
 		SET_LIM_PROCESS_DEFD_MESGS(pMac, true);
@@ -4595,9 +4614,11 @@ lim_prepare_and_send_del_sta_cnf(tpAniSirGlobal pMac, tpDphHashNode pStaDs,
 
 	if (LIM_IS_STA_ROLE(psessionEntry)) {
 		psessionEntry->limMlmState = eLIM_MLM_IDLE_STATE;
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace(pMac, TRACE_CODE_MLM_STATE,
 				 psessionEntry->peSessionId,
 				 psessionEntry->limMlmState));
+#endif
 	}
 	lim_send_del_sta_cnf(pMac, sta_dsaddr, staDsAssocId, mlmStaContext,
 			     statusCode, psessionEntry);

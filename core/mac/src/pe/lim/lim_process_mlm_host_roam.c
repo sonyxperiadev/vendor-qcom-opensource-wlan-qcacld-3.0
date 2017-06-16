@@ -137,9 +137,10 @@ void lim_process_mlm_reassoc_req(tpAniSirGlobal mac_ctx, uint32_t *msg)
 		reassoc_req->sessionId;
 	session->limPrevMlmState = session->limMlmState;
 	session->limMlmState = eLIM_MLM_WT_REASSOC_RSP_STATE;
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace(mac_ctx, TRACE_CODE_MLM_STATE, session->peSessionId,
 			 session->limMlmState));
-
+#endif
 	/* Derive channel from BSS description and store it at CFG. */
 	channel = session->limReassocChannelId;
 	sec_ch_offset = session->reAssocHtSecondaryChannelOffset;
@@ -311,9 +312,10 @@ void lim_process_mlm_reassoc_cnf(tpAniSirGlobal mac_ctx, uint32_t *msg_buf)
 			  FL("*** Reassociated with new BSS ***"));
 
 		session->limSmeState = eLIM_SME_LINK_EST_STATE;
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace(mac_ctx, TRACE_CODE_SME_STATE,
 		      session->peSessionId, session->limSmeState));
-
+#endif
 		/* Need to send Reassoc rsp with Reassoc success to Host. */
 		lim_send_sme_join_reassoc_rsp(mac_ctx, eWNI_SME_REASSOC_RSP,
 					lim_mlm_reassoc_cnf->resultCode,
@@ -327,9 +329,10 @@ void lim_process_mlm_reassoc_cnf(tpAniSirGlobal mac_ctx, uint32_t *msg_buf)
 		 * link with the Older AP
 		 */
 		session->limSmeState = eLIM_SME_LINK_EST_STATE;
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace(mac_ctx, TRACE_CODE_SME_STATE,
 		       session->peSessionId, session->limSmeState));
-
+#endif
 		/* Need to send Reassoc rsp with Assoc failure to Host. */
 		lim_send_sme_join_reassoc_rsp(mac_ctx, eWNI_SME_REASSOC_RSP,
 					lim_mlm_reassoc_cnf->resultCode,
@@ -339,8 +342,10 @@ void lim_process_mlm_reassoc_cnf(tpAniSirGlobal mac_ctx, uint32_t *msg_buf)
 	} else {
 		/* Reassociation failure */
 		session->limSmeState = eLIM_SME_JOIN_FAILURE_STATE;
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace(mac_ctx, TRACE_CODE_SME_STATE,
 		       session->peSessionId, session->limSmeState));
+#endif
 		/* Need to send Reassoc rsp with Assoc failure to Host. */
 		lim_handle_sme_reaasoc_result(mac_ctx,
 					lim_mlm_reassoc_cnf->resultCode,
@@ -399,9 +404,11 @@ void lim_process_sta_mlm_add_bss_rsp_ft(tpAniSirGlobal pMac,
 		pMac->lim.limTimers.gLimReassocFailureTimer.sessionId =
 			psessionEntry->peSessionId;
 		/* / Start reassociation failure timer */
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace
 			(pMac, TRACE_CODE_TIMER_ACTIVATE,
 			 psessionEntry->peSessionId, eLIM_REASSOC_FAIL_TIMER));
+#endif
 		if (tx_timer_activate
 			(&pMac->lim.limTimers.gLimReassocFailureTimer)
 			!= TX_SUCCESS) {
@@ -443,9 +450,11 @@ void lim_process_sta_mlm_add_bss_rsp_ft(tpAniSirGlobal pMac,
 #endif
 	psessionEntry->limPrevMlmState = psessionEntry->limMlmState;
 	psessionEntry->limMlmState = eLIM_MLM_WT_FT_REASSOC_RSP_STATE;
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace
 		       (pMac, TRACE_CODE_MLM_STATE, psessionEntry->peSessionId,
 		       eLIM_MLM_WT_FT_REASSOC_RSP_STATE));
+#endif
 	PELOGE(lim_log
 		       (pMac, LOG1, FL("Set the mlm state to %d session=%d"),
 		       psessionEntry->limMlmState, psessionEntry->peSessionId);
@@ -732,7 +741,9 @@ void lim_process_mlm_ft_reassoc_req(tpAniSirGlobal pMac, uint32_t *pMsgBuf,
 	msgQ.bodyval = 0;
 
 	lim_log(pMac, LOG1, FL("Sending SIR_HAL_ADD_BSS_REQ..."));
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace_msg_tx(pMac, psessionEntry->peSessionId, msgQ.type));
+#endif
 	retCode = wma_post_ctrl_msg(pMac, &msgQ);
 	if (eSIR_SUCCESS != retCode) {
 		qdf_mem_free(psessionEntry->ftPEContext.pAddBssReq);
