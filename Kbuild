@@ -257,7 +257,7 @@ endif
 # Feature flags which are not (currently) configurable via Kconfig
 
 #Whether to build debug version
-BUILD_DEBUG_VERSION := 1
+BUILD_DEBUG_VERSION := 0
 
 #Enable this flag to build driver in diag version
 BUILD_DIAG_VERSION := 1
@@ -1657,9 +1657,9 @@ ifeq (y,$(filter y,$(CONFIG_CNSS_EOS) $(CONFIG_ICNSS)))
 CONFIG_HELIUMPLUS := y
 CONFIG_64BIT_PADDR := y
 CONFIG_FEATURE_TSO := y
-CONFIG_FEATURE_TSO_DEBUG := y
+CONFIG_FEATURE_TSO_DEBUG := n
 ifneq ($(CONFIG_FORCE_ALLOC_FROM_DMA_ZONE), y)
-CONFIG_ENABLE_DEBUG_ADDRESS_MARKING := y
+CONFIG_ENABLE_DEBUG_ADDRESS_MARKING := n
 endif
 ifeq ($(CONFIG_HELIUMPLUS),y)
 CDEFINES += -DHELIUMPLUS
