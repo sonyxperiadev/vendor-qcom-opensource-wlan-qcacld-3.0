@@ -59,6 +59,7 @@ QDF_STATUS csr_msg_processor(tpAniSirGlobal mac_ctx, void *msg_buf)
 	uint8_t session_id = sme_rsp->sessionId;
 	eCsrRoamState cur_state = mac_ctx->roam.curState[session_id];
 
+#ifdef TRACE_RECORD
 	sms_log(mac_ctx, LOG2,
 		FL("msg %d[0x%04X] recvd in curstate %s & substate %s id(%d)"),
 		sme_rsp->messageType, sme_rsp->messageType,
@@ -66,6 +67,7 @@ QDF_STATUS csr_msg_processor(tpAniSirGlobal mac_ctx, void *msg_buf)
 		mac_trace_getcsr_roam_sub_state(
 			mac_ctx->roam.curSubState[session_id]),
 		session_id);
+#endif
 
 #ifdef FEATURE_WLAN_SCAN_PNO
 	/*

@@ -53,6 +53,10 @@
 #include "parser_api.h"
 #include "wma_if.h"
 
+#ifndef NO_SESSION
+#define NO_SESSION 0xFF
+#endif
+
 #define LINK_TEST_DEFER 1
 
 #define TRACE_EVENT_CNF_TIMER_DEACT        0x6600

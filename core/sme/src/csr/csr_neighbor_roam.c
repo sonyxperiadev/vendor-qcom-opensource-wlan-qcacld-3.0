@@ -168,11 +168,13 @@ QDF_STATUS csr_neighbor_roam_update_fast_roaming_enabled(tpAniSirGlobal mac_ctx,
 				    ("Currently in INIT state, Nothing to do"));
 		break;
 	default:
+#ifdef TRACE_RECORD
 		NEIGHBOR_ROAM_DEBUG(mac_ctx, LOGE,
 				    FL
 				    ("Unexpected state %s, returning failure"),
 				    mac_trace_get_neighbour_roam_state
 				    (neighbor_roam_info->neighborRoamState));
+#endif
 		qdf_status = QDF_STATUS_E_FAILURE;
 		break;
 	}
@@ -233,8 +235,10 @@ QDF_STATUS csr_neighbor_roam_update_config(tpAniSirGlobal mac_ctx,
 			return QDF_STATUS_E_FAILURE;
 		}
 	} else {
+#ifdef TRACE_RECORD
 		sms_log(mac_ctx, LOGE, FL("Unexpected state %s, return fail"),
 			mac_trace_get_neighbour_roam_state(state));
+#endif
 		return QDF_STATUS_E_FAILURE;
 	}
 	if (state == eCSR_NEIGHBOR_ROAM_STATE_CONNECTED) {
@@ -939,10 +943,12 @@ QDF_STATUS csr_neighbor_roam_indicate_disconnect(tpAniSirGlobal pMac,
 				sessionId);
 		break;
 	default:
+#ifdef TRACE_RECORD
 		NEIGHBOR_ROAM_DEBUG(pMac, LOGW, FL("Received disconnect event"
 				"in state %s "),
 				mac_trace_get_neighbour_roam_state(
 					pNeighborRoamInfo->neighborRoamState));
+#endif
 		NEIGHBOR_ROAM_DEBUG(pMac, LOGW, FL("Transit to INIT state"));
 		csr_neighbor_roam_state_transition(pMac,
 				eCSR_NEIGHBOR_ROAM_STATE_INIT, sessionId);
@@ -1105,11 +1111,12 @@ QDF_STATUS csr_neighbor_roam_indicate_connect(
 		return QDF_STATUS_E_FAILURE;
 	}
 
+#ifdef TRACE_RECORD
 	sms_log(pMac, LOG2,
 		FL("Connect ind. received with session id %d in state %s"),
 		session_id, mac_trace_get_neighbour_roam_state(
 			ngbr_roam_info->neighborRoamState));
-
+#endif
 	/* Bail out if this is NOT a STA persona */
 	if (pMac->roam.roamSession[session_id].pCurRoamProfile->csrPersona !=
 	QDF_STA_MODE) {
@@ -1183,10 +1190,12 @@ QDF_STATUS csr_neighbor_roam_indicate_connect(
 		csr_neighbor_roam_info_ctx_init(pMac, session_id);
 		break;
 	default:
+#ifdef TRACE_RECORD
 		sms_log(pMac, LOGE,
 			FL("Connect evt received in invalid state %s Ignoring"),
 			mac_trace_get_neighbour_roam_state(
 			ngbr_roam_info->neighborRoamState));
+#endif
 		break;
 	}
 	return status;

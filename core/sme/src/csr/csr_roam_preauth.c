@@ -260,10 +260,12 @@ QDF_STATUS csr_neighbor_roam_preauth_rsp_handler(tpAniSirGlobal mac_ctx,
 	/* We can receive it in these 2 states. */
 	if ((neighbor_roam_info->neighborRoamState !=
 	     eCSR_NEIGHBOR_ROAM_STATE_PREAUTHENTICATING)) {
+#ifdef TRACE_RECORD
 		sms_log(mac_ctx, LOGW,
 			FL("Preauth response received in state %s"),
 			mac_trace_get_neighbour_roam_state
 				(neighbor_roam_info->neighborRoamState));
+#endif
 		preauth_processed = QDF_STATUS_E_FAILURE;
 		goto DEQ_PREAUTH;
 	}

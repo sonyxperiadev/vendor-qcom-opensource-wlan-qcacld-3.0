@@ -623,10 +623,12 @@ void csr_neighbor_roam_request_handoff(tpAniSirGlobal mac_ctx,
 
 	if (neighbor_roam_info->neighborRoamState !=
 		eCSR_NEIGHBOR_ROAM_STATE_PREAUTH_DONE) {
+#ifdef TRACE_RECORD
 		sms_log(mac_ctx, LOGE,
 			FL("Roam requested when Neighbor roam is in %s state"),
 			mac_trace_get_neighbour_roam_state(
 			neighbor_roam_info->neighborRoamState));
+#endif
 		return;
 	}
 

@@ -40,6 +40,9 @@
 
 #include "ani_global.h"
 
+QDF_STATUS pe_acquire_global_lock(tAniSirLim *psPe);
+QDF_STATUS pe_release_global_lock(tAniSirLim *psPe);
+
 #ifdef TRACE_RECORD
 
 #define MAC_TRACE_GET_MODULE_ID(data) ((data >> 8) & 0xff)
@@ -57,8 +60,6 @@ uint8_t *mac_trace_get_lim_msg_string(uint16_t limMsg);
 uint8_t *mac_trace_get_wma_msg_string(uint16_t wmaMsg);
 uint8_t *mac_trace_get_sme_msg_string(uint16_t smeMsg);
 uint8_t *mac_trace_get_info_log_string(uint16_t infoLog);
-QDF_STATUS pe_acquire_global_lock(tAniSirLim *psPe);
-QDF_STATUS pe_release_global_lock(tAniSirLim *psPe);
 
 uint8_t *mac_trace_get_neighbour_roam_state(uint16_t neighbourRoamState);
 uint8_t *mac_trace_getcsr_roam_state(uint16_t csr_roamState);
