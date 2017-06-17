@@ -59,7 +59,11 @@
 #define SME_GLOBAL_CLASSD_STATS   (1 << eCsrGlobalClassDStats)
 #define SME_PER_CHAIN_RSSI_STATS  (1 << csr_per_chain_rssi_stats)
 
+#ifdef CONFIG_SME_SILENT
+#define sme_log(level, args...)
+#else
 #define sme_log(level, args...) QDF_TRACE(QDF_MODULE_ID_SME, level, ## args)
+#endif
 #define sme_logfl(level, format, args...) sme_log(level, FL(format), ## args)
 
 #define sme_alert(format, args...) \
@@ -70,8 +74,12 @@
 		sme_logfl(QDF_TRACE_LEVEL_WARN, format, ## args)
 #define sme_info(format, args...) \
 		sme_logfl(QDF_TRACE_LEVEL_INFO, format, ## args)
+#ifdef TRACE_RECORD
 #define sme_debug(format, args...) \
 		sme_logfl(QDF_TRACE_LEVEL_DEBUG, format, ## args)
+#else
+#define sme_debug(format, args...)
+#endif
 
 #define SME_ENTER() sme_logfl(QDF_TRACE_LEVEL_DEBUG, "enter")
 #define SME_EXIT() sme_logfl(QDF_TRACE_LEVEL_DEBUG, "exit")

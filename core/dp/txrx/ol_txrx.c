@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
  *
@@ -3397,8 +3398,9 @@ QDF_STATUS ol_txrx_clear_peer(uint8_t sta_id)
  */
 void peer_unmap_timer_handler(void *data)
 {
+#ifdef WLAN_DEBUG
 	ol_txrx_peer_handle peer = (ol_txrx_peer_handle)data;
-
+#endif
 	WMA_LOGE("%s: all unmap events not received for peer %pK, ref_cnt %d",
 		 __func__, peer, qdf_atomic_read(&peer->ref_cnt));
 	WMA_LOGE("%s: peer %pK (%02x:%02x:%02x:%02x:%02x:%02x)",

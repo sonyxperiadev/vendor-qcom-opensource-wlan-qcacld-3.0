@@ -2193,7 +2193,9 @@ static void hdd_ipa_uc_op_cb(struct op_msg_type *op_msg, void *usr_ctxt)
 		qdf_mutex_release(&hdd_ipa->ipa_lock);
 	} else if ((HDD_IPA_UC_OPCODE_STATS == msg->op_code) &&
 		(HDD_IPA_UC_STAT_REASON_DEBUG == hdd_ipa->stat_req_reason)) {
+#ifdef WLAN_DEBUG
 		struct ol_txrx_ipa_resources *res = &hdd_ipa->ipa_resource;
+#endif
 		/* STATs from host */
 		QDF_TRACE(QDF_MODULE_ID_HDD, QDF_TRACE_LEVEL_ERROR,
 			  "==== IPA_UC WLAN_HOST CE ====\n"
