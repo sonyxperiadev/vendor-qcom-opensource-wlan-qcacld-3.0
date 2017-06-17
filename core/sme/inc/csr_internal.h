@@ -244,7 +244,6 @@ typedef enum {
 	eCsrMaxStats
 } eCsrRoamStatsClassTypes;
 
-#ifdef FEATURE_WLAN_DIAG_SUPPORT
 typedef enum {
 	eCSR_WLAN_STATUS_CONNECT = 0,
 	eCSR_WLAN_STATUS_DISCONNECT
@@ -260,9 +259,9 @@ typedef enum {
 	eCSR_REASON_ROAM_SYNCH_IND,
 	eCSR_REASON_ROAM_SYNCH_CNF,
 	eCSR_REASON_ROAM_HO_FAIL,
-
 } eCsrDiagWlanStatusEventReason;
 
+#ifdef FEATURE_WLAN_DIAG_SUPPORT
 /**
  * enum eCSR_WLAN_DIAG_EVENT_TYPE - enum for DIAG events
  * @eCSR_EVENT_SCAN_COMPLETE - scan complete

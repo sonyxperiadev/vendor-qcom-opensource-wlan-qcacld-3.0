@@ -511,9 +511,11 @@ static int pkt_stats_fill_headers(struct sk_buff *skb)
 	cds_pktlog.version = VERSION_LOG_WLAN_PKT_LOG_INFO_C;
 	cds_pktlog.buf_len = skb->len;
 	cds_pktlog.seq_no = gwlan_logging.pkt_stats_msg_idx++;
+#ifdef FEATURE_WLAN_DIAG_SUPPORT
 	host_diag_log_set_code(&cds_pktlog, LOG_WLAN_PKT_LOG_INFO_C);
 	host_diag_log_set_length(&cds_pktlog.log_hdr, skb->len +
 				cds_pkt_size);
+#endif
 
 	if (unlikely(skb_headroom(skb) < cds_pkt_size)) {
 		pr_err("VPKT [%d]: Insufficient headroom, head[%p], data[%p], req[%zu]",
