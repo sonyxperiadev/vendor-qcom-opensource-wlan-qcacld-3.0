@@ -19124,9 +19124,7 @@ csr_roam_offload_scan(tpAniSirGlobal mac_ctx, uint8_t session_id,
 		&mac_ctx->roam.neighborRoamInfo[session_id];
 	struct roam_ext_params *roam_params_dst;
 	struct roam_ext_params *roam_params_src;
-#ifdef TRACE_RECORD
 	uint8_t i;
-#endif
 	uint8_t op_channel;
 
 	QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
