@@ -126,8 +126,10 @@ static void wma_dec_pending_scans(tp_wma_handle wma)
  */
 static void wma_inc_pending_scans(tp_wma_handle wma)
 {
+#ifdef WLAN_DEBUG
 	int32_t scan_cnt = qdf_atomic_inc_return(&wma->num_pending_scans);
 	WMA_LOGI("Starting pending scan: %d -> %d", scan_cnt - 1, scan_cnt);
+#endif
 }
 
 /**

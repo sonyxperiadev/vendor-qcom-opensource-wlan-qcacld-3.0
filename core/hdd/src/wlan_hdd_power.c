@@ -1758,6 +1758,7 @@ static int wlan_hdd_set_powersave(hdd_adapter_t *adapter,
 
 static void wlan_hdd_print_suspend_fail_stats(hdd_context_t *hdd_ctx)
 {
+#ifdef WLAN_DEBUG
 	struct suspend_resume_stats *stats = &hdd_ctx->suspend_resume_stats;
 	hdd_err("ipa:%d, radar:%d, roam:%d, scan:%d, initial_wakeup:%d",
 		stats->suspend_fail[SUSPEND_FAIL_IPA],
@@ -1765,6 +1766,7 @@ static void wlan_hdd_print_suspend_fail_stats(hdd_context_t *hdd_ctx)
 		stats->suspend_fail[SUSPEND_FAIL_ROAM],
 		stats->suspend_fail[SUSPEND_FAIL_SCAN],
 		stats->suspend_fail[SUSPEND_FAIL_INITIAL_WAKEUP]);
+#endif
 }
 
 void wlan_hdd_inc_suspend_stats(hdd_context_t *hdd_ctx,

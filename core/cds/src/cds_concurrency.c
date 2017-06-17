@@ -7362,7 +7362,9 @@ static void cds_check_sta_ap_concurrent_ch_intf(void *data)
 void cds_check_concurrent_intf_and_restart_sap(hdd_adapter_t *adapter)
 {
 	hdd_context_t *hdd_ctx;
+#ifdef WLAN_DEBUG
 	hdd_station_ctx_t *hdd_sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
+#endif
 
 	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
 	if (!hdd_ctx) {

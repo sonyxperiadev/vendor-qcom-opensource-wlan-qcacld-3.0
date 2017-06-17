@@ -13738,6 +13738,7 @@ disconnected:
  * Return: string conversion of reason code, if match found;
  *         "Unknown" otherwise.
  */
+#ifdef WLAN_DEBUG
 static const char *hdd_ieee80211_reason_code_to_str(uint16_t reason)
 {
 	switch (reason) {
@@ -13792,6 +13793,7 @@ static const char *hdd_ieee80211_reason_code_to_str(uint16_t reason)
 		return "Unknown";
 	}
 }
+#endif
 
 /**
  * __wlan_hdd_cfg80211_disconnect() - cfg80211 disconnect api

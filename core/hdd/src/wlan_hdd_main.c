@@ -5871,6 +5871,7 @@ void wlan_hdd_deinit_tx_rx_histogram(hdd_context_t *hdd_ctx)
 	}
 }
 
+#ifdef WLAN_DEBUG
 static uint8_t *convert_level_to_string(uint32_t level)
 {
 	switch (level) {
@@ -5887,6 +5888,7 @@ static uint8_t *convert_level_to_string(uint32_t level)
 		return "INVAL";
 	}
 }
+#endif
 
 
 /**
