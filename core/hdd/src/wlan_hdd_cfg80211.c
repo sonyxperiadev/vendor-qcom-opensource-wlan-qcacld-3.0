@@ -2043,6 +2043,15 @@ wlan_hdd_cfg80211_set_scanning_mac_oui(struct wiphy *wiphy,
 	return ret;
 }
 
+#define MAX_CONCURRENT_MATRIX \
+	QCA_WLAN_VENDOR_ATTR_GET_CONCURRENCY_MATRIX_MAX
+#define MATRIX_CONFIG_PARAM_SET_SIZE_MAX \
+	QCA_WLAN_VENDOR_ATTR_GET_CONCURRENCY_MATRIX_CONFIG_PARAM_SET_SIZE_MAX
+static const struct nla_policy
+wlan_hdd_get_concurrency_matrix_policy[MAX_CONCURRENT_MATRIX + 1] = {
+	[MATRIX_CONFIG_PARAM_SET_SIZE_MAX] = {.type = NLA_U32},
+};
+
 /**
  * __wlan_hdd_cfg80211_get_concurrency_matrix() - to retrieve concurrency matrix
  * @wiphy: pointer phy adapter
@@ -2061,7 +2070,7 @@ static int __wlan_hdd_cfg80211_get_concurrency_matrix(struct wiphy *wiphy,
 {
 	uint32_t feature_set_matrix[CDS_MAX_FEATURE_SET] = {0};
 	uint8_t i, feature_sets, max_feature_sets;
-	struct nlattr *tb[QCA_WLAN_VENDOR_ATTR_GET_CONCURRENCY_MATRIX_MAX + 1];
+	struct nlattr *tb[MAX_CONCURRENT_MATRIX + 1];
 	struct sk_buff *reply_skb;
 	hdd_context_t *hdd_ctx = wiphy_priv(wiphy);
 	int ret;
@@ -2077,20 +2086,19 @@ static int __wlan_hdd_cfg80211_get_concurrency_matrix(struct wiphy *wiphy,
 	if (ret)
 		return ret;
 
-	if (nla_parse(tb, QCA_WLAN_VENDOR_ATTR_GET_CONCURRENCY_MATRIX_MAX,
-			data, data_len, NULL)) {
+	if (nla_parse(tb, MAX_CONCURRENT_MATRIX, data, data_len,
+		      wlan_hdd_get_concurrency_matrix_policy)) {
 		hdd_err("Invalid ATTR");
 		return -EINVAL;
 	}
 
 	/* Parse and fetch max feature set */
-	if (!tb[QCA_WLAN_VENDOR_ATTR_GET_CONCURRENCY_MATRIX_CONFIG_PARAM_SET_SIZE_MAX]) {
+	if (!tb[MATRIX_CONFIG_PARAM_SET_SIZE_MAX]) {
 		hdd_err("Attr max feature set size failed");
 		return -EINVAL;
 	}
-	max_feature_sets = nla_get_u32(tb[
-		QCA_WLAN_VENDOR_ATTR_GET_CONCURRENCY_MATRIX_CONFIG_PARAM_SET_SIZE_MAX]);
-	hdd_info("Max feature set size: %d", max_feature_sets);
+	max_feature_sets = nla_get_u32(tb[MATRIX_CONFIG_PARAM_SET_SIZE_MAX]);
+	hdd_debug("Max feature set size: %d", max_feature_sets);
 
 	/* Fill feature combination matrix */
 	feature_sets = 0;
@@ -2126,6 +2134,9 @@ static int __wlan_hdd_cfg80211_get_concurrency_matrix(struct wiphy *wiphy,
 	}
 	return cfg80211_vendor_cmd_reply(reply_skb);
 }
+
+#undef MAX_CONCURRENT_MATRIX
+#undef MATRIX_CONFIG_PARAM_SET_SIZE_MAX
 
 /**
  * wlan_hdd_cfg80211_get_concurrency_matrix() - get concurrency matrix
@@ -5617,7 +5628,8 @@ static int wlan_hdd_cfg80211_set_probable_oper_channel(struct wiphy *wiphy,
 static const struct
 nla_policy
 qca_wlan_vendor_attr_policy[QCA_WLAN_VENDOR_ATTR_MAX+1] = {
-	[QCA_WLAN_VENDOR_ATTR_MAC_ADDR] = { .type = NLA_UNSPEC },
+	[QCA_WLAN_VENDOR_ATTR_MAC_ADDR] = {
+		.type = NLA_BINARY, .len = QDF_MAC_ADDR_SIZE },
 };
 
 /**
@@ -5669,6 +5681,12 @@ static int __wlan_hdd_cfg80211_get_link_properties(struct wiphy *wiphy,
 	if (!tb[QCA_WLAN_VENDOR_ATTR_MAC_ADDR]) {
 		hdd_err("Attribute peerMac not provided for mode=%d",
 		       adapter->device_mode);
+		return -EINVAL;
+	}
+
+	if (nla_len(tb[QCA_WLAN_VENDOR_ATTR_MAC_ADDR]) < QDF_MAC_ADDR_SIZE) {
+		hdd_err("Attribute peerMac is invalid for mode=%d",
+			adapter->device_mode);
 		return -EINVAL;
 	}
 
