@@ -163,12 +163,14 @@ uint8_t cds_get_mmie_size(void);
 QDF_STATUS sme_send_flush_logs_cmd_to_fw(tpAniSirGlobal pMac);
 static inline void cds_host_diag_log_work(qdf_wake_lock_t *lock, uint32_t msec,
 			    uint32_t reason) {
+#ifdef FEATURE_WLAN_DIAG_SUPPORT
 	if (((cds_get_ring_log_level(RING_ID_WAKELOCK) >= WLAN_LOG_LEVEL_ACTIVE)
 	     && (WIFI_POWER_EVENT_WAKELOCK_HOLD_RX == reason)) ||
 	    (WIFI_POWER_EVENT_WAKELOCK_HOLD_RX != reason)) {
 		host_diag_log_wlock(reason, qdf_wake_lock_name(lock),
 				    msec, WIFI_POWER_EVENT_WAKELOCK_TAKEN);
 	}
+#endif
 }
 
 /**
