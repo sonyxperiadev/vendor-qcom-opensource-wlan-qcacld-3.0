@@ -6218,13 +6218,12 @@ bool csr_scan_remove_fresh_scan_command(tpAniSirGlobal pMac, uint8_t sessionId)
 void csr_release_scan_command(tpAniSirGlobal pMac, tSmeCmd *pCommand,
 			      eCsrScanStatus scanStatus)
 {
-	eCsrScanReason reason = pCommand->u.scanCmd.reason;
 	bool status;
 	tDblLinkList *cmd_list = NULL;
 
 	csr_scan_call_callback(pMac, pCommand, scanStatus);
 	sme_debug("Remove Scan command reason = %d, scan_id %d",
-		reason, pCommand->u.scanCmd.scanID);
+		pCommand->u.scanCmd.reason, pCommand->u.scanCmd.scanID);
 	cmd_list = &pMac->sme.smeScanCmdActiveList;
 	status = csr_ll_remove_entry(cmd_list, &pCommand->Link, LL_ACCESS_LOCK);
 	if (!status) {
