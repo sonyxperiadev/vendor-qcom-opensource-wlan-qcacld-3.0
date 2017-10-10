@@ -113,7 +113,9 @@ tSirRetStatus lim_send_cf_params(tpAniSirGlobal pMac, uint8_t bssIdx,
 	msgQ.bodyptr = pCFParams;
 	msgQ.bodyval = 0;
 	pe_debug("Sending WMA_UPDATE_CF_IND");
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace_msg_tx(pMac, NO_SESSION, msgQ.type));
+#endif
 	retCode = wma_post_ctrl_msg(pMac, &msgQ);
 	if (eSIR_SUCCESS != retCode) {
 		qdf_mem_free(pCFParams);
@@ -159,12 +161,16 @@ tSirRetStatus lim_send_beacon_params(tpAniSirGlobal pMac,
 	       pUpdatedBcnParams->paramChangeBitmap);
 	if (NULL == psessionEntry) {
 		qdf_mem_free(pBcnParams);
+#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace_msg_tx(pMac, NO_SESSION, msgQ.type));
+#endif
 		return eSIR_FAILURE;
+#ifdef LIM_TRACE_RECORD
 	} else {
 		MTRACE(mac_trace_msg_tx(pMac,
 					psessionEntry->peSessionId,
 					msgQ.type));
+#endif
 	}
 	pBcnParams->smeSessionId = psessionEntry->smeSessionId;
 	retCode = wma_post_ctrl_msg(pMac, &msgQ);
@@ -290,7 +296,9 @@ tSirRetStatus lim_send_switch_chnl_params(tpAniSirGlobal pMac,
 	pe_debug("CH_SWITCH_REQ, ch_width %d, ch_num %d, max_tx_pwr %d, ldpc %d",
 		       pChnlParams->ch_width, pChnlParams->channelNumber,
 		       pChnlParams->maxTxPower, pChnlParams->rx_ldpc);
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace_msg_tx(pMac, peSessionId, msgQ.type));
+#endif
 	if (eSIR_SUCCESS != wma_post_ctrl_msg(pMac, &msgQ)) {
 		qdf_mem_free(pChnlParams);
 		pe_err("Posting  CH_SWITCH_REQ to WMA failed");
@@ -354,7 +362,9 @@ tSirRetStatus lim_send_edca_params(tpAniSirGlobal pMac,
 		       pUpdatedEdcaParams[i].cw.max,
 		       pUpdatedEdcaParams[i].txoplimit);
 	}
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace_msg_tx(pMac, NO_SESSION, msgQ.type));
+#endif
 	retCode = wma_post_ctrl_msg(pMac, &msgQ);
 	if (eSIR_SUCCESS != retCode) {
 		qdf_mem_free(pEdcaParams);
@@ -505,7 +515,9 @@ tSirRetStatus lim_set_link_state(tpAniSirGlobal pMac, tSirLinkState state,
 	msgQ.bodyptr = pLinkStateParams;
 	msgQ.bodyval = 0;
 
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace_msg_tx(pMac, NO_SESSION, msgQ.type));
+#endif
 
 	retCode = (uint32_t) wma_post_ctrl_msg(pMac, &msgQ);
 	if (retCode != eSIR_SUCCESS) {
@@ -542,12 +554,14 @@ extern tSirRetStatus lim_set_link_state_ft(tpAniSirGlobal pMac, tSirLinkState
 	msgQ.reserved = 0;
 	msgQ.bodyptr = pLinkStateParams;
 	msgQ.bodyval = 0;
+#ifdef LIM_TRACE_RECORD
 	if (NULL == psessionEntry) {
 		MTRACE(mac_trace_msg_tx(pMac, NO_SESSION, msgQ.type));
 	} else {
 		MTRACE(mac_trace_msg_tx
 			       (pMac, psessionEntry->peSessionId, msgQ.type));
 	}
+#endif
 
 	retCode = (uint32_t) wma_post_ctrl_msg(pMac, &msgQ);
 	if (retCode != eSIR_SUCCESS) {
@@ -616,7 +630,9 @@ tSirRetStatus lim_send_beacon_filter_info(tpAniSirGlobal pMac,
 	msgQ.bodyptr = pBeaconFilterMsg;
 	msgQ.bodyval = 0;
 	pe_debug("Sending WMA_BEACON_FILTER_IND");
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace_msg_tx(pMac, psessionEntry->peSessionId, msgQ.type));
+#endif
 	retCode = wma_post_ctrl_msg(pMac, &msgQ);
 	if (eSIR_SUCCESS != retCode) {
 		qdf_mem_free(pBeaconFilterMsg);
@@ -648,12 +664,14 @@ tSirRetStatus lim_send_mode_update(tpAniSirGlobal pMac,
 	msgQ.bodyval = 0;
 	pe_debug("Sending WMA_UPDATE_OP_MODE, op_mode %d, sta_id %d",
 			pVhtOpMode->opMode, pVhtOpMode->staId);
+#ifdef LIM_TRACE_RECORD
 	if (NULL == psessionEntry)
 		MTRACE(mac_trace_msg_tx(pMac, NO_SESSION, msgQ.type));
 	else
 		MTRACE(mac_trace_msg_tx(pMac,
 					psessionEntry->peSessionId,
 					msgQ.type));
+#endif
 	retCode = wma_post_ctrl_msg(pMac, &msgQ);
 	if (eSIR_SUCCESS != retCode) {
 		qdf_mem_free(pVhtOpMode);
@@ -683,12 +701,14 @@ tSirRetStatus lim_send_rx_nss_update(tpAniSirGlobal pMac,
 	msgQ.bodyptr = pRxNss;
 	msgQ.bodyval = 0;
 	pe_debug("Sending WMA_UPDATE_RX_NSS");
+#ifdef LIM_TRACE_RECORD
 	if (NULL == psessionEntry)
 		MTRACE(mac_trace_msg_tx(pMac, NO_SESSION, msgQ.type));
 	else
 		MTRACE(mac_trace_msg_tx(pMac,
 					psessionEntry->peSessionId,
 					msgQ.type));
+#endif
 	retCode = wma_post_ctrl_msg(pMac, &msgQ);
 	if (eSIR_SUCCESS != retCode) {
 		qdf_mem_free(pRxNss);
@@ -720,12 +740,14 @@ tSirRetStatus lim_set_membership(tpAniSirGlobal pMac,
 	msgQ.bodyptr = pMembership;
 	msgQ.bodyval = 0;
 	pe_debug("Sending WMA_UPDATE_MEMBERSHIP");
+#ifdef LIM_TRACE_RECORD
 	if (NULL == psessionEntry)
 		MTRACE(mac_trace_msg_tx(pMac, NO_SESSION, msgQ.type));
 	else
 		MTRACE(mac_trace_msg_tx(pMac,
 					psessionEntry->peSessionId,
 					msgQ.type));
+#endif
 	retCode = wma_post_ctrl_msg(pMac, &msgQ);
 	if (eSIR_SUCCESS != retCode) {
 		qdf_mem_free(pMembership);
@@ -756,12 +778,14 @@ tSirRetStatus lim_set_user_pos(tpAniSirGlobal pMac,
 	msgQ.bodyptr = pUserPos;
 	msgQ.bodyval = 0;
 	pe_debug("Sending WMA_UPDATE_USERPOS");
+#ifdef LIM_TRACE_RECORD
 	if (NULL == psessionEntry)
 		MTRACE(mac_trace_msg_tx(pMac, NO_SESSION, msgQ.type));
 	else
 		MTRACE(mac_trace_msg_tx(pMac,
 					psessionEntry->peSessionId,
 					msgQ.type));
+#endif
 	retCode = wma_post_ctrl_msg(pMac, &msgQ);
 	if (eSIR_SUCCESS != retCode) {
 		qdf_mem_free(pUserPos);
@@ -808,7 +832,9 @@ tSirRetStatus lim_send_exclude_unencrypt_ind(tpAniSirGlobal pMac,
 	msgQ.bodyptr = pExcludeUnencryptParam;
 	msgQ.bodyval = 0;
 	pe_debug("Sending WMA_EXCLUDE_UNENCRYPTED_IND");
+#ifdef LIM_TRACE_RECORD
 	MTRACE(mac_trace_msg_tx(pMac, psessionEntry->peSessionId, msgQ.type));
+#endif
 	retCode = wma_post_ctrl_msg(pMac, &msgQ);
 	if (eSIR_SUCCESS != retCode) {
 		qdf_mem_free(pExcludeUnencryptParam);

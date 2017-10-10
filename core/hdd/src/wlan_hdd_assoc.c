@@ -1820,7 +1820,9 @@ QDF_STATUS hdd_roam_register_sta(hdd_adapter_t *pAdapter,
 {
 	QDF_STATUS qdf_status = QDF_STATUS_E_FAILURE;
 	struct ol_txrx_desc_type staDesc = { 0 };
+#ifdef WLAN_DEBUG
 	hdd_station_ctx_t *pHddStaCtx = WLAN_HDD_GET_STATION_CTX_PTR(pAdapter);
+#endif
 	struct ol_txrx_ops txrx_ops;
 
 	if (NULL == pBssDesc)
@@ -1948,8 +1950,12 @@ void hdd_save_gtk_params(hdd_adapter_t *adapter,
 		 * Caller should make sure fils_join_rsp is
 		 * not NULL, if there is need to use else where.
 		 */
+#ifdef WLAN_FEATURE_FILS_SK
 		kek = csr_roam_info->fils_join_rsp->kek;
 		kek_len = csr_roam_info->fils_join_rsp->kek_len;
+#else
+		return; /* nothing to save */
+#endif
 	}
 
 	wlan_hdd_save_gtk_offload_params(adapter, NULL, kek, kek_len,

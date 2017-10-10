@@ -56,6 +56,7 @@ typedef struct event_report_s {
 	uint16_t length;
 } event_report_t;
 
+#ifdef FEATURE_WLAN_DIAG_SUPPORT
 /**---------------------------------------------------------------------------
 
    \brief host_diag_log_set_code() -
@@ -283,7 +284,6 @@ void host_log_low_resource_failure(uint8_t event_sub_type)
 					EVENT_WLAN_LOW_RESOURCE_FAILURE);
 }
 
-#ifdef FEATURE_WLAN_DIAG_SUPPORT
 /**
  * qdf_wow_wakeup_host_event()- send wow wakeup event
  * @wow_wakeup_cause: WOW wakeup reason code

@@ -8639,6 +8639,7 @@ QDF_STATUS sme_update_roam_rssi_diff(tHalHandle hHal, uint8_t sessionId,
 
 	status = sme_acquire_global_lock(&pMac->sme);
 	if (QDF_IS_STATUS_SUCCESS(status)) {
+#ifdef TRACE_RECORD
 		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
 			  "LFR runtime successfully set roam rssi diff to %d - old value is %d - roam state is %s",
 			  RoamRssiDiff,
@@ -8647,6 +8648,7 @@ QDF_STATUS sme_update_roam_rssi_diff(tHalHandle hHal, uint8_t sessionId,
 							     neighborRoamInfo
 							     [sessionId].
 							    neighborRoamState));
+#endif
 		pMac->roam.configParam.RoamRssiDiff = RoamRssiDiff;
 		sme_release_global_lock(&pMac->sme);
 	}
@@ -8856,6 +8858,7 @@ QDF_STATUS sme_update_wes_mode(tHalHandle hHal, bool isWESModeEnabled,
 
 	status = sme_acquire_global_lock(&pMac->sme);
 	if (QDF_IS_STATUS_SUCCESS(status)) {
+#ifdef TRACE_RECORD
 		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
 			  "LFR runtime successfully set WES Mode to %d - old value is %d - roam state is %s",
 			  isWESModeEnabled,
@@ -8864,6 +8867,7 @@ QDF_STATUS sme_update_wes_mode(tHalHandle hHal, bool isWESModeEnabled,
 							     neighborRoamInfo
 							     [sessionId].
 							    neighborRoamState));
+#endif
 		pMac->roam.configParam.isWESModeEnabled = isWESModeEnabled;
 		sme_release_global_lock(&pMac->sme);
 	}
@@ -8899,6 +8903,7 @@ QDF_STATUS sme_set_roam_scan_control(tHalHandle hHal, uint8_t sessionId,
 
 	status = sme_acquire_global_lock(&pMac->sme);
 	if (QDF_IS_STATUS_SUCCESS(status)) {
+#ifdef TRACE_RECORD
 		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
 			  "LFR runtime successfully set roam scan control to %d - old value is %d - roam state is %s",
 			  roamScanControl,
@@ -8907,6 +8912,7 @@ QDF_STATUS sme_set_roam_scan_control(tHalHandle hHal, uint8_t sessionId,
 							     neighborRoamInfo
 							     [sessionId].
 							    neighborRoamState));
+#endif
 		pMac->roam.configParam.nRoamScanControl = roamScanControl;
 		if (0 == roamScanControl) {
 			QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
@@ -9553,6 +9559,7 @@ QDF_STATUS sme_set_neighbor_scan_refresh_period(tHalHandle hHal,
 		pNeighborRoamConfig =
 			&pMac->roam.configParam.neighborRoamConfig;
 		pNeighborRoamInfo = &pMac->roam.neighborRoamInfo[sessionId];
+#ifdef TRACE_RECORD
 		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
 			  "LFR runtime successfully set roam scan refresh period to %d- old value is %d - roam state is %s",
 			  neighborScanResultsRefreshPeriod,
@@ -9562,6 +9569,7 @@ QDF_STATUS sme_set_neighbor_scan_refresh_period(tHalHandle hHal,
 							     neighborRoamInfo
 							     [sessionId].
 							    neighborRoamState));
+#endif
 		pNeighborRoamConfig->nNeighborResultsRefreshPeriod =
 			neighborScanResultsRefreshPeriod;
 		pNeighborRoamInfo->cfgParams.neighborResultsRefreshPeriod =
@@ -9677,6 +9685,7 @@ QDF_STATUS sme_update_empty_scan_refresh_period(tHalHandle hHal, uint8_t
 		pNeighborRoamConfig =
 			&pMac->roam.configParam.neighborRoamConfig;
 		pNeighborRoamInfo = &pMac->roam.neighborRoamInfo[sessionId];
+#ifdef TRACE_RECORD
 		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
 			  "LFR runtime successfully set roam scan period to %d -old value is %d - roam state is %s",
 			  nEmptyScanRefreshPeriod,
@@ -9686,6 +9695,7 @@ QDF_STATUS sme_update_empty_scan_refresh_period(tHalHandle hHal, uint8_t
 							     neighborRoamInfo
 							     [sessionId].
 							    neighborRoamState));
+#endif
 		pNeighborRoamConfig->nEmptyScanRefreshPeriod =
 			nEmptyScanRefreshPeriod;
 		pNeighborRoamInfo->cfgParams.emptyScanRefreshPeriod =
@@ -9729,6 +9739,7 @@ QDF_STATUS sme_set_neighbor_scan_min_chan_time(tHalHandle hHal,
 
 	status = sme_acquire_global_lock(&pMac->sme);
 	if (QDF_IS_STATUS_SUCCESS(status)) {
+#ifdef TRACE_RECORD
 		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
 			  "LFR runtime successfully set channel min dwell time to %d - old value is %d - roam state is %s",
 			  nNeighborScanMinChanTime,
@@ -9738,7 +9749,7 @@ QDF_STATUS sme_set_neighbor_scan_min_chan_time(tHalHandle hHal,
 							     neighborRoamInfo
 							     [sessionId].
 							    neighborRoamState));
-
+#endif
 		pMac->roam.configParam.neighborRoamConfig.
 		nNeighborScanMinChanTime = nNeighborScanMinChanTime;
 		pMac->roam.neighborRoamInfo[sessionId].cfgParams.
@@ -9783,6 +9794,7 @@ QDF_STATUS sme_set_neighbor_scan_max_chan_time(tHalHandle hHal, uint8_t
 		pNeighborRoamConfig =
 			&pMac->roam.configParam.neighborRoamConfig;
 		pNeighborRoamInfo = &pMac->roam.neighborRoamInfo[sessionId];
+#ifdef TRACE_RECORD
 		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
 			  "LFR runtime successfully set channel max dwell time to %d - old value is %d - roam state is %s",
 			  nNeighborScanMaxChanTime,
@@ -9792,6 +9804,7 @@ QDF_STATUS sme_set_neighbor_scan_max_chan_time(tHalHandle hHal, uint8_t
 							     neighborRoamInfo
 							     [sessionId].
 							    neighborRoamState));
+#endif
 		pNeighborRoamConfig->nNeighborScanMaxChanTime =
 			nNeighborScanMaxChanTime;
 		pNeighborRoamInfo->cfgParams.maxChannelScanTime =
@@ -10010,6 +10023,7 @@ QDF_STATUS sme_set_neighbor_scan_period(tHalHandle hHal, uint8_t sessionId,
 		pNeighborRoamConfig =
 			&pMac->roam.configParam.neighborRoamConfig;
 		pNeighborRoamInfo = &pMac->roam.neighborRoamInfo[sessionId];
+#ifdef TRACE_RECORD
 		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
 			  "LFR:set neighbor scan period, old:%d, new: %d, state: %s",
 			  nNeighborScanPeriod,
@@ -10019,6 +10033,7 @@ QDF_STATUS sme_set_neighbor_scan_period(tHalHandle hHal, uint8_t sessionId,
 							     neighborRoamInfo
 							     [sessionId].
 							    neighborRoamState));
+#endif
 		pNeighborRoamConfig->nNeighborScanTimerPeriod =
 			nNeighborScanPeriod;
 		pNeighborRoamInfo->cfgParams.neighborScanPeriod =
@@ -13411,6 +13426,7 @@ QDF_STATUS sme_update_dfs_scan_mode(tHalHandle hHal, uint8_t sessionId,
 
 	status = sme_acquire_global_lock(&pMac->sme);
 	if (QDF_IS_STATUS_SUCCESS(status)) {
+#ifdef TRACE_RECORD
 		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
 			  "LFR runtime successfully set AllowDFSChannelRoam Mode to %d - old value is %d - roam state is %s",
 			  allowDFSChannelRoam,
@@ -13419,6 +13435,7 @@ QDF_STATUS sme_update_dfs_scan_mode(tHalHandle hHal, uint8_t sessionId,
 							     neighborRoamInfo
 							     [sessionId].
 							    neighborRoamState));
+#endif
 		pMac->roam.configParam.allowDFSChannelRoam =
 			allowDFSChannelRoam;
 		sme_release_global_lock(&pMac->sme);

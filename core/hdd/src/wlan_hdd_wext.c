@@ -3183,8 +3183,9 @@ static QDF_STATUS hdd_wlan_get_ibss_peer_info(hdd_adapter_t *pAdapter,
 		hdd_debug("pPeerInfo->numIBSSPeers = %d ", pPeerInfo->numPeers);
 		{
 			uint8_t mac_addr[QDF_MAC_ADDR_SIZE];
+#ifdef WLAN_DEBUG
 			uint32_t tx_rate = pPeerInfo->peerInfoParams[0].txRate;
-
+#endif
 			qdf_mem_copy(mac_addr, pPeerInfo->peerInfoParams[0].
 					mac_addr, sizeof(mac_addr));
 			hdd_debug("PEER ADDR : %pM TxRate: %d Mbps  RSSI: %d",
@@ -9738,6 +9739,7 @@ int iw_set_three_ints_getnone(struct net_device *dev,
  *
  * Return: the string equivalent of @connection_state
  */
+#ifdef TRACE_RECORD
 static const char *
 hdd_connection_state_string(eConnectionState connection_state)
 {
@@ -9752,6 +9754,7 @@ hdd_connection_state_string(eConnectionState connection_state)
 		return "UNKNOWN";
 	}
 }
+#endif
 
 /**
  * iw_get_char_setnone() - Generic "get string" private ioctl handler
@@ -9825,7 +9828,9 @@ static int __iw_get_char_setnone(struct net_device *dev,
 	{
 		int buf = 0, len = 0;
 		int adapter_num = 0;
+#ifdef TRACE_RECORD
 		int count = 0, check = 1;
+#endif
 
 		tHalHandle hHal = NULL;
 		tpAniSirGlobal pMac = NULL;
@@ -9902,6 +9907,7 @@ static int __iw_get_char_setnone(struct net_device *dev,
 				WLAN_HDD_GET_STATION_CTX_PTR(useAdapter);
 
 
+#ifdef TRACE_RECORD
 			buf =
 				scnprintf(extra + len, WE_MAX_STR_LEN - len,
 					  "\n HDD Conn State - %s "
@@ -9922,9 +9928,11 @@ static int __iw_get_char_setnone(struct net_device *dev,
 							  (hHal, useAdapter->sessionId))
 					  );
 			len += buf;
+#endif
 			adapter_num++;
 		}
 
+#ifdef TRACE_RECORD
 		if (hHal) {
 			/* Printing Lim State starting with global lim states */
 			buf =
@@ -9963,6 +9971,7 @@ static int __iw_get_char_setnone(struct net_device *dev,
 				count++;
 			}
 		}
+#endif
 
 		wrqu->data.length = strlen(extra) + 1;
 		break;

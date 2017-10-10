@@ -3720,6 +3720,7 @@ QDF_STATUS csr_set_country_code(tpAniSirGlobal pMac, uint8_t *pCountry)
 	return status;
 }
 
+#ifdef FEATURE_WLAN_DIAG_SUPPORT_CSR
 /* caller allocated memory for pNumChn and pChnPowerInfo */
 /* As input, *pNumChn has the size of the array of pChnPowerInfo */
 /* Upon return, *pNumChn has the number of channels assigned. */
@@ -3748,7 +3749,6 @@ static void csr_get_channel_power_info(tpAniSirGlobal pMac, tDblLinkList *list,
 
 }
 
-#ifdef FEATURE_WLAN_DIAG_SUPPORT_CSR
 static void csr_diag_apply_country_info(tpAniSirGlobal mac_ctx)
 {
 	host_log_802_11d_pkt_type *p11dLog;
@@ -5517,8 +5517,6 @@ static void csr_diag_scan_channels(tpAniSirGlobal pMac, tSmeCmd *pCommand)
 	}
 	WLAN_HOST_DIAG_LOG_REPORT(pScanLog);
 }
-#else
-#define csr_diag_scan_channels(tpAniSirGlobal pMac, tSmeCmd *pCommand) (void)0;
 #endif /* #ifdef FEATURE_WLAN_DIAG_SUPPORT_CSR */
 
 static QDF_STATUS csr_scan_channels(tpAniSirGlobal pMac, tSmeCmd *pCommand)
@@ -5546,7 +5544,9 @@ static QDF_STATUS csr_scan_channels(tpAniSirGlobal pMac, tSmeCmd *pCommand)
 	}
 	if (eCsrScanProbeBss == pCommand->u.scanCmd.reason)
 		scanReq.hiddenSsid = SIR_SCAN_HIDDEN_SSID_PE_DECISION;
+#ifdef FEATURE_WLAN_DIAG_SUPPORT_CSR
 	csr_diag_scan_channels(pMac, pCommand);
+#endif
 	csr_clear_votes_for_country_info(pMac);
 	status = csr_send_mb_scan_req(pMac, pCommand->sessionId,
 				      &pCommand->u.scanCmd.u.scanRequest,
@@ -6218,13 +6218,12 @@ bool csr_scan_remove_fresh_scan_command(tpAniSirGlobal pMac, uint8_t sessionId)
 void csr_release_scan_command(tpAniSirGlobal pMac, tSmeCmd *pCommand,
 			      eCsrScanStatus scanStatus)
 {
-	eCsrScanReason reason = pCommand->u.scanCmd.reason;
 	bool status;
 	tDblLinkList *cmd_list = NULL;
 
 	csr_scan_call_callback(pMac, pCommand, scanStatus);
 	sme_debug("Remove Scan command reason = %d, scan_id %d",
-		reason, pCommand->u.scanCmd.scanID);
+		pCommand->u.scanCmd.reason, pCommand->u.scanCmd.scanID);
 	cmd_list = &pMac->sme.smeScanCmdActiveList;
 	status = csr_ll_remove_entry(cmd_list, &pCommand->Link, LL_ACCESS_LOCK);
 	if (!status) {
