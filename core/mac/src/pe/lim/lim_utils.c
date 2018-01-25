@@ -4075,16 +4075,16 @@ static void lim_handle_ht20coexist_ht20protection(tpAniSirGlobal mac_ctx,
 					session_entry->htOperMode =
 					eSIR_HT_OP_MODE_NO_LEGACY_20MHZ_HT;
 
-					lim_enable_ht_rifs_protection(mac_ctx,
-						false, overlap, beaconparams,
-						session_entry);
-					lim_enable_ht_obss_protection(mac_ctx,
-						false, overlap, beaconparams,
-						session_entry);
-				} else {
-					session_entry->htOperMode =
-						eSIR_HT_OP_MODE_PURE;
-				}
+				lim_enable_ht_rifs_protection(mac_ctx,
+					false, overlap, beaconparams,
+					session_entry);
+				lim_enable_ht_obss_protection(mac_ctx,
+					false, overlap, beaconparams,
+					session_entry);
+			} else {
+				session_entry->htOperMode =
+					eSIR_HT_OP_MODE_PURE;
+			}
 		}
 	} else if (LIM_IS_AP_ROLE(session_entry) && !overlap) {
 		/* Disable protection from 11G stations. */

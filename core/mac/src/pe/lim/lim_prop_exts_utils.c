@@ -75,8 +75,8 @@ static void get_local_power_constraint_probe_response(
 	if (beacon_struct->eseTxPwr.present)
 		*local_constraint =
 			beacon_struct->eseTxPwr.power_limit;
-		session->is_ese_version_ie_present =
-			beacon_struct->is_ese_ver_ie_present;
+	session->is_ese_version_ie_present =
+		beacon_struct->is_ese_ver_ie_present;
 }
 #else
 static void get_local_power_constraint_probe_response(
