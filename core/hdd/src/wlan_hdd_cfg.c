@@ -8373,6 +8373,7 @@ static bool hdd_string_to_hex(uint8_t *token, uint8_t *hex_str,
  *
  * Return: converted string
  */
+#ifdef WLAN_CFG_DEBUG
 static
 uint8_t *hdd_action_oui_token_string(enum hdd_action_oui_token_type token_id)
 {
@@ -8390,6 +8391,7 @@ uint8_t *hdd_action_oui_token_string(enum hdd_action_oui_token_type token_id)
 
 	return (uint8_t *) "UNKNOWN";
 }
+#endif
 
 /**
  * hdd_validate_and_convert_oui() - validate and convert OUI str to hex array
