@@ -1475,7 +1475,7 @@ static void hdd_fill_station_info(hdd_adapter_t *pHostapdAdapter,
 	if (i == WLAN_MAX_STA_COUNT) {
 		i = 0;
 		while (i < WLAN_MAX_STA_COUNT) {
-			if (pHostapdAdapter->cache_sta_info[i].isUsed != TRUE)
+			if (pHostapdAdapter->cache_sta_info[i].isUsed != true)
 				break;
 			i++;
 		}
