@@ -1957,8 +1957,9 @@ void ol_txrx_pdev_pre_detach(ol_txrx_pdev_handle pdev, int force)
 void ol_txrx_pdev_detach(ol_txrx_pdev_handle pdev)
 {
 	struct ol_txrx_stats_req_internal *req;
+#if defined(TXRX_DEBUG_LEVEL) && TXRX_DEBUG_LEVEL > 5
 	int i = 0;
-
+#endif
 	/*checking to ensure txrx pdev structure is not NULL */
 	if (!pdev) {
 		ol_txrx_err(
