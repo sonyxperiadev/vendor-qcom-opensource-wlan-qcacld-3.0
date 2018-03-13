@@ -708,20 +708,16 @@ uint32_t lim_defer_msg(tpAniSirGlobal pMac, tSirMsgQ *pMsg)
 	retCode = lim_write_deferred_msg_q(pMac, pMsg);
 
 	if (retCode == TX_SUCCESS) {
-#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace_msg_rx
 			       (pMac, NO_SESSION,
 			       LIM_TRACE_MAKE_RXMSG(pMsg->type, LIM_MSG_DEFERRED));
 		       )
-#endif
 	} else {
 		pe_err("Dropped lim message (0x%X) Message %s", pMsg->type, lim_msg_str(pMsg->type));
-#ifdef LIM_TRACE_RECORD
 		MTRACE(mac_trace_msg_rx
 			       (pMac, NO_SESSION,
 			       LIM_TRACE_MAKE_RXMSG(pMsg->type, LIM_MSG_DROPPED));
 		       )
-#endif
 	}
 
 	return retCode;
@@ -1304,7 +1300,6 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 #ifdef WLAN_DEBUG
 	mac_ctx->lim.numTot++;
 #endif
-#ifdef LIM_TRACE_RECORD
 	/*
 	 * MTRACE logs not captured for events received from SME
 	 * SME enums (eWNI_SME_START_REQ) starts with 0x16xx.
@@ -1328,7 +1323,6 @@ static void lim_process_messages(tpAniSirGlobal mac_ctx, tpSirMsgQ msg)
 				LIM_TRACE_MAKE_RXMSG(msg->type,
 				LIM_MSG_PROCESSED));)
 	}
-#endif
 
 	switch (msg->type) {
 

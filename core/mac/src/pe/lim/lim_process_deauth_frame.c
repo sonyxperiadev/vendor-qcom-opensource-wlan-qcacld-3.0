@@ -334,12 +334,11 @@ lim_process_deauth_frame(tpAniSirGlobal pMac, uint8_t *pRxPacketInfo,
 			mlmDeauthInd.reasonCode = reasonCode;
 
 			psessionEntry->limMlmState = eLIM_MLM_IDLE_STATE;
-#ifdef LIM_TRACE_RECORD
 			MTRACE(mac_trace
 				       (pMac, TRACE_CODE_MLM_STATE,
 				       psessionEntry->peSessionId,
 				       psessionEntry->limMlmState));
-#endif
+
 			lim_post_sme_message(pMac,
 					     LIM_MLM_DEAUTH_IND,
 					     (uint32_t *) &mlmDeauthInd);
@@ -371,12 +370,11 @@ lim_process_deauth_frame(tpAniSirGlobal pMac, uint8_t *pRxPacketInfo,
 
 			psessionEntry->limMlmState =
 				psessionEntry->limPrevMlmState;
-#ifdef LIM_TRACE_RECORD
 			MTRACE(mac_trace
 				       (pMac, TRACE_CODE_MLM_STATE,
 				       psessionEntry->peSessionId,
 				       psessionEntry->limMlmState));
-#endif
+
 			/* Deactive Association response timeout */
 			lim_deactivate_and_change_timer(pMac,
 							eLIM_ASSOC_FAIL_TIMER);
