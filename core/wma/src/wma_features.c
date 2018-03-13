@@ -145,7 +145,9 @@ static void qdf_wma_wow_wakeup_stats_event(void)
 	WLAN_HOST_DIAG_EVENT_REPORT(&WowStats, EVENT_WLAN_POWERSAVE_WOW_STATS);
 }
 #else
-#define qdf_wma_wow_wakeup_stats_event()
+static void qdf_wma_wow_wakeup_stats_event(void)
+{
+}
 #endif
 
 #ifdef FEATURE_WLAN_AUTO_SHUTDOWN
@@ -3400,7 +3402,6 @@ static void wma_send_status_to_suspend_ind(tp_wma_handle wma, bool suspended)
  *
  * Return: reason code in string format
  */
-#ifdef WLAN_DEBUG
 static const u8 *wma_wow_wake_reason_str(A_INT32 wake_reason)
 {
 	switch (wake_reason) {
@@ -3506,7 +3507,6 @@ static const u8 *wma_wow_wake_reason_str(A_INT32 wake_reason)
 		return "unknown";
 	}
 }
-#endif
 
 /**
  * wma_wow_stats_display() - display wow wake up stats
@@ -3827,7 +3827,6 @@ static bool tlv_check_required(int32_t reason)
  *
  * Return: string for proto subtype for data packet
  */
-#ifdef WLAN_DEBUG
 static const char *
 wma_pkt_proto_subtype_to_string(enum qdf_proto_subtype proto_subtype)
 {
@@ -3888,7 +3887,6 @@ wma_pkt_proto_subtype_to_string(enum qdf_proto_subtype proto_subtype)
 		return "Invalid Packet";
 	}
 }
-#endif
 
 /**
  * wma_wow_get_pkt_proto_subtype() - get the proto subtype
@@ -4348,7 +4346,6 @@ exit_handler:
 	wma_beacon_miss_handler(wma, wake_info->vdev_id, 0);
 }
 
-#ifdef WLAN_DEBUG
 static const char *wma_vdev_type_str(uint32_t vdev_type)
 {
 	switch (vdev_type) {
@@ -4370,7 +4367,6 @@ static const char *wma_vdev_type_str(uint32_t vdev_type)
 		return "unknown";
 	}
 }
-#endif
 
 #ifdef FEATURE_WLAN_D0WOW
  /**
