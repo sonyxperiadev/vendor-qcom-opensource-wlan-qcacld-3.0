@@ -3531,7 +3531,7 @@ static void hdd_get_snr_cb(int8_t snr, uint32_t staId, void *pContext)
 		 * we can do
 		 */
 		spin_unlock(&hdd_context_lock);
-		hdd_warn("Invalid context, pAdapter [%p] magic [%08x]",
+		hdd_warn("Invalid context, pAdapter [%pK] magic [%08x]",
 			 pAdapter, pStatsContext->magic);
 		return;
 	}
@@ -3634,6 +3634,7 @@ QDF_STATUS wlan_hdd_get_rssi(hdd_adapter_t *pAdapter, int8_t *rssi_value)
 	spin_unlock(&hdd_context_lock);
 
 	*rssi_value = pAdapter->rssi;
+	hdd_debug("RSSI = %d", *rssi_value);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -3735,7 +3736,7 @@ hdd_get_link_speed_cb(tSirLinkSpeedInfo *pLinkSpeed, void *pContext)
 	hdd_adapter_t *pAdapter;
 
 	if ((NULL == pLinkSpeed) || (NULL == pContext)) {
-		hdd_err("Bad param, pLinkSpeed [%p] pContext [%p]",
+		hdd_err("Bad param, pLinkSpeed [%pK] pContext [%pK]",
 			pLinkSpeed, pContext);
 		return;
 	}
@@ -3755,7 +3756,7 @@ hdd_get_link_speed_cb(tSirLinkSpeedInfo *pLinkSpeed, void *pContext)
 		 * we can do
 		 */
 		spin_unlock(&hdd_context_lock);
-		hdd_warn("Invalid context, pAdapter [%p] magic [%08x]",
+		hdd_warn("Invalid context, pAdapter [%pK] magic [%08x]",
 			 pAdapter, pLinkSpeedContext->magic);
 		return;
 	}
@@ -3912,11 +3913,12 @@ static void hdd_get_peer_rssi_cb(struct sir_peer_info_resp *sta_rssi,
 {
 	struct statsContext *get_rssi_context;
 	struct sir_peer_info *rssi_info;
-	uint8_t peer_num;
+	uint8_t peer_num, i;
 	hdd_adapter_t *padapter;
+	hdd_station_info_t *stainfo;
 
 	if ((sta_rssi == NULL) || (context == NULL)) {
-		hdd_err("Bad param, sta_rssi [%p] context [%p]",
+		hdd_err("Bad param, sta_rssi [%pK] context [%pK]",
 			sta_rssi, context);
 		return;
 	}
@@ -3937,7 +3939,7 @@ static void hdd_get_peer_rssi_cb(struct sir_peer_info_resp *sta_rssi,
 		 * we can do
 		 */
 		spin_unlock(&hdd_context_lock);
-		hdd_warn("Invalid context, magic [%08x], adapter [%p]",
+		hdd_warn("Invalid context, magic [%08x], adapter [%pK]",
 			get_rssi_context->magic, padapter);
 		return;
 	}
@@ -3957,6 +3959,19 @@ static void hdd_get_peer_rssi_cb(struct sir_peer_info_resp *sta_rssi,
 		peer_num * sizeof(*rssi_info));
 	padapter->peer_sta_info.sta_num = peer_num;
 
+	for (i = 0; i < peer_num; i++) {
+		stainfo = hdd_get_stainfo(padapter->cache_sta_info,
+					  rssi_info[i].peer_macaddr);
+		if (stainfo) {
+			stainfo->rssi = rssi_info[i].rssi;
+			stainfo->tx_rate = rssi_info[i].tx_rate;
+			stainfo->rx_rate = rssi_info[i].rx_rate;
+			hdd_info("rssi:%d tx_rate:%u rx_rate:%u %pM",
+				 stainfo->rssi, stainfo->tx_rate,
+				 stainfo->rx_rate, stainfo->macAddrSTA.bytes);
+		}
+	}
+
 	/* notify the caller */
 	complete(&get_rssi_context->completion);
 
@@ -3965,7 +3980,8 @@ static void hdd_get_peer_rssi_cb(struct sir_peer_info_resp *sta_rssi,
 }
 
 int wlan_hdd_get_peer_rssi(hdd_adapter_t *adapter,
-					struct qdf_mac_addr *macaddress)
+			   struct qdf_mac_addr *macaddress,
+			   int request_source)
 {
 	QDF_STATUS status;
 	int ret;
@@ -3973,12 +3989,13 @@ int wlan_hdd_get_peer_rssi(hdd_adapter_t *adapter,
 	struct sir_peer_info_req rssi_req;
 
 	if (!adapter || !macaddress) {
-		hdd_err("pAdapter [%p], macaddress [%p]", adapter, macaddress);
+		hdd_err("pAdapter [%pK], macaddress [%pK]", adapter, macaddress);
 		return -EFAULT;
 	}
 
 	init_completion(&context.completion);
 	context.magic = PEER_INFO_CONTEXT_MAGIC;
+	context.pAdapter = adapter;
 
 	qdf_mem_copy(&(rssi_req.peer_macaddr), macaddress,
 				QDF_MAC_ADDR_SIZE);
@@ -3990,7 +4007,9 @@ int wlan_hdd_get_peer_rssi(hdd_adapter_t *adapter,
 	if (status != QDF_STATUS_SUCCESS) {
 		hdd_err("Unable to retrieve statistics for rssi");
 		ret = -EFAULT;
-	} else {
+	}
+
+	else if (request_source != HDD_WLAN_GET_PEER_RSSI_SOURCE_DRIVER) {
 		if (!wait_for_completion_timeout(&context.completion,
 				msecs_to_jiffies(WLAN_WAIT_TIME_STATS))) {
 			hdd_err("SME timed out while retrieving rssi");
@@ -3998,8 +4017,12 @@ int wlan_hdd_get_peer_rssi(hdd_adapter_t *adapter,
 		} else {
 			ret = 0;
 		}
+		goto set_magic;
+	} else {
+		ret = 0;
+		return ret;
 	}
-
+set_magic:
 	/*
 	 * either we never sent a request, we sent a request and received a
 	 * response or we sent a request and timed out.  if we never sent a
@@ -4013,9 +4036,11 @@ int wlan_hdd_get_peer_rssi(hdd_adapter_t *adapter,
 	 * holding a shared spinlock which will cause us to block if the
 	 * callback is currently executing
 	 */
+
 	spin_lock(&hdd_context_lock);
 	context.magic = 0;
 	spin_unlock(&hdd_context_lock);
+
 	return ret;
 }
 
@@ -6054,7 +6079,7 @@ static void hdd_get_class_a_statistics_cb(void *pStats, void *pContext)
 	hdd_adapter_t *pAdapter;
 
 	if ((NULL == pStats) || (NULL == pContext)) {
-		hdd_err("Bad param, pStats [%p] pContext [%p]",
+		hdd_err("Bad param, pStats [%pK] pContext [%pK]",
 			pStats, pContext);
 		return;
 	}
@@ -6076,7 +6101,7 @@ static void hdd_get_class_a_statistics_cb(void *pStats, void *pContext)
 		 * we can do
 		 */
 		spin_unlock(&hdd_context_lock);
-		hdd_warn("Invalid context, pAdapter [%p] magic [%08x]",
+		hdd_warn("Invalid context, pAdapter [%pK] magic [%08x]",
 			 pAdapter, pStatsContext->magic);
 		return;
 	}
@@ -6180,7 +6205,7 @@ static void hdd_get_station_statistics_cb(void *pStats, void *pContext)
 	hdd_adapter_t *pAdapter;
 
 	if ((NULL == pStats) || (NULL == pContext)) {
-		hdd_err("Bad param, pStats [%p] pContext [%p]",
+		hdd_err("Bad param, pStats [%pK] pContext [%pK]",
 			pStats, pContext);
 		return;
 	}
@@ -6204,7 +6229,7 @@ static void hdd_get_station_statistics_cb(void *pStats, void *pContext)
 		 * we can do
 		 */
 		spin_unlock(&hdd_context_lock);
-		hdd_warn("Invalid context, pAdapter [%p] magic [%08x]",
+		hdd_warn("Invalid context, pAdapter [%pK] magic [%08x]",
 			 pAdapter, pStatsContext->magic);
 		return;
 	}
@@ -6779,7 +6804,7 @@ static int __iw_set_encodeext(struct net_device *dev,
 	int key_index;
 	struct iw_point *encoding = &wrqu->encoding;
 	tCsrRoamSetKey setKey;
-	uint32_t roamId = 0xFF;
+	uint32_t roamId = INVALID_ROAM_ID;
 
 	ENTER_DEV(dev);
 
@@ -7566,7 +7591,7 @@ static void hdd_get_temperature_cb(int temperature, void *pContext)
 	spin_lock(&hdd_context_lock);
 	if ((NULL == pAdapter) || (TEMP_CONTEXT_MAGIC != pTempContext->magic)) {
 		spin_unlock(&hdd_context_lock);
-		hdd_warn("Invalid context, pAdapter [%p] magic [%08x]",
+		hdd_warn("Invalid context, pAdapter [%pK] magic [%08x]",
 		       pAdapter, pTempContext->magic);
 		return;
 	}
@@ -9020,9 +9045,11 @@ static int __iw_setchar_getnone(struct net_device *dev,
 		tRrmNeighborRspCallbackInfo callbackInfo;
 
 		if (pConfig->fRrmEnable) {
-			hdd_debug("Neighbor Request");
+			neighborReq.neighbor_report_offload = false;
 			neighborReq.no_ssid =
 				(s_priv_data.length - 1) ? false : true;
+			hdd_debug("Neighbor Request ssid present %d",
+				  neighborReq.no_ssid);
 			if (!neighborReq.no_ssid) {
 				neighborReq.ssid.length =
 					(s_priv_data.length - 1) >
@@ -9032,14 +9059,25 @@ static int __iw_setchar_getnone(struct net_device *dev,
 					     neighborReq.ssid.length);
 			}
 
+			/*
+			 * If 11k offload is supported by FW and enabled
+			 * in the ini, set the offload to true
+			 */
+			if (hdd_ctx->config->is_11k_offload_supported &&
+			    (hdd_ctx->config->offload_11k_enable_bitmask &
+			    OFFLOAD_11K_BITMASK_NEIGHBOR_REPORT_REQUEST)) {
+				hdd_debug("Neighbor report offloaded to FW");
+				neighborReq.neighbor_report_offload = true;
+			}
+
 			callbackInfo.neighborRspCallback = NULL;
 			callbackInfo.neighborRspCallbackContext = NULL;
-			callbackInfo.timeout = 5000;            /* 5 seconds */
-			sme_neighbor_report_request(WLAN_HDD_GET_HAL_CTX
-							    (pAdapter),
-						    pAdapter->sessionId,
-						    &neighborReq,
-						    &callbackInfo);
+			callbackInfo.timeout = 5000; /* 5 seconds */
+			sme_neighbor_report_request(
+					WLAN_HDD_GET_HAL_CTX(pAdapter),
+					pAdapter->sessionId,
+					&neighborReq,
+					&callbackInfo);
 		} else {
 			hdd_err("Ignoring neighbor request as RRM not enabled");
 			ret = -EINVAL;
@@ -10387,7 +10425,7 @@ static int __iw_setnone_getnone(struct net_device *dev,
 
 		tHalHandle hHal = WLAN_HDD_GET_HAL_CTX(adapter);
 		tSirMacAddr bssid;
-		uint32_t roamId = 0;
+		uint32_t roamId = INVALID_ROAM_ID;
 		uint8_t operating_ch =
 			adapter->sessionCtx.station.conn_info.operationChannel;
 		tCsrRoamModifyProfileFields modProfileFields;
@@ -11441,13 +11479,14 @@ static int __iw_set_host_offload(struct net_device *dev,
 		}
 	}
 
-	/* Execute offload request. The reason that we can copy the
-	 * request information from the ioctl structure to the SME
-	 * structure is that they are laid out exactly the same.
-	 * Otherwise, each piece of information would have to be
-	 * copied individually.
-	 */
-	memcpy(&offloadRequest, pRequest, wrqu->data.length);
+	qdf_mem_zero(&offloadRequest, sizeof(offloadRequest));
+	offloadRequest.offloadType = pRequest->offloadType;
+	offloadRequest.enableOrDisable = pRequest->enableOrDisable;
+	qdf_mem_copy(&offloadRequest.params, &pRequest->params,
+		     sizeof(pRequest->params));
+	qdf_mem_copy(&offloadRequest.bssid, &pRequest->bssId.bytes,
+		     QDF_MAC_ADDR_SIZE);
+
 	if (QDF_STATUS_SUCCESS !=
 	    sme_set_host_offload(WLAN_HDD_GET_HAL_CTX(pAdapter),
 				 pAdapter->sessionId, &offloadRequest)) {
@@ -11735,7 +11774,7 @@ static int __iw_set_packet_filter_params(struct net_device *dev,
 	}
 
 	if ((NULL == priv_data.pointer) || (0 == priv_data.length)) {
-		hdd_err("invalid priv data %p or invalid priv data length %d",
+		hdd_err("invalid priv data %pK or invalid priv data length %d",
 			priv_data.pointer, priv_data.length);
 		return -EINVAL;
 	}
@@ -12474,16 +12513,8 @@ static int iw_set_band_config(struct net_device *dev,
 	return ret;
 }
 
-/**
- * wlan_hdd_set_mon_chan() - Set capture channel on the monitor mode interface.
- * @adapter: Handle to adapter
- * @chan: Monitor mode channel
- * @bandwidth: Capture channel bandwidth
- *
- * Return: 0 on success else error code.
- */
-static int wlan_hdd_set_mon_chan(hdd_adapter_t *adapter, uint32_t chan,
-				 uint32_t bandwidth)
+int wlan_hdd_set_mon_chan(hdd_adapter_t *adapter, uint32_t chan,
+			  uint32_t bandwidth)
 {
 	hdd_context_t *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	hdd_station_ctx_t *sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
@@ -12522,6 +12553,9 @@ static int wlan_hdd_set_mon_chan(hdd_adapter_t *adapter, uint32_t chan,
 		hdd_err("Status: %d Failed to set sme_roam Channel for monitor mode",
 			status);
 	}
+
+	adapter->mon_chan = chan;
+	adapter->mon_bandwidth = bandwidth;
 
 	return qdf_status_to_os_return(status);
 }
@@ -14069,7 +14103,7 @@ int hdd_register_wext(struct net_device *dev)
 
 int hdd_unregister_wext(struct net_device *dev)
 {
-	hdd_debug("dev(%p)", dev);
+	hdd_debug("dev(%pK)", dev);
 
 	if (dev != NULL) {
 		rtnl_lock();
