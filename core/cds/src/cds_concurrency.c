@@ -5630,6 +5630,10 @@ QDF_STATUS cds_get_pcl(enum cds_con_mode mode,
 		cds_err("HDD context is NULL");
 		return status;
 	}
+	if ((mode < 0) || (mode >= CDS_MAX_NUM_OF_MODE)) {
+		cds_err("Incorrect concurrency mode:%d recieved", mode);
+		return status;
+	}
 
 	/* find the current connection state from conc_connection_list*/
 	num_connections = cds_get_connection_count();
