@@ -1174,6 +1174,8 @@ CDEFINES :=	-DANI_LITTLE_BYTE_ENDIAN \
 		-DWMI_CMD_STRINGS \
 		-DCONFIG_HDD_INIT_WITH_RTNL_LOCK
 
+subdir-ccflags-y := $(call cc-disable-warning, misleading-indentation)
+
 ifneq ($(CONFIG_HIF_USB), 1)
 CDEFINES += -DWLAN_LOGGING_SOCK_SVC_ENABLE
 endif
