@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -56,6 +56,7 @@
 #include "lim_ft_defs.h"
 #include "lim_session.h"
 #include "cds_reg_service.h"
+#include "cds_concurrency.h"
 #include "nan_datapath.h"
 #include "wma.h"
 
@@ -400,10 +401,6 @@ char *lim_msg_str(uint32_t msgType)
 		return "WNI_CFG_DNLD_RSP";
 	case WNI_CFG_GET_REQ:
 		return "WNI_CFG_GET_REQ";
-	case WNI_CFG_SET_REQ:
-		return "WNI_CFG_SET_REQ";
-	case WNI_CFG_SET_REQ_NO_RSP:
-		return "WNI_CFG_SET_REQ_NO_RSP";
 	case eWNI_PMC_ENTER_IMPS_RSP:
 		return "eWNI_PMC_ENTER_IMPS_RSP";
 	case eWNI_PMC_EXIT_IMPS_RSP:
@@ -511,43 +508,6 @@ void lim_print_msg_name(tpAniSirGlobal pMac, uint16_t logLevel, uint32_t msgType
 	pe_debug("Msg: %s", lim_msg_str(msgType));
 }
 
-void lim_send_open_system_auth(void *ctx, uint32_t param)
-{
-	tLimMlmAuthReq *auth_req;
-	tpPESession session_entry;
-	tpAniSirGlobal mac_ctx = (tpAniSirGlobal)ctx;
-	uint8_t session_id;
-
-	session_id = mac_ctx->lim.limTimers.open_sys_auth_timer.sessionId;
-	session_entry = pe_find_session_by_session_id(mac_ctx, session_id);
-
-	if (!session_entry)
-		return;
-	/* Trigger MAC based Authentication */
-	auth_req = qdf_mem_malloc(sizeof(tLimMlmAuthReq));
-	if (!auth_req) {
-		pe_err("mlmAuthReq :Memory alloc failed");
-		lim_handle_sme_join_result(mac_ctx,
-					eSIR_SME_AUTH_TIMEOUT_RESULT_CODE,
-					eSIR_MAC_AUTH_ALGO_NOT_SUPPORTED_STATUS,
-					session_entry);
-		tx_timer_deactivate(&mac_ctx->lim.limTimers.
-				    open_sys_auth_timer);
-		return;
-	}
-	sir_copy_mac_addr(auth_req->peerMacAddr, session_entry->bssId);
-	auth_req->authType = eSIR_OPEN_SYSTEM;
-	/* Update PE session Id */
-	auth_req->sessionId = session_id;
-	if (wlan_cfg_get_int(mac_ctx, WNI_CFG_AUTHENTICATE_FAILURE_TIMEOUT,
-	    (uint32_t *) &auth_req->authFailureTimeout) != eSIR_SUCCESS) {
-		pe_err("Fail:retrieve AuthFailureTimeout");
-	}
-	lim_post_mlm_message(mac_ctx, LIM_MLM_AUTH_REQ, (uint32_t *) auth_req);
-	tx_timer_deactivate(&mac_ctx->lim.limTimers.open_sys_auth_timer);
-
-}
-
 /**
  * lim_init_mlm() -  This function is called by limProcessSmeMessages() to
  * initialize MLM state machine on STA
@@ -582,39 +542,6 @@ tSirRetStatus lim_init_mlm(tpAniSirGlobal pMac)
 	return eSIR_SUCCESS;
 } /*** end lim_init_mlm() ***/
 
-#ifdef WLAN_FEATURE_11W
-/**
- * lim_deactivate_del_sta() - This function deactivate/delete associates STA
- * @mac_ctx: pointer to Global Mac Structure
- * @bss_entry: index for bss_entry
- * @psession_entry: pointer to session entry
- * @sta_ds: pointer to tpDphHashNode
- *
- * Function deactivate/delete associates STA
- *
- * Return: none
- */
-static void lim_deactivate_del_sta(tpAniSirGlobal mac_ctx, uint32_t bss_entry,
-		tpPESession psession_entry, tpDphHashNode sta_ds)
-{
-	uint32_t sta_entry;
-
-	for (sta_entry = 1; sta_entry < mac_ctx->lim.gLimAssocStaLimit;
-				sta_entry++) {
-		psession_entry = &mac_ctx->lim.gpSession[bss_entry];
-		sta_ds = dph_get_hash_entry(mac_ctx, sta_entry,
-					&psession_entry->dph.dphHashTable);
-		if (NULL == sta_ds)
-			continue;
-
-		pe_err("Deleting pmfSaQueryTimer for staid: %d",
-				sta_ds->staIndex);
-		tx_timer_deactivate(&sta_ds->pmfSaQueryTimer);
-		tx_timer_delete(&sta_ds->pmfSaQueryTimer);
-	}
-}
-#endif
-
 void lim_deactivate_timers(tpAniSirGlobal mac_ctx)
 {
 	uint32_t n;
@@ -631,6 +558,11 @@ void lim_deactivate_timers(tpAniSirGlobal mac_ctx)
 	/* Deactivate addts response timer. */
 	tx_timer_deactivate(&lim_timer->gLimAddtsRspTimer);
 
+	if (tx_timer_running(&lim_timer->gLimJoinFailureTimer)) {
+		pe_err("Join failure timer running call the timeout API");
+		/* Cleanup as if join timer expired */
+		lim_process_join_failure_timeout(mac_ctx);
+	}
 	/* Deactivate Join failure timer. */
 	tx_timer_deactivate(&lim_timer->gLimJoinFailureTimer);
 
@@ -641,12 +573,22 @@ void lim_deactivate_timers(tpAniSirGlobal mac_ctx)
 	tx_timer_deactivate
 			(&lim_timer->g_lim_periodic_auth_retry_timer);
 
+	if (tx_timer_running(&lim_timer->gLimAssocFailureTimer)) {
+		pe_err("Assoc failure timer running call the timeout API");
+		/* Cleanup as if assoc timer expired */
+		lim_process_assoc_failure_timeout(mac_ctx, LIM_ASSOC);
+	}
 	/* Deactivate Association failure timer. */
 	tx_timer_deactivate(&lim_timer->gLimAssocFailureTimer);
 
 	/* Deactivate Open system auth timer. */
 	tx_timer_deactivate(&lim_timer->open_sys_auth_timer);
 
+	if (tx_timer_running(&mac_ctx->lim.limTimers.gLimAuthFailureTimer)) {
+		pe_err("Auth failure timer running call the timeout API");
+		/* Cleanup as if auth timer expired */
+		lim_process_auth_failure_timeout(mac_ctx);
+	}
 	/* Deactivate Authentication failure timer. */
 	tx_timer_deactivate(&lim_timer->gLimAuthFailureTimer);
 
@@ -697,11 +639,6 @@ void lim_cleanup_mlm(tpAniSirGlobal mac_ctx)
 {
 	uint32_t n;
 	tLimPreAuthNode **pAuthNode;
-#ifdef WLAN_FEATURE_11W
-	uint32_t bss_entry;
-	tpDphHashNode sta_ds = NULL;
-	tpPESession psession_entry = NULL;
-#endif
 	tLimTimers *lim_timer = NULL;
 
 	if (mac_ctx->lim.gLimTimersCreated == 1) {
@@ -776,21 +713,6 @@ void lim_cleanup_mlm(tpAniSirGlobal mac_ctx)
 
 		mac_ctx->lim.gLimTimersCreated = 0;
 	}
-#ifdef WLAN_FEATURE_11W
-	/*
-	 * When SSR is triggered, we need to loop through
-	 * each STA associated per BSSId and deactivate/delete
-	 * the pmfSaQueryTimer for it
-	 */
-	for (bss_entry = 0; bss_entry < mac_ctx->lim.maxBssId;
-					bss_entry++) {
-		if (!mac_ctx->lim.gpSession[bss_entry].valid)
-			continue;
-		lim_deactivate_del_sta(mac_ctx, bss_entry,
-				psession_entry, sta_ds);
-	}
-#endif
-
 } /*** end lim_cleanup_mlm() ***/
 
 /**
@@ -4462,6 +4384,12 @@ void lim_update_sta_run_time_ht_switch_chnl_params(tpAniSirGlobal pMac,
 		    (pMac, eHT_SUPPORTED_CHANNEL_WIDTH_SET, psessionEntry))
 		return;
 
+	if (CDS_IS_CHANNEL_24GHZ(psessionEntry->currentOperChannel) &&
+		psessionEntry->force_24ghz_in_ht20) {
+		pe_debug("force_24ghz_in_ht20 is set and channel is 2.4 Ghz");
+		return;
+	}
+
 	if (psessionEntry->ftPEContext.ftPreAuthSession) {
 		pe_err("FT PREAUTH channel change is in progress");
 		return;
@@ -5146,6 +5074,7 @@ bool lim_is_channel_valid_for_channel_switch(tpAniSirGlobal pMac, uint8_t channe
 	uint8_t index;
 	uint32_t validChannelListLen = WNI_CFG_VALID_CHANNEL_LIST_LEN;
 	tSirMacChanNum validChannelList[WNI_CFG_VALID_CHANNEL_LIST_LEN];
+	bool status;
 
 	if (wlan_cfg_get_str(pMac, WNI_CFG_VALID_CHANNEL_LIST,
 			     (uint8_t *) validChannelList,
@@ -5156,8 +5085,13 @@ bool lim_is_channel_valid_for_channel_switch(tpAniSirGlobal pMac, uint8_t channe
 	}
 
 	for (index = 0; index < validChannelListLen; index++) {
-		if (validChannelList[index] == channel)
-			return true;
+
+		if (validChannelList[index] != channel)
+			continue;
+
+		status = cds_is_valid_channel_for_channel_switch(channel);
+
+		return status;
 	}
 
 	/* channel does not belong to list of valid channels */
@@ -6089,6 +6023,16 @@ bool lim_set_nss_change(tpAniSirGlobal pMac, tpPESession psessionEntry,
 {
 	tUpdateRxNss tempParam;
 
+	if (!rxNss) {
+		pe_err("Invalid rxNss value: %u", rxNss);
+		if (!cds_is_driver_recovering()) {
+			if (cds_is_self_recovery_enabled())
+				cds_trigger_recovery(CDS_REASON_UNSPECIFIED);
+			else
+				QDF_BUG(0);
+		}
+	}
+
 	tempParam.rxNss = rxNss;
 	tempParam.staId = staId;
 	tempParam.smesessionId = psessionEntry->smeSessionId;
@@ -6222,7 +6166,7 @@ void lim_set_ht_caps(tpAniSirGlobal p_mac, tpPESession p_session_entry,
 	populate_dot11f_ht_caps(p_mac, p_session_entry, &dot11_ht_cap);
 	p_ie = lim_get_ie_ptr_new(p_mac, p_ie_start, num_bytes,
 			DOT11F_EID_HTCAPS, ONE_BYTE);
-	pe_debug("p_ie: %p dot11_ht_cap.supportedMCSSet[0]: 0x%x",
+	pe_debug("p_ie: %pK dot11_ht_cap.supportedMCSSet[0]: 0x%x",
 		p_ie, dot11_ht_cap.supportedMCSSet[0]);
 	if (p_ie) {
 		/* convert from unpacked to packed structure */
@@ -6766,6 +6710,28 @@ tSirRetStatus lim_strip_ie(tpAniSirGlobal mac_ctx,
 
 	return eSIR_SUCCESS;
 }
+
+#ifdef WLAN_FEATURE_11W
+void lim_del_pmf_sa_query_timer(tpAniSirGlobal mac_ctx, tpPESession pe_session)
+{
+	uint32_t associated_sta;
+	tpDphHashNode sta_ds = NULL;
+
+	for (associated_sta = 1;
+			associated_sta < mac_ctx->lim.gLimAssocStaLimit;
+			associated_sta++) {
+		sta_ds = dph_get_hash_entry(mac_ctx, associated_sta,
+				&pe_session->dph.dphHashTable);
+		if (NULL == sta_ds)
+			continue;
+
+		pe_err("Deleting pmfSaQueryTimer for staid: %d",
+			sta_ds->staIndex);
+		tx_timer_deactivate(&sta_ds->pmfSaQueryTimer);
+		tx_timer_delete(&sta_ds->pmfSaQueryTimer);
+	}
+}
+#endif
 
 tSirRetStatus lim_strip_supp_op_class_update_struct(tpAniSirGlobal mac_ctx,
 		uint8_t *addn_ie, uint16_t *addn_ielen,
@@ -7389,9 +7355,9 @@ QDF_STATUS lim_util_get_type_subtype(void *pkt, uint8_t *type,
 
 	hdr = WMA_GET_RX_MAC_HEADER(rxpktinfor);
 	if (hdr->fc.type == SIR_MAC_MGMT_FRAME) {
-		pe_debug("RxBd: %p mHdr: %p Type: %d Subtype: %d  SizesFC: %zu",
-		  rxpktinfor, hdr, hdr->fc.type, hdr->fc.subType,
-		  sizeof(tSirMacFrameCtl));
+		pe_debug("RxBd: %pK mHdr: %pK Type: %d Subtype: %d SizeFC: %zu",
+				rxpktinfor, hdr, hdr->fc.type, hdr->fc.subType,
+				sizeof(tSirMacFrameCtl));
 		*type = hdr->fc.type;
 		*subtype = hdr->fc.subType;
 	} else {

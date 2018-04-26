@@ -427,7 +427,7 @@ htt_rx_paddr_unmark_high_bits(qdf_dma_addr_t paddr)
 		 */
 		if ((markings & 0xFFFF0000) != RX_PADDR_MAGIC_PATTERN) {
 			QDF_TRACE(QDF_MODULE_ID_HTT, QDF_TRACE_LEVEL_ERROR,
-				  "%s: paddr not marked correctly: 0x%p!",
+				  "%s: paddr not marked correctly: 0x%pK!",
 				  __func__, (void *)paddr);
 			HTT_ASSERT_ALWAYS(0);
 		}
@@ -683,18 +683,17 @@ static void htt_rx_ring_refill_retry(void *arg)
 	qdf_atomic_sub(num, &pdev->rx_ring.refill_debt);
 	filled = htt_rx_ring_fill_n(pdev, num);
 
-	qdf_spin_unlock_bh(&(pdev->rx_ring.refill_lock));
-
 	if (filled > num) {
 		/* we served ourselves and some other debt */
 		/* sub is safer than  = 0 */
 		qdf_atomic_sub(filled - num, &pdev->rx_ring.refill_debt);
 	} else if (num == filled) { /* nothing to be done */
 	} else {
+		qdf_atomic_add(num - filled, &pdev->rx_ring.refill_debt);
 		/* we could not fill all, timer must have been started */
 		pdev->refill_retry_timer_doubles++;
 	}
-
+	qdf_spin_unlock_bh(&(pdev->rx_ring.refill_lock));
 }
 #endif
 
@@ -1535,6 +1534,13 @@ htt_rx_frag_pop_hl(
 }
 
 static inline int
+htt_rx_offload_msdu_cnt_hl(
+    htt_pdev_handle pdev)
+{
+    return 1;
+}
+
+static inline int
 htt_rx_offload_msdu_pop_hl(htt_pdev_handle pdev,
 			   qdf_nbuf_t offload_deliver_msg,
 			   int *vdev_id,
@@ -1581,6 +1587,13 @@ htt_rx_offload_msdu_pop_hl(htt_pdev_handle pdev,
 #endif
 
 #ifndef CONFIG_HL_SUPPORT
+static inline int
+htt_rx_offload_msdu_cnt_ll(
+    htt_pdev_handle pdev)
+{
+    return htt_rx_ring_elems(pdev);
+}
+
 static int
 htt_rx_offload_msdu_pop_ll(htt_pdev_handle pdev,
 			   qdf_nbuf_t offload_deliver_msg,
@@ -1804,7 +1817,7 @@ static unsigned char htt_rx_get_rate(uint32_t l_sig_rate_select,
 					uint32_t l_sig_rate, uint8_t *preamble)
 {
 	char ret = 0x0;
-	*preamble = LONG_PREAMBLE;
+	*preamble = SHORT_PREAMBLE;
 	if (l_sig_rate_select == 0) {
 		switch (l_sig_rate) {
 		case 0x8:
@@ -1854,14 +1867,12 @@ static unsigned char htt_rx_get_rate(uint32_t l_sig_rate_select,
 			break;
 		case 0x5:
 			ret = 0x4;
-			*preamble = SHORT_PREAMBLE;
 			break;
 		case 0x6:
 			ret = 0xB;
 			break;
 		case 0x7:
 			ret = 0x16;
-			*preamble = SHORT_PREAMBLE;
 			break;
 		default:
 			break;
@@ -2961,6 +2972,10 @@ int (*htt_rx_frag_pop)(htt_pdev_handle pdev,
 		       uint32_t *msdu_count);
 
 int
+(*htt_rx_offload_msdu_cnt)(
+    htt_pdev_handle pdev);
+
+int
 (*htt_rx_offload_msdu_pop)(htt_pdev_handle pdev,
 			   qdf_nbuf_t offload_deliver_msg,
 			   int *vdev_id,
@@ -3307,13 +3322,14 @@ int htt_rx_msdu_buff_in_order_replenish(htt_pdev_handle pdev, uint32_t num)
 	pdev->rx_buff_fill_n_invoked++;
 	filled = htt_rx_ring_fill_n(pdev, num);
 
-	qdf_spin_unlock_bh(&(pdev->rx_ring.refill_lock));
-
 	if (filled > num) {
 		/* we served ourselves and some other debt */
 		/* sub is safer than  = 0 */
 		qdf_atomic_sub(filled - num, &pdev->rx_ring.refill_debt);
+	} else {
+		qdf_atomic_add(num - filled, &pdev->rx_ring.refill_debt);
 	}
+	qdf_spin_unlock_bh(&(pdev->rx_ring.refill_lock));
 
 	return filled;
 }
@@ -3451,7 +3467,7 @@ htt_rx_hash_list_insert(struct htt_pdev_t *pdev,
 	htt_list_add_tail(&pdev->rx_ring.hash_table[i]->listhead,
 			  &hash_element->listnode);
 
-	RX_HASH_LOG(qdf_print("rx hash: %s: paddr 0x%x netbuf %p bucket %d\n",
+	RX_HASH_LOG(qdf_print("rx hash: %s: paddr 0x%x netbuf %pK bucket %d\n",
 			      __func__, paddr, netbuf, (int)i));
 
 	HTT_RX_HASH_COUNT_INCR(pdev->rx_ring.hash_table[i]);
@@ -3516,17 +3532,17 @@ qdf_nbuf_t htt_rx_hash_list_lookup(struct htt_pdev_t *pdev,
 		}
 	}
 
-	RX_HASH_LOG(qdf_print("rx hash: %s: paddr 0x%x, netbuf %p, bucket %d\n",
+	RX_HASH_LOG(qdf_print("rx hash: %s: paddr 0x%x, netbuf %pK, bucket %d\n",
 			      __func__, paddr, netbuf, (int)i));
 	HTT_RX_HASH_COUNT_PRINT(pdev->rx_ring.hash_table[i]);
 
 	qdf_spin_unlock_bh(&(pdev->rx_ring.rx_hash_lock));
 
 	if (netbuf == NULL) {
-		qdf_print("rx hash: %s: no entry found for %p!\n",
+		qdf_print("rx hash: %s: no entry found for %pK!\n",
 			  __func__, (void *)paddr);
 		if (cds_is_self_recovery_enabled())
-			cds_trigger_recovery();
+			cds_trigger_recovery(CDS_RX_HASH_NO_ENTRY_FOUND);
 		else
 			HTT_ASSERT_ALWAYS(0);
 	}
@@ -3635,6 +3651,7 @@ int htt_rx_attach(struct htt_pdev_t *pdev)
 	pdev->rx_ring.base_paddr = 0;
 	htt_rx_amsdu_pop = htt_rx_amsdu_pop_hl;
 	htt_rx_frag_pop = htt_rx_frag_pop_hl;
+	htt_rx_offload_msdu_cnt = htt_rx_offload_msdu_cnt_hl;
 	htt_rx_offload_msdu_pop = htt_rx_offload_msdu_pop_hl;
 	htt_rx_mpdu_desc_list_next = htt_rx_mpdu_desc_list_next_hl;
 	htt_rx_mpdu_desc_retry = htt_rx_mpdu_desc_retry_hl;
@@ -3779,6 +3796,7 @@ int htt_rx_attach(struct htt_pdev_t *pdev)
 	if (cds_get_conparam() == QDF_GLOBAL_MONITOR_MODE)
 		htt_rx_amsdu_pop = htt_rx_mon_amsdu_rx_in_order_pop_ll;
 
+	htt_rx_offload_msdu_cnt = htt_rx_offload_msdu_cnt_ll;
 	htt_rx_offload_msdu_pop = htt_rx_offload_msdu_pop_ll;
 	htt_rx_mpdu_desc_retry = htt_rx_mpdu_desc_retry_ll;
 	htt_rx_mpdu_desc_seq_num = htt_rx_mpdu_desc_seq_num_ll;

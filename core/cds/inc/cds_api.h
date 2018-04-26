@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -117,6 +117,7 @@ struct cds_dp_cbacks {
 	void (*hdd_en_lro_in_cc_cb)(struct hdd_context_s *);
 	void (*hdd_disble_lro_in_cc_cb)(struct hdd_context_s *);
 	void (*hdd_set_rx_mode_rps_cb)(struct hdd_context_s *, void *, bool);
+	void (*hdd_ipa_set_mcc_mode_cb)(bool);
 };
 
 void cds_set_driver_state(enum cds_driver_state);
@@ -422,7 +423,28 @@ bool cds_is_packet_log_enabled(void);
 
 uint64_t cds_get_monotonic_boottime(void);
 
-void cds_trigger_recovery(void);
+/**
+ * cds_get_recovery_reason() - get self recovery reason
+ * @reason: cds hang reason
+ *
+ * Return: None
+ */
+void cds_get_recovery_reason(enum cds_hang_reason *reason);
+
+/**
+ * cds_reset_recovery_reason() - reset the reason to unspecified
+ *
+ * Return: None
+ */
+void cds_reset_recovery_reason(void);
+
+/**
+ * cds_trigger_recovery() - trigger self recovery
+ * @reason: recovery reason
+ *
+ * Return: none
+ */
+void cds_trigger_recovery(enum cds_hang_reason reason);
 
 void cds_set_wakelock_logging(bool value);
 bool cds_is_wakelock_enabled(void);
@@ -478,7 +500,20 @@ void cds_pkt_stats_to_logger_thread(void *pl_hdr, void *pkt_dump, void *data);
 QDF_STATUS cds_register_dp_cb(struct cds_dp_cbacks *dp_cbs);
 QDF_STATUS cds_deregister_dp_cb(void);
 
-uint32_t cds_get_arp_stats_gw_ip(void);
+/**
+ * cds_get_arp_stats_gw_ip() - get arp stats track IP
+ * @context: osif dev
+ *
+ * Return: ARP stats IP to track.
+ */
+uint32_t cds_get_arp_stats_gw_ip(void *context);
+/**
+ * cds_get_connectivity_stats_pkt_bitmap() - get pkt-type bitmap
+ * @context: osif dev context
+ *
+ * Return: pkt bitmap to track
+ */
+uint32_t cds_get_connectivity_stats_pkt_bitmap(void *context);
 void cds_incr_arp_stats_tx_tgt_delivered(void);
 void cds_incr_arp_stats_tx_tgt_acked(void);
 
@@ -511,4 +546,23 @@ void cds_smmu_mem_map_setup(qdf_device_t osdev);
  * Return: Status of map operation
  */
 int cds_smmu_map_unmap(bool map, uint32_t num_buf, qdf_mem_info_t *buf_arr);
+
+/**
+ * cds_get_mcc_to_scc_switch_mode() - get mcc to scc swith mode
+ *
+ * Get the mcc to scc swith mode from ini
+ *
+ * Return: current mcc to scc swith mode
+ */
+uint32_t cds_get_mcc_to_scc_switch_mode(void);
+
+/**
+ * cds_is_sta_sap_scc_allowed_on_dfs_channel() - get the status sta, sap scc on
+ * dfs channel
+ *
+ * Get the status of sta, sap scc on dfs channel
+ *
+ * Return: true if sta, sap scc is allowed on dfs channel otherwise false
+ */
+bool cds_is_sta_sap_scc_allowed_on_dfs_channel(void);
 #endif /* if !defined __CDS_API_H */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -1065,7 +1065,7 @@ void wlan_hdd_cfg80211_link_layer_stats_callback(void *ctx,
 	switch (indType) {
 	case SIR_HAL_LL_STATS_RESULTS_RSP:
 	{
-		hdd_debug("LL_STATS RESP paramID = 0x%x, ifaceId = %u, respId= %u , moreResultToFollow = %u, num radio = %u result = %p",
+		hdd_debug("LL_STATS RESP paramID = 0x%x, ifaceId = %u, respId= %u , moreResultToFollow = %u, num radio = %u result = %pK",
 			linkLayerStatsResults->paramId,
 			linkLayerStatsResults->ifaceId,
 			linkLayerStatsResults->rspId,
@@ -2266,7 +2266,7 @@ void wlan_hdd_cfg80211_link_layer_stats_ext_callback(tHddHandle ctx,
 
 	results = linkLayer_stats_results->results;
 	param_id = linkLayer_stats_results->paramId;
-	hdd_info("LL_STATS RESP paramID = 0x%x, ifaceId = %u, result = %p",
+	hdd_info("LL_STATS RESP paramID = 0x%x, ifaceId = %u, result = %pK",
 		 linkLayer_stats_results->paramId,
 		 linkLayer_stats_results->ifaceId,
 		 linkLayer_stats_results->results);
@@ -3811,7 +3811,7 @@ static void wlan_hdd_get_peer_info_cb(struct sir_peer_info_ext_resp *sta_info,
 	hdd_ap_ctx_t *ap_ctx;
 
 	if ((sta_info == NULL) || (context == NULL)) {
-		hdd_err("Bad param, sta_info [%p] context [%p]",
+		hdd_err("Bad param, sta_info [%pK] context [%pK]",
 			sta_info, context);
 		return;
 	}
@@ -4379,6 +4379,8 @@ static int __wlan_hdd_cfg80211_get_station(struct wiphy *wiphy,
 					}
 					maxSpeedMCS = 1;
 				}
+				if (nss == 2)
+					maxMCSIdx += MAX_HT_MCS_IDX;
 			}
 		}
 
@@ -4437,8 +4439,7 @@ static int __wlan_hdd_cfg80211_get_station(struct wiphy *wiphy,
 #endif
 			} else if (rate_flags & eHAL_TX_RATE_VHT20) {
 				sinfo->txrate.flags |= RATE_INFO_FLAGS_VHT_MCS;
-			} else
-				sinfo->txrate.flags |= RATE_INFO_FLAGS_VHT_MCS;
+			}
 			if (rate_flags &
 			    (eHAL_TX_RATE_HT20 | eHAL_TX_RATE_HT40)) {
 				sinfo->txrate.flags |= RATE_INFO_FLAGS_MCS;
@@ -4478,7 +4479,7 @@ static int __wlan_hdd_cfg80211_get_station(struct wiphy *wiphy,
 			/* must be MCS */
 			sinfo->txrate.mcs = mcs_index;
 			sinfo->txrate.nss = nss;
-			sinfo->txrate.flags |= RATE_INFO_FLAGS_VHT_MCS;
+
 			if (rate_flags & eHAL_TX_RATE_VHT80) {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 0, 0)) || defined(WITH_BACKPORTS)
 				sinfo->txrate.bw = RATE_INFO_BW_80;
@@ -4505,6 +4506,8 @@ static int __wlan_hdd_cfg80211_get_station(struct wiphy *wiphy,
 						RATE_INFO_FLAGS_40_MHZ_WIDTH;
 #endif
 				}
+			} else {
+				sinfo->txrate.flags |= RATE_INFO_FLAGS_VHT_MCS;
 			}
 			if (rate_flags & eHAL_TX_RATE_SGI) {
 				sinfo->txrate.flags |= RATE_INFO_FLAGS_MCS;
@@ -4737,7 +4740,7 @@ static int __wlan_hdd_cfg80211_dump_survey(struct wiphy *wiphy,
 	mutex_lock(&pHddCtx->chan_info_lock);
 	freq = pHddCtx->chan_info[idx].freq;
 
-	for (i = 0; i < NUM_NL80211_BANDS && !filled; i++) {
+	for (i = 0; i < HDD_NUM_NL80211_BANDS; i++) {
 		struct ieee80211_supported_band *band = wiphy->bands[i];
 		if (NULL == wiphy->bands[i])
 			continue;
