@@ -1145,7 +1145,6 @@ CDEFINES :=	-DANI_LITTLE_BYTE_ENDIAN \
 		-DANI_OS_TYPE_ANDROID=6 \
 		-DPTT_SOCK_SVC_ENABLE \
 		-Wall\
-		-Werror\
 		-D__linux__ \
 		-DHAL_SELF_STA_PER_BSS=1 \
 		-DFEATURE_WLAN_WAPI \
@@ -1174,6 +1173,8 @@ CDEFINES :=	-DANI_LITTLE_BYTE_ENDIAN \
 		-DCONFIG_MCL \
 		-DWMI_CMD_STRINGS \
 		-DCONFIG_HDD_INIT_WITH_RTNL_LOCK
+
+subdir-ccflags-y := $(call cc-disable-warning, misleading-indentation)
 
 ifneq ($(CONFIG_HIF_USB), 1)
 CDEFINES += -DWLAN_LOGGING_SOCK_SVC_ENABLE
