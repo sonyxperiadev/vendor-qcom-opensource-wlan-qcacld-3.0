@@ -1,0 +1,58 @@
+From 49780623e44fd69468082e572ac5a67ea4985ce9 Mon Sep 17 00:00:00 2001
+From: Jia Ding <jiad@codeaurora.org>
+Date: Tue, 15 Oct 2019 17:43:38 +0800
+Subject: qcacld-3.0: Properly handle IPA uC ready notification
+
+When doing IPA initialization, WLAN driver registers a
+notification callback for IPA uC ready. In the callback,
+we directly set uc_loaded to true before scheduling a work
+task to connect WLAN IPA pipes. However issue is that in
+the work handler, uc_loaded is checked and if it is true,
+we return without connecting WLAN IPA pipes.
+
+Therefore properly set uc_loaded to true so that WLAN IPA
+pipes can be connected correctly.
+
+Change-Id: I27a14e627a1a75836f08dc5dec8c8b1d09725e10
+CRs-Fixed: 2537625
+---
+ components/ipa/core/src/wlan_ipa_core.c | 8 ++------
+ 1 file changed, 2 insertions(+), 6 deletions(-)
+
+diff --git a/components/ipa/core/src/wlan_ipa_core.c b/components/ipa/core/src/wlan_ipa_core.c
+index bb96705..e88f057 100644
+--- a/components/ipa/core/src/wlan_ipa_core.c
++++ b/components/ipa/core/src/wlan_ipa_core.c
+@@ -145,11 +145,11 @@ static void wlan_ipa_uc_loaded_uc_cb(void *priv_ctxt)
+ 	}
+ 
+ 	ipa_ctx = priv_ctxt;
+-	ipa_ctx->uc_loaded = true;
+ 
+ 	uc_op_work = &ipa_ctx->uc_op_work[WLAN_IPA_UC_OPCODE_UC_READY];
+ 	if (!list_empty(&uc_op_work->work.work.entry)) {
+ 		/* uc_op_work is not initialized yet */
++		ipa_ctx->uc_loaded = true;
+ 		return;
+ 	}
+ 
+@@ -3044,15 +3044,11 @@ static void wlan_ipa_uc_loaded_handler(struct wlan_ipa_priv *ipa_ctx)
+ 
+ 	ipa_info("UC READY");
+ 
+-	if (!qdf_dev) {
+-		ipa_err("qdf device is NULL!");
+-		return;
+-	}
+-
+ 	if (true == ipa_ctx->uc_loaded) {
+ 		ipa_info("UC already loaded");
+ 		return;
+ 	}
++	ipa_ctx->uc_loaded = true;
+ 
+ 	if (!qdf_dev) {
+ 		ipa_err("qdf_dev is null");
+-- 
+cgit v1.1
+
