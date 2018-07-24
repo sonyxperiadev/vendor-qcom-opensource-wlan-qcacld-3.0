@@ -4876,9 +4876,7 @@ static QDF_STATUS sap_get_channel_list(ptSapContext sap_ctx,
 	uint8_t end_ch_num, band_end_ch;
 	uint32_t en_lte_coex;
 	tHalHandle hal = CDS_GET_HAL_CB(sap_ctx->p_cds_gctx);
-#ifdef FEATURE_WLAN_CH_AVOID
 	uint8_t i;
-#endif
 	tpAniSirGlobal mac_ctx = PMAC_STRUCT(hal);
 	tSapChSelSpectInfo spect_info_obj = { NULL, 0 };
 	uint16_t ch_width;

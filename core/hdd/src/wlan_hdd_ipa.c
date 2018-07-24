@@ -1286,10 +1286,6 @@ static int hdd_ipa_wdi_conn_pipes(struct hdd_ipa_priv *hdd_ipa,
 		return ret;
 	}
 
-	HDD_IPA_LOG(QDF_TRACE_LEVEL_INFO,
-			"out.tx_uc_db_pa 0x%x out.rx_uc_db_pa 0x%x",
-			out.tx_uc_db_pa, out.rx_uc_db_pa);
-
 	hdd_ipa->tx_comp_doorbell_dmaaddr = out.tx_uc_db_pa;
 	hdd_ipa->rx_ready_doorbell_dmaaddr = out.rx_uc_db_pa;
 
