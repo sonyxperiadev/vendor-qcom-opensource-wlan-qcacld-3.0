@@ -4,6 +4,7 @@
 WLAN_CHIPSET :=
 
 ifeq ($(BOARD_HAS_QCOM_WLAN), true)
+ifeq ($(SOMC_KERNEL_VERSION),4.9)
 
 # Check if this driver needs be built for current target
 ifneq ($(findstring qca_cld3,$(WIFI_DRIVER_BUILT)),)
@@ -85,4 +86,5 @@ endif
 
 endif # DLKM check
 endif # supported target check
+endif # Sony Kernel version
 endif # WLAN enabled check
