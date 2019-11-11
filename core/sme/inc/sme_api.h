@@ -98,7 +98,7 @@
 
 /* SME timeout for vdev delete is set to 10 secs */
 #define SME_VDEV_DELETE_CMD_TIMEOUT (10 * 1000)
-#define SME_CMD_VDEV_CREATE_DELETE_TIMEOUT (SME_VDEV_DELETE_CMD_TIMEOUT + 1000)
+#define SME_CMD_VDEV_CREATE_DELETE_TIMEOUT (SME_VDEV_DELETE_CMD_TIMEOUT + 5000)
 
 /*--------------------------------------------------------------------------
   Type declarations
@@ -1968,6 +1968,20 @@ QDF_STATUS sme_get_chain_rssi(tHalHandle hal,
 			      struct get_chain_rssi_req_params *input,
 			      get_chain_rssi_callback callback,
 			      void *context);
+
+/**
+ * sme_get_isolation() - sme api to get antenna isolation
+ * @mac_handle: hal handle for getting global mac struct
+ * @context: context of callback function
+ * @callbackfn: hdd callback function when receive response
+ *
+ * This function will send WMA_GET_ISOLATION to WMA
+ *
+ * Return: QDF_STATUS_SUCCESS or non-zero on failure
+ */
+QDF_STATUS sme_get_isolation(mac_handle_t mac_handle,
+			     void *context,
+			     sme_get_isolation_cb callbackfn);
 
 /**
  * sme_get_valid_channels() - sme api to get valid channels for
