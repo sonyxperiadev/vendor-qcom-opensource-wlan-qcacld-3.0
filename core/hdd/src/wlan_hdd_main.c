@@ -13357,7 +13357,8 @@ static ssize_t wlan_boot_cb(struct kobject *kobj,
 
 	if (wlan_loader->loaded_state) {
 		hdd_fln("wlan driver already initialized");
-		return -EALREADY;
+		return count;
+		//return -EALREADY;
 	}
 
 	if (hdd_driver_load())
