@@ -3,7 +3,7 @@
 # Assume no targets will be supported
 WLAN_CHIPSET :=
 
-ifeq ($(BOARD_HAS_QCOM_WLAN), true)
+ifeq ($(BOARD_WANTS_QCOM_WLAN_AS_MODULE), true)
 
 # Check if this driver needs be built for current target
 ifneq ($(findstring qca_cld3,$(WIFI_DRIVER_BUILT)),)
@@ -82,4 +82,4 @@ $(shell ln -sf /mnt/vendor/persist/wlan_mac.bin $(TARGET_OUT_ETC)/firmware/wlan/
 endif
 endif # DLKM check
 endif # supported target check
-endif # WLAN enabled check
+endif # WLAN-AS-MODULE enabled check
