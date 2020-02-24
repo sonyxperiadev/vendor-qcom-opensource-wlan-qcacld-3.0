@@ -929,6 +929,7 @@ typedef struct tagCsrRoamConnectedProfile {
 	tCsrEncryptionList EncryptionInfo;
 	eCsrEncryptionType mcEncryptionType;
 	tCsrEncryptionList mcEncryptionInfo;
+	uint8_t country_code[WNI_CFG_COUNTRY_CODE_LEN];
 	uint32_t vht_channel_width;
 	tCsrKeys Keys;
 	/*
@@ -1290,7 +1291,7 @@ typedef struct tagCsrConfigParam {
 	bool qcn_ie_support;
 	uint8_t fils_max_chan_guard_time;
 	uint16_t pkt_err_disconn_th;
-	bool is_force_1x1;
+	enum force_1x1_type is_force_1x1_enable;
 	uint16_t num_11b_tx_chains;
 	uint16_t num_11ag_tx_chains;
 	uint32_t disallow_duration;
@@ -1465,6 +1466,7 @@ struct csr_roam_info {
 	struct sir_sae_info *sae_info;
 #endif
 	uint16_t roam_reason;
+	struct wlan_ies *disconnect_ies;
 };
 
 typedef struct tagCsrFreqScanInfo {

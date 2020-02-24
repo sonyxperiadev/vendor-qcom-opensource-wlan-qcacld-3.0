@@ -203,6 +203,8 @@ QDF_STATUS cds_init(void)
 
 	return QDF_STATUS_SUCCESS;
 deinit:
+	qdf_cpuhp_deinit();
+	qdf_event_list_destroy();
 	qdf_mc_timer_manager_exit();
 	qdf_mem_exit();
 	qdf_lock_stats_deinit();
@@ -836,6 +838,7 @@ stop_wmi:
 	}
 	htc_stop(gp_cds_context->htc_ctx);
 
+	wma_wmi_work_close();
 exit_with_status:
 	return status;
 }

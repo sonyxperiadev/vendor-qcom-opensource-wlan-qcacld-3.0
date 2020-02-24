@@ -756,6 +756,7 @@ static void wma_remove_objmgr_peer(tp_wma_handle wma, uint8_t vdev_id,
 	struct wlan_objmgr_peer *obj_peer;
 	struct wlan_objmgr_vdev *obj_vdev;
 	struct wlan_objmgr_pdev *obj_pdev;
+	struct wma_txrx_node *iface = &wma->interfaces[vdev_id];
 	uint8_t pdev_id = 0;
 
 	psoc = wma->psoc;
@@ -772,6 +773,8 @@ static void wma_remove_objmgr_peer(tp_wma_handle wma, uint8_t vdev_id,
 	}
 	obj_pdev = wlan_vdev_get_pdev(obj_vdev);
 	pdev_id = wlan_objmgr_pdev_get_pdev_id(obj_pdev);
+
+	qdf_spin_lock_bh(&iface->peer_lock);
 	obj_peer = wlan_objmgr_get_peer(psoc, pdev_id, peer_addr,
 					WLAN_LEGACY_WMA_ID);
 	if (obj_peer) {
@@ -782,6 +785,7 @@ static void wma_remove_objmgr_peer(tp_wma_handle wma, uint8_t vdev_id,
 	} else {
 		WMA_LOGE("Peer %pM not found", peer_addr);
 	}
+	qdf_spin_unlock_bh(&iface->peer_lock);
 
 	wlan_objmgr_vdev_release_ref(obj_vdev, WLAN_LEGACY_WMA_ID);
 }
@@ -2980,23 +2984,20 @@ QDF_STATUS wma_vdev_start(tp_wma_handle wma,
 
 	/* TODO: Handle regulatory class, max antenna */
 	if (!isRestart) {
-		params.beacon_intval = req->beacon_intval;
-		params.dtim_period = req->dtim_period;
-
-		/* Copy the SSID */
-		if (req->ssid.length) {
-			params.ssid.length = req->ssid.length;
-			if (req->ssid.length < sizeof(cmd->ssid.ssid))
-				temp_ssid_len = req->ssid.length;
-			else
-				temp_ssid_len = sizeof(cmd->ssid.ssid);
-			qdf_mem_copy(params.ssid.mac_ssid, req->ssid.ssId,
-				     temp_ssid_len);
-		}
-
 		params.pmf_enabled = req->pmf_enabled;
 		if (req->pmf_enabled)
 			temp_flags |= WMI_UNIFIED_VDEV_START_PMF_ENABLED;
+	}
+
+	/* Copy the SSID */
+	if (req->ssid.length) {
+		params.ssid.length = req->ssid.length;
+		if (req->ssid.length < sizeof(cmd->ssid.ssid))
+			temp_ssid_len = req->ssid.length;
+		else
+			temp_ssid_len = sizeof(cmd->ssid.ssid);
+		qdf_mem_copy(params.ssid.mac_ssid, req->ssid.ssId,
+			     temp_ssid_len);
 	}
 
 	params.hidden_ssid = req->hidden_ssid;
@@ -3958,9 +3959,45 @@ static void wma_set_mgmt_frame_protection(tp_wma_handle wma)
 		WMA_LOGD("%s: QOS MFP/PMF set", __func__);
 	}
 }
+
+/**
+ * wma_set_peer_pmf_status() - Get the peer and update PMF capability of it
+ * @wma: wma handle
+ * @peer_mac: peer mac addr
+ * @is_pmf_enabled: Carries the status whether PMF is enabled or not
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+wma_set_peer_pmf_status(tp_wma_handle wma, uint8_t *peer_mac,
+			bool is_pmf_enabled)
+{
+	struct wlan_objmgr_peer *peer;
+
+	peer = wlan_objmgr_get_peer(wma->psoc,
+				    wlan_objmgr_pdev_get_pdev_id(wma->pdev),
+				    peer_mac, WLAN_LEGACY_WMA_ID);
+	if (!peer) {
+		WMA_LOGE("Peer of peer_mac %pM not found",
+			 peer_mac);
+		return QDF_STATUS_E_INVAL;
+	}
+	mlme_set_peer_pmf_status(peer, is_pmf_enabled);
+	wlan_objmgr_peer_release_ref(peer, WLAN_LEGACY_WMA_ID);
+	WMA_LOGD("set is_pmf_enabled %d for %pM", is_pmf_enabled, peer_mac);
+
+	return QDF_STATUS_SUCCESS;
+}
 #else
 static inline void wma_set_mgmt_frame_protection(tp_wma_handle wma)
 {
+}
+
+static QDF_STATUS
+wma_set_peer_pmf_status(tp_wma_handle wma, uint8_t *peer_mac,
+			bool is_pmf_enabled)
+{
+	return QDF_STATUS_SUCCESS;
 }
 #endif /* WLAN_FEATURE_11W */
 
@@ -3983,6 +4020,7 @@ static void wma_add_bss_ap_mode(tp_wma_handle wma, tpAddBssParams add_bss)
 	int8_t maxTxPower;
 	struct policy_mgr_hw_mode_params hw_mode = {0};
 	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
+	struct wma_txrx_node *iface;
 
 	pdev = cds_get_context(QDF_MODULE_ID_TXRX);
 
@@ -4025,6 +4063,8 @@ static void wma_add_bss_ap_mode(tp_wma_handle wma, tpAddBssParams add_bss)
 		goto peer_cleanup;
 	}
 
+	iface = &wma->interfaces[vdev_id];
+
 	add_bss->staContext.staIdx = cdp_peer_get_local_peer_id(soc, peer);
 
 	qdf_mem_zero(&req, sizeof(req));
@@ -4045,7 +4085,7 @@ static void wma_add_bss_ap_mode(tp_wma_handle wma, tpAddBssParams add_bss)
 
 	req.max_txpow = add_bss->maxTxPower;
 	maxTxPower = add_bss->maxTxPower;
-
+	iface->rmfEnabled = add_bss->rmfEnabled;
 	if (add_bss->rmfEnabled)
 		wma_set_mgmt_frame_protection(wma);
 
@@ -4325,6 +4365,8 @@ static void wma_add_bss_sta_mode(tp_wma_handle wma, tpAddBssParams add_bss)
 		iface->llbCoexist = add_bss->llbCoexist;
 		iface->shortSlotTimeSupported = add_bss->shortSlotTimeSupported;
 		iface->nwType = add_bss->nwType;
+		if (add_bss->rmfEnabled)
+			wma_set_peer_pmf_status(wma, add_bss->bssId, true);
 		if (add_bss->nonRoamReassoc) {
 			peer = cdp_peer_find_by_addr(soc,
 					pdev, add_bss->bssId,
@@ -4784,10 +4826,8 @@ static void wma_add_sta_req_ap_mode(tp_wma_handle wma, tpAddStaParams add_sta)
 		}
 	}
 #endif
-
-	iface->rmfEnabled = add_sta->rmfEnabled;
 	if (add_sta->rmfEnabled)
-		wma_set_mgmt_frame_protection(wma);
+		wma_set_peer_pmf_status(wma, add_sta->staMac, true);
 
 	if (add_sta->uAPSD) {
 		status = wma_set_ap_peer_uapsd(wma, add_sta->smesessionId,

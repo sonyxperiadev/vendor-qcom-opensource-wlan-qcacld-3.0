@@ -50,7 +50,7 @@
 
 /* Private */
 
-#define WMA_READY_EVENTID_TIMEOUT          3000
+#define WMA_READY_EVENTID_TIMEOUT          6000
 #define WMA_SERVICE_READY_EXT_TIMEOUT      6000
 #define NAN_CLUSTER_ID_BYTES               4
 
@@ -1135,7 +1135,7 @@ struct wma_valid_channels {
 typedef struct {
 	void *wmi_handle;
 	void *cds_context;
-	void *mac_context;
+	tAniSirGlobal *mac_context;
 	struct wlan_objmgr_psoc *psoc;
 	struct wlan_objmgr_pdev *pdev;
 	qdf_event_t wma_resume_event;
@@ -1278,6 +1278,7 @@ typedef struct {
 	qdf_mc_timer_t wma_fw_time_sync_timer;
 	qdf_atomic_t critical_events_in_flight;
 	bool enable_tx_compl_tsf64;
+	bool enable_three_way_coex_config_legacy;
 } t_wma_handle, *tp_wma_handle;
 
 extern void cds_wma_complete_cback(void);
@@ -2184,6 +2185,18 @@ QDF_STATUS wma_vdev_get_cfg_int(int cfg_id, int *value)
 
 	return wlan_cfg_get_int(mac, cfg_id, value);
 }
+
+/**
+ * wma_handle_roam_sync_timeout() - Update roaming status at wma layer
+ * @wma_handle: wma handle
+ * @info: Info for roaming start timer
+ *
+ * This function gets called in case of roaming offload timer get expired
+ *
+ * Return: None
+ */
+void wma_handle_roam_sync_timeout(tp_wma_handle wma_handle,
+				  struct roam_sync_timeout_timer_info *info);
 
 /**
  * wma_vdev_get_dtim_period - Get dtim period value from mlme

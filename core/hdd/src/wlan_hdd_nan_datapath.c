@@ -36,6 +36,7 @@
 #include "os_if_nan.h"
 #include "wlan_nan_api.h"
 #include "nan_public_structs.h"
+#include <cdp_txrx_misc.h>
 
 /**
  * hdd_ndp_print_ini_config()- Print nan datapath specific INI configuration
@@ -631,7 +632,6 @@ int hdd_ndi_delete(uint8_t vdev_id, char *iface_name, uint16_t transaction_id)
 
 	/* Since, the interface is being deleted, remove the broadcast id. */
 	hdd_ctx->sta_to_adapter[sta_id] = NULL;
-	sta_ctx->broadcast_staid = HDD_WLAN_INVALID_STA_ID;
 
 	os_if_nan_set_ndp_delete_transaction_id(adapter->vdev,
 						transaction_id);
@@ -830,6 +830,8 @@ int hdd_ndp_new_peer_handler(uint8_t vdev_id, uint16_t sta_id,
 	/* perform following steps for first new peer ind */
 	if (fist_peer) {
 		hdd_info("Set ctx connection state to connected");
+		hdd_bus_bw_compute_prev_txrx_stats(adapter);
+		hdd_bus_bw_compute_timer_start(hdd_ctx);
 		sta_ctx->conn_info.connState = eConnectionState_NdiConnected;
 		hdd_wmm_connect(adapter, &roam_info, eCSR_BSS_TYPE_NDI);
 		wlan_hdd_netif_queue_control(adapter,
@@ -838,7 +840,6 @@ int hdd_ndp_new_peer_handler(uint8_t vdev_id, uint16_t sta_id,
 	hdd_exit();
 	return 0;
 }
-
 
 /**
  * hdd_ndp_peer_departed_handler() - Handle NDP peer departed indication
@@ -891,6 +892,8 @@ void hdd_ndp_peer_departed_handler(uint8_t vdev_id, uint16_t sta_id,
 		hdd_info("Stop netif tx queues.");
 		wlan_hdd_netif_queue_control(adapter, WLAN_STOP_ALL_NETIF_QUEUE,
 					     WLAN_CONTROL_PATH);
+		hdd_bus_bw_compute_reset_prev_txrx_stats(adapter);
+		hdd_bus_bw_compute_timer_try_stop(hdd_ctx);
 	}
 
 	hdd_exit();
