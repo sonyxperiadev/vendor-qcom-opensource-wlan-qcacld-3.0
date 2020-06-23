@@ -10,9 +10,13 @@ ifeq ($(KERNEL_BUILD), y)
 	# These are provided in external module based builds
 	# Need to explicitly define for Kernel-based builds
 	MODNAME := wlan
-	WLAN_ROOT := drivers/staging/qcacld-3.0
+	WLAN_ROOT := drivers/staging/wlan-qc/qcacld-3.0
 	WLAN_COMMON_ROOT := ../qca-wifi-host-cmn
 	WLAN_COMMON_INC := $(WLAN_ROOT)/$(WLAN_COMMON_ROOT)
+
+	# Disable debugging by forcing BUILD_VARIANT user if
+	# we are building this outside of Android
+	TARGET_BUILD_VARIANT := user
 endif
 
 WLAN_COMMON_ROOT ?= ../qca-wifi-host-cmn
@@ -2281,22 +2285,21 @@ endif
 
 # inject some build related information
 ifeq ($(CONFIG_BUILD_TAG), y)
-CLD_CHECKOUT = $(shell cd "$(WLAN_ROOT)" && \
+CLD_CHECKOUT = $(shell cd "$(PWD)/$(WLAN_ROOT)" && \
 	git reflog | grep -vm1 "}: cherry-pick: " | grep -oE ^[0-f]+)
-CLD_IDS = $(shell cd "$(WLAN_ROOT)" && \
+CLD_IDS = $(shell cd "$(PWD)/$(WLAN_ROOT)" && \
 	git log -50 $(CLD_CHECKOUT)~..HEAD | \
 		sed -nE 's/^\s*Change-Id: (I[0-f]{10})[0-f]{30}\s*$$/\1/p' | \
 		paste -sd "," -)
 
-CMN_CHECKOUT = $(shell cd "$(WLAN_COMMON_INC)" && \
+CMN_CHECKOUT = $(shell cd "$(PWD)/$(WLAN_COMMON_INC)" && \
 	git reflog | grep -vm1 "}: cherry-pick: " | grep -oE ^[0-f]+)
-CMN_IDS = $(shell cd "$(WLAN_COMMON_INC)" && \
+CMN_IDS = $(shell cd "$(PWD)/$(WLAN_COMMON_INC)" && \
 	git log -50 $(CMN_CHECKOUT)~..HEAD | \
 		sed -nE 's/^\s*Change-Id: (I[0-f]{10})[0-f]{30}\s*$$/\1/p' | \
 		paste -sd "," -)
 
-TIMESTAMP = $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
-BUILD_TAG = "$(TIMESTAMP); cld:$(CLD_IDS); cmn:$(CMN_IDS);"
+BUILD_TAG = "cld:$(CLD_IDS); cmn:$(CMN_IDS);"
 # It's assumed that BUILD_TAG is used only in wlan_hdd_main.c
 CFLAGS_wlan_hdd_main.o += -DBUILD_TAG=\"$(BUILD_TAG)\"
 endif
