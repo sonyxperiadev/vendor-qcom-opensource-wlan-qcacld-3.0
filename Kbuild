@@ -13,7 +13,10 @@ ifeq ($(KERNEL_BUILD), y)
 	WLAN_COMMON_ROOT := ../qca-wifi-host-cmn
 	WLAN_COMMON_INC := $(WLAN_ROOT)/$(WLAN_COMMON_ROOT)
 	WLAN_FW_API := $(WLAN_ROOT)/../fw-api/
-	WLAN_PROFILE := default
+
+        ifeq ($(CONFIG_ARCH_KONA), y)
+            WLAN_PROFILE := qca6390
+        endif
 
 	# Disable debugging by forcing BUILD_VARIANT user if
 	# we are building this outside of Android
