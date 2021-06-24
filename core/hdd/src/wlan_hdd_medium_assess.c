@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -261,22 +261,22 @@ static int get_congestion_report_len(void)
 static void hdd_congestion_reset_data(uint8_t pdev_id)
 {
 	struct hdd_medium_assess_info *mdata;
-	uint8_t i;
 
 	mdata = &medium_assess_info[pdev_id];
-	for (i = 0; i < MEDIUM_ASSESS_NUM; i++)
-		mdata->data[i].part1_valid = 0;
+	qdf_mem_zero(mdata->data, sizeof(mdata->data));
 }
 
 /**
  * hdd_congestion_notification_cb() - congestion notification callback function
  * @vdev_id: vdev id
- * @congestion: congestion percentage
+ * @data: medium assess data from firmware
+ * @last: indicate whether the callback from final WMI_STATS_EVENT in a series
  *
  * Return: None
  */
 static void hdd_congestion_notification_cb(uint8_t vdev_id,
-					   struct medium_assess_data *data)
+					   struct medium_assess_data *data,
+					   bool last)
 {
 	struct hdd_medium_assess_info *mdata;
 	uint8_t i;
@@ -302,7 +302,7 @@ static void hdd_congestion_notification_cb(uint8_t vdev_id,
 		}
 
 		if (data[i].part1_valid) {
-			mdata->data[mdata->index].part1_valid = 1;
+			mdata->data[mdata->index].part1_valid = true;
 			mdata->data[mdata->index].cycle_count =
 						data[i].cycle_count;
 			mdata->data[mdata->index].rx_clear_count =
@@ -311,11 +311,18 @@ static void hdd_congestion_notification_cb(uint8_t vdev_id,
 						data[i].tx_frame_count;
 		}
 
-		if (mdata->data[mdata->index].part1_valid) {
+		if (data[i].part2_valid) {
+			mdata->data[mdata->index].part2_valid = true;
+			mdata->data[mdata->index].my_rx_count =
+						data[i].my_rx_count;
+		}
+
+		if (last) {
 			mdata->index++;
 			if (mdata->index >= MEDIUM_ASSESS_NUM)
 				mdata->index = 0;
-			mdata->data[mdata->index].part1_valid = 0;
+			mdata->data[mdata->index].part1_valid = false;
+			mdata->data[mdata->index].part2_valid = false;
 		}
 	}
 }
@@ -587,7 +594,7 @@ hdd_congestion_notification_calculation(struct hdd_medium_assess_info *info)
 	struct medium_assess_data *h_data, *t_data;
 	int32_t h_index, t_index;
 	uint32_t rx_clear_count_delta, tx_frame_count_delta;
-	uint32_t cycle_count_delta;
+	uint32_t cycle_count_delta, my_rx_count_delta;
 	uint32_t congestion = 0;
 	uint64_t diff;
 
@@ -609,7 +616,8 @@ hdd_congestion_notification_calculation(struct hdd_medium_assess_info *info)
 	h_data = &info->data[h_index];
 	t_data = &info->data[t_index];
 
-	if (!(h_data->part1_valid || t_data->part1_valid)) {
+	if (!(h_data->part1_valid || h_data->part2_valid ||
+	      t_data->part1_valid || t_data->part2_valid)) {
 		hdd_err("medium assess data is not valid.");
 		return;
 	}
@@ -630,6 +638,13 @@ hdd_congestion_notification_calculation(struct hdd_medium_assess_info *info)
 		tx_frame_count_delta += h_data->tx_frame_count;
 	}
 
+	if (h_data->my_rx_count >= t_data->my_rx_count) {
+		my_rx_count_delta = h_data->my_rx_count - t_data->my_rx_count;
+	} else {
+		my_rx_count_delta = U32_MAX - t_data->my_rx_count;
+		my_rx_count_delta += h_data->my_rx_count;
+	}
+
 	if (h_data->cycle_count >= t_data->cycle_count) {
 		cycle_count_delta = h_data->cycle_count - t_data->cycle_count;
 	} else {
@@ -637,16 +652,20 @@ hdd_congestion_notification_calculation(struct hdd_medium_assess_info *info)
 		cycle_count_delta += h_data->cycle_count;
 	}
 
-	diff = ((uint64_t)(rx_clear_count_delta - tx_frame_count_delta)) * 100;
-	if (cycle_count_delta)
-		congestion = qdf_do_div(diff, cycle_count_delta);
+	if (rx_clear_count_delta > tx_frame_count_delta &&
+	    rx_clear_count_delta - tx_frame_count_delta > my_rx_count_delta) {
+		diff = rx_clear_count_delta - tx_frame_count_delta
+		       - my_rx_count_delta;
+		if (cycle_count_delta)
+			congestion = qdf_do_div(diff * 100, cycle_count_delta);
 
-	if (congestion > 100)
-		congestion = 100;
+		if (congestion > 100)
+			congestion = 100;
+	}
 
-	hdd_debug("pdev: %d, rx_clear %u, tx_frame %u cycle %u congestion: %u",
+	hdd_debug("pdev: %d, rx_c %u, tx %u myrx %u cycle %u congestion: %u",
 		  info->pdev_id, rx_clear_count_delta, tx_frame_count_delta,
-		  cycle_count_delta, congestion);
+		  my_rx_count_delta, cycle_count_delta, congestion);
 	if (congestion >= info->config.threshold)
 		hdd_congestion_notification_report(info->vdev_id, congestion);
 }
@@ -694,7 +713,8 @@ static void hdd_medium_assess_expire_handler(void *arg)
 
 			/* ensure events are reveived at the 'same' time */
 			index = medium_assess_info[i].index;
-			medium_assess_info[i].data[index].part1_valid = 0;
+			medium_assess_info[i].data[index].part1_valid = false;
+			medium_assess_info[i].data[index].part2_valid = false;
 		}
 
 	if (vdev_id == INVALID_VDEV_ID)
@@ -711,7 +731,7 @@ static void hdd_medium_assess_expire_handler(void *arg)
 		return;
 
 	info.vdev_id = vdev_id;
-	info.pdev_id = 0;
+	info.pdev_id = WMI_HOST_PDEV_ID_SOC;
 	info.u.congestion_notif_cb = hdd_congestion_notification_cb;
 	stime = jiffies + msecs_to_jiffies(40);
 	ucfg_mc_cp_stats_send_stats_request(vdev,

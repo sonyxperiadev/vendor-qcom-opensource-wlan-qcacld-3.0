@@ -123,6 +123,7 @@ static void wlan_cfg80211_mc_cp_stats_dealloc(void *priv)
 	}
 
 	qdf_mem_free(stats->pdev_stats);
+	qdf_mem_free(stats->pdev_extd_stats);
 	qdf_mem_free(stats->peer_stats);
 	qdf_mem_free(stats->cca_stats);
 	qdf_mem_free(stats->vdev_summary_stats);
