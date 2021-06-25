@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -324,4 +324,31 @@ int hdd_softap_inspect_dhcp_packet(struct hdd_adapter *adapter,
  */
 void hdd_softap_check_wait_for_tx_eap_pkt(struct hdd_adapter *adapter,
 					  struct qdf_mac_addr *mac_addr);
+
+#ifdef FEATURE_WDS
+/**
+ * hdd_softap_ind_l2_update() - Send L2 update frame to bridge
+ * @adapter: pointer to adapter context
+ * @sta_mac: pointer to the MAC address of the station
+ *
+ * The layer-2 update frame is an 802.2 type LLC exchange identifier (XID)
+ * update response frame. This frame is sent using a MAC source address of
+ * the newly associated station. Upon the reception of this frame,
+ * all the layer-2 devices update their forwarding tables with the correct
+ * port to reach the new location of the station according to the ieee802.1d
+ * bridge table self learning procedure.
+ *
+ * Return: QDF_STATUS_E_FAILURE if any errors encountered,
+ *	   QDF_STATUS_SUCCESS otherwise
+ */
+QDF_STATUS hdd_softap_ind_l2_update(struct hdd_adapter *adapter,
+				    struct qdf_mac_addr *sta_mac);
+#else
+static inline
+QDF_STATUS hdd_softap_ind_l2_update(struct hdd_adapter *adapter,
+				    struct qdf_mac_addr *sta_mac)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 #endif /* end #if !defined(WLAN_HDD_SOFTAP_TX_RX_H) */

@@ -2567,6 +2567,11 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 						 (const u8 *)&event->
 						 staMac.bytes[0],
 						 sta_info, GFP_KERNEL);
+
+			if (adapter->device_mode == QDF_SAP_MODE &&
+			    ucfg_mlme_get_wds_mode(hdd_ctx->psoc))
+				hdd_softap_ind_l2_update(adapter,
+							 &event->staMac);
 			qdf_mem_free(sta_info);
 		}
 		/* Lets abort scan to ensure smooth authentication for client */
