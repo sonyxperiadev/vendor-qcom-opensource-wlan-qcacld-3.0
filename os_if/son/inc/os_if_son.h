@@ -535,4 +535,18 @@ void os_if_son_deauth_peer_sta(struct wlan_objmgr_vdev *vdev,
 void os_if_son_modify_acl(struct wlan_objmgr_vdev *vdev,
 			  uint8_t *peer_mac,
 			  bool allow_auth);
+
+/**
+ * os_if_son_deliver_ald_event() - deliver ald events to son
+ * @adapter: adapter object
+ * @peer: peer object
+ * @event: Name of the event
+ * @event_data: event data
+ *
+ * Return: 0 on success
+ */
+int os_if_son_deliver_ald_event(struct hdd_adapter *adapter,
+				struct wlan_objmgr_peer *peer,
+				enum ieee80211_event_type event,
+				void *event_data);
 #endif
