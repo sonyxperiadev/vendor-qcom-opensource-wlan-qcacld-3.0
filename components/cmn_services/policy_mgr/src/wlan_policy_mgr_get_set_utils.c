@@ -4755,6 +4755,80 @@ bool policy_mgr_scan_trim_5g_chnls_for_dfs_ap(struct wlan_objmgr_psoc *psoc)
 	return true;
 }
 
+static void
+policy_mgr_fill_trim_chan(struct wlan_objmgr_pdev *pdev,
+			  void *object, void *arg)
+{
+	struct wlan_objmgr_vdev *vdev = object;
+	struct trim_chan_info *trim_info = arg;
+	uint16_t sap_peer_count = 0;
+	qdf_freq_t chan_freq;
+
+	if (wlan_vdev_mlme_get_opmode(vdev) != QDF_SAP_MODE)
+		return;
+
+	if (wlan_vdev_is_up(vdev) != QDF_STATUS_SUCCESS)
+		return;
+
+	sap_peer_count = wlan_vdev_get_peer_count(vdev);
+	policy_mgr_debug("vdev %d - peer count %d",
+			 wlan_vdev_get_id(vdev), sap_peer_count);
+	if (sap_peer_count <= 1)
+		return;
+
+	chan_freq = wlan_get_operation_chan_freq(vdev);
+	if (!chan_freq)
+		return;
+
+	if (WLAN_REG_IS_5GHZ_CH_FREQ(chan_freq)) {
+		trim_info->trim |= TRIM_CHANNEL_LIST_5G;
+	} else if (WLAN_REG_IS_24GHZ_CH_FREQ(chan_freq)) {
+		if (trim_info->sap_count != 1)
+			return;
+
+		if ((trim_info->band_capability & BIT(REG_BAND_5G)) ==
+		     BIT(REG_BAND_5G))
+			return;
+
+		trim_info->trim |= TRIM_CHANNEL_LIST_24G;
+	}
+}
+
+uint16_t
+policy_mgr_scan_trim_chnls_for_connected_ap(struct wlan_objmgr_pdev *pdev)
+{
+	struct trim_chan_info trim_info;
+	struct wlan_objmgr_psoc *psoc;
+	QDF_STATUS status;
+
+	psoc = wlan_pdev_get_psoc(pdev);
+	if (!psoc)
+		return TRIM_CHANNEL_LIST_NONE;
+
+	status = wlan_mlme_get_band_capability(psoc,
+					       &trim_info.band_capability);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		policy_mgr_err("Could not get band capability");
+		return TRIM_CHANNEL_LIST_NONE;
+	}
+
+	trim_info.sap_count = policy_mgr_mode_specific_connection_count(psoc,
+							PM_SAP_MODE, NULL);
+	if (!trim_info.sap_count)
+		return TRIM_CHANNEL_LIST_NONE;
+
+	trim_info.trim = TRIM_CHANNEL_LIST_NONE;
+
+	wlan_objmgr_pdev_iterate_obj_list(pdev, WLAN_VDEV_OP,
+					  policy_mgr_fill_trim_chan, &trim_info,
+					  0, WLAN_POLICY_MGR_ID);
+	policy_mgr_debug("band_capability %d, sap_count %d, trim %d",
+			 trim_info.band_capability, trim_info.sap_count,
+			 trim_info.trim);
+
+	return trim_info.trim;
+}
+
 QDF_STATUS policy_mgr_get_nss_for_vdev(struct wlan_objmgr_psoc *psoc,
 				enum policy_mgr_con_mode mode,
 				uint8_t *nss_2g, uint8_t *nss_5g)

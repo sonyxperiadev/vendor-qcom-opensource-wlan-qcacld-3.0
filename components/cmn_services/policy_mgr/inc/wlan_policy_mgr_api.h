@@ -174,6 +174,18 @@ static inline const char *device_mode_to_string(uint32_t idx)
 };
 
 /**
+ * trim_chan_info - trim channel info
+ * @band_capability: band capability
+ * @sap_count: sap count
+ * @trim: enum trim channel list
+ */
+struct trim_chan_info {
+	uint32_t band_capability;
+	uint32_t sap_count;
+	uint16_t trim;
+};
+
+/**
  * policy_mgr_get_allow_mcc_go_diff_bi() - to get information on whether GO
  *						can have diff BI than STA in MCC
  * @psoc: pointer to psoc
@@ -3579,6 +3591,20 @@ bool policy_mgr_is_sta_connected_2g(struct wlan_objmgr_psoc *psoc);
  * Return: true if sta scan 5g chan should be skipped
  */
 bool policy_mgr_scan_trim_5g_chnls_for_dfs_ap(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * policy_mgr_scan_trim_chnls_for_connected_ap() - check if sta scan
+ * should skip 5g or 2.4g channel when AP/GO connected by clients.
+ * STA + AP 5G (connected) + AP 2.4G		skip 5G scan
+ * STA + AP 5G (connected)			skip 5G scan
+ * STA + AP 2.4G (connected && 2.4G only)	skip 2.4G scan
+ *
+ * @pdev: pointer to pdev
+ *
+ * Return: trim_channel_list
+ */
+uint16_t
+policy_mgr_scan_trim_chnls_for_connected_ap(struct wlan_objmgr_pdev *pdev);
 
 /**
  * policy_mgr_is_hwmode_set_for_given_chnl() - to check for given channel
