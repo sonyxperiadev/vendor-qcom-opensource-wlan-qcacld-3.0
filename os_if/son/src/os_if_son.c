@@ -1406,3 +1406,41 @@ QDF_STATUS os_if_son_trigger_objmgr_object_deletion(enum wlan_umac_comp_id id)
 }
 
 qdf_export_symbol(os_if_son_trigger_objmgr_object_deletion);
+
+int os_if_son_start_acs(struct wlan_objmgr_vdev *vdev, uint8_t enable)
+{
+	if (!vdev) {
+		osif_err("null vdev");
+		return 0;
+	}
+
+	return g_son_os_if_cb.os_if_start_acs(vdev, enable);
+}
+
+qdf_export_symbol(os_if_son_start_acs);
+
+int os_if_son_set_acs_chan(struct wlan_objmgr_vdev *vdev,
+			   struct ieee80211req_athdbg *req)
+{
+	if (!vdev) {
+		osif_err("null vdev");
+		return 0;
+	}
+
+	return g_son_os_if_cb.os_if_set_acs_channels(vdev, req);
+}
+
+qdf_export_symbol(os_if_son_set_acs_chan);
+
+int os_if_son_get_acs_report(struct wlan_objmgr_vdev *vdev,
+			     struct ieee80211_acs_dbg *acs_r)
+{
+	if (!vdev) {
+		osif_err("null vdev");
+		return 0;
+	}
+
+	return g_son_os_if_cb.os_if_get_acs_report(vdev, acs_r);
+}
+
+qdf_export_symbol(os_if_son_get_acs_report);

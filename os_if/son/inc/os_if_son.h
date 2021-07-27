@@ -63,6 +63,9 @@
  * @os_if_get_vdev_by_netdev: Get vdev from net device
  * @os_if_trigger_objmgr_object_creation: Trigger objmgr object creation
  * @os_if_trigger_objmgr_object_deletion: Trigger objmgr object deletion
+ * @os_if_start_acs: Trigger ACS
+ * @os_if_set_acs_channels: Set channel list for ACS
+ * @os_if_get_acs_report: Gets the ACS report
  */
 struct son_callbacks {
 	uint32_t (*os_if_is_acs_in_progress)(struct wlan_objmgr_vdev *vdev);
@@ -117,6 +120,11 @@ struct son_callbacks {
 				(enum wlan_umac_comp_id id);
 	QDF_STATUS (*os_if_trigger_objmgr_object_deletion)
 				(enum wlan_umac_comp_id id);
+	int (*os_if_start_acs)(struct wlan_objmgr_vdev *vdev, uint8_t enable);
+	int (*os_if_set_acs_channels)(struct wlan_objmgr_vdev *vdev,
+				      struct ieee80211req_athdbg *req);
+	int (*os_if_get_acs_report)(struct wlan_objmgr_vdev *vdev,
+				    struct ieee80211_acs_dbg *acs_r);
 };
 
 /**
@@ -627,4 +635,33 @@ QDF_STATUS os_if_son_trigger_objmgr_object_deletion(enum wlan_umac_comp_id id);
  * Return: QDF_STATUS_SUCCESS on success
  */
 QDF_STATUS os_if_son_trigger_objmgr_object_creation(enum wlan_umac_comp_id id);
+
+/**
+ * os_if_son_start_acs() - Triggers ACS on the target vdev
+ * @vdev: target vdev
+ * @enable: True - to start ACS
+ *
+ * Return: 0 on success
+ */
+int os_if_son_start_acs(struct wlan_objmgr_vdev *vdev, uint8_t enable);
+
+/**
+ * os_if_son_set_acs_chan() - Set channel list for ACS
+ * @vdev: target vdev
+ * @req: channel list
+ *
+ * Return: 0 on success
+ */
+int os_if_son_set_acs_chan(struct wlan_objmgr_vdev *vdev,
+			   struct ieee80211req_athdbg *req);
+
+/**
+ * os_if_son_get_acs_report() - Get ACS report
+ * @vdev: target vdev
+ * @acs_r: ACS report structure
+ *
+ * Return: 0 on success
+ */
+int os_if_son_get_acs_report(struct wlan_objmgr_vdev *vdev,
+			     struct ieee80211_acs_dbg *acs_r);
 #endif

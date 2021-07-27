@@ -3282,6 +3282,28 @@ QDF_STATUS sme_set_phy_mode(mac_handle_t mac_handle, eCsrPhyMode phyMode)
 	return QDF_STATUS_SUCCESS;
 }
 
+/*
+ * sme_get_11b_data_duration() -
+ * returns 11b data duration via channel freq.
+ *
+ * mac_handle - The handle returned by mac_open.
+ * chan_freq - channel frequency
+ *
+ * Return - 11b data duration on success else 0
+ */
+uint32_t sme_get_11b_data_duration(mac_handle_t mac_handle, uint32_t chan_freq)
+{
+	uint32_t rx_11b_data_duration = 0;
+	struct mac_context *mac = MAC_CONTEXT(mac_handle);
+	struct lim_channel_status *chan_status =
+					csr_get_channel_status(mac, chan_freq);
+
+	if (chan_status)
+		rx_11b_data_duration = chan_status->rx_11b_mode_data_duration;
+
+	return rx_11b_data_duration;
+}
+
 QDF_STATUS sme_roam_ndi_stop(mac_handle_t mac_handle, uint8_t vdev_id)
 {
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;

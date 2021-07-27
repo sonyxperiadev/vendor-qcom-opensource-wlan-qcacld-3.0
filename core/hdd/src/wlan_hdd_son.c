@@ -1750,6 +1750,470 @@ hdd_son_trigger_objmgr_object_deletion(enum wlan_umac_comp_id id)
 	return ret;
 }
 
+/*
+ * hdd_son_init_acs_channels() -initializes acs configs
+ *
+ * @adapter: pointer to hdd adapter
+ * @hdd_ctx: pointer to hdd context
+ * @acs_cfg: pointer to acs configs
+ *
+ * Return: QDF_STATUS_SUCCESS if ACS configuration is initialized,
+ */
+static QDF_STATUS hdd_son_init_acs_channels(struct hdd_adapter *adapter,
+					    struct hdd_context *hdd_ctx,
+					    struct sap_acs_cfg *acs_cfg)
+{
+	enum policy_mgr_con_mode pm_mode;
+	uint32_t freq_list[NUM_CHANNELS], num_channels, i;
+
+	if (!hdd_ctx || !acs_cfg) {
+		hdd_err("Null pointer!!! hdd_ctx or acs_cfg");
+		return QDF_STATUS_E_INVAL;
+	}
+	if (acs_cfg->freq_list) {
+		hdd_debug("ACS config is already there, no need to init again");
+		return return QDF_STATUS_SUCCESS;
+	}
+	/* Setting ACS config */
+	qdf_mem_zero(acs_cfg, sizeof(*acs_cfg));
+	acs_cfg->ch_width = CH_WIDTH_20MHZ;
+	policy_mgr_get_valid_chans(hdd_ctx->psoc, freq_list, &num_channels);
+	/* convert and store channel to freq */
+	if (!num_channels) {
+		hdd_err("No Valid channel for ACS");
+		return QDF_STATUS_E_INVAL;
+	}
+	acs_cfg->freq_list = qdf_mem_malloc(sizeof(*acs_cfg->freq_list) *
+					    num_channels);
+	if (!acs_cfg->freq_list) {
+		hdd_err("Mem-alloc failed for acs_cfg->freq_list");
+		return QDF_STATUS_E_NOMEM;
+	}
+	acs_cfg->master_freq_list =
+			qdf_mem_malloc(sizeof(*acs_cfg->master_freq_list) *
+				       num_channels);
+	if (!acs_cfg->master_freq_list) {
+		hdd_err("Mem-alloc failed for acs_cfg->master_freq_list");
+		qdf_mem_free(acs_cfg->freq_list);
+		acs_cfg->freq_list = NULL;
+		return QDF_STATUS_E_NOMEM;
+	}
+
+	pm_mode =
+	      policy_mgr_convert_device_mode_to_qdf_type(adapter->device_mode);
+	/* convert channel to freq */
+	for (i = 0; i < num_channels; i++) {
+		acs_cfg->freq_list[i] = freq_list[i];
+		acs_cfg->master_freq_list[i] = freq_list[i];
+	}
+	acs_cfg->ch_list_count = num_channels;
+	acs_cfg->master_ch_list_count = num_channels;
+	if (policy_mgr_is_force_scc(hdd_ctx->psoc) &&
+	    policy_mgr_get_connection_count(hdd_ctx->psoc)) {
+		policy_mgr_get_pcl(hdd_ctx->psoc, pm_mode,
+				   acs_cfg->pcl_chan_freq,
+				   &acs_cfg->pcl_ch_count,
+				   acs_cfg->pcl_channels_weight_list,
+				   NUM_CHANNELS);
+		wlan_hdd_trim_acs_channel_list(acs_cfg->pcl_chan_freq,
+					       acs_cfg->pcl_ch_count,
+					       acs_cfg->freq_list,
+					       &acs_cfg->ch_list_count);
+		if (!acs_cfg->ch_list_count && acs_cfg->master_ch_list_count)
+			wlan_hdd_handle_zero_acs_list
+					       (hdd_ctx,
+						acs_cfg->freq_list,
+						&acs_cfg->ch_list_count,
+						acs_cfg->master_freq_list,
+						acs_cfg->master_ch_list_count);
+	}
+	acs_cfg->start_ch_freq = acs_cfg->freq_list[0];
+	acs_cfg->end_ch_freq = acs_cfg->freq_list[acs_cfg->ch_list_count - 1];
+	acs_cfg->hw_mode = eCSR_DOT11_MODE_abg;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * hdd_son_start_acs() -Trigers ACS
+ *
+ * @vdev: pointer to object mgr vdev
+ * @enable: True to trigger ACS
+ *
+ * Return: 0 on success
+ */
+static int hdd_son_start_acs(struct wlan_objmgr_vdev *vdev, uint8_t enable)
+{
+	struct hdd_adapter *adapter;
+	struct sap_config *sap_config;
+	struct hdd_context *hdd_ctx;
+
+	if (!enable) {
+		hdd_err("ACS Start report with disabled flag");
+		return -EINVAL;
+	}
+	adapter = wlan_hdd_get_adapter_from_objmgr(vdev);
+	if (!adapter) {
+		hdd_err("null adapter");
+		return -EINVAL;
+	}
+	if (adapter->device_mode != QDF_SAP_MODE) {
+		hdd_err("Invalid device mode %d", adapter->device_mode);
+		return -EINVAL;
+	}
+	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	if (!hdd_ctx) {
+		hdd_err("null hdd_ctx");
+		return -EINVAL;
+	}
+	if (qdf_atomic_read(&adapter->session.ap.acs_in_progress)) {
+		hdd_err("ACS is in-progress");
+		return -EAGAIN;
+	}
+	wlan_hdd_undo_acs(adapter);
+	sap_config = &adapter->session.ap.sap_config;
+	hdd_debug("ACS Config country %s hw_mode %d ACS_BW: %d START_CH: %d END_CH: %d band %d",
+		  hdd_ctx->reg.alpha2, sap_config->acs_cfg.hw_mode,
+		  sap_config->acs_cfg.ch_width,
+		  sap_config->acs_cfg.start_ch_freq,
+		  sap_config->acs_cfg.end_ch_freq, sap_config->acs_cfg.band);
+	sap_dump_acs_channel(&sap_config->acs_cfg);
+
+	wlan_hdd_cfg80211_start_acs(adapter);
+
+	return 0;
+}
+
+#define ACS_SET_CHAN_LIST_APPEND 0xFF
+#define ACS_SNR_NEAR_RANGE_MIN 60
+#define ACS_SNR_MID_RANGE_MIN 30
+#define ACS_SNR_FAR_RANGE_MIN 0
+
+/**
+ * hdd_son_set_acs_channels() - Sets Channels for ACS
+ *
+ * @vdev: pointer to object mgr vdev
+ * @req: target channels
+ *
+ * Return: 0 on success
+ */
+static int hdd_son_set_acs_channels(struct wlan_objmgr_vdev *vdev,
+				    struct ieee80211req_athdbg *req)
+{
+	struct sap_config *sap_config;
+	/* Append the new channels with existing channel list */
+	bool append;
+	/* Duplicate */
+	bool dup;
+	uint32_t freq_list[ACS_MAX_CHANNEL_COUNT];
+	uint32_t num_channels;
+	uint32_t chan_idx = 0;
+	uint32_t tmp;
+	uint16_t chan_start = 0;
+	uint16_t i, j;
+	uint16_t acs_chan_count = 0;
+	uint32_t *prev_acs_list;
+	struct ieee80211_chan_def *chans = req->data.user_chanlist.chans;
+	uint16_t nchans = req->data.user_chanlist.n_chan;
+	struct wlan_objmgr_pdev *pdev = wlan_vdev_get_pdev(vdev);
+	struct hdd_adapter *adapter = wlan_hdd_get_adapter_from_objmgr(vdev);
+	struct hdd_context *hdd_ctx;
+
+	if (!adapter || !req) {
+		hdd_err("null adapter or req");
+		return -EINVAL;
+	}
+	if (adapter->device_mode != QDF_SAP_MODE) {
+		hdd_err("Invalid device mode %d", adapter->device_mode);
+		return -EINVAL;
+	}
+	if (!nchans) {
+		hdd_err("No channels are sent to be set");
+		return -EINVAL;
+	}
+	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	if (!hdd_ctx) {
+		hdd_err("null hdd_ctx");
+		return -EINVAL;
+	}
+	sap_config = &adapter->session.ap.sap_config;
+	/* initialize with default channels */
+	if (hdd_son_init_acs_channels(adapter, hdd_ctx, &sap_config->acs_cfg)
+						       != QDF_STATUS_SUCCESS) {
+		hdd_err("Failed to start the ACS");
+		return -EAGAIN;
+	}
+	append = (chans[0].chan == ACS_SET_CHAN_LIST_APPEND);
+	if (append) {
+		chan_start = 1;
+		acs_chan_count = sap_config->acs_cfg.ch_list_count;
+	}
+	prev_acs_list = sap_config->acs_cfg.freq_list;
+	for (i = chan_start; i < nchans; i++) {
+		tmp = wlan_reg_legacy_chan_to_freq(pdev, chans[i].chan);
+		if (append) {
+			for (j = 0; j < acs_chan_count; j++) {
+				if (prev_acs_list[j] == tmp) {
+					dup = true;
+					break;
+				}
+			}
+		}
+		/* Remove duplicate */
+		if (!dup) {
+			freq_list[chan_idx] = tmp;
+			chan_idx++;
+		} else {
+			dup = false;
+		}
+	}
+	num_channels = chan_idx + acs_chan_count;
+	sap_config->acs_cfg.ch_list_count = num_channels;
+	sap_config->acs_cfg.freq_list =
+			qdf_mem_malloc(num_channels *
+				       sizeof(*sap_config->acs_cfg.freq_list));
+	if (!sap_config->acs_cfg.freq_list) {
+		hdd_err("Error in allocating memory, failed to set channels");
+		sap_config->acs_cfg.freq_list = prev_acs_list;
+		sap_config->acs_cfg.ch_list_count = acs_chan_count;
+		return -ENOMEM;
+	}
+	if (append)
+		qdf_mem_copy(sap_config->acs_cfg.freq_list, prev_acs_list,
+			     sizeof(uint32_t) * acs_chan_count);
+	qdf_mem_copy(&sap_config->acs_cfg.freq_list[acs_chan_count], freq_list,
+		     sizeof(uint32_t) * chan_idx);
+	qdf_mem_free(prev_acs_list);
+
+	return 0;
+}
+
+static enum wlan_band_id
+reg_wifi_band_to_wlan_band_id(enum reg_wifi_band reg_wifi_band)
+{
+	enum wlan_band_id wlan_band;
+	const uint32_t reg_wifi_band_to_wlan_band_id_map[] = {
+		[REG_BAND_2G] = WLAN_BAND_2GHZ,
+		[REG_BAND_5G] = WLAN_BAND_5GHZ,
+		[REG_BAND_6G] = WLAN_BAND_6GHZ,
+		[REG_BAND_UNKNOWN] = WLAN_BAND_MAX,};
+
+	wlan_band = reg_wifi_band_to_wlan_band_id_map[reg_wifi_band];
+	if (wlan_band == WLAN_BAND_MAX) {
+		hdd_err("Invalid wlan_band_id %d, reg_wifi_band: %d",
+			wlan_band, reg_wifi_band);
+		return -EINVAL;
+	}
+
+	return wlan_band;
+}
+
+/**
+ * get_son_acs_report_values() - Gets ACS report for target channel
+ *
+ * @vdev: pointer to object mgr vdev
+ * @acs_r: pointer to acs_dbg
+ * @mac_handle: Handle to MAC
+ * @chan_freq: Channel frequency
+ *
+ * Return: void
+ */
+static void get_son_acs_report_values(struct wlan_objmgr_vdev *vdev,
+				      struct ieee80211_acs_dbg *acs_r,
+				      mac_handle_t mac_handle,
+				      uint16_t chan_freq)
+{
+	struct wlan_objmgr_pdev *pdev = wlan_vdev_get_pdev(vdev);
+	struct scan_filter *filter = qdf_mem_malloc(sizeof(*filter));
+	struct scan_cache_node *cur_node;
+	struct scan_cache_entry *se;
+	enum ieee80211_phymode phymode_se;
+	struct ieee80211_ie_hecap *hecap_ie;
+	struct ieee80211_ie_srp_extie *srp_ie;
+	qdf_list_node_t *cur_lst = NULL, *next_lst = NULL;
+	uint32_t srps = 0;
+	qdf_list_t *scan_list = NULL;
+	uint8_t snr_se, *hecap_phy_ie;
+
+	if (!filter)
+		return;
+	filter->num_of_channels = 1;
+	filter->chan_freq_list[0] = chan_freq;
+	scan_list = ucfg_scan_get_result(pdev, filter);
+	acs_r->chan_nbss = qdf_list_size(scan_list);
+
+	acs_r->chan_maxrssi = 0;
+	acs_r->chan_minrssi = 0;
+	acs_r->chan_nbss_near = 0;
+	acs_r->chan_nbss_mid = 0;
+	acs_r->chan_nbss_far = 0;
+	acs_r->chan_nbss_srp = 0;
+	qdf_list_peek_front(scan_list, &cur_lst);
+	while (cur_lst) {
+		qdf_list_peek_next(scan_list, cur_lst, &next_lst);
+		cur_node = qdf_container_of(cur_lst,
+					    struct scan_cache_node, node);
+		se = cur_node->entry;
+		snr_se = util_scan_entry_snr(se);
+		hecap_ie = (struct ieee80211_ie_hecap *)
+			   util_scan_entry_hecap(se);
+		srp_ie = (struct ieee80211_ie_srp_extie *)
+			 util_scan_entry_spatial_reuse_parameter(se);
+		phymode_se = util_scan_entry_phymode(se);
+
+		if (hecap_ie) {
+			hecap_phy_ie = &hecap_ie->hecap_phyinfo[0];
+			srps = hecap_phy_ie[HECAP_PHYBYTE_IDX7] &
+			       HECAP_PHY_SRP_SR_BITS;
+		}
+
+		if (acs_r->chan_maxrssi < snr_se)
+			acs_r->chan_maxrssi = snr_se;
+		else if (acs_r->chan_minrssi > snr_se)
+			acs_r->chan_minrssi = snr_se;
+		if (snr_se > ACS_SNR_NEAR_RANGE_MIN)
+			acs_r->chan_nbss_near += 1;
+		else if (snr_se > ACS_SNR_MID_RANGE_MIN)
+			acs_r->chan_nbss_mid += 1;
+		else
+			acs_r->chan_nbss_far += 1;
+		if (srp_ie &&
+		    (!(srp_ie->sr_control &
+		       IEEE80211_SRP_SRCTRL_OBSS_PD_DISALLOWED_MASK) || srps))
+			acs_r->chan_nbss_srp++;
+
+		cur_lst = next_lst;
+		next_lst = NULL;
+	}
+	acs_r->chan_80211_b_duration = sme_get_11b_data_duration(mac_handle,
+								 chan_freq);
+	acs_r->chan_nbss_eff = 100 + (acs_r->chan_nbss_near * 50)
+				   + (acs_r->chan_nbss_mid * 50)
+				   + (acs_r->chan_nbss_far * 25);
+	acs_r->chan_srp_load = acs_r->chan_nbss_srp * 4;
+	acs_r->chan_efficiency = (1000 + acs_r->chan_grade) /
+				  acs_r->chan_nbss_eff;
+	ucfg_scan_purge_results(scan_list);
+
+	qdf_mem_free(filter);
+}
+
+/**
+ * hdd_son_get_acs_report() - Gets ACS report
+ *
+ * @vdev: pointer to object mgr vdev
+ * @acs_report: pointer to acs_dbg
+ *
+ * Return: 0 on success
+ */
+static int hdd_son_get_acs_report(struct wlan_objmgr_vdev *vdev,
+				  struct ieee80211_acs_dbg *acs_report)
+{
+	struct hdd_adapter *adapter;
+	uint8_t  acs_entry_id = 0;
+	ACS_LIST_TYPE acs_type = 0;
+	int ret = 0, i = 0;
+	uint8_t vdev_id = vdev->vdev_objmgr.vdev_id;
+	struct sap_acs_cfg *acs_cfg;
+	struct hdd_context *hdd_ctx;
+	struct ieee80211_acs_dbg *acs_r = NULL;
+	struct sap_context *sap_ctx;
+
+	if (!acs_report) {
+		hdd_err("null acs_report");
+		ret = -EINVAL;
+		goto end;
+	}
+	adapter = wlan_hdd_get_adapter_from_objmgr(vdev);
+	if (!adapter) {
+		hdd_err("null adapter");
+		ret = -EINVAL;
+		goto end;
+	}
+	if (adapter->device_mode != QDF_SAP_MODE) {
+		hdd_err("Invalid device mode %d", adapter->device_mode);
+		ret = -EINVAL;
+		goto end;
+	}
+	if (hdd_son_get_acs_in_progress(vdev_id)) {
+		acs_report->nchans = 0;
+		hdd_err("ACS is in-progress");
+		ret = -EAGAIN;
+		goto end;
+	}
+	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	if (!hdd_ctx) {
+		hdd_err("null hdd_ctx");
+		ret = -EINVAL;
+		goto end;
+	}
+	acs_r = qdf_mem_malloc(sizeof(*acs_r));
+	if (!acs_r) {
+		hdd_err("Failed to allocate memory");
+		ret = -ENOMEM;
+		goto end;
+	}
+	sap_ctx = WLAN_HDD_GET_SAP_CTX_PTR(adapter);
+	acs_cfg = &adapter->session.ap.sap_config.acs_cfg;
+	if (!acs_cfg->freq_list &&
+	    (hdd_son_init_acs_channels(adapter, hdd_ctx,
+				       acs_cfg) != QDF_STATUS_SUCCESS)) {
+		hdd_err("Failed to start the ACS");
+		ret = -EAGAIN;
+		goto end_acs_r_free;
+	}
+	acs_r->nchans = acs_cfg->ch_list_count;
+	ret = copy_from_user(&acs_entry_id, &acs_report->entry_id,
+			     sizeof(acs_report->entry_id));
+	hdd_debug("acs entry id: %u num of channels: %u",
+		  acs_entry_id, acs_r->nchans);
+	if (acs_entry_id > acs_r->nchans) {
+		ret = -EINVAL;
+		goto end_acs_r_free;
+	}
+	ret = copy_from_user(&acs_type, &acs_report->acs_type,
+			     sizeof(acs_report->acs_type));
+
+	acs_r->acs_status = ACS_DEFAULT;
+	acs_r->chan_freq = acs_cfg->freq_list[acs_entry_id];
+	acs_r->chan_band = reg_wifi_band_to_wlan_band_id
+				(wlan_reg_freq_to_band(acs_r->chan_freq));
+	hdd_debug("acs type: %d", acs_type);
+	if (acs_type == ACS_CHAN_STATS) {
+		acs_r->ieee_chan = wlan_reg_freq_to_chan(hdd_ctx->pdev,
+							 acs_r->chan_freq);
+		acs_r->chan_width = IEEE80211_CWM_WIDTH20;
+		acs_r->channel_loading = 0;
+		acs_r->chan_availability = 100;
+		acs_r->chan_grade = 100; /* as hw_chan_grade is 100 in WIN 8 */
+		acs_r->sec_chan = false;
+		acs_r->chan_radar_noise =
+		    wlansap_is_channel_in_nol_list(sap_ctx, acs_r->chan_freq,
+						   PHY_SINGLE_CHANNEL_CENTERED);
+		get_son_acs_report_values(vdev, acs_r, hdd_ctx->mac_handle,
+					  acs_r->chan_freq);
+		acs_r->chan_load = 0;
+		acs_r->noisefloor = -254; /* NF_INVALID */
+		for (i = 0; i < SIR_MAX_NUM_CHANNELS; i++) {
+			if (hdd_ctx->chan_info[i].freq == acs_r->chan_freq) {
+				acs_r->noisefloor =
+					hdd_ctx->chan_info[i].noise_floor;
+				acs_r->chan_load =
+					hdd_ctx->chan_info[i].rx_clear_count;
+				break;
+			}
+		}
+		copy_to_user(acs_report, acs_r, sizeof(*acs_r));
+	} else if (acs_type == ACS_CHAN_NF_STATS) {
+	} else if (acs_type == ACS_NEIGHBOUR_GET_LIST_COUNT ||
+		   acs_type == ACS_NEIGHBOUR_GET_LIST) {
+	}
+end_acs_r_free:
+	qdf_mem_free(acs_r);
+end:
+	return ret;
+}
+
 void hdd_son_register_callbacks(struct hdd_context *hdd_ctx)
 {
 	struct son_callbacks cb_obj = {0};
@@ -1782,6 +2246,9 @@ void hdd_son_register_callbacks(struct hdd_context *hdd_ctx)
 				hdd_son_trigger_objmgr_object_creation;
 	cb_obj.os_if_trigger_objmgr_object_deletion =
 				hdd_son_trigger_objmgr_object_deletion;
+	cb_obj.os_if_start_acs = hdd_son_start_acs;
+	cb_obj.os_if_set_acs_channels = hdd_son_set_acs_channels;
+	cb_obj.os_if_get_acs_report = hdd_son_get_acs_report;
 
 	os_if_son_register_hdd_callbacks(hdd_ctx->psoc, &cb_obj);
 
