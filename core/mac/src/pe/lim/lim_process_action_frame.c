@@ -1959,6 +1959,17 @@ void lim_process_action_frame(struct mac_context *mac_ctx,
 		case SIR_MAC_PROT_ACTION_VENDOR_SPECIFIC_CATEGORY:
 		case SIR_MAC_ACTION_2040_BSS_COEXISTENCE:
 		case SIR_MAC_ACTION_GAS_INITIAL_REQUEST:
+			if (action_hdr->actionID ==
+				SIR_MAC_ACTION_GAS_INITIAL_REQUEST) {
+				wlan_son_anqp_frame(session->vdev,
+						    mac_hdr->fc.subType,
+						    (uint8_t *)mac_hdr,
+						    (uint16_t)(frame_len +
+						    sizeof(tSirMacMgmtHdr)),
+						    (void *)action_hdr,
+						    &mac_hdr->sa[0]);
+			}
+			/* fallthrough */
 		case SIR_MAC_ACTION_GAS_INITIAL_RESPONSE:
 		case SIR_MAC_ACTION_GAS_COMEBACK_REQUEST:
 		case SIR_MAC_ACTION_GAS_COMEBACK_RESPONSE:

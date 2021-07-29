@@ -182,6 +182,20 @@ int wlan_son_deliver_rrm_rpt(struct wlan_objmgr_vdev *vdev,
 			     uint8_t *addr,
 			     uint8_t *frm,
 			     uint32_t flen);
+/**
+ * wlan_son_anqp_frame() - notify son module of mgmt frames
+ * @vdev: vdev
+ * @subtype: frame subtype
+ * @frame: the 802.11 frame
+ * @frame_len: frame length
+ * @action_hdr: Action header of the frame
+ * @macaddr: source mac address
+ *
+ * Return: 0 if event is sent successfully
+ */
+int wlan_son_anqp_frame(struct wlan_objmgr_vdev *vdev, int subtype,
+			uint8_t *frame, uint16_t frame_len, void *action_hdr,
+			uint8_t *macaddr);
 
 #else
 
@@ -245,5 +259,14 @@ int wlan_son_deliver_rrm_rpt(struct wlan_objmgr_vdev *vdev,
 {
 	return -EINVAL;
 }
+
+static inline
+int wlan_son_anqp_frame(struct wlan_objmgr_vdev *vdev, int subtype,
+			uint8_t *frame, uint16_t frame_len, void *action_hdr,
+			uint8_t *macaddr)
+{
+	return -EINVAL;
+}
+
 #endif /*WLAN_FEATURE_SON*/
 #endif

@@ -584,3 +584,33 @@ int wlan_son_deliver_rrm_rpt(struct wlan_objmgr_vdev *vdev,
 
 	return 0;
 }
+
+int wlan_son_anqp_frame(struct wlan_objmgr_vdev *vdev, int subtype,
+			uint8_t *frame, uint16_t frame_len, void *action_hdr,
+			uint8_t *macaddr)
+{
+	struct son_act_frm_info info;
+	struct wlan_objmgr_psoc *psoc;
+	struct wlan_lmac_if_rx_ops *rx_ops;
+	int ret;
+
+	if (!vdev)
+		return -EINVAL;
+	psoc = wlan_vdev_get_psoc(vdev);
+	if (!psoc)
+		return -EINVAL;
+
+	qdf_mem_zero(&info, sizeof(info));
+	info.ia = (struct ieee80211_action *)action_hdr;
+	info.ald_info = 1;
+	qdf_mem_copy(info.data.macaddr, macaddr, sizeof(tSirMacAddr));
+
+	rx_ops = wlan_psoc_get_lmac_if_rxops(psoc);
+	if (rx_ops && rx_ops->son_rx_ops.process_mgmt_frame)
+		ret = rx_ops->son_rx_ops.process_mgmt_frame(vdev, NULL,
+							    subtype, frame,
+							    frame_len, &info);
+	else
+		return -EINVAL;
+	return ret;
+}
