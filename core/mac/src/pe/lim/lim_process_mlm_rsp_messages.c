@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -786,6 +787,8 @@ lim_fill_sme_assoc_ind_params(
 	sme_assoc_ind->rx_mcs_map = assoc_ind->rx_mcs_map;
 	sme_assoc_ind->tx_mcs_map = assoc_ind->tx_mcs_map;
 	sme_assoc_ind->ecsa_capable = assoc_ind->ecsa_capable;
+	sme_assoc_ind->ext_cap = assoc_ind->ext_cap;
+	sme_assoc_ind->supported_band = assoc_ind->supported_band;
 
 	if (assoc_ind->ht_caps.present)
 		sme_assoc_ind->HTCaps = assoc_ind->ht_caps;

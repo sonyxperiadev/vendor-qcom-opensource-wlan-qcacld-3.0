@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -240,6 +241,8 @@ typedef struct sLimMlmAssocInd {
 	uint8_t rx_mcs_map;
 	uint8_t tx_mcs_map;
 	uint8_t ecsa_capable;
+	uint32_t ext_cap;
+	uint8_t supported_band;
 
 	tDot11fIEHTCaps ht_caps;
 	tDot11fIEVHTCaps vht_caps;

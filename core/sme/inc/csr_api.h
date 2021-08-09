@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -582,6 +583,8 @@ struct csr_roam_info {
 	uint8_t tx_mcs_map;
 	/* Extended capabilities of STA */
 	uint8_t ecsa_capable;
+	uint32_t ext_cap;
+	uint8_t supported_band;
 	int rssi;
 	int tx_rate;
 	int rx_rate;
@@ -625,6 +628,8 @@ typedef struct sSirSmeAssocIndToUpperLayerCnf {
 	uint8_t tx_mcs_map;
 	/* Extended capabilities of STA */
 	uint8_t              ecsa_capable;
+	uint32_t ext_cap;
+	uint8_t supported_band;
 
 	uint32_t ies_len;
 	uint8_t *ies;

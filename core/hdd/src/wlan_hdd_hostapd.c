@@ -1597,6 +1597,8 @@ static void hdd_fill_station_info(struct hdd_adapter *adapter,
 	 */
 	is_dot11_mode_abgn = true;
 	stainfo->ecsa_capable = event->ecsa_capable;
+	stainfo->ext_cap = event->ext_cap;
+	stainfo->supported_band = event->supported_band;
 
 	if (event->vht_caps.present) {
 		stainfo->vht_present = true;

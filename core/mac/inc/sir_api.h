@@ -1069,6 +1069,8 @@ struct assoc_ind {
 	uint8_t tx_mcs_map;
 	/* Extended CSA capability of station */
 	uint8_t ecsa_capable;
+	uint32_t ext_cap;
+	uint8_t supported_band;
 	tDot11fIEHTCaps HTCaps;
 	tDot11fIEVHTCaps VHTCaps;
 	bool he_caps_present;

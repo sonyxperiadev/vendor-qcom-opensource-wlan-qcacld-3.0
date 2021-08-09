@@ -2062,6 +2062,8 @@ QDF_STATUS sap_signal_hdd_event(struct sap_context *sap_ctx,
 		reassoc_complete->rx_mcs_map = csr_roaminfo->rx_mcs_map;
 		reassoc_complete->tx_mcs_map = csr_roaminfo->tx_mcs_map;
 		reassoc_complete->ecsa_capable = csr_roaminfo->ecsa_capable;
+		reassoc_complete->ext_cap = csr_roaminfo->ext_cap;
+		reassoc_complete->supported_band = csr_roaminfo->supported_band;
 		if (csr_roaminfo->ht_caps.present)
 			reassoc_complete->ht_caps = csr_roaminfo->ht_caps;
 		if (csr_roaminfo->vht_caps.present)

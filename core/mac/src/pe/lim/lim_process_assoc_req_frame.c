@@ -3002,6 +3002,8 @@ bool lim_fill_lim_assoc_ind_params(
 	bool wme_enable;
 	struct wlan_objmgr_vdev *vdev;
 	struct vdev_mlme_obj *mlme_obj;
+	uint8_t country_iso[REG_ALPHA2_LEN + 1];
+	tDot11fIESuppOperatingClasses *oper_class;
 
 	if (!session_entry->parsedAssocReq) {
 		pe_err(" Parsed Assoc req is NULL");
@@ -3195,9 +3197,30 @@ bool lim_fill_lim_assoc_ind_params(
 		assoc_ind->max_mcs_idx = maxidx;
 	}
 	fill_mlm_assoc_ind_vht(assoc_req, sta_ds, assoc_ind);
-	if (assoc_req->ExtCap.present)
+	if (assoc_req->ExtCap.present) {
 		assoc_ind->ecsa_capable =
 		((struct s_ext_cap *)assoc_req->ExtCap.bytes)->ext_chan_switch;
+		if (assoc_req->ExtCap.num_bytes >= sizeof(assoc_ind->ext_cap))
+			qdf_mem_copy(&assoc_ind->ext_cap,
+				     assoc_req->ExtCap.bytes,
+				     sizeof(assoc_ind->ext_cap));
+		else
+			qdf_mem_copy(&assoc_ind->ext_cap,
+				     assoc_req->ExtCap.bytes,
+				     assoc_req->ExtCap.num_bytes);
+	}
+
+	if (assoc_req->supp_operating_classes.present) {
+		oper_class = &assoc_req->supp_operating_classes;
+		qdf_mem_zero(country_iso, sizeof(country_iso));
+		country_iso[2] = OP_CLASS_GLOBAL;
+		assoc_ind->supported_band =
+				wlan_reg_get_band_cap_from_op_class(
+						country_iso,
+						oper_class->num_classes,
+						oper_class->classes);
+	}
+
 	/* updates VHT information in assoc indication */
 	if (assoc_req->VHTCaps.present)
 		qdf_mem_copy(&assoc_ind->vht_caps, &assoc_req->VHTCaps,

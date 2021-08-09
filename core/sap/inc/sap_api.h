@@ -278,6 +278,8 @@ typedef struct sap_StationAssocReassocCompleteEvent_s {
 	uint8_t rx_mcs_map;
 	uint8_t tx_mcs_map;
 	uint8_t ecsa_capable;
+	uint32_t ext_cap;
+	uint8_t supported_band;
 	tDot11fIEHTCaps ht_caps;
 	tDot11fIEVHTCaps vht_caps;
 	tSirMacCapabilityInfo capability_info;

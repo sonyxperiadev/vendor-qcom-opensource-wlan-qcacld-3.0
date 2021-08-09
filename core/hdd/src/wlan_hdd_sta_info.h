@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -177,6 +178,8 @@ char *sta_info_string_from_dbgid(wlan_sta_info_dbgid id);
  * @nss: Number of spatial streams supported
  * @rate_flags: Rate Flags for this connection
  * @ecsa_capable: Extended CSA capabilities
+ * @ext_cap: The first 4 bytes of Extended capabilities IE
+ * @supported_band: sta band capabilities bitmap from supporting opclass
  * @max_phy_rate: Calcuated maximum phy rate based on mode, nss, mcs etc.
  * @tx_packets: The number of frames from host to firmware
  * @tx_bytes: Bytes send to current station
@@ -244,6 +247,8 @@ struct hdd_station_info {
 	uint8_t   nss;
 	uint32_t  rate_flags;
 	uint8_t   ecsa_capable;
+	uint32_t ext_cap;
+	uint8_t supported_band;
 	uint32_t max_phy_rate;
 	uint32_t tx_packets;
 	uint64_t tx_bytes;

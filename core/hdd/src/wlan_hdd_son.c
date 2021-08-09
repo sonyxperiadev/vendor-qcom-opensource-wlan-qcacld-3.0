@@ -1002,6 +1002,120 @@ static enum ieee80211_phymode hdd_son_get_phymode(struct wlan_objmgr_vdev *vdev)
 }
 
 /**
+ * hdd_son_per_sta_len() - get sta information length
+ * @sta_info: pointer to hdd_station_info
+ *
+ * TD: Certain IE may be provided for sta info
+ *
+ * Return: the size which is needed for given sta info
+ */
+static uint32_t hdd_son_per_sta_len(struct hdd_station_info *sta_info)
+{
+	return qdf_roundup(sizeof(struct ieee80211req_sta_info),
+			   sizeof(uint32_t));
+}
+
+/**
+ * hdd_son_get_sta_space() - how many space are needed for given vdev
+ * @vdev: vdev
+ *
+ * Return: space needed for given vdev to provide sta info
+ */
+static uint32_t hdd_son_get_sta_space(struct wlan_objmgr_vdev *vdev)
+{
+	struct hdd_adapter *adapter;
+	struct hdd_station_info *sta_info = NULL;
+	uint32_t space = 0;
+
+	if (!vdev) {
+		hdd_err("null vdev");
+		return space;
+	}
+	adapter = wlan_hdd_get_adapter_from_objmgr(vdev);
+	if (!adapter) {
+		hdd_err("null adapter");
+		return space;
+	}
+
+	hdd_for_each_sta_ref(adapter->sta_info_list, sta_info,
+			     STA_INFO_SOFTAP_GET_STA_INFO) {
+		if (!qdf_is_macaddr_broadcast(&sta_info->sta_mac))
+			space += hdd_son_per_sta_len(sta_info);
+
+		hdd_put_sta_info_ref(&adapter->sta_info_list,
+				     &sta_info, true,
+				     STA_INFO_SOFTAP_GET_STA_INFO);
+	}
+	hdd_debug("sta list space %u", space);
+
+	return space;
+}
+
+/**
+ * hdd_son_get_stalist() - get connected station list
+ * @vdev: vdev
+ * @si: pointer to ieee80211req_sta_info
+ * @space: space left
+ *
+ * Return: void
+ */
+static void hdd_son_get_sta_list(struct wlan_objmgr_vdev *vdev,
+				 struct ieee80211req_sta_info *si,
+				 uint32_t *space)
+{
+	struct hdd_adapter *adapter;
+	struct hdd_station_info *sta_info = NULL;
+	uint32_t len;
+
+	if (!vdev) {
+		hdd_err("null vdev");
+		return;
+	}
+	adapter = wlan_hdd_get_adapter_from_objmgr(vdev);
+	if (!adapter) {
+		hdd_err("null adapter");
+		return;
+	}
+
+	hdd_for_each_sta_ref(adapter->sta_info_list, sta_info,
+			     STA_INFO_SOFTAP_GET_STA_INFO) {
+		if (!qdf_is_macaddr_broadcast(&sta_info->sta_mac)) {
+			len = hdd_son_per_sta_len(sta_info);
+
+			if (len > *space) {
+				/* no more space if left */
+				hdd_put_sta_info_ref(
+					&adapter->sta_info_list,
+					&sta_info, true,
+					STA_INFO_SOFTAP_GET_STA_INFO);
+				hdd_err("space %u, length %u", *space, len);
+
+				return;
+			}
+
+			qdf_mem_copy(si->isi_macaddr, &sta_info->sta_mac,
+				     QDF_MAC_ADDR_SIZE);
+			si->isi_ext_cap = sta_info->ext_cap;
+			si->isi_operating_bands = sta_info->supported_band;
+			si->isi_assoc_time = sta_info->assoc_ts;
+			si->isi_rssi = sta_info->rssi;
+			si->isi_len = len;
+			si->isi_ie_len = 0;
+			si = (struct ieee80211req_sta_info *)(((uint8_t *)si) +
+			     len);
+			*space -= len;
+			hdd_debug("sta " QDF_MAC_ADDR_FMT " ext_cap %u op band %u rssi %d len %u",
+				  QDF_MAC_ADDR_REF(si->isi_macaddr),
+				  si->isi_ext_cap, si->isi_operating_bands,
+				  si->isi_rssi, si->isi_len);
+		}
+		hdd_put_sta_info_ref(&adapter->sta_info_list,
+				     &sta_info, true,
+				     STA_INFO_SOFTAP_GET_STA_INFO);
+	}
+}
+
+/**
  * hdd_son_set_acl_policy() - set son acl policy
  * @vdev: vdev
  * @son_acl_policy: enum ieee80211_acl_cmd
@@ -1414,6 +1528,8 @@ void hdd_son_register_callbacks(struct hdd_context *hdd_ctx)
 	cb_obj.os_if_get_chwidth = hdd_son_get_chwidth;
 	cb_obj.os_if_deauth_sta = hdd_son_deauth_sta;
 	cb_obj.os_if_modify_acl = hdd_son_modify_acl;
+	cb_obj.os_if_get_sta_list = hdd_son_get_sta_list;
+	cb_obj.os_if_get_sta_space = hdd_son_get_sta_space;
 
 	os_if_son_register_hdd_callbacks(hdd_ctx->psoc, &cb_obj);
 

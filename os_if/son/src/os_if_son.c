@@ -947,6 +947,47 @@ bool os_if_son_vdev_is_wds(struct wlan_objmgr_vdev *vdev)
 
 qdf_export_symbol(os_if_son_vdev_is_wds);
 
+uint32_t os_if_son_get_sta_space(struct wlan_objmgr_vdev *vdev)
+{
+	uint32_t sta_space;
+
+	if (!vdev) {
+		osif_err("null vdev");
+		return 0;
+	}
+
+	sta_space = g_son_os_if_cb.os_if_get_sta_space(vdev);
+	osif_debug("need space %u", sta_space);
+
+	return sta_space;
+}
+
+qdf_export_symbol(os_if_son_get_sta_space);
+
+void os_if_son_get_sta_list(struct wlan_objmgr_vdev *vdev,
+			    struct ieee80211req_sta_info *si, uint32_t *space)
+{
+	if (!vdev) {
+		osif_err("null vdev");
+		return;
+	}
+
+	if (!si) {
+		osif_err("null si");
+		return;
+	}
+	if (!space || *space == 0) {
+		osif_err("invalid input space");
+		return;
+	}
+
+	g_son_os_if_cb.os_if_get_sta_list(vdev, si, space);
+
+	osif_debug("left space %u", *space);
+}
+
+qdf_export_symbol(os_if_son_get_sta_list);
+
 void os_if_son_deauth_peer_sta(struct wlan_objmgr_vdev *vdev,
 			       uint8_t *peer_mac,
 			       bool ignore_frame)

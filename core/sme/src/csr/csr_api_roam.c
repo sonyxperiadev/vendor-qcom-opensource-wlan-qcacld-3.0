@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -3689,6 +3690,9 @@ void csr_roam_joined_state_msg_processor(struct mac_context *mac, void *msg_buf)
 		roam_info->rx_mcs_map = pUpperLayerAssocCnf->rx_mcs_map;
 		roam_info->tx_mcs_map = pUpperLayerAssocCnf->tx_mcs_map;
 		roam_info->ecsa_capable = pUpperLayerAssocCnf->ecsa_capable;
+		roam_info->ext_cap = pUpperLayerAssocCnf->ext_cap;
+		roam_info->supported_band =
+					pUpperLayerAssocCnf->supported_band;
 		if (pUpperLayerAssocCnf->ht_caps.present)
 			roam_info->ht_caps = pUpperLayerAssocCnf->ht_caps;
 		if (pUpperLayerAssocCnf->vht_caps.present)
@@ -4221,6 +4225,8 @@ csr_send_assoc_ind_to_upper_layer_cnf_msg(struct mac_context *mac,
 	cnf->rx_mcs_map = ind->rx_mcs_map;
 	cnf->tx_mcs_map = ind->tx_mcs_map;
 	cnf->ecsa_capable = ind->ecsa_capable;
+	cnf->ext_cap = ind->ext_cap;
+	cnf->supported_band = ind->supported_band;
 	if (ind->HTCaps.present)
 		cnf->ht_caps = ind->HTCaps;
 	if (ind->VHTCaps.present)
