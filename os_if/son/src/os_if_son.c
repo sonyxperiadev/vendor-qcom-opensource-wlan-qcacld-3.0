@@ -1486,3 +1486,39 @@ void os_if_son_register_osif_ops(void)
 }
 
 qdf_export_symbol(os_if_son_register_osif_ops);
+
+int os_if_son_parse_generic_nl_cmd(struct wiphy *wiphy,
+				   struct wireless_dev *wdev,
+				   struct nlattr **tb,
+				   enum os_if_son_vendor_cmd_type type)
+{
+	struct os_if_son_rx_ops *rx_ops = &g_son_os_if_txrx_ops.son_osif_rx_ops;
+	struct wlan_cfg8011_genric_params param = {};
+
+	if (!rx_ops->parse_generic_nl_cmd)
+		return -EINVAL;
+
+	if (tb[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_COMMAND])
+		param.command = nla_get_u32(tb
+				[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_COMMAND]);
+
+	if (tb[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_VALUE])
+		param.value = nla_get_u32(tb
+				[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_VALUE]);
+
+	if (tb[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA])
+		param.data = nla_data(tb
+				[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA]);
+		param.data_len = nla_len(tb
+				[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA]);
+
+	if (tb[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_LENGTH])
+		param.length = nla_get_u32(tb
+				[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_LENGTH]);
+
+	if (tb[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_FLAGS])
+		param.flags = nla_get_u32(tb
+				[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_FLAGS]);
+
+	return rx_ops->parse_generic_nl_cmd(wiphy, wdev, &param, type);
+}

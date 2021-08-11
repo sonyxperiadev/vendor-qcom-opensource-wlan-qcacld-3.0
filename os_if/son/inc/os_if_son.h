@@ -722,4 +722,27 @@ int os_if_son_set_acs_chan(struct wlan_objmgr_vdev *vdev,
  */
 int os_if_son_get_acs_report(struct wlan_objmgr_vdev *vdev,
 			     struct ieee80211_acs_dbg *acs_r);
+
+/**
+ * os_if_son_parse_generic_nl_cmd() - Sends the Generic vendor commands
+ *				      to SON.
+ * @wiphy: Standard wiphy object
+ * @wdev: wireless device
+ * @tb: Command type structure pointer
+ * @type: Get/Set command
+ *
+ * This function parses the GENERIC vendor commands received from
+ * userspace then sends the extracted data to SON module for further
+ * processing along with wiphy, wdev, extected structure - param
+ * and command type i.e. GET / SET. Each of the GENERIC commands are
+ * interdependent and hence in SON module, they will be further
+ * parsed based on type i.e. GET / SET.
+ *
+ * Return: 0 on success
+ */
+int os_if_son_parse_generic_nl_cmd(struct wiphy *wiphy,
+				   struct wireless_dev *wdev,
+				   struct nlattr **tb,
+				   enum os_if_son_vendor_cmd_type type);
+
 #endif

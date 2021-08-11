@@ -2368,3 +2368,19 @@ void hdd_son_deliver_peer_authorize_event(struct hdd_adapter *adapter,
 	wlan_objmgr_peer_release_ref(peer, WLAN_UMAC_COMP_SON);
 	hdd_objmgr_put_vdev_by_user(vdev, WLAN_SON_ID);
 }
+
+int hdd_son_send_set_wifi_generic_command(struct wiphy *wiphy,
+					  struct wireless_dev *wdev,
+					  struct nlattr **tb)
+{
+	return os_if_son_parse_generic_nl_cmd(wiphy, wdev, tb,
+					      OS_IF_SON_VENDOR_SET_CMD);
+}
+
+int hdd_son_send_get_wifi_generic_command(struct wiphy *wiphy,
+					  struct wireless_dev *wdev,
+					  struct nlattr **tb)
+{
+	return os_if_son_parse_generic_nl_cmd(wiphy, wdev, tb,
+					      OS_IF_SON_VENDOR_GET_CMD);
+}
