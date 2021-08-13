@@ -1992,14 +1992,23 @@ static void mlme_init_power_cfg(struct wlan_objmgr_psoc *psoc,
 static void mlme_init_roam_scoring_cfg(struct wlan_objmgr_psoc *psoc,
 				struct wlan_mlme_roam_scoring_cfg *scoring_cfg)
 {
+	bool val = false;
+
 	scoring_cfg->enable_scoring_for_roam =
 		cfg_get(psoc, CFG_ENABLE_SCORING_FOR_ROAM);
 	scoring_cfg->roam_trigger_bitmap =
 			cfg_get(psoc, CFG_ROAM_SCORE_DELTA_TRIGGER_BITMAP);
 	scoring_cfg->roam_score_delta = cfg_get(psoc, CFG_ROAM_SCORE_DELTA);
 	scoring_cfg->apsd_enabled = (bool)cfg_default(CFG_APSD_ENABLED);
-	scoring_cfg->min_roam_score_delta =
-				cfg_get(psoc, CFG_CAND_MIN_ROAM_SCORE_DELTA);
+
+	ucfg_mlme_get_connection_roaming_ini_present(psoc, &val);
+	if (val) {
+		scoring_cfg->min_roam_score_delta =
+			cfg_get(psoc, CFG_ROAM_COMMON_MIN_ROAM_DELTA) * 100;
+	} else {
+		scoring_cfg->min_roam_score_delta =
+			cfg_get(psoc, CFG_CAND_MIN_ROAM_SCORE_DELTA);
+	}
 }
 
 static void mlme_init_oce_cfg(struct wlan_objmgr_psoc *psoc,

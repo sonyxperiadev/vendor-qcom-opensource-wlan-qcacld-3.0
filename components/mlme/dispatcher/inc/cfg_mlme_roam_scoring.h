@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -128,6 +129,41 @@
 			0, \
 			CFG_VALUE_OR_DEFAULT, \
 			"Diff between connected AP's and candidate AP's roam score")
+
+/*
+ * <ini>
+ * RoamCommon_MinRoamDelta - Difference of roam score values between connected
+ * AP and roam candidate AP.
+ * @Min: 0
+ * @Max: 100
+ * @Default: 15
+ *
+ * This ini is used during CU and low rssi based roam triggers, consider
+ * AP as roam candidate only if its roam score is better than connected
+ * AP score by at least RoamCommon_MinRoamDelta.
+ * If user configured "RoamCommon_Delta" and "RoamCommon_MinRoamDelta" both,
+ * then firmware selects roam candidate AP by considering values of both
+ * INIs.
+ * Example: If DUT is connected with AP1 and roam candidate AP2 has roam
+ * score greater than RoamCommon_Delta and RoamCommon_MinRoamDelta then only
+ * firmware will trigger roaming to AP2.
+ * This value needs to be given in percentage
+ *
+ * Related: RoamCommon_Delta
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
+#define CFG_ROAM_COMMON_MIN_ROAM_DELTA CFG_INI_UINT( \
+			"RoamCommon_MinRoamDelta", \
+			0, \
+			100, \
+			15, \
+			CFG_VALUE_OR_DEFAULT, \
+			"Diff bet connected AP's and candidate AP's roam score")
 
 /*
  * <ini>
@@ -319,6 +355,7 @@
 	CFG(CFG_ROAM_SCORE_DELTA_TRIGGER_BITMAP) \
 	CFG(CFG_ROAM_SCORE_DELTA) \
 	CFG(CFG_CAND_MIN_ROAM_SCORE_DELTA) \
+	CFG(CFG_ROAM_COMMON_MIN_ROAM_DELTA) \
 	CFG(CFG_ENABLE_SCORING_FOR_ROAM) \
 	CFG(CFG_APSD_ENABLED) \
 	CFG(CFG_DISCONNECT_ROAM_TRIGGER_MIN_RSSI) \
