@@ -2044,8 +2044,13 @@ static void mlme_init_lfr_cfg(struct wlan_objmgr_psoc *psoc,
 	lfr->roaming_scan_policy =
 		cfg_get(psoc, CFG_ROAM_SCAN_SCAN_POLICY);
 
-	lfr->roam_scan_inactivity_time =
-		cfg_get(psoc, CFG_ROAM_SCAN_INACTIVITY_TIME);
+	if (val)
+		lfr->roam_scan_inactivity_time =
+			cfg_get(psoc, CFG_ROAM_SCAN_SECOND_TIMER) * 1000;
+	else
+		lfr->roam_scan_inactivity_time =
+			cfg_get(psoc, CFG_ROAM_SCAN_INACTIVITY_TIME);
+
 	lfr->roam_inactive_data_packet_count =
 		cfg_get(psoc, CFG_ROAM_INACTIVE_COUNT);
 	lfr->roam_scan_period_after_inactivity =

@@ -2827,6 +2827,43 @@
 	CFG_VALUE_OR_DEFAULT, \
 	"Device inactivity monitoring time")
 
+ /*
+  * <ini>
+  * RoamScan_SecondTimer - Device inactivity monitoring time in
+  * seconds for which the device is considered to be inactive with data
+  * packets count is less than configured RoamScan_InactiveCount.
+  *
+  * @Min: 60
+  * @Max: 300
+  * @Default: 120
+  *
+  * The below three ini values are used to control the roam scan after the
+  * firmware gets empty roam scan results during periodic roam scans.
+  * 1. RoamScan_SecondTimer
+  * 2. RoamScan_InactiveCount
+  * 3. RoamScan_InactiveTimer
+  * The first two ini "RoamScan_SecondTimer" and "RoamScan_InactiveCount"
+  * is frames the criteria to detect if the DUT is inactive. If the device is
+  * identified to be inactive based on the above two ini, then the value,
+  * "RoamScan_InactiveTimer" will be used as periodic roam scan
+  * duration.
+  *
+  * Related: RoamScan_InactiveCount
+  *
+  * Supported Feature: Roaming
+  *
+  * Usage: External
+  *
+  * </ini>
+  */
+#define CFG_ROAM_SCAN_SECOND_TIMER CFG_INI_UINT( \
+	"RoamScan_SecondTimer", \
+	60, \
+	300, \
+	120, \
+	CFG_VALUE_OR_DEFAULT, \
+	"Device inactivity monitoring time")
+
 /*
  * <ini>
  * roam_inactive_data_count/RoamScan_InactiveCount - Maximum allowed data
@@ -2999,6 +3036,7 @@
 	CFG(CFG_LFR_ROAM_FORCE_RSSI_TRIGGER) \
 	CFG(CFG_ROAM_SCAN_SCAN_POLICY) \
 	CFG(CFG_ROAM_SCAN_INACTIVITY_TIME) \
+	CFG(CFG_ROAM_SCAN_SECOND_TIMER) \
 	CFG(CFG_FT_IM_ROAMING) \
 	CFG(CFG_ROAM_INACTIVE_COUNT) \
 	CFG(CFG_POST_INACTIVITY_ROAM_SCAN_PERIOD) \
