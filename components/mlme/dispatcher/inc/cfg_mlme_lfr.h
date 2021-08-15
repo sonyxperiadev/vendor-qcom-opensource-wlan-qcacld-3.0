@@ -2019,6 +2019,30 @@
 
 /*
  * <ini>
+ * RoamCU_MonitorTime - Time in seconds for which the bss load values
+ * obtained from the beacons is sampled.
+ * @Min: 0
+ * @Max: 20
+ * @Default: 10
+ *
+ * Related: None
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_ROAM_CU_MONITOR_TIME CFG_INI_UINT( \
+			"RoamCU_MonitorTime", \
+			0, \
+			20, \
+			10, \
+			CFG_VALUE_OR_DEFAULT, \
+			"bss load sampling time")
+
+/*
+ * <ini>
  * bss_load_trigger_5g_rssi_threshold/RoamCU_5GRSSIRange -
  * Current AP minimum RSSI in dBm below
  * which roaming can be triggered if BSS load exceeds bss_load_threshold.
@@ -3029,6 +3053,7 @@
 	CFG(CFG_ENABLE_BSS_LOAD_TRIGGERED_ROAM) \
 	CFG(CFG_BSS_LOAD_THRESHOLD) \
 	CFG(CFG_BSS_LOAD_SAMPLE_TIME) \
+	CFG(CFG_ROAM_CU_MONITOR_TIME) \
 	CFG(CFG_LFR3_ROAM_HO_DELAY_FOR_RX) \
 	CFG(CFG_LFR_MIN_DELAY_BTW_ROAM_SCAN) \
 	CFG(CFG_LFR_ROAM_SCAN_TRIGGER_REASON_BITMASK) \

@@ -1855,10 +1855,20 @@ static void
 mlme_init_bss_load_trigger_params(struct wlan_objmgr_psoc *psoc,
 				  struct bss_load_trigger *bss_load_trig)
 {
+	bool val = false;
+
 	bss_load_trig->enabled =
 		cfg_get(psoc, CFG_ENABLE_BSS_LOAD_TRIGGERED_ROAM);
 	bss_load_trig->threshold = cfg_get(psoc, CFG_BSS_LOAD_THRESHOLD);
-	bss_load_trig->sample_time = cfg_get(psoc, CFG_BSS_LOAD_SAMPLE_TIME);
+
+	ucfg_mlme_get_connection_roaming_ini_present(psoc, &val);
+	if (val)
+		bss_load_trig->sample_time =
+				cfg_get(psoc, CFG_ROAM_CU_MONITOR_TIME) * 1000;
+	else
+		bss_load_trig->sample_time = cfg_get(psoc,
+						     CFG_BSS_LOAD_SAMPLE_TIME);
+
 	bss_load_trig->rssi_threshold_5ghz =
 			cfg_get(psoc, CFG_BSS_LOAD_TRIG_5G_RSSI_THRES);
 	bss_load_trig->rssi_threshold_24ghz =
