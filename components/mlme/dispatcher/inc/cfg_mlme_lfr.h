@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2353,6 +2354,34 @@
 
 /*
  * <ini>
+ * RoamIdle_InactiveTime - Time duration in seconds for which the
+ * connection is idle.
+ * @Min: 0
+ * @Max: 20
+ * @Default: 10
+ *
+ * This ini is used to configure the time in seconds for which the connection
+ * candidate is idle and after which idle roam scan can be triggered if
+ * other criteria of ini "enable_idle_roam" is met.
+ *
+ * Related: enable_idle_roam
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+#define CFG_ROAM_IDLE_INACTIVE_TIME CFG_INI_UINT( \
+	"RoamIdle_InactiveTime", \
+	0, \
+	20, \
+	10, \
+	CFG_VALUE_OR_DEFAULT, \
+	"Configure RSSI delta to start idle roam")
+
+/*
+ * <ini>
  * idle_data_packet_count/RoamIdle_InactivePacketCount - No of tx/rx packets
  * above which the connection is not idle.
  * @Min: 0
@@ -2550,6 +2579,7 @@
 	CFG(CFG_LFR_ENABLE_IDLE_ROAM) \
 	CFG(CFG_LFR_IDLE_ROAM_RSSI_DELTA) \
 	CFG(CFG_LFR_IDLE_ROAM_INACTIVE_TIME) \
+	CFG(CFG_ROAM_IDLE_INACTIVE_TIME) \
 	CFG(CFG_LFR_IDLE_ROAM_PACKET_COUNT) \
 	CFG(CFG_LFR_IDLE_ROAM_MIN_RSSI) \
 	CFG(CFG_LFR_IDLE_ROAM_BAND) \

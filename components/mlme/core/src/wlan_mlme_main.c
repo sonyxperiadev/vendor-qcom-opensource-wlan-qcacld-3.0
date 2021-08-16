@@ -30,6 +30,7 @@
 #include "wlan_mlme_api.h"
 #include <wlan_crypto_global_api.h>
 #include <wlan_mlo_mgr_cmn.h>
+#include "wlan_mlme_ucfg_api.h"
 
 #define NUM_OF_SOUNDING_DIMENSIONS     1 /*Nss - 1, (Nss = 2 for 2x2)*/
 
@@ -1681,6 +1682,8 @@ mlme_init_sae_single_pmk_cfg(struct wlan_objmgr_psoc *psoc,
 static void mlme_init_roam_offload_cfg(struct wlan_objmgr_psoc *psoc,
 				       struct wlan_mlme_lfr_cfg *lfr)
 {
+	bool val = false;
+
 	lfr->lfr3_roaming_offload =
 		cfg_get(psoc, CFG_LFR3_ROAMING_OFFLOAD);
 	lfr->lfr3_dual_sta_roaming_enabled =
@@ -1694,8 +1697,16 @@ static void mlme_init_roam_offload_cfg(struct wlan_objmgr_psoc *psoc,
 		cfg_get(psoc, CFG_LFR_ENABLE_IDLE_ROAM);
 	lfr->idle_roam_rssi_delta =
 		cfg_get(psoc, CFG_LFR_IDLE_ROAM_RSSI_DELTA);
-	lfr->idle_roam_inactive_time =
-		cfg_get(psoc, CFG_LFR_IDLE_ROAM_INACTIVE_TIME);
+
+	ucfg_mlme_get_connection_roaming_ini_present(psoc, &val);
+	if (val) {
+		lfr->idle_roam_inactive_time =
+			cfg_get(psoc, CFG_ROAM_IDLE_INACTIVE_TIME) * 1000;
+	} else {
+		lfr->idle_roam_inactive_time =
+			cfg_get(psoc, CFG_LFR_IDLE_ROAM_INACTIVE_TIME);
+	}
+
 	lfr->idle_data_packet_count =
 		cfg_get(psoc, CFG_LFR_IDLE_ROAM_PACKET_COUNT);
 	lfr->idle_roam_min_rssi = cfg_get(psoc, CFG_LFR_IDLE_ROAM_MIN_RSSI);
