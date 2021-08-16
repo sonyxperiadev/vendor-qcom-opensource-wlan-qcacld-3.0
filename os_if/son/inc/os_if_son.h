@@ -66,6 +66,8 @@
  * @os_if_start_acs: Trigger ACS
  * @os_if_set_acs_channels: Set channel list for ACS
  * @os_if_get_acs_report: Gets the ACS report
+ * @os_if_get_node_info: Gets the datarate info for node
+ * @os_if_get_peer_capability: Gets peer capability
  */
 struct son_callbacks {
 	uint32_t (*os_if_is_acs_in_progress)(struct wlan_objmgr_vdev *vdev);
@@ -125,6 +127,12 @@ struct son_callbacks {
 				      struct ieee80211req_athdbg *req);
 	int (*os_if_get_acs_report)(struct wlan_objmgr_vdev *vdev,
 				    struct ieee80211_acs_dbg *acs_r);
+	QDF_STATUS (*os_if_get_node_info)(struct wlan_objmgr_vdev *vdev,
+					  uint8_t *mac_addr,
+					  wlan_node_info *nodeinfo);
+	QDF_STATUS (*os_if_get_peer_capability)(struct wlan_objmgr_vdev *vdev,
+						struct wlan_objmgr_peer *peer,
+						wlan_peer_cap *cap);
 };
 
 /**
@@ -745,4 +753,15 @@ int os_if_son_parse_generic_nl_cmd(struct wiphy *wiphy,
 				   struct nlattr **tb,
 				   enum os_if_son_vendor_cmd_type type);
 
+/**
+ * os_if_son_get_node_datarate_info() - Get datarate info about given mac
+ * @vdev: vdev_obj
+ * @mac_addr: mac_address to get datarate information
+ * @node_info: object to store datarate information
+ *
+ * Return: void
+ */
+QDF_STATUS os_if_son_get_node_datarate_info(struct wlan_objmgr_vdev *vdev,
+					    uint8_t *mac_addr,
+					    wlan_node_info *node_info);
 #endif

@@ -31,6 +31,8 @@
 #include <son_ucfg_api.h>
 #include <wlan_hdd_son.h>
 #include <wlan_hdd_object_manager.h>
+#include <wlan_hdd_stats.h>
+
 
 /**
  * hdd_son_is_acs_in_progress() - whether acs is in progress or not
@@ -2215,6 +2217,161 @@ end:
 	return ret;
 }
 
+static const uint8_t wlanphymode2ieeephymode[WLAN_PHYMODE_MAX] = {
+	[WLAN_PHYMODE_AUTO] = IEEE80211_MODE_AUTO,
+	[WLAN_PHYMODE_11A] = IEEE80211_MODE_11A,
+	[WLAN_PHYMODE_11B] = IEEE80211_MODE_11B,
+	[WLAN_PHYMODE_11G] = IEEE80211_MODE_11G,
+	[WLAN_PHYMODE_11G_ONLY] = 0,
+	[WLAN_PHYMODE_11NA_HT20] = IEEE80211_MODE_11NA_HT20,
+	[WLAN_PHYMODE_11NG_HT20] = IEEE80211_MODE_11NG_HT20,
+	[WLAN_PHYMODE_11NA_HT40] = IEEE80211_MODE_11NA_HT40,
+	[WLAN_PHYMODE_11NG_HT40PLUS] = IEEE80211_MODE_11NG_HT40PLUS,
+	[WLAN_PHYMODE_11NG_HT40MINUS] = IEEE80211_MODE_11NG_HT40MINUS,
+	[WLAN_PHYMODE_11NG_HT40] = IEEE80211_MODE_11NG_HT40,
+	[WLAN_PHYMODE_11AC_VHT20] = IEEE80211_MODE_11AC_VHT20,
+	[WLAN_PHYMODE_11AC_VHT20_2G] = 0,
+	[WLAN_PHYMODE_11AC_VHT40] = IEEE80211_MODE_11AC_VHT40,
+	[WLAN_PHYMODE_11AC_VHT40PLUS_2G] = IEEE80211_MODE_11AC_VHT40PLUS,
+	[WLAN_PHYMODE_11AC_VHT40MINUS_2G] = IEEE80211_MODE_11AC_VHT40MINUS,
+	[WLAN_PHYMODE_11AC_VHT40_2G] = 0,
+	[WLAN_PHYMODE_11AC_VHT80] = IEEE80211_MODE_11AC_VHT80,
+	[WLAN_PHYMODE_11AC_VHT80_2G] = 0,
+	[WLAN_PHYMODE_11AC_VHT160] = IEEE80211_MODE_11AC_VHT160,
+	[WLAN_PHYMODE_11AC_VHT80_80] = IEEE80211_MODE_11AC_VHT80_80,
+	[WLAN_PHYMODE_11AXA_HE20] = IEEE80211_MODE_11AXA_HE20,
+	[WLAN_PHYMODE_11AXG_HE20] = IEEE80211_MODE_11AXG_HE20,
+	[WLAN_PHYMODE_11AXA_HE40MINUS] = IEEE80211_MODE_11AXA_HE40,
+	[WLAN_PHYMODE_11AXG_HE40PLUS] = IEEE80211_MODE_11AXG_HE40PLUS,
+	[WLAN_PHYMODE_11AXG_HE40MINUS] = IEEE80211_MODE_11AXG_HE40MINUS,
+	[WLAN_PHYMODE_11AXG_HE40] = IEEE80211_MODE_11AXG_HE40,
+	[WLAN_PHYMODE_11AXA_HE80] = IEEE80211_MODE_11AXA_HE80,
+	[WLAN_PHYMODE_11AXA_HE80] = 0,
+	[WLAN_PHYMODE_11AXA_HE160] = IEEE80211_MODE_11AXA_HE160,
+	[WLAN_PHYMODE_11AXA_HE80_80] = IEEE80211_MODE_11AXA_HE80_80,
+#ifdef WLAN_FEATURE_11BE
+	[WLAN_PHYMODE_11BEA_EHT20] = IEEE80211_MODE_11BEA_EHT20,
+	[WLAN_PHYMODE_11BEG_EHT20] = IEEE80211_MODE_11BEG_EHT20,
+	[WLAN_PHYMODE_11BEA_EHT40MINUS] = IEEE80211_MODE_11BEA_EHT40,
+	[WLAN_PHYMODE_11BEG_EHT40PLUS] = IEEE80211_MODE_11BEG_EHT40PLUS,
+	[WLAN_PHYMODE_11BEG_EHT40MINUS] = IEEE80211_MODE_11BEG_EHT40MINUS,
+	[WLAN_PHYMODE_11BEG_EHT40] = IEEE80211_MODE_11BEG_EHT40,
+	[WLAN_PHYMODE_11BEA_EHT80] = IEEE80211_MODE_11BEA_EHT80,
+	[WLAN_PHYMODE_11BEG_EHT80] = 0,
+	[WLAN_PHYMODE_11BEA_EHT160] = IEEE80211_MODE_11BEA_EHT160,
+	[WLAN_PHYMODE_11BEA_EHT320] = IEEE80211_MODE_11BEA_EHT320,
+#endif /* WLAN_FEATURE_11BE */
+};
+
+static enum ieee80211_phymode
+wlan_hdd_son_get_ieee_phymode(enum wlan_phymode wlan_phymode)
+{
+	if (wlan_phymode >= WLAN_PHYMODE_MAX)
+		return IEEE80211_MODE_AUTO;
+
+	return wlanphymode2ieeephymode[wlan_phymode];
+}
+
+static QDF_STATUS hdd_son_get_node_info(struct wlan_objmgr_vdev *vdev,
+					uint8_t *mac_addr,
+					wlan_node_info *node_info)
+{
+	struct hdd_adapter *adapter = wlan_hdd_get_adapter_from_objmgr(vdev);
+	struct hdd_station_info *sta_info;
+	enum wlan_phymode peer_phymode;
+	struct wlan_objmgr_psoc *psoc;
+
+	sta_info = hdd_get_sta_info_by_mac(&adapter->sta_info_list, mac_addr,
+					   STA_INFO_SON_GET_DATRATE_INFO);
+	if (!sta_info) {
+		hdd_err("Sta info is null");
+		return QDF_STATUS_E_FAILURE;
+	}
+	psoc = wlan_vdev_get_psoc(vdev);
+	if (!psoc) {
+		hdd_err("null psoc");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	node_info->max_chwidth =
+			hdd_chan_width_to_son_chwidth(sta_info->ch_width);
+	node_info->num_streams = (sta_info->max_mcs_idx >= 8) ? 2 : 1;
+	ucfg_mlme_get_peer_phymode(psoc, mac_addr, &peer_phymode);
+	node_info->phymode = wlan_hdd_son_get_ieee_phymode(peer_phymode);
+	node_info->max_txpower = ucfg_son_get_tx_power(sta_info->assoc_req_ies);
+	node_info->max_MCS = ucfg_son_get_max_mcs(sta_info->mode,
+						  sta_info->max_supp_idx,
+						  sta_info->max_ext_idx,
+						  sta_info->max_mcs_idx,
+						  sta_info->rx_mcs_map);
+	if (sta_info->vht_present)
+		node_info->is_mu_mimo_supported =
+				sta_info->vht_caps.vht_cap_info
+				& IEEE80211_VHT_CAP_MU_BEAMFORMEE_CAPABLE;
+	if (sta_info->ht_present)
+		node_info->is_static_smps = ((sta_info->ht_caps.cap_info
+				& IEEE80211_HTCAP_C_SM_MASK) ==
+				IEEE80211_HTCAP_C_SMPOWERSAVE_STATIC);
+	hdd_put_sta_info_ref(&adapter->sta_info_list, &sta_info, true,
+			     STA_INFO_SON_GET_DATRATE_INFO);
+	return QDF_STATUS_SUCCESS;
+}
+
+static QDF_STATUS hdd_son_get_peer_capability(struct wlan_objmgr_vdev *vdev,
+					      struct wlan_objmgr_peer *peer,
+					      wlan_peer_cap *peer_cap)
+{
+	struct hdd_station_info *sta_info;
+	struct hdd_adapter *adapter;
+	bool b_meas_supported;
+	QDF_STATUS status;
+
+	adapter = wlan_hdd_get_adapter_from_objmgr(vdev);
+	if (!adapter) {
+		hdd_err("null adapter");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	sta_info = hdd_get_sta_info_by_mac(&adapter->sta_info_list,
+					   peer->macaddr,
+					   STA_INFO_SOFTAP_GET_STA_INFO);
+	if (!sta_info) {
+		hdd_err("sta_info NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	hdd_info("Getting peer capability from sta_info");
+	qdf_mem_copy(peer_cap->bssid, vdev->vdev_mlme.macaddr,
+		     QDF_MAC_ADDR_SIZE);
+	peer_cap->is_BTM_Supported = !!(sta_info->ext_cap &
+				   BIT(19/*BSS_TRANSITION*/));
+	peer_cap->is_RRM_Supported = !!(sta_info->capability &
+				   WLAN_CAPABILITY_RADIO_MEASURE);
+
+	peer_cap->band_cap = sta_info->supported_band;
+	if (sta_info->assoc_req_ies.len) {
+		status = ucfg_son_get_peer_rrm_info(sta_info->assoc_req_ies,
+						    peer_cap->rrmcaps,
+						    &(b_meas_supported));
+		if (status == QDF_STATUS_SUCCESS)
+			peer_cap->is_beacon_meas_supported = b_meas_supported;
+	}
+	if (sta_info->ht_present)
+		peer_cap->htcap = sta_info->ht_caps.cap_info;
+	if (sta_info->vht_present)
+		peer_cap->vhtcap = sta_info->vht_caps.vht_cap_info;
+
+	qdf_mem_zero(&peer_cap->hecap, sizeof(wlan_client_he_capabilities));
+
+	os_if_son_get_node_datarate_info(vdev, peer->macaddr,
+					 &peer_cap->info);
+
+	hdd_put_sta_info_ref(&adapter->sta_info_list, &sta_info, true,
+			     STA_INFO_SOFTAP_GET_STA_INFO);
+
+	return QDF_STATUS_SUCCESS;
+}
+
 void hdd_son_register_callbacks(struct hdd_context *hdd_ctx)
 {
 	struct son_callbacks cb_obj = {0};
@@ -2250,6 +2407,8 @@ void hdd_son_register_callbacks(struct hdd_context *hdd_ctx)
 	cb_obj.os_if_start_acs = hdd_son_start_acs;
 	cb_obj.os_if_set_acs_channels = hdd_son_set_acs_channels;
 	cb_obj.os_if_get_acs_report = hdd_son_get_acs_report;
+	cb_obj.os_if_get_node_info = hdd_son_get_node_info;
+	cb_obj.os_if_get_peer_capability = hdd_son_get_peer_capability;
 
 	os_if_son_register_hdd_callbacks(hdd_ctx->psoc, &cb_obj);
 

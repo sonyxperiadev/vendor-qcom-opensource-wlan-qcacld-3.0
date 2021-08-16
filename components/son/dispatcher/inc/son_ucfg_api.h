@@ -170,6 +170,39 @@ int ucfg_son_set_cbs_wait_time(struct wlan_objmgr_vdev *vdev,
 int ucfg_son_set_cbs_dwell_split_time(struct wlan_objmgr_vdev *vdev,
 				      uint32_t val);
 
+/**
+ * ucfg_son_get_max_tx_power() - Gets the max transmit power for peer
+ * @assoc_req_ies: assoc req ies
+ *
+ * Return: Returns the max tx power
+ */
+uint8_t ucfg_son_get_tx_power(struct element_info assoc_req_ies);
+
+/**
+ * ucfg_get_max_mcs() - calculate the max mcs supported by the node
+ * @mode: current phy mode
+ * @supp_idx: max supported idx
+ * @ext_idx: max extended idx
+ * @ht_mcs_idx: max mcs index for HT
+ * @vht_mcs_map: mcs map for VHT
+ *
+ * Return: max_mcs for the node
+ */
+uint8_t ucfg_son_get_max_mcs(uint8_t mode, uint8_t supp_idx, uint8_t ext_idx,
+			     uint8_t ht_mcs_idx, uint8_t vht_mcs_map);
+
+/**
+ * ucfg_son_get_peer_rrm_info() - Get RRM info for peer
+ * @assoc_req_ies: assoc req ies
+ * @rrmcaps: rrm capabiities
+ * @is_beacon_meas_supported: if beacon meas is supported
+ *
+ * Return: Returns QDF_STATUS_SUCCESS if succeed
+ */
+QDF_STATUS ucfg_son_get_peer_rrm_info(struct element_info assoc_req_ies,
+				      uint8_t *rrmcaps,
+				      bool *is_beacon_meas_supported);
+
 #ifdef WLAN_FEATURE_SON
 /* ucfg_son_disable_cbs() - son cbs disable
  * @vdev: vdev pointer

@@ -884,10 +884,87 @@ QDF_STATUS os_if_son_vdev_ops(struct wlan_objmgr_vdev *vdev,
 			      enum wlan_mlme_vdev_param type,
 			      void *data, void *ret)
 {
+	union wlan_mlme_vdev_data *in = (union wlan_mlme_vdev_data *)data;
+	union wlan_mlme_vdev_data *out = (union wlan_mlme_vdev_data *)ret;
+
+	if (!vdev)
+		return QDF_STATUS_E_INVAL;
+	switch (type) {
+	case VDEV_SET_IE:
+		break;
+	case VDEV_CLR_IE:
+		break;
+	case VDEV_SET_ACL:
+		break;
+	case VDEV_CLR_ACL:
+		break;
+	case VDEV_SET_ACL_TIMER:
+		break;
+	case VDEV_SET_PEER_ACT_STATS:
+		break;
+	case VDEV_SET_SEC_STA_WDS:
+		break;
+	case VDEV_SET_MEC:
+		break;
+	case VDEV_SET_MBO_IE_BSTM:
+		break;
+	case VDEV_SET_WPS_ACL_ENABLE:
+		break;
+	case VDEV_SET_WNM_BSS_PREF:
+		break;
+	case VDEV_GET_NSS:
+		break;
+	case VDEV_GET_CHAN:
+		if (!out)
+			return QDF_STATUS_E_INVAL;
+		qdf_mem_copy(&out->chan,
+			     wlan_vdev_get_active_channel(vdev),
+			     sizeof(out->chan));
+		break;
+	case VDEV_GET_CHAN_WIDTH:
+		break;
+	case VDEV_GET_CHAN_UTIL:
+		if (!out)
+			return QDF_STATUS_E_INVAL;
+		out->chan_util = os_if_son_get_chan_uti(vdev, NULL);
+		break;
+	case VDEV_GET_APCAP:
+		break;
+	case VDEV_GET_CONNECT_N_TX:
+		break;
+	case VDEV_GET_SSID:
+		break;
+	case VDEV_GET_MAX_PHYRATE:
+		break;
+	case VDEV_GET_ACL:
+		break;
+	case VDEV_GET_ACL_RSSI_THRESHOLDS:
+		break;
+	case VDEV_GET_NODE_CAP:
+		if (!out || !in)
+			return QDF_STATUS_E_INVAL;
+		os_if_son_get_node_datarate_info(vdev, in->mac, &out->nodeinfo);
+		break;
+	case VDEV_GET_WDS:
+		break;
+	default:
+		return QDF_STATUS_E_INVAL;
+	}
+
 	return QDF_STATUS_SUCCESS;
 }
 
 qdf_export_symbol(os_if_son_vdev_ops);
+
+static QDF_STATUS os_if_son_get_peer_capability(struct wlan_objmgr_vdev *vdev,
+						struct wlan_objmgr_peer *peer,
+						wlan_peer_cap *peer_cap)
+{
+	if (g_son_os_if_cb.os_if_get_peer_capability)
+		return g_son_os_if_cb.os_if_get_peer_capability(vdev, peer,
+								peer_cap);
+	return QDF_STATUS_E_INVAL;
+}
 
 QDF_STATUS os_if_son_peer_ops(struct wlan_objmgr_peer *peer,
 			      enum wlan_mlme_peer_param type,
@@ -930,6 +1007,12 @@ QDF_STATUS os_if_son_peer_ops(struct wlan_objmgr_peer *peer,
 		}
 		status = ucfg_son_set_peer_kickout_allow(vdev, peer,
 							 in->enable);
+		break;
+	case PEER_GET_CAPABILITY:
+		if (!out)
+			return QDF_STATUS_E_INVAL;
+		status = os_if_son_get_peer_capability(vdev, peer,
+						       &out->peercap);
 		break;
 	default:
 		osif_err("invalid type: %d", type);
@@ -1521,4 +1604,43 @@ int os_if_son_parse_generic_nl_cmd(struct wiphy *wiphy,
 				[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_FLAGS]);
 
 	return rx_ops->parse_generic_nl_cmd(wiphy, wdev, &param, type);
+}
+
+QDF_STATUS os_if_son_get_node_datarate_info(struct wlan_objmgr_vdev *vdev,
+					    uint8_t *mac_addr,
+					    wlan_node_info *node_info)
+{
+	int8_t max_tx_power;
+	int8_t min_tx_power;
+	struct wlan_objmgr_psoc *psoc;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+
+	psoc = wlan_vdev_get_psoc(vdev);
+	if (!psoc) {
+		osif_err("null posc");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (WLAN_ADDR_EQ(wlan_vdev_mlme_get_macaddr(vdev), mac_addr) ==
+							   QDF_STATUS_SUCCESS) {
+		node_info->max_chwidth = os_if_son_get_chwidth(vdev);
+		node_info->phymode = os_if_son_get_phymode(vdev);
+		node_info->num_streams = os_if_son_get_rx_streams(vdev);
+		ucfg_son_get_min_and_max_power(psoc, &max_tx_power,
+					       &min_tx_power);
+		node_info->max_txpower = max_tx_power;
+		node_info->max_MCS = MAX_HE_MCS_IDX;
+		osif_debug("node info: max_chwidth: %u, phymode: %u, num_streams: %d, max_mcs: %d, max_txpower: %d",
+			   node_info->max_chwidth, node_info->phymode,
+			   node_info->num_streams, node_info->max_MCS,
+			   node_info->max_txpower);
+	} else {
+		if (!g_son_os_if_cb.os_if_get_node_info) {
+			osif_err("Callback not registered");
+			return QDF_STATUS_E_INVAL;
+		}
+		status = g_son_os_if_cb.os_if_get_node_info(vdev, mac_addr,
+							    node_info);
+	}
+	return status;
 }

@@ -1263,3 +1263,60 @@ int wlan_son_set_cbs_dwell_split_time(struct wlan_objmgr_vdev *vdev,
 
 	return 0;
 }
+
+uint8_t wlan_son_get_node_tx_power(struct element_info assoc_req_ies)
+{
+	const uint8_t *power_cap_ie_data;
+
+	power_cap_ie_data = wlan_get_ie_ptr_from_eid(WLAN_ELEMID_PWRCAP,
+						     assoc_req_ies.ptr,
+						     assoc_req_ies.len);
+	if (power_cap_ie_data)
+		return *(power_cap_ie_data + 3);
+	else
+		return 0;
+}
+
+uint8_t wlan_son_get_max_mcs(uint8_t mode, uint8_t supp_idx, uint8_t ext_idx,
+			     uint8_t ht_mcs_idx, uint8_t vht_mcs_map)
+{
+	uint8_t maxidx = MAX_HE_MCS_IDX;
+
+	/* check supported rates */
+	if (supp_idx != 0xff && maxidx < supp_idx)
+		maxidx = supp_idx;
+
+	/* check extended rates */
+	if (ext_idx != 0xff && maxidx < ext_idx)
+		maxidx = ext_idx;
+
+	/* check for HT Mode */
+	if (mode == SIR_SME_PHY_MODE_HT)
+		maxidx = ht_mcs_idx;
+
+	if (mode == SIR_SME_PHY_MODE_VHT)
+		maxidx = (vht_mcs_map & DATA_RATE_11AC_MCS_MASK);
+
+	return maxidx;
+}
+
+QDF_STATUS wlan_son_get_peer_rrm_info(struct element_info assoc_req_ies,
+				      uint8_t *rrmcaps,
+				      bool *is_beacon_meas_supported)
+{
+	const uint8_t *eid;
+
+	eid = wlan_get_ie_ptr_from_eid(WLAN_ELEMID_RRM,
+				       assoc_req_ies.ptr,
+				       assoc_req_ies.len);
+	if (eid) {
+		qdf_mem_copy(rrmcaps, &eid[2], eid[1]);
+		if ((rrmcaps[0] &
+		    IEEE80211_RRM_CAPS_BEACON_REPORT_PASSIVE) ||
+		    (rrmcaps[0] &
+		    IEEE80211_RRM_CAPS_BEACON_REPORT_ACTIVE))
+			*is_beacon_meas_supported = true;
+		return QDF_STATUS_SUCCESS;
+	}
+	return QDF_STATUS_E_RESOURCES;
+}

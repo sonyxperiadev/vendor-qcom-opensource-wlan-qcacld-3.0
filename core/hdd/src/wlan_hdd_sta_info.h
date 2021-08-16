@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -111,6 +111,7 @@ enum dhcp_nego_status {
  * @STA_INFO_SOFTAP_IPA_RX_PKT_CALLBACK: Update rx mcbc stats for IPA case
  * @STA_INFO_WLAN_HDD_CFG80211_DUMP_STATION: NL80211_CMD_GET_STATION dumpit
  *                                           handler for SoftAP
+ * @STA_INFO_SON_GET_DATRATE_INFO: gets datarate info for a SON node
  *
  */
 /*
@@ -150,7 +151,7 @@ typedef enum {
 	STA_INFO_SHOW = 29,
 	STA_INFO_SOFTAP_IPA_RX_PKT_CALLBACK = 30,
 	STA_INFO_WLAN_HDD_CFG80211_DUMP_STATION = 31,
-
+	STA_INFO_SON_GET_DATRATE_INFO = 32,
 	STA_INFO_ID_MAX,
 } wlan_sta_info_dbgid;
 
