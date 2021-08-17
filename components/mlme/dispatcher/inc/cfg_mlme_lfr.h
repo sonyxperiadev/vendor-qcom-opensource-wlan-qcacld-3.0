@@ -1621,6 +1621,32 @@
 	CFG_VALUE_OR_DEFAULT, \
 	"Empty scan refresh period")
 
+ /*
+  * <ini>
+  * RoamScan_FirstTimer - Set empty scan refresh period
+  * @Min: 0
+  * @Max: 20
+  * @Default: 10
+  *
+  * This ini is used by firmware to set scan period in secs
+  * following empty scan results.
+  *
+  * Related: None
+  *
+  * Supported Feature: LFR Scan
+  *
+  * Usage: External
+  *
+  * </ini>
+  */
+#define CFG_ROAM_SCAN_FIRST_TIMER CFG_INI_UINT( \
+	"RoamScan_FirstTimer", \
+	0, \
+	20, \
+	10, \
+	CFG_VALUE_OR_DEFAULT, \
+	"Empty scan refresh period")
+
 /*
  * <ini>
  * gRoamBmissFirstBcnt - Beacon miss count to trigger 1st bmiss event
@@ -2950,6 +2976,7 @@
 	CFG(CFG_LFR_NEIGHBOR_SCAN_MAX_CHAN_TIME) \
 	CFG(CFG_LFR_NEIGHBOR_SCAN_RESULTS_REFRESH_PERIOD) \
 	CFG(CFG_LFR_EMPTY_SCAN_REFRESH_PERIOD) \
+	CFG(CFG_ROAM_SCAN_FIRST_TIMER) \
 	CFG(CFG_LFR_ROAM_BMISS_FIRST_BCNT) \
 	CFG(CFG_LFR_ROAM_BMISS_FINAL_BCNT) \
 	CFG(CFG_LFR_ROAMING_DFS_CHANNEL) \

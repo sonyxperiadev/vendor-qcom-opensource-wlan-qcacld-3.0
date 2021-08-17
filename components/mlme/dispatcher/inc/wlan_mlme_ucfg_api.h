@@ -4307,11 +4307,13 @@ bool ucfg_mlme_validate_full_roam_scan_period(uint32_t full_roam_scan_period);
 
 /**
  * ucfg_mlme_validate_scan_period() - Validate if scan period is in valid range
- * @value: Scan period in msec
+ * @psoc: Pointer to soc
+ * @roam_scan_period: Scan period in msec
  *
  * Return: True if roam_scan_period is in expected range, false otherwise.
  */
-bool ucfg_mlme_validate_scan_period(uint32_t roam_scan_period);
+bool ucfg_mlme_validate_scan_period(struct wlan_objmgr_psoc *psoc,
+				    uint32_t roam_scan_period);
 /**
  * ucfg_mlme_get_ignore_fw_reg_offload_ind() - Get the
  * ignore_fw_reg_offload_ind ini

@@ -5308,7 +5308,8 @@ hdd_send_roam_scan_period_to_sme(struct hdd_context *hdd_ctx,
 	QDF_STATUS status;
 	uint16_t roam_scan_period_current, roam_scan_period_global;
 
-	if (!ucfg_mlme_validate_scan_period(roam_scan_period * 1000))
+	if (!ucfg_mlme_validate_scan_period(hdd_ctx->psoc,
+					    roam_scan_period * 1000))
 		return QDF_STATUS_E_INVAL;
 
 	hdd_debug("Received Command to Set roam scan period (Empty Scan refresh period) = %d",

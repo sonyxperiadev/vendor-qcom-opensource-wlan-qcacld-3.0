@@ -2801,8 +2801,18 @@ static int drv_cmd_set_roam_scan_period(struct hdd_adapter *adapter,
 	int ret = 0;
 	uint8_t *value = command;
 	uint8_t roam_scan_period = 0;
-	uint16_t empty_scan_refresh_period =
-		cfg_default(CFG_LFR_EMPTY_SCAN_REFRESH_PERIOD);
+	uint16_t empty_scan_refresh_period;
+	bool flag = false, val = false;
+
+	ucfg_mlme_get_connection_roaming_ini_present(hdd_ctx->psoc, &val);
+	if (val) {
+		flag = true;
+		empty_scan_refresh_period =
+			cfg_default(CFG_ROAM_SCAN_FIRST_TIMER) * 1000;
+	} else {
+		empty_scan_refresh_period =
+			cfg_default(CFG_LFR_EMPTY_SCAN_REFRESH_PERIOD);
+	}
 
 	/* input refresh period is in terms of seconds */
 
@@ -2816,14 +2826,20 @@ static int drv_cmd_set_roam_scan_period(struct hdd_adapter *adapter,
 		 * If the input value is greater than max value of datatype,
 		 * then also kstrtou8 fails
 		 */
-		hdd_err("kstrtou8 failed Input value may be out of range[%d - %d]",
-			(cfg_min(CFG_LFR_EMPTY_SCAN_REFRESH_PERIOD) / 1000),
-			(cfg_max(CFG_LFR_EMPTY_SCAN_REFRESH_PERIOD) / 1000));
+		if (flag)
+			hdd_err("kstrtou8 failed Input value may be out of range[%d - %d]",
+				cfg_min(CFG_ROAM_SCAN_FIRST_TIMER),
+				cfg_max(CFG_ROAM_SCAN_FIRST_TIMER));
+		else
+			hdd_err("kstrtou8 failed Input value may be out of range[%d - %d]",
+				(cfg_min(CFG_LFR_EMPTY_SCAN_REFRESH_PERIOD) / 1000),
+				(cfg_max(CFG_LFR_EMPTY_SCAN_REFRESH_PERIOD) / 1000));
 		ret = -EINVAL;
 		goto exit;
 	}
 
-	if (!ucfg_mlme_validate_scan_period(roam_scan_period * 1000)) {
+	if (!ucfg_mlme_validate_scan_period(hdd_ctx->psoc,
+					    roam_scan_period * 1000)) {
 		ret = -EINVAL;
 		goto exit;
 	}

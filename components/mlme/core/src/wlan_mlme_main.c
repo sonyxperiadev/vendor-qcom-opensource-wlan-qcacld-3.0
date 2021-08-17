@@ -1880,6 +1880,7 @@ static void mlme_init_lfr_cfg(struct wlan_objmgr_psoc *psoc,
 			      struct wlan_mlme_lfr_cfg *lfr)
 {
 	qdf_size_t neighbor_scan_chan_list_num = 0;
+	bool val = false;
 
 	lfr->mawc_roam_enabled =
 		cfg_get(psoc, CFG_LFR_MAWC_ROAM_ENABLED);
@@ -1992,8 +1993,14 @@ static void mlme_init_lfr_cfg(struct wlan_objmgr_psoc *psoc,
 		cfg_get(psoc, CFG_LFR_NEIGHBOR_SCAN_MAX_CHAN_TIME);
 	lfr->neighbor_scan_results_refresh_period =
 		cfg_get(psoc, CFG_LFR_NEIGHBOR_SCAN_RESULTS_REFRESH_PERIOD);
-	lfr->empty_scan_refresh_period =
-		cfg_get(psoc, CFG_LFR_EMPTY_SCAN_REFRESH_PERIOD);
+
+	ucfg_mlme_get_connection_roaming_ini_present(psoc, &val);
+	if (val)
+		lfr->empty_scan_refresh_period =
+			cfg_get(psoc, CFG_ROAM_SCAN_FIRST_TIMER) * 1000;
+	else
+		lfr->empty_scan_refresh_period =
+			cfg_get(psoc, CFG_LFR_EMPTY_SCAN_REFRESH_PERIOD);
 	lfr->roam_bmiss_first_bcnt =
 		cfg_get(psoc, CFG_LFR_ROAM_BMISS_FIRST_BCNT);
 	lfr->roam_bmiss_final_bcnt =
