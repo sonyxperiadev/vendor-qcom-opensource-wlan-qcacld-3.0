@@ -2948,6 +2948,37 @@
 	CFG_VALUE_OR_DEFAULT, \
 	"Roam scan period post inactivity")
 
+/*
+ * <ini>
+ * RoamScan_InactiveTimer - Roam scan duration in sec after device is
+ * out of inactivity state.
+ *
+ * @Min: 0
+ * @Max: 20
+ * @Default: 10
+ *
+ * If there is empty scan results during roam scan, firmware will move to
+ * roam scan inactive state if roam_scan_inactivity and
+ * roam_inactive_data_count criteria are met.
+ * This ini is used to configure the roam scan duration in sec once the
+ * inactivity is finished and roam scan can be started.
+ *
+ * Related: roam_scan_inactivity_time, roam_inactive_data_count
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_ROAM_SCAN_INACTIVE_TIMER CFG_INI_UINT( \
+	"RoamScan_InactiveTimer", \
+	0, \
+	20, \
+	10, \
+	CFG_VALUE_OR_DEFAULT, \
+	"Roam scan period post inactivity")
+
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 /*
  * <ini>
@@ -3065,6 +3096,7 @@
 	CFG(CFG_FT_IM_ROAMING) \
 	CFG(CFG_ROAM_INACTIVE_COUNT) \
 	CFG(CFG_POST_INACTIVITY_ROAM_SCAN_PERIOD) \
+	CFG(CFG_ROAM_SCAN_INACTIVE_TIMER) \
 	CFG(CFG_BSS_LOAD_TRIG_5G_RSSI_THRES) \
 	CFG(CFG_BSS_LOAD_TRIG_2G_RSSI_THRES) \
 	CFG(CFG_LFR_FULL_ROAM_SCAN_REFRESH_PERIOD) \
