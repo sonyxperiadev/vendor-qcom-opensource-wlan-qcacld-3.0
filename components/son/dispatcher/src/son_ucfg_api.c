@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -90,4 +90,37 @@ QDF_STATUS ucfg_son_register_deliver_smps_cb(struct wlan_objmgr_psoc *psoc,
 {
 	return wlan_son_register_mlme_deliver_cb(psoc, cb,
 					SON_MLME_DELIVER_CB_TYPE_SMPS);
+}
+
+int ucfg_son_cbs_init(void)
+{
+	return wlan_son_cbs_init();
+}
+
+int ucfg_son_cbs_deinit(void)
+{
+	return wlan_son_cbs_deinit();
+}
+
+int ucfg_son_set_cbs(struct wlan_objmgr_vdev *vdev,
+		     bool enable)
+{
+	return wlan_son_set_cbs(vdev, enable);
+}
+
+int ucfg_son_set_cbs_wait_time(struct wlan_objmgr_vdev *vdev,
+			       uint32_t val)
+{
+	return wlan_son_set_cbs_wait_time(vdev, val);
+}
+
+int ucfg_son_set_cbs_dwell_split_time(struct wlan_objmgr_vdev *vdev,
+				      uint32_t val)
+{
+	return wlan_son_set_cbs_dwell_split_time(vdev, val);
+}
+
+int ucfg_son_disable_cbs(struct wlan_objmgr_vdev *vdev)
+{
+	return wlan_son_cbs_disable(vdev);
 }

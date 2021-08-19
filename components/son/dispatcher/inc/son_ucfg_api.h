@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -129,4 +129,58 @@ QDF_STATUS ucfg_son_register_deliver_opmode_cb(struct wlan_objmgr_psoc *psoc,
 
 QDF_STATUS ucfg_son_register_deliver_smps_cb(struct wlan_objmgr_psoc *psoc,
 					     mlme_deliver_cb cb);
+
+/**
+ * ucfg_son_cbs_init() - son cbs init
+ *
+ * Return: 0 if succeed
+ */
+int ucfg_son_cbs_init(void);
+
+/* ucfg_son_cbs_deinit - son cbs deinit
+ *
+ * Return: 0 if succeed
+ */
+int ucfg_son_cbs_deinit(void);
+
+/* ucfg_son_set_cbs() - son cbs set
+ * @vdev: pointer to vdev
+ * @enable: enable or disable son cbs
+ *
+ * Return: 0 if succeed
+ */
+int ucfg_son_set_cbs(struct wlan_objmgr_vdev *vdev,
+		     bool enable);
+
+/* ucfg_son_set_cbs_wait_time() - cbs wait time configure
+ * @vdev: pointer to vdev
+ * @val: wait time value
+ *
+ * Return: 0 if succeed
+ */
+int ucfg_son_set_cbs_wait_time(struct wlan_objmgr_vdev *vdev,
+			       uint32_t val);
+
+/* ucfg_son_set_cbs_dwell_split_time() - cbs dwell spilt time configure
+ * @vdev: pointer to vdev
+ * @val: dwell spilt time value
+ *
+ * Return: 0 if succeed
+ */
+int ucfg_son_set_cbs_dwell_split_time(struct wlan_objmgr_vdev *vdev,
+				      uint32_t val);
+
+#ifdef WLAN_FEATURE_SON
+/* ucfg_son_disable_cbs() - son cbs disable
+ * @vdev: vdev pointer
+ *
+ * Return: 0 if succeed
+ */
+int ucfg_son_disable_cbs(struct wlan_objmgr_vdev *vdev);
+#else
+static inline int ucfg_son_disable_cbs(struct wlan_objmgr_vdev *vdev)
+{
+	return -EINVAL;
+}
+#endif
 #endif

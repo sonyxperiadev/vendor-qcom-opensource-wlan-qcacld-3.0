@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -23,6 +23,7 @@
 #include <wlan_reg_services_api.h>
 #include <wlan_mlme_api.h>
 #include <ieee80211_external.h>
+#include <wlan_cfg80211_scan.h>
 
 /**
  * struct son_mlme_deliver_cbs - son mlme deliver callbacks
@@ -35,6 +36,9 @@ struct son_mlme_deliver_cbs {
 };
 
 static struct son_mlme_deliver_cbs g_son_mlme_deliver_cbs;
+
+static struct son_cbs *g_son_cbs[WLAN_MAX_VDEVS];
+static qdf_spinlock_t g_cbs_lock;
 
 QDF_STATUS
 wlan_son_register_mlme_deliver_cb(struct wlan_objmgr_psoc *psoc,
@@ -613,4 +617,649 @@ int wlan_son_anqp_frame(struct wlan_objmgr_vdev *vdev, int subtype,
 	else
 		return -EINVAL;
 	return ret;
+}
+
+static int wlan_son_deliver_cbs(struct wlan_objmgr_vdev *vdev,
+				wlan_cbs_event_type type)
+{
+	int ret;
+
+	ret = wlan_son_deliver_mlme_event(vdev,
+					  NULL,
+					  MLME_EVENT_CBS_STATUS,
+					  &type);
+
+	return ret;
+}
+
+static int wlan_son_deliver_cbs_completed(struct wlan_objmgr_vdev *vdev)
+{
+	return wlan_son_deliver_cbs(vdev, CBS_COMPLETE);
+}
+
+static int wlan_son_deliver_cbs_cancelled(struct wlan_objmgr_vdev *vdev)
+{
+	return wlan_son_deliver_cbs(vdev, CBS_CANCELLED);
+}
+
+static void
+wlan_son_cbs_set_state(struct son_cbs *cbs, enum son_cbs_state state)
+{
+	qdf_debug("Change State CBS OLD[%d] --> NEW[%d]",
+		  cbs->cbs_state, state);
+	cbs->cbs_state = state;
+}
+
+static enum
+son_cbs_state wlan_son_cbs_get_state(struct son_cbs *cbs)
+{
+	return cbs->cbs_state;
+}
+
+static void
+wlan_son_cbs_init_dwell_params(struct son_cbs *cbs,
+			       int dwell_split_time,
+			       int dwell_rest_time)
+{
+	int i;
+
+	if (!cbs || !cbs->vdev)
+		return;
+	qdf_debug("dwell_split_time %d, dwell_rest_time %d",
+		  dwell_split_time, dwell_rest_time);
+	qdf_debug("vdev_id: %d\n", wlan_vdev_get_id(cbs->vdev));
+
+	switch (dwell_split_time) {
+	case CBS_DWELL_TIME_10MS:
+		cbs->max_arr_size_used = 10;
+		cbs->dwell_split_cnt = cbs->max_arr_size_used - 1;
+		cbs->max_dwell_split_cnt = cbs->max_arr_size_used - 1;
+		for (i = 0; i < cbs->max_arr_size_used; i++)
+			cbs->scan_dwell_rest[i] = dwell_rest_time;
+		for (i = 0; i < cbs->max_arr_size_used; i++)
+			cbs->scan_offset[i] = i * dwell_split_time;
+		break;
+	case CBS_DWELL_TIME_25MS:
+		cbs->max_arr_size_used = 8;
+		cbs->dwell_split_cnt = cbs->max_arr_size_used - 1;
+		cbs->max_dwell_split_cnt = cbs->max_arr_size_used - 1;
+		if (dwell_rest_time % TOTAL_DWELL_TIME == 0) {
+			cbs->scan_dwell_rest[0] = dwell_rest_time;
+			cbs->scan_dwell_rest[1] = dwell_rest_time;
+			cbs->scan_dwell_rest[2] = dwell_rest_time;
+			cbs->scan_dwell_rest[3] = dwell_rest_time;
+			cbs->scan_dwell_rest[4] = dwell_rest_time +
+							TOTAL_DWELL_TIME -
+							DEFAULT_BEACON_INTERVAL;
+			cbs->scan_dwell_rest[5] = dwell_rest_time +
+							TOTAL_DWELL_TIME -
+							DEFAULT_BEACON_INTERVAL;
+			cbs->scan_dwell_rest[6] = dwell_rest_time;
+			cbs->scan_dwell_rest[7] = dwell_rest_time;
+			cbs->scan_dwell_rest[8] = 0;
+			cbs->scan_dwell_rest[9] = 0;
+			cbs->scan_offset[0] = 0;
+			cbs->scan_offset[1] = 0;
+			cbs->scan_offset[2] = dwell_split_time;
+			cbs->scan_offset[3] = dwell_split_time;
+			cbs->scan_offset[4] = 2 * dwell_split_time;
+			cbs->scan_offset[5] = 2 * dwell_split_time;
+			cbs->scan_offset[6] = 3 * dwell_split_time;
+			cbs->scan_offset[7] = 3 * dwell_split_time;
+			cbs->scan_offset[8] = 0;
+			cbs->scan_offset[9] = 0;
+		} else {
+			for (i = 0; i < cbs->max_arr_size_used - 1; i++)
+				cbs->scan_dwell_rest[i] = dwell_rest_time;
+
+			cbs->scan_dwell_rest[8] = 0;
+			cbs->scan_dwell_rest[9] = 0;
+			cbs->scan_offset[0] = 0;
+			cbs->scan_offset[1] = dwell_split_time;
+			cbs->scan_offset[2] = 2 * dwell_split_time;
+			cbs->scan_offset[3] = 3 * dwell_split_time;
+			cbs->scan_offset[4] = 0;
+			cbs->scan_offset[5] = dwell_split_time;
+			cbs->scan_offset[6] = 2 * dwell_split_time;
+			cbs->scan_offset[7] = 3 * dwell_split_time;
+			cbs->scan_offset[8] = 0;
+			cbs->scan_offset[9] = 0;
+		}
+		break;
+	case CBS_DWELL_TIME_50MS:
+		cbs->max_arr_size_used = 4;
+		cbs->dwell_split_cnt = cbs->max_arr_size_used - 1;
+		cbs->max_dwell_split_cnt = cbs->max_arr_size_used - 1;
+		if (dwell_rest_time % TOTAL_DWELL_TIME == 0) {
+			cbs->scan_dwell_rest[0] = dwell_rest_time;
+			cbs->scan_dwell_rest[1] = dwell_rest_time;
+			cbs->scan_dwell_rest[2] = dwell_rest_time +
+							TOTAL_DWELL_TIME -
+							DEFAULT_BEACON_INTERVAL;
+			cbs->scan_dwell_rest[3] = dwell_rest_time +
+							TOTAL_DWELL_TIME -
+							DEFAULT_BEACON_INTERVAL;
+			cbs->scan_dwell_rest[4] = 0;
+			cbs->scan_dwell_rest[5] = 0;
+			cbs->scan_dwell_rest[6] = 0;
+			cbs->scan_dwell_rest[7] = 0;
+			cbs->scan_dwell_rest[8] = 0;
+			cbs->scan_dwell_rest[9] = 0;
+			cbs->scan_offset[0] = 0;
+			cbs->scan_offset[1] = 0;
+			cbs->scan_offset[2] = dwell_split_time;
+			cbs->scan_offset[3] = dwell_split_time;
+			cbs->scan_offset[4] = 0;
+			cbs->scan_offset[5] = 0;
+			cbs->scan_offset[6] = 0;
+			cbs->scan_offset[7] = 0;
+			cbs->scan_offset[8] = 0;
+			cbs->scan_offset[9] = 0;
+		} else {
+			cbs->scan_dwell_rest[0] = dwell_rest_time;
+			cbs->scan_dwell_rest[1] = dwell_rest_time;
+			cbs->scan_dwell_rest[2] = dwell_rest_time;
+			cbs->scan_dwell_rest[3] = dwell_rest_time;
+			cbs->scan_dwell_rest[4] = 0;
+			cbs->scan_dwell_rest[5] = 0;
+			cbs->scan_dwell_rest[6] = 0;
+			cbs->scan_dwell_rest[7] = 0;
+			cbs->scan_dwell_rest[8] = 0;
+			cbs->scan_dwell_rest[9] = 0;
+			cbs->scan_offset[0] = 0;
+			cbs->scan_offset[1] = dwell_split_time;
+			cbs->scan_offset[2] = 0;
+			cbs->scan_offset[3] = dwell_split_time;
+			cbs->scan_offset[4] = 0;
+			cbs->scan_offset[5] = 0;
+			cbs->scan_offset[6] = 0;
+			cbs->scan_offset[7] = 0;
+			cbs->scan_offset[8] = 0;
+			cbs->scan_offset[9] = 0;
+		}
+		break;
+	case CBS_DWELL_TIME_75MS:
+		cbs->max_arr_size_used = 4;
+		cbs->dwell_split_cnt = cbs->max_arr_size_used - 1;
+		cbs->max_dwell_split_cnt = cbs->max_arr_size_used - 1;
+		if (dwell_rest_time % TOTAL_DWELL_TIME == 0) {
+			cbs->scan_dwell_rest[0] = dwell_rest_time;
+			cbs->scan_dwell_rest[1] = dwell_rest_time;
+			cbs->scan_dwell_rest[2] = dwell_rest_time +
+							TOTAL_DWELL_TIME -
+							DEFAULT_BEACON_INTERVAL;
+			cbs->scan_dwell_rest[3] = dwell_rest_time +
+							TOTAL_DWELL_TIME -
+							DEFAULT_BEACON_INTERVAL;
+			cbs->scan_dwell_rest[4] = 0;
+			cbs->scan_dwell_rest[5] = 0;
+			cbs->scan_dwell_rest[6] = 0;
+			cbs->scan_dwell_rest[7] = 0;
+			cbs->scan_dwell_rest[8] = 0;
+			cbs->scan_dwell_rest[9] = 0;
+			cbs->scan_offset[0] = 0;
+			cbs->scan_offset[1] = 0;
+			cbs->scan_offset[2] = DEFAULT_BEACON_INTERVAL -
+							dwell_split_time;
+			cbs->scan_offset[3] = DEFAULT_BEACON_INTERVAL -
+							dwell_split_time;
+			cbs->scan_offset[4] = 0;
+			cbs->scan_offset[5] = 0;
+			cbs->scan_offset[6] = 0;
+			cbs->scan_offset[7] = 0;
+			cbs->scan_offset[8] = 0;
+			cbs->scan_offset[9] = 0;
+		} else {
+			cbs->scan_dwell_rest[0] = dwell_rest_time;
+			cbs->scan_dwell_rest[1] = dwell_rest_time;
+			cbs->scan_dwell_rest[2] = dwell_rest_time;
+			cbs->scan_dwell_rest[3] = dwell_rest_time;
+			cbs->scan_dwell_rest[4] = 0;
+			cbs->scan_dwell_rest[5] = 0;
+			cbs->scan_dwell_rest[6] = 0;
+			cbs->scan_dwell_rest[7] = 0;
+			cbs->scan_dwell_rest[8] = 0;
+			cbs->scan_dwell_rest[9] = 0;
+			cbs->scan_offset[0] = 0;
+			cbs->scan_offset[1] = DEFAULT_BEACON_INTERVAL -
+							dwell_split_time;
+			cbs->scan_offset[2] = 0;
+			cbs->scan_offset[3] = DEFAULT_BEACON_INTERVAL -
+							dwell_split_time;
+			cbs->scan_offset[4] = 0;
+			cbs->scan_offset[5] = 0;
+			cbs->scan_offset[6] = 0;
+			cbs->scan_offset[7] = 0;
+			cbs->scan_offset[8] = 0;
+			cbs->scan_offset[9] = 0;
+		}
+		break;
+	default:
+		qdf_err("Dwell time not supported\n");
+		break;
+	}
+}
+
+static int wlan_son_cbs_start(struct son_cbs *cbs)
+{
+	struct scan_start_request *req;
+	struct wlan_objmgr_psoc *psoc;
+	QDF_STATUS status;
+
+	psoc = wlan_vdev_get_psoc(cbs->vdev);
+	if (!psoc) {
+		qdf_err("invalid psoc");
+		return -EINVAL;
+	}
+
+	req = qdf_mem_malloc(sizeof(*req));
+	if (!req) {
+		qdf_err("failed to malloc");
+		return -ENOMEM;
+	}
+	qdf_mem_copy(req, &cbs->scan_params, sizeof(*req));
+
+	cbs->cbs_scan_id = ucfg_scan_get_scan_id(psoc);
+	req->scan_req.scan_id = cbs->cbs_scan_id;
+	qdf_debug("vdev_id: %d req->scan_req.scan_id: %u",
+		  wlan_vdev_get_id(cbs->vdev), req->scan_req.scan_id);
+
+	status = ucfg_scan_start(req);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		qdf_err("failed to start cbs");
+		wlan_son_deliver_cbs_cancelled(cbs->vdev);
+		return -EINVAL;
+	}
+
+	qdf_debug("cbs start");
+
+	return 0;
+}
+
+static int wlan_son_cbs_stop(struct son_cbs *cbs)
+{
+	struct wlan_objmgr_pdev *pdev;
+	QDF_STATUS status;
+
+	pdev = wlan_vdev_get_pdev(cbs->vdev);
+	if (!pdev) {
+		qdf_err("invalid pdev");
+		return -EINVAL;
+	}
+	qdf_debug("vdev_id: %d", wlan_vdev_get_id(cbs->vdev));
+
+	if (ucfg_scan_get_pdev_status(pdev) != SCAN_NOT_IN_PROGRESS) {
+		qdf_info("cbs_scan_id: %u abort scan", cbs->cbs_scan_id);
+		status = wlan_abort_scan(pdev,
+					 wlan_objmgr_pdev_get_pdev_id(pdev),
+					 cbs->vdev->vdev_objmgr.vdev_id,
+					 cbs->cbs_scan_id,
+					 true);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			qdf_err("failed to abort cbs");
+			return -EBUSY;
+		}
+	}
+
+	return 0;
+}
+
+static void wlan_cbs_timer_handler(void *arg)
+{
+	struct son_cbs *cbs = (struct son_cbs *)arg;
+	enum son_cbs_state state;
+
+	state = wlan_son_cbs_get_state(cbs);
+	qdf_debug("state: %d", state);
+	if (state == CBS_REST) {
+		qdf_debug("vdev_id: %d dwell_split_cnt: %d",
+			  wlan_vdev_get_id(cbs->vdev),
+			  cbs->dwell_split_cnt);
+		qdf_spin_lock_bh(&g_cbs_lock);
+		wlan_son_cbs_set_state(cbs, CBS_SCAN);
+		cbs->dwell_split_cnt--;
+		wlan_son_cbs_start(cbs);
+		qdf_spin_unlock_bh(&g_cbs_lock);
+	} else if (state == CBS_WAIT) {
+		wlan_son_cbs_enable(cbs->vdev);
+	}
+}
+
+static int wlan_cbs_iterate(struct son_cbs *cbs)
+{
+	int offset_array_idx;
+	struct wlan_objmgr_psoc *psoc;
+
+	if (!cbs || !cbs->vdev)
+		return -EINVAL;
+	qdf_spin_lock_bh(&g_cbs_lock);
+	qdf_debug("dwell_split_cnt: %d", cbs->dwell_split_cnt);
+	if (cbs->dwell_split_cnt < 0) {
+		psoc = wlan_vdev_get_psoc(cbs->vdev);
+		if (!psoc) {
+			qdf_spin_unlock_bh(&g_cbs_lock);
+			return -EINVAL;
+		}
+		wlan_son_deliver_cbs_completed(cbs->vdev);
+
+		ucfg_scan_unregister_requester(psoc,
+					       cbs->cbs_scan_requestor);
+		qdf_debug("Unregister cbs_scan_requestor: %u",
+			  cbs->cbs_scan_requestor);
+
+		if (cbs->wait_time) {
+			wlan_son_cbs_set_state(cbs, CBS_WAIT);
+			qdf_timer_mod(&cbs->cbs_timer,
+				      cbs->wait_time);
+		} else {
+			wlan_son_cbs_set_state(cbs, CBS_INIT);
+		}
+	} else {
+		offset_array_idx = cbs->max_arr_size_used -
+				   cbs->dwell_split_cnt - 1;
+		if (offset_array_idx < MIN_SCAN_OFFSET_ARRAY_SIZE ||
+		    offset_array_idx > MAX_SCAN_OFFSET_ARRAY_SIZE) {
+			qdf_spin_unlock_bh(&g_cbs_lock);
+			return -EINVAL;
+		}
+		if (cbs->scan_dwell_rest[offset_array_idx] == 0) {
+			cbs->dwell_split_cnt--;
+			wlan_son_cbs_start(cbs);
+		} else {
+			wlan_son_cbs_set_state(cbs, CBS_REST);
+			qdf_timer_mod(&cbs->cbs_timer,
+				      cbs->scan_dwell_rest[offset_array_idx]);
+		}
+	}
+	qdf_spin_unlock_bh(&g_cbs_lock);
+
+	return 0;
+}
+
+static void wlan_cbs_scan_event_cb(struct wlan_objmgr_vdev *vdev,
+				   struct scan_event *event,
+				   void *arg)
+{
+	qdf_debug("event type: %d", event->type);
+	switch (event->type) {
+	case SCAN_EVENT_TYPE_FOREIGN_CHANNEL:
+	case SCAN_EVENT_TYPE_FOREIGN_CHANNEL_GET_NF:
+		break;
+	case SCAN_EVENT_TYPE_COMPLETED:
+		wlan_cbs_iterate(arg);
+		break;
+	default:
+		break;
+	}
+}
+
+int wlan_son_cbs_init(void)
+{
+	int i, j;
+
+	for (i = 0; i < WLAN_MAX_VDEVS; i++) {
+		if (g_son_cbs[i]) {
+			qdf_mem_free(g_son_cbs[i]);
+			g_son_cbs[i] = NULL;
+		}
+		g_son_cbs[i] = qdf_mem_malloc(sizeof(*g_son_cbs[i]));
+		if (!g_son_cbs[i]) {
+			for (j = i - 1; j >= 0; j--) {
+				qdf_mem_free(g_son_cbs[j]);
+				g_son_cbs[i] = NULL;
+			}
+			return -ENOMEM;
+		}
+		qdf_timer_init(NULL,
+			       &g_son_cbs[i]->cbs_timer,
+			       wlan_cbs_timer_handler,
+			       g_son_cbs[i],
+			       QDF_TIMER_TYPE_WAKE_APPS);
+
+		g_son_cbs[i]->rest_time  = CBS_DEFAULT_RESTTIME;
+		g_son_cbs[i]->dwell_time = CBS_DEFAULT_DWELL_TIME;
+		g_son_cbs[i]->wait_time  = CBS_DEFAULT_WAIT_TIME;
+		g_son_cbs[i]->dwell_split_time = CBS_DEFAULT_DWELL_SPLIT_TIME;
+		g_son_cbs[i]->min_dwell_rest_time = CBS_DEFAULT_DWELL_REST_TIME;
+
+		wlan_son_cbs_set_state(g_son_cbs[i], CBS_INIT);
+	}
+	qdf_spinlock_create(&g_cbs_lock);
+	qdf_debug("cbs init");
+
+	return 0;
+}
+
+int wlan_son_cbs_deinit(void)
+{
+	int i;
+
+	qdf_spinlock_destroy(&g_cbs_lock);
+	for (i = 0; i < WLAN_MAX_VDEVS; i++) {
+		if (!g_son_cbs[i])
+			return -EINVAL;
+		if (g_son_cbs[i]->vdev) {
+			wlan_objmgr_vdev_release_ref(g_son_cbs[i]->vdev,
+						     WLAN_SON_ID);
+			qdf_debug("vdev_id: %d dereferenced",
+				  wlan_vdev_get_id(g_son_cbs[i]->vdev));
+		}
+		qdf_timer_free(&g_son_cbs[i]->cbs_timer);
+		qdf_mem_free(g_son_cbs[i]);
+		g_son_cbs[i] = NULL;
+	}
+
+	qdf_debug("cbs deinit");
+
+	return 0;
+}
+
+int wlan_son_cbs_enable(struct wlan_objmgr_vdev *vdev)
+{
+	struct scan_start_request *req;
+	struct wlan_objmgr_psoc *psoc;
+	enum son_cbs_state state;
+	struct son_cbs *cbs;
+	QDF_STATUS status;
+
+	cbs = g_son_cbs[wlan_vdev_get_id(vdev)];
+	psoc = wlan_vdev_get_psoc(vdev);
+	if (!psoc) {
+		qdf_err("invalid psoc");
+		return -EINVAL;
+	}
+
+	state = wlan_son_cbs_get_state(cbs);
+	if (state != CBS_INIT &&
+	    state != CBS_WAIT) {
+		qdf_err("can't start scan in state %d", state);
+		return -EINVAL;
+	}
+	qdf_debug("State: %d", state);
+
+	qdf_spin_lock_bh(&g_cbs_lock);
+	if (!cbs->vdev) {
+		cbs->vdev = vdev;
+		status = wlan_objmgr_vdev_try_get_ref(vdev, WLAN_SON_ID);
+		if (status != QDF_STATUS_SUCCESS) {
+			qdf_spin_unlock_bh(&g_cbs_lock);
+			qdf_err("Failed to get VDEV reference");
+			return -EAGAIN;
+		}
+		qdf_debug("vdev_id: %d referenced",
+			  wlan_vdev_get_id(vdev));
+	}
+	cbs->cbs_scan_requestor =
+		ucfg_scan_register_requester(psoc,
+					     (uint8_t *)"cbs",
+					     wlan_cbs_scan_event_cb,
+					     (void *)cbs);
+	qdf_debug("cbs_scan_requestor: %u vdev_id: %d",
+		  cbs->cbs_scan_requestor, wlan_vdev_get_id(vdev));
+
+	if (!cbs->cbs_scan_requestor) {
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_SON_ID);
+		qdf_spin_unlock_bh(&g_cbs_lock);
+		qdf_err("ucfg_scan_register_requestor failed");
+		return -EINVAL;
+	}
+
+	req = &cbs->scan_params;
+	ucfg_scan_init_default_params(vdev, req);
+	req->scan_req.scan_req_id = cbs->cbs_scan_requestor;
+
+	req->scan_req.vdev_id = wlan_vdev_get_id(vdev);
+	req->scan_req.scan_priority = SCAN_PRIORITY_HIGH;
+	req->scan_req.scan_f_bcast_probe = true;
+
+	req->scan_req.scan_f_passive = true;
+	req->scan_req.max_rest_time = DEFAULT_SCAN_MAX_REST_TIME;
+	req->scan_req.scan_f_forced = true;
+
+	req->scan_req.scan_flags = 0;
+	req->scan_req.dwell_time_active = cbs->dwell_split_time;
+	req->scan_req.dwell_time_passive = cbs->dwell_split_time + 5;
+	req->scan_req.min_rest_time = CBS_DEFAULT_MIN_REST_TIME;
+	req->scan_req.max_rest_time = CBS_DEFAULT_DWELL_REST_TIME;
+	req->scan_req.scan_f_passive = false;
+	req->scan_req.scan_f_2ghz = true;
+	req->scan_req.scan_f_5ghz = true;
+	req->scan_req.scan_f_offchan_mgmt_tx = true;
+	req->scan_req.scan_f_offchan_data_tx = true;
+	req->scan_req.scan_f_chan_stat_evnt = true;
+
+	if (cbs->min_dwell_rest_time % DEFAULT_BEACON_INTERVAL) {
+		cbs->min_dwell_rest_time =
+			(cbs->min_dwell_rest_time /
+			(2 * DEFAULT_BEACON_INTERVAL)) *
+			(2 * DEFAULT_BEACON_INTERVAL) +
+			(cbs->min_dwell_rest_time % 200 < 100) ? 100 : 200;
+	}
+
+	wlan_son_cbs_init_dwell_params(cbs,
+				       cbs->dwell_split_time,
+				       cbs->min_dwell_rest_time);
+
+	cbs->dwell_split_cnt--;
+	wlan_son_cbs_set_state(cbs, CBS_SCAN);
+
+	wlan_son_cbs_start(cbs);
+	qdf_spin_unlock_bh(&g_cbs_lock);
+
+	qdf_debug("cbs enable");
+
+	return 0;
+}
+
+int wlan_son_cbs_disable(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_objmgr_psoc *psoc;
+	struct son_cbs *cbs;
+
+	if (!vdev) {
+		qdf_err("invalid psoc");
+		return -EINVAL;
+	}
+	psoc = wlan_vdev_get_psoc(vdev);
+	if (!psoc) {
+		qdf_err("invalid psoc");
+		return -EINVAL;
+	}
+	cbs = g_son_cbs[wlan_vdev_get_id(vdev)];
+	if (!cbs->vdev) {
+		qdf_err("vdev null");
+		return -EINVAL;
+	}
+	wlan_son_deliver_cbs_cancelled(vdev);
+
+	qdf_timer_sync_cancel(&cbs->cbs_timer);
+
+	wlan_son_cbs_stop(cbs);
+
+	qdf_debug("cbs_scan_requestor: %d vdev_id: %d",
+		  cbs->cbs_scan_requestor, wlan_vdev_get_id(vdev));
+	ucfg_scan_unregister_requester(psoc, cbs->cbs_scan_requestor);
+
+	qdf_spin_lock_bh(&g_cbs_lock);
+	wlan_son_cbs_set_state(cbs, CBS_INIT);
+	if (vdev == cbs->vdev) {
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_SON_ID);
+		qdf_debug("vdev_id: %d dereferenced",
+			  vdev->vdev_objmgr.vdev_id);
+	}
+	cbs->vdev = NULL;
+	qdf_spin_unlock_bh(&g_cbs_lock);
+
+	qdf_debug("cbs disable");
+
+	return 0;
+}
+
+int wlan_son_set_cbs(struct wlan_objmgr_vdev *vdev,
+		     bool enable)
+{
+	qdf_debug("Enable: %u", enable);
+
+	if (!vdev && !g_son_cbs[wlan_vdev_get_id(vdev)])
+		return -EINVAL;
+
+	if (enable)
+		wlan_son_cbs_enable(vdev);
+	else
+		wlan_son_cbs_disable(vdev);
+
+	return 0;
+}
+
+int wlan_son_set_cbs_wait_time(struct wlan_objmgr_vdev *vdev,
+			       uint32_t val)
+{
+	if (!g_son_cbs[wlan_vdev_get_id(vdev)])
+		return -EINVAL;
+
+	qdf_debug("vdev_id: %d wait time %d", wlan_vdev_get_id(vdev), val);
+	wlan_son_set_cbs(vdev, false);
+
+	if (val % DEFAULT_BEACON_INTERVAL != 0) {
+		val = (val / (2 * DEFAULT_BEACON_INTERVAL)) *
+			(2 * DEFAULT_BEACON_INTERVAL) +
+			(val % (2 * DEFAULT_BEACON_INTERVAL) <
+				DEFAULT_BEACON_INTERVAL) ?
+				DEFAULT_BEACON_INTERVAL :
+				2 * DEFAULT_BEACON_INTERVAL;
+	}
+	qdf_spin_lock_bh(&g_cbs_lock);
+	g_son_cbs[wlan_vdev_get_id(vdev)]->wait_time = val;
+	qdf_spin_unlock_bh(&g_cbs_lock);
+
+	wlan_son_set_cbs(vdev, true);
+
+	return 0;
+}
+
+int wlan_son_set_cbs_dwell_split_time(struct wlan_objmgr_vdev *vdev,
+				      uint32_t val)
+{
+	if (!g_son_cbs[wlan_vdev_get_id(vdev)])
+		return -EINVAL;
+
+	qdf_debug("vdev_id: %d dwell split time %d",
+		  wlan_vdev_get_id(vdev), val);
+	if (val != CBS_DWELL_TIME_10MS &&
+	    val != CBS_DWELL_TIME_25MS &&
+	    val != CBS_DWELL_TIME_50MS &&
+	    val != CBS_DWELL_TIME_75MS) {
+		qdf_err("dwell time not supported ");
+		return -EINVAL;
+	}
+
+	wlan_son_set_cbs(vdev, false);
+
+	qdf_spin_lock_bh(&g_cbs_lock);
+	g_son_cbs[wlan_vdev_get_id(vdev)]->dwell_split_time = val;
+	qdf_spin_unlock_bh(&g_cbs_lock);
+
+	wlan_son_set_cbs(vdev, true);
+
+	return 0;
 }

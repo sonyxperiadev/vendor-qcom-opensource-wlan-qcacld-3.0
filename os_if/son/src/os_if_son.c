@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -784,6 +784,64 @@ void os_if_son_get_phy_stats(struct wlan_objmgr_vdev *vdev,
 		   phy_stats->chan_nf);
 }
 qdf_export_symbol(os_if_son_get_phy_stats);
+
+int os_if_son_cbs_init(void)
+{
+	int ret;
+
+	ret = ucfg_son_cbs_init();
+
+	return ret;
+}
+
+qdf_export_symbol(os_if_son_cbs_init);
+
+int os_if_son_cbs_deinit(void)
+{
+	int ret;
+
+	ret = ucfg_son_cbs_deinit();
+
+	return ret;
+}
+
+qdf_export_symbol(os_if_son_cbs_deinit);
+
+int os_if_son_set_cbs(struct wlan_objmgr_vdev *vdev,
+		      bool enable)
+{
+	int ret;
+
+	ret = ucfg_son_set_cbs(vdev, enable);
+
+	return ret;
+}
+
+qdf_export_symbol(os_if_son_set_cbs);
+
+int os_if_son_set_cbs_wait_time(struct wlan_objmgr_vdev *vdev,
+				uint32_t val)
+{
+	int ret;
+
+	ret = ucfg_son_set_cbs_wait_time(vdev, val);
+
+	return ret;
+}
+
+qdf_export_symbol(os_if_son_set_cbs_wait_time);
+
+int os_if_son_set_cbs_dwell_split_time(struct wlan_objmgr_vdev *vdev,
+				       uint32_t val)
+{
+	int ret;
+
+	ret = ucfg_son_set_cbs_dwell_split_time(vdev, val);
+
+	return ret;
+}
+
+qdf_export_symbol(os_if_son_set_cbs_dwell_split_time);
 
 int os_if_son_set_phymode(struct wlan_objmgr_vdev *vdev,
 			  enum ieee80211_phymode mode)

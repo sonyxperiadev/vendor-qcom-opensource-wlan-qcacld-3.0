@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -25,6 +25,91 @@
 #include <wlan_objmgr_peer_obj.h>
 #include <wlan_objmgr_pdev_obj.h>
 #include <reg_services_public_struct.h>
+
+#define TOTAL_DWELL_TIME 200
+
+#define CBS_DEFAULT_RESTTIME 500 /* msec */
+#define CBS_DEFAULT_DWELL_TIME 50 /* msec */
+#define CBS_DEFAULT_WAIT_TIME 1000 /* 1 sec */
+#define CBS_DEFAULT_DWELL_SPLIT_TIME 50 /* msec */
+#define CBS_DEFAULT_DWELL_REST_TIME 500 /* msec */
+#define CBS_DEFAULT_MIN_REST_TIME 50 /* msec */
+
+#define DEFAULT_BEACON_INTERVAL 100
+
+#define CBS_DWELL_TIME_10MS 10
+#define CBS_DWELL_TIME_25MS 25
+#define CBS_DWELL_TIME_50MS 50
+#define CBS_DWELL_TIME_75MS 75
+#define MIN_SCAN_OFFSET_ARRAY_SIZE 0
+#define MAX_SCAN_OFFSET_ARRAY_SIZE 9
+#define SCAN_START_OFFSET_MIN 26
+
+#define DEFAULT_SCAN_MAX_REST_TIME 500
+
+/**
+ * enum son_cbs_state - son cbs state enumeration
+ * @CBS_INIT: init state
+ * @CBS_SCAN: scanning state
+ * @CBS_REST: rest state
+ * @CBS_RANK: rank state
+ * @CBS_WAIT: wait state
+ */
+enum son_cbs_state {
+	CBS_INIT,
+	CBS_SCAN,
+	CBS_REST,
+	CBS_RANK,
+	CBS_WAIT,
+};
+
+/**
+ * struct son_cbs - son cbs struction
+ * @vdev: vdev
+ * @cbs_lock: cbs spin lock
+ * @cbs_timer: cbs timer
+ * @cbs_state: cbs state
+ * @cbs_scan_requestor: scan requestor
+ * @cbs_scan_id: scan id
+ * @dwell_time: dwell time configuration
+ * @rest_time: rest time configuration
+ * @wait_time: wait time configuration
+ * @scan_intvl_time: interval time configuration
+ * @scan_params: scan params
+ * @max_dwell_split_cnt: max dwell split counter
+ * @dwell_split_cnt: dwell split counter
+ * @scan_offset: scan offset array
+ * @scan_dwell_rest: scan dwell rest array
+ * @min_dwell_rest_time: nub dwell rest time
+ * @dwell_split_time: dwell split time
+ * @max_arr_size_used: max array size used
+ */
+struct son_cbs {
+	struct wlan_objmgr_vdev *vdev;
+
+	spinlock_t cbs_lock;
+	qdf_timer_t cbs_timer;
+
+	enum son_cbs_state cbs_state;
+
+	wlan_scan_requester cbs_scan_requestor;
+	wlan_scan_id cbs_scan_id;
+
+	uint32_t dwell_time;
+	uint32_t rest_time;
+	uint32_t wait_time;
+	int32_t  scan_intvl_time;
+
+	struct scan_start_request scan_params;
+
+	uint8_t max_dwell_split_cnt;
+	int8_t dwell_split_cnt;
+	uint32_t scan_offset[10];
+	uint32_t scan_dwell_rest[10];
+	uint32_t min_dwell_rest_time;
+	uint32_t dwell_split_time;
+	uint8_t max_arr_size_used;
+};
 
 /**
  * mlme_deliver_cb - cb to deliver mlme event
@@ -87,6 +172,60 @@ uint32_t wlan_son_get_chan_flag(struct wlan_objmgr_pdev *pdev,
 QDF_STATUS wlan_son_peer_set_kickout_allow(struct wlan_objmgr_vdev *vdev,
 					   struct wlan_objmgr_peer *peer,
 					   bool kickout_allow);
+
+/**
+ * wlan_son_cbs_init() - son cbs init
+ *
+ * Return: 0 if succeed
+ */
+int wlan_son_cbs_init(void);
+
+/* wlan_son_cbs_deinit - son cbs deinit
+ *
+ * Return: 0 if succeed
+ */
+int wlan_son_cbs_deinit(void);
+
+/* wlan_son_cbs_enable() - son cbs enable
+ * @vdev: pointer to vdev
+ *
+ * Return: 0 if succeed
+ */
+int wlan_son_cbs_enable(struct wlan_objmgr_vdev *vdev);
+
+/* wlan_son_cbs_disable() - son cbs disable
+ * @vdev: pointer to vdev
+ *
+ * Return: 0 if succeed
+ */
+int wlan_son_cbs_disable(struct wlan_objmgr_vdev *vdev);
+
+/* wlan_son_set_cbs() - son cbs set
+ * @vdev: pointer to vdev
+ * @enable: enable or disable son cbs
+ *
+ * Return: 0 if succeed
+ */
+int wlan_son_set_cbs(struct wlan_objmgr_vdev *vdev,
+		     bool enable);
+
+/* wlan_son_set_cbs_wait_time() - cbs wait time configure
+ * @vdev: pointer to vdev
+ * @val: wait time value
+ *
+ * Return: 0 if succeed
+ */
+int wlan_son_set_cbs_wait_time(struct wlan_objmgr_vdev *vdev,
+			       uint32_t val);
+
+/* wlan_son_set_cbs_dwell_split_time() - cbs dwell spilt time configure
+ * @vdev: pointer to vdev
+ * @val: dwell spilt time value
+ *
+ * Return: 0 if succeed
+ */
+int wlan_son_set_cbs_dwell_split_time(struct wlan_objmgr_vdev *vdev,
+				      uint32_t val);
 
 #ifdef WLAN_FEATURE_SON
 /**

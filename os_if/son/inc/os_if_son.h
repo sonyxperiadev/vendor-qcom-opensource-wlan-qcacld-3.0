@@ -1,7 +1,7 @@
 
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -330,6 +330,52 @@ int os_if_son_set_phymode(struct wlan_objmgr_vdev *vdev,
  */
 void os_if_son_get_phy_stats(struct wlan_objmgr_vdev *vdev,
 			     struct ol_ath_radiostats *phy_stats);
+
+/**
+ * os_if_son_cbs_init() - cbs init
+ * @vdev: vdev
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+int os_if_son_cbs_init(void);
+
+/**
+ * os_if_son_cbs_deinit() - cbs deinit
+ * @vdev: vdev
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+int os_if_son_cbs_deinit(void);
+
+/**
+ * os_if_son_set_cbs() - enable cbs or disable
+ * @vdev: vdev
+ * @enable: true or false
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+int os_if_son_set_cbs(struct wlan_objmgr_vdev *vdev,
+		      bool enable);
+
+/**
+ * os_if_son_set_cbs_wait_time() - set cbs wait time
+ * @vdev: vdev
+ * @val: value
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+int os_if_son_set_cbs_wait_time(struct wlan_objmgr_vdev *vdev,
+				uint32_t val);
+
+/**
+ * os_if_son_set_cbs_dwell_split_time() - set cbs dwell split time
+ * @vdev: vdev
+ * @val: value
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+int os_if_son_set_cbs_dwell_split_time(struct wlan_objmgr_vdev *vdev,
+				       uint32_t val);
 
 /**
  * os_if_son_get_chan_util() - get chan utilization
