@@ -1073,7 +1073,6 @@ u_int8_t os_if_son_get_rx_streams(struct wlan_objmgr_vdev *vdev)
 
 	return g_son_os_if_cb.os_if_get_rx_nss(vdev);
 }
-
 qdf_export_symbol(os_if_son_get_rx_streams);
 
 QDF_STATUS os_if_son_cfg80211_reply(qdf_nbuf_t sk_buf)
@@ -1589,11 +1588,12 @@ int os_if_son_parse_generic_nl_cmd(struct wiphy *wiphy,
 		param.value = nla_get_u32(tb
 				[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_VALUE]);
 
-	if (tb[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA])
+	if (tb[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA]) {
 		param.data = nla_data(tb
 				[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA]);
 		param.data_len = nla_len(tb
 				[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA]);
+	}
 
 	if (tb[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_LENGTH])
 		param.length = nla_get_u32(tb
