@@ -13409,7 +13409,7 @@ static QDF_STATUS hdd_cfg_parse_connection_roaming_cfg(void)
 #else
 static inline QDF_STATUS hdd_cfg_parse_connection_roaming_cfg(void)
 {
-	return QDF_STATUS_SUCCESS;
+	return QDF_STATUS_E_NOSUPPORT;
 }
 #endif
 
@@ -13461,6 +13461,10 @@ struct hdd_context *hdd_context_create(struct device *dev)
 		QDF_DEBUG_PANIC("Psoc creation fails!");
 		goto err_release_store;
 	}
+
+	if (QDF_IS_STATUS_SUCCESS(status))
+		ucfg_mlme_set_connection_roaming_ini_present(hdd_ctx->psoc,
+							     true);
 
 	hdd_cfg_params_init(hdd_ctx);
 

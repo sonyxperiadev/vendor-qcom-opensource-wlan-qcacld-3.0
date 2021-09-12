@@ -1725,3 +1725,36 @@ bool ucfg_mlme_get_coex_unsafe_chan_reg_disable(
 	return mlme_obj->cfg.reg.coex_unsafe_chan_reg_disable;
 }
 #endif
+
+#ifdef CONNECTION_ROAMING_CFG
+QDF_STATUS
+ucfg_mlme_set_connection_roaming_ini_present(struct wlan_objmgr_psoc *psoc,
+					     bool value)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_INVAL;
+
+	mlme_obj->cfg.connection_roaming_ini_flag = value;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+ucfg_mlme_get_connection_roaming_ini_present(struct wlan_objmgr_psoc *psoc,
+					     bool *value)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+
+	if (!mlme_obj)
+		return QDF_STATUS_E_INVAL;
+
+	*value = mlme_obj->cfg.connection_roaming_ini_flag;
+
+	return QDF_STATUS_SUCCESS;
+}
+#endif

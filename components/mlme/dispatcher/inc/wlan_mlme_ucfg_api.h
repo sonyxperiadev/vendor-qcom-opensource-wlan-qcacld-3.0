@@ -4580,4 +4580,44 @@ ucfg_mlme_get_vdev_max_mcs_idx(struct wlan_objmgr_vdev *vdev)
 	return mlme_get_vdev_max_mcs_idx(vdev);
 }
 #endif /* WLAN_FEATURE_SON */
+
+#ifdef CONNECTION_ROAMING_CFG
+/**
+ * ucfg_mlme_set_connection_roaming_ini_present() - Set connection roaming ini
+ * present
+ * @psoc: pointer to psoc object
+ * @value:  Value to be set
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+ucfg_mlme_set_connection_roaming_ini_present(struct wlan_objmgr_psoc *psoc,
+					     bool value);
+
+/**
+ * ucfg_mlme_get_connection_roaming_ini_present() - Get connection roaming ini
+ * present
+ * @psoc: pointer to psoc object
+ * @value:  Value to be get
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+ucfg_mlme_get_connection_roaming_ini_present(struct wlan_objmgr_psoc *psoc,
+					     bool *value);
+#else
+static inline QDF_STATUS
+ucfg_mlme_set_connection_roaming_ini_present(struct wlan_objmgr_psoc *psoc,
+					     bool value)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline QDF_STATUS
+ucfg_mlme_get_connection_roaming_ini_present(struct wlan_objmgr_psoc *psoc,
+					     bool *value)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+#endif /* CONNECTION_ROAMING_CFG */
 #endif /* _WLAN_MLME_UCFG_API_H_ */

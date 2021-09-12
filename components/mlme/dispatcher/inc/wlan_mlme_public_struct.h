@@ -2594,6 +2594,8 @@ struct wlan_mlme_iot {
  * @trig_min_rssi: Expected minimum RSSI value of candidate AP for
  * various roam triggers
  * @iot: IOT related CFG items
+ * @connection_roaming_ini_flag: To indicate whether connection_roaming related
+ * ini file is present or not.
  */
 struct wlan_mlme_cfg {
 	struct wlan_mlme_chainmask chainmask_cfg;
@@ -2642,6 +2644,7 @@ struct wlan_mlme_cfg {
 	struct roam_trigger_min_rssi trig_min_rssi[NUM_OF_ROAM_MIN_RSSI];
 	struct wlan_mlme_ratemask ratemask_cfg;
 	struct wlan_mlme_iot iot;
+	bool connection_roaming_ini_flag;
 };
 
 enum pkt_origin {
