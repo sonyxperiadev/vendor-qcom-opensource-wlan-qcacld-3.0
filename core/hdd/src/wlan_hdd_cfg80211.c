@@ -179,6 +179,7 @@
 #include "os_if_pkt_capture.h"
 #include "wlan_hdd_son.h"
 #include "wlan_hdd_mcc_quota.h"
+#include "wlan_hdd_peer_txq_flush.h"
 #include "wlan_cfg80211_wifi_pos.h"
 #include "wlan_osif_features.h"
 
@@ -18132,6 +18133,7 @@ const struct wiphy_vendor_command hdd_wiphy_vendor_commands[] = {
 	},
 #endif
 	FEATURE_MCC_QUOTA_VENDOR_COMMANDS
+	FEATURE_PEER_FLUSH_VENDOR_COMMANDS
 };
 
 struct hdd_context *hdd_cfg80211_wiphy_alloc(void)
