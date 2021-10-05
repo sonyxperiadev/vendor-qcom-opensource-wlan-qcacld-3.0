@@ -111,6 +111,13 @@ qca_wlan_vendor_twt_nudge_dialog_policy[QCA_WLAN_VENDOR_ATTR_TWT_NUDGE_MAX + 1] 
 	[QCA_WLAN_VENDOR_ATTR_TWT_NUDGE_MAC_ADDR] = VENDOR_NLA_POLICY_MAC_ADDR,
 };
 
+static const struct nla_policy
+qca_wlan_vendor_twt_set_param_policy[
+	QCA_WLAN_VENDOR_ATTR_TWT_SET_PARAM_MAX + 1] = {
+		[QCA_WLAN_VENDOR_ATTR_TWT_SET_PARAM_AP_AC_VALUE] = {
+			.type = NLA_U8 },
+};
+
 static
 int hdd_send_twt_del_dialog_cmd(struct hdd_context *hdd_ctx,
 				struct wmi_twt_del_dialog_param *twt_params);
@@ -1902,6 +1909,86 @@ static int hdd_twt_setup_session(struct hdd_adapter *adapter,
 	ret = hdd_send_twt_add_dialog_cmd(adapter->hdd_ctx, &params);
 	if (ret < 0)
 		return ret;
+
+	return ret;
+}
+
+/**
+ * hdd_twt_add_ac_config() - Get TWT AC parameter
+ * value from QCA_WLAN_VENDOR_ATTR_CONFIG_TWT_PARAMS
+ * @adapter: adapter pointer
+ * @twt_ac_param: AC parameter
+ *
+ * Handles QCA_WLAN_VENDOR_ATTR_TWT_SET_PARAM_AP_AC_VALUE
+ *
+ * Return: 0 on success, negative value on failure.
+ */
+static int hdd_twt_add_ac_config(struct hdd_adapter *adapter,
+				 enum qca_wlan_ac_type twt_ac_param)
+{
+	bool is_responder_en;
+	int ret = 0;
+	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+
+	if (twt_ac_param < QCA_WLAN_AC_BE || twt_ac_param > QCA_WLAN_AC_VO) {
+		hdd_err_rl("Invalid AC parameter. Value: %d", twt_ac_param);
+		return -EINVAL;
+	}
+
+	ucfg_mlme_get_twt_responder(hdd_ctx->psoc, &is_responder_en);
+
+	if (adapter->device_mode == QDF_SAP_MODE && is_responder_en) {
+		ret = sme_cli_set_command(adapter->vdev_id,
+					  WMI_PDEV_PARAM_TWT_AC_CONFIG,
+					  twt_ac_param, PDEV_CMD);
+	} else {
+		hdd_err_rl("Undesired device mode. Mode: %d and responder: %d",
+			   adapter->device_mode, is_responder_en);
+		return -EINVAL;
+	}
+
+	return ret;
+}
+
+/**
+ * hdd_twt_set_param - Process TWT set parameter operation
+ * in the received vendor command and send it to firmware
+ * @adapter: adapter pointer
+ * @twt_param_attr: nl attributes
+ *
+ * Handles QCA_WLAN_TWT_SET_PARAM
+ *
+ * Return: 0 on success, negative value on failure
+ */
+static int hdd_twt_set_param(struct hdd_adapter *adapter,
+			     struct nlattr *twt_param_attr)
+{
+	struct nlattr *tb[QCA_WLAN_VENDOR_ATTR_TWT_SET_PARAM_MAX + 1];
+	int ret;
+	int cmd_id;
+	uint8_t twt_ac_param;
+
+	ret = wlan_cfg80211_nla_parse_nested
+					(tb,
+					 QCA_WLAN_VENDOR_ATTR_TWT_SET_PARAM_MAX,
+					 twt_param_attr,
+					 qca_wlan_vendor_twt_set_param_policy);
+	if (ret)
+		return ret;
+
+	cmd_id = QCA_WLAN_VENDOR_ATTR_TWT_SET_PARAM_AP_AC_VALUE;
+
+	if (tb[cmd_id]) {
+		twt_ac_param = nla_get_u8(tb[cmd_id]);
+		hdd_debug("TWT_AC_CONFIG_VALUE: %d", twt_ac_param);
+		ret = hdd_twt_add_ac_config(adapter, twt_ac_param);
+
+		if (ret) {
+			hdd_err("Fail to set TWT AC parameter, errno %d",
+				ret);
+			return ret;
+		}
+	}
 
 	return ret;
 }
@@ -3936,6 +4023,9 @@ static int hdd_twt_configure(struct hdd_adapter *adapter,
 	case QCA_WLAN_TWT_CLEAR_STATS:
 		ret = hdd_twt_clear_session_traffic_stats(adapter,
 							  twt_param_attr);
+		break;
+	case QCA_WLAN_TWT_SET_PARAM:
+		ret = hdd_twt_set_param(adapter, twt_param_attr);
 		break;
 	default:
 		hdd_err("Invalid TWT Operation");

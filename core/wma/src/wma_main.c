@@ -891,6 +891,30 @@ static inline bool wma_is_tx_chainmask_valid(int value,
 }
 
 /**
+ * wma_convert_ac_value() - map ac setting to the value to be used in FW.
+ * @ac_value: ac value to be mapped.
+ *
+ * Return: enum wmi_traffic_ac
+ */
+static inline wmi_traffic_ac wma_convert_ac_value(uint32_t ac_value)
+{
+	switch (ac_value) {
+	case QCA_WLAN_AC_BE:
+		return WMI_AC_BE;
+	case QCA_WLAN_AC_BK:
+		return WMI_AC_BK;
+	case QCA_WLAN_AC_VI:
+		return WMI_AC_VI;
+	case QCA_WLAN_AC_VO:
+		return WMI_AC_VO;
+	case QCA_WLAN_AC_ALL:
+		return WMI_AC_MAX;
+	}
+	wma_err("invalid enum: %u", ac_value);
+	return WMI_AC_MAX;
+}
+
+/**
  * wma_process_cli_set_cmd() - set parameters to fw
  * @wma: wma handle
  * @privcmd: command
@@ -971,6 +995,9 @@ static void wma_process_cli_set_cmd(tp_wma_handle wma,
 		}
 		pdev_param.param_id = privcmd->param_id;
 		pdev_param.param_value = privcmd->param_value;
+		if (privcmd->param_id == WMI_PDEV_PARAM_TWT_AC_CONFIG)
+			pdev_param.param_value =
+				wma_convert_ac_value(pdev_param.param_value);
 		ret = wmi_unified_pdev_param_send(wma->wmi_handle,
 						 &pdev_param,
 						 privcmd->param_sec_value);
