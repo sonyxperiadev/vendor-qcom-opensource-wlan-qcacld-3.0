@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -36,4 +37,13 @@ QDF_STATUS
 wlan_send_wfatest_cmd(struct wlan_objmgr_vdev *vdev,
 		      struct set_wfatest_params *wmi_wfatest);
 
+/**
+ * wlan_wfa_get_test_feature_flags() - Check if the given WFA test flag is set
+ * @psoc: psoc pointer
+ * @feature: wfa test feature bit to be checked
+ *
+ * Return: True if the specific feature is configured
+ */
+bool wlan_wfa_get_test_feature_flags(struct wlan_objmgr_psoc *psoc,
+				     enum wlan_wfa_test_feature_flags feature);
 #endif /* WFA_TGT_IF_TX_API_H__ */

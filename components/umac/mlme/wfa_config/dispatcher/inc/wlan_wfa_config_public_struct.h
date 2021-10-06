@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -38,11 +39,22 @@ struct wlan_wfa_cmd_tx_ops {
 };
 
 /**
+ * wlan_wfa_test_feature_flags - WFA test feature flags
+ * @WFA_TEST_IGNORE_RSNXE: Ignore the H2E RSNXE mismatch for 6g connection when
+ *                         this flag is set
+ */
+enum wlan_wfa_test_feature_flags {
+	WFA_TEST_IGNORE_RSNXE = 0x1,
+};
+
+/**
  * struct wlan_mlme_wfa_cmd - WFA test command tx ops
  * @tx_ops: WFA test command Tx ops to send commands to firmware
+ * @flags: WFA test feature flags to do feature specific operations
  */
 struct wlan_mlme_wfa_cmd {
 	struct wlan_wfa_cmd_tx_ops tx_ops;
+	enum wlan_wfa_test_feature_flags flags;
 };
 
 #endif /* _WLAN_WFA_CONFIG_PUBLIC_STRUCT_H_ */

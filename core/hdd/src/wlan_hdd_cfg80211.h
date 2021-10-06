@@ -319,6 +319,8 @@ wlan_hdd_wifi_test_config_policy[
 #define SA_QUERY_TIMEOUT_IGNORE 1
 #define FILS_DISCV_FRAMES_DISABLE 0
 #define FILS_DISCV_FRAMES_ENABLE 1
+#define H2E_RSNXE_DEFAULT 0
+#define H2E_RSNXE_IGNORE 1
 
 #define FEATURE_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION                    \
 {                                                                        \
