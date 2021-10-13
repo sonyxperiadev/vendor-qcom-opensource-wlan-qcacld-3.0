@@ -2372,6 +2372,37 @@ static QDF_STATUS hdd_son_get_peer_capability(struct wlan_objmgr_vdev *vdev,
 	return QDF_STATUS_SUCCESS;
 }
 
+uint32_t hdd_son_get_peer_max_mcs_idx(struct wlan_objmgr_vdev *vdev,
+				      struct wlan_objmgr_peer *peer)
+{
+	uint32_t ret = 0;
+	struct hdd_station_info *sta_info = NULL;
+	struct hdd_adapter *adapter = NULL;
+
+	adapter = wlan_hdd_get_adapter_from_objmgr(vdev);
+	if (!adapter) {
+		hdd_err("null adapter");
+		return ret;
+	}
+
+	sta_info = hdd_get_sta_info_by_mac(&adapter->sta_info_list,
+					   peer->macaddr,
+					   STA_INFO_SOFTAP_GET_STA_INFO);
+	if (!sta_info) {
+		hdd_err("sta_info NULL");
+		return ret;
+	}
+
+	ret = sta_info->max_mcs_idx;
+
+	hdd_put_sta_info_ref(&adapter->sta_info_list, &sta_info, true,
+			     STA_INFO_SOFTAP_GET_STA_INFO);
+	hdd_debug("Peer " QDF_MAC_ADDR_FMT " max MCS index: %u",
+		  QDF_MAC_ADDR_REF(peer->macaddr), ret);
+
+	return ret;
+}
+
 void hdd_son_register_callbacks(struct hdd_context *hdd_ctx)
 {
 	struct son_callbacks cb_obj = {0};
@@ -2409,6 +2440,7 @@ void hdd_son_register_callbacks(struct hdd_context *hdd_ctx)
 	cb_obj.os_if_get_acs_report = hdd_son_get_acs_report;
 	cb_obj.os_if_get_node_info = hdd_son_get_node_info;
 	cb_obj.os_if_get_peer_capability = hdd_son_get_peer_capability;
+	cb_obj.os_if_get_peer_max_mcs_idx = hdd_son_get_peer_max_mcs_idx;
 
 	os_if_son_register_hdd_callbacks(hdd_ctx->psoc, &cb_obj);
 

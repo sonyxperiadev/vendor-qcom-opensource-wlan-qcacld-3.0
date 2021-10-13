@@ -975,6 +975,9 @@ QDF_STATUS os_if_son_peer_ops(struct wlan_objmgr_peer *peer,
 	struct wlan_objmgr_pdev *pdev;
 	struct wlan_objmgr_psoc *psoc;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	struct qdf_mac_addr mac;
+	int ret_val;
+	static uint32_t peer_ext_stats_count;
 
 	if (!peer) {
 		osif_err("null peer");
@@ -1000,6 +1003,18 @@ QDF_STATUS os_if_son_peer_ops(struct wlan_objmgr_peer *peer,
 	osif_debug("type %d", type);
 	/* All PEER MLME operations exported to SON component */
 	switch (type) {
+	/* SET/CLR API start */
+	case PEER_SET_KICKOUT:
+		qdf_mem_copy(&mac.bytes, peer->macaddr, QDF_MAC_ADDR_SIZE);
+		ret_val =
+		    g_son_os_if_cb.os_if_kickout_mac(vdev->vdev_objmgr.vdev_id,
+						     &mac);
+		if (ret_val) {
+			osif_err("Failed to kickout peer " QDF_MAC_ADDR_FMT,
+				 QDF_MAC_ADDR_REF(peer->macaddr));
+			return QDF_STATUS_E_INVAL;
+		}
+		break;
 	case PEER_SET_KICKOUT_ALLOW:
 		if (!in) {
 			osif_err("invalid input parameter");
@@ -1007,12 +1022,49 @@ QDF_STATUS os_if_son_peer_ops(struct wlan_objmgr_peer *peer,
 		}
 		status = ucfg_son_set_peer_kickout_allow(vdev, peer,
 							 in->enable);
+		osif_debug("kickout allow %d, status %d", in->enable, status);
+		break;
+	case PEER_SET_EXT_STATS:
+		if (!in)
+			return QDF_STATUS_E_INVAL;
+		ret_val = wlan_peer_mlme_flag_get(peer, WLAN_PEER_F_EXT_STATS);
+		osif_debug("Enable: %d peer_ext_stats_count: %u ret_val: %d",
+			   in->enable, peer_ext_stats_count, ret_val);
+		if ((!!ret_val) != in->enable) {
+			status =
+			     wlan_son_peer_ext_stat_enable(pdev, peer->macaddr,
+							   vdev,
+							   peer_ext_stats_count,
+							   in->enable);
+			osif_debug("status: %u", status);
+			if (status == QDF_STATUS_SUCCESS) {
+				peer_ext_stats_count++;
+				wlan_peer_mlme_flag_set(peer,
+							WLAN_PEER_F_EXT_STATS);
+			} else {
+				if (peer_ext_stats_count)
+					peer_ext_stats_count--;
+				wlan_peer_mlme_flag_clear
+						(peer, WLAN_PEER_F_EXT_STATS);
+			}
+		}
+		break;
+	case PEER_REQ_INST_STAT:
+		status = wlan_son_peer_req_inst_stats(pdev, peer->macaddr,
+						      vdev);
+		if (status != QDF_STATUS_SUCCESS)
+			osif_err("Type: %d is failed", type);
 		break;
 	case PEER_GET_CAPABILITY:
 		if (!out)
 			return QDF_STATUS_E_INVAL;
 		status = os_if_son_get_peer_capability(vdev, peer,
 						       &out->peercap);
+		break;
+	case PEER_GET_MAX_MCS:
+		if (!out)
+			return QDF_STATUS_E_INVAL;
+		out->mcs = os_if_son_get_peer_max_mcs_idx(vdev, peer);
 		break;
 	default:
 		osif_err("invalid type: %d", type);
@@ -1643,4 +1695,13 @@ QDF_STATUS os_if_son_get_node_datarate_info(struct wlan_objmgr_vdev *vdev,
 							    node_info);
 	}
 	return status;
+}
+
+uint32_t os_if_son_get_peer_max_mcs_idx(struct wlan_objmgr_vdev *vdev,
+					struct wlan_objmgr_peer *peer)
+{
+	if (g_son_os_if_cb.os_if_get_peer_max_mcs_idx)
+		return g_son_os_if_cb.os_if_get_peer_max_mcs_idx(vdev, peer);
+
+	return 0;
 }

@@ -68,6 +68,7 @@
  * @os_if_get_acs_report: Gets the ACS report
  * @os_if_get_node_info: Gets the datarate info for node
  * @os_if_get_peer_capability: Gets peer capability
+ * @os_if_get_peer_max_mcs_idx: Gets peer max MCS index
  */
 struct son_callbacks {
 	uint32_t (*os_if_is_acs_in_progress)(struct wlan_objmgr_vdev *vdev);
@@ -133,6 +134,8 @@ struct son_callbacks {
 	QDF_STATUS (*os_if_get_peer_capability)(struct wlan_objmgr_vdev *vdev,
 						struct wlan_objmgr_peer *peer,
 						wlan_peer_cap *cap);
+	uint32_t (*os_if_get_peer_max_mcs_idx)(struct wlan_objmgr_vdev *vdev,
+					       struct wlan_objmgr_peer *peer);
 };
 
 /**
@@ -764,4 +767,14 @@ int os_if_son_parse_generic_nl_cmd(struct wiphy *wiphy,
 QDF_STATUS os_if_son_get_node_datarate_info(struct wlan_objmgr_vdev *vdev,
 					    uint8_t *mac_addr,
 					    wlan_node_info *node_info);
+
+/**
+ * os_if_son_get_peer_max_mcs_idx() - Get max mcs index of the peer
+ * @vdev: vdev obj
+ * @peer: peer obj
+ *
+ * Return: max mcs index on success / 0 on failure
+ */
+uint32_t os_if_son_get_peer_max_mcs_idx(struct wlan_objmgr_vdev *vdev,
+					struct wlan_objmgr_peer *peer);
 #endif

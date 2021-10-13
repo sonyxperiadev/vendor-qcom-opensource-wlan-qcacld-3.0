@@ -112,6 +112,15 @@ int hdd_son_send_get_wifi_generic_command(struct wiphy *wiphy,
 					  struct wireless_dev *wdev,
 					  struct nlattr **tb);
 
+/**
+ * hdd_son_get_peer_max_mcs_idx() - Get peer max mcs index
+ * @vdev: vdev object
+ * @peer: peer obj
+ *
+ * Return: number of max mcs on succes or 0 on failure
+ */
+uint32_t hdd_son_get_peer_max_mcs_idx(struct wlan_objmgr_vdev *vdev,
+				      struct wlan_objmgr_peer *peer);
 #else
 
 static inline void hdd_son_register_callbacks(struct hdd_context *hdd_ctx)
@@ -161,5 +170,13 @@ int hdd_son_send_get_wifi_generic_command(struct wiphy *wiphy,
 {
 	return -EINVAL;
 }
+
+static inline
+uint32_t hdd_son_get_peer_max_mcs_idx(struct wlan_objmgr_vdev *vdev,
+				      struct wlan_objmgr_peer *peer)
+{
+	return 0;
+}
+
 #endif /* WLAN_FEATURE_SON */
 #endif
