@@ -108,6 +108,7 @@
 #endif
 #include "wlan_hdd_son.h"
 #include "wlan_hdd_mcc_quota.h"
+#include "wlan_hdd_wds.h"
 
 #define ACS_SCAN_EXPIRY_TIMEOUT_S 4
 
@@ -1935,6 +1936,7 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 	uint8_t *mld;
 #endif
 	bool notify_new_sta = true;
+	struct wlan_objmgr_vdev *vdev;
 
 	dev = context;
 	if (!dev) {
@@ -2144,6 +2146,17 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 		if (!wlan_reg_is_6ghz_chan_freq(ap_ctx->operating_chan_freq))
 			wlan_reg_set_ap_pwr_and_update_chan_list(hdd_ctx->pdev,
 								 REG_INDOOR_AP);
+
+		/*
+		 * Enable wds source port learning on the dp vdev in AP mode
+		 * when WDS feature is enabled.
+		 */
+		vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_ID);
+		if (vdev) {
+			if (wlan_vdev_mlme_get_opmode(vdev) == QDF_SAP_MODE)
+				hdd_wds_config_dp_repeater_mode(vdev);
+			hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_ID);
+		}
 		/*
 		 * set this event at the very end because once this events
 		 * get set, caller thread is waiting to do further processing.

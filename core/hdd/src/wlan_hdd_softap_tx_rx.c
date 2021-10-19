@@ -50,6 +50,7 @@
 #include "ol_defines.h"
 #include <wlan_hdd_sar_limits.h>
 #include "wlan_hdd_tsf.h"
+#include "wlan_hdd_wds.h"
 
 /* Preprocessor definitions and constants */
 #undef QCA_HDD_SAP_DUMP_SK_BUFF
@@ -614,6 +615,7 @@ static QDF_STATUS hdd_softap_validate_peer_state(struct hdd_adapter *adapter,
 		void *soc = cds_get_context(QDF_MODULE_ID_SOC);
 
 		QDF_BUG(soc);
+		hdd_wds_replace_peer_mac(soc, adapter, mac_addr->bytes);
 		peer_state = cdp_peer_state_get(soc, adapter->vdev_id,
 						mac_addr->bytes);
 
