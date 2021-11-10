@@ -2065,16 +2065,19 @@ DP_OBJS := $(DP_SRC)/dp_main.o \
 		$(DP_SRC)/dp_peer.o \
 		$(DP_SRC)/dp_rx_desc.o \
 		$(DP_SRC)/dp_reo.o \
-		$(DP_SRC)/monitor/dp_mon.o \
+		$(DP_SRC)/dp_rx_defrag.o \
+		$(DP_SRC)/dp_stats.o \
+		$(WLAN_COMMON_ROOT)/target_if/dp/src/target_if_dp.o
+
+ifeq ($(CONFIG_WIFI_MONITOR_SUPPORT), y)
+DP_OBJS += $(DP_SRC)/monitor/dp_mon.o \
 		$(DP_SRC)/monitor/dp_mon_filter.o \
 		$(DP_SRC)/monitor/dp_rx_mon.o \
 		$(DP_SRC)/monitor/1.0/dp_rx_mon_dest_1.0.o \
 		$(DP_SRC)/monitor/1.0/dp_rx_mon_status_1.0.o \
-		$(DP_SRC)/dp_rx_defrag.o \
 		$(DP_SRC)/monitor/1.0/dp_mon_filter_1.0.o \
-		$(DP_SRC)/dp_stats.o \
-		$(DP_SRC)/monitor/1.0/dp_mon_1.0.o \
-		$(WLAN_COMMON_ROOT)/target_if/dp/src/target_if_dp.o
+		$(DP_SRC)/monitor/1.0/dp_mon_1.0.o
+endif
 
 ifeq ($(CONFIG_BERYLLIUM), y)
 DP_OBJS += $(DP_SRC)/be/dp_be.o
