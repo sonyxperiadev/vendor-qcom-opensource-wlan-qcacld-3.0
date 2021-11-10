@@ -315,7 +315,8 @@ QDF_STATUS dp_rx_fst_attach(struct dp_soc *soc, struct dp_pdev *pdev)
 	if (QDF_IS_STATUS_ERROR(status))
 		goto free_hist;
 
-	fst->hal_rx_fst = hal_rx_fst_attach(soc->osdev,
+	fst->hal_rx_fst = hal_rx_fst_attach(soc->hal_soc,
+					    soc->osdev,
 					    &fst->hal_rx_fst_base_paddr,
 					    fst->max_entries,
 					    fst->max_skid_length, hash_key);
@@ -354,7 +355,7 @@ QDF_STATUS dp_rx_fst_attach(struct dp_soc *soc, struct dp_pdev *pdev)
 
 timer_init_fail:
 	qdf_spinlock_destroy(&fst->dp_rx_fst_lock);
-	hal_rx_fst_detach(fst->hal_rx_fst, soc->osdev);
+	hal_rx_fst_detach(soc->hal_soc, fst->hal_rx_fst, soc->osdev);
 free_hist:
 	dp_rx_sw_ft_hist_deinit((struct dp_fisa_rx_sw_ft *)fst->base,
 				fst->max_entries);
@@ -384,7 +385,7 @@ static void dp_rx_fst_check_cmem_support(struct dp_soc *soc)
 	if (status != QDF_STATUS_SUCCESS)
 		return;
 
-	hal_rx_fst_detach(fst->hal_rx_fst, soc->osdev);
+	hal_rx_fst_detach(soc->hal_soc, fst->hal_rx_fst, soc->osdev);
 	fst->hal_rx_fst = NULL;
 	fst->hal_rx_fst_base_paddr = 0;
 	fst->flow_deletion_supported = true;
@@ -451,7 +452,8 @@ void dp_rx_fst_detach(struct dp_soc *soc, struct dp_pdev *pdev)
 		if (dp_fst->fst_in_cmem)
 			dp_rx_fst_cmem_deinit(dp_fst);
 		else
-			hal_rx_fst_detach(dp_fst->hal_rx_fst, soc->osdev);
+			hal_rx_fst_detach(soc->hal_soc, dp_fst->hal_rx_fst,
+					  soc->osdev);
 
 		dp_rx_sw_ft_hist_deinit((struct dp_fisa_rx_sw_ft *)dp_fst->base,
 					dp_fst->max_entries);
