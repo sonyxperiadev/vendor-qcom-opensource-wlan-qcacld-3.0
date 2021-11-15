@@ -515,6 +515,10 @@ ifeq ($(CONFIG_FEATURE_WDS), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_wds.o
 endif
 
+ifeq ($(CONFIG_DP_HW_TX_DELAY_STATS_ENABLE), y)
+HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_dp_tx_delay_stats.o
+endif
+
 $(call add-wlan-objs,hdd,$(HDD_OBJS))
 
 ###### OSIF_SYNC ########
@@ -4351,6 +4355,10 @@ cppflags-y += -DWLAN_FEATURE_MCC_QUOTA
 ifdef CONFIG_WLAN_MCC_MIN_CHANNEL_QUOTA
 ccflags-y += -DWLAN_MCC_MIN_CHANNEL_QUOTA=$(CONFIG_WLAN_MCC_MIN_CHANNEL_QUOTA)
 endif
+endif
+
+ifeq ($(CONFIG_DP_HW_TX_DELAY_STATS_ENABLE), y)
+cppflags-y += -DHW_TX_DELAY_STATS_ENABLE
 endif
 
 KBUILD_CPPFLAGS += $(cppflags-y)
