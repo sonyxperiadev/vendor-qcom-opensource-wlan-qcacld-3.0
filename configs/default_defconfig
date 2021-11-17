@@ -748,7 +748,11 @@ CONFIG_WLAN_LOG_EXIT := y
 CONFIG_ATH_PERF_PWR_OFFLOAD := y
 
 #Disable packet log
+ifeq (y,$(filter y,$(CONFIG_LITHIUM) $(CONFIG_BERYLLIUM)))
+CONFIG_REMOVE_PKT_LOG := y
+else
 CONFIG_REMOVE_PKT_LOG := n
+endif
 
 #Enable 11AC TX
 ifeq ($(CONFIG_ROME_IF),pci)
