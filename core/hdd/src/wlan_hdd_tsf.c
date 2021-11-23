@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021, Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1665,7 +1666,8 @@ enum hdd_tsf_op_result hdd_netbuf_timestamp(qdf_nbuf_t netbuf,
  *
  * Return: Describe the execute result of this routine
  */
-static int hdd_tx_timestamp(qdf_nbuf_t netbuf, uint64_t target_time)
+static int hdd_tx_timestamp(enum htt_tx_status status,
+			    qdf_nbuf_t netbuf, uint64_t target_time)
 {
 	struct sock *sk = netbuf->sk;
 
@@ -1688,7 +1690,25 @@ static int hdd_tx_timestamp(qdf_nbuf_t netbuf, uint64_t target_time)
 
 		serr = SKB_EXT_ERR(new_netbuf);
 		memset(serr, 0, sizeof(*serr));
-		serr->ee.ee_errno = ENOMSG;
+
+		switch (status) {
+		case htt_tx_status_ok:
+			serr->ee.ee_errno = ENOMSG;
+			break;
+		case htt_tx_status_discard:
+			serr->ee.ee_errno = ENOBUFS;
+			break;
+		case htt_tx_status_no_ack:
+			serr->ee.ee_errno = EREMOTEIO;
+			break;
+		default:
+			serr->ee.ee_errno = ENOMSG;
+			break;
+		}
+
+		hdd_debug("packet status %d, sock ee_errno %d",
+			  status, serr->ee.ee_errno);
+
 		serr->ee.ee_origin = SO_EE_ORIGIN_TIMESTAMPING;
 
 		err = sock_queue_err_skb(sk, new_netbuf);
