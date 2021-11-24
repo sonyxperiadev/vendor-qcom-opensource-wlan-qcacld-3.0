@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -58,7 +59,6 @@
 	CFG_POLICY_MGR_ALL \
 	CFG_HDD_ALL \
 	CFG_HDD_DP_ALL \
-	CFG_IPA \
 	CFG_LEGACY_DP_ALL \
 	CFG_MLME_ALL \
 	CFG_NAN_ALL \
