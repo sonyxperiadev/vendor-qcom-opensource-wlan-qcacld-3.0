@@ -6721,7 +6721,8 @@ hdd_sap_nan_check_and_disable_unsupported_ndi(struct wlan_objmgr_psoc *psoc,
 #endif
 
 #if defined(WLAN_SUPPORT_TWT) && \
-	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 3, 0))
+	((LINUX_VERSION_CODE >= KERNEL_VERSION(5, 3, 0)) || \
+	  defined(CFG80211_TWT_RESPONDER_SUPPORT))
 static void
 wlan_hdd_update_twt_responder(struct hdd_context *hdd_ctx,
 			      struct cfg80211_ap_settings *params)
@@ -6733,7 +6734,8 @@ wlan_hdd_update_twt_responder(struct hdd_context *hdd_ctx,
 	ucfg_mlme_set_twt_responder(hdd_ctx->psoc, QDF_MIN(
 					twt_res_svc_cap,
 					(enable_twt && params->twt_responder)));
-	if (params->twt_responder)
+	hdd_debug("cfg80211 TWT responder:%d", params->twt_responder);
+	if (enable_twt && params->twt_responder)
 		hdd_send_twt_responder_enable_cmd(hdd_ctx);
 	else
 		hdd_send_twt_responder_disable_cmd(hdd_ctx);
