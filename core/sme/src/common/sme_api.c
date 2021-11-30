@@ -2070,7 +2070,7 @@ sme_sap_init_twt_context(struct wlan_objmgr_psoc *psoc,
  */
 static void
 sme_process_twt_add_renego_failure(struct mac_context *mac,
-				 struct twt_add_dialog_complete_event *add_dialog_event)
+				 struct wma_twt_add_dialog_complete_event *add_dialog_event)
 {
 	twt_add_dialog_cb callback;
 
@@ -2095,7 +2095,7 @@ sme_process_twt_add_renego_failure(struct mac_context *mac,
  */
 static void
 sme_process_twt_add_initial_nego(struct mac_context *mac,
-				 struct twt_add_dialog_complete_event *add_dialog_event)
+				 struct wma_twt_add_dialog_complete_event *add_dialog_event)
 {
 	twt_add_dialog_cb callback;
 
@@ -2138,7 +2138,7 @@ sme_process_twt_add_initial_nego(struct mac_context *mac,
  */
 static void
 sme_process_twt_add_dialog_event(struct mac_context *mac,
-				 struct twt_add_dialog_complete_event
+				 struct wma_twt_add_dialog_complete_event
 				 *add_dialog_event)
 {
 	bool is_evt_allowed;
@@ -2539,7 +2539,7 @@ void sme_twt_update_beacon_template(mac_handle_t mac_handle)
 #else
 static void
 sme_process_twt_add_dialog_event(struct mac_context *mac,
-				 struct twt_add_dialog_complete_event *add_dialog_event)
+				 struct wma_twt_add_dialog_complete_event *add_dialog_event)
 {
 }
 
