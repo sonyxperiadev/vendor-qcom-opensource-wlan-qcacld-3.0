@@ -1379,7 +1379,7 @@ endif
 $(call add-wlan-objs,ocb,$(OCB_OBJS))
 
 ######## IPA ##############
-IPA_DIR := components/ipa
+IPA_DIR := $(WLAN_COMMON_ROOT)/ipa
 IPA_INC := -I$(WLAN_ROOT)/$(IPA_DIR)/core/inc \
 		-I$(WLAN_ROOT)/$(IPA_DIR)/dispatcher/inc
 
@@ -1665,11 +1665,6 @@ CLD_TARGET_IF_INC += -I$(WLAN_ROOT)/$(CLD_TARGET_IF_DIR)/blacklist_mgr/inc
 CLD_TARGET_IF_OBJ += $(CLD_TARGET_IF_DIR)/blacklist_mgr/src/target_if_blm.o
 endif
 
-ifeq ($(CONFIG_IPA_OFFLOAD), y)
-CLD_TARGET_IF_INC += -I$(WLAN_ROOT)/$(CLD_TARGET_IF_DIR)/ipa/inc
-CLD_TARGET_IF_OBJ += $(CLD_TARGET_IF_DIR)/ipa/src/target_if_ipa.o
-endif
-
 ifeq ($(CONFIG_WLAN_FEATURE_ACTION_OUI), y)
 CLD_TARGET_IF_INC += -I$(WLAN_ROOT)/$(CLD_TARGET_IF_DIR)/action_oui/inc
 CLD_TARGET_IF_OBJ += $(CLD_TARGET_IF_DIR)/action_oui/src/target_if_action_oui.o
@@ -1774,7 +1769,8 @@ TARGET_IF_INC := -I$(WLAN_COMMON_INC)/target_if/core/inc \
 		 -I$(WLAN_COMMON_INC)/target_if/regulatory/inc \
 		 -I$(WLAN_COMMON_INC)/target_if/mlme/vdev_mgr/inc \
 		 -I$(WLAN_COMMON_INC)/target_if/dispatcher/inc \
-		 -I$(WLAN_COMMON_INC)/target_if/mlme/psoc/inc
+		 -I$(WLAN_COMMON_INC)/target_if/mlme/psoc/inc \
+		 -I$(WLAN_COMMON_INC)/target_if/ipa/inc
 
 TARGET_IF_OBJ := $(TARGET_IF_DIR)/core/src/target_if_main.o \
 		$(TARGET_IF_DIR)/regulatory/src/target_if_reg.o \
@@ -1794,6 +1790,10 @@ endif
 
 ifeq ($(CONFIG_CRYPTO_COMPONENT), y)
 TARGET_IF_OBJ += $(TARGET_IF_DIR)/crypto/src/target_if_crypto.o
+endif
+
+ifeq ($(CONFIG_IPA_OFFLOAD), y)
+TARGET_IF_OBJ += $(TARGET_IF_DIR)/ipa/src/target_if_ipa.o
 endif
 
 $(call add-wlan-objs,target_if,$(TARGET_IF_OBJ))
