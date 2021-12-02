@@ -3865,6 +3865,7 @@ struct sir_nss_update_request {
  * @REASON_COLOR_CHANGE: Color change
  * @REASON_CHANNEL_SWITCH: channel switch
  * @REASON_MLO_IE_UPDATE: mlo ie update
+ * @REASON_RNR_UPDATE: SAP is changed, notify co-located SAP
  */
 enum sir_bcn_update_reason {
 	REASON_DEFAULT = 0,
@@ -3874,6 +3875,7 @@ enum sir_bcn_update_reason {
 	REASON_COLOR_CHANGE = 4,
 	REASON_CHANNEL_SWITCH = 5,
 	REASON_MLO_IE_UPDATE = 6,
+	REASON_RNR_UPDATE = 7,
 };
 
 /**
