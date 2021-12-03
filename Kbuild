@@ -4322,6 +4322,8 @@ ifdef CONFIG_CHIP_VERSION
 cppflags-y += -DCHIP_VERSION=$(CONFIG_CHIP_VERSION)
 endif
 
+cppflags-$(CONFIG_WLAN_FEATURE_MARK_FIRST_WAKEUP_PACKET) += -DWLAN_FEATURE_MARK_FIRST_WAKEUP_PACKET
+
 KBUILD_CPPFLAGS += $(cppflags-y)
 
 # Currently, for versions of gcc which support it, the kernel Makefile
