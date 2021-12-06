@@ -4403,7 +4403,6 @@ static void hdd_rtpm_tput_policy_init(struct hdd_context *hdd_ctx)
 	struct hdd_rtpm_tput_policy_context *ctx;
 
 	ctx = &hdd_ctx->rtpm_tput_policy_ctx;
-	qdf_wake_lock_create(&ctx->wake_lock, "rtpm_tput_policy_lock");
 	qdf_runtime_lock_init(&ctx->rtpm_lock);
 	ctx->curr_state = RTPM_TPUT_POLICY_STATE_REQUIRED;
 	qdf_atomic_init(&ctx->high_tput_vote);
@@ -4416,7 +4415,6 @@ static void hdd_rtpm_tput_policy_deinit(struct hdd_context *hdd_ctx)
 	ctx = &hdd_ctx->rtpm_tput_policy_ctx;
 	ctx->curr_state = RTPM_TPUT_POLICY_STATE_INVALID;
 	qdf_runtime_lock_deinit(&ctx->rtpm_lock);
-	qdf_wake_lock_destroy(&ctx->wake_lock);
 }
 
 static void hdd_rtpm_tput_policy_prevent(struct hdd_context *hdd_ctx)
@@ -4424,8 +4422,6 @@ static void hdd_rtpm_tput_policy_prevent(struct hdd_context *hdd_ctx)
 	struct hdd_rtpm_tput_policy_context *ctx;
 
 	ctx = &hdd_ctx->rtpm_tput_policy_ctx;
-	qdf_wake_lock_acquire(&ctx->wake_lock,
-			      WIFI_POWER_EVENT_WAKELOCK_RTPM_TPUT_POLICY);
 	qdf_runtime_pm_prevent_suspend(&ctx->rtpm_lock);
 }
 
@@ -4435,8 +4431,6 @@ static void hdd_rtpm_tput_policy_allow(struct hdd_context *hdd_ctx)
 
 	ctx = &hdd_ctx->rtpm_tput_policy_ctx;
 	qdf_runtime_pm_allow_suspend(&ctx->rtpm_lock);
-	qdf_wake_lock_release(&ctx->wake_lock,
-			      WIFI_POWER_EVENT_WAKELOCK_RTPM_TPUT_POLICY);
 }
 
 #define HDD_RTPM_POLICY_HIGH_TPUT_THRESH TPUT_LEVEL_MEDIUM
