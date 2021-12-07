@@ -7654,6 +7654,7 @@ QDF_STATUS populate_dot11f_twt_extended_caps(struct mac_context *mac_ctx,
 
 	dot11f->num_bytes = DOT11F_IE_EXTCAP_MAX_LEN;
 	p_ext_cap = (struct s_ext_cap *)dot11f->bytes;
+	dot11f->present = 1;
 
 	if (pe_session->opmode == QDF_STA_MODE)
 		p_ext_cap->twt_requestor_support =
@@ -7666,6 +7667,10 @@ QDF_STATUS populate_dot11f_twt_extended_caps(struct mac_context *mac_ctx,
 			mac_ctx->mlme_cfg->twt_cfg.res_flag;
 
 	dot11f->num_bytes = lim_compute_ext_cap_ie_length(dot11f);
+	if (!dot11f->num_bytes) {
+		dot11f->present = 0;
+		pe_debug("ext ie length become 0, disable the ext caps");
+	}
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -8424,6 +8429,7 @@ QDF_STATUS populate_dot11f_btm_extended_caps(struct mac_context *mac_ctx,
 	pe_debug("enter");
 	dot11f->num_bytes = DOT11F_IE_EXTCAP_MAX_LEN;
 	p_ext_cap = (struct s_ext_cap *)dot11f->bytes;
+	dot11f->present = 1;
 
 	status = cm_akm_roam_allowed(mac_ctx->psoc, pe_session->vdev);
 	if (QDF_IS_STATUS_ERROR(status)) {
@@ -8432,6 +8438,10 @@ QDF_STATUS populate_dot11f_btm_extended_caps(struct mac_context *mac_ctx,
 	}
 
 	dot11f->num_bytes = lim_compute_ext_cap_ie_length(dot11f);
+	if (!dot11f->num_bytes) {
+		dot11f->present = 0;
+		pe_debug("ext ie length become 0, disable the ext caps");
+	}
 
 	return QDF_STATUS_SUCCESS;
 }
