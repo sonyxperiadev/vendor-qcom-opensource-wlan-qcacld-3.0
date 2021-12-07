@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -636,7 +637,7 @@ hdd_congestion_notification_calculation(struct hdd_medium_assess_info *info)
 		cycle_count_delta += h_data->cycle_count;
 	}
 
-	diff = (rx_clear_count_delta - tx_frame_count_delta) * 100;
+	diff = ((uint64_t)(rx_clear_count_delta - tx_frame_count_delta)) * 100;
 	if (cycle_count_delta)
 		congestion = qdf_do_div(diff, cycle_count_delta);
 
