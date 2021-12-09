@@ -107,6 +107,7 @@
 #include <wlan_mlo_mgr_ap.h>
 #endif
 #include "wlan_hdd_son.h"
+#include "wlan_hdd_mcc_quota.h"
 
 #define ACS_SCAN_EXPIRY_TIMEOUT_S 4
 
@@ -2154,6 +2155,8 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 			hdd_err("qdf_event_set failed! status: %d", qdf_status);
 			goto stopbss;
 		}
+
+		wlan_hdd_apply_user_mcc_quota(adapter);
 		break;          /* Event will be sent after Switch-Case stmt */
 
 	case eSAP_STOP_BSS_EVENT:

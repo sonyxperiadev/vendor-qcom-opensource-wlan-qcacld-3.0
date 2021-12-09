@@ -6650,6 +6650,26 @@ cm_csr_connect_done_ind(struct wlan_objmgr_vdev *vdev,
 				return -EAGAIN;
 			}
 		}
+	} else {
+		QDF_STATUS status = QDF_STATUS_SUCCESS;
+		uint32_t quota_val;
+
+		quota_val =
+			ucfg_mlme_get_user_mcc_quota_percentage(mac_ctx->psoc);
+
+		if (quota_val) {
+			if (enable_mcc_adaptive_sch) {
+				policy_mgr_set_dynamic_mcc_adaptive_sch(
+							mac_ctx->psoc, false);
+				status = sme_set_mas(false);
+			}
+			if (status == QDF_STATUS_SUCCESS)
+				sme_cli_set_command(wlan_vdev_get_id(vdev),
+						    WMA_VDEV_MCC_SET_TIME_QUOTA,
+						    quota_val, VDEV_CMD);
+		} else {
+			sme_debug("no applicable user mcc/quota");
+		}
 	}
 
 	/*

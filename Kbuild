@@ -507,6 +507,10 @@ ifeq ($(CONFIG_QCACLD_WLAN_CONNECTIVITY_LOGGING), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_connectivity_logging.o
 endif
 
+ifeq ($(CONFIG_WLAN_FEATURE_MCC_QUOTA), y)
+HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_mcc_quota.o
+endif
+
 $(call add-wlan-objs,hdd,$(HDD_OBJS))
 
 ###### OSIF_SYNC ########
@@ -4328,6 +4332,13 @@ cppflags-y += -DCHIP_VERSION=$(CONFIG_CHIP_VERSION)
 endif
 
 cppflags-$(CONFIG_WLAN_FEATURE_MARK_FIRST_WAKEUP_PACKET) += -DWLAN_FEATURE_MARK_FIRST_WAKEUP_PACKET
+
+ifeq ($(CONFIG_WLAN_FEATURE_MCC_QUOTA), y)
+cppflags-y += -DWLAN_FEATURE_MCC_QUOTA
+ifdef CONFIG_WLAN_MCC_MIN_CHANNEL_QUOTA
+ccflags-y += -DWLAN_MCC_MIN_CHANNEL_QUOTA=$(CONFIG_WLAN_MCC_MIN_CHANNEL_QUOTA)
+endif
+endif
 
 KBUILD_CPPFLAGS += $(cppflags-y)
 

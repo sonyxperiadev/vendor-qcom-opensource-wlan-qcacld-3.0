@@ -2483,7 +2483,6 @@ mlme_init_dot11_mode_cfg(struct wlan_objmgr_psoc *psoc,
 
 /**
  * mlme_iot_parse_aggr_info - parse aggr related items in ini
- *
  * @psoc: PSOC pointer
  * @iot: IOT related CFG items
  *
@@ -2589,7 +2588,6 @@ end:
 
 /**
  * mlme_iot_parse_aggr_info - parse IOT related items in ini
- *
  * @psoc: PSOC pointer
  * @iot: IOT related CFG items
  *
@@ -2604,7 +2602,6 @@ mlme_init_iot_cfg(struct wlan_objmgr_psoc *psoc,
 
 /**
  * mlme_init_dual_sta_config - Initialize dual sta configuratons
- *
  * @gen: Generic CFG config items
  *
  * Return: None
@@ -2617,6 +2614,26 @@ mlme_init_dual_sta_config(struct wlan_mlme_generic *gen)
 				QCA_WLAN_CONCURRENT_STA_POLICY_UNBIASED;
 }
 
+#ifdef WLAN_FEATURE_MCC_QUOTA
+/**
+ * mlme_init_user_mcc_quota_config - Initialize mcc quota
+ * @gen: Generic CFG config items
+ *
+ * Return: None
+ */
+static void
+mlme_init_user_mcc_quota_config(struct wlan_mlme_generic *gen)
+{
+	gen->user_mcc_quota.quota = 0;
+	gen->user_mcc_quota.op_mode = QDF_MAX_NO_OF_MODE;
+	gen->user_mcc_quota.vdev_id = WLAN_UMAC_VDEV_ID_MAX;
+}
+#else
+static void
+mlme_init_user_mcc_quota_config(struct wlan_mlme_generic *gen)
+{
+}
+#endif
 QDF_STATUS mlme_cfg_on_psoc_enable(struct wlan_objmgr_psoc *psoc)
 {
 	struct wlan_mlme_psoc_ext_obj *mlme_obj;
@@ -2672,6 +2689,7 @@ QDF_STATUS mlme_cfg_on_psoc_enable(struct wlan_objmgr_psoc *psoc)
 	mlme_init_ratemask_cfg(psoc, &mlme_cfg->ratemask_cfg);
 	mlme_init_iot_cfg(psoc, &mlme_cfg->iot);
 	mlme_init_dual_sta_config(&mlme_cfg->gen);
+	mlme_init_user_mcc_quota_config(&mlme_cfg->gen);
 
 	return status;
 }

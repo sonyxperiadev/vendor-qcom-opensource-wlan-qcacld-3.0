@@ -3747,7 +3747,22 @@ void hdd_indicate_mgmt_frame(tSirSmeMgmtFrameInd *frame_ind);
  *
  */
 struct hdd_adapter *hdd_get_adapter_by_iface_name(struct hdd_context *hdd_ctx,
-					     const char *iface_name);
+						  const char *iface_name);
+
+/**
+ * hdd_get_adapter_by_ifindex() - Return adapter associated with an ifndex
+ * @hdd_ctx: hdd context.
+ * @if_index: netdev interface index
+ *
+ * This function is used to get the adapter associated with a netdev with the
+ * given interface index.
+ *
+ * Return: adapter pointer if found, NULL otherwise
+ *
+ */
+struct hdd_adapter *hdd_get_adapter_by_ifindex(struct hdd_context *hdd_ctx,
+					       uint32_t if_index);
+
 enum phy_ch_width hdd_map_nl_chan_width(enum nl80211_chan_width ch_width);
 
 /**
