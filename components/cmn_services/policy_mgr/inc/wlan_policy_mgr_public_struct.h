@@ -846,6 +846,8 @@ enum policy_mgr_two_connection_mode {
  * 5ghz DBS
  * @PM_NDI_NDI_5_NAN_DISC_24_DBS: Both NDI on 5ghz and NAN Disc on 2.4Ghz DBS
  * @PM_NDI_NDI_NAN_DISC_24_SMM: Both NDI, NAN Disc on 2.4ghz SMM
+ * @PM_SAP_SAP_SCC_24_SAP_5_DBS: Both SAP on 2.4Ghz and another SAP on 5Ghz DBS
+ * @PM_SAP_SAP_SCC_5_SAP_24_DBS: Both SAP on 5Ghz and another SAP on 2.4Ghz DBS
  */
 enum policy_mgr_three_connection_mode {
 	PM_STA_SAP_SCC_24_SAP_5_DBS,
@@ -862,6 +864,8 @@ enum policy_mgr_three_connection_mode {
 	PM_NAN_DISC_NDI_24_NDI_5_DBS,
 	PM_NDI_NDI_5_NAN_DISC_24_DBS,
 	PM_NDI_NDI_NAN_DISC_24_SMM,
+	PM_SAP_SAP_SCC_24_SAP_5_DBS,
+	PM_SAP_SAP_SCC_5_SAP_24_DBS,
 
 	PM_MAX_THREE_CONNECTION_MODE
 };
