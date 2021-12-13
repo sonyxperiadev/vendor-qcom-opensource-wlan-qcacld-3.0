@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011, 2014-2021 The Linux Foundation. All rights reserved.
- *
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -195,7 +195,9 @@
 /*
  * Maximum number of VDEV that beacon tx offload will support
  */
+#ifndef CFG_TGT_DEFAULT_BEACON_TX_OFFLOAD_MAX_VDEV
 #define CFG_TGT_DEFAULT_BEACON_TX_OFFLOAD_MAX_VDEV 3
+#endif
 
 /*
  * number of vdevs that can support tdls
