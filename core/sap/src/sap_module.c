@@ -753,6 +753,7 @@ QDF_STATUS wlansap_start_bss(struct sap_context *sap_ctx,
 	sap_ctx->dfs_cac_offload = config->dfs_cac_offload;
 	sap_ctx->isCacEndNotified = false;
 	sap_ctx->is_chan_change_inprogress = false;
+	sap_ctx->disabled_mcs13 = false;
 	sap_ctx->phyMode = config->SapHw_mode;
 	sap_ctx->csa_reason = CSA_REASON_UNKNOWN;
 

@@ -1350,6 +1350,112 @@ QDF_STATUS sap_clear_session_param(mac_handle_t mac_handle,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef WLAN_FEATURE_11AX
+static uint16_t he_mcs_12_13_support(void)
+{
+	struct mac_context *mac_ctx;
+
+	mac_ctx = sap_get_mac_context();
+	if (!mac_ctx) {
+		sap_err("Invalid MAC context");
+		return 0;
+	}
+
+	return mac_ctx->mlme_cfg->he_caps.he_mcs_12_13_supp_5g;
+}
+#else
+static inline uint16_t he_mcs_12_13_support(void)
+{
+	return 0;
+}
+#endif
+
+#ifdef WLAN_FEATURE_11BE
+static bool is_mcs13_ch_width(enum phy_ch_width ch_width)
+{
+	if ((ch_width == CH_WIDTH_320MHZ) ||
+	    (ch_width == CH_WIDTH_160MHZ) ||
+	    (ch_width == CH_WIDTH_80P80MHZ))
+		return true;
+
+	return false;
+}
+#else
+static bool is_mcs13_ch_width(enum phy_ch_width ch_width)
+{
+	if ((ch_width == CH_WIDTH_160MHZ) ||
+	    (ch_width == CH_WIDTH_80P80MHZ))
+		return true;
+
+	return false;
+}
+#endif
+
+/**
+ * sap_update_mcs_rate() - Update SAP MCS rate
+ * @sap_ctx: pointer to sap Context
+ * @is_start: Start or stop SAP
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+sap_update_mcs_rate(struct sap_context *sap_ctx, bool is_start)
+{
+	uint32_t default_mcs[] = {26, 0x3fff};
+	uint32_t fixed_mcs[] = {26, 0x1fff};
+	bool mcs13_support = false;
+	uint16_t he_mcs_12_13_supp;
+	struct mac_context *mac_ctx;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+
+	mac_ctx = sap_get_mac_context();
+	if (!mac_ctx) {
+		sap_err("Invalid MAC context");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	he_mcs_12_13_supp = he_mcs_12_13_support();
+	mcs13_support = cfg_get(mac_ctx->psoc,
+				CFG_DISABLE_MCS13_SUPPORT);
+	sap_debug("session id %d, mcs13 support %d, he_mcs_12_13 %d, start %d, disabled_mcs13 %d, ch width %d",
+		  sap_ctx->sessionId, mcs13_support,
+		  he_mcs_12_13_supp,
+		  is_start, sap_ctx->disabled_mcs13,
+		  sap_ctx->ch_params.ch_width);
+
+	if (mcs13_support ||
+	    !he_mcs_12_13_supp)
+		return status;
+
+	if (!is_start && !sap_ctx->disabled_mcs13)
+		return status;
+
+	if (!is_mcs13_ch_width(sap_ctx->ch_params.ch_width))
+		return status;
+
+	if (is_start) {
+		status = sme_send_unit_test_cmd(sap_ctx->sessionId,
+						10, 2, fixed_mcs);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			sap_err("Set fixed mcs rate failed, session %d",
+				sap_ctx->sessionId);
+		} else {
+			sap_ctx->disabled_mcs13 = true;
+		}
+	} else {
+		status = sme_send_unit_test_cmd(sap_ctx->sessionId,
+						10, 2, default_mcs);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			sap_err("Set default mcs rate failed, session %d",
+				sap_ctx->sessionId);
+		} else {
+			sap_ctx->disabled_mcs13 = false;
+		}
+	}
+
+	return status;
+}
+
 /**
  * sap_goto_stopping() - Processing of SAP FSM stopping state
  * @sap_ctx: pointer to sap Context
@@ -1368,6 +1474,7 @@ static QDF_STATUS sap_goto_stopping(struct sap_context *sap_ctx)
 		return QDF_STATUS_E_FAULT;
 	}
 
+	sap_update_mcs_rate(sap_ctx, false);
 	sap_free_roam_profile(&sap_ctx->csr_roamProfile);
 	status = sme_roam_stop_bss(MAC_HANDLE(mac_ctx), sap_ctx->sessionId);
 	if (status != QDF_STATUS_SUCCESS) {
@@ -1946,9 +2053,11 @@ QDF_STATUS sap_signal_hdd_event(struct sap_context *sap_ctx,
 
 		bss_complete->operating_chan_freq = sap_ctx->chan_freq;
 		bss_complete->ch_width = sap_ctx->ch_params.ch_width;
-		if (QDF_IS_STATUS_SUCCESS(bss_complete->status))
+		if (QDF_IS_STATUS_SUCCESS(bss_complete->status)) {
 			sap_update_cac_history(mac_ctx, sap_ctx,
 					       sap_hddevent);
+			sap_update_mcs_rate(sap_ctx, true);
+		}
 		break;
 	case eSAP_DFS_CAC_START:
 	case eSAP_DFS_CAC_INTERRUPTED:
