@@ -50,6 +50,8 @@
 #include "wlan_roam_debug.h"
 #include <wlan_hdd_regulatory.h>
 #include "wlan_hdd_hostapd.h"
+#include <wlan_twt_ucfg_ext_api.h>
+#include <osif_twt_internal.h>
 
 bool hdd_cm_is_vdev_associated(struct hdd_adapter *adapter)
 {
@@ -1305,6 +1307,9 @@ hdd_cm_connect_success_post_user_update(struct wlan_objmgr_vdev *vdev,
 		ucfg_mlme_init_twt_context(hdd_ctx->psoc,
 					   &rsp->bssid,
 					   TWT_ALL_SESSIONS_DIALOG_ID);
+		ucfg_twt_init_context(hdd_ctx->psoc,
+				      &rsp->bssid,
+				      TWT_ALL_SESSIONS_DIALOG_ID);
 	}
 	hdd_periodic_sta_stats_start(adapter);
 	wlan_twt_concurrency_update(hdd_ctx);
