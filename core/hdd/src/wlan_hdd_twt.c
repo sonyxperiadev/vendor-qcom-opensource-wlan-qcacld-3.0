@@ -43,6 +43,7 @@
 #define TWT_DISABLE_COMPLETE_TIMEOUT 1000
 #define TWT_ENABLE_COMPLETE_TIMEOUT  1000
 #define TWT_ACK_COMPLETE_TIMEOUT 1000
+#define TWT_WORK_RESCHED_WAIT_TIME 30
 
 #define TWT_FLOW_TYPE_ANNOUNCED 0
 #define TWT_FLOW_TYPE_UNANNOUNCED 1
@@ -4524,8 +4525,16 @@ void hdd_twt_update_work_handler(void *data)
 	int ret;
 
 	ret = osif_psoc_sync_op_start(wiphy_dev(hdd_ctx->wiphy), &psoc_sync);
-	if (ret)
+
+	if (ret == -EAGAIN) {
+		qdf_sleep(TWT_WORK_RESCHED_WAIT_TIME);
+		hdd_debug("rescheduling TWT work");
+		wlan_twt_concurrency_update(hdd_ctx);
 		return;
+	} else if (ret) {
+		hdd_err("can not handle TWT update %d", ret);
+		return;
+	}
 
 	__hdd_twt_update_work_handler(hdd_ctx);
 
