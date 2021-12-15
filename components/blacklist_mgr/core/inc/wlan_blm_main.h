@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,79 +17,79 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 /**
- * DOC: declare internal APIs related to the blacklist manager component
+ * DOC: declare internal APIs related to the denylist manager component
  */
 
-#ifndef _WLAN_BLM_MAIN_H_
-#define _WLAN_BLM_MAIN_H_
+#ifndef _WLAN_DLM_MAIN_H_
+#define _WLAN_DLM_MAIN_H_
 
 #include <qdf_time.h>
 #include <wlan_objmgr_cmn.h>
 #include <wlan_objmgr_global_obj.h>
 #include <wlan_blm_ucfg_api.h>
 
-#define blm_fatal(params...)\
-		QDF_TRACE_FATAL(QDF_MODULE_ID_BLACKLIST_MGR, params)
-#define blm_err(params...)\
-		QDF_TRACE_ERROR(QDF_MODULE_ID_BLACKLIST_MGR, params)
-#define blm_warn(params...)\
-		QDF_TRACE_WARN(QDF_MODULE_ID_BLACKLIST_MGR, params)
-#define blm_info(params...)\
-		QDF_TRACE_INFO(QDF_MODULE_ID_BLACKLIST_MGR, params)
-#define blm_debug(params...)\
-		QDF_TRACE_DEBUG(QDF_MODULE_ID_BLACKLIST_MGR, params)
-#define blm_nofl_debug(params...)\
-		QDF_TRACE_DEBUG_NO_FL(QDF_MODULE_ID_BLACKLIST_MGR, params)
+#define dlm_fatal(params...)\
+		QDF_TRACE_FATAL(QDF_MODULE_ID_DENYLIST_MGR, params)
+#define dlm_err(params...)\
+		QDF_TRACE_ERROR(QDF_MODULE_ID_DENYLIST_MGR, params)
+#define dlm_warn(params...)\
+		QDF_TRACE_WARN(QDF_MODULE_ID_DENYLIST_MGR, params)
+#define dlm_info(params...)\
+		QDF_TRACE_INFO(QDF_MODULE_ID_DENYLIST_MGR, params)
+#define dlm_debug(params...)\
+		QDF_TRACE_DEBUG(QDF_MODULE_ID_DENYLIST_MGR, params)
+#define dlm_nofl_debug(params...)\
+		QDF_TRACE_DEBUG_NO_FL(QDF_MODULE_ID_DENYLIST_MGR, params)
 
 /**
- * struct blm_pdev_priv_obj - Pdev priv struct to store list of blacklist mgr.
+ * struct dlm_pdev_priv_obj - Pdev priv struct to store list of denylist mgr.
  * @reject_ap_list_lock: Mutex needed to restrict two threads updating the list.
  * @reject_ap_list: The reject Ap list which would contain the list of bad APs.
- * @blm_tx_ops: tx ops to send reject ap list to FW
+ * @dlm_tx_ops: tx ops to send reject ap list to FW
  */
-struct blm_pdev_priv_obj {
+struct dlm_pdev_priv_obj {
 	qdf_mutex_t reject_ap_list_lock;
 	qdf_list_t reject_ap_list;
-	struct wlan_blm_tx_ops blm_tx_ops;
+	struct wlan_dlm_tx_ops dlm_tx_ops;
 };
 
 /**
- * struct blm_config - Structure to define the config params for blacklist mgr.
+ * struct dlm_config - Structure to define the config params for denylist mgr.
  * @avoid_list_exipry_time: Timer after which transition from avoid->monitor
  * would happen for the BSSID which is in avoid list.
- * @black_list_exipry_time: Timer after which transition from black->monitor
- * would happen for the BSSID which is in black list.
+ * @deny_list_exipry_time: Timer after which transition from deny->monitor
+ * would happen for the BSSID which is in deny list.
  * @bad_bssid_counter_reset_time: Timer after which the bssid would be removed
  * from the reject list when connected, and data stall is not seen with the AP.
  * @bad_bssid_counter_thresh: This is the threshold count which is incremented
  * after every NUD fail, and after this much count, the BSSID would be moved to
- * blacklist.
+ * denylist.
  * @delta_rssi: This is the rssi threshold, only when rssi
- * improves by this value the entry for BSSID should be removed from black
+ * improves by this value the entry for BSSID should be removed from deny
  * list manager list.
  */
-struct blm_config {
+struct dlm_config {
 	qdf_time_t avoid_list_exipry_time;
-	qdf_time_t black_list_exipry_time;
+	qdf_time_t deny_list_exipry_time;
 	qdf_time_t bad_bssid_counter_reset_time;
 	uint8_t bad_bssid_counter_thresh;
 	uint32_t delta_rssi;
 };
 
 /**
- * struct blm_psoc_priv_obj - Psoc priv structure of the blacklist manager.
+ * struct dlm_psoc_priv_obj - Psoc priv structure of the denylist manager.
  * @pdev_id: pdev id
- * @is_suspended: is black list manager state suspended
- * @blm_cfg: These are the config ini params that the user can configure.
+ * @is_suspended: is deny list manager state suspended
+ * @dlm_cfg: These are the config ini params that the user can configure.
  */
-struct blm_psoc_priv_obj {
+struct dlm_psoc_priv_obj {
 	uint8_t pdev_id;
 	bool is_suspended;
-	struct blm_config blm_cfg;
+	struct dlm_config dlm_cfg;
 };
 
 /**
- * blm_pdev_object_created_notification() - blacklist mgr pdev create
+ * dlm_pdev_object_created_notification() - denylist mgr pdev create
  * handler
  * @pdev: pdev which is going to be created by objmgr
  * @arg: argument for pdev create handler
@@ -98,11 +99,11 @@ struct blm_psoc_priv_obj {
  * Return: QDF_STATUS status in case of success else return error
  */
 QDF_STATUS
-blm_pdev_object_created_notification(struct wlan_objmgr_pdev *pdev,
+dlm_pdev_object_created_notification(struct wlan_objmgr_pdev *pdev,
 				     void *arg);
 
 /**
- * blm_pdev_object_destroyed_notification() - blacklist mgr pdev delete handler
+ * dlm_pdev_object_destroyed_notification() - denylist mgr pdev delete handler
  * @pdev: pdev which is going to be deleted by objmgr
  * @arg: argument for pdev delete handler
  *
@@ -111,11 +112,11 @@ blm_pdev_object_created_notification(struct wlan_objmgr_pdev *pdev,
  * Return: QDF_STATUS status in case of success else return error
  */
 QDF_STATUS
-blm_pdev_object_destroyed_notification(struct wlan_objmgr_pdev *pdev,
+dlm_pdev_object_destroyed_notification(struct wlan_objmgr_pdev *pdev,
 				       void *arg);
 
 /**
- * blm_psoc_object_created_notification() - blacklist mgr psoc create handler
+ * dlm_psoc_object_created_notification() - denylist mgr psoc create handler
  * @psoc: psoc which is going to be created by objmgr
  * @arg: argument for psoc create handler
  *
@@ -124,11 +125,11 @@ blm_pdev_object_destroyed_notification(struct wlan_objmgr_pdev *pdev,
  * Return: QDF_STATUS status in case of success else return error
  */
 QDF_STATUS
-blm_psoc_object_created_notification(struct wlan_objmgr_psoc *psoc,
+dlm_psoc_object_created_notification(struct wlan_objmgr_psoc *psoc,
 				     void *arg);
 
 /**
- * blm_psoc_object_destroyed_notification() - blacklist mgr psoc delete handler
+ * dlm_psoc_object_destroyed_notification() - denylist mgr psoc delete handler
  * @psoc: psoc which is going to be deleted by objmgr
  * @arg: argument for psoc delete handler.
  *
@@ -137,41 +138,41 @@ blm_psoc_object_created_notification(struct wlan_objmgr_psoc *psoc,
  * Return: QDF_STATUS status in case of success else return error
  */
 QDF_STATUS
-blm_psoc_object_destroyed_notification(struct wlan_objmgr_psoc *psoc,
+dlm_psoc_object_destroyed_notification(struct wlan_objmgr_psoc *psoc,
 				       void *arg);
 
 /**
- * blm_cfg_psoc_open() - blacklist mgr psoc open handler
+ * dlm_cfg_psoc_open() - denylist mgr psoc open handler
  * @psoc: psoc which is initialized by objmgr
  *
  * This API will initialize the config file, and store the config while in the
- * psoc priv object of the blacklist manager.
+ * psoc priv object of the denylist manager.
  *
  * Return: QDF_STATUS status in case of success else return error
  */
 QDF_STATUS
-blm_cfg_psoc_open(struct wlan_objmgr_psoc *psoc);
+dlm_cfg_psoc_open(struct wlan_objmgr_psoc *psoc);
 
 /**
- * blm_get_pdev_obj() - Get the pdev priv object of the blacklist manager
+ * dlm_get_pdev_obj() - Get the pdev priv object of the denylist manager
  * @pdev: pdev object
  *
- * Get the pdev priv object of the blacklist manager
+ * Get the pdev priv object of the denylist manager
  *
  * Return: Pdev priv object if present, else NULL.
  */
-struct blm_pdev_priv_obj *
-blm_get_pdev_obj(struct wlan_objmgr_pdev *pdev);
+struct dlm_pdev_priv_obj *
+dlm_get_pdev_obj(struct wlan_objmgr_pdev *pdev);
 
 /**
- * blm_get_psoc_obj() - Get the psoc priv object of the blacklist manager
+ * dlm_get_psoc_obj() - Get the psoc priv object of the denylist manager
  * @psoc: psoc object
  *
- * Get the psoc priv object of the blacklist manager
+ * Get the psoc priv object of the denylist manager
  *
  * Return: Psoc priv object if present, else NULL.
  */
-struct blm_psoc_priv_obj *
-blm_get_psoc_obj(struct wlan_objmgr_psoc *psoc);
+struct dlm_psoc_priv_obj *
+dlm_get_psoc_obj(struct wlan_objmgr_psoc *psoc);
 
 #endif

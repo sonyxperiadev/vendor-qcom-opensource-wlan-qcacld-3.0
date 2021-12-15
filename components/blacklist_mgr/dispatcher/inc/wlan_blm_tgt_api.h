@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,26 +17,26 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 /**
- * DOC: Declare public API for blacklist manager to interact with target/WMI
+ * DOC: Declare public API for denylist manager to interact with target/WMI
  */
 
-#ifndef _WLAN_BLM_TGT_API_H
-#define _WLAN_BLM_TGT_API_H
+#ifndef _WLAN_DLM_TGT_API_H
+#define _WLAN_DLM_TGT_API_H
 
 #include "wlan_blm_main.h"
 
 /**
- * tgt_blm_send_reject_list_to_fw() - API to send the reject ap list to FW.
+ * tgt_dlm_send_reject_list_to_fw() - API to send the reject ap list to FW.
  * @pdev: pdev object
  * @reject_params: Reject params contains the bssid list, and num of bssids
  *
- * This API will send the reject AP list maintained by the blacklist manager
+ * This API will send the reject AP list maintained by the denylist manager
  * to the target.
  *
  * Return: QDF status
  */
 QDF_STATUS
-tgt_blm_send_reject_list_to_fw(struct wlan_objmgr_pdev *pdev,
+tgt_dlm_send_reject_list_to_fw(struct wlan_objmgr_pdev *pdev,
 			       struct reject_ap_params *reject_params);
 
 #endif

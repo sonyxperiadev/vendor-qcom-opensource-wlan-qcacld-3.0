@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,19 +17,19 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 /**
- * DOC: Target interface file for blacklist manager component to
- * declare api's which shall be used by blacklist manager component
+ * DOC: Target interface file for denylist manager component to
+ * declare api's which shall be used by denylist manager component
  * in target if internally.
  */
 
-#ifndef __TARGET_IF_BLM_H
-#define __TARGET_IF_BLM_H
+#ifndef __TARGET_IF_DLM_H
+#define __TARGET_IF_DLM_H
 
 #include "wlan_blm_public_struct.h"
 
 #if defined(WLAN_FEATURE_ROAM_OFFLOAD)
 /**
- * target_if_blm_send_reject_ap_list() - API to send reject ap list to FW
+ * target_if_dlm_send_reject_ap_list() - API to send reject ap list to FW
  * @pdev: pdev object
  * @reject_params: This contains the reject ap list, and the num of BSSIDs
  *
@@ -38,24 +39,24 @@
  * Return: Qdf status
  */
 QDF_STATUS
-target_if_blm_send_reject_ap_list(struct wlan_objmgr_pdev *pdev,
+target_if_dlm_send_reject_ap_list(struct wlan_objmgr_pdev *pdev,
 				  struct reject_ap_params *reject_params);
 
 /**
- * target_if_blm_register_tx_ops() - Register blm tx ops
- * @blm_tx_ops: BLM tx ops
+ * target_if_dlm_register_tx_ops() - Register dlm tx ops
+ * @dlm_tx_ops: DLM tx ops
  *
- * This API will register the tx ops used by the BLM to send commands to the
+ * This API will register the tx ops used by the DLM to send commands to the
  * target.
  *
  * Return: void
  */
-void target_if_blm_register_tx_ops(struct wlan_blm_tx_ops *blm_tx_ops);
+void target_if_dlm_register_tx_ops(struct wlan_dlm_tx_ops *dlm_tx_ops);
 #else
-static inline void target_if_blm_register_tx_ops(
-	struct wlan_blm_tx_ops *blm_tx_ops)
+static inline void target_if_dlm_register_tx_ops(
+	struct wlan_dlm_tx_ops *dlm_tx_ops)
 {
 }
 #endif //WLAN_FEATURE_ROAM_OFFLOAD
 
-#endif //__TARGET_IF_BLM_H
+#endif //__TARGET_IF_DLM_H

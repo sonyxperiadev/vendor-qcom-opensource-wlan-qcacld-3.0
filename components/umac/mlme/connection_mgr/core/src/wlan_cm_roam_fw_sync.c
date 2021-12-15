@@ -144,10 +144,10 @@ cm_fw_roam_sync_start_ind(struct wlan_objmgr_vdev *vdev,
 	wlan_mlme_get_bssid_vdev_id(pdev, vdev_id,
 				    &connected_bssid);
 
-	/* Update the BLM that the previous profile has disconnected */
-	wlan_blm_update_bssid_connect_params(pdev,
+	/* Update the DLM that the previous profile has disconnected */
+	wlan_dlm_update_bssid_connect_params(pdev,
 					     connected_bssid,
-					     BLM_AP_DISCONNECTED);
+					     DLM_AP_DISCONNECTED);
 	if (IS_ROAM_REASON_STA_KICKOUT(roam_reason)) {
 		struct reject_ap_info ap_info;
 
@@ -156,7 +156,7 @@ cm_fw_roam_sync_start_ind(struct wlan_objmgr_vdev *vdev,
 		ap_info.reject_ap_type = DRIVER_AVOID_TYPE;
 		ap_info.reject_reason = REASON_STA_KICKOUT;
 		ap_info.source = ADDED_BY_DRIVER;
-		wlan_blm_add_bssid_to_reject_list(pdev, &ap_info);
+		wlan_dlm_add_bssid_to_reject_list(pdev, &ap_info);
 	}
 
 	cm_update_scan_mlme_on_roam(vdev, &connected_bssid,
@@ -1096,7 +1096,7 @@ static QDF_STATUS cm_handle_ho_fail(struct scheduler_msg *msg)
 	ap_info.reject_ap_type = DRIVER_AVOID_TYPE;
 	ap_info.reject_reason = REASON_ROAM_HO_FAILURE;
 	ap_info.source = ADDED_BY_DRIVER;
-	wlan_blm_add_bssid_to_reject_list(pdev, &ap_info);
+	wlan_dlm_add_bssid_to_reject_list(pdev, &ap_info);
 
 	cm_ho_fail_diag_event();
 	wlan_roam_debug_log(ind->vdev_id,

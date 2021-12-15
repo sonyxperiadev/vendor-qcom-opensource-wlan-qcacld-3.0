@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -17,13 +18,13 @@
  */
 
 /**
- * DOC: This file contains ini params for blacklist mgr component
+ * DOC: This file contains ini params for denylist mgr component
  */
 
-#ifndef __CFG_BLM_H_
-#define __CFG_BLM_H_
+#ifndef __CFG_DLM_H_
+#define __CFG_DLM_H_
 
-#ifdef FEATURE_BLACKLIST_MGR
+#ifdef FEATURE_DENYLIST_MGR
 
 /*
  * <ini>
@@ -53,13 +54,13 @@
 
 /*
  * <ini>
- * bad_bssid_counter_thresh - Threshold to move the Ap from avoid to blacklist.
+ * bad_bssid_counter_thresh - Threshold to move the Ap from avoid to denylist.
  * @Min: 2
  * @Max: 10
  * @Default: 3
  *
  * This ini is used to specify the threshld after which the BSSID which is in
- * the avoid list should be moved to black list, assuming that the AP or the
+ * the avoid list should be moved to deny list, assuming that the AP or the
  * gateway with which the data stall happenend has no recovered, and now
  * the STA got the NUD failure again with the BSSID
  *
@@ -79,14 +80,14 @@
 
 /*
  * <ini>
- * black_list_expiry_time - Config Param to move AP from blacklist to monitor
+ * deny_list_expiry_time - Config Param to move AP from denylist to monitor
  * list.
  * @Min: 1 minutes
  * @Max: 600 minutes
  * @Default: 10 minutes
  *
  * This ini is used to specify the time after which the BSSID which is in the
- * black list should be moved to monitor list, assuming that the AP or the
+ * deny list should be moved to monitor list, assuming that the AP or the
  * gateway with which the data stall happenend might have recovered, and now
  * the STA can give another chance to connect to the AP.
  *
@@ -96,13 +97,13 @@
  *
  * </ini>
  */
-#define CFG_BLACK_LIST_EXPIRY_TIME CFG_INI_UINT( \
+#define CFG_DENY_LIST_EXPIRY_TIME CFG_INI_UINT( \
 				"black_list_expiry_time", \
 				1, \
 				600, \
 				10, \
 				CFG_VALUE_OR_DEFAULT, \
-				"black list expiry")
+				"deny list expiry")
 
 /*
  * <ini>
@@ -135,14 +136,14 @@
 /*
  * <ini>
  * delta_rssi - RSSI threshold value, only when AP rssi improves
- * by threshold value entry would be removed from blacklist manager and assoc
+ * by threshold value entry would be removed from denylist manager and assoc
  * req would be sent by FW.
  * @Min: 0
  * @Max: 10
  * @Default: 5
  *
  * This ini is used to specify the rssi threshold value, after rssi improves
- * by threshold the BSSID which is in the blacklist manager list should be
+ * by threshold the BSSID which is in the denylist manager list should be
  * removed from the respective list.
  *
  * Supported Feature: Customer requirement
@@ -151,7 +152,7 @@
  *
  * </ini>
  */
-#define CFG_BLACKLIST_RSSI_THRESHOLD CFG_INI_INT( \
+#define CFG_DENYLIST_RSSI_THRESHOLD CFG_INI_INT( \
 			"delta_rssi", \
 			0, \
 			10, \
@@ -159,17 +160,17 @@
 			CFG_VALUE_OR_DEFAULT, \
 			"Configure delta RSSI")
 
-#define CFG_BLACKLIST_MGR_ALL \
+#define CFG_DENYLIST_MGR_ALL \
 	CFG(CFG_AVOID_LIST_EXPIRY_TIME) \
 	CFG(CFG_BAD_BSSID_COUNTER_THRESHOLD) \
-	CFG(CFG_BLACK_LIST_EXPIRY_TIME) \
+	CFG(CFG_DENY_LIST_EXPIRY_TIME) \
 	CFG(CFG_BAD_BSSID_RESET_TIME) \
-	CFG(CFG_BLACKLIST_RSSI_THRESHOLD)
+	CFG(CFG_DENYLIST_RSSI_THRESHOLD)
 
 #else
 
-#define CFG_BLACKLIST_MGR_ALL
+#define CFG_DENYLIST_MGR_ALL
 
-#endif /* FEATURE_BLACKLIST_MGR */
+#endif /* FEATURE_DENYLIST_MGR */
 
-#endif /* __CFG_BLACKLIST_MGR */
+#endif /* __CFG_DENYLIST_MGR */

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,7 +17,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 /**
- * DOC: define UCFG APIs exposed by the blacklist mgr component
+ * DOC: define UCFG APIs exposed by the denylist mgr component
  */
 
 #include <wlan_blm_ucfg_api.h>
@@ -24,229 +25,229 @@
 #include <wlan_blm_api.h>
 #include "wlan_pmo_obj_mgmt_api.h"
 
-QDF_STATUS ucfg_blm_init(void)
+QDF_STATUS ucfg_dlm_init(void)
 {
 	QDF_STATUS status;
 
 	status = wlan_objmgr_register_pdev_create_handler(
-			WLAN_UMAC_COMP_BLACKLIST_MGR,
-			blm_pdev_object_created_notification,
+			WLAN_UMAC_COMP_DENYLIST_MGR,
+			dlm_pdev_object_created_notification,
 			NULL);
 	if (QDF_IS_STATUS_ERROR(status)) {
-		blm_err("pdev create register notification failed");
+		dlm_err("pdev create register notification failed");
 		goto fail_create_pdev;
 	}
 
 	status = wlan_objmgr_register_pdev_destroy_handler(
-			WLAN_UMAC_COMP_BLACKLIST_MGR,
-			blm_pdev_object_destroyed_notification,
+			WLAN_UMAC_COMP_DENYLIST_MGR,
+			dlm_pdev_object_destroyed_notification,
 			NULL);
 	if (QDF_IS_STATUS_ERROR(status)) {
-		blm_err("pdev destroy register notification failed");
+		dlm_err("pdev destroy register notification failed");
 		goto fail_destroy_pdev;
 	}
 
 	status = wlan_objmgr_register_psoc_create_handler(
-			WLAN_UMAC_COMP_BLACKLIST_MGR,
-			blm_psoc_object_created_notification,
+			WLAN_UMAC_COMP_DENYLIST_MGR,
+			dlm_psoc_object_created_notification,
 			NULL);
 	if (QDF_IS_STATUS_ERROR(status)) {
-		blm_err("psoc create register notification failed");
+		dlm_err("psoc create register notification failed");
 		goto fail_create_psoc;
 	}
 
 	status = wlan_objmgr_register_psoc_destroy_handler(
-			WLAN_UMAC_COMP_BLACKLIST_MGR,
-			blm_psoc_object_destroyed_notification,
+			WLAN_UMAC_COMP_DENYLIST_MGR,
+			dlm_psoc_object_destroyed_notification,
 			NULL);
 	if (QDF_IS_STATUS_ERROR(status)) {
-		blm_err("psoc destroy register notification failed");
+		dlm_err("psoc destroy register notification failed");
 		goto fail_destroy_psoc;
 	}
 
 	return QDF_STATUS_SUCCESS;
 
 fail_destroy_psoc:
-	wlan_objmgr_unregister_psoc_create_handler(WLAN_UMAC_COMP_BLACKLIST_MGR,
-				   blm_psoc_object_created_notification, NULL);
+	wlan_objmgr_unregister_psoc_create_handler(WLAN_UMAC_COMP_DENYLIST_MGR,
+				   dlm_psoc_object_created_notification, NULL);
 fail_create_psoc:
 	wlan_objmgr_unregister_pdev_destroy_handler(
-				 WLAN_UMAC_COMP_BLACKLIST_MGR,
-				 blm_pdev_object_destroyed_notification, NULL);
+				 WLAN_UMAC_COMP_DENYLIST_MGR,
+				 dlm_pdev_object_destroyed_notification, NULL);
 fail_destroy_pdev:
-	wlan_objmgr_unregister_pdev_create_handler(WLAN_UMAC_COMP_BLACKLIST_MGR,
-				   blm_pdev_object_created_notification, NULL);
+	wlan_objmgr_unregister_pdev_create_handler(WLAN_UMAC_COMP_DENYLIST_MGR,
+				   dlm_pdev_object_created_notification, NULL);
 fail_create_pdev:
 	return status;
 }
 
-QDF_STATUS ucfg_blm_deinit(void)
+QDF_STATUS ucfg_dlm_deinit(void)
 {
 	QDF_STATUS status;
 
 	status = wlan_objmgr_unregister_psoc_destroy_handler(
-			WLAN_UMAC_COMP_BLACKLIST_MGR,
-			blm_psoc_object_destroyed_notification,
+			WLAN_UMAC_COMP_DENYLIST_MGR,
+			dlm_psoc_object_destroyed_notification,
 			NULL);
 
 	status = wlan_objmgr_unregister_psoc_create_handler(
-			WLAN_UMAC_COMP_BLACKLIST_MGR,
-			blm_psoc_object_created_notification,
+			WLAN_UMAC_COMP_DENYLIST_MGR,
+			dlm_psoc_object_created_notification,
 			NULL);
 
 	status = wlan_objmgr_unregister_pdev_destroy_handler(
-			WLAN_UMAC_COMP_BLACKLIST_MGR,
-			blm_pdev_object_destroyed_notification,
+			WLAN_UMAC_COMP_DENYLIST_MGR,
+			dlm_pdev_object_destroyed_notification,
 			NULL);
 
 	status = wlan_objmgr_unregister_pdev_create_handler(
-			WLAN_UMAC_COMP_BLACKLIST_MGR,
-			blm_pdev_object_created_notification,
+			WLAN_UMAC_COMP_DENYLIST_MGR,
+			dlm_pdev_object_created_notification,
 			NULL);
 
 	return status;
 }
 
-QDF_STATUS ucfg_blm_psoc_set_suspended(struct wlan_objmgr_psoc *psoc,
+QDF_STATUS ucfg_dlm_psoc_set_suspended(struct wlan_objmgr_psoc *psoc,
 				       bool state)
 {
-	struct blm_psoc_priv_obj *blm_psoc_obj;
+	struct dlm_psoc_priv_obj *dlm_psoc_obj;
 
-	blm_psoc_obj = blm_get_psoc_obj(psoc);
+	dlm_psoc_obj = dlm_get_psoc_obj(psoc);
 
-	if (!blm_psoc_obj) {
-		blm_err("BLM psoc obj NULL");
+	if (!dlm_psoc_obj) {
+		dlm_err("DLM psoc obj NULL");
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	blm_psoc_obj->is_suspended = state;
+	dlm_psoc_obj->is_suspended = state;
 
 	return QDF_STATUS_SUCCESS;
 }
 
-QDF_STATUS ucfg_blm_psoc_get_suspended(struct wlan_objmgr_psoc *psoc,
+QDF_STATUS ucfg_dlm_psoc_get_suspended(struct wlan_objmgr_psoc *psoc,
 				       bool *state)
 {
-	struct blm_psoc_priv_obj *blm_psoc_obj;
+	struct dlm_psoc_priv_obj *dlm_psoc_obj;
 
-	blm_psoc_obj = blm_get_psoc_obj(psoc);
+	dlm_psoc_obj = dlm_get_psoc_obj(psoc);
 
-	if (!blm_psoc_obj) {
-		blm_err("BLM psoc obj NULL");
+	if (!dlm_psoc_obj) {
+		dlm_err("DLM psoc obj NULL");
 		*state = true;
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	*state = blm_psoc_obj->is_suspended;
+	*state = dlm_psoc_obj->is_suspended;
 
 	return QDF_STATUS_SUCCESS;
 }
 
 static QDF_STATUS
-ucfg_blm_suspend_handler(struct wlan_objmgr_psoc *psoc, void *arg)
+ucfg_dlm_suspend_handler(struct wlan_objmgr_psoc *psoc, void *arg)
 {
-	ucfg_blm_psoc_set_suspended(psoc, true);
+	ucfg_dlm_psoc_set_suspended(psoc, true);
 	return QDF_STATUS_SUCCESS;
 }
 
 static QDF_STATUS
-ucfg_blm_resume_handler(struct wlan_objmgr_psoc *psoc, void *arg)
+ucfg_dlm_resume_handler(struct wlan_objmgr_psoc *psoc, void *arg)
 {
-	ucfg_blm_psoc_set_suspended(psoc, false);
-	blm_update_reject_ap_list_to_fw(psoc);
+	ucfg_dlm_psoc_set_suspended(psoc, false);
+	dlm_update_reject_ap_list_to_fw(psoc);
 	return QDF_STATUS_SUCCESS;
 }
 
 static inline void
-ucfg_blm_register_pmo_handler(void)
+ucfg_dlm_register_pmo_handler(void)
 {
-	pmo_register_suspend_handler(WLAN_UMAC_COMP_BLACKLIST_MGR,
-				     ucfg_blm_suspend_handler, NULL);
-	pmo_register_resume_handler(WLAN_UMAC_COMP_BLACKLIST_MGR,
-				    ucfg_blm_resume_handler, NULL);
+	pmo_register_suspend_handler(WLAN_UMAC_COMP_DENYLIST_MGR,
+				     ucfg_dlm_suspend_handler, NULL);
+	pmo_register_resume_handler(WLAN_UMAC_COMP_DENYLIST_MGR,
+				    ucfg_dlm_resume_handler, NULL);
 }
 
 static inline void
-ucfg_blm_unregister_pmo_handler(void)
+ucfg_dlm_unregister_pmo_handler(void)
 {
-	pmo_unregister_suspend_handler(WLAN_UMAC_COMP_BLACKLIST_MGR,
-				       ucfg_blm_suspend_handler);
-	pmo_unregister_resume_handler(WLAN_UMAC_COMP_BLACKLIST_MGR,
-				      ucfg_blm_resume_handler);
+	pmo_unregister_suspend_handler(WLAN_UMAC_COMP_DENYLIST_MGR,
+				       ucfg_dlm_suspend_handler);
+	pmo_unregister_resume_handler(WLAN_UMAC_COMP_DENYLIST_MGR,
+				      ucfg_dlm_resume_handler);
 }
 
-QDF_STATUS ucfg_blm_psoc_open(struct wlan_objmgr_psoc *psoc)
+QDF_STATUS ucfg_dlm_psoc_open(struct wlan_objmgr_psoc *psoc)
 {
-	ucfg_blm_register_pmo_handler();
-	return blm_cfg_psoc_open(psoc);
+	ucfg_dlm_register_pmo_handler();
+	return dlm_cfg_psoc_open(psoc);
 }
 
-QDF_STATUS ucfg_blm_psoc_close(struct wlan_objmgr_psoc *psoc)
+QDF_STATUS ucfg_dlm_psoc_close(struct wlan_objmgr_psoc *psoc)
 {
-	ucfg_blm_unregister_pmo_handler();
+	ucfg_dlm_unregister_pmo_handler();
 	return QDF_STATUS_SUCCESS;
 }
 
 QDF_STATUS
-ucfg_blm_add_bssid_to_reject_list(struct wlan_objmgr_pdev *pdev,
+ucfg_dlm_add_bssid_to_reject_list(struct wlan_objmgr_pdev *pdev,
 				  struct reject_ap_info *ap_info)
 {
-	return blm_add_bssid_to_reject_list(pdev, ap_info);
+	return dlm_add_bssid_to_reject_list(pdev, ap_info);
 }
 
 QDF_STATUS
-ucfg_blm_add_userspace_black_list(struct wlan_objmgr_pdev *pdev,
-				  struct qdf_mac_addr *bssid_black_list,
-				  uint8_t num_of_bssid)
+ucfg_dlm_add_userspace_deny_list(struct wlan_objmgr_pdev *pdev,
+				 struct qdf_mac_addr *bssid_deny_list,
+				 uint8_t num_of_bssid)
 {
-	return blm_add_userspace_black_list(pdev, bssid_black_list,
+	return dlm_add_userspace_deny_list(pdev, bssid_deny_list,
 					    num_of_bssid);
 }
 
 void
-ucfg_blm_dump_black_list_ap(struct wlan_objmgr_pdev *pdev)
+ucfg_dlm_dump_deny_list_ap(struct wlan_objmgr_pdev *pdev)
 {
-	return wlan_blm_dump_blcklist_bssid(pdev);
+	return wlan_dlm_dump_blcklist_bssid(pdev);
 }
 
 void
-ucfg_blm_update_bssid_connect_params(struct wlan_objmgr_pdev *pdev,
+ucfg_dlm_update_bssid_connect_params(struct wlan_objmgr_pdev *pdev,
 				     struct qdf_mac_addr bssid,
-				     enum blm_connection_state con_state)
+				     enum dlm_connection_state con_state)
 {
-	wlan_blm_update_bssid_connect_params(pdev, bssid, con_state);
+	wlan_dlm_update_bssid_connect_params(pdev, bssid, con_state);
 }
 
 void
-ucfg_blm_wifi_off(struct wlan_objmgr_pdev *pdev)
+ucfg_dlm_wifi_off(struct wlan_objmgr_pdev *pdev)
 {
-	struct blm_pdev_priv_obj *blm_ctx;
-	struct blm_psoc_priv_obj *blm_psoc_obj;
-	struct blm_config *cfg;
+	struct dlm_pdev_priv_obj *dlm_ctx;
+	struct dlm_psoc_priv_obj *dlm_psoc_obj;
+	struct dlm_config *cfg;
 	QDF_STATUS status;
 
 	if (!pdev) {
-		blm_err("pdev is NULL");
+		dlm_err("pdev is NULL");
 		return;
 	}
 
-	blm_ctx = blm_get_pdev_obj(pdev);
-	blm_psoc_obj = blm_get_psoc_obj(wlan_pdev_get_psoc(pdev));
+	dlm_ctx = dlm_get_pdev_obj(pdev);
+	dlm_psoc_obj = dlm_get_psoc_obj(wlan_pdev_get_psoc(pdev));
 
-	if (!blm_ctx || !blm_psoc_obj) {
-		blm_err("blm_ctx or blm_psoc_obj is NULL");
-		return ;
+	if (!dlm_ctx || !dlm_psoc_obj) {
+		dlm_err("dlm_ctx or dlm_psoc_obj is NULL");
+		return;
 	}
 
-	status = qdf_mutex_acquire(&blm_ctx->reject_ap_list_lock);
+	status = qdf_mutex_acquire(&dlm_ctx->reject_ap_list_lock);
 	if (QDF_IS_STATUS_ERROR(status)) {
-		blm_err("failed to acquire reject_ap_list_lock");
+		dlm_err("failed to acquire reject_ap_list_lock");
 		return;
 	}
 
-	cfg = &blm_psoc_obj->blm_cfg;
+	cfg = &dlm_psoc_obj->dlm_cfg;
 
-	blm_flush_reject_ap_list(blm_ctx);
-	blm_send_reject_ap_list_to_fw(pdev, &blm_ctx->reject_ap_list, cfg);
-	qdf_mutex_release(&blm_ctx->reject_ap_list_lock);
+	dlm_flush_reject_ap_list(dlm_ctx);
+	dlm_send_reject_ap_list_to_fw(pdev, &dlm_ctx->reject_ap_list, cfg);
+	qdf_mutex_release(&dlm_ctx->reject_ap_list_lock);
 }

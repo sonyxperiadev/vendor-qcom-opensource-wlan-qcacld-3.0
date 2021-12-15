@@ -310,7 +310,7 @@ lim_process_disassoc_frame(struct mac_context *mac, uint8_t *pRxPacketInfo,
 
 		ap_info.retry_delay = 0;
 		ap_info.expected_rssi = frame_rssi +
-			wlan_blm_get_rssi_blacklist_threshold(mac->pdev);
+			wlan_dlm_get_rssi_denylist_threshold(mac->pdev);
 		qdf_mem_copy(ap_info.bssid.bytes, pHdr->sa, QDF_MAC_ADDR_SIZE);
 		ap_info.reject_reason = REASON_ASSOC_REJECT_POOR_RSSI;
 		ap_info.source = ADDED_BY_DRIVER;

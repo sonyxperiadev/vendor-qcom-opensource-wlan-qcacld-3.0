@@ -4587,24 +4587,24 @@ static int hdd_set_blacklist_bssid(struct hdd_context *hdd_ctx,
 	uint8_t j = 0;
 	struct nlattr *tb2[MAX_ROAMING_PARAM + 1];
 	struct nlattr *curr_attr = NULL;
-	struct qdf_mac_addr *black_list_bssid;
+	struct qdf_mac_addr *deny_list_bssid;
 	mac_handle_t mac_handle;
 
-	/* Parse and fetch number of blacklist BSSID */
+	/* Parse and fetch number of denylist BSSID */
 	if (!tb[PARAMS_NUM_BSSID]) {
-		hdd_err("attr num of blacklist bssid failed");
+		hdd_err("attr num of denylist bssid failed");
 		goto fail;
 	}
 	count = nla_get_u32(tb[PARAMS_NUM_BSSID]);
 	if (count > MAX_BSSID_AVOID_LIST) {
-		hdd_err("Blacklist BSSID count %u exceeds max %u",
+		hdd_err("Denylist BSSID count %u exceeds max %u",
 			count, MAX_BSSID_AVOID_LIST);
 		goto fail;
 	}
-	hdd_debug("Num of blacklist BSSID (%d)", count);
-	black_list_bssid = qdf_mem_malloc(sizeof(*black_list_bssid) *
+	hdd_debug("Num of denylist BSSID (%d)", count);
+	deny_list_bssid = qdf_mem_malloc(sizeof(*deny_list_bssid) *
 					  MAX_BSSID_AVOID_LIST);
-	if (!black_list_bssid)
+	if (!deny_list_bssid)
 		goto fail;
 
 	i = 0;
@@ -4613,7 +4613,7 @@ static int hdd_set_blacklist_bssid(struct hdd_context *hdd_ctx,
 			tb[PARAM_BSSID_PARAMS],
 			rem) {
 			if (i == count) {
-				hdd_warn("Ignoring excess Blacklist BSSID");
+				hdd_warn("Ignoring excess Denylist BSSID");
 				break;
 			}
 
@@ -4623,13 +4623,13 @@ static int hdd_set_blacklist_bssid(struct hdd_context *hdd_ctx,
 					 nla_len(curr_attr),
 					 wlan_hdd_set_roam_param_policy)) {
 				hdd_err("nla_parse failed");
-				qdf_mem_free(black_list_bssid);
+				qdf_mem_free(deny_list_bssid);
 				goto fail;
 			}
 			/* Parse and fetch MAC address */
 			if (!tb2[PARAM_SET_BSSID]) {
-				hdd_err("attr blacklist addr failed");
-				qdf_mem_free(black_list_bssid);
+				hdd_err("attr denylist addr failed");
+				qdf_mem_free(deny_list_bssid);
 				goto fail;
 			}
 			if (tb2[PARAM_SET_BSSID_HINT]) {
@@ -4645,28 +4645,28 @@ static int hdd_set_blacklist_bssid(struct hdd_context *hdd_ctx,
 						REASON_USERSPACE_AVOID_LIST;
 				ap_info.source = ADDED_BY_DRIVER;
 
-				/* This BSSID is avoided and not blacklisted */
-				ucfg_blm_add_bssid_to_reject_list(hdd_ctx->pdev,
+				/* This BSSID is avoided and not denylisted */
+				ucfg_dlm_add_bssid_to_reject_list(hdd_ctx->pdev,
 								  &ap_info);
 				i++;
 				continue;
 			}
-			nla_memcpy(black_list_bssid[j].bytes,
+			nla_memcpy(deny_list_bssid[j].bytes,
 				   tb2[PARAM_SET_BSSID], QDF_MAC_ADDR_SIZE);
 			hdd_debug(QDF_MAC_ADDR_FMT,
-				  QDF_MAC_ADDR_REF(black_list_bssid[j].bytes));
+				  QDF_MAC_ADDR_REF(deny_list_bssid[j].bytes));
 			i++;
 			j++;
 		}
 	}
 
 	if (i < count)
-		hdd_warn("Num Blacklist BSSID %u less than expected %u",
+		hdd_warn("Num Denylist BSSID %u less than expected %u",
 			 i, count);
 
-	/* Send the blacklist to the blacklist mgr component */
-	ucfg_blm_add_userspace_black_list(hdd_ctx->pdev, black_list_bssid, j);
-	qdf_mem_free(black_list_bssid);
+	/* Send the denylist to the denylist mgr component */
+	ucfg_dlm_add_userspace_deny_list(hdd_ctx->pdev, deny_list_bssid, j);
+	qdf_mem_free(deny_list_bssid);
 	mac_handle = hdd_ctx->mac_handle;
 	sme_update_roam_params(mac_handle, vdev_id,
 			       rso_config, REASON_ROAM_SET_BLACKLIST_BSSID);

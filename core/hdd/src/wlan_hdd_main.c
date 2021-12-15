@@ -394,7 +394,7 @@ static const struct category_info cinfo[MAX_SUPPORTED_CATEGORY] = {
 	[QDF_MODULE_ID_CP_STATS] = {QDF_TRACE_LEVEL_ALL},
 	[QDF_MODULE_ID_DCS] = {QDF_TRACE_LEVEL_ALL},
 	[QDF_MODULE_ID_INTEROP_ISSUES_AP] = {QDF_TRACE_LEVEL_ALL},
-	[QDF_MODULE_ID_BLACKLIST_MGR] = {QDF_TRACE_LEVEL_ALL},
+	[QDF_MODULE_ID_DENYLIST_MGR] = {QDF_TRACE_LEVEL_ALL},
 	[QDF_MODULE_ID_DIRECT_BUF_RX] = {QDF_TRACE_LEVEL_ALL},
 	[QDF_MODULE_ID_SPECTRAL] = {QDF_TRACE_LEVEL_ALL},
 	[QDF_MODULE_ID_WIFIPOS] = {QDF_TRACE_LEVEL_ALL},
@@ -17029,7 +17029,7 @@ static void __hdd_inform_wifi_off(void)
 	if (ret != 0)
 		return;
 
-	ucfg_blm_wifi_off(hdd_ctx->pdev);
+	ucfg_dlm_wifi_off(hdd_ctx->pdev);
 }
 
 static void hdd_inform_wifi_off(void)
@@ -17358,13 +17358,13 @@ static QDF_STATUS hdd_component_init(void)
 	if (QDF_IS_STATUS_ERROR(status))
 		goto policy_deinit;
 
-	status = ucfg_blm_init();
+	status = ucfg_dlm_init();
 	if (QDF_IS_STATUS_ERROR(status))
 		goto tdls_deinit;
 
 	status = ucfg_pkt_capture_init();
 	if (QDF_IS_STATUS_ERROR(status))
-		goto blm_deinit;
+		goto dlm_deinit;
 
 	status = ucfg_ftm_time_sync_init();
 	if (QDF_IS_STATUS_ERROR(status))
@@ -17374,8 +17374,8 @@ static QDF_STATUS hdd_component_init(void)
 
 pkt_capture_deinit:
 	ucfg_pkt_capture_deinit();
-blm_deinit:
-	ucfg_blm_deinit();
+dlm_deinit:
+	ucfg_dlm_deinit();
 tdls_deinit:
 	ucfg_tdls_deinit();
 policy_deinit:
@@ -17420,7 +17420,7 @@ static void hdd_component_deinit(void)
 	/* deinitialize non-converged components */
 	ucfg_ftm_time_sync_deinit();
 	ucfg_pkt_capture_deinit();
-	ucfg_blm_deinit();
+	ucfg_dlm_deinit();
 	ucfg_tdls_deinit();
 	policy_mgr_deinit();
 	ucfg_interop_issues_ap_deinit();
@@ -17448,9 +17448,9 @@ QDF_STATUS hdd_component_psoc_open(struct wlan_objmgr_psoc *psoc)
 	if (QDF_IS_STATUS_ERROR(status))
 		return status;
 
-	status = ucfg_blm_psoc_open(psoc);
+	status = ucfg_dlm_psoc_open(psoc);
 	if (QDF_IS_STATUS_ERROR(status))
-		goto err_blm;
+		goto err_dlm;
 
 	status = ucfg_fwol_psoc_open(psoc);
 	if (QDF_IS_STATUS_ERROR(status))
@@ -17489,8 +17489,8 @@ err_plcy_mgr:
 err_pmo:
 	ucfg_fwol_psoc_close(psoc);
 err_fwol:
-	ucfg_blm_psoc_close(psoc);
-err_blm:
+	ucfg_dlm_psoc_close(psoc);
+err_dlm:
 	ucfg_mlme_psoc_close(psoc);
 
 	return status;
@@ -17503,7 +17503,7 @@ void hdd_component_psoc_close(struct wlan_objmgr_psoc *psoc)
 	ucfg_policy_mgr_psoc_close(psoc);
 	ucfg_pmo_psoc_close(psoc);
 	ucfg_fwol_psoc_close(psoc);
-	ucfg_blm_psoc_close(psoc);
+	ucfg_dlm_psoc_close(psoc);
 	ucfg_mlme_psoc_close(psoc);
 }
 

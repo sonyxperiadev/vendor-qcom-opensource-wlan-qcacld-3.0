@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -53,7 +54,7 @@ hdd_dcs_add_bssid_to_reject_list(struct wlan_objmgr_pdev *pdev,
 	ap_info.reject_ap_type = DRIVER_RSSI_REJECT_TYPE;
 	ap_info.reject_reason = REASON_STA_KICKOUT;
 	ap_info.source = ADDED_BY_DRIVER;
-	return ucfg_blm_add_bssid_to_reject_list(pdev, &ap_info);
+	return ucfg_dlm_add_bssid_to_reject_list(pdev, &ap_info);
 }
 
 /**

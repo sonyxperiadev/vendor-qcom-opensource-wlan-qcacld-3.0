@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,8 +17,8 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 /**
- * DOC: Target interface file for blacklist manager component to
- * Implement api's which shall be used by blacklist manager component
+ * DOC: Target interface file for denylist manager component to
+ * Implement api's which shall be used by denylist manager component
  * in target if internally.
  */
 
@@ -26,7 +27,7 @@
 
 #if defined(WLAN_FEATURE_ROAM_OFFLOAD)
 QDF_STATUS
-target_if_blm_send_reject_ap_list(struct wlan_objmgr_pdev *pdev,
+target_if_dlm_send_reject_ap_list(struct wlan_objmgr_pdev *pdev,
 				  struct reject_ap_params *reject_params)
 {
 	struct wmi_unified *wmi_handle;
@@ -40,13 +41,13 @@ target_if_blm_send_reject_ap_list(struct wlan_objmgr_pdev *pdev,
 	return wmi_unified_send_reject_ap_list(wmi_handle, reject_params);
 }
 
-void target_if_blm_register_tx_ops(struct wlan_blm_tx_ops *blm_tx_ops)
+void target_if_dlm_register_tx_ops(struct wlan_dlm_tx_ops *dlm_tx_ops)
 {
-	if (!blm_tx_ops) {
-		target_if_err("blm_tx_ops is null");
+	if (!dlm_tx_ops) {
+		target_if_err("dlm_tx_ops is null");
 		return;
 	}
 
-	blm_tx_ops->blm_send_reject_ap_list = target_if_blm_send_reject_ap_list;
+	dlm_tx_ops->dlm_send_reject_ap_list = target_if_dlm_send_reject_ap_list;
 }
 #endif

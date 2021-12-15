@@ -1551,12 +1551,12 @@ MLME_OBJS += $(WFA_TGT_IF_DIR)/src/target_if_wfa_testcmd.o \
 
 $(call add-wlan-objs,mlme,$(MLME_OBJS))
 
-####### BLACKLIST_MGR ########
+####### DENYLIST_MGR ########
 
 BLM_DIR := components/blacklist_mgr
 BLM_INC := -I$(WLAN_ROOT)/$(BLM_DIR)/core/inc \
                 -I$(WLAN_ROOT)/$(BLM_DIR)/dispatcher/inc
-ifeq ($(CONFIG_FEATURE_BLACKLIST_MGR), y)
+ifeq ($(CONFIG_FEATURE_DENYLIST_MGR), y)
 BLM_OBJS :=    $(BLM_DIR)/core/src/wlan_blm_main.o \
                 $(BLM_DIR)/core/src/wlan_blm_core.o \
                 $(BLM_DIR)/dispatcher/src/wlan_blm_ucfg_api.o \
@@ -1665,7 +1665,7 @@ CLD_TARGET_IF_INC += -I$(WLAN_ROOT)/$(CLD_TARGET_IF_DIR)/disa/inc
 CLD_TARGET_IF_OBJ += $(CLD_TARGET_IF_DIR)/disa/src/target_if_disa.o
 endif
 
-ifeq ($(CONFIG_FEATURE_BLACKLIST_MGR), y)
+ifeq ($(CONFIG_FEATURE_DENYLIST_MGR), y)
 CLD_TARGET_IF_INC += -I$(WLAN_ROOT)/$(CLD_TARGET_IF_DIR)/blacklist_mgr/inc
 CLD_TARGET_IF_OBJ += $(CLD_TARGET_IF_DIR)/blacklist_mgr/src/target_if_blm.o
 endif
@@ -2933,7 +2933,7 @@ cppflags-$(CONFIG_REG_CLIENT) += -DCONFIG_REG_CLIENT
 cppflags-$(CONFIG_WLAN_PMO_ENABLE) += -DWLAN_PMO_ENABLE
 cppflags-$(CONFIG_CONVERGED_P2P_ENABLE) += -DCONVERGED_P2P_ENABLE
 cppflags-$(CONFIG_WLAN_POLICY_MGR_ENABLE) += -DWLAN_POLICY_MGR_ENABLE
-cppflags-$(CONFIG_FEATURE_BLACKLIST_MGR) += -DFEATURE_BLACKLIST_MGR
+cppflags-$(CONFIG_FEATURE_DENYLIST_MGR) += -DFEATURE_DENYLIST_MGR
 cppflags-$(CONFIG_WAPI_BIG_ENDIAN) += -DFEATURE_WAPI_BIG_ENDIAN
 cppflags-$(CONFIG_SUPPORT_11AX) += -DSUPPORT_11AX
 cppflags-$(CONFIG_HDD_INIT_WITH_RTNL_LOCK) += -DCONFIG_HDD_INIT_WITH_RTNL_LOCK

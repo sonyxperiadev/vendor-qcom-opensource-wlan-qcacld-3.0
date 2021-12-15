@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,124 +17,124 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 /**
- * DOC: declare internal APIs related to the blacklist component
+ * DOC: declare internal APIs related to the denylist component
  */
 
-#ifndef _WLAN_BLM_CORE_H_
-#define _WLAN_BLM_CORE_H_
+#ifndef _WLAN_DLM_CORE_H_
+#define _WLAN_DLM_CORE_H_
 
 #include <wlan_blm_main.h>
 
-#define BLM_IS_AP_AVOIDED_BY_USERSPACE(cur_node) \
-			cur_node->userspace_avoidlist
+#define DLM_IS_AP_AVOIDED_BY_USERSPACE(cur_node) \
+			(cur_node)->userspace_avoidlist
 
-#define BLM_IS_AP_AVOIDED_BY_DRIVER(cur_node) \
-		cur_node->driver_avoidlist
+#define DLM_IS_AP_AVOIDED_BY_DRIVER(cur_node) \
+		(cur_node)->driver_avoidlist
 
-#define BLM_IS_AP_BLACKLISTED_BY_USERSPACE(cur_node) \
-		cur_node->userspace_blacklist
+#define DLM_IS_AP_DENYLISTED_BY_USERSPACE(cur_node) \
+		(cur_node)->userspace_denylist
 
-#define BLM_IS_AP_BLACKLISTED_BY_DRIVER(cur_node) \
-		cur_node->driver_blacklist
+#define DLM_IS_AP_DENYLISTED_BY_DRIVER(cur_node) \
+		(cur_node)->driver_denylist
 
-#define BLM_IS_AP_IN_MONITOR_LIST(cur_node) \
-		cur_node->driver_monitorlist
+#define DLM_IS_AP_IN_MONITOR_LIST(cur_node) \
+		(cur_node)->driver_monitorlist
 
-#define BLM_IS_AP_IN_RSSI_REJECT_LIST(cur_node) \
-		cur_node->rssi_reject_list
+#define DLM_IS_AP_IN_RSSI_REJECT_LIST(cur_node) \
+		(cur_node)->rssi_reject_list
 
-#define BLM_IS_AP_IN_BLACKLIST(cur_node) \
-		(BLM_IS_AP_BLACKLISTED_BY_USERSPACE(cur_node) | \
-		 BLM_IS_AP_BLACKLISTED_BY_DRIVER(cur_node) | \
-		 BLM_IS_AP_IN_RSSI_REJECT_LIST(cur_node))
+#define DLM_IS_AP_IN_DENYLIST(cur_node) \
+		(DLM_IS_AP_DENYLISTED_BY_USERSPACE(cur_node) | \
+		 DLM_IS_AP_DENYLISTED_BY_DRIVER(cur_node) | \
+		 DLM_IS_AP_IN_RSSI_REJECT_LIST(cur_node))
 
-#define BLM_IS_AP_IN_AVOIDLIST(cur_node) \
-		(BLM_IS_AP_AVOIDED_BY_USERSPACE(cur_node) | \
-		 BLM_IS_AP_AVOIDED_BY_DRIVER(cur_node))
+#define DLM_IS_AP_IN_AVOIDLIST(cur_node) \
+		(DLM_IS_AP_AVOIDED_BY_USERSPACE(cur_node) | \
+		 DLM_IS_AP_AVOIDED_BY_DRIVER(cur_node))
 
-#define IS_AP_IN_USERSPACE_BLACKLIST_ONLY(cur_node) \
-		(BLM_IS_AP_BLACKLISTED_BY_USERSPACE(cur_node) & \
-		!(BLM_IS_AP_IN_AVOIDLIST(cur_node) | \
-		 BLM_IS_AP_IN_MONITOR_LIST(cur_node) | \
-		 BLM_IS_AP_IN_RSSI_REJECT_LIST(cur_node) | \
-		 BLM_IS_AP_BLACKLISTED_BY_DRIVER(cur_node)))
+#define IS_AP_IN_USERSPACE_DENYLIST_ONLY(cur_node) \
+		(DLM_IS_AP_DENYLISTED_BY_USERSPACE(cur_node) & \
+		!(DLM_IS_AP_IN_AVOIDLIST(cur_node) | \
+		 DLM_IS_AP_IN_MONITOR_LIST(cur_node) | \
+		 DLM_IS_AP_IN_RSSI_REJECT_LIST(cur_node) | \
+		 DLM_IS_AP_DENYLISTED_BY_DRIVER(cur_node)))
 
 #define IS_AP_IN_MONITOR_LIST_ONLY(cur_node) \
-		(BLM_IS_AP_IN_MONITOR_LIST(cur_node) & \
-		!(BLM_IS_AP_IN_AVOIDLIST(cur_node) | \
-		 BLM_IS_AP_IN_BLACKLIST(cur_node)))
+		(DLM_IS_AP_IN_MONITOR_LIST(cur_node) & \
+		!(DLM_IS_AP_IN_AVOIDLIST(cur_node) | \
+		 DLM_IS_AP_IN_DENYLIST(cur_node)))
 
 #define IS_AP_IN_AVOID_LIST_ONLY(cur_node) \
-		(BLM_IS_AP_IN_AVOIDLIST(cur_node) & \
-		!(BLM_IS_AP_IN_MONITOR_LIST(cur_node) | \
-		 BLM_IS_AP_IN_BLACKLIST(cur_node)))
+		(DLM_IS_AP_IN_AVOIDLIST(cur_node) & \
+		!(DLM_IS_AP_IN_MONITOR_LIST(cur_node) | \
+		 DLM_IS_AP_IN_DENYLIST(cur_node)))
 
-#define IS_AP_IN_DRIVER_BLACKLIST_ONLY(cur_node) \
-		(BLM_IS_AP_BLACKLISTED_BY_DRIVER(cur_node) & \
-		!(BLM_IS_AP_IN_AVOIDLIST(cur_node) | \
-		 BLM_IS_AP_IN_MONITOR_LIST(cur_node) | \
-		 BLM_IS_AP_IN_RSSI_REJECT_LIST(cur_node) | \
-		 BLM_IS_AP_BLACKLISTED_BY_USERSPACE(cur_node)))
+#define IS_AP_IN_DRIVER_DENYLIST_ONLY(cur_node) \
+		(DLM_IS_AP_DENYLISTED_BY_DRIVER(cur_node) & \
+		!(DLM_IS_AP_IN_AVOIDLIST(cur_node) | \
+		 DLM_IS_AP_IN_MONITOR_LIST(cur_node) | \
+		 DLM_IS_AP_IN_RSSI_REJECT_LIST(cur_node) | \
+		 DLM_IS_AP_DENYLISTED_BY_USERSPACE(cur_node)))
 
 #define IS_AP_IN_RSSI_REJECT_LIST_ONLY(cur_node) \
-		(BLM_IS_AP_IN_RSSI_REJECT_LIST(cur_node) & \
-		!(BLM_IS_AP_IN_AVOIDLIST(cur_node) | \
-		 BLM_IS_AP_IN_MONITOR_LIST(cur_node) | \
-		 BLM_IS_AP_BLACKLISTED_BY_DRIVER(cur_node) | \
-		 BLM_IS_AP_BLACKLISTED_BY_USERSPACE(cur_node)))
+		(DLM_IS_AP_IN_RSSI_REJECT_LIST(cur_node) & \
+		!(DLM_IS_AP_IN_AVOIDLIST(cur_node) | \
+		 DLM_IS_AP_IN_MONITOR_LIST(cur_node) | \
+		 DLM_IS_AP_DENYLISTED_BY_DRIVER(cur_node) | \
+		 DLM_IS_AP_DENYLISTED_BY_USERSPACE(cur_node)))
 
 #define IS_AP_IN_USERSPACE_AVOID_LIST_ONLY(cur_node) \
-		(BLM_IS_AP_AVOIDED_BY_USERSPACE(cur_node) & \
-		!(BLM_IS_AP_AVOIDED_BY_DRIVER(cur_node) | \
-		 BLM_IS_AP_IN_MONITOR_LIST(cur_node) | \
-		 BLM_IS_AP_IN_BLACKLIST(cur_node)))
+		(DLM_IS_AP_AVOIDED_BY_USERSPACE(cur_node) & \
+		!(DLM_IS_AP_AVOIDED_BY_DRIVER(cur_node) | \
+		 DLM_IS_AP_IN_MONITOR_LIST(cur_node) | \
+		 DLM_IS_AP_IN_DENYLIST(cur_node)))
 
 #define IS_AP_IN_DRIVER_AVOID_LIST_ONLY(cur_node) \
-		(BLM_IS_AP_AVOIDED_BY_DRIVER(cur_node) & \
-		!(BLM_IS_AP_AVOIDED_BY_USERSPACE(cur_node) | \
-		 BLM_IS_AP_IN_MONITOR_LIST(cur_node) | \
-		 BLM_IS_AP_IN_BLACKLIST(cur_node)))
+		(DLM_IS_AP_AVOIDED_BY_DRIVER(cur_node) & \
+		!(DLM_IS_AP_AVOIDED_BY_USERSPACE(cur_node) | \
+		 DLM_IS_AP_IN_MONITOR_LIST(cur_node) | \
+		 DLM_IS_AP_IN_DENYLIST(cur_node)))
 
 /**
- * struct blm_reject_ap_timestamp - Structure to store the reject list BSSIDs
+ * struct dlm_reject_ap_timestamp - Structure to store the reject list BSSIDs
  * entry time stamp.
  * @userspace_avoid_timestamp: Time when userspace adds BSSID to avoid list.
  * @driver_avoid_timestamp: Time when driver adds BSSID to avoid list.
- * @userspace_blacklist_timestamp: Time when userspace adds BSSID to black list.
- * @driver_blacklist_timestamp: Time when driver adds BSSID to black list.
+ * @userspace_denylist_timestamp: Time when userspace adds BSSID to deny list.
+ * @driver_denylist_timestamp: Time when driver adds BSSID to deny list.
  * @rssi_reject_timestamp: Time when driver adds BSSID to rssi reject list.
  * @driver_monitor_timestamp: Time when driver adds BSSID to monitor list.
  */
-struct blm_reject_ap_timestamp {
+struct dlm_reject_ap_timestamp {
 	qdf_time_t userspace_avoid_timestamp;
 	qdf_time_t driver_avoid_timestamp;
-	qdf_time_t userspace_blacklist_timestamp;
-	qdf_time_t driver_blacklist_timestamp;
+	qdf_time_t userspace_denylist_timestamp;
+	qdf_time_t driver_denylist_timestamp;
 	qdf_time_t rssi_reject_timestamp;
 	qdf_time_t driver_monitor_timestamp;
 };
 
 /**
- * struct blm_reject_ap - Structure of a node added to blacklist manager
+ * struct dlm_reject_ap - Structure of a node added to denylist manager
  * @node: Node of the entry
  * @bssid: Bssid of the AP entry.
  * @rssi_reject_params: Rssi reject params of the AP entry.
  * @bad_bssid_counter: It represent how many times data stall happened.
  * @ap_timestamp: Ap timestamp.
- * @reject_ap_type: what is the type of rejection for the AP (avoid, black etc.)
- * @reject_ap_reason: reason for adding the BSSID to BLM
+ * @reject_ap_type: what is the type of rejection for the AP (avoid, deny etc.)
+ * @reject_ap_reason: reason for adding the BSSID to DLM
  * @connect_timestamp: Timestamp when the STA got connected with this BSSID
  */
-struct blm_reject_ap {
+struct dlm_reject_ap {
 	qdf_list_node_t node;
 	struct qdf_mac_addr bssid;
-	struct blm_rssi_disallow_params rssi_reject_params;
+	struct dlm_rssi_disallow_params rssi_reject_params;
 	uint8_t bad_bssid_counter;
-	struct blm_reject_ap_timestamp ap_timestamp;
+	struct dlm_reject_ap_timestamp ap_timestamp;
 	union {
 		struct {
-			uint8_t userspace_blacklist:1,
-				driver_blacklist:1,
+			uint8_t userspace_denylist:1,
+				driver_denylist:1,
 				userspace_avoidlist:1,
 				driver_avoidlist:1,
 				rssi_reject_list:1,
@@ -148,7 +149,7 @@ struct blm_reject_ap {
 				 ho_fail:1,
 				 poor_rssi:1,
 				 oce_assoc_reject:1,
-				 blacklist_userspace:1,
+				 denylist_userspace:1,
 				 avoid_userspace:1,
 				 btm_disassoc_imminent:1,
 				 btm_bss_termination:1,
@@ -158,145 +159,145 @@ struct blm_reject_ap {
 		};
 		uint32_t reject_ap_reason;
 	};
-	enum blm_reject_ap_source source;
+	enum dlm_reject_ap_source source;
 	qdf_time_t connect_timestamp;
 };
 
 /**
- * blm_add_bssid_to_reject_list() - Add BSSID to the specific reject list.
+ * dlm_add_bssid_to_reject_list() - Add BSSID to the specific reject list.
  * @pdev: Pdev object
  * @ap_info: Ap info params such as BSSID, and the type of rejection to be done
  *
- * This API will add the BSSID to the reject AP list maintained by the blacklist
+ * This API will add the BSSID to the reject AP list maintained by the denylist
  * manager.
  *
  * Return: QDF status
  */
 QDF_STATUS
-blm_add_bssid_to_reject_list(struct wlan_objmgr_pdev *pdev,
+dlm_add_bssid_to_reject_list(struct wlan_objmgr_pdev *pdev,
 			     struct reject_ap_info *ap_info);
 
 #if defined(WLAN_FEATURE_ROAM_OFFLOAD)
 /**
- * blm_send_reject_ap_list_to_fw() - Send the blacklist BSSIDs to FW
+ * dlm_send_reject_ap_list_to_fw() - Send the denylist BSSIDs to FW
  * @pdev: Pdev object
- * @reject_db_list: List of blacklist BSSIDs
- * @cfg: Blacklist manager cfg
+ * @reject_db_list: List of denylist BSSIDs
+ * @cfg: Denylist manager cfg
  *
- * This API will send the blacklist BSSIDs to FW for avoiding or blacklisting
+ * This API will send the denylist BSSIDs to FW for avoiding or denylisting
  * in roaming scenarios.
  *
  * Return: None
  */
 void
-blm_send_reject_ap_list_to_fw(struct wlan_objmgr_pdev *pdev,
+dlm_send_reject_ap_list_to_fw(struct wlan_objmgr_pdev *pdev,
 			      qdf_list_t *reject_db_list,
-			      struct blm_config *cfg);
+			      struct dlm_config *cfg);
 
 /**
- * blm_update_reject_ap_list_to_fw() - Send the blacklist BSSIDs to FW
+ * dlm_update_reject_ap_list_to_fw() - Send the denylist BSSIDs to FW
  * @psoc: psoc object
  *
- * This API will send the blacklist BSSIDs to FW.
+ * This API will send the denylist BSSIDs to FW.
  *
  * Return: None
  */
-void blm_update_reject_ap_list_to_fw(struct wlan_objmgr_psoc *psoc);
+void dlm_update_reject_ap_list_to_fw(struct wlan_objmgr_psoc *psoc);
 #else
-static inline void blm_send_reject_ap_list_to_fw(struct wlan_objmgr_pdev *pdev,
+static inline void dlm_send_reject_ap_list_to_fw(struct wlan_objmgr_pdev *pdev,
 						 qdf_list_t *reject_db_list,
-						 struct blm_config *cfg)
+						 struct dlm_config *cfg)
 {
 }
 
 static inline void
-blm_update_reject_ap_list_to_fw(struct wlan_objmgr_psoc *psoc)
+dlm_update_reject_ap_list_to_fw(struct wlan_objmgr_psoc *psoc)
 {
 }
 #endif
 
 /**
- * blm_add_userspace_black_list() - Clear already existing userspace BSSID, and
- * add the new ones to blacklist manager.
+ * dlm_add_userspace_deny_list() - Clear already existing userspace BSSID, and
+ * add the new ones to denylist manager.
  * @pdev: pdev object
- * @bssid_black_list: BSSIDs to be blacklisted by userspace.
- * @num_of_bssid: num of bssids to be blacklisted.
+ * @bssid_deny_list: BSSIDs to be denylisted by userspace.
+ * @num_of_bssid: num of bssids to be denylisted.
  *
  * This API will Clear already existing userspace BSSID, and add the new ones
- * to blacklist manager's reject list.
+ * to denylist manager's reject list.
  *
  * Return: QDF status
  */
 QDF_STATUS
-blm_add_userspace_black_list(struct wlan_objmgr_pdev *pdev,
-			     struct qdf_mac_addr *bssid_black_list,
-			     uint8_t num_of_bssid);
+dlm_add_userspace_deny_list(struct wlan_objmgr_pdev *pdev,
+			    struct qdf_mac_addr *bssid_deny_list,
+			    uint8_t num_of_bssid);
 
 /**
- * blm_update_bssid_connect_params() - Inform the BLM about connect/disconnect
+ * dlm_update_bssid_connect_params() - Inform the DLM about connect/disconnect
  * with the current AP.
  * @pdev: pdev object
  * @bssid: BSSID of the AP
  * @con_state: Connection stae (connected/disconnected)
  *
- * This API will inform the BLM about the state with the AP so that if the AP
+ * This API will inform the DLM about the state with the AP so that if the AP
  * is selected, and the connection went through, and the connection did not
- * face any data stall till the bad bssid reset timer, BLM can remove the
+ * face any data stall till the bad bssid reset timer, DLM can remove the
  * AP from the reject ap list maintained by it.
  *
  * Return: None
  */
 void
-blm_update_bssid_connect_params(struct wlan_objmgr_pdev *pdev,
+dlm_update_bssid_connect_params(struct wlan_objmgr_pdev *pdev,
 				struct qdf_mac_addr bssid,
-				enum blm_connection_state con_state);
+				enum dlm_connection_state con_state);
 
 /**
- * blm_flush_reject_ap_list() - Clear away BSSID and destroy the reject ap list
- * @blm_ctx: blacklist manager pdev priv object
+ * dlm_flush_reject_ap_list() - Clear away BSSID and destroy the reject ap list
+ * @dlm_ctx: denylist manager pdev priv object
  *
  * This API will clear the BSSID info in the reject AP list maintained by the
- * blacklist manager, and will destroy the list as well.
+ * denylist manager, and will destroy the list as well.
  *
  * Return: None
  */
 void
-blm_flush_reject_ap_list(struct blm_pdev_priv_obj *blm_ctx);
+dlm_flush_reject_ap_list(struct dlm_pdev_priv_obj *dlm_ctx);
 
 /**
- * blm_get_bssid_reject_list() - Get the BSSIDs in reject list from BLM
+ * dlm_get_bssid_reject_list() - Get the BSSIDs in reject list from DLM
  * @pdev: pdev object
  * @reject_list: reject list to be filled (passed by caller)
- * @max_bssid_to_be_filled: num of bssids filled in reject list by BLM
+ * @max_bssid_to_be_filled: num of bssids filled in reject list by DLM
  * @reject_ap_type: reject ap type of the BSSIDs to be filled.
  *
  * This API will fill the reject ap list requested by caller of type given as
  * argument reject_ap_type, and will return the number of BSSIDs filled.
  *
- * Return: Unsigned integer (number of BSSIDs filled by the blacklist manager)
+ * Return: Unsigned integer (number of BSSIDs filled by the denylist manager)
  */
 uint8_t
-blm_get_bssid_reject_list(struct wlan_objmgr_pdev *pdev,
+dlm_get_bssid_reject_list(struct wlan_objmgr_pdev *pdev,
 			  struct reject_ap_config_params *reject_list,
 			  uint8_t max_bssid_to_be_filled,
-			  enum blm_reject_ap_type reject_ap_type);
+			  enum dlm_reject_ap_type reject_ap_type);
 
 /**
- * blm_dump_blacklist_bssid - Dump blacklisted bssids
+ * dlm_dump_denylist_bssid - Dump denylisted bssids
  * @pdev: pdev object
  *
  * Return: None
  */
-void blm_dump_blacklist_bssid(struct wlan_objmgr_pdev *pdev);
+void dlm_dump_denylist_bssid(struct wlan_objmgr_pdev *pdev);
 
 /**
- * blm_get_rssi_blacklist_threshold() - Get rssi blacklist threshold value
+ * dlm_get_rssi_denylist_threshold() - Get rssi denylist threshold value
  * @pdev: pdev object
  *
- * This API will get the RSSI blacklist threshold info.
+ * This API will get the RSSI denylist threshold info.
  *
  * Return: rssi theshold value
  */
 int32_t
-blm_get_rssi_blacklist_threshold(struct wlan_objmgr_pdev *pdev);
+dlm_get_rssi_denylist_threshold(struct wlan_objmgr_pdev *pdev);
 #endif

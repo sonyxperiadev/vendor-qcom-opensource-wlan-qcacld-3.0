@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,34 +17,34 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 /**
- * DOC: Implements public API for blacklist manager to interact with target/WMI
+ * DOC: Implements public API for denylist manager to interact with target/WMI
  */
 
 #include "wlan_blm_tgt_api.h"
 
 #if defined(WLAN_FEATURE_ROAM_OFFLOAD)
 QDF_STATUS
-tgt_blm_send_reject_list_to_fw(struct wlan_objmgr_pdev *pdev,
+tgt_dlm_send_reject_list_to_fw(struct wlan_objmgr_pdev *pdev,
 			       struct reject_ap_params *reject_params)
 {
-	struct wlan_blm_tx_ops *blm_tx_ops;
-	struct blm_pdev_priv_obj *blm_priv;
+	struct wlan_dlm_tx_ops *dlm_tx_ops;
+	struct dlm_pdev_priv_obj *dlm_priv;
 
-	blm_priv = blm_get_pdev_obj(pdev);
+	dlm_priv = dlm_get_pdev_obj(pdev);
 
-	if (!blm_priv) {
-		blm_err("blm_priv is NULL");
+	if (!dlm_priv) {
+		dlm_err("dlm_priv is NULL");
 		return QDF_STATUS_E_FAILURE;
 	}
-	blm_tx_ops = &blm_priv->blm_tx_ops;
-	if (!blm_tx_ops) {
-		blm_err("blm_tx_ops is NULL");
+	dlm_tx_ops = &dlm_priv->dlm_tx_ops;
+	if (!dlm_tx_ops) {
+		dlm_err("dlm_tx_ops is NULL");
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	if (blm_tx_ops->blm_send_reject_ap_list)
-		return blm_tx_ops->blm_send_reject_ap_list(pdev, reject_params);
-	blm_err("Tx ops not registered, failed to send reject list to FW");
+	if (dlm_tx_ops->dlm_send_reject_ap_list)
+		return dlm_tx_ops->dlm_send_reject_ap_list(pdev, reject_params);
+	dlm_err("Tx ops not registered, failed to send reject list to FW");
 
 	return QDF_STATUS_E_FAILURE;
 }

@@ -1017,7 +1017,7 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 		if (!assoc_rsp->rssi_assoc_rej.retry_delay)
 			ap_info.expected_rssi = assoc_rsp->rssi_assoc_rej.delta_rssi +
 				WMA_GET_RX_RSSI_NORMALIZED(rx_pkt_info) +
-				wlan_blm_get_rssi_blacklist_threshold(mac_ctx->pdev);
+				wlan_dlm_get_rssi_denylist_threshold(mac_ctx->pdev);
 		else
 			ap_info.expected_rssi = assoc_rsp->rssi_assoc_rej.delta_rssi +
 				WMA_GET_RX_RSSI_NORMALIZED(rx_pkt_info);

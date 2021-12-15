@@ -8674,7 +8674,7 @@ lim_add_bssid_to_reject_list(struct wlan_objmgr_pdev *pdev,
 	ap_info.rssi_reject_params.received_time = entry->received_time;
 	ap_info.rssi_reject_params.original_timeout = entry->original_timeout;
 	/* Add this ap info to the rssi reject ap type in blacklist manager */
-	wlan_blm_add_bssid_to_reject_list(pdev, &ap_info);
+	wlan_dlm_add_bssid_to_reject_list(pdev, &ap_info);
 }
 
 void lim_decrement_pending_mgmt_count(struct mac_context *mac_ctx)

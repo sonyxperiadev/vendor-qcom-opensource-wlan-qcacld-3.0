@@ -5102,8 +5102,8 @@ struct sir_peer_set_rx_blocksize {
  * @retry_delay: Retry delay received during last rejection in ms
  * @ expected_rssi: RSSI at which STA can initate
  * @time_during_rejection: Timestamp during last rejection in millisec
- * @reject_reason: reason to add the BSSID to BLM
- * @source: Source of adding the BSSID to BLM
+ * @reject_reason: reason to add the BSSID to DLM
+ * @source: Source of adding the BSSID to DLM
  * @original_timeout: original timeout sent by the AP
  * @received_time: Timestamp when the AP was added to the Blacklist
  */
@@ -5113,8 +5113,8 @@ struct sir_rssi_disallow_lst {
 	uint32_t retry_delay;
 	int8_t expected_rssi;
 	qdf_time_t time_during_rejection;
-	enum blm_reject_ap_reason reject_reason;
-	enum blm_reject_ap_source source;
+	enum dlm_reject_ap_reason reject_reason;
+	enum dlm_reject_ap_source source;
 	uint32_t original_timeout;
 	qdf_time_t received_time;
 };

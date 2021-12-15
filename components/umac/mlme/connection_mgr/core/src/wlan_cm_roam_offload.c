@@ -1969,9 +1969,9 @@ cm_add_blacklist_ap_list(struct wlan_objmgr_pdev *pdev,
 		return;
 
 	params->num_bssid_black_list =
-		wlan_blm_get_bssid_reject_list(pdev, reject_list,
+		wlan_dlm_get_bssid_reject_list(pdev, reject_list,
 					       MAX_RSSI_AVOID_BSSID_LIST,
-					       USERSPACE_BLACKLIST_TYPE);
+					       USERSPACE_DENYLIST_TYPE);
 	if (!params->num_bssid_black_list) {
 		qdf_mem_free(reject_list);
 		return;
@@ -2058,7 +2058,7 @@ cm_roam_scan_filter(struct wlan_objmgr_psoc *psoc,
 				 * until RSSI OR time condition are matched.
 				 */
 				params->num_rssi_rejection_ap =
-					wlan_blm_get_bssid_reject_list(pdev,
+					wlan_dlm_get_bssid_reject_list(pdev,
 						params->rssi_rejection_ap,
 						MAX_RSSI_AVOID_BSSID_LIST,
 						DRIVER_RSSI_REJECT_TYPE);
@@ -2104,7 +2104,7 @@ cm_roam_scan_filter(struct wlan_objmgr_psoc *psoc,
 	params->num_ssid_white_list = num_ssid_white_list;
 	params->num_bssid_preferred_list = num_bssid_preferred_list;
 	params->delta_rssi =
-		wlan_blm_get_rssi_blacklist_threshold(pdev);
+		wlan_dlm_get_rssi_denylist_threshold(pdev);
 
 	for (i = 0; i < num_ssid_white_list; i++) {
 		qdf_mem_copy(params->ssid_allowed_list[i].ssid,

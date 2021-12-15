@@ -2654,7 +2654,7 @@ end:
 	return status;
 }
 
-static enum blm_reject_ap_reason wmi_get_reject_reason(uint32_t reason)
+static enum dlm_reject_ap_reason wmi_get_reject_reason(uint32_t reason)
 {
 	switch (reason) {
 	case WMI_BL_REASON_NUD_FAILURE:

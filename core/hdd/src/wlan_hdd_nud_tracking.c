@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -253,7 +254,7 @@ hdd_handle_nud_fail_sta(struct hdd_context *hdd_ctx,
 	ap_info.reject_ap_type = DRIVER_AVOID_TYPE;
 	ap_info.reject_reason = REASON_NUD_FAILURE;
 	ap_info.source = ADDED_BY_DRIVER;
-	ucfg_blm_add_bssid_to_reject_list(hdd_ctx->pdev, &ap_info);
+	ucfg_dlm_add_bssid_to_reject_list(hdd_ctx->pdev, &ap_info);
 
 	if (roaming_offload_enabled(hdd_ctx)) {
 		qdf_zero_macaddr(&bssid);

@@ -53,7 +53,7 @@
 
 /* Maintain Alphabetic order here while adding components */
 #define CFG_ALL \
-	CFG_BLACKLIST_MGR_ALL \
+	CFG_DENYLIST_MGR_ALL \
 	CFG_CONVERGED_ALL \
 	CFG_FWOL_ALL \
 	CFG_POLICY_MGR_ALL \
