@@ -4413,6 +4413,7 @@ FRAME Authentication                      // 7.2.3.10
     OPTIE  fils_session;
     OPTIE  fils_wrapped_data;
     OPTIE  fils_assoc_delay_info;
+    OPTIE  mlo_ie;
 } // End frame Auth.
 
 FRAME DeAuth                              // 7.2.3.11
