@@ -2537,6 +2537,10 @@ enum mlme_reg_srd_master_modes {
  * list command to FW till the current scan is complete.
  * @retain_nol_across_regdmn_update: Retain the NOL list across the regdomain.
  * @enable_nan_on_indoor_channels: Enable nan on Indoor channels
+ * @enable_6ghz_sp_pwrmode_supp: Enable 6 GHz SP mode support
+ * @afc_disable_timer_check: Disable AFC timer check
+ * @afc_disable_request_id_check: Disable AFC request id check
+ * @is_afc_reg_noaction: Whether no action to AFC power event
  * @coex_unsafe_chan_nb_user_prefer: Honor coex unsafe freq event from firmware
  * or not
  * @coex_unsafe_chan_reg_disable: To disable reg channels for received coex
@@ -2561,6 +2565,12 @@ struct wlan_mlme_reg {
 	bool enable_pending_chan_list_req;
 	bool retain_nol_across_regdmn_update;
 	bool enable_nan_on_indoor_channels;
+#if defined(CONFIG_AFC_SUPPORT) && defined(CONFIG_BAND_6GHZ)
+	bool enable_6ghz_sp_pwrmode_supp;
+	bool afc_disable_timer_check;
+	bool afc_disable_request_id_check;
+	bool is_afc_reg_noaction;
+#endif
 #ifdef FEATURE_WLAN_CH_AVOID_EXT
 	bool coex_unsafe_chan_nb_user_prefer;
 	bool coex_unsafe_chan_reg_disable;
