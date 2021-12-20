@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -31,6 +31,7 @@
 #include "wlan_p2p_public_struct.h"
 #include "wlan_p2p_ucfg_api.h"
 #include "wlan_p2p_tgt_api.h"
+#include "wlan_p2p_mcc_quota_tgt_api.h"
 #include "wlan_p2p_main.h"
 #include "wlan_p2p_roc.h"
 #include "wlan_p2p_off_chan_tx.h"
@@ -844,7 +845,7 @@ QDF_STATUS p2p_psoc_start(struct wlan_objmgr_psoc *soc,
 	tgt_p2p_register_lo_ev_handler(soc);
 	tgt_p2p_register_noa_ev_handler(soc);
 	tgt_p2p_register_macaddr_rx_filter_evt_handler(soc, true);
-
+	tgt_p2p_register_mcc_quota_ev_handler(soc, true);
 	/* register scan request id */
 	p2p_soc_obj->scan_req_id = ucfg_scan_register_requester(
 		soc, P2P_MODULE_NAME, tgt_p2p_scan_event_cb,
@@ -893,6 +894,7 @@ QDF_STATUS p2p_psoc_stop(struct wlan_objmgr_psoc *soc)
 	/* unrgister scan request id*/
 	ucfg_scan_unregister_requester(soc, p2p_soc_obj->scan_req_id);
 
+	tgt_p2p_register_mcc_quota_ev_handler(soc, false);
 	/* unregister p2p lo stop and noa event */
 	tgt_p2p_register_macaddr_rx_filter_evt_handler(soc, false);
 	tgt_p2p_unregister_lo_ev_handler(soc);
