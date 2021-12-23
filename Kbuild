@@ -1579,10 +1579,10 @@ BLM_DIR := components/blacklist_mgr
 BLM_INC := -I$(WLAN_ROOT)/$(BLM_DIR)/core/inc \
                 -I$(WLAN_ROOT)/$(BLM_DIR)/dispatcher/inc
 ifeq ($(CONFIG_FEATURE_DENYLIST_MGR), y)
-BLM_OBJS :=    $(BLM_DIR)/core/src/wlan_blm_main.o \
-                $(BLM_DIR)/core/src/wlan_blm_core.o \
-                $(BLM_DIR)/dispatcher/src/wlan_blm_ucfg_api.o \
-                $(BLM_DIR)/dispatcher/src/wlan_blm_tgt_api.o
+BLM_OBJS :=    $(BLM_DIR)/core/src/wlan_dlm_main.o \
+                $(BLM_DIR)/core/src/wlan_dlm_core.o \
+                $(BLM_DIR)/dispatcher/src/wlan_dlm_ucfg_api.o \
+                $(BLM_DIR)/dispatcher/src/wlan_dlm_tgt_api.o
 endif
 
 $(call add-wlan-objs,blm,$(BLM_OBJS))
@@ -1689,7 +1689,7 @@ endif
 
 ifeq ($(CONFIG_FEATURE_DENYLIST_MGR), y)
 CLD_TARGET_IF_INC += -I$(WLAN_ROOT)/$(CLD_TARGET_IF_DIR)/blacklist_mgr/inc
-CLD_TARGET_IF_OBJ += $(CLD_TARGET_IF_DIR)/blacklist_mgr/src/target_if_blm.o
+CLD_TARGET_IF_OBJ += $(CLD_TARGET_IF_DIR)/blacklist_mgr/src/target_if_dlm.o
 endif
 
 ifeq ($(CONFIG_WLAN_FEATURE_ACTION_OUI), y)

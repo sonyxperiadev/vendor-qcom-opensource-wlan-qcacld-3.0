@@ -25,7 +25,7 @@
 #include "qdf_types.h"
 #include "cfg_coex.h"
 #include "cfg_thermal_temp.h"
-#include "cfg_ie_whitelist.h"
+#include "cfg_ie_allowlist.h"
 #include "cfg_fwol_generic.h"
 #include "cfg_neighbor_roam.h"
 #include "cfg_adaptive_dwelltime.h"

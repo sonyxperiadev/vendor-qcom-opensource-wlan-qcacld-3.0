@@ -25,7 +25,7 @@
 #include "wlan_objmgr_cmn.h"
 #include "reg_services_public_struct.h"
 #include "wlan_cm_bss_score_param.h"
-#include "wlan_blm_public_struct.h"
+#include "wlan_dlm_public_struct.h"
 #include "wmi_unified_param.h"
 #include "wmi_unified_sta_param.h"
 #include "wlan_cm_public_struct.h"

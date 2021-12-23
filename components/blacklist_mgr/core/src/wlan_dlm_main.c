@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -26,10 +26,10 @@
 
 /* Include files */
 
-#include "target_if_blm.h"
-#include <wlan_blm_ucfg_api.h>
+#include "target_if_dlm.h"
+#include <wlan_dlm_ucfg_api.h>
 #include "cfg_ucfg_api.h"
-#include <wlan_blm_core.h>
+#include <wlan_dlm_core.h>
 
 struct dlm_pdev_priv_obj *
 dlm_get_pdev_obj(struct wlan_objmgr_pdev *pdev)

@@ -31,7 +31,7 @@
 #include "wlan_crypto_global_api.h"
 #include "wlan_psoc_mlme_api.h"
 #include "pld_common.h"
-#include "wlan_blm_api.h"
+#include "wlan_dlm_api.h"
 #include "wlan_scan_api.h"
 #include "wlan_vdev_mgr_ucfg_api.h"
 #include "wlan_p2p_cfg_api.h"

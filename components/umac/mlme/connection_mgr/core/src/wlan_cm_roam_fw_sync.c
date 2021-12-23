@@ -27,7 +27,7 @@
 #include "wlan_objmgr_pdev_obj.h"
 #include "wlan_objmgr_vdev_obj.h"
 #include "wlan_cm_roam_i.h"
-#include "wlan_blm_api.h"
+#include "wlan_dlm_api.h"
 #include "wlan_cm_roam_public_struct.h"
 #include "wlan_utility.h"
 #include "wlan_scan_api.h"

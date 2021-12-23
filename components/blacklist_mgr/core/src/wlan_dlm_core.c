@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -21,11 +21,11 @@
  */
 
 #include <wlan_objmgr_pdev_obj.h>
-#include <wlan_blm_core.h>
+#include <wlan_dlm_core.h>
 #include <qdf_mc_timer.h>
 #include <wlan_scan_public_structs.h>
 #include <wlan_scan_utils_api.h>
-#include "wlan_blm_tgt_api.h"
+#include "wlan_dlm_tgt_api.h"
 #include <wlan_cm_bss_score_param.h>
 
 #define SECONDS_TO_MS(params)       ((params) * 1000)
@@ -841,13 +841,13 @@ void dlm_dump_denylist_bssid(struct wlan_objmgr_pdev *pdev)
 							 dlm_entry,
 							 &dlm_psoc_obj->dlm_cfg);
 
-			dlm_nofl_debug("DENYLIST BSSID " QDF_MAC_ADDR_FMT " type %s retry delay %dms expected RSSI %d reject reason %d rejection source %d",
-				       QDF_MAC_ADDR_REF(dlm_entry->bssid.bytes),
-				       dlm_find_reject_type_string(reject_ap_type),
-				reject_duration,
-				dlm_entry->rssi_reject_params.expected_rssi,
-				dlm_entry->reject_ap_reason,
-				dlm_entry->rssi_reject_params.source);
+		dlm_nofl_debug("DENYLIST BSSID " QDF_MAC_ADDR_FMT " type %s retry delay %dms expected RSSI %d reject reason %d rejection source %d",
+			       QDF_MAC_ADDR_REF(dlm_entry->bssid.bytes),
+			       dlm_find_reject_type_string(reject_ap_type),
+			       reject_duration,
+			       dlm_entry->rssi_reject_params.expected_rssi,
+			       dlm_entry->reject_ap_reason,
+			       dlm_entry->rssi_reject_params.source);
 		cur_node = next_node;
 		next_node = NULL;
 	}

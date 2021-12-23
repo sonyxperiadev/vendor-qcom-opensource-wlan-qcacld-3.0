@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -26,7 +26,7 @@
 #include <wlan_hdd_dcs.h>
 #include <wlan_hdd_includes.h>
 #include <wlan_dcs_ucfg_api.h>
-#include <wlan_blm_ucfg_api.h>
+#include <wlan_dlm_ucfg_api.h>
 #include <wlan_osif_priv.h>
 #include <wlan_objmgr_vdev_obj.h>
 

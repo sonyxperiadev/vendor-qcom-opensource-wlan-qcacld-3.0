@@ -21,8 +21,8 @@
  * DOC: This file contains centralized definitions of converged configuration.
  */
 
-#ifndef __CFG_IE_WHITELIST_H
-#define __CFG_IE_WHITELIST_H
+#ifndef __CFG_IE_ALLOWLIST_H
+#define __CFG_IE_ALLOWLIST_H
 
 /*
  * <ini>

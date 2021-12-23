@@ -42,7 +42,7 @@
 #include "lim_ser_des_utils.h"
 #include "lim_send_messages.h"
 #include "lim_process_fils.h"
-#include "wlan_blm_api.h"
+#include "wlan_dlm_api.h"
 #include "wlan_mlme_twt_api.h"
 #include "wlan_mlme_ucfg_api.h"
 #include "wlan_connectivity_logging.h"

@@ -41,7 +41,7 @@
 #include "qdf_nbuf.h"
 #include "qdf_types.h"
 #include "qdf_mem.h"
-#include "wlan_blm_api.h"
+#include "wlan_dlm_api.h"
 
 #include "wma_types.h"
 #include "lim_api.h"
@@ -82,7 +82,7 @@
 #include <wlan_crypto_global_api.h>
 #include <cdp_txrx_mon.h>
 #include <cdp_txrx_ctrl.h>
-#include "wlan_blm_api.h"
+#include "wlan_dlm_api.h"
 #include "wlan_cm_roam_api.h"
 #ifdef FEATURE_WLAN_DIAG_SUPPORT    /* FEATURE_WLAN_DIAG_SUPPORT */
 #include "host_diag_core_log.h"

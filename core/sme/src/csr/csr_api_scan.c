@@ -50,7 +50,7 @@
 #include <wlan_utility.h>
 #include "wlan_reg_services_api.h"
 #include "sch_api.h"
-#include "wlan_blm_api.h"
+#include "wlan_dlm_api.h"
 #include "qdf_crypto.h"
 #include <wlan_crypto_global_api.h>
 #include "wlan_reg_ucfg_api.h"

@@ -45,7 +45,7 @@
 #include "lim_ft_defs.h"
 #include "lim_session.h"
 #include "lim_ser_des_utils.h"
-#include "wlan_blm_api.h"
+#include "wlan_dlm_api.h"
 
 /**
  * lim_delete_sta_util - utility function for deleting station context

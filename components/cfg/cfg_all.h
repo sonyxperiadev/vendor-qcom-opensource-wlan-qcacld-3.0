@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -48,7 +48,7 @@
 #include "hdd_config.h"
 #include "hdd_dp_cfg.h"
 #include "cfg_legacy_dp.h"
-#include "wlan_cfg_blm.h"
+#include "wlan_cfg_dlm.h"
 #include "cfg_pkt_capture.h"
 
 /* Maintain Alphabetic order here while adding components */

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -26,7 +26,7 @@
 #include <qdf_time.h>
 #include <wlan_objmgr_cmn.h>
 #include <wlan_objmgr_global_obj.h>
-#include <wlan_blm_ucfg_api.h>
+#include <wlan_dlm_ucfg_api.h>
 
 #define dlm_fatal(params...)\
 		QDF_TRACE_FATAL(QDF_MODULE_ID_DENYLIST_MGR, params)
