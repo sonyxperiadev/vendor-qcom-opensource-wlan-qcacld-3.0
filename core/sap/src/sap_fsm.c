@@ -3788,7 +3788,7 @@ void sap_print_acl(struct qdf_mac_addr *macList, uint16_t size)
 
 	sap_debug("print acl entered");
 
-	if ((!macList) || (size == 0) || (size >= MAX_ACL_MAC_ADDRESS)) {
+	if ((!macList) || (size == 0) || (size > MAX_ACL_MAC_ADDRESS)) {
 		sap_err("Either buffer is NULL or size %d is incorrect", size);
 		return;
 	}
