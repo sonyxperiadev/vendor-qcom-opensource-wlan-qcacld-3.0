@@ -240,20 +240,6 @@ QDF_STATUS wlan_cm_enable_rso(struct wlan_objmgr_pdev *pdev, uint8_t vdev_id,
 			      uint8_t reason);
 
 /**
- * wlan_cm_abort_rso() - Enable roam scan offload to firmware
- * @pdev: Pointer to pdev
- * @vdev_id: vdev id
- *
- * Returns:
- * QDF_STATUS_E_BUSY if roam_synch is in progress and upper layer has to wait
- *                   before RSO stop cmd can be issued;
- * QDF_STATUS_SUCCESS if roam_synch is not outstanding. RSO stop cmd will be
- *                    issued with the global SME lock held in this case, and
- *                    uppler layer doesn't have to do any wait.
- */
-QDF_STATUS wlan_cm_abort_rso(struct wlan_objmgr_pdev *pdev, uint8_t vdev_id);
-
-/**
  * wlan_cm_roaming_in_progress() - check if roaming is in progress
  * @pdev: Pointer to pdev
  * @vdev_id: vdev id

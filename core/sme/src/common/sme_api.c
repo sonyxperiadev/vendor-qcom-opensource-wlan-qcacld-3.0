@@ -6459,20 +6459,6 @@ QDF_STATUS sme_start_roaming(mac_handle_t mac_handle, uint8_t vdev_id,
 	return wlan_cm_enable_rso(mac->pdev, vdev_id, requestor, reason);
 }
 
-QDF_STATUS sme_abort_roaming(mac_handle_t mac_handle, uint8_t vdev_id)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-	struct csr_roam_session *session;
-
-	session = CSR_GET_SESSION(mac, vdev_id);
-	if (!session) {
-		sme_err("ROAM: incorrect vdev ID %d", vdev_id);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	return wlan_cm_abort_rso(mac->pdev, vdev_id);
-}
-
 bool sme_roaming_in_progress(mac_handle_t mac_handle, uint8_t vdev_id)
 {
 	struct mac_context *mac = MAC_CONTEXT(mac_handle);
