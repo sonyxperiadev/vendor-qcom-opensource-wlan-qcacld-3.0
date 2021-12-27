@@ -1403,7 +1403,7 @@ sap_update_mcs_rate(struct sap_context *sap_ctx, bool is_start)
 {
 	uint32_t default_mcs[] = {26, 0x3fff};
 	uint32_t fixed_mcs[] = {26, 0x1fff};
-	bool mcs13_support = false;
+	bool disable_mcs13_support = false;
 	uint16_t he_mcs_12_13_supp;
 	struct mac_context *mac_ctx;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
@@ -1415,15 +1415,15 @@ sap_update_mcs_rate(struct sap_context *sap_ctx, bool is_start)
 	}
 
 	he_mcs_12_13_supp = he_mcs_12_13_support();
-	mcs13_support = cfg_get(mac_ctx->psoc,
-				CFG_DISABLE_MCS13_SUPPORT);
-	sap_debug("session id %d, mcs13 support %d, he_mcs_12_13 %d, start %d, disabled_mcs13 %d, ch width %d",
-		  sap_ctx->sessionId, mcs13_support,
+	disable_mcs13_support = cfg_get(mac_ctx->psoc,
+					CFG_DISABLE_MCS13_SUPPORT);
+	sap_debug("session id %d, disable mcs13 support %d, he_mcs_12_13 %d, start %d, disabled_mcs13 %d, ch width %d",
+		  sap_ctx->sessionId, disable_mcs13_support,
 		  he_mcs_12_13_supp,
 		  is_start, sap_ctx->disabled_mcs13,
 		  sap_ctx->ch_params.ch_width);
 
-	if (mcs13_support ||
+	if (!disable_mcs13_support ||
 	    !he_mcs_12_13_supp)
 		return status;
 

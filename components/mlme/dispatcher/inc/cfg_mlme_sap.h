@@ -728,10 +728,10 @@
  * disable_mcs13_support - Disable mcs13 support.
  * @Min: 0
  * @Max: 1
- * @Default: 1
+ * @Default: 0
  *
  * This ini is used to disable mcs13 if SAP works on 80p80MHZ/160MHZ/320MHZ
- * nd he_mcs_12_13_support enabled..
+ * nd he_mcs_12_13_support enabled.
  *
  * Related: he_mcs_12_13_support
  *
@@ -744,7 +744,7 @@
 #define CFG_DISABLE_MCS13_SUPPORT CFG_INI_BOOL( \
 			"disable_mcs13_support", \
 			0, \
-			"mcs13 support")
+			"disable mcs13 support")
 
 #define CFG_SAP_ALL \
 	CFG_SAP_SAE \
