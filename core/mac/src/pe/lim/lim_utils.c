@@ -555,6 +555,19 @@ void lim_deactivate_timers_for_vdev(struct mac_context *mac_ctx,
 			lim_process_sae_auth_timeout(mac_ctx);
 		}
 		break;
+	case eLIM_MLM_LINK_ESTABLISHED_STATE:
+		if (!pe_session->ftPEContext.ftPreAuthSession)
+			break;
+
+		pe_debug("pre-auth in progress");
+		if (tx_timer_running(&lim_timer->gLimFTPreAuthRspTimer)) {
+			pe_debug("Trigger pre auth timeout for vdev %d",
+				 vdev_id);
+			tx_timer_deactivate(
+				&lim_timer->gLimFTPreAuthRspTimer);
+		}
+		lim_process_ft_preauth_rsp_timeout(mac_ctx);
+		break;
 	default:
 		return;
 	}
