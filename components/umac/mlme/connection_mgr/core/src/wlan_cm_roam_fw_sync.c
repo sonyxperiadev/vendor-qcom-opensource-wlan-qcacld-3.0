@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -911,7 +911,8 @@ QDF_STATUS cm_fw_roam_complete(struct cnx_mgr *cm_ctx, void *data)
 	/* first update connection info from wma interface */
 	policy_mgr_update_connection_info(psoc, vdev_id);
 	/* then update remaining parameters from roam sync ctx */
-	policy_mgr_hw_mode_transition_cb(
+	if (roam_synch_data->hw_mode_trans_present)
+		policy_mgr_hw_mode_transition_cb(
 		roam_synch_data->hw_mode_trans_ind.old_hw_mode_index,
 		roam_synch_data->hw_mode_trans_ind.new_hw_mode_index,
 		roam_synch_data->hw_mode_trans_ind.num_vdev_mac_entries,
