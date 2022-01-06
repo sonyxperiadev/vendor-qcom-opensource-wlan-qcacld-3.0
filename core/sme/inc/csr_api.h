@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -445,12 +445,8 @@ struct csr_roam_profile {
 	uint32_t nRSNReqIELength; /* The byte count in the pRSNReqIE */
 	uint8_t *pRSNReqIE;       /* If not null,it's IE byte stream for RSN */
 	uint8_t privacy;
-	bool fwdWPSPBCProbeReq;
 	tAniAuthType csr80211AuthType;
 	uint32_t dtimPeriod;
-	bool ApUapsdEnable;
-	bool protEnabled;
-	bool obssProtEnabled;
 	bool chan_switch_hostapd_rate_enabled;
 	uint16_t cfg_protection;
 	uint8_t wps_state;

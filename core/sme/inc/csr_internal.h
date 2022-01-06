@@ -126,17 +126,11 @@ struct bss_config_param {
 	tSirMacSSid SSID;
 	enum csr_cfgdot11mode uCfgDot11Mode;
 	tSirMacCapabilityInfo BssCap;
-	ePhyChanBondState cbMode;
 };
 
 struct csr_roamstart_bssparams {
 	tSirMacSSid ssId;
 
-	/*
-	 * This is the BSSID for the party we want to
-	 * join (only use for WDS).
-	 */
-	struct qdf_mac_addr bssid;
 	tSirNwType sirNwType;
 	ePhyChanBondState cbMode;
 	tSirMacRateSet operationalRateSet;
@@ -145,23 +139,16 @@ struct csr_roamstart_bssparams {
 	struct ch_params ch_params;
 	enum csr_cfgdot11mode uCfgDot11Mode;
 	uint8_t privacy;
-	bool fwdWPSPBCProbeReq;
-	bool protEnabled;
-	bool obssProtEnabled;
 	tAniAuthType authType;
 	uint16_t beaconInterval; /* If this is 0, SME'll fill in for caller */
-	uint16_t ht_protection;
 	uint32_t dtimPeriod;
-	uint8_t ApUapsdEnable;
 	uint8_t ssidHidden;
 	uint8_t wps_state;
-	enum QDF_OPMODE bssPersona;
 	uint16_t nRSNIELength;  /* If 0, pRSNIE is ignored. */
 	uint8_t *pRSNIE;        /* If not null, it has IE byte stream for RSN */
 	/* Flag used to indicate update beaconInterval */
 	bool updatebeaconInterval;
 	struct add_ie_params add_ie_params;
-	uint8_t sap_dot11mc;
 	uint16_t beacon_tx_rate;
 	uint32_t cac_duration_ms;
 	uint32_t dfs_regdomain;

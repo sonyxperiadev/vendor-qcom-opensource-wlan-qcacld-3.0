@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -571,7 +571,7 @@ struct pe_session {
 #ifdef FEATURE_WLAN_ESE
 	uint8_t is_ese_version_ie_present;
 #endif
-	uint8_t sap_dot11mc;
+	bool sap_dot11mc;
 	bool is_vendor_specific_vhtcaps;
 	uint8_t vendor_specific_vht_ie_sub_type;
 	bool vendor_vht_sap;

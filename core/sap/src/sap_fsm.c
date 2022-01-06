@@ -3577,9 +3577,7 @@ sapconvert_to_csr_profile(struct sap_config *config, eCsrRoamBssType bssType,
 			  struct csr_roam_profile *profile)
 {
 	int qdf_status = QDF_STATUS_SUCCESS;
-	bool sap_uapsd = true, chan_switch_hostapd_rate_enabled = true;
-	bool ap_obss_prot = false;
-	uint16_t ap_prot = cfg_default(CFG_AP_PROTECTION_MODE);
+	bool chan_switch_hostapd_rate_enabled = true;
 	struct mac_context *mac_ctx;
 	uint8_t mcc_to_scc_switch = 0;
 
@@ -3608,7 +3606,6 @@ sapconvert_to_csr_profile(struct sap_config *config, eCsrRoamBssType bssType,
 		     sizeof(config->SSIDinfo.ssid.ssId));
 
 	profile->privacy = config->privacy;
-	profile->fwdWPSPBCProbeReq = config->fwdWPSPBCProbeReq;
 
 	if (config->authType == eSAP_SHARED_KEY) {
 		profile->csr80211AuthType = eSIR_SHARED_KEY;
@@ -3648,26 +3645,6 @@ sapconvert_to_csr_profile(struct sap_config *config, eCsrRoamBssType bssType,
 	/* set DTIM period */
 	profile->dtimPeriod = config->dtim_period;
 
-	/* set Uapsd enable bit */
-	qdf_status = ucfg_mlme_is_sap_uapsd_enabled(mac_ctx->psoc, &sap_uapsd);
-	if (QDF_IS_STATUS_ERROR(qdf_status))
-		sap_err("Get ap UAPSD enabled/disabled failed");
-
-	profile->ApUapsdEnable = sap_uapsd;
-	/* Enable protection parameters */
-	profile->protEnabled = ucfg_mlme_is_ap_prot_enabled(mac_ctx->psoc);
-
-	/* Enable OBSS protection */
-	qdf_status = ucfg_mlme_is_ap_obss_prot_enabled(mac_ctx->psoc,
-						       &ap_obss_prot);
-	if (QDF_IS_STATUS_ERROR(qdf_status))
-		sap_err("Get ap obss protection failed");
-	profile->obssProtEnabled = ap_obss_prot;
-
-	qdf_status = ucfg_mlme_get_ap_protection_mode(mac_ctx->psoc, &ap_prot);
-	if (QDF_IS_STATUS_ERROR(qdf_status))
-		sap_err("Get ap protection mode failed using default value");
-	profile->cfg_protection = ap_prot;
 	/* wps config info */
 	profile->wps_state = config->wps_state;
 

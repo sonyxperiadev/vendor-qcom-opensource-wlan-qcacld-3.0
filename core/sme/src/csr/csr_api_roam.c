@@ -2569,14 +2569,6 @@ QDF_STATUS csr_roam_prepare_bss_config_from_profile(struct mac_context *mac,
 						bss_op_ch_freq,
 						&band);
 
-	/* short slot time */
-	if (WNI_CFG_PHY_MODE_11B != pBssConfig->uCfgDot11Mode) {
-		mac->mlme_cfg->feature_flags.enable_short_slot_time_11g =
-			mac->mlme_cfg->ht_caps.short_slot_time_enabled;
-	} else {
-		mac->mlme_cfg->feature_flags.enable_short_slot_time_11g = 0;
-	}
-
 	return status;
 }
 
@@ -2703,25 +2695,13 @@ QDF_STATUS csr_roam_set_bss_config_cfg(struct mac_context *mac, uint32_t session
 				       struct csr_roam_profile *pProfile,
 				       struct bss_config_param *pBssConfig)
 {
-	uint32_t cfgCb = WNI_CFG_CHANNEL_BONDING_MODE_DISABLE;
 	struct csr_roam_session *pSession = CSR_GET_SESSION(mac, sessionId);
-	uint32_t chan_freq = 0;
 
 	if (!pSession) {
 		sme_err("session %d not found", sessionId);
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	/* CB */
-	if (CSR_IS_INFRA_AP(pProfile))
-		chan_freq = pProfile->op_freq;
-	if (chan_freq) {
-		/* for now if we are on 2.4 Ghz, CB will be always disabled */
-		if (WLAN_REG_IS_24GHZ_CH_FREQ(chan_freq))
-			cfgCb = WNI_CFG_CHANNEL_BONDING_MODE_DISABLE;
-		else
-			cfgCb = pBssConfig->cbMode;
-	}
 	/* Rate */
 	/* Fixed Rate */
 	csr_set_cfg_rate_set_from_profile(mac, pProfile, sessionId,
@@ -3349,15 +3329,10 @@ QDF_STATUS csr_roam_copy_profile(struct mac_context *mac,
 	pDstProfile->uapsd_mask = pSrcProfile->uapsd_mask;
 	pDstProfile->beaconInterval = pSrcProfile->beaconInterval;
 	pDstProfile->privacy = pSrcProfile->privacy;
-	pDstProfile->fwdWPSPBCProbeReq = pSrcProfile->fwdWPSPBCProbeReq;
 	pDstProfile->csr80211AuthType = pSrcProfile->csr80211AuthType;
 	pDstProfile->dtimPeriod = pSrcProfile->dtimPeriod;
-	pDstProfile->ApUapsdEnable = pSrcProfile->ApUapsdEnable;
 	pDstProfile->SSIDs.SSIDList[0].ssidHidden =
 		pSrcProfile->SSIDs.SSIDList[0].ssidHidden;
-	pDstProfile->protEnabled = pSrcProfile->protEnabled;
-	pDstProfile->obssProtEnabled = pSrcProfile->obssProtEnabled;
-	pDstProfile->cfg_protection = pSrcProfile->cfg_protection;
 	pDstProfile->wps_state = pSrcProfile->wps_state;
 	pDstProfile->add_ie_params = pSrcProfile->add_ie_params;
 
@@ -5704,25 +5679,6 @@ csr_roam_get_bss_start_parms(struct mac_context *mac,
 	return QDF_STATUS_SUCCESS;
 }
 
-static void csr_roam_determine_max_rate_for_ad_hoc(struct mac_context *mac,
-						   tSirMacRateSet *pSirRateSet)
-{
-	uint8_t MaxRate = 0;
-	uint32_t i;
-	uint8_t *pRate;
-
-	pRate = pSirRateSet->rate;
-	for (i = 0; i < pSirRateSet->numRates; i++) {
-		MaxRate = QDF_MAX(MaxRate, (pRate[i] &
-					(~CSR_DOT11_BASIC_RATE_MASK)));
-	}
-
-	/* Save the max rate in the connected state information.
-	 * modify LastRates variable as well
-	 */
-
-}
-
 QDF_STATUS csr_roam_issue_start_bss(struct mac_context *mac, uint32_t sessionId,
 				    struct csr_roamstart_bssparams *pParam,
 				    struct csr_roam_profile *pProfile,
@@ -5737,11 +5693,9 @@ QDF_STATUS csr_roam_issue_start_bss(struct mac_context *mac, uint32_t sessionId,
 	pParam->pRSNIE = pProfile->pRSNReqIE;
 
 	pParam->privacy = pProfile->privacy;
-	pParam->fwdWPSPBCProbeReq = pProfile->fwdWPSPBCProbeReq;
 	pParam->authType = pProfile->csr80211AuthType;
 	pParam->beaconInterval = pProfile->beaconInterval;
 	pParam->dtimPeriod = pProfile->dtimPeriod;
-	pParam->ApUapsdEnable = pProfile->ApUapsdEnable;
 	pParam->ssidHidden = pProfile->SSIDs.SSIDList[0].ssidHidden;
 	if (CSR_IS_INFRA_AP(pProfile) && (pParam->operation_chan_freq != 0)) {
 		if (!wlan_reg_is_freq_present_in_cur_chan_list(mac->pdev,
@@ -5750,11 +5704,7 @@ QDF_STATUS csr_roam_issue_start_bss(struct mac_context *mac, uint32_t sessionId,
 			pParam->ch_params.ch_width = CH_WIDTH_20MHZ;
 		}
 	}
-	pParam->protEnabled = pProfile->protEnabled;
-	pParam->obssProtEnabled = pProfile->obssProtEnabled;
-	pParam->ht_protection = pProfile->cfg_protection;
 	pParam->wps_state = pProfile->wps_state;
-	pParam->bssPersona = pProfile->csrPersona;
 
 	pParam->add_ie_params.probeRespDataLen =
 		pProfile->add_ie_params.probeRespDataLen;
@@ -5771,13 +5721,7 @@ QDF_STATUS csr_roam_issue_start_bss(struct mac_context *mac, uint32_t sessionId,
 	pParam->add_ie_params.probeRespBCNData_buff =
 		pProfile->add_ie_params.probeRespBCNData_buff;
 
-	if (pProfile->csrPersona == QDF_SAP_MODE)
-		pParam->sap_dot11mc = mac->mlme_cfg->gen.sap_dot11mc;
-	else
-		pParam->sap_dot11mc = 1;
-
-	sme_debug("11MC Support Enabled : %d uCfgDot11Mode %d",
-		  pParam->sap_dot11mc, pParam->uCfgDot11Mode);
+	sme_debug("uCfgDot11Mode %d", pParam->uCfgDot11Mode);
 
 	pParam->cac_duration_ms = pProfile->cac_duration_ms;
 	pParam->dfs_regdomain = pProfile->dfs_regdomain;
@@ -5809,14 +5753,6 @@ void csr_roam_prepare_bss_params(struct mac_context *mac, uint32_t sessionId,
 		qdf_mem_copy(&pSession->bssParams.ssId,
 			     pProfile->SSIDs.SSIDList,
 			     sizeof(tSirMacSSid));
-	if (pProfile->BSSIDs.numOfBSSIDs)
-		/* Use the first BSSID */
-		qdf_mem_copy(&pSession->bssParams.bssid,
-			     pProfile->BSSIDs.bssid,
-			     sizeof(struct qdf_mac_addr));
-	else
-		qdf_mem_zero(&pSession->bssParams.bssid,
-			    sizeof(struct qdf_mac_addr));
 
 	/* Set operating frequency in pProfile which will be used */
 	/* in csr_roam_set_bss_config_cfg() to determine channel bonding */
@@ -5826,18 +5762,16 @@ void csr_roam_prepare_bss_params(struct mac_context *mac, uint32_t sessionId,
 	if (pProfile->op_freq == 0)
 		sme_err("CSR cannot find a channel to start");
 	else {
-		csr_roam_determine_max_rate_for_ad_hoc(mac,
-				&pSession->bssParams.operationalRateSet);
 		if (CSR_IS_INFRA_AP(pProfile)) {
 			if (WLAN_REG_IS_24GHZ_CH_FREQ(pProfile->op_freq))
 				cbMode = mac->roam.configParam.channelBondingMode24GHz;
 			else
 				cbMode = mac->roam.configParam.channelBondingMode5GHz;
 			sme_debug("## cbMode %d", cbMode);
-			pBssConfig->cbMode = cbMode;
 			pSession->bssParams.cbMode = cbMode;
 		}
 	}
+
 }
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
@@ -6028,9 +5962,6 @@ static QDF_STATUS csr_roam_start_wds(struct mac_context *mac, uint32_t sessionId
 		return QDF_STATUS_E_FAILURE;
 	}
 	qdf_mem_zero(&bssConfig, sizeof(struct bss_config_param));
-	/* Assume HDD provide bssid in profile */
-	qdf_copy_macaddr(&pSession->bssParams.bssid,
-			 pProfile->BSSIDs.bssid);
 	/* there is no Bss description before we start an WDS so we
 	 * need to adopt all Bss configuration parameters from the
 	 * Profile.
@@ -7105,9 +7036,6 @@ QDF_STATUS csr_send_mb_start_bss_req_msg(struct mac_context *mac, uint32_t
 	pMsg->messageType = eWNI_SME_START_BSS_REQ;
 	pMsg->vdev_id = sessionId;
 	pMsg->length = sizeof(*pMsg);
-	qdf_copy_macaddr(&pMsg->bssid, &pParam->bssid);
-	/* self_mac_addr */
-	wlan_mlme_get_mac_vdev_id(mac->pdev, sessionId, &pMsg->self_macaddr);
 	if (pParam->beaconInterval)
 		candidate_info.beacon_interval = pParam->beaconInterval;
 	else
@@ -7123,31 +7051,18 @@ QDF_STATUS csr_send_mb_start_bss_req_msg(struct mac_context *mac, uint32_t
 	pMsg->dot11mode =
 		csr_translate_to_wni_cfg_dot11_mode(mac,
 						    pParam->uCfgDot11Mode);
-#ifdef FEATURE_WLAN_MCC_TO_SCC_SWITCH
-	pMsg->cc_switch_mode = mac->roam.configParam.cc_switch_mode;
-#endif
-	pMsg->bssType = csr_translate_bsstype_to_mac_type(bssType);
 	qdf_mem_copy(&pMsg->ssId, &pParam->ssId, sizeof(pParam->ssId));
 	pMsg->oper_ch_freq = pParam->operation_chan_freq;
 	/* What should we really do for the cbmode. */
-	pMsg->cbMode = (ePhyChanBondState) pParam->cbMode;
 	pMsg->vht_channel_width = pParam->ch_params.ch_width;
 	pMsg->center_freq_seg0 = pParam->ch_params.center_freq_seg0;
 	pMsg->center_freq_seg1 = pParam->ch_params.center_freq_seg1;
 	pMsg->sec_ch_offset = pParam->ch_params.sec_ch_offset;
 	pMsg->privacy = pParam->privacy;
-	pMsg->apUapsdEnable = pParam->ApUapsdEnable;
 	pMsg->ssidHidden = pParam->ssidHidden;
-	pMsg->fwdWPSPBCProbeReq = (uint8_t) pParam->fwdWPSPBCProbeReq;
-	pMsg->protEnabled = (uint8_t) pParam->protEnabled;
-	pMsg->obssProtEnabled = (uint8_t) pParam->obssProtEnabled;
-	/* set cfg related to protection */
-	pMsg->ht_capab = pParam->ht_protection;
 	pMsg->authType = pParam->authType;
 	pMsg->dtimPeriod = pParam->dtimPeriod;
 	pMsg->wps_state = pParam->wps_state;
-	pMsg->bssPersona = pParam->bssPersona;
-	pMsg->txLdpcIniFeatureEnabled = mac->mlme_cfg->ht_caps.tx_ldpc_enable;
 
 	if (pParam->nRSNIELength > sizeof(pMsg->rsnIE.rsnIEdata)) {
 		qdf_mem_free(pMsg);
@@ -7166,10 +7081,6 @@ QDF_STATUS csr_send_mb_start_bss_req_msg(struct mac_context *mac, uint32_t
 		     sizeof(tSirMacRateSet));
 
 	pMsg->add_ie_params = pParam->add_ie_params;
-	pMsg->obssEnabled = mac->roam.configParam.obssEnabled;
-	pMsg->sap_dot11mc = pParam->sap_dot11mc;
-	pMsg->vendor_vht_sap =
-		mac->mlme_cfg->vht_caps.vht_cap_info.vendor_24ghz_band;
 	pMsg->cac_duration_ms = pParam->cac_duration_ms;
 	pMsg->dfs_regdomain = pParam->dfs_regdomain;
 	pMsg->beacon_tx_rate = pParam->beacon_tx_rate;

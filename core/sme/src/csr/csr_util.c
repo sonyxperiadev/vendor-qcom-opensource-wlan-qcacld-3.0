@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1089,29 +1089,6 @@ void csr_release_profile(struct mac_context *mac,
 		}
 		qdf_mem_zero(pProfile, sizeof(struct csr_roam_profile));
 	}
-}
-
-enum bss_type csr_translate_bsstype_to_mac_type(eCsrRoamBssType csrtype)
-{
-	enum bss_type ret;
-
-	switch (csrtype) {
-	case eCSR_BSS_TYPE_INFRASTRUCTURE:
-		ret = eSIR_INFRASTRUCTURE_MODE;
-		break;
-	case eCSR_BSS_TYPE_INFRA_AP:
-		ret = eSIR_INFRA_AP_MODE;
-		break;
-	case eCSR_BSS_TYPE_NDI:
-		ret = eSIR_NDI_MODE;
-		break;
-	case eCSR_BSS_TYPE_ANY:
-	default:
-		ret = eSIR_AUTO_MODE;
-		break;
-	}
-
-	return ret;
 }
 
 /* This function use the parameters to decide the CFG value. */

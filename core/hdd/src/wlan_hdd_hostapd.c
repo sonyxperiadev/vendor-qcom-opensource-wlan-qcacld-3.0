@@ -5755,8 +5755,6 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 	} else {
 		config->wps_state = SAP_WPS_DISABLED;
 	}
-	/* Forward WPS PBC probe request frame up */
-	config->fwdWPSPBCProbeReq = 1;
 	(WLAN_HDD_GET_AP_CTX_PTR(adapter))->encryption_type =
 		eCSR_ENCRYPT_TYPE_NONE;
 

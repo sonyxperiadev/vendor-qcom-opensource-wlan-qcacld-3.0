@@ -707,48 +707,25 @@ struct start_bss_req {
 	uint16_t messageType;   /* eWNI_SME_START_BSS_REQ */
 	uint16_t length;
 	uint8_t vdev_id;
-	struct qdf_mac_addr bssid;
-	struct qdf_mac_addr self_macaddr;
 	uint16_t beaconInterval;
 	uint8_t dot11mode;
-#ifdef FEATURE_WLAN_MCC_TO_SCC_SWITCH
-	uint8_t cc_switch_mode;
-#endif
-	enum bss_type bssType;
 	tSirMacSSid ssId;
 	uint32_t oper_ch_freq;
-	ePhyChanBondState cbMode;
 	uint8_t vht_channel_width;
 	uint8_t center_freq_seg0;
 	uint8_t center_freq_seg1;
 	uint8_t sec_ch_offset;
-
 	uint8_t privacy;
-	uint8_t apUapsdEnable;
 	uint8_t ssidHidden;
-	bool fwdWPSPBCProbeReq;
-	bool protEnabled;
-	bool obssProtEnabled;
-	uint16_t ht_capab;
 	tAniAuthType authType;
 	uint32_t dtimPeriod;
 	uint8_t wps_state;
-	enum QDF_OPMODE bssPersona;
-
-	uint8_t txLdpcIniFeatureEnabled;
-
 	tSirRSNie rsnIE;        /* RSN IE to be sent in */
-	/* Beacon and Probe */
-	/* Response frames */
 	tSirNwType nwType;      /* Indicates 11a/b/g */
 	tSirMacRateSet operationalRateSet;      /* Has 11a or 11b rates */
 	tSirMacRateSet extendedRateSet; /* Has 11g rates */
 	struct add_ie_params add_ie_params;
-
-	bool obssEnabled;
-	uint8_t sap_dot11mc;
 	uint16_t beacon_tx_rate;
-	bool vendor_vht_sap;
 	uint32_t cac_duration_ms;
 	uint32_t dfs_regdomain;
 

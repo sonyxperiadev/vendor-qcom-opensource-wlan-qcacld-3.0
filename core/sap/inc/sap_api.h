@@ -492,7 +492,6 @@ struct sap_config {
 	eSapAuthType authType;
 	tCsrAuthList akm_list;
 	bool privacy;
-	bool fwdWPSPBCProbeReq;
 	/* 0 - disabled, 1 - not configured , 2 - configured */
 	uint8_t wps_state;
 	uint16_t RSNWPAReqIELength;     /* The byte count in the pWPAReqIE */
