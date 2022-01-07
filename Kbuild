@@ -2272,6 +2272,7 @@ CP_STATS_OS_IF_INC              := -I$(WLAN_COMMON_INC)/os_if/linux/cp_stats/inc
 CP_STATS_TGT_INC                := -I$(WLAN_COMMON_INC)/target_if/cp_stats/inc
 CP_STATS_DISPATCHER_INC         := -I$(WLAN_COMMON_INC)/umac/cp_stats/dispatcher/inc
 CP_MC_STATS_COMPONENT_INC       := -I$(WLAN_ROOT)/components/cp_stats/dispatcher/inc
+CP_STATS_CFG80211_OS_IF_INC     := -I$(WLAN_ROOT)/os_if/cp_stats/inc
 
 ifeq ($(CONFIG_CP_STATS), y)
 CP_STATS_OBJS := $(CP_MC_STATS_COMPONENT_SRC)/wlan_cp_stats_mc_tgt_api.o	\
@@ -2831,6 +2832,7 @@ INCS +=		$(CP_STATS_OS_IF_INC)
 INCS +=		$(CP_STATS_TGT_INC)
 INCS +=		$(CP_STATS_DISPATCHER_INC)
 INCS +=		$(CP_MC_STATS_COMPONENT_INC)
+INCS +=		$(CP_STATS_CFG80211_OS_IF_INC)
 ################ Dynamic ACS ####################
 INCS +=		$(DCS_TGT_IF_INC)
 INCS +=		$(DCS_DISP_INC)
