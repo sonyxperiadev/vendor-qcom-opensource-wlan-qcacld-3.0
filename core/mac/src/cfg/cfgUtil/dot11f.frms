@@ -3275,8 +3275,12 @@ IE eht_cap (EID_EXTN_ID_ELEMENT) OUI (0x6C)
     {
 	nsep_pri_access: 1;
 	eht_om_ctl: 1;
-	triggered_txop_sharing: 1;
-	reserved: 13;
+	triggered_txop_sharing_mode1: 1;
+	triggered_txop_sharing_mode2: 1;
+	restricted_twt: 1;
+	scs_traffic_desc: 1;
+	max_mpdu_len: 2;
+	reserved: 8;
     }
     {
 	reserved2: 1;
@@ -3321,12 +3325,43 @@ IE eht_cap (EID_EXTN_ID_ELEMENT) OUI (0x6C)
 	mu_bformer_le_80mhz: 1;
 	mu_bformer_160mhz: 1;
 	mu_bformer_320mhz: 1;
-	reserved3: 1;
+	tb_sounding_feedback_rl: 1;
     }
-    eht_mcs_map_20[0..4];
-    eht_mcs_map_le_80[0..3];
-    eht_mcs_map_160[0..3];
-    eht_mcs_map_320[3][0..1] COUNTIS support_320mhz_6ghz;
+    {
+	bw_20_rx_max_nss_for_mcs_0_to_7: 4;
+	bw_20_tx_max_nss_for_mcs_0_to_7: 4;
+	bw_20_rx_max_nss_for_mcs_8_and_9: 4;
+	bw_20_tx_max_nss_for_mcs_8_and_9: 4;
+	bw_20_rx_max_nss_for_mcs_10_and_11: 4;
+	bw_20_tx_max_nss_for_mcs_10_and_11: 4;
+	bw_20_rx_max_nss_for_mcs_12_and_13: 4;
+	bw_20_tx_max_nss_for_mcs_12_and_13: 4;
+
+    }
+    {
+	bw_le_80_rx_max_nss_for_mcs_0_to_9: 4;
+	bw_le_80_tx_max_nss_for_mcs_0_to_9: 4;
+	bw_le_80_rx_max_nss_for_mcs_10_and_11: 4;
+	bw_le_80_tx_max_nss_for_mcs_10_and_11: 4;
+	bw_le_80_rx_max_nss_for_mcs_12_and_13: 4;
+	bw_le_80_tx_max_nss_for_mcs_12_and_13: 4;
+	bw_160_rx_max_nss_for_mcs_0_to_9: 4;
+	bw_160_tx_max_nss_for_mcs_0_to_9: 4;
+    }
+    {
+	bw_160_rx_max_nss_for_mcs_10_and_11: 4;
+	bw_160_tx_max_nss_for_mcs_10_and_11: 4;
+	bw_160_rx_max_nss_for_mcs_12_and_13: 4;
+	bw_160_tx_max_nss_for_mcs_12_and_13: 4;
+	bw_320_rx_max_nss_for_mcs_0_to_9: 4;
+	bw_320_tx_max_nss_for_mcs_0_to_9: 4;
+	bw_320_rx_max_nss_for_mcs_10_and_11: 4;
+	bw_320_tx_max_nss_for_mcs_10_and_11: 4;
+    }
+    {
+	bw_320_rx_max_nss_for_mcs_12_and_13: 4;
+	bw_320_tx_max_nss_for_mcs_12_and_13: 4;
+    }
     OPTIONAL UNION ppet (DISCRIMINATOR ppet_present)
     {
         ppe_threshold (ppet_present IS 1)
