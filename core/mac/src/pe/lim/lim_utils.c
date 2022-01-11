@@ -8442,6 +8442,7 @@ void lim_set_eht_caps(struct mac_context *mac, struct pe_session *session,
 	tDot11fIEeht_cap dot11_cap;
 	tDot11fIEhe_cap dot11_he_cap;
 	struct wlan_eht_cap_info *eht_cap;
+	bool is_band_2g = WLAN_REG_IS_24GHZ_CH_FREQ(session->curr_op_freq);
 
 	populate_dot11f_eht_caps(mac, session, &dot11_cap);
 	populate_dot11f_he_caps(mac, session, &dot11_he_cap);
@@ -8457,8 +8458,16 @@ void lim_set_eht_caps(struct mac_context *mac, struct pe_session *session,
 
 		eht_cap->nsep_pri_access = dot11_cap.nsep_pri_access;
 		eht_cap->eht_om_ctl = dot11_cap.eht_om_ctl;
-		eht_cap->triggered_txop_sharing =
-			dot11_cap.triggered_txop_sharing;
+		eht_cap->triggered_txop_sharing_mode1 =
+			dot11_cap.triggered_txop_sharing_mode1;
+		eht_cap->triggered_txop_sharing_mode2 =
+			dot11_cap.triggered_txop_sharing_mode2;
+		eht_cap->restricted_twt =
+			dot11_cap.restricted_twt;
+		eht_cap->scs_traffic_desc =
+			dot11_cap.scs_traffic_desc;
+		eht_cap->max_mpdu_len =
+			dot11_cap.max_mpdu_len;
 		eht_cap->support_320mhz_6ghz = dot11_cap.support_320mhz_6ghz;
 		eht_cap->ru_242tone_wt_20mhz = dot11_cap.ru_242tone_wt_20mhz;
 		eht_cap->ndp_4x_eht_ltf_3dot2_us_gi =
@@ -8518,32 +8527,81 @@ void lim_set_eht_caps(struct mac_context *mac, struct pe_session *session,
 			dot11_cap.mu_bformer_le_80mhz;
 		eht_cap->mu_bformer_160mhz = dot11_cap.mu_bformer_160mhz;
 		eht_cap->mu_bformer_320mhz = dot11_cap.mu_bformer_320mhz;
+		eht_cap->tb_sounding_feedback_rl =
+			dot11_cap.tb_sounding_feedback_rl;
 
-		if (!dot11_he_cap.chan_width_0 ||
-		    (!dot11_he_cap.chan_width_1 &&
-		     !dot11_he_cap.chan_width_2 &&
-		     !dot11_he_cap.chan_width_3)) {
-			qdf_mem_copy(eht_cap->eht_mcs_map_20,
-				     dot11_cap.eht_mcs_map_20,
-				     EHT_CAP_20M_MCS_MAP_LEN);
+		if ((is_band_2g && !dot11_he_cap.chan_width_0) ||
+			(!is_band_2g && !dot11_he_cap.chan_width_1 &&
+			 !dot11_he_cap.chan_width_2 &&
+			 !dot11_he_cap.chan_width_3)) {
+			eht_cap->bw_20_rx_max_nss_for_mcs_0_to_7 =
+				dot11_cap.bw_20_rx_max_nss_for_mcs_0_to_7;
+			eht_cap->bw_20_tx_max_nss_for_mcs_0_to_7 =
+				dot11_cap.bw_20_tx_max_nss_for_mcs_0_to_7;
+			eht_cap->bw_20_rx_max_nss_for_mcs_8_and_9 =
+				dot11_cap.bw_20_rx_max_nss_for_mcs_8_and_9;
+			eht_cap->bw_20_tx_max_nss_for_mcs_8_and_9 =
+				dot11_cap.bw_20_tx_max_nss_for_mcs_8_and_9;
+			eht_cap->bw_20_rx_max_nss_for_mcs_10_and_11 =
+				dot11_cap.bw_20_rx_max_nss_for_mcs_10_and_11;
+			eht_cap->bw_20_tx_max_nss_for_mcs_10_and_11 =
+				dot11_cap.bw_20_tx_max_nss_for_mcs_10_and_11;
+			eht_cap->bw_20_rx_max_nss_for_mcs_12_and_13 =
+				dot11_cap.bw_20_rx_max_nss_for_mcs_12_and_13;
+			eht_cap->bw_20_tx_max_nss_for_mcs_12_and_13 =
+				dot11_cap.bw_20_tx_max_nss_for_mcs_12_and_13;
 			ie_start[1] += EHT_CAP_20M_MCS_MAP_LEN;
 		}
-		if (dot11_he_cap.chan_width_0 || dot11_he_cap.chan_width_1) {
-			qdf_mem_copy(eht_cap->eht_mcs_map_le_80,
-				     dot11_cap.eht_mcs_map_le_80,
-				     EHT_CAP_80M_MCS_MAP_LEN);
+
+		if ((is_band_2g && dot11_he_cap.chan_width_0) ||
+		    (!is_band_2g && dot11_he_cap.chan_width_1)) {
+			eht_cap->bw_le_80_rx_max_nss_for_mcs_0_to_9 =
+				dot11_cap.bw_le_80_rx_max_nss_for_mcs_0_to_9;
+			eht_cap->bw_le_80_tx_max_nss_for_mcs_0_to_9 =
+				dot11_cap.bw_le_80_tx_max_nss_for_mcs_0_to_9;
+			eht_cap->bw_le_80_rx_max_nss_for_mcs_10_and_11 =
+				dot11_cap.bw_le_80_rx_max_nss_for_mcs_10_and_11;
+			eht_cap->bw_le_80_tx_max_nss_for_mcs_10_and_11 =
+				dot11_cap.bw_le_80_tx_max_nss_for_mcs_10_and_11;
+			eht_cap->bw_le_80_rx_max_nss_for_mcs_12_and_13 =
+				dot11_cap.bw_le_80_rx_max_nss_for_mcs_12_and_13;
+			eht_cap->bw_le_80_tx_max_nss_for_mcs_12_and_13 =
+				dot11_cap.bw_le_80_tx_max_nss_for_mcs_12_and_13;
 			ie_start[1] += EHT_CAP_80M_MCS_MAP_LEN;
 		}
-		if (dot11_he_cap.chan_width_2) {
-			qdf_mem_copy(eht_cap->eht_mcs_map_160,
-				     dot11_cap.eht_mcs_map_160,
-				     EHT_CAP_160M_MCS_MAP_LEN);
+
+		if ((dot11_he_cap.chan_width_6 | dot11_he_cap.chan_width_5 |
+		     dot11_he_cap.chan_width_4 | dot11_he_cap.chan_width_3 |
+		     dot11_he_cap.chan_width_2 | dot11_he_cap.chan_width_1 |
+		     dot11_he_cap.chan_width_0) == 1) {
+			eht_cap->bw_160_rx_max_nss_for_mcs_0_to_9 =
+				dot11_cap.bw_160_rx_max_nss_for_mcs_0_to_9;
+			eht_cap->bw_160_tx_max_nss_for_mcs_0_to_9 =
+				dot11_cap.bw_160_tx_max_nss_for_mcs_0_to_9;
+			eht_cap->bw_160_rx_max_nss_for_mcs_10_and_11 =
+				dot11_cap.bw_160_rx_max_nss_for_mcs_10_and_11;
+			eht_cap->bw_160_tx_max_nss_for_mcs_10_and_11 =
+				dot11_cap.bw_160_tx_max_nss_for_mcs_10_and_11;
+			eht_cap->bw_160_rx_max_nss_for_mcs_12_and_13 =
+				dot11_cap.bw_160_rx_max_nss_for_mcs_12_and_13;
+			eht_cap->bw_160_tx_max_nss_for_mcs_12_and_13 =
+				dot11_cap.bw_160_tx_max_nss_for_mcs_12_and_13;
 			ie_start[1] += EHT_CAP_160M_MCS_MAP_LEN;
 		}
+
 		if (eht_cap->support_320mhz_6ghz) {
-			qdf_mem_copy(eht_cap->eht_mcs_map_320,
-				     dot11_cap.eht_mcs_map_320,
-				     EHT_CAP_320M_MCS_MAP_LEN);
+			eht_cap->bw_320_rx_max_nss_for_mcs_0_to_9 =
+				dot11_cap.bw_320_rx_max_nss_for_mcs_0_to_9;
+			eht_cap->bw_320_tx_max_nss_for_mcs_0_to_9 =
+				dot11_cap.bw_320_tx_max_nss_for_mcs_0_to_9;
+			eht_cap->bw_320_rx_max_nss_for_mcs_10_and_11 =
+				dot11_cap.bw_320_rx_max_nss_for_mcs_10_and_11;
+			eht_cap->bw_320_tx_max_nss_for_mcs_10_and_11 =
+				dot11_cap.bw_320_tx_max_nss_for_mcs_10_and_11;
+			eht_cap->bw_320_rx_max_nss_for_mcs_12_and_13 =
+				dot11_cap.bw_320_rx_max_nss_for_mcs_12_and_13;
+			eht_cap->bw_320_tx_max_nss_for_mcs_12_and_13 =
+				dot11_cap.bw_320_tx_max_nss_for_mcs_12_and_13;
 			ie_start[1] += EHT_CAP_320M_MCS_MAP_LEN;
 		}
 	}
@@ -8570,7 +8628,13 @@ QDF_STATUS lim_send_eht_caps_ie(struct mac_context *mac_ctx,
 	eht_caps[1] = DOT11F_IE_EHT_CAP_MIN_LEN + 1;
 
 	qdf_mem_copy(&eht_caps[2], EHT_CAP_OUI_TYPE, EHT_CAP_OUI_SIZE);
-	lim_set_eht_caps(mac_ctx, session, eht_caps, eht_cap_total_len);
+
+	if (!session)
+		session = pe_find_session_by_vdev_id(mac_ctx, vdev_id);
+	if (session)
+		lim_set_eht_caps(mac_ctx, session, eht_caps, eht_cap_total_len);
+	else
+		pe_err("session not found for given vdev_id %d", vdev_id);
 
 	status_2g = lim_send_ie(mac_ctx, vdev_id, DOT11F_EID_EHT_CAP,
 				CDS_BAND_2GHZ, &eht_caps[2],

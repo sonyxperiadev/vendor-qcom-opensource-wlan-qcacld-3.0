@@ -47,7 +47,8 @@ static void wma_convert_eht_cap(tDot11fIEeht_cap *eht_cap, uint32_t *mac_cap,
 	/* EHT MAC capabilities */
 	eht_cap->nsep_pri_access = WMI_EHTCAP_MAC_NSEPPRIACCESS_GET(mac_cap);
 	eht_cap->eht_om_ctl = WMI_EHTCAP_MAC_EHTOMCTRL_GET(mac_cap);
-	eht_cap->triggered_txop_sharing = WMI_EHTCAP_MAC_TRIGTXOP_GET(mac_cap);
+	eht_cap->triggered_txop_sharing_mode1 =
+					WMI_EHTCAP_MAC_TRIGTXOP_GET(mac_cap);
 
 	/* EHT PHY capabilities */
 	eht_cap->support_320mhz_6ghz = WMI_EHTCAP_PHY_320MHZIN6GHZ_GET(phy_cap);
@@ -224,8 +225,8 @@ void wma_print_eht_cap(tDot11fIEeht_cap *eht_cap)
 	wma_nofl_debug("\tNSEP Priority Access: 0x%01x",
 		       eht_cap->nsep_pri_access);
 	wma_nofl_debug("\tOM Control: 0x%01x", eht_cap->eht_om_ctl);
-	wma_nofl_debug("\tTriggered TXOP Sharing: 0x%01x",
-		       eht_cap->triggered_txop_sharing);
+	wma_nofl_debug("\tTriggered TXOP Sharing mode-1: 0x%01x",
+		       eht_cap->triggered_txop_sharing_mode1);
 
 	/* EHT PHY Capabilities */
 	wma_nofl_debug("\t320 MHz In 6 GHz: 0x%01x",
@@ -418,7 +419,8 @@ void wma_populate_peer_eht_cap(struct peer_assoc_params *peer,
 	/* EHT MAC Capabilities */
 	WMI_EHTCAP_MAC_NSEPPRIACCESS_SET(mac_cap, eht_cap->nsep_pri_access);
 	WMI_EHTCAP_MAC_EHTOMCTRL_SET(mac_cap, eht_cap->eht_om_ctl);
-	WMI_EHTCAP_MAC_TRIGTXOP_SET(mac_cap, eht_cap->triggered_txop_sharing);
+	WMI_EHTCAP_MAC_TRIGTXOP_SET(mac_cap,
+				    eht_cap->triggered_txop_sharing_mode1);
 
 	/* EHT PHY Capabilities */
 	WMI_EHTCAP_PHY_320MHZIN6GHZ_SET(phy_cap, eht_cap->support_320mhz_6ghz);
