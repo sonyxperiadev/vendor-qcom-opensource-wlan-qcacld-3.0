@@ -23179,7 +23179,7 @@ static int __wlan_hdd_cfg80211_set_bitrate_mask(struct wiphy *wiphy,
 	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
 	uint8_t vdev_id;
 	uint8_t gi_val;
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(5, 4, 0))
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(5, 10, 0))
 	uint8_t auto_rate_he_gi = 0;
 #endif
 
@@ -23257,7 +23257,7 @@ configure_fw:
 		}
 
 
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(5, 4, 0))
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(5, 10, 0))
 		if (NL80211_RATE_INFO_HE_GI_0_8 == mask->control[band].he_gi) {
 			auto_rate_he_gi = AUTO_RATE_GI_800NS;
 			gi_val = 1;
