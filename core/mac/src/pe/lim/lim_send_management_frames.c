@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -5224,7 +5224,7 @@ returnAfterError:
 	return status_code;
 }
 
-static bool
+bool
 lim_is_self_and_peer_ocv_capable(struct mac_context *mac,
 				 uint8_t *peer,
 				 struct pe_session *pe_session)
@@ -5246,7 +5246,7 @@ lim_is_self_and_peer_ocv_capable(struct mac_context *mac,
 	return false;
 }
 
-static void
+void
 lim_fill_oci_params(struct mac_context *mac, struct pe_session *session,
 		    tDot11fIEoci *oci)
 {
