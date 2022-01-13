@@ -4436,6 +4436,17 @@ static void lim_handle_reassoc_req(struct cm_vdev_join_req *req)
 	else if (lim_is_wapi_profile(session_entry))
 		lim_fill_wapi_ie(mac_ctx, session_entry, req);
 
+	if (lim_is_rsn_profile(session_entry) &&
+	    !util_scan_entry_rsnxe(req->entry)) {
+		pe_debug("Bss bcn has no RSNXE, strip if has");
+		status = lim_strip_ie(mac_ctx, req->assoc_ie.ptr,
+				      (uint16_t *)&req->assoc_ie.len,
+				      WLAN_ELEMID_RSNXE, ONE_BYTE,
+				      NULL, 0, NULL, 0);
+		if (QDF_IS_STATUS_ERROR(status))
+			pe_err("Strip RNSXE failed");
+	}
+
 	pe_debug("After stripping Assoc IE len: %d", req->assoc_ie.len);
 	if (req->assoc_ie.len)
 		QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
