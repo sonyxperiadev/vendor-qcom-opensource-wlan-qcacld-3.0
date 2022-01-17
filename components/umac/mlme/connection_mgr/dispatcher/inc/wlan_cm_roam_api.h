@@ -1416,15 +1416,15 @@ QDF_STATUS
 cm_roam_event_handler(struct roam_offload_roam_event *roam_event);
 
 /**
- * cm_btm_blacklist_event_handler() - Black list the given BSSID due to btm
+ * cm_btm_denylist_event_handler() - Deny list the given BSSID due to btm
  * @psoc: PSOC pointer
- * @list: Roam blacklist info
+ * @list: Roam denylist info
  *
  * Return: QDF_STATUS
  */
 QDF_STATUS
-cm_btm_blacklist_event_handler(struct wlan_objmgr_psoc *psoc,
-			       struct roam_blacklist_event *list);
+cm_btm_denylist_event_handler(struct wlan_objmgr_psoc *psoc,
+			      struct roam_denylist_event *list);
 
 /**
  * cm_vdev_disconnect_event_handler() - disconnect evt handler for target_if

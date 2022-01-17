@@ -2568,8 +2568,8 @@ enum extscan_configuration_flags {
  *			if ssid is specified, that is, epno entries for
  *			which an exact match is required,
  *			or entries corresponding to hidden ssids
- * @max_number_of_white_listed_ssid: max number of white listed SSIDs
- * @max_number_of_black_listed_bssid: max number of black listed BSSIDs
+ * @max_number_of_allow_listed_ssid: max number of allow listed SSIDs
+ * @max_number_of_deny_listed_bssid: max number of deny listed BSSIDs
  */
 struct ext_scan_capabilities_response {
 	uint32_t requestId;
@@ -2588,8 +2588,8 @@ struct ext_scan_capabilities_response {
 	uint32_t max_hotlist_ssids;
 	uint32_t max_number_epno_networks;
 	uint32_t max_number_epno_networks_by_ssid;
-	uint32_t max_number_of_white_listed_ssid;
-	uint32_t max_number_of_black_listed_bssid;
+	uint32_t max_number_of_allow_listed_ssid;
+	uint32_t max_number_of_deny_listed_bssid;
 };
 
 typedef struct {
@@ -5088,7 +5088,7 @@ struct sir_peer_set_rx_blocksize {
  * @reject_reason: reason to add the BSSID to DLM
  * @source: Source of adding the BSSID to DLM
  * @original_timeout: original timeout sent by the AP
- * @received_time: Timestamp when the AP was added to the Blacklist
+ * @received_time: Timestamp when the AP was added to the Denylist
  */
 struct sir_rssi_disallow_lst {
 	qdf_list_node_t node;

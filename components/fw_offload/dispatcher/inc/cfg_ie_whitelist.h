@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -25,30 +26,30 @@
 
 /*
  * <ini>
- * g_enable_probereq_whitelist_ies - Enable IE white listing
+ * g_enable_probereq_whitelist_ies - Enable IE allow listing
  * @Min: 0
  * @Max: 1
  * @Default: 0
  *
- * This ini is used to enable/disable probe request IE white listing feature.
+ * This ini is used to enable/disable probe request IE allow listing feature.
  * Values 0 and 1 are used to disable and enable respectively, by default this
  * feature is disabled.
  *
  * Related: None
  *
- * Supported Feature: Probe request IE whitelisting
+ * Supported Feature: Probe request IE allowlisting
  *
  * Usage: Internal/External
  *
  * </ini>
  */
-#define CFG_PROBE_REQ_IE_WHITELIST CFG_INI_BOOL( \
+#define CFG_PROBE_REQ_IE_ALLOWLIST CFG_INI_BOOL( \
 			"g_enable_probereq_whitelist_ies", \
 			0, \
-			"Enable IE whitelisting")
+			"Enable IE allowlisting")
 
 /*
- * For IE white listing in Probe Req, following ini parameters from
+ * For IE allow listing in Probe Req, following ini parameters from
  * g_probe_req_ie_bitmap_0 to g_probe_req_ie_bitmap_7 are used. User needs to
  * input this values in hexa decimal format, when bit is set in bitmap,
  * corresponding IE needs to be included in probe request.
@@ -78,7 +79,7 @@
  *
  * Related: Need to enable g_enable_probereq_whitelist_ies.
  *
- * Supported Feature: Probe request ie whitelisting
+ * Supported Feature: Probe request ie allowlisting
  *
  * Usage: Internal/External
  *
@@ -104,7 +105,7 @@
  *
  * Related: Need to enable g_enable_probereq_whitelist_ies.
  *
- * Supported Feature: Probe request ie whitelisting
+ * Supported Feature: Probe request ie allowlisting
  *
  * Usage: Internal/External
  *
@@ -130,7 +131,7 @@
  *
  * Related: Need to enable g_enable_probereq_whitelist_ies.
  *
- * Supported Feature: Probe request ie whitelisting
+ * Supported Feature: Probe request ie allowlisting
  *
  * Usage: Internal/External
  *
@@ -156,7 +157,7 @@
  *
  * Related: Need to enable g_enable_probereq_whitelist_ies.
  *
- * Supported Feature: Probe request ie whitelisting
+ * Supported Feature: Probe request ie allowlisting
  *
  * Usage: Internal/External
  *
@@ -182,7 +183,7 @@
  *
  * Related: Need to enable g_enable_probereq_whitelist_ies.
  *
- * Supported Feature: Probe request ie whitelisting
+ * Supported Feature: Probe request ie allowlisting
  *
  * Usage: Internal/External
  *
@@ -208,7 +209,7 @@
  *
  * Related: Need to enable g_enable_probereq_whitelist_ies.
  *
- * Supported Feature: Probe request ie whitelisting
+ * Supported Feature: Probe request ie allowlisting
  *
  * Usage: Internal/External
  *
@@ -234,7 +235,7 @@
  *
  * Related: Need to enable g_enable_probereq_whitelist_ies.
  *
- * Supported Feature: Probe request ie whitelisting
+ * Supported Feature: Probe request ie allowlisting
  *
  * Usage: Internal/External
  *
@@ -260,7 +261,7 @@
  *
  * Related: Need to enable g_enable_probereq_whitelist_ies.
  *
- * Supported Feature: Probe request ie whitelisting
+ * Supported Feature: Probe request ie allowlisting
  *
  * Usage: Internal/External
  *
@@ -278,7 +279,7 @@
 #define VENDOR_SPECIFIC_IE_BITMAP 0x20000000
 /*
  * For vendor specific IE, Probe Req OUI types and sub types which are
- * to be white listed are specified in gProbeReqOUIs in the following
+ * to be allow listed are specified in gProbeReqOUIs in the following
  * example format - gProbeReqOUIs=AABBCCDD EEFF1122
  */
 
@@ -293,7 +294,7 @@
  * Related: Need to enable g_enable_probereq_whitelist_ies and
  * vendor specific IE should be set in g_probe_req_ie_bitmap_6.
  *
- * Supported Feature: Probe request ie whitelisting
+ * Supported Feature: Probe request ie allowlisting
  *
  * Usage: Internal/External
  *
@@ -306,8 +307,8 @@
 			"", \
 			"Probe Req OUIs")
 
-#define CFG_IE_WHITELIST \
-	CFG(CFG_PROBE_REQ_IE_WHITELIST) \
+#define CFG_IE_ALLOWLIST \
+	CFG(CFG_PROBE_REQ_IE_ALLOWLIST) \
 	CFG(CFG_PROBE_REQ_IE_BIT_MAP0) \
 	CFG(CFG_PROBE_REQ_IE_BIT_MAP1) \
 	CFG(CFG_PROBE_REQ_IE_BIT_MAP2) \

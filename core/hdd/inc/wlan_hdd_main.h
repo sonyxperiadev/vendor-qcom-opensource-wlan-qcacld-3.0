@@ -4377,13 +4377,13 @@ void hdd_chip_pwr_save_fail_detected_cb(hdd_handle_t hdd_handle,
 				*data);
 
 /**
- * hdd_update_ie_whitelist_attr() - Copy probe req ie whitelist attrs from cfg
- * @ie_whitelist: output parameter
+ * hdd_update_ie_allowlist_attr() - Copy probe req ie allowlist attrs from cfg
+ * @ie_allowlist: output parameter
  * @hdd_ctx: pointer to hdd context
  *
  * Return: None
  */
-void hdd_update_ie_whitelist_attr(struct probe_req_whitelist_attr *ie_whitelist,
+void hdd_update_ie_allowlist_attr(struct probe_req_allowlist_attr *ie_allowlist,
 				  struct hdd_context *hdd_ctx);
 
 /**

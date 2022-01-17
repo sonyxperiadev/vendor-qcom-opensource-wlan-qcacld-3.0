@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -380,9 +380,10 @@ wmi_extract_roam_event(wmi_unified_t wmi_handle, uint8_t *event,
 }
 
 QDF_STATUS
-wmi_extract_btm_blacklist_event(wmi_unified_t wmi_handle,
-				uint8_t *event, uint32_t data_len,
-				struct roam_blacklist_event **dst_list)
+wmi_extract_btm_denylist_event(wmi_unified_t wmi_handle,
+			       uint8_t *event,
+			       uint32_t data_len,
+			       struct roam_denylist_event **dst_list)
 {
 	if (wmi_handle->ops->extract_btm_bl_event)
 		return wmi_handle->ops->extract_btm_bl_event(wmi_handle,

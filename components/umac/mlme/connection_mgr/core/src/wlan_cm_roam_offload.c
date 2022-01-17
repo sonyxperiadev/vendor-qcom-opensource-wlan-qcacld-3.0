@@ -1950,8 +1950,8 @@ cm_fill_rso_channel_list(struct wlan_objmgr_psoc *psoc,
 }
 
 static void
-cm_add_blacklist_ap_list(struct wlan_objmgr_pdev *pdev,
-			 struct roam_scan_filter_params *params)
+cm_add_denylist_ap_list(struct wlan_objmgr_pdev *pdev,
+			struct roam_scan_filter_params *params)
 {
 	int i = 0;
 	struct reject_ap_config_params *reject_list;
@@ -1961,19 +1961,19 @@ cm_add_blacklist_ap_list(struct wlan_objmgr_pdev *pdev,
 	if (!reject_list)
 		return;
 
-	params->num_bssid_black_list =
+	params->num_bssid_deny_list =
 		wlan_dlm_get_bssid_reject_list(pdev, reject_list,
 					       MAX_RSSI_AVOID_BSSID_LIST,
 					       USERSPACE_DENYLIST_TYPE);
-	if (!params->num_bssid_black_list) {
+	if (!params->num_bssid_deny_list) {
 		qdf_mem_free(reject_list);
 		return;
 	}
 
-	for (i = 0; i < params->num_bssid_black_list; i++) {
+	for (i = 0; i < params->num_bssid_deny_list; i++) {
 		qdf_copy_macaddr(&params->bssid_avoid_list[i],
 				 &reject_list[i].bssid);
-		mlme_debug("Blacklist bssid[%d]:" QDF_MAC_ADDR_FMT, i,
+		mlme_debug("Denylist bssid[%d]:" QDF_MAC_ADDR_FMT, i,
 			   QDF_MAC_ADDR_REF(params->bssid_avoid_list[i].bytes));
 	}
 
@@ -1989,7 +1989,7 @@ cm_add_blacklist_ap_list(struct wlan_objmgr_pdev *pdev,
  * @reason:  reason to roam
  * @scan_filter_params:  roam scan filter related parameters
  *
- * There are filters such as whitelist, blacklist and preferred
+ * There are filters such as allowlist, denylist and preferred
  * list that need to be applied to the scan results to form the
  * probable candidates for roaming.
  *
@@ -2002,7 +2002,7 @@ cm_roam_scan_filter(struct wlan_objmgr_psoc *psoc,
 		    struct wlan_roam_scan_filter_params *scan_filter_params)
 {
 	int i;
-	uint32_t num_ssid_white_list = 0, num_bssid_preferred_list = 0;
+	uint32_t num_ssid_allow_list = 0, num_bssid_preferred_list = 0;
 	uint32_t op_bitmap = 0;
 	struct roam_scan_filter_params *params;
 	struct wlan_mlme_psoc_ext_obj *mlme_obj;
@@ -2017,13 +2017,13 @@ cm_roam_scan_filter(struct wlan_objmgr_psoc *psoc,
 	rso_usr_cfg = &mlme_obj->cfg.lfr.rso_user_config;
 	if (command != ROAM_SCAN_OFFLOAD_STOP) {
 		switch (reason) {
-		case REASON_ROAM_SET_BLACKLIST_BSSID:
+		case REASON_ROAM_SET_DENYLIST_BSSID:
 			op_bitmap |= ROAM_FILTER_OP_BITMAP_BLACK_LIST;
-			cm_add_blacklist_ap_list(pdev, params);
+			cm_add_denylist_ap_list(pdev, params);
 			break;
 		case REASON_ROAM_SET_SSID_ALLOWED:
 			op_bitmap |= ROAM_FILTER_OP_BITMAP_WHITE_LIST;
-			num_ssid_white_list =
+			num_ssid_allow_list =
 				rso_usr_cfg->num_ssid_allowed_list;
 			break;
 		case REASON_ROAM_SET_FAVORED_BSSID:
@@ -2033,13 +2033,13 @@ cm_roam_scan_filter(struct wlan_objmgr_psoc *psoc,
 			break;
 		case REASON_CTX_INIT:
 			if (command == ROAM_SCAN_OFFLOAD_START) {
-				num_ssid_white_list =
+				num_ssid_allow_list =
 					rso_usr_cfg->num_ssid_allowed_list;
-				if (num_ssid_white_list)
+				if (num_ssid_allow_list)
 					op_bitmap |=
 					ROAM_FILTER_OP_BITMAP_WHITE_LIST;
-				cm_add_blacklist_ap_list(pdev, params);
-				if (params->num_bssid_black_list)
+				cm_add_denylist_ap_list(pdev, params);
+				if (params->num_bssid_deny_list)
 					op_bitmap |=
 					ROAM_FILTER_OP_BITMAP_BLACK_LIST;
 
@@ -2062,13 +2062,13 @@ cm_roam_scan_filter(struct wlan_objmgr_psoc *psoc,
 			break;
 		default:
 			if (command == ROAM_SCAN_OFFLOAD_START) {
-				num_ssid_white_list =
+				num_ssid_allow_list =
 					rso_usr_cfg->num_ssid_allowed_list;
-				if (num_ssid_white_list)
+				if (num_ssid_allow_list)
 					op_bitmap |=
 					ROAM_FILTER_OP_BITMAP_WHITE_LIST;
-				cm_add_blacklist_ap_list(pdev, params);
-				if (params->num_bssid_black_list)
+				cm_add_denylist_ap_list(pdev, params);
+				if (params->num_bssid_deny_list)
 					op_bitmap |=
 					ROAM_FILTER_OP_BITMAP_BLACK_LIST;
 			}
@@ -2080,13 +2080,13 @@ cm_roam_scan_filter(struct wlan_objmgr_psoc *psoc,
 		}
 	} else {
 		/* In case of STOP command, reset all the variables
-		 * except for blacklist BSSID which should be retained
+		 * except for denylist BSSID which should be retained
 		 * across connections.
 		 */
 		op_bitmap = ROAM_FILTER_OP_BITMAP_WHITE_LIST |
 			    ROAM_FILTER_OP_BITMAP_PREFER_BSSID;
 		if (reason == REASON_ROAM_SET_SSID_ALLOWED)
-			num_ssid_white_list =
+			num_ssid_allow_list =
 					rso_usr_cfg->num_ssid_allowed_list;
 		num_bssid_preferred_list = rso_usr_cfg->num_bssid_favored;
 	}
@@ -2094,12 +2094,12 @@ cm_roam_scan_filter(struct wlan_objmgr_psoc *psoc,
 	/* fill in fixed values */
 	params->vdev_id = vdev_id;
 	params->op_bitmap = op_bitmap;
-	params->num_ssid_white_list = num_ssid_white_list;
+	params->num_ssid_allow_list = num_ssid_allow_list;
 	params->num_bssid_preferred_list = num_bssid_preferred_list;
 	params->delta_rssi =
 		wlan_dlm_get_rssi_denylist_threshold(pdev);
 
-	for (i = 0; i < num_ssid_white_list; i++) {
+	for (i = 0; i < num_ssid_allow_list; i++) {
 		qdf_mem_copy(params->ssid_allowed_list[i].ssid,
 			     rso_usr_cfg->ssid_allowed_list[i].ssid,
 			     rso_usr_cfg->ssid_allowed_list[i].length);
@@ -3294,14 +3294,14 @@ cm_roam_cmd_allowed(struct wlan_objmgr_psoc *psoc,
 	 * station could also be in a PREAUTH or REASSOC states.
 	 * 1) Block all CMDs that are not STOP in INIT State. For STOP always
 	 *    inform firmware irrespective of state.
-	 * 2) Block update cfg CMD if its for REASON_ROAM_SET_BLACKLIST_BSSID,
-	 *    because we need to inform firmware of blacklisted AP for PNO in
+	 * 2) Block update cfg CMD if its for REASON_ROAM_SET_DENYLIST_BSSID,
+	 *    because we need to inform firmware of denylisted AP for PNO in
 	 *    all states.
 	 */
 	if ((cm_is_vdev_disconnecting(vdev) ||
 	     cm_is_vdev_disconnected(vdev)) &&
 	    (command != ROAM_SCAN_OFFLOAD_STOP) &&
-	    (reason != REASON_ROAM_SET_BLACKLIST_BSSID)) {
+	    (reason != REASON_ROAM_SET_DENYLIST_BSSID)) {
 		mlme_info("Scan Command not sent to FW and cmd=%d", command);
 		return QDF_STATUS_E_FAILURE;
 	}

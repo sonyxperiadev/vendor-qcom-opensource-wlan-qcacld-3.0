@@ -8769,7 +8769,7 @@ lim_assoc_rej_get_remaining_delta(struct sir_rssi_disallow_lst *node)
 }
 
 QDF_STATUS
-lim_rem_blacklist_entry_with_lowest_delta(qdf_list_t *list)
+lim_rem_denylist_entry_with_lowest_delta(qdf_list_t *list)
 {
 	struct sir_rssi_disallow_lst *oldest_node = NULL;
 	struct sir_rssi_disallow_lst *cur_node;
@@ -8817,7 +8817,7 @@ lim_add_bssid_to_reject_list(struct wlan_objmgr_pdev *pdev,
 	ap_info.source = entry->source;
 	ap_info.rssi_reject_params.received_time = entry->received_time;
 	ap_info.rssi_reject_params.original_timeout = entry->original_timeout;
-	/* Add this ap info to the rssi reject ap type in blacklist manager */
+	/* Add this ap info to the rssi reject ap type in denylist manager */
 	wlan_dlm_add_bssid_to_reject_list(pdev, &ap_info);
 }
 

@@ -19080,43 +19080,43 @@ static int hdd_update_pmo_config(struct hdd_context *hdd_ctx)
 	return qdf_status_to_os_return(status);
 }
 
-void hdd_update_ie_whitelist_attr(struct probe_req_whitelist_attr *ie_whitelist,
+void hdd_update_ie_allowlist_attr(struct probe_req_allowlist_attr *ie_allowlist,
 				  struct hdd_context *hdd_ctx)
 {
-	struct wlan_fwol_ie_whitelist whitelist = {0};
+	struct wlan_fwol_ie_allowlist allowlist = {0};
 	struct wlan_objmgr_psoc *psoc = hdd_ctx->psoc;
 	QDF_STATUS status;
-	bool is_ie_whitelist_enable = false;
+	bool is_ie_allowlist_enable = false;
 	uint8_t i = 0;
 
-	status = ucfg_fwol_get_ie_whitelist(psoc, &is_ie_whitelist_enable);
+	status = ucfg_fwol_get_ie_allowlist(psoc, &is_ie_allowlist_enable);
 	if (QDF_IS_STATUS_ERROR(status)) {
-		hdd_err("Unable to get IE whitelist param");
+		hdd_err("Unable to get IE allowlist param");
 		return;
 	}
 
-	ie_whitelist->white_list = is_ie_whitelist_enable;
-	if (!ie_whitelist->white_list)
+	ie_allowlist->allow_list = is_ie_allowlist_enable;
+	if (!ie_allowlist->allow_list)
 		return;
 
-	status = ucfg_fwol_get_all_whitelist_params(psoc, &whitelist);
+	status = ucfg_fwol_get_all_allowlist_params(psoc, &allowlist);
 	if (QDF_IS_STATUS_ERROR(status)) {
-		hdd_err("Unable to get all whitelist params");
+		hdd_err("Unable to get all allowlist params");
 		return;
 	}
 
-	ie_whitelist->ie_bitmap[0] = whitelist.ie_bitmap_0;
-	ie_whitelist->ie_bitmap[1] = whitelist.ie_bitmap_1;
-	ie_whitelist->ie_bitmap[2] = whitelist.ie_bitmap_2;
-	ie_whitelist->ie_bitmap[3] = whitelist.ie_bitmap_3;
-	ie_whitelist->ie_bitmap[4] = whitelist.ie_bitmap_4;
-	ie_whitelist->ie_bitmap[5] = whitelist.ie_bitmap_5;
-	ie_whitelist->ie_bitmap[6] = whitelist.ie_bitmap_6;
-	ie_whitelist->ie_bitmap[7] = whitelist.ie_bitmap_7;
+	ie_allowlist->ie_bitmap[0] = allowlist.ie_bitmap_0;
+	ie_allowlist->ie_bitmap[1] = allowlist.ie_bitmap_1;
+	ie_allowlist->ie_bitmap[2] = allowlist.ie_bitmap_2;
+	ie_allowlist->ie_bitmap[3] = allowlist.ie_bitmap_3;
+	ie_allowlist->ie_bitmap[4] = allowlist.ie_bitmap_4;
+	ie_allowlist->ie_bitmap[5] = allowlist.ie_bitmap_5;
+	ie_allowlist->ie_bitmap[6] = allowlist.ie_bitmap_6;
+	ie_allowlist->ie_bitmap[7] = allowlist.ie_bitmap_7;
 
-	ie_whitelist->num_vendor_oui = whitelist.no_of_probe_req_ouis;
-	for (i = 0; i < ie_whitelist->num_vendor_oui; i++)
-		ie_whitelist->voui[i] = whitelist.probe_req_voui[i];
+	ie_allowlist->num_vendor_oui = allowlist.no_of_probe_req_ouis;
+	for (i = 0; i < ie_allowlist->num_vendor_oui; i++)
+		ie_allowlist->voui[i] = allowlist.probe_req_voui[i];
 }
 
 QDF_STATUS hdd_update_score_config(struct hdd_context *hdd_ctx)
@@ -19174,7 +19174,7 @@ int hdd_update_scan_config(struct hdd_context *hdd_ctx)
 		return -EIO;
 	}
 	scan_cfg.sta_miracast_mcc_rest_time = mcast_mcc_rest_time;
-	hdd_update_ie_whitelist_attr(&scan_cfg.ie_whitelist, hdd_ctx);
+	hdd_update_ie_allowlist_attr(&scan_cfg.ie_allowlist, hdd_ctx);
 
 	status = ucfg_scan_update_user_config(psoc, &scan_cfg);
 	if (status != QDF_STATUS_SUCCESS) {

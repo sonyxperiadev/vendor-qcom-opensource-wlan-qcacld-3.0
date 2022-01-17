@@ -1392,7 +1392,7 @@ void wlan_roam_reset_roam_params(struct wlan_objmgr_psoc *psoc)
 	rso_usr_cfg = &mlme_obj->cfg.lfr.rso_user_config;
 
 	/*
-	 * clear all the whitelist parameters and remaining
+	 * clear all the allowlist parameters and remaining
 	 * needs to be retained across connections.
 	 */
 	rso_usr_cfg->num_ssid_allowed_list = 0;
@@ -2550,12 +2550,12 @@ cm_add_bssid_to_reject_list(struct wlan_objmgr_pdev *pdev,
 }
 
 QDF_STATUS
-cm_btm_blacklist_event_handler(struct wlan_objmgr_psoc *psoc,
-			       struct roam_blacklist_event *list)
+cm_btm_denylist_event_handler(struct wlan_objmgr_psoc *psoc,
+			      struct roam_denylist_event *list)
 {
 	uint32_t i, pdev_id;
 	struct sir_rssi_disallow_lst entry;
-	struct roam_blacklist_timeout *blacklist;
+	struct roam_denylist_timeout *denylist;
 	struct wlan_objmgr_pdev *pdev;
 
 	pdev_id = wlan_get_pdev_id_from_vdev_id(psoc, list->vdev_id,
@@ -2571,34 +2571,34 @@ cm_btm_blacklist_event_handler(struct wlan_objmgr_psoc *psoc,
 		return QDF_STATUS_E_INVAL;
 	}
 
-	mlme_debug("Received Blacklist event from FW num entries %d",
+	mlme_debug("Received Denylist event from FW num entries %d",
 		   list->num_entries);
-	blacklist = &list->roam_blacklist[0];
+	denylist = &list->roam_denylist[0];
 	for (i = 0; i < list->num_entries; i++) {
 		qdf_mem_zero(&entry, sizeof(struct sir_rssi_disallow_lst));
-		entry.bssid = blacklist->bssid;
-		entry.time_during_rejection = blacklist->received_time;
-		entry.reject_reason = blacklist->reject_reason;
-		entry.source = blacklist->source ? blacklist->source :
+		entry.bssid = denylist->bssid;
+		entry.time_during_rejection = denylist->received_time;
+		entry.reject_reason = denylist->reject_reason;
+		entry.source = denylist->source ? denylist->source :
 						   ADDED_BY_TARGET;
-		entry.original_timeout = blacklist->original_timeout;
-		entry.received_time = blacklist->received_time;
+		entry.original_timeout = denylist->original_timeout;
+		entry.received_time = denylist->received_time;
 		/* If timeout = 0 and rssi = 0 ignore the entry */
-		if (!blacklist->timeout && !blacklist->rssi) {
+		if (!denylist->timeout && !denylist->rssi) {
 			continue;
-		} else if (blacklist->timeout) {
-			entry.retry_delay = blacklist->timeout;
+		} else if (denylist->timeout) {
+			entry.retry_delay = denylist->timeout;
 			/* set 0dbm as expected rssi */
 			entry.expected_rssi = CM_MIN_RSSI;
 		} else {
-			/* blacklist timeout as 0 */
-			entry.retry_delay = blacklist->timeout;
-			entry.expected_rssi = blacklist->rssi;
+			/* denylist timeout as 0 */
+			entry.retry_delay = denylist->timeout;
+			entry.expected_rssi = denylist->rssi;
 		}
 
-		/* Add this bssid to the rssi reject ap type in blacklist mgr */
+		/* Add this bssid to the rssi reject ap type in denylist mgr */
 		cm_add_bssid_to_reject_list(pdev, &entry);
-		blacklist++;
+		denylist++;
 	}
 	wlan_objmgr_pdev_release_ref(pdev, WLAN_MLME_CM_ID);
 

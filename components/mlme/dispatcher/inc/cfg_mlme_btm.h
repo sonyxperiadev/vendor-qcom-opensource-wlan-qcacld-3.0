@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -108,7 +109,7 @@
  * BIT 10: When this bit is set, Firmware will forward BTM Request Frame to
  * driver when the frame contains MBO assoc retry attribute. Driver will send
  * this frame to supplicant and supplicant will use the frame info for
- * blacklisting the AP so for the next connection framework will avoid this AP.
+ * denylisting the AP so for the next connection framework will avoid this AP.
  *
  * BIT 11-31: Reserved
  *

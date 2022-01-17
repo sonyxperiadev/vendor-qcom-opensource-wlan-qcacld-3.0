@@ -1256,9 +1256,9 @@ static int hdd_son_add_acl_mac(struct wlan_objmgr_vdev *vdev,
 	wlansap_get_acl_mode(WLAN_HDD_GET_SAP_CTX_PTR(adapter), &acl_policy);
 
 	if (acl_policy == eSAP_ACCEPT_UNLESS_DENIED) {
-		list_type = eSAP_BLACK_LIST;
+		list_type = SAP_DENY_LIST;
 	} else if (acl_policy == eSAP_DENY_UNLESS_ACCEPTED) {
-		list_type = eSAP_WHITE_LIST;
+		list_type = SAP_ALLOW_LIST;
 	} else {
 		hdd_err("Invalid ACL policy %d.", acl_policy);
 		return -EINVAL;
@@ -1313,9 +1313,9 @@ static int hdd_son_del_acl_mac(struct wlan_objmgr_vdev *vdev,
 	wlansap_get_acl_mode(sap_ctx, &acl_policy);
 
 	if (acl_policy == eSAP_ACCEPT_UNLESS_DENIED) {
-		list_type = eSAP_BLACK_LIST;
+		list_type = SAP_DENY_LIST;
 	} else if (acl_policy == eSAP_DENY_UNLESS_ACCEPTED) {
-		list_type = eSAP_WHITE_LIST;
+		list_type = SAP_ALLOW_LIST;
 	} else {
 		hdd_err("Invalid ACL policy %d.", acl_policy);
 		return -EINVAL;
@@ -1411,20 +1411,20 @@ static void hdd_son_modify_acl(struct wlan_objmgr_vdev *vdev,
 	if (allow_auth) {
 		status = wlansap_modify_acl(WLAN_HDD_GET_SAP_CTX_PTR(adapter),
 					    peer_mac,
-					    eSAP_BLACK_LIST,
+					    SAP_DENY_LIST,
 					    DELETE_STA_FROM_ACL);
 		status = wlansap_modify_acl(WLAN_HDD_GET_SAP_CTX_PTR(adapter),
 					    peer_mac,
-					    eSAP_WHITE_LIST,
+					    SAP_ALLOW_LIST,
 					    ADD_STA_TO_ACL);
 	} else {
 		status = wlansap_modify_acl(WLAN_HDD_GET_SAP_CTX_PTR(adapter),
 					    peer_mac,
-					    eSAP_WHITE_LIST,
+					    SAP_ALLOW_LIST,
 					    DELETE_STA_FROM_ACL);
 		status = wlansap_modify_acl(WLAN_HDD_GET_SAP_CTX_PTR(adapter),
 					    peer_mac,
-					    eSAP_BLACK_LIST,
+					    SAP_DENY_LIST,
 					    ADD_STA_TO_ACL);
 	}
 }

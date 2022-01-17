@@ -724,7 +724,7 @@ target_if_cm_roam_scan_filter(wmi_unified_t wmi_handle, uint8_t command,
 
 	if (command != ROAM_SCAN_OFFLOAD_STOP) {
 		switch (req->reason) {
-		case REASON_ROAM_SET_BLACKLIST_BSSID:
+		case REASON_ROAM_SET_DENYLIST_BSSID:
 		case REASON_ROAM_SET_SSID_ALLOWED:
 		case REASON_ROAM_SET_FAVORED_BSSID:
 			break;

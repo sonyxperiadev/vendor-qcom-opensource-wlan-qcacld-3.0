@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -101,8 +101,8 @@ wmi_unified_roam_mawc_params_cmd(wmi_unified_t wmi_handle,
 				 struct wlan_roam_mawc_params *params);
 
 /**
- * wmi_unified_roam_scan_filter_cmd() - send roam scan whitelist,
- *                                      blacklist and preferred list
+ * wmi_unified_roam_scan_filter_cmd() - send roam scan allowlist,
+ *                                      denylist and preferred list
  * @wmi_handle: wmi handle
  * @roam_req: roam scan lists related parameters
  *
@@ -286,7 +286,7 @@ wmi_extract_roam_event(wmi_unified_t wmi_handle, uint8_t *event,
 		       struct roam_offload_roam_event *roam_event);
 
 /**
- * wmi_extract_btm_blacklist_event - Extract btm blacklist event
+ * wmi_extract_btm_denylist_event - Extract btm denylist event
  * @wmi_handle: WMI handle
  * @event: Event data received from firmware
  * @data_len: Event data length received from firmware
@@ -295,9 +295,9 @@ wmi_extract_roam_event(wmi_unified_t wmi_handle, uint8_t *event,
  * Return: QDF_STATUS
  */
 QDF_STATUS
-wmi_extract_btm_blacklist_event(wmi_unified_t wmi_handle,
-				uint8_t *event, uint32_t data_len,
-				struct roam_blacklist_event **dst_list);
+wmi_extract_btm_denylist_event(wmi_unified_t wmi_handle,
+			       uint8_t *event, uint32_t data_len,
+			       struct roam_denylist_event **dst_list);
 
 /**
  * wmi_extract_vdev_disconnect_event - Extract disconnect event data

@@ -1480,10 +1480,10 @@ int wma_extscan_capabilities_event_handler(void *handle,
 				event->num_epno_networks;
 	dest_capab->max_number_epno_networks_by_ssid =
 				event->num_epno_networks;
-	dest_capab->max_number_of_white_listed_ssid =
-				event->num_roam_ssid_whitelist;
-	dest_capab->max_number_of_black_listed_bssid =
-				event->num_roam_bssid_blacklist;
+	dest_capab->max_number_of_allow_listed_ssid =
+				event->num_roam_ssid_allowlist;
+	dest_capab->max_number_of_deny_listed_bssid =
+				event->num_roam_bssid_denylist;
 	dest_capab->status = 0;
 
 	wma_debug("request_id: %u status: %d",
@@ -1503,9 +1503,9 @@ int wma_extscan_capabilities_event_handler(void *handle,
 		 dest_capab->max_hotlist_ssids,
 		 dest_capab->max_number_epno_networks,
 		 dest_capab->max_number_epno_networks_by_ssid);
-	wma_debug("max_number_of_white_listed_ssid: %d, max_number_of_black_listed_bssid: %d",
-		 dest_capab->max_number_of_white_listed_ssid,
-		 dest_capab->max_number_of_black_listed_bssid);
+	wma_debug("max_number_of_allow_listed_ssid: %d, max_number_of_deny_listed_bssid: %d",
+		  dest_capab->max_number_of_allow_listed_ssid,
+		  dest_capab->max_number_of_deny_listed_bssid);
 
 	mac->sme.ext_scan_ind_cb(mac->hdd_handle,
 				eSIR_EXTSCAN_GET_CAPABILITIES_IND, dest_capab);

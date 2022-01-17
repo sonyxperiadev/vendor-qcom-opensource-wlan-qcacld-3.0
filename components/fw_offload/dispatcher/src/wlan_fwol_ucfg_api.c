@@ -276,7 +276,7 @@ ucfg_fwol_is_neighbor_report_req_supported(struct wlan_objmgr_psoc *psoc,
 }
 
 QDF_STATUS
-ucfg_fwol_get_ie_whitelist(struct wlan_objmgr_psoc *psoc, bool *ie_whitelist)
+ucfg_fwol_get_ie_allowlist(struct wlan_objmgr_psoc *psoc, bool *ie_allowlist)
 {
 	struct wlan_fwol_psoc_obj *fwol_obj;
 
@@ -286,13 +286,13 @@ ucfg_fwol_get_ie_whitelist(struct wlan_objmgr_psoc *psoc, bool *ie_whitelist)
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	*ie_whitelist = fwol_obj->cfg.ie_whitelist_cfg.ie_whitelist;
+	*ie_allowlist = fwol_obj->cfg.ie_allowlist_cfg.ie_allowlist;
 
 	return QDF_STATUS_SUCCESS;
 }
 
 QDF_STATUS
-ucfg_fwol_set_ie_whitelist(struct wlan_objmgr_psoc *psoc, bool ie_whitelist)
+ucfg_fwol_set_ie_allowlist(struct wlan_objmgr_psoc *psoc, bool ie_allowlist)
 {
 	struct wlan_fwol_psoc_obj *fwol_obj;
 
@@ -302,7 +302,7 @@ ucfg_fwol_set_ie_whitelist(struct wlan_objmgr_psoc *psoc, bool ie_whitelist)
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	fwol_obj->cfg.ie_whitelist_cfg.ie_whitelist = ie_whitelist;
+	fwol_obj->cfg.ie_allowlist_cfg.ie_allowlist = ie_allowlist;
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -428,8 +428,8 @@ QDF_STATUS ucfg_get_enable_phy_reg_retention(struct wlan_objmgr_psoc *psoc,
 }
 
 QDF_STATUS
-ucfg_fwol_get_all_whitelist_params(struct wlan_objmgr_psoc *psoc,
-				   struct wlan_fwol_ie_whitelist *whitelist)
+ucfg_fwol_get_all_allowlist_params(struct wlan_objmgr_psoc *psoc,
+				   struct wlan_fwol_ie_allowlist *allowlist)
 {
 	struct wlan_fwol_psoc_obj *fwol_obj;
 
@@ -439,7 +439,7 @@ ucfg_fwol_get_all_whitelist_params(struct wlan_objmgr_psoc *psoc,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	*whitelist = fwol_obj->cfg.ie_whitelist_cfg;
+	*allowlist = fwol_obj->cfg.ie_allowlist_cfg;
 	return QDF_STATUS_SUCCESS;
 }
 

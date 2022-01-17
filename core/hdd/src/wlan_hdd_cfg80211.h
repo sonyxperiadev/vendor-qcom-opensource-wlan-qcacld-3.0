@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -121,8 +121,8 @@ extern const struct nla_policy wlan_hdd_wisa_cmd_policy[
 #define WNM_NOTIFICATION_FRAME_SIZE 2
 
 #define WPA_OUI_TYPE   "\x00\x50\xf2\x01"
-#define BLACKLIST_OUI_TYPE   "\x00\x50\x00\x00"
-#define WHITELIST_OUI_TYPE   "\x00\x50\x00\x01"
+#define DENYLIST_OUI_TYPE   "\x00\x50\x00\x00"
+#define ALLOWLIST_OUI_TYPE   "\x00\x50\x00\x01"
 #define WPA_OUI_TYPE_SIZE  4
 #define WMM_OUI_TYPE   "\x00\x50\xf2\x02\x01"
 #define WMM_OUI_TYPE_SIZE  5
@@ -256,7 +256,9 @@ typedef enum {
 #define WIFI_FEATURE_CONFIG_NDO         0x200000  /* ND offload configure */
 #define WIFI_FEATURE_TX_TRANSMIT_POWER  0x400000  /* Tx transmit power levels */
 #define WIFI_FEATURE_CONTROL_ROAMING    0x800000  /* Enable/Disable roaming */
-#define WIFI_FEATURE_IE_WHITELIST       0x1000000 /* Support Probe IE white listing */
+#define WIFI_FEATURE_IE_ALLOWLIST       0x1000000 /* Support Probe IE allow
+						   * listing
+						   */
 #define WIFI_FEATURE_SCAN_RAND          0x2000000 /* Support MAC & Probe Sequence Number randomization */
 #define WIFI_FEATURE_SET_LATENCY_MODE   0x40000000 /* Set latency mode */
 /* Support changing MAC address without iface reset(down and up) */

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012 - 2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -35,7 +36,7 @@
 	CFG_11K_ALL \
 	CFG_COEX_ALL \
 	CFG_FWOL_GENERIC_ALL \
-	CFG_IE_WHITELIST \
+	CFG_IE_ALLOWLIST \
 	CFG_THERMAL_TEMP_ALL
 #else
 #define CFG_FWOL_ALL

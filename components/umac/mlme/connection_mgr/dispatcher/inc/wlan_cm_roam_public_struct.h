@@ -64,7 +64,7 @@
 #define REASON_ROAM_SET_SSID_ALLOWED                26
 #define REASON_ROAM_SET_FAVORED_BSSID               27
 #define REASON_ROAM_GOOD_RSSI_CHANGED               28
-#define REASON_ROAM_SET_BLACKLIST_BSSID             29
+#define REASON_ROAM_SET_DENYLIST_BSSID              29
 #define REASON_ROAM_SCAN_HI_RSSI_MAXCOUNT_CHANGED   30
 #define REASON_ROAM_SCAN_HI_RSSI_DELTA_CHANGED      31
 #define REASON_ROAM_SCAN_HI_RSSI_DELAY_CHANGED      32
@@ -570,10 +570,10 @@ struct rso_roam_policy_params {
 /**
  * struct rso_params - global RSO params
  * @num_ssid_allowed_list: The number of SSID profiles that are
- *                         in the Whitelist. When roaming, we
+ *                         in the Allowlist. When roaming, we
  *                         consider the BSSID's with this SSID
  *                         also for roaming apart from the connected one's
- * @ssid_allowed_list: Whitelist SSID's
+ * @ssid_allowed_list: Allowlist SSID's
  * @num_bssid_favored: Number of BSSID's which have a preference over others
  * @bssid_favored: Favorable BSSID's
  * @bssid_favored_factor: RSSI to be added to this BSSID to prefer it
@@ -987,16 +987,16 @@ struct wlan_roam_mawc_params {
  *                                  parameters
  * @op_bitmap: bitmap to determine reason of roaming
  * @vdev_id: vdev id
- * @num_bssid_black_list: The number of BSSID's that we should avoid
- *                        connecting to. It is like a blacklist of BSSID's.
- * @num_ssid_white_list: The number of SSID profiles that are in the
- *                       Whitelist. When roaming, we consider the BSSID's with
+ * @num_bssid_deny_list: The number of BSSID's that we should avoid
+ *                        connecting to. It is like a denylist of BSSID's.
+ * @num_ssid_allow_list: The number of SSID profiles that are in the
+ *                       Allowlist. When roaming, we consider the BSSID's with
  *                       this SSID also for roaming apart from the connected
  *                       one's
  * @num_bssid_preferred_list: Number of BSSID's which have a preference over
  *                            others
- * @bssid_avoid_list: Blacklist SSID's
- * @ssid_allowed_list: Whitelist SSID's
+ * @bssid_avoid_list: Denylist SSID's
+ * @ssid_allowed_list: Allowlist SSID's
  * @bssid_favored: Favorable BSSID's
  * @bssid_favored_factor: RSSI to be added to this BSSID to prefer it
  * @lca_disallow_config_present: LCA [Last Connected AP] disallow config
@@ -1008,8 +1008,8 @@ struct wlan_roam_mawc_params {
  *                             AP's, in units of db
  * @num_disallowed_aps: How many APs the target should maintain in its LCA
  *                      list
- * @delta_rssi: (dB units) when AB in RSSI blacklist improved by at least
- *              delta_rssi,it will be removed from blacklist
+ * @delta_rssi: (dB units) when AB in RSSI denylist improved by at least
+ *              delta_rssi,it will be removed from denylist
  *
  * This structure holds all the key parameters related to
  * initial connection and roaming connections.
@@ -1018,8 +1018,8 @@ struct wlan_roam_mawc_params {
 struct roam_scan_filter_params {
 	uint32_t op_bitmap;
 	uint8_t vdev_id;
-	uint32_t num_bssid_black_list;
-	uint32_t num_ssid_white_list;
+	uint32_t num_bssid_deny_list;
+	uint32_t num_ssid_allow_list;
 	uint32_t num_bssid_preferred_list;
 	struct qdf_mac_addr bssid_avoid_list[MAX_BSSID_AVOID_LIST];
 	struct wlan_ssid ssid_allowed_list[MAX_SSID_ALLOWED_LIST];
@@ -2048,16 +2048,16 @@ enum roam_reason {
 };
 
 /*
- * struct roam_blacklist_timeout - BTM blacklist entry
- * @bssid: bssid that is to be blacklisted
- * @timeout: time duration for which the bssid is blacklisted
+ * struct roam_denylist_timeout - BTM denylist entry
+ * @bssid: bssid that is to be denylisted
+ * @timeout: time duration for which the bssid is denylisted
  * @received_time: boot timestamp at which the firmware event was received
- * @rssi: rssi value for which the bssid is blacklisted
+ * @rssi: rssi value for which the bssid is denylisted
  * @reject_reason: reason to add the BSSID to DLM
  * @original_timeout: original timeout sent by the AP
  * @source: Source of adding the BSSID to DLM
  */
-struct roam_blacklist_timeout {
+struct roam_denylist_timeout {
 	struct qdf_mac_addr bssid;
 	uint32_t timeout;
 	qdf_time_t received_time;
@@ -2068,15 +2068,15 @@ struct roam_blacklist_timeout {
 };
 
 /*
- * struct roam_blacklist_event - Blacklist event entries destination structure
+ * struct roam_denylist_event - Denylist event entries destination structure
  * @vdev_id: vdev id
  * @num_entries: total entries sent over the event
- * @roam_blacklist: blacklist details
+ * @roam_denylist: denylist details
  */
-struct roam_blacklist_event {
+struct roam_denylist_event {
 	uint8_t vdev_id;
 	uint32_t num_entries;
-	struct roam_blacklist_timeout roam_blacklist[];
+	struct roam_denylist_timeout roam_denylist[];
 };
 
 /*
@@ -2466,7 +2466,7 @@ struct roam_scan_candidate_frame {
  * @roam_sync_event: RX ops function pointer for roam sync event
  * @roam_sync_frame_event: Rx ops function pointer for roam sync frame event
  * @roam_event_rx: Rx ops function pointer for roam info event
- * @btm_blacklist_event: Rx ops function pointer for btm blacklist event
+ * @btm_denylist_event: Rx ops function pointer for btm denylist event
  * @vdev_disconnect_event: Rx ops function pointer for vdev disconnect event
  * @roam_scan_chan_list_event: Rx ops function pointer for roam scan ch event
  * @roam_stats_event_rx: Rx ops function pointer for roam stats event
@@ -2482,8 +2482,8 @@ struct wlan_cm_roam_rx_ops {
 	QDF_STATUS (*roam_sync_frame_event)(struct wlan_objmgr_psoc *psoc,
 					    struct roam_synch_frame_ind *frm);
 	QDF_STATUS (*roam_event_rx)(struct roam_offload_roam_event *roam_event);
-	QDF_STATUS (*btm_blacklist_event)(struct wlan_objmgr_psoc *psoc,
-					  struct roam_blacklist_event *list);
+	QDF_STATUS (*btm_denylist_event)(struct wlan_objmgr_psoc *psoc,
+					 struct roam_denylist_event *list);
 	QDF_STATUS
 	(*vdev_disconnect_event)(struct vdev_disconnect_event_data *data);
 	QDF_STATUS

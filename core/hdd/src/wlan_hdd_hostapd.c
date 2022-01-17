@@ -4511,9 +4511,9 @@ static void wlan_hdd_add_hostapd_conf_vsie(struct hdd_adapter *adapter,
 			 * include or it will be included by existing code.
 			 */
 			if (elem_len >= WPS_OUI_TYPE_SIZE &&
-			    (!qdf_mem_cmp(&ptr[2], WHITELIST_OUI_TYPE,
+			    (!qdf_mem_cmp(&ptr[2], ALLOWLIST_OUI_TYPE,
 					  WPA_OUI_TYPE_SIZE) ||
-			     !qdf_mem_cmp(&ptr[2], BLACKLIST_OUI_TYPE,
+			     !qdf_mem_cmp(&ptr[2], DENYLIST_OUI_TYPE,
 					  WPA_OUI_TYPE_SIZE) ||
 			     !qdf_mem_cmp(&ptr[2], "\x00\x50\xf2\x02",
 					  WPA_OUI_TYPE_SIZE) ||

@@ -559,14 +559,14 @@ int
 lim_assoc_rej_get_remaining_delta(struct sir_rssi_disallow_lst *node);
 
 /**
- * lim_rem_blacklist_entry_with_lowest_delta() - Remove the entry with lowest
+ * lim_rem_denylist_entry_with_lowest_delta() - Remove the entry with lowest
  * time delta
  * @list: rssi based rejected BSSID list
  *
  * Return: QDF_STATUS
  */
 QDF_STATUS
-lim_rem_blacklist_entry_with_lowest_delta(qdf_list_t *list);
+lim_rem_denylist_entry_with_lowest_delta(qdf_list_t *list);
 
 static inline enum reg_wifi_band lim_get_rf_band(uint32_t chan_freq)
 {
@@ -1096,7 +1096,7 @@ bool lim_get_vdev_rmf_capable(struct mac_context *mac,
 			      struct pe_session *session);
 
 /**
- * lim_add_bssid_to_reject_list:- Add rssi reject Ap info to blacklist mgr.
+ * lim_add_bssid_to_reject_list:- Add rssi reject Ap info to denylist mgr.
  * @pdev: pdev
  * @entry: info of the BSSID to be put in rssi reject list.
  *

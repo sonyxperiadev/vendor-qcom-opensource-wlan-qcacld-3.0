@@ -461,7 +461,7 @@ static QDF_STATUS send_roam_mawc_params_cmd_tlv(
  * @wmi_handle:     wmi handle
  * @roam_req:       Request which contains the filters
  *
- * There are filters such as whitelist, blacklist and preferred
+ * There are filters such as allowlist, denylist and preferred
  * list that need to be applied to the scan results to form the
  * probable candidates for roaming.
  *
@@ -487,11 +487,11 @@ static QDF_STATUS send_roam_scan_filter_cmd_tlv(wmi_unified_t wmi_handle,
 	len = sizeof(wmi_roam_filter_fixed_param);
 
 	len += WMI_TLV_HDR_SIZE;
-	if (roam_req->num_bssid_black_list)
-		len += roam_req->num_bssid_black_list * sizeof(wmi_mac_addr);
+	if (roam_req->num_bssid_deny_list)
+		len += roam_req->num_bssid_deny_list * sizeof(wmi_mac_addr);
 	len += WMI_TLV_HDR_SIZE;
-	if (roam_req->num_ssid_white_list)
-		len += roam_req->num_ssid_white_list * sizeof(wmi_ssid);
+	if (roam_req->num_ssid_allow_list)
+		len += roam_req->num_ssid_allow_list * sizeof(wmi_ssid);
 	len += 2 * WMI_TLV_HDR_SIZE;
 	if (roam_req->num_bssid_preferred_list) {
 		len += (roam_req->num_bssid_preferred_list *
@@ -521,8 +521,8 @@ static QDF_STATUS send_roam_scan_filter_cmd_tlv(wmi_unified_t wmi_handle,
 	roam_filter->vdev_id = roam_req->vdev_id;
 	roam_filter->flags = 0;
 	roam_filter->op_bitmap = roam_req->op_bitmap;
-	roam_filter->num_bssid_black_list = roam_req->num_bssid_black_list;
-	roam_filter->num_ssid_white_list = roam_req->num_ssid_white_list;
+	roam_filter->num_bssid_black_list = roam_req->num_bssid_deny_list;
+	roam_filter->num_ssid_white_list = roam_req->num_ssid_allow_list;
 	roam_filter->num_bssid_preferred_list =
 			roam_req->num_bssid_preferred_list;
 	roam_filter->num_rssi_rejection_ap =
@@ -532,28 +532,28 @@ static QDF_STATUS send_roam_scan_filter_cmd_tlv(wmi_unified_t wmi_handle,
 
 	WMITLV_SET_HDR((buf_ptr),
 		WMITLV_TAG_ARRAY_FIXED_STRUC,
-		(roam_req->num_bssid_black_list * sizeof(wmi_mac_addr)));
+		(roam_req->num_bssid_deny_list * sizeof(wmi_mac_addr)));
 	bssid_src_ptr = (uint8_t *)&roam_req->bssid_avoid_list;
 	bssid_dst_ptr = (wmi_mac_addr *)(buf_ptr + WMI_TLV_HDR_SIZE);
-	for (i = 0; i < roam_req->num_bssid_black_list; i++) {
+	for (i = 0; i < roam_req->num_bssid_deny_list; i++) {
 		WMI_CHAR_ARRAY_TO_MAC_ADDR(bssid_src_ptr, bssid_dst_ptr);
 		bssid_src_ptr += ATH_MAC_LEN;
 		bssid_dst_ptr++;
 	}
 	buf_ptr += WMI_TLV_HDR_SIZE +
-		(roam_req->num_bssid_black_list * sizeof(wmi_mac_addr));
+		(roam_req->num_bssid_deny_list * sizeof(wmi_mac_addr));
 	WMITLV_SET_HDR((buf_ptr),
 		       WMITLV_TAG_ARRAY_FIXED_STRUC,
-		       (roam_req->num_ssid_white_list * sizeof(wmi_ssid)));
+		       (roam_req->num_ssid_allow_list * sizeof(wmi_ssid)));
 	ssid_ptr = (wmi_ssid *)(buf_ptr + WMI_TLV_HDR_SIZE);
-	for (i = 0; i < roam_req->num_ssid_white_list; i++) {
+	for (i = 0; i < roam_req->num_ssid_allow_list; i++) {
 		qdf_mem_copy(&ssid_ptr->ssid,
 			&roam_req->ssid_allowed_list[i].ssid,
 			roam_req->ssid_allowed_list[i].length);
 		ssid_ptr->ssid_len = roam_req->ssid_allowed_list[i].length;
 		ssid_ptr++;
 	}
-	buf_ptr += WMI_TLV_HDR_SIZE + (roam_req->num_ssid_white_list *
+	buf_ptr += WMI_TLV_HDR_SIZE + (roam_req->num_ssid_allow_list *
 							sizeof(wmi_ssid));
 	WMITLV_SET_HDR((buf_ptr),
 		WMITLV_TAG_ARRAY_FIXED_STRUC,
@@ -2724,15 +2724,15 @@ static enum dlm_reject_ap_reason wmi_get_reject_reason(uint32_t reason)
 }
 
 static QDF_STATUS
-extract_btm_blacklist_event(wmi_unified_t wmi_handle,
-			    uint8_t *event, uint32_t len,
-			    struct roam_blacklist_event **list)
+extract_btm_denylist_event(wmi_unified_t wmi_handle,
+			   uint8_t *event, uint32_t len,
+			   struct roam_denylist_event **list)
 {
 	WMI_ROAM_BLACKLIST_EVENTID_param_tlvs *param_buf;
 	wmi_roam_blacklist_event_fixed_param *resp_event;
 	wmi_roam_blacklist_with_timeout_tlv_param *src_list;
-	struct roam_blacklist_timeout *roam_blacklist;
-	struct roam_blacklist_event *dst_list;
+	struct roam_denylist_timeout *roam_denylist;
+	struct roam_denylist_event *dst_list;
 	uint32_t num_entries, i;
 
 	param_buf = (WMI_ROAM_BLACKLIST_EVENTID_param_tlvs *)event;
@@ -2768,24 +2768,24 @@ extract_btm_blacklist_event(wmi_unified_t wmi_handle,
 		return QDF_STATUS_E_INVAL;
 	}
 
-	dst_list = qdf_mem_malloc(sizeof(struct roam_blacklist_event) +
-				 (sizeof(struct roam_blacklist_timeout) *
+	dst_list = qdf_mem_malloc(sizeof(struct roam_denylist_event) +
+				 (sizeof(struct roam_denylist_timeout) *
 				 num_entries));
 	if (!dst_list)
 		return QDF_STATUS_E_NOMEM;
 
 	dst_list->vdev_id = resp_event->vdev_id;
-	roam_blacklist = &dst_list->roam_blacklist[0];
+	roam_denylist = &dst_list->roam_denylist[0];
 	for (i = 0; i < num_entries; i++) {
 		WMI_MAC_ADDR_TO_CHAR_ARRAY(&src_list->bssid,
-					   roam_blacklist->bssid.bytes);
-		roam_blacklist->timeout = src_list->timeout;
-		roam_blacklist->received_time = src_list->timestamp;
-		roam_blacklist->original_timeout = src_list->original_timeout;
-		roam_blacklist->reject_reason =
+					   roam_denylist->bssid.bytes);
+		roam_denylist->timeout = src_list->timeout;
+		roam_denylist->received_time = src_list->timestamp;
+		roam_denylist->original_timeout = src_list->original_timeout;
+		roam_denylist->reject_reason =
 				wmi_get_reject_reason(src_list->reason);
-		roam_blacklist->source = src_list->source;
-		roam_blacklist++;
+		roam_denylist->source = src_list->source;
+		roam_denylist++;
 		src_list++;
 	}
 
@@ -3331,7 +3331,7 @@ void wmi_roam_offload_attach_tlv(wmi_unified_t wmi_handle)
 	ops->extract_roam_sync_event = extract_roam_sync_event_tlv;
 	ops->extract_roam_sync_frame_event = extract_roam_sync_frame_event_tlv;
 	ops->extract_roam_event = extract_roam_event_tlv;
-	ops->extract_btm_bl_event = extract_btm_blacklist_event;
+	ops->extract_btm_bl_event = extract_btm_denylist_event;
 	ops->extract_vdev_disconnect_event = extract_vdev_disconnect_event_tlv;
 	ops->extract_roam_scan_chan_list = extract_roam_scan_chan_list_tlv;
 	ops->extract_roam_stats_event = extract_roam_stats_event_tlv;
