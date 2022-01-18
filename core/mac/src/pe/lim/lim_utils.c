@@ -8950,8 +8950,7 @@ enum rateid lim_get_min_session_txrate(struct pe_session *session)
 
 void lim_send_sme_mgmt_frame_ind(struct mac_context *mac_ctx, uint8_t frame_type,
 				 uint8_t *frame, uint32_t frame_len,
-				 uint16_t session_id, uint32_t rx_freq,
-				 struct pe_session *psession_entry,
+				 uint16_t vdev_id, uint32_t rx_freq,
 				 int8_t rx_rssi, enum rxmgmt_flags rx_flags)
 {
 	tpSirSmeMgmtFrameInd sme_mgmt_frame = NULL;
@@ -8965,13 +8964,13 @@ void lim_send_sme_mgmt_frame_ind(struct mac_context *mac_ctx, uint8_t frame_type
 
 	if (qdf_is_macaddr_broadcast(
 		(struct qdf_mac_addr *)(frame + 4)) &&
-		!session_id) {
+		!vdev_id) {
 		pe_debug("Broadcast action frame");
-		session_id = SME_SESSION_ID_BROADCAST;
+		vdev_id = SME_SESSION_ID_BROADCAST;
 	}
 
 	sme_mgmt_frame->frame_len = frame_len;
-	sme_mgmt_frame->sessionId = session_id;
+	sme_mgmt_frame->sessionId = vdev_id;
 	sme_mgmt_frame->frameType = frame_type;
 	sme_mgmt_frame->rxRssi = rx_rssi;
 	sme_mgmt_frame->rx_freq = rx_freq;
@@ -8984,7 +8983,9 @@ void lim_send_sme_mgmt_frame_ind(struct mac_context *mac_ctx, uint8_t frame_type
 		mac_ctx->mgmt_frame_ind_cb(sme_mgmt_frame);
 	else
 		pe_debug_rl("Management indication callback not registered!!");
+
 	qdf_mem_free(sme_mgmt_frame);
+
 	return;
 }
 
