@@ -1950,11 +1950,9 @@ QDF_STATUS csr_change_default_config_param(struct mac_context *mac,
 		mac->roam.configParam.wep_tkip_in_he = pParam->wep_tkip_in_he;
 
 		mac->roam.configParam.uCfgDot11Mode =
-			csr_get_cfg_dot11_mode_from_csr_phy_mode(NULL,
+			csr_get_cfg_dot11_mode_from_csr_phy_mode(false,
 							mac->roam.configParam.
-							phyMode,
-							mac->roam.configParam.
-						ProprietaryRatesEnabled);
+							phyMode);
 
 		/* Assign this before calling csr_init11d_info */
 		if (wlan_reg_11d_enabled_on_host(mac->psoc))
@@ -5323,14 +5321,19 @@ csr_roam_get_phy_mode_band_for_bss(struct mac_context *mac_ctx,
 	bool is_11n_allowed;
 	enum csr_cfgdot11mode curr_mode =
 		mac_ctx->roam.configParam.uCfgDot11Mode;
-	enum csr_cfgdot11mode cfg_dot11_mode =
-		csr_get_cfg_dot11_mode_from_csr_phy_mode(
-			profile,
-			(eCsrPhyMode) profile->phyMode,
-			mac_ctx->roam.configParam.ProprietaryRatesEnabled);
+	enum csr_cfgdot11mode cfg_dot11_mode;
+	enum QDF_OPMODE opmode;
+	bool is_ap = false;
 
 	if (bss_op_ch_freq)
 		opr_freq = bss_op_ch_freq;
+
+	opmode = wlan_get_opmode_vdev_id(mac_ctx->pdev, vdev_id);
+	is_ap = (opmode == QDF_SAP_MODE || opmode == QDF_P2P_GO_MODE);
+
+	cfg_dot11_mode =
+		csr_get_cfg_dot11_mode_from_csr_phy_mode(is_ap,
+						(eCsrPhyMode)profile->phyMode);
 	/*
 	 * If the global setting for dot11Mode is set to auto/abg, we overwrite
 	 * the setting in the profile.

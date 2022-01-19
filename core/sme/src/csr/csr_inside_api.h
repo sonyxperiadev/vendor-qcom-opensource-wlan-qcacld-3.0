@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -167,9 +168,7 @@ void csr_release_profile(struct mac_context *mac,
 			 struct csr_roam_profile *pProfile);
 
 enum csr_cfgdot11mode
-csr_get_cfg_dot11_mode_from_csr_phy_mode(struct csr_roam_profile *pProfile,
-					 eCsrPhyMode phyMode,
-					 bool fProprietary);
+csr_get_cfg_dot11_mode_from_csr_phy_mode(bool is_ap, eCsrPhyMode phyMode);
 
 uint32_t csr_translate_to_wni_cfg_dot11_mode(struct mac_context *mac,
 				    enum csr_cfgdot11mode csrDot11Mode);

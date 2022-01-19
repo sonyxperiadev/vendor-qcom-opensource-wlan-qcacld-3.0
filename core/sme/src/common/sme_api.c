@@ -3276,10 +3276,8 @@ QDF_STATUS sme_set_phy_mode(mac_handle_t mac_handle, eCsrPhyMode phyMode)
 
 	mac->roam.configParam.phyMode = phyMode;
 	mac->roam.configParam.uCfgDot11Mode =
-		csr_get_cfg_dot11_mode_from_csr_phy_mode(NULL,
-						mac->roam.configParam.phyMode,
-						mac->roam.configParam.
-						ProprietaryRatesEnabled);
+		csr_get_cfg_dot11_mode_from_csr_phy_mode(false,
+						mac->roam.configParam.phyMode);
 
 	return QDF_STATUS_SUCCESS;
 }
