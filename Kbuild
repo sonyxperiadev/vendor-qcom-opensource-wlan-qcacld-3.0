@@ -1447,7 +1447,8 @@ UMAC_MLME_INC := -I$(WLAN_COMMON_INC)/umac/mlme \
 		-I$(WLAN_COMMON_INC)/umac/mlme/pdev_mgr/dispatcher/inc \
 		-I$(WLAN_COMMON_INC)/umac/mlme/psoc_mgr/dispatcher/inc \
 		-I$(WLAN_COMMON_INC)/umac/mlme/connection_mgr/dispatcher/inc \
-		-I$(WLAN_COMMON_INC)/umac/mlme/connection_mgr/utf/inc
+		-I$(WLAN_COMMON_INC)/umac/mlme/connection_mgr/utf/inc \
+		-I$(WLAN_COMMON_INC)/umac/mlme/mlme_utils/
 
 UMAC_MLME_OBJS := $(WLAN_COMMON_ROOT)/umac/mlme/mlme_objmgr/dispatcher/src/wlan_vdev_mlme_main.o \
 		$(WLAN_COMMON_ROOT)/umac/mlme/vdev_mgr/core/src/vdev_mlme_sm.o \
@@ -1471,7 +1472,8 @@ UMAC_MLME_OBJS := $(WLAN_COMMON_ROOT)/umac/mlme/mlme_objmgr/dispatcher/src/wlan_
 		$(WLAN_COMMON_ROOT)/umac/mlme/connection_mgr/core/src/wlan_cm_disconnect.o \
 		$(WLAN_COMMON_ROOT)/umac/mlme/connection_mgr/core/src/wlan_cm_util.o \
 		$(WLAN_COMMON_ROOT)/umac/mlme/connection_mgr/dispatcher/src/wlan_cm_ucfg_api.o \
-		$(WLAN_COMMON_ROOT)/umac/mlme/connection_mgr/dispatcher/src/wlan_cm_api.o
+		$(WLAN_COMMON_ROOT)/umac/mlme/connection_mgr/dispatcher/src/wlan_cm_api.o \
+		$(WLAN_COMMON_ROOT)/umac/mlme/mlme_utils/wlan_vdev_mlme_ser_if.o
 ifeq ($(CONFIG_CM_UTF_ENABLE), y)
 UMAC_MLME_OBJS += $(WLAN_COMMON_ROOT)/umac/mlme/connection_mgr/utf/src/wlan_cm_utf_main.o \
 		$(WLAN_COMMON_ROOT)/umac/mlme/connection_mgr/utf/src/wlan_cm_utf_scan.o
