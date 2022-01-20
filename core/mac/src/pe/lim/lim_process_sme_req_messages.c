@@ -445,10 +445,17 @@ static bool __lim_process_sme_sys_ready_ind(struct mac_context *mac,
  *
  * Return: None.
  */
+#ifndef SAP_CP_CLEANUP
 static void
 lim_configure_ap_start_bss_session(struct mac_context *mac_ctx,
 				   struct pe_session *session,
 				   struct start_bss_req *sme_start_bss_req)
+#else
+static void
+lim_configure_ap_start_bss_session(struct mac_context *mac_ctx,
+				   struct pe_session *session,
+				   struct start_bss_config *sme_start_bss_req)
+#endif
 {
 	bool sap_uapsd;
 	uint16_t ht_cap = cfg_default(CFG_AP_PROTECTION_MODE);
@@ -759,7 +766,12 @@ __lim_handle_sme_start_bss_request(struct mac_context *mac_ctx, uint32_t *msg_bu
 	uint32_t val = 0;
 	tSirMacChanNum channel_number;
 	tLimMlmStartReq *mlm_start_req = NULL;
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	struct start_bss_req *sme_start_bss_req = NULL;
+#else
+	struct start_bss_config *sme_start_bss_req = NULL;
+#endif
 	tSirResultCodes ret_code = eSIR_SME_SUCCESS;
 	uint8_t session_id;
 	struct pe_session *session = NULL;
@@ -8072,7 +8084,12 @@ static void lim_change_channel(
 static void lim_process_sme_channel_change_request(struct mac_context *mac_ctx,
 		uint32_t *msg_buf)
 {
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	tpSirChanChangeRequest ch_change_req;
+#else
+	struct channel_change_req *ch_change_req;
+#endif
 	struct pe_session *session_entry;
 	uint8_t session_id;      /* PE session_id */
 	int8_t max_tx_pwr;
@@ -8083,19 +8100,22 @@ static void lim_process_sme_channel_change_request(struct mac_context *mac_ctx,
 		pe_err("msg_buf is NULL");
 		return;
 	}
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	ch_change_req = (tpSirChanChangeRequest)msg_buf;
-
+#endif
 	target_freq = ch_change_req->target_chan_freq;
 
 	max_tx_pwr = wlan_reg_get_channel_reg_power_for_freq(
 				mac_ctx->pdev, target_freq);
-
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	if ((ch_change_req->messageType != eWNI_SME_CHANNEL_CHANGE_REQ) ||
 			(max_tx_pwr == WMA_MAX_TXPOWER_INVALID)) {
 		pe_err("Invalid Request/max_tx_pwr");
 		return;
 	}
-
+#endif
 	session_entry = pe_find_session_by_bssid(mac_ctx,
 			ch_change_req->bssid, &session_id);
 	if (!session_entry) {

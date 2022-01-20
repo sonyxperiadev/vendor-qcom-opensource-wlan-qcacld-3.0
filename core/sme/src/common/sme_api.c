@@ -3235,6 +3235,7 @@ eCsrPhyMode sme_get_phy_mode(mac_handle_t mac_handle)
 	return mac->roam.configParam.phyMode;
 }
 
+#ifndef SAP_CP_CLEANUP
 QDF_STATUS sme_bss_start(mac_handle_t mac_handle, uint8_t vdev_id,
 			 struct csr_roam_profile *profile,
 			 uint32_t *roam_id)
@@ -3261,7 +3262,20 @@ QDF_STATUS sme_bss_start(mac_handle_t mac_handle, uint8_t vdev_id,
 
 	return status;
 }
+#else
+QDF_STATUS sme_get_network_params(struct mac_context *mac,
+				  struct bss_dot11_config *dot11_cfg)
+{
+	return QDF_STATUS_SUCCESS;
+}
 
+QDF_STATUS sme_start_bss(mac_handle_t mac_handle, uint8_t vdev_id,
+			 struct start_bss_config *bss_config,
+			 uint32_t *roam_id)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 /*
  * sme_set_phy_mode() -
  * Changes the PhyMode.
@@ -8491,6 +8505,7 @@ QDF_STATUS sme_set_mas(uint32_t val)
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifndef SAP_CP_CLEANUP
 QDF_STATUS sme_roam_channel_change_req(mac_handle_t mac_handle,
 				       struct qdf_mac_addr bssid,
 				       uint8_t vdev_id,
@@ -8509,6 +8524,13 @@ QDF_STATUS sme_roam_channel_change_req(mac_handle_t mac_handle,
 	}
 	return status;
 }
+#else
+QDF_STATUS sme_sap_channel_change_req(mac_handle_t mac_handle,
+				      struct channel_change_req *req)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 
 /*
  * sme_process_channel_change_resp() -
@@ -16253,3 +16275,34 @@ void sme_roam_events_deregister_callback(mac_handle_t mac_handle)
 }
 #endif
 
+#ifdef SAP_CP_CLEANUP
+static QDF_STATUS sme_send_start_bss_msg(struct mac_context *mac,
+					 struct start_bss_config *cfg)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static QDF_STATUS sme_send_stop_bss_msg(struct mac_context *mac,
+					uint32_t vdev_id)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static QDF_STATUS sme_sap_activate_cmd(struct wlan_serialization_command *cmd)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS sme_sap_ser_callback(struct wlan_serialization_command *cmd,
+				enum wlan_serialization_cb_reason reason)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+void sme_fill_channel_change_request(mac_handle_t mac_handle,
+				     struct channel_change_req *req,
+				     eCsrPhyMode phy_mode)
+{
+	return;
+}
+#endif

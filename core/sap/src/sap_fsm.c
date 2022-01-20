@@ -1459,7 +1459,10 @@ QDF_STATUS sap_clear_session_param(mac_handle_t mac_handle,
 	mac_ctx->sap.sapCtxList[sapctx->sessionId].sapPersona =
 		QDF_MAX_NO_OF_MODE;
 	sap_clear_global_dfs_param(mac_handle, sapctx);
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	sap_free_roam_profile(&sapctx->csr_roamProfile);
+#endif
 	sap_err("Set sapCtxList null for session %d", sapctx->sessionId);
 	qdf_mem_zero(sapctx, sizeof(*sapctx));
 	sapctx->sessionId = WLAN_UMAC_VDEV_ID_MAX;
@@ -1592,7 +1595,10 @@ static QDF_STATUS sap_goto_stopping(struct sap_context *sap_ctx)
 	}
 
 	sap_update_mcs_rate(sap_ctx, false);
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	sap_free_roam_profile(&sap_ctx->csr_roamProfile);
+#endif
 	status = sme_roam_stop_bss(MAC_HANDLE(mac_ctx), sap_ctx->sessionId);
 	if (status != QDF_STATUS_SUCCESS) {
 		sap_err("Calling sme_roam_stop_bss status = %d", status);
@@ -2840,11 +2846,17 @@ static void sap_validate_chanmode_and_chwidth(struct mac_context *mac_ctx,
 	if (WLAN_REG_IS_5GHZ_CH_FREQ(sap_ctx->chan_freq) &&
 	    (sap_ctx->phyMode == eCSR_DOT11_MODE_11g ||
 	     sap_ctx->phyMode == eCSR_DOT11_MODE_11g_ONLY)) {
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 		sap_ctx->csr_roamProfile.phyMode = eCSR_DOT11_MODE_11a;
+#endif
 		sap_ctx->phyMode = eCSR_DOT11_MODE_11a;
 	} else if (WLAN_REG_IS_24GHZ_CH_FREQ(sap_ctx->chan_freq) &&
 		   (sap_ctx->phyMode == eCSR_DOT11_MODE_11a)) {
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 		sap_ctx->csr_roamProfile.phyMode = eCSR_DOT11_MODE_11g;
+#endif
 		sap_ctx->phyMode = eCSR_DOT11_MODE_11g;
 	}
 
@@ -2941,6 +2953,8 @@ static QDF_STATUS sap_goto_starting(struct sap_context *sap_ctx,
 		  "SAP_INIT", "SAP_STARTING", sap_ctx->phyMode,
 		  sap_ctx->ch_params.ch_width);
 	/* Specify the channel */
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	sap_ctx->csr_roamProfile.ChannelInfo.numOfChannels =
 					1;
 	sap_ctx->csr_roamProfile.ChannelInfo.freq_list =
@@ -2957,6 +2971,7 @@ static QDF_STATUS sap_goto_starting(struct sap_context *sap_ctx,
 			      !!sap_ctx->csr_roamProfile.cac_duration_ms);
 	sap_ctx->csr_roamProfile.beacon_tx_rate =
 			sap_ctx->beacon_tx_rate;
+#endif
 	sap_debug("notify hostapd about chan freq selection: %d",
 		  sap_ctx->chan_freq);
 	sap_signal_hdd_event(sap_ctx, NULL,
@@ -2970,9 +2985,12 @@ static QDF_STATUS sap_goto_starting(struct sap_context *sap_ctx,
 
 	sap_debug("session: %d", sap_ctx->sessionId);
 
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	qdf_status = sme_bss_start(mac_handle, sap_ctx->sessionId,
 				   &sap_ctx->csr_roamProfile,
 				   &sap_ctx->csr_roamId);
+#endif
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status))
 		sap_err("Failed to issue sme_roam_connect");
 
@@ -3593,6 +3611,7 @@ QDF_STATUS sap_fsm(struct sap_context *sap_ctx, struct sap_sm_event *sap_event)
 	return qdf_status;
 }
 
+#ifndef SAP_CP_CLEANUP
 eSapStatus
 sapconvert_to_csr_profile(struct sap_config *config, eCsrRoamBssType bssType,
 			  struct csr_roam_profile *profile)
@@ -3745,6 +3764,7 @@ void sap_free_roam_profile(struct csr_roam_profile *profile)
 		profile->pRSNReqIE = NULL;
 	}
 }
+#endif
 
 void sap_sort_mac_list(struct qdf_mac_addr *macList, uint16_t size)
 {
@@ -4577,3 +4597,21 @@ bool sap_is_conc_sap_doing_scc_dfs(mac_handle_t mac_handle,
 
 	return false;
 }
+
+#ifdef SAP_CP_CLEANUP
+/**
+ * sap_build_start_bss_config() - Fill the start bss request for SAP
+ * @sap_bss_cfg: start bss config
+ * @config: sap config
+ *
+ * This function fills the start bss request for SAP
+ *
+ * Return: None
+ */
+void
+sap_build_start_bss_config(struct start_bss_config *sap_bss_cfg,
+			   struct sap_config *config)
+{
+	return;
+}
+#endif

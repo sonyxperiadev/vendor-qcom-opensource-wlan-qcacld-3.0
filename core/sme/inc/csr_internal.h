@@ -82,9 +82,11 @@ enum csr_cfgdot11mode {
 };
 
 enum csr_roam_reason {
+#ifndef SAP_CP_CLEANUP
 	eCsrNoConnection,
 	eCsrStartBss,
 	eCsrStopBss,
+#endif
 	eCsrForcedDisassocSta,
 	eCsrForcedDeauthSta,
 };
@@ -128,6 +130,7 @@ struct bss_config_param {
 	tSirMacCapabilityInfo BssCap;
 };
 
+#ifndef SAP_CP_CLEANUP
 struct csr_roamstart_bssparams {
 	tSirMacSSid ssId;
 
@@ -153,12 +156,26 @@ struct csr_roamstart_bssparams {
 	uint32_t cac_duration_ms;
 	uint32_t dfs_regdomain;
 };
+#else
+/* struct csr_roamstart_bssparams: csr bss parameters
+ * @cb_mode: channel bonding mode
+ * @bcn_int: beacon interval
+ * @update_bcn_int: updated beacon interval
+ */
+struct csr_roamstart_bssparams {
+	ePhyChanBondState cb_mode;
+	uint16_t bcn_int;
+	bool update_bcn_int;
+};
+#endif
 
 struct roam_cmd {
 	uint32_t roamId;
 	enum csr_roam_reason roamReason;
+#ifndef SAP_CP_CLEANUP
 	struct csr_roam_profile roamProfile;
 	bool fReleaseProfile;             /* whether to free roamProfile */
+#endif
 	tSirMacAddr peerMac;
 	enum wlan_reason_code reason;
 };
@@ -548,6 +565,7 @@ QDF_STATUS csr_get_tsm_stats(struct mac_context *mac,
 		void *pContext, uint8_t tid);
 #endif
 
+#ifndef SAP_CP_CLEANUP
 /**
  * csr_roam_channel_change_req() - Post channel change request to LIM
  * @mac: mac context
@@ -565,6 +583,19 @@ QDF_STATUS csr_roam_channel_change_req(struct mac_context *mac,
 				       uint8_t vdev_id,
 				       struct ch_params *ch_params,
 				       struct csr_roam_profile *profile);
+#else
+/**
+ * csr_sap_channel_change_req() - Post channel change request to LIM
+ * @mac : mac context
+ * @req : channel change request
+ *
+ * This API is primarily used to post Channel Change Req for SAP
+ *
+ *  Return: QDF_STATUS
+ */
+QDF_STATUS csr_sap_channel_change_req(struct mac_context *mac,
+				      struct channel_change_req *req);
+#endif
 
 /* Post Beacon Tx Start Indication */
 QDF_STATUS csr_roam_start_beacon_req(struct mac_context *mac,
