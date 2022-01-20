@@ -726,7 +726,7 @@ static void __hdd_softap_hard_start_xmit(struct sk_buff *skb,
 	if (QDF_IS_STATUS_ERROR(hdd_softap_validate_driver_state(adapter)))
 		goto drop_pkt;
 
-	wlan_hdd_classify_pkt(skb);
+	wlan_hdd_mark_pkt_type(skb);
 
 	hdd_pkt_add_timestamp(adapter, QDF_PKT_TX_DRIVER_ENTRY,
 			      qdf_get_log_timestamp(), skb);

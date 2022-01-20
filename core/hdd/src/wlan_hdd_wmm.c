@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1805,21 +1805,63 @@ hdd_check_and_upgrade_udp_qos(struct hdd_adapter *adapter,
 }
 
 /**
- * hdd_wmm_classify_pkt() - Function which will classify an OS packet
- * into a WMM AC based on DSCP
- *
- * @adapter: adapter upon which the packet is being transmitted
+ * hdd_wmm_classify_critical_pkt() - Function checks and classifies critical skb
+ * @adapter: adapter for which skb is being transmitted
  * @skb: pointer to network buffer
- * @user_pri: user priority of the OS packet
- * @is_eapol: eapol packet flag
+ * @user_pri: user priority of the OS packet to be determined
+ * @is_critical: pointer to be marked true for a critical packet
  *
+ * Function checks if the packet is one of the critical packets and determines
+ * 'user_pri' for it. EAPOL, ARP, DHCP(v4,v6), NS, NA are considered critical.
+ *
+ * Note that wlan_hdd_mark_critical_pkt is used to mark packet type in CB for
+ * these critical packets. This is done as skb->cb amay be overwritten between
+ * _select_queue and_hard_start_xmit functions. hdd_wmm_classify_critical_pkt
+ * and wlan_hdd_mark_critical_pkt should be in sync w.r.t packet types.
+
  * Return: None
  */
 static
-void hdd_wmm_classify_pkt(struct hdd_adapter *adapter,
-			  struct sk_buff *skb,
-			  enum sme_qos_wmmuptype *user_pri,
-			  bool *is_eapol)
+void hdd_wmm_classify_critical_pkt(struct hdd_adapter *adapter,
+				   struct sk_buff *skb,
+				   enum sme_qos_wmmuptype *user_pri,
+				   bool *is_critical)
+{
+	enum qdf_proto_subtype proto_subtype;
+
+	 /* Send EAPOL on TID 6(VO). Rest are sent on TID 0(BE). */
+
+	if (qdf_nbuf_is_ipv4_eapol_pkt(skb)) {
+		*is_critical = true;
+		*user_pri = SME_QOS_WMM_UP_VO;
+	} else if (qdf_nbuf_is_ipv4_arp_pkt(skb)) {
+		*is_critical = true;
+		*user_pri = SME_QOS_WMM_UP_BE;
+	} else if (qdf_nbuf_is_ipv4_dhcp_pkt(skb)) {
+		*is_critical = true;
+		*user_pri = SME_QOS_WMM_UP_BE;
+	} else if (qdf_nbuf_is_ipv6_dhcp_pkt(skb)) {
+		*is_critical = true;
+		*user_pri = SME_QOS_WMM_UP_BE;
+	} else if (qdf_nbuf_is_icmpv6_pkt(skb)) {
+		proto_subtype = qdf_nbuf_get_icmpv6_subtype(skb);
+		switch (proto_subtype) {
+		case QDF_PROTO_ICMPV6_NA:
+		case QDF_PROTO_ICMPV6_NS:
+			*is_critical = true;
+			*user_pri = SME_QOS_WMM_UP_BE;
+			break;
+		default:
+			break;
+		}
+	}
+}
+
+static
+void hdd_wmm_get_user_priority_from_ip_tos(struct hdd_adapter *adapter,
+					   struct sk_buff *skb,
+					   enum sme_qos_wmmuptype *user_pri)
+
 {
 	unsigned char dscp;
 	unsigned char tos;
@@ -1917,7 +1959,6 @@ void hdd_wmm_classify_pkt(struct hdd_adapter *adapter,
 		if (eth_hdr->eth_II.h_proto ==
 			htons(HDD_ETHERTYPE_802_1_X)) {
 			tos = 0xC0;
-			*is_eapol = true;
 		} else
 			tos = 0;
 	}
@@ -1925,15 +1966,36 @@ void hdd_wmm_classify_pkt(struct hdd_adapter *adapter,
 	dscp = (tos >> 2) & 0x3f;
 	*user_pri = adapter->dscp_to_up_map[dscp];
 
-	/*
-	 * Upgrade the priority, if the user priority of this packet is
-	 * less than the configured threshold.
-	 */
-	hdd_check_and_upgrade_udp_qos(adapter, skb, user_pri);
-
 #ifdef HDD_WMM_DEBUG
 	hdd_debug("tos is %d, dscp is %d, up is %d", tos, dscp, *user_pri);
 #endif /* HDD_WMM_DEBUG */
+}
+
+/**
+ * hdd_wmm_classify_pkt() - Function to classify skb into WMM AC based on DSCP
+ *
+ * @adapter: adapter upon which the packet is being transmitted
+ * @skb: pointer to network buffer
+ * @user_pri: user priority of the OS packet
+ * @is_critical: pointer to be marked true for a critical packet
+ *
+ * Function checks if the packet is one of the critical packets and determines
+ * 'user_pri' for it. Else it uses IP TOS value to determine 'user_pri'.
+ * It is the responsibility of caller to set the user_pri to skb->priority.
+ * Return: None
+ */
+static
+void hdd_wmm_classify_pkt(struct hdd_adapter *adapter,
+			  struct sk_buff *skb,
+			  enum sme_qos_wmmuptype *user_pri,
+			  bool *is_critical)
+{
+	hdd_wmm_get_user_priority_from_ip_tos(adapter, skb, user_pri);
+
+	hdd_wmm_classify_critical_pkt(adapter, skb, user_pri, is_critical);
+
+	if (!is_critical)
+		hdd_check_and_upgrade_udp_qos(adapter, skb, user_pri);
 }
 
 #ifdef TX_MULTIQ_PER_AC
@@ -2018,20 +2080,20 @@ static uint16_t __hdd_get_queue_index(uint16_t up)
 /**
  * hdd_get_queue_index() - get queue index
  * @up: user priority
- * @is_eapol: is_eapol flag
+ * @is_critical: is_critical flag
  *
  * Return: queue_index
  */
 static
-uint16_t hdd_get_queue_index(uint16_t up, bool is_eapol)
+uint16_t hdd_get_queue_index(uint16_t up, bool is_critical)
 {
-	if (qdf_unlikely(is_eapol == true))
+	if (qdf_unlikely(is_critical))
 		return HDD_LINUX_AC_HI_PRIO;
 	return __hdd_get_queue_index(up);
 }
 #else
 static
-uint16_t hdd_get_queue_index(uint16_t up, bool is_eapol)
+uint16_t hdd_get_queue_index(uint16_t up, bool is_critical)
 {
 	return __hdd_get_queue_index(up);
 }
@@ -2043,9 +2105,8 @@ static uint16_t __hdd_wmm_select_queue(struct net_device *dev,
 	enum sme_qos_wmmuptype up = SME_QOS_WMM_UP_BE;
 	uint16_t index;
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
-	bool is_crtical = false;
+	bool is_critical = false;
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
-	enum qdf_proto_subtype proto_subtype;
 
 	if (qdf_unlikely(!hdd_ctx || cds_is_driver_transitioning())) {
 		hdd_debug_rl("driver is transitioning! Using default(BE) queue.");
@@ -2054,24 +2115,11 @@ static uint16_t __hdd_wmm_select_queue(struct net_device *dev,
 	}
 
 	/* Get the user priority from IP header */
-	hdd_wmm_classify_pkt(adapter, skb, &up, &is_crtical);
-
-	if (qdf_nbuf_is_ipv4_arp_pkt(skb)) {
-		is_crtical = true;
-	} else if (qdf_nbuf_is_icmpv6_pkt(skb)) {
-		proto_subtype = qdf_nbuf_get_icmpv6_subtype(skb);
-		switch (proto_subtype) {
-		case QDF_PROTO_ICMPV6_NA:
-		case QDF_PROTO_ICMPV6_NS:
-			is_crtical = true;
-			break;
-		default:
-			break;
-		}
-	}
+	hdd_wmm_classify_pkt(adapter, skb, &up, &is_critical);
 
 	skb->priority = up;
-	index = hdd_get_queue_index(skb->priority, is_crtical);
+
+	index = hdd_get_queue_index(skb->priority, is_critical);
 
 	return hdd_get_tx_queue_for_ac(adapter, skb, index);
 }

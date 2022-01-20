@@ -426,7 +426,15 @@ void hdd_adapter_set_rps(uint8_t vdev_id, bool enable)
 }
 #endif
 
-void wlan_hdd_classify_pkt(struct sk_buff *skb);
+/**
+ * wlan_hdd_mark_pkt_type() - Mark packet type in qdf_nbuf_cb
+ * @skb - sk buff
+ *
+ * The function zeros out skb->cb and marks packet type in it.
+ *
+ * Return: none
+ */
+void wlan_hdd_mark_pkt_type(struct sk_buff *skb);
 
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
 void hdd_reset_tcp_delack(struct hdd_context *hdd_ctx);
