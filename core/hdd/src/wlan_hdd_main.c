@@ -18029,6 +18029,23 @@ int hdd_set_suspend_mode(struct hdd_context *hdd_ctx)
 }
 #endif
 
+void hdd_shutdown_wlan_in_suspend(struct hdd_context *hdd_ctx)
+{
+/* schedule timeout cb as soon as possible */
+#define SHUTDOWN_IN_SUSPEND_WAIT_TIMEOUT 0
+/* prevent system suspend to let shutdown_restart work can be invoked */
+#define SHUTDOWN_IN_SUSPEND_PREVENT_TIMEOUT 5
+
+	if (!hdd_is_any_interface_open(hdd_ctx)) {
+		qdf_delayed_work_start(&hdd_ctx->psoc_idle_timeout_work,
+				       SHUTDOWN_IN_SUSPEND_WAIT_TIMEOUT);
+		hdd_prevent_suspend_timeout(SHUTDOWN_IN_SUSPEND_PREVENT_TIMEOUT,
+				WIFI_POWER_EVENT_WAKELOCK_DRIVER_IDLE_SHUTDOWN);
+	} else {
+		hdd_err("some adapter not stopped");
+	}
+}
+
 int hdd_driver_load(void)
 {
 	struct osif_driver_sync *driver_sync;

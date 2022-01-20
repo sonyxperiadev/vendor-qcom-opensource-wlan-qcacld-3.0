@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -175,13 +175,13 @@ enum powersave_mode {
  * @PMO_SUSPEND_NONE: Does not support suspend
  * @PMO_SUSPEND_LEGENCY: Legency PDEV suspend mode
  * @PMO_SUSPEND_WOW: WoW suspend mode
- * @PMO_FULL_POWER_DOWN: Full power down while suspend
+ * @PMO_SUSPEND_SHUTDOWN: Shutdown suspend mode. Shutdown while suspend
  */
 enum pmo_suspend_mode {
 	PMO_SUSPEND_NONE = 0,
 	PMO_SUSPEND_LEGENCY,
 	PMO_SUSPEND_WOW,
-	PMO_FULL_POWER_DOWN
+	PMO_SUSPEND_SHUTDOWN
 };
 
 #define PMO_TARGET_SUSPEND_TIMEOUT   (4000)
