@@ -2141,6 +2141,26 @@ cm_roam_scan_filter(struct wlan_objmgr_psoc *psoc,
 	}
 }
 
+#ifdef CONFIG_BAND_6GHZ
+static void
+cm_fill_6ghz_dwell_times(struct wlan_objmgr_psoc *psoc,
+			 struct wlan_roam_scan_params *scan_params)
+{
+	wlan_scan_cfg_get_active_6g_dwelltime(
+					psoc,
+					&scan_params->dwell_time_active_6ghz);
+
+	wlan_scan_cfg_get_passive_6g_dwelltime(
+					psoc,
+					&scan_params->dwell_time_passive_6ghz);
+}
+#else
+static inline void
+cm_fill_6ghz_dwell_times(struct wlan_objmgr_psoc *psoc,
+			 struct wlan_roam_scan_params *scan_params)
+{}
+#endif
+
 static void
 cm_roam_scan_offload_fill_scan_params(struct wlan_objmgr_psoc *psoc,
 			struct rso_config *rso_cfg,
@@ -2258,6 +2278,8 @@ cm_roam_scan_offload_fill_scan_params(struct wlan_objmgr_psoc *psoc,
 
 	scan_params->rso_adaptive_dwell_mode =
 		mlme_obj->cfg.lfr.adaptive_roamscan_dwell_mode;
+
+	cm_fill_6ghz_dwell_times(psoc, scan_params);
 }
 
 void wlan_cm_append_assoc_ies(struct wlan_roam_scan_offload_params *rso_mode_cfg,
