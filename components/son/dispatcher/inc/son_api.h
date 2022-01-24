@@ -25,6 +25,67 @@
 #include <wlan_objmgr_peer_obj.h>
 #include <wlan_objmgr_pdev_obj.h>
 #include <reg_services_public_struct.h>
+#include <qdf_trace.h>
+
+#define son_alert(format, args...) \
+		QDF_TRACE_FATAL(QDF_MODULE_ID_SON, format, ## args)
+
+#define son_err(format, args...) \
+		QDF_TRACE_ERROR(QDF_MODULE_ID_SON, format, ## args)
+
+#define son_warn(format, args...) \
+		QDF_TRACE_WARN(QDF_MODULE_ID_SON, format, ## args)
+
+#define son_info(format, args...) \
+		QDF_TRACE_INFO(QDF_MODULE_ID_SON, format, ## args)
+
+#define son_debug(format, args...) \
+		QDF_TRACE_DEBUG(QDF_MODULE_ID_SON, format, ## args)
+
+#define son_nofl_alert(format, args...) \
+		QDF_TRACE_FATAL_NO_FL(QDF_MODULE_ID_SON, format, ## args)
+
+#define son_nofl_err(format, args...) \
+		QDF_TRACE_ERROR_NO_FL(QDF_MODULE_ID_SON, format, ## args)
+
+#define son_nofl_warn(format, args...) \
+		QDF_TRACE_WARN_NO_FL(QDF_MODULE_ID_SON, format, ## args)
+
+#define son_nofl_info(format, args...) \
+		QDF_TRACE_INFO_NO_FL(QDF_MODULE_ID_SON, format, ## args)
+
+#define son_nofl_debug(format, args...) \
+		QDF_TRACE_DEBUG_NO_FL(QDF_MODULE_ID_SON, format, ## args)
+
+#define son_alert_rl(format, args...) \
+		QDF_TRACE_FATAL_RL(QDF_MODULE_ID_SON, format, ## args)
+
+#define son_err_rl(format, args...) \
+		QDF_TRACE_ERROR_RL(QDF_MODULE_ID_SON, format, ## args)
+
+#define son_warn_rl(format, args...) \
+		QDF_TRACE_WARN_RL(QDF_MODULE_ID_SON, format, ## args)
+
+#define son_info_rl(format, args...) \
+		QDF_TRACE_INFO_RL(QDF_MODULE_ID_SON, format, ## args)
+
+#define son_debug_rl(format, args...) \
+		QDF_TRACE_DEBUG_RL(QDF_MODULE_ID_SON, format, ## args)
+
+#define son_nofl_alert_rl(format, args...) \
+		QDF_TRACE_FATAL_RL_NO_FL(QDF_MODULE_ID_SON, format, ## args)
+
+#define son_nofl_err_rl(format, args...) \
+		QDF_TRACE_ERROR_RL_NO_FL(QDF_MODULE_ID_SON, format, ## args)
+
+#define son_nofl_warn_rl(format, args...) \
+		QDF_TRACE_WARN_RL_NO_FL(QDF_MODULE_ID_SON, format, ## args)
+
+#define son_nofl_info_rl(format, args...) \
+		QDF_TRACE_INFO_RL_NO_FL(QDF_MODULE_ID_SON, format, ## args)
+
+#define son_nofl_debug_rl(format, args...) \
+		QDF_TRACE_DEBUG_RL_NO_FL(QDF_MODULE_ID_SON, format, ## args)
 
 #define TOTAL_DWELL_TIME 200
 
