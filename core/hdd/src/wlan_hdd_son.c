@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -1503,6 +1503,253 @@ static int hdd_son_deliver_smps(struct wlan_objmgr_vdev *vdev,
 				      event_buf);
 }
 
+/**
+ * hdd_son_get_vdev_by_netdev() - get vdev from net device
+ * @dev: struct net_device dev
+ *
+ * Return: vdev on success, NULL on failure
+ */
+static struct wlan_objmgr_vdev *
+hdd_son_get_vdev_by_netdev(struct net_device *dev)
+{
+	struct hdd_adapter *adapter;
+	struct wlan_objmgr_vdev *vdev;
+
+	if (!dev)
+		return NULL;
+
+	adapter = WLAN_HDD_GET_PRIV_PTR(dev);
+	if (!adapter || (adapter && adapter->delete_in_progress))
+		return NULL;
+
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_SON_ID);
+	if (!vdev)
+		return NULL;
+
+	return vdev;
+}
+
+/**
+ * son_trigger_vdev_obj_creation() - Trigger vdev object creation
+ * @psoc: psoc object
+ * @object: vdev object
+ * @arg: component id
+ *
+ * Return: void
+ */
+static void
+son_trigger_vdev_obj_creation(struct wlan_objmgr_psoc *psoc,
+			      void *object, void *arg)
+{
+	QDF_STATUS ret;
+	struct wlan_objmgr_vdev *vdev;
+	enum wlan_umac_comp_id *id;
+
+	vdev = object;
+	id = arg;
+
+	ret = wlan_objmgr_trigger_vdev_comp_priv_object_creation(vdev, *id);
+	if (QDF_IS_STATUS_ERROR(ret))
+		hdd_err("vdev obj creation trigger failed");
+}
+
+/**
+ * son_trigger_pdev_obj_creation() - Trigger pdev object creation
+ * @psoc: psoc object
+ * @object: pdev object
+ * @arg: component id
+ *
+ * Return: void
+ */
+static void
+son_trigger_pdev_obj_creation(struct wlan_objmgr_psoc *psoc,
+			      void *object, void *arg)
+{
+	QDF_STATUS ret;
+	struct wlan_objmgr_pdev *pdev;
+	enum wlan_umac_comp_id *id;
+
+	pdev = object;
+	id = arg;
+
+	ret = wlan_objmgr_trigger_pdev_comp_priv_object_creation(pdev, *id);
+	if (QDF_IS_STATUS_ERROR(ret))
+		hdd_err("pdev obj creation trigger failed");
+}
+
+/**
+ * hdd_son_trigger_objmgr_object_creation() - Trigger objmgr object creation
+ * @id: umac component id
+ *
+ * Return: QDF_STATUS_SUCCESS on success otherwise failure
+ */
+static QDF_STATUS
+hdd_son_trigger_objmgr_object_creation(enum wlan_umac_comp_id id)
+{
+	QDF_STATUS ret;
+	struct wlan_objmgr_psoc *psoc;
+
+	psoc = wlan_objmgr_get_psoc_by_id(0, WLAN_SON_ID);
+	if (!psoc) {
+		hdd_err("psoc null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	ret = wlan_objmgr_trigger_psoc_comp_priv_object_creation(psoc, id);
+	if (QDF_IS_STATUS_ERROR(ret)) {
+		hdd_err("psoc object create trigger failed");
+		goto out;
+	}
+
+	ret = wlan_objmgr_iterate_obj_list(psoc, WLAN_PDEV_OP,
+					   son_trigger_pdev_obj_creation,
+					   &id, 0, id);
+	if (QDF_IS_STATUS_ERROR(ret)) {
+		hdd_err("pdev object create trigger failed");
+		goto fail;
+	}
+
+	ret = wlan_objmgr_iterate_obj_list(psoc, WLAN_VDEV_OP,
+					   son_trigger_vdev_obj_creation,
+					   &id, 0, id);
+	if (QDF_IS_STATUS_ERROR(ret)) {
+		hdd_err("vdev object create trigger failed");
+		goto fail1;
+	}
+	wlan_objmgr_psoc_release_ref(psoc, WLAN_SON_ID);
+	return ret;
+
+fail1:
+	ret = wlan_objmgr_iterate_obj_list(psoc, WLAN_PDEV_OP,
+					   son_trigger_pdev_obj_deletion,
+					   &id, 0, id);
+	if (QDF_IS_STATUS_ERROR(ret))
+		hdd_err("pdev object delete trigger failed");
+fail:
+	ret = wlan_objmgr_trigger_psoc_comp_priv_object_deletion(psoc, id);
+	if (QDF_IS_STATUS_ERROR(ret))
+		hdd_err("psoc object delete trigger failed");
+out:
+	wlan_objmgr_psoc_release_ref(psoc, WLAN_SON_ID);
+	return ret;
+}
+
+/**
+ * son_trigger_peer_obj_deletion() - Trigger peer object deletion
+ * @psoc: psoc object
+ * @object: peer object
+ * @arg: component id
+ *
+ * Return: void
+ */
+static void
+son_trigger_peer_obj_deletion(struct wlan_objmgr_psoc *psoc,
+			      void *object, void *arg)
+{
+	QDF_STATUS ret;
+	struct wlan_objmgr_peer *peer;
+	enum wlan_umac_comp_id *id;
+
+	peer = object;
+	id = arg;
+
+	ret = wlan_objmgr_trigger_peer_comp_priv_object_deletion(peer, *id);
+	if (QDF_IS_STATUS_ERROR(ret))
+		hdd_err("peer obj delete trigger failed");
+}
+
+/**
+ * son_trigger_vdev_obj_deletion() - Trigger vdev object deletion
+ * @psoc: psoc object
+ * @object: vdev object
+ * @arg: component id
+ *
+ * Return: void
+ */
+static void
+son_trigger_vdev_obj_deletion(struct wlan_objmgr_psoc *psoc,
+			      void *object, void *arg)
+{
+	QDF_STATUS ret;
+	struct wlan_objmgr_vdev *vdev;
+	enum wlan_umac_comp_id *id;
+
+	vdev = object;
+	id = arg;
+
+	ret = wlan_objmgr_trigger_vdev_comp_priv_object_deletion(vdev, *id);
+	if (QDF_IS_STATUS_ERROR(ret))
+		hdd_err("vdev obj deletion trigger failed");
+}
+
+/**
+ * son_trigger_pdev_obj_deletion() - Trigger pdev object deletion
+ * @psoc: psoc object
+ * @object: pdev object
+ * @arg: component id
+ *
+ * Return: void
+ */
+static void
+son_trigger_pdev_obj_deletion(struct wlan_objmgr_psoc *psoc,
+			      void *object, void *arg)
+{
+	QDF_STATUS ret;
+	struct wlan_objmgr_pdev *pdev;
+	enum wlan_umac_comp_id *id;
+
+	pdev = object;
+	id = arg;
+
+	ret = wlan_objmgr_trigger_pdev_comp_priv_object_deletion(pdev, *id);
+	if (QDF_IS_STATUS_ERROR(ret))
+		hdd_err("pdev obj delete trigger failed");
+}
+
+/**
+ * hdd_son_trigger_objmgr_object_deletion() - Trigger objmgr object deletion
+ * @id: umac component id
+ *
+ * Return: QDF_STATUS_SUCCESS on success otherwise failure
+ */
+static QDF_STATUS
+hdd_son_trigger_objmgr_object_deletion(enum wlan_umac_comp_id id)
+{
+	QDF_STATUS ret;
+	struct wlan_objmgr_psoc *psoc;
+
+	psoc = wlan_objmgr_get_psoc_by_id(0, WLAN_SON_ID);
+	if (!psoc) {
+		hdd_err("psoc null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	ret = wlan_objmgr_iterate_obj_list(psoc, WLAN_PEER_OP,
+					   son_trigger_peer_obj_deletion,
+					   &id, 0, id);
+	if (QDF_IS_STATUS_ERROR(ret))
+		hdd_err("peer object deletion trigger failed");
+
+	ret = wlan_objmgr_iterate_obj_list(psoc, WLAN_VDEV_OP,
+					   son_trigger_vdev_obj_deletion,
+					   &id, 0, id);
+	if (QDF_IS_STATUS_ERROR(ret))
+		hdd_err("vdev object deletion trigger failed");
+
+	ret = wlan_objmgr_iterate_obj_list(psoc, WLAN_PDEV_OP,
+					   son_trigger_pdev_obj_deletion,
+					   &id, 0, id);
+	if (QDF_IS_STATUS_ERROR(ret))
+		hdd_err("pdev object delete trigger failed");
+
+	ret = wlan_objmgr_trigger_psoc_comp_priv_object_deletion(psoc, id);
+	if (QDF_IS_STATUS_ERROR(ret))
+		hdd_err("psoc object delete trigger failed");
+
+	wlan_objmgr_psoc_release_ref(psoc, WLAN_SON_ID);
+	return ret;
+}
+
 void hdd_son_register_callbacks(struct hdd_context *hdd_ctx)
 {
 	struct son_callbacks cb_obj = {0};
@@ -1530,6 +1777,11 @@ void hdd_son_register_callbacks(struct hdd_context *hdd_ctx)
 	cb_obj.os_if_modify_acl = hdd_son_modify_acl;
 	cb_obj.os_if_get_sta_list = hdd_son_get_sta_list;
 	cb_obj.os_if_get_sta_space = hdd_son_get_sta_space;
+	cb_obj.os_if_get_vdev_by_netdev = hdd_son_get_vdev_by_netdev;
+	cb_obj.os_if_trigger_objmgr_object_creation =
+				hdd_son_trigger_objmgr_object_creation;
+	cb_obj.os_if_trigger_objmgr_object_deletion =
+				hdd_son_trigger_objmgr_object_deletion;
 
 	os_if_son_register_hdd_callbacks(hdd_ctx->psoc, &cb_obj);
 
@@ -1583,21 +1835,21 @@ void hdd_son_deliver_peer_authorize_event(struct hdd_adapter *adapter,
 	int ret;
 
 	if (adapter->device_mode != QDF_SAP_MODE) {
-		osif_err("Non SAP vdev");
+		hdd_err("Non SAP vdev");
 		return;
 	}
 	peer = wlan_objmgr_get_peer_by_mac(psoc, peer_mac, WLAN_UMAC_COMP_SON);
 	if (!peer) {
-		osif_err("No peer object for sta" QDF_FULL_MAC_FMT,
-			 QDF_FULL_MAC_REF(peer_mac));
+		hdd_err("No peer object for sta" QDF_FULL_MAC_FMT,
+			QDF_FULL_MAC_REF(peer_mac));
 		return;
 	}
 
 	ret = os_if_son_deliver_ald_event(adapter, peer,
 					  MLME_EVENT_CLIENT_ASSOCIATED, NULL);
 	if (ret)
-		osif_err("ALD ASSOCIATED Event failed for" QDF_FULL_MAC_FMT,
-			 QDF_FULL_MAC_REF(peer_mac));
+		hdd_err("ALD ASSOCIATED Event failed for" QDF_FULL_MAC_FMT,
+			QDF_FULL_MAC_REF(peer_mac));
 
 	wlan_objmgr_peer_release_ref(peer, WLAN_UMAC_COMP_SON);
 }

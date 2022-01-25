@@ -60,6 +60,9 @@
  * @os_if_get_sta_space: get sta space
  * @os_if_deauth_sta: Deauths the target peer
  * @os_if_modify_acl: Add/Del target peer in ACL
+ * @os_if_get_vdev_by_netdev: Get vdev from net device
+ * @os_if_trigger_objmgr_object_creation: Trigger objmgr object creation
+ * @os_if_trigger_objmgr_object_deletion: Trigger objmgr object deletion
  */
 struct son_callbacks {
 	uint32_t (*os_if_is_acs_in_progress)(struct wlan_objmgr_vdev *vdev);
@@ -108,6 +111,12 @@ struct son_callbacks {
 	void (*os_if_modify_acl)(struct wlan_objmgr_vdev *vdev,
 				 uint8_t *peer_mac,
 				 bool allow_auth);
+	struct wlan_objmgr_vdev *(*os_if_get_vdev_by_netdev)
+				(struct net_device *dev);
+	QDF_STATUS (*os_if_trigger_objmgr_object_creation)
+				(enum wlan_umac_comp_id id);
+	QDF_STATUS (*os_if_trigger_objmgr_object_deletion)
+				(enum wlan_umac_comp_id id);
 };
 
 /**
@@ -595,4 +604,27 @@ int os_if_son_deliver_ald_event(struct hdd_adapter *adapter,
 				struct wlan_objmgr_peer *peer,
 				enum ieee80211_event_type event,
 				void *event_data);
+/**
+ * os_if_son_get_vdev_by_netdev() - Get vdev from net device
+ * @dev: net device struct
+ *
+ * Return: objmgr vdev on success else NULL
+ */
+struct wlan_objmgr_vdev *os_if_son_get_vdev_by_netdev(struct net_device *dev);
+
+/**
+ * os_if_son_trigger_objmgr_object_deletion() - Trigger objmgr object deletion
+ * @id: umac component id
+ *
+ * Return: QDF_STATUS_SUCCESS on success
+ */
+QDF_STATUS os_if_son_trigger_objmgr_object_deletion(enum wlan_umac_comp_id id);
+
+/**
+ * os_if_son_trigger_objmgr_object_creation() - Trigger objmgr object creation
+ * @id: umac component id
+ *
+ * Return: QDF_STATUS_SUCCESS on success
+ */
+QDF_STATUS os_if_son_trigger_objmgr_object_creation(enum wlan_umac_comp_id id);
 #endif

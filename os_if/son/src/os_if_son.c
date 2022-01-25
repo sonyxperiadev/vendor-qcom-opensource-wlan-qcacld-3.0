@@ -1384,3 +1384,25 @@ int os_if_son_deliver_ald_event(struct hdd_adapter *adapter,
 }
 
 qdf_export_symbol(os_if_son_deliver_ald_event);
+
+struct wlan_objmgr_vdev *
+os_if_son_get_vdev_by_netdev(struct net_device *dev)
+{
+	return g_son_os_if_cb.os_if_get_vdev_by_netdev(dev);
+}
+
+qdf_export_symbol(os_if_son_get_vdev_by_netdev);
+
+QDF_STATUS os_if_son_trigger_objmgr_object_creation(enum wlan_umac_comp_id id)
+{
+	return g_son_os_if_cb.os_if_trigger_objmgr_object_creation(id);
+}
+
+qdf_export_symbol(os_if_son_trigger_objmgr_object_creation);
+
+QDF_STATUS os_if_son_trigger_objmgr_object_deletion(enum wlan_umac_comp_id id)
+{
+	return g_son_os_if_cb.os_if_trigger_objmgr_object_deletion(id);
+}
+
+qdf_export_symbol(os_if_son_trigger_objmgr_object_deletion);
