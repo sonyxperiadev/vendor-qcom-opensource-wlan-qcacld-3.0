@@ -1339,6 +1339,7 @@ QDF_STATUS hdd_softap_register_sta(struct hdd_adapter *adapter,
 	struct hdd_station_info *sta_info;
 	bool wmm_enabled = false;
 	enum qca_wlan_802_11_mode dot11mode = QCA_WLAN_802_11_MODE_INVALID;
+	bool is_macaddr_broadcast = false;
 
 	if (event) {
 		wmm_enabled = event->wmmEnabled;
@@ -1351,12 +1352,14 @@ QDF_STATUS hdd_softap_register_sta(struct hdd_adapter *adapter,
 	 * If the address is a broadcast address, then provide the self mac addr
 	 * to the data path. Else provide the mac address of the connected peer.
 	 */
-	if (qdf_is_macaddr_broadcast(sta_mac))
+	if (qdf_is_macaddr_broadcast(sta_mac)) {
 		qdf_mem_copy(&txrx_desc.peer_addr, &adapter->mac_addr,
 			     QDF_MAC_ADDR_SIZE);
-	else
+		is_macaddr_broadcast = true;
+	} else {
 		qdf_mem_copy(&txrx_desc.peer_addr, sta_mac,
 			     QDF_MAC_ADDR_SIZE);
+	}
 
 	qdf_status = hdd_softap_init_tx_rx_sta(adapter, sta_mac);
 	sta_info = hdd_get_sta_info_by_mac(&adapter->sta_info_list,
@@ -1371,29 +1374,35 @@ QDF_STATUS hdd_softap_register_sta(struct hdd_adapter *adapter,
 	txrx_desc.is_qos_enabled = wmm_enabled;
 	hdd_add_latency_critical_client(adapter, dot11mode);
 
-	/* Register the vdev transmit and receive functions */
-	qdf_mem_zero(&txrx_ops, sizeof(txrx_ops));
+	if (is_macaddr_broadcast) {
+		/*
+		 * Register the vdev transmit and receive functions once with
+		 * CDP layer. Broadcast STA is registered only once when BSS is
+		 * started.
+		 */
+		qdf_mem_zero(&txrx_ops, sizeof(txrx_ops));
 
-	txrx_ops.tx.tx_comp = hdd_softap_notify_tx_compl_cbk;
+		txrx_ops.tx.tx_comp = hdd_softap_notify_tx_compl_cbk;
 
-	if (adapter->hdd_ctx->enable_dp_rx_threads) {
-		txrx_ops.rx.rx = hdd_rx_pkt_thread_enqueue_cbk;
-		txrx_ops.rx.rx_stack = hdd_softap_rx_packet_cbk;
-		txrx_ops.rx.rx_flush = hdd_rx_flush_packet_cbk;
-		txrx_ops.rx.rx_gro_flush = hdd_rx_thread_gro_flush_ind_cbk;
-		adapter->rx_stack = hdd_softap_rx_packet_cbk;
-	} else {
-		txrx_ops.rx.rx = hdd_softap_rx_packet_cbk;
-		txrx_ops.rx.rx_stack = NULL;
-		txrx_ops.rx.rx_flush = NULL;
+		if (adapter->hdd_ctx->enable_dp_rx_threads) {
+			txrx_ops.rx.rx = hdd_rx_pkt_thread_enqueue_cbk;
+			txrx_ops.rx.rx_stack = hdd_softap_rx_packet_cbk;
+			txrx_ops.rx.rx_flush = hdd_rx_flush_packet_cbk;
+			txrx_ops.rx.rx_gro_flush =
+					hdd_rx_thread_gro_flush_ind_cbk;
+			adapter->rx_stack = hdd_softap_rx_packet_cbk;
+		} else {
+			txrx_ops.rx.rx = hdd_softap_rx_packet_cbk;
+		}
+
+		txrx_ops.get_tsf_time = hdd_get_tsf_time;
+
+		cdp_vdev_register(soc,
+				  adapter->vdev_id,
+				  (ol_osif_vdev_handle)adapter,
+				  &txrx_ops);
+		adapter->tx_fn = txrx_ops.tx.tx;
 	}
-
-	txrx_ops.get_tsf_time = hdd_get_tsf_time;
-	cdp_vdev_register(soc,
-			  adapter->vdev_id,
-			  (ol_osif_vdev_handle)adapter,
-			  &txrx_ops);
-	adapter->tx_fn = txrx_ops.tx.tx;
 
 	qdf_status = cdp_peer_register(soc, OL_TXRX_PDEV_ID, &txrx_desc);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
@@ -1447,10 +1456,13 @@ QDF_STATUS hdd_softap_register_sta(struct hdd_adapter *adapter,
 		ap_ctx->client_count[dot11mode]++;
 	hdd_put_sta_info_ref(&adapter->sta_info_list, &sta_info, true,
 			     STA_INFO_SOFTAP_REGISTER_STA);
-	hdd_debug("Enabling queues");
-	wlan_hdd_netif_queue_control(adapter,
-				   WLAN_START_ALL_NETIF_QUEUE_N_CARRIER,
-				   WLAN_CONTROL_PATH);
+
+	if (is_macaddr_broadcast) {
+		hdd_debug("Enabling queues");
+		wlan_hdd_netif_queue_control(adapter,
+					     WLAN_START_ALL_NETIF_QUEUE_N_CARRIER,
+					     WLAN_CONTROL_PATH);
+	}
 	ucfg_mlme_update_oce_flags(hdd_ctx->pdev);
 	ucfg_mlme_init_twt_context(hdd_ctx->psoc, sta_mac,
 				   TWT_ALL_SESSIONS_DIALOG_ID);
