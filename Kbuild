@@ -2366,8 +2366,8 @@ $(call add-wlan-objs,nan,$(WLAN_NAN_OBJS))
 #SON_CORE_INC := -I$(WLAN_ROOT)/components/son/core/inc
 SON_UCFG_DIR := components/son/dispatcher/src
 SON_UCFG_INC := -I$(WLAN_ROOT)/components/son/dispatcher/inc
-#SON_TGT_DIR  := components/target_if/son/src
-#SON_TGT_INC  := -I$(WLAN_ROOT)/components/target_if/son/inc
+SON_TGT_DIR  := $(WLAN_COMMON_ROOT)/target_if/son/src
+SON_TGT_INC  := -I$(WLAN_COMMON_INC)/target_if/son/inc/
 
 SON_OS_IF_DIR  := os_if/son/src
 SON_OS_IF_INC  := -I$(WLAN_ROOT)/os_if/son/inc
@@ -2375,7 +2375,8 @@ SON_OS_IF_INC  := -I$(WLAN_ROOT)/os_if/son/inc
 ifeq ($(CONFIG_QCACLD_FEATURE_SON), y)
 WLAN_SON_OBJS := $(SON_UCFG_DIR)/son_ucfg_api.o \
 		 $(SON_UCFG_DIR)/son_api.o \
-		 $(SON_OS_IF_DIR)/os_if_son.o
+		 $(SON_OS_IF_DIR)/os_if_son.o \
+		 $(SON_TGT_DIR)/target_if_son.o
 endif
 
 $(call add-wlan-objs,son,$(WLAN_SON_OBJS))
