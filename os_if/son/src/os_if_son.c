@@ -37,6 +37,8 @@
 #include <wlan_dcs_ucfg_api.h>
 
 static struct son_callbacks g_son_os_if_cb;
+static struct wlan_os_if_son_ops g_son_os_if_txrx_ops;
+static void (*os_if_son_ops_cb)(struct wlan_os_if_son_ops *son_ops);
 
 void os_if_son_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 				      struct son_callbacks *cb_obj)
@@ -1441,3 +1443,46 @@ int os_if_son_get_acs_report(struct wlan_objmgr_vdev *vdev,
 }
 
 qdf_export_symbol(os_if_son_get_acs_report);
+
+void
+wlan_os_if_son_ops_register_cb(void (*handler)(struct wlan_os_if_son_ops *))
+{
+	os_if_son_ops_cb = handler;
+}
+
+qdf_export_symbol(wlan_os_if_son_ops_register_cb);
+
+static void wlan_son_register_os_if_ops(struct wlan_os_if_son_ops *son_ops)
+{
+	if (os_if_son_ops_cb)
+		os_if_son_ops_cb(son_ops);
+	else
+		osif_err("\n***** OS_IF: SON MODULE NOT LOADED *****\n");
+}
+
+void os_if_son_register_lmac_if_ops(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_lmac_if_rx_ops *rx_ops;
+
+	if (!psoc) {
+		osif_err("psoc is NULL");
+		return;
+	}
+
+	rx_ops = wlan_psoc_get_lmac_if_rxops(psoc);
+	if (!rx_ops) {
+		osif_err("rx_ops is null");
+		return;
+	}
+
+	wlan_lmac_if_son_mod_register_rx_ops(rx_ops);
+}
+
+qdf_export_symbol(os_if_son_register_lmac_if_ops);
+
+void os_if_son_register_osif_ops(void)
+{
+	wlan_son_register_os_if_ops(&g_son_os_if_txrx_ops);
+}
+
+qdf_export_symbol(os_if_son_register_osif_ops);

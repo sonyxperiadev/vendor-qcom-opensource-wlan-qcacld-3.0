@@ -128,6 +128,64 @@ struct son_callbacks {
 };
 
 /**
+ * enum os_if_son_vendor_cmd_type - Enum to specify get/set command
+ * @OS_IF_SON_VENDOR_GET_CMD: Get type command called from wificonfiguration
+ *                            vendor command handler
+ * @OS_IF_SON_VENDOR_SET_CMD: Set type command called from wificonfiguration
+ *                            vendor command handler
+ * @OS_IF_SON_VENDOR_MAX_CMD: Max cmd type
+ */
+enum os_if_son_vendor_cmd_type {
+	OS_IF_SON_VENDOR_GET_CMD,
+	OS_IF_SON_VENDOR_SET_CMD,
+	OS_IF_SON_VENDOR_MAX_CMD,
+};
+
+/**
+ * struct os_if_son_rx_ops - Contains cb for os_if rx ops used by SON
+ * @parse_generic_nl_cmd: Callback for parsing generic nl vendor commands
+ */
+struct os_if_son_rx_ops {
+	int (*parse_generic_nl_cmd)(struct wiphy *wiphy,
+				    struct wireless_dev *wdev, void *params,
+				    enum os_if_son_vendor_cmd_type type);
+};
+
+/**
+ * struct wlan_os_if_son_ops - Contains cb for os_if txrx ops used by SON
+ * @son_osif_rx_ops: structure to contain rx ops
+ */
+struct wlan_os_if_son_ops {
+	struct os_if_son_rx_ops son_osif_rx_ops;
+};
+
+/**
+ * wlan_os_if_son_ops_register_cb() - Set son os_if ops cb
+ * @handler: son os_if ops cb table
+ *
+ * Return: void
+ */
+void
+wlan_os_if_son_ops_register_cb(void (*handler)(struct wlan_os_if_son_ops *));
+
+/**
+ * os_if_son_register_osif_ops() - Register son os_if ops with os_if
+ *
+ * Return: void
+ */
+void os_if_son_register_osif_ops(void);
+
+/**
+ * os_if_son_register_lmac_if_ops() - Register son lmac_if rx_ops with lmac
+ * @psoc: objmrg psoc handle
+ *
+ * Register son lmac_if rx_ops with lmac to be called by SON DLKM
+ *
+ * Return: void
+ */
+void os_if_son_register_lmac_if_ops(struct wlan_objmgr_psoc *psoc);
+
+/**
  * os_if_son_register_hdd_callbacks() - register son hdd callback
  * @psoc: psoc
  * @cb_obj: pointer to callback
