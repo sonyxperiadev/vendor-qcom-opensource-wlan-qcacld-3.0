@@ -6180,6 +6180,7 @@ hdd_alloc_station_adapter(struct hdd_context *hdd_ctx, tSirMacAddr mac_addr,
 	init_completion(&adapter->vdev_destroy_event);
 
 	adapter->offloads_configured = false;
+	hdd_update_dynamic_tsf_sync(adapter);
 	adapter->is_link_up_service_needed = false;
 	adapter->send_mode_change = true;
 
