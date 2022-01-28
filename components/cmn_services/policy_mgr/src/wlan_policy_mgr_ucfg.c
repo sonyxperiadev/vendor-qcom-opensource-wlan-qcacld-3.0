@@ -201,6 +201,11 @@ QDF_STATUS ucfg_policy_mgr_get_dual_mac_feature(struct wlan_objmgr_psoc *psoc,
 	return policy_mgr_get_dual_mac_feature(psoc, dual_mac_feature);
 }
 
+bool ucfg_policy_mgr_get_dual_sta_feature(struct wlan_objmgr_psoc *psoc)
+{
+	return policy_mgr_allow_multiple_sta_connections(psoc);
+}
+
 QDF_STATUS ucfg_policy_mgr_get_force_1x1(struct wlan_objmgr_psoc *psoc,
 					 uint8_t *force_1x1)
 {

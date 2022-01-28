@@ -3928,7 +3928,9 @@ __wlan_hdd_cfg80211_get_supported_features(struct wiphy *wiphy,
 		fset |= WIFI_FEATURE_PNO;
 	}
 #endif
-	fset |= WIFI_FEATURE_ADDITIONAL_STA;
+	if (ucfg_policy_mgr_get_dual_sta_feature(hdd_ctx->psoc))
+		fset |= WIFI_FEATURE_ADDITIONAL_STA;
+
 #ifdef FEATURE_WLAN_TDLS
 	cfg_tdls_get_support_enable(hdd_ctx->psoc, &bvalue);
 	if ((bvalue) && sme_is_feature_supported_by_fw(TDLS)) {

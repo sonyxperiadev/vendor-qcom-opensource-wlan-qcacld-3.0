@@ -3539,14 +3539,7 @@ static inline bool policy_mgr_is_concurrency_allowed_4_port(
 {return false; }
 #endif
 
-/**
- * policy_mgr_allow_multiple_sta_connections() - check whether multiple STA
- * concurrency is allowed and F/W supported
- * @psoc: Pointer to soc
- *
- *  Return: true if supports else false.
- */
-static bool
+bool
 policy_mgr_allow_multiple_sta_connections(struct wlan_objmgr_psoc *psoc)
 {
 	struct wmi_unified *wmi_handle;

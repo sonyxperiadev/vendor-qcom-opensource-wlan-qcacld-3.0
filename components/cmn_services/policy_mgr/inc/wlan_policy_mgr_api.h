@@ -214,6 +214,18 @@ QDF_STATUS policy_mgr_get_dual_mac_feature(struct wlan_objmgr_psoc *psoc,
 					   uint8_t *dual_mac_feature);
 
 /**
+ * policy_mgr_allow_multiple_sta_connections() - to find out if STA+STA feature
+ * is enabled.
+ * @psoc: pointer to psoc
+ *
+ * This API is used to find out whether STA+STA specific feature is enabled
+ * or not
+ *
+ * Return: true if supports else false.
+ */
+bool policy_mgr_allow_multiple_sta_connections(struct wlan_objmgr_psoc *psoc);
+
+/**
  * policy_mgr_set_dual_mac_feature() - to set the dual mac feature value
  * @psoc: pointer to psoc
  * @dual_mac_feature: value to be updated
