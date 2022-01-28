@@ -1352,17 +1352,15 @@ QDF_STATUS os_if_son_pdev_ops(struct wlan_objmgr_pdev *pdev,
 
 qdf_export_symbol(os_if_son_pdev_ops);
 
-int os_if_son_deliver_ald_event(struct hdd_adapter *adapter,
+int os_if_son_deliver_ald_event(struct wlan_objmgr_vdev *vdev,
 				struct wlan_objmgr_peer *peer,
 				enum ieee80211_event_type event,
 				void *event_data)
 {
-	struct wlan_objmgr_vdev *vdev;
 	struct wlan_objmgr_psoc *psoc;
 	struct wlan_lmac_if_rx_ops *rx_ops;
 	int ret;
 
-	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_SON_ID);
 	if (!vdev) {
 		osif_err("null vdev");
 		return -EINVAL;
@@ -1370,16 +1368,15 @@ int os_if_son_deliver_ald_event(struct hdd_adapter *adapter,
 	psoc = wlan_vdev_get_psoc(vdev);
 	if (!psoc) {
 		osif_err("null posc");
-		hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_SON_ID);
 		return -EINVAL;
 	}
 	rx_ops = wlan_psoc_get_lmac_if_rxops(psoc);
 	if (rx_ops && rx_ops->son_rx_ops.deliver_event)
 		ret = rx_ops->son_rx_ops.deliver_event(vdev, peer, event,
-							event_data);
+						       event_data);
 	else
 		ret = -EINVAL;
-	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_SON_ID);
+
 	return ret;
 }
 

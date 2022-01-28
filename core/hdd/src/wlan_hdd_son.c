@@ -30,6 +30,7 @@
 #include <wlan_reg_services_api.h>
 #include <son_ucfg_api.h>
 #include <wlan_hdd_son.h>
+#include <wlan_hdd_object_manager.h>
 
 /**
  * hdd_son_is_acs_in_progress() - whether acs is in progress or not
@@ -2260,21 +2261,42 @@ void hdd_son_register_callbacks(struct hdd_context *hdd_ctx)
 
 int hdd_son_deliver_acs_complete_event(struct hdd_adapter *adapter)
 {
-	int ret;
+	int ret = -EINVAL;
+	struct wlan_objmgr_vdev *vdev;
 
-	ret = os_if_son_deliver_ald_event(adapter, NULL,
-					  MLME_EVENT_ACS_COMPLETE, NULL);
+	if (adapter) {
+		vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_SON_ID);
+		if (!vdev) {
+			hdd_err("null vdev");
+			return ret;
+		}
+		ret = os_if_son_deliver_ald_event(vdev, NULL,
+						  MLME_EVENT_ACS_COMPLETE,
+						  NULL);
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_SON_ID);
+	}
+
 	return ret;
 }
 
 int hdd_son_deliver_cac_status_event(struct hdd_adapter *adapter,
 				     bool radar_detected)
 {
-	int ret;
+	int ret = -EINVAL;
+	struct wlan_objmgr_vdev *vdev;
 
-	ret = os_if_son_deliver_ald_event(adapter, NULL,
-					  MLME_EVENT_CAC_STATUS,
-					  &radar_detected);
+	if (adapter) {
+		vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_SON_ID);
+		if (!vdev) {
+			hdd_err("null vdev");
+			return ret;
+		}
+		ret = os_if_son_deliver_ald_event(vdev, NULL,
+						  MLME_EVENT_CAC_STATUS,
+						  &radar_detected);
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_SON_ID);
+	}
+
 	return ret;
 }
 
@@ -2283,15 +2305,26 @@ int hdd_son_deliver_assoc_disassoc_event(struct hdd_adapter *adapter,
 					 uint32_t reason_code,
 					 enum assoc_disassoc_event flag)
 {
-	int ret;
+	int ret = -EINVAL;
 	struct son_ald_assoc_event_info info;
+	struct wlan_objmgr_vdev *vdev;
 
 	qdf_mem_zero(&info, sizeof(info));
 	memcpy(info.macaddr, &sta_mac.bytes, QDF_MAC_ADDR_SIZE);
 	info.flag = flag;
 	info.reason = reason_code;
-	ret = os_if_son_deliver_ald_event(adapter, NULL,
-					  MLME_EVENT_ASSOC_DISASSOC, &info);
+	if (adapter) {
+		vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_SON_ID);
+		if (!vdev) {
+			hdd_err("null vdev");
+			return ret;
+		}
+		ret = os_if_son_deliver_ald_event(vdev, NULL,
+						  MLME_EVENT_ASSOC_DISASSOC,
+						  &info);
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_SON_ID);
+	}
+
 	return ret;
 }
 
@@ -2300,23 +2333,38 @@ void hdd_son_deliver_peer_authorize_event(struct hdd_adapter *adapter,
 {
 	struct wlan_objmgr_peer *peer;
 	int ret;
+	struct wlan_objmgr_vdev *vdev;
+	struct wlan_objmgr_psoc *psoc;
 
-	if (adapter->device_mode != QDF_SAP_MODE) {
+	if (!adapter || adapter->device_mode != QDF_SAP_MODE) {
 		hdd_err("Non SAP vdev");
+		return;
+	}
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_SON_ID);
+	if (!vdev) {
+		hdd_err("null vdev");
+		return;
+	}
+	psoc = wlan_vdev_get_psoc(vdev);
+	if (!psoc) {
+		hdd_err("null psoc");
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_SON_ID);
 		return;
 	}
 	peer = wlan_objmgr_get_peer_by_mac(psoc, peer_mac, WLAN_UMAC_COMP_SON);
 	if (!peer) {
 		hdd_err("No peer object for sta" QDF_FULL_MAC_FMT,
 			QDF_FULL_MAC_REF(peer_mac));
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_SON_ID);
 		return;
 	}
 
-	ret = os_if_son_deliver_ald_event(adapter, peer,
+	ret = os_if_son_deliver_ald_event(vdev, peer,
 					  MLME_EVENT_CLIENT_ASSOCIATED, NULL);
 	if (ret)
 		hdd_err("ALD ASSOCIATED Event failed for" QDF_FULL_MAC_FMT,
 			QDF_FULL_MAC_REF(peer_mac));
 
 	wlan_objmgr_peer_release_ref(peer, WLAN_UMAC_COMP_SON);
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_SON_ID);
 }

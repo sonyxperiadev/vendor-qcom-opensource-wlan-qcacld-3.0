@@ -601,14 +601,14 @@ void os_if_son_modify_acl(struct wlan_objmgr_vdev *vdev,
 
 /**
  * os_if_son_deliver_ald_event() - deliver ald events to son
- * @adapter: adapter object
+ * @vdev: vdev object
  * @peer: peer object
  * @event: Name of the event
  * @event_data: event data
  *
  * Return: 0 on success
  */
-int os_if_son_deliver_ald_event(struct hdd_adapter *adapter,
+int os_if_son_deliver_ald_event(struct wlan_objmgr_vdev *vdev,
 				struct wlan_objmgr_peer *peer,
 				enum ieee80211_event_type event,
 				void *event_data);
