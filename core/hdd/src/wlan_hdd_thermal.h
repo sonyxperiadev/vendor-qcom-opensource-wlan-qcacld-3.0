@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -144,6 +145,21 @@ void hdd_thermal_mitigation_unregister(struct hdd_context *hdd_ctx,
  */
 int wlan_hdd_pld_set_thermal_mitigation(struct device *dev,
 					unsigned long state, int mon_id);
+/**
+ * hdd_send_thermal_mitigation_val() - send the suggested thermal value
+ *                                     to the firmware
+ * @hdd_ctx: pointer to hdd context
+ * @level: Thermal mitigation level to set
+ * @mon_id: Thermal monitor id ie.. apps or wpss
+ *
+ * Send the requested thermal mitigation value to the firmware * for the
+ * requested thermal monitor id.
+ *
+ * Return: 0 for success or errno for failure.
+ */
+QDF_STATUS
+hdd_send_thermal_mitigation_val(struct hdd_context *hdd_ctx, uint32_t level,
+				uint8_t mon_id);
 #ifdef FEATURE_WPSS_THERMAL_MITIGATION
 /**
  * hdd_thermal_fill_clientid_priority() - fill the client id/priority
@@ -230,6 +246,13 @@ hdd_thermal_register_callbacks(struct hdd_context *hdd_ctx)
 static inline void
 hdd_thermal_unregister_callbacks(struct hdd_context *hdd_ctx)
 {
+}
+
+static inline QDF_STATUS
+hdd_send_thermal_mitigation_val(struct hdd_context *hdd_ctx, uint32_t level,
+				uint8_t mon_id)
+{
+	return QDF_STATUS_SUCCESS;
 }
 #endif /* FEATURE_THERMAL_VENDOR_COMMANDS */
 

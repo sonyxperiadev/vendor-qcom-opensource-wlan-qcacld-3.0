@@ -163,6 +163,8 @@
 #include "wlan_fwol_ucfg_api.h"
 #include "wlan_policy_mgr_ucfg.h"
 #include "qdf_func_tracker.h"
+#include "pld_common.h"
+
 
 #ifdef CNSS_GENL
 #ifdef CONFIG_CNSS_OUT_OF_TREE
@@ -4536,6 +4538,7 @@ int hdd_wlan_start_modules(struct hdd_context *hdd_ctx, bool reinit)
 	bool unint = false;
 	void *hif_ctx;
 	struct target_psoc_info *tgt_hdl;
+	unsigned long thermal_state = 0;
 
 	hdd_enter();
 	qdf_dev = cds_get_context(QDF_MODULE_ID_QDF_DEVICE);
@@ -4778,6 +4781,22 @@ int hdd_wlan_start_modules(struct hdd_context *hdd_ctx, bool reinit)
 				   hdd_ipa_send_nbuf_to_network);
 	ucfg_ipa_reg_rps_enable_cb(hdd_ctx->pdev,
 				   hdd_adapter_set_rps);
+
+	if (!pld_get_thermal_state(hdd_ctx->parent_dev, &thermal_state,
+				   THERMAL_MONITOR_APPS)) {
+		if (thermal_state > QCA_WLAN_VENDOR_THERMAL_LEVEL_NONE)
+			hdd_send_thermal_mitigation_val(hdd_ctx,
+							thermal_state,
+							THERMAL_MONITOR_APPS);
+	}
+
+	if (!pld_get_thermal_state(hdd_ctx->parent_dev, &thermal_state,
+				   THERMAL_MONITOR_WPSS)) {
+		if (thermal_state > QCA_WLAN_VENDOR_THERMAL_LEVEL_NONE)
+			hdd_send_thermal_mitigation_val(hdd_ctx, thermal_state,
+							THERMAL_MONITOR_WPSS);
+	}
+
 	hdd_exit();
 
 	return 0;

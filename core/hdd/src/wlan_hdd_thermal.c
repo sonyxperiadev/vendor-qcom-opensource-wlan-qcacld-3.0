@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -78,7 +78,7 @@ hdd_thermal_fill_clientid_priority(uint8_t mon_id, uint8_t priority_apps,
 }
 #endif
 
-static QDF_STATUS
+QDF_STATUS
 hdd_send_thermal_mitigation_val(struct hdd_context *hdd_ctx, uint32_t level,
 				uint8_t mon_id)
 {
