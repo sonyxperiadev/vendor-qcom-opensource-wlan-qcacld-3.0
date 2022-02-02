@@ -350,6 +350,7 @@ ucfg_dp_store_qdf_dev(struct wlan_objmgr_psoc *psoc)
 QDF_STATUS ucfg_dp_psoc_open(struct wlan_objmgr_psoc *psoc)
 {
 	ucfg_dp_store_qdf_dev(psoc);
+	dp_rtpm_tput_policy_init(psoc);
 	dp_register_pmo_handler();
 
 	return QDF_STATUS_SUCCESS;
@@ -357,6 +358,7 @@ QDF_STATUS ucfg_dp_psoc_open(struct wlan_objmgr_psoc *psoc)
 
 QDF_STATUS ucfg_dp_psoc_close(struct wlan_objmgr_psoc *psoc)
 {
+	dp_rtpm_tput_policy_deinit(psoc);
 	dp_unregister_pmo_handler();
 
 	return QDF_STATUS_SUCCESS;

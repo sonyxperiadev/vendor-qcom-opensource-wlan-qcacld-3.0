@@ -24,6 +24,7 @@
  * Bus Bandwidth Manager implementation
  */
 
+#include "wlan_dp_priv.h"
 #include <qdf_types.h>
 #include <qca_vendor.h>
 #include <wlan_objmgr_psoc_obj.h>
@@ -93,4 +94,62 @@ void dp_bbm_apply_independent_policy(struct wlan_objmgr_psoc *psoc,
 {
 }
 #endif /* FEATURE_BUS_BANDWIDTH_MGR */
+
+#if defined(WLAN_FEATURE_DP_BUS_BANDWIDTH) && defined(FEATURE_RUNTIME_PM)
+/**
+ * dp_rtpm_tput_policy_init() - Initialize RTPM tput policy
+ * @psoc: psoc handle
+ *
+ * Returns: None
+ */
+void dp_rtpm_tput_policy_init(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * dp_rtpm_tput_policy_deinit() - Deinitialize RTPM tput policy
+ * @psoc: psoc handle
+ *
+ * Returns: None
+ */
+void dp_rtpm_tput_policy_deinit(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * dp_rtpm_tput_policy_apply() - Apply RTPM tput policy
+ * @dp_ctx: dp_ctx handle
+ * @tput_level : Tput level
+ *
+ * Returns: None
+ */
+void dp_rtpm_tput_policy_apply(struct wlan_dp_psoc_context *dp_ctx,
+			       enum tput_level tput_level);
+
+/**
+ * dp_rtpm_tput_policy_get_vote() - Get RTPM tput policy vote
+ * @dp_ctx: dp_ctx handle
+ *
+ * Returns: Current vote
+ */
+int dp_rtpm_tput_policy_get_vote(struct wlan_dp_psoc_context *dp_ctx);
+#else
+static inline
+void dp_rtpm_tput_policy_init(struct wlan_objmgr_psoc *psoc)
+{
+}
+
+static inline
+void dp_rtpm_tput_policy_deinit(struct wlan_objmgr_psoc *psoc)
+{
+}
+
+static inline
+void dp_rtpm_tput_policy_apply(struct wlan_dp_psoc_context *dp_ctx,
+			       enum tput_level tput_level)
+{
+}
+
+static inline int
+dp_rtpm_tput_policy_get_vote(struct wlan_dp_psoc_context *dp_ctx)
+{
+	return -EINVAL;
+}
+#endif /* WLAN_FEATURE_DP_BUS_BANDWIDTH && FEATURE_RUNTIME_PM */
 #endif /* WLAN_DP_BUS_BANDWIDTH_H */
