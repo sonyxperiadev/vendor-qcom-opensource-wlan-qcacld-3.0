@@ -1990,13 +1990,29 @@ void hdd_wmm_classify_pkt(struct hdd_adapter *adapter,
 			  enum sme_qos_wmmuptype *user_pri,
 			  bool *is_critical)
 {
-	hdd_wmm_get_user_priority_from_ip_tos(adapter, skb, user_pri);
-
 	hdd_wmm_classify_critical_pkt(adapter, skb, user_pri, is_critical);
 
-	if (!is_critical)
+	if (!is_critical) {
+		hdd_wmm_get_user_priority_from_ip_tos(adapter, skb, user_pri);
 		hdd_check_and_upgrade_udp_qos(adapter, skb, user_pri);
+	}
 }
+
+#ifdef QCA_SUPPORT_TX_MIN_RATES_FOR_SPECIAL_FRAMES
+void hdd_wmm_classify_pkt_cb(void *adapter,
+			     struct sk_buff *skb)
+{
+	enum sme_qos_wmmuptype user_pri;
+	bool is_critical;
+
+	hdd_wmm_classify_critical_pkt(adapter, skb, &user_pri, &is_critical);
+
+	if (is_critical) {
+		skb->priority = user_pri;
+		QDF_NBUF_CB_TX_EXTRA_IS_CRITICAL(skb) = true;
+	}
+}
+#endif
 
 #ifdef TX_MULTIQ_PER_AC
 /**

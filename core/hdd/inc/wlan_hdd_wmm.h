@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2012,2016-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -417,6 +418,28 @@ config_tspec_policy[QCA_WLAN_VENDOR_ATTR_CONFIG_TSPEC_MAX + 1];
 int wlan_hdd_cfg80211_config_tspec(struct wiphy *wiphy,
 				   struct wireless_dev *wdev,
 				   const void *data, int data_len);
+#ifdef QCA_SUPPORT_TX_MIN_RATES_FOR_SPECIAL_FRAMES
+/**
+ * hdd_wmm_classify_pkt_cb() - Call back to identify critical packets
+ * @adapter: adapter for which callback is called
+ * @nbuf: skb for which callback is called
+ *
+ * Callback used by intrabss forwarding path to identify critical packets.
+ * QDF_NBUF_CB_TX_EXTRA_IS_CRITICAL is marked 1 for such packets.
+ * The function also populates sb->priority for these packets.
+ * skb->priority is used as TID for these frames during TX.
+
+ * Return: None
+ */
+void hdd_wmm_classify_pkt_cb(void *adapter,
+			     qdf_nbuf_t nbuf);
+#else
+static inline
+void hdd_wmm_classify_pkt_cb(void *adapter,
+			     qdf_nbuf_t nbuf)
+{
+}
+#endif
 
 #define FEATURE_WMM_COMMANDS						\
 {									\

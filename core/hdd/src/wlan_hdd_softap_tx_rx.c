@@ -1396,7 +1396,8 @@ QDF_STATUS hdd_softap_register_sta(struct hdd_adapter *adapter,
 		}
 
 		txrx_ops.get_tsf_time = hdd_get_tsf_time;
-
+		txrx_ops.tx.tx_classify_critical_pkt_cb =
+					hdd_wmm_classify_pkt_cb;
 		cdp_vdev_register(soc,
 				  adapter->vdev_id,
 				  (ol_osif_vdev_handle)adapter,
