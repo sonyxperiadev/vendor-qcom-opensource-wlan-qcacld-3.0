@@ -579,91 +579,23 @@ void lim_send_sme_start_bss_rsp(struct mac_context *mac,
 				uint8_t smesessionId)
 {
 
-	uint16_t size = 0;
 	struct scheduler_msg mmhMsg = {0};
-	struct start_bss_rsp *pSirSmeRsp;
-	uint16_t beacon_length, ieLen;
-	uint16_t ieOffset, curLen;
+	struct start_bss_rsp *start_bss_rsp;
 
 	pe_debug("Sending message: %s with reasonCode: %s",
 		       lim_msg_str(msgType), lim_result_code_str(resultCode));
 
-	size = sizeof(struct start_bss_rsp);
+	start_bss_rsp = qdf_mem_malloc(sizeof(*start_bss_rsp));
+	if (!start_bss_rsp)
+		return;
 
-	if (!pe_session) {
-		pSirSmeRsp = qdf_mem_malloc(size);
-		if (!pSirSmeRsp)
-			return;
-	} else {
-		/* subtract size of beaconLength + Mac Hdr + Fixed Fields before SSID */
-		ieOffset = sizeof(tAniBeaconStruct) + SIR_MAC_B_PR_SSID_OFFSET;
-		beacon_length = pe_session->schBeaconOffsetBegin +
-						pe_session->schBeaconOffsetEnd;
-		ieLen = beacon_length - ieOffset;
-
-		/* Invalidate for non-beaconing entities */
-		if (beacon_length <= ieOffset)
-			ieLen = ieOffset = 0;
-		/* calculate the memory size to allocate */
-		size += ieLen;
-
-		pSirSmeRsp = qdf_mem_malloc(size);
-		if (!pSirSmeRsp)
-			return;
-		size = sizeof(struct start_bss_rsp);
-		if (resultCode == eSIR_SME_SUCCESS) {
-
-			sir_copy_mac_addr(pSirSmeRsp->bssDescription.bssId,
-					  pe_session->bssId);
-
-			/* Read beacon interval from session */
-			pSirSmeRsp->bssDescription.beaconInterval =
-				(uint16_t) pe_session->beaconParams.
-				beaconInterval;
-			pSirSmeRsp->bssType = pe_session->bssType;
-
-			if (lim_get_capability_info
-				    (mac, &pSirSmeRsp->bssDescription.capabilityInfo,
-				    pe_session)
-			    != QDF_STATUS_SUCCESS)
-				pe_err("could not retrieve Capabilities value");
-
-			lim_get_phy_mode(mac,
-					 (uint32_t *) &pSirSmeRsp->bssDescription.
-					 nwType, pe_session);
-
-			pSirSmeRsp->bssDescription.chan_freq =
-				pe_session->curr_op_freq;
-
-		if (!LIM_IS_NDI_ROLE(pe_session)) {
-			curLen = pe_session->schBeaconOffsetBegin - ieOffset;
-			qdf_mem_copy((uint8_t *) &pSirSmeRsp->bssDescription.
-				     ieFields,
-				     pe_session->pSchBeaconFrameBegin +
-				     ieOffset, (uint32_t) curLen);
-
-			qdf_mem_copy(((uint8_t *) &pSirSmeRsp->bssDescription.
-				      ieFields) + curLen,
-				     pe_session->pSchBeaconFrameEnd,
-				     (uint32_t) pe_session->
-				     schBeaconOffsetEnd);
-
-			pSirSmeRsp->bssDescription.length = (uint16_t)
-				(offsetof(struct bss_description, ieFields[0])
-				- sizeof(pSirSmeRsp->bssDescription.length)
-				+ ieLen);
-			/* This is the size of the message, subtracting the size of the pointer to ieFields */
-			size += ieLen - sizeof(uint32_t);
-		}
-		}
-	}
-	pSirSmeRsp->messageType = msgType;
-	pSirSmeRsp->length = size;
-	pSirSmeRsp->sessionId = smesessionId;
-	pSirSmeRsp->status_code = resultCode;
+	start_bss_rsp->messageType = msgType;
+	start_bss_rsp->length = sizeof(*start_bss_rsp);
+	start_bss_rsp->sessionId = smesessionId;
+	start_bss_rsp->status_code = resultCode;
 
 	mmhMsg.type = msgType;
-	mmhMsg.bodyptr = pSirSmeRsp;
+	mmhMsg.bodyptr = start_bss_rsp;
 	mmhMsg.bodyval = 0;
 	if (!pe_session) {
 		MTRACE(mac_trace(mac, TRACE_CODE_TX_SME_MSG,

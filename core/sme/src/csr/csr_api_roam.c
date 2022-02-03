@@ -3100,7 +3100,6 @@ static void csr_roam_process_start_bss_success(struct mac_context *mac_ctx,
 	uint32_t session_id = cmd->vdev_id;
 	struct csr_roam_profile *profile = &cmd->u.roamCmd.roamProfile;
 	struct csr_roam_session *session;
-	struct bss_description *bss_desc = NULL;
 	struct csr_roam_info *roam_info;
 	struct start_bss_rsp *start_bss_rsp = NULL;
 	eRoamCmdStatus roam_status = eCSR_ROAM_INFRA_IND;
@@ -3131,12 +3130,10 @@ static void csr_roam_process_start_bss_success(struct mac_context *mac_ctx,
 	else
 		session->connectState = eCSR_ASSOC_STATE_TYPE_WDS_DISCONNECTED;
 
-	bss_desc = &start_bss_rsp->bssDescription;
 	session->modifyProfileFields.uapsd_mask = profile->uapsd_mask;
 	csr_roam_state_change(mac_ctx, eCSR_ROAMING_STATE_JOINED, session_id);
 	csr_roam_free_connected_info(mac_ctx, &session->connectedInfo);
-	qdf_mem_copy(&roam_info->bssid, &bss_desc->bssId,
-		     sizeof(struct qdf_mac_addr));
+	wlan_mlme_get_mac_vdev_id(mac_ctx->pdev, session_id, &roam_info->bssid);
 
 	/* We are done with the IEs so free it */
 	/*

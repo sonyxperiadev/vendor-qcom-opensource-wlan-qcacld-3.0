@@ -813,10 +813,7 @@ struct start_bss_rsp {
 	uint32_t cmd_id;
 #endif
 	tSirResultCodes status_code;
-	enum bss_type bssType;    /* Add new type for WDS mode */
-	uint16_t beaconInterval;        /* Beacon Interval for both type */
 	uint32_t staId;         /* Station ID for Self */
-	struct bss_description bssDescription;      /* Peer BSS description */
 };
 
 struct report_channel_list {
