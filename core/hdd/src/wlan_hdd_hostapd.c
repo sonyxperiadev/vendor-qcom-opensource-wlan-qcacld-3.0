@@ -5191,13 +5191,13 @@ static int wlan_hdd_sap_p2p_11ac_overrides(struct hdd_adapter *ap_adapter)
 			 */
 			ucfg_mlme_get_channel_bonding_24ghz(
 				hdd_ctx->psoc, &channel_bonding_mode);
-			if (sap_cfg->ch_width_orig >= eHT_CHANNEL_WIDTH_40MHZ &&
+			if (sap_cfg->ch_width_orig >= CH_WIDTH_40MHZ &&
 			    channel_bonding_mode)
 				sap_cfg->ch_width_orig =
-					eHT_CHANNEL_WIDTH_40MHZ;
+					CH_WIDTH_40MHZ;
 			else
 				sap_cfg->ch_width_orig =
-					eHT_CHANNEL_WIDTH_20MHZ;
+					CH_WIDTH_20MHZ;
 		}
 	}
 
@@ -6152,17 +6152,12 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 		sme_config->csr_config.WMMSupportMode = WMM_USER_MODE_NO_QOS;
 	sme_update_config(mac_handle, sme_config);
 
-	if (!((adapter->device_mode == QDF_SAP_MODE) &&
+	if (((adapter->device_mode == QDF_SAP_MODE) &&
 	     (sap_force_11n_for_11ac)) ||
 	     ((adapter->device_mode == QDF_P2P_GO_MODE) &&
 	     (go_force_11n_for_11ac))) {
-		config->ch_width_orig =
-			hdd_map_nl_chan_width(config->ch_width_orig);
-	} else {
-		if (config->ch_width_orig >= NL80211_CHAN_WIDTH_40)
+		if (config->ch_width_orig > CH_WIDTH_40MHZ)
 			config->ch_width_orig = CH_WIDTH_40MHZ;
-		else
-			config->ch_width_orig = CH_WIDTH_20MHZ;
 	}
 
 	if (wlan_hdd_setup_driver_overrides(adapter)) {
@@ -7190,7 +7185,7 @@ static int __wlan_hdd_cfg80211_start_ap(struct wiphy *wiphy,
 				eSAP_AUTO_SWITCH;
 		}
 		adapter->session.ap.sap_config.ch_width_orig =
-						chandef->width;
+					hdd_map_nl_chan_width(chandef->width);
 
 		/*
 		 * Enable/disable TWT responder based on

@@ -13501,7 +13501,8 @@ static void hdd_update_acs_sap_config(struct hdd_context *hdd_ctx,
 		wlan_reg_freq_to_chan(hdd_ctx->pdev,
 				      channel_list->ht_sec_chan_freq);
 
-	sap_config->ch_params.ch_width = channel_list->chan_width;
+	sap_config->ch_params.ch_width =
+				hdd_map_nl_chan_width(channel_list->chan_width);
 	if (!WLAN_REG_IS_24GHZ_CH_FREQ(sap_config->chan_freq)) {
 		status =
 			ucfg_mlme_get_vht_channel_width(hdd_ctx->psoc,
@@ -13513,10 +13514,11 @@ static void hdd_update_acs_sap_config(struct hdd_context *hdd_ctx,
 		ucfg_mlme_get_channel_bonding_24ghz(hdd_ctx->psoc,
 						    &channel_bonding_mode);
 		sap_config->ch_width_orig = channel_bonding_mode ?
-			eHT_CHANNEL_WIDTH_40MHZ : eHT_CHANNEL_WIDTH_20MHZ;
+			CH_WIDTH_40MHZ : CH_WIDTH_20MHZ;
 	}
 	sap_config->acs_cfg.pri_ch_freq = channel_list->pri_chan_freq;
-	sap_config->acs_cfg.ch_width = channel_list->chan_width;
+	sap_config->acs_cfg.ch_width =
+				hdd_map_nl_chan_width(channel_list->chan_width);
 	sap_config->acs_cfg.vht_seg0_center_ch_freq =
 			channel_list->vht_seg0_center_chan_freq;
 	sap_config->acs_cfg.vht_seg1_center_ch_freq =
@@ -13574,8 +13576,8 @@ static int hdd_update_acs_channel(struct hdd_adapter *adapter, uint8_t reason,
 					   channel_list->pri_chan_freq);
 
 		wlan_sap_update_next_channel(
-				WLAN_HDD_GET_SAP_CTX_PTR(adapter), (uint8_t)ch,
-				channel_list->chan_width);
+			WLAN_HDD_GET_SAP_CTX_PTR(adapter), (uint8_t)ch,
+			hdd_map_nl_chan_width(channel_list->chan_width));
 		status = sme_update_new_channel_event(
 					mac_handle,
 					adapter->vdev_id);
@@ -13586,9 +13588,10 @@ static int hdd_update_acs_channel(struct hdd_adapter *adapter, uint8_t reason,
 		ch = wlan_reg_freq_to_chan(hdd_ctx->pdev,
 					   channel_list->pri_chan_freq);
 		sap_config->acs_cfg.pri_ch_freq = channel_list->pri_chan_freq;
-		sap_config->acs_cfg.ch_width = channel_list->chan_width;
+		sap_config->acs_cfg.ch_width =
+				hdd_map_nl_chan_width(channel_list->chan_width);
 		hdd_ap_ctx->sap_config.ch_width_orig =
-				channel_list->chan_width;
+				sap_config->acs_cfg.ch_width;
 		wlan_hdd_set_sap_csa_reason(hdd_ctx->psoc, adapter->vdev_id,
 					    CSA_REASON_LTE_COEX);
 		hdd_switch_sap_channel(adapter, (uint8_t)ch, true);
@@ -13982,8 +13985,8 @@ static int __wlan_hdd_cfg80211_update_vendor_channel(struct wiphy *wiphy,
 	/* Validate channel to be set */
 	while (channel_cnt && channel_list) {
 		qdf_status = wlan_hdd_validate_acs_channel(adapter,
-					channel_list->pri_chan_freq,
-					channel_list->chan_width);
+			     channel_list->pri_chan_freq,
+			     hdd_map_nl_chan_width(channel_list->chan_width));
 		if (qdf_status == QDF_STATUS_SUCCESS)
 			break;
 		else if (channel_cnt == 1) {
