@@ -27,6 +27,15 @@
 #include "wlan_objmgr_cmn.h"
 #include "wlan_objmgr_global_obj.h"
 #include "qdf_status.h"
+#include <wlan_nlink_common.h>
+
+/**
+ * wlan_tp_data : union of TCP msg for Tx and Rx Dir
+ */
+union wlan_tp_data {
+	struct wlan_tx_tp_data tx_tp_data;
+	struct wlan_rx_tp_data rx_tp_data;
+};
 
 /**
  * struct wlan_dp_psoc_callbacks - struct containing callback
