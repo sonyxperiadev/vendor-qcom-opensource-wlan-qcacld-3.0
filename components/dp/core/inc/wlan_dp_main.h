@@ -27,6 +27,8 @@
 #include "wlan_dp_priv.h"
 #include "wlan_dp_objmgr.h"
 
+#define NUM_RX_QUEUES 5
+
 /**
  * dp_allocate_ctx() - Allocate DP context
  *
@@ -235,5 +237,88 @@ void dp_dettach_ctx(void);
  * Return: dp context.
  */
 struct wlan_dp_psoc_context *dp_get_context(void);
+
+/**
+ * dp_send_rps_ind() - send rps indication to daemon
+ * @dp_intf: DP interface
+ *
+ * If RPS feature enabled by INI, send RPS enable indication to daemon
+ * Indication contents is the name of interface to find correct sysfs node
+ * Should send all available interfaces
+ *
+ * Return: none
+ */
+void dp_send_rps_ind(struct wlan_dp_intf *dp_intf);
+
+/**
+ * dp_try_send_rps_ind() - try to send rps indication to daemon.
+ * @vdev: vdev handle
+ *
+ * If RPS flag is set in DP context then send rsp indication.
+ *
+ * Return: none
+ */
+void dp_try_send_rps_ind(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * dp_send_rps_disable_ind() - send rps disable indication to daemon
+ * @dp_intf: DP interface
+ *
+ * Return: none
+ */
+void dp_send_rps_disable_ind(struct wlan_dp_intf *dp_intf);
+
+#ifdef QCA_CONFIG_RPS
+/**
+ * dp_set_rps() - Enable/disable RPS for mode specified
+ * @vdev_id: vdev id which RPS needs to be enabled
+ * @enable: Set true to enable RPS in SAP mode
+ *
+ * Callback function registered with ipa
+ *
+ * Return: none
+ */
+void dp_set_rps(uint8_t vdev_id, bool enable);
+#else
+void dp_set_rps(uint8_t vdev_id, bool enable)
+{
+}
+#endif
+
+/**
+ * dp_set_rx_mode_rps() - Enable/disable RPS in SAP mode
+ * @enable: Set true to enable RPS in SAP mode
+ *
+ * Callback function registered with core datapath
+ *
+ * Return: none
+ */
+void dp_set_rx_mode_rps(bool enable);
+
+/**
+ * dp_set_rps_cpu_mask - set RPS CPU mask for interfaces
+ * @dp_ctx: pointer to struct dp_context
+ *
+ * Return: none
+ */
+void dp_set_rps_cpu_mask(struct wlan_dp_psoc_context *dp_ctx);
+
+/**
+ * dp_try_set_rps_cpu_mask() - try to set RPS CPU mask
+ * @psoc: psoc handle
+ *
+ * If RPS flag is set in DP context then set RPS CPU mask.
+ *
+ * Return: none
+ */
+void dp_try_set_rps_cpu_mask(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * dp_clear_rps_cpu_mask - clear RPS CPU mask for interfaces
+ * @dp_ctx: pointer to struct dp_context
+ *
+ * Return: none
+ */
+void dp_clear_rps_cpu_mask(struct wlan_dp_psoc_context *dp_ctx);
 
 #endif

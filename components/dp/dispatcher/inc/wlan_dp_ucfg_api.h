@@ -160,6 +160,45 @@ void ucfg_dp_bbm_apply_independent_policy(struct wlan_objmgr_psoc *psoc,
 					  struct bbm_params *params);
 
 /**
+ * ucfg_dp_set_rx_mode_rps() - Enable/disable RPS in SAP mode
+ * @enable: Set true to enable RPS in SAP mode
+ *
+ * Callback function registered with datapath
+ *
+ * Return: none
+ */
+void ucfg_dp_set_rx_mode_rps(bool enable);
+
+/**
+ * ucfg_dp_try_send_rps_ind() - send rps indication to daemon
+ * @vdev: vdev handle
+ *
+ * If RPS feature enabled by INI, send RPS enable indication to daemon
+ * Indication contents is the name of interface to find correct sysfs node
+ * Should send all available interfaces
+ *
+ * Return: none
+ */
+void ucfg_dp_try_send_rps_ind(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_reg_ipa_rsp_ind() - Resiter RSP IND cb with IPA component
+ * @psoc: psoc handle
+ * @cb_obj: Callback object
+ *
+ * Returns: None
+ */
+void ucfg_dp_reg_ipa_rsp_ind(struct wlan_objmgr_pdev *pdev);
+
+/**
+ * ucfg_dp_try_set_rps_cpu_mask - set RPS CPU mask for interfaces
+ * @psoc: psoc handle
+ *
+ * Return: none
+ */
+void ucfg_dp_try_set_rps_cpu_mask(struct wlan_objmgr_psoc *psoc);
+
+/**
  * ucfg_dp_register_hdd_callbacks() - Resiter HDD callbacks with DP component
  * @psoc: psoc handle
  * @cb_obj: Callback object
@@ -168,4 +207,5 @@ void ucfg_dp_bbm_apply_independent_policy(struct wlan_objmgr_psoc *psoc,
  */
 void ucfg_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 				    struct wlan_dp_psoc_callbacks *cb_obj);
-#endif
+
+#endif /* _WLAN_DP_UCFG_API_H_ */

@@ -21,6 +21,7 @@
  */
 
 #include "wlan_dp_ucfg_api.h"
+#include "wlan_ipa_ucfg_api.h"
 #include "wlan_dp_main.h"
 #include "wlan_dp_objmgr.h"
 #include "cdp_txrx_cmn.h"
@@ -486,6 +487,26 @@ void ucfg_dp_bbm_apply_independent_policy(struct wlan_objmgr_psoc *psoc,
 	dp_bbm_apply_independent_policy(psoc, params);
 }
 
+void ucfg_dp_set_rx_mode_rps(bool enable)
+{
+	dp_set_rx_mode_rps(enable);
+}
+
+void ucfg_dp_try_send_rps_ind(struct wlan_objmgr_vdev *vdev)
+{
+	dp_try_send_rps_ind(vdev);
+}
+
+void ucfg_dp_reg_ipa_rsp_ind(struct wlan_objmgr_pdev *pdev)
+{
+	ucfg_ipa_reg_rps_enable_cb(pdev, dp_set_rps);
+}
+
+void ucfg_dp_try_set_rps_cpu_mask(struct wlan_objmgr_psoc *psoc)
+{
+	dp_try_set_rps_cpu_mask(psoc);
+}
+
 void ucfg_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 				    struct wlan_dp_psoc_callbacks *cb_obj)
 {
@@ -504,4 +525,5 @@ void ucfg_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 		cb_obj->wlan_dp_sta_ndi_connected;
 	dp_ctx->dp_ops.dp_any_adapter_connected =
 		cb_obj->dp_any_adapter_connected;
+	dp_ctx->dp_ops.dp_send_svc_nlink_msg = cb_obj->dp_send_svc_nlink_msg;
 }

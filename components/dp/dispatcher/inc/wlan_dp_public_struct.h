@@ -196,6 +196,7 @@ union wlan_tp_data {
  * @wlan_dp_get_ap_client_count: Callback to get client count connected to AP
  * @wlan_dp_sta_ndi_connected: Callback to get NDI connected status
  * @dp_any_adapter_connected: Callback to check if any adapter is connected
+ * @dp_send_svc_nlink_msg: Callback API to send svc nlink message
  * @osif_dp_send_tcp_param_update_event: OS IF callback to send TCP param
  */
 struct wlan_dp_psoc_callbacks {
@@ -212,6 +213,7 @@ struct wlan_dp_psoc_callbacks {
 	bool (*wlan_dp_sta_ndi_connected)(hdd_cb_handle context,
 					  uint8_t vdev_id);
 	bool (*dp_any_adapter_connected)(hdd_cb_handle context);
+	void (*dp_send_svc_nlink_msg)(int radio, int type, void *data, int len);
 
 	void
 	(*osif_dp_send_tcp_param_update_event)(struct wlan_objmgr_psoc *psoc,
