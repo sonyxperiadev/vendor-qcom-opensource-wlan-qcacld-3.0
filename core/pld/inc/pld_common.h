@@ -1215,4 +1215,9 @@ static inline int pfrm_write_config_dword(struct pci_dev *pdev, int offset,
 	return pld_pci_write_config_dword(pdev, offset, val);
 }
 
+static inline bool pld_get_enable_intx(struct device *dev)
+{
+	return false;
+}
+
 #endif
