@@ -48,6 +48,7 @@
 #include "sme_trace.h"
 #include "rrm_api.h"
 #include "qdf_crypto.h"
+#include "parser_api.h"
 
 #include "wma_types.h"
 #include <cdp_txrx_cmn.h>
@@ -662,6 +663,7 @@ lim_send_probe_rsp_mgmt_frame(struct mac_context *mac_ctx,
 	populate_dot11f_ssid(mac_ctx, (tSirMacSSid *) ssid, &frm->SSID);
 	populate_dot11f_supp_rates(mac_ctx, POPULATE_DOT11F_RATES_OPERATIONAL,
 		&frm->SuppRates, pe_session);
+	populate_dot11f_tpc_report(mac_ctx, &frm->TPCReport, pe_session);
 
 	populate_dot11f_ds_params(
 		mac_ctx, &frm->DSParams,
