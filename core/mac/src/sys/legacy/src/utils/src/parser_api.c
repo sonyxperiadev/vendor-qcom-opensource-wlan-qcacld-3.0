@@ -6820,6 +6820,900 @@ populate_dot11f_he_bss_color_change(struct mac_context *mac_ctx,
 #endif /* WLAN_FEATURE_11AX */
 
 #ifdef WLAN_FEATURE_11BE
+
+/* 1 byte ext id, 2 bytes mac cap, 8 bytes phy cap */
+#define EHTCAP_FIXED_LEN 11
+#define EHTCAP_MACBYTE_IDX0      0
+#define EHTCAP_MACBYTE_IDX1      1
+
+#define EHTCAP_PHYBYTE_IDX0      0
+#define EHTCAP_PHYBYTE_IDX1      1
+#define EHTCAP_PHYBYTE_IDX2      2
+#define EHTCAP_PHYBYTE_IDX3      3
+#define EHTCAP_PHYBYTE_IDX4      4
+#define EHTCAP_PHYBYTE_IDX5      5
+#define EHTCAP_PHYBYTE_IDX6      6
+#define EHTCAP_PHYBYTE_IDX7      7
+
+#define WLAN_IE_HDR_LEN          2
+
+enum EHT_TXRX_MCS_NSS_IDX {
+	EHTCAP_TXRX_MCS_NSS_IDX0,
+	EHTCAP_TXRX_MCS_NSS_IDX1,
+	EHTCAP_TXRX_MCS_NSS_IDX2,
+	EHTCAP_TXRX_MCS_NSS_IDXMAX,
+};
+
+enum EHT_PER_BW_TXRX_MCS_NSS_MAP_IDX {
+	EHTCAP_TXRX_MCS_NSS_IDX_ONLY20,
+	EHTCAP_TXRX_MCS_NSS_IDX_80,
+	EHTCAP_TXRX_MCS_NSS_IDX_160,
+	EHTCAP_TXRX_MCS_NSS_IDX_320,
+	EHTCAP_TXRX_MCS_NSS_IDX_MAX,
+};
+
+#define EHT_MCS_MAP_RX_MCS_0_9_IDX 0
+#define EHT_MCS_MAP_RX_MCS_0_9_BITS 4
+#define EHT_MCS_MAP_TX_MCS_0_9_IDX 4
+#define EHT_MCS_MAP_TX_MCS_0_9_BITS 4
+#define EHT_MCS_MAP_RX_MCS_10_11_IDX 8
+#define EHT_MCS_MAP_RX_MCS_10_11_BITS 4
+#define EHT_MCS_MAP_TX_MCS_10_11_IDX 12
+#define EHT_MCS_MAP_TX_MCS_10_11_BITS 4
+#define EHT_MCS_MAP_RX_MCS_12_13_IDX 16
+#define EHT_MCS_MAP_RX_MCS_12_13_BITS 4
+#define EHT_MCS_MAP_TX_MCS_12_13_IDX 20
+#define EHT_MCS_MAP_TX_MCS_12_13_BITS 4
+
+#define EHT_MCS_MAP_20_ONLY_RX_MCS_0_7_IDX 0
+#define EHT_MCS_MAP_20_ONLY_RX_MCS_0_7_BITS 4
+#define EHT_MCS_MAP_20_ONLY_TX_MCS_0_7_IDX 4
+#define EHT_MCS_MAP_20_ONLY_TX_MCS_0_7_BITS 4
+#define EHT_MCS_MAP_20_ONLY_RX_MCS_8_9_IDX 8
+#define EHT_MCS_MAP_20_ONLY_RX_MCS_8_9_BITS 4
+#define EHT_MCS_MAP_20_ONLY_TX_MCS_8_9_IDX 12
+#define EHT_MCS_MAP_20_ONLY_TX_MCS_8_9_BITS 4
+#define EHT_MCS_MAP_20_ONLY_RX_MCS_10_11_IDX 16
+#define EHT_MCS_MAP_20_ONLY_RX_MCS_10_11_BITS 4
+#define EHT_MCS_MAP_20_ONLY_TX_MCS_10_11_IDX 20
+#define EHT_MCS_MAP_20_ONLY_TX_MCS_10_11_BITS 4
+#define EHT_MCS_MAP_20_ONLY_RX_MCS_12_13_IDX 24
+#define EHT_MCS_MAP_20_ONLY_RX_MCS_12_13_BITS 4
+#define EHT_MCS_MAP_20_ONLY_TX_MCS_12_13_IDX 28
+#define EHT_MCS_MAP_20_ONLY_TX_MCS_12_13_BITS 4
+
+#define EHT_TXMCS_MAP_MCS_0_7_IDX 0
+#define EHT_TXMCS_MAP_MCS_0_7_BITS 4
+#define EHT_TXMCS_MAP_MCS_8_9_IDX 4
+#define EHT_TXMCS_MAP_MCS_8_9_BITS 4
+#define EHT_TXMCS_MAP_MCS_10_11_IDX 8
+#define EHT_TXMCS_MAP_MCS_10_11_BITS 4
+#define EHT_TXMCS_MAP_MCS_12_13_IDX 12
+#define EHT_TXMCS_MAP_MCS_12_13_BITS 4
+
+#define EHT_RXMCS_MAP_MCS_0_7_IDX 0
+#define EHT_RXMCS_MAP_MCS_0_7_BITS 4
+#define EHT_RXMCS_MAP_MCS_8_9_IDX 4
+#define EHT_RXMCS_MAP_MCS_8_9_BITS 4
+#define EHT_RXMCS_MAP_MCS_10_11_IDX 8
+#define EHT_RXMCS_MAP_MCS_10_11_BITS 4
+#define EHT_RXMCS_MAP_MCS_12_13_IDX 12
+#define EHT_RXMCS_MAP_MCS_12_13_BITS 4
+
+#define EHT_MCS_MAP_LEN 3
+#define EHT_MCS_MAP_BW20_ONLY_LEN 4
+
+#define ehtcap_ie_set(eht_cap, index, num_bits, val) \
+			QDF_SET_BITS((*eht_cap), qdf_do_div_rem(index, 8),\
+				     (num_bits), (val))
+#define ehtcap_ie_get(eht_cap, index, num_bits) \
+			QDF_GET_BITS((eht_cap), qdf_do_div_rem(index, 8), \
+				     (num_bits))
+
+/* byte 0 */
+#define EHTCAP_MAC_NSEPPRIACCESS_GET_FROM_IE(__eht_cap_mac) \
+			ehtcap_ie_get(__eht_cap_mac[EHTCAP_MACBYTE_IDX0], \
+				      EHTCAP_MAC_NSEPPRIACCESS_IDX, \
+				      EHTCAP_MAC_NSEPPRIACCESS_BITS)
+#define EHTCAP_MAC_NSEPPRIACCESS_SET_TO_IE(__eht_cap_mac, __value) \
+			ehtcap_ie_set(&__eht_cap_mac[EHTCAP_MACBYTE_IDX0], \
+				      EHTCAP_MAC_NSEPPRIACCESS_IDX, \
+				      EHTCAP_MAC_NSEPPRIACCESS_BITS, __value)
+
+#define EHTCAP_MAC_EHTOMCTRL_GET_FROM_IE(__eht_cap_mac) \
+			ehtcap_ie_get(__eht_cap_mac[EHTCAP_MACBYTE_IDX0], \
+				      EHTCAP_MAC_EHTOMCTRL_IDX, \
+				      EHTCAP_MAC_EHTOMCTRL_BITS)
+#define EHTCAP_MAC_EHTOMCTRL_SET_TO_IE(__eht_cap_mac, value) \
+			ehtcap_ie_set(&__eht_cap_mac[EHTCAP_MACBYTE_IDX0], \
+				      EHTCAP_MAC_EHTOMCTRL_IDX, \
+				      EHTCAP_MAC_EHTOMCTRL_BITS, value)
+
+#define EHTCAP_MAC_TRIGTXOP_MODE1_GET_FROM_IE(__eht_cap_mac) \
+			ehtcap_ie_get(__eht_cap_mac[EHTCAP_MACBYTE_IDX0], \
+				      EHTCAP_MAC_TRIGGERED_TXOP_MODE1_IDX, \
+				      EHTCAP_MAC_TRIGGERED_TXOP_MODE1_BITS)
+#define EHTCAP_MAC_TRIGTXOP_MODE1_SET_TO_IE(__eht_cap_mac, value) \
+			ehtcap_ie_set(&__eht_cap_mac[EHTCAP_MACBYTE_IDX0], \
+				      EHTCAP_MAC_TRIGGERED_TXOP_MODE1_IDX, \
+				      EHTCAP_MAC_TRIGGERED_TXOP_MODE1_BITS, \
+				      value)
+
+#define EHTCAP_MAC_TRIGTXOP_MODE2_GET_FROM_IE(__eht_cap_mac) \
+			ehtcap_ie_get(__eht_cap_mac[EHTCAP_MACBYTE_IDX0], \
+				      EHTCAP_MAC_TRIGGERED_TXOP_MODE2_IDX, \
+				      EHTCAP_MAC_TRIGGERED_TXOP_MODE2_BITS)
+#define EHTCAP_MAC_TRIGTXOP_MODE2_SET_TO_IE(__eht_cap_mac, value) \
+			ehtcap_ie_set(&__eht_cap_mac[EHTCAP_MACBYTE_IDX0], \
+				      EHTCAP_MAC_TRIGGERED_TXOP_MODE2_IDX, \
+				      EHTCAP_MAC_TRIGGERED_TXOP_MODE2_BITS, \
+				      value)
+
+#define EHTCAP_MAC_RESTRICTED_TWT_GET_FROM_IE(__eht_cap_mac) \
+			ehtcap_ie_get(__eht_cap_mac[EHTCAP_MACBYTE_IDX0], \
+				      EHTCAP_MAC_RESTRICTED_TWT_IDX, \
+				      EHTCAP_MAC_RESTRICTED_TWT_BITS)
+#define EHTCAP_MAC_RESTRICTED_TWT_SET_TO_IE(__eht_cap_mac, value) \
+			ehtcap_ie_set(&__eht_cap_mac[EHTCAP_MACBYTE_IDX0], \
+				      EHTCAP_MAC_RESTRICTED_TWT_IDX, \
+				      EHTCAP_MAC_RESTRICTED_TWT_BITS, value)
+
+#define EHTCAP_MAC_SCS_TRAFFIC_DESC_GET_FROM_IE(__eht_cap_mac) \
+			ehtcap_ie_get(__eht_cap_mac[EHTCAP_MACBYTE_IDX0], \
+				      EHTCAP_MAC_SCS_TRAFFIC_DESC_IDX, \
+				      EHTCAP_MAC_SCS_TRAFFIC_DESC_BITS)
+#define EHTCAP_MAC_SCS_TRAFFIC_DESC_SET_TO_IE(__eht_cap_mac, value) \
+			ehtcap_ie_set(&__eht_cap_mac[EHTCAP_MACBYTE_IDX0], \
+				      EHTCAP_MAC_SCS_TRAFFIC_DESC_IDX, \
+				      EHTCAP_MAC_SCS_TRAFFIC_DESC_BITS, value)
+
+#define EHTCAP_MAC_MAX_MPDU_LEN_GET_FROM_IE(__eht_cap_mac) \
+			ehtcap_ie_get(__eht_cap_mac[EHTCAP_MACBYTE_IDX0], \
+				      EHTCAP_MAC_MAX_MPDU_LEN_IDX, \
+				      EHTCAP_MAC_MAX_MPDU_LEN_BITS)
+#define EHTCAP_MAC_MAX_MPDU_LEN_SET_TO_IE(__eht_cap_mac, value) \
+			ehtcap_ie_set(&__eht_cap_mac[EHTCAP_MACBYTE_IDX0], \
+				      EHTCAP_MAC_MAX_MPDU_LEN_IDX, \
+				      EHTCAP_MAC_MAX_MPDU_LEN_BITS, value)
+
+/* byte 0 */
+#define EHTCAP_PHY_320MHZIN6GHZ_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX0], \
+				      EHTCAP_PHY_320MHZIN6GHZ_IDX, \
+				      EHTCAP_PHY_320MHZIN6GHZ_BITS)
+#define EHTCAP_PHY_320MHZIN6GHZ_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX0], \
+				      EHTCAP_PHY_320MHZIN6GHZ_IDX, \
+				      EHTCAP_PHY_320MHZIN6GHZ_BITS, value)
+
+#define EHTCAP_PHY_242TONERUBWGT20MHZ_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX0], \
+				      EHTCAP_PHY_242TONERUBWLT20MHZ_IDX, \
+				      EHTCAP_PHY_242TONERUBWLT20MHZ_BITS)
+#define EHTCAP_PHY_242TONERUBWGT20MHZ_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX0], \
+				      EHTCAP_PHY_242TONERUBWLT20MHZ_IDX, \
+				      EHTCAP_PHY_242TONERUBWLT20MHZ_BITS, value)
+
+#define EHTCAP_PHY_NDP4XEHTLTFAND320NSGI_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX0], \
+				      EHTCAP_PHY_NDP4XEHTLTFAND320NSGI_IDX, \
+				      EHTCAP_PHY_NDP4XEHTLTFAND320NSGI_BITS)
+#define EHTCAP_PHY_NDP4XEHTLTFAND320NSGI_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX0], \
+				      EHTCAP_PHY_NDP4XEHTLTFAND320NSGI_IDX, \
+				      EHTCAP_PHY_NDP4XEHTLTFAND320NSGI_BITS, \
+				      value)
+
+#define EHTCAP_PHY_PARTIALBWULMU_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX0], \
+				      EHTCAP_PHY_PARTIALBWULMU_IDX, \
+				      EHTCAP_PHY_PARTIALBWULMU_BITS)
+#define EHTCAP_PHY_PARTIALBWULMU_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX0], \
+				      EHTCAP_PHY_PARTIALBWULMU_IDX, \
+				      EHTCAP_PHY_PARTIALBWULMU_BITS, value)
+
+#define EHTCAP_PHY_SUBFMR_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX0], \
+				      EHTCAP_PHY_SUBFMR_IDX, \
+				      EHTCAP_PHY_SUBFMR_BITS)
+#define EHTCAP_PHY_SUBFMR_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX0],  \
+				      EHTCAP_PHY_SUBFMR_IDX, \
+				      EHTCAP_PHY_SUBFMR_BITS, value)
+
+#define EHTCAP_PHY_SUBFME_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX0], \
+				      EHTCAP_PHY_SUBFME_IDX, \
+				      EHTCAP_PHY_SUBFME_BITS)
+#define EHTCAP_PHY_SUBFME_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX0], \
+				      EHTCAP_PHY_SUBFME_IDX, \
+				      EHTCAP_PHY_SUBFME_BITS, value)
+
+#define EHTCAP_PHY_BFMESSLT80MHZ_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX0], \
+				      EHTCAP_PHY_BFMESSLT80MHZ_IDX, \
+				      EHTCAP_PHY_BFMESSLT80MHZ_BITS)
+#define EHTCAP_PHY_BFMESSLT80MHZ_SET_TO_IE(__eht_cap_phy, __value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX0], \
+				      EHTCAP_PHY_BFMESSLT80MHZ_IDX, \
+				      EHTCAP_PHY_BFMESSLT80MHZ_BITS, __value)
+
+/* byte 1 */
+#define EHTCAP_PHY_BFMESS160MHZ_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX1], \
+				      EHTCAP_PHY_BFMESS160MHZ_IDX, \
+				      EHTCAP_PHY_BFMESS160MHZ_BITS)
+#define EHTCAP_PHY_BFMESS160MHZ_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX1], \
+				      EHTCAP_PHY_BFMESS160MHZ_IDX, \
+				      EHTCAP_PHY_BFMESS160MHZ_BITS, value)
+
+#define EHTCAP_PHY_BFMESS320MHZ_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX1], \
+				      EHTCAP_PHY_BFMESS320MHZ_IDX, \
+				      EHTCAP_PHY_BFMESS320MHZ_BITS)
+#define EHTCAP_PHY_BFMESS320MHZ_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX1], \
+				      EHTCAP_PHY_BFMESS320MHZ_IDX, \
+				      EHTCAP_PHY_BFMESS320MHZ_BITS, value)
+
+/* byte 2 */
+#define EHTCAP_PHY_NUMSOUNDLT80MHZ_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX2], \
+				      EHTCAP_PHY_NUMSOUNDLT80MHZ_IDX, \
+				      EHTCAP_PHY_NUMSOUNDLT80MHZ_BITS)
+#define EHTCAP_PHY_NUMSOUNDLT80MHZ_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX2], \
+				      EHTCAP_PHY_NUMSOUNDLT80MHZ_IDX, \
+				      EHTCAP_PHY_NUMSOUNDLT80MHZ_BITS, value)
+
+#define EHTCAP_PHY_NUMSOUND160MHZ_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX2], \
+				      EHTCAP_PHY_NUMSOUND160MHZ_IDX, \
+				      EHTCAP_PHY_NUMSOUND160MHZ_BITS)
+#define EHTCAP_PHY_NUMSOUND160MHZ_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX2], \
+				      EHTCAP_PHY_NUMSOUND160MHZ_IDX, \
+				      EHTCAP_PHY_NUMSOUND160MHZ_BITS, value)
+
+#define EHTCAP_PHY_NUMSOUND320MHZ_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX2], \
+				      EHTCAP_PHY_NUMSOUND320MHZ_IDX, \
+				      EHTCAP_PHY_NUMSOUND320MHZ_BITS)
+#define EHTCAP_PHY_NUMSOUND320MHZ_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX2], \
+				      EHTCAP_PHY_NUMSOUND320MHZ_IDX, \
+				      EHTCAP_PHY_NUMSOUND320MHZ_BITS, value)
+
+/* byte 3 */
+#define EHTCAP_PHY_NG16SUFB_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX3], \
+				      EHTCAP_PHY_NG16SUFB_IDX, \
+				      EHTCAP_PHY_NG16SUFB_BITS)
+#define EHTCAP_PHY_NG16SUFB_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX3], \
+				      EHTCAP_PHY_NG16SUFB_IDX, \
+				      EHTCAP_PHY_NG16SUFB_BITS, value)
+
+#define EHTCAP_PHY_NG16MUFB_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX3], \
+				      EHTCAP_PHY_NG16MUFB_IDX, \
+				      EHTCAP_PHY_NG16MUFB_BITS)
+#define EHTCAP_PHY_NG16MUFB_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX3], \
+				      EHTCAP_PHY_NG16MUFB_IDX, \
+				      EHTCAP_PHY_NG16MUFB_BITS, value)
+
+#define EHTCAP_PHY_CODBK42SUFB_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX3], \
+				      EHTCAP_PHY_CODBK42SUFB_IDX, \
+				      EHTCAP_PHY_CODBK42SUFB_BITS)
+#define EHTCAP_PHY_CODBK42SUFB_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX3], \
+				      EHTCAP_PHY_CODBK42SUFB_IDX, \
+				      EHTCAP_PHY_CODBK42SUFB_BITS, value)
+
+#define EHTCAP_PHY_CODBK75MUFB_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX3], \
+				      EHTCAP_PHY_CODBK75MUFB_IDX, \
+				      EHTCAP_PHY_CODBK75MUFB_BITS)
+#define EHTCAP_PHY_CODBK75MUFB_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX3], \
+				      EHTCAP_PHY_CODBK75MUFB_IDX, \
+				      EHTCAP_PHY_CODBK75MUFB_BITS, value)
+
+#define EHTCAP_PHY_TRIGSUBFFB_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX3], \
+				      EHTCAP_PHY_TRIGSUBFFB_IDX, \
+				      EHTCAP_PHY_TRIGSUBFFB_BITS)
+#define EHTCAP_PHY_TRIGSUBFFB_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX3], \
+				      EHTCAP_PHY_TRIGSUBFFB_IDX, \
+				      EHTCAP_PHY_TRIGSUBFFB_BITS, value)
+
+#define EHTCAP_PHY_TRIGMUBFPARTBWFB_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX3], \
+				      EHTCAP_PHY_TRIGMUBFPARTBWFB_IDX, \
+				      EHTCAP_PHY_TRIGMUBFPARTBWFB_BITS)
+#define EHTCAP_PHY_TRIGMUBFPARTBWFB_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX3], \
+				      EHTCAP_PHY_TRIGMUBFPARTBWFB_IDX, \
+				      EHTCAP_PHY_TRIGMUBFPARTBWFB_BITS, value)
+
+#define EHTCAP_PHY_TRIGCQIFB_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX3], \
+				      EHTCAP_PHY_TRIGCQIFB_IDX, \
+				      EHTCAP_PHY_TRIGCQIFB_BITS)
+#define EHTCAP_PHY_TRIGCQIFB_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX3], \
+				      EHTCAP_PHY_TRIGCQIFB_IDX, \
+				      EHTCAP_PHY_TRIGCQIFB_BITS, value)
+
+/* byte 4 */
+#define EHTCAP_PHY_PARTBWDLMUMIMO_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX4], \
+				      EHTCAP_PHY_PARTBWDLMUMIMO_IDX, \
+				      EHTCAP_PHY_PARTBWDLMUMIMO_BITS)
+#define EHTCAP_PHY_PARTBWDLMUMIMO_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX4], \
+				      EHTCAP_PHY_PARTBWDLMUMIMO_IDX, \
+				      EHTCAP_PHY_PARTBWDLMUMIMO_BITS, value)
+
+#define EHTCAP_PHY_PSRSR_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX4], \
+				      EHTCAP_PHY_PSRSR_IDX, \
+				      EHTCAP_PHY_PSRSR_BITS)
+#define EHTCAP_PHY_PSRSR_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX4], \
+				      EHTCAP_PHY_PSRSR_IDX, \
+				      EHTCAP_PHY_PSRSR_BITS, value)
+
+#define EHTCAP_PHY_PWRBSTFACTOR_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX4], \
+				      EHTCAP_PHY_PWRBSTFACTOR_IDX, \
+				      EHTCAP_PHY_PWRBSTFACTOR_BITS)
+#define EHTCAP_PHY_PWRBSTFACTOR_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX4], \
+				      EHTCAP_PHY_PWRBSTFACTOR_IDX, \
+				      EHTCAP_PHY_PWRBSTFACTOR_BITS, value)
+
+#define EHTCAP_PHY_4XEHTMULTFAND800NSGI_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX4], \
+				      EHTCAP_PHY_4XEHTLTFAND800NSGI_IDX, \
+				      EHTCAP_PHY_4XEHTLTFAND800NSGI_BITS)
+#define EHTCAP_PHY_4XEHTMULTFAND800NSGI_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX4], \
+				      EHTCAP_PHY_4XEHTLTFAND800NSGI_IDX, \
+				      EHTCAP_PHY_4XEHTLTFAND800NSGI_BITS, value)
+
+#define EHTCAP_PHY_MAXNC_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX4], \
+				      EHTCAP_PHY_MAXNC_IDX, \
+				      EHTCAP_PHY_MAXNC_BITS)
+#define EHTCAP_PHY_MAXNC_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX4], \
+				      EHTCAP_PHY_MAXNC_IDX, \
+				      EHTCAP_PHY_MAXNC_BITS, value)
+
+/* byte 5 */
+#define EHTCAP_PHY_NONTRIGCQIFB_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX5], \
+				      EHTCAP_PHY_NONTRIGCQIFB_IDX, \
+				      EHTCAP_PHY_NONTRIGCQIFB_BITS)
+#define EHTCAP_PHY_NONTRIGCQIFB_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX5], \
+				      EHTCAP_PHY_NONTRIGCQIFB_IDX, \
+				      EHTCAP_PHY_NONTRIGCQIFB_BITS, value)
+
+#define EHTCAP_PHY_TX1024AND4096QAMLT242TONERU_GET_FROM_IE(__eht_cap_phy) \
+		    ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX5], \
+				  EHTCAP_PHY_TX1024AND4096QAMLS242TONERU_IDX, \
+				  EHTCAP_PHY_TX1024AND4096QAMLS242TONERU_BITS)
+#define EHTCAP_PHY_TX1024AND4096QAMLT242TONERU_SET_TO_IE(__eht_cap_phy, value) \
+		    ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX5], \
+				  EHTCAP_PHY_TX1024AND4096QAMLS242TONERU_IDX, \
+				  EHTCAP_PHY_TX1024AND4096QAMLS242TONERU_BITS, \
+				  value)
+
+#define EHTCAP_PHY_RX1024AND4096QAMLT242TONERU_GET_FROM_IE(__eht_cap_phy) \
+		    ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX5], \
+				  EHTCAP_PHY_RX1024AND4096QAMLS242TONERU_IDX, \
+				  EHTCAP_PHY_RX1024AND4096QAMLS242TONERU_BITS)
+#define EHTCAP_PHY_RX1024AND4096QAMLT242TONERU_SET_TO_IE(__eht_cap_phy, value) \
+		    ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX5], \
+				  EHTCAP_PHY_RX1024AND4096QAMLS242TONERU_IDX, \
+				  EHTCAP_PHY_RX1024AND4096QAMLS242TONERU_BITS, \
+				  value)
+
+#define EHTCAP_PHY_PPETHRESPRESENT_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX5], \
+				      EHTCAP_PHY_PPETHRESPRESENT_IDX, \
+				      EHTCAP_PHY_PPETHRESPRESENT_BITS)
+#define EHTCAP_PHY_PPETHRESPRESENT_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX5], \
+				      EHTCAP_PHY_PPETHRESPRESENT_IDX, \
+				      EHTCAP_PHY_PPETHRESPRESENT_BITS, value)
+
+#define EHTCAP_PHY_CMNNOMPKTPAD_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX5], \
+				      EHTCAP_PHY_CMNNOMPKTPAD_IDX, \
+				      EHTCAP_PHY_CMNNOMPKTPAD_BITS)
+#define EHTCAP_PHY_CMNNOMPKTPAD_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX5], \
+				      EHTCAP_PHY_CMNNOMPKTPAD_IDX, \
+				      EHTCAP_PHY_CMNNOMPKTPAD_BITS, value)
+
+#define EHTCAP_PHY_MAXNUMEHTLTF_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX5], \
+				      EHTCAP_PHY_MAXNUMEHTLTF_IDX, \
+				      EHTCAP_PHY_MAXNUMEHTLTF_BITS)
+#define EHTCAP_PHY_MAXNUMEHTLTF_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX5], \
+				      EHTCAP_PHY_MAXNUMEHTLTF_IDX, \
+				      EHTCAP_PHY_MAXNUMEHTLTF_BITS, value)
+
+/* byte 6 */
+#define EHTCAP_PHY_SUPMCS15_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX6], \
+				      EHTCAP_PHY_SUPMCS15_IDX, \
+				      EHTCAP_PHY_SUPMCS15_BITS)
+#define EHTCAP_PHY_SUPMCS15_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX6], \
+				      EHTCAP_PHY_SUPMCS15_IDX, \
+				      EHTCAP_PHY_SUPMCS15_BITS, value)
+
+#define EHTCAP_PHY_EHTDUPIN6GHZ_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX6], \
+				      EHTCAP_PHY_EHTDUPIN6GHZ_IDX, \
+				      EHTCAP_PHY_EHTDUPIN6GHZ_BITS)
+#define EHTCAP_PHY_EHTDUPIN6GHZ_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX6], \
+				      EHTCAP_PHY_EHTDUPIN6GHZ_IDX, \
+				      EHTCAP_PHY_EHTDUPIN6GHZ_BITS, value)
+
+/* byte 7 */
+#define EHTCAP_PHY_20MHZOPSTARXNDPWIDERBW_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX7], \
+				      EHTCAP_PHY_20MHZOPSTARXNDPWIDERBW_IDX, \
+				      EHTCAP_PHY_20MHZOPSTARXNDPWIDERBW_BITS)
+#define EHTCAP_PHY_20MHZOPSTARXNDPWIDERBW_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX7], \
+				      EHTCAP_PHY_20MHZOPSTARXNDPWIDERBW_IDX, \
+				      EHTCAP_PHY_20MHZOPSTARXNDPWIDERBW_BITS, \
+				      value)
+
+#define EHTCAP_PHY_NONOFDMAULMUMIMOLT80MHZ_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX7], \
+				      EHTCAP_PHY_NONOFDMAULMUMIMOLT80MHZ_IDX, \
+				      EHTCAP_PHY_NONOFDMAULMUMIMOLT80MHZ_BITS)
+#define EHTCAP_PHY_NONOFDMAULMUMIMOLT80MHZ_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX7], \
+				      EHTCAP_PHY_NONOFDMAULMUMIMOLT80MHZ_IDX, \
+				      EHTCAP_PHY_NONOFDMAULMUMIMOLT80MHZ_BITS, \
+				      value)
+
+#define EHTCAP_PHY_NONOFDMAULMUMIMO160MHZ_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX7], \
+				      EHTCAP_PHY_NONOFDMAULMUMIMO160MHZ_IDX, \
+				      EHTCAP_PHY_NONOFDMAULMUMIMO160MHZ_BITS)
+#define EHTCAP_PHY_NONOFDMAULMUMIMO160MHZ_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX7], \
+				      EHTCAP_PHY_NONOFDMAULMUMIMO160MHZ_IDX, \
+				      EHTCAP_PHY_NONOFDMAULMUMIMO160MHZ_BITS, \
+				      value)
+
+#define EHTCAP_PHY_NONOFDMAULMUMIMO320MHZ_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX7], \
+				      EHTCAP_PHY_NONOFDMAULMUMIMO320MHZ_IDX, \
+				      EHTCAP_PHY_NONOFDMAULMUMIMO320MHZ_BITS)
+#define EHTCAP_PHY_NONOFDMAULMUMIMO320MHZ_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX7], \
+				      EHTCAP_PHY_NONOFDMAULMUMIMO320MHZ_IDX, \
+				      EHTCAP_PHY_NONOFDMAULMUMIMO320MHZ_BITS, \
+				      value)
+
+#define EHTCAP_PHY_MUBFMRLT80MHZ_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX7], \
+				      EHTCAP_PHY_MUBFMRLT80MHZ_IDX, \
+				      EHTCAP_PHY_MUBFMRLT80MHZ_BITS)
+#define EHTCAP_PHY_MUBFMRLT80MHZ_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX7], \
+				      EHTCAP_PHY_MUBFMRLT80MHZ_IDX, \
+				      EHTCAP_PHY_MUBFMRLT80MHZ_BITS, value)
+
+#define EHTCAP_PHY_MUBFMR160MHZ_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX7], \
+				      EHTCAP_PHY_MUBFMR160MHZ_IDX, \
+				      EHTCAP_PHY_MUBFMR160MHZ_BITS)
+#define EHTCAP_PHY_MUBFMR160MHZ_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX7], \
+				      EHTCAP_PHY_MUBFMR160MHZ_IDX, \
+				      EHTCAP_PHY_MUBFMR160MHZ_BITS, value)
+
+#define EHTCAP_PHY_MUBFMR320MHZ_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX7], \
+				      EHTCAP_PHY_MUBFMR320MHZ_IDX, \
+				      EHTCAP_PHY_MUBFMR320MHZ_BITS)
+#define EHTCAP_PHY_MUBFMR320MHZ_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX7], \
+				      EHTCAP_PHY_MUBFMR320MHZ_IDX, \
+				      EHTCAP_PHY_MUBFMR320MHZ_BITS, value)
+
+#define EHTCAP_PHY_TB_SOUNDING_FB_RL_GET_FROM_IE(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX7], \
+				      EHTCAP_PHY_TB_SOUNDING_FEEDBACK_RL_IDX, \
+				      EHTCAP_PHY_TB_SOUNDING_FEEDBACK_RL_BITS)
+#define EHTCAP_PHY_TB_SOUNDING_FB_RL_SET_TO_IE(__eht_cap_phy, value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX7], \
+				      EHTCAP_PHY_TB_SOUNDING_FEEDBACK_RL_IDX, \
+				      EHTCAP_PHY_TB_SOUNDING_FEEDBACK_RL_BITS, \
+				      value)
+
+void lim_ieee80211_pack_ehtcap(uint8_t *ie, tDot11fIEeht_cap dot11f_eht_cap,
+			       tDot11fIEhe_cap dot11f_he_cap, bool is_band_2g)
+{
+	struct wlan_ie_ehtcaps *ehtcap  = (struct wlan_ie_ehtcaps *)ie;
+	uint32_t ehtcaplen;
+	uint32_t val, idx = 0;
+	bool chwidth_320;
+	uint32_t mcs_map_len;
+
+	if (!ie) {
+		pe_err("ie is null");
+		return;
+	}
+
+	/* deduct the variable size fields before
+	 * memsetting hecap to 0
+	 */
+	qdf_mem_zero(ehtcap,
+		     (sizeof(struct wlan_ie_ehtcaps)));
+
+	ehtcap->elem_id = DOT11F_EID_EHT_CAP;
+	/* elem id + len = 2 bytes  readjust based on
+	 *  mcs-nss and ppet fields
+	 */
+	qdf_mem_copy(&ehtcap->elem_id_extn, EHT_CAP_OUI_TYPE, EHT_CAP_OUI_SIZE);
+
+	val = dot11f_eht_cap.nsep_pri_access;
+	EHTCAP_MAC_NSEPPRIACCESS_SET_TO_IE(ehtcap->eht_mac_cap, val);
+
+	val = dot11f_eht_cap.eht_om_ctl;
+	EHTCAP_MAC_EHTOMCTRL_SET_TO_IE(ehtcap->eht_mac_cap, val);
+
+	val = dot11f_eht_cap.triggered_txop_sharing_mode1;
+	EHTCAP_MAC_TRIGTXOP_MODE1_SET_TO_IE(ehtcap->eht_mac_cap, val);
+
+	val = dot11f_eht_cap.triggered_txop_sharing_mode2;
+	EHTCAP_MAC_TRIGTXOP_MODE2_SET_TO_IE(ehtcap->eht_mac_cap, val);
+
+	val = dot11f_eht_cap.restricted_twt;
+	EHTCAP_MAC_RESTRICTED_TWT_SET_TO_IE(ehtcap->eht_mac_cap, val);
+
+	val = dot11f_eht_cap.scs_traffic_desc;
+	EHTCAP_MAC_SCS_TRAFFIC_DESC_SET_TO_IE(ehtcap->eht_mac_cap, val);
+
+	val = dot11f_eht_cap.max_mpdu_len;
+	EHTCAP_MAC_MAX_MPDU_LEN_SET_TO_IE(ehtcap->eht_mac_cap, val);
+
+	chwidth_320 = dot11f_eht_cap.support_320mhz_6ghz;
+	EHTCAP_PHY_320MHZIN6GHZ_SET_TO_IE(ehtcap->eht_phy_cap.phy_cap_bytes,
+					  chwidth_320);
+
+	val = dot11f_eht_cap.ru_242tone_wt_20mhz;
+	EHTCAP_PHY_242TONERUBWGT20MHZ_SET_TO_IE(
+				      ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.ndp_4x_eht_ltf_3dot2_us_gi;
+	EHTCAP_PHY_NDP4XEHTLTFAND320NSGI_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.partial_bw_mu_mimo;
+	EHTCAP_PHY_PARTIALBWULMU_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.su_beamformer;
+	EHTCAP_PHY_SUBFMR_SET_TO_IE(ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.su_beamformee;
+	EHTCAP_PHY_SUBFME_SET_TO_IE(ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.bfee_ss_le_80mhz;
+	EHTCAP_PHY_BFMESSLT80MHZ_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.bfee_ss_160mhz;
+	EHTCAP_PHY_BFMESS160MHZ_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.bfee_ss_320mhz;
+	EHTCAP_PHY_BFMESS320MHZ_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.num_sounding_dim_le_80mhz;
+	EHTCAP_PHY_NUMSOUNDLT80MHZ_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.num_sounding_dim_160mhz;
+	EHTCAP_PHY_NUMSOUND160MHZ_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.num_sounding_dim_320mhz;
+	EHTCAP_PHY_NUMSOUND320MHZ_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.ng_16_su_feedback;
+	EHTCAP_PHY_NG16SUFB_SET_TO_IE(ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.ng_16_mu_feedback;
+	EHTCAP_PHY_NG16MUFB_SET_TO_IE(ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.cb_sz_4_2_su_feedback;
+	EHTCAP_PHY_CODBK42SUFB_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.cb_sz_7_5_su_feedback;
+	EHTCAP_PHY_CODBK75MUFB_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.trig_su_bforming_feedback;
+	EHTCAP_PHY_TRIGSUBFFB_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.trig_mu_bforming_partial_bw_feedback;
+	EHTCAP_PHY_TRIGMUBFPARTBWFB_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.triggered_cqi_feedback;
+	EHTCAP_PHY_TRIGCQIFB_SET_TO_IE(ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.partial_bw_dl_mu_mimo;
+	EHTCAP_PHY_PARTBWDLMUMIMO_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.psr_based_sr;
+	EHTCAP_PHY_PSRSR_SET_TO_IE(ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.power_boost_factor;
+	EHTCAP_PHY_PWRBSTFACTOR_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.eht_mu_ppdu_4x_ltf_0_8_us_gi;
+	EHTCAP_PHY_4XEHTMULTFAND800NSGI_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.max_nc;
+	EHTCAP_PHY_MAXNC_SET_TO_IE(ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.non_trig_cqi_feedback;
+	EHTCAP_PHY_NONTRIGCQIFB_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.tx_1024_4096_qam_lt_242_tone_ru;
+	EHTCAP_PHY_TX1024AND4096QAMLT242TONERU_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.rx_1024_4096_qam_lt_242_tone_ru;
+	EHTCAP_PHY_RX1024AND4096QAMLT242TONERU_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.ppet_present;
+	EHTCAP_PHY_PPETHRESPRESENT_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.common_nominal_pkt_padding;
+	EHTCAP_PHY_CMNNOMPKTPAD_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.max_num_eht_ltf;
+	EHTCAP_PHY_MAXNUMEHTLTF_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.mcs_15;
+	EHTCAP_PHY_SUPMCS15_SET_TO_IE(ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.eht_dup_6ghz;
+	EHTCAP_PHY_EHTDUPIN6GHZ_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.op_sta_rx_ndp_wider_bw_20mhz;
+	EHTCAP_PHY_20MHZOPSTARXNDPWIDERBW_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.non_ofdma_ul_mu_mimo_le_80mhz;
+	EHTCAP_PHY_NONOFDMAULMUMIMOLT80MHZ_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.non_ofdma_ul_mu_mimo_160mhz;
+	EHTCAP_PHY_NONOFDMAULMUMIMO160MHZ_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.non_ofdma_ul_mu_mimo_320mhz;
+	EHTCAP_PHY_NONOFDMAULMUMIMO320MHZ_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.mu_bformer_le_80mhz;
+	EHTCAP_PHY_MUBFMRLT80MHZ_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.mu_bformer_160mhz;
+	EHTCAP_PHY_MUBFMR160MHZ_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.mu_bformer_320mhz;
+	EHTCAP_PHY_MUBFMR320MHZ_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.tb_sounding_feedback_rl;
+	EHTCAP_PHY_TB_SOUNDING_FB_RL_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes,	val);
+
+	/* Fill EHT MCS and NSS set field */
+	if ((is_band_2g && !dot11f_he_cap.chan_width_0) ||
+	    (!is_band_2g && !dot11f_he_cap.chan_width_1 &&
+	     !dot11f_he_cap.chan_width_2 && !dot11f_he_cap.chan_width_3)) {
+		val = dot11f_eht_cap.bw_20_rx_max_nss_for_mcs_0_to_7;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_RX_MCS_NSS_MAP_IDX,
+			      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
+
+		val = dot11f_eht_cap.bw_20_tx_max_nss_for_mcs_0_to_7;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_TX_MCS_NSS_MAP_IDX,
+			      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
+		idx++;
+
+		val = dot11f_eht_cap.bw_20_rx_max_nss_for_mcs_8_and_9;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_RX_MCS_NSS_MAP_IDX,
+			      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
+
+		val = dot11f_eht_cap.bw_20_tx_max_nss_for_mcs_8_and_9;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_TX_MCS_NSS_MAP_IDX,
+			      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
+		idx++;
+
+		val = dot11f_eht_cap.bw_20_rx_max_nss_for_mcs_10_and_11;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_RX_MCS_NSS_MAP_IDX,
+			      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
+
+		val = dot11f_eht_cap.bw_20_rx_max_nss_for_mcs_10_and_11;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_TX_MCS_NSS_MAP_IDX,
+			      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
+		idx++;
+
+		val = dot11f_eht_cap.bw_20_rx_max_nss_for_mcs_12_and_13;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_RX_MCS_NSS_MAP_IDX,
+			      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
+
+		val = dot11f_eht_cap.bw_20_rx_max_nss_for_mcs_12_and_13;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_TX_MCS_NSS_MAP_IDX,
+			      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
+		idx++;
+	}
+
+	if ((is_band_2g && dot11f_he_cap.chan_width_0) ||
+	    (!is_band_2g && dot11f_he_cap.chan_width_1)) {
+		val = dot11f_eht_cap.bw_le_80_rx_max_nss_for_mcs_0_to_9;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_RX_MCS_NSS_MAP_IDX,
+			      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
+
+		val = dot11f_eht_cap.bw_le_80_tx_max_nss_for_mcs_0_to_9;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_TX_MCS_NSS_MAP_IDX,
+			      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
+		idx++;
+
+		val = dot11f_eht_cap.bw_le_80_rx_max_nss_for_mcs_10_and_11;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_RX_MCS_NSS_MAP_IDX,
+			      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
+
+		val = dot11f_eht_cap.bw_le_80_tx_max_nss_for_mcs_10_and_11;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_TX_MCS_NSS_MAP_IDX,
+			      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
+		idx++;
+
+		val = dot11f_eht_cap.bw_le_80_rx_max_nss_for_mcs_12_and_13;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_RX_MCS_NSS_MAP_IDX,
+			      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
+
+		val = dot11f_eht_cap.bw_le_80_rx_max_nss_for_mcs_12_and_13;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_TX_MCS_NSS_MAP_IDX,
+			      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
+		idx++;
+	}
+
+	if ((dot11f_he_cap.chan_width_6 | dot11f_he_cap.chan_width_5 |
+	     dot11f_he_cap.chan_width_4 | dot11f_he_cap.chan_width_3 |
+	     dot11f_he_cap.chan_width_2 | dot11f_he_cap.chan_width_1 |
+	     dot11f_he_cap.chan_width_0) == 1) {
+		val = dot11f_eht_cap.bw_160_rx_max_nss_for_mcs_0_to_9;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_RX_MCS_NSS_MAP_IDX,
+			      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
+
+		val = dot11f_eht_cap.bw_160_tx_max_nss_for_mcs_0_to_9;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_TX_MCS_NSS_MAP_IDX,
+			      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
+		idx++;
+
+		val = dot11f_eht_cap.bw_160_rx_max_nss_for_mcs_10_and_11;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_RX_MCS_NSS_MAP_IDX,
+			      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
+
+		val = dot11f_eht_cap.bw_160_tx_max_nss_for_mcs_10_and_11;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_TX_MCS_NSS_MAP_IDX,
+			      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
+		idx++;
+
+		val = dot11f_eht_cap.bw_160_rx_max_nss_for_mcs_12_and_13;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_RX_MCS_NSS_MAP_IDX,
+			      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
+
+		val = dot11f_eht_cap.bw_160_rx_max_nss_for_mcs_12_and_13;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_TX_MCS_NSS_MAP_IDX,
+			      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
+		idx++;
+	}
+
+	if (chwidth_320) {
+		val = dot11f_eht_cap.bw_320_rx_max_nss_for_mcs_0_to_9;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_RX_MCS_NSS_MAP_IDX,
+			      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
+
+		val = dot11f_eht_cap.bw_320_tx_max_nss_for_mcs_0_to_9;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_TX_MCS_NSS_MAP_IDX,
+			      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
+		idx++;
+
+		val = dot11f_eht_cap.bw_320_rx_max_nss_for_mcs_10_and_11;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_RX_MCS_NSS_MAP_IDX,
+			      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
+
+		val = dot11f_eht_cap.bw_320_tx_max_nss_for_mcs_10_and_11;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_TX_MCS_NSS_MAP_IDX,
+			      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
+		idx++;
+
+		val = dot11f_eht_cap.bw_320_rx_max_nss_for_mcs_12_and_13;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_RX_MCS_NSS_MAP_IDX,
+			      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
+
+		val = dot11f_eht_cap.bw_320_rx_max_nss_for_mcs_12_and_13;
+		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+			      EHTCAP_TX_MCS_NSS_MAP_IDX,
+			      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
+		idx++;
+	}
+	/* Fill in TxRx EHT NSS & MCS support */
+	mcs_map_len = idx;
+	ehtcap->elem_len = EHTCAP_FIXED_LEN + mcs_map_len;
+	ehtcaplen = ehtcap->elem_len + WLAN_IE_HDR_LEN;
+}
+
 QDF_STATUS populate_dot11f_eht_caps(struct mac_context *mac_ctx,
 				    struct pe_session *session,
 				    tDot11fIEeht_cap *eht_cap)

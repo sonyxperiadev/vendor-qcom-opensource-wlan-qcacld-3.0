@@ -1727,6 +1727,11 @@ static inline bool lim_is_sta_eht_capable(tpDphHashNode sta_ds)
 	return sta_ds->mlmStaContext.eht_capable;
 }
 
+QDF_STATUS lim_strip_eht_cap_ie(struct mac_context *mac_ctx,
+				uint8_t *frame_ies,
+				uint16_t *ie_buf_size,
+				uint8_t *eht_cap_ie);
+
 /**
  * lim_populate_eht_mcs_set() - function to populate EHT mcs rate set
  * @mac_ctx: pointer to global mac structure
@@ -2001,6 +2006,15 @@ static inline bool lim_is_session_eht_capable(struct pe_session *session)
 static inline bool lim_is_sta_eht_capable(tpDphHashNode sta_ds)
 {
 	return false;
+}
+
+static inline
+QDF_STATUS lim_strip_eht_cap_ie(struct mac_context *mac_ctx,
+				uint8_t *frame_ies,
+				uint16_t *ie_buf_size,
+				uint8_t *eht_cap_ie)
+{
+	return QDF_STATUS_E_FAILURE;
 }
 
 static inline

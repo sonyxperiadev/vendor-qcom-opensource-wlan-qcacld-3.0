@@ -1458,6 +1458,21 @@ QDF_STATUS populate_dot11f_eht_caps(struct mac_context *mac_ctx,
 QDF_STATUS populate_dot11f_eht_operation(struct mac_context *mac_ctx,
 					 struct pe_session *session,
 					 tDot11fIEeht_op *eht_op);
+
+/**
+ * lim_ieee80211_pack_ehtcap() - Pack EHT capabilities IE
+ * @ie: output pointer for eht capabilities IE
+ * @dot11f_eht_cap: dot11f EHT capabilities IE structure
+ * @dot11f_he_cap: dot11f HE capabilities IE structure
+ * @is_band_2g: Flag to indicate whether operating band is 2g or not
+ *
+ * This API is used to enacode EHT capabilities IE which is of variable in
+ * length depending on the HE capabilities IE content.
+ *
+ * Return: Void
+ */
+void lim_ieee80211_pack_ehtcap(uint8_t *ie, tDot11fIEeht_cap dot11f_eht_cap,
+			       tDot11fIEhe_cap dot11f_he_cap, bool is_band_2g);
 #else
 static inline QDF_STATUS
 populate_dot11f_eht_caps(struct mac_context *mac_ctx,
@@ -1472,6 +1487,13 @@ populate_dot11f_eht_operation(struct mac_context *mac_ctx,
 			      tDot11fIEeht_op *eht_op)
 {
 	return QDF_STATUS_SUCCESS;
+}
+
+static inline void lim_ieee80211_pack_ehtcap(uint8_t *ie,
+					     tDot11fIEeht_cap dot11f_eht_cap,
+					     tDot11fIEhe_cap dot11f_he_cap,
+					     bool is_band_2g)
+{
 }
 #endif
 
