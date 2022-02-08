@@ -4318,6 +4318,10 @@ ccflags-$(CONFIG_IPA_WDI3_TX_TWO_PIPES) += -DIPA_WDI3_TX_TWO_PIPES
 
 cppflags-$(CONFIG_DP_TX_TRACKING) += -DDP_TX_TRACKING
 
+ifdef CONFIG_CHIP_VERSION
+cppflags-y += -DCHIP_VERSION=$(CONFIG_CHIP_VERSION)
+endif
+
 KBUILD_CPPFLAGS += $(cppflags-y)
 
 # Currently, for versions of gcc which support it, the kernel Makefile
