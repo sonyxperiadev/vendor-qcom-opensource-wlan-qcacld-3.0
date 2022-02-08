@@ -2275,6 +2275,7 @@ WIFI_POS_OBJS := $(WIFI_POS_CORE_DIR)/wifi_pos_api.o \
 		 $(WIFI_POS_CORE_DIR)/wifi_pos_ucfg.o \
 		 $(WIFI_POS_CORE_DIR)/wifi_pos_utils.o \
 		 $(WIFI_POS_OS_IF_DIR)/os_if_wifi_pos.o \
+		 $(WIFI_POS_OS_IF_DIR)/wlan_cfg80211_wifi_pos.o \
 		 $(WIFI_POS_TGT_DIR)/target_if_wifi_pos.o
 endif
 

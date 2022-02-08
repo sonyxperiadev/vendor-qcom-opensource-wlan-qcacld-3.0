@@ -179,6 +179,7 @@
 #include "os_if_pkt_capture.h"
 #include "wlan_hdd_son.h"
 #include "wlan_hdd_mcc_quota.h"
+#include "wlan_cfg80211_wifi_pos.h"
 
 #define g_mode_rates_size (12)
 #define a_mode_rates_size (8)
@@ -18586,6 +18587,8 @@ void wlan_hdd_update_wiphy(struct hdd_context *hdd_ctx)
 	mac_spoofing_enabled = ucfg_scan_is_mac_spoofing_enabled(hdd_ctx->psoc);
 	if (mac_spoofing_enabled)
 		wlan_hdd_cfg80211_scan_randomization_init(wiphy);
+
+	wlan_wifi_pos_cfg80211_set_wiphy_ext_feature(wiphy, hdd_ctx->psoc);
 }
 
 /**
