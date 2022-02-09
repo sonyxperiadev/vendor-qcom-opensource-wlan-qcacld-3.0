@@ -1879,9 +1879,9 @@ lim_send_assoc_rsp_mgmt_frame(struct mac_context *mac_ctx,
 
 		is_band_2g =
 			WLAN_REG_IS_24GHZ_CH_FREQ(pe_session->curr_op_freq);
-
 		lim_ieee80211_pack_ehtcap(eht_cap_ie, frm.eht_cap, frm.he_cap,
 					  is_band_2g);
+
 		eht_cap_ie_len = eht_cap_ie[1] + 2;
 
 		/* Copy the EHT IE to the end of the frame */

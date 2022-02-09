@@ -264,8 +264,20 @@ static bool lim_chk_assoc_req_parse_error(struct mac_context *mac_ctx,
 		status = sir_convert_reassoc_req_frame2_struct(mac_ctx,
 						frm_body, frame_len, assoc_req);
 
-	if (status == QDF_STATUS_SUCCESS)
+	if (status == QDF_STATUS_SUCCESS) {
+		status = lim_strip_and_decode_eht_cap(
+					frm_body + WLAN_ASSOC_REQ_IES_OFFSET,
+					frame_len - WLAN_ASSOC_REQ_IES_OFFSET,
+					&assoc_req->eht_cap,
+					assoc_req->he_cap,
+					session->curr_op_freq);
+		if (status != QDF_STATUS_SUCCESS) {
+			pe_err("Failed to extract eht cap");
+			return false;
+		}
+
 		return true;
+	}
 
 	pe_warn("Assoc Req rejected: frame parsing error. source addr:"
 			QDF_MAC_ADDR_FMT, QDF_MAC_ADDR_REF(sa));

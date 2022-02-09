@@ -996,6 +996,19 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 		return;
 	}
 
+	if (lim_is_session_eht_capable(session_entry)) {
+		status = lim_strip_and_decode_eht_cap(
+					body + WLAN_ASSOC_RSP_IES_OFFSET,
+					frame_len - WLAN_ASSOC_RSP_IES_OFFSET,
+					&assoc_rsp->eht_cap,
+					assoc_rsp->he_cap,
+					session_entry->curr_op_freq);
+		if (status != QDF_STATUS_SUCCESS) {
+			pe_err("Failed to extract eht cap");
+			return;
+		}
+	}
+
 	if (!assoc_rsp->suppRatesPresent) {
 		pe_debug("assoc response does not have supported rate set");
 		qdf_mem_copy(&assoc_rsp->supportedRates,
