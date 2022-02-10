@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -229,6 +230,7 @@ void lim_process_mlm_reassoc_cnf(struct mac_context *mac_ctx, uint32_t *msg_buf)
 	tLimMlmReassocCnf *lim_mlm_reassoc_cnf;
 	struct reassoc_params param;
 	QDF_STATUS status;
+	enum wlan_vdev_state sub_state;
 
 	if (!msg_buf) {
 		pe_err("Buffer is Pointing to NULL");
@@ -279,8 +281,9 @@ void lim_process_mlm_reassoc_cnf(struct mac_context *mac_ctx, uint32_t *msg_buf)
 	}
 #endif
 
-	pe_debug("Rcv MLM_REASSOC_CNF with result code: %d",
-		 lim_mlm_reassoc_cnf->resultCode);
+	sub_state = wlan_vdev_mlme_get_substate(session->vdev);
+	pe_debug("Rcv MLM_REASSOC_CNF with result code: %d vdev SS %d",
+		 lim_mlm_reassoc_cnf->resultCode, sub_state);
 	if (lim_mlm_reassoc_cnf->resultCode == eSIR_SME_SUCCESS) {
 		/* Successful Reassociation */
 		pe_debug("*** Reassociated with new BSS ***");
@@ -300,6 +303,18 @@ void lim_process_mlm_reassoc_cnf(struct mac_context *mac_ctx, uint32_t *msg_buf)
 					lim_mlm_reassoc_cnf->resultCode,
 					lim_mlm_reassoc_cnf->protStatusCode,
 					session, session->smeSessionId);
+	} else if (sub_state == WLAN_VDEV_SS_START_CONN_PROGRESS ||
+		   sub_state == WLAN_VDEV_SS_START_RESTART_PROGRESS) {
+		session->limSmeState = eLIM_SME_LINK_EST_STATE;
+		/*
+		 * Need to send Reassoc rsp with re-Assoc failure to CM
+		 * so that disconnect can be initiated.
+		 */
+		lim_send_sme_join_reassoc_rsp(
+					mac_ctx, eWNI_SME_REASSOC_RSP,
+					lim_mlm_reassoc_cnf->resultCode,
+					lim_mlm_reassoc_cnf->protStatusCode,
+					session, session->smeSessionId);
 	} else {
 		param.result_code = lim_mlm_reassoc_cnf->resultCode;
 		param.prot_status_code = lim_mlm_reassoc_cnf->protStatusCode;
@@ -307,8 +322,7 @@ void lim_process_mlm_reassoc_cnf(struct mac_context *mac_ctx, uint32_t *msg_buf)
 
 		mlme_set_connection_fail(session->vdev, true);
 
-		if (wlan_vdev_mlme_get_substate(session->vdev) ==
-		    WLAN_VDEV_SS_START_START_PROGRESS)
+		if (sub_state == WLAN_VDEV_SS_START_START_PROGRESS)
 			status = wlan_vdev_mlme_sm_deliver_evt(session->vdev,
 						WLAN_VDEV_SM_EV_START_REQ_FAIL,
 						sizeof(param), &param);

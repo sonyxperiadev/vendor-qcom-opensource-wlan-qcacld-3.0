@@ -348,6 +348,27 @@ static QDF_STATUS sta_mlme_vdev_stop_send(struct vdev_mlme_obj *vdev_mlme,
 }
 
 /**
+ * sta_mlme_vdev_sta_disconnect_start() - MLME vdev disconnect send callback
+ * @vdev_mlme: vdev mlme object
+ * @event_data_len: event data length
+ * @event_data: event data
+ *
+ * This function is called to trigger the vdev stop to firmware when
+ * reassoc failure
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+sta_mlme_vdev_sta_disconnect_start(struct vdev_mlme_obj *vdev_mlme,
+				   uint16_t data_len, void *data)
+{
+	mlme_legacy_debug("vdev id = %d ",
+			  vdev_mlme->vdev->vdev_objmgr.vdev_id);
+	return lim_sta_mlme_vdev_sta_disconnect_start(vdev_mlme, data_len,
+						      data);
+}
+
+/**
  * vdevmgr_mlme_stop_continue() - MLME vdev stop send callback
  * @vdev_mlme: vdev mlme object
  * @event_data_len: event data length
@@ -1812,6 +1833,8 @@ static QDF_STATUS ap_mlme_vdev_csa_complete(struct vdev_mlme_obj *vdev_mlme)
  *                                      MLME down operation
  * @mlme_vdev_notify_down_complete:     callback to notify VDEV MLME on moving
  *                                      to INIT state
+ * @mlme_vdev_sta_disconn_start         callback to trigger vdev stop to
+ *                                      firmware when resaaoc failure
  */
 static struct vdev_mlme_ops sta_mlme_ops = {
 	.mlme_vdev_start_send = sta_mlme_vdev_start_send,
@@ -1829,6 +1852,7 @@ static struct vdev_mlme_ops sta_mlme_ops = {
 	.mlme_vdev_notify_down_complete = vdevmgr_notify_down_complete,
 	.mlme_vdev_ext_stop_rsp = vdevmgr_vdev_stop_rsp_handle,
 	.mlme_vdev_ext_start_rsp = vdevmgr_vdev_start_rsp_handle,
+	.mlme_vdev_sta_disconn_start = sta_mlme_vdev_sta_disconnect_start,
 };
 
 /**

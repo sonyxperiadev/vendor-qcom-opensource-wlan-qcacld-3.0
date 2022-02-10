@@ -4479,10 +4479,18 @@ wma_mlme_vdev_notify_down_complete(struct vdev_mlme_obj *vdev_mlme,
 	status = mlme_get_vdev_stop_type(wma->interfaces[resp->vdev_id].vdev,
 					 &vdev_stop_type);
 	if (QDF_IS_STATUS_ERROR(status)) {
-		wma_err("Failed to get msg_type");
+		wma_err("Failed to get vdev stop type for vdev_id: %d",
+			resp->vdev_id);
 		status = QDF_STATUS_E_INVAL;
 		goto end;
 	}
+
+	/*
+	 * Need reset vdev_stop_type to 0 here, otherwise the vdev_stop_type
+	 * would be taken to next BSS stop in some stress test, then cause
+	 * unexpected behavior.
+	 */
+	mlme_set_vdev_stop_type(wma->interfaces[resp->vdev_id].vdev, 0);
 
 	if (vdev_stop_type == WMA_DELETE_BSS_HO_FAIL_REQ) {
 		resp->status = QDF_STATUS_SUCCESS;
