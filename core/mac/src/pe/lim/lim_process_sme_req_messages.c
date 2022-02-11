@@ -3841,6 +3841,7 @@ lim_fill_session_params(struct mac_context *mac_ctx,
 	struct join_req *pe_join_req;
 	int32_t akm;
 	struct mlme_legacy_priv *mlme_priv;
+	uint32_t assoc_ie_len;
 
 	ie_len = util_scan_entry_ie_len(req->entry);
 	bss_len = (uint16_t)(offsetof(struct bss_description,
@@ -3896,12 +3897,19 @@ lim_fill_session_params(struct mac_context *mac_ctx,
 	if (req->assoc_ie.len)
 		QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
 				   req->assoc_ie.ptr, req->assoc_ie.len);
+
+	assoc_ie_len = req->assoc_ie.len;
 	lim_fill_crypto_params(mac_ctx, session, req);
 
-	pe_debug("After stripping Assoc IE len: %d", req->assoc_ie.len);
-	if (req->assoc_ie.len)
-		QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-				   req->assoc_ie.ptr, req->assoc_ie.len);
+	if (assoc_ie_len != req->assoc_ie.len) {
+		pe_debug("After stripping Assoc IE len: %d", req->assoc_ie.len);
+		if (req->assoc_ie.len)
+			QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE,
+					   QDF_TRACE_LEVEL_DEBUG,
+					   req->assoc_ie.ptr,
+					   req->assoc_ie.len);
+	}
+
 	qdf_mem_copy(pe_join_req->addIEAssoc.addIEdata,
 		     req->assoc_ie.ptr, req->assoc_ie.len);
 	/* update assoc ie to cm */
