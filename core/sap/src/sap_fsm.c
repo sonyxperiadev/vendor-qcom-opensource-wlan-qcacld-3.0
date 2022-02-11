@@ -4447,6 +4447,17 @@ QDF_STATUS sap_init_dfs_channel_nol_list(struct sap_context *sap_ctx)
 	return QDF_STATUS_SUCCESS;
 }
 
+/**
+ * sap_is_active() - Check SAP active or not by sap_context object
+ * @sap_ctx: Pointer to the SAP context
+ *
+ * Return: true if SAP is active
+ */
+static bool sap_is_active(struct sap_context *sap_ctx)
+{
+	return sap_ctx->fsm_state != SAP_INIT;
+}
+
 /*
  * This function will calculate how many interfaces
  * have sap persona and returns total number of sap persona.
@@ -4456,12 +4467,17 @@ uint8_t sap_get_total_number_sap_intf(mac_handle_t mac_handle)
 	struct mac_context *mac = MAC_CONTEXT(mac_handle);
 	uint8_t intf = 0;
 	uint8_t intf_count = 0;
+	struct sap_context *sap_context;
 
 	for (intf = 0; intf < SAP_MAX_NUM_SESSION; intf++) {
 		if (((QDF_SAP_MODE == mac->sap.sapCtxList[intf].sapPersona)
 		    ||
 		    (QDF_P2P_GO_MODE == mac->sap.sapCtxList[intf].sapPersona))
 		    && mac->sap.sapCtxList[intf].sap_context) {
+			sap_context =
+				mac->sap.sapCtxList[intf].sap_context;
+			if (!sap_is_active(sap_context))
+				continue;
 			intf_count++;
 		}
 	}
@@ -4494,6 +4510,8 @@ bool is_concurrent_sap_ready_for_channel_change(mac_handle_t mac_handle,
 		    && mac->sap.sapCtxList[intf].sap_context) {
 			sap_context =
 				mac->sap.sapCtxList[intf].sap_context;
+			if (!sap_is_active(sap_context))
+				continue;
 			if (sap_context == sap_ctx) {
 				sap_err("sapCtx matched [%pK]", sap_ctx);
 				continue;
@@ -4544,6 +4562,8 @@ bool sap_is_conc_sap_doing_scc_dfs(mac_handle_t mac_handle,
 		if (!mac->sap.sapCtxList[intf].sap_context)
 			continue;
 		sap_ctx = mac->sap.sapCtxList[intf].sap_context;
+		if (!sap_is_active(sap_ctx))
+			continue;
 		/* if same SAP contexts then skip to next context */
 		if (sap_ctx == given_sapctx)
 			continue;
