@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -37,6 +38,9 @@
 
 /* / convert the CW values into a uint16_t */
 #define GET_CW(pCw) ((uint16_t) ((*(pCw) << 8) + *((pCw) + 1)))
+
+/* Max debug string size for WMM in bytes  */
+#define SCH_WMM_DEBUG_STRING_SIZE    512
 
 /* local functions */
 static QDF_STATUS
@@ -264,14 +268,14 @@ void sch_qos_update_broadcast(struct mac_context *mac, struct pe_session *pe_ses
 	uint8_t i;
 	bool updated = false;
 	QDF_STATUS status;
+	uint8_t *debug_str;
+	uint32_t len = 0;
 
 	if (sch_get_params(mac, params, false) != QDF_STATUS_SUCCESS) {
 		pe_debug("QosUpdateBroadcast: failed");
 		return;
 	}
 	lim_get_phy_mode(mac, &phyMode, pe_session);
-
-	pe_debug("QosUpdBcast: mode %d", phyMode);
 
 	if (phyMode == WNI_CFG_PHY_MODE_11G) {
 		cwminidx = CFG_EDCA_PROFILE_CWMING_IDX;
@@ -287,6 +291,10 @@ void sch_qos_update_broadcast(struct mac_context *mac, struct pe_session *pe_ses
 		cwmaxidx = CFG_EDCA_PROFILE_CWMAXA_IDX;
 		txopidx = CFG_EDCA_PROFILE_TXOPA_IDX;
 	}
+
+	debug_str = qdf_mem_malloc(SCH_WMM_DEBUG_STRING_SIZE);
+	if (!debug_str)
+		return;
 
 	for (i = 0; i < QCA_WLAN_AC_ALL; i++) {
 		if (pe_session->gLimEdcaParamsBC[i].aci.acm !=
@@ -320,14 +328,19 @@ void sch_qos_update_broadcast(struct mac_context *mac, struct pe_session *pe_ses
 			updated = true;
 		}
 
-		pe_debug("QoSUpdateBCast: AC :%d: AIFSN: %d, ACM %d, CWmin %d, CWmax %d, TxOp %d",
-			       i, pe_session->gLimEdcaParamsBC[i].aci.aifsn,
-			       pe_session->gLimEdcaParamsBC[i].aci.acm,
-			       pe_session->gLimEdcaParamsBC[i].cw.min,
-			       pe_session->gLimEdcaParamsBC[i].cw.max,
-			       pe_session->gLimEdcaParamsBC[i].txoplimit);
+		len += qdf_scnprintf(debug_str + len,
+				     SCH_WMM_DEBUG_STRING_SIZE - len,
+				     "AC[%d]: AIFSN %d ACM %d CWmin %d CWmax %d TxOp %d, ",
+				     i, pe_session->gLimEdcaParamsBC[i].aci.aifsn,
+				     pe_session->gLimEdcaParamsBC[i].aci.acm,
+				     pe_session->gLimEdcaParamsBC[i].cw.min,
+				     pe_session->gLimEdcaParamsBC[i].cw.max,
+				     pe_session->gLimEdcaParamsBC[i].txoplimit);
 
 	}
+
+	pe_nofl_debug("QosUpdBcast: mode %d, %s", phyMode, debug_str);
+	qdf_mem_free(debug_str);
 
 	/*
 	 * If there exists a concurrent STA-AP session, use its WMM
