@@ -1824,11 +1824,8 @@ static void hdd_hostapd_set_sap_key(struct hdd_adapter *adapter)
 
 	for (key_index = 0; key_index < WLAN_CRYPTO_MAXKEYIDX; ++key_index) {
 		crypto_key = wlan_crypto_get_key(adapter->vdev, key_index);
-		if (!crypto_key) {
-			hdd_debug("Crypto KEY with key id %d is NULL",
-				  key_index);
+		if (!crypto_key)
 			continue;
-		}
 		ucfg_crypto_set_key_req(adapter->vdev, crypto_key,
 					WLAN_CRYPTO_KEY_TYPE_GROUP);
 		wma_update_set_key(adapter->vdev_id, false, key_index,
