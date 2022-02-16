@@ -17928,7 +17928,8 @@ int wlan_hdd_cfg80211_init(struct device *dev,
 #ifdef FEATURE_WLAN_STA_4ADDR_SCHEME
 			| WIPHY_FLAG_4ADDR_STATION
 #endif
-			| WIPHY_FLAG_OFFCHAN_TX;
+			| WIPHY_FLAG_OFFCHAN_TX
+			| WIPHY_FLAG_NETNS_OK;
 
 	if (ucfg_pmo_get_suspend_mode(hdd_ctx->psoc) == PMO_SUSPEND_WOW) {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0))
