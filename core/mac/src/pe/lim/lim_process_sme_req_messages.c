@@ -4394,6 +4394,12 @@ static void lim_handle_reassoc_req(struct cm_vdev_join_req *req)
 					session_entry);
 		goto end;
 	}
+
+	if  (session_entry->lim_join_req) {
+		qdf_mem_free(session_entry->lim_join_req);
+		session_entry->lim_join_req = NULL;
+	}
+
 	session_entry->cm_id = req->cm_id;
 	ie_len = util_scan_entry_ie_len(req->entry);
 	bss_len = (uint16_t)(offsetof(struct bss_description,
