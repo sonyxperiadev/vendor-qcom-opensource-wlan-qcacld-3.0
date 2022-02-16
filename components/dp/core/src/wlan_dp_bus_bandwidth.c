@@ -28,6 +28,8 @@
 #include "pld_common.h"
 #include "cds_api.h"
 #include <wlan_nlink_common.h>
+#include "wlan_ipa_ucfg_api.h"
+#include "dp_txrx.h"
 
 #ifdef FEATURE_BUS_BANDWIDTH_MGR
 /**
@@ -699,4 +701,155 @@ static void wlan_dp_update_tcp_tx_param(struct wlan_dp_psoc_context *dp_ctx,
 					      &next_tx_level,
 					      sizeof(next_tx_level));
 }
+
+/**
+ * dp_low_tput_gro_flush_skip_handler() - adjust GRO flush for low tput
+ * @dp_ctx: dp_ctx object
+ * @next_vote_level: next bus bandwidth level
+ * @legacy_client: legacy connection mode active
+ *
+ * If bus bandwidth level is PLD_BUS_WIDTH_LOW consistently and hit
+ * the bus_low_cnt_threshold, set flag to skip GRO flush.
+ * If bus bandwidth keeps going to PLD_BUS_WIDTH_IDLE, perform a GRO
+ * flush to avoid TCP traffic stall
+ *
+ * Return: none
+ */
+static inline void dp_low_tput_gro_flush_skip_handler(
+			struct wlan_dp_psoc_context *dp_ctx,
+			enum pld_bus_width_type next_vote_level,
+			bool legacy_client)
+{
+	uint32_t threshold = dp_ctx->dp_cfg.bus_low_cnt_threshold;
+	ol_txrx_soc_handle soc = cds_get_context(QDF_MODULE_ID_SOC);
+	int i;
+
+	if (next_vote_level == PLD_BUS_WIDTH_LOW && legacy_client) {
+		if (++dp_ctx->bus_low_vote_cnt >= threshold)
+			qdf_atomic_set(&dp_ctx->low_tput_gro_enable, 1);
+	} else {
+		if (qdf_atomic_read(&dp_ctx->low_tput_gro_enable) &&
+		    dp_ctx->enable_dp_rx_threads) {
+			/* flush pending rx pkts when LOW->IDLE */
+			dp_info("flush queued GRO pkts");
+			for (i = 0; i < cdp_get_num_rx_contexts(soc); i++) {
+				dp_rx_gro_flush_ind(soc, i,
+						    DP_RX_GRO_NORMAL_FLUSH);
+			}
+		}
+
+		dp_ctx->bus_low_vote_cnt = 0;
+		qdf_atomic_set(&dp_ctx->low_tput_gro_enable, 0);
+	}
+}
+
+#ifdef WDI3_STATS_UPDATE
+/**
+ * dp_ipa_set_perf_level() - set IPA perf level
+ * @dp_ctx: handle to dp context
+ * @tx_pkts: transmit packet count
+ * @rx_pkts: receive packet count
+ * @ipa_tx_pkts: IPA transmit packet count
+ * @ipa_rx_pkts: IPA receive packet count
+ *
+ * Return: none
+ */
+static inline
+void dp_ipa_set_perf_level(struct wlan_dp_psoc_context *dp_ctx,
+			   uint64_t *tx_pkts, uint64_t *rx_pkts,
+			   uint32_t *ipa_tx_pkts, uint32_t *ipa_rx_pkts)
+{
+}
+#else
+static void dp_ipa_set_perf_level(struct wlan_dp_psoc_context *dp_ctx,
+				  uint64_t *tx_pkts, uint64_t *rx_pkts,
+				  uint32_t *ipa_tx_pkts, uint32_t *ipa_rx_pkts)
+{
+	if (ucfg_ipa_is_fw_wdi_activated(dp_ctx->pdev)) {
+		ucfg_ipa_uc_stat_query(dp_ctx->pdev, ipa_tx_pkts,
+				       ipa_rx_pkts);
+		*tx_pkts += *ipa_tx_pkts;
+		*rx_pkts += *ipa_rx_pkts;
+
+		ucfg_ipa_set_perf_level(dp_ctx->pdev, *tx_pkts, *rx_pkts);
+		ucfg_ipa_uc_stat_request(dp_ctx->pdev, 2);
+	}
+}
+#endif /* WDI3_STATS_UPDATE */
+
+#ifdef WLAN_SUPPORT_TXRX_HL_BUNDLE
+/**
+ * dp_set_vdev_bundle_require_flag() - set vdev bundle require flag
+ * @vdev_id: vdev id
+ * @dp_ctx: handle to dp context
+ * @tx_bytes: Tx bytes
+ *
+ * Return: none
+ */
+static inline
+void dp_set_vdev_bundle_require_flag(uint16_t vdev_id,
+				     struct wlan_dp_psoc_context *dp_ctx,
+				     uint64_t tx_bytes)
+{
+	struct wlan_dp_psoc_cfg *cfg = dp_ctx->dp_cfg;
+
+	cdp_vdev_set_bundle_require_flag(cds_get_context(QDF_MODULE_ID_SOC),
+					 vdev_id, tx_bytes,
+					 cfg->bus_bw_compute_interval,
+					 cfg->pkt_bundle_threshold_high,
+					 cfg->pkt_bundle_threshold_low);
+}
+#else
+static inline
+void dp_set_vdev_bundle_require_flag(uint16_t vdev_id,
+				     struct wlan_dp_psoc_context *dp_ctx,
+				     uint64_t tx_bytes)
+{
+}
+#endif /* WLAN_SUPPORT_TXRX_HL_BUNDLE */
+
+#ifdef QCA_SUPPORT_TXRX_DRIVER_TCP_DEL_ACK
+/**
+ * dp_set_driver_del_ack_enable() - set driver delayed ack enabled flag
+ * @vdev_id: vdev id
+ * @dp_ctx: handle to dp context
+ * @rx_packets: receive packet count
+ *
+ * Return: none
+ */
+static inline
+void dp_set_driver_del_ack_enable(uint16_t vdev_id,
+				  struct wlan_dp_psoc_context *dp_ctx,
+				  uint64_t rx_packets)
+{
+	struct wlan_dp_psoc_cfg *cfg = dp_ctx->dp_cfg;
+
+	cdp_vdev_set_driver_del_ack_enable(cds_get_context(QDF_MODULE_ID_SOC),
+					   vdev_id, rx_packets,
+					   cfg->bus_bw_compute_interval,
+					   cfg->del_ack_threshold_high,
+					   cfg->del_ack_threshold_low);
+}
+#else
+static inline
+void dp_set_driver_del_ack_enable(uint16_t vdev_id,
+				  struct wlan_dp_psoc_context *dp_ctx,
+				  uint64_t rx_packets)
+{
+}
+#endif /* QCA_SUPPORT_TXRX_DRIVER_TCP_DEL_ACK */
+
+#define DP_BW_GET_DIFF(_x, _y) ((unsigned long)((ULONG_MAX - (_y)) + (_x) + 1))
+
+#ifdef RX_PERFORMANCE
+bool dp_is_current_high_throughput(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_dp_psoc_context *dp_ctx = dp_get_psoc_priv_obj(psoc);
+
+	if (dp_ctx->cur_vote_level < PLD_BUS_WIDTH_MEDIUM)
+		return false;
+	else
+		return true;
+}
+#endif /* RX_PERFORMANCE */
 #endif /* WLAN_FEATURE_DP_BUS_BANDWIDTH */

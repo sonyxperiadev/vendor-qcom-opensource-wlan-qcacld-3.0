@@ -173,6 +173,24 @@ void dp_reset_tcp_delack(struct wlan_objmgr_psoc *psoc);
  */
 void wlan_dp_update_tcp_rx_param(struct wlan_dp_psoc_context *dp_ctx,
 				 struct wlan_rx_tp_data *data);
+
+#ifdef RX_PERFORMANCE
+/**
+ * dp_is_current_high_throughput() - Check if vote level is high
+ * @psoc: psoc handle
+ *
+ * Function used to check if vote level is high
+ *
+ * Return: True if vote level is high
+ */
+bool dp_is_current_high_throughput(struct wlan_objmgr_psoc *psoc);
+#else
+static inline
+bool dp_is_current_high_throughput(struct wlan_objmgr_psoc *psoc)
+{
+	return false;
+}
+#endif /* RX_PERFORMANCE */
 #else
 static inline
 void dp_reset_tcp_delack(struct wlan_objmgr_psoc *psoc);
@@ -183,6 +201,12 @@ static inline
 void wlan_dp_update_tcp_rx_param(struct wlan_dp_psoc_context *dp_ctx,
 				 struct wlan_rx_tp_data *data)
 {
+}
+
+static inline
+bool dp_is_current_high_throughput(struct wlan_objmgr_psoc *psoc)
+{
+	return false;
 }
 #endif /* WLAN_FEATURE_DP_BUS_BANDWIDTH */
 #endif /* WLAN_DP_BUS_BANDWIDTH_H */
