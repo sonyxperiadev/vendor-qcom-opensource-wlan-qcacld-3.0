@@ -7844,7 +7844,6 @@ void
 wlan_populate_basic_rates(tSirMacRateSet *rate_set, bool is_ofdm_rates,
 			  bool is_basic_rates)
 {
-	int i = 0;
 	uint8_t ofdm_rates[8] = {
 		SIR_MAC_RATE_6,
 		SIR_MAC_RATE_9,
@@ -7870,9 +7869,9 @@ wlan_populate_basic_rates(tSirMacRateSet *rate_set, bool is_ofdm_rates,
 			rate_set->rate[2] |= WLAN_DOT11_BASIC_RATE_MASK;
 			rate_set->rate[4] |= WLAN_DOT11_BASIC_RATE_MASK;
 		}
-		for (i = 0; i < rate_set->numRates; i++)
-			QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
-			("Default OFDM rate is %2x"), rate_set->rate[i]);
+		pe_debug("Default OFDM Rates");
+		QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
+				   rate_set->rate, rate_set->numRates);
 	} else {
 		rate_set->numRates = 4;
 		qdf_mem_copy(rate_set->rate, cck_rates, sizeof(cck_rates));
@@ -7882,9 +7881,9 @@ wlan_populate_basic_rates(tSirMacRateSet *rate_set, bool is_ofdm_rates,
 			rate_set->rate[2] |= WLAN_DOT11_BASIC_RATE_MASK;
 			rate_set->rate[3] |= WLAN_DOT11_BASIC_RATE_MASK;
 		}
-		for (i = 0; i < rate_set->numRates; i++)
-			QDF_TRACE(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-			("Default CCK rate is %2x"), rate_set->rate[i]);
+		pe_debug("Default CCK Rates");
+		QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
+				   rate_set->rate, rate_set->numRates);
 	}
 }
 
