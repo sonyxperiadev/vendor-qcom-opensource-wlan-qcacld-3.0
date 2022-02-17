@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -608,7 +609,7 @@ __wlan_hdd_cfg80211_apf_offload(struct wiphy *wiphy,
 	int ret_val = 0, apf_subcmd;
 	struct hdd_apf_context *context;
 
-	hdd_enter();
+	hdd_enter_dev(dev);
 
 	if (!adapter) {
 		hdd_err("Adapter is null");
