@@ -1504,7 +1504,6 @@ lim_send_assoc_rsp_mgmt_frame(struct mac_context *mac_ctx,
 
 		if (sta->mlmStaContext.htCapability &&
 		    pe_session->htCapability) {
-			pe_debug("Populate HT IEs in Assoc Response");
 			populate_dot11f_ht_caps(mac_ctx, pe_session,
 				&frm.HTCaps);
 			/*
@@ -1522,17 +1521,9 @@ lim_send_assoc_rsp_mgmt_frame(struct mac_context *mac_ctx,
 			populate_dot11f_ht_info(mac_ctx, &frm.HTInfo,
 						pe_session);
 		}
-		pe_debug("SupportedChnlWidth: %d, mimoPS: %d, GF: %d, short GI20:%d, shortGI40: %d, dsssCck: %d, AMPDU Param: %x",
-			frm.HTCaps.supportedChannelWidthSet,
-			frm.HTCaps.mimoPowerSave,
-			frm.HTCaps.greenField, frm.HTCaps.shortGI20MHz,
-			frm.HTCaps.shortGI40MHz,
-			frm.HTCaps.dsssCckMode40MHz,
-			frm.HTCaps.maxRxAMPDUFactor);
 
 		if (sta->mlmStaContext.vhtCapability &&
 		    pe_session->vhtCapability) {
-			pe_debug("Populate VHT IEs in Assoc Response");
 			populate_dot11f_vht_caps(mac_ctx, pe_session,
 				&frm.VHTCaps);
 			populate_dot11f_vht_operation(mac_ctx, pe_session,
@@ -1560,7 +1551,6 @@ lim_send_assoc_rsp_mgmt_frame(struct mac_context *mac_ctx,
 		    pe_session->vendor_vht_sap &&
 		    (assoc_req) &&
 		    assoc_req->vendor_vht_ie.VHTCaps.present) {
-			pe_debug("Populate Vendor VHT IEs in Assoc Rsponse");
 			frm.vendor_vht_ie.present = 1;
 			frm.vendor_vht_ie.sub_type =
 				pe_session->vendor_specific_vht_ie_sub_type;
@@ -1579,7 +1569,6 @@ lim_send_assoc_rsp_mgmt_frame(struct mac_context *mac_ctx,
 
 		if (lim_is_sta_he_capable(sta) &&
 		    lim_is_session_he_capable(pe_session)) {
-			pe_debug("Populate HE IEs");
 			populate_dot11f_he_caps(mac_ctx, pe_session,
 						&frm.he_cap);
 			populate_dot11f_he_operation(mac_ctx, pe_session,
@@ -1590,7 +1579,6 @@ lim_send_assoc_rsp_mgmt_frame(struct mac_context *mac_ctx,
 
 		if (lim_is_sta_eht_capable(sta) &&
 		    lim_is_session_eht_capable(pe_session)) {
-			pe_debug("Populate EHT IEs");
 			populate_dot11f_eht_caps(mac_ctx, pe_session,
 						 &frm.eht_cap);
 			populate_dot11f_eht_operation(mac_ctx, pe_session,
@@ -1677,8 +1665,6 @@ lim_send_assoc_rsp_mgmt_frame(struct mac_context *mac_ctx,
 			}
 			bytes = bytes + addn_ie_len;
 		}
-		pe_debug("addn_ie_len: %d for Assoc Resp: %d",
-			addn_ie_len, assoc_req->addIEPresent);
 	}
 
 	/*
@@ -1746,11 +1732,6 @@ lim_send_assoc_rsp_mgmt_frame(struct mac_context *mac_ctx,
 			status);
 	}
 
-	pe_nofl_debug("Assoc rsp TX: vdev %d subtype %d to "QDF_MAC_ADDR_FMT" seq num %d status %d aid %d",
-		      pe_session->vdev_id, subtype,
-		      QDF_MAC_ADDR_REF(mac_hdr->da),
-		      mac_ctx->mgmtSeqNum, status_code, aid);
-
 	if (addn_ie_len && addn_ie_len <= WNI_CFG_ASSOC_RSP_ADDNIE_DATA_LEN)
 		qdf_mem_copy(frame + sizeof(tSirMacMgmtHdr) + payload,
 			     &add_ie[0], addn_ie_len);
@@ -1760,6 +1741,15 @@ lim_send_assoc_rsp_mgmt_frame(struct mac_context *mac_ctx,
 			     + addn_ie_len,
 			     sta->mlmStaContext.owe_ie,
 			     sta->mlmStaContext.owe_ie_len);
+	pe_nofl_debug("Assoc rsp TX: vdev %d subtype %d to "QDF_MAC_ADDR_FMT" seq num %d status %d aid %d addn_ie_len %d ht %d vht %d vendor vht %d he %d eht %d",
+		      pe_session->vdev_id, subtype,
+		      QDF_MAC_ADDR_REF(mac_hdr->da),
+		      mac_ctx->mgmtSeqNum, status_code, aid, addn_ie_len,
+		      frm.HTCaps.present, frm.VHTCaps.present,
+		      frm.vendor_vht_ie.present, frm.he_cap.present,
+		      frm.eht_cap.present);
+	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
+			   frame, (uint16_t)bytes);
 
 	if (!wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq) ||
 	    pe_session->opmode == QDF_P2P_CLIENT_MODE ||
@@ -2192,7 +2182,6 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 			extr_ext_flag = (extr_ext_cap.num_bytes > 0);
 		}
 	} else {
-		pe_debug("No addn IE or peer doesn't support addnIE for Assoc Req");
 		extr_ext_flag = false;
 	}
 
@@ -2309,34 +2298,26 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 	 * when AP is also operating in 11n mode
 	 */
 	if (pe_session->htCapability &&
-	    mac_ctx->lim.htCapabilityPresentInBeacon) {
-		pe_debug("Populate HT Caps in Assoc Request");
+	    mac_ctx->lim.htCapabilityPresentInBeacon)
 		populate_dot11f_ht_caps(mac_ctx, pe_session, &frm->HTCaps);
-	} else if (pe_session->he_with_wep_tkip) {
-		pe_debug("Populate HT Caps in Assoc Request with WEP/TKIP");
+	else if (pe_session->he_with_wep_tkip)
 		populate_dot11f_ht_caps(mac_ctx, NULL, &frm->HTCaps);
-	}
 
 	if (pe_session->vhtCapability &&
 	    pe_session->vhtCapabilityPresentInBeacon) {
-		pe_debug("Populate VHT IEs in Assoc Request");
 		populate_dot11f_vht_caps(mac_ctx, pe_session, &frm->VHTCaps);
 		vht_enabled = true;
 		if (pe_session->gLimOperatingMode.present &&
 		    pe_session->ch_width == CH_WIDTH_20MHZ &&
 		    frm->VHTCaps.present) {
-			pe_debug("VHT OP mode IE in Assoc Req");
 			populate_dot11f_operating_mode(mac_ctx,
 					&frm->OperatingMode, pe_session);
 		}
 	} else if (pe_session->he_with_wep_tkip) {
-		pe_debug("Populate VHT IEs in Assoc Request with WEP/TKIP");
 		populate_dot11f_vht_caps(mac_ctx, NULL, &frm->VHTCaps);
 	}
 
-	if (!vht_enabled &&
-			pe_session->is_vendor_specific_vhtcaps) {
-		pe_debug("Populate Vendor VHT IEs in Assoc Request");
+	if (!vht_enabled && pe_session->is_vendor_specific_vhtcaps) {
 		frm->vendor_vht_ie.present = 1;
 		frm->vendor_vht_ie.sub_type =
 			pe_session->vendor_specific_vht_ie_sub_type;
@@ -2361,22 +2342,18 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 				     &frm->bss_max_idle_period);
 
 	if (lim_is_session_he_capable(pe_session)) {
-		pe_debug("Populate HE IEs");
 		populate_dot11f_he_caps(mac_ctx, pe_session,
 					&frm->he_cap);
 		populate_dot11f_he_6ghz_cap(mac_ctx, pe_session,
 					    &frm->he_6ghz_band_cap);
 	} else if (pe_session->he_with_wep_tkip) {
-		pe_debug("Populate HE IEs in Assoc Request with WEP/TKIP");
 		populate_dot11f_he_caps(mac_ctx, NULL, &frm->he_cap);
 		populate_dot11f_he_6ghz_cap(mac_ctx, pe_session,
 					    &frm->he_6ghz_band_cap);
 	}
 
-	if (lim_is_session_eht_capable(pe_session)) {
-		pe_debug("Populate EHT IEs");
+	if (lim_is_session_eht_capable(pe_session))
 		populate_dot11f_eht_caps(mac_ctx, pe_session, &frm->eht_cap);
-	}
 
 #ifdef WLAN_FEATURE_11BE_MLO
 	if ((wlan_vdev_mlme_get_opmode(pe_session->vdev) == QDF_STA_MODE) &&
@@ -2539,9 +2516,6 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 		if (pe_session->connected_akm == ANI_AKM_TYPE_NONE)
 			is_open_auth = true;
 
-		pe_debug("Stripped MBO IE of length %d is_open_auth:%d",
-			 mbo_ie_len, is_open_auth);
-
 		if (!is_open_auth) {
 			bss_mfp_capable =
 				lim_get_vdev_rmf_capable(mac_ctx, pe_session);
@@ -2575,8 +2549,6 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 			}
 
 			vendor_ie_len = current_len - add_ie_len;
-			pe_debug("Stripped vendor IEs of size: %u",
-				 current_len);
 		}
 	}
 
@@ -2723,8 +2695,14 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 	MTRACE(qdf_trace(QDF_MODULE_ID_PE, TRACE_CODE_TX_MGMT,
 			 pe_session->peSessionId, mac_hdr->fc.subType));
 
-	pe_nofl_info("Assoc req TX: vdev %d to "QDF_MAC_ADDR_FMT" seq num %d", pe_session->vdev_id,
-		     QDF_MAC_ADDR_REF(pe_session->bssId),
+	pe_debug("extr_ext_flag %d mbo ie len %d is open auth %d stripped vendor len %d he with tkip %d ht %d vht %d opmode %d vendor vht %d he %d eht %d",
+		 extr_ext_flag, mbo_ie_len, is_open_auth, current_len,
+		 pe_session->he_with_wep_tkip,
+		 frm->HTCaps.present, frm->VHTCaps.present,
+		 frm->OperatingMode.present, frm->vendor_vht_ie.present,
+		 frm->he_cap.present, frm->eht_cap.present);
+	pe_nofl_info("Assoc req TX: vdev %d to "QDF_MAC_ADDR_FMT" seq num %d",
+		     pe_session->vdev_id, QDF_MAC_ADDR_REF(pe_session->bssId),
 		     mac_ctx->mgmtSeqNum);
 	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
 			  frame, (uint16_t)(sizeof(tSirMacMgmtHdr) + payload));
