@@ -354,6 +354,28 @@ static void mlme_init_wds_config_cfg(struct wlan_objmgr_psoc *psoc,
 }
 #endif
 
+#ifdef CONFIG_BAND_6GHZ
+/**
+ * mlme_init_relaxed_6ghz_conn_policy() - initialize relaxed 6GHz
+ *                                        policy connection flag
+ * @psoc: Pointer to PSOC
+ * @gen: pointer to generic CFG items
+ *
+ * Return: None
+ */
+static void mlme_init_relaxed_6ghz_conn_policy(struct wlan_objmgr_psoc *psoc,
+					       struct wlan_mlme_generic *gen)
+{
+	gen->relaxed_6ghz_conn_policy =
+		cfg_default(CFG_RELAXED_6GHZ_CONN_POLICY);
+}
+#else
+static void mlme_init_relaxed_6ghz_conn_policy(struct wlan_objmgr_psoc *psoc,
+					       struct wlan_mlme_generic *gen)
+{
+}
+#endif
+
 /**
  * mlme_init_mgmt_hw_tx_retry_count_cfg() - initialize mgmt hw tx retry count
  * @psoc: Pointer to PSOC
@@ -461,6 +483,7 @@ static void mlme_init_generic_cfg(struct wlan_objmgr_psoc *psoc,
 	gen->tx_retry_multiplier = cfg_get(psoc, CFG_TX_RETRY_MULTIPLIER);
 	mlme_init_wds_config_cfg(psoc, gen);
 	mlme_init_mgmt_hw_tx_retry_count_cfg(psoc, gen);
+	mlme_init_relaxed_6ghz_conn_policy(psoc, gen);
 }
 
 static void mlme_init_edca_ani_cfg(struct wlan_objmgr_psoc *psoc,
