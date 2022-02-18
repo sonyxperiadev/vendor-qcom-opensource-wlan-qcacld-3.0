@@ -1484,7 +1484,7 @@ static enum hdd_tsf_op_result hdd_tsf_sync_init(struct hdd_adapter *adapter)
 	}
 
 	if (!adapter->enable_dynamic_tsf_sync) {
-		hdd_err("TSF sync feature not enabled");
+		hdd_debug("TSF sync feature not enabled");
 		return HDD_TSF_OP_FAIL;
 	}
 
