@@ -54,9 +54,23 @@ static QDF_STATUS wlan_wifi_pos_pasn_peer_delete(struct wlan_objmgr_psoc *psoc,
 				    no_fw_peer_delete);
 }
 
+/**
+ * wlan_wifi_pos_vdev_delete_resume() - Resume vdev delete operation
+ * after deleting all pasn peers
+ * @vdev: Pointer to objmgr vdev
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+wlan_wifi_pos_vdev_delete_resume(struct wlan_objmgr_vdev *vdev)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
 static struct wifi_pos_legacy_ops wifi_pos_ops = {
 	.pasn_peer_create_cb = wlan_wifi_pos_pasn_peer_create,
 	.pasn_peer_delete_cb = wlan_wifi_pos_pasn_peer_delete,
+	.pasn_vdev_delete_resume_cb = wlan_wifi_pos_vdev_delete_resume,
 };
 
 QDF_STATUS

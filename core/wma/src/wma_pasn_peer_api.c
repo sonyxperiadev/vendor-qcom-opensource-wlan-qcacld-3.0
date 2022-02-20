@@ -223,3 +223,25 @@ wma_pasn_handle_peer_create_conf(tp_wma_handle wma,
 
 	return QDF_STATUS_SUCCESS;
 }
+
+QDF_STATUS
+wma_delete_all_pasn_peers(tp_wma_handle wma, struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_lmac_if_wifi_pos_tx_ops *tx_ops;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+
+	tx_ops = wifi_pos_get_tx_ops(wma->psoc);
+	if (!tx_ops || !tx_ops->wifi_pos_vdev_delete_all_ranging_peers_cb) {
+		wma_err("rx_ops is NULL");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	status = tx_ops->wifi_pos_vdev_delete_all_ranging_peers_cb(vdev);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		wma_err("Delete all ranging peers failed");
+		return status;
+	}
+
+	return status;
+}
+#endif

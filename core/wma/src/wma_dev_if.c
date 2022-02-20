@@ -65,6 +65,7 @@
 
 #include "wlan_policy_mgr_api.h"
 #include "wma_nan_datapath.h"
+#include "wifi_pos_pasn_api.h"
 #if defined(CONFIG_HL_SUPPORT)
 #include "wlan_tgt_def_config_hl.h"
 #else
@@ -97,6 +98,7 @@
 #include "wlan_nan_api.h"
 #include "wlan_mlo_mgr_peer.h"
 #include "wifi_pos_api.h"
+#include "wifi_pos_pasn_api.h"
 #ifdef DCS_INTERFERENCE_DETECTION
 #include <wlan_dcs_ucfg_api.h>
 #endif
@@ -675,9 +677,9 @@ static QDF_STATUS wma_check_for_deffered_peer_delete(tp_wma_handle wma_handle,
 	return status;
 }
 
-static QDF_STATUS wma_vdev_self_peer_delete(tp_wma_handle wma_handle,
-					    struct del_vdev_params
-					    *pdel_vdev_req_param)
+static QDF_STATUS
+wma_vdev_self_peer_delete(tp_wma_handle wma_handle,
+			  struct del_vdev_params *pdel_vdev_req_param)
 {
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	uint8_t vdev_id = pdel_vdev_req_param->vdev_id;
