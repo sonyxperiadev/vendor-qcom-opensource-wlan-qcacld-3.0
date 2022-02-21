@@ -418,7 +418,6 @@ set_sch_edca_params(struct mac_context *mac,
 
 	lim_get_phy_mode(mac, &phyMode, pe_session);
 
-	pe_debug("lim_get_phy_mode() = %d", phyMode);
 	/* if (mac->lim.gLimPhyMode == WNI_CFG_PHY_MODE_11G) */
 	if (phyMode == WNI_CFG_PHY_MODE_11G) {
 		cwminidx = CFG_EDCA_PROFILE_CWMING_IDX;
@@ -448,14 +447,6 @@ set_sch_edca_params(struct mac_context *mac,
 			convert_cw(GET_CW(&params[i][cwmaxidx]));
 		pe_session->gLimEdcaParams[i].txoplimit =
 			(uint16_t)params[i][txopidx];
-
-		pe_debug("AC :%d: AIFSN: %d, ACM %d, CWmin %d, CWmax %d, TxOp %d",
-			       i, pe_session->gLimEdcaParams[i].aci.aifsn,
-			       pe_session->gLimEdcaParams[i].aci.acm,
-			       pe_session->gLimEdcaParams[i].cw.min,
-			       pe_session->gLimEdcaParams[i].cw.max,
-			       pe_session->gLimEdcaParams[i].txoplimit);
-
 	}
 	return;
 }
