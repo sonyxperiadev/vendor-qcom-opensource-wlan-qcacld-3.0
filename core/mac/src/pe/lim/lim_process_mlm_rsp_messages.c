@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1216,12 +1216,11 @@ void lim_process_mlm_set_keys_cnf(struct mac_context *mac, uint32_t *msg_buf)
 	pe_session = pe_find_session_by_session_id(mac,
 					   pMlmSetKeysCnf->sessionId);
 	if (!pe_session) {
-		pe_err("session does not exist for given sessionId");
+		pe_err("session does not exist for given sessionId %d",
+		       pMlmSetKeysCnf->sessionId);
 		return;
 	}
 	pe_session->is_key_installed = 0;
-	pe_debug("Received MLM_SETKEYS_CNF with resultCode = %d",
-		pMlmSetKeysCnf->resultCode);
 	/* if the status is success keys are installed in the
 	* Firmware so we can set the protection bit
 	*/
@@ -1234,7 +1233,9 @@ void lim_process_mlm_set_keys_cnf(struct mac_context *mac, uint32_t *msg_buf)
 		if (sta_ds && pMlmSetKeysCnf->key_len_nonzero)
 			sta_ds->is_key_installed = 1;
 	}
-	pe_debug("is_key_installed = %d", pe_session->is_key_installed);
+	pe_debug("vdev %d Status %d is_key_installed %d",
+		 pe_session->vdev_id, pMlmSetKeysCnf->resultCode,
+		 pe_session->is_key_installed);
 
 	lim_send_sme_set_context_rsp(mac,
 				     pMlmSetKeysCnf->peer_macaddr,
@@ -2574,7 +2575,6 @@ void lim_process_mlm_set_bss_key_rsp(struct mac_context *mac_ctx,
 	}
 
 	session_id = session_entry->peSessionId;
-	pe_debug("PE session ID %d, vdev_id %d", session_id, vdev_id);
 	if (eLIM_MLM_WT_SET_BSS_KEY_STATE == session_entry->limMlmState) {
 		result_status =
 			(uint16_t)(((tpSetBssKeyParams)msg->bodyptr)->status);
@@ -2585,8 +2585,9 @@ void lim_process_mlm_set_bss_key_rsp(struct mac_context *mac_ctx,
 		key_len = ((tpSetBssKeyParams)msg->bodyptr)->key[0].keyLength;
 	}
 
-	pe_debug("limMlmState %d status %d key_len %d",
-		 session_entry->limMlmState, result_status, key_len);
+	pe_debug("vdev %d (pe %d) limMlmState %d status %d key_len %d",
+		 vdev_id, session_id, session_entry->limMlmState,
+		 result_status, key_len);
 
 	if (result_status == eSIR_SME_SUCCESS && key_len)
 		set_key_cnf.key_len_nonzero = true;
