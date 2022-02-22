@@ -911,9 +911,12 @@ static void hdd_wmm_cm_connect(struct wlan_objmgr_vdev *vdev,
 	adapter->hdd_wmm_status.qap = qap;
 	adapter->hdd_wmm_status.qos_connection = qos_connection;
 
+	if (acm_mask)
+		QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
+				   (uint8_t *)acm_mask_bit,  WLAN_MAX_AC);
+
 	for (ac = 0; ac < WLAN_MAX_AC; ac++) {
 		if (qap && qos_connection && (acm_mask & acm_mask_bit[ac])) {
-			hdd_debug("ac %d on", ac);
 
 			/* admission is required */
 			adapter->hdd_wmm_status.ac_status[ac].
@@ -941,7 +944,6 @@ static void hdd_wmm_cm_connect(struct wlan_objmgr_vdev *vdev,
 					is_access_allowed = false;
 			}
 		} else {
-			hdd_debug("ac %d off", ac);
 			/* admission is not required so access is allowed */
 			adapter->hdd_wmm_status.ac_status[ac].
 			is_access_required = false;
