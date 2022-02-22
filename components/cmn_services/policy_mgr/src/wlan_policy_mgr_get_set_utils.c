@@ -5014,6 +5014,8 @@ void policy_mgr_dump_connection_status_info(struct wlan_objmgr_psoc *psoc)
 
 	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
 	for (i = 0; i < MAX_NUMBER_OF_CONC_CONNECTIONS; i++) {
+		if (!pm_conc_connection_list[i].in_use)
+			continue;
 		policy_mgr_debug("%d: use:%d vdev:%d mode:%d mac:%d freq:%d orig chainmask:%d orig nss:%d bw:%d, ch_flags %0X",
 				 i, pm_conc_connection_list[i].in_use,
 				 pm_conc_connection_list[i].vdev_id,
