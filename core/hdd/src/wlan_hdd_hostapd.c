@@ -6916,6 +6916,7 @@ static int __wlan_hdd_cfg80211_start_ap(struct wiphy *wiphy,
 	bool srd_channel_allowed, disable_nan = true;
 	enum QDF_OPMODE vdev_opmode;
 	uint8_t vdev_id_list[MAX_NUMBER_OF_CONC_CONNECTIONS], i;
+	enum policy_mgr_con_mode intf_pm_mode;
 
 	hdd_enter();
 
@@ -6997,6 +6998,15 @@ static int __wlan_hdd_cfg80211_start_ap(struct wiphy *wiphy,
 	if (!status)
 		return -EINVAL;
 
+	intf_pm_mode = policy_mgr_convert_device_mode_to_qdf_type(
+							adapter->device_mode);
+	status = policy_mgr_is_multi_sap_allowed_on_same_band(
+				hdd_ctx->pdev,
+				intf_pm_mode,
+				chandef->chan->center_freq);
+	if (!status)
+		return -EINVAL;
+
 	vdev_opmode = wlan_vdev_mlme_get_opmode(adapter->vdev);
 	ucfg_mlme_get_srd_master_mode_for_vdev(hdd_ctx->psoc, vdev_opmode,
 					       &srd_channel_allowed);
@@ -7071,8 +7081,7 @@ static int __wlan_hdd_cfg80211_start_ap(struct wiphy *wiphy,
 
 	/* check if concurrency is allowed */
 	if (!policy_mgr_allow_concurrency(hdd_ctx->psoc,
-				policy_mgr_convert_device_mode_to_qdf_type(
-				adapter->device_mode),
+				intf_pm_mode,
 				freq,
 				channel_width,
 				policy_mgr_get_conc_ext_flags(adapter->vdev,

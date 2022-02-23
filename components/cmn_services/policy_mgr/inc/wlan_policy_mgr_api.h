@@ -279,6 +279,34 @@ policy_mgr_get_sta_sap_scc_on_dfs_chnl(struct wlan_objmgr_psoc *psoc,
 				       uint8_t *sta_sap_scc_on_dfs_chnl);
 
 /**
+ * policy_mgr_set_multi_sap_allowed_on_same_band() - to set
+ * multi_sap_allowed_on_same_band
+ * @psoc: pointer to psoc
+ * @multi_sap_allowed_on_same_band: value to be set
+ *
+ * This API is used to set multi_sap_allowed_on_same_band
+ *
+ * Return: QDF_STATUS_SUCCESS up on success and any other status for failure.
+ */
+QDF_STATUS
+policy_mgr_set_multi_sap_allowed_on_same_band(struct wlan_objmgr_psoc *psoc,
+				bool multi_sap_allowed_on_same_band);
+
+/**
+ * policy_mgr_get_multi_sap_allowed_on_same_band() - to find out if multi sap
+ * is allowed on same band
+ * @psoc: pointer to psoc
+ * @multi_sap_allowed_on_same_band: value to be filled
+ *
+ * This API is used to find out whether multi sap is allowed on same band
+ *
+ * Return: QDF_STATUS_SUCCESS up on success and any other status for failure.
+ */
+QDF_STATUS
+policy_mgr_get_multi_sap_allowed_on_same_band(struct wlan_objmgr_psoc *psoc,
+				bool *multi_sap_allowed_on_same_band);
+
+/**
  * policy_mgr_get_dfs_master_dynamic_enabled() - support dfs master or not
  * on AP interafce when STA+SAP(GO) concurrency
  * @psoc: pointer to psoc
@@ -3585,6 +3613,21 @@ bool policy_mgr_is_sap_allowed_on_dfs_freq(struct wlan_objmgr_pdev *pdev,
  */
 bool policy_mgr_is_sta_sap_scc_allowed_on_dfs_chan(
 		struct wlan_objmgr_psoc *psoc);
+
+/**
+ * policy_mgr_is_multi_sap_allowed_on_same_band() - check if multi sap allowed
+ * on same band
+ * @pdev: id of objmgr pdev
+ * @mode: operating mode of interface to be checked
+ * @ch_freq: channel freq
+ * This function is used to check if multi sap can be started on the same band
+ *
+ * Return: true if multi sap is allowed on same band, otherwise false
+ */
+bool policy_mgr_is_multi_sap_allowed_on_same_band(
+					struct wlan_objmgr_pdev *pdev,
+					enum policy_mgr_con_mode mode,
+					qdf_freq_t ch_freq);
 
 /**
  * policy_mgr_is_special_mode_active_5g() - check if given mode active in 5g
