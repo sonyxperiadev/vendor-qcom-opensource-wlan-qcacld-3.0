@@ -87,8 +87,6 @@ static void lim_convert_supported_channels(struct mac_context *mac_ctx,
 
 		/* Get Number of Channels in a Subband */
 		chn_count = assoc_req->supportedChannels.supportedChannels[i];
-		pe_debug("Rcv assoc_req: chnl: %d numOfChnl: %d",
-			first_ch_no, chn_count);
 		if (index >= SIR_MAX_SUPPORTED_CHANNEL_LIST) {
 			pe_warn("Ch count > max supported: %d", chn_count);
 			assoc_ind->supportedChannels.numChnl = 0;
@@ -125,6 +123,10 @@ static void lim_convert_supported_channels(struct mac_context *mac_ctx,
 		assoc_ind->powerCap.minTxPower,
 		assoc_ind->powerCap.maxTxPower,
 		assoc_ind->supportedChannels.numChnl);
+
+	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
+			   assoc_req->supportedChannels.supportedChannels,
+			   assoc_req->supportedChannels.length);
 }
 
 /**
