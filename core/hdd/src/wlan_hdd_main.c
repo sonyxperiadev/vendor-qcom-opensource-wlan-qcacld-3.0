@@ -222,6 +222,9 @@
 #include "osif_twt_util.h"
 #include "wlan_twt_ucfg_ext_api.h"
 #include "wlan_hdd_mcc_quota.h"
+#include "wlan_dp_public_struct.h"
+#include "os_if_dp.h"
+#include <wlan_dp_ucfg_api.h>
 
 #ifdef MULTI_CLIENT_LL_SUPPORT
 #define WLAM_WLM_HOST_DRIVER_PORT_ID 0xFFFFFF
@@ -5547,6 +5550,7 @@ static int __hdd_set_mac_address(struct net_device *dev, void *addr)
 	else
 		hdd_update_dynamic_mac(hdd_ctx, &adapter->mac_addr, &mac_addr);
 
+	ucfg_dp_update_inf_mac(hdd_ctx->psoc, &adapter->mac_addr, &mac_addr);
 	memcpy(&adapter->mac_addr, psta_mac_addr->sa_data, ETH_ALEN);
 	memcpy(dev->dev_addr, psta_mac_addr->sa_data, ETH_ALEN);
 
@@ -7716,6 +7720,11 @@ struct hdd_adapter *hdd_open_adapter(struct hdd_context *hdd_ctx,
 
 		ndev = adapter->dev;
 
+		status = ucfg_dp_create_intf(hdd_ctx->psoc, &adapter->mac_addr,
+					     (qdf_netdev_t)adapter->dev);
+		if (QDF_IS_STATUS_ERROR(status))
+			goto err_free_netdev;
+
 		if (QDF_P2P_CLIENT_MODE == session_type)
 			adapter->wdev.iftype = NL80211_IFTYPE_P2P_CLIENT;
 		else if (QDF_P2P_DEVICE_MODE == session_type)
@@ -7752,7 +7761,7 @@ struct hdd_adapter *hdd_open_adapter(struct hdd_context *hdd_ctx,
 
 		status = hdd_register_interface(adapter, rtnl_held, params);
 		if (QDF_STATUS_SUCCESS != status)
-			goto err_free_netdev;
+			goto err_destroy_dp_intf;
 
 		/* Stop the Interface TX queue. */
 		hdd_debug("Disabling queues");
@@ -7780,6 +7789,11 @@ struct hdd_adapter *hdd_open_adapter(struct hdd_context *hdd_ctx,
 
 		ndev = adapter->dev;
 
+		status = ucfg_dp_create_intf(hdd_ctx->psoc, &adapter->mac_addr,
+					     (qdf_netdev_t)adapter->dev);
+		if (QDF_IS_STATUS_ERROR(status))
+			goto err_free_netdev;
+
 		adapter->wdev.iftype =
 			(session_type ==
 			 QDF_SAP_MODE) ? NL80211_IFTYPE_AP :
@@ -7788,7 +7802,7 @@ struct hdd_adapter *hdd_open_adapter(struct hdd_context *hdd_ctx,
 
 		status = hdd_register_interface(adapter, rtnl_held, params);
 		if (QDF_STATUS_SUCCESS != status)
-			goto err_free_netdev;
+			goto err_destroy_dp_intf;
 
 		hdd_debug("Disabling queues");
 		wlan_hdd_netif_queue_control(adapter,
@@ -7825,11 +7839,16 @@ struct hdd_adapter *hdd_open_adapter(struct hdd_context *hdd_ctx,
 
 		ndev = adapter->dev;
 
+		status = ucfg_dp_create_intf(hdd_ctx->psoc, &adapter->mac_addr,
+					     (qdf_netdev_t)adapter->dev);
+		if (QDF_IS_STATUS_ERROR(status))
+			goto err_free_netdev;
+
 		adapter->wdev.iftype = NL80211_IFTYPE_STATION;
 		adapter->device_mode = session_type;
 		status = hdd_register_interface(adapter, rtnl_held, params);
 		if (QDF_STATUS_SUCCESS != status)
-			goto err_free_netdev;
+			goto err_destroy_dp_intf;
 
 		/* Stop the Interface TX queue. */
 		hdd_debug("Disabling queues");
@@ -7907,6 +7926,9 @@ err_cleanup_adapter:
 		adapter = NULL;
 	}
 
+err_destroy_dp_intf:
+	ucfg_dp_destroy_intf(hdd_ctx->psoc, &adapter->mac_addr);
+
 err_free_netdev:
 	if (ndev)
 		free_netdev(ndev);
@@ -7918,6 +7940,9 @@ static void __hdd_close_adapter(struct hdd_context *hdd_ctx,
 				struct hdd_adapter *adapter,
 				bool rtnl_held)
 {
+	struct qdf_mac_addr adapter_mac;
+
+	qdf_copy_macaddr(&adapter_mac, &adapter->mac_addr);
 	if (adapter->device_mode == QDF_STA_MODE)
 		hdd_cleanup_conn_info(adapter);
 	qdf_list_destroy(&adapter->blocked_scan_request_q);
@@ -7927,6 +7952,7 @@ static void __hdd_close_adapter(struct hdd_context *hdd_ctx,
 	qdf_event_destroy(&adapter->peer_cleanup_done);
 	hdd_adapter_feature_update_work_deinit(adapter);
 	hdd_cleanup_adapter(hdd_ctx, adapter, rtnl_held);
+	ucfg_dp_destroy_intf(hdd_ctx->psoc, &adapter_mac);
 }
 
 void hdd_close_adapter(struct hdd_context *hdd_ctx,
@@ -18004,7 +18030,14 @@ static QDF_STATUS hdd_component_init(void)
 	if (QDF_IS_STATUS_ERROR(status))
 		goto pkt_capture_deinit;
 
+	status = ucfg_dp_init();
+	if (QDF_IS_STATUS_ERROR(status))
+		goto ftm_time_sync_deinit;
+
 	return QDF_STATUS_SUCCESS;
+
+ftm_time_sync_deinit:
+	ucfg_ftm_time_sync_deinit();
 
 pkt_capture_deinit:
 	ucfg_pkt_capture_deinit();
@@ -18052,6 +18085,7 @@ mlme_global_deinit:
 static void hdd_component_deinit(void)
 {
 	/* deinitialize non-converged components */
+	ucfg_dp_deinit();
 	ucfg_ftm_time_sync_deinit();
 	ucfg_pkt_capture_deinit();
 	ucfg_dlm_deinit();
@@ -18114,8 +18148,14 @@ QDF_STATUS hdd_component_psoc_open(struct wlan_objmgr_psoc *psoc)
 	if (QDF_IS_STATUS_ERROR(status))
 		goto err_twt;
 
+	status = ucfg_dp_psoc_open(psoc);
+	if (QDF_IS_STATUS_ERROR(status))
+		goto err_dp;
+
 	return status;
 
+err_dp:
+	ucfg_twt_psoc_close(psoc);
 err_twt:
 	ucfg_nan_psoc_close(psoc);
 err_nan:
@@ -18138,6 +18178,7 @@ err_dlm:
 
 void hdd_component_psoc_close(struct wlan_objmgr_psoc *psoc)
 {
+	ucfg_dp_psoc_close(psoc);
 	ucfg_twt_psoc_close(psoc);
 	ucfg_nan_psoc_close(psoc);
 	ucfg_tdls_psoc_close(psoc);
@@ -19293,61 +19334,13 @@ static void hdd_update_hif_config(struct hdd_context *hdd_ctx)
 	cfg.enable_self_recovery = self_recovery;
 	hdd_populate_runtime_cfg(hdd_ctx, &cfg);
 	cfg.rx_softirq_max_yield_duration_ns =
-				cfg_get(hdd_ctx->psoc,
-					CFG_DP_RX_SOFTIRQ_MAX_YIELD_TIME_NS);
+		ucfg_dp_get_rx_softirq_yield_duration(hdd_ctx->psoc);
 
 	hif_init_ini_config(scn, &cfg);
 
 	if (prevent_link_down)
 		hif_vote_link_up(scn);
 }
-
-#ifdef WLAN_FEATURE_RX_SOFTIRQ_TIME_LIMIT
-/**
- * hdd_update_dp_config_rx_softirq_limits() - Update DP rx softirq limit config
- *                          datapath
- * @hdd_ctx: HDD Context
- * @params: pointer to cdp_config_params to be updated
- *
- * Void
- */
-static
-void hdd_update_dp_config_rx_softirq_limits(struct hdd_context *hdd_ctx,
-					    struct cdp_config_params *params)
-{
-	params->tx_comp_loop_pkt_limit = cfg_get(hdd_ctx->psoc,
-						 CFG_DP_TX_COMP_LOOP_PKT_LIMIT);
-	params->rx_reap_loop_pkt_limit = cfg_get(hdd_ctx->psoc,
-						 CFG_DP_RX_REAP_LOOP_PKT_LIMIT);
-	params->rx_hp_oos_update_limit = cfg_get(hdd_ctx->psoc,
-						 CFG_DP_RX_HP_OOS_UPDATE_LIMIT);
-}
-#else
-static
-void hdd_update_dp_config_rx_softirq_limits(struct hdd_context *hdd_ctx,
-					    struct cdp_config_params *params)
-{
-}
-#endif /* WLAN_FEATURE_RX_SOFTIRQ_TIME_LIMIT */
-
-#if defined(QCA_LL_TX_FLOW_CONTROL_V2) || defined(QCA_LL_PDEV_TX_FLOW_CONTROL)
-static void
-hdd_update_dp_config_queue_threshold(struct hdd_context *hdd_ctx,
-				     struct cdp_config_params *params)
-{
-	params->tx_flow_stop_queue_threshold =
-			cfg_get(hdd_ctx->psoc, CFG_DP_TX_FLOW_STOP_QUEUE_TH);
-	params->tx_flow_start_queue_offset =
-			cfg_get(hdd_ctx->psoc,
-				CFG_DP_TX_FLOW_START_QUEUE_OFFSET);
-}
-#else
-static inline void
-hdd_update_dp_config_queue_threshold(struct hdd_context *hdd_ctx,
-				     struct cdp_config_params *params)
-{
-}
-#endif
 
 /**
  * hdd_update_dp_config() - Propagate config parameters to Lithium
@@ -19358,40 +19351,16 @@ hdd_update_dp_config_queue_threshold(struct hdd_context *hdd_ctx,
  */
 static int hdd_update_dp_config(struct hdd_context *hdd_ctx)
 {
-	struct cdp_config_params params = {0};
+	struct wlan_dp_user_config dp_cfg;
 	QDF_STATUS status;
-	void *soc;
 
-	soc = cds_get_context(QDF_MODULE_ID_SOC);
-	params.tso_enable = cfg_get(hdd_ctx->psoc, CFG_DP_TSO);
-	params.lro_enable = cfg_get(hdd_ctx->psoc, CFG_DP_LRO);
-	hdd_update_dp_config_queue_threshold(hdd_ctx, &params);
-	params.flow_steering_enable =
-		cfg_get(hdd_ctx->psoc, CFG_DP_FLOW_STEERING_ENABLED);
-	params.napi_enable = hdd_ctx->napi_enable;
-	params.p2p_tcp_udp_checksumoffload =
-		cfg_get(hdd_ctx->psoc,
-			CFG_DP_P2P_TCP_UDP_CKSUM_OFFLOAD);
-	params.nan_tcp_udp_checksumoffload =
-		cfg_get(hdd_ctx->psoc,
-			CFG_DP_NAN_TCP_UDP_CKSUM_OFFLOAD);
-	params.tcp_udp_checksumoffload =
-			cfg_get(hdd_ctx->psoc,
-				CFG_DP_TCP_UDP_CKSUM_OFFLOAD);
-	params.ipa_enable = ucfg_ipa_is_enabled();
-	params.gro_enable = cfg_get(hdd_ctx->psoc, CFG_DP_GRO);
-	params.tx_comp_loop_pkt_limit = cfg_get(hdd_ctx->psoc,
-						CFG_DP_TX_COMP_LOOP_PKT_LIMIT);
-	params.rx_reap_loop_pkt_limit = cfg_get(hdd_ctx->psoc,
-						CFG_DP_RX_REAP_LOOP_PKT_LIMIT);
-	params.rx_hp_oos_update_limit = cfg_get(hdd_ctx->psoc,
-						CFG_DP_RX_HP_OOS_UPDATE_LIMIT);
-	hdd_update_dp_config_rx_softirq_limits(hdd_ctx, &params);
+	dp_cfg.ipa_enable = ucfg_ipa_is_enabled();
+	dp_cfg.arp_connectivity_map = CONNECTIVITY_CHECK_SET_ARP;
 
-	status = cdp_update_config_parameters(soc, &params);
-	if (status) {
-		hdd_err("Failed to attach config parameters");
-		return status;
+	status = ucfg_dp_update_config(hdd_ctx->psoc, &dp_cfg);
+	if (status != QDF_STATUS_SUCCESS) {
+		hdd_err("failed DP PSOC configuration update");
+		return -EINVAL;
 	}
 
 	return 0;

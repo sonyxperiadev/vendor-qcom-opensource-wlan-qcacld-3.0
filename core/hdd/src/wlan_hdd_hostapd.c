@@ -109,6 +109,7 @@
 #include "wlan_hdd_son.h"
 #include "wlan_hdd_mcc_quota.h"
 #include "wlan_hdd_wds.h"
+#include <wlan_dp_ucfg_api.h>
 
 #define ACS_SCAN_EXPIRY_TIMEOUT_S 4
 
@@ -783,6 +784,7 @@ static int __hdd_hostapd_set_mac_address(struct net_device *dev, void *addr)
 	}
 
 	hdd_update_dynamic_mac(hdd_ctx, &adapter->mac_addr, &mac_addr);
+	ucfg_dp_update_inf_mac(hdd_ctx->psoc, &adapter->mac_addr, &mac_addr);
 	memcpy(&adapter->mac_addr, psta_mac_addr->sa_data, ETH_ALEN);
 	memcpy(dev->dev_addr, psta_mac_addr->sa_data, ETH_ALEN);
 	hdd_exit();
