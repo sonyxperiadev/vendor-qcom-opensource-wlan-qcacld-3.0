@@ -4588,6 +4588,16 @@ uint32_t hdd_wlan_get_version(struct hdd_context *hdd_ctx,
 int hdd_assemble_rate_code(uint8_t preamble, uint8_t nss, uint8_t rate);
 
 /**
+ * hdd_update_country_code - Update country code
+ * @hdd_ctx: HDD context
+ *
+ * Update country code based on module parameter country_code
+ *
+ * Return: 0 on success and errno on failure
+ */
+int hdd_update_country_code(struct hdd_context *hdd_ctx);
+
+/**
  * hdd_set_11ax_rate() - set 11ax rate
  * @adapter: adapter being modified
  * @value: new 11ax rate code

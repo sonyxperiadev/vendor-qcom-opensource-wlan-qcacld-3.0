@@ -4072,7 +4072,7 @@ static void hdd_skip_acs_scan_timer_deinit(struct hdd_context *hdd_ctx) {}
  *
  * Return: 0 on success and errno on failure
  */
-static int hdd_update_country_code(struct hdd_context *hdd_ctx)
+int hdd_update_country_code(struct hdd_context *hdd_ctx)
 {
 	if (!country_code)
 		return 0;
@@ -14712,12 +14712,6 @@ static int hdd_features_init(struct hdd_context *hdd_ctx)
 	bool rf_test_mode;
 
 	hdd_enter();
-
-	ret = hdd_update_country_code(hdd_ctx);
-	if (ret) {
-		hdd_err("Failed to update country code; errno:%d", ret);
-		return -EINVAL;
-	}
 
 	ret = hdd_init_mws_coex(hdd_ctx);
 	if (ret)
