@@ -605,6 +605,7 @@ MAC_INC := 	-I$(WLAN_ROOT)/$(MAC_INC_DIR) \
 
 MAC_DPH_OBJS :=	$(MAC_SRC_DIR)/dph/dph_hash_table.o
 
+ifeq ($(KERNEL_SUPPORTS_NESTED_COMPOSITES),y)
 MAC_LIM_OBJS := $(MAC_SRC_DIR)/pe/lim/lim_aid_mgmt.o \
 		$(MAC_SRC_DIR)/pe/lim/lim_admit_control.o \
 		$(MAC_SRC_DIR)/pe/lim/lim_api.o \
@@ -637,6 +638,10 @@ MAC_LIM_OBJS := $(MAC_SRC_DIR)/pe/lim/lim_aid_mgmt.o \
 		$(MAC_SRC_DIR)/pe/lim/lim_timer_utils.o \
 		$(MAC_SRC_DIR)/pe/lim/lim_trace.o \
 		$(MAC_SRC_DIR)/pe/lim/lim_utils.o
+else
+#composite of all of the above is in lim.c
+MAC_LIM_OBJS := $(MAC_SRC_DIR)/pe/lim/lim.o
+endif
 
 ifeq ($(CONFIG_QCOM_TDLS), y)
 MAC_LIM_OBJS += $(MAC_SRC_DIR)/pe/lim/lim_process_tdls.o
