@@ -43,23 +43,32 @@ $(foreach cfg, $(WLAN_CFG_OVERRIDE), \
 
 # KERNEL_SUPPORTS_NESTED_COMPOSITES := y is used to enable nested
 # composite support. The nested composite support is available in some
-# MSM kernels, and is available in all GKI kernels beginning with
+# MSM kernels, and is available in 5.10 GKI kernels beginning with
 # 5.10.20, but unfortunately is not available in any upstream kernel.
 #
 # When the feature is present in an MSM kernel, the flag is explicitly
 # set in the kernel sources.  When a GKI kernel is used, there isn't a
 # flag set in the sources, so set the flag here if we are building
-# with GKI kernel 5.10.20 or greater
+# with GKI kernel where the feature is present
 KERNEL_VERSION = $(shell echo $$(( ( $1 << 16 ) + ( $2 << 8 ) + $3 )))
 LINUX_CODE := $(call KERNEL_VERSION,$(VERSION),$(PATCHLEVEL),$(SUBLEVEL))
-COMPOSITE_CODE := 330260 # hardcoded $(call KERNEL_VERSION,5,10,20)
+
+# Comosite feature was added to GKI 5.10.20
+COMPOSITE_CODE_ADDED := 330260 # hardcoded $(call KERNEL_VERSION,5,10,20)
+
+# Comosite feature was not ported beyond 5.10.x
+COMPOSITE_CODE_REMOVED := 330496 # hardcoded $(call KERNEL_VERSION,5,11,0)
+
 ifeq ($(KERNEL_SUPPORTS_NESTED_COMPOSITES),)
   #flag is not explicitly present
   ifneq ($(findstring gki,$(CONFIG_LOCALVERSION))$(findstring qki,$(CONFIG_LOCALVERSION)),)
     # GKI kernel
-    ifeq ($(shell test $(LINUX_CODE) -ge $(COMPOSITE_CODE); echo $$?),0)
+    ifeq ($(shell test $(LINUX_CODE) -ge $(COMPOSITE_CODE_ADDED); echo $$?),0)
       # version >= 5.10.20
-      KERNEL_SUPPORTS_NESTED_COMPOSITES := y
+      ifeq ($(shell test $(LINUX_CODE) -lt $(COMPOSITE_CODE_REMOVED); echo $$?),0)
+        # version < 5.11.0
+        KERNEL_SUPPORTS_NESTED_COMPOSITES := y
+      endif
     endif
   endif
 endif
