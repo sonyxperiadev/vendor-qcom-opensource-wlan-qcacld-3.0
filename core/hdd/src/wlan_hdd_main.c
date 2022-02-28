@@ -18313,6 +18313,7 @@ void hdd_shutdown_wlan_in_suspend(struct hdd_context *hdd_ctx)
 #define SHUTDOWN_IN_SUSPEND_PREVENT_TIMEOUT 5
 
 	if (!hdd_is_any_interface_open(hdd_ctx)) {
+		hdd_ctx->shutdown_in_suspend = true;
 		qdf_delayed_work_start(&hdd_ctx->psoc_idle_timeout_work,
 				       SHUTDOWN_IN_SUSPEND_WAIT_TIMEOUT);
 		hdd_prevent_suspend_timeout(SHUTDOWN_IN_SUSPEND_PREVENT_TIMEOUT,
