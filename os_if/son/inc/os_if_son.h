@@ -1,7 +1,7 @@
 
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -60,6 +60,12 @@
  * @os_if_get_sta_space: get sta space
  * @os_if_deauth_sta: Deauths the target peer
  * @os_if_modify_acl: Add/Del target peer in ACL
+ * @os_if_get_vdev_by_netdev: Get vdev from net device
+ * @os_if_trigger_objmgr_object_creation: Trigger objmgr object creation
+ * @os_if_trigger_objmgr_object_deletion: Trigger objmgr object deletion
+ * @os_if_start_acs: Trigger ACS
+ * @os_if_set_acs_channels: Set channel list for ACS
+ * @os_if_get_acs_report: Gets the ACS report
  */
 struct son_callbacks {
 	uint32_t (*os_if_is_acs_in_progress)(struct wlan_objmgr_vdev *vdev);
@@ -108,6 +114,17 @@ struct son_callbacks {
 	void (*os_if_modify_acl)(struct wlan_objmgr_vdev *vdev,
 				 uint8_t *peer_mac,
 				 bool allow_auth);
+	struct wlan_objmgr_vdev *(*os_if_get_vdev_by_netdev)
+				(struct net_device *dev);
+	QDF_STATUS (*os_if_trigger_objmgr_object_creation)
+				(enum wlan_umac_comp_id id);
+	QDF_STATUS (*os_if_trigger_objmgr_object_deletion)
+				(enum wlan_umac_comp_id id);
+	int (*os_if_start_acs)(struct wlan_objmgr_vdev *vdev, uint8_t enable);
+	int (*os_if_set_acs_channels)(struct wlan_objmgr_vdev *vdev,
+				      struct ieee80211req_athdbg *req);
+	int (*os_if_get_acs_report)(struct wlan_objmgr_vdev *vdev,
+				    struct ieee80211_acs_dbg *acs_r);
 };
 
 /**
@@ -332,6 +349,52 @@ void os_if_son_get_phy_stats(struct wlan_objmgr_vdev *vdev,
 			     struct ol_ath_radiostats *phy_stats);
 
 /**
+ * os_if_son_cbs_init() - cbs init
+ * @vdev: vdev
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+int os_if_son_cbs_init(void);
+
+/**
+ * os_if_son_cbs_deinit() - cbs deinit
+ * @vdev: vdev
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+int os_if_son_cbs_deinit(void);
+
+/**
+ * os_if_son_set_cbs() - enable cbs or disable
+ * @vdev: vdev
+ * @enable: true or false
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+int os_if_son_set_cbs(struct wlan_objmgr_vdev *vdev,
+		      bool enable);
+
+/**
+ * os_if_son_set_cbs_wait_time() - set cbs wait time
+ * @vdev: vdev
+ * @val: value
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+int os_if_son_set_cbs_wait_time(struct wlan_objmgr_vdev *vdev,
+				uint32_t val);
+
+/**
+ * os_if_son_set_cbs_dwell_split_time() - set cbs dwell split time
+ * @vdev: vdev
+ * @val: value
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+int os_if_son_set_cbs_dwell_split_time(struct wlan_objmgr_vdev *vdev,
+				       uint32_t val);
+
+/**
  * os_if_son_get_chan_util() - get chan utilization
  * @vdev: vdev
  *
@@ -538,15 +601,67 @@ void os_if_son_modify_acl(struct wlan_objmgr_vdev *vdev,
 
 /**
  * os_if_son_deliver_ald_event() - deliver ald events to son
- * @adapter: adapter object
+ * @vdev: vdev object
  * @peer: peer object
  * @event: Name of the event
  * @event_data: event data
  *
  * Return: 0 on success
  */
-int os_if_son_deliver_ald_event(struct hdd_adapter *adapter,
+int os_if_son_deliver_ald_event(struct wlan_objmgr_vdev *vdev,
 				struct wlan_objmgr_peer *peer,
 				enum ieee80211_event_type event,
 				void *event_data);
+/**
+ * os_if_son_get_vdev_by_netdev() - Get vdev from net device
+ * @dev: net device struct
+ *
+ * Return: objmgr vdev on success else NULL
+ */
+struct wlan_objmgr_vdev *os_if_son_get_vdev_by_netdev(struct net_device *dev);
+
+/**
+ * os_if_son_trigger_objmgr_object_deletion() - Trigger objmgr object deletion
+ * @id: umac component id
+ *
+ * Return: QDF_STATUS_SUCCESS on success
+ */
+QDF_STATUS os_if_son_trigger_objmgr_object_deletion(enum wlan_umac_comp_id id);
+
+/**
+ * os_if_son_trigger_objmgr_object_creation() - Trigger objmgr object creation
+ * @id: umac component id
+ *
+ * Return: QDF_STATUS_SUCCESS on success
+ */
+QDF_STATUS os_if_son_trigger_objmgr_object_creation(enum wlan_umac_comp_id id);
+
+/**
+ * os_if_son_start_acs() - Triggers ACS on the target vdev
+ * @vdev: target vdev
+ * @enable: True - to start ACS
+ *
+ * Return: 0 on success
+ */
+int os_if_son_start_acs(struct wlan_objmgr_vdev *vdev, uint8_t enable);
+
+/**
+ * os_if_son_set_acs_chan() - Set channel list for ACS
+ * @vdev: target vdev
+ * @req: channel list
+ *
+ * Return: 0 on success
+ */
+int os_if_son_set_acs_chan(struct wlan_objmgr_vdev *vdev,
+			   struct ieee80211req_athdbg *req);
+
+/**
+ * os_if_son_get_acs_report() - Get ACS report
+ * @vdev: target vdev
+ * @acs_r: ACS report structure
+ *
+ * Return: 0 on success
+ */
+int os_if_son_get_acs_report(struct wlan_objmgr_vdev *vdev,
+			     struct ieee80211_acs_dbg *acs_r);
 #endif

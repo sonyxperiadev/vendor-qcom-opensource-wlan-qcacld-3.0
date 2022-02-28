@@ -143,6 +143,19 @@ QDF_STATUS mlo_enable_rso(struct wlan_objmgr_pdev *pdev,
 void mlo_roam_copy_partner_info(struct wlan_cm_connect_resp *connect_rsp,
 				struct roam_offload_synch_ind *sync_ind);
 
+/**
+ * mlo_roam_update_connected_links - update connected links bitmap after roaming
+ *
+ * @vdev: vdev pointer
+ * @connect_rsp: connect resp structure pointer
+ *
+ * This api will be called to copy partner link info to connect response.
+ *
+ * Return: none
+ */
+void mlo_roam_update_connected_links(struct wlan_objmgr_vdev *vdev,
+				     struct wlan_cm_connect_resp *connect_rsp);
+
 #ifdef WLAN_FEATURE_11BE_MLO_ADV_FEATURE
 /**
  * mlo_cm_roam_sync_cb - Callback function from CM to MLO mgr
@@ -159,6 +172,21 @@ void mlo_roam_copy_partner_info(struct wlan_cm_connect_resp *connect_rsp,
 void mlo_cm_roam_sync_cb(struct wlan_objmgr_vdev *vdev,
 			 void *event, uint32_t event_data_len);
 #endif /* WLAN_FEATURE_11BE_MLO_ADV_FEATURE */
+
+/**
+ * wlan_mlo_roam_abort_on_link - Abort roam on link
+ *
+ * @psoc: psoc pointer
+ * @sync_ind: Roam sync indication
+ *
+ * Abort roaming on all the links except the primary. Roam abort on primary
+ * link would be taken care in legacy path.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_mlo_roam_abort_on_link(struct wlan_objmgr_psoc *psoc,
+			    struct roam_offload_synch_ind *sync_ind);
 
 #else /* WLAN_FEATURE_11BE_MLO */
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
@@ -214,5 +242,17 @@ static inline void
 mlo_roam_copy_partner_info(struct wlan_cm_connect_resp *connect_rsp,
 			   struct roam_offload_synch_ind *sync_ind)
 {}
+
+static inline void
+mlo_roam_update_connected_links(struct wlan_objmgr_vdev *vdev,
+				struct wlan_cm_connect_resp *connect_rsp)
+{}
+
+static inline QDF_STATUS
+wlan_mlo_roam_abort_on_link(struct wlan_objmgr_psoc *psoc,
+			    struct roam_offload_synch_ind *sync_ind)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
 #endif /* WLAN_FEATURE_11BE_MLO */
 #endif

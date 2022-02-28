@@ -2070,7 +2070,7 @@ sme_sap_init_twt_context(struct wlan_objmgr_psoc *psoc,
  */
 static void
 sme_process_twt_add_renego_failure(struct mac_context *mac,
-				 struct twt_add_dialog_complete_event *add_dialog_event)
+				 struct wma_twt_add_dialog_complete_event *add_dialog_event)
 {
 	twt_add_dialog_cb callback;
 
@@ -2095,7 +2095,7 @@ sme_process_twt_add_renego_failure(struct mac_context *mac,
  */
 static void
 sme_process_twt_add_initial_nego(struct mac_context *mac,
-				 struct twt_add_dialog_complete_event *add_dialog_event)
+				 struct wma_twt_add_dialog_complete_event *add_dialog_event)
 {
 	twt_add_dialog_cb callback;
 
@@ -2138,7 +2138,7 @@ sme_process_twt_add_initial_nego(struct mac_context *mac,
  */
 static void
 sme_process_twt_add_dialog_event(struct mac_context *mac,
-				 struct twt_add_dialog_complete_event
+				 struct wma_twt_add_dialog_complete_event
 				 *add_dialog_event)
 {
 	bool is_evt_allowed;
@@ -2539,7 +2539,7 @@ void sme_twt_update_beacon_template(mac_handle_t mac_handle)
 #else
 static void
 sme_process_twt_add_dialog_event(struct mac_context *mac,
-				 struct twt_add_dialog_complete_event *add_dialog_event)
+				 struct wma_twt_add_dialog_complete_event *add_dialog_event)
 {
 }
 
@@ -3276,12 +3276,32 @@ QDF_STATUS sme_set_phy_mode(mac_handle_t mac_handle, eCsrPhyMode phyMode)
 
 	mac->roam.configParam.phyMode = phyMode;
 	mac->roam.configParam.uCfgDot11Mode =
-		csr_get_cfg_dot11_mode_from_csr_phy_mode(NULL,
-						mac->roam.configParam.phyMode,
-						mac->roam.configParam.
-						ProprietaryRatesEnabled);
+		csr_get_cfg_dot11_mode_from_csr_phy_mode(false,
+						mac->roam.configParam.phyMode);
 
 	return QDF_STATUS_SUCCESS;
+}
+
+/*
+ * sme_get_11b_data_duration() -
+ * returns 11b data duration via channel freq.
+ *
+ * mac_handle - The handle returned by mac_open.
+ * chan_freq - channel frequency
+ *
+ * Return - 11b data duration on success else 0
+ */
+uint32_t sme_get_11b_data_duration(mac_handle_t mac_handle, uint32_t chan_freq)
+{
+	uint32_t rx_11b_data_duration = 0;
+	struct mac_context *mac = MAC_CONTEXT(mac_handle);
+	struct lim_channel_status *chan_status =
+					csr_get_channel_status(mac, chan_freq);
+
+	if (chan_status)
+		rx_11b_data_duration = chan_status->rx_11b_mode_data_duration;
+
+	return rx_11b_data_duration;
 }
 
 QDF_STATUS sme_roam_ndi_stop(mac_handle_t mac_handle, uint8_t vdev_id)
@@ -4681,6 +4701,11 @@ csr_cleanup_vdev_session:
 cleanup_wma:
 	wma_cleanup_vdev(vdev);
 	return status;
+}
+
+QDF_STATUS sme_vdev_set_data_tx_callback(struct wlan_objmgr_vdev *vdev)
+{
+	return wma_vdev_set_data_tx_callback(vdev);
 }
 
 struct wlan_objmgr_vdev
@@ -15139,10 +15164,8 @@ void sme_update_score_config(mac_handle_t mac_handle, eCsrPhyMode phy_mode,
 	    phy_mode == eCSR_DOT11_MODE_11n_ONLY)
 		config.ht_cap = 1;
 
-#ifdef WLAN_FEATURE_11BE
-	if (!IS_FEATURE_SUPPORTED_BY_FW(DOT11BE))
+	if (!IS_FEATURE_11BE_SUPPORTED_BY_FW)
 		config.eht_cap = 0;
-#endif
 
 	if (!IS_FEATURE_SUPPORTED_BY_FW(DOT11AX))
 		config.he_cap = 0;
@@ -16027,8 +16050,7 @@ QDF_STATUS sme_switch_channel(mac_handle_t mac_handle,
 	if (!csa_offload_event)
 		return QDF_STATUS_E_NOMEM;
 
-	qdf_mem_copy(csa_offload_event->bssId, bssid->bytes,
-		     QDF_MAC_ADDR_SIZE);
+	qdf_copy_macaddr(&csa_offload_event->bssid, bssid);
 	csa_offload_event->csa_chan_freq = (uint32_t)chan_freq;
 	csa_offload_event->new_ch_width = (uint8_t)chan_width;
 	csa_offload_event->channel =
@@ -16037,7 +16059,7 @@ QDF_STATUS sme_switch_channel(mac_handle_t mac_handle,
 	csa_offload_event->switch_mode = 1;
 
 	sme_debug("bssid " QDF_MAC_ADDR_FMT " freq %u width %u",
-		  QDF_MAC_ADDR_REF(csa_offload_event->bssId),
+		  QDF_MAC_ADDR_REF(csa_offload_event->bssid.bytes),
 		  csa_offload_event->csa_chan_freq,
 		  csa_offload_event->new_ch_width);
 

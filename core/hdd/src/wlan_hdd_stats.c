@@ -6174,6 +6174,9 @@ static int __wlan_hdd_cfg80211_dump_station(struct wiphy *wiphy,
 			hdd_err("sap get peer info disabled!");
 		}
 	} else {
+		if (idx != 0)
+			return -ENOENT;
+
 		qdf_mem_copy(mac, dev->dev_addr, QDF_MAC_ADDR_SIZE);
 		errno = wlan_hdd_get_sta_stats(wiphy, adapter, mac, sinfo);
 	}

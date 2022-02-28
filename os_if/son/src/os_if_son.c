@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -785,6 +785,64 @@ void os_if_son_get_phy_stats(struct wlan_objmgr_vdev *vdev,
 }
 qdf_export_symbol(os_if_son_get_phy_stats);
 
+int os_if_son_cbs_init(void)
+{
+	int ret;
+
+	ret = ucfg_son_cbs_init();
+
+	return ret;
+}
+
+qdf_export_symbol(os_if_son_cbs_init);
+
+int os_if_son_cbs_deinit(void)
+{
+	int ret;
+
+	ret = ucfg_son_cbs_deinit();
+
+	return ret;
+}
+
+qdf_export_symbol(os_if_son_cbs_deinit);
+
+int os_if_son_set_cbs(struct wlan_objmgr_vdev *vdev,
+		      bool enable)
+{
+	int ret;
+
+	ret = ucfg_son_set_cbs(vdev, enable);
+
+	return ret;
+}
+
+qdf_export_symbol(os_if_son_set_cbs);
+
+int os_if_son_set_cbs_wait_time(struct wlan_objmgr_vdev *vdev,
+				uint32_t val)
+{
+	int ret;
+
+	ret = ucfg_son_set_cbs_wait_time(vdev, val);
+
+	return ret;
+}
+
+qdf_export_symbol(os_if_son_set_cbs_wait_time);
+
+int os_if_son_set_cbs_dwell_split_time(struct wlan_objmgr_vdev *vdev,
+				       uint32_t val)
+{
+	int ret;
+
+	ret = ucfg_son_set_cbs_dwell_split_time(vdev, val);
+
+	return ret;
+}
+
+qdf_export_symbol(os_if_son_set_cbs_dwell_split_time);
+
 int os_if_son_set_phymode(struct wlan_objmgr_vdev *vdev,
 			  enum ieee80211_phymode mode)
 {
@@ -1294,17 +1352,15 @@ QDF_STATUS os_if_son_pdev_ops(struct wlan_objmgr_pdev *pdev,
 
 qdf_export_symbol(os_if_son_pdev_ops);
 
-int os_if_son_deliver_ald_event(struct hdd_adapter *adapter,
+int os_if_son_deliver_ald_event(struct wlan_objmgr_vdev *vdev,
 				struct wlan_objmgr_peer *peer,
 				enum ieee80211_event_type event,
 				void *event_data)
 {
-	struct wlan_objmgr_vdev *vdev;
 	struct wlan_objmgr_psoc *psoc;
 	struct wlan_lmac_if_rx_ops *rx_ops;
 	int ret;
 
-	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_SON_ID);
 	if (!vdev) {
 		osif_err("null vdev");
 		return -EINVAL;
@@ -1312,17 +1368,76 @@ int os_if_son_deliver_ald_event(struct hdd_adapter *adapter,
 	psoc = wlan_vdev_get_psoc(vdev);
 	if (!psoc) {
 		osif_err("null posc");
-		hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_SON_ID);
 		return -EINVAL;
 	}
 	rx_ops = wlan_psoc_get_lmac_if_rxops(psoc);
 	if (rx_ops && rx_ops->son_rx_ops.deliver_event)
 		ret = rx_ops->son_rx_ops.deliver_event(vdev, peer, event,
-							event_data);
+						       event_data);
 	else
 		ret = -EINVAL;
-	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_SON_ID);
+
 	return ret;
 }
 
 qdf_export_symbol(os_if_son_deliver_ald_event);
+
+struct wlan_objmgr_vdev *
+os_if_son_get_vdev_by_netdev(struct net_device *dev)
+{
+	return g_son_os_if_cb.os_if_get_vdev_by_netdev(dev);
+}
+
+qdf_export_symbol(os_if_son_get_vdev_by_netdev);
+
+QDF_STATUS os_if_son_trigger_objmgr_object_creation(enum wlan_umac_comp_id id)
+{
+	return g_son_os_if_cb.os_if_trigger_objmgr_object_creation(id);
+}
+
+qdf_export_symbol(os_if_son_trigger_objmgr_object_creation);
+
+QDF_STATUS os_if_son_trigger_objmgr_object_deletion(enum wlan_umac_comp_id id)
+{
+	return g_son_os_if_cb.os_if_trigger_objmgr_object_deletion(id);
+}
+
+qdf_export_symbol(os_if_son_trigger_objmgr_object_deletion);
+
+int os_if_son_start_acs(struct wlan_objmgr_vdev *vdev, uint8_t enable)
+{
+	if (!vdev) {
+		osif_err("null vdev");
+		return 0;
+	}
+
+	return g_son_os_if_cb.os_if_start_acs(vdev, enable);
+}
+
+qdf_export_symbol(os_if_son_start_acs);
+
+int os_if_son_set_acs_chan(struct wlan_objmgr_vdev *vdev,
+			   struct ieee80211req_athdbg *req)
+{
+	if (!vdev) {
+		osif_err("null vdev");
+		return 0;
+	}
+
+	return g_son_os_if_cb.os_if_set_acs_channels(vdev, req);
+}
+
+qdf_export_symbol(os_if_son_set_acs_chan);
+
+int os_if_son_get_acs_report(struct wlan_objmgr_vdev *vdev,
+			     struct ieee80211_acs_dbg *acs_r)
+{
+	if (!vdev) {
+		osif_err("null vdev");
+		return 0;
+	}
+
+	return g_son_os_if_cb.os_if_get_acs_report(vdev, acs_r);
+}
+
+qdf_export_symbol(os_if_son_get_acs_report);

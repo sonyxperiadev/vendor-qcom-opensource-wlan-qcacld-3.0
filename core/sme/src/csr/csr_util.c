@@ -828,7 +828,7 @@ uint32_t csr_translate_to_wni_cfg_dot11_mode(struct mac_context *mac,
 	switch (csrDot11Mode) {
 	case eCSR_CFG_DOT11_MODE_AUTO:
 #ifdef WLAN_FEATURE_11BE
-		if (IS_FEATURE_SUPPORTED_BY_FW(DOT11BE))
+		if (IS_FEATURE_11BE_SUPPORTED_BY_FW)
 			ret = MLME_DOT11_MODE_11BE;
 		else
 #endif
@@ -887,7 +887,7 @@ uint32_t csr_translate_to_wni_cfg_dot11_mode(struct mac_context *mac,
 		break;
 #ifdef WLAN_FEATURE_11BE
 	case eCSR_CFG_DOT11_MODE_11BE_ONLY:
-		if (IS_FEATURE_SUPPORTED_BY_FW(DOT11BE))
+		if (IS_FEATURE_11BE_SUPPORTED_BY_FW)
 			ret = MLME_DOT11_MODE_11BE_ONLY;
 		else if (IS_FEATURE_SUPPORTED_BY_FW(DOT11AX))
 			ret = MLME_DOT11_MODE_11AX_ONLY;
@@ -897,7 +897,7 @@ uint32_t csr_translate_to_wni_cfg_dot11_mode(struct mac_context *mac,
 			ret = MLME_DOT11_MODE_11N;
 		break;
 	case eCSR_CFG_DOT11_MODE_11BE:
-		if (IS_FEATURE_SUPPORTED_BY_FW(DOT11BE))
+		if (IS_FEATURE_11BE_SUPPORTED_BY_FW)
 			ret = MLME_DOT11_MODE_11BE;
 		else if (IS_FEATURE_SUPPORTED_BY_FW(DOT11AX))
 			ret = MLME_DOT11_MODE_11AX;
@@ -1095,9 +1095,7 @@ void csr_release_profile(struct mac_context *mac,
 /* CSR never sets MLME_DOT11_MODE_ALL to the CFG */
 /* So PE should not see MLME_DOT11_MODE_ALL when it gets the CFG value */
 enum csr_cfgdot11mode
-csr_get_cfg_dot11_mode_from_csr_phy_mode(struct csr_roam_profile *pProfile,
-					 eCsrPhyMode phyMode,
-					 bool fProprietary)
+csr_get_cfg_dot11_mode_from_csr_phy_mode(bool is_ap, eCsrPhyMode phyMode)
 {
 	uint32_t cfgDot11Mode = eCSR_CFG_DOT11_MODE_ABG;
 
@@ -1111,8 +1109,7 @@ csr_get_cfg_dot11_mode_from_csr_phy_mode(struct csr_roam_profile *pProfile,
 		break;
 	case eCSR_DOT11_MODE_11g:
 	case eCSR_DOT11_MODE_11g_ONLY:
-		if (pProfile && (CSR_IS_INFRA_AP(pProfile))
-		    && (phyMode == eCSR_DOT11_MODE_11g_ONLY))
+		if (is_ap && (phyMode == eCSR_DOT11_MODE_11g_ONLY))
 			cfgDot11Mode = eCSR_CFG_DOT11_MODE_11G_ONLY;
 		else
 			cfgDot11Mode = eCSR_CFG_DOT11_MODE_11G;
@@ -1121,7 +1118,7 @@ csr_get_cfg_dot11_mode_from_csr_phy_mode(struct csr_roam_profile *pProfile,
 			cfgDot11Mode = eCSR_CFG_DOT11_MODE_11N;
 		break;
 	case eCSR_DOT11_MODE_11n_ONLY:
-		if (pProfile && CSR_IS_INFRA_AP(pProfile))
+		if (is_ap)
 			cfgDot11Mode = eCSR_CFG_DOT11_MODE_11N_ONLY;
 		else
 			cfgDot11Mode = eCSR_CFG_DOT11_MODE_11N;
@@ -1163,7 +1160,7 @@ csr_get_cfg_dot11_mode_from_csr_phy_mode(struct csr_roam_profile *pProfile,
 		break;
 #ifdef WLAN_FEATURE_11BE
 	case eCSR_DOT11_MODE_11be:
-		if (IS_FEATURE_SUPPORTED_BY_FW(DOT11BE))
+		if (IS_FEATURE_11BE_SUPPORTED_BY_FW)
 			cfgDot11Mode = eCSR_CFG_DOT11_MODE_11BE;
 		else if (IS_FEATURE_SUPPORTED_BY_FW(DOT11AX))
 			cfgDot11Mode = eCSR_CFG_DOT11_MODE_11AX;
@@ -1173,7 +1170,7 @@ csr_get_cfg_dot11_mode_from_csr_phy_mode(struct csr_roam_profile *pProfile,
 			cfgDot11Mode = eCSR_CFG_DOT11_MODE_11N;
 		break;
 	case eCSR_DOT11_MODE_11be_ONLY:
-		if (IS_FEATURE_SUPPORTED_BY_FW(DOT11BE))
+		if (IS_FEATURE_11BE_SUPPORTED_BY_FW)
 			cfgDot11Mode = eCSR_CFG_DOT11_MODE_11BE_ONLY;
 		else if (IS_FEATURE_SUPPORTED_BY_FW(DOT11AX))
 			cfgDot11Mode = eCSR_CFG_DOT11_MODE_11AX_ONLY;

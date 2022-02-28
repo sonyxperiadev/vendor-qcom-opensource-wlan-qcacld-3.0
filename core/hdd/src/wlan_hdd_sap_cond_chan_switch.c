@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -403,7 +404,8 @@ static int __wlan_hdd_request_pre_cac(struct hdd_context *hdd_ctx,
 		hdd_err("error set pre_cac channel %d", pre_cac_chan_freq);
 		goto close_pre_cac_adapter;
 	}
-	pre_cac_adapter->session.ap.sap_config.ch_width_orig = chandef.width;
+	pre_cac_adapter->session.ap.sap_config.ch_width_orig =
+					hdd_map_nl_chan_width(chandef.width);
 
 	hdd_debug("existing ap phymode:%d pre cac ch_width:%d freq:%d",
 		  ap_adapter->session.ap.sap_config.SapHw_mode,

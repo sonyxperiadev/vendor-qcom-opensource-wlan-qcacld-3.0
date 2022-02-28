@@ -46,6 +46,7 @@
 #include "wlan_if_mgr_roam.h"
 #include "wlan_roam_debug.h"
 #include "wlan_mlo_mgr_roam.h"
+#include "wlan_mlo_mgr_sta.h"
 
 #ifdef WLAN_FEATURE_SAE
 #define CM_IS_FW_FT_SAE_SUPPORTED(fw_akm_bitmap) \
@@ -620,7 +621,6 @@ cm_roam_is_change_in_band_allowed(struct wlan_objmgr_psoc *psoc,
 				  uint8_t vdev_id, uint32_t roam_band_mask)
 {
 	struct wlan_objmgr_vdev *vdev;
-	uint32_t count;
 	bool concurrency_is_dbs;
 	struct wlan_channel *chan;
 
@@ -638,14 +638,7 @@ cm_roam_is_change_in_band_allowed(struct wlan_objmgr_psoc *psoc,
 		return false;
 	}
 
-	count = policy_mgr_mode_specific_connection_count(psoc, PM_STA_MODE,
-							  NULL);
-	if (count != 2)
-		return true;
-
-	concurrency_is_dbs = !(policy_mgr_current_concurrency_is_mcc(psoc) ||
-	      policy_mgr_current_concurrency_is_scc(psoc));
-
+	concurrency_is_dbs = policy_mgr_concurrent_sta_doing_dbs(psoc);
 	if (!concurrency_is_dbs)
 		return true;
 
@@ -2149,6 +2142,26 @@ cm_roam_scan_filter(struct wlan_objmgr_psoc *psoc,
 	}
 }
 
+#ifdef CONFIG_BAND_6GHZ
+static void
+cm_fill_6ghz_dwell_times(struct wlan_objmgr_psoc *psoc,
+			 struct wlan_roam_scan_params *scan_params)
+{
+	wlan_scan_cfg_get_active_6g_dwelltime(
+					psoc,
+					&scan_params->dwell_time_active_6ghz);
+
+	wlan_scan_cfg_get_passive_6g_dwelltime(
+					psoc,
+					&scan_params->dwell_time_passive_6ghz);
+}
+#else
+static inline void
+cm_fill_6ghz_dwell_times(struct wlan_objmgr_psoc *psoc,
+			 struct wlan_roam_scan_params *scan_params)
+{}
+#endif
+
 static void
 cm_roam_scan_offload_fill_scan_params(struct wlan_objmgr_psoc *psoc,
 			struct rso_config *rso_cfg,
@@ -2266,6 +2279,8 @@ cm_roam_scan_offload_fill_scan_params(struct wlan_objmgr_psoc *psoc,
 
 	scan_params->rso_adaptive_dwell_mode =
 		mlme_obj->cfg.lfr.adaptive_roamscan_dwell_mode;
+
+	cm_fill_6ghz_dwell_times(psoc, scan_params);
 }
 
 void wlan_cm_append_assoc_ies(struct wlan_roam_scan_offload_params *rso_mode_cfg,
@@ -3339,14 +3354,13 @@ void cm_handle_sta_sta_roaming_enablement(struct wlan_objmgr_psoc *psoc,
 							   vdev_id_list,
 							   PM_STA_MODE);
 
-	if (!(wlan_mlme_get_dual_sta_roaming_enabled(psoc) && sta_count == 2)) {
+	if (!(wlan_mlme_get_dual_sta_roaming_enabled(psoc) && sta_count >= 2)) {
 		mlme_debug("Dual sta roaming is not enabled or count:%d",
 			   sta_count);
 		goto rel_ref;
 	}
 
-	if (!(policy_mgr_current_concurrency_is_mcc(psoc) ||
-	    policy_mgr_current_concurrency_is_scc(psoc))) {
+	if (policy_mgr_concurrent_sta_doing_dbs(psoc)) {
 		mlme_debug("After roam on vdev_id:%d, STA + STA concurrency is in DBS:%d",
 			   curr_vdev_id, sta_count);
 		for (conn_idx = 0; conn_idx < sta_count; conn_idx++) {
@@ -3567,7 +3581,7 @@ cm_roam_switch_to_init(struct wlan_objmgr_pdev *pdev,
 {
 	enum roam_offload_state cur_state;
 	uint8_t temp_vdev_id, roam_enabled_vdev_id;
-	uint32_t roaming_bitmap, count;
+	uint32_t roaming_bitmap;
 	bool dual_sta_roam_active, usr_disabled_roaming, sta_concurrency_is_dbs;
 	QDF_STATUS status;
 	struct wlan_objmgr_psoc *psoc = wlan_pdev_get_psoc(pdev);
@@ -3584,18 +3598,12 @@ cm_roam_switch_to_init(struct wlan_objmgr_pdev *pdev,
 		return QDF_STATUS_E_FAILURE;
 
 	dual_sta_policy = &mlme_obj->cfg.gen.dual_sta_policy;
-	dual_sta_roam_active =
-		wlan_mlme_get_dual_sta_roaming_enabled(psoc);
-	count = policy_mgr_mode_specific_connection_count(psoc, PM_STA_MODE,
-							  NULL);
-	sta_concurrency_is_dbs = (count == 2) &&
-		    !(policy_mgr_current_concurrency_is_mcc(psoc) ||
-		      policy_mgr_current_concurrency_is_scc(psoc));
-
+	dual_sta_roam_active = wlan_mlme_get_dual_sta_roaming_enabled(psoc);
+	sta_concurrency_is_dbs = policy_mgr_concurrent_sta_doing_dbs(psoc);
 	cur_state = mlme_get_roam_state(psoc, vdev_id);
 
-	mlme_info("sta count:%d, dual_sta_roam_active:%d, is_dbs:%d, state:%d",
-		  count, dual_sta_roam_active, sta_concurrency_is_dbs,
+	mlme_info("dual_sta_roam_active:%d, is_dbs:%d, state:%d",
+		  dual_sta_roam_active, sta_concurrency_is_dbs,
 		  cur_state);
 
 	switch (cur_state) {
@@ -4103,6 +4111,7 @@ cm_record_state_change(struct wlan_objmgr_pdev *pdev,
 }
 #endif
 
+#ifdef WLAN_FEATURE_11BE_MLO
 /**
  * cm_mlo_roam_switch_for_link() - roam state handling during mlo roam
   for link/s.
@@ -4143,6 +4152,68 @@ cm_mlo_roam_switch_for_link(struct wlan_objmgr_pdev *pdev,
 }
 
 QDF_STATUS
+cm_handle_mlo_rso_state_change(struct wlan_objmgr_pdev *pdev,
+			       uint8_t *vdev_id,
+			       uint8_t reason,
+			       bool *is_rso_skip)
+{
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	struct wlan_objmgr_vdev *vdev;
+	struct wlan_objmgr_vdev *assoc_vdev = NULL;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_pdev(pdev, *vdev_id,
+						    WLAN_MLME_NB_ID);
+	if (!vdev)
+		return QDF_STATUS_E_FAILURE;
+
+	if (wlan_vdev_mlme_get_is_mlo_vdev(wlan_pdev_get_psoc(pdev),
+					   *vdev_id)) {
+		if ((reason == REASON_DISCONNECTED ||
+		     reason == REASON_DRIVER_DISABLED) &&
+		    (cm_is_vdev_disconnecting(vdev))) {
+			mlme_debug("MLO ROAM: skip RSO cmd on assoc vdev %d",
+				   *vdev_id);
+			*is_rso_skip = true;
+		}
+	}
+
+	if (wlan_vdev_mlme_get_is_mlo_link(wlan_pdev_get_psoc(pdev),
+					   *vdev_id)) {
+		if (reason == REASON_ROAM_HANDOFF_DONE) {
+			status = cm_mlo_roam_switch_for_link(pdev, *vdev_id,
+							     reason);
+			mlme_debug("MLO ROAM: update rso state on link vdev %d",
+				   *vdev_id);
+			*is_rso_skip = true;
+		} else if ((reason == REASON_DISCONNECTED ||
+			    reason == REASON_DRIVER_DISABLED) &&
+			   (cm_is_vdev_disconnecting(vdev))) {
+			assoc_vdev = wlan_mlo_get_assoc_link_vdev(vdev);
+
+			if (!assoc_vdev) {
+				mlme_err("Assoc vdev is NULL");
+				status = QDF_STATUS_E_FAILURE;
+				goto end;
+			}
+			/* Update the vdev id to send RSO stop on assoc vdev */
+			*vdev_id = wlan_vdev_get_id(assoc_vdev);
+			*is_rso_skip = false;
+			mlme_debug("MLO ROAM: process RSO stop on assoc vdev %d",
+				   *vdev_id);
+			goto end;
+		} else {
+			mlme_debug("MLO ROAM: skip RSO cmd on link vdev %d",
+				   *vdev_id);
+			*is_rso_skip = true;
+		}
+	}
+end:
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_NB_ID);
+	return status;
+}
+#endif
+
+QDF_STATUS
 cm_roam_state_change(struct wlan_objmgr_pdev *pdev,
 		     uint8_t vdev_id,
 		     enum roam_offload_state requested_state,
@@ -4151,6 +4222,7 @@ cm_roam_state_change(struct wlan_objmgr_pdev *pdev,
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	struct wlan_objmgr_vdev *vdev;
 	bool is_up;
+	bool is_rso_skip = false;
 	enum roam_offload_state cur_state;
 	struct wlan_objmgr_psoc *psoc = wlan_pdev_get_psoc(pdev);
 
@@ -4172,13 +4244,10 @@ cm_roam_state_change(struct wlan_objmgr_pdev *pdev,
 		goto end;
 	}
 
-	if (wlan_vdev_mlme_get_is_mlo_link(wlan_pdev_get_psoc(pdev), vdev_id)) {
-		if (reason == REASON_ROAM_HANDOFF_DONE)
-			status = cm_mlo_roam_switch_for_link(pdev, vdev_id, reason);
-
-		mlme_debug("MLO ROAM: skip RSO cmd for link vdev %d", vdev_id);
+	status = cm_handle_mlo_rso_state_change(pdev, &vdev_id,
+						reason, &is_rso_skip);
+	if (is_rso_skip)
 		return status;
-	}
 
 	switch (requested_state) {
 	case WLAN_ROAM_DEINIT:
@@ -4206,7 +4275,6 @@ cm_roam_state_change(struct wlan_objmgr_pdev *pdev,
 end:
 	cm_record_state_change(pdev, vdev_id, cur_state, requested_state,
 			       reason, is_up, status);
-
 	return status;
 }
 
@@ -5089,8 +5157,7 @@ QDF_STATUS cm_start_roam_invoke(struct wlan_objmgr_psoc *psoc,
 	if (source == CM_ROAMING_FW)
 		goto send_evt;
 
-	if (qdf_is_macaddr_zero(bssid) ||
-	    cm_req->roam_req.req.source == CM_ROAMING_NUD_FAILURE) {
+	if (qdf_is_macaddr_zero(bssid)) {
 		if (!wlan_mlme_is_data_stall_recovery_fw_supported(psoc)) {
 			mlme_debug("FW does not support data stall recovery, aborting roam invoke");
 			qdf_mem_free(cm_req);
@@ -5098,6 +5165,12 @@ QDF_STATUS cm_start_roam_invoke(struct wlan_objmgr_psoc *psoc,
 		}
 		cm_req->roam_req.req.forced_roaming = true;
 		source = CM_ROAMING_NUD_FAILURE;
+		goto send_evt;
+	}
+
+	if (qdf_is_macaddr_broadcast(bssid)) {
+		qdf_copy_macaddr(&cm_req->roam_req.req.bssid, bssid);
+		mlme_debug("Roam only if better candidate found else stick to current AP");
 		goto send_evt;
 	}
 
@@ -5414,6 +5487,11 @@ cm_send_roam_invoke_req(struct cnx_mgr *cm_ctx, struct cm_req *req)
 		goto send_cmd;
 	}
 
+	if (qdf_is_macaddr_broadcast(&roam_req->req.bssid)) {
+		qdf_copy_macaddr(&roam_invoke_req->target_bssid,
+				 &roam_req->req.bssid);
+		goto send_cmd;
+	}
 	if (qdf_is_macaddr_equal(&roam_req->req.bssid, &connected_bssid))
 		roam_invoke_req->is_same_bssid = true;
 

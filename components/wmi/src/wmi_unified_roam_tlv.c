@@ -1028,6 +1028,14 @@ static QDF_STATUS send_roam_invoke_cmd_tlv(wmi_unified_t wmi_handle,
 		cmd->flags |=
 			(1 << WMI_ROAM_INVOKE_FLAG_FULL_SCAN_IF_NO_CANDIDATE);
 		cmd->reason = ROAM_INVOKE_REASON_NUD_FAILURE;
+	} else if (qdf_is_macaddr_broadcast(&roaminvoke->target_bssid)) {
+		cmd->num_chan = 0;
+		cmd->num_bssid = 0;
+		cmd->roam_scan_mode = WMI_ROAM_INVOKE_SCAN_MODE_CACHE_MAP;
+		cmd->flags |=
+			(1 << WMI_ROAM_INVOKE_FLAG_FULL_SCAN_IF_NO_CANDIDATE) |
+			(1 << WMI_ROAM_INVOKE_FLAG_SELECT_CANDIDATE_CONSIDER_SCORE);
+		cmd->reason = ROAM_INVOKE_REASON_USER_SPACE;
 	} else {
 		cmd->reason = ROAM_INVOKE_REASON_USER_SPACE;
 	}
@@ -2129,13 +2137,15 @@ wmi_fill_roam_sync_buffer(struct wlan_objmgr_vdev *vdev,
 			     REPLAY_CTR_LEN);
 	}
 
-	if (param_buf->hw_mode_transition_fixed_param)
+	if (param_buf->hw_mode_transition_fixed_param) {
 		wmi_extract_pdev_hw_mode_trans_ind(
 		    param_buf->hw_mode_transition_fixed_param,
 		    param_buf->wmi_pdev_set_hw_mode_response_vdev_mac_mapping,
 		    &roam_sync_ind->hw_mode_trans_ind);
-	else
+		roam_sync_ind->hw_mode_trans_present = true;
+	} else {
 		wmi_debug("hw_mode transition fixed param is NULL");
+	}
 
 	fils_info = param_buf->roam_fils_synch_info;
 	if (fils_info) {
@@ -2415,6 +2425,11 @@ extract_roam_sync_frame_event_tlv(wmi_unified_t wmi_handle, void *event,
 
 	roam_sync_frame_ind = frame_ptr;
 	roam_sync_frame_ind->vdev_id = synch_frame_event->vdev_id;
+
+	wmi_debug("synch frame payload: LEN bcn:%d, req:%d, rsp:%d",
+		  synch_frame_event->bcn_probe_rsp_len,
+		  synch_frame_event->reassoc_req_len,
+		  synch_frame_event->reassoc_rsp_len);
 
 	if (synch_frame_event->bcn_probe_rsp_len) {
 		roam_sync_frame_ind->bcn_probe_rsp_len =
@@ -3987,6 +4002,10 @@ wmi_fill_rso_start_scan_tlv(struct wlan_roam_scan_offload_params *rso_req,
 	scan_tlv->idle_time = src_scan_params->idle_time;
 	scan_tlv->n_probes = src_scan_params->n_probes;
 	scan_tlv->scan_ctrl_flags |= src_scan_params->scan_ctrl_flags;
+	scan_tlv->dwell_time_active_6ghz =
+		src_scan_params->dwell_time_active_6ghz;
+	scan_tlv->dwell_time_passive_6ghz =
+		src_scan_params->dwell_time_passive_6ghz;
 
 	WMI_SCAN_SET_DWELL_MODE(scan_tlv->scan_ctrl_flags,
 				src_scan_params->rso_adaptive_dwell_mode);
@@ -3999,8 +4018,10 @@ wmi_fill_rso_start_scan_tlv(struct wlan_roam_scan_offload_params *rso_req,
 		scan_tlv->scan_ctrl_flags_ext |=
 			WMI_SCAN_DBS_POLICY_DEFAULT;
 
-	wmi_debug("RSO_CFG: dwell time: active %d passive %d, minrest %d max rest %d repeat probe time %d probe_spacing:%d",
+	wmi_debug("RSO_CFG: dwell time: active %d passive %d, active 6g %d passive 6g %d, minrest %d max rest %d repeat probe time %d probe_spacing:%d",
 		  scan_tlv->dwell_time_active, scan_tlv->dwell_time_passive,
+		  scan_tlv->dwell_time_active_6ghz,
+		  scan_tlv->dwell_time_passive_6ghz,
 		  scan_tlv->min_rest_time, scan_tlv->max_rest_time,
 		  scan_tlv->repeat_probe_time, scan_tlv->probe_spacing_time);
 	wmi_debug("RSO_CFG: ctrl_flags:0x%x probe_delay:%d max_scan_time:%d idle_time:%d n_probes:%d",

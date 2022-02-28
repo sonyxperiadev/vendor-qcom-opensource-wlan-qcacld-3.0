@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2765,4 +2765,30 @@ void lim_process_tpe_ie_from_beacon(struct mac_context *mac,
  * Return: void
  */
 void lim_send_conc_params_update(void);
+
+/**
+ * lim_is_self_and_peer_ocv_capable() - check whether OCV capable
+ * @mac:        pointer to mac data
+ * @pe_session: pointer to pe session
+.* @peer:       peer mac address
+ *
+ * Return: true if both self and peer ocv capable
+ */
+bool
+lim_is_self_and_peer_ocv_capable(struct mac_context *mac,
+				 uint8_t *peer,
+				 struct pe_session *pe_session);
+
+/**
+ * lim_fill_oci_params() - fill oci parameters
+ * @mac:        pointer to mac data
+ * @session: pointer to pe session
+.* @oci:       pointer of tDot11fIEoci
+ *
+ * Return: void
+ */
+void
+lim_fill_oci_params(struct mac_context *mac, struct pe_session *session,
+		    tDot11fIEoci *oci);
+
 #endif /* __LIM_UTILS_H */

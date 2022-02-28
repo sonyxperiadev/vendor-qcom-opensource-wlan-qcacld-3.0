@@ -1226,6 +1226,8 @@ struct hdd_context;
  * @vdev_id: Unique identifier assigned to the vdev
  * @event_flags: a bitmap of hdd_adapter_flags
  * @mic_work: mic work information
+ * @enable_dynamic_tsf_sync: Enable/Disable TSF sync through NL interface
+ * @dynamic_tsf_sync_interval: TSF sync interval configure through NL interface
  * @gpio_tsf_sync_work: work to sync send TSF CAP WMI command
  * @cache_sta_count: number of currently cached stations
  * @acs_complete_event: acs complete event
@@ -1393,6 +1395,8 @@ struct hdd_adapter {
 	/* spin lock for read/write timestamps */
 	qdf_spinlock_t host_target_sync_lock;
 	qdf_mc_timer_t host_target_sync_timer;
+	bool enable_dynamic_tsf_sync;
+	uint32_t dynamic_tsf_sync_interval;
 	uint64_t cur_host_time;
 	uint64_t last_host_time;
 	uint64_t last_target_time;
@@ -2021,6 +2025,9 @@ struct hdd_context {
 	/* Flag keeps track of wiphy suspend/resume */
 	bool is_wiphy_suspended;
 
+	/* Flag keeps track of idle shutdown triggered by suspend */
+	bool shutdown_in_suspend;
+
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
 	struct qdf_periodic_work bus_bw_work;
 	int cur_vote_level;
@@ -2061,6 +2068,9 @@ struct hdd_context {
 	uint16_t unsafe_channel_count;
 	uint16_t unsafe_channel_list[NUM_CHANNELS];
 #endif /* FEATURE_WLAN_CH_AVOID */
+#ifdef FEATURE_WLAN_CH_AVOID_EXT
+	uint32_t restriction_mask;
+#endif
 
 	uint8_t max_intf_count;
 #ifdef WLAN_FEATURE_LPSS
@@ -2317,6 +2327,9 @@ struct hdd_context {
 
 #ifdef WLAN_FEATURE_DYNAMIC_MAC_ADDR_UPDATE
 	bool is_vdev_macaddr_dynamic_update_supported;
+#endif
+#ifdef CONFIG_WLAN_FREQ_LIST
+	uint8_t power_type;
 #endif
 };
 
@@ -3466,6 +3479,44 @@ void hdd_acs_response_timeout_handler(void *context);
  * Return: Status of ACS Start procedure
  */
 int wlan_hdd_cfg80211_start_acs(struct hdd_adapter *adapter);
+
+/**
+ * wlan_hdd_trim_acs_channel_list() - Trims ACS channel list with
+ * intersection of PCL
+ * @pcl: preferred channel list
+ * @pcl_count: Preferred channel list count
+ * @org_ch_list: ACS channel list from user space
+ * @org_ch_list_count: ACS channel count from user space
+ *
+ * Return: None
+ */
+void wlan_hdd_trim_acs_channel_list(uint32_t *pcl, uint8_t pcl_count,
+				    uint32_t *org_freq_list,
+				    uint8_t *org_ch_list_count);
+
+/**
+ * wlan_hdd_handle_zero_acs_list() - Handle worst case of acs channel
+ * trimmed to zero
+ * @hdd_ctx: struct hdd_context
+ * @org_ch_list: ACS channel list from user space
+ * @org_ch_list_count: ACS channel count from user space
+ *
+ * When all chan in ACS freq list is filtered out
+ * by wlan_hdd_trim_acs_channel_list, the hostapd start will fail.
+ * This happens when PCL is PM_24G_SCC_CH_SBS_CH, and SAP acs range includes
+ * 5G channel list. One example is STA active on 6Ghz chan. Hostapd
+ * start SAP on 5G ACS range. The intersection of PCL and ACS range is zero.
+ * Instead of ACS failure, this API selects one channel from ACS range
+ * and report to Hostapd. When hostapd do start_ap, the driver will
+ * force SCC to 6G or move SAP to 2G based on SAP's configuration.
+ *
+ * Return: None
+ */
+void wlan_hdd_handle_zero_acs_list(struct hdd_context *hdd_ctx,
+				   uint32_t *acs_freq_list,
+				   uint8_t *acs_ch_list_count,
+				   uint32_t *org_freq_list,
+				   uint8_t org_ch_list_count);
 
 /**
  * hdd_cfg80211_update_acs_config() - update acs config to application
@@ -5173,6 +5224,15 @@ int hdd_dynamic_mac_address_set(struct hdd_context *hdd_ctx,
 				struct hdd_adapter *adapter,
 				struct qdf_mac_addr mac_addr);
 
+/**
+ * hdd_is_dynamic_set_mac_addr_allowed() - API to check dynamic MAC address
+ *				           update is allowed or not
+ * @adapter: Pointer to the adapter structure
+ *
+ * Return: true or false
+ */
+bool hdd_is_dynamic_set_mac_addr_allowed(struct hdd_adapter *adapter);
+
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(CFG80211_11BE_BASIC)
 /**
  * hdd_update_vdev_mac_address() - Update VDEV MAC address dynamically
@@ -5209,6 +5269,13 @@ static inline int hdd_dynamic_mac_address_set(struct hdd_context *hdd_ctx,
 {
 	return 0;
 }
+
+static inline bool
+hdd_is_dynamic_set_mac_addr_allowed(struct hdd_adapter *adapter)
+{
+	return false;
+}
+
 #endif /* WLAN_FEATURE_DYNAMIC_MAC_ADDR_UPDATE */
 
 #ifdef FEATURE_WLAN_FULL_POWER_DOWN_SUPPORT
@@ -5227,4 +5294,12 @@ static inline int hdd_set_suspend_mode(struct hdd_context *hdd_ctx)
 	return 0;
 }
 #endif
+/*
+ * hdd_shutdown_wlan_in_suspend: shutdown wlan chip when suspend called
+ * @hdd_ctx: HDD context
+ *
+ * this function called by __wlan_hdd_cfg80211_suspend_wlan(), and it
+ * schedule idle shutdown work queue when no interface open.
+ */
+void hdd_shutdown_wlan_in_suspend(struct hdd_context *hdd_ctx);
 #endif /* end #if !defined(WLAN_HDD_MAIN_H) */

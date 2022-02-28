@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -851,6 +851,7 @@ void pld_lock_pm_sem(struct device *dev);
 void pld_release_pm_sem(struct device *dev);
 void pld_lock_reg_window(struct device *dev, unsigned long *flags);
 void pld_unlock_reg_window(struct device *dev, unsigned long *flags);
+int pld_get_pci_slot(struct device *dev);
 int pld_power_on(struct device *dev);
 int pld_power_off(struct device *dev);
 int pld_athdiag_read(struct device *dev, uint32_t offset, uint32_t memtype,
@@ -1212,6 +1213,11 @@ static inline int pfrm_write_config_dword(struct pci_dev *pdev, int offset,
 					  uint32_t val)
 {
 	return pld_pci_write_config_dword(pdev, offset, val);
+}
+
+static inline bool pld_get_enable_intx(struct device *dev)
+{
+	return false;
 }
 
 #endif

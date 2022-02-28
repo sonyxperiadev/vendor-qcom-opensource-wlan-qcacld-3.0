@@ -2895,7 +2895,7 @@ static void lim_update_qos(struct mac_context *mac_ctx,
 		 session->limWmeEnabled);
 }
 
-static QDF_STATUS
+QDF_STATUS
 lim_fill_pe_session(struct mac_context *mac_ctx, struct pe_session *session,
 		    struct bss_description *bss_desc)
 {
@@ -3841,6 +3841,7 @@ lim_fill_session_params(struct mac_context *mac_ctx,
 	struct join_req *pe_join_req;
 	int32_t akm;
 	struct mlme_legacy_priv *mlme_priv;
+	uint32_t assoc_ie_len;
 
 	ie_len = util_scan_entry_ie_len(req->entry);
 	bss_len = (uint16_t)(offsetof(struct bss_description,
@@ -3896,12 +3897,19 @@ lim_fill_session_params(struct mac_context *mac_ctx,
 	if (req->assoc_ie.len)
 		QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
 				   req->assoc_ie.ptr, req->assoc_ie.len);
+
+	assoc_ie_len = req->assoc_ie.len;
 	lim_fill_crypto_params(mac_ctx, session, req);
 
-	pe_debug("After stripping Assoc IE len: %d", req->assoc_ie.len);
-	if (req->assoc_ie.len)
-		QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-				   req->assoc_ie.ptr, req->assoc_ie.len);
+	if (assoc_ie_len != req->assoc_ie.len) {
+		pe_debug("After stripping Assoc IE len: %d", req->assoc_ie.len);
+		if (req->assoc_ie.len)
+			QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE,
+					   QDF_TRACE_LEVEL_DEBUG,
+					   req->assoc_ie.ptr,
+					   req->assoc_ie.len);
+	}
+
 	qdf_mem_copy(pe_join_req->addIEAssoc.addIEdata,
 		     req->assoc_ie.ptr, req->assoc_ie.len);
 	/* update assoc ie to cm */
@@ -4023,8 +4031,8 @@ lim_cm_handle_join_req(struct cm_vdev_join_req *req)
 		       pe_session->vdev_id);
 		goto fail;
 	}
-	if (wlan_vdev_mlme_is_mlo_vdev(pe_session->vdev) &&
-	    !wlan_vdev_mlme_is_mlo_link_vdev(pe_session->vdev))
+
+	if (!wlan_vdev_mlme_is_mlo_link_vdev(pe_session->vdev))
 		lim_send_mlo_caps_ie(mac_ctx, pe_session,
 				     QDF_STA_MODE,
 				     pe_session->vdev_id);
@@ -4162,7 +4170,8 @@ static void lim_process_nb_disconnect_req(struct mac_context *mac_ctx,
 		break;
 	default:
 		/* Set reason REASON_UNSPEC_FAILURE for prop disassoc */
-		if (reason_code >= REASON_PROP_START)
+		if (reason_code >= REASON_PROP_START &&
+		    reason_code != REASON_FW_TRIGGERED_ROAM_FAILURE)
 			req->req.reason_code = REASON_UNSPEC_FAILURE;
 		lim_prepare_and_send_disassoc(mac_ctx, pe_session, req);
 	}
@@ -4435,6 +4444,17 @@ static void lim_handle_reassoc_req(struct cm_vdev_join_req *req)
 		lim_fill_wpa_ie(mac_ctx, session_entry, req);
 	else if (lim_is_wapi_profile(session_entry))
 		lim_fill_wapi_ie(mac_ctx, session_entry, req);
+
+	if (lim_is_rsn_profile(session_entry) &&
+	    !util_scan_entry_rsnxe(req->entry)) {
+		pe_debug("Bss bcn has no RSNXE, strip if has");
+		status = lim_strip_ie(mac_ctx, req->assoc_ie.ptr,
+				      (uint16_t *)&req->assoc_ie.len,
+				      WLAN_ELEMID_RSNXE, ONE_BYTE,
+				      NULL, 0, NULL, 0);
+		if (QDF_IS_STATUS_ERROR(status))
+			pe_err("Strip RNSXE failed");
+	}
 
 	pe_debug("After stripping Assoc IE len: %d", req->assoc_ie.len);
 	if (req->assoc_ie.len)

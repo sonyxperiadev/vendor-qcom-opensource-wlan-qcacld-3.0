@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -220,10 +221,13 @@ void lim_update_he_bw_cap_mcs(struct pe_session *session,
 			      tSirProbeRespBeacon *beacon)
 {
 	uint8_t is_80mhz;
+	uint8_t sta_prefer_80mhz_over_160mhz;
 
 	if (!session->he_capable)
 		return;
 
+	sta_prefer_80mhz_over_160mhz =
+		session->mac_ctx->mlme_cfg->sta.sta_prefer_80mhz_over_160mhz;
 	if ((session->opmode == QDF_STA_MODE ||
 	     session->opmode == QDF_P2P_CLIENT_MODE) &&
 	    beacon && beacon->he_cap.present) {
@@ -237,6 +241,13 @@ void lim_update_he_bw_cap_mcs(struct pe_session *session,
 			is_80mhz = 1;
 			if (session->ch_width == CH_WIDTH_160MHZ) {
 				pe_debug("HE160 Rx/Tx MCS is not valid, falling back to 80MHz");
+				session->ch_width = CH_WIDTH_80MHZ;
+			}
+		} else if (sta_prefer_80mhz_over_160mhz ==
+				STA_PREFER_BW_80MHZ) {
+			is_80mhz = 1;
+			if (session->ch_width == CH_WIDTH_160MHZ) {
+				pe_debug("STA prferred HE80 over HE160, falling back to 80MHz");
 				session->ch_width = CH_WIDTH_80MHZ;
 			}
 		} else {
@@ -482,6 +493,7 @@ void lim_extract_ap_capability(struct mac_context *mac_ctx, uint8_t *p_ie,
 	uint8_t chan_center_freq_seg1;
 	tDot11fIEVHTCaps *vht_caps;
 	uint8_t channel = 0;
+	uint8_t sta_prefer_80mhz_over_160mhz;
 	struct mlme_vht_capabilities_info *mlme_vht_cap;
 
 	beacon_struct = qdf_mem_malloc(sizeof(tSirProbeRespBeacon));
@@ -490,6 +502,8 @@ void lim_extract_ap_capability(struct mac_context *mac_ctx, uint8_t *p_ie,
 
 	*qos_cap = 0;
 	*uapsd = 0;
+	sta_prefer_80mhz_over_160mhz =
+		session->mac_ctx->mlme_cfg->sta.sta_prefer_80mhz_over_160mhz;
 
 	if (sir_parse_beacon_ie(mac_ctx, beacon_struct, p_ie,
 		(uint32_t) ie_len) != QDF_STATUS_SUCCESS) {
@@ -597,11 +611,13 @@ void lim_extract_ap_capability(struct mac_context *mac_ctx, uint8_t *p_ie,
 		 * AP supports Nss > 1 in 160MHz mode then connect the STA
 		 * in 2x2 80MHz mode instead of connecting in 160MHz mode.
 		 */
-		if ((vht_ch_wd > WNI_CFG_VHT_CHANNEL_WIDTH_80MHZ) &&
-		    mac_ctx->mlme_cfg->sta.sta_prefer_80mhz_over_160mhz) {
-			if (!(IS_VHT_NSS_1x1(beacon_struct->VHTCaps.txMCSMap))
-					&&
-			   (!IS_VHT_NSS_1x1(beacon_struct->VHTCaps.rxMCSMap)))
+		if (vht_ch_wd > WNI_CFG_VHT_CHANNEL_WIDTH_80MHZ) {
+			if (sta_prefer_80mhz_over_160mhz == STA_PREFER_BW_80MHZ)
+				vht_ch_wd = WNI_CFG_VHT_CHANNEL_WIDTH_80MHZ;
+			else if ((sta_prefer_80mhz_over_160mhz ==
+						STA_PREFER_BW_VHT80MHZ) &&
+			  (!(IS_VHT_NSS_1x1(beacon_struct->VHTCaps.txMCSMap)) &&
+			    (!IS_VHT_NSS_1x1(beacon_struct->VHTCaps.rxMCSMap))))
 				vht_ch_wd = WNI_CFG_VHT_CHANNEL_WIDTH_80MHZ;
 		}
 		/*
