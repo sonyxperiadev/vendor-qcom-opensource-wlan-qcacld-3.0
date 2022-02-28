@@ -137,7 +137,6 @@ void hdd_mlo_close_adapter(struct hdd_adapter *link_adapter, bool rtnl_held)
 		rtnl_unlock();
 
 	cfg80211_unregister_wdev(&link_adapter->wdev);
-	link_adapter->dev->reg_state = NETREG_UNREGISTERED;
 	free_netdev(link_adapter->dev);
 
 	if (rtnl_held)
