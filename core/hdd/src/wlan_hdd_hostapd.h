@@ -87,13 +87,14 @@ void hdd_stop_sap_set_tx_power(struct wlan_objmgr_psoc *psoc,
  *
  * Invokes the necessary API to perform channel switch for the SAP or GO
  *
- * Return: None
+ * Return: QDF_STATUS_SUCCESS if successfully
  */
-void hdd_sap_restart_with_channel_switch(struct wlan_objmgr_psoc *psoc,
-					 struct hdd_adapter *adapter,
-					 uint32_t target_chan_freq,
-					 uint32_t target_bw,
-					 bool forced);
+QDF_STATUS hdd_sap_restart_with_channel_switch(struct wlan_objmgr_psoc *psoc,
+					       struct hdd_adapter *ap_adapter,
+					       uint32_t target_chan_freq,
+					       uint32_t target_bw,
+					       bool forced);
+
 /**
  * hdd_sap_restart_chan_switch_cb() - Function to restart SAP with
  * a different channel
@@ -104,13 +105,12 @@ void hdd_sap_restart_with_channel_switch(struct wlan_objmgr_psoc *psoc,
  *
  * This function restarts SAP with a different channel
  *
- * Return: None
+ * Return: QDF_STATUS_SUCCESS if successfully
  *
  */
-void hdd_sap_restart_chan_switch_cb(struct wlan_objmgr_psoc *psoc,
-				    uint8_t vdev_id, uint32_t ch_freq,
-				    uint32_t channel_bw,
-				    bool forced);
+QDF_STATUS hdd_sap_restart_chan_switch_cb(struct wlan_objmgr_psoc *psoc,
+					  uint8_t vdev_id, uint32_t ch_freq,
+					  uint32_t channel_bw, bool forced);
 /**
  * wlan_hdd_get_channel_for_sap_restart() - Function to get
  * suitable channel and restart SAP

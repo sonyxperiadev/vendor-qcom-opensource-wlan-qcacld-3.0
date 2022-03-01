@@ -3562,10 +3562,10 @@ void hdd_switch_sap_channel(struct hdd_adapter *adapter, uint8_t channel,
  * Moves the SAP interface by invoking the function which
  * executes the callback to perform channel switch using (E)CSA.
  *
- * Return: None
+ * Return: QDF_STATUS_SUCCESS if successfully
  */
-void hdd_switch_sap_chan_freq(struct hdd_adapter *adapter, qdf_freq_t chan_freq,
-			      bool forced);
+QDF_STATUS hdd_switch_sap_chan_freq(struct hdd_adapter *adapter,
+				    qdf_freq_t chan_freq, bool forced);
 
 #if defined(FEATURE_WLAN_CH_AVOID)
 void hdd_unsafe_channel_restart_sap(struct hdd_context *hdd_ctx);

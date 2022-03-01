@@ -688,17 +688,18 @@ QDF_STATUS policy_mgr_change_mcc_go_beacon_interval(
  *
  * Invoke the callback function to change SAP channel using (E)CSA
  *
- * Return: None
+ * Return: QDF_STATUS_SUCCESS on success
  */
-void policy_mgr_change_sap_channel_with_csa(struct wlan_objmgr_psoc *psoc,
-					    uint8_t vdev_id, uint32_t ch_freq,
-					    uint32_t ch_width, bool forced);
+QDF_STATUS
+policy_mgr_change_sap_channel_with_csa(struct wlan_objmgr_psoc *psoc,
+				       uint8_t vdev_id, uint32_t ch_freq,
+				       uint32_t ch_width, bool forced);
 
 #else
-static inline void policy_mgr_change_sap_channel_with_csa(
-		struct wlan_objmgr_psoc *psoc,
-		uint8_t vdev_id, uint32_t ch_freq,
-		uint32_t ch_width, bool forced)
+static inline QDF_STATUS
+policy_mgr_change_sap_channel_with_csa(struct wlan_objmgr_psoc *psoc,
+				       uint8_t vdev_id, uint32_t ch_freq,
+				       uint32_t ch_width, bool forced)
 {
 
 }
@@ -1716,10 +1717,11 @@ struct policy_mgr_sme_cbacks {
  * @wlan_get_sap_acs_band: get acs band from sap config
  */
 struct policy_mgr_hdd_cbacks {
-	void (*sap_restart_chan_switch_cb)(struct wlan_objmgr_psoc *psoc,
-				uint8_t vdev_id, uint32_t ch_freq,
-				uint32_t channel_bw,
-				bool forced);
+	QDF_STATUS (*sap_restart_chan_switch_cb)(struct wlan_objmgr_psoc *psoc,
+						 uint8_t vdev_id,
+						 uint32_t ch_freq,
+						 uint32_t channel_bw,
+						 bool forced);
 	QDF_STATUS (*wlan_hdd_get_channel_for_sap_restart)(
 				struct wlan_objmgr_psoc *psoc,
 				uint8_t vdev_id, uint32_t *ch_freq);

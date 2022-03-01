@@ -12016,28 +12016,30 @@ void hdd_switch_sap_channel(struct hdd_adapter *adapter, uint8_t channel,
 		hdd_ap_ctx->sap_config.ch_width_orig, forced);
 }
 
-void hdd_switch_sap_chan_freq(struct hdd_adapter *adapter, qdf_freq_t chan_freq,
-			      bool forced)
+QDF_STATUS hdd_switch_sap_chan_freq(struct hdd_adapter *adapter,
+				    qdf_freq_t chan_freq, bool forced)
 {
 	struct hdd_ap_ctx *hdd_ap_ctx;
 	struct hdd_context *hdd_ctx;
 
 	if (hdd_validate_adapter(adapter))
-		return;
+		return QDF_STATUS_E_INVAL;
 
 	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 
 	if(wlan_hdd_validate_context(hdd_ctx))
-		return;
+		return QDF_STATUS_E_INVAL;
 
 	hdd_ap_ctx = WLAN_HDD_GET_AP_CTX_PTR(adapter);
 
 	hdd_debug("chan freq:%d width:%d",
 		  chan_freq, hdd_ap_ctx->sap_config.ch_width_orig);
 
-	policy_mgr_change_sap_channel_with_csa(
-		hdd_ctx->psoc, adapter->vdev_id, chan_freq,
-		hdd_ap_ctx->sap_config.ch_width_orig, forced);
+	return policy_mgr_change_sap_channel_with_csa(hdd_ctx->psoc,
+						      adapter->vdev_id,
+						      chan_freq,
+						      hdd_ap_ctx->sap_config.ch_width_orig,
+						      forced);
 }
 
 int hdd_update_acs_timer_reason(struct hdd_adapter *adapter, uint8_t reason)
@@ -12238,43 +12240,47 @@ void hdd_unsafe_channel_restart_sap(struct hdd_context *hdd_ctxt)
 						    adapter->vdev_id,
 						    CSA_REASON_UNSAFE_CHANNEL);
 			hdd_err("Unable to find safe chan, Stop the SAP if restriction mask is set else stop SAP");
-				hdd_stop_sap_set_tx_power(hdd_ctxt->psoc,
-							  adapter);
+			hdd_stop_sap_set_tx_power(hdd_ctxt->psoc, adapter);
+			hdd_adapter_dev_put_debug(adapter, dbgid);
+			continue;
+		}
+		/*
+		 * SAP restart due to unsafe channel. While
+		 * restarting the SAP, make sure to clear
+		 * acs_channel, channel to reset to
+		 * 0. Otherwise these settings will override
+		 * the ACS while restart.
+		 */
+		hdd_ctxt->acs_policy.acs_chan_freq =
+					AUTO_CHANNEL_SELECT;
+		ucfg_mlme_get_sap_internal_restart(hdd_ctxt->psoc,
+						   &value);
+		if (value) {
+			wlan_hdd_set_sap_csa_reason(hdd_ctxt->psoc,
+						    adapter->vdev_id,
+						    CSA_REASON_UNSAFE_CHANNEL);
+			status = hdd_switch_sap_chan_freq(adapter,
+							  restart_freq,
+							  true);
+			if (QDF_IS_STATUS_SUCCESS(status)) {
+				hdd_adapter_dev_put_debug(adapter, dbgid);
+				if (next_adapter)
+					hdd_adapter_dev_put_debug(next_adapter,
+								  dbgid);
+				return;
+			} else {
+				hdd_debug("CSA failed, check next SAP");
+			}
 		} else {
-			/*
-			 * SAP restart due to unsafe channel. While
-			 * restarting the SAP, make sure to clear
-			 * acs_channel, channel to reset to
-			 * 0. Otherwise these settings will override
-			 * the ACS while restart.
-			 */
-			hdd_ctxt->acs_policy.acs_chan_freq =
-						AUTO_CHANNEL_SELECT;
-			ucfg_mlme_get_sap_internal_restart(hdd_ctxt->psoc,
-							   &value);
-			if (value) {
-				wlan_hdd_set_sap_csa_reason(hdd_ctxt->psoc,
-						adapter->vdev_id,
-						CSA_REASON_UNSAFE_CHANNEL);
-				hdd_switch_sap_chan_freq(adapter, restart_freq,
-							 true);
-				hdd_adapter_dev_put_debug(adapter, dbgid);
-				if (next_adapter)
-					hdd_adapter_dev_put_debug(next_adapter,
-								  dbgid);
-				return;
-			}
-			else {
-				hdd_debug("sending coex indication");
-				wlan_hdd_send_svc_nlink_msg(
-						hdd_ctxt->radio_index,
-						WLAN_SVC_LTE_COEX_IND, NULL, 0);
-				hdd_adapter_dev_put_debug(adapter, dbgid);
-				if (next_adapter)
-					hdd_adapter_dev_put_debug(next_adapter,
-								  dbgid);
-				return;
-			}
+			hdd_debug("sending coex indication");
+			wlan_hdd_send_svc_nlink_msg(
+					hdd_ctxt->radio_index,
+					WLAN_SVC_LTE_COEX_IND, NULL, 0);
+			hdd_adapter_dev_put_debug(adapter, dbgid);
+			if (next_adapter)
+				hdd_adapter_dev_put_debug(next_adapter,
+							  dbgid);
+			return;
 		}
 		/* dev_put has to be done here */
 		hdd_adapter_dev_put_debug(adapter, dbgid);
