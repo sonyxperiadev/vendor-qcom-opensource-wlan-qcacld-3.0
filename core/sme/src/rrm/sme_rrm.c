@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -441,7 +442,6 @@ static QDF_STATUS sme_rrm_send_scan_result(struct mac_context *mac_ctx,
 					   uint32_t *freq_list,
 					   uint8_t measurementdone)
 {
-	mac_handle_t mac_handle = MAC_HANDLE(mac_ctx);
 	struct scan_filter *filter;
 	tScanResultHandle result_handle;
 	tCsrScanResultInfo *scan_results, *next_result;
@@ -507,8 +507,7 @@ static QDF_STATUS sme_rrm_send_scan_result(struct mac_context *mac_ctx,
 		sme_debug("BSSID mismatch, using current session_id");
 		session_id = mac_ctx->roam.roamSession->vdev_id;
 	}
-	status = sme_scan_get_result(mac_handle, (uint8_t)session_id,
-				     filter, &result_handle);
+	status = csr_scan_get_result(mac_ctx, filter, &result_handle);
 	qdf_mem_free(filter);
 
 	sme_debug("RRM Measurement Done %d for index:%d",
@@ -542,7 +541,7 @@ static QDF_STATUS sme_rrm_send_scan_result(struct mac_context *mac_ctx,
 							measurementdone, 0);
 		return status;
 	}
-	scan_results = sme_scan_result_get_first(mac_handle, result_handle);
+	scan_results = csr_scan_result_get_first(mac_ctx, result_handle);
 	if (!scan_results && measurementdone) {
 #ifdef FEATURE_WLAN_ESE
 		if (eRRM_MSG_SOURCE_ESE_UPLOAD == rrm_ctx->msgSource) {
@@ -614,7 +613,7 @@ static QDF_STATUS sme_rrm_send_scan_result(struct mac_context *mac_ctx,
 				sme_debug("Non Tx BSS of Conn AP in results");
 			}
 		}
-		next_result = sme_scan_result_get_next(mac_handle,
+		next_result = csr_scan_result_get_next(mac_ctx,
 						       result_handle);
 		sme_debug("Scan res timer:%lu, rrm scan timer:%llu",
 				scan_results->timer, rrm_scan_timer);
@@ -653,7 +652,7 @@ static QDF_STATUS sme_rrm_send_scan_result(struct mac_context *mac_ctx,
 rrm_send_scan_results_done:
 	if (scanresults_arr)
 		qdf_mem_free(scanresults_arr);
-	sme_scan_result_purge(result_handle);
+	csr_scan_result_purge(mac_ctx, result_handle);
 
 	return status;
 }

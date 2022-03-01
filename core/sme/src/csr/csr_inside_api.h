@@ -254,12 +254,16 @@ QDF_STATUS csr_scan_get_result_for_bssid(struct mac_context *mac_ctx,
 					 struct qdf_mac_addr *bssid,
 					 tCsrScanResultInfo *res);
 
-/*
- * csr_scan_filter_results() -
- *  Filter scan results based on valid channel list.
+/**
+ * csr_scan_filter_results: filter scan result based
+ * on valid channel list number.
+ * @mac_ctx: mac context
  *
- * mac - Pointer to Global MAC structure
- * Return QDF_STATUS
+ * Get scan result from scan list and Check Scan result channel number
+ * with 11d channel list if channel number is found in 11d channel list
+ * then do not remove scan result entry from scan list
+ *
+ * return: QDF Status
  */
 QDF_STATUS csr_scan_filter_results(struct mac_context *mac);
 
@@ -587,19 +591,6 @@ void
 csr_roam_prepare_bss_params(struct mac_context *mac_ctx, uint32_t session_id,
 			    struct csr_roam_profile *profile,
 			    struct bss_config_param *bss_cfg);
-
-/**
- * csr_remove_bssid_from_scan_list() - remove the bssid from
- * scan list
- * @mac_tx: mac context.
- * @bssid: bssid to be removed
- *
- * This function remove the given bssid from scan list.
- *
- * Return: void.
- */
-void csr_remove_bssid_from_scan_list(struct mac_context *mac_ctx,
-				     tSirMacAddr bssid);
 
 #ifndef SAP_CP_CLEANUP
 QDF_STATUS

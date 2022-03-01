@@ -479,8 +479,6 @@ csr_get_vdev_dot11_mode(struct mac_context *mac,
 
 QDF_STATUS csr_get_channel_and_power_list(struct mac_context *mac);
 
-QDF_STATUS csr_scan_filter_results(struct mac_context *mac);
-
 QDF_STATUS csr_set_modify_profile_fields(struct mac_context *mac,
 		uint32_t sessionId, tCsrRoamModifyProfileFields *
 		pModifyProfileFields);

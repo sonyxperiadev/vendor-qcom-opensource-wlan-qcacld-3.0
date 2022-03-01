@@ -281,19 +281,6 @@ static QDF_STATUS sme_process_hw_mode_trans_ind(struct mac_context *mac,
 	return QDF_STATUS_SUCCESS;
 }
 
-void sme_purge_pdev_all_ser_cmd_list(mac_handle_t mac_handle)
-{
-	QDF_STATUS status;
-	struct mac_context *mac_ctx = MAC_CONTEXT(mac_handle);
-
-	status = sme_acquire_global_lock(&mac_ctx->sme);
-	if (QDF_IS_STATUS_ERROR(status))
-		return;
-
-	csr_purge_pdev_all_ser_cmd_list(mac_ctx);
-	sme_release_global_lock(&mac_ctx->sme);
-}
-
 /**
  * free_sme_cmds() - This function frees memory allocated for SME commands
  * @mac_ctx:      Pointer to Global MAC structure
@@ -3102,147 +3089,6 @@ QDF_STATUS sme_close(mac_handle_t mac_handle)
 	mac->sme.state = SME_STATE_STOP;
 
 	return fail_status;
-}
-
-/**
- * sme_remove_bssid_from_scan_list() - wrapper to remove the bssid from
- * scan list
- * @mac_handle: Opaque handle to the global MAC context.
- * @bssid: bssid to be removed
- *
- * This function remove the given bssid from scan list.
- *
- * Return: QDF status.
- */
-QDF_STATUS sme_remove_bssid_from_scan_list(mac_handle_t mac_handle,
-					   tSirMacAddr bssid)
-{
-	QDF_STATUS status = QDF_STATUS_E_FAILURE;
-	struct mac_context *mac_ctx = MAC_CONTEXT(mac_handle);
-
-	status = sme_acquire_global_lock(&mac_ctx->sme);
-	if (QDF_IS_STATUS_SUCCESS(status)) {
-		csr_remove_bssid_from_scan_list(mac_ctx, bssid);
-		sme_release_global_lock(&mac_ctx->sme);
-	}
-
-	return status;
-}
-
-QDF_STATUS sme_scan_get_result(mac_handle_t mac_handle, uint8_t vdev_id,
-			       struct scan_filter *filter,
-			       tScanResultHandle *phResult)
-{
-	QDF_STATUS status = QDF_STATUS_E_FAILURE;
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-
-	MTRACE(qdf_trace(QDF_MODULE_ID_SME,
-			 TRACE_CODE_SME_RX_HDD_MSG_SCAN_GET_RESULTS, vdev_id,
-			 0));
-	status = sme_acquire_global_lock(&mac->sme);
-	if (QDF_IS_STATUS_SUCCESS(status)) {
-		status = csr_scan_get_result(mac, filter, phResult);
-		sme_release_global_lock(&mac->sme);
-	}
-
-	return status;
-}
-
-QDF_STATUS sme_scan_get_result_for_bssid(mac_handle_t mac_handle,
-					 struct qdf_mac_addr *bssid,
-					 tCsrScanResultInfo *res)
-{
-	struct mac_context *mac_ctx = MAC_CONTEXT(mac_handle);
-	QDF_STATUS status;
-
-	status = sme_acquire_global_lock(&mac_ctx->sme);
-	if (QDF_IS_STATUS_SUCCESS(status)) {
-		status = csr_scan_get_result_for_bssid(mac_ctx, bssid, res);
-		sme_release_global_lock(&mac_ctx->sme);
-	}
-
-	return status;
-}
-
-/*
- * sme_scan_result_get_first() -
- * A wrapper function to request CSR to returns the first element of
- * scan result.
- * This is a synchronous call
- *
- * hScanResult - returned from csr_scan_get_result
- * Return tCsrScanResultInfo * - NULL if no result
- */
-tCsrScanResultInfo *sme_scan_result_get_first(mac_handle_t mac_handle,
-					      tScanResultHandle hScanResult)
-{
-	QDF_STATUS status = QDF_STATUS_E_FAILURE;
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-	tCsrScanResultInfo *pRet = NULL;
-
-	MTRACE(qdf_trace(QDF_MODULE_ID_SME,
-			 TRACE_CODE_SME_RX_HDD_MSG_SCAN_RESULT_GETFIRST,
-			 NO_SESSION, 0));
-	status = sme_acquire_global_lock(&mac->sme);
-	if (QDF_IS_STATUS_SUCCESS(status)) {
-		pRet = csr_scan_result_get_first(mac, hScanResult);
-		sme_release_global_lock(&mac->sme);
-	}
-
-	return pRet;
-}
-
-/*
- * sme_scan_result_get_next() -
- * A wrapper function to request CSR to returns the next element of
- * scan result. It can be called without calling csr_scan_result_get_first first
- *   This is a synchronous call
- *
- * hScanResult - returned from csr_scan_get_result
- * Return Null if no result or reach the end
- */
-tCsrScanResultInfo *sme_scan_result_get_next(mac_handle_t mac_handle,
-					     tScanResultHandle hScanResult)
-{
-	QDF_STATUS status = QDF_STATUS_E_FAILURE;
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-	tCsrScanResultInfo *pRet = NULL;
-
-	status = sme_acquire_global_lock(&mac->sme);
-	if (QDF_IS_STATUS_SUCCESS(status)) {
-		pRet = csr_scan_result_get_next(mac, hScanResult);
-		sme_release_global_lock(&mac->sme);
-	}
-
-	return pRet;
-}
-
-/*
- * sme_scan_result_purge() -
- * A wrapper function to request CSR to remove all items(tCsrScanResult)
- * in the list and free memory for each item
- *   This is a synchronous call
- *
- * hScanResult - returned from csr_scan_get_result. hScanResult is
- *	considered gone by
- *  calling this function and even before this function reutrns.
- * Return QDF_STATUS
- */
-QDF_STATUS sme_scan_result_purge(tScanResultHandle hScanResult)
-{
-	QDF_STATUS status = QDF_STATUS_E_FAILURE;
-	struct mac_context *mac_ctx = sme_get_mac_context();
-
-	MTRACE(qdf_trace(QDF_MODULE_ID_SME,
-			 TRACE_CODE_SME_RX_HDD_MSG_SCAN_RESULT_PURGE,
-			 NO_SESSION, 0));
-	status = sme_acquire_global_lock(&mac_ctx->sme);
-	if (QDF_IS_STATUS_SUCCESS(status)) {
-		status = csr_scan_result_purge(mac_ctx, hScanResult);
-		sme_release_global_lock(&mac_ctx->sme);
-	}
-
-	return status;
 }
 
 eCsrPhyMode sme_get_phy_mode(mac_handle_t mac_handle)
@@ -14659,6 +14505,7 @@ QDF_STATUS sme_get_bss_transition_status(mac_handle_t mac_handle,
 					 uint16_t n_candidates,
 					 bool is_bt_in_progress)
 {
+	struct mac_context *mac_ctx = MAC_CONTEXT(mac_handle);
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	struct bss_description *bss_desc, *conn_bss_desc;
 	tCsrScanResultInfo *res, *conn_res;
@@ -14680,7 +14527,7 @@ QDF_STATUS sme_get_bss_transition_status(mac_handle_t mac_handle,
 	}
 
 	/* Get the connected BSS descriptor */
-	status = sme_scan_get_result_for_bssid(mac_handle, bssid, conn_res);
+	status = csr_scan_get_result_for_bssid(mac_ctx, bssid, conn_res);
 	if (!QDF_IS_STATUS_SUCCESS(status)) {
 		sme_err("Failed to find connected BSS in scan list");
 		goto free;
@@ -14689,8 +14536,7 @@ QDF_STATUS sme_get_bss_transition_status(mac_handle_t mac_handle,
 
 	for (i = 0; i < n_candidates; i++) {
 		/* Get candidate BSS descriptors */
-		status = sme_scan_get_result_for_bssid(mac_handle,
-						       &info[i].bssid,
+		status = csr_scan_get_result_for_bssid(mac_ctx, &info[i].bssid,
 						       res);
 		if (!QDF_IS_STATUS_SUCCESS(status)) {
 			sme_err("BSS "QDF_MAC_ADDR_FMT" not present in scan list",

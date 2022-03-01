@@ -503,15 +503,6 @@ sme_register_bcn_report_pe_cb(mac_handle_t mac_handle, beacon_report_cb cb)
 QDF_STATUS sme_ser_cmd_callback(struct wlan_serialization_command *cmd,
 				enum wlan_serialization_cb_reason reason);
 
-/**
- * sme_purge_pdev_all_ser_cmd_list() - purge all scan and non-scan
- * active and pending cmds for pdev
- * @mac_handle: pointer to global MAC context
- *
- * Return : none
- */
-void sme_purge_pdev_all_ser_cmd_list(mac_handle_t mac_handle);
-
 /*
  * sme_process_msg() - The main message processor for SME.
  * @mac: The global mac context
@@ -527,24 +518,6 @@ void sme_purge_pdev_all_ser_cmd_list(mac_handle_t mac_handle);
 QDF_STATUS sme_process_msg(struct mac_context *mac, struct scheduler_msg *pMsg);
 
 QDF_STATUS sme_mc_process_handler(struct scheduler_msg *msg);
-/*
- * sme_scan_get_result() - Return scan results based on filter
- * @mac: Pointer to Global MAC structure
- * @vdev_id: vdev_id
- * @filter: If pFilter is NULL, all cached results are returned
- * @phResult: an object for the result.
- *
- * Return QDF_STATUS
- */
-QDF_STATUS sme_scan_get_result(mac_handle_t mac_handle, uint8_t vdev_id,
-			       struct scan_filter *filter,
-			       tScanResultHandle *phResult);
-
-tCsrScanResultInfo *sme_scan_result_get_first(mac_handle_t,
-		tScanResultHandle hScanResult);
-tCsrScanResultInfo *sme_scan_result_get_next(mac_handle_t,
-		tScanResultHandle hScanResult);
-QDF_STATUS sme_scan_result_purge(tScanResultHandle hScanResult);
 
 #ifndef SAP_CP_CLEANUP
 /**
@@ -2181,9 +2154,6 @@ static inline void sme_register_p2p_lo_event(mac_handle_t mac_handle,
 }
 #endif
 
-QDF_STATUS sme_remove_bssid_from_scan_list(mac_handle_t mac_handle,
-	tSirMacAddr bssid);
-
 QDF_STATUS sme_process_mac_pwr_dbg_cmd(mac_handle_t mac_handle,
 				       uint32_t session_id,
 				       struct sir_mac_pwr_dbg_cmd*
@@ -2873,19 +2843,6 @@ QDF_STATUS sme_set_he_bss_color(mac_handle_t mac_handle, uint8_t session_id,
  * Return: True if connected, false if any other state.
  */
 bool sme_is_conn_state_connected(mac_handle_t mac_handle, uint8_t session_id);
-
-/**
- * sme_scan_get_result_for_bssid - gets the scan result from scan cache for the
- * bssid specified
- * @mac_handle: handle returned by mac_open
- * @bssid: bssid to get the scan result for
- * @res: pointer to tCsrScanResultInfo allocated from caller
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS sme_scan_get_result_for_bssid(mac_handle_t mac_handle,
-					 struct qdf_mac_addr *bssid,
-					 tCsrScanResultInfo *res);
 
 /**
  * sme_get_bss_transition_status() - get bss transition status all cadidates

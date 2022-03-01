@@ -1002,62 +1002,6 @@ free_filter:
 	return status;
 }
 
-static inline QDF_STATUS
-csr_flush_scan_results(struct mac_context *mac_ctx,
-		       struct scan_filter *filter)
-{
-	struct wlan_objmgr_pdev *pdev = NULL;
-	QDF_STATUS status;
-
-	pdev = wlan_objmgr_get_pdev_by_id(mac_ctx->psoc,
-		0, WLAN_LEGACY_MAC_ID);
-	if (!pdev) {
-		sme_err("pdev is NULL");
-		return QDF_STATUS_E_INVAL;
-	}
-	status = ucfg_scan_flush_results(pdev, filter);
-
-	wlan_objmgr_pdev_release_ref(pdev, WLAN_LEGACY_MAC_ID);
-	return status;
-}
-
-static inline void csr_flush_bssid(struct mac_context *mac_ctx,
-				   uint8_t *bssid)
-{
-	struct scan_filter *filter;
-
-	filter = qdf_mem_malloc(sizeof(*filter));
-	if (!filter)
-		return;
-
-	filter->num_of_bssid = 1;
-	qdf_mem_copy(filter->bssid_list[0].bytes,
-		     bssid, QDF_MAC_ADDR_SIZE);
-
-	csr_flush_scan_results(mac_ctx, filter);
-	sme_debug("Removed BSS entry:"QDF_MAC_ADDR_FMT,
-		   QDF_MAC_ADDR_REF(bssid));
-	if (filter)
-		qdf_mem_free(filter);
-}
-
-void csr_remove_bssid_from_scan_list(struct mac_context *mac_ctx,
-				     tSirMacAddr bssid)
-{
-	csr_flush_bssid(mac_ctx, bssid);
-}
-
-/**
- * csr_scan_filter_results: filter scan result based
- * on valid channel list number.
- * @mac_ctx: mac context
- *
- * Get scan result from scan list and Check Scan result channel number
- * with 11d channel list if channel number is found in 11d channel list
- * then do not remove scan result entry from scan list
- *
- * return: QDF Status
- */
 QDF_STATUS csr_scan_filter_results(struct mac_context *mac_ctx)
 {
 	uint32_t len = mac_ctx->mlme_cfg->reg.valid_channel_list_num;
