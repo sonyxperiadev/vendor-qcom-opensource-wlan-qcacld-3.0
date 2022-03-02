@@ -804,13 +804,11 @@ struct bss_description {
 /* / issued start BSS request */
 /* / MAC ---> */
 struct start_bss_rsp {
+#ifndef SAP_CP_CLEANUP
 	uint16_t messageType;   /* eWNI_SME_START_BSS_RSP */
 	uint16_t length;
-	uint8_t sessionId;
-/* To be removed after SAP CSR cleanup changes */
-#ifdef SAP_CP_CLEANUP
-	uint32_t cmd_id;
 #endif
+	uint8_t vdev_id;
 	tSirResultCodes status_code;
 	uint32_t staId;         /* Station ID for Self */
 };

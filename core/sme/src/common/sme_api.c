@@ -2905,6 +2905,14 @@ QDF_STATUS sme_process_msg(struct mac_context *mac, struct scheduler_msg *pMsg)
 		sme_process_twt_notify_event(mac, pMsg->bodyptr);
 		qdf_mem_free(pMsg->bodyptr);
 		break;
+/* To be removed after SAP CSR cleanup changes */
+#ifdef SAP_CP_CLEANUP
+	case eWNI_SME_START_BSS_RSP:
+		csr_roam_roaming_state_start_bss_rsp_processor(mac,
+							       pMsg->bodyptr);
+		qdf_mem_free(pMsg->bodyptr);
+		break;
+#endif
 	default:
 
 		if ((pMsg->type >= eWNI_SME_MSG_TYPES_BEGIN)
@@ -16393,11 +16401,10 @@ static QDF_STATUS sme_send_start_bss_msg(struct mac_context *mac,
 
 	return QDF_STATUS_SUCCESS;
 failure:
-	rsp.cmd_id = start_bss_cfg->cmd_id;
 	sme_err("Failed to post start bss request to PE for vdev : %d",
 		start_bss_cfg->vdev_id);
 	csr_process_sap_response(mac, CSR_SAP_START_BSS_FAILURE, &rsp,
-				 start_bss_cfg->vdev_id, start_bss_cfg->cmd_id);
+				 start_bss_cfg->vdev_id);
 	qdf_mem_free(start_bss_cfg);
 	return QDF_STATUS_E_FAILURE;
 }

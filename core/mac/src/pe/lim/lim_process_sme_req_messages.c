@@ -1199,8 +1199,13 @@ free:
 		pe_delete_session(mac_ctx, session);
 		session = NULL;
 	}
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	lim_send_sme_start_bss_rsp(mac_ctx, eWNI_SME_START_BSS_RSP, ret_code,
 				   session, vdev_id);
+#else
+	 lim_send_sme_start_bss_rsp(mac_ctx, ret_code, session, vdev_id);
+#endif
 }
 
 /**

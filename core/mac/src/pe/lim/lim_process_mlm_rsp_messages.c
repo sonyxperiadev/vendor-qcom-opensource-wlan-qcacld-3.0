@@ -207,10 +207,17 @@ void lim_process_mlm_start_cnf(struct mac_context *mac, uint32_t *msg_buf)
 		pe_session = NULL;
 		pe_err("Start BSS Failed");
 	}
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	/* Send response to Host */
 	lim_send_sme_start_bss_rsp(mac, eWNI_SME_START_BSS_RSP,
 				((tLimMlmStartCnf *)msg_buf)->resultCode,
 				pe_session, smesessionId);
+#else
+	lim_send_sme_start_bss_rsp(mac,
+				   ((tLimMlmStartCnf *)msg_buf)->resultCode,
+				   pe_session, smesessionId);
+#endif
 	if (pe_session &&
 	    (((tLimMlmStartCnf *)msg_buf)->resultCode == eSIR_SME_SUCCESS)) {
 		lim_ndi_mlme_vdev_up_transition(pe_session);

@@ -670,30 +670,30 @@ void csr_cm_get_sta_cxn_info(struct mac_context *mac_ctx, uint8_t vdev_id,
 
 #ifdef SAP_CP_CLEANUP
 /**
- * csr_dequeue_sap_cmd() - API to dequeue the active/pending
- * command posted by SAP from the serialization queues
- * @mac_ctx: mac context
- * @req: Serialization command to be dequeued
- * @vdev_id: vdev ida
- *
- * Return: None
- */
-void csr_dequeue_sap_cmd(struct mac_context *mac_ctx,
-			 struct wlan_serialization_command *req,
-			 uint32_t vdev_id);
-
-/**
  * csr_process_sap_response() - Wrapper API to process the SAP
  * response from LIM
  * @mac_ctx: mac context
- * @result: Result of LIM processing
- * @rsp: Response from LIM
- * @vdev_id: vdev id
+ * @result: Response status of LIM processing
+ * @context: Response from LIM
+ * @session_id: vdev id
  *
  * Return: void
  */
 void csr_process_sap_response(struct mac_context *mac,
-			      enum csr_roamcomplete_result result,
+			      enum csr_sap_response_type result,
 			      void *context, uint8_t session_id);
+
+/**
+ * csr_roam_roaming_state_start_bss_rsp_processor() - Handles start bss
+ * response from LIM
+ *
+ * @mac: mac context
+ * @msg: start bss response pointer
+ *
+ * Return: void
+ */
+void
+csr_roam_roaming_state_start_bss_rsp_processor(struct mac_context *mac,
+					       void *msg);
 #endif
 #endif /* CSR_INSIDE_API_H__ */

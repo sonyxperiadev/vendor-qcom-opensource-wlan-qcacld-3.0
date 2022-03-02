@@ -3089,6 +3089,7 @@ static void csr_roam_process_results_default(struct mac_context *mac_ctx,
 	qdf_mem_free(roam_info);
 }
 
+#ifndef SAP_CP_CLEANUP
 /**
  * csr_roam_process_start_bss_success() - Process the result for start bss
  * @mac_ctx:          Global MAC Context
@@ -3180,6 +3181,106 @@ static void csr_roam_process_start_bss_success(struct mac_context *mac_ctx,
 			       roam_status, roam_result);
 	qdf_mem_free(roam_info);
 }
+#else
+/**
+ * csr_roam_process_start_bss_success() - Process the result for start bss
+ * @mac_ctx:   Global MAC Context
+ * @context:   Additional data in context of the cmd
+ * @vdev_id:   vdev id
+ *
+ * Return: None
+ */
+static void csr_roam_process_start_bss_success(struct mac_context *mac_ctx,
+					       struct csr_roam_info *roam_info,
+					       void *context, uint8_t vdev_id)
+{
+	struct csr_roam_session *session;
+	struct start_bss_rsp *start_bss_rsp = NULL;
+	eRoamCmdStatus roam_status = eCSR_ROAM_INFRA_IND;
+	eCsrRoamResult roam_result = eCSR_ROAM_RESULT_INFRA_STARTED;
+	tSirMacAddr bcast_mac = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+	QDF_STATUS status;
+	enum QDF_OPMODE opmode;
+	uint8_t wmm_mode = 0, value = 0;
+
+	if (!CSR_IS_SESSION_VALID(mac_ctx, vdev_id)) {
+		sme_err("Invalid session id %d", vdev_id);
+		return;
+	}
+	session = CSR_GET_SESSION(mac_ctx, vdev_id);
+
+	sme_debug("Start BSS success");
+	start_bss_rsp = (struct start_bss_rsp *)context;
+
+	opmode = wlan_get_opmode_vdev_id(mac_ctx->pdev, vdev_id);
+	if (opmode == QDF_SAP_MODE || opmode == QDF_P2P_GO_MODE)
+		session->connectState =
+				eCSR_ASSOC_STATE_TYPE_INFRA_DISCONNECTED;
+	else if (opmode == QDF_NDI_MODE)
+		session->connectState = eCSR_CONNECT_STATE_TYPE_NDI_STARTED;
+	else
+		session->connectState = eCSR_ASSOC_STATE_TYPE_WDS_DISCONNECTED;
+
+	if (opmode == QDF_NDI_MODE) {
+		status = ucfg_mlme_get_wmm_mode(mac_ctx->psoc, &wmm_mode);
+		if (!QDF_IS_STATUS_SUCCESS(status))
+			return;
+		if (wmm_mode == WMM_USER_MODE_NO_QOS) {
+			session->modifyProfileFields.uapsd_mask = 0;
+		} else {
+			status =
+			   ucfg_mlme_get_wmm_uapsd_mask(mac_ctx->psoc, &value);
+			if (!QDF_IS_STATUS_SUCCESS(status))
+				return;
+			session->modifyProfileFields.uapsd_mask = value;
+		}
+	}
+	csr_roam_state_change(mac_ctx, eCSR_ROAMING_STATE_JOINED, vdev_id);
+	csr_roam_free_connected_info(mac_ctx, &session->connectedInfo);
+	wlan_mlme_get_mac_vdev_id(mac_ctx->pdev, vdev_id, &roam_info->bssid);
+
+	/* We are done with the IEs so free it */
+	/*
+	 * Only set context for non-WDS_STA. We don't even need it for
+	 * WDS_AP. But since the encryption.
+	 * is WPA2-PSK so it won't matter.
+	 */
+	if (opmode == QDF_SAP_MODE || opmode == QDF_P2P_GO_MODE) {
+		if (wlan_is_open_wep_cipher(mac_ctx->pdev, vdev_id)) {
+			/* NO keys. these key parameters don't matter */
+			csr_issue_set_context_req_helper(mac_ctx, vdev_id,
+							 &bcast_mac, false,
+							 false, eSIR_TX_RX,
+							 0, 0, NULL);
+		}
+	}
+
+	/*
+	 * Only tell upper layer is we start the BSS because Vista doesn't like
+	 * multiple connection indications. If we don't start the BSS ourself,
+	 * handler of eSIR_SME_JOINED_NEW_BSS will trigger the connection start
+	 * indication in Vista
+	 */
+	roam_info->staId = (uint8_t)start_bss_rsp->staId;
+	if (opmode == QDF_NDI_MODE) {
+		csr_roam_update_ndp_return_params(mac_ctx,
+						  CSR_SAP_START_BSS_SUCCESS,
+						   &roam_status,
+						   &roam_result,
+						    roam_info);
+	}
+	/*
+	 * Only tell upper layer is we start the BSS because Vista
+	 * doesn't like multiple connection indications. If we don't
+	 * start the BSS ourself, handler of eSIR_SME_JOINED_NEW_BSS
+	 * will trigger the connection start indication in Vista
+	 */
+	roam_info->status_code = eSIR_SME_SUCCESS;
+	csr_roam_call_callback(mac_ctx, vdev_id, roam_info,
+			       0,
+			       roam_status, roam_result);
+}
+#endif
 
 /**
  * csr_roam_process_results() - Process the Roam Results
@@ -3200,11 +3301,14 @@ static bool csr_roam_process_results(struct mac_context *mac_ctx, tSmeCmd *cmd,
 	struct csr_roam_info *roam_info;
 	uint32_t session_id = cmd->vdev_id;
 	struct csr_roam_session *session = CSR_GET_SESSION(mac_ctx, session_id);
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	struct csr_roam_profile *profile;
 	eRoamCmdStatus roam_status = eCSR_ROAM_INFRA_IND;
 	eCsrRoamResult roam_result = eCSR_ROAM_RESULT_INFRA_START_FAILED;
 
 	profile = &cmd->u.roamCmd.roamProfile;
+#endif
 	if (!session) {
 		sme_err("session %d not found ", session_id);
 		return false;
@@ -3216,6 +3320,8 @@ static bool csr_roam_process_results(struct mac_context *mac_ctx, tSmeCmd *cmd,
 
 	sme_debug("Result %d", res);
 	switch (res) {
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	case eCsrStartBssSuccess:
 		csr_roam_process_start_bss_success(mac_ctx, cmd, context);
 		break;
@@ -3232,6 +3338,7 @@ static bool csr_roam_process_results(struct mac_context *mac_ctx, tSmeCmd *cmd,
 				       roam_result);
 		csr_set_default_dot11_mode(mac_ctx);
 		break;
+#endif
 	case eCsrStopBssSuccess:
 		if (CSR_IS_NDI(profile)) {
 			qdf_mem_zero(roam_info, sizeof(*roam_info));
@@ -3737,6 +3844,7 @@ static void csr_roam_roaming_state_deauth_rsp_processor(struct mac_context *mac,
 	csr_roam_complete(mac, eCsrNothingToJoin, NULL, pSmeRsp->sessionId);
 }
 
+#ifndef SAP_CP_CLEANUP
 static void
 csr_roam_roaming_state_start_bss_rsp_processor(struct mac_context *mac,
 					struct start_bss_rsp *pSmeStartBssRsp)
@@ -3752,12 +3860,34 @@ csr_roam_roaming_state_start_bss_rsp_processor(struct mac_context *mac,
 		/* Let csr_roam_complete decide what to do */
 		result = eCsrStartBssFailure;
 	}
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
 	csr_roam_complete(mac, result, pSmeStartBssRsp,
-				pSmeStartBssRsp->sessionId);
-#endif
+				pSmeStartBssRsp->vdev_id);
 }
+#else
+void
+csr_roam_roaming_state_start_bss_rsp_processor(struct mac_context *mac,
+					       void *msg)
+{
+	enum csr_sap_response_type result;
+	struct start_bss_rsp *start_bss_rsp = (struct start_bss_rsp *)msg;
+
+	if (!CSR_IS_ROAM_SUBSTATE_START_BSS_REQ(mac, start_bss_rsp->vdev_id)) {
+		sme_err(" Start bss received in invalid state");
+		return;
+	}
+
+	sme_debug("Start Bss response status : %d",
+		  start_bss_rsp->status_code);
+	if (start_bss_rsp->status_code == eSIR_SME_SUCCESS)
+		result = CSR_SAP_START_BSS_SUCCESS;
+	else
+		result = CSR_SAP_START_BSS_FAILURE;
+
+	csr_process_sap_response(mac, result, start_bss_rsp,
+				 start_bss_rsp->vdev_id);
+}
+#endif
+
 
 /**
  * csr_roam_send_disconnect_done_indication() - Send disconnect ind to HDD.
@@ -3854,6 +3984,8 @@ void csr_roaming_state_msg_processor(struct mac_context *mac, void *msg_buf)
 			csr_roam_roaming_state_deauth_rsp_processor(mac,
 						(struct deauth_rsp *) pSmeRsp);
 		break;
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	case eWNI_SME_START_BSS_RSP:
 		/* or the Start BSS response message... */
 		if (CSR_IS_ROAM_SUBSTATE_START_BSS_REQ(mac,
@@ -3861,6 +3993,7 @@ void csr_roaming_state_msg_processor(struct mac_context *mac, void *msg_buf)
 			csr_roam_roaming_state_start_bss_rsp_processor(mac,
 					(struct start_bss_rsp *)pSmeRsp);
 		break;
+#endif
 	/* In case CSR issues STOP_BSS, we need to tell HDD about peer departed
 	 * because PE is removing them
 	 */
@@ -8976,25 +9109,120 @@ static void csr_process_sap_defaults(struct mac_context *mac_ctx,
  * Return: void
  */
 static bool csr_process_sap_results(struct mac_context *mac_ctx,
-				    struct wlan_serialization_command *req,
 				    void *rsp,
-				    enum csr_roamcomplete_result result,
+				    enum csr_sap_response_type result,
 				    uint8_t vdev_id)
 {
+	struct csr_roam_info *roam_info;
+	struct csr_roam_session *session = CSR_GET_SESSION(mac_ctx, vdev_id);
+	eRoamCmdStatus roam_status = eCSR_ROAM_INFRA_IND;
+	eCsrRoamResult roam_result = eCSR_ROAM_RESULT_INFRA_START_FAILED;
+	enum QDF_OPMODE opmode;
+
+	if (!session) {
+		sme_err("session %d not found ", vdev_id);
+		return false;
+	}
+
+	roam_info = qdf_mem_malloc(sizeof(*roam_info));
+	if (!roam_info)
+		return false;
+
+	opmode = wlan_get_opmode_vdev_id(mac_ctx->pdev, vdev_id);
+	sme_debug("SAP result : %d", result);
+
+	switch (result) {
+	case CSR_SAP_START_BSS_SUCCESS:
+		csr_roam_process_start_bss_success(mac_ctx, roam_info,
+						   rsp, vdev_id);
+		break;
+	case CSR_SAP_START_BSS_FAILURE:
+		if (opmode == QDF_NDI_MODE) {
+			csr_roam_update_ndp_return_params(mac_ctx,
+							  CSR_SAP_START_BSS_FAILURE,
+							  &roam_status,
+							  &roam_result,
+							  roam_info);
+		}
+		csr_roam_call_callback(mac_ctx, vdev_id, roam_info,
+				       0, roam_status, roam_result);
+		csr_set_default_dot11_mode(mac_ctx);
+		break;
+	default:
+		sme_err("Invalid response");
+		break;
+	}
+	qdf_mem_free(roam_info);
 	return true;
 }
 
-void csr_dequeue_sap_cmd(struct mac_context *mac_ctx,
-			 struct wlan_serialization_command *req,
-			 uint32_t vdev_id)
+static enum wlan_serialization_cmd_type
+get_cmd_type_from_result(enum csr_sap_response_type result)
 {
-	return;
+	switch (result) {
+	case CSR_SAP_START_BSS_SUCCESS:
+	case CSR_SAP_START_BSS_FAILURE:
+		return WLAN_SER_CMD_VDEV_START_BSS;
+	case CSR_SAP_STOP_BSS_SUCCESS:
+	case CSR_SAP_STOP_BSS_FAILURE:
+		return WLAN_SER_CMD_VDEV_STOP_BSS;
+	default:
+		return WLAN_SER_CMD_MAX;
+	}
+}
+
+static inline
+uint32_t get_cmd_id_from_cmd_type(void *cmd,
+				  enum wlan_serialization_cmd_type cmd_type)
+{
+	switch (cmd_type) {
+	case WLAN_SER_CMD_VDEV_START_BSS:
+		return ((struct start_bss_config *)cmd)->cmd_id;
+	case WLAN_SER_CMD_VDEV_STOP_BSS:
+		return ((struct stop_bss_req *)cmd)->cmd_id;
+	default:
+		sme_err("Invalid cmd_type %d to be dequeued", cmd_type);
+		return 0;
+	}
 }
 
 void csr_process_sap_response(struct mac_context *mac_ctx,
-			      enum csr_roamcomplete_result result,
+			      enum csr_sap_response_type result,
 			      void *rsp, uint8_t vdev_id)
 {
-	return;
+	struct wlan_objmgr_vdev *vdev;
+	void *req;
+	uint32_t cmd_id;
+	enum wlan_serialization_cmd_type cmd_type =
+				get_cmd_type_from_result(result);
+
+	if (cmd_type >= WLAN_SER_CMD_MAX) {
+		sme_err("Invalid command to be dequeued %d", cmd_type);
+		return;
+	}
+
+	req = wlan_serialization_get_active_cmd(mac_ctx->psoc,
+						vdev_id, cmd_type);
+	if (!req) {
+		sme_err("No active command for response from LIM for cmd: %d vdev: %d",
+			cmd_type, vdev_id);
+		csr_process_sap_results(mac_ctx, rsp, result, vdev_id);
+		return;
+	}
+
+	csr_process_sap_results(mac_ctx, rsp, result, vdev_id);
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac_ctx->psoc, vdev_id,
+						    WLAN_LEGACY_MAC_ID);
+	if (!vdev) {
+		sme_err("vdev not found for vdev id: %d", vdev_id);
+		return;
+	}
+
+	cmd_id = get_cmd_id_from_cmd_type(req, cmd_type);
+	sme_debug("Dequeue cmd id : %d type : %d", cmd_id, cmd_type);
+
+	wlan_vdev_mlme_ser_remove_request(vdev, cmd_id, cmd_type);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
 }
 #endif

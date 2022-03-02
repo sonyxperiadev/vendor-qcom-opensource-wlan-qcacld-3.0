@@ -67,11 +67,18 @@ void lim_send_sme_rsp(struct mac_context *mac_ctx, uint16_t msg_type,
  * This function is called to send eWNI_SME_START_BSS_RSP
  * message to applications above MAC Software.
  */
+#ifndef SAP_CP_CLEANUP
 void lim_send_sme_start_bss_rsp(struct mac_context *mac,
 				uint16_t msgType,
 				tSirResultCodes resultCode,
 				struct pe_session *pe_session,
 				uint8_t smesessionId);
+#else
+void lim_send_sme_start_bss_rsp(struct mac_context *mac,
+				tSirResultCodes resultCode,
+				struct pe_session *pe_session,
+				uint8_t smesessionId);
+#endif
 
 /**
  * lim_send_sme_join_reassoc_rsp() - Send Response to Upper Layers

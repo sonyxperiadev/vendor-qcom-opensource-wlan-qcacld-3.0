@@ -572,29 +572,39 @@ void lim_send_sme_join_reassoc_rsp(struct mac_context *mac_ctx,
 	/* add reassoc resp API */
 }
 
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 void lim_send_sme_start_bss_rsp(struct mac_context *mac,
 				uint16_t msgType,
 				tSirResultCodes resultCode,
 				struct pe_session *pe_session,
 				uint8_t smesessionId)
+#else
+void lim_send_sme_start_bss_rsp(struct mac_context *mac,
+				tSirResultCodes resultCode,
+				struct pe_session *pe_session,
+				uint8_t smesessionId)
+#endif
 {
 
 	struct scheduler_msg mmhMsg = {0};
 	struct start_bss_rsp *start_bss_rsp;
 
-	pe_debug("Sending message: %s with reasonCode: %s",
-		       lim_msg_str(msgType), lim_result_code_str(resultCode));
+	pe_debug("Sending start bss response with reasonCode: %s",
+		 lim_result_code_str(resultCode));
 
 	start_bss_rsp = qdf_mem_malloc(sizeof(*start_bss_rsp));
 	if (!start_bss_rsp)
 		return;
-
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	start_bss_rsp->messageType = msgType;
 	start_bss_rsp->length = sizeof(*start_bss_rsp);
-	start_bss_rsp->sessionId = smesessionId;
+#endif
+	start_bss_rsp->vdev_id = smesessionId;
 	start_bss_rsp->status_code = resultCode;
 
-	mmhMsg.type = msgType;
+	mmhMsg.type = eWNI_SME_START_BSS_RSP;
 	mmhMsg.bodyptr = start_bss_rsp;
 	mmhMsg.bodyval = 0;
 	if (!pe_session) {

@@ -87,7 +87,12 @@ void csr_roam_update_ndp_return_params(struct mac_context *mac_ctx,
 {
 
 	switch (result) {
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	case eCsrStartBssSuccess:
+#else
+	case CSR_SAP_START_BSS_SUCCESS:
+#endif
 		roam_info->ndp.ndi_create_params.reason = 0;
 		roam_info->ndp.ndi_create_params.status =
 					NDP_RSP_STATUS_SUCCESS;
@@ -95,7 +100,12 @@ void csr_roam_update_ndp_return_params(struct mac_context *mac_ctx,
 		*roam_status = eCSR_ROAM_NDP_STATUS_UPDATE;
 		*roam_result = eCSR_ROAM_RESULT_NDI_CREATE_RSP;
 		break;
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	case eCsrStartBssFailure:
+#else
+	case CSR_SAP_START_BSS_FAILURE:
+#endif
 		roam_info->ndp.ndi_create_params.status = NDP_RSP_STATUS_ERROR;
 		roam_info->ndp.ndi_create_params.reason =
 					NDP_NAN_DATA_IFACE_CREATE_FAILED;
