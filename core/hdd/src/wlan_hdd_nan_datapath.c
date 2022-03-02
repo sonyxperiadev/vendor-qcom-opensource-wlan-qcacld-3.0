@@ -331,12 +331,18 @@ end:
 static int hdd_ndi_start_bss(struct hdd_adapter *adapter)
 {
 	QDF_STATUS status;
-	uint32_t roam_id;
 /* To be removed after SAP CSR cleanup changes */
 #ifndef SAP_CP_CLEANUP
+	uint32_t roam_id;
 	struct csr_roam_profile *roam_profile;
-#endif
 	mac_handle_t mac_handle;
+#else
+	struct bss_dot11_config dot11_cfg = {0};
+	struct start_bss_config ndi_bss_cfg = {0};
+	tCsrChannelInfo ch_info;
+	mac_handle_t mac_handle = hdd_adapter_get_mac_handle(adapter);
+	struct mac_context *mac = MAC_CONTEXT(mac_handle);
+#endif
 	struct hdd_context *hdd_ctx;
 /* To be removed after SAP CSR cleanup changes */
 #ifndef SAP_CP_CLEANUP
@@ -388,6 +394,43 @@ static int hdd_ndi_start_bss(struct hdd_adapter *adapter)
 	mac_handle = hdd_adapter_get_mac_handle(adapter);
 	status = sme_bss_start(mac_handle, adapter->vdev_id,
 			       roam_profile, &roam_id);
+#else
+	status = hdd_ndi_config_ch_list(hdd_ctx, &ch_info);
+	if (!QDF_IS_STATUS_SUCCESS(status)) {
+		hdd_err("Unable to retrieve channel list for NAN");
+		return -EINVAL;
+	}
+
+	dot11_cfg.vdev_id = adapter->vdev_id;
+	dot11_cfg.bss_op_ch_freq = ch_info.freq_list[0];
+	dot11_cfg.phy_mode = eCSR_DOT11_MODE_AUTO;
+	if (!wlan_vdev_id_is_open_cipher(mac->pdev, adapter->vdev_id))
+		dot11_cfg.privacy = 1;
+
+	sme_get_network_params(mac, &dot11_cfg);
+	ndi_bss_cfg.vdev_id = adapter->vdev_id;
+	ndi_bss_cfg.oper_ch_freq = dot11_cfg.bss_op_ch_freq;
+	ndi_bss_cfg.nwType = dot11_cfg.nw_type;
+	ndi_bss_cfg.dot11mode = dot11_cfg.dot11_mode;
+
+	if (dot11_cfg.opr_rates.numRates) {
+		qdf_mem_copy(ndi_bss_cfg.operationalRateSet.rate,
+			     dot11_cfg.opr_rates.rate,
+			     dot11_cfg.opr_rates.numRates);
+		ndi_bss_cfg.operationalRateSet.numRates =
+					dot11_cfg.opr_rates.numRates;
+	}
+
+	if (dot11_cfg.ext_rates.numRates) {
+		qdf_mem_copy(ndi_bss_cfg.extendedRateSet.rate,
+			     dot11_cfg.ext_rates.rate,
+			     dot11_cfg.ext_rates.numRates);
+		ndi_bss_cfg.extendedRateSet.numRates =
+				dot11_cfg.ext_rates.numRates;
+	}
+
+	status = sme_start_bss(mac_handle, adapter->vdev_id,
+			       &ndi_bss_cfg);
 #endif
 	if (QDF_IS_STATUS_ERROR(status)) {
 		hdd_err("NDI sme_RoamConnect session %d failed with status %d -> NotConnected",
@@ -403,6 +446,8 @@ static int hdd_ndi_start_bss(struct hdd_adapter *adapter)
 	qdf_mem_free(roam_profile->ChannelInfo.freq_list);
 	roam_profile->ChannelInfo.freq_list = NULL;
 	roam_profile->ChannelInfo.numOfChannels = 0;
+#else
+	qdf_mem_free(ch_info.freq_list);
 #endif
 	hdd_exit();
 

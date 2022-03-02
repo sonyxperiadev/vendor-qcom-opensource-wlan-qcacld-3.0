@@ -286,10 +286,8 @@ bool lim_is_sme_start_bss_req_valid(struct mac_context *mac_ctx,
 #endif
 {
 	uint8_t i = 0;
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
 	tSirMacRateSet *opr_rates = &start_bss_req->operationalRateSet;
-#endif
+
 	switch (bss_type) {
 	case eSIR_INFRASTRUCTURE_MODE:
 		/**

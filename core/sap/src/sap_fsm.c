@@ -2906,6 +2906,13 @@ static QDF_STATUS sap_goto_starting(struct sap_context *sap_ctx,
 				    mac_handle_t mac_handle)
 {
 	QDF_STATUS qdf_status = QDF_STATUS_E_FAILURE;
+/* To be removed after SAP CSR cleanup changes */
+#ifdef SAP_CP_CLEANUP
+	struct bss_dot11_config dot11_cfg = {0};
+	tSirMacRateSet *opr_rates = &sap_ctx->sap_bss_cfg.operationalRateSet;
+	tSirMacRateSet *ext_rates = &sap_ctx->sap_bss_cfg.extendedRateSet;
+	uint8_t h2e;
+#endif
 
 	/*
 	 * check if channel is in DFS_NOL or if the channel
@@ -2972,6 +2979,74 @@ static QDF_STATUS sap_goto_starting(struct sap_context *sap_ctx,
 			      !!sap_ctx->csr_roamProfile.cac_duration_ms);
 	sap_ctx->csr_roamProfile.beacon_tx_rate =
 			sap_ctx->beacon_tx_rate;
+#else
+	sap_get_cac_dur_dfs_region(sap_ctx,
+				   &sap_ctx->sap_bss_cfg.cac_duration_ms,
+				   &sap_ctx->sap_bss_cfg.dfs_regdomain,
+				   sap_ctx->chan_freq,
+				   &sap_ctx->ch_params);
+	mlme_set_cac_required(sap_ctx->vdev,
+			      !!sap_ctx->sap_bss_cfg.cac_duration_ms);
+
+	sap_ctx->sap_bss_cfg.oper_ch_freq = sap_ctx->chan_freq;
+	sap_ctx->sap_bss_cfg.vht_channel_width = sap_ctx->ch_params.ch_width;
+	sap_ctx->sap_bss_cfg.center_freq_seg0 =
+					sap_ctx->ch_params.center_freq_seg0;
+	sap_ctx->sap_bss_cfg.center_freq_seg1 =
+					sap_ctx->ch_params.center_freq_seg1;
+	sap_ctx->sap_bss_cfg.sec_ch_offset = sap_ctx->ch_params.sec_ch_offset;
+
+	dot11_cfg.vdev_id = sap_ctx->sessionId;
+	dot11_cfg.bss_op_ch_freq = sap_ctx->chan_freq;
+	dot11_cfg.phy_mode = sap_ctx->phyMode;
+	dot11_cfg.privacy = sap_ctx->sap_bss_cfg.privacy;
+
+	qdf_mem_copy(dot11_cfg.opr_rates.rate,
+		     opr_rates->rate, opr_rates->numRates);
+	dot11_cfg.opr_rates.numRates = opr_rates->numRates;
+
+	qdf_mem_copy(dot11_cfg.ext_rates.rate,
+		     ext_rates->rate, ext_rates->numRates);
+	dot11_cfg.ext_rates.numRates = ext_rates->numRates;
+
+	sme_get_network_params(mac_ctx, &dot11_cfg);
+
+	sap_ctx->sap_bss_cfg.nwType = dot11_cfg.nw_type;
+	sap_ctx->sap_bss_cfg.dot11mode = dot11_cfg.dot11_mode;
+
+	if (dot11_cfg.opr_rates.numRates) {
+		qdf_mem_copy(opr_rates->rate,
+			     dot11_cfg.opr_rates.rate,
+			     dot11_cfg.opr_rates.numRates);
+		opr_rates->numRates = dot11_cfg.opr_rates.numRates;
+	} else {
+		qdf_mem_zero(opr_rates, sizeof(tSirMacRateSet));
+	}
+
+	if (dot11_cfg.ext_rates.numRates) {
+		qdf_mem_copy(ext_rates->rate,
+			     dot11_cfg.ext_rates.rate,
+			     dot11_cfg.ext_rates.numRates);
+		ext_rates->numRates = dot11_cfg.ext_rates.numRates;
+	} else {
+		qdf_mem_zero(ext_rates, sizeof(tSirMacRateSet));
+	}
+
+	if (sap_ctx->require_h2e) {
+		h2e = WLAN_BASIC_RATE_MASK |
+			WLAN_BSS_MEMBERSHIP_SELECTOR_SAE_H2E;
+		if (ext_rates->numRates < SIR_MAC_MAX_NUMBER_OF_RATES) {
+			ext_rates->rate[ext_rates->numRates] = h2e;
+			ext_rates->numRates++;
+			sap_debug("H2E bss membership add to ext support rate");
+		} else if (opr_rates->numRates < SIR_MAC_MAX_NUMBER_OF_RATES) {
+			opr_rates->rate[opr_rates->numRates] = h2e;
+			opr_rates->numRates++;
+			sap_debug("H2E bss membership add to support rate");
+		} else {
+			sap_err("rates full, can not add H2E bss membership");
+		}
+	}
 #endif
 	sap_debug("notify hostapd about chan freq selection: %d",
 		  sap_ctx->chan_freq);
@@ -2991,6 +3066,9 @@ static QDF_STATUS sap_goto_starting(struct sap_context *sap_ctx,
 	qdf_status = sme_bss_start(mac_handle, sap_ctx->sessionId,
 				   &sap_ctx->csr_roamProfile,
 				   &sap_ctx->csr_roamId);
+#else
+	qdf_status = sme_start_bss(mac_handle, sap_ctx->sessionId,
+				   &sap_ctx->sap_bss_cfg);
 #endif
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status))
 		sap_err("Failed to issue sme_roam_connect");
@@ -4619,6 +4697,81 @@ void
 sap_build_start_bss_config(struct start_bss_config *sap_bss_cfg,
 			   struct sap_config *config)
 {
+	qdf_mem_zero(&sap_bss_cfg->ssId.ssId, sizeof(sap_bss_cfg->ssId.ssId));
+	sap_bss_cfg->ssId.length = config->SSIDinfo.ssid.length;
+	qdf_mem_copy(&sap_bss_cfg->ssId.ssId, config->SSIDinfo.ssid.ssId,
+		     config->SSIDinfo.ssid.length);
+
+	if (config->authType == eSAP_SHARED_KEY)
+		sap_bss_cfg->authType = eSIR_SHARED_KEY;
+	else if (config->authType == eSAP_OPEN_SYSTEM)
+		sap_bss_cfg->authType = eSIR_OPEN_SYSTEM;
+	else
+		sap_bss_cfg->authType = eSIR_AUTO_SWITCH;
+
+	sap_bss_cfg->beaconInterval = (uint16_t)config->beacon_int;
+	sap_bss_cfg->privacy = config->privacy;
+	sap_bss_cfg->ssidHidden = config->SSIDinfo.ssidHidden;
+	sap_bss_cfg->dtimPeriod = config->dtim_period;
+	sap_bss_cfg->wps_state = config->wps_state;
+	sap_bss_cfg->beacon_tx_rate = config->beacon_tx_rate;
+
+	/* RSNIE */
+	sap_bss_cfg->rsnIE.length = config->RSNWPAReqIELength;
+	if (config->RSNWPAReqIELength)
+		qdf_mem_copy(sap_bss_cfg->rsnIE.rsnIEdata,
+			     config->RSNWPAReqIE, config->RSNWPAReqIELength);
+
+	/* Probe response IE */
+	if (config->probeRespIEsBufferLen > 0 &&
+	    config->pProbeRespIEsBuffer) {
+		sap_bss_cfg->add_ie_params.probeRespDataLen =
+						config->probeRespIEsBufferLen;
+		sap_bss_cfg->add_ie_params.probeRespData_buff =
+						config->pProbeRespIEsBuffer;
+	} else {
+		sap_bss_cfg->add_ie_params.probeRespDataLen = 0;
+		sap_bss_cfg->add_ie_params.probeRespData_buff = NULL;
+	}
+
+	/*assoc resp IE */
+	if (config->assocRespIEsLen > 0 && config->pAssocRespIEsBuffer) {
+		sap_bss_cfg->add_ie_params.assocRespDataLen =
+						config->assocRespIEsLen;
+		sap_bss_cfg->add_ie_params.assocRespData_buff =
+						config->pAssocRespIEsBuffer;
+	} else {
+		sap_bss_cfg->add_ie_params.assocRespDataLen = 0;
+		sap_bss_cfg->add_ie_params.assocRespData_buff = NULL;
+	}
+
+	if (config->probeRespBcnIEsLen > 0 &&
+	    config->pProbeRespBcnIEsBuffer) {
+		sap_bss_cfg->add_ie_params.probeRespBCNDataLen =
+						config->probeRespBcnIEsLen;
+		sap_bss_cfg->add_ie_params.probeRespBCNData_buff =
+						config->pProbeRespBcnIEsBuffer;
+	} else {
+		sap_bss_cfg->add_ie_params.probeRespBCNDataLen = 0;
+		sap_bss_cfg->add_ie_params.probeRespBCNData_buff = NULL;
+	}
+
+	if (config->supported_rates.numRates) {
+		qdf_mem_copy(sap_bss_cfg->operationalRateSet.rate,
+			     config->supported_rates.rate,
+			     config->supported_rates.numRates);
+		sap_bss_cfg->operationalRateSet.numRates =
+					config->supported_rates.numRates;
+	}
+
+	if (config->extended_rates.numRates) {
+		qdf_mem_copy(sap_bss_cfg->extendedRateSet.rate,
+			     config->extended_rates.rate,
+			     config->extended_rates.numRates);
+		sap_bss_cfg->extendedRateSet.numRates =
+				config->extended_rates.numRates;
+	}
+
 	return;
 }
 #endif

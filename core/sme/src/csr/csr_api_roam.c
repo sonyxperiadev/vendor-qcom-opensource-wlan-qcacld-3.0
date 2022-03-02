@@ -83,6 +83,9 @@
 #include "wlan_cm_roam_public_struct.h"
 #include "wlan_mlme_twt_api.h"
 #include <wlan_serialization_api.h>
+#ifdef SAP_CP_CLEANUP
+#include <wlan_vdev_mlme_ser_if.h>
+#endif
 
 #define RSN_AUTH_KEY_MGMT_SAE           WLAN_RSN_SEL(WLAN_AKM_SAE)
 #define MAX_PWR_FCC_CHAN_12 8
@@ -5342,11 +5345,6 @@ csr_roam_get_phy_mode_band_for_bss(struct mac_context *mac_ctx,
 				   struct csr_roam_profile *profile,
 				   uint32_t bss_op_ch_freq,
 				   enum reg_wifi_band *p_band)
-#else
-enum csr_cfgdot11mode
-csr_roam_get_phy_mode_band_for_bss(struct mac_context *mac_ctx,
-				   struct bss_dot11_config *dot11_cfg)
-#endif
 {
 	enum reg_wifi_band band = REG_BAND_2G;
 	qdf_freq_t opr_freq = 0;
@@ -5429,6 +5427,95 @@ csr_roam_get_phy_mode_band_for_bss(struct mac_context *mac_ctx,
 #endif
 	return cfg_dot11_mode;
 }
+#else
+enum csr_cfgdot11mode
+csr_roam_get_phy_mode_band_for_bss(struct mac_context *mac_ctx,
+				   struct bss_dot11_config *dot11_cfg)
+{
+	enum reg_wifi_band band = REG_BAND_2G;
+	qdf_freq_t opr_freq = 0;
+	bool is_11n_allowed;
+	enum csr_cfgdot11mode curr_mode =
+		mac_ctx->roam.configParam.uCfgDot11Mode;
+	enum csr_cfgdot11mode cfg_dot11_mode;
+	enum QDF_OPMODE opmode;
+	bool is_ap = false;
+	uint8_t privacy;
+	uint8_t vdev_id = dot11_cfg->vdev_id;
+
+	if (dot11_cfg->bss_op_ch_freq)
+		opr_freq = dot11_cfg->bss_op_ch_freq;
+
+	opmode = wlan_get_opmode_vdev_id(mac_ctx->pdev, vdev_id);
+	is_ap = (opmode == QDF_SAP_MODE || opmode == QDF_P2P_GO_MODE);
+	cfg_dot11_mode =
+		csr_get_cfg_dot11_mode_from_csr_phy_mode(is_ap,
+							 dot11_cfg->phy_mode);
+	privacy = dot11_cfg->privacy;
+
+	/*
+	 * If the global setting for dot11Mode is set to auto/abg, we overwrite
+	 * the setting in the profile.
+	 */
+	if ((!is_ap && ((eCSR_CFG_DOT11_MODE_AUTO == curr_mode) ||
+	     (eCSR_CFG_DOT11_MODE_ABG == curr_mode))) ||
+	     (eCSR_CFG_DOT11_MODE_AUTO == cfg_dot11_mode) ||
+	     (eCSR_CFG_DOT11_MODE_ABG == cfg_dot11_mode)) {
+		csr_compute_mode_and_band(mac_ctx, &cfg_dot11_mode,
+					  &band, opr_freq);
+	} /* if( eCSR_CFG_DOT11_MODE_ABG == cfg_dot11_mode ) */
+	else {
+		/* dot11 mode is set, lets pick the band */
+		if (0 == opr_freq) {
+			/* channel is Auto also. */
+			if (mac_ctx->mlme_cfg->gen.band == BAND_ALL) {
+				/* prefer 5GHz */
+				band = REG_BAND_5G;
+			}
+		} else{
+			band = wlan_reg_freq_to_band(opr_freq);
+		}
+	}
+
+	dot11_cfg->p_band = band;
+	if (opr_freq == 2484 && wlan_reg_is_24ghz_ch_freq(opr_freq)) {
+		sme_err("Switching to Dot11B mode");
+		cfg_dot11_mode = eCSR_CFG_DOT11_MODE_11B;
+	}
+
+	if (wlan_reg_is_24ghz_ch_freq(opr_freq) &&
+	    !mac_ctx->mlme_cfg->vht_caps.vht_cap_info.b24ghz_band &&
+	    (eCSR_CFG_DOT11_MODE_11AC == cfg_dot11_mode ||
+	    eCSR_CFG_DOT11_MODE_11AC_ONLY == cfg_dot11_mode))
+		cfg_dot11_mode = eCSR_CFG_DOT11_MODE_11N;
+	/*
+	 * Incase of WEP Security encryption type is coming as part of add key.
+	 * So while STart BSS dont have information
+	 */
+	is_11n_allowed = wlan_vdev_id_is_11n_allowed(mac_ctx->pdev, vdev_id);
+	if ((!is_11n_allowed || (privacy &&
+	    wlan_vdev_id_is_open_cipher(mac_ctx->pdev, vdev_id))) &&
+	    ((eCSR_CFG_DOT11_MODE_11N == cfg_dot11_mode) ||
+	    (eCSR_CFG_DOT11_MODE_11AC == cfg_dot11_mode) ||
+	    (eCSR_CFG_DOT11_MODE_11AX == cfg_dot11_mode) ||
+	    CSR_IS_CFG_DOT11_PHY_MODE_11BE(cfg_dot11_mode))) {
+		/* We cannot do 11n here */
+		if (wlan_reg_is_24ghz_ch_freq(opr_freq))
+			cfg_dot11_mode = eCSR_CFG_DOT11_MODE_11G;
+		else
+			cfg_dot11_mode = eCSR_CFG_DOT11_MODE_11A;
+	}
+	sme_debug("dot11mode: %d phyMode %d is_11n_allowed %d privacy %d chan freq %d fw sup AX %d",
+		  cfg_dot11_mode, dot11_cfg->phy_mode, is_11n_allowed,
+		  privacy, opr_freq,
+		  IS_FEATURE_SUPPORTED_BY_FW(DOT11AX));
+
+#ifdef WLAN_FEATURE_11BE
+	sme_debug("BE :%d", IS_FEATURE_SUPPORTED_BY_FW(DOT11BE));
+#endif
+	return cfg_dot11_mode;
+}
+#endif
 
 #ifndef SAP_CP_CLEANUP
 QDF_STATUS csr_roam_issue_stop_bss(struct mac_context *mac,
@@ -5504,7 +5591,7 @@ csr_populate_basic_rates(tSirMacRateSet *rate_set, bool is_ofdm_rates,
  *
  * Return: tSirNwType
  */
-static tSirNwType
+tSirNwType
 csr_convert_mode_to_nw_type(enum csr_cfgdot11mode dot11_mode,
 			    enum reg_wifi_band band)
 {
@@ -8787,14 +8874,70 @@ QDF_STATUS csr_update_owe_info(struct mac_context *mac,
 static void csr_set_sap_ser_params(struct wlan_serialization_command *cmd,
 				   enum wlan_serialization_cmd_type cmd_type)
 {
+	cmd->cmd_type = cmd_type;
+	cmd->source = WLAN_UMAC_COMP_MLME;
+	cmd->cmd_cb = sme_sap_ser_callback;
+	cmd->is_high_priority =  false;
+	cmd->is_blocking = true;
 	return;
 }
 
 QDF_STATUS csr_bss_start(struct mac_context *mac, uint32_t vdev_id,
-			 struct start_bss_config *bss_config,
-			 uint32_t *roam_id)
+			 struct start_bss_config *bss_config)
 {
+	struct wlan_serialization_command cmd = {0};
+	struct wlan_objmgr_vdev *vdev;
+	struct start_bss_config *start_bss_cfg = NULL;
+	enum QDF_OPMODE persona;
+	enum wlan_serialization_status status;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_pdev(mac->pdev, vdev_id,
+						    WLAN_LEGACY_MAC_ID);
+	if (!vdev) {
+		sme_err("VDEV not found for vdev id : %d", vdev_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	persona = wlan_vdev_mlme_get_opmode(vdev);
+	if (persona != QDF_SAP_MODE && persona != QDF_NDI_MODE &&
+	    persona != QDF_P2P_GO_MODE) {
+		sme_err("Start BSS request for invalid mode %d", persona);
+		goto error;
+	}
+
+	start_bss_cfg = qdf_mem_malloc(sizeof(struct start_bss_config));
+	if (!start_bss_cfg) {
+		sme_err("SAP BSS config allocation failed");
+		goto error;
+	}
+
+	qdf_mem_copy(start_bss_cfg, bss_config,
+		     sizeof(struct start_bss_config));
+	start_bss_cfg->cmd_id = csr_get_monotonous_number(mac);
+
+	cmd.cmd_id = start_bss_cfg->cmd_id;
+	csr_set_sap_ser_params(&cmd, WLAN_SER_CMD_VDEV_START_BSS);
+	cmd.umac_cmd = start_bss_cfg;
+	cmd.vdev = vdev;
+	csr_fill_cmd_timeout(&cmd);
+
+	status = wlan_vdev_mlme_ser_start_bss(&cmd);
+	switch (status) {
+	case WLAN_SER_CMD_PENDING:
+	case WLAN_SER_CMD_ACTIVE:
+		break;
+	default:
+		sme_err("ser cmd status %d", status);
+		goto error;
+	}
+
 	return QDF_STATUS_SUCCESS;
+error:
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
+	if (start_bss_cfg)
+		qdf_mem_free(start_bss_cfg);
+
+	return QDF_STATUS_E_FAILURE;
 }
 
 QDF_STATUS csr_roam_issue_stop_bss_cmd(struct mac_context *mac,

@@ -763,7 +763,6 @@ QDF_STATUS wlansap_start_bss(struct sap_context *sap_ctx,
 	sap_ctx->disabled_mcs13 = false;
 	sap_ctx->phyMode = config->SapHw_mode;
 	sap_ctx->csa_reason = CSA_REASON_UNKNOWN;
-
 /* To be removed after SAP CSR cleanup changes */
 #ifndef SAP_CP_CLEANUP
 	/* Set the BSSID to your "self MAC Addr" read the mac address
@@ -779,6 +778,10 @@ QDF_STATUS wlansap_start_bss(struct sap_context *sap_ctx,
 	/* copy the configuration items to csrProfile */
 	sapconvert_to_csr_profile(config, eCSR_BSS_TYPE_INFRA_AP,
 			       &sap_ctx->csr_roamProfile);
+#else
+	 sap_ctx->require_h2e = config->require_h2e;
+	 qdf_mem_copy(sap_ctx->bssid.bytes, config->self_macaddr.bytes,
+		      QDF_MAC_ADDR_SIZE);
 #endif
 	qdf_mem_copy(sap_ctx->self_mac_addr,
 		     config->self_macaddr.bytes, QDF_MAC_ADDR_SIZE);
@@ -841,6 +844,11 @@ QDF_STATUS wlansap_start_bss(struct sap_context *sap_ctx,
 	/* Store the HDD callback in SAP context */
 	sap_ctx->sap_event_cb = sap_event_cb;
 
+	/* To be removed after SAP CSR cleanup changes */
+#ifdef SAP_CP_CLEANUP
+	sap_ctx->sap_bss_cfg.vdev_id = sap_ctx->sessionId;
+	sap_build_start_bss_config(&sap_ctx->sap_bss_cfg, config);
+#endif
 	/* Handle event */
 	qdf_status = sap_fsm(sap_ctx, &sap_event);
 fail:
@@ -848,6 +856,10 @@ fail:
 #ifndef SAP_CP_CLEANUP
 	if (QDF_IS_STATUS_ERROR(qdf_status))
 		sap_free_roam_profile(&sap_ctx->csr_roamProfile);
+#else
+	if (QDF_IS_STATUS_ERROR(qdf_status))
+		qdf_mem_zero(&sap_ctx->sap_bss_cfg,
+			     sizeof(sap_ctx->sap_bss_cfg));
 #endif
 	return qdf_status;
 } /* wlansap_start_bss */

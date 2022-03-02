@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2019, 2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -28,6 +29,7 @@
 #include "csr_internal.h"
 #include "sme_nan_datapath.h"
 
+#ifndef SAP_CP_CLEANUP
 /**
  * csr_roam_start_ndi() - Start connection for NAN datapath
  * @mac_ctx: Global MAC context
@@ -65,6 +67,7 @@ QDF_STATUS csr_roam_start_ndi(struct mac_context *mac_ctx, uint32_t session,
 
 	return status;
 }
+#endif
 
 /**
  * csr_roam_update_ndp_return_params() - updates ndp return parameters

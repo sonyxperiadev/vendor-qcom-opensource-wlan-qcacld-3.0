@@ -4541,9 +4541,8 @@ QDF_STATUS sme_update_vdev_mac_addr(struct wlan_objmgr_psoc *psoc,
  *
  * Return : QDF_STATUS
  */
-QDF_STATUS
-sme_get_network_params(struct mac_context *mac_ctx,
-		       struct bss_dot11_config *dot11_cfg);
+QDF_STATUS sme_get_network_params(struct mac_context *mac_ctx,
+				  struct bss_dot11_config *dot11_cfg);
 
 /**
  * sme_start_bss() -A wrapper function to request CSR to
@@ -4551,13 +4550,11 @@ sme_get_network_params(struct mac_context *mac_ctx,
  * @mac_handle: mac hancle
  * @vdev_id: vdev id
  * @bss_config: pointer to start bss config
- * @roam_id: pointer to roam id
  *
  * Return: QDF_STATUS
  */
 QDF_STATUS sme_start_bss(mac_handle_t mac_handle, uint8_t vdev_id,
-			 struct start_bss_config *bss_config,
-			 uint32_t *roam_id);
+			 struct start_bss_config *bss_config);
 
 /**
  * sme_sap_ser_callback() - callback from serialization module
@@ -4581,20 +4578,19 @@ QDF_STATUS sme_sap_ser_callback(struct wlan_serialization_command *cmd,
  *
  * Return: QDF_STATUS
  */
-void
-sme_fill_channel_change_request(mac_handle_t mac_handle,
-				struct channel_change_req *req,
-				eCsrPhyMode phy_mode);
+void sme_fill_channel_change_request(mac_handle_t mac_handle,
+				     struct channel_change_req *req,
+				      eCsrPhyMode phy_mode);
 
 /**
- * sme_sap_channel_change_req() - SME API to post channel change
+ * sme_send_channel_change_req() - SME API to post channel change
  * request to LIM
  * @mac_handle: mac handle
  * @req: pointer to change channel request message
  *
  * Return: QDF_STATUS
  */
-QDF_STATUS sme_sap_channel_change_req(mac_handle_t mac_handle,
+QDF_STATUS sme_send_channel_change_req(mac_handle_t mac_handle,
 				      struct channel_change_req *req);
 #endif
 #endif /* #if !defined( __SME_API_H ) */

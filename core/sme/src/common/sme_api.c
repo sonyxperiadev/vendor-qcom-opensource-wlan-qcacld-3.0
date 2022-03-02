@@ -80,6 +80,10 @@
 #include <wlan_mlo_mgr_sta.h>
 #include <wlan_mlo_mgr_main.h>
 
+#ifdef SAP_CP_CLEANUP
+#include "wlan_policy_mgr_ucfg.h"
+#endif
+
 static QDF_STATUS init_sme_cmd_list(struct mac_context *mac);
 
 static void sme_disconnect_connected_sessions(struct mac_context *mac,
@@ -3266,14 +3270,105 @@ QDF_STATUS sme_bss_start(mac_handle_t mac_handle, uint8_t vdev_id,
 QDF_STATUS sme_get_network_params(struct mac_context *mac,
 				  struct bss_dot11_config *dot11_cfg)
 {
+	enum csr_cfgdot11mode dot11_mode;
+	QDF_STATUS status = QDF_STATUS_E_FAILURE;
+	bool chan_switch_hostapd_rate_enabled = true;
+	uint8_t mcc_to_scc_switch = 0;
+	enum QDF_OPMODE opmode;
+
+	if (!mac)
+		return status;
+
+	status = sme_acquire_global_lock(&mac->sme);
+	if (QDF_IS_STATUS_ERROR(status))
+		return status;
+
+	ucfg_mlme_get_sap_chan_switch_rate_enabled(mac->psoc,
+				&chan_switch_hostapd_rate_enabled);
+	ucfg_policy_mgr_get_mcc_scc_switch(mac->psoc,
+					   &mcc_to_scc_switch);
+
+	if (mcc_to_scc_switch != QDF_MCC_TO_SCC_SWITCH_DISABLE)
+		chan_switch_hostapd_rate_enabled = false;
+
+	opmode = wlan_get_opmode_from_vdev_id(mac->pdev,
+					      dot11_cfg->vdev_id);
+	dot11_mode =
+		csr_roam_get_phy_mode_band_for_bss(mac, dot11_cfg);
+
+	dot11_cfg->dot11_mode =
+		csr_translate_to_wni_cfg_dot11_mode(mac, dot11_mode);
+
+	dot11_cfg->nw_type =
+		csr_convert_mode_to_nw_type(dot11_cfg->dot11_mode,
+					    dot11_cfg->p_band);
+
+	/* If INI is enabled, use the rates from hostapd */
+	if (!cds_is_sub_20_mhz_enabled() && chan_switch_hostapd_rate_enabled &&
+	    (dot11_cfg->opr_rates.numRates || dot11_cfg->ext_rates.numRates)) {
+		sme_err("Use the rates from the hostapd");
+	} else { /* Populate new rates */
+		dot11_cfg->ext_rates.numRates = 0;
+		dot11_cfg->opr_rates.numRates = 0;
+
+		switch (dot11_cfg->nw_type) {
+		case eSIR_11A_NW_TYPE:
+			wlan_populate_basic_rates(&dot11_cfg->opr_rates,
+						  true, true);
+			break;
+		case eSIR_11B_NW_TYPE:
+			wlan_populate_basic_rates(&dot11_cfg->opr_rates,
+						  false, true);
+			break;
+		case eSIR_11G_NW_TYPE:
+			if ((opmode == QDF_P2P_CLIENT_MODE) ||
+			    (opmode == QDF_P2P_GO_MODE) ||
+			    (dot11_mode == eCSR_CFG_DOT11_MODE_11G_ONLY)) {
+				wlan_populate_basic_rates(&dot11_cfg->opr_rates,
+							  true, true);
+			} else {
+				wlan_populate_basic_rates(&dot11_cfg->opr_rates,
+							  false, true);
+				wlan_populate_basic_rates(&dot11_cfg->ext_rates,
+							  true, false);
+			}
+			break;
+		default:
+			sme_release_global_lock(&mac->sme);
+			sme_err("Unknown network type %d", dot11_cfg->nw_type);
+			return QDF_STATUS_E_FAILURE;
+		}
+	}
+
+	sme_release_global_lock(&mac->sme);
 	return QDF_STATUS_SUCCESS;
 }
 
 QDF_STATUS sme_start_bss(mac_handle_t mac_handle, uint8_t vdev_id,
-			 struct start_bss_config *bss_config,
-			 uint32_t *roam_id)
+			 struct start_bss_config *bss_config)
 {
-	return QDF_STATUS_SUCCESS;
+	QDF_STATUS status = QDF_STATUS_E_FAILURE;
+	struct mac_context *mac = MAC_CONTEXT(mac_handle);
+
+	if (!mac)
+		return QDF_STATUS_E_FAILURE;
+
+	MTRACE(qdf_trace(QDF_MODULE_ID_SME,
+			 TRACE_CODE_SME_RX_HDD_MSG_CONNECT, vdev_id, 0));
+
+	if (!CSR_IS_SESSION_VALID(mac, vdev_id)) {
+		sme_err("Invalid sessionID: %d", vdev_id);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	status = sme_acquire_global_lock(&mac->sme);
+	if (QDF_IS_STATUS_ERROR(status))
+		return status;
+
+	status = csr_bss_start(mac, vdev_id, bss_config);
+	sme_release_global_lock(&mac->sme);
+
+	return status;
 }
 #endif
 /*
@@ -16270,7 +16365,41 @@ void sme_roam_events_deregister_callback(mac_handle_t mac_handle)
 static QDF_STATUS sme_send_start_bss_msg(struct mac_context *mac,
 					 struct start_bss_config *cfg)
 {
+	struct scheduler_msg msg = {0};
+	struct start_bss_config *start_bss_cfg;
+	struct start_bss_rsp rsp;
+
+	if (!cfg)
+		return QDF_STATUS_E_FAILURE;
+
+	csr_roam_state_change(mac, eCSR_ROAMING_STATE_JOINING, cfg->vdev_id);
+	csr_roam_substate_change(mac, eCSR_ROAM_SUBSTATE_START_BSS_REQ,
+				 cfg->vdev_id);
+
+	start_bss_cfg = qdf_mem_malloc(sizeof(*start_bss_cfg));
+	if (!start_bss_cfg)
+		return QDF_STATUS_E_NOMEM;
+
+	qdf_mem_copy(start_bss_cfg, cfg, sizeof(*start_bss_cfg));
+	msg.type =  eWNI_SME_START_BSS_REQ;
+	msg.bodyptr = start_bss_cfg;
+	msg.reserved = 0;
+
+	if (QDF_STATUS_SUCCESS != scheduler_post_message(QDF_MODULE_ID_SME,
+							 QDF_MODULE_ID_PE,
+							 QDF_MODULE_ID_PE,
+							 &msg))
+		goto failure;
+
 	return QDF_STATUS_SUCCESS;
+failure:
+	rsp.cmd_id = start_bss_cfg->cmd_id;
+	sme_err("Failed to post start bss request to PE for vdev : %d",
+		start_bss_cfg->vdev_id);
+	csr_process_sap_response(mac, CSR_SAP_START_BSS_FAILURE, &rsp,
+				 start_bss_cfg->vdev_id, start_bss_cfg->cmd_id);
+	qdf_mem_free(start_bss_cfg);
+	return QDF_STATUS_E_FAILURE;
 }
 
 static QDF_STATUS sme_send_stop_bss_msg(struct mac_context *mac,
@@ -16281,13 +16410,68 @@ static QDF_STATUS sme_send_stop_bss_msg(struct mac_context *mac,
 
 static QDF_STATUS sme_sap_activate_cmd(struct wlan_serialization_command *cmd)
 {
-	return QDF_STATUS_SUCCESS;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	mac_handle_t mac_handle;
+	struct mac_context *mac;
+
+	mac_handle = cds_get_context(QDF_MODULE_ID_SME);
+	mac = MAC_CONTEXT(mac_handle);
+	if (!mac) {
+		QDF_ASSERT(0);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	switch (cmd->cmd_type) {
+	case WLAN_SER_CMD_VDEV_START_BSS:
+		status = sme_send_start_bss_msg(mac, cmd->umac_cmd);
+		break;
+	default:
+		status = QDF_STATUS_E_FAILURE;
+		break;
+	}
+	return status;
 }
 
 QDF_STATUS sme_sap_ser_callback(struct wlan_serialization_command *cmd,
 				enum wlan_serialization_cb_reason reason)
 {
-	return QDF_STATUS_SUCCESS;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	mac_handle_t mac_handle;
+	struct mac_context *mac_ctx;
+
+	if (!cmd) {
+		sme_err("Invalid Serialization command");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	mac_handle = cds_get_context(QDF_MODULE_ID_SME);
+	if (mac_handle)
+		mac_ctx = MAC_CONTEXT(mac_handle);
+	else
+		return QDF_STATUS_E_FAILURE;
+
+	switch (reason) {
+	case WLAN_SER_CB_ACTIVATE_CMD:
+		status = sme_sap_activate_cmd(cmd);
+		break;
+	case WLAN_SER_CB_CANCEL_CMD:
+		break;
+	case WLAN_SER_CB_RELEASE_MEM_CMD:
+		if (cmd->vdev)
+			wlan_objmgr_vdev_release_ref(cmd->vdev,
+						     WLAN_LEGACY_MAC_ID);
+		if (cmd->umac_cmd)
+			qdf_mem_free(cmd->umac_cmd);
+		break;
+	case WLAN_SER_CB_ACTIVE_CMD_TIMEOUT:
+		qdf_trigger_self_recovery(mac_ctx->psoc,
+					  QDF_ACTIVE_LIST_TIMEOUT);
+		break;
+	default:
+		sme_debug("unknown reason code");
+		return QDF_STATUS_E_FAILURE;
+	}
+	return status;
 }
 
 void sme_fill_channel_change_request(mac_handle_t mac_handle,

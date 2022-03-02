@@ -142,10 +142,10 @@ struct sap_context {
 #ifndef SAP_CP_CLEANUP
 	/* Include the SME(CSR) context here */
 	struct csr_roam_profile csr_roamProfile;
+	uint32_t csr_roamId;
 #else
 	struct start_bss_config sap_bss_cfg;
 #endif
-	uint32_t csr_roamId;
 
 	/* SAP event Callback to hdd */
 	sap_event_cb sap_event_cb;
@@ -249,6 +249,9 @@ struct sap_context {
 	qdf_freq_t candidate_freq;
 #ifdef FEATURE_WLAN_CH_AVOID_EXT
 	uint32_t restriction_mask;
+#endif
+#ifdef SAP_CP_CLEANUP
+	bool require_h2e;
 #endif
 };
 

@@ -40,6 +40,16 @@ enum csr_roamcomplete_result {
 	eCsrStopBssFailure,
 };
 
+
+#ifdef SAP_CP_CLEANUP
+enum csr_sap_response_type {
+	CSR_SAP_START_BSS_SUCCESS,
+	CSR_SAP_START_BSS_FAILURE,
+	CSR_SAP_STOP_BSS_SUCCESS,
+	CSR_SAP_STOP_BSS_FAILURE,
+};
+#endif
+
 struct tag_csrscan_result {
 	tListElem Link;
 	/* Preferred Encryption type that matched with profile. */
@@ -383,13 +393,11 @@ QDF_STATUS csr_bss_start(struct mac_context *mac, uint32_t vdev_id,
  * @mac: mac context
  * @vdev_id: vdev id
  * @bss_config: start bss config
- * @roam_id : pointer to roam id
  *
  * Return: QDF_STATUS
  */
 QDF_STATUS csr_bss_start(struct mac_context *mac, uint32_t vdev_id,
-			 struct start_bss_config *bss_config,
-			 uint32_t *roam_id);
+			 struct start_bss_config *bss_config);
 #endif
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD

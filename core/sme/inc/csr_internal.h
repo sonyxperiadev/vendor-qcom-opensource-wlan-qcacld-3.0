@@ -585,7 +585,7 @@ QDF_STATUS csr_roam_channel_change_req(struct mac_context *mac,
 				       struct csr_roam_profile *profile);
 #else
 /**
- * csr_sap_channel_change_req() - Post channel change request to LIM
+ * csr_send_channel_change_req() - Post channel change request to LIM
  * @mac : mac context
  * @req : channel change request
  *
@@ -593,8 +593,8 @@ QDF_STATUS csr_roam_channel_change_req(struct mac_context *mac,
  *
  *  Return: QDF_STATUS
  */
-QDF_STATUS csr_sap_channel_change_req(struct mac_context *mac,
-				      struct channel_change_req *req);
+QDF_STATUS csr_send_channel_change_req(struct mac_context *mac,
+				       struct channel_change_req *req);
 #endif
 
 /* Post Beacon Tx Start Indication */

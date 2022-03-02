@@ -1066,6 +1066,7 @@ bool csr_is_bssid_match(struct qdf_mac_addr *pProfBssid,
 	return fMatch;
 }
 
+#ifndef SAP_CP_CLEANUP
 void csr_release_profile(struct mac_context *mac,
 			 struct csr_roam_profile *pProfile)
 {
@@ -1090,6 +1091,7 @@ void csr_release_profile(struct mac_context *mac,
 		qdf_mem_zero(pProfile, sizeof(struct csr_roam_profile));
 	}
 }
+#endif
 
 /* This function use the parameters to decide the CFG value. */
 /* CSR never sets MLME_DOT11_MODE_ALL to the CFG */

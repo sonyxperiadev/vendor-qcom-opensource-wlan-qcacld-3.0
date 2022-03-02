@@ -964,6 +964,18 @@ QDF_STATUS csr_mlme_vdev_stop_bss(uint8_t vdev_id);
  */
 qdf_freq_t csr_mlme_get_concurrent_operation_freq(void);
 
+/* csr_convert_mode_to_nw_type() - CSR API to convert dot11 mode
+ * to network type.
+ *
+ * @dot11_mode: dot11 mode
+ * @band: reg band
+ *
+ * Return: network type
+ */
+tSirNwType
+csr_convert_mode_to_nw_type(enum csr_cfgdot11mode dot11_mode,
+			    enum reg_wifi_band band);
+
 #ifdef SAP_CP_CLEANUP
 /*
  * csr_roam_get_phy_mode_band_for_bss() - CSR API to get phy mode and
