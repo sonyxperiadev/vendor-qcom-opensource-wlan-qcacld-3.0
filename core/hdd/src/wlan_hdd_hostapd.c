@@ -3656,6 +3656,17 @@ sap_restart:
 		wlansap_get_csa_chanwidth_from_phymode(
 					sap_context, intf_ch_freq,
 					&ch_params);
+
+	hdd_debug("mhz_freq_seg0: %d, ch_width: %d",
+		  ch_params.mhz_freq_seg0, ch_params.ch_width);
+	if (sap_context->csa_reason == CSA_REASON_UNSAFE_CHANNEL &&
+	    (!policy_mgr_check_bw_with_unsafe_chan_freq(hdd_ctx->psoc,
+							ch_params.mhz_freq_seg0,
+							ch_params.ch_width))) {
+		hdd_debug("SAP bw shrink to 20M for unsafe");
+		ch_params.ch_width = CH_WIDTH_20MHZ;
+	}
+
 	hdd_debug("SAP restart orig chan freq: %d, new freq: %d bw %d",
 		  hdd_ap_ctx->sap_config.chan_freq, intf_ch_freq,
 		  ch_params.ch_width);

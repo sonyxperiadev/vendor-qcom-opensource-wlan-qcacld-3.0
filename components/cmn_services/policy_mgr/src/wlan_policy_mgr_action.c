@@ -2527,20 +2527,9 @@ sap_restart:
 	}
 }
 
-/**
- * policy_mgr_check_bw_with_unsafe_chan_freq() - valid SAP channel bw against
- *						 unsafe channel list
- * @psoc: PSOC object information
- * @center_freq: SAP channel center frequency
- * @ch_width: SAP channel width
- *
- * Return: true if no unsafe channel fall in SAP channel bandwidth range,
- *	   false otherwise
- */
-static bool
-policy_mgr_check_bw_with_unsafe_chan_freq(struct wlan_objmgr_psoc *psoc,
-					  qdf_freq_t center_freq,
-					  enum phy_ch_width ch_width)
+bool policy_mgr_check_bw_with_unsafe_chan_freq(struct wlan_objmgr_psoc *psoc,
+					       qdf_freq_t center_freq,
+					       enum phy_ch_width ch_width)
 {
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
 	uint32_t freq_start, freq_end, bw, i, unsafe_chan_freq;

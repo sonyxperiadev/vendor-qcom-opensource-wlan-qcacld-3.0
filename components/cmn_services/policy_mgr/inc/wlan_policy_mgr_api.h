@@ -679,6 +679,19 @@ QDF_STATUS policy_mgr_change_mcc_go_beacon_interval(
 
 #if defined(FEATURE_WLAN_MCC_TO_SCC_SWITCH)
 /**
+ * policy_mgr_check_bw_with_unsafe_chan_freq() - valid SAP channel bw against
+ *                                               unsafe channel list
+ * @psoc: PSOC object information
+ * @center_freq: SAP channel center frequency
+ * @ch_width: SAP channel width
+ *
+ * Return: true if no unsafe channel fall in SAP channel bandwidth range,
+ *         false otherwise
+ */
+bool policy_mgr_check_bw_with_unsafe_chan_freq(struct wlan_objmgr_psoc *psoc,
+					       qdf_freq_t center_freq,
+					       enum phy_ch_width ch_width);
+/**
  * policy_mgr_change_sap_channel_with_csa() - Move SAP channel using (E)CSA
  * @psoc: PSOC object information
  * @vdev_id: Vdev id
