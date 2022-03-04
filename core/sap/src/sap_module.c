@@ -1808,6 +1808,95 @@ static void
 wlansap_fill_channel_change_request(struct sap_context *sap_ctx,
 				    struct channel_change_req *req)
 {
+	struct mac_context *mac_ctx = sap_get_mac_context();
+	struct bss_dot11_config dot11_cfg = {0};
+	uint8_t h2e;
+
+	dot11_cfg.vdev_id = sap_ctx->sessionId;
+	dot11_cfg.bss_op_ch_freq = sap_ctx->chan_freq;
+	dot11_cfg.phy_mode = sap_ctx->phyMode;
+	dot11_cfg.privacy = sap_ctx->sap_bss_cfg.privacy;
+
+	/* Rates configured from start_bss will have
+	 * hostapd rates if hostapd chan rates are enabled
+	 */
+	qdf_mem_copy(dot11_cfg.opr_rates.rate,
+		     sap_ctx->sap_bss_cfg.operationalRateSet.rate,
+		     sap_ctx->sap_bss_cfg.operationalRateSet.numRates);
+	dot11_cfg.opr_rates.numRates =
+		sap_ctx->sap_bss_cfg.operationalRateSet.numRates;
+
+	qdf_mem_copy(dot11_cfg.ext_rates.rate,
+		     sap_ctx->sap_bss_cfg.extendedRateSet.rate,
+		     sap_ctx->sap_bss_cfg.extendedRateSet.numRates);
+	dot11_cfg.ext_rates.numRates =
+		sap_ctx->sap_bss_cfg.extendedRateSet.numRates;
+	sme_get_network_params(mac_ctx, &dot11_cfg);
+
+	req->vdev_id = sap_ctx->sessionId;
+	req->target_chan_freq = sap_ctx->chan_freq;
+	req->sec_ch_offset = sap_ctx->ch_params.sec_ch_offset;
+	req->ch_width =  sap_ctx->ch_params.ch_width;
+	req->center_freq_seg0 = sap_ctx->ch_params.center_freq_seg0;
+	req->center_freq_seg1 = sap_ctx->ch_params.center_freq_seg1;
+	req->dot11mode = dot11_cfg.dot11_mode;
+	req->nw_type = dot11_cfg.nw_type;
+
+	sap_get_cac_dur_dfs_region(sap_ctx,
+				   &req->cac_duration_ms,
+				   &req->dfs_regdomain,
+				   sap_ctx->chan_freq,
+				   &sap_ctx->ch_params);
+	mlme_set_cac_required(sap_ctx->vdev,
+			      !!req->cac_duration_ms);
+
+	/* Update the rates in sap_bss_cfg for subsequent channel switch */
+	if (dot11_cfg.opr_rates.numRates) {
+		qdf_mem_copy(req->opr_rates.rate,
+			     dot11_cfg.opr_rates.rate,
+			     dot11_cfg.opr_rates.numRates);
+		qdf_mem_copy(sap_ctx->sap_bss_cfg.operationalRateSet.rate,
+			     dot11_cfg.opr_rates.rate,
+			     dot11_cfg.opr_rates.numRates);
+		req->opr_rates.numRates = dot11_cfg.opr_rates.numRates;
+		sap_ctx->sap_bss_cfg.operationalRateSet.numRates =
+					dot11_cfg.opr_rates.numRates;
+	} else {
+		qdf_mem_zero(&sap_ctx->sap_bss_cfg.operationalRateSet,
+			     sizeof(tSirMacRateSet));
+	}
+
+	if (dot11_cfg.ext_rates.numRates) {
+		qdf_mem_copy(req->ext_rates.rate,
+			     dot11_cfg.ext_rates.rate,
+			     sizeof(dot11_cfg.ext_rates.numRates));
+		qdf_mem_copy(sap_ctx->sap_bss_cfg.extendedRateSet.rate,
+			     dot11_cfg.ext_rates.rate,
+			     dot11_cfg.ext_rates.numRates);
+		req->ext_rates.numRates = dot11_cfg.ext_rates.numRates;
+		sap_ctx->sap_bss_cfg.extendedRateSet.numRates =
+					dot11_cfg.ext_rates.numRates;
+	} else {
+		qdf_mem_zero(&sap_ctx->sap_bss_cfg.extendedRateSet,
+			     sizeof(tSirMacRateSet));
+	}
+
+	if (sap_ctx->require_h2e) {
+		h2e = WLAN_BASIC_RATE_MASK |
+			WLAN_BSS_MEMBERSHIP_SELECTOR_SAE_H2E;
+		if (req->ext_rates.numRates < SIR_MAC_MAX_NUMBER_OF_RATES) {
+			req->ext_rates.rate[req->ext_rates.numRates] = h2e;
+			req->ext_rates.numRates++;
+			sap_debug("H2E bss membership add to ext support rate");
+		} else if (req->opr_rates.numRates <
+						SIR_MAC_MAX_NUMBER_OF_RATES) {
+			req->opr_rates.rate[req->opr_rates.numRates] = h2e;
+			req->opr_rates.numRates++;
+			sap_debug("H2E bss membership add to support rate");
+		} else {
+			sap_err("rates full, can not add H2E bss membership");
+		}
+	}
 	return;
 }
 #endif
@@ -1819,6 +1908,10 @@ QDF_STATUS wlansap_channel_change_request(struct sap_context *sap_ctx,
 	struct mac_context *mac_ctx;
 	eCsrPhyMode phy_mode;
 	struct ch_params *ch_params;
+/* To be removed after SAP CSR cleanup changes */
+#ifdef SAP_CP_CLEANUP
+	struct channel_change_req *ch_change_req;
+#endif
 
 	if (!target_chan_freq) {
 		sap_err("channel 0 requested");
@@ -1895,6 +1988,16 @@ QDF_STATUS wlansap_channel_change_request(struct sap_context *sap_ctx,
 					     sap_ctx->sessionId,
 					     ch_params,
 					     &sap_ctx->csr_roamProfile);
+#else
+	ch_change_req = qdf_mem_malloc(sizeof(struct channel_change_req));
+	if (!ch_change_req)
+		return QDF_STATUS_E_FAILURE;
+
+	wlansap_fill_channel_change_request(sap_ctx, ch_change_req);
+
+	status = sme_send_channel_change_req(MAC_HANDLE(mac_ctx),
+					     ch_change_req);
+	qdf_mem_free(ch_change_req);
 #endif
 	sap_debug("chan_freq:%d phy_mode %d width:%d offset:%d seg0:%d seg1:%d",
 		  sap_ctx->chan_freq, phy_mode, ch_params->ch_width,

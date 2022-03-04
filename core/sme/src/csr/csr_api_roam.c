@@ -8232,10 +8232,33 @@ QDF_STATUS csr_roam_channel_change_req(struct mac_context *mac,
 	return status;
 }
 #else
-QDF_STATUS csr_sap_channel_change_req(struct mac_context *mac,
+QDF_STATUS csr_send_channel_change_req(struct mac_context *mac,
 				      struct channel_change_req *req)
 {
-	return QDF_STATUS_SUCCESS;
+	struct scheduler_msg msg = {0};
+	struct channel_change_req *ch_change_req;
+	QDF_STATUS status;
+
+	ch_change_req = qdf_mem_malloc(sizeof(*ch_change_req));
+	if (!ch_change_req)
+		return QDF_STATUS_E_NOMEM;
+
+	qdf_mem_copy(ch_change_req, req, sizeof(*ch_change_req));
+	msg.type = eWNI_SME_CHANNEL_CHANGE_REQ;
+	msg.bodyptr = ch_change_req;
+	msg.reserved = 0;
+
+	status = scheduler_post_message(QDF_MODULE_ID_SME,
+					QDF_MODULE_ID_PE,
+					QDF_MODULE_ID_PE,
+					&msg);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		sme_err("Failed to send channel change request with status : %d",
+			status);
+		qdf_mem_free(ch_change_req);
+	}
+
+	return status;
 }
 #endif
 /*

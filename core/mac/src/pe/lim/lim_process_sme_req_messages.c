@@ -8112,6 +8112,7 @@ static void lim_process_sme_channel_change_request(struct mac_context *mac_ctx,
 	tpSirChanChangeRequest ch_change_req;
 #else
 	struct channel_change_req *ch_change_req;
+	struct qdf_mac_addr bssid;
 #endif
 	struct pe_session *session_entry;
 	uint8_t session_id;      /* PE session_id */
@@ -8126,6 +8127,8 @@ static void lim_process_sme_channel_change_request(struct mac_context *mac_ctx,
 /* To be removed after SAP CSR cleanup changes */
 #ifndef SAP_CP_CLEANUP
 	ch_change_req = (tpSirChanChangeRequest)msg_buf;
+#else
+	ch_change_req = (struct channel_change_req *)msg_buf;
 #endif
 	target_freq = ch_change_req->target_chan_freq;
 
@@ -8138,14 +8141,29 @@ static void lim_process_sme_channel_change_request(struct mac_context *mac_ctx,
 		pe_err("Invalid Request/max_tx_pwr");
 		return;
 	}
-#endif
 	session_entry = pe_find_session_by_bssid(mac_ctx,
 			ch_change_req->bssid, &session_id);
+
 	if (!session_entry) {
 		lim_print_mac_addr(mac_ctx, ch_change_req->bssid, LOGE);
 		pe_err("Session does not exist for given bssId");
 		return;
 	}
+#else
+	if (max_tx_pwr == WMA_MAX_TXPOWER_INVALID) {
+		pe_err("Invalid max tx power");
+		return;
+	}
+	wlan_mlme_get_mac_vdev_id(mac_ctx->pdev,
+				  ch_change_req->vdev_id, &bssid);
+	session_entry = pe_find_session_by_bssid(mac_ctx, bssid.bytes,
+						 &session_id);
+	if (!session_entry) {
+		pe_err("Session does not exist for bssid " QDF_MAC_ADDR_FMT,
+		       QDF_MAC_ADDR_REF(bssid.bytes));
+		return;
+	}
+#endif
 
 	if (session_entry->curr_op_freq == target_freq &&
 	    session_entry->ch_width == ch_change_req->ch_width) {
@@ -8229,10 +8247,18 @@ static void lim_process_sme_channel_change_request(struct mac_context *mac_ctx,
 
 	/* Store the New Channel Params in session_entry */
 	session_entry->ch_width = ch_change_req->ch_width;
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	session_entry->ch_center_freq_seg0 =
 		ch_change_req->center_freq_seg_0;
 	session_entry->ch_center_freq_seg1 =
 		ch_change_req->center_freq_seg_1;
+#else
+	session_entry->ch_center_freq_seg0 =
+			 ch_change_req->center_freq_seg0;
+	session_entry->ch_center_freq_seg1 =
+			ch_change_req->center_freq_seg1;
+#endif
 	session_entry->htSecondaryChannelOffset = ch_change_req->sec_ch_offset;
 	session_entry->htSupportedChannelWidthSet =
 		(ch_change_req->ch_width ? 1 : 0);
@@ -8261,13 +8287,22 @@ static void lim_process_sme_channel_change_request(struct mac_context *mac_ctx,
 
 	session_entry->dot11mode = ch_change_req->dot11mode;
 	session_entry->nwType = ch_change_req->nw_type;
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	qdf_mem_copy(&session_entry->rateSet,
 			&ch_change_req->operational_rateset,
 			sizeof(session_entry->rateSet));
 	qdf_mem_copy(&session_entry->extRateSet,
 			&ch_change_req->extended_rateset,
 			sizeof(session_entry->extRateSet));
-
+#else
+	qdf_mem_copy(&session_entry->rateSet,
+		     &ch_change_req->opr_rates,
+		     sizeof(session_entry->rateSet));
+	qdf_mem_copy(&session_entry->extRateSet,
+		     &ch_change_req->ext_rates,
+		     sizeof(session_entry->extRateSet));
+#endif
 	lim_change_channel(mac_ctx, session_entry);
 }
 

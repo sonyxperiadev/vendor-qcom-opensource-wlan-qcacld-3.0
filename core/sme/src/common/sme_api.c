@@ -8619,10 +8619,18 @@ QDF_STATUS sme_roam_channel_change_req(mac_handle_t mac_handle,
 	return status;
 }
 #else
-QDF_STATUS sme_sap_channel_change_req(mac_handle_t mac_handle,
+QDF_STATUS sme_send_channel_change_req(mac_handle_t mac_handle,
 				      struct channel_change_req *req)
 {
-	return QDF_STATUS_SUCCESS;
+	QDF_STATUS status = QDF_STATUS_E_FAILURE;
+	struct mac_context *mac = MAC_CONTEXT(mac_handle);
+
+	status = sme_acquire_global_lock(&mac->sme);
+	if (QDF_IS_STATUS_SUCCESS(status)) {
+		status = csr_send_channel_change_req(mac, req);
+		sme_release_global_lock(&mac->sme);
+	}
+	return status;
 }
 #endif
 
@@ -16485,6 +16493,32 @@ void sme_fill_channel_change_request(mac_handle_t mac_handle,
 				     struct channel_change_req *req,
 				     eCsrPhyMode phy_mode)
 {
-	return;
+	struct mac_context *mac_ctx = MAC_CONTEXT(mac_handle);
+	struct bss_dot11_config dot11_cfg = {0};
+
+	dot11_cfg.vdev_id = req->vdev_id;
+	dot11_cfg.bss_op_ch_freq = req->target_chan_freq;
+	dot11_cfg.phy_mode = phy_mode;
+
+	sme_get_network_params(mac_ctx, &dot11_cfg);
+
+	req->dot11mode = dot11_cfg.dot11_mode;
+	req->nw_type = dot11_cfg.nw_type;
+
+	if (dot11_cfg.opr_rates.numRates) {
+		qdf_mem_copy(req->opr_rates.rate,
+			     dot11_cfg.opr_rates.rate,
+			     dot11_cfg.opr_rates.numRates);
+		req->opr_rates.numRates =
+				dot11_cfg.opr_rates.numRates;
+	}
+
+	if (dot11_cfg.ext_rates.numRates) {
+		qdf_mem_copy(req->ext_rates.rate,
+			     dot11_cfg.ext_rates.rate,
+			     dot11_cfg.ext_rates.numRates);
+		req->ext_rates.numRates =
+				dot11_cfg.ext_rates.numRates;
+	}
 }
 #endif

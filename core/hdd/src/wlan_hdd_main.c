@@ -8741,6 +8741,8 @@ int wlan_hdd_set_mon_chan(struct hdd_adapter *adapter, qdf_freq_t freq,
 /* To be removed after SAP CSR cleanup changes */
 #ifndef SAP_CP_CLEANUP
 	struct csr_roam_profile roam_profile;
+#else
+	struct channel_change_req *req;
 #endif
 	struct ch_params ch_params;
 	enum phy_ch_width max_fw_bw;
@@ -8827,6 +8829,27 @@ int wlan_hdd_set_mon_chan(struct hdd_adapter *adapter, qdf_freq_t freq,
 					     bssid, adapter->vdev_id,
 					     &roam_profile.ch_params,
 					     &roam_profile);
+#else
+	qdf_mem_zero(&ch_params, sizeof(struct ch_params));
+
+	req = qdf_mem_malloc(sizeof(struct channel_change_req));
+	if (!req)
+		return -ENOMEM;
+	req->vdev_id = adapter->vdev_id;
+	req->target_chan_freq = ch_info->freq;
+	req->ch_width = ch_width;
+
+	ch_params.ch_width = ch_width;
+	hdd_select_cbmode(adapter, freq, 0, &ch_params);
+
+	req->sec_ch_offset = ch_params.sec_ch_offset;
+	req->center_freq_seg0 = ch_params.center_freq_seg0;
+	req->center_freq_seg1 = ch_params.center_freq_seg1;
+
+	sme_fill_channel_change_request(hdd_ctx->mac_handle, req,
+					ch_info->phy_mode);
+	status = sme_send_channel_change_req(hdd_ctx->mac_handle, req);
+	qdf_mem_free(req);
 #endif
 	if (status) {
 		hdd_err("Status: %d Failed to set sme_roam Channel for monitor mode",
