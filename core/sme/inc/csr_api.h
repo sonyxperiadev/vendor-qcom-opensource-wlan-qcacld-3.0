@@ -741,6 +741,32 @@ struct csr_del_sta_params {
 	uint8_t subtype;
 };
 
+#ifdef SAP_CP_CLEANUP
+/* Struct bss_dot11_config - Dot11 parameters for
+ * SAP operation
+ * @vdev_id: vdev id
+ * @privacy: privacy config
+ * @phy_mode: phy mode
+ * @bss_op_ch_freq: operational frequency
+ * @dot11_mode: dot11 mode
+ * @nw_type: network type
+ * @p_band: operating band
+ * @opr_rates: operational rates
+ * @ext_rates: extended rates
+ */
+struct bss_dot11_config {
+	uint8_t vdev_id;
+	uint8_t privacy;
+	eCsrPhyMode phy_mode;
+	uint32_t bss_op_ch_freq;
+	uint8_t dot11_mode;
+	tSirNwType nw_type;
+	enum reg_wifi_band p_band;
+	tSirMacRateSet opr_rates;
+	tSirMacRateSet ext_rates;
+};
+#endif
+
 typedef QDF_STATUS (*csr_roam_complete_cb)(struct wlan_objmgr_psoc *psoc,
 					   uint8_t session_id,
 					   struct csr_roam_info *param,
@@ -956,4 +982,18 @@ void csr_handle_sap_mlo_sta_concurrency(struct wlan_objmgr_vdev *vdev,
  * Return: concurrent frequency
  */
 qdf_freq_t csr_mlme_get_concurrent_operation_freq(void);
+
+#ifdef SAP_CP_CLEANUP
+/*
+ * csr_roam_get_phy_mode_band_for_bss() - CSR API to get phy mode and
+ * band for particular dot11 config
+ * @mac : mac context
+ * @dot11_cfg : pointer to the dot11 config
+ *
+ * Return : Void
+ */
+enum csr_cfgdot11mode
+csr_roam_get_phy_mode_band_for_bss(struct mac_context *mac,
+				   struct bss_dot11_config *dot11_cfg);
+#endif
 #endif

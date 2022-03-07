@@ -2270,16 +2270,16 @@ static void mlme_init_fe_wlm_in_cfg(struct wlan_objmgr_psoc *psoc,
 			  wlm_config->latency_flags[0],
 			  wlm_config->latency_host_flags[0]);
 
-	status = qdf_uint64_parse(cfg_get(psoc, CFG_LATENCY_FLAGS_MOD),
+	status = qdf_uint64_parse(cfg_get(psoc, CFG_LATENCY_FLAGS_XR),
 				  &flags);
 	if (status != QDF_STATUS_SUCCESS) {
 		flags = 0;
-		mlme_legacy_err("moderate latency flags parsing failed");
+		mlme_legacy_err("xr latency flags parsing failed");
 	}
 
 	wlm_config->latency_flags[1] = flags & 0xFFFFFFFF;
 	wlm_config->latency_host_flags[1] = flags >> 32;
-	mlme_legacy_debug("moderate latency flags 0x%x host flags 0x%x",
+	mlme_legacy_debug("xr latency flags 0x%x host flags 0x%x",
 			  wlm_config->latency_flags[1],
 			  wlm_config->latency_host_flags[1]);
 
@@ -2395,15 +2395,27 @@ static void mlme_init_acs_avoid_freq_list(struct wlan_objmgr_psoc *psoc,
 #endif
 
 #ifdef FEATURE_WLAN_CH_AVOID_EXT
-static void mlme_init_unsafe_coex_cfg(struct wlan_objmgr_psoc *psoc,
-				      struct wlan_mlme_reg *reg)
+static void mlme_init_coex_unsafe_chan_cfg(struct wlan_objmgr_psoc *psoc,
+					   struct wlan_mlme_reg *reg)
 {
 	reg->coex_unsafe_chan_nb_user_prefer =
 		cfg_get(psoc, CFG_COEX_UNSAFE_CHAN_NB_USER_PREFER);
 }
+
+static void mlme_init_coex_unsafe_chan_reg_disable_cfg(
+		struct wlan_objmgr_psoc *psoc, struct wlan_mlme_reg *reg)
+{
+	reg->coex_unsafe_chan_reg_disable =
+		cfg_get(psoc, CFG_COEX_UNSAFE_CHAN_REG_DISABLE);
+}
 #else
-static void mlme_init_unsafe_coex_cfg(struct wlan_objmgr_psoc *psoc,
-				      struct wlan_mlme_reg *reg)
+static void mlme_init_coex_unsafe_chan_cfg(struct wlan_objmgr_psoc *psoc,
+					   struct wlan_mlme_reg *reg)
+{
+}
+
+static void mlme_init_coex_unsafe_chan_reg_disable_cfg(
+		struct wlan_objmgr_psoc *psoc, struct wlan_mlme_reg *reg)
 {
 }
 #endif
@@ -2434,7 +2446,8 @@ static void mlme_init_reg_cfg(struct wlan_objmgr_psoc *psoc,
 		cfg_get(psoc, CFG_INDOOR_CHANNEL_SUPPORT_FOR_NAN);
 
 	mlme_init_acs_avoid_freq_list(psoc, reg);
-	mlme_init_unsafe_coex_cfg(psoc, reg);
+	mlme_init_coex_unsafe_chan_cfg(psoc, reg);
+	mlme_init_coex_unsafe_chan_reg_disable_cfg(psoc, reg);
 }
 
 static void

@@ -848,6 +848,7 @@ bool hdd_get_interface_info(struct hdd_adapter *adapter,
 			    struct wifi_interface_info *info)
 {
 	struct hdd_station_ctx *sta_ctx;
+	struct sap_config *config;
 
 	info->mode = hdd_map_device_to_ll_iface_mode(adapter->device_mode);
 
@@ -886,6 +887,15 @@ bool hdd_get_interface_info(struct hdd_adapter *adapter,
 		}
 	}
 
+	if ((adapter->device_mode == QDF_SAP_MODE) ||
+	    (adapter->device_mode == QDF_P2P_GO_MODE)) {
+		if (test_bit(SOFTAP_BSS_STARTED, &adapter->event_flags)) {
+			config = &adapter->session.ap.sap_config;
+
+			qdf_copy_macaddr(&info->bssid,
+					 &config->self_macaddr);
+		}
+	}
 	wlan_reg_get_cc_and_src(adapter->hdd_ctx->psoc, info->countryStr);
 	wlan_reg_get_cc_and_src(adapter->hdd_ctx->psoc, info->apCountryStr);
 
@@ -1710,6 +1720,7 @@ __wlan_hdd_cfg80211_ll_stats_set(struct wiphy *wiphy,
 		return -EINVAL;
 
 	if (adapter->device_mode != QDF_STA_MODE &&
+	    adapter->device_mode != QDF_SAP_MODE &&
 	    adapter->device_mode != QDF_P2P_CLIENT_MODE &&
 	    adapter->device_mode != QDF_P2P_GO_MODE) {
 		hdd_debug("Cannot set LL_STATS for device mode %d",

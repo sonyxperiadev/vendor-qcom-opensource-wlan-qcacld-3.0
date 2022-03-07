@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -36,6 +37,9 @@
 #include "lim_utils.h"
 #include "wma.h"
 #include "../../core/src/vdev_mgr_ops.h"
+
+/* Max debug string size in bytes  */
+#define LIM_DEBUG_STRING_SIZE    512
 
 /**
  * lim_send_beacon_params() - updates bcn params to WMA
@@ -187,6 +191,9 @@ void lim_set_active_edca_params(struct mac_context *mac_ctx,
 #ifdef FEATURE_WLAN_DIAG_SUPPORT_LIM    /* FEATURE_WLAN_DIAG_SUPPORT */
 	host_log_qos_edca_pkt_type *log_ptr = NULL;
 #endif /* FEATURE_WLAN_DIAG_SUPPORT */
+	uint8_t *debug_str;
+	uint32_t len = 0;
+
 	/* Initialize gLimEdcaParamsActive[] to be same as localEdcaParams */
 	pe_session->gLimEdcaParamsActive[QCA_WLAN_AC_BE] = edca_params[QCA_WLAN_AC_BE];
 	pe_session->gLimEdcaParamsActive[QCA_WLAN_AC_BK] = edca_params[QCA_WLAN_AC_BK];
@@ -201,7 +208,6 @@ void lim_set_active_edca_params(struct mac_context *mac_ctx,
 					mac_ctx->no_ack_policy_cfg[QCA_WLAN_AC_VI];
 	pe_session->gLimEdcaParamsActive[QCA_WLAN_AC_VO].no_ack =
 					mac_ctx->no_ack_policy_cfg[QCA_WLAN_AC_VO];
-
 	/* An AC requires downgrade if the ACM bit is set, and the AC has not
 	 * yet been admitted in uplink or bi-directions.
 	 * If an AC requires downgrade, it will downgrade to the next beset AC
@@ -215,19 +221,21 @@ void lim_set_active_edca_params(struct mac_context *mac_ctx,
 	 *   such that: BE_ACM=1, BK_ACM=1, VI_ACM=1, VO_ACM=0
 	 *   then all AC will be downgraded to AC_BE.
 	 */
-	pe_debug("adAdmitMask[UPLINK] = 0x%x ",
-		pe_session->gAcAdmitMask[SIR_MAC_DIRECTION_UPLINK]);
-	pe_debug("adAdmitMask[DOWNLINK] = 0x%x ",
-		pe_session->gAcAdmitMask[SIR_MAC_DIRECTION_DNLINK]);
+
+	debug_str = qdf_mem_malloc(LIM_DEBUG_STRING_SIZE);
+	if (!debug_str)
+		return;
+
 	for (ac = QCA_WLAN_AC_BK; ac <= QCA_WLAN_AC_VO; ac++) {
 		ac_admitted =
 			((pe_session->gAcAdmitMask[SIR_MAC_DIRECTION_UPLINK] &
 			 (1 << ac)) >> ac);
 
-		pe_debug("For AC[%d]: acm=%d,  ac_admitted=%d ",
-			ac, edca_params[ac].aci.acm, ac_admitted);
+		len += qdf_scnprintf(debug_str + len,
+				     LIM_DEBUG_STRING_SIZE - len,
+				     "AC[%d]:acm=%d ac_admitted=%d,", ac,
+				     edca_params[ac].aci.acm, ac_admitted);
 		if ((edca_params[ac].aci.acm == 1) && (ac_admitted == 0)) {
-			pe_debug("We need to downgrade AC %d!!", ac);
 			/* Loop backwards through AC values until it finds
 			 * acm == 0 or reaches QCA_WLAN_AC_BE.
 			 * Note that for block has no executable statements.
@@ -238,11 +246,18 @@ void lim_set_active_edca_params(struct mac_context *mac_ctx,
 			     i--)
 				;
 			new_ac = i;
-			pe_debug("Downgrading AC %d ---> AC %d ", ac, new_ac);
+			len += qdf_scnprintf(debug_str + len,
+					     LIM_DEBUG_STRING_SIZE - len,
+					     "AC %d ---> AC %d, ", ac, new_ac);
 			pe_session->gLimEdcaParamsActive[ac] =
 				edca_params[new_ac];
 		}
 	}
+
+	pe_debug("adAdmitMask: uplink 0x%x downlink 0x%x, %s",
+		 pe_session->gAcAdmitMask[SIR_MAC_DIRECTION_UPLINK],
+		 pe_session->gAcAdmitMask[SIR_MAC_DIRECTION_DNLINK], debug_str);
+	qdf_mem_free(debug_str);
 /* log: LOG_WLAN_QOS_EDCA_C */
 #ifdef FEATURE_WLAN_DIAG_SUPPORT_LIM    /* FEATURE_WLAN_DIAG_SUPPORT */
 	WLAN_HOST_DIAG_LOG_ALLOC(log_ptr, host_log_qos_edca_pkt_type,

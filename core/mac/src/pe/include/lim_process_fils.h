@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -15,6 +16,9 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
+
+#ifndef __LIM_PROCESS_FILS_H
+#define __LIM_PROCESS_FILS_H
 
 #include <cds_api.h>
 #include <lim_global.h>
@@ -296,4 +300,5 @@ static inline bool lim_verify_fils_params_assoc_rsp(struct mac_context *mac_ctx,
 {
 	return true;
 }
+#endif
 #endif

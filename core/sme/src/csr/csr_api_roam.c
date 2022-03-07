@@ -171,9 +171,10 @@ static void init_config_param(struct mac_context *mac);
 static bool csr_roam_process_results(struct mac_context *mac, tSmeCmd *pCommand,
 				     enum csr_roamcomplete_result Result,
 				     void *Context);
-
+#ifndef SAP_CP_CLEANUP
 static void csr_roaming_state_config_cnf_processor(struct mac_context *mac,
 			tSmeCmd *pCommand, uint8_t session_id);
+#endif
 static QDF_STATUS csr_roam_open(struct mac_context *mac);
 static QDF_STATUS csr_roam_close(struct mac_context *mac);
 static QDF_STATUS csr_init11d_info(struct mac_context *mac, tCsr11dinfo *ps11dinfo);
@@ -182,6 +183,7 @@ static QDF_STATUS csr_init_channel_power_list(struct mac_context *mac,
 static QDF_STATUS csr_roam_free_connected_info(struct mac_context *mac,
 					       struct csr_roam_connectedinfo *
 					       pConnectedInfo);
+#ifndef SAP_CP_CLEANUP
 static enum csr_cfgdot11mode
 csr_roam_get_phy_mode_band_for_bss(struct mac_context *mac,
 				   uint8_t vdev_id,
@@ -191,6 +193,7 @@ csr_roam_get_phy_mode_band_for_bss(struct mac_context *mac,
 static QDF_STATUS csr_roam_start_wds(struct mac_context *mac,
 				     uint32_t sessionId,
 				     struct csr_roam_profile *pProfile);
+#endif
 static void csr_init_session(struct mac_context *mac, uint32_t sessionId);
 
 static void csr_init_operating_classes(struct mac_context *mac);
@@ -2532,6 +2535,7 @@ QDF_STATUS csr_roam_issue_deauth_sta_cmd(struct mac_context *mac,
 	return status;
 }
 
+#ifndef SAP_CP_CLEANUP
 QDF_STATUS csr_roam_prepare_bss_config_from_profile(struct mac_context *mac,
 					struct csr_roam_profile *pProfile,
 					uint8_t vdev_id,
@@ -2777,7 +2781,7 @@ static QDF_STATUS csr_start_bss(struct mac_context *mac, tSmeCmd *pCommand)
 
 	return status;
 }
-
+#endif
 /**
  * csr_get_peer_stats_cb - Peer stats callback
  * @ev: stats event
@@ -2899,13 +2903,15 @@ QDF_STATUS csr_roam_process_command(struct mac_context *mac, tSmeCmd *pCommand)
 		pCommand->u.roamCmd.roamReason, sessionId);
 
 	switch (pCommand->u.roamCmd.roamReason) {
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	case eCsrStopBss:
 		csr_roam_state_change(mac, eCSR_ROAMING_STATE_JOINING,
 				sessionId);
 		status = csr_roam_issue_stop_bss(mac, sessionId,
 				eCSR_ROAM_SUBSTATE_STOP_BSS_REQ);
 		break;
-
+#endif
 	case eCsrForcedDisassocSta:
 	case eCsrForcedDeauthSta:
 		csr_roam_state_change(mac, eCSR_ROAMING_STATE_JOINING,
@@ -2929,6 +2935,8 @@ QDF_STATUS csr_roam_process_command(struct mac_context *mac, tSmeCmd *pCommand)
 		 */
 		csr_get_peer_stats(mac, sessionId, peer_mac);
 		break;
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	case eCsrStartBss:
 		/* for success case */
 		/* fallthrough */
@@ -2940,16 +2948,20 @@ QDF_STATUS csr_roam_process_command(struct mac_context *mac, tSmeCmd *pCommand)
 			sme_warn("csr_roam() failed with status = 0x%08X",
 				status);
 		break;
+#endif
 	}
 	return status;
 }
 
 void csr_reinit_roam_cmd(struct mac_context *mac, tSmeCmd *pCommand)
 {
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	if (pCommand->u.roamCmd.fReleaseProfile) {
 		csr_release_profile(mac, &pCommand->u.roamCmd.roamProfile);
 		pCommand->u.roamCmd.fReleaseProfile = false;
 	}
+#endif
 	/* Because u.roamCmd is union and share with scanCmd and StatusChange */
 	qdf_mem_zero(&pCommand->u.roamCmd, sizeof(struct roam_cmd));
 }
@@ -3033,11 +3045,14 @@ static void csr_roam_process_results_default(struct mac_context *mac_ctx,
 	}
 
 	switch (cmd->u.roamCmd.roamReason) {
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	case eCsrStopBss:
 		csr_roam_call_callback(mac_ctx, session_id, NULL,
 			cmd->u.roamCmd.roamId, eCSR_ROAM_INFRA_IND,
 			eCSR_ROAM_RESULT_INFRA_STOPPED);
 		break;
+#endif
 	case eCsrForcedDisassocSta:
 	case eCsrForcedDeauthSta:
 		roam_info->rssi = mac_ctx->peer_rssi;
@@ -3085,7 +3100,6 @@ static void csr_roam_process_start_bss_success(struct mac_context *mac_ctx,
 	uint32_t session_id = cmd->vdev_id;
 	struct csr_roam_profile *profile = &cmd->u.roamCmd.roamProfile;
 	struct csr_roam_session *session;
-	struct bss_description *bss_desc = NULL;
 	struct csr_roam_info *roam_info;
 	struct start_bss_rsp *start_bss_rsp = NULL;
 	eRoamCmdStatus roam_status = eCSR_ROAM_INFRA_IND;
@@ -3116,12 +3130,10 @@ static void csr_roam_process_start_bss_success(struct mac_context *mac_ctx,
 	else
 		session->connectState = eCSR_ASSOC_STATE_TYPE_WDS_DISCONNECTED;
 
-	bss_desc = &start_bss_rsp->bssDescription;
 	session->modifyProfileFields.uapsd_mask = profile->uapsd_mask;
 	csr_roam_state_change(mac_ctx, eCSR_ROAMING_STATE_JOINED, session_id);
 	csr_roam_free_connected_info(mac_ctx, &session->connectedInfo);
-	qdf_mem_copy(&roam_info->bssid, &bss_desc->bssId,
-		     sizeof(struct qdf_mac_addr));
+	wlan_mlme_get_mac_vdev_id(mac_ctx->pdev, session_id, &roam_info->bssid);
 
 	/* We are done with the IEs so free it */
 	/*
@@ -3250,6 +3262,7 @@ static bool csr_roam_process_results(struct mac_context *mac_ctx, tSmeCmd *cmd,
 	return release_cmd;
 }
 
+#ifndef SAP_CP_CLEANUP
 QDF_STATUS csr_roam_copy_profile(struct mac_context *mac,
 				 struct csr_roam_profile *pDstProfile,
 				 struct csr_roam_profile *pSrcProfile,
@@ -3395,6 +3408,7 @@ QDF_STATUS csr_issue_bss_start(struct mac_context *mac, uint8_t vdev_id,
 
 	return status;
 }
+#endif
 
 static void csr_flush_pending_start_bss_cmd(struct mac_context *mac_ctx,
 					     uint8_t vdev_id)
@@ -3421,6 +3435,7 @@ static void csr_flush_pending_start_bss_cmd(struct mac_context *mac_ctx,
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
 }
 
+#ifndef SAP_CP_CLEANUP
 QDF_STATUS csr_bss_start(struct mac_context *mac, uint32_t vdev_id,
 			 struct csr_roam_profile *profile, uint32_t *roam_id)
 {
@@ -3468,6 +3483,7 @@ QDF_STATUS csr_bss_start(struct mac_context *mac, uint32_t vdev_id,
 
 	return status;
 }
+#endif
 
 bool cm_csr_is_ss_wait_for_key(uint8_t vdev_id)
 {
@@ -3555,6 +3571,7 @@ void cm_csr_set_ss_none(uint8_t vdev_id)
 				 vdev_id);
 }
 
+#ifndef SAP_CP_CLEANUP
 QDF_STATUS csr_roam_issue_stop_bss_cmd(struct mac_context *mac, uint8_t vdev_id,
 				       eCsrRoamBssType bss_type,
 				       bool high_priority)
@@ -3585,6 +3602,7 @@ QDF_STATUS csr_roam_issue_stop_bss_cmd(struct mac_context *mac, uint8_t vdev_id,
 
 	return status;
 }
+#endif
 
 QDF_STATUS csr_roam_ndi_stop(struct mac_context *mac_ctx, uint8_t vdev_id)
 {
@@ -3626,6 +3644,7 @@ csr_fill_single_pmk(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 {}
 #endif
 
+#ifndef SAP_CP_CLEANUP
 static void
 csr_roaming_state_config_cnf_processor(struct mac_context *mac_ctx,
 				       tSmeCmd *cmd, uint8_t vdev_id)
@@ -3659,6 +3678,7 @@ csr_roaming_state_config_cnf_processor(struct mac_context *mac_ctx,
 		return;
 	}
 }
+#endif
 
 static void csr_roam_roaming_state_stop_bss_rsp_processor(struct mac_context *mac,
 							  tSirSmeRsp *pSmeRsp)
@@ -3675,7 +3695,10 @@ static void csr_roam_roaming_state_stop_bss_rsp_processor(struct mac_context *ma
 			if (pSmeRsp->status_code != eSIR_SME_SUCCESS)
 				result_code = eCsrStopBssFailure;
 		}
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 		csr_roam_complete(mac, result_code, NULL, pSmeRsp->vdev_id);
+#endif
 	}
 }
 
@@ -3726,8 +3749,11 @@ csr_roam_roaming_state_start_bss_rsp_processor(struct mac_context *mac,
 		/* Let csr_roam_complete decide what to do */
 		result = eCsrStartBssFailure;
 	}
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	csr_roam_complete(mac, result, pSmeStartBssRsp,
 				pSmeStartBssRsp->sessionId);
+#endif
 }
 
 /**
@@ -5309,12 +5335,18 @@ csr_compute_mode_and_band(struct mac_context *mac_ctx,
  *
  * Return: dot11mode
  */
+#ifndef SAP_CP_CLEANUP
 static enum csr_cfgdot11mode
 csr_roam_get_phy_mode_band_for_bss(struct mac_context *mac_ctx,
 				   uint8_t vdev_id,
 				   struct csr_roam_profile *profile,
 				   uint32_t bss_op_ch_freq,
 				   enum reg_wifi_band *p_band)
+#else
+enum csr_cfgdot11mode
+csr_roam_get_phy_mode_band_for_bss(struct mac_context *mac_ctx,
+				   struct bss_dot11_config *dot11_cfg)
+#endif
 {
 	enum reg_wifi_band band = REG_BAND_2G;
 	qdf_freq_t opr_freq = 0;
@@ -5398,6 +5430,7 @@ csr_roam_get_phy_mode_band_for_bss(struct mac_context *mac_ctx,
 	return cfg_dot11_mode;
 }
 
+#ifndef SAP_CP_CLEANUP
 QDF_STATUS csr_roam_issue_stop_bss(struct mac_context *mac,
 		uint32_t sessionId, enum csr_roam_substate NewSubstate)
 {
@@ -5420,6 +5453,7 @@ QDF_STATUS csr_roam_issue_stop_bss(struct mac_context *mac,
 	}
 	return status;
 }
+#endif
 
 QDF_STATUS csr_get_cfg_valid_channels(struct mac_context *mac,
 				      qdf_freq_t *ch_freq_list,
@@ -5443,6 +5477,7 @@ QDF_STATUS csr_get_cfg_valid_channels(struct mac_context *mac,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifndef SAP_CP_CLEANUP
 /**
  * csr_populate_basic_rates() - populates OFDM or CCK rates
  * @rates:         rate struct to populate
@@ -5460,6 +5495,7 @@ csr_populate_basic_rates(tSirMacRateSet *rate_set, bool is_ofdm_rates,
 {
 	wlan_populate_basic_rates(rate_set, is_ofdm_rates, is_basic_rates);
 }
+#endif
 
 /**
  * csr_convert_mode_to_nw_type() - convert mode into network type
@@ -5493,6 +5529,7 @@ csr_convert_mode_to_nw_type(enum csr_cfgdot11mode dot11_mode,
 	return eSIR_DONOT_USE_NW_TYPE;
 }
 
+#ifndef SAP_CP_CLEANUP
 /**
  * csr_populate_supported_rates_from_hostapd() - populates operational
  * and extended rates.
@@ -5542,7 +5579,6 @@ static void csr_populate_supported_rates_from_hostapd(tSirMacRateSet *opr_rates,
 			FL("Extended Rate is %2x"), ext_rates->rate[i]);
 	}
 }
-
 /**
  * csr_roam_get_bss_start_parms() - get bss start param from profile
  * @mac:          mac global context
@@ -5777,7 +5813,7 @@ void csr_roam_prepare_bss_params(struct mac_context *mac, uint32_t sessionId,
 	}
 
 }
-
+#endif
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 void csr_get_pmk_info(struct mac_context *mac_ctx, uint8_t session_id,
 		      struct wlan_crypto_pmksa *pmk_cache)
@@ -5949,6 +5985,7 @@ void csr_clear_sae_single_pmk(struct wlan_objmgr_psoc *psoc,
 }
 #endif
 
+#ifndef SAP_CP_CLEANUP
 static QDF_STATUS csr_roam_start_wds(struct mac_context *mac, uint32_t sessionId,
 				     struct csr_roam_profile *pProfile)
 {
@@ -5983,7 +6020,7 @@ static QDF_STATUS csr_roam_start_wds(struct mac_context *mac, uint32_t sessionId
 
 	return status;
 }
-
+#endif
 #ifdef FEATURE_WLAN_ESE
 void csr_update_prev_ap_info(struct csr_roam_session *session,
 			     struct wlan_objmgr_vdev *vdev)
@@ -7020,6 +7057,7 @@ QDF_STATUS csr_send_assoc_cnf_msg(struct mac_context *mac,
 	return status;
 }
 
+#ifndef SAP_CP_CLEANUP
 QDF_STATUS csr_send_mb_start_bss_req_msg(struct mac_context *mac, uint32_t
 					sessionId, eCsrRoamBssType bssType,
 					 struct csr_roamstart_bssparams *pParam)
@@ -7108,7 +7146,7 @@ QDF_STATUS csr_send_mb_stop_bss_req_msg(struct mac_context *mac,
 
 	return umac_send_mb_message_to_mac(pMsg);
 }
-
+#endif
 /**
  * csr_store_oce_cfg_flags_in_vdev() - fill OCE flags from ini
  * @mac: mac_context.
@@ -7668,12 +7706,15 @@ static enum wlan_serialization_cmd_type csr_get_roam_cmd_type(
 	enum wlan_serialization_cmd_type cmd_type = WLAN_SER_CMD_MAX;
 
 	switch (sme_cmd->u.roamCmd.roamReason) {
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	case eCsrStartBss:
 		cmd_type = WLAN_SER_CMD_VDEV_START_BSS;
 		break;
 	case eCsrStopBss:
 		cmd_type = WLAN_SER_CMD_VDEV_STOP_BSS;
 		break;
+#endif
 	case eCsrForcedDisassocSta:
 		cmd_type = WLAN_SER_CMD_FORCE_DISASSOC_STA;
 		break;
@@ -7890,6 +7931,7 @@ QDF_STATUS csr_roam_update_config(struct mac_context *mac_ctx, uint8_t session_i
 	return status;
 }
 
+#ifndef SAP_CP_CLEANUP
 QDF_STATUS csr_roam_channel_change_req(struct mac_context *mac,
 				       struct qdf_mac_addr bssid,
 				       uint8_t vdev_id,
@@ -7949,7 +7991,13 @@ QDF_STATUS csr_roam_channel_change_req(struct mac_context *mac,
 
 	return status;
 }
-
+#else
+QDF_STATUS csr_sap_channel_change_req(struct mac_context *mac,
+				      struct channel_change_req *req)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 /*
  * Post Beacon Tx Start request to LIM
  * immediately after SAP CAC WAIT is
@@ -8706,3 +8754,84 @@ QDF_STATUS csr_update_owe_info(struct mac_context *mac,
 
 	return status;
 }
+
+#ifdef SAP_CP_CLEANUP
+/**
+ * csr_set_sap_ser_params() - API to fill serialization parameters for
+ * SAP requests
+ * @cmd : Serialization command
+ * @cmd_type: Type of serialization command
+ *
+ * Return: Void
+ */
+static void csr_set_sap_ser_params(struct wlan_serialization_command *cmd,
+				   enum wlan_serialization_cmd_type cmd_type)
+{
+	return;
+}
+
+QDF_STATUS csr_bss_start(struct mac_context *mac, uint32_t vdev_id,
+			 struct start_bss_config *bss_config,
+			 uint32_t *roam_id)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS csr_roam_issue_stop_bss_cmd(struct mac_context *mac,
+				       uint8_t vdev_id,
+				       eCsrRoamBssType bss_type,
+				       bool high_priority)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * csr_process_sap_defaults() - API to process the default response
+ * for SAP from LIM
+ * @mac_ctx: mac context
+ * @req: Serialization command posted by SAP
+ * @vdev_id : vdev id
+ *
+ * Return: void
+ */
+static void csr_process_sap_defaults(struct mac_context *mac_ctx,
+				     struct wlan_serialization_command *req,
+				     uint32_t vdev_id)
+{
+	return;
+}
+
+/**
+ * csr_process_sap_results() - API to process the LIM response for
+ * the messages posted by SAP module
+ * @mac_ctx: mac context
+ * @req: Serialization command posted by SAP
+ * @rsp: Response from LIM
+ * @result: Result from LIM
+ * @vdev_id : vdev id
+ *
+ * Return: void
+ */
+static bool csr_process_sap_results(struct mac_context *mac_ctx,
+				    struct wlan_serialization_command *req,
+				    void *rsp,
+				    enum csr_roamcomplete_result result,
+				    uint8_t vdev_id)
+{
+	return true;
+}
+
+void csr_dequeue_sap_cmd(struct mac_context *mac_ctx,
+			 struct wlan_serialization_command *req,
+			 uint32_t vdev_id)
+{
+	return;
+}
+
+void csr_process_sap_response(struct mac_context *mac_ctx,
+			      enum csr_roamcomplete_result result,
+			      void *rsp, uint8_t vdev_id)
+{
+	return;
+}
+#endif

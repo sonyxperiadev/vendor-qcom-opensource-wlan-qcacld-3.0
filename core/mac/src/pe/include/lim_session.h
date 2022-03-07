@@ -230,7 +230,11 @@ struct pe_session {
 	tLimSystemRole limSystemRole;
 	enum bss_type bssType;
 	tSirNwType nwType;
+#ifndef SAP_CP_CLEANUP
 	struct start_bss_req *pLimStartBssReq; /* handle to start bss req */
+#else
+	struct start_bss_config *lim_start_bss_req;
+#endif
 	struct join_req *lim_join_req;    /* handle to sme join req */
 	struct join_req *pLimReAssocReq; /* handle to sme reassoc req */
 	tpLimMlmJoinReq pLimMlmJoinReq; /* handle to MLM join Req */

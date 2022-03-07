@@ -1116,7 +1116,6 @@ QDF_STATUS
 sch_beacon_edca_process(struct mac_context *mac, tSirMacEdcaParamSetIE *edca,
 			struct pe_session *session)
 {
-	uint8_t i;
 	bool follow_ap_edca;
 #ifdef FEATURE_WLAN_DIAG_SUPPORT
 	host_log_qos_edca_pkt_type *log_ptr = NULL;
@@ -1197,16 +1196,29 @@ sch_beacon_edca_process(struct mac_context *mac, tSirMacEdcaParamSetIE *edca,
 	}
 	WLAN_HOST_DIAG_LOG_REPORT(log_ptr);
 #endif /* FEATURE_WLAN_DIAG_SUPPORT */
-	pe_debug("Edca param enabled %d. Updating Local Params to: ",
-		 mac->mlme_cfg->edca_params.enable_edca_params);
-	for (i = 0; i < QCA_WLAN_AC_ALL; i++) {
-		pe_nofl_debug("AC[%d]:  AIFSN: %d, ACM %d, CWmin %d, CWmax %d, TxOp %d",
-			      i, session->gLimEdcaParams[i].aci.aifsn,
-			      session->gLimEdcaParams[i].aci.acm,
-			      session->gLimEdcaParams[i].cw.min,
-			      session->gLimEdcaParams[i].cw.max,
-			      session->gLimEdcaParams[i].txoplimit);
-	}
+	pe_debug("Edca param enabled %d. Updating Local Params to: AC_BE: AIFSN: %d, ACM %d, CWmin %d, CWmax %d, TxOp %d  AC_BK: AIFSN: %d, ACM %d, CWmin %d, CWmax %d, TxOp %d  AC_VI: AIFSN: %d, ACM %d, CWmin %d, CWmax %d, TxOp %d  AC_VO: AIFSN: %d, ACM %d, CWmin %d, CWmax %d, TxOp %d",
+		 mac->mlme_cfg->edca_params.enable_edca_params,
+		 session->gLimEdcaParams[0].aci.aifsn,
+		 session->gLimEdcaParams[0].aci.acm,
+		 session->gLimEdcaParams[0].cw.min,
+		 session->gLimEdcaParams[0].cw.max,
+		 session->gLimEdcaParams[0].txoplimit,
+		 session->gLimEdcaParams[1].aci.aifsn,
+		 session->gLimEdcaParams[1].aci.acm,
+		 session->gLimEdcaParams[1].cw.min,
+		 session->gLimEdcaParams[1].cw.max,
+		 session->gLimEdcaParams[1].txoplimit,
+		 session->gLimEdcaParams[2].aci.aifsn,
+		 session->gLimEdcaParams[2].aci.acm,
+		 session->gLimEdcaParams[2].cw.min,
+		 session->gLimEdcaParams[2].cw.max,
+		 session->gLimEdcaParams[2].txoplimit,
+		 session->gLimEdcaParams[3].aci.aifsn,
+		 session->gLimEdcaParams[3].aci.acm,
+		 session->gLimEdcaParams[3].cw.min,
+		 session->gLimEdcaParams[3].cw.max,
+		 session->gLimEdcaParams[3].txoplimit);
+
 	return QDF_STATUS_SUCCESS;
 }
 

@@ -1824,11 +1824,8 @@ static void hdd_hostapd_set_sap_key(struct hdd_adapter *adapter)
 
 	for (key_index = 0; key_index < WLAN_CRYPTO_MAXKEYIDX; ++key_index) {
 		crypto_key = wlan_crypto_get_key(adapter->vdev, key_index);
-		if (!crypto_key) {
-			hdd_debug("Crypto KEY with key id %d is NULL",
-				  key_index);
+		if (!crypto_key)
 			continue;
-		}
 		ucfg_crypto_set_key_req(adapter->vdev, crypto_key,
 					WLAN_CRYPTO_KEY_TYPE_GROUP);
 		wma_update_set_key(adapter->vdev_id, false, key_index,
@@ -6870,6 +6867,7 @@ wlan_hdd_update_twt_responder(struct hdd_context *hdd_ctx,
 			      struct cfg80211_ap_settings *params)
 {
 	bool twt_res_svc_cap, enable_twt;
+	uint32_t reason;
 
 	enable_twt = ucfg_mlme_is_twt_enabled(hdd_ctx->psoc);
 	ucfg_mlme_get_twt_res_service_cap(hdd_ctx->psoc, &twt_res_svc_cap);
@@ -6877,10 +6875,12 @@ wlan_hdd_update_twt_responder(struct hdd_context *hdd_ctx,
 					twt_res_svc_cap,
 					(enable_twt && params->twt_responder)));
 	hdd_debug("cfg80211 TWT responder:%d", params->twt_responder);
-	if (enable_twt && params->twt_responder)
+	if (enable_twt && params->twt_responder) {
 		hdd_send_twt_responder_enable_cmd(hdd_ctx);
-	else
-		hdd_send_twt_responder_disable_cmd(hdd_ctx);
+	} else {
+		reason = HOST_TWT_DISABLE_REASON_NONE;
+		hdd_send_twt_responder_disable_cmd(hdd_ctx, reason);
+	}
 }
 #else
 static inline void
@@ -6916,6 +6916,7 @@ static int __wlan_hdd_cfg80211_start_ap(struct wiphy *wiphy,
 	bool srd_channel_allowed, disable_nan = true;
 	enum QDF_OPMODE vdev_opmode;
 	uint8_t vdev_id_list[MAX_NUMBER_OF_CONC_CONNECTIONS], i;
+	enum policy_mgr_con_mode intf_pm_mode;
 
 	hdd_enter();
 
@@ -6997,6 +6998,15 @@ static int __wlan_hdd_cfg80211_start_ap(struct wiphy *wiphy,
 	if (!status)
 		return -EINVAL;
 
+	intf_pm_mode = policy_mgr_convert_device_mode_to_qdf_type(
+							adapter->device_mode);
+	status = policy_mgr_is_multi_sap_allowed_on_same_band(
+				hdd_ctx->pdev,
+				intf_pm_mode,
+				chandef->chan->center_freq);
+	if (!status)
+		return -EINVAL;
+
 	vdev_opmode = wlan_vdev_mlme_get_opmode(adapter->vdev);
 	ucfg_mlme_get_srd_master_mode_for_vdev(hdd_ctx->psoc, vdev_opmode,
 					       &srd_channel_allowed);
@@ -7071,8 +7081,7 @@ static int __wlan_hdd_cfg80211_start_ap(struct wiphy *wiphy,
 
 	/* check if concurrency is allowed */
 	if (!policy_mgr_allow_concurrency(hdd_ctx->psoc,
-				policy_mgr_convert_device_mode_to_qdf_type(
-				adapter->device_mode),
+				intf_pm_mode,
 				freq,
 				channel_width,
 				policy_mgr_get_conc_ext_flags(adapter->vdev,

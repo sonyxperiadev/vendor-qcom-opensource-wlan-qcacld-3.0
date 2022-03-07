@@ -911,9 +911,12 @@ static void hdd_wmm_cm_connect(struct wlan_objmgr_vdev *vdev,
 	adapter->hdd_wmm_status.qap = qap;
 	adapter->hdd_wmm_status.qos_connection = qos_connection;
 
+	if (acm_mask)
+		QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
+				   (uint8_t *)acm_mask_bit,  WLAN_MAX_AC);
+
 	for (ac = 0; ac < WLAN_MAX_AC; ac++) {
 		if (qap && qos_connection && (acm_mask & acm_mask_bit[ac])) {
-			hdd_debug("ac %d on", ac);
 
 			/* admission is required */
 			adapter->hdd_wmm_status.ac_status[ac].
@@ -941,7 +944,6 @@ static void hdd_wmm_cm_connect(struct wlan_objmgr_vdev *vdev,
 					is_access_allowed = false;
 			}
 		} else {
-			hdd_debug("ac %d off", ac);
 			/* admission is not required so access is allowed */
 			adapter->hdd_wmm_status.ac_status[ac].
 			is_access_required = false;
@@ -1561,9 +1563,9 @@ QDF_STATUS hdd_cm_ft_preauth_complete(struct wlan_objmgr_vdev *vdev,
 	struct wireless_dev *wdev;
 	uint16_t auth_resp_len = 0;
 	uint32_t ric_ies_length = 0;
-	struct cfg80211_ft_event_params ft_event;
-	uint8_t ft_ie[DOT11F_IE_FTINFO_MAX_LEN];
-	uint8_t ric_ies[DOT11F_IE_RICDESCRIPTOR_MAX_LEN];
+	struct cfg80211_ft_event_params ft_event = {0};
+	uint8_t ft_ie[DOT11F_IE_FTINFO_MAX_LEN] = {0};
+	uint8_t ric_ies[DOT11F_IE_RICDESCRIPTOR_MAX_LEN] = {0};
 
 	mac_handle = cds_get_context(QDF_MODULE_ID_SME);
 	if (!mac_handle) {
@@ -1582,9 +1584,6 @@ QDF_STATUS hdd_cm_ft_preauth_complete(struct wlan_objmgr_vdev *vdev,
 		return QDF_STATUS_E_INVAL;
 	}
 
-	qdf_mem_zero(ft_ie, DOT11F_IE_FTINFO_MAX_LEN);
-	qdf_mem_zero(ric_ies, DOT11F_IE_RICDESCRIPTOR_MAX_LEN);
-
 	if (rsp->ric_ies_length &&
 	    rsp->ric_ies_length <= DOT11F_IE_RICDESCRIPTOR_MAX_LEN) {
 		qdf_mem_copy(ric_ies, rsp->ric_ies, rsp->ric_ies_length);
@@ -1593,8 +1592,10 @@ QDF_STATUS hdd_cm_ft_preauth_complete(struct wlan_objmgr_vdev *vdev,
 		hdd_warn("Do not send RIC IEs as length is 0");
 	}
 
-	ft_event.ric_ies = ric_ies;
-	ft_event.ric_ies_len = ric_ies_length;
+	if (ric_ies_length) {
+		ft_event.ric_ies = ric_ies;
+		ft_event.ric_ies_len = ric_ies_length;
+	}
 	hdd_debug("RIC IEs is of length %d", ric_ies_length);
 
 	hdd_cm_get_ft_preauth_response(vdev, rsp, ft_ie,

@@ -951,10 +951,13 @@ QDF_STATUS wma_add_beacon_filter(WMA_HANDLE handle,
 			(BCN_FLT_MAX_ELEMS_IE_LIST * sizeof(u_int32_t)));
 
 	ie_map = (A_UINT32 *)(buf + WMI_TLV_HDR_SIZE);
-	for (i = 0; i < BCN_FLT_MAX_ELEMS_IE_LIST; i++) {
+	for (i = 0; i < BCN_FLT_MAX_ELEMS_IE_LIST; i++)
 		ie_map[i] = filter_params->ie_map[i];
-		wma_debug("beacon filter ie map = %u", ie_map[i]);
-	}
+
+	wma_debug("Beacon filter ie map Hex dump:");
+	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_DEBUG,
+			   (uint8_t *)ie_map,
+			   BCN_FLT_MAX_ELEMS_IE_LIST * sizeof(u_int32_t));
 
 	ret = wmi_unified_cmd_send(wmi_handle, wmi_buf, len,
 			WMI_ADD_BCN_FILTER_CMDID);

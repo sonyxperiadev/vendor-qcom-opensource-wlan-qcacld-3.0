@@ -1141,7 +1141,8 @@ QDF_STATUS wlan_cm_send_connect_rsp(struct scheduler_msg *msg)
 	}
 
 	/*  check and delete bss peer in case of failure */
-	if (QDF_IS_STATUS_ERROR(rsp->connect_rsp.connect_status)) {
+	if (QDF_IS_STATUS_ERROR(rsp->connect_rsp.connect_status) &&
+	    (wlan_vdev_mlme_is_init_state(vdev) == QDF_STATUS_SUCCESS)) {
 		peer = wlan_objmgr_vdev_try_get_bsspeer(vdev,
 							WLAN_MLME_CM_ID);
 		if (peer) {

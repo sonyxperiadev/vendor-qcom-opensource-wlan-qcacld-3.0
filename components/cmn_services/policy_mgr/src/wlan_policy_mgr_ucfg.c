@@ -80,6 +80,8 @@ static QDF_STATUS policy_mgr_init_cfg(struct wlan_objmgr_psoc *psoc)
 	cfg->mark_indoor_chnl_disable =
 		cfg_get(psoc, CFG_MARK_INDOOR_AS_DISABLE_FEATURE);
 	cfg->go_force_scc = cfg_get(psoc, CFG_P2P_GO_ENABLE_FORCE_SCC);
+	cfg->multi_sap_allowed_on_same_band =
+		cfg_get(psoc, CFG_MULTI_SAP_ALLOWED_ON_SAME_BAND);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -199,6 +201,11 @@ QDF_STATUS ucfg_policy_mgr_get_dual_mac_feature(struct wlan_objmgr_psoc *psoc,
 						uint8_t *dual_mac_feature)
 {
 	return policy_mgr_get_dual_mac_feature(psoc, dual_mac_feature);
+}
+
+bool ucfg_policy_mgr_get_dual_sta_feature(struct wlan_objmgr_psoc *psoc)
+{
+	return policy_mgr_allow_multiple_sta_connections(psoc);
 }
 
 QDF_STATUS ucfg_policy_mgr_get_force_1x1(struct wlan_objmgr_psoc *psoc,

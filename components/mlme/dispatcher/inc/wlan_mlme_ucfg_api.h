@@ -4391,6 +4391,17 @@ ucfg_mlme_cfg_get_ht_smps(struct wlan_objmgr_psoc *psoc,
  */
 bool ucfg_mlme_get_coex_unsafe_chan_nb_user_prefer(
 		struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_mlme_get_coex_unsafe_chan_reg_disable() - get reg disable cap for
+ * coex unsafe channels support
+ * @psoc:   pointer to psoc object
+ * @value:  pointer to the value which will be filled for the caller
+ *
+ * Return: coex_unsafe_chan_reg_disable
+ */
+bool ucfg_mlme_get_coex_unsafe_chan_reg_disable(
+		struct wlan_objmgr_psoc *psoc);
 #else
 static inline
 bool ucfg_mlme_get_coex_unsafe_chan_nb_user_prefer(
@@ -4398,5 +4409,30 @@ bool ucfg_mlme_get_coex_unsafe_chan_nb_user_prefer(
 {
 	return false;
 }
+
+static inline
+bool ucfg_mlme_get_coex_unsafe_chan_reg_disable(
+		struct wlan_objmgr_psoc *psoc)
+{
+	return false;
+}
 #endif
+
+/**
+ * ucfg_set_ratemask_params() - Set ratemask config
+ * @vdev:   pointer to vdev object
+ * @num_ratemask: number of ratemask params
+ * @rate_params: ratemask params
+ *
+ * Return: QDF_STATUS
+ */
+
+static inline QDF_STATUS
+ucfg_set_ratemask_params(struct wlan_objmgr_vdev *vdev,
+			 uint8_t num_ratemask,
+			 struct config_ratemask_params *rate_params)
+{
+	return wlan_mlme_update_ratemask_params(vdev, num_ratemask,
+						rate_params);
+}
 #endif /* _WLAN_MLME_UCFG_API_H_ */

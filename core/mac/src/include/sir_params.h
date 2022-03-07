@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -394,7 +395,6 @@ enum halmsgtype {
 #ifndef REMOVE_PKT_LOG
 	SIR_HAL_PKTLOG_ENABLE_REQ         = (SIR_HAL_ITC_MSG_TYPES_BEGIN + 164),
 #endif
-	SIR_HAL_START_SCAN_OFFLOAD_REQ    = (SIR_HAL_ITC_MSG_TYPES_BEGIN + 166),
 	SIR_HAL_UPDATE_CHAN_LIST_REQ      = (SIR_HAL_ITC_MSG_TYPES_BEGIN + 167),
 	SIR_CSA_OFFLOAD_EVENT             = (SIR_HAL_ITC_MSG_TYPES_BEGIN + 169),
 

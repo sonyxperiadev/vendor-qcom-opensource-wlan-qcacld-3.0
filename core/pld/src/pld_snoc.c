@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -21,11 +22,21 @@
 #include <linux/list.h>
 #include <linux/slab.h>
 
+#ifdef CONFIG_CNSS_OUT_OF_TREE
+#ifdef CONFIG_PLD_SNOC_ICNSS
+#ifdef CONFIG_PLD_SNOC_ICNSS2
+#include "icnss2.h"
+#else
+#include "icnss.h"
+#endif
+#endif
+#else
 #ifdef CONFIG_PLD_SNOC_ICNSS
 #ifdef CONFIG_PLD_SNOC_ICNSS2
 #include <soc/qcom/icnss2.h>
 #else
 #include <soc/qcom/icnss.h>
+#endif
 #endif
 #endif
 

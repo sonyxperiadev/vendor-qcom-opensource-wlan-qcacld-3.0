@@ -36,6 +36,19 @@
 #include <net/cnss2.h>
 #endif
 #endif
+
+#ifdef CONFIG_CNSS_OUT_OF_TREE
+#ifdef CONFIG_PLD_SNOC_ICNSS
+#ifdef CONFIG_PLD_SNOC_ICNSS2
+#include "icnss2.h"
+#else
+#include "icnss.h"
+#endif
+#endif
+#ifdef CONFIG_PLD_IPCI_ICNSS
+#include "icnss2.h"
+#endif
+#else
 #ifdef CONFIG_PLD_SNOC_ICNSS
 #ifdef CONFIG_PLD_SNOC_ICNSS2
 #include <soc/qcom/icnss2.h>
@@ -45,6 +58,7 @@
 #endif
 #ifdef CONFIG_PLD_IPCI_ICNSS
 #include <soc/qcom/icnss2.h>
+#endif
 #endif
 
 #include "pld_pcie.h"
@@ -330,14 +344,14 @@ int pld_register_driver(struct pld_driver_ops *ops)
 
 	ret = pld_pcie_register_driver();
 	if (ret) {
-		pr_err("Fail to register pcie driver\n");
+		pld_err_rl("Fail to register pcie driver\n");
 		goto fail_pcie;
 	}
 	pld_context->pld_driver_state |= PLD_PCIE_REGISTERED;
 
 	ret = pld_snoc_register_driver();
 	if (ret) {
-		pr_err("Fail to register snoc driver\n");
+		pld_err_rl("Fail to register snoc driver\n");
 		goto fail_snoc;
 	}
 	pld_context->pld_driver_state |= PLD_SNOC_REGISTERED;
@@ -372,7 +386,7 @@ int pld_register_driver(struct pld_driver_ops *ops)
 
 	ret = pld_ipci_register_driver();
 	if (ret) {
-		pr_err("Fail to register ipci driver\n");
+		pld_err_rl("Fail to register ipci driver\n");
 		goto fail_ipci;
 	}
 	pld_context->pld_driver_state |= PLD_IPCI_REGISTERED;

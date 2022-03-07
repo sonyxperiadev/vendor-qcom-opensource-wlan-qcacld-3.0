@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -202,6 +203,19 @@ ucfg_policy_mgr_get_allow_mcc_go_diff_bi(struct wlan_objmgr_psoc *psoc,
  */
 QDF_STATUS ucfg_policy_mgr_get_dual_mac_feature(struct wlan_objmgr_psoc *psoc,
 						uint8_t *dual_mac_feature);
+
+/**
+ * ucfg_policy_mgr_get_dual_sta_feature() - to find out if DUAL STA feature is
+ *					    enabled
+ * @psoc: pointer to psoc
+ *
+ * This API is used to find out whether dual sta specific feature is enabled
+ * or not.
+ *
+ * Return: true if feature is enabled, otherwise false.
+ */
+bool ucfg_policy_mgr_get_dual_sta_feature(struct wlan_objmgr_psoc *psoc);
+
 /**
  * ucfg_policy_mgr_get_force_1x1() - to find out if 1x1 connection is enforced
  *

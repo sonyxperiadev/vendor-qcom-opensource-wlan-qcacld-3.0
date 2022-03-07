@@ -2065,16 +2065,19 @@ DP_OBJS := $(DP_SRC)/dp_main.o \
 		$(DP_SRC)/dp_peer.o \
 		$(DP_SRC)/dp_rx_desc.o \
 		$(DP_SRC)/dp_reo.o \
-		$(DP_SRC)/monitor/dp_mon.o \
+		$(DP_SRC)/dp_rx_defrag.o \
+		$(DP_SRC)/dp_stats.o \
+		$(WLAN_COMMON_ROOT)/target_if/dp/src/target_if_dp.o
+
+ifeq ($(CONFIG_WIFI_MONITOR_SUPPORT), y)
+DP_OBJS += $(DP_SRC)/monitor/dp_mon.o \
 		$(DP_SRC)/monitor/dp_mon_filter.o \
 		$(DP_SRC)/monitor/dp_rx_mon.o \
 		$(DP_SRC)/monitor/1.0/dp_rx_mon_dest_1.0.o \
 		$(DP_SRC)/monitor/1.0/dp_rx_mon_status_1.0.o \
-		$(DP_SRC)/dp_rx_defrag.o \
 		$(DP_SRC)/monitor/1.0/dp_mon_filter_1.0.o \
-		$(DP_SRC)/dp_stats.o \
-		$(DP_SRC)/monitor/1.0/dp_mon_1.0.o \
-		$(WLAN_COMMON_ROOT)/target_if/dp/src/target_if_dp.o
+		$(DP_SRC)/monitor/1.0/dp_mon_1.0.o
+endif
 
 ifeq ($(CONFIG_BERYLLIUM), y)
 DP_OBJS += $(DP_SRC)/be/dp_be.o
@@ -3100,6 +3103,7 @@ cppflags-$(CONFIG_WLAN_FEATURE_LRO_CTX_IN_CB) += -DWLAN_FEATURE_LRO_CTX_IN_CB
 ifeq ($(CONFIG_FEATURE_MONITOR_MODE_SUPPORT), y)
 cppflags-y += -DFEATURE_MONITOR_MODE_SUPPORT
 cppflags-$(CONFIG_DP_CON_MON_MSI_ENABLED) += -DDP_CON_MON_MSI_ENABLED
+cppflags-$(CONFIG_WLAN_RX_MON_PARSE_CMN_USER_INFO) += -DWLAN_RX_MON_PARSE_CMN_USER_INFO
 else
 cppflags-y += -DDISABLE_MON_CONFIG
 endif
@@ -4219,6 +4223,7 @@ cppflags-y += -DCHECK_REG_PHYMODE
 
 cppflags-$(CONFIG_BAND_6GHZ) += -DCONFIG_BAND_6GHZ
 cppflags-$(CONFIG_6G_SCAN_CHAN_SORT_ALGO) += -DFEATURE_6G_SCAN_CHAN_SORT_ALGO
+cppflags-y += -DCONFIG_REG_6G_PWRMODE
 
 cppflags-$(CONFIG_RX_FISA) += -DWLAN_SUPPORT_RX_FISA
 cppflags-$(CONFIG_RX_FISA_HISTORY) += -DWLAN_SUPPORT_RX_FISA_HIST

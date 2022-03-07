@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -87,6 +87,31 @@ int hdd_son_deliver_assoc_disassoc_event(struct hdd_adapter *adapter,
 void
 hdd_son_deliver_peer_authorize_event(struct hdd_adapter *adapter,
 				     uint8_t *peer_mac);
+
+/**
+ * hdd_son_send_set_wifi_generic_command() - Send Generic SET command to SON
+ * @wiphy: standard kernel wiphy
+ * @wdev: wireless device
+ * @tb: NL attributes
+ *
+ * Return: 0 on success
+ */
+int hdd_son_send_set_wifi_generic_command(struct wiphy *wiphy,
+					  struct wireless_dev *wdev,
+					  struct nlattr **tb);
+
+/**
+ * hdd_son_send_get_wifi_generic_command() - Send Generic GET command to SON
+ * @wiphy: standard kernel wiphy
+ * @wdev: wireless device
+ * @tb: NL attributes
+ *
+ * Return: 0 on success
+ */
+int hdd_son_send_get_wifi_generic_command(struct wiphy *wiphy,
+					  struct wireless_dev *wdev,
+					  struct nlattr **tb);
+
 #else
 
 static inline void hdd_son_register_callbacks(struct hdd_context *hdd_ctx)
@@ -121,5 +146,20 @@ hdd_son_deliver_peer_authorize_event(struct hdd_adapter *adapter,
 {
 }
 
+static inline
+int hdd_son_send_set_wifi_generic_command(struct wiphy *wiphy,
+					  struct wireless_dev *wdev,
+					  struct nlattr **tb)
+{
+	return -EINVAL;
+}
+
+static inline
+int hdd_son_send_get_wifi_generic_command(struct wiphy *wiphy,
+					  struct wireless_dev *wdev,
+					  struct nlattr **tb)
+{
+	return -EINVAL;
+}
 #endif /* WLAN_FEATURE_SON */
 #endif

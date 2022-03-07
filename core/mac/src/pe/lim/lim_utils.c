@@ -9272,6 +9272,45 @@ QDF_STATUS lim_sta_mlme_vdev_stop_send(struct vdev_mlme_obj *vdev_mlme,
 	return status;
 }
 
+QDF_STATUS
+lim_sta_mlme_vdev_sta_disconnect_start(struct vdev_mlme_obj *vdev_mlme,
+				       uint16_t data_len, void *data)
+{
+	tpDphHashNode stads;
+	struct pe_session *session;
+	struct mac_context *mac_ctx;
+	uint8_t vdev_id = wlan_vdev_get_id(vdev_mlme->vdev);
+
+	mac_ctx = cds_get_context(QDF_MODULE_ID_PE);
+	if (!mac_ctx)
+		return QDF_STATUS_E_INVAL;
+
+	session = pe_find_session_by_vdev_id(mac_ctx, vdev_id);
+	if (!session) {
+		pe_err("session is NULL for vdevid %d", vdev_id);
+		return QDF_STATUS_E_INVAL;
+	}
+	stads = dph_get_hash_entry(mac_ctx, DPH_STA_HASH_INDEX_PEER,
+				   &session->dph.dphHashTable);
+	if (!stads)
+		return QDF_STATUS_E_INVAL;
+	mlme_set_connection_fail(vdev_mlme->vdev, false);
+
+	session->limPrevSmeState = session->limSmeState;
+	session->limSmeState = eLIM_SME_WT_DISASSOC_STATE;
+
+	stads->mlmStaContext.disassocReason = REASON_UNSPEC_FAILURE;
+	stads->mlmStaContext.cleanupTrigger = eLIM_HOST_DISASSOC;
+
+	stads->mlmStaContext.mlmState = eLIM_MLM_WT_DEL_STA_RSP_STATE;
+
+	wlan_vdev_mlme_sm_deliver_evt(session->vdev,
+				      WLAN_VDEV_SM_EV_CONNECTION_FAIL,
+				      sizeof(*session), session);
+
+	return QDF_STATUS_SUCCESS;
+}
+
 QDF_STATUS lim_sta_mlme_vdev_req_fail(struct vdev_mlme_obj *vdev_mlme,
 				      uint16_t data_len, void *data)
 {

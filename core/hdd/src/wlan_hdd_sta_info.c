@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -64,6 +64,7 @@ char *sta_info_string_from_dbgid(wlan_sta_info_dbgid id)
 				"STA_INFO_SHOW",
 				"STA_INFO_SOFTAP_IPA_RX_PKT_CALLBACK",
 				"STA_INFO_WLAN_HDD_CFG80211_DUMP_STATION",
+				"STA_INFO_SON_GET_DATRATE_INFO",
 				"STA_INFO_ID_MAX"};
 	int32_t num_dbg_strings = QDF_ARRAY_SIZE(strings);
 

@@ -1007,14 +1007,11 @@ uint8_t sme_qos_get_acm_mask(struct mac_context *mac, struct bss_description
 	enum qca_wlan_ac_type ac;
 	uint8_t acm_mask = 0;
 
-	QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
-		  "%s: %d: invoked", __func__, __LINE__);
 	for (ac = QCA_WLAN_AC_BE; ac < QCA_WLAN_AC_ALL; ac++) {
 		if (sme_qos_is_acm(mac, pSirBssDesc, ac, pIes))
 			acm_mask = acm_mask | (1 << (QCA_WLAN_AC_VO - ac));
 	}
-	QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
-		  "%s: %d: mask is %d", __func__, __LINE__, acm_mask);
+	sme_debug("mask is 0x%x", acm_mask);
 	return acm_mask;
 }
 
@@ -6095,9 +6092,7 @@ sme_qos_is_acm(struct mac_context *mac, struct bss_description *pSirBssDesc,
 			    (csr_get_parsed_bss_description_ies
 				    (mac, pSirBssDesc, &pIesLocal))) {
 			/* err msg */
-			QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
-				  "%s: %d: csr_get_parsed_bss_description_ies() failed",
-				  __func__, __LINE__);
+			sme_err("csr_get_parsed_bss_description_ies() failed");
 			return false;
 		}
 
@@ -6123,15 +6118,10 @@ sme_qos_is_acm(struct mac_context *mac, struct bss_description *pSirBssDesc,
 				ret_val = true;
 			break;
 		default:
-			QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
-				  "%s: %d: unknown AC = %d",
-				  __func__, __LINE__, ac);
+			sme_err("unknown AC = %d", ac);
 			break;
 		}
 	} /* IS_QOS_BSS */
-	QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
-		  "%s: %d: ACM = %d for AC = %d",
-		  __func__, __LINE__, ret_val, ac);
 	if (!pIes)
 		/* IEs were allocated locally so free them */
 		qdf_mem_free(pIesLocal);

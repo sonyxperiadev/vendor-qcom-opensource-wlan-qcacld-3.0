@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -147,6 +148,14 @@ static void csr_purge_channel_power(struct mac_context *mac,
 	csr_ll_unlock(pChannelList);
 }
 
+#define FREQ_SIZE 4
+#define SPACE_SIZE 2
+#define SIZEOFNULL 1
+#define BUF24GHZSIZE (NUM_24GHZ_CHANNELS * (\
+					FREQ_SIZE + SPACE_SIZE) + SIZEOFNULL)
+#define BUF5GHZSIZE (NUM_5GHZ_CHANNELS * (\
+					FREQ_SIZE + SPACE_SIZE) + SIZEOFNULL)
+
 /*
  * Save the channelList into the ultimate storage as the final stage of channel
  * Input: pCountryInfo -- the country code (e.g. "USI"), channel list, and power
@@ -158,41 +167,53 @@ QDF_STATUS csr_save_to_channel_power2_g_5_g(struct mac_context *mac,
 {
 	uint32_t i = tableSize / sizeof(struct pwr_channel_info);
 	struct pwr_channel_info *pChannelInfo;
-	struct csr_channel_powerinfo *pChannelSet;
+	struct csr_channel_powerinfo *pchannelset;
 	bool f2GHzInfoFound = false;
 	bool f2GListPurged = false, f5GListPurged = false;
+	uint8_t *buf24ghz = qdf_mem_malloc(BUF24GHZSIZE);
+	uint8_t *buf5ghz = qdf_mem_malloc(BUF5GHZSIZE);
+	uint32_t size24ghz = 0, size5ghz = 0;
 
+	if (!buf24ghz || !buf5ghz) {
+		if (buf24ghz)
+			qdf_mem_free(buf24ghz);
+		if (buf5ghz)
+			qdf_mem_free(buf5ghz);
+		return QDF_STATUS_E_NOMEM;
+	}
 	pChannelInfo = channelTable;
 	/* atleast 3 bytes have to be remaining  -- from "countryString" */
 	while (i--) {
-	pChannelSet = qdf_mem_malloc(sizeof(struct csr_channel_powerinfo));
-		if (!pChannelSet) {
+	pchannelset = qdf_mem_malloc(sizeof(struct csr_channel_powerinfo));
+		if (!pchannelset) {
 			pChannelInfo++;
 			continue;
 		}
-		pChannelSet->first_chan_freq = pChannelInfo->first_freq;
-		pChannelSet->numChannels = pChannelInfo->num_chan;
+		pchannelset->first_chan_freq = pChannelInfo->first_freq;
+		pchannelset->numChannels = pChannelInfo->num_chan;
 		/*
 		 * Now set the inter-channel offset based on the frequency band
 		 * the channel set lies in
 		 */
-		if (WLAN_REG_IS_24GHZ_CH_FREQ(pChannelSet->first_chan_freq) &&
-		    (pChannelSet->first_chan_freq + 5 * (pChannelSet->numChannels - 1) <=
+		if (WLAN_REG_IS_24GHZ_CH_FREQ(pchannelset->first_chan_freq) &&
+		    (pchannelset->first_chan_freq + 5 * (pchannelset->numChannels - 1) <=
 		     WLAN_REG_MAX_24GHZ_CHAN_FREQ)) {
-			pChannelSet->interChannelOffset = 5;
+			pchannelset->interChannelOffset = 5;
 			f2GHzInfoFound = true;
-		} else if (WLAN_REG_IS_5GHZ_CH_FREQ(pChannelSet->first_chan_freq) &&
-			   (pChannelSet->first_chan_freq + 20 * (pChannelSet->numChannels - 1) <=
+		} else if (WLAN_REG_IS_5GHZ_CH_FREQ(pchannelset->first_chan_freq) &&
+			   (pchannelset->first_chan_freq + 20 * (pchannelset->numChannels - 1) <=
 			   WLAN_REG_MAX_5GHZ_CHAN_FREQ)) {
-			pChannelSet->interChannelOffset = 20;
+			pchannelset->interChannelOffset = 20;
 			f2GHzInfoFound = false;
 		} else {
 			sme_warn("Invalid Channel freq %d Present in Country IE",
-				 pChannelSet->first_chan_freq);
-			qdf_mem_free(pChannelSet);
+				 pchannelset->first_chan_freq);
+			qdf_mem_free(pchannelset);
+			qdf_mem_free(buf24ghz);
+			qdf_mem_free(buf5ghz);
 			return QDF_STATUS_E_FAILURE;
 		}
-		pChannelSet->txPower = pChannelInfo->max_tx_pwr;
+		pchannelset->txPower = pChannelInfo->max_tx_pwr;
 		if (f2GHzInfoFound) {
 			if (!f2GListPurged) {
 				/* purge previous results if found new */
@@ -205,13 +226,14 @@ QDF_STATUS csr_save_to_channel_power2_g_5_g(struct mac_context *mac,
 				/* add to the list of 2.4 GHz channel sets */
 				csr_ll_insert_tail(&mac->scan.
 						   channelPowerInfoList24,
-						   &pChannelSet->link,
+						   &pchannelset->link,
 						   LL_ACCESS_LOCK);
 			} else {
-				sme_debug(
-					"Adding 11B/G ch in 11A. 1st ch freq %d",
-					pChannelSet->first_chan_freq);
-				qdf_mem_free(pChannelSet);
+				size24ghz += qdf_scnprintf(
+					buf24ghz + size24ghz,
+					BUF24GHZSIZE - size24ghz, "  %d",
+					pchannelset->first_chan_freq);
+				qdf_mem_free(pchannelset);
 			}
 		} else {
 			/* 5GHz info found */
@@ -226,20 +248,26 @@ QDF_STATUS csr_save_to_channel_power2_g_5_g(struct mac_context *mac,
 				/* add to the list of 5GHz channel sets */
 				csr_ll_insert_tail(&mac->scan.
 						   channelPowerInfoList5G,
-						   &pChannelSet->link,
+						   &pchannelset->link,
 						   LL_ACCESS_LOCK);
 			} else {
-				sme_debug(
-					"Adding 11A ch in B/G. 1st ch freq %d",
-					pChannelSet->first_chan_freq);
-				qdf_mem_free(pChannelSet);
+				size5ghz += qdf_scnprintf(
+						buf5ghz + size5ghz,
+						BUF5GHZSIZE - size5ghz, "  %d",
+						pchannelset->first_chan_freq);
+				qdf_mem_free(pchannelset);
 			}
 		}
 		pChannelInfo++; /* move to next entry */
 	}
+	if (size24ghz)
+		sme_nofl_debug("Adding 11B/G ch in 11A:%s", buf24ghz);
+	qdf_mem_free(buf24ghz);
+	if (size5ghz)
+		sme_nofl_debug("Adding 11A ch in B/G:%s", buf5ghz);
+	qdf_mem_free(buf5ghz);
 	return QDF_STATUS_SUCCESS;
 }
-
 void csr_apply_power2_current(struct mac_context *mac)
 {
 	sme_debug("Updating Cfg with power settings");

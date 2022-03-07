@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -468,8 +469,6 @@ lim_restore_pre_reassoc_state(struct mac_context *mac,
 
 	/* 'Change' timer for future activations */
 	lim_deactivate_and_change_timer(mac, eLIM_REASSOC_FAIL_TIMER);
-
-	lim_send_switch_chnl_params(mac, pe_session);
 
 	/* @ToDo:Need to Integrate the STOP the Dataxfer to AP from 11H code */
 

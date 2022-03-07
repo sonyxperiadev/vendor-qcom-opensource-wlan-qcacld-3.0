@@ -2599,6 +2599,21 @@ QDF_STATUS lim_ap_mlme_vdev_restart_send(struct vdev_mlme_obj *vdev_mlme,
 					 uint16_t data_len, void *data);
 
 /**
+ * lim_ap_mlme_vdev_restart_send - Invokes VDEV sta disconnect operation
+ * @vdev_mlme_obj:  VDEV MLME comp object
+ * @data_len: data size
+ * @data: event data
+ *
+ * API invokes VDEV sta disconnect operation
+ *
+ * Return: SUCCESS on successful completion of sta disconnect operation
+ *         FAILURE, if it fails due to any
+ */
+QDF_STATUS
+lim_sta_mlme_vdev_sta_disconnect_start(struct vdev_mlme_obj *vdev_mlme,
+				       uint16_t data_len, void *data);
+
+/**
  * lim_ap_mlme_vdev_start_req_failed - handle vdev start req failure
  * @vdev_mlme_obj:  VDEV MLME comp object
  * @data_len: data size

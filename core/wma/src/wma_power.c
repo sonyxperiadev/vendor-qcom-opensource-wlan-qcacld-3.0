@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -217,7 +218,9 @@ QDF_STATUS wma_set_ap_peer_uapsd(tp_wma_handle wma, uint32_t vdev_id,
  */
 void wma_update_edca_params_for_ac(tSirMacEdcaParamRecord *edca_param,
 				   struct wmi_host_wme_vparams *wmm_param,
-				   int ac, bool mu_edca_param)
+				   int ac, bool mu_edca_param,
+				   uint8_t *debug_str,
+				   uint32_t debug_str_size, uint32_t *len)
 {
 	wmm_param->cwmin = WMA_WMM_EXPO_TO_VAL(edca_param->cw.min);
 	wmm_param->cwmax = WMA_WMM_EXPO_TO_VAL(edca_param->cw.max);
@@ -230,13 +233,13 @@ void wma_update_edca_params_for_ac(tSirMacEdcaParamRecord *edca_param,
 
 	wmm_param->noackpolicy = edca_param->no_ack;
 
-	wma_debug("WMM PARAMS AC[%d]: AIFS %d Min %d Max %d %s %d ACM %d NOACK %d",
-			ac, wmm_param->aifs, wmm_param->cwmin,
-			wmm_param->cwmax,
-			mu_edca_param ? "MU_EDCA TIMER" : "TXOP",
-			mu_edca_param ? wmm_param->mu_edca_timer :
-				wmm_param->txoplimit,
-			wmm_param->acm, wmm_param->noackpolicy);
+	*len += qdf_scnprintf(debug_str + *len, debug_str_size - *len,
+			      "AC[%d]: AIFS %d Min %d Max %d %s %d ACM %d NOACK %d, ",
+			      ac, wmm_param->aifs, wmm_param->cwmin,
+			      wmm_param->cwmax,
+			      mu_edca_param ? "MU_EDCA TIMER" : "TXOP",
+			      mu_edca_param ? wmm_param->mu_edca_timer : wmm_param->txoplimit,
+			      wmm_param->acm, wmm_param->noackpolicy);
 }
 
 /**

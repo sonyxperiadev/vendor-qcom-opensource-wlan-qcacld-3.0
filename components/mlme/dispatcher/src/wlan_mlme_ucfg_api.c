@@ -1632,16 +1632,7 @@ QDF_STATUS
 ucfg_mlme_get_channel_bonding_5ghz(struct wlan_objmgr_psoc *psoc,
 				   uint32_t *value)
 {
-	struct wlan_mlme_psoc_ext_obj *mlme_obj;
-
-	mlme_obj = mlme_get_psoc_ext_obj(psoc);
-	if (!mlme_obj) {
-		*value = cfg_default(CFG_CHANNEL_BONDING_MODE_5GHZ);
-		return QDF_STATUS_E_INVAL;
-	}
-	*value = mlme_obj->cfg.feature_flags.channel_bonding_mode_5ghz;
-
-	return QDF_STATUS_SUCCESS;
+	return wlan_mlme_get_channel_bonding_5ghz(psoc, value);
 }
 
 QDF_STATUS
@@ -1704,5 +1695,18 @@ bool ucfg_mlme_get_coex_unsafe_chan_nb_user_prefer(
 		return cfg_default(CFG_COEX_UNSAFE_CHAN_NB_USER_PREFER);
 	}
 	return mlme_obj->cfg.reg.coex_unsafe_chan_nb_user_prefer;
+}
+
+bool ucfg_mlme_get_coex_unsafe_chan_reg_disable(
+		struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj) {
+		mlme_legacy_err("Failed to get MLME Obj");
+		return cfg_default(CFG_COEX_UNSAFE_CHAN_REG_DISABLE);
+	}
+	return mlme_obj->cfg.reg.coex_unsafe_chan_reg_disable;
 }
 #endif

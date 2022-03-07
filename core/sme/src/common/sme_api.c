@@ -3235,6 +3235,7 @@ eCsrPhyMode sme_get_phy_mode(mac_handle_t mac_handle)
 	return mac->roam.configParam.phyMode;
 }
 
+#ifndef SAP_CP_CLEANUP
 QDF_STATUS sme_bss_start(mac_handle_t mac_handle, uint8_t vdev_id,
 			 struct csr_roam_profile *profile,
 			 uint32_t *roam_id)
@@ -3261,7 +3262,20 @@ QDF_STATUS sme_bss_start(mac_handle_t mac_handle, uint8_t vdev_id,
 
 	return status;
 }
+#else
+QDF_STATUS sme_get_network_params(struct mac_context *mac,
+				  struct bss_dot11_config *dot11_cfg)
+{
+	return QDF_STATUS_SUCCESS;
+}
 
+QDF_STATUS sme_start_bss(mac_handle_t mac_handle, uint8_t vdev_id,
+			 struct start_bss_config *bss_config,
+			 uint32_t *roam_id)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 /*
  * sme_set_phy_mode() -
  * Changes the PhyMode.
@@ -5488,7 +5502,7 @@ QDF_STATUS sme_set_tsf_gpio(mac_handle_t mac_handle, uint32_t pinvalue)
 
 QDF_STATUS sme_get_cfg_valid_channels(uint32_t *valid_ch_freq, uint32_t *len)
 {
-	QDF_STATUS status = QDF_STATUS_E_FAILURE;
+	QDF_STATUS status;
 	struct mac_context *mac_ctx = sme_get_mac_context();
 	uint32_t *valid_ch_freq_list;
 	uint32_t i;
@@ -5504,12 +5518,7 @@ QDF_STATUS sme_get_cfg_valid_channels(uint32_t *valid_ch_freq, uint32_t *len)
 	if (!valid_ch_freq_list)
 		return QDF_STATUS_E_NOMEM;
 
-	status = sme_acquire_global_lock(&mac_ctx->sme);
-	if (QDF_IS_STATUS_SUCCESS(status)) {
-		status = csr_get_cfg_valid_channels(mac_ctx,
-			valid_ch_freq_list, len);
-		sme_release_global_lock(&mac_ctx->sme);
-	}
+	status = csr_get_cfg_valid_channels(mac_ctx, valid_ch_freq_list, len);
 
 	for (i = 0; i < *len; i++)
 		valid_ch_freq[i] = valid_ch_freq_list[i];
@@ -8264,15 +8273,12 @@ QDF_STATUS sme_get_reg_info(mac_handle_t mac_handle, uint32_t chan_freq,
 			    uint32_t *regInfo1, uint32_t *regInfo2)
 {
 	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-	QDF_STATUS status;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	uint8_t i;
 	bool found = false;
 
-	status = sme_acquire_global_lock(&mac->sme);
 	*regInfo1 = 0;
 	*regInfo2 = 0;
-	if (!QDF_IS_STATUS_SUCCESS(status))
-		return status;
 
 	for (i = 0; i < CFG_VALID_CHANNEL_LIST_LEN; i++) {
 		if (mac->scan.defaultPowerTable[i].center_freq == chan_freq) {
@@ -8288,7 +8294,6 @@ QDF_STATUS sme_get_reg_info(mac_handle_t mac_handle, uint32_t chan_freq,
 	if (!found)
 		status = QDF_STATUS_E_FAILURE;
 
-	sme_release_global_lock(&mac->sme);
 	return status;
 }
 
@@ -8491,6 +8496,7 @@ QDF_STATUS sme_set_mas(uint32_t val)
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifndef SAP_CP_CLEANUP
 QDF_STATUS sme_roam_channel_change_req(mac_handle_t mac_handle,
 				       struct qdf_mac_addr bssid,
 				       uint8_t vdev_id,
@@ -8509,6 +8515,13 @@ QDF_STATUS sme_roam_channel_change_req(mac_handle_t mac_handle,
 	}
 	return status;
 }
+#else
+QDF_STATUS sme_sap_channel_change_req(mac_handle_t mac_handle,
+				      struct channel_change_req *req)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 
 /*
  * sme_process_channel_change_resp() -
@@ -16253,3 +16266,34 @@ void sme_roam_events_deregister_callback(mac_handle_t mac_handle)
 }
 #endif
 
+#ifdef SAP_CP_CLEANUP
+static QDF_STATUS sme_send_start_bss_msg(struct mac_context *mac,
+					 struct start_bss_config *cfg)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static QDF_STATUS sme_send_stop_bss_msg(struct mac_context *mac,
+					uint32_t vdev_id)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static QDF_STATUS sme_sap_activate_cmd(struct wlan_serialization_command *cmd)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS sme_sap_ser_callback(struct wlan_serialization_command *cmd,
+				enum wlan_serialization_cb_reason reason)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+void sme_fill_channel_change_request(mac_handle_t mac_handle,
+				     struct channel_change_req *req,
+				     eCsrPhyMode phy_mode)
+{
+	return;
+}
+#endif

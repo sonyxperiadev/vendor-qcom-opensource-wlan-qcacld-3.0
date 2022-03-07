@@ -66,6 +66,8 @@
  * @os_if_start_acs: Trigger ACS
  * @os_if_set_acs_channels: Set channel list for ACS
  * @os_if_get_acs_report: Gets the ACS report
+ * @os_if_get_node_info: Gets the datarate info for node
+ * @os_if_get_peer_capability: Gets peer capability
  */
 struct son_callbacks {
 	uint32_t (*os_if_is_acs_in_progress)(struct wlan_objmgr_vdev *vdev);
@@ -125,7 +127,71 @@ struct son_callbacks {
 				      struct ieee80211req_athdbg *req);
 	int (*os_if_get_acs_report)(struct wlan_objmgr_vdev *vdev,
 				    struct ieee80211_acs_dbg *acs_r);
+	QDF_STATUS (*os_if_get_node_info)(struct wlan_objmgr_vdev *vdev,
+					  uint8_t *mac_addr,
+					  wlan_node_info *nodeinfo);
+	QDF_STATUS (*os_if_get_peer_capability)(struct wlan_objmgr_vdev *vdev,
+						struct wlan_objmgr_peer *peer,
+						wlan_peer_cap *cap);
 };
+
+/**
+ * enum os_if_son_vendor_cmd_type - Enum to specify get/set command
+ * @OS_IF_SON_VENDOR_GET_CMD: Get type command called from wificonfiguration
+ *                            vendor command handler
+ * @OS_IF_SON_VENDOR_SET_CMD: Set type command called from wificonfiguration
+ *                            vendor command handler
+ * @OS_IF_SON_VENDOR_MAX_CMD: Max cmd type
+ */
+enum os_if_son_vendor_cmd_type {
+	OS_IF_SON_VENDOR_GET_CMD,
+	OS_IF_SON_VENDOR_SET_CMD,
+	OS_IF_SON_VENDOR_MAX_CMD,
+};
+
+/**
+ * struct os_if_son_rx_ops - Contains cb for os_if rx ops used by SON
+ * @parse_generic_nl_cmd: Callback for parsing generic nl vendor commands
+ */
+struct os_if_son_rx_ops {
+	int (*parse_generic_nl_cmd)(struct wiphy *wiphy,
+				    struct wireless_dev *wdev, void *params,
+				    enum os_if_son_vendor_cmd_type type);
+};
+
+/**
+ * struct wlan_os_if_son_ops - Contains cb for os_if txrx ops used by SON
+ * @son_osif_rx_ops: structure to contain rx ops
+ */
+struct wlan_os_if_son_ops {
+	struct os_if_son_rx_ops son_osif_rx_ops;
+};
+
+/**
+ * wlan_os_if_son_ops_register_cb() - Set son os_if ops cb
+ * @handler: son os_if ops cb table
+ *
+ * Return: void
+ */
+void
+wlan_os_if_son_ops_register_cb(void (*handler)(struct wlan_os_if_son_ops *));
+
+/**
+ * os_if_son_register_osif_ops() - Register son os_if ops with os_if
+ *
+ * Return: void
+ */
+void os_if_son_register_osif_ops(void);
+
+/**
+ * os_if_son_register_lmac_if_ops() - Register son lmac_if rx_ops with lmac
+ * @psoc: objmrg psoc handle
+ *
+ * Register son lmac_if rx_ops with lmac to be called by SON DLKM
+ *
+ * Return: void
+ */
+void os_if_son_register_lmac_if_ops(struct wlan_objmgr_psoc *psoc);
 
 /**
  * os_if_son_register_hdd_callbacks() - register son hdd callback
@@ -664,4 +730,38 @@ int os_if_son_set_acs_chan(struct wlan_objmgr_vdev *vdev,
  */
 int os_if_son_get_acs_report(struct wlan_objmgr_vdev *vdev,
 			     struct ieee80211_acs_dbg *acs_r);
+
+/**
+ * os_if_son_parse_generic_nl_cmd() - Sends the Generic vendor commands
+ *				      to SON.
+ * @wiphy: Standard wiphy object
+ * @wdev: wireless device
+ * @tb: Command type structure pointer
+ * @type: Get/Set command
+ *
+ * This function parses the GENERIC vendor commands received from
+ * userspace then sends the extracted data to SON module for further
+ * processing along with wiphy, wdev, extected structure - param
+ * and command type i.e. GET / SET. Each of the GENERIC commands are
+ * interdependent and hence in SON module, they will be further
+ * parsed based on type i.e. GET / SET.
+ *
+ * Return: 0 on success
+ */
+int os_if_son_parse_generic_nl_cmd(struct wiphy *wiphy,
+				   struct wireless_dev *wdev,
+				   struct nlattr **tb,
+				   enum os_if_son_vendor_cmd_type type);
+
+/**
+ * os_if_son_get_node_datarate_info() - Get datarate info about given mac
+ * @vdev: vdev_obj
+ * @mac_addr: mac_address to get datarate information
+ * @node_info: object to store datarate information
+ *
+ * Return: void
+ */
+QDF_STATUS os_if_son_get_node_datarate_info(struct wlan_objmgr_vdev *vdev,
+					    uint8_t *mac_addr,
+					    wlan_node_info *node_info);
 #endif

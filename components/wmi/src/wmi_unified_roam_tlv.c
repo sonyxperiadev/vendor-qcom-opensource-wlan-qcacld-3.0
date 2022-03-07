@@ -2224,6 +2224,7 @@ extract_roam_sync_event_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 	uint32_t bcn_probe_rsp_len;
 	uint32_t reassoc_rsp_len;
 	uint32_t reassoc_req_len;
+	wmi_pdev_hw_mode_transition_event_fixed_param *hw_mode_trans_param;
 
 	if (!evt_buf) {
 		wmi_debug("Empty roam_sync_event param buf");
@@ -2239,6 +2240,15 @@ extract_roam_sync_event_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 	synch_event = param_buf->fixed_param;
 	if (!synch_event) {
 		wmi_debug("received null event data from target");
+		return QDF_STATUS_E_FAILURE;
+	}
+	hw_mode_trans_param = param_buf->hw_mode_transition_fixed_param;
+	if (hw_mode_trans_param &&
+	    hw_mode_trans_param->num_vdev_mac_entries >
+	    param_buf->num_wmi_pdev_set_hw_mode_response_vdev_mac_mapping) {
+		wmi_debug("invalid vdev mac entries %d %d in roam sync",
+			  hw_mode_trans_param->num_vdev_mac_entries,
+			  param_buf->num_wmi_pdev_set_hw_mode_response_vdev_mac_mapping);
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -2575,6 +2585,8 @@ wmi_convert_fw_notif_to_cm_notif(uint32_t fw_notif)
 		return CM_ROAM_NOTIF_DEAUTH_RECV;
 	case WMI_ROAM_NOTIF_DISASSOC_RECV:
 		return CM_ROAM_NOTIF_DISASSOC_RECV;
+	case WMI_ROAM_NOTIF_SCAN_MODE_SUCCESS_WITH_HO_FAIL:
+		return CM_ROAM_NOTIF_HO_FAIL;
 	case WMI_ROAM_NOTIF_SCAN_END:
 		return CM_ROAM_NOTIF_SCAN_END;
 	default:
@@ -2599,6 +2611,7 @@ extract_roam_event_tlv(wmi_unified_t wmi_handle, void *evt_buf, uint32_t len,
 	wmi_roam_event_fixed_param *wmi_event = NULL;
 	WMI_ROAM_EVENTID_param_tlvs *param_buf = NULL;
 	struct cm_hw_mode_trans_ind *hw_mode_trans_ind;
+	wmi_pdev_hw_mode_transition_event_fixed_param *hw_mode_trans_param;
 
 	if (!evt_buf) {
 		wmi_debug("Empty roam_sync_event param buf");
@@ -2625,6 +2638,15 @@ extract_roam_event_tlv(wmi_unified_t wmi_handle, void *evt_buf, uint32_t len,
 		wmi_err("Invalid vdev id from firmware: %u",
 			roam_event->vdev_id);
 		return -EINVAL;
+	}
+	hw_mode_trans_param = param_buf->hw_mode_transition_fixed_param;
+	if (hw_mode_trans_param &&
+	    hw_mode_trans_param->num_vdev_mac_entries >
+	    param_buf->num_wmi_pdev_set_hw_mode_response_vdev_mac_mapping) {
+		wmi_debug("invalid vdev mac entries %d %d",
+			  hw_mode_trans_param->num_vdev_mac_entries,
+			  param_buf->num_wmi_pdev_set_hw_mode_response_vdev_mac_mapping);
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	roam_event->reason =
@@ -4032,6 +4054,23 @@ wmi_fill_rso_start_scan_tlv(struct wlan_roam_scan_offload_params *rso_req,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static void
+wmi_set_rso_stop_report_status(wmi_roam_scan_mode_fixed_param *rso_fp)
+{
+	/**
+	 * Set the REPORT status flag always, so that firmware sends RSO stop
+	 * status always
+	 */
+	rso_fp->flags |= WMI_ROAM_SCAN_MODE_FLAG_REPORT_STATUS;
+}
+#else
+static void
+wmi_set_rso_stop_report_status(wmi_roam_scan_mode_fixed_param *rso_fp)
+{
+}
+#endif
+
 /**
  * send_roam_scan_offload_mode_cmd_tlv() - send roam scan mode request to fw
  * @wmi_handle: wmi handle
@@ -4101,6 +4140,8 @@ send_roam_scan_offload_mode_cmd_tlv(
 		roam_scan_mode_fp->flags |=
 				WMI_ROAM_SCAN_MODE_FLAG_REPORT_STATUS;
 		goto send_roam_scan_mode_cmd;
+	} else {
+		wmi_set_rso_stop_report_status(roam_scan_mode_fp);
 	}
 
 	/* Fill in scan parameters suitable for roaming scan */

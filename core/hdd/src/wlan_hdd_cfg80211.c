@@ -177,6 +177,7 @@
 #include "wlan_hdd_mdns_offload.h"
 #include "wlan_pkt_capture_ucfg_api.h"
 #include "os_if_pkt_capture.h"
+#include "wlan_hdd_son.h"
 
 #define g_mode_rates_size (12)
 #define a_mode_rates_size (8)
@@ -3928,7 +3929,9 @@ __wlan_hdd_cfg80211_get_supported_features(struct wiphy *wiphy,
 		fset |= WIFI_FEATURE_PNO;
 	}
 #endif
-	fset |= WIFI_FEATURE_ADDITIONAL_STA;
+	if (ucfg_policy_mgr_get_dual_sta_feature(hdd_ctx->psoc))
+		fset |= WIFI_FEATURE_ADDITIONAL_STA;
+
 #ifdef FEATURE_WLAN_TDLS
 	cfg_tdls_get_support_enable(hdd_ctx->psoc, &bvalue);
 	if ((bvalue) && sme_is_feature_supported_by_fw(TDLS)) {
@@ -6038,6 +6041,189 @@ wlan_hdd_cfg80211_set_ext_roam_params(struct wiphy *wiphy,
 	return errno;
 }
 
+#define RATEMASK_PARAMS_TYPE_MAX 4
+#define RATEMASK_PARAMS_MAX QCA_WLAN_VENDOR_ATTR_RATEMASK_PARAMS_MAX
+const struct nla_policy wlan_hdd_set_ratemask_param_policy[
+			RATEMASK_PARAMS_MAX + 1] = {
+	[QCA_WLAN_VENDOR_ATTR_RATEMASK_PARAMS_LIST] =
+		VENDOR_NLA_POLICY_NESTED(wlan_hdd_set_ratemask_param_policy),
+	[QCA_WLAN_VENDOR_ATTR_RATEMASK_PARAMS_TYPE] = {.type = NLA_U8},
+	[QCA_WLAN_VENDOR_ATTR_RATEMASK_PARAMS_BITMAP] = {.type = NLA_BINARY,
+							 .len = 128},
+};
+
+/**
+ * hdd_set_ratemask_params() - parse ratemask params
+ * @hdd_ctx:        HDD context
+ * @tb:            list of attributes
+ * @vdev_id:       vdev id
+ *
+ * Return: 0 on success; error number on failure
+ */
+static int hdd_set_ratemask_params(struct hdd_context *hdd_ctx,
+				   const void *data, int data_len,
+				   struct wlan_objmgr_vdev *vdev)
+{
+	struct nlattr *tb[RATEMASK_PARAMS_MAX + 1];
+	struct nlattr *tb2[RATEMASK_PARAMS_MAX + 1];
+	struct nlattr *curr_attr;
+	int ret, rem;
+	struct config_ratemask_params rate_params[RATEMASK_PARAMS_TYPE_MAX];
+	uint8_t ratemask_type, num_ratemask = 0, len;
+	uint32_t bitmap[RATEMASK_PARAMS_TYPE_MAX] = {0};
+
+	ret = wlan_cfg80211_nla_parse(tb,
+				      RATEMASK_PARAMS_MAX,
+				      data, data_len,
+				      wlan_hdd_set_ratemask_param_policy);
+	if (ret) {
+		hdd_err("Invalid ATTR");
+		return -EINVAL;
+	}
+
+	if (!tb[QCA_WLAN_VENDOR_ATTR_RATEMASK_PARAMS_LIST]) {
+		hdd_err("ratemask array attribute not present");
+		return -EINVAL;
+	}
+
+	memset(rate_params, 0, (RATEMASK_PARAMS_TYPE_MAX *
+				sizeof(struct config_ratemask_params)));
+
+	nla_for_each_nested(curr_attr,
+			    tb[QCA_WLAN_VENDOR_ATTR_RATEMASK_PARAMS_LIST],
+			    rem) {
+		if (num_ratemask >= RATEMASK_PARAMS_TYPE_MAX) {
+			hdd_err("Exceeding ratemask_list_param_num value");
+			return -EINVAL;
+		}
+
+		if (wlan_cfg80211_nla_parse(
+				tb2, RATEMASK_PARAMS_MAX,
+				nla_data(curr_attr), nla_len(curr_attr),
+				wlan_hdd_set_ratemask_param_policy)) {
+			hdd_err("nla_parse failed");
+			return -EINVAL;
+		}
+
+		if (!tb2[QCA_WLAN_VENDOR_ATTR_RATEMASK_PARAMS_TYPE]) {
+			hdd_err("type attribute not present");
+			return -EINVAL;
+		}
+
+		if (!tb2[QCA_WLAN_VENDOR_ATTR_RATEMASK_PARAMS_BITMAP]) {
+			hdd_err("bitmap attribute not present");
+			return -EINVAL;
+		}
+
+		ratemask_type =
+		 nla_get_u8(tb2[QCA_WLAN_VENDOR_ATTR_RATEMASK_PARAMS_TYPE]);
+		if (ratemask_type >= RATEMASK_PARAMS_TYPE_MAX) {
+			hdd_err("invalid ratemask type");
+			return -EINVAL;
+		}
+
+		len = nla_len(tb2[QCA_WLAN_VENDOR_ATTR_RATEMASK_PARAMS_BITMAP]);
+		nla_memcpy((void *)bitmap,
+			   tb2[QCA_WLAN_VENDOR_ATTR_RATEMASK_PARAMS_BITMAP],
+			   len);
+
+		hdd_debug("rate_type:%d, lower32 0x%x, lower32_2 0x%x, higher32 0x%x, higher32_2 0x%x",
+			  ratemask_type, bitmap[0], bitmap[1],
+			  bitmap[2], bitmap[3]);
+
+		rate_params[num_ratemask].type = ratemask_type;
+		rate_params[num_ratemask].lower32 = bitmap[0];
+		rate_params[num_ratemask].lower32_2 = bitmap[1];
+		rate_params[num_ratemask].higher32 = bitmap[2];
+		rate_params[num_ratemask].higher32_2 = bitmap[3];
+
+		num_ratemask += 1;
+	}
+
+	ret = ucfg_set_ratemask_params(vdev, num_ratemask, rate_params);
+	if (ret)
+		hdd_err("ucfg_set_ratemask_params failed");
+	return ret;
+}
+
+/**
+ * __wlan_hdd_cfg80211_set_ratemask_config() - Ratemask parameters
+ * @wiphy:                 The wiphy structure
+ * @wdev:                  The wireless device
+ * @data:                  Data passed by framework
+ * @data_len:              Parameters to be configured passed as data
+ *
+ * The ratemask parameters are configured by the framework
+ * using this interface.
+ *
+ * Return: Return either success or failure code.
+ */
+static int
+__wlan_hdd_cfg80211_set_ratemask_config(struct wiphy *wiphy,
+					struct wireless_dev *wdev,
+					const void *data, int data_len)
+{
+	struct net_device *dev = wdev->netdev;
+	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
+	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
+	struct wlan_objmgr_vdev *vdev;
+	int ret;
+
+	ret = wlan_hdd_validate_context(hdd_ctx);
+	if (ret)
+		return ret;
+
+	if (hdd_ctx->driver_status == DRIVER_MODULES_CLOSED) {
+		hdd_err("Driver Modules are closed");
+		return -EINVAL;
+	}
+
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_POWER_ID);
+	if (!vdev) {
+		hdd_err("vdev not present");
+		return -EINVAL;
+	}
+
+	ret = hdd_set_ratemask_params(hdd_ctx, data, data_len, vdev);
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_POWER_ID);
+	if (ret)
+		goto fail;
+
+	return 0;
+fail:
+	return ret;
+}
+
+/**
+ * wlan_hdd_cfg80211_set_ratemask_config() - set ratemask config
+ * @wiphy:   pointer to wireless wiphy structure.
+ * @wdev:    pointer to wireless_dev structure.
+ * @data:    Pointer to the data to be passed via vendor interface
+ * @data_len:Length of the data to be passed
+ *
+ * Return:   Return the Success or Failure code.
+ */
+static int
+wlan_hdd_cfg80211_set_ratemask_config(struct wiphy *wiphy,
+				      struct wireless_dev *wdev,
+				      const void *data,
+				      int data_len)
+{
+	int errno;
+	struct osif_vdev_sync *vdev_sync;
+
+	errno = osif_vdev_sync_op_start(wdev->netdev, &vdev_sync);
+	if (errno)
+		return errno;
+
+	errno = __wlan_hdd_cfg80211_set_ratemask_config(wiphy, wdev,
+							data, data_len);
+
+	osif_vdev_sync_op_stop(vdev_sync);
+
+	return errno;
+}
+
 #define PWR_SAVE_FAIL_CMD_INDEX \
 	QCA_NL80211_VENDOR_SUBCMD_PWR_SAVE_FAIL_DETECTED_INDEX
 
@@ -7947,6 +8133,37 @@ static int hdd_config_tx_rx_nss(struct hdd_adapter *adapter,
 	return 0;
 }
 
+#ifdef WLAN_FEATURE_SON
+static int hdd_process_generic_set_cmd(struct hdd_adapter *adapter,
+				       struct nlattr *tb[])
+{
+	struct wireless_dev *wdev;
+	struct wiphy *wiphy;
+
+	if (!adapter)
+		return 0;
+
+	wdev = &adapter->wdev;
+	if (!wdev || !wdev->wiphy)
+		return 0;
+	wiphy = wdev->wiphy;
+
+	/* Generic command is used by EasyMesh,
+	 * route the command to SON module if it is Generic
+	 */
+	if (tb[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_COMMAND])
+		return hdd_son_send_set_wifi_generic_command(wiphy, wdev, tb);
+
+	return 0;
+}
+#else
+static int hdd_process_generic_set_cmd(struct hdd_adapter *adapter,
+				       struct nlattr *tb[])
+{
+	return -EINVAL;
+}
+#endif
+
 static int hdd_config_ani(struct hdd_adapter *adapter,
 			  struct nlattr *tb[])
 {
@@ -8692,7 +8909,7 @@ static int hdd_config_latency_level(struct hdd_adapter *adapter,
 	latency_level = nla_get_u16(attr);
 	switch (latency_level) {
 	case QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL_NORMAL:
-	case QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL_MODERATE:
+	case QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL_XR:
 	case QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL_LOW:
 	case QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL_ULTRALOW:
 		/* valid values */
@@ -8705,7 +8922,7 @@ static int hdd_config_latency_level(struct hdd_adapter *adapter,
 	wlan_hdd_set_wlm_mode(hdd_ctx, latency_level);
 
 	/* Map the latency value to the level which fw expected
-	 * 0 - normal, 1 - moderate, 2 - low, 3 - ultralow
+	 * 0 - normal, 1 - xr, 2 - low, 3 - ultralow
 	 */
 	adapter->latency_level = latency_level - 1;
 
@@ -9972,6 +10189,7 @@ static const interdependent_setter_fn interdependent_setters[] = {
 	hdd_config_vdev_chains,
 	hdd_config_ani,
 	hdd_config_tx_rx_nss,
+	hdd_process_generic_set_cmd,
 };
 
 /**
@@ -10134,6 +10352,19 @@ __wlan_hdd_cfg80211_wifi_configuration_get(struct wiphy *wiphy,
 		hdd_err("invalid attr");
 		return -EINVAL;
 	}
+
+	/* Generic command is used by EasyMesh,
+	 * route the command to SON module if it is Generic
+	 *
+	 * GENERIC_COMMAND to get configs can not be done as part of dispatch
+	 * table because, for each command sent as part of GENERIC command,
+	 * return value is different and is handled in SON module as well.
+	 * Hence having return type with dispatch table is not possible as
+	 * we will not be able to generalize the return for each of get sub
+	 * command sent as part of GENERIC command.
+	 */
+	if (tb[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_COMMAND])
+		return hdd_son_send_get_wifi_generic_command(wiphy, wdev, tb);
 
 	ret = hdd_get_configuration(adapter, tb);
 	if (ret)
@@ -17075,6 +17306,16 @@ const struct wiphy_vendor_command hdd_wiphy_vendor_commands[] = {
 	},
 	{
 		.info.vendor_id = QCA_NL80211_VENDOR_ID,
+		.info.subcmd = QCA_NL80211_VENDOR_SUBCMD_RATEMASK_CONFIG,
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
+			WIPHY_VENDOR_CMD_NEED_NETDEV |
+			WIPHY_VENDOR_CMD_NEED_RUNNING,
+		.doit = wlan_hdd_cfg80211_set_ratemask_config,
+		vendor_command_policy(wlan_hdd_set_ratemask_param_policy,
+				      QCA_WLAN_VENDOR_ATTR_RATEMASK_PARAMS_MAX)
+	},
+	{
+		.info.vendor_id = QCA_NL80211_VENDOR_ID,
 		.info.subcmd = QCA_NL80211_VENDOR_SUBCMD_WIFI_LOGGER_START,
 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
 			WIPHY_VENDOR_CMD_NEED_NETDEV |
@@ -17880,7 +18121,8 @@ int wlan_hdd_cfg80211_init(struct device *dev,
 #ifdef FEATURE_WLAN_STA_4ADDR_SCHEME
 			| WIPHY_FLAG_4ADDR_STATION
 #endif
-			| WIPHY_FLAG_OFFCHAN_TX;
+			| WIPHY_FLAG_OFFCHAN_TX
+			| WIPHY_FLAG_NETNS_OK;
 
 	if (ucfg_pmo_get_suspend_mode(hdd_ctx->psoc) == PMO_SUSPEND_WOW) {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0))
@@ -22176,7 +22418,12 @@ static int __wlan_hdd_cfg80211_set_mon_ch(struct wiphy *wiphy,
 	QDF_STATUS status;
 	mac_handle_t mac_handle;
 	struct qdf_mac_addr bssid;
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	struct csr_roam_profile roam_profile;
+#else
+	struct channel_change_req *req;
+#endif
 	struct ch_params ch_params = {0};
 	int ret;
 	enum channel_state chan_freq_state;
@@ -22230,10 +22477,13 @@ static int __wlan_hdd_cfg80211_set_mon_ch(struct wiphy *wiphy,
 	}
 	sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
 	ch_info = &sta_ctx->ch_info;
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	roam_profile.ChannelInfo.freq_list = &ch_info->freq;
 	roam_profile.ChannelInfo.numOfChannels = 1;
 	roam_profile.phyMode = ch_info->phy_mode;
 	roam_profile.ch_params.ch_width = ch_width;
+#endif
 	if (WLAN_REG_IS_24GHZ_CH_FREQ(chandef->chan->center_freq) &&
 	    chandef->width == NL80211_CHAN_WIDTH_40 &&
 	    chandef->center_freq1) {
@@ -22244,8 +22494,11 @@ static int __wlan_hdd_cfg80211_set_mon_ch(struct wiphy *wiphy,
 	}
 	hdd_debug("set mon ch:width=%d, freq %d sec_ch_2g_freq=%d",
 		  chandef->width, chandef->chan->center_freq, sec_ch_2g_freq);
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	hdd_select_cbmode(adapter, chandef->chan->center_freq, sec_ch_2g_freq,
 			  &roam_profile.ch_params);
+#endif
 	qdf_mem_copy(bssid.bytes, adapter->mac_addr.bytes,
 		     QDF_MAC_ADDR_SIZE);
 
@@ -22271,11 +22524,13 @@ static int __wlan_hdd_cfg80211_set_mon_ch(struct wiphy *wiphy,
 		return qdf_status_to_os_return(status);
 	}
 	adapter->monitor_mode_vdev_up_in_progress = true;
-
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	status = sme_roam_channel_change_req(mac_handle, bssid,
 					     adapter->vdev_id,
 					     &roam_profile.ch_params,
 					     &roam_profile);
+#endif
 	if (status) {
 		hdd_err_rl("Failed to set sme_RoamChannel for monitor mode status: %d",
 			   status);

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2019, 2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -28,10 +29,11 @@
 #include "csr_inside_api.h"
 
 #ifdef WLAN_FEATURE_NAN
+#ifndef SAP_CP_CLEANUP
 /* Start NDI BSS */
 QDF_STATUS csr_roam_start_ndi(struct mac_context *mac_ctx, uint32_t session_id,
 			      struct csr_roam_profile *profile);
-
+#endif
 void csr_roam_update_ndp_return_params(struct mac_context *mac_ctx,
 					uint32_t result,
 					uint32_t *roam_status,
@@ -39,6 +41,7 @@ void csr_roam_update_ndp_return_params(struct mac_context *mac_ctx,
 					struct csr_roam_info *roam_info);
 
 #else /* WLAN_FEATURE_NAN */
+#ifndef SAP_CP_CLEANUP
 /* Start NDI BSS */
 static inline QDF_STATUS csr_roam_start_ndi(struct mac_context *mac_ctx,
 					uint32_t session_id,
@@ -46,7 +49,7 @@ static inline QDF_STATUS csr_roam_start_ndi(struct mac_context *mac_ctx,
 {
 	return QDF_STATUS_SUCCESS;
 }
-
+#endif
 static inline void csr_roam_update_ndp_return_params(struct mac_context *mac_ctx,
 					uint32_t result,
 					uint32_t *roam_status,

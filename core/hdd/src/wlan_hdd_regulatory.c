@@ -228,9 +228,26 @@ void hdd_update_coex_unsafe_chan_nb_user_prefer(
 		ucfg_mlme_get_coex_unsafe_chan_nb_user_prefer(
 		hdd_ctx->psoc);
 }
+
+static inline
+void hdd_update_coex_unsafe_chan_reg_disable(
+		struct hdd_context *hdd_ctx,
+		struct reg_config_vars *config_vars)
+{
+	config_vars->coex_unsafe_chan_reg_disable =
+		ucfg_mlme_get_coex_unsafe_chan_reg_disable(
+		hdd_ctx->psoc);
+}
 #else
 static inline
 void hdd_update_coex_unsafe_chan_nb_user_prefer(
+		struct hdd_context *hdd_ctx,
+		struct reg_config_vars *config_vars)
+{
+}
+
+static inline
+void hdd_update_coex_unsafe_chan_reg_disable(
 		struct hdd_context *hdd_ctx,
 		struct reg_config_vars *config_vars)
 {
@@ -303,6 +320,7 @@ static void reg_program_config_vars(struct hdd_context *hdd_ctx,
 	config_vars->enable_5dot9_ghz_chan_in_master_mode =
 						enable_5dot9_ghz_chan;
 	hdd_update_coex_unsafe_chan_nb_user_prefer(hdd_ctx, config_vars);
+	hdd_update_coex_unsafe_chan_reg_disable(hdd_ctx, config_vars);
 }
 
 /**
@@ -1226,6 +1244,7 @@ void hdd_ch_avoid_ind(struct hdd_context *hdd_ctxt,
 {
 	uint16_t *local_unsafe_list;
 	uint16_t local_unsafe_list_count;
+	uint32_t restriction_mask;
 	uint8_t i;
 
 	/* Basic sanity */
@@ -1239,6 +1258,7 @@ void hdd_ch_avoid_ind(struct hdd_context *hdd_ctxt,
 			sizeof(struct ch_avoid_ind_type));
 	mutex_unlock(&hdd_ctxt->avoid_freq_lock);
 
+	restriction_mask = wlan_hdd_get_restriction_mask(hdd_ctxt);
 	if (hdd_clone_local_unsafe_chan(hdd_ctxt,
 					&local_unsafe_list,
 					&local_unsafe_list_count) != 0) {
@@ -1252,6 +1272,8 @@ void hdd_ch_avoid_ind(struct hdd_context *hdd_ctxt,
 					sizeof(hdd_ctxt->unsafe_channel_list));
 
 	hdd_ctxt->unsafe_channel_count = unsafe_chan_list->chan_cnt;
+
+	wlan_hdd_set_restriction_mask(hdd_ctxt);
 
 	for (i = 0; i < unsafe_chan_list->chan_cnt; i++) {
 		hdd_ctxt->unsafe_channel_list[i] =
@@ -1296,7 +1318,8 @@ void hdd_ch_avoid_ind(struct hdd_context *hdd_ctxt,
 	}
 	if (hdd_local_unsafe_channel_updated(hdd_ctxt,
 					    local_unsafe_list,
-					    local_unsafe_list_count))
+					    local_unsafe_list_count,
+					    restriction_mask))
 		hdd_unsafe_channel_restart_sap(hdd_ctxt);
 	qdf_mem_free(local_unsafe_list);
 
