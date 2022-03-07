@@ -1174,11 +1174,23 @@ wma_host_to_fw_phymode_11be(enum wlan_phymode host_phymode)
 		return WMI_HOST_MODE_UNKNOWN;
 	}
 }
+
+static void wma_populate_peer_puncture(struct peer_assoc_params *peer,
+				       struct wlan_channel *des_chan)
+{
+	peer->puncture_bitmap = des_chan->puncture_bitmap;
+	wma_debug("Peer EHT puncture bitmap %d", peer->puncture_bitmap);
+}
 #else
 static WMI_HOST_WLAN_PHY_MODE
 wma_host_to_fw_phymode_11be(enum wlan_phymode host_phymode)
 {
 	return WMI_HOST_MODE_UNKNOWN;
+}
+
+static void wma_populate_peer_puncture(struct peer_assoc_params *peer,
+				       struct wlan_channel *des_chan)
+{
 }
 #endif
 
@@ -1683,6 +1695,7 @@ QDF_STATUS wma_send_peer_assoc(tp_wma_handle wma,
 
 	wma_populate_peer_he_cap(cmd, params);
 	wma_populate_peer_eht_cap(cmd, params);
+	wma_populate_peer_puncture(cmd, des_chan);
 	if (!wma_is_vdev_in_ap_mode(wma, params->smesessionId))
 		intr->nss = cmd->peer_nss;
 

@@ -771,6 +771,43 @@ lim_update_mcs_rate_set(struct wlan_objmgr_vdev *vdev, tDot11fIEHTCaps *ht_cap)
 	mlme_set_mcs_rate(vdev, dst_rate, len);
 }
 
+#ifdef WLAN_FEATURE_11BE
+/**
+ * lim_update_sta_vdev_punc() - Update puncture set according to assoc resp
+ * @psoc: Pointer to psoc object
+ * @vdev_id: vdev id
+ * @assoc_resp: pointer to parsed associate response
+ *
+ * Return: None.
+ */
+static void
+lim_update_sta_vdev_punc(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
+			 tpSirAssocRsp assoc_resp)
+{
+	struct wlan_objmgr_vdev *vdev;
+	struct wlan_channel *des_chan;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_LEGACY_MAC_ID);
+	if (!vdev) {
+		pe_err("vdev not found for id: %d", vdev_id);
+		return;
+	}
+
+	des_chan = wlan_vdev_mlme_get_des_chan(vdev);
+	des_chan->puncture_bitmap =
+		*(uint16_t *)assoc_resp->eht_op.disable_sub_chan_bitmap;
+	pe_debug("sta vdev %d puncture %d", vdev_id, des_chan->puncture_bitmap);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
+}
+#else
+static void
+lim_update_sta_vdev_punc(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
+			 tpSirAssocRsp assoc_resp)
+{
+}
+#endif
+
 /**
  * hdd_cm_update_rate_set() - Update rate set according to assoc resp
  * @psoc: Pointer to psoc object
@@ -1275,6 +1312,8 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 				   session_entry->smeSessionId,
 				   session_entry->nss);
 	lim_update_vdev_rate_set(mac_ctx->psoc, session_entry->smeSessionId,
+				 assoc_rsp);
+	lim_update_sta_vdev_punc(mac_ctx->psoc, session_entry->smeSessionId,
 				 assoc_rsp);
 
 	/*
