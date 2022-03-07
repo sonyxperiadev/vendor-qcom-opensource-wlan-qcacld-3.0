@@ -6906,7 +6906,8 @@ int wma_rx_service_ready_ext_event(void *handle, uint8_t *event,
 	 * the num_vdevs by 1.
 	 */
 
-	if (wmi_service_enabled(wma_handle->wmi_handle, wmi_service_nan)) {
+	if (wmi_service_enabled(wma_handle->wmi_handle, wmi_service_nan) &&
+	    cfg_nan_get_enable(wma_handle->psoc)) {
 		if (ucfg_nan_is_vdev_creation_allowed(wma_handle->psoc) ||
 		    QDF_GLOBAL_FTM_MODE == cds_get_conparam()) {
 			wlan_res_cfg->nan_separate_iface_support = true;
