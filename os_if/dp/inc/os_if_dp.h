@@ -24,6 +24,7 @@
 #define __OSIF_DP_H__
 
 #include "wlan_dp_public_struct.h"
+#include <wlan_cfg80211.h>
 
 /**
  * osif_dp_classify_pkt() - classify packet
@@ -32,6 +33,34 @@
  * Return: None
  */
 void osif_dp_classify_pkt(struct sk_buff *skb);
+
+/* wait time for nud stats in milliseconds */
+#define WLAN_WAIT_TIME_NUD_STATS 800
+/* nud stats skb max length */
+#define WLAN_NUD_STATS_LEN 800
+/* ARP packet type for NUD debug stats */
+#define WLAN_NUD_STATS_ARP_PKT_TYPE 1
+
+#define MAX_USER_COMMAND_SIZE 4096
+#define DNS_DOMAIN_NAME_MAX_LEN 255
+#define ICMPV6_ADDR_LEN 16
+
+#define CONNECTIVITY_CHECK_SET_ARP \
+	QCA_WLAN_VENDOR_CONNECTIVITY_CHECK_SET_ARP
+#define CONNECTIVITY_CHECK_SET_DNS \
+	QCA_WLAN_VENDOR_CONNECTIVITY_CHECK_SET_DNS
+#define CONNECTIVITY_CHECK_SET_TCP_HANDSHAKE \
+	QCA_WLAN_VENDOR_CONNECTIVITY_CHECK_SET_TCP_HANDSHAKE
+#define CONNECTIVITY_CHECK_SET_ICMPV4 \
+	QCA_WLAN_VENDOR_CONNECTIVITY_CHECK_SET_ICMPV4
+#define CONNECTIVITY_CHECK_SET_ICMPV6 \
+	QCA_WLAN_VENDOR_CONNECTIVITY_CHECK_SET_ICMPV6
+#define CONNECTIVITY_CHECK_SET_TCP_SYN \
+	QCA_WLAN_VENDOR_CONNECTIVITY_CHECK_SET_TCP_SYN
+#define CONNECTIVITY_CHECK_SET_TCP_SYN_ACK \
+	QCA_WLAN_VENDOR_CONNECTIVITY_CHECK_SET_TCP_SYN_ACK
+#define CONNECTIVITY_CHECK_SET_TCP_ACK \
+	QCA_WLAN_VENDOR_CONNECTIVITY_CHECK_SET_TCP_ACK
 
 /**
  * os_if_dp_register_hdd_callbacks() - Register callback handlers
@@ -58,4 +87,34 @@ int osif_dp_nud_register_netevent_notifier(struct wlan_objmgr_psoc *psoc);
  * Return: None
  */
 void osif_dp_nud_unregister_netevent_notifier(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * osif_dp_get_nud_stats() - get arp stats command to firmware
+ * @wiphy: pointer to wireless wiphy structure.
+ * @vdev: pointer to vdev context.
+ * @data: pointer to apfind configuration data.
+ * @data_len: the length in byte of apfind data.
+ *
+ * This is called when wlan driver needs to get arp stats to
+ * firmware.
+ *
+ * Return: An error code or 0 on success.
+ */
+int osif_dp_get_nud_stats(struct wiphy *wiphy, struct wlan_objmgr_vdev *vdev,
+			  const void *data, int data_len);
+
+/**
+ * osif_dp_set_nud_stats() - set arp stats command to firmware
+ * @wiphy: pointer to wireless wiphy structure.
+ * @vdev: pointer to wireless_dev structure.
+ * @data: pointer to apfind configuration data.
+ * @data_len: the length in byte of apfind data.
+ *
+ * This is called when wlan driver needs to send arp stats to
+ * firmware.
+ *
+ * Return: An error code or 0 on success.
+ */
+int osif_dp_set_nud_stats(struct wiphy *wiphy, struct wlan_objmgr_vdev *vdev,
+			  const void *data, int data_len);
 #endif /* __OSIF_DP_H__ */

@@ -674,6 +674,315 @@ void ucfg_dp_nud_indicate_roam(struct wlan_objmgr_vdev *vdev)
 	dp_nud_indicate_roam(vdev);
 }
 
+void ucfg_dp_clear_arp_stats(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("DP Context is NULL");
+		return;
+	}
+	qdf_mem_zero(&dp_intf->dp_stats.arp_stats,
+		     sizeof(dp_intf->dp_stats.arp_stats));
+}
+
+void ucfg_dp_clear_dns_stats(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("DP Context is NULL");
+		return;
+	}
+	qdf_mem_zero(&dp_intf->dp_stats.dns_stats,
+		     sizeof(dp_intf->dp_stats.dns_stats));
+}
+
+void ucfg_dp_clear_tcp_stats(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("DP Context is NULL");
+		return;
+	}
+	qdf_mem_zero(&dp_intf->dp_stats.tcp_stats,
+		     sizeof(dp_intf->dp_stats.tcp_stats));
+}
+
+void ucfg_dp_clear_icmpv4_stats(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("DP Context is NULL");
+		return;
+	}
+	qdf_mem_zero(&dp_intf->dp_stats.icmpv4_stats,
+		     sizeof(dp_intf->dp_stats.icmpv4_stats));
+}
+
+void ucfg_dp_clear_dns_payload_value(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("DP Context is NULL");
+		return;
+	}
+	qdf_mem_zero(dp_intf->dns_payload, dp_intf->track_dns_domain_len);
+}
+
+void ucfg_dp_set_pkt_type_bitmap_value(struct wlan_objmgr_vdev *vdev,
+				       uint32_t value)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("DP Context is NULL");
+		return;
+	}
+	dp_intf->pkt_type_bitmap = value;
+}
+
+void ucfg_dp_set_track_dest_ipv4_value(struct wlan_objmgr_vdev *vdev,
+				       uint32_t value)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("DP Context is NULL");
+		return;
+	}
+	dp_intf->track_dest_ipv4 = value;
+}
+
+void ucfg_dp_set_track_dest_port_value(struct wlan_objmgr_vdev *vdev,
+				       uint32_t value)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("DP Context is NULL");
+		return;
+	}
+	dp_intf->track_dest_port = value;
+}
+
+void ucfg_dp_set_track_src_port_value(struct wlan_objmgr_vdev *vdev,
+				      uint32_t value)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("DP Context is NULL");
+		return;
+	}
+	dp_intf->track_src_port = value;
+}
+
+void ucfg_dp_set_track_dns_domain_len_value(struct wlan_objmgr_vdev *vdev,
+					    uint32_t value)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("DP Context is NULL");
+		return;
+	}
+	dp_intf->track_dns_domain_len = value;
+}
+
+void ucfg_dp_set_track_arp_ip_value(struct wlan_objmgr_vdev *vdev,
+				    uint32_t value)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("DP Context is NULL");
+		return;
+	}
+	dp_intf->track_arp_ip = value;
+}
+
+uint32_t ucfg_dp_get_pkt_type_bitmap_value(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("DP Context is NULL");
+		return 0;
+	}
+	return dp_intf->pkt_type_bitmap;
+}
+
+void ucfg_dp_get_dns_payload_value(struct wlan_objmgr_vdev *vdev,
+				   uint8_t *dns_query)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("DP Context is NULL");
+		return;
+	}
+	qdf_mem_copy(dns_query, dp_intf->dns_payload,
+		     dp_intf->track_dns_domain_len);
+}
+
+uint32_t ucfg_dp_get_track_dns_domain_len_value(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("DP Context is NULL");
+		return 0;
+	}
+	return dp_intf->track_dns_domain_len;
+}
+
+uint32_t ucfg_dp_get_track_dest_port_value(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("DP Context is NULL");
+		return 0;
+	}
+	return dp_intf->track_dest_port;
+}
+
+uint32_t ucfg_dp_get_track_src_port_value(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("DP Context is NULL");
+		return 0;
+	}
+	return dp_intf->track_src_port;
+}
+
+uint32_t ucfg_dp_get_track_dest_ipv4_value(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("DP Context is NULL");
+		return 0;
+	}
+	return dp_intf->track_dest_ipv4;
+}
+
+bool ucfg_dp_get_dad_value(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("DP Context is NULL");
+		return 0;
+	}
+	return dp_intf->dad;
+}
+
+bool ucfg_dp_get_con_status_value(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("DP Context is NULL");
+		return 0;
+	}
+	return dp_intf->con_status;
+}
+
+uint8_t ucfg_dp_get_intf_id(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("DP Context is NULL");
+		return 0;
+	}
+	return dp_intf->intf_id;
+}
+
+struct dp_arp_stats *ucfg_dp_get_arp_stats(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("DP Context is NULL");
+		return NULL;
+	}
+	return &dp_intf->dp_stats.arp_stats;
+}
+
+struct dp_icmpv4_stats *ucfg_dp_get_icmpv4_stats(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("DP Context is NULL");
+		return NULL;
+	}
+	return &dp_intf->dp_stats.icmpv4_stats;
+}
+
+struct dp_tcp_stats *ucfg_dp_get_tcp_stats(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("DP Context is NULL");
+		return NULL;
+	}
+	return &dp_intf->dp_stats.tcp_stats;
+}
+
+struct dp_dns_stats *ucfg_dp_get_dns_stats(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("DP Context is NULL");
+		return NULL;
+	}
+	return &dp_intf->dp_stats.dns_stats;
+}
+
+void ucfg_dp_set_nud_stats_cb(struct wlan_objmgr_psoc *psoc, void *cookie)
+{
+	struct wlan_dp_psoc_sb_ops *sb_ops = dp_intf_get_tx_ops(psoc);
+
+	sb_ops->dp_arp_stats_register_event_handler(psoc);
+	sb_ops->arp_request_ctx = cookie;
+}
+
+void ucfg_dp_clear_nud_stats_cb(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_dp_psoc_sb_ops *sb_ops = dp_intf_get_tx_ops(psoc);
+
+	sb_ops->dp_arp_stats_unregister_event_handler(psoc);
+}
+
+QDF_STATUS
+ucfg_dp_req_get_arp_stats(struct wlan_objmgr_psoc *psoc,
+			  struct dp_get_arp_stats_params *params)
+{
+	struct wlan_dp_psoc_sb_ops *sb_ops = dp_intf_get_tx_ops(psoc);
+
+	return sb_ops->dp_get_arp_req_stats(psoc, params);
+}
+
+QDF_STATUS
+ucfg_dp_req_set_arp_stats(struct wlan_objmgr_psoc *psoc,
+			  struct dp_set_arp_stats_params *params)
+{
+	struct wlan_dp_psoc_sb_ops *sb_ops = dp_intf_get_tx_ops(psoc);
+
+	return sb_ops->dp_set_arp_req_stats(psoc, params);
+}
+
 void ucfg_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 				    struct wlan_dp_psoc_callbacks *cb_obj)
 {

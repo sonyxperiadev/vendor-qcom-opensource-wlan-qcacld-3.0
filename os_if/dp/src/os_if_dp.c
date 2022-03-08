@@ -31,6 +31,119 @@
 #include "osif_sync.h"
 #include <net/netevent.h>
 #include "wlan_osif_request_manager.h"
+#include <ol_defines.h>
+
+/*
+ * define short names for the global vendor params
+ * used by wlan_hdd_cfg80211_setarp_stats_cmd()
+ */
+#define STATS_GET_INVALID \
+	QCA_ATTR_NUD_STATS_SET_INVALID
+#define COUNT_FROM_NETDEV \
+	QCA_ATTR_NUD_STATS_ARP_REQ_COUNT_FROM_NETDEV
+#define COUNT_TO_LOWER_MAC \
+	QCA_ATTR_NUD_STATS_ARP_REQ_COUNT_TO_LOWER_MAC
+#define RX_COUNT_BY_LOWER_MAC \
+	QCA_ATTR_NUD_STATS_ARP_REQ_RX_COUNT_BY_LOWER_MAC
+#define COUNT_TX_SUCCESS \
+	QCA_ATTR_NUD_STATS_ARP_REQ_COUNT_TX_SUCCESS
+#define RSP_RX_COUNT_BY_LOWER_MAC \
+	QCA_ATTR_NUD_STATS_ARP_RSP_RX_COUNT_BY_LOWER_MAC
+#define RSP_RX_COUNT_BY_UPPER_MAC \
+	QCA_ATTR_NUD_STATS_ARP_RSP_RX_COUNT_BY_UPPER_MAC
+#define RSP_COUNT_TO_NETDEV \
+	QCA_ATTR_NUD_STATS_ARP_RSP_COUNT_TO_NETDEV
+#define RSP_COUNT_OUT_OF_ORDER_DROP \
+	QCA_ATTR_NUD_STATS_ARP_RSP_COUNT_OUT_OF_ORDER_DROP
+#define AP_LINK_ACTIVE \
+	QCA_ATTR_NUD_STATS_AP_LINK_ACTIVE
+#define AP_LINK_DAD \
+	QCA_ATTR_NUD_STATS_IS_DAD
+#define DATA_PKT_STATS \
+	QCA_ATTR_NUD_STATS_DATA_PKT_STATS
+#define STATS_GET_MAX \
+	QCA_ATTR_NUD_STATS_GET_MAX
+
+#define CHECK_STATS_INVALID \
+	QCA_ATTR_CONNECTIVITY_CHECK_STATS_INVALID
+#define CHECK_STATS_PKT_TYPE \
+	QCA_ATTR_CONNECTIVITY_CHECK_STATS_PKT_TYPE
+#define CHECK_STATS_PKT_DNS_DOMAIN_NAME \
+	QCA_ATTR_CONNECTIVITY_CHECK_STATS_PKT_DNS_DOMAIN_NAME
+#define CHECK_STATS_PKT_SRC_PORT \
+	QCA_ATTR_CONNECTIVITY_CHECK_STATS_PKT_SRC_PORT
+#define CHECK_STATS_PKT_DEST_PORT \
+	QCA_ATTR_CONNECTIVITY_CHECK_STATS_PKT_DEST_PORT
+#define CHECK_STATS_PKT_DEST_IPV4 \
+	QCA_ATTR_CONNECTIVITY_CHECK_STATS_PKT_DEST_IPV4
+#define CHECK_STATS_PKT_DEST_IPV6 \
+	QCA_ATTR_CONNECTIVITY_CHECK_STATS_PKT_DEST_IPV6
+#define CHECK_STATS_PKT_REQ_COUNT_FROM_NETDEV \
+	QCA_ATTR_CONNECTIVITY_CHECK_STATS_PKT_REQ_COUNT_FROM_NETDEV
+#define CHECK_STATS_PKT_REQ_COUNT_TO_LOWER_MAC \
+	QCA_ATTR_CONNECTIVITY_CHECK_STATS_PKT_REQ_COUNT_TO_LOWER_MAC
+#define CHECK_STATS_PKT_REQ_RX_COUNT_BY_LOWER_MAC \
+	QCA_ATTR_CONNECTIVITY_CHECK_STATS_PKT_REQ_RX_COUNT_BY_LOWER_MAC
+#define CHECK_STATS_PKT_REQ_COUNT_TX_SUCCESS \
+	QCA_ATTR_CONNECTIVITY_CHECK_STATS_PKT_REQ_COUNT_TX_SUCCESS
+#define CHECK_STATS_PKT_RSP_RX_COUNT_BY_LOWER_MAC \
+	QCA_ATTR_CONNECTIVITY_CHECK_STATS_PKT_RSP_RX_COUNT_BY_LOWER_MAC
+#define CHECK_STATS_PKT_RSP_RX_COUNT_BY_UPPER_MAC \
+	QCA_ATTR_CONNECTIVITY_CHECK_STATS_PKT_RSP_RX_COUNT_BY_UPPER_MAC
+#define CHECK_STATS_PKT_RSP_COUNT_TO_NETDEV \
+	QCA_ATTR_CONNECTIVITY_CHECK_STATS_PKT_RSP_COUNT_TO_NETDEV
+#define CHECK_STATS_PKT_RSP_COUNT_OUT_OF_ORDER_DROP \
+	QCA_ATTR_CONNECTIVITY_CHECK_STATS_PKT_RSP_COUNT_OUT_OF_ORDER_DROP
+#define CHECK_DATA_STATS_MAX \
+	QCA_ATTR_CONNECTIVITY_CHECK_DATA_STATS_MAX
+
+#define STATS_SET_INVALID \
+	QCA_ATTR_NUD_STATS_SET_INVALID
+#define STATS_SET_START \
+	QCA_ATTR_NUD_STATS_SET_START
+#define STATS_GW_IPV4 \
+	QCA_ATTR_NUD_STATS_GW_IPV4
+#define STATS_SET_DATA_PKT_INFO \
+		QCA_ATTR_NUD_STATS_SET_DATA_PKT_INFO
+#define STATS_SET_MAX \
+	QCA_ATTR_NUD_STATS_SET_MAX
+
+const struct nla_policy
+dp_set_nud_stats_policy[STATS_SET_MAX + 1] = {
+	[STATS_SET_START] = {.type = NLA_FLAG },
+	[STATS_GW_IPV4] = {.type = NLA_U32 },
+	[STATS_SET_DATA_PKT_INFO] = {.type = NLA_NESTED },
+};
+
+/* define short names for the global vendor params */
+#define CONNECTIVITY_STATS_SET_INVALID \
+	QCA_ATTR_CONNECTIVITY_CHECK_STATS_SET_INVALID
+#define STATS_PKT_INFO_TYPE \
+	QCA_ATTR_CONNECTIVITY_CHECK_STATS_STATS_PKT_INFO_TYPE
+#define STATS_DNS_DOMAIN_NAME \
+	QCA_ATTR_CONNECTIVITY_CHECK_STATS_DNS_DOMAIN_NAME
+#define STATS_SRC_PORT \
+	QCA_ATTR_CONNECTIVITY_CHECK_STATS_SRC_PORT
+#define STATS_DEST_PORT \
+	QCA_ATTR_CONNECTIVITY_CHECK_STATS_DEST_PORT
+#define STATS_DEST_IPV4 \
+	QCA_ATTR_CONNECTIVITY_CHECK_STATS_DEST_IPV4
+#define STATS_DEST_IPV6 \
+	QCA_ATTR_CONNECTIVITY_CHECK_STATS_DEST_IPV6
+#define CONNECTIVITY_STATS_SET_MAX \
+	QCA_ATTR_CONNECTIVITY_CHECK_STATS_SET_MAX
+
+const struct nla_policy
+dp_set_connectivity_check_stats[CONNECTIVITY_STATS_SET_MAX + 1] = {
+	[STATS_PKT_INFO_TYPE] = {.type = NLA_U32 },
+	[STATS_DNS_DOMAIN_NAME] = {.type = NLA_NUL_STRING,
+					.len = DNS_DOMAIN_NAME_MAX_LEN },
+	[STATS_SRC_PORT] = {.type = NLA_U32 },
+	[STATS_DEST_PORT] = {.type = NLA_U32 },
+	[STATS_DEST_IPV4] = {.type = NLA_U32 },
+	[STATS_DEST_IPV6] = {.type = NLA_BINARY,
+			.len = ICMPV6_ADDR_LEN },
+};
 
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
 /**
@@ -419,6 +532,700 @@ void osif_dp_nud_unregister_netevent_notifier(struct wlan_objmgr_psoc *psoc)
 #endif
 
 /**
+ * dp_dns_unmake_name_query() - Convert an uncompressed DNS name to a
+ *			     NUL-terminated string
+ * @name: DNS name
+ *
+ * Return: Produce a printable version of a DNS name.
+ */
+static inline uint8_t *dp_dns_unmake_name_query(uint8_t *name)
+{
+	uint8_t *p;
+	unsigned int len;
+
+	p = name;
+	while ((len = *p)) {
+		*(p++) = '.';
+		p += len;
+	}
+
+	return name + 1;
+}
+
+/**
+ * dp_dns_make_name_query() - Convert a standard NUL-terminated string
+ *				to DNS name
+ * @string: Name as a NUL-terminated string
+ * @buf: Buffer in which to place DNS name
+ * @len: BUffer length
+ *
+ * DNS names consist of "<length>element" pairs.
+ *
+ * Return: Byte following constructed DNS name
+ */
+static uint8_t *dp_dns_make_name_query(const uint8_t *string,
+				       uint8_t *buf, uint8_t len)
+{
+	uint8_t *length_byte = buf++;
+	uint8_t c;
+
+	if (string[len - 1]) {
+		dp_err("DNS name is not null terminated");
+		return NULL;
+	}
+
+	while ((c = *(string++))) {
+		if (c == '.') {
+			*length_byte = buf - length_byte - 1;
+			length_byte = buf;
+		}
+		*(buf++) = c;
+	}
+	*length_byte = buf - length_byte - 1;
+	*(buf++) = '\0';
+	return buf;
+}
+
+/**
+ * osif_dp_set_clear_connectivity_check_stats_info() - set/clear stats info
+ * @vdev: vdev context
+ * @arp_stats_params: arp stats structure to be sent to FW
+ * @tb: nl attribute
+ * @is_set_stats: set/clear stats
+ *
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+static int osif_dp_set_clear_connectivity_check_stats_info(
+		struct wlan_objmgr_vdev *vdev,
+		struct dp_set_arp_stats_params *arp_stats_params,
+		struct nlattr **tb, bool is_set_stats)
+{
+	struct nlattr *tb2[CONNECTIVITY_STATS_SET_MAX + 1];
+	struct nlattr *curr_attr = NULL;
+	int err = 0;
+	uint32_t pkt_bitmap;
+	int rem;
+	uint8_t dns_payload[256];
+	uint32_t pkt_type_bitmap = ucfg_dp_get_pkt_type_bitmap_value(vdev);
+
+	/* Set NUD command for start tracking is received. */
+	nla_for_each_nested(curr_attr,
+			    tb[STATS_SET_DATA_PKT_INFO],
+			    rem) {
+		if (wlan_cfg80211_nla_parse(tb2,
+				CONNECTIVITY_STATS_SET_MAX,
+				nla_data(curr_attr), nla_len(curr_attr),
+				dp_set_connectivity_check_stats)) {
+			dp_err("nla_parse failed");
+			err = -EINVAL;
+			goto end;
+		}
+
+		if (tb2[STATS_PKT_INFO_TYPE]) {
+			pkt_bitmap = nla_get_u32(tb2[STATS_PKT_INFO_TYPE]);
+			if (!pkt_bitmap) {
+				dp_err("pkt tracking bitmap is empty");
+				err = -EINVAL;
+				goto end;
+			}
+
+			if (is_set_stats) {
+				arp_stats_params->pkt_type_bitmap = pkt_bitmap;
+				arp_stats_params->flag = true;
+				pkt_type_bitmap |=
+					arp_stats_params->pkt_type_bitmap;
+				ucfg_dp_set_pkt_type_bitmap_value(vdev,
+								  pkt_type_bitmap);
+
+				if (pkt_bitmap & CONNECTIVITY_CHECK_SET_ARP) {
+					if (!tb[STATS_GW_IPV4]) {
+						dp_err("GW ipv4 address is not present");
+						err = -EINVAL;
+						goto end;
+					}
+					arp_stats_params->ip_addr =
+						nla_get_u32(tb[STATS_GW_IPV4]);
+					arp_stats_params->pkt_type =
+						WLAN_NUD_STATS_ARP_PKT_TYPE;
+					ucfg_dp_set_track_arp_ip_value(vdev,
+								arp_stats_params->ip_addr);
+				}
+
+				if (pkt_bitmap & CONNECTIVITY_CHECK_SET_DNS) {
+					uint8_t *domain_name;
+
+					if (!tb2[STATS_DNS_DOMAIN_NAME]) {
+						dp_err("DNS domain id is not present");
+						err = -EINVAL;
+						goto end;
+					}
+					domain_name = nla_data(
+						tb2[STATS_DNS_DOMAIN_NAME]);
+					ucfg_dp_set_track_dns_domain_len_value(vdev,
+						nla_len(tb2[STATS_DNS_DOMAIN_NAME]));
+					ucfg_dp_get_dns_payload_value(vdev, dns_payload);
+					if (!dp_dns_make_name_query(
+						domain_name,
+						dns_payload,
+						ucfg_dp_get_track_dns_domain_len_value(vdev)))
+						ucfg_dp_set_track_dns_domain_len_value(vdev, 0);
+					/* DNStracking isn't supported in FW. */
+					arp_stats_params->pkt_type_bitmap &=
+						~CONNECTIVITY_CHECK_SET_DNS;
+				}
+
+				if (pkt_bitmap &
+				    CONNECTIVITY_CHECK_SET_TCP_HANDSHAKE) {
+					if (!tb2[STATS_SRC_PORT] ||
+					    !tb2[STATS_DEST_PORT]) {
+						dp_err("Source/Dest port is not present");
+						err = -EINVAL;
+						goto end;
+					}
+					arp_stats_params->tcp_src_port =
+						nla_get_u32(
+							tb2[STATS_SRC_PORT]);
+					arp_stats_params->tcp_dst_port =
+						nla_get_u32(
+							tb2[STATS_DEST_PORT]);
+					ucfg_dp_set_track_src_port_value(vdev,
+						arp_stats_params->tcp_src_port);
+					ucfg_dp_set_track_dest_port_value(vdev,
+						arp_stats_params->tcp_dst_port);
+				}
+
+				if (pkt_bitmap &
+				    CONNECTIVITY_CHECK_SET_ICMPV4) {
+					if (!tb2[STATS_DEST_IPV4]) {
+						dp_err("destination ipv4 address to track ping packets is not present");
+						err = -EINVAL;
+						goto end;
+					}
+					arp_stats_params->icmp_ipv4 =
+						nla_get_u32(
+							tb2[STATS_DEST_IPV4]);
+					ucfg_dp_set_track_dest_ipv4_value(vdev,
+						arp_stats_params->icmp_ipv4);
+				}
+			} else {
+				/* clear stats command received */
+				arp_stats_params->pkt_type_bitmap = pkt_bitmap;
+				arp_stats_params->flag = false;
+				pkt_type_bitmap &=
+					(~arp_stats_params->pkt_type_bitmap);
+				ucfg_dp_set_pkt_type_bitmap_value(vdev, pkt_type_bitmap);
+
+				if (pkt_bitmap & CONNECTIVITY_CHECK_SET_ARP) {
+					arp_stats_params->pkt_type =
+						WLAN_NUD_STATS_ARP_PKT_TYPE;
+					ucfg_dp_clear_arp_stats(vdev);
+					ucfg_dp_set_track_arp_ip_value(vdev, 0);
+				}
+
+				if (pkt_bitmap & CONNECTIVITY_CHECK_SET_DNS) {
+					/* DNStracking isn't supported in FW. */
+					arp_stats_params->pkt_type_bitmap &=
+						~CONNECTIVITY_CHECK_SET_DNS;
+					ucfg_dp_clear_dns_stats(vdev);
+					ucfg_dp_clear_dns_payload_value(vdev);
+					ucfg_dp_set_track_dns_domain_len_value(vdev, 0);
+				}
+
+				if (pkt_bitmap &
+				    CONNECTIVITY_CHECK_SET_TCP_HANDSHAKE) {
+					ucfg_dp_clear_tcp_stats(vdev);
+					ucfg_dp_set_track_src_port_value(vdev,
+									 0);
+					ucfg_dp_set_track_dest_port_value(vdev,
+									  0);
+				}
+
+				if (pkt_bitmap &
+				    CONNECTIVITY_CHECK_SET_ICMPV4) {
+					ucfg_dp_clear_icmpv4_stats(vdev);
+					ucfg_dp_set_track_dest_ipv4_value(vdev,
+									  0);
+				}
+			}
+		} else {
+			dp_err("stats list empty");
+			err = -EINVAL;
+			goto end;
+		}
+	}
+
+end:
+	return err;
+}
+
+/**
+ * osif_dp_populate_dns_stats_info() - populate dns stats info
+ * @vdev: vdev context
+ * @skb: pointer to skb
+ *
+ *
+ * Return: An error code or 0 on success.
+ */
+static int osif_dp_populate_dns_stats_info(struct wlan_objmgr_vdev *vdev,
+					   struct sk_buff *skb)
+{
+	uint8_t *dns_query;
+	uint32_t track_dns_domain_len;
+	struct dp_dns_stats *dns_stats = ucfg_dp_get_dns_stats(vdev);
+
+	track_dns_domain_len = ucfg_dp_get_track_dns_domain_len_value(vdev);
+	dns_query = qdf_mem_malloc(track_dns_domain_len + 1);
+	if (!dns_query)
+		return -EINVAL;
+
+	ucfg_dp_get_dns_payload_value(vdev, dns_query);
+
+	if (nla_put_u16(skb, CHECK_STATS_PKT_TYPE,
+			CONNECTIVITY_CHECK_SET_DNS) ||
+	    nla_put(skb, CHECK_STATS_PKT_DNS_DOMAIN_NAME,
+		    track_dns_domain_len,
+		    dp_dns_unmake_name_query(dns_query)) ||
+	    nla_put_u16(skb, CHECK_STATS_PKT_REQ_COUNT_FROM_NETDEV,
+			dns_stats->tx_dns_req_count) ||
+	    nla_put_u16(skb, CHECK_STATS_PKT_REQ_COUNT_TO_LOWER_MAC,
+			dns_stats->tx_host_fw_sent) ||
+	    nla_put_u16(skb, CHECK_STATS_PKT_REQ_RX_COUNT_BY_LOWER_MAC,
+			dns_stats->tx_host_fw_sent) ||
+	    nla_put_u16(skb, CHECK_STATS_PKT_REQ_COUNT_TX_SUCCESS,
+			dns_stats->tx_ack_cnt) ||
+	    nla_put_u16(skb, CHECK_STATS_PKT_RSP_RX_COUNT_BY_UPPER_MAC,
+			dns_stats->rx_dns_rsp_count) ||
+	    nla_put_u16(skb, CHECK_STATS_PKT_RSP_COUNT_TO_NETDEV,
+			dns_stats->rx_delivered) ||
+	    nla_put_u16(skb, CHECK_STATS_PKT_RSP_COUNT_OUT_OF_ORDER_DROP,
+			dns_stats->rx_host_drop)) {
+		dp_err("nla put fail");
+		qdf_mem_free(dns_query);
+		kfree_skb(skb);
+		return -EINVAL;
+	}
+	qdf_mem_free(dns_query);
+	return 0;
+}
+
+/**
+ * osif_dp_populate_tcp_stats_info() - populate tcp stats info
+ * @vdev: pointer to vdev context
+ * @skb: pointer to skb
+ * @pkt_type: tcp pkt type
+ *
+ * Return: An error code or 0 on success.
+ */
+static int osif_dp_populate_tcp_stats_info(struct wlan_objmgr_vdev *vdev,
+					   struct sk_buff *skb,
+					   uint8_t pkt_type)
+{
+	uint32_t track_src_port = ucfg_dp_get_track_src_port_value(vdev);
+	uint32_t track_dest_port = ucfg_dp_get_track_dest_port_value(vdev);
+	struct dp_tcp_stats *tcp_stats = ucfg_dp_get_tcp_stats(vdev);
+
+	switch (pkt_type) {
+	case CONNECTIVITY_CHECK_SET_TCP_SYN:
+		/* Fill info for tcp syn packets (tx packet) */
+		if (nla_put_u16(skb, CHECK_STATS_PKT_TYPE,
+				CONNECTIVITY_CHECK_SET_TCP_SYN) ||
+		    nla_put_u16(skb, CHECK_STATS_PKT_SRC_PORT,
+				track_src_port) ||
+		    nla_put_u16(skb, CHECK_STATS_PKT_DEST_PORT,
+				track_dest_port) ||
+		    nla_put_u16(skb, CHECK_STATS_PKT_REQ_COUNT_FROM_NETDEV,
+				tcp_stats->tx_tcp_syn_count) ||
+		    nla_put_u16(skb, CHECK_STATS_PKT_REQ_COUNT_TO_LOWER_MAC,
+				tcp_stats->tx_tcp_syn_host_fw_sent) ||
+		    nla_put_u16(skb, CHECK_STATS_PKT_REQ_RX_COUNT_BY_LOWER_MAC,
+				tcp_stats->tx_tcp_syn_host_fw_sent) ||
+		    nla_put_u16(skb, CHECK_STATS_PKT_REQ_COUNT_TX_SUCCESS,
+				tcp_stats->tx_tcp_syn_ack_cnt)) {
+			dp_err("nla put fail");
+			kfree_skb(skb);
+			return -EINVAL;
+		}
+		break;
+	case CONNECTIVITY_CHECK_SET_TCP_SYN_ACK:
+		/* Fill info for tcp syn-ack packets (rx packet) */
+		if (nla_put_u16(skb, CHECK_STATS_PKT_TYPE,
+				CONNECTIVITY_CHECK_SET_TCP_SYN_ACK) ||
+		    nla_put_u16(skb, CHECK_STATS_PKT_SRC_PORT,
+				track_src_port) ||
+		    nla_put_u16(skb, CHECK_STATS_PKT_DEST_PORT,
+				track_dest_port) ||
+		    nla_put_u16(skb, CHECK_STATS_PKT_RSP_RX_COUNT_BY_LOWER_MAC,
+				tcp_stats->rx_fw_cnt) ||
+		    nla_put_u16(skb, CHECK_STATS_PKT_RSP_RX_COUNT_BY_UPPER_MAC,
+				tcp_stats->rx_tcp_syn_ack_count) ||
+		    nla_put_u16(skb, CHECK_STATS_PKT_RSP_COUNT_TO_NETDEV,
+				tcp_stats->rx_delivered) ||
+		    nla_put_u16(skb,
+				CHECK_STATS_PKT_RSP_COUNT_OUT_OF_ORDER_DROP,
+				tcp_stats->rx_host_drop)) {
+			dp_err("nla put fail");
+			kfree_skb(skb);
+			return -EINVAL;
+		}
+		break;
+	case CONNECTIVITY_CHECK_SET_TCP_ACK:
+		/* Fill info for tcp ack packets (tx packet) */
+		if (nla_put_u16(skb, CHECK_STATS_PKT_TYPE,
+				CONNECTIVITY_CHECK_SET_TCP_ACK) ||
+		    nla_put_u16(skb, CHECK_STATS_PKT_SRC_PORT,
+				track_src_port) ||
+		    nla_put_u16(skb, CHECK_STATS_PKT_DEST_PORT,
+				track_dest_port) ||
+		    nla_put_u16(skb, CHECK_STATS_PKT_REQ_COUNT_FROM_NETDEV,
+				tcp_stats->tx_tcp_ack_count) ||
+		    nla_put_u16(skb, CHECK_STATS_PKT_REQ_COUNT_TO_LOWER_MAC,
+				tcp_stats->tx_tcp_ack_host_fw_sent) ||
+		    nla_put_u16(skb, CHECK_STATS_PKT_REQ_RX_COUNT_BY_LOWER_MAC,
+				tcp_stats->tx_tcp_ack_host_fw_sent) ||
+		    nla_put_u16(skb, CHECK_STATS_PKT_REQ_COUNT_TX_SUCCESS,
+				tcp_stats->tx_tcp_ack_ack_cnt)) {
+			dp_err("nla put fail");
+			kfree_skb(skb);
+			return -EINVAL;
+		}
+		break;
+	default:
+		break;
+	}
+	return 0;
+}
+
+/**
+ * osif_dp_populate_icmpv4_stats_info() - populate icmpv4 stats
+ * @vdev: pointer to vdev context
+ * @skb: pointer to skb
+ *
+ *
+ * Return: An error code or 0 on success.
+ */
+static int osif_dp_populate_icmpv4_stats_info(struct wlan_objmgr_vdev *vdev,
+					      struct sk_buff *skb)
+{
+	struct dp_icmpv4_stats *icmpv4_stats = ucfg_dp_get_icmpv4_stats(vdev);
+	uint32_t track_dest_ipv4 = ucfg_dp_get_track_dest_ipv4_value(vdev);
+
+	if (nla_put_u16(skb, CHECK_STATS_PKT_TYPE,
+			CONNECTIVITY_CHECK_SET_ICMPV4) ||
+	    nla_put_u32(skb, CHECK_STATS_PKT_DEST_IPV4,
+			track_dest_ipv4) ||
+	    nla_put_u16(skb, CHECK_STATS_PKT_REQ_COUNT_FROM_NETDEV,
+			icmpv4_stats->tx_icmpv4_req_count) ||
+	    nla_put_u16(skb, CHECK_STATS_PKT_REQ_COUNT_TO_LOWER_MAC,
+			icmpv4_stats->tx_host_fw_sent) ||
+	    nla_put_u16(skb, CHECK_STATS_PKT_REQ_RX_COUNT_BY_LOWER_MAC,
+			icmpv4_stats->tx_host_fw_sent) ||
+	    nla_put_u16(skb, CHECK_STATS_PKT_REQ_COUNT_TX_SUCCESS,
+			icmpv4_stats->tx_ack_cnt) ||
+	    nla_put_u16(skb, CHECK_STATS_PKT_RSP_RX_COUNT_BY_LOWER_MAC,
+			icmpv4_stats->rx_fw_cnt) ||
+	    nla_put_u16(skb, CHECK_STATS_PKT_RSP_RX_COUNT_BY_UPPER_MAC,
+			icmpv4_stats->rx_icmpv4_rsp_count) ||
+	    nla_put_u16(skb, CHECK_STATS_PKT_RSP_COUNT_TO_NETDEV,
+			icmpv4_stats->rx_delivered) ||
+	    nla_put_u16(skb, CHECK_STATS_PKT_RSP_COUNT_OUT_OF_ORDER_DROP,
+			icmpv4_stats->rx_host_drop)) {
+		dp_err("nla put fail");
+		kfree_skb(skb);
+		return -EINVAL;
+	}
+	return 0;
+}
+
+/**
+ * osif_dp_populate_connectivity_check_stats_info() - Poplulate connectivity
+ * stats info
+ * @vdev: pointer to vdev context
+ * @skb: pointer to skb
+ *
+ *
+ * Return: An error code or 0 on success.
+ */
+static int
+osif_dp_populate_connectivity_check_stats_info(struct wlan_objmgr_vdev *vdev,
+					       struct sk_buff *skb)
+{
+	struct nlattr *connect_stats, *connect_info;
+	uint32_t count = 0;
+	uint32_t pkt_type_bitmap = ucfg_dp_get_pkt_type_bitmap_value(vdev);
+
+	connect_stats = nla_nest_start(skb, DATA_PKT_STATS);
+	if (!connect_stats) {
+		dp_err("nla_nest_start failed");
+		return -EINVAL;
+	}
+
+	if (pkt_type_bitmap & CONNECTIVITY_CHECK_SET_DNS) {
+		connect_info = nla_nest_start(skb, count);
+		if (!connect_info) {
+			dp_err("nla_nest_start failed count %u", count);
+			return -EINVAL;
+		}
+
+		if (osif_dp_populate_dns_stats_info(vdev, skb))
+			goto put_attr_fail;
+		nla_nest_end(skb, connect_info);
+		count++;
+	}
+
+	if (pkt_type_bitmap & CONNECTIVITY_CHECK_SET_TCP_HANDSHAKE) {
+		connect_info = nla_nest_start(skb, count);
+		if (!connect_info) {
+			dp_err("nla_nest_start failed count %u", count);
+			return -EINVAL;
+		}
+		if (osif_dp_populate_tcp_stats_info(vdev, skb,
+					CONNECTIVITY_CHECK_SET_TCP_SYN))
+			goto put_attr_fail;
+		nla_nest_end(skb, connect_info);
+		count++;
+
+		connect_info = nla_nest_start(skb, count);
+		if (!connect_info) {
+			dp_err("nla_nest_start failed count %u", count);
+			return -EINVAL;
+		}
+		if (osif_dp_populate_tcp_stats_info(vdev, skb,
+					CONNECTIVITY_CHECK_SET_TCP_SYN_ACK))
+			goto put_attr_fail;
+		nla_nest_end(skb, connect_info);
+		count++;
+
+		connect_info = nla_nest_start(skb, count);
+		if (!connect_info) {
+			dp_err("nla_nest_start failed count %u", count);
+			return -EINVAL;
+		}
+		if (osif_dp_populate_tcp_stats_info(vdev, skb,
+					CONNECTIVITY_CHECK_SET_TCP_ACK))
+			goto put_attr_fail;
+		nla_nest_end(skb, connect_info);
+		count++;
+	}
+
+	if (pkt_type_bitmap & CONNECTIVITY_CHECK_SET_ICMPV4) {
+		connect_info = nla_nest_start(skb, count);
+		if (!connect_info) {
+			dp_err("nla_nest_start failed count %u", count);
+			return -EINVAL;
+		}
+
+		if (osif_dp_populate_icmpv4_stats_info(vdev, skb))
+			goto put_attr_fail;
+		nla_nest_end(skb, connect_info);
+		count++;
+	}
+
+	nla_nest_end(skb, connect_stats);
+	return 0;
+
+put_attr_fail:
+	dp_err("QCA_WLAN_VENDOR_ATTR put fail. count %u", count);
+	return -EINVAL;
+}
+
+int osif_dp_get_nud_stats(struct wiphy *wiphy,
+			  struct wlan_objmgr_vdev *vdev,
+			  const void *data, int data_len)
+{
+	int err = 0;
+	struct dp_get_arp_stats_params arp_stats_params;
+	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
+	uint32_t pkt_type_bitmap = ucfg_dp_get_pkt_type_bitmap_value(vdev);
+	struct sk_buff *skb;
+	struct osif_request *request = NULL;
+	struct dp_arp_stats *arp_stats;
+	struct wlan_objmgr_psoc *psoc = wlan_vdev_get_psoc(vdev);
+	static const struct osif_request_params params = {
+		.priv_size = 0,
+		.timeout_ms = WLAN_WAIT_TIME_NUD_STATS,
+	};
+
+	request = osif_request_alloc(&params);
+	if (!request) {
+		dp_err("Request allocation failure");
+		return -ENOMEM;
+	}
+
+	ucfg_dp_set_nud_stats_cb(psoc, osif_request_cookie(request));
+
+	arp_stats_params.pkt_type = WLAN_NUD_STATS_ARP_PKT_TYPE;
+	arp_stats_params.vdev_id = ucfg_dp_get_intf_id(vdev);
+
+	/* send NUD failure event only when ARP tracking is enabled. */
+	if (cdp_cfg_get(soc, cfg_dp_enable_data_stall) &&
+	    !ucfg_dp_nud_tracking_enabled(psoc) &&
+	    (pkt_type_bitmap & CONNECTIVITY_CHECK_SET_ARP)) {
+		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_ERROR,
+			  "Data stall due to NUD failure");
+		cdp_post_data_stall_event(soc,
+					  DATA_STALL_LOG_INDICATOR_FRAMEWORK,
+					  DATA_STALL_LOG_NUD_FAILURE,
+					  OL_TXRX_PDEV_ID, 0XFF,
+					  DATA_STALL_LOG_RECOVERY_TRIGGER_PDR);
+	}
+
+	if (QDF_STATUS_SUCCESS !=
+	    ucfg_dp_req_get_arp_stats(psoc, &arp_stats_params)) {
+		dp_err("Unable to sent ARP stats request");
+		err = -EINVAL;
+		goto exit;
+	}
+
+	err = osif_request_wait_for_response(request);
+	if (err) {
+		dp_err("timedout while retrieving NUD stats");
+		err = -ETIMEDOUT;
+		goto exit;
+	}
+
+	skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy,
+						  WLAN_NUD_STATS_LEN);
+	if (!skb) {
+		dp_err("cfg80211_vendor_cmd_alloc_reply_skb failed");
+		err = -ENOMEM;
+		goto exit;
+	}
+	arp_stats = ucfg_dp_get_arp_stats(vdev);
+	if (nla_put_u16(skb, COUNT_FROM_NETDEV,
+			arp_stats->tx_arp_req_count) ||
+	    nla_put_u16(skb, COUNT_TO_LOWER_MAC,
+			arp_stats->tx_host_fw_sent) ||
+	    nla_put_u16(skb, RX_COUNT_BY_LOWER_MAC,
+			arp_stats->tx_host_fw_sent) ||
+	    nla_put_u16(skb, COUNT_TX_SUCCESS,
+			arp_stats->tx_ack_cnt) ||
+	    nla_put_u16(skb, RSP_RX_COUNT_BY_LOWER_MAC,
+			arp_stats->rx_fw_cnt) ||
+	    nla_put_u16(skb, RSP_RX_COUNT_BY_UPPER_MAC,
+			arp_stats->rx_arp_rsp_count) ||
+	    nla_put_u16(skb, RSP_COUNT_TO_NETDEV,
+			arp_stats->rx_delivered) ||
+	    nla_put_u16(skb, RSP_COUNT_OUT_OF_ORDER_DROP,
+			arp_stats->rx_host_drop_reorder)) {
+		dp_err("nla put fail");
+		kfree_skb(skb);
+		err = -EINVAL;
+		goto exit;
+	}
+	if (ucfg_dp_get_con_status_value(vdev))
+		nla_put_flag(skb, AP_LINK_ACTIVE);
+	if (ucfg_dp_get_dad_value(vdev))
+		nla_put_flag(skb, AP_LINK_DAD);
+
+	/* ARP tracking is done above. */
+	pkt_type_bitmap &= ~CONNECTIVITY_CHECK_SET_ARP;
+
+	if (pkt_type_bitmap) {
+		if (osif_dp_populate_connectivity_check_stats_info(vdev, skb)) {
+			err = -EINVAL;
+			goto exit;
+		}
+	}
+
+	cfg80211_vendor_cmd_reply(skb);
+exit:
+	ucfg_dp_clear_nud_stats_cb(psoc);
+	osif_request_put(request);
+	return err;
+}
+
+int osif_dp_set_nud_stats(struct wiphy *wiphy,
+			  struct wlan_objmgr_vdev *vdev,
+			  const void *data, int data_len)
+{
+	struct nlattr *tb[STATS_SET_MAX + 1];
+	struct wlan_objmgr_psoc *psoc = wlan_vdev_get_psoc(vdev);
+	struct dp_set_arp_stats_params arp_stats_params = {0};
+	uint32_t pkt_type_bitmap = ucfg_dp_get_pkt_type_bitmap_value(vdev);
+	int err = 0;
+
+	err = wlan_cfg80211_nla_parse(tb, STATS_SET_MAX, data, data_len,
+				      dp_set_nud_stats_policy);
+	if (err) {
+		dp_err("STATS_SET_START ATTR");
+		return err;
+	}
+
+	if (tb[STATS_SET_START]) {
+		/* tracking is enabled for stats other than arp. */
+		if (tb[STATS_SET_DATA_PKT_INFO]) {
+			err = osif_dp_set_clear_connectivity_check_stats_info(
+						vdev,
+						&arp_stats_params, tb, true);
+			if (err)
+				return -EINVAL;
+
+			/*
+			 * if only tracking dns, then don't send
+			 * wmi command to FW.
+			 */
+			if (!arp_stats_params.pkt_type_bitmap)
+				return err;
+		} else {
+			if (!tb[STATS_GW_IPV4]) {
+				dp_err("STATS_SET_START CMD");
+				return -EINVAL;
+			}
+
+			arp_stats_params.pkt_type_bitmap =
+						CONNECTIVITY_CHECK_SET_ARP;
+			pkt_type_bitmap |=
+					arp_stats_params.pkt_type_bitmap;
+			ucfg_dp_set_pkt_type_bitmap_value(vdev,
+							  pkt_type_bitmap);
+			arp_stats_params.flag = true;
+			arp_stats_params.ip_addr =
+					nla_get_u32(tb[STATS_GW_IPV4]);
+			ucfg_dp_set_track_arp_ip_value(vdev,
+						       arp_stats_params.ip_addr);
+			arp_stats_params.pkt_type = WLAN_NUD_STATS_ARP_PKT_TYPE;
+		}
+	} else {
+		/* clear stats command received. */
+		if (tb[STATS_SET_DATA_PKT_INFO]) {
+			err = osif_dp_set_clear_connectivity_check_stats_info(
+						vdev,
+						&arp_stats_params, tb, false);
+			if (err)
+				return -EINVAL;
+
+			/*
+			 * if only tracking dns, then don't send
+			 * wmi command to FW.
+			 */
+			if (!arp_stats_params.pkt_type_bitmap)
+				return err;
+		} else {
+			arp_stats_params.pkt_type_bitmap =
+						CONNECTIVITY_CHECK_SET_ARP;
+			pkt_type_bitmap &= (~arp_stats_params.pkt_type_bitmap);
+			ucfg_dp_set_pkt_type_bitmap_value(vdev,
+							  pkt_type_bitmap);
+			arp_stats_params.flag = false;
+			ucfg_dp_clear_arp_stats(vdev);
+			arp_stats_params.pkt_type = WLAN_NUD_STATS_ARP_PKT_TYPE;
+		}
+	}
+
+	dp_info("STATS_SET_START Received flag %d!", arp_stats_params.flag);
+
+	arp_stats_params.vdev_id = ucfg_dp_get_intf_id(vdev);
+
+	if (QDF_STATUS_SUCCESS !=
+	    ucfg_dp_req_set_arp_stats(psoc, &arp_stats_params)) {
+		dp_err("Unable to set ARP stats!");
+		return -EINVAL;
+	}
+	return err;
+}
+
+/*
  * os_if_dp_register_event_handler() - Register osif event handler
  * @psoc: psoc handle
  *

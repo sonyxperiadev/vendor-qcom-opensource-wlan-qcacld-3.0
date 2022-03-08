@@ -291,6 +291,14 @@ struct wlan_dp_intf {
 	qdf_net_dev_stats stats;
 	bool con_status;
 	bool dad;
+	uint8_t active_ac;
+	uint32_t pkt_type_bitmap;
+	uint32_t track_arp_ip;
+	uint8_t dns_payload[256];
+	uint32_t track_dns_domain_len;
+	uint32_t track_src_port;
+	uint32_t track_dest_port;
+	uint32_t track_dest_ipv4;
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
 	unsigned long prev_rx_packets;
 	unsigned long prev_tx_packets;

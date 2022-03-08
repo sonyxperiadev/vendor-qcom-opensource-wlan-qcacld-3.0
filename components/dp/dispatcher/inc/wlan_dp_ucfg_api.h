@@ -449,6 +449,246 @@ uint8_t ucfg_dp_nud_tracking_enabled(struct wlan_objmgr_psoc *psoc);
 void ucfg_dp_nud_indicate_roam(struct wlan_objmgr_vdev *vdev);
 
 /**
+ * ucfg_dp_clear_arp_stats() - Clear ARP Stats
+ * @vdev: vdev context
+ *
+ * Return: None
+ */
+void ucfg_dp_clear_arp_stats(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_clear_dns_stats() - Clear DNS Stats
+ * @vdev: vdev context
+ *
+ * Return: None
+ */
+void ucfg_dp_clear_dns_stats(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_clear_tcp_stats() - Clear TCP Stats
+ * @vdev: vdev context
+ *
+ * Return: None
+ */
+void ucfg_dp_clear_tcp_stats(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_clear_icmpv4_stats() - Clear ICMPv4 Stats
+ * @vdev: vdev context
+ *
+ * Return: None
+ */
+void ucfg_dp_clear_icmpv4_stats(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_clear_dns_payload_value() - Clear DNS payload value
+ * @vdev: vdev context
+ *
+ * Return: None
+ */
+void ucfg_dp_clear_dns_payload_value(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_set_pkt_type_bitmap_value() - Set Packet type bitmap value
+ * @vdev: vdev context
+ *
+ * Return: None
+ */
+void ucfg_dp_set_pkt_type_bitmap_value(struct wlan_objmgr_vdev *vdev,
+				       uint32_t value);
+
+/**
+ * ucfg_dp_set_track_dest_ipv4_value() - Set track_dest_ipv4 value
+ * @vdev: vdev context
+ *
+ * Return: None
+ */
+void ucfg_dp_set_track_dest_ipv4_value(struct wlan_objmgr_vdev *vdev,
+				       uint32_t value);
+
+/**
+ * ucfg_dp_set_track_dest_port_value() - Set track_dest_port value
+ * @vdev: vdev context
+ *
+ * Return: None
+ */
+void ucfg_dp_set_track_dest_port_value(struct wlan_objmgr_vdev *vdev,
+				       uint32_t value);
+
+/**
+ * ucfg_dp_set_track_src_port_value() - Set track_dest_port value
+ * @vdev: vdev context
+ *
+ * Return: None
+ */
+void ucfg_dp_set_track_src_port_value(struct wlan_objmgr_vdev *vdev,
+				      uint32_t value);
+
+/**
+ * ucfg_dp_set_track_dns_domain_len_value() - Set track_dns_domain_len value
+ * @vdev: vdev context
+ *
+ * Return: None
+ */
+void ucfg_dp_set_track_dns_domain_len_value(struct wlan_objmgr_vdev *vdev,
+					    uint32_t value);
+
+/**
+ * ucfg_dp_set_track_arp_ip_value() - Set track_arp_ip value
+ * @vdev: vdev context
+ *
+ * Return: None
+ */
+void ucfg_dp_set_track_arp_ip_value(struct wlan_objmgr_vdev *vdev,
+				    uint32_t value);
+
+/**
+ * ucfg_dp_get_pkt_type_bitmap_value() - Get pkt_type_bitmap value
+ * @vdev: vdev context
+ *
+ * Return: pkt_type_bitmap value
+ */
+uint32_t ucfg_dp_get_pkt_type_bitmap_value(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_get_dns_payload_value() - Get dns_payload value
+ * @vdev: vdev context
+ * @dns_query : DNS query pointer
+ * Return: None
+ */
+void ucfg_dp_get_dns_payload_value(struct wlan_objmgr_vdev *vdev,
+				   uint8_t *dns_query);
+
+/**
+ * ucfg_dp_get_track_dns_domain_len_value() - Get track_dns_domain_len value
+ * @vdev: vdev context
+ *
+ * Return: track_dns_domain_len value
+ */
+uint32_t ucfg_dp_get_track_dns_domain_len_value(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_get_track_dest_port_value() - Get track_dest_port value
+ * @vdev: vdev context
+ *
+ * Return: track_dest_port value
+ */
+uint32_t ucfg_dp_get_track_dest_port_value(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_get_track_src_port_value() - Get track_src_port value
+ * @vdev: vdev context
+ *
+ * Return: track_src_port value
+ */
+uint32_t ucfg_dp_get_track_src_port_value(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_get_track_dest_ipv4_value() - Get track_dest_ipv4 value
+ * @vdev: vdev context
+ *
+ * Return: track_dest_ipv4 value
+ */
+uint32_t ucfg_dp_get_track_dest_ipv4_value(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_get_dad_value() - Get dad value
+ * @vdev: vdev context
+ *
+ * Return: dad value
+ */
+bool ucfg_dp_get_dad_value(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_get_con_status_value() - Get con_status value
+ * @vdev: vdev context
+ *
+ * Return: con_status value
+ */
+bool ucfg_dp_get_con_status_value(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_get_intf_id() - Get intf_id
+ * @vdev: vdev context
+ *
+ * Return: intf_id
+ */
+uint8_t ucfg_dp_get_intf_id(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_get_arp_stats() - Get ARP stats
+ * @vdev: vdev context
+ *
+ * Return: ARP Stats
+ */
+struct dp_arp_stats *ucfg_dp_get_arp_stats(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_get_icmpv4_stats() - Get ICMPv4 stats
+ * @vdev: vdev context
+ *
+ * Return: ICMPv4 Stats
+ */
+struct dp_icmpv4_stats
+*ucfg_dp_get_icmpv4_stats(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_get_tcp_stats() - Get TCP stats
+ * @vdev: vdev context
+ *
+ * Return: TCP Stats
+ */
+struct dp_tcp_stats *ucfg_dp_get_tcp_stats(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_get_dns_stats() - Get DNS stats
+ * @vdev: vdev context
+ *
+ * Return: DNS Stats
+ */
+struct dp_dns_stats *ucfg_dp_get_dns_stats(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_set_nud_stats_cb() - Register callback with WMI
+ * @psoc: psoc context
+ * @cookie: callback context
+ *
+ * Return: None
+ */
+
+void ucfg_dp_set_nud_stats_cb(struct wlan_objmgr_psoc *psoc, void *cookie);
+
+/**
+ * ucfg_dp_clear_nud_stats_cb() - Unregister callback with WMI
+ * @psoc: psoc context
+ *
+ * Return: None
+ */
+void ucfg_dp_clear_nud_stats_cb(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_dp_req_get_arp_stats() - Send Get ARP set request to FW
+ * @psoc: psoc context
+ * @params : Get ARP stats param
+ *
+ * Return: Status
+ */
+QDF_STATUS
+ucfg_dp_req_get_arp_stats(struct wlan_objmgr_psoc *psoc,
+			  struct dp_get_arp_stats_params *params);
+
+/**
+ * ucfg_dp_req_set_arp_stats() - Send Set ARP set request to FW
+ * @psoc: psoc context
+ * @params : Set ARP stats param
+ *
+ * Return: Status
+ */
+QDF_STATUS
+ucfg_dp_req_set_arp_stats(struct wlan_objmgr_psoc *psoc,
+			  struct dp_set_arp_stats_params *params);
+
+/**
  * ucfg_dp_register_hdd_callbacks() - Resiter HDD callbacks with DP component
  * @psoc: psoc handle
  * @cb_obj: Callback object
