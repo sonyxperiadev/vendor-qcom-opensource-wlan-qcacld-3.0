@@ -18462,6 +18462,39 @@ static void wlan_hdd_update_lfr_wiphy(struct hdd_context *hdd_ctx)
 }
 #endif
 
+#if defined (CFG80211_SA_QUERY_OFFLOAD_SUPPORT) || \
+	    (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0))
+/**
+ * wlan_hdd_set_sa_query_offload_wiphy() - set sa query offload cap in sme cap
+ * @hdd_ctx: HDD context
+ *
+ * This function set sa query offload cap for ap sme capabilities in wiphy
+ *
+ * Return: void
+ */
+static void wlan_hdd_set_sa_query_offload_wiphy(struct hdd_context *hdd_ctx)
+{
+	hdd_ctx->wiphy->ap_sme_capa |= NL80211_AP_SME_SA_QUERY_OFFLOAD;
+}
+
+/**
+ * wlan_hdd_update_ap_sme_cap_wiphy() - update ap sme capabilities in wiphy
+ * @hdd_ctx: HDD context
+ *
+ * This function update ap sme capabilities in wiphy
+ *
+ * Return: void
+ */
+static void wlan_hdd_update_ap_sme_cap_wiphy(struct hdd_context *hdd_ctx)
+{
+	wlan_hdd_set_sa_query_offload_wiphy(hdd_ctx);
+}
+#else
+static void wlan_hdd_update_ap_sme_cap_wiphy(struct hdd_context *hdd_ctx)
+{
+}
+#endif
+
 /*
  * In this function, wiphy structure is updated after QDF
  * initialization. In wlan_hdd_cfg80211_init, only the
@@ -18488,6 +18521,7 @@ void wlan_hdd_update_wiphy(struct hdd_context *hdd_ctx)
 	wlan_hdd_update_ht_cap(hdd_ctx);
 	wlan_hdd_update_band_cap_in_wiphy(hdd_ctx);
 	wlan_hdd_update_lfr_wiphy(hdd_ctx);
+	wlan_hdd_update_ap_sme_cap_wiphy(hdd_ctx);
 
 	fils_enabled = 0;
 	status = ucfg_mlme_get_fils_enabled_info(hdd_ctx->psoc,
