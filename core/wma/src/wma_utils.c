@@ -695,9 +695,10 @@ int wma_stats_ext_event_handler(void *handle, uint8_t *event_buf,
 	QDF_STATUS status;
 	struct scheduler_msg cds_msg = {0};
 	uint8_t *buf_ptr;
-	uint32_t alloc_len;
+	uint32_t alloc_len = 0, i, partner_links_data_len = 0;
 	struct cdp_txrx_ext_stats ext_stats = {0};
 	struct cdp_soc_t *soc_hdl = cds_get_context(QDF_MODULE_ID_SOC);
+	wmi_partner_link_stats *link_stats;
 
 	wma_debug("Posting stats ext event to SME");
 
@@ -707,12 +708,29 @@ int wma_stats_ext_event_handler(void *handle, uint8_t *event_buf,
 		return -EINVAL;
 	}
 
+	if (param_buf->num_partner_link_stats)
+		wma_debug("number of partner link stats:%d",
+			  param_buf->num_partner_link_stats);
+
 	stats_ext_info = param_buf->fixed_param;
 	buf_ptr = (uint8_t *)stats_ext_info;
 
-	alloc_len = sizeof(tSirStatsExtEvent);
+	alloc_len += sizeof(tSirStatsExtEvent);
 	alloc_len += stats_ext_info->data_len;
 	alloc_len += sizeof(struct cdp_txrx_ext_stats);
+
+	if (param_buf->num_partner_link_stats) {
+		link_stats = param_buf->partner_link_stats;
+		if (link_stats) {
+			for (i = 0; i < param_buf->num_partner_link_stats; i++) {
+				partner_links_data_len += link_stats->data_length;
+				link_stats++;
+			}
+		alloc_len += partner_links_data_len;
+		alloc_len += param_buf->num_partner_link_stats *
+			     sizeof(struct cdp_txrx_ext_stats);
+		}
+	}
 
 	if (stats_ext_info->data_len > (WMI_SVC_MSG_MAX_SIZE -
 	    WMI_TLV_HDR_SIZE - sizeof(*stats_ext_info)) ||
@@ -738,6 +756,30 @@ int wma_stats_ext_event_handler(void *handle, uint8_t *event_buf,
 		     &ext_stats, sizeof(struct cdp_txrx_ext_stats));
 
 	stats_ext_event->event_data_len += sizeof(struct cdp_txrx_ext_stats);
+
+	if (param_buf->num_partner_link_stats) {
+		link_stats = param_buf->partner_link_stats;
+		if (link_stats) {
+			for (i = 0; i < param_buf->num_partner_link_stats; i++) {
+				qdf_mem_copy(((uint8_t *)stats_ext_event->event_data) +
+					     stats_ext_event->event_data_len,
+					     param_buf->partner_link_data +
+					     link_stats->offset,
+					     link_stats->data_length);
+
+				stats_ext_event->event_data_len +=
+							link_stats->data_length;
+
+				qdf_mem_copy(stats_ext_event->event_data +
+						stats_ext_event->event_data_len,
+						&ext_stats,
+						sizeof(struct cdp_txrx_ext_stats));
+				stats_ext_event->event_data_len +=
+					sizeof(struct cdp_txrx_ext_stats);
+				link_stats++;
+			}
+		}
+	}
 
 	cds_msg.type = eWNI_SME_STATS_EXT_EVENT;
 	cds_msg.bodyptr = (void *)stats_ext_event;
