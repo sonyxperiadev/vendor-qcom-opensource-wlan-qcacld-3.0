@@ -383,6 +383,22 @@ wmi_extract_roam_stats_event(wmi_unified_t wmi_handle,
 			     struct roam_stats_event **stats_info);
 
 /**
+ * wmi_unified_extract_roam_extract_frame_info() - Extract the roam frame
+ * info TLV from roam stats event
+ * @wmi:        wmi handle
+ * @evt_buf:    Pointer to the event buffer
+ * @dst:        Pointer to destination structure to fill data
+ * @idx:        Index of the TLV to read
+ * @num_frames: Number of TLV to read
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wmi_unified_extract_roam_extract_frame_info(wmi_unified_t wmi, void *evt_buf,
+					    struct roam_frame_stats *dst,
+					    uint8_t idx, uint8_t num_frames);
+
+/**
  * wmi_extract_auth_offload_event  - Extract auth offload event
  * @wmi_handle: WMI handle
  * @event: Event data received from firmware
