@@ -8184,7 +8184,7 @@ static int hdd_process_generic_set_cmd(struct hdd_adapter *adapter,
 static int hdd_process_generic_set_cmd(struct hdd_adapter *adapter,
 				       struct nlattr *tb[])
 {
-	return -EINVAL;
+	return 0;
 }
 #endif
 
