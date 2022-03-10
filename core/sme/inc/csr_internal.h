@@ -135,7 +135,7 @@ struct csr_roamstart_bssparams {
 	tSirMacSSid ssId;
 
 	tSirNwType sirNwType;
-	ePhyChanBondState cbMode;
+	ePhyChanBondState cb_mode;
 	tSirMacRateSet operationalRateSet;
 	tSirMacRateSet extendedRateSet;
 	uint32_t operation_chan_freq;
@@ -143,14 +143,14 @@ struct csr_roamstart_bssparams {
 	enum csr_cfgdot11mode uCfgDot11Mode;
 	uint8_t privacy;
 	tAniAuthType authType;
-	uint16_t beaconInterval; /* If this is 0, SME'll fill in for caller */
+	uint16_t bcn_int; /* If this is 0, SME'll fill in for caller */
 	uint32_t dtimPeriod;
 	uint8_t ssidHidden;
 	uint8_t wps_state;
 	uint16_t nRSNIELength;  /* If 0, pRSNIE is ignored. */
 	uint8_t *pRSNIE;        /* If not null, it has IE byte stream for RSN */
 	/* Flag used to indicate update beaconInterval */
-	bool updatebeaconInterval;
+	bool update_bcn_int;
 	struct add_ie_params add_ie_params;
 	uint16_t beacon_tx_rate;
 	uint32_t cac_duration_ms;

@@ -5978,7 +5978,7 @@ QDF_STATUS csr_roam_issue_start_bss(struct mac_context *mac, uint32_t sessionId,
 
 	pParam->privacy = pProfile->privacy;
 	pParam->authType = pProfile->csr80211AuthType;
-	pParam->beaconInterval = pProfile->beaconInterval;
+	pParam->bcn_int = pProfile->beaconInterval;
 	pParam->dtimPeriod = pProfile->dtimPeriod;
 	pParam->ssidHidden = pProfile->SSIDs.SSIDList[0].ssidHidden;
 	if (CSR_IS_INFRA_AP(pProfile) && (pParam->operation_chan_freq != 0)) {
@@ -6052,7 +6052,7 @@ void csr_roam_prepare_bss_params(struct mac_context *mac, uint32_t sessionId,
 			else
 				cbMode = mac->roam.configParam.channelBondingMode5GHz;
 			sme_debug("## cbMode %d", cbMode);
-			pSession->bssParams.cbMode = cbMode;
+			pSession->bssParams.cb_mode = cbMode;
 		}
 	}
 
@@ -7089,10 +7089,10 @@ QDF_STATUS csr_send_chng_mcc_beacon_interval(struct mac_context *mac,
 	/* NO need to update the Beacon Params if update beacon parameter flag
 	 * is not set
 	 */
-	if (!mac->roam.roamSession[sessionId].bssParams.updatebeaconInterval)
+	if (!mac->roam.roamSession[sessionId].bssParams.update_bcn_int)
 		return QDF_STATUS_SUCCESS;
 
-	mac->roam.roamSession[sessionId].bssParams.updatebeaconInterval =
+	mac->roam.roamSession[sessionId].bssParams.update_bcn_int =
 		false;
 
 	/* Create the message and send to lim */
@@ -7115,9 +7115,9 @@ QDF_STATUS csr_send_chng_mcc_beacon_interval(struct mac_context *mac,
 		sme_debug("session %d BeaconInterval %d",
 			sessionId,
 			mac->roam.roamSession[sessionId].bssParams.
-			beaconInterval);
+			bcn_int);
 		pMsg->beacon_interval =
-			mac->roam.roamSession[sessionId].bssParams.beaconInterval;
+			mac->roam.roamSession[sessionId].bssParams.bcn_int;
 		status = umac_send_mb_message_to_mac(pMsg);
 	}
 	return status;
@@ -7342,8 +7342,8 @@ QDF_STATUS csr_send_mb_start_bss_req_msg(struct mac_context *mac, uint32_t
 	pMsg->messageType = eWNI_SME_START_BSS_REQ;
 	pMsg->vdev_id = sessionId;
 	pMsg->length = sizeof(*pMsg);
-	if (pParam->beaconInterval)
-		candidate_info.beacon_interval = pParam->beaconInterval;
+	if (pParam->bcn_int)
+		candidate_info.beacon_interval = pParam->bcn_int;
 	else
 		candidate_info.beacon_interval = MLME_CFG_BEACON_INTERVAL_DEF;
 
@@ -7352,7 +7352,7 @@ QDF_STATUS csr_send_mb_start_bss_req_msg(struct mac_context *mac, uint32_t
 					&candidate_info);
 
 	/* Update the beacon Interval */
-	pParam->beaconInterval = candidate_info.beacon_interval;
+	pParam->bcn_int = candidate_info.beacon_interval;
 	pMsg->beaconInterval = candidate_info.beacon_interval;
 	pMsg->dot11mode =
 		csr_translate_to_wni_cfg_dot11_mode(mac,
