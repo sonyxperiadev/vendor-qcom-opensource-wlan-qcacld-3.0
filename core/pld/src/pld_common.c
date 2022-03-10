@@ -3376,6 +3376,45 @@ int pld_get_wlan_unsafe_channel_sap(
 }
 #endif
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+/**
+ * pld_is_ipa_offload_disabled() - Check if IPA offload is disabled or not
+ *
+ * @dev: device
+ *
+ * This API will be called to check if IPA offload is disabled or not.
+ *
+ *  Return: Non-zero for IPA offload is disabled
+ *          Otherwise IPA offload is enabled
+ */
+int pld_is_ipa_offload_disabled(struct device *dev)
+{
+	unsigned long dev_cfg = 0;
+
+	enum pld_bus_type type = pld_get_bus_type(dev);
+
+	switch (type) {
+	case PLD_BUS_TYPE_SNOC:
+		dev_cfg = pld_snoc_get_device_config();
+		break;
+	case PLD_BUS_TYPE_IPCI:
+	case PLD_BUS_TYPE_PCIE:
+	case PLD_BUS_TYPE_SDIO:
+	case PLD_BUS_TYPE_USB:
+	case PLD_BUS_TYPE_SNOC_FW_SIM:
+	case PLD_BUS_TYPE_PCIE_FW_SIM:
+	case PLD_BUS_TYPE_IPCI_FW_SIM:
+		pr_err("Not supported on type %d\n", type);
+		break;
+	default:
+		pr_err("Invalid device type %d\n", type);
+		break;
+	}
+
+	return test_bit(PLD_IPA_DISABLED, &dev_cfg);
+}
+#endif
+
 #ifdef FEATURE_WLAN_TIME_SYNC_FTM
 /**
  * pld_get_audio_wlan_timestamp() - Get audio timestamp

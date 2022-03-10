@@ -135,6 +135,11 @@ static inline int pld_snoc_idle_shutdown(struct device *dev)
 	return 0;
 }
 
+static inline unsigned long pld_snoc_get_device_config(void)
+{
+	return 0;
+}
+
 static inline int pld_snoc_smmu_map(struct device *dev, phys_addr_t paddr,
 				    uint32_t *iova_addr, size_t size)
 {
@@ -403,6 +408,11 @@ static inline int pld_snoc_idle_restart(struct device *dev)
 static inline int pld_snoc_idle_shutdown(struct device *dev)
 {
 	return icnss_idle_shutdown(dev);
+}
+
+static inline unsigned long pld_snoc_get_device_config(void)
+{
+	return icnss_get_device_config();
 }
 #endif
 #endif
