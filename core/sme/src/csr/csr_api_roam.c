@@ -3338,7 +3338,6 @@ static bool csr_roam_process_results(struct mac_context *mac_ctx, tSmeCmd *cmd,
 				       roam_result);
 		csr_set_default_dot11_mode(mac_ctx);
 		break;
-#endif
 	case eCsrStopBssSuccess:
 		if (CSR_IS_NDI(profile)) {
 			qdf_mem_zero(roam_info, sizeof(*roam_info));
@@ -3363,6 +3362,7 @@ static bool csr_roam_process_results(struct mac_context *mac_ctx, tSmeCmd *cmd,
 					       roam_status, roam_result);
 		}
 		break;
+#endif
 	case eCsrNothingToJoin:
 	default:
 		csr_roam_process_results_default(mac_ctx, cmd, context, res);
@@ -3730,10 +3730,16 @@ QDF_STATUS csr_roam_ndi_stop(struct mac_context *mac_ctx, uint8_t vdev_id)
 	sme_debug("vdev_id: %d is_vdev_up %d is_start_bss_in_active_q %d",
 		  vdev_id, is_vdev_up, is_start_bss_in_active_q);
 
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	if (is_vdev_up || is_start_bss_in_active_q)
 		status = csr_roam_issue_stop_bss_cmd(mac_ctx, vdev_id,
 						     eCSR_BSS_TYPE_NDI, true);
-
+#else
+	if (is_vdev_up || is_start_bss_in_active_q)
+		status = csr_roam_issue_stop_bss_cmd(mac_ctx, vdev_id,
+						     eCSR_BSS_TYPE_NDI);
+#endif
 	return status;
 }
 
@@ -3788,7 +3794,6 @@ csr_roaming_state_config_cnf_processor(struct mac_context *mac_ctx,
 		return;
 	}
 }
-#endif
 
 static void csr_roam_roaming_state_stop_bss_rsp_processor(struct mac_context *mac,
 							  tSirSmeRsp *pSmeRsp)
@@ -3805,12 +3810,28 @@ static void csr_roam_roaming_state_stop_bss_rsp_processor(struct mac_context *ma
 			if (pSmeRsp->status_code != eSIR_SME_SUCCESS)
 				result_code = eCsrStopBssFailure;
 		}
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
 		csr_roam_complete(mac, result_code, NULL, pSmeRsp->vdev_id);
-#endif
 	}
 }
+
+#else
+void csr_roam_roaming_state_stop_bss_rsp_processor(struct mac_context *mac,
+						   void *msg)
+{
+	struct stop_bss_rsp *stop_bss_rsp = (struct stop_bss_rsp *)msg;
+	uint8_t vdev_id = stop_bss_rsp->vdev_id;
+	enum csr_sap_response_type result_code = CSR_SAP_STOP_BSS_SUCCESS;
+
+	sme_debug("Received stop bss rsp on vdev: %d", vdev_id);
+	mac->roam.roamSession[vdev_id].connectState =
+					eCSR_ASSOC_STATE_TYPE_NOT_CONNECTED;
+	if (CSR_IS_ROAM_SUBSTATE_STOP_BSS_REQ(mac, vdev_id)) {
+		if (stop_bss_rsp->status_code != eSIR_SME_SUCCESS)
+			result_code = CSR_SAP_STOP_BSS_FAILURE;
+		csr_process_sap_response(mac, result_code, NULL, vdev_id);
+	}
+}
+#endif
 
 static
 void csr_roam_roaming_state_disassoc_rsp_processor(struct mac_context *mac,
@@ -3963,10 +3984,13 @@ void csr_roaming_state_msg_processor(struct mac_context *mac, void *msg_buf)
 	pSmeRsp = (tSirSmeRsp *)msg_buf;
 
 	switch (pSmeRsp->messageType) {
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	case eWNI_SME_STOP_BSS_RSP:
 		/* or the Stop Bss response message... */
 		csr_roam_roaming_state_stop_bss_rsp_processor(mac, pSmeRsp);
 		break;
+#endif
 	case eWNI_SME_DISASSOC_RSP:
 		/* or the Disassociate response message... */
 		if (CSR_IS_ROAM_SUBSTATE_DISASSOC_REQ(mac, pSmeRsp->vdev_id)) {
@@ -9098,25 +9122,71 @@ error:
 
 QDF_STATUS csr_roam_issue_stop_bss_cmd(struct mac_context *mac,
 				       uint8_t vdev_id,
-				       eCsrRoamBssType bss_type,
-				       bool high_priority)
+				       eCsrRoamBssType bss_type)
 {
+	struct wlan_objmgr_vdev *vdev;
+	struct wlan_serialization_command cmd = {0};
+	enum wlan_serialization_status status;
+	struct stop_bss_req *stop_bss_req;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_pdev(mac->pdev, vdev_id,
+						    WLAN_LEGACY_MAC_ID);
+	if (!vdev) {
+		sme_err("VDEV not found for vdev id : %d", vdev_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	/* Change the substate in case it is wait-for-key */
+	if (CSR_IS_WAIT_FOR_KEY(mac, vdev_id)) {
+		cm_stop_wait_for_key_timer(mac->psoc, vdev_id);
+		csr_roam_substate_change(mac, eCSR_ROAM_SUBSTATE_NONE,
+					 vdev_id);
+	}
+
+	sme_debug("Stop BSS vdev_id: %d bss_type %d", vdev_id, bss_type);
+	stop_bss_req = qdf_mem_malloc(sizeof(*stop_bss_req));
+	if (!stop_bss_req)
+		return QDF_STATUS_E_FAILURE;
+
+	stop_bss_req->vdev_id = vdev_id;
+	stop_bss_req->cmd_id = csr_get_monotonous_number(mac);
+
+	cmd.cmd_id = stop_bss_req->cmd_id;
+	csr_set_sap_ser_params(&cmd, WLAN_SER_CMD_VDEV_STOP_BSS);
+	cmd.umac_cmd = stop_bss_req;
+	cmd.vdev = vdev;
+	csr_fill_cmd_timeout(&cmd);
+
+	status = wlan_vdev_mlme_ser_stop_bss(&cmd);
+	switch (status) {
+	case WLAN_SER_CMD_PENDING:
+	case WLAN_SER_CMD_ACTIVE:
+		break;
+	default:
+		sme_err("ser cmd status %d", status);
+		goto error;
+	}
 	return QDF_STATUS_SUCCESS;
+
+error:
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
+	qdf_mem_free(stop_bss_req);
+	return QDF_STATUS_E_FAILURE;
 }
 
-/**
- * csr_process_sap_defaults() - API to process the default response
- * for SAP from LIM
- * @mac_ctx: mac context
- * @req: Serialization command posted by SAP
- * @vdev_id : vdev id
- *
- * Return: void
- */
-static void csr_process_sap_defaults(struct mac_context *mac_ctx,
-				     struct wlan_serialization_command *req,
-				     uint32_t vdev_id)
+static void csr_process_stop_bss_response(struct mac_context *mac_ctx,
+					  uint32_t vdev_id)
 {
+	struct csr_roam_session *session = CSR_GET_SESSION(mac_ctx, vdev_id);
+
+	if (CSR_IS_ROAM_SUBSTATE_STOP_BSS_REQ(mac_ctx, vdev_id)) {
+		csr_roam_free_connected_info(mac_ctx, &session->connectedInfo);
+		csr_set_default_dot11_mode(mac_ctx);
+	}
+
+	csr_roam_call_callback(mac_ctx, vdev_id, NULL,
+			       0, eCSR_ROAM_INFRA_IND,
+			       eCSR_ROAM_RESULT_INFRA_STOPPED);
 	return;
 }
 
@@ -9170,6 +9240,22 @@ static bool csr_process_sap_results(struct mac_context *mac_ctx,
 		csr_roam_call_callback(mac_ctx, vdev_id, roam_info,
 				       0, roam_status, roam_result);
 		csr_set_default_dot11_mode(mac_ctx);
+		break;
+	case CSR_SAP_STOP_BSS_SUCCESS:
+	case CSR_SAP_STOP_BSS_FAILURE:
+		if (opmode == QDF_NDI_MODE) {
+			qdf_mem_zero(roam_info, sizeof(*roam_info));
+			csr_roam_update_ndp_return_params(mac_ctx, result,
+							  &roam_status,
+							  &roam_result,
+							  roam_info);
+			csr_roam_call_callback(mac_ctx, vdev_id,
+					       roam_info, 0,
+					       roam_status,
+					       roam_result);
+		} else {
+			csr_process_stop_bss_response(mac_ctx, vdev_id);
+		}
 		break;
 	default:
 		sme_err("Invalid response");

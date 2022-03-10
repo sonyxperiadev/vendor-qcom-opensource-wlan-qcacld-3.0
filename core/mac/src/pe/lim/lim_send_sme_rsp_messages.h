@@ -289,4 +289,16 @@ void lim_handle_mlo_sta_csa_param(struct wlan_objmgr_vdev *vdev,
 				  struct csa_offload_params *csa_params);
 #endif /* WLAN_FEATURE_11BE_MLO */
 
+#ifdef SAP_CP_CLEANUP
+/** lim_send_stop_bss_response() - Send stop bss response to CSR
+ *
+ * @mac_ctx : Global mac ctx
+ * @vdev_id : vdev_id
+ * @result_code: result
+ *
+ * Return: None
+ */
+void lim_send_stop_bss_response(struct mac_context *mac_ctx, uint8_t vdev_id,
+				tSirResultCodes result_code);
+#endif
 #endif /* __LIM_SEND_SME_RSP_H */

@@ -81,6 +81,8 @@ void lim_send_sme_rsp(struct mac_context *mac_ctx, uint16_t msg_type,
 	msg.bodyval = 0;
 	MTRACE(mac_trace(mac_ctx, TRACE_CODE_TX_SME_MSG, vdev_id, msg.type));
 
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 #ifdef FEATURE_WLAN_DIAG_SUPPORT_LIM    /* FEATURE_WLAN_DIAG_SUPPORT */
 	switch (msg_type) {
 	case eWNI_SME_STOP_BSS_RSP:
@@ -89,9 +91,46 @@ void lim_send_sme_rsp(struct mac_context *mac_ctx, uint16_t msg_type,
 		break;
 	}
 #endif /* FEATURE_WLAN_DIAG_SUPPORT */
+#endif
 	lim_sys_process_mmh_msg_api(mac_ctx, &msg);
 }
 
+#ifdef SAP_CP_CLEANUP
+void
+lim_send_stop_bss_response(struct mac_context *mac_ctx, uint8_t vdev_id,
+			   tSirResultCodes result_code)
+{
+	struct scheduler_msg msg = {0};
+	struct stop_bss_rsp *stop_bss_rsp;
+	struct pe_session *pe_session;
+
+	pe_debug("Sending stop bss response with reasonCode: %s",
+		 lim_result_code_str(result_code));
+
+	pe_session = pe_find_session_by_vdev_id(mac_ctx, vdev_id);
+	if (!pe_session) {
+		pe_err("Unable to find session for stop bss response");
+		return;
+	}
+
+	stop_bss_rsp = qdf_mem_malloc(sizeof(*stop_bss_rsp));
+	if (!stop_bss_rsp)
+		return;
+
+	stop_bss_rsp->status_code = result_code;
+	stop_bss_rsp->vdev_id = vdev_id;
+
+	msg.type = eWNI_SME_STOP_BSS_RSP;
+	msg.bodyptr = stop_bss_rsp;
+	msg.bodyval = 0;
+
+#ifdef FEATURE_WLAN_DIAG_SUPPORT_LIM    /* FEATURE_WLAN_DIAG_SUPPORT */
+	lim_diag_event_report(mac_ctx, WLAN_PE_DIAG_STOP_BSS_RSP_EVENT,
+			      NULL, (uint16_t) result_code, 0);
+#endif /* FEATURE_WLAN_DIAG_SUPPORT */
+	lim_sys_process_mmh_msg_api(mac_ctx, &msg);
+}
+#endif
 /**
  * lim_get_max_rate_flags() - Get rate flags
  * @mac_ctx: Pointer to global MAC structure

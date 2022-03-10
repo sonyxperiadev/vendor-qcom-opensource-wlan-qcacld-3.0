@@ -2912,6 +2912,11 @@ QDF_STATUS sme_process_msg(struct mac_context *mac, struct scheduler_msg *pMsg)
 							       pMsg->bodyptr);
 		qdf_mem_free(pMsg->bodyptr);
 		break;
+	case eWNI_SME_STOP_BSS_RSP:
+		csr_roam_roaming_state_stop_bss_rsp_processor(mac,
+							      pMsg->bodyptr);
+		qdf_mem_free(pMsg->bodyptr);
+		break;
 #endif
 	default:
 
@@ -3476,8 +3481,14 @@ QDF_STATUS sme_roam_stop_bss(mac_handle_t mac_handle, uint8_t vdev_id)
 	if (QDF_IS_STATUS_ERROR(status))
 		return status;
 
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	status = csr_roam_issue_stop_bss_cmd(mac, vdev_id,
 					     eCSR_BSS_TYPE_INFRA_AP, false);
+#else
+	status = csr_roam_issue_stop_bss_cmd(mac, vdev_id,
+					     eCSR_BSS_TYPE_INFRA_AP);
+#endif
 	sme_release_global_lock(&mac->sme);
 
 	return status;
@@ -16418,8 +16429,37 @@ failure:
 }
 
 static QDF_STATUS sme_send_stop_bss_msg(struct mac_context *mac,
-					uint32_t vdev_id)
+					struct stop_bss_req *cfg)
 {
+	struct scheduler_msg msg = {0};
+	struct stop_bss_req *stop_bss_req;
+
+	csr_roam_state_change(mac, eCSR_ROAMING_STATE_JOINING, cfg->vdev_id);
+	csr_roam_substate_change(mac, eCSR_ROAM_SUBSTATE_STOP_BSS_REQ,
+				 cfg->vdev_id);
+
+	sme_err("Stop bss request received for vdev : %d cmd_id : %d",
+		cfg->vdev_id, cfg->cmd_id);
+
+	stop_bss_req = qdf_mem_malloc(sizeof(*stop_bss_req));
+	if (!stop_bss_req)
+		return QDF_STATUS_E_NOMEM;
+
+	qdf_mem_copy(stop_bss_req, cfg, sizeof(*stop_bss_req));
+
+	msg.type = eWNI_SME_STOP_BSS_REQ;
+	msg.bodyptr = stop_bss_req;
+	msg.reserved = 0;
+
+	if (QDF_STATUS_SUCCESS != scheduler_post_message(QDF_MODULE_ID_SME,
+							 QDF_MODULE_ID_PE,
+							 QDF_MODULE_ID_PE,
+							 &msg)) {
+		sme_err("Failed to post stop bss request for vdev id : %d",
+			cfg->vdev_id);
+		qdf_mem_free(stop_bss_req);
+		return QDF_STATUS_E_FAILURE;
+	}
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -16439,6 +16479,9 @@ static QDF_STATUS sme_sap_activate_cmd(struct wlan_serialization_command *cmd)
 	switch (cmd->cmd_type) {
 	case WLAN_SER_CMD_VDEV_START_BSS:
 		status = sme_send_start_bss_msg(mac, cmd->umac_cmd);
+		break;
+	case WLAN_SER_CMD_VDEV_STOP_BSS:
+		status = sme_send_stop_bss_msg(mac, cmd->umac_cmd);
 		break;
 	default:
 		status = QDF_STATUS_E_FAILURE;

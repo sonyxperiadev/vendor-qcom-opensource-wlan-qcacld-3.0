@@ -1599,6 +1599,8 @@ static QDF_STATUS sap_goto_stopping(struct sap_context *sap_ctx)
 /* To be removed after SAP CSR cleanup changes */
 #ifndef SAP_CP_CLEANUP
 	sap_free_roam_profile(&sap_ctx->csr_roamProfile);
+#else
+	qdf_mem_zero(&sap_ctx->sap_bss_cfg, sizeof(sap_ctx->sap_bss_cfg));
 #endif
 	status = sme_roam_stop_bss(MAC_HANDLE(mac_ctx), sap_ctx->sessionId);
 	if (status != QDF_STATUS_SUCCESS) {

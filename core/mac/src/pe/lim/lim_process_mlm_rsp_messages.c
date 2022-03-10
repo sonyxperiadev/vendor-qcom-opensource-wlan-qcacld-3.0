@@ -1682,8 +1682,13 @@ void lim_process_ap_mlm_del_bss_rsp(struct mac_context *mac,
 	/* Initialize number of associated stations during cleanup */
 	pe_session->gLimNumOfCurrentSTAs = 0;
 end:
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	lim_send_sme_rsp(mac, eWNI_SME_STOP_BSS_RSP, rc,
 			 pe_session->smeSessionId);
+#else
+	lim_send_stop_bss_response(mac, pe_session->vdev_id, rc);
+#endif
 	pe_delete_session(mac, pe_session);
 }
 

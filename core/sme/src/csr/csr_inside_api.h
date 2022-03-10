@@ -185,8 +185,6 @@ QDF_STATUS csr_get_cfg_valid_channels(struct mac_context *mac,
 /* to free memory allocated inside the profile structure */
 void csr_release_profile(struct mac_context *mac,
 			 struct csr_roam_profile *pProfile);
-#else
-void csr_clear_start_bss_config(struct start_bss_config *sap_config);
 #endif
 
 enum csr_cfgdot11mode
@@ -461,6 +459,7 @@ QDF_STATUS csr_apply_channel_and_power_list(struct mac_context *mac);
  */
 QDF_STATUS csr_roam_ndi_stop(struct mac_context *mac, uint8_t vdev_id);
 
+#ifndef SAP_CP_CLEANUP
 /* This function is used to stop a BSS. It is similar of csr_roamIssueDisconnect
  * but this function doesn't have any logic other than blindly trying to stop
  * BSS
@@ -468,6 +467,20 @@ QDF_STATUS csr_roam_ndi_stop(struct mac_context *mac, uint8_t vdev_id);
 QDF_STATUS csr_roam_issue_stop_bss_cmd(struct mac_context *mac, uint8_t vdev_id,
 				       eCsrRoamBssType bss_type,
 				       bool high_priority);
+#else
+/**
+ * csr_roam_issue_stop_bss_cmd() - This API posts the stop bss command
+ * to the serialization module.
+ *
+ * @mac: Global mac context
+ * @vdev_id: Vdev id
+ * @bss_type: BSS type
+ *
+ * Return : QDF_STATUS
+ */
+QDF_STATUS csr_roam_issue_stop_bss_cmd(struct mac_context *mac, uint8_t vdev_id,
+				       eCsrRoamBssType bss_type);
+#endif
 
 /**
  * csr_roam_issue_disassociate_sta_cmd() - disassociate a associated station
@@ -588,10 +601,12 @@ csr_roam_prepare_bss_params(struct mac_context *mac_ctx, uint32_t session_id,
 void csr_remove_bssid_from_scan_list(struct mac_context *mac_ctx,
 				     tSirMacAddr bssid);
 
+#ifndef SAP_CP_CLEANUP
 QDF_STATUS
 csr_roam_set_bss_config_cfg(struct mac_context *mac_ctx, uint32_t session_id,
 			    struct csr_roam_profile *profile,
 			    struct bss_config_param *bss_cfg);
+#endif
 
 void csr_prune_channel_list_for_mode(struct mac_context *mac,
 				     struct csr_channel *pChannelList);
@@ -695,5 +710,17 @@ void csr_process_sap_response(struct mac_context *mac,
 void
 csr_roam_roaming_state_start_bss_rsp_processor(struct mac_context *mac,
 					       void *msg);
+
+/**
+ * csr_roam_roaming_state_stop_bss_rsp_processor() - Handles stop bss
+ * response from LIM
+ *
+ * @mac: mac context
+ * @msg: stop bss response pointer
+ *
+ * Return: void
+ */
+void csr_roam_roaming_state_stop_bss_rsp_processor(struct mac_context *mac,
+						   void *msg);
 #endif
 #endif /* CSR_INSIDE_API_H__ */

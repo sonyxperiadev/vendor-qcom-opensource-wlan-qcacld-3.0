@@ -112,14 +112,24 @@ void csr_roam_update_ndp_return_params(struct mac_context *mac_ctx,
 		*roam_status = eCSR_ROAM_NDP_STATUS_UPDATE;
 		*roam_result = eCSR_ROAM_RESULT_NDI_CREATE_RSP;
 		break;
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	case eCsrStopBssSuccess:
+#else
+	case CSR_SAP_STOP_BSS_SUCCESS:
+#endif
 		roam_info->ndp.ndi_delete_params.reason = 0;
 		roam_info->ndp.ndi_delete_params.status =
 						NDP_RSP_STATUS_SUCCESS;
 		*roam_status = eCSR_ROAM_NDP_STATUS_UPDATE;
 		*roam_result = eCSR_ROAM_RESULT_NDI_DELETE_RSP;
 		break;
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	case eCsrStopBssFailure:
+#else
+	case CSR_SAP_STOP_BSS_FAILURE:
+#endif
 		roam_info->ndp.ndi_delete_params.status = NDP_RSP_STATUS_ERROR;
 		roam_info->ndp.ndi_delete_params.reason =
 					NDP_NAN_DATA_IFACE_DELETE_FAILED;

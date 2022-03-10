@@ -104,8 +104,6 @@ bool lim_is_sme_deauth_req_valid(struct mac_context *mac,
 bool lim_is_sme_set_context_req_valid(struct mac_context *,
 				      struct set_context_req *set_context_req);
 
-uint8_t lim_is_sme_stop_bss_req_valid(uint32_t *);
-
 /**
  * lim_is_sme_disassoc_cnf_valid() - Validate disassoc cnf message
  * @mac: Pointer to Global MAC structure

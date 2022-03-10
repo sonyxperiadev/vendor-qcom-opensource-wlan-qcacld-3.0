@@ -1222,6 +1222,7 @@ struct deauth_cnf {
 	struct qdf_mac_addr peer_macaddr;
 };
 
+#ifndef SAP_CP_CLEANUP
 /* / Definition for stop BSS request message */
 struct stop_bss_req {
 	uint16_t messageType;   /* eWNI_SME_STOP_BSS_REQ */
@@ -1230,6 +1231,17 @@ struct stop_bss_req {
 	tSirResultCodes reasonCode;
 	struct qdf_mac_addr bssid;      /* Self BSSID */
 };
+#else
+struct stop_bss_req {
+	uint8_t vdev_id;
+	uint32_t cmd_id;
+};
+
+struct stop_bss_rsp {
+	uint8_t vdev_id;
+	tSirResultCodes status_code;
+};
+#endif
 
 /* / Definition for Channel Switch indication for station */
 /* / MAC ---> */

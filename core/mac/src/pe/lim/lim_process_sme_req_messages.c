@@ -5964,9 +5964,14 @@ void lim_send_stop_bss_failure_resp(struct mac_context *mac_ctx,
 
 	MTRACE(mac_trace(mac_ctx, TRACE_CODE_SME_STATE, session->peSessionId,
 			  session->limSmeState));
-
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	lim_send_sme_rsp(mac_ctx, eWNI_SME_STOP_BSS_RSP,
 			 eSIR_SME_STOP_BSS_FAILURE, session->smeSessionId);
+#else
+	lim_send_stop_bss_response(mac_ctx, session->vdev_id,
+				   eSIR_SME_STOP_BSS_FAILURE);
+#endif
 }
 
 void lim_delete_all_peers(struct pe_session *session)
@@ -6083,29 +6088,42 @@ __lim_handle_sme_stop_bss_request(struct mac_context *mac, uint32_t *msg_buf)
 	struct stop_bss_req stop_bss_req;
 	tLimSmeStates prevState;
 	struct pe_session *pe_session;
-	uint8_t smesessionId;
-	uint8_t sessionId;
+/* To be removed after SAP CSR cleanup changes */
+#ifdef SAP_CP_CLEANUP
+	struct qdf_mac_addr bssid;
+#endif
+	uint8_t vdev_id;
+	uint8_t session_id;
 
 	qdf_mem_copy(&stop_bss_req, msg_buf, sizeof(stop_bss_req));
-	smesessionId = stop_bss_req.sessionId;
-
-	if (!lim_is_sme_stop_bss_req_valid(msg_buf)) {
-		pe_warn("received invalid SME_STOP_BSS_REQ message");
-		/* Send Stop BSS response to host */
-		lim_send_sme_rsp(mac, eWNI_SME_STOP_BSS_RSP,
-				 eSIR_SME_INVALID_PARAMETERS, smesessionId);
-		return;
-	}
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
+	vdev_id = stop_bss_req.sessionId;
 
 	pe_session = pe_find_session_by_bssid(mac,
 				stop_bss_req.bssid.bytes,
-				&sessionId);
+				&session_id);
 	if (!pe_session) {
 		pe_err("session does not exist for given BSSID");
 		lim_send_sme_rsp(mac, eWNI_SME_STOP_BSS_RSP,
-				 eSIR_SME_INVALID_PARAMETERS, smesessionId);
+				eSIR_SME_INVALID_PARAMETERS, vdev_id);
 		return;
 	}
+#else
+	vdev_id = stop_bss_req.vdev_id;
+	wlan_mlme_get_mac_vdev_id(mac->pdev, vdev_id, &bssid);
+
+	pe_session = pe_find_session_by_bssid(mac, bssid.bytes,
+					       &session_id);
+	if (!pe_session) {
+		pe_err("session does not exist for bssid " QDF_MAC_ADDR_FMT,
+		       QDF_MAC_ADDR_REF(bssid.bytes));
+		lim_send_stop_bss_response(mac, vdev_id,
+					   eSIR_SME_INVALID_PARAMETERS);
+		return;
+	}
+#endif
+
 #ifdef FEATURE_WLAN_DIAG_SUPPORT_LIM    /* FEATURE_WLAN_DIAG_SUPPORT */
 	lim_diag_event_report(mac, WLAN_PE_DIAG_STOP_BSS_REQ_EVENT, pe_session,
 			      0, 0);
@@ -6123,17 +6141,20 @@ __lim_handle_sme_stop_bss_request(struct mac_context *mac, uint32_t *msg_buf)
 			GET_LIM_SYSTEM_ROLE(pe_session));
 		lim_print_sme_state(mac, LOGE, pe_session->limSmeState);
 		/* / Send Stop BSS response to host */
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 		lim_send_sme_rsp(mac, eWNI_SME_STOP_BSS_RSP,
 				 eSIR_SME_UNEXPECTED_REQ_RESULT_CODE,
-				 smesessionId);
+				 vdev_id);
+#else
+		lim_send_stop_bss_response(mac, vdev_id,
+					   eSIR_SME_UNEXPECTED_REQ_RESULT_CODE);
+#endif
 		return;
 	}
 
 	if (LIM_IS_AP_ROLE(pe_session))
 		lim_wpspbc_close(mac, pe_session);
-
-	pe_debug("RECEIVED STOP_BSS_REQ with reason code=%d",
-		stop_bss_req.reasonCode);
 
 	prevState = pe_session->limSmeState;
 	pe_session->limPrevSmeState = prevState;
@@ -6143,8 +6164,8 @@ __lim_handle_sme_stop_bss_request(struct mac_context *mac, uint32_t *msg_buf)
 		       (mac, TRACE_CODE_SME_STATE, pe_session->peSessionId,
 		       pe_session->limSmeState));
 
-	pe_session->smeSessionId = smesessionId;
-	pe_session->stop_bss_reason = stop_bss_req.reasonCode;
+	pe_session->smeSessionId = vdev_id;
+	pe_session->stop_bss_reason = 0;
 
 	if (!LIM_IS_NDI_ROLE(pe_session)) {
 		/* Free the buffer allocated in START_BSS_REQ */
@@ -6192,8 +6213,14 @@ void lim_process_sme_del_bss_rsp(struct mac_context *mac,
 	SET_LIM_PROCESS_DEFD_MESGS(mac, true);
 	dph_hash_table_init(mac, &pe_session->dph.dphHashTable);
 	lim_delete_pre_auth_list(mac);
+/* To be removed after SAP CSR cleanup changes */
+#ifndef SAP_CP_CLEANUP
 	lim_send_sme_rsp(mac, eWNI_SME_STOP_BSS_RSP, eSIR_SME_SUCCESS,
 			 pe_session->smeSessionId);
+#else
+	lim_send_stop_bss_response(mac, pe_session->vdev_id,
+				   eSIR_SME_SUCCESS);
+#endif
 	return;
 }
 
