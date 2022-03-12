@@ -3508,11 +3508,12 @@ cppflags-$(CONFIG_AR6320_SUPPORT) += -DCONFIG_AR6320_SUPPORT
 
 ifeq ($(CONFIG_WLAN_FEATURE_DSRC), y)
 cppflags-y += -DWLAN_FEATURE_DSRC
-
 ifeq ($(CONFIG_OCB_UT_FRAMEWORK), y)
 cppflags-y += -DWLAN_OCB_UT
 endif
 
+else ifeq ($(CONFIG_WLAN_REG_AUTO), y)
+cppflags-y += -DWLAN_REG_AUTO
 endif
 
 cppflags-$(CONFIG_FEATURE_SKB_PRE_ALLOC) += -DFEATURE_SKB_PRE_ALLOC
