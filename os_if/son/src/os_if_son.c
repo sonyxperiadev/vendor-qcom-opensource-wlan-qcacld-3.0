@@ -926,7 +926,7 @@ QDF_STATUS os_if_son_vdev_ops(struct wlan_objmgr_vdev *vdev,
 	case VDEV_GET_CHAN_UTIL:
 		if (!out)
 			return QDF_STATUS_E_INVAL;
-		out->chan_util = os_if_son_get_chan_uti(vdev, NULL);
+		out->chan_util = os_if_son_get_chan_util(vdev);
 		break;
 	case VDEV_GET_APCAP:
 		break;
@@ -1007,8 +1007,7 @@ QDF_STATUS os_if_son_peer_ops(struct wlan_objmgr_peer *peer,
 	case PEER_SET_KICKOUT:
 		qdf_mem_copy(&mac.bytes, peer->macaddr, QDF_MAC_ADDR_SIZE);
 		ret_val =
-		    g_son_os_if_cb.os_if_kickout_mac(vdev->vdev_objmgr.vdev_id,
-						     &mac);
+		    g_son_os_if_cb.os_if_kickout_mac(vdev, &mac);
 		if (ret_val) {
 			osif_err("Failed to kickout peer " QDF_MAC_ADDR_FMT,
 				 QDF_MAC_ADDR_REF(peer->macaddr));

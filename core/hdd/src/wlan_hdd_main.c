@@ -6440,6 +6440,7 @@ int hdd_vdev_destroy(struct hdd_adapter *adapter)
 	ucfg_scan_vdev_set_disable(vdev, REASON_VDEV_DOWN);
 	wlan_hdd_scan_abort(adapter);
 	wlan_cfg80211_cleanup_scan_queue(hdd_ctx->pdev, adapter->dev);
+	ucfg_son_disable_cbs(vdev);
 	/* Disable serialization for vdev before sending vdev delete */
 	wlan_ser_vdev_queue_disable(vdev);
 	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_ID);
@@ -6473,7 +6474,6 @@ int hdd_vdev_destroy(struct hdd_adapter *adapter)
 					  QDF_VDEV_DELETE_RESPONSE_TIMED_OUT);
 	}
 
-	ucfg_son_disable_cbs(vdev);
 	hdd_nofl_debug("vdev %d destroyed successfully", vdev_id);
 
 send_status:

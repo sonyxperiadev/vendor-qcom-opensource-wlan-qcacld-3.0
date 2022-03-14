@@ -1581,6 +1581,30 @@ son_trigger_pdev_obj_creation(struct wlan_objmgr_psoc *psoc,
 }
 
 /**
+ * son_trigger_pdev_obj_deletion() - Trigger pdev object deletion
+ * @psoc: psoc object
+ * @object: pdev object
+ * @arg: component id
+ *
+ * Return: void
+ */
+static void
+son_trigger_pdev_obj_deletion(struct wlan_objmgr_psoc *psoc,
+			      void *object, void *arg)
+{
+	QDF_STATUS ret;
+	struct wlan_objmgr_pdev *pdev;
+	enum wlan_umac_comp_id *id;
+
+	pdev = object;
+	id = arg;
+
+	ret = wlan_objmgr_trigger_pdev_comp_priv_object_deletion(pdev, *id);
+	if (QDF_IS_STATUS_ERROR(ret))
+		hdd_err("pdev obj delete trigger failed");
+}
+
+/**
  * hdd_son_trigger_objmgr_object_creation() - Trigger objmgr object creation
  * @id: umac component id
  *
@@ -1686,30 +1710,6 @@ son_trigger_vdev_obj_deletion(struct wlan_objmgr_psoc *psoc,
 }
 
 /**
- * son_trigger_pdev_obj_deletion() - Trigger pdev object deletion
- * @psoc: psoc object
- * @object: pdev object
- * @arg: component id
- *
- * Return: void
- */
-static void
-son_trigger_pdev_obj_deletion(struct wlan_objmgr_psoc *psoc,
-			      void *object, void *arg)
-{
-	QDF_STATUS ret;
-	struct wlan_objmgr_pdev *pdev;
-	enum wlan_umac_comp_id *id;
-
-	pdev = object;
-	id = arg;
-
-	ret = wlan_objmgr_trigger_pdev_comp_priv_object_deletion(pdev, *id);
-	if (QDF_IS_STATUS_ERROR(ret))
-		hdd_err("pdev obj delete trigger failed");
-}
-
-/**
  * hdd_son_trigger_objmgr_object_deletion() - Trigger objmgr object deletion
  * @id: umac component id
  *
@@ -1775,7 +1775,7 @@ static QDF_STATUS hdd_son_init_acs_channels(struct hdd_adapter *adapter,
 	}
 	if (acs_cfg->freq_list) {
 		hdd_debug("ACS config is already there, no need to init again");
-		return return QDF_STATUS_SUCCESS;
+		return QDF_STATUS_SUCCESS;
 	}
 	/* Setting ACS config */
 	qdf_mem_zero(acs_cfg, sizeof(*acs_cfg));
@@ -2116,7 +2116,6 @@ static int hdd_son_get_acs_report(struct wlan_objmgr_vdev *vdev,
 	uint8_t  acs_entry_id = 0;
 	ACS_LIST_TYPE acs_type = 0;
 	int ret = 0, i = 0;
-	uint8_t vdev_id = vdev->vdev_objmgr.vdev_id;
 	struct sap_acs_cfg *acs_cfg;
 	struct hdd_context *hdd_ctx;
 	struct ieee80211_acs_dbg *acs_r = NULL;
@@ -2138,7 +2137,7 @@ static int hdd_son_get_acs_report(struct wlan_objmgr_vdev *vdev,
 		ret = -EINVAL;
 		goto end;
 	}
-	if (hdd_son_get_acs_in_progress(vdev_id)) {
+	if (hdd_son_is_acs_in_progress(vdev)) {
 		acs_report->nchans = 0;
 		hdd_err("ACS is in-progress");
 		ret = -EAGAIN;
@@ -2241,7 +2240,7 @@ static const uint8_t wlanphymode2ieeephymode[WLAN_PHYMODE_MAX] = {
 	[WLAN_PHYMODE_11AC_VHT80_80] = IEEE80211_MODE_11AC_VHT80_80,
 	[WLAN_PHYMODE_11AXA_HE20] = IEEE80211_MODE_11AXA_HE20,
 	[WLAN_PHYMODE_11AXG_HE20] = IEEE80211_MODE_11AXG_HE20,
-	[WLAN_PHYMODE_11AXA_HE40MINUS] = IEEE80211_MODE_11AXA_HE40,
+	[WLAN_PHYMODE_11AXA_HE40] = IEEE80211_MODE_11AXA_HE40,
 	[WLAN_PHYMODE_11AXG_HE40PLUS] = IEEE80211_MODE_11AXG_HE40PLUS,
 	[WLAN_PHYMODE_11AXG_HE40MINUS] = IEEE80211_MODE_11AXG_HE40MINUS,
 	[WLAN_PHYMODE_11AXG_HE40] = IEEE80211_MODE_11AXG_HE40,

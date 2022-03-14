@@ -24,6 +24,7 @@
 #include <wlan_mlme_api.h>
 #include <ieee80211_external.h>
 #include <wlan_cfg80211_scan.h>
+#include <wlan_mlme_main.h>
 
 /**
  * struct son_mlme_deliver_cbs - son mlme deliver callbacks
