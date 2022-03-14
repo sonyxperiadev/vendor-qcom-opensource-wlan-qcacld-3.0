@@ -221,6 +221,7 @@
 #include <son_ucfg_api.h>
 #include "osif_twt_util.h"
 #include "wlan_twt_ucfg_ext_api.h"
+#include "wlan_hdd_mcc_quota.h"
 
 #ifdef MODULE
 #define WLAN_MODULE_NAME  module_name(THIS_MODULE)
@@ -14814,7 +14815,7 @@ static int hdd_features_init(struct hdd_context *hdd_ctx)
 	if (wma_is_p2p_lo_capable())
 		sme_register_p2p_lo_event(mac_handle, hdd_ctx,
 					  wlan_hdd_p2p_lo_event_callback);
-
+	wlan_hdd_register_mcc_quota_event_callback(hdd_ctx);
 	ret = hdd_set_auto_shutdown_cb(hdd_ctx);
 
 	if (ret)

@@ -71,6 +71,12 @@ int wlan_hdd_cfg80211_set_mcc_quota(struct wiphy *wiphy,
 			      QCA_WLAN_VENDOR_ATTR_MCC_QUOTA_MAX)	   \
 },
 
+#define FEATURE_MCC_QUOTA_VENDOR_EVENTS                         \
+[QCA_NL80211_VENDOR_SUBCMD_MCC_QUOTA_INDEX] = {                 \
+	.vendor_id = QCA_NL80211_VENDOR_ID,                     \
+	.subcmd = QCA_NL80211_VENDOR_SUBCMD_MCC_QUOTA,          \
+},
+
 /**
  * wlan_hdd_apply_user_mcc_quota() - Apply the user MCC quota to the target
  * @adapter: pointer to HDD adapter object
@@ -78,8 +84,18 @@ int wlan_hdd_cfg80211_set_mcc_quota(struct wiphy *wiphy,
  * Return: 0 on succcess, errno for error
  */
 int wlan_hdd_apply_user_mcc_quota(struct hdd_adapter *adapter);
+
+/**
+ * wlan_hdd_register_mcc_quota_event_callback() - Register hdd callback to get
+ * mcc quota event.
+ * @hdd_ctx: pointer to hdd context
+ *
+ * Return: void
+ */
+void wlan_hdd_register_mcc_quota_event_callback(struct hdd_context *hdd_ctx);
 #else /* WLAN_FEATURE_MCC_QUOTA */
 #define	FEATURE_MCC_QUOTA_VENDOR_COMMANDS
+#define FEATURE_MCC_QUOTA_VENDOR_EVENTS
 
 static inline int wlan_hdd_apply_user_mcc_quota(struct hdd_adapter *adapter)
 {
@@ -90,6 +106,11 @@ static inline int wlan_hdd_set_mcc_adaptive_sched(struct wlan_objmgr_psoc *psoc,
 						  bool enable)
 {
 	return 0;
+}
+
+static inline void
+wlan_hdd_register_mcc_quota_event_callback(struct hdd_context *hdd_ctx)
+{
 }
 #endif /* WLAN_FEATURE_MCC_QUOTA */
 #endif /* WLAN_HDD_MCC_QUOTA_H */
