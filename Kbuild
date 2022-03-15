@@ -1575,17 +1575,17 @@ $(call add-wlan-objs,mlme,$(MLME_OBJS))
 
 ####### DENYLIST_MGR ########
 
-BLM_DIR := components/blacklist_mgr
-BLM_INC := -I$(WLAN_ROOT)/$(BLM_DIR)/core/inc \
-                -I$(WLAN_ROOT)/$(BLM_DIR)/dispatcher/inc
+DLM_DIR := components/denylist_mgr
+DLM_INC := -I$(WLAN_ROOT)/$(DLM_DIR)/core/inc \
+                -I$(WLAN_ROOT)/$(DLM_DIR)/dispatcher/inc
 ifeq ($(CONFIG_FEATURE_DENYLIST_MGR), y)
-BLM_OBJS :=    $(BLM_DIR)/core/src/wlan_dlm_main.o \
-                $(BLM_DIR)/core/src/wlan_dlm_core.o \
-                $(BLM_DIR)/dispatcher/src/wlan_dlm_ucfg_api.o \
-                $(BLM_DIR)/dispatcher/src/wlan_dlm_tgt_api.o
+DLM_OBJS :=    $(DLM_DIR)/core/src/wlan_dlm_main.o \
+                $(DLM_DIR)/core/src/wlan_dlm_core.o \
+                $(DLM_DIR)/dispatcher/src/wlan_dlm_ucfg_api.o \
+                $(DLM_DIR)/dispatcher/src/wlan_dlm_tgt_api.o
 endif
 
-$(call add-wlan-objs,blm,$(BLM_OBJS))
+$(call add-wlan-objs,dlm,$(DLM_OBJS))
 
 ######### CONNECTIVITY_LOGGING #########
 CONN_LOGGING_DIR := components/cmn_services/logging
@@ -1688,8 +1688,8 @@ CLD_TARGET_IF_OBJ += $(CLD_TARGET_IF_DIR)/disa/src/target_if_disa.o
 endif
 
 ifeq ($(CONFIG_FEATURE_DENYLIST_MGR), y)
-CLD_TARGET_IF_INC += -I$(WLAN_ROOT)/$(CLD_TARGET_IF_DIR)/blacklist_mgr/inc
-CLD_TARGET_IF_OBJ += $(CLD_TARGET_IF_DIR)/blacklist_mgr/src/target_if_dlm.o
+CLD_TARGET_IF_INC += -I$(WLAN_ROOT)/$(CLD_TARGET_IF_DIR)/denylist_mgr/inc
+CLD_TARGET_IF_OBJ += $(CLD_TARGET_IF_DIR)/denylist_mgr/src/target_if_dlm.o
 endif
 
 ifeq ($(CONFIG_WLAN_FEATURE_ACTION_OUI), y)
@@ -2946,7 +2946,7 @@ INCS +=		$(UMAC_SM_INC)
 INCS +=		$(UMAC_MLME_INC)
 INCS +=		$(MLME_INC)
 INCS +=		$(FWOL_INC)
-INCS +=		$(BLM_INC)
+INCS +=		$(DLM_INC)
 INCS +=		$(CONN_LOGGING_INC)
 
 ifeq ($(CONFIG_REMOVE_PKT_LOG), n)
