@@ -361,15 +361,28 @@ void sch_qos_update_local(struct mac_context *mac, struct pe_session *pe_session
 {
 
 	uint32_t params[4][CFG_EDCA_DATA_LEN];
+	uint8_t ac, user_edca_set = 0;
 	QDF_STATUS status;
 
-	status = sch_get_params(mac, params, true /*local */);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		pe_err("sch_get_params(local) failed");
-		return;
+	/* Check if a user preferred EDCA setting is present */
+	for (ac = 0; ac < QCA_WLAN_AC_ALL; ac++) {
+		if (pe_session->gLimEdcaParams[ac].user_edca_set) {
+			user_edca_set = 1;
+			break;
+		}
 	}
 
-	set_sch_edca_params(mac, params, pe_session);
+	/* If user preferred EDCA setting present, use it, do not default */
+	if (user_edca_set == 0) {
+		status = sch_get_params(mac, params, true /*local */);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			pe_err("sch_get_params(local) failed");
+			return;
+		}
+
+		set_sch_edca_params(mac, params, pe_session);
+	}
+
 	lim_set_active_edca_params(mac, pe_session->gLimEdcaParams, pe_session);
 
 	/* For AP, the bssID is stored in LIM Global context. */
