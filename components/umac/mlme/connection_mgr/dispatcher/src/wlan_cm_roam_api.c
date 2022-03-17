@@ -2826,15 +2826,15 @@ cm_stats_log_roam_scan_candidates(struct wmi_roam_candidate_info *ap,
 
 	for (i = 0; i < num_entries; i++) {
 		mlme_get_converted_timestamp(ap->timestamp, time);
-		mlme_get_converted_timestamp(ap->bl_timestamp, time2);
+		mlme_get_converted_timestamp(ap->dl_timestamp, time2);
 		mlme_nofl_info(QDF_MAC_ADDR_FMT " %17s %4d %-4s %4d %3d/%-4d %2d/%-4d %5d %7d %7d %17s %9d",
 			       QDF_MAC_ADDR_REF(ap->bssid.bytes), time,
 			  ap->freq,
 			  ((ap->type == 0) ? "C_AP" :
 			  ((ap->type == 2) ? "R_AP" : "P_AP")),
 			  ap->etp, ap->rssi, ap->rssi_score, ap->cu_load,
-			  ap->cu_score, ap->total_score, ap->bl_reason,
-			  ap->bl_source, time2, ap->bl_original_timeout);
+			  ap->cu_score, ap->total_score, ap->dl_reason,
+			  ap->dl_source, time2, ap->dl_original_timeout);
 		/* Update roam candidates info to userspace */
 		cm_roam_candidate_info_event(ap, i);
 		ap++;

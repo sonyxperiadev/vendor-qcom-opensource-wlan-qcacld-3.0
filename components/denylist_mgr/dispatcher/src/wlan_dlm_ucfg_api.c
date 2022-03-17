@@ -207,7 +207,7 @@ ucfg_dlm_add_userspace_deny_list(struct wlan_objmgr_pdev *pdev,
 void
 ucfg_dlm_dump_deny_list_ap(struct wlan_objmgr_pdev *pdev)
 {
-	return wlan_dlm_dump_blcklist_bssid(pdev);
+	return wlan_dlm_dump_denylist_bssid(pdev);
 }
 
 void

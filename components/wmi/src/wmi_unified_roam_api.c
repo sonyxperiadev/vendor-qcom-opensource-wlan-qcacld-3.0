@@ -385,8 +385,8 @@ wmi_extract_btm_denylist_event(wmi_unified_t wmi_handle,
 			       uint32_t data_len,
 			       struct roam_denylist_event **dst_list)
 {
-	if (wmi_handle->ops->extract_btm_bl_event)
-		return wmi_handle->ops->extract_btm_bl_event(wmi_handle,
+	if (wmi_handle->ops->extract_btm_dl_event)
+		return wmi_handle->ops->extract_btm_dl_event(wmi_handle,
 							     event,
 							     data_len,
 							     dst_list);
