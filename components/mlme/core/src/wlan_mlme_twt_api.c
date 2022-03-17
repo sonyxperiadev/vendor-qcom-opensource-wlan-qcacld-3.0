@@ -39,7 +39,8 @@ bool mlme_is_max_twt_sessions_reached(struct wlan_objmgr_psoc *psoc,
 	peer = wlan_objmgr_get_peer_by_mac(psoc, peer_mac->bytes,
 					   WLAN_MLME_NB_ID);
 	if (!peer) {
-		mlme_legacy_err("Peer object not found");
+		mlme_legacy_err("Peer object not found "QDF_MAC_ADDR_FMT,
+				QDF_MAC_ADDR_REF(peer_mac));
 		return true;
 	}
 
@@ -79,7 +80,8 @@ bool mlme_is_twt_setup_in_progress(struct wlan_objmgr_psoc *psoc,
 	peer = wlan_objmgr_get_peer_by_mac(psoc, peer_mac->bytes,
 					   WLAN_MLME_NB_ID);
 	if (!peer) {
-		mlme_legacy_err("Peer object not found");
+		mlme_legacy_err("Peer object not found "QDF_MAC_ADDR_FMT,
+				QDF_MAC_ADDR_REF(peer_mac));
 		return false;
 	}
 
@@ -118,7 +120,8 @@ void mlme_add_twt_session(struct wlan_objmgr_psoc *psoc,
 	peer = wlan_objmgr_get_peer_by_mac(psoc, peer_mac->bytes,
 					   WLAN_MLME_NB_ID);
 	if (!peer) {
-		mlme_legacy_err("Peer object not found");
+		mlme_legacy_err("Peer object not found "QDF_MAC_ADDR_FMT,
+				QDF_MAC_ADDR_REF(peer_mac));
 		return;
 	}
 
@@ -153,7 +156,8 @@ void mlme_set_twt_setup_done(struct wlan_objmgr_psoc *psoc,
 	peer = wlan_objmgr_get_peer_by_mac(psoc, peer_mac->bytes,
 					   WLAN_MLME_NB_ID);
 	if (!peer) {
-		mlme_legacy_err("Peer object not found");
+		mlme_legacy_err("Peer object not found "QDF_MAC_ADDR_FMT,
+				QDF_MAC_ADDR_REF(peer_mac));
 		return;
 	}
 
@@ -188,7 +192,8 @@ QDF_STATUS mlme_init_twt_context(struct wlan_objmgr_psoc *psoc,
 	peer = wlan_objmgr_get_peer_by_mac(psoc, peer_mac->bytes,
 					   WLAN_MLME_NB_ID);
 	if (!peer) {
-		mlme_legacy_debug("Peer object not found");
+		mlme_legacy_debug("Peer object not found "QDF_MAC_ADDR_FMT,
+				  QDF_MAC_ADDR_REF(peer_mac));
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -303,7 +308,8 @@ bool mlme_is_twt_setup_done(struct wlan_objmgr_psoc *psoc,
 	peer = wlan_objmgr_get_peer_by_mac(psoc, peer_mac->bytes,
 					   WLAN_MLME_NB_ID);
 	if (!peer) {
-		mlme_legacy_err("Peer object not found");
+		mlme_legacy_err("Peer object not found "QDF_MAC_ADDR_FMT,
+				QDF_MAC_ADDR_REF(peer_mac));
 		return false;
 	}
 
@@ -368,7 +374,8 @@ void mlme_set_twt_session_state(struct wlan_objmgr_psoc *psoc,
 	peer = wlan_objmgr_get_peer_by_mac(psoc, peer_mac->bytes,
 					   WLAN_MLME_NB_ID);
 	if (!peer) {
-		mlme_legacy_err("Peer object not found");
+		mlme_legacy_err("Peer object not found "QDF_MAC_ADDR_FMT,
+				QDF_MAC_ADDR_REF(peer_mac));
 		return;
 	}
 
@@ -403,7 +410,8 @@ mlme_get_twt_session_state(struct wlan_objmgr_psoc *psoc,
 	peer = wlan_objmgr_get_peer_by_mac(psoc, peer_mac->bytes,
 					   WLAN_MLME_NB_ID);
 	if (!peer) {
-		mlme_legacy_err("Peer object not found");
+		mlme_legacy_err("Peer object not found "QDF_MAC_ADDR_FMT,
+				QDF_MAC_ADDR_REF(peer_mac));
 		return WLAN_TWT_SETUP_STATE_NOT_ESTABLISHED;
 	}
 
@@ -437,7 +445,8 @@ uint8_t mlme_get_twt_peer_capabilities(struct wlan_objmgr_psoc *psoc,
 	peer = wlan_objmgr_get_peer_by_mac(psoc, peer_mac->bytes,
 					   WLAN_MLME_NB_ID);
 	if (!peer) {
-		mlme_legacy_err("Peer object not found");
+		mlme_legacy_err("Peer object not found "QDF_MAC_ADDR_FMT,
+				QDF_MAC_ADDR_REF(peer_mac));
 		return false;
 	}
 
@@ -464,7 +473,8 @@ void mlme_set_twt_peer_capabilities(struct wlan_objmgr_psoc *psoc,
 	peer = wlan_objmgr_get_peer_by_mac(psoc, peer_mac->bytes,
 					   WLAN_MLME_NB_ID);
 	if (!peer) {
-		mlme_legacy_err("Peer object not found");
+		mlme_legacy_err("Peer object not found "QDF_MAC_ADDR_FMT,
+				QDF_MAC_ADDR_REF(peer_mac));
 		return;
 	}
 
@@ -687,7 +697,8 @@ bool mlme_sap_twt_peer_is_cmd_in_progress(struct wlan_objmgr_psoc *psoc,
 	peer = wlan_objmgr_get_peer_by_mac(psoc, peer_mac->bytes,
 					   WLAN_MLME_NB_ID);
 	if (!peer) {
-		mlme_legacy_err("Peer object not found");
+		mlme_legacy_err("Peer object not found "QDF_MAC_ADDR_FMT,
+				QDF_MAC_ADDR_REF(peer_mac));
 		return false;
 	}
 
@@ -736,7 +747,8 @@ QDF_STATUS mlme_set_twt_command_in_progress(struct wlan_objmgr_psoc *psoc,
 	peer = wlan_objmgr_get_peer_by_mac(psoc, peer_mac->bytes,
 					   WLAN_MLME_NB_ID);
 	if (!peer) {
-		mlme_legacy_err("Peer object not found");
+		mlme_legacy_err("Peer object not found "QDF_MAC_ADDR_FMT,
+				QDF_MAC_ADDR_REF(peer_mac));
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -805,7 +817,8 @@ bool mlme_twt_is_command_in_progress(struct wlan_objmgr_psoc *psoc,
 	peer = wlan_objmgr_get_peer_by_mac(psoc, peer_mac->bytes,
 					   WLAN_MLME_NB_ID);
 	if (!peer) {
-		mlme_legacy_err("Peer object not found");
+		mlme_legacy_err("Peer object not found "QDF_MAC_ADDR_FMT,
+				QDF_MAC_ADDR_REF(peer_mac));
 		return false;
 	}
 
