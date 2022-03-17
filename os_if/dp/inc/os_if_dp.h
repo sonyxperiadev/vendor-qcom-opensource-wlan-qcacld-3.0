@@ -33,23 +33,14 @@
  */
 void osif_dp_classify_pkt(struct sk_buff *skb);
 
-#ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
 /**
- * osif_dp_send_tcp_param_update_event() - Send vendor event to update
- * TCP parameter through Wi-Fi HAL
+ * os_if_dp_register_hdd_callbacks() - Register callback handlers
  * @psoc: Pointer to psoc context
- * @data: Parameters to update
- * @dir: Direction(tx/rx) to update
+ * @cb_obj: Callback object pointer
  *
  * Return: None
  */
-void osif_dp_send_tcp_param_update_event(struct wlan_objmgr_psoc *psoc,
-					 union wlan_tp_data *data, uint8_t dir);
-#else
-static inline
-void osif_dp_send_tcp_param_update_event(struct wlan_objmgr_psoc *psoc,
-					 union wlan_tp_data *data, uint8_t dir)
-{
-}
-#endif /* WLAN_FEATURE_DP_BUS_BANDWIDTH */
+void os_if_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
+				     struct wlan_dp_psoc_callbacks *cb_obj);
+
 #endif /* __OSIF_DP_H__ */

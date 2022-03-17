@@ -129,4 +129,43 @@ ucfg_dp_update_config(struct wlan_objmgr_psoc *psoc,
 uint64_t
 ucfg_dp_get_rx_softirq_yield_duration(struct wlan_objmgr_psoc *psoc);
 
+/**
+ * ucfg_dp_bbm_context_init() - Initialize BBM context
+ * @psoc: psoc handle
+ *
+ * Returns: error code
+ */
+int ucfg_dp_bbm_context_init(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_dp_bbm_context_deinit() - De-initialize BBM context
+ * @psoc: psoc handle
+ *
+ * Returns: None
+ */
+void ucfg_dp_bbm_context_deinit(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_dp_bbm_apply_independent_policy() - Apply independent policies
+ *  to set the bus bw level
+ * @psoc: psoc handle
+ * @params: BBM policy related params
+ *
+ * The function applies BBM related policies and appropriately sets the bus
+ * bandwidth level.
+ *
+ * Returns: None
+ */
+void ucfg_dp_bbm_apply_independent_policy(struct wlan_objmgr_psoc *psoc,
+					  struct bbm_params *params);
+
+/**
+ * ucfg_dp_register_hdd_callbacks() - Resiter HDD callbacks with DP component
+ * @psoc: psoc handle
+ * @cb_obj: Callback object
+ *
+ * Returns: None
+ */
+void ucfg_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
+				    struct wlan_dp_psoc_callbacks *cb_obj);
 #endif

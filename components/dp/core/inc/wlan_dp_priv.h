@@ -55,9 +55,9 @@
  * required
  */
 enum dp_rtpm_tput_policy_state {
-	RTPM_TPUT_POLICY_STATE_INVALID,
-	RTPM_TPUT_POLICY_STATE_REQUIRED,
-	RTPM_TPUT_POLICY_STATE_NOT_REQUIRED
+	DP_RTPM_TPUT_POLICY_STATE_INVALID,
+	DP_RTPM_TPUT_POLICY_STATE_REQUIRED,
+	DP_RTPM_TPUT_POLICY_STATE_NOT_REQUIRED
 };
 
 /**
@@ -294,6 +294,7 @@ struct wlan_dp_intf {
  * @cur_rx_level: Current Rx level
  * @rtpm_tput_policy_ctx: Runtime Tput policy context
  * @txrx_hist: TxRx histogram
+ * @bbm_ctx: bus bandwidth manager context
  */
 struct wlan_dp_psoc_context {
 	struct wlan_objmgr_psoc *psoc;
@@ -350,7 +351,6 @@ struct wlan_dp_psoc_context {
 	struct dp_rtpm_tput_policy_context rtpm_tput_policy_ctx;
 #endif
 #endif /*WLAN_FEATURE_DP_BUS_BANDWIDTH*/
-
 #ifdef WLAN_NS_OFFLOAD
 	/* IPv6 notifier callback for handling NS offload on change in IP */
 	struct notifier_block ipv6_notifier;
@@ -360,6 +360,9 @@ struct wlan_dp_psoc_context {
 	struct tx_rx_histogram *txrx_hist;
 
 	uint32_t rx_high_ind_cnt;
+#ifdef FEATURE_BUS_BANDWIDTH_MGR
+	struct bbm_context *bbm_ctx;
+#endif
 };
 
 #endif /* end  of _WLAN_DP_PRIV_STRUCT_H_ */

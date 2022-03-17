@@ -26,6 +26,8 @@
 #include "cdp_txrx_cmn.h"
 #include "cfg_ucfg_api.h"
 #include "wlan_pmo_obj_mgmt_api.h"
+#include "wlan_dp_objmgr.h"
+#include "wlan_dp_bus_bandwidth.h"
 
 void ucfg_dp_update_inf_mac(struct wlan_objmgr_psoc *psoc,
 			    struct qdf_mac_addr *cur_mac,
@@ -464,4 +466,40 @@ ucfg_dp_get_rx_softirq_yield_duration(struct wlan_objmgr_psoc *psoc)
 	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
 
 	return dp_ctx->dp_cfg.rx_softirq_max_yield_duration_ns;
+}
+
+int ucfg_dp_bbm_context_init(struct wlan_objmgr_psoc *psoc)
+{
+	return dp_bbm_context_init(psoc);
+}
+
+void ucfg_dp_bbm_context_deinit(struct wlan_objmgr_psoc *psoc)
+{
+	dp_bbm_context_deinit(psoc);
+}
+
+void ucfg_dp_bbm_apply_independent_policy(struct wlan_objmgr_psoc *psoc,
+					  struct bbm_params *params)
+{
+	dp_bbm_apply_independent_policy(psoc, params);
+}
+
+void ucfg_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
+				    struct wlan_dp_psoc_callbacks *cb_obj)
+{
+	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
+
+	if (!dp_ctx) {
+		dp_err("DP ctx is NULL");
+		return;
+	}
+	dp_ctx->dp_ops.callback_ctx = cb_obj->callback_ctx;
+	dp_ctx->dp_ops.wlan_dp_sta_get_dot11mode =
+		cb_obj->wlan_dp_sta_get_dot11mode;
+	dp_ctx->dp_ops.wlan_dp_get_ap_client_count =
+		cb_obj->wlan_dp_get_ap_client_count;
+	dp_ctx->dp_ops.wlan_dp_sta_ndi_connected =
+		cb_obj->wlan_dp_sta_ndi_connected;
+	dp_ctx->dp_ops.dp_any_adapter_connected =
+		cb_obj->dp_any_adapter_connected;
 }

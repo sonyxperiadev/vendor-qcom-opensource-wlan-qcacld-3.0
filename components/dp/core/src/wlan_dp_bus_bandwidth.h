@@ -27,19 +27,30 @@
 #include <qdf_types.h>
 #include <qca_vendor.h>
 #include <wlan_objmgr_psoc_obj.h>
+#include "wlan_dp_public_struct.h"
 
-#ifdef FEATURE_BUS_BANDWIDTH_MGR
+typedef const enum bus_bw_level
+	bus_bw_table_type[QCA_WLAN_802_11_MODE_INVALID][TPUT_LEVEL_MAX];
 
 /**
- * struct bbm_params - BBM params
+ * struct bbm_context: Bus Bandwidth Manager context
  *
+ * @curr_bus_bw_lookup_table: current bus bw lookup table
+ * @curr_vote_level: current vote level
+ * @per_policy_vote: per BBM policy related vote
+ * @bbm_lock: BBM API lock
  */
-struct bbm_params {
+struct bbm_context {
+	bus_bw_table_type *curr_bus_bw_lookup_table;
+	enum bus_bw_level curr_vote_level;
+	enum bus_bw_level per_policy_vote[BBM_MAX_POLICY];
+	qdf_mutex_t bbm_lock;
 };
 
+#ifdef FEATURE_BUS_BANDWIDTH_MGR
 /**
  * dp_bbm_context_init() - Initialize BBM context
- * @dp_ctx: DP context
+ * @psoc: psoc Handle
  *
  * Returns: error code
  */
@@ -47,7 +58,7 @@ int dp_bbm_context_init(struct wlan_objmgr_psoc *psoc);
 
 /**
  * dp_bbm_context_deinit() - De-initialize BBM context
- * @dp_ctx: DP context
+ * @psoc: psoc Handle
  *
  * Returns: None
  */
@@ -56,7 +67,7 @@ void dp_bbm_context_deinit(struct wlan_objmgr_psoc *psoc);
 /**
  * dp_bbm_apply_independent_policy() - Function to apply independent policies
  *  to set the bus bw level
- * @dp_ctx: DP context
+ * @psoc: psoc Handle
  * @params: BBM policy related params
  *
  * The function applies BBM related policies and appropriately sets the bus

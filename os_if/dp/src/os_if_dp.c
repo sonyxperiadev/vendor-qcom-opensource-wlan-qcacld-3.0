@@ -26,8 +26,19 @@
 #include <wlan_osif_priv.h>
 #include <cdp_txrx_cmn.h>
 #include "qca_vendor.h"
+#include "wlan_dp_ucfg_api.h"
 
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
+/**
+ * osif_dp_send_tcp_param_update_event() - Send vendor event to update
+ * TCP parameter through Wi-Fi HAL
+ * @psoc: Pointer to psoc context
+ * @data: Parameters to update
+ * @dir: Direction(tx/rx) to update
+ *
+ * Return: None
+ */
+static
 void osif_dp_send_tcp_param_update_event(struct wlan_objmgr_psoc *psoc,
 					 union wlan_tp_data *data,
 					 uint8_t dir)
@@ -137,4 +148,20 @@ tcp_param_change_nla_failed:
 	dp_err("nla_put api failed");
 	kfree_skb(vendor_event);
 }
+#else
+static
+void osif_dp_send_tcp_param_update_event(struct wlan_objmgr_psoc *psoc,
+					 union wlan_tp_data *data,
+					 uint8_t dir)
+{
+}
 #endif /*WLAN_FEATURE_DP_BUS_BANDWIDTH*/
+
+void os_if_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
+				     struct wlan_dp_psoc_callbacks *cb_obj)
+{
+	cb_obj->osif_dp_send_tcp_param_update_event =
+		osif_dp_send_tcp_param_update_event;
+
+	ucfg_dp_register_hdd_callbacks(psoc, cb_obj);
+}
