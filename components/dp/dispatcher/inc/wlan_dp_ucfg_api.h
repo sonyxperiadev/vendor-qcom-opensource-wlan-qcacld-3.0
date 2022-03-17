@@ -33,6 +33,23 @@
 #include "pld_common.h"
 #include <wlan_dp_public_struct.h>
 #include <cdp_txrx_misc.h>
+#include "wlan_dp_objmgr.h"
+
+#define DP_IGNORE_NUD_FAIL                      0
+#define DP_DISCONNECT_AFTER_NUD_FAIL            1
+#define DP_ROAM_AFTER_NUD_FAIL                  2
+#define DP_DISCONNECT_AFTER_ROAM_FAIL           3
+
+#ifdef WLAN_NUD_TRACKING
+bool
+ucfg_dp_is_roam_after_nud_enabled(struct wlan_objmgr_psoc *psoc);
+#else
+static inline bool
+ucfg_dp_is_roam_after_nud_enabled(struct wlan_objmgr_psoc *psoc)
+{
+	return false;
+}
+#endif
 
 /**
  * ucfg_dp_create_intf() - update DP interface MAC address
@@ -362,6 +379,53 @@ void ucfg_dp_bus_bw_compute_prev_txrx_stats(struct wlan_objmgr_vdev *vdev);
  */
 void
 ucfg_dp_bus_bw_compute_reset_prev_txrx_stats(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_nud_set_gateway_addr() - set gateway mac address
+ * @vdev: vdev handle
+ * @gw_mac_addr: mac address to be set
+ *
+ * Return: none
+ */
+void ucfg_dp_nud_set_gateway_addr(struct wlan_objmgr_vdev *vdev,
+				  struct qdf_mac_addr gw_mac_addr);
+
+/**
+ * ucfg_dp_nud_event() - netevent callback
+ * @netdev_addr: netdev_addr
+ * @gw_mac_addr: Gateway MAC address
+ * @nud_state : NUD State
+ *
+ * Return: None
+ */
+void ucfg_dp_nud_event(struct qdf_mac_addr *netdev_mac_addr,
+		       struct qdf_mac_addr *gw_mac_addr,
+		       uint8_t nud_state);
+
+/**
+ * ucfg_dp_nud_reset_tracking() - reset NUD tracking
+ * @vdev: vdev handle
+ *
+ * Return: None
+ */
+void ucfg_dp_nud_reset_tracking(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_nud_tracking_enabled - Check if NUD tracking is enabled
+ *
+ * @psoc: PSOC Handle
+ *
+ * Return : NUD tracking value.
+ */
+uint8_t ucfg_dp_nud_tracking_enabled(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_dp_nud_indicate_roam() - reset NUD when roaming happens
+ * @vdev: vdev handle
+ *
+ * Return: None
+ */
+void ucfg_dp_nud_indicate_roam(struct wlan_objmgr_vdev *vdev);
 
 /**
  * ucfg_dp_register_hdd_callbacks() - Resiter HDD callbacks with DP component

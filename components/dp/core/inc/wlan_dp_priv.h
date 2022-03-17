@@ -33,6 +33,7 @@
 #include "qdf_periodic_work.h"
 #include <cds_api.h>
 #include "pld_common.h"
+#include "wlan_dp_nud_tracking.h"
 
 #ifndef NUM_CPUS
 #ifdef QCA_CONFIG_SMP
@@ -296,6 +297,9 @@ struct wlan_dp_intf {
 	uint32_t mscs_counter;
 #endif /* WLAN_FEATURE_MSCS */
 	struct dp_mic_work mic_work;
+#ifdef WLAN_NUD_TRACKING
+	struct dp_nud_tracking_info nud_tracking;
+#endif
 };
 
 /**

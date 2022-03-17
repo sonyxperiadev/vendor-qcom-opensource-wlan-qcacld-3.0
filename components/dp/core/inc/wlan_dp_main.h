@@ -308,6 +308,14 @@ dp_del_latency_critical_client(struct wlan_objmgr_vdev *vdev,
 }
 
 /**
+ * is_dp_intf_valid() - Check if interface is valid
+ * @dp_intf: DP interface
+ *
+ * Return: 0 if interface is valid, else error code
+ */
+int is_dp_intf_valid(struct wlan_dp_intf *dp_intf);
+
+/**
  * dp_send_rps_ind() - send rps indication to daemon
  * @dp_intf: DP interface
  *

@@ -143,13 +143,7 @@ static int validate_interface_id(uint8_t intf_id)
 	return 0;
 }
 
-/**
- * is_dp_intf_valid() - Check if interface is valid
- * @dp_intf: interface context
- *
- * Return: 0 on success, error code on failure
- */
-static int is_dp_intf_valid(struct wlan_dp_intf *dp_intf)
+int is_dp_intf_valid(struct wlan_dp_intf *dp_intf)
 {
 	if (!dp_intf) {
 		dp_err("Interface is NULL");
@@ -386,6 +380,7 @@ dp_vdev_obj_create_notification(struct wlan_objmgr_vdev *vdev, void *arg)
 		return status;
 	}
 
+	dp_nud_ignore_tracking(dp_intf, false);
 	dp_mic_enable_work(dp_intf);
 
 	return status;
@@ -406,6 +401,9 @@ dp_vdev_obj_destroy_notification(struct wlan_objmgr_vdev *vdev, void *arg)
 		return QDF_STATUS_E_INVAL;
 	}
 
+	dp_nud_ignore_tracking(dp_intf, true);
+	dp_nud_reset_tracking(dp_intf);
+	dp_nud_flush_work(dp_intf);
 	dp_mic_flush_work(dp_intf);
 
 	status = wlan_objmgr_vdev_component_obj_detach(vdev,

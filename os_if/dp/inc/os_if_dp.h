@@ -43,4 +43,19 @@ void osif_dp_classify_pkt(struct sk_buff *skb);
 void os_if_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 				     struct wlan_dp_psoc_callbacks *cb_obj);
 
+/**
+ * osif_dp_nud_register_netevent_notifier() - Register netevent notifier
+ * @psoc: Pointer to psoc context
+ *
+ * Return: 0 on success, error code on failure
+ */
+int osif_dp_nud_register_netevent_notifier(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * osif_dp_nud_unregister_netevent_notifier() - Unregister netevent notifier
+ * @psoc: Pointer to psoc context
+ *
+ * Return: None
+ */
+void osif_dp_nud_unregister_netevent_notifier(struct wlan_objmgr_psoc *psoc);
 #endif /* __OSIF_DP_H__ */

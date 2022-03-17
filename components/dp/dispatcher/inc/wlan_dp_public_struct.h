@@ -32,6 +32,24 @@
 #include <ani_system_defs.h>
 #include <qdf_defer.h>
 
+#ifdef TX_MULTIQ_PER_AC
+#define TX_GET_QUEUE_IDX(ac, off) (((ac) * TX_QUEUES_PER_AC) + (off))
+#define TX_QUEUES_PER_AC 4
+#else
+#define TX_GET_QUEUE_IDX(ac, off) (ac)
+#define TX_QUEUES_PER_AC 1
+#endif
+
+/** Number of Tx Queues */
+#if defined(QCA_LL_TX_FLOW_CONTROL_V2) || \
+	defined(QCA_HL_NETDEV_FLOW_CONTROL) || \
+	defined(QCA_LL_PDEV_TX_FLOW_CONTROL)
+/* Only one HI_PRIO queue */
+#define NUM_TX_QUEUES (4 * TX_QUEUES_PER_AC + 1)
+#else
+#define NUM_TX_QUEUES (4 * TX_QUEUES_PER_AC)
+#endif
+
 /**
  * struct dp_mic_info - mic error info in dp
  * @ta_mac_addr: transmitter mac address
@@ -69,6 +87,19 @@ struct dp_mic_work {
 	enum dp_mic_work_status status;
 	struct dp_mic_error_info *info;
 	qdf_spinlock_t lock;
+};
+
+enum dp_nud_state {
+	DP_NUD_NONE,
+	DP_NUD_INCOMPLETE,
+	DP_NUD_REACHABLE,
+	DP_NUD_STALE,
+	DP_NUD_DELAY,
+	DP_NUD_PROBE,
+	DP_NUD_FAILED,
+	DP_NUD_NOARP,
+	DP_NUD_PERMANENT,
+	DP_NUD_STATE_INVALID
 };
 
 /**
@@ -253,6 +284,10 @@ union wlan_tp_data {
  * @wlan_dp_display_netif_queue_history: Callback to display Netif queue history
  * @osif_dp_process_sta_mic_error: osif callback to process STA MIC error
  * @osif_dp_process_sap_mic_error: osif callback to process SAP MIC error
+ * @dp_is_link_adapter: Callback API to check if adapter is link adapter
+ * @os_if_dp_nud_stats_info: osif callback to print nud stats info
+ * @dp_get_pause_map: Callback API to get pause map count
+ * @dp_nud_failure_work: Callback API to handle NUD failuire work
  */
 struct wlan_dp_psoc_callbacks {
 	void (*os_if_dp_gro_rx)(struct sk_buff *skb, uint8_t napi_to_use,
@@ -300,6 +335,10 @@ struct wlan_dp_psoc_callbacks {
 					      struct wlan_objmgr_vdev *vdev);
 	void (*osif_dp_process_sap_mic_error)(struct dp_mic_error_info *info,
 					      struct wlan_objmgr_vdev *vdev);
+	bool (*dp_is_link_adapter)(hdd_cb_handle context, uint8_t vdev_id);
+	void (*os_if_dp_nud_stats_info)(struct wlan_objmgr_vdev *vdev);
+	uint32_t (*dp_get_pause_map)(hdd_cb_handle context, uint8_t vdev_id);
+	void (*dp_nud_failure_work)(hdd_cb_handle context, uint8_t vdev_id);
 };
 
 /**

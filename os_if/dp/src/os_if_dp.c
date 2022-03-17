@@ -28,6 +28,8 @@
 #include "qca_vendor.h"
 #include "wlan_dp_ucfg_api.h"
 #include "osif_vdev_sync.h"
+#include "osif_sync.h"
+#include <net/netevent.h>
 
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
 /**
@@ -250,11 +252,149 @@ osif_dp_process_sap_mic_error(struct dp_mic_error_info *info,
 				     GFP_KERNEL);
 }
 
+#ifdef WLAN_NUD_TRACKING
+/**
+ * nud_state_osif_to_dp() - convert os_if to enum
+ * @curr_state: Current NUD state
+ *
+ * Return: DP enum equivalent to NUD state
+ */
+static inline enum dp_nud_state nud_state_osif_to_dp(uint8_t curr_state)
+{
+	switch (curr_state) {
+	case NUD_NONE:
+		return DP_NUD_NONE;
+	case NUD_INCOMPLETE:
+		return DP_NUD_INCOMPLETE;
+	case NUD_REACHABLE:
+		return DP_NUD_REACHABLE;
+	case NUD_STALE:
+		return DP_NUD_STALE;
+	case NUD_DELAY:
+		return DP_NUD_DELAY;
+	case NUD_PROBE:
+		return DP_NUD_PROBE;
+	case NUD_FAILED:
+		return DP_NUD_FAILED;
+	case NUD_NOARP:
+		return DP_NUD_NOARP;
+	case NUD_PERMANENT:
+		return DP_NUD_PERMANENT;
+	default:
+		return DP_NUD_STATE_INVALID;
+	}
+}
+
+/**
+ * os_if_dp_nud_stats_info() - print NUD stats info
+ * @vdev: vdev handle
+ *
+ * Return: None
+ */
+static void os_if_dp_nud_stats_info(struct wlan_objmgr_vdev *vdev)
+{
+	struct netdev_queue *txq;
+	struct net_device *net_dev;
+	int i = 0, errno;
+
+	errno = osif_dp_get_net_dev_from_vdev(vdev, &net_dev);
+	if (errno) {
+		dp_err("failed to get netdev");
+		return;
+	}
+	dp_info("carrier state: %d", netif_carrier_ok(net_dev));
+
+	for (i = 0; i < NUM_TX_QUEUES; i++) {
+		txq = netdev_get_tx_queue(net_dev, i);
+		dp_info("Queue: %d status: %d txq->trans_start: %lu",
+			i, netif_tx_queue_stopped(txq), txq->trans_start);
+	}
+}
+
+/**
+ * os_if_dp_nud_netevent_cb() - netevent callback
+ * @nb: Pointer to notifier block
+ * @event: Net Event triggered
+ * @data: Pointer to neighbour struct
+ *
+ * Callback for netevent
+ *
+ * Return: 0 on success
+ */
+static int os_if_dp_nud_netevent_cb(struct notifier_block *nb,
+				    unsigned long event,
+				    void *data)
+{
+	struct neighbour *neighbor = data;
+	struct osif_vdev_sync *vdev_sync;
+	const struct net_device *netdev = neighbor->dev;
+	int errno;
+
+	errno = osif_vdev_sync_op_start(neighbor->dev, &vdev_sync);
+	if (errno)
+		return errno;
+
+	switch (event) {
+	case NETEVENT_NEIGH_UPDATE:
+		ucfg_dp_nud_event((struct qdf_mac_addr *)netdev->dev_addr,
+				  (struct qdf_mac_addr *)&neighbor->ha[0],
+				  nud_state_osif_to_dp(neighbor->nud_state));
+		break;
+	default:
+		break;
+	}
+
+	osif_vdev_sync_op_stop(vdev_sync);
+
+	return 0;
+}
+
+static struct notifier_block wlan_netevent_nb = {
+	.notifier_call = os_if_dp_nud_netevent_cb
+};
+
+int osif_dp_nud_register_netevent_notifier(struct wlan_objmgr_psoc *psoc)
+{
+	int ret = 0;
+
+	if (ucfg_dp_nud_tracking_enabled(psoc)) {
+		ret = register_netevent_notifier(&wlan_netevent_nb);
+		if (!ret)
+			dp_info("Registered netevent notifier");
+	}
+	return ret;
+}
+
+void osif_dp_nud_unregister_netevent_notifier(struct wlan_objmgr_psoc *psoc)
+{
+	int ret = 0;
+
+	if (ucfg_dp_nud_tracking_enabled(psoc)) {
+		ret = unregister_netevent_notifier(&wlan_netevent_nb);
+		if (!ret)
+			dp_info("Unregistered netevent notifier");
+	}
+}
+#else
+static void os_if_dp_nud_stats_info(struct wlan_objmgr_vdev *vdev)
+{
+}
+
+int osif_dp_nud_register_netevent_notifier(struct wlan_objmgr_psoc *psoc)
+{
+	return 0;
+}
+
+void osif_dp_nud_unregister_netevent_notifier(struct wlan_objmgr_psoc *psoc)
+{
+}
+#endif
 void os_if_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 				     struct wlan_dp_psoc_callbacks *cb_obj)
 {
 	cb_obj->osif_dp_send_tcp_param_update_event =
 		osif_dp_send_tcp_param_update_event;
+	cb_obj->os_if_dp_nud_stats_info = os_if_dp_nud_stats_info;
 	cb_obj->osif_dp_process_sta_mic_error = osif_dp_process_sta_mic_error;
 	cb_obj->osif_dp_process_sap_mic_error = osif_dp_process_sap_mic_error;
 

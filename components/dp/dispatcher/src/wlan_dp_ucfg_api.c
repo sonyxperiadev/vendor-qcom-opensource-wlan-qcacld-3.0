@@ -30,6 +30,7 @@
 #include "wlan_dp_objmgr.h"
 #include "wlan_dp_bus_bandwidth.h"
 #include "wlan_dp_periodic_sta_stats.h"
+#include "wlan_dp_nud_tracking.h"
 
 void ucfg_dp_update_inf_mac(struct wlan_objmgr_psoc *psoc,
 			    struct qdf_mac_addr *cur_mac,
@@ -82,6 +83,7 @@ ucfg_dp_create_intf(struct wlan_objmgr_psoc *psoc,
 
 	dp_periodic_sta_stats_init(dp_intf);
 	dp_periodic_sta_stats_mutex_create(dp_intf);
+	dp_nud_init_tracking(dp_intf);
 	dp_mic_init_work(dp_intf);
 
 	return QDF_STATUS_SUCCESS;
@@ -107,6 +109,7 @@ ucfg_dp_destroy_intf(struct wlan_objmgr_psoc *psoc,
 	}
 
 	dp_periodic_sta_stats_mutex_destroy(dp_intf);
+	dp_nud_deinit_tracking(dp_intf);
 	dp_mic_deinit_work(dp_intf);
 
 	qdf_spin_lock_bh(&dp_ctx->intf_list_lock);
@@ -486,6 +489,21 @@ void ucfg_dp_register_rx_mic_error_ind_handler(void *soc)
 	cdp_register_rx_mic_error_ind_handler(soc, dp_rx_mic_error_ind);
 }
 
+#ifdef WLAN_NUD_TRACKING
+bool
+ucfg_dp_is_roam_after_nud_enabled(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
+	struct wlan_dp_psoc_cfg *dp_cfg = &dp_ctx->dp_cfg;
+
+	if (dp_cfg->enable_nud_tracking == DP_ROAM_AFTER_NUD_FAIL ||
+	    dp_cfg->enable_nud_tracking == DP_DISCONNECT_AFTER_ROAM_FAIL)
+		return true;
+
+	return false;
+}
+#endif
+
 int ucfg_dp_bbm_context_init(struct wlan_objmgr_psoc *psoc)
 {
 	return dp_bbm_context_init(psoc);
@@ -605,6 +623,46 @@ ucfg_dp_bus_bw_compute_reset_prev_txrx_stats(struct wlan_objmgr_vdev *vdev)
 	dp_bus_bw_compute_reset_prev_txrx_stats(vdev);
 }
 
+void ucfg_dp_nud_set_gateway_addr(struct wlan_objmgr_vdev *vdev,
+				  struct qdf_mac_addr gw_mac_addr)
+{
+	dp_nud_set_gateway_addr(vdev, gw_mac_addr);
+}
+
+void ucfg_dp_nud_event(struct qdf_mac_addr *netdev_mac_addr,
+		       struct qdf_mac_addr *gw_mac_addr,
+		       uint8_t nud_state)
+{
+	dp_nud_netevent_cb(netdev_mac_addr, gw_mac_addr, nud_state);
+}
+
+void ucfg_dp_nud_reset_tracking(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("Unable to get DP Interface");
+		return;
+	}
+	dp_nud_reset_tracking(dp_intf);
+}
+
+uint8_t ucfg_dp_nud_tracking_enabled(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
+
+	if (!dp_ctx) {
+		dp_err("DP Context is NULL");
+		return 0;
+	}
+	return dp_ctx->dp_cfg.enable_nud_tracking;
+}
+
+void ucfg_dp_nud_indicate_roam(struct wlan_objmgr_vdev *vdev)
+{
+	dp_nud_indicate_roam(vdev);
+}
+
 void ucfg_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 				    struct wlan_dp_psoc_callbacks *cb_obj)
 {
@@ -646,4 +704,7 @@ void ucfg_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 		cb_obj->dp_disable_rx_ol_for_low_tput;
 	dp_ctx->dp_ops.dp_napi_apply_throughput_policy =
 		cb_obj->dp_napi_apply_throughput_policy;
+	dp_ctx->dp_ops.dp_is_link_adapter = cb_obj->dp_is_link_adapter;
+	dp_ctx->dp_ops.dp_get_pause_map = cb_obj->dp_get_pause_map;
+	dp_ctx->dp_ops.dp_nud_failure_work = cb_obj->dp_nud_failure_work;
 }
