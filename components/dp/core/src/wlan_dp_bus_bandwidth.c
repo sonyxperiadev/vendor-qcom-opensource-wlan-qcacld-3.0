@@ -27,6 +27,7 @@
 #include <wlan_objmgr_psoc_obj_i.h>
 #include "pld_common.h"
 #include "cds_api.h"
+#include <wlan_nlink_common.h>
 
 #ifdef FEATURE_BUS_BANDWIDTH_MGR
 /**
@@ -481,7 +482,8 @@ void dp_bbm_context_deinit(struct wlan_objmgr_psoc *psoc)
 	qdf_mem_free(bbm_ctx);
 }
 #endif /* FEATURE_BUS_BANDWIDTH_MGR */
-#if defined(WLAN_FEATURE_DP_BUS_BANDWIDTH) && defined(FEATURE_RUNTIME_PM)
+#ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
+#ifdef FEATURE_RUNTIME_PM
 void dp_rtpm_tput_policy_init(struct wlan_objmgr_psoc *psoc)
 {
 	struct wlan_dp_psoc_context *dp_ctx;
@@ -592,4 +594,109 @@ int dp_rtpm_tput_policy_get_vote(struct wlan_dp_psoc_context *dp_ctx)
 	ctx = &dp_ctx->rtpm_tput_policy_ctx;
 	return qdf_atomic_read(&ctx->high_tput_vote);
 }
-#endif
+#endif /* FEATURE_RUNTIME_PM */
+
+void dp_reset_tcp_delack(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
+
+	enum wlan_tp_level next_level = WLAN_SVC_TP_LOW;
+	struct wlan_rx_tp_data rx_tp_data = {0};
+
+	if (!dp_ctx->en_tcp_delack_no_lro)
+		return;
+
+	rx_tp_data.rx_tp_flags |= TCP_DEL_ACK_IND;
+	rx_tp_data.level = next_level;
+	dp_ctx->rx_high_ind_cnt = 0;
+	wlan_dp_update_tcp_rx_param(dp_ctx, &rx_tp_data);
+}
+
+/**
+ * dp_reset_tcp_adv_win_scale() - Reset TCP advance window scaling
+ * value to default
+ * @dp_ctx: pointer to DP context (Should not be NULL)
+ *
+ * Function used to reset TCP advance window scaling
+ * value to its default value
+ *
+ * Return: None
+ */
+static void dp_reset_tcp_adv_win_scale(struct wlan_dp_psoc_context *dp_ctx)
+{
+	enum wlan_tp_level next_level = WLAN_SVC_TP_NONE;
+	struct wlan_rx_tp_data rx_tp_data = {0};
+
+	if (!dp_ctx->dp_cfg.enable_tcp_adv_win_scale)
+		return;
+
+	rx_tp_data.rx_tp_flags |= TCP_ADV_WIN_SCL;
+	rx_tp_data.level = next_level;
+	dp_ctx->cur_rx_level = WLAN_SVC_TP_NONE;
+	wlan_dp_update_tcp_rx_param(dp_ctx, &rx_tp_data);
+}
+
+void wlan_dp_update_tcp_rx_param(struct wlan_dp_psoc_context *dp_ctx,
+				 struct wlan_rx_tp_data *data)
+{
+	struct wlan_dp_psoc_callbacks *dp_ops = &dp_ctx->dp_ops;
+
+	if (!dp_ctx) {
+		dp_err("psoc is null");
+		return;
+	}
+
+	if (!data) {
+		dp_err("Data is null");
+		return;
+	}
+
+	if (dp_ctx->dp_cfg.enable_tcp_param_update)
+		dp_ops->osif_dp_send_tcp_param_update_event(dp_ctx->psoc,
+							    (union wlan_tp_data *)data,
+							    1);
+	else
+		dp_ops->dp_send_svc_nlink_msg(cds_get_radio_index(),
+					      WLAN_SVC_WLAN_TP_IND,
+					      (void *)data,
+					      sizeof(struct wlan_rx_tp_data));
+}
+
+/**
+ * wlan_dp_update_tcp_tx_param() - update TCP param in Tx dir
+ * @dp_ctx: Pointer to DP context
+ * @data: Parameters to update
+ *
+ * Return: None
+ */
+static void wlan_dp_update_tcp_tx_param(struct wlan_dp_psoc_context *dp_ctx,
+					struct wlan_tx_tp_data *data)
+{
+	enum wlan_tp_level next_tx_level;
+	struct wlan_tx_tp_data *tx_tp_data;
+	struct wlan_dp_psoc_callbacks *dp_ops = &dp_ctx->dp_ops;
+
+	if (!dp_ctx) {
+		dp_err("psoc is null");
+		return;
+	}
+
+	if (!data) {
+		dp_err("Data is null");
+		return;
+	}
+
+	tx_tp_data = (struct wlan_tx_tp_data *)data;
+	next_tx_level = tx_tp_data->level;
+
+	if (dp_ctx->dp_cfg.enable_tcp_param_update)
+		dp_ops->osif_dp_send_tcp_param_update_event(dp_ctx->psoc,
+							    (union wlan_tp_data *)data,
+							    0);
+	else
+		dp_ops->dp_send_svc_nlink_msg(cds_get_radio_index(),
+					      WLAN_SVC_WLAN_TP_TX_IND,
+					      &next_tx_level,
+					      sizeof(next_tx_level));
+}
+#endif /* WLAN_FEATURE_DP_BUS_BANDWIDTH */

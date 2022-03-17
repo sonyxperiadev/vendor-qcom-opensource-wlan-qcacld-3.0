@@ -29,6 +29,7 @@
 #include <qca_vendor.h>
 #include <wlan_objmgr_psoc_obj.h>
 #include "wlan_dp_public_struct.h"
+#include "wlan_dp_priv.h"
 
 typedef const enum bus_bw_level
 	bus_bw_table_type[QCA_WLAN_802_11_MODE_INVALID][TPUT_LEVEL_MAX];
@@ -152,4 +153,36 @@ dp_rtpm_tput_policy_get_vote(struct wlan_dp_psoc_context *dp_ctx)
 	return -EINVAL;
 }
 #endif /* WLAN_FEATURE_DP_BUS_BANDWIDTH && FEATURE_RUNTIME_PM */
+#ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
+/**
+ * dp_reset_tcp_delack() - Reset tcp delack value to default
+ * @psoc: psoc handle
+ *
+ * Function used to reset TCP delack value to its default value
+ *
+ * Return: None
+ */
+void dp_reset_tcp_delack(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * wlan_dp_update_tcp_rx_param() - update TCP param in RX dir
+ * @dp_ctx: Pointer to DP context
+ * @data: Parameters to update
+ *
+ * Return: None
+ */
+void wlan_dp_update_tcp_rx_param(struct wlan_dp_psoc_context *dp_ctx,
+				 struct wlan_rx_tp_data *data);
+#else
+static inline
+void dp_reset_tcp_delack(struct wlan_objmgr_psoc *psoc);
+{
+}
+
+static inline
+void wlan_dp_update_tcp_rx_param(struct wlan_dp_psoc_context *dp_ctx,
+				 struct wlan_rx_tp_data *data)
+{
+}
+#endif /* WLAN_FEATURE_DP_BUS_BANDWIDTH */
 #endif /* WLAN_DP_BUS_BANDWIDTH_H */

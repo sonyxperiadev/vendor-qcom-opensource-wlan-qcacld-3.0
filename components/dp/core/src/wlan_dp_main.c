@@ -513,6 +513,7 @@ void dp_set_rps(uint8_t vdev_id, bool enable)
 
 	dp_intf = dp_get_vdev_priv_obj(vdev);
 	if (!dp_intf) {
+		dp_comp_vdev_put_ref(vdev);
 		dp_err_rl("DP interface not found for vdev_id: %d", vdev_id);
 		return;
 	}
@@ -524,6 +525,7 @@ void dp_set_rps(uint8_t vdev_id, bool enable)
 		else
 			dp_send_rps_disable_ind(dp_intf);
 	}
+	dp_comp_vdev_put_ref(vdev);
 }
 #endif
 
