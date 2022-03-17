@@ -48,6 +48,7 @@
 #include "wlan_connectivity_logging.h"
 #include <lim_mlo.h>
 #include "parser_api.h"
+#include "wlan_twt_cfg_ext_api.h"
 
 /**
  * lim_update_stads_htcap() - Updates station Descriptor HT capability
@@ -878,7 +879,8 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 	int8_t rssi;
 	QDF_STATUS status;
 	enum ani_akm_type auth_type;
-	bool sha384_akm;
+	bool sha384_akm, twt_support_in_11n = false;
+	struct s_ext_cap *ext_cap;
 
 	assoc_cnf.resultCode = eSIR_SME_SUCCESS;
 	/* Update PE session Id */
@@ -1158,12 +1160,25 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 		lim_update_obss_scanparams(session_entry,
 				&assoc_rsp->obss_scanparams);
 
-	if (lim_is_session_he_capable(session_entry))
+	if (lim_is_session_he_capable(session_entry)) {
 		lim_set_twt_peer_capabilities(
 				mac_ctx,
 				(struct qdf_mac_addr *)current_bssid,
 				&assoc_rsp->he_cap,
 				&assoc_rsp->he_op);
+
+	} else {
+		wlan_twt_cfg_get_support_in_11n(mac_ctx->psoc,
+						&twt_support_in_11n);
+		if (twt_support_in_11n && session_entry->htCapability &&
+		    assoc_rsp->HTCaps.present && assoc_rsp->ExtCap.present) {
+			ext_cap = (struct s_ext_cap *)assoc_rsp->ExtCap.bytes;
+			lim_set_twt_ext_capabilities(
+				mac_ctx,
+				(struct qdf_mac_addr *)current_bssid,
+				ext_cap);
+		}
+	}
 
 	lim_diag_event_report(mac_ctx, WLAN_PE_DIAG_ROAM_ASSOC_COMP_EVENT,
 			      session_entry,

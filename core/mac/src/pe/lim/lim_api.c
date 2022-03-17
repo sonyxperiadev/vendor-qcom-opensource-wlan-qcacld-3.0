@@ -1785,6 +1785,21 @@ void lim_set_twt_peer_capabilities(struct mac_context *mac_ctx,
 
 	wlan_set_peer_twt_capabilities(mac_ctx->psoc, peer_mac, caps);
 }
+
+void lim_set_twt_ext_capabilities(struct mac_context *mac_ctx,
+				  struct qdf_mac_addr *peer_mac,
+				  struct s_ext_cap *ext_cap)
+{
+	uint8_t caps = 0;
+
+	if (ext_cap->twt_requestor_support)
+		caps |= WLAN_TWT_CAPA_REQUESTOR;
+
+	if (ext_cap->twt_responder_support)
+		caps |= WLAN_TWT_CAPA_RESPONDER;
+
+	wlan_set_peer_twt_capabilities(mac_ctx->psoc, peer_mac, caps);
+}
 #else
 void lim_set_twt_peer_capabilities(struct mac_context *mac_ctx,
 				   struct qdf_mac_addr *peer_mac,
@@ -1810,6 +1825,21 @@ void lim_set_twt_peer_capabilities(struct mac_context *mac_ctx,
 
 	mlme_set_twt_peer_capabilities(mac_ctx->psoc, peer_mac,
 				       caps);
+}
+
+void lim_set_twt_ext_capabilities(struct mac_context *mac_ctx,
+				  struct qdf_mac_addr *peer_mac,
+				  struct s_ext_cap *ext_cap)
+{
+	uint8_t caps = 0;
+
+	if (ext_cap->twt_requestor_support)
+		caps |= WLAN_TWT_CAPA_REQUESTOR;
+
+	if (ext_cap->twt_responder_support)
+		caps |= WLAN_TWT_CAPA_RESPONDER;
+
+	mlme_set_twt_peer_capabilities(mac_ctx->psoc, peer_mac, caps);
 }
 #endif /* WLAN_TWT_CONV_SUPPORTED */
 #endif /* WLAN_SUPPORT_TWT */

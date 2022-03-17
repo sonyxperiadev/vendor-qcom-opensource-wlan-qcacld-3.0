@@ -510,6 +510,17 @@ void lim_set_twt_peer_capabilities(struct mac_context *mac_ctx,
 				   struct qdf_mac_addr *peer_mac,
 				   tDot11fIEhe_cap *he_cap,
 				   tDot11fIEhe_op *he_op);
+
+/**
+ * lim_set_twt_ext_capabilities() - Update twt caps for 11n devices
+ * @mac_ctx: Pointer to mac context
+ * @peer_mac: peer mac address
+ * @ext_cap: pointer to Extended capabilities IE
+ *
+ */
+void lim_set_twt_ext_capabilities(struct mac_context *mac_ctx,
+				  struct qdf_mac_addr *peer_mac,
+				  struct s_ext_cap *ext_cap);
 #else
 static inline
 void lim_fill_roamed_peer_twt_caps(struct mac_context *mac_ctx, uint8_t vdev_id,
@@ -521,6 +532,12 @@ void lim_set_twt_peer_capabilities(struct mac_context *mac_ctx,
 				    struct qdf_mac_addr *peer_mac,
 				    tDot11fIEhe_cap *he_cap,
 				    tDot11fIEhe_op *he_op)
+{}
+
+static inline
+void lim_set_twt_ext_capabilities(struct mac_context *mac_ctx,
+				  struct qdf_mac_addr *peer_mac,
+				  struct s_ext_cap *ext_cap)
 {}
 #endif
 
