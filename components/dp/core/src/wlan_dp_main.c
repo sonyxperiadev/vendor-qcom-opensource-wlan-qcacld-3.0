@@ -29,6 +29,8 @@
 #include <qdf_net_types.h>
 #include "wlan_objmgr_vdev_obj.h"
 #include <wlan_cm_ucfg_api.h>
+#include "wlan_dp_nud_tracking.h"
+#include "target_if_dp_comp.h"
 
 /* Global DP context */
 static struct wlan_dp_psoc_context *gp_dp_ctx;
@@ -497,6 +499,9 @@ dp_psoc_obj_create_notification(struct wlan_objmgr_psoc *psoc, void *arg)
 
 	dp_ctx->psoc = psoc;
 	dp_cfg_init(dp_ctx);
+	target_if_dp_register_tx_ops(&dp_ctx->sb_ops);
+	target_if_dp_register_rx_ops(&dp_ctx->nb_ops);
+
 	return status;
 }
 
@@ -808,4 +813,53 @@ void dp_clear_rps_cpu_mask(struct wlan_dp_psoc_context *dp_ctx)
 
 		dp_send_rps_disable_ind(dp_intf);
 	}
+}
+
+QDF_STATUS dp_get_arp_stats_event_handler(struct wlan_objmgr_psoc *psoc,
+					  struct dp_rsp_stats *rsp)
+{
+	struct wlan_dp_intf *dp_intf;
+	struct wlan_objmgr_vdev *vdev;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc,
+						    rsp->vdev_id,
+						    WLAN_DP_ID);
+	if (!vdev) {
+		dp_err("Can't get vdev by vdev_id:%d", rsp->vdev_id);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	dp_intf = dp_get_vdev_priv_obj(vdev);
+	if (!dp_intf) {
+		dp_err("Unable to get DP interface");
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_DP_ID);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	dp_info("rsp->arp_req_enqueue :%x", rsp->arp_req_enqueue);
+	dp_info("rsp->arp_req_tx_success :%x", rsp->arp_req_tx_success);
+	dp_info("rsp->arp_req_tx_failure :%x", rsp->arp_req_tx_failure);
+	dp_info("rsp->arp_rsp_recvd :%x", rsp->arp_rsp_recvd);
+	dp_info("rsp->out_of_order_arp_rsp_drop_cnt :%x",
+		rsp->out_of_order_arp_rsp_drop_cnt);
+	dp_info("rsp->dad_detected :%x", rsp->dad_detected);
+	dp_info("rsp->connect_status :%x", rsp->connect_status);
+	dp_info("rsp->ba_session_establishment_status :%x",
+		rsp->ba_session_establishment_status);
+
+	dp_intf->dp_stats.arp_stats.rx_fw_cnt = rsp->arp_rsp_recvd;
+	dp_intf->dad |= rsp->dad_detected;
+	dp_intf->con_status = rsp->connect_status;
+
+	/* Flag true indicates connectivity check stats present. */
+	if (rsp->connect_stats_present) {
+		dp_info("rsp->tcp_ack_recvd :%x", rsp->tcp_ack_recvd);
+		dp_info("rsp->icmpv4_rsp_recvd :%x", rsp->icmpv4_rsp_recvd);
+		dp_intf->dp_stats.tcp_stats.rx_fw_cnt = rsp->tcp_ack_recvd;
+		dp_intf->dp_stats.icmpv4_stats.rx_fw_cnt =
+							rsp->icmpv4_rsp_recvd;
+	}
+
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_DP_ID);
+	return QDF_STATUS_SUCCESS;
 }

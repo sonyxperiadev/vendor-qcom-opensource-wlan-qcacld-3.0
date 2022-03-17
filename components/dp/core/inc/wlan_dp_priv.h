@@ -246,6 +246,10 @@ struct dp_tx_rx_stats {
  */
 struct dp_stats {
 	struct dp_tx_rx_stats tx_rx_stats;
+	struct dp_arp_stats arp_stats;
+	struct dp_dns_stats dns_stats;
+	struct dp_tcp_stats tcp_stats;
+	struct dp_icmpv4_stats icmpv4_stats;
 };
 
 /**
@@ -285,6 +289,8 @@ struct wlan_dp_intf {
 	qdf_mutex_t sta_periodic_stats_lock;
 #endif /* WLAN_FEATURE_PERIODIC_STA_STATS */
 	qdf_net_dev_stats stats;
+	bool con_status;
+	bool dad;
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
 	unsigned long prev_rx_packets;
 	unsigned long prev_tx_packets;

@@ -427,4 +427,86 @@ void dp_mic_deinit_work(struct wlan_dp_intf *dp_intf);
 void
 dp_rx_mic_error_ind(struct cdp_ctrl_objmgr_psoc *psoc, uint8_t pdev_id,
 		    struct cdp_rx_mic_err_info *mic_failure_info);
+/**
+ * dp_intf_get_tx_ops: get TX ops from the DP interface
+ * @psoc: pointer to psoc object
+ *
+ * Return: pointer to TX op callback
+ */
+static inline
+struct wlan_dp_psoc_sb_ops *dp_intf_get_tx_ops(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_dp_psoc_context *dp_ctx;
+
+	if (!psoc) {
+		dp_err("psoc is null");
+		return NULL;
+	}
+
+	dp_ctx = dp_psoc_get_priv(psoc);
+	if (!dp_ctx) {
+		dp_err("psoc private object is null");
+		return NULL;
+	}
+
+	return &dp_ctx->sb_ops;
+}
+
+/**
+ * dp_intf_get_rx_ops: get RX ops from the DP interface
+ * @psoc: pointer to psoc object
+ *
+ * Return: pointer to RX op callback
+ */
+static inline
+struct wlan_dp_psoc_nb_ops *dp_intf_get_rx_ops(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_dp_psoc_context *dp_ctx;
+
+	if (!psoc) {
+		dp_err("psoc is null");
+		return NULL;
+	}
+
+	dp_ctx = dp_psoc_get_priv(psoc);
+	if (!dp_ctx) {
+		dp_err("psoc private object is null");
+		return NULL;
+	}
+
+	return &dp_ctx->nb_ops;
+}
+
+/**
+ * dp_intf_get_rx_ops: get ARP req context from the DP context
+ * @psoc: pointer to psoc object
+ *
+ * Return: pointer to ARP request ctx.
+ */
+static inline
+void *dp_get_arp_request_ctx(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_dp_psoc_context *dp_ctx;
+
+	dp_ctx = dp_psoc_get_priv(psoc);
+	if (!dp_ctx) {
+		dp_err("psoc private object is null");
+		return NULL;
+	}
+	return dp_ctx->sb_ops.arp_request_ctx;
+}
+
+/**
+ * dp_get_arp_stats_event_handler() - callback api to update the
+ * stats received from FW
+ * @psoc : psoc handle
+ * @rsp: pointer to data received from FW.
+ *
+ * This is called when wlan driver received response event for
+ * get arp stats to firmware.
+ *
+ * Return: None
+ */
+QDF_STATUS dp_get_arp_stats_event_handler(struct wlan_objmgr_psoc *psoc,
+					  struct dp_rsp_stats *rsp);
 #endif

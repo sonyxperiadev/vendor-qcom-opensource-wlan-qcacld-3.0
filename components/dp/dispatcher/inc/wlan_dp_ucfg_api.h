@@ -403,6 +403,27 @@ void ucfg_dp_nud_event(struct qdf_mac_addr *netdev_mac_addr,
 		       uint8_t nud_state);
 
 /**
+ * ucfg_dp_get_arp_stats_event_handler - ARP get stats event handler
+ *
+ * @psoc: PSOC Handle
+ * @rsp : response message
+ *
+ * Return : 0 on success else error code.
+ */
+
+QDF_STATUS ucfg_dp_get_arp_stats_event_handler(struct wlan_objmgr_psoc *psoc,
+					       struct dp_rsp_stats *rsp);
+
+/**
+ * ucfg_dp_get_arp_request_ctx - Get ARP request context
+ *
+ * @psoc: PSOC Handle
+ *
+ * Return : ARP request context
+ */
+void *ucfg_dp_get_arp_request_ctx(struct wlan_objmgr_psoc *psoc);
+
+/**
  * ucfg_dp_nud_reset_tracking() - reset NUD tracking
  * @vdev: vdev handle
  *
@@ -436,4 +457,14 @@ void ucfg_dp_nud_indicate_roam(struct wlan_objmgr_vdev *vdev);
  */
 void ucfg_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 				    struct wlan_dp_psoc_callbacks *cb_obj);
+
+/**
+ * ucfg_dp_register_event_handler() - Resiter event handler with DP component
+ * @psoc: psoc handle
+ * @cb_obj: Callback object
+ *
+ * Returns: None
+ */
+void ucfg_dp_register_event_handler(struct wlan_objmgr_psoc *psoc,
+				    struct wlan_dp_psoc_nb_ops *cb_obj);
 #endif /* _WLAN_DP_UCFG_API_H_ */

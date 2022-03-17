@@ -30,6 +30,7 @@
 #include <wlan_nlink_common.h>
 #include <qca_vendor.h>
 #include <ani_system_defs.h>
+#include "cdp_txrx_ops.h"
 #include <qdf_defer.h>
 
 #ifdef TX_MULTIQ_PER_AC
@@ -49,6 +50,191 @@
 #else
 #define NUM_TX_QUEUES (4 * TX_QUEUES_PER_AC)
 #endif
+
+/**
+ * struct dp_arp_stats - arp debug stats count
+ * @tx_arp_req_count: no. of arp req received from network stack
+ * @rx_arp_rsp_count: no. of arp res received from FW
+ * @tx_dropped: no. of arp req dropped at hdd layer
+ * @rx_dropped: no. of arp res dropped
+ * @rx_delivered: no. of arp res delivered to network stack
+ * @rx_refused: no of arp rsp refused (not delivered) to network stack
+ * @tx_host_fw_sent: no of arp req sent by FW OTA
+ * @rx_host_drop_reorder: no of arp res dropped by host
+ * @rx_fw_cnt: no of arp res received by FW
+ * @tx_ack_cnt: no of arp req acked by FW
+ */
+struct dp_arp_stats {
+	uint16_t tx_arp_req_count;
+	uint16_t rx_arp_rsp_count;
+	uint16_t tx_dropped;
+	uint16_t rx_dropped;
+	uint16_t rx_delivered;
+	uint16_t rx_refused;
+	uint16_t tx_host_fw_sent;
+	uint16_t rx_host_drop_reorder;
+	uint16_t rx_fw_cnt;
+	uint16_t tx_ack_cnt;
+};
+
+/**
+ * struct dp_set_arp_stats_params - set/reset arp stats
+ * @vdev_id: session id
+ * @flag: enable/disable stats
+ * @pkt_type: type of packet(1 - arp)
+ * @ip_addr: subnet ipv4 address in case of encrypted packets
+ * @pkt_type_bitmap: pkt bitmap
+ * @tcp_src_port: tcp src port for pkt tracking
+ * @tcp_dst_port: tcp dst port for pkt tracking
+ * @icmp_ipv4: target ipv4 address to track ping packets
+ * @reserved: reserved
+ */
+struct dp_set_arp_stats_params {
+	uint32_t vdev_id;
+	uint8_t flag;
+	uint8_t pkt_type;
+	uint32_t ip_addr;
+	uint32_t pkt_type_bitmap;
+	uint32_t tcp_src_port;
+	uint32_t tcp_dst_port;
+	uint32_t icmp_ipv4;
+	uint32_t reserved;
+};
+
+/**
+ * struct dp_get_arp_stats_params - get arp stats from firmware
+ * @pkt_type: packet type(1 - ARP)
+ * @vdev_id: session id
+ */
+struct dp_get_arp_stats_params {
+	uint8_t pkt_type;
+	uint32_t vdev_id;
+};
+
+/**
+ * struct dp_dns_stats - dns debug stats count
+ * @tx_dns_req_count: no. of dns query received from network stack
+ * @rx_dns_rsp_count: no. of dns res received from FW
+ * @tx_dropped: no. of dns query dropped at hdd layer
+ * @rx_delivered: no. of dns res delivered to network stack
+ * @rx_refused: no of dns res refused (not delivered) to network stack
+ * @tx_host_fw_sent: no of dns query sent by FW OTA
+ * @rx_host_drop: no of dns res dropped by host
+ * @tx_ack_cnt: no of dns req acked by FW
+ */
+struct dp_dns_stats {
+	uint16_t tx_dns_req_count;
+	uint16_t rx_dns_rsp_count;
+	uint16_t tx_dropped;
+	uint16_t rx_delivered;
+	uint16_t rx_refused;
+	uint16_t tx_host_fw_sent;
+	uint16_t rx_host_drop;
+	uint16_t tx_ack_cnt;
+};
+
+/**
+ * struct dp_tcp_stats - tcp debug stats count
+ * @tx_tcp_syn_count: no. of tcp syn received from network stack
+ * @@tx_tcp_ack_count: no. of tcp ack received from network stack
+ * @rx_tcp_syn_ack_count: no. of tcp syn ack received from FW
+ * @tx_tcp_syn_dropped: no. of tcp syn dropped at hdd layer
+ * @tx_tcp_ack_dropped: no. of tcp ack dropped at hdd layer
+ * @rx_delivered: no. of tcp syn ack delivered to network stack
+ * @rx_refused: no of tcp syn ack refused (not delivered) to network stack
+ * @tx_tcp_syn_host_fw_sent: no of tcp syn sent by FW OTA
+ * @@tx_tcp_ack_host_fw_sent: no of tcp ack sent by FW OTA
+ * @rx_host_drop: no of tcp syn ack dropped by host
+ * @tx_tcp_syn_ack_cnt: no of tcp syn acked by FW
+ * @tx_tcp_syn_ack_cnt: no of tcp ack acked by FW
+ * @is_tcp_syn_ack_rcv: flag to check tcp syn ack received or not
+ * @is_tcp_ack_sent: flag to check tcp ack sent or not
+ */
+struct dp_tcp_stats {
+	uint16_t tx_tcp_syn_count;
+	uint16_t tx_tcp_ack_count;
+	uint16_t rx_tcp_syn_ack_count;
+	uint16_t tx_tcp_syn_dropped;
+	uint16_t tx_tcp_ack_dropped;
+	uint16_t rx_delivered;
+	uint16_t rx_refused;
+	uint16_t tx_tcp_syn_host_fw_sent;
+	uint16_t tx_tcp_ack_host_fw_sent;
+	uint16_t rx_host_drop;
+	uint16_t rx_fw_cnt;
+	uint16_t tx_tcp_syn_ack_cnt;
+	uint16_t tx_tcp_ack_ack_cnt;
+	bool is_tcp_syn_ack_rcv;
+	bool is_tcp_ack_sent;
+
+};
+
+/**
+ * struct dp_icmpv4_stats - icmpv4 debug stats count
+ * @tx_icmpv4_req_count: no. of icmpv4 req received from network stack
+ * @rx_icmpv4_rsp_count: no. of icmpv4 res received from FW
+ * @tx_dropped: no. of icmpv4 req dropped at hdd layer
+ * @rx_delivered: no. of icmpv4 res delivered to network stack
+ * @rx_refused: no of icmpv4 res refused (not delivered) to network stack
+ * @tx_host_fw_sent: no of icmpv4 req sent by FW OTA
+ * @rx_host_drop: no of icmpv4 res dropped by host
+ * @rx_fw_cnt: no of icmpv4 res received by FW
+ * @tx_ack_cnt: no of icmpv4 req acked by FW
+ */
+struct dp_icmpv4_stats {
+	uint16_t tx_icmpv4_req_count;
+	uint16_t rx_icmpv4_rsp_count;
+	uint16_t tx_dropped;
+	uint16_t rx_delivered;
+	uint16_t rx_refused;
+	uint16_t tx_host_fw_sent;
+	uint16_t rx_host_drop;
+	uint16_t rx_fw_cnt;
+	uint16_t tx_ack_cnt;
+};
+
+/**
+ * struct dp_rsp_stats - arp packet stats
+ * @arp_req_enqueue: fw tx count
+ * @arp_req_tx_success: tx ack count
+ * @arp_req_tx_failure: tx ack fail count
+ * @arp_rsp_recvd: rx fw count
+ * @out_of_order_arp_rsp_drop_cnt: out of order count
+ * @dad_detected: dad detected
+ * @connect_status: connection status
+ * @ba_session_establishment_status: BA session status
+ * @connect_stats_present: connectivity stats present or not
+ * @tcp_ack_recvd: tcp syn ack's count
+ * @icmpv4_rsp_recvd: icmpv4 responses count
+ */
+struct dp_rsp_stats {
+	uint32_t vdev_id;
+	uint32_t arp_req_enqueue;
+	uint32_t arp_req_tx_success;
+	uint32_t arp_req_tx_failure;
+	uint32_t arp_rsp_recvd;
+	uint32_t out_of_order_arp_rsp_drop_cnt;
+	uint32_t dad_detected;
+	uint32_t connect_status;
+	uint32_t ba_session_establishment_status;
+	bool connect_stats_present;
+	uint32_t tcp_ack_recvd;
+	uint32_t icmpv4_rsp_recvd;
+};
+
+/**
+ * struct dp_dhcp_ind - DHCP Start/Stop indication message
+ * @dhcp_start: Is DHCP start idication
+ * @device_mode: Mode of the device(ex:STA, AP)
+ * @intf_mac_addr: MAC address of the interface
+ * @peer_mac_addr: MAC address of the connected peer
+ */
+struct dp_dhcp_ind {
+	bool dhcp_start;
+	uint8_t device_mode;
+	struct qdf_mac_addr intf_mac_addr;
+	struct qdf_mac_addr peer_mac_addr;
+};
 
 /**
  * struct dp_mic_info - mic error info in dp
@@ -344,17 +530,40 @@ struct wlan_dp_psoc_callbacks {
 /**
  * struct wlan_dp_psoc_sb_ops - struct containing callback
  * to south bound APIs. callbacks to call traget_if APIs
+ * @dp_arp_stats_register_event_handler: Callback to register
+ * arp stas WMI handle
+ * @dp_arp_stats_unregister_event_handler: Callback to unregister
+ * arp stas WMI handle
+ * @dp_get_arp_req_stats: Callback to get arp stats
+ * @dp_set_arp_req_stats: Callback to  set arp stats
+ * @arp_request_ctx: ARP request context
+ * @dp_lro_config_cmd: Callback to  send LRO config command
+ * @dp_send_dhcp_ind: Callback to send DHCP indication
  */
 struct wlan_dp_psoc_sb_ops {
 	/*TODO to add target if TX ops*/
+	QDF_STATUS (*dp_arp_stats_register_event_handler)(struct wlan_objmgr_psoc *psoc);
+	QDF_STATUS (*dp_arp_stats_unregister_event_handler)(struct wlan_objmgr_psoc *psoc);
+	QDF_STATUS (*dp_get_arp_req_stats)(struct wlan_objmgr_psoc *psoc,
+					   struct dp_get_arp_stats_params *req_buf);
+	QDF_STATUS (*dp_set_arp_req_stats)(struct wlan_objmgr_psoc *psoc,
+					   struct dp_set_arp_stats_params *req_buf);
+	void *arp_request_ctx;
+	QDF_STATUS (*dp_lro_config_cmd)(struct wlan_objmgr_psoc *psoc,
+					struct cdp_lro_hash_config *dp_lro_cmd);
+	QDF_STATUS (*dp_send_dhcp_ind)(uint16_t vdev_id,
+				       struct dp_dhcp_ind *dhcp_ind);
 };
 
 /**
  * struct wlan_dp_psoc_nb_ops - struct containing callback
  * to north bound APIs. callbacks APIs to be called by target_if APIs
+ * @osif_dp_get_arp_stats_evt: Callback called on receiving arp stats event
  */
 struct wlan_dp_psoc_nb_ops {
 	/*TODO to add target if RX ops*/
+	void (*osif_dp_get_arp_stats_evt)(struct wlan_objmgr_psoc *psoc,
+					  struct dp_rsp_stats *rsp);
 };
 
 /**

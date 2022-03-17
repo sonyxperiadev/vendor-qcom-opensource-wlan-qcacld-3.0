@@ -636,6 +636,17 @@ void ucfg_dp_nud_event(struct qdf_mac_addr *netdev_mac_addr,
 	dp_nud_netevent_cb(netdev_mac_addr, gw_mac_addr, nud_state);
 }
 
+QDF_STATUS ucfg_dp_get_arp_stats_event_handler(struct wlan_objmgr_psoc *psoc,
+					       struct dp_rsp_stats *rsp)
+{
+	return dp_get_arp_stats_event_handler(psoc, rsp);
+}
+
+void *ucfg_dp_get_arp_request_ctx(struct wlan_objmgr_psoc *psoc)
+{
+	return dp_get_arp_request_ctx(psoc);
+}
+
 void ucfg_dp_nud_reset_tracking(struct wlan_objmgr_vdev *vdev)
 {
 	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
@@ -707,4 +718,18 @@ void ucfg_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 	dp_ctx->dp_ops.dp_is_link_adapter = cb_obj->dp_is_link_adapter;
 	dp_ctx->dp_ops.dp_get_pause_map = cb_obj->dp_get_pause_map;
 	dp_ctx->dp_ops.dp_nud_failure_work = cb_obj->dp_nud_failure_work;
+}
+
+void ucfg_dp_register_event_handler(struct wlan_objmgr_psoc *psoc,
+				    struct wlan_dp_psoc_nb_ops *cb_obj)
+{
+	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
+
+	if (!dp_ctx) {
+		dp_err("DP ctx is NULL");
+		return;
+	}
+
+	dp_ctx->nb_ops.osif_dp_get_arp_stats_evt =
+		cb_obj->osif_dp_get_arp_stats_evt;
 }

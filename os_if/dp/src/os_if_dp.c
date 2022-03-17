@@ -30,6 +30,7 @@
 #include "osif_vdev_sync.h"
 #include "osif_sync.h"
 #include <net/netevent.h>
+#include "wlan_osif_request_manager.h"
 
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
 /**
@@ -252,6 +253,33 @@ osif_dp_process_sap_mic_error(struct dp_mic_error_info *info,
 				     GFP_KERNEL);
 }
 
+/**
+ * osif_dp_get_arp_stats_event_handler() - ARP get stats event handler
+ * @psoc: psoc handle
+ * @rsp: Get ARP stats response
+ *
+ * Return: None
+ */
+static void osif_dp_get_arp_stats_event_handler(struct wlan_objmgr_psoc *psoc,
+						struct dp_rsp_stats *rsp)
+{
+	struct osif_request *request = NULL;
+	void *context;
+
+	context = ucfg_dp_get_arp_request_ctx(psoc);
+	if (!context)
+		return;
+
+	request = osif_request_get(context);
+	if (!request)
+		return;
+
+	ucfg_dp_get_arp_stats_event_handler(psoc, rsp);
+
+	osif_request_complete(request);
+	osif_request_put(request);
+}
+
 #ifdef WLAN_NUD_TRACKING
 /**
  * nud_state_osif_to_dp() - convert os_if to enum
@@ -389,6 +417,23 @@ void osif_dp_nud_unregister_netevent_notifier(struct wlan_objmgr_psoc *psoc)
 {
 }
 #endif
+
+/**
+ * os_if_dp_register_event_handler() - Register osif event handler
+ * @psoc: psoc handle
+ *
+ * Return: None
+ */
+static void os_if_dp_register_event_handler(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_dp_psoc_nb_ops cb_obj = {0};
+
+	cb_obj.osif_dp_get_arp_stats_evt =
+		osif_dp_get_arp_stats_event_handler;
+
+	ucfg_dp_register_event_handler(psoc, &cb_obj);
+}
+
 void os_if_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 				     struct wlan_dp_psoc_callbacks *cb_obj)
 {
@@ -399,4 +444,5 @@ void os_if_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 	cb_obj->osif_dp_process_sap_mic_error = osif_dp_process_sap_mic_error;
 
 	ucfg_dp_register_hdd_callbacks(psoc, cb_obj);
+	os_if_dp_register_event_handler(psoc);
 }
