@@ -1069,6 +1069,7 @@ static void hdd_son_get_sta_list(struct wlan_objmgr_vdev *vdev,
 	struct hdd_adapter *adapter;
 	struct hdd_station_info *sta_info = NULL;
 	uint32_t len;
+	qdf_time_t current_ts;
 
 	if (!vdev) {
 		hdd_err("null vdev");
@@ -1101,16 +1102,20 @@ static void hdd_son_get_sta_list(struct wlan_objmgr_vdev *vdev,
 			si->isi_ext_cap = sta_info->ext_cap;
 			si->isi_operating_bands = sta_info->supported_band;
 			si->isi_assoc_time = sta_info->assoc_ts;
+			current_ts = qdf_system_ticks();
+			jiffies_to_timespec(current_ts - sta_info->assoc_ts,
+					    &si->isi_tr069_assoc_time);
 			si->isi_rssi = sta_info->rssi;
 			si->isi_len = len;
 			si->isi_ie_len = 0;
 			si = (struct ieee80211req_sta_info *)(((uint8_t *)si) +
 			     len);
 			*space -= len;
-			hdd_debug("sta " QDF_MAC_ADDR_FMT " ext_cap %u op band %u rssi %d len %u",
+			hdd_debug("sta " QDF_MAC_ADDR_FMT " ext_cap %u op band %u rssi %d len %u, assoc ts %lu, curr ts %lu",
 				  QDF_MAC_ADDR_REF(si->isi_macaddr),
 				  si->isi_ext_cap, si->isi_operating_bands,
-				  si->isi_rssi, si->isi_len);
+				  si->isi_rssi, si->isi_len, sta_info->assoc_ts,
+				  current_ts);
 		}
 		hdd_put_sta_info_ref(&adapter->sta_info_list,
 				     &sta_info, true,
