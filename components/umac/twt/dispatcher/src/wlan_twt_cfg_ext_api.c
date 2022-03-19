@@ -29,3 +29,9 @@ wlan_twt_cfg_get_res_flag(struct wlan_objmgr_psoc *psoc, bool *val)
 {
 	return wlan_twt_cfg_get_responder_flag(psoc, val);
 }
+
+QDF_STATUS
+wlan_twt_cfg_get_support_in_11n(struct wlan_objmgr_psoc *psoc, bool *val)
+{
+	return wlan_twt_cfg_get_support_in_11n_mode(psoc, val);
+}

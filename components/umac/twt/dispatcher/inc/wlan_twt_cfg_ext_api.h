@@ -41,15 +41,33 @@ wlan_twt_cfg_get_req_flag(struct wlan_objmgr_psoc *psoc, bool *val);
  */
 QDF_STATUS
 wlan_twt_cfg_get_res_flag(struct wlan_objmgr_psoc *psoc, bool *val);
+
+/**
+ * wlan_twt_cfg_get_support_in_11n() - Get TWT support on HT cap
+ * @psoc: Pointer to global psoc object
+ * @val: pointer to output variable
+ *
+ * Return: QDF_STATUS_SUCCESS
+ */
+QDF_STATUS
+wlan_twt_cfg_get_support_in_11n(struct wlan_objmgr_psoc *psoc,
+				bool *val);
 #else
-static inline
+static inline QDF_STATUS
 wlan_twt_cfg_get_res_flag(struct wlan_objmgr_psoc *psoc, bool *val)
 {
 	return QDF_STATUS_SUCCESS;
 }
 
-static inline
+static inline QDF_STATUS
 wlan_twt_cfg_get_req_flag(struct wlan_objmgr_psoc *psoc, bool *val)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+wlan_twt_cfg_get_support_in_11n(struct wlan_objmgr_psoc *psoc,
+				bool *val)
 {
 	return QDF_STATUS_SUCCESS;
 }
