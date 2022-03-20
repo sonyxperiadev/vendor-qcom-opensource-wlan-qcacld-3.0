@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -123,13 +124,11 @@ uint8_t mlme_get_twt_peer_capabilities(struct wlan_objmgr_psoc *psoc,
  * context
  * @psoc: Pointer to psoc object
  * @peer_mac: Pointer to peer mac address
- * @he_cap: Pointer to HE capabilities IE
- * @he_op: Pointer to HE operations IE
+ * @caps: Bitmap of enum wlan_twt_capabilities
  */
 void mlme_set_twt_peer_capabilities(struct wlan_objmgr_psoc *psoc,
 				    struct qdf_mac_addr *peer_mac,
-				    tDot11fIEhe_cap *he_cap,
-				    tDot11fIEhe_op *he_op);
+				    uint8_t caps);
 
 /**
  * mlme_twt_any_peer_cmd_in_progress() - Iterate through the list of peers
@@ -324,8 +323,7 @@ bool mlme_is_24ghz_twt_enabled(struct wlan_objmgr_psoc *psoc);
 static inline
 void mlme_set_twt_peer_capabilities(struct wlan_objmgr_psoc *psoc,
 				    struct qdf_mac_addr *peer_mac,
-				    tDot11fIEhe_cap *he_cap,
-				    tDot11fIEhe_op *he_op)
+				    uint8_t caps)
 {}
 
 static inline

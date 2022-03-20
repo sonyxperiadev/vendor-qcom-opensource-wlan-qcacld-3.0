@@ -1791,8 +1791,25 @@ void lim_set_twt_peer_capabilities(struct mac_context *mac_ctx,
 				   tDot11fIEhe_cap *he_cap,
 				   tDot11fIEhe_op *he_op)
 {
+	uint8_t caps = 0;
+
+	if (he_cap->twt_request)
+		caps |= WLAN_TWT_CAPA_REQUESTOR;
+
+	if (he_cap->twt_responder)
+		caps |= WLAN_TWT_CAPA_RESPONDER;
+
+	if (he_cap->broadcast_twt)
+		caps |= WLAN_TWT_CAPA_BROADCAST;
+
+	if (he_cap->flex_twt_sched)
+		caps |= WLAN_TWT_CAPA_FLEXIBLE;
+
+	if (he_op->twt_required)
+		caps |= WLAN_TWT_CAPA_REQUIRED;
+
 	mlme_set_twt_peer_capabilities(mac_ctx->psoc, peer_mac,
-					he_cap, he_op);
+				       caps);
 }
 #endif /* WLAN_TWT_CONV_SUPPORTED */
 #endif /* WLAN_SUPPORT_TWT */
