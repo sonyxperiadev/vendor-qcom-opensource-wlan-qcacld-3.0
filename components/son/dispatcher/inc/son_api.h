@@ -317,6 +317,19 @@ int wlan_son_set_cbs_wait_time(struct wlan_objmgr_vdev *vdev,
 int wlan_son_set_cbs_dwell_split_time(struct wlan_objmgr_vdev *vdev,
 				      uint32_t val);
 
+/**
+ * wlan_son_vdev_get_supported_txrx_streams() - get supported spatial streams
+ * @vdev: pointer to vdev
+ * @num_tx_streams: pointer to number of tx streams
+ * @num_rx_streams: pointer to number of rx streams
+ *
+ * Return: QDF_STATUS_SUCCESS on Success else failure.
+ */
+QDF_STATUS
+wlan_son_vdev_get_supported_txrx_streams(struct wlan_objmgr_vdev *vdev,
+					 uint32_t *num_tx_streams,
+					 uint32_t *num_rx_streams);
+
 #ifdef WLAN_FEATURE_SON
 /**
  * wlan_son_peer_is_kickout_allow() - Is peer is allowed to kickout

@@ -144,3 +144,25 @@ QDF_STATUS ucfg_son_get_peer_rrm_info(struct element_info assoc_req_ies,
 	return wlan_son_get_peer_rrm_info(assoc_req_ies, rrmcaps,
 					  is_beacon_meas_supported);
 }
+
+QDF_STATUS
+ucfg_son_vdev_get_supported_txrx_streams(struct wlan_objmgr_vdev *vdev,
+					 uint32_t *num_tx_streams,
+					 uint32_t *num_rx_streams)
+{
+	return wlan_son_vdev_get_supported_txrx_streams(vdev,
+							num_tx_streams,
+							num_rx_streams);
+}
+
+QDF_STATUS ucfg_son_get_vht_cap(struct wlan_objmgr_psoc *psoc,
+				int32_t *vht_caps)
+{
+	struct wlan_psoc_target_capability_info *target_cap =
+					lmac_get_target_cap(psoc);
+
+	if (!target_cap)
+		return QDF_STATUS_E_NULL_VALUE;
+	*vht_caps = target_cap->vht_cap_info;
+	return QDF_STATUS_SUCCESS;
+}

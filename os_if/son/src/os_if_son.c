@@ -880,6 +880,75 @@ enum ieee80211_phymode os_if_son_get_phymode(struct wlan_objmgr_vdev *vdev)
 }
 qdf_export_symbol(os_if_son_get_phymode);
 
+static QDF_STATUS os_if_son_get_apcap(struct wlan_objmgr_vdev *vdev,
+				      wlan_ap_cap *apcap)
+{
+	uint32_t num_rx_streams = 0;
+	uint32_t num_tx_streams = 0;
+	uint32_t  value;
+	struct mlme_ht_capabilities_info ht_cap_info;
+	struct wlan_objmgr_psoc *psoc;
+	tDot11fIEhe_cap he_cap = {0};
+	bool enabled;
+	QDF_STATUS status;
+	int32_t vht_caps = 0;
+
+	/* Number of supported tx and rx streams */
+	status = ucfg_son_vdev_get_supported_txrx_streams(vdev, &num_tx_streams,
+							  &num_rx_streams);
+	if (status != QDF_STATUS_SUCCESS) {
+		osif_err("Could not get txrx streams");
+		return status;
+	}
+
+	psoc = wlan_vdev_get_psoc(vdev);
+	if (!psoc) {
+		osif_err("null psoc");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	/* Fetch HT CAP */
+	status = ucfg_mlme_get_ht_cap_info(psoc, &ht_cap_info);
+	if (status == QDF_STATUS_SUCCESS) {
+		apcap->wlan_ap_ht_capabilities_valid = true;
+		qdf_mem_copy(&apcap->htcap.htcap, &ht_cap_info,
+			     sizeof(struct mlme_ht_capabilities_info));
+		apcap->htcap.max_tx_nss = num_tx_streams;
+		apcap->htcap.max_rx_nss = num_rx_streams;
+	}
+
+	/* Fetch VHT CAP */
+	status = ucfg_mlme_get_vht_enable2x2(psoc, &enabled);
+	if (enabled) {
+		apcap->wlan_ap_vht_capabilities_valid = 1;
+		ucfg_mlme_cfg_get_vht_tx_mcs_map(psoc, &value);
+		apcap->vhtcap.supp_tx_mcs = value;
+		ucfg_mlme_cfg_get_vht_rx_mcs_map(psoc, &value);
+		apcap->vhtcap.supp_rx_mcs = value;
+		apcap->vhtcap.max_tx_nss = num_tx_streams;
+		apcap->vhtcap.max_rx_nss = num_rx_streams;
+		if (ucfg_son_get_vht_cap(psoc, &vht_caps) == QDF_STATUS_SUCCESS)
+			apcap->vhtcap.vhtcap = vht_caps;
+	}
+
+	/* Fetch HE CAP */
+	ucfg_mlme_cfg_get_he_caps(psoc, &he_cap);
+	if (he_cap.present) {
+		apcap->wlan_ap_he_capabilities_valid = 1;
+		apcap->hecap.num_mcs_entries = MAP_MAX_HE_MCS;
+		apcap->hecap.max_tx_nss = num_tx_streams;
+		apcap->hecap.max_rx_nss = num_rx_streams;
+		apcap->hecap.he_su_ppdu_1x_ltf_800ns_gi =
+					he_cap.he_1x_ltf_800_gi_ppdu;
+		apcap->hecap.he_ndp_4x_ltf_3200ns_gi =
+					he_cap.he_4x_ltf_3200_gi_ndp;
+		apcap->hecap.he_su_bfer = he_cap.su_beamformer;
+		apcap->hecap.he_su_bfee = he_cap.su_beamformee;
+		apcap->hecap.he_mu_bfer = he_cap.mu_beamformer;
+	}
+	return QDF_STATUS_SUCCESS;
+}
+
 QDF_STATUS os_if_son_vdev_ops(struct wlan_objmgr_vdev *vdev,
 			      enum wlan_mlme_vdev_param type,
 			      void *data, void *ret)
@@ -929,6 +998,9 @@ QDF_STATUS os_if_son_vdev_ops(struct wlan_objmgr_vdev *vdev,
 		out->chan_util = os_if_son_get_chan_util(vdev);
 		break;
 	case VDEV_GET_APCAP:
+		if (!out)
+			return QDF_STATUS_E_INVAL;
+		return os_if_son_get_apcap(vdev, &out->apcap);
 		break;
 	case VDEV_GET_CONNECT_N_TX:
 		break;

@@ -1380,3 +1380,36 @@ QDF_STATUS wlan_son_get_peer_rrm_info(struct element_info assoc_req_ies,
 	}
 	return QDF_STATUS_E_RESOURCES;
 }
+
+QDF_STATUS
+wlan_son_vdev_get_supported_txrx_streams(struct wlan_objmgr_vdev *vdev,
+					 uint32_t *num_tx_streams,
+					 uint32_t *num_rx_streams)
+{
+	struct wlan_mlme_nss_chains *nss_cfg;
+	enum nss_chains_band_info band = NSS_CHAINS_BAND_MAX;
+	struct wlan_channel *chan;
+	qdf_freq_t chan_freq = 0;
+
+	nss_cfg = mlme_get_dynamic_vdev_config(vdev);
+	if (!nss_cfg)
+		return QDF_STATUS_NOT_INITIALIZED;
+
+	chan = wlan_vdev_get_active_channel(vdev);
+	if (chan)
+		chan_freq = chan->ch_freq;
+
+	if (WLAN_REG_IS_24GHZ_CH_FREQ(chan_freq))
+		band = NSS_CHAINS_BAND_2GHZ;
+
+	if (WLAN_REG_IS_5GHZ_CH_FREQ(chan_freq))
+		band = NSS_CHAINS_BAND_5GHZ;
+
+	if (band == NSS_CHAINS_BAND_MAX)
+		return QDF_STATUS_NOT_INITIALIZED;
+
+	*num_tx_streams = nss_cfg->tx_nss[band];
+	*num_rx_streams = nss_cfg->rx_nss[band];
+
+	return QDF_STATUS_SUCCESS;
+}
