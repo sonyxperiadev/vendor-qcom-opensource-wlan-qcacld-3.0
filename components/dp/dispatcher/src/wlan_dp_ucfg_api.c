@@ -364,6 +364,7 @@ QDF_STATUS ucfg_dp_psoc_open(struct wlan_objmgr_psoc *psoc)
 	ucfg_dp_store_qdf_dev(psoc);
 	dp_rtpm_tput_policy_init(psoc);
 	dp_register_pmo_handler();
+	dp_trace_init(psoc);
 	dp_bus_bandwidth_init(psoc);
 
 	return QDF_STATUS_SUCCESS;
@@ -963,6 +964,11 @@ void ucfg_dp_clear_nud_stats_cb(struct wlan_objmgr_psoc *psoc)
 	struct wlan_dp_psoc_sb_ops *sb_ops = dp_intf_get_tx_ops(psoc);
 
 	sb_ops->dp_arp_stats_unregister_event_handler(psoc);
+}
+
+void ucfg_dp_set_dump_dp_trace(uint16_t cmd_type, uint16_t count)
+{
+	dp_set_dump_dp_trace(cmd_type, count);
 }
 
 QDF_STATUS

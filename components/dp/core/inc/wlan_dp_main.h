@@ -509,4 +509,22 @@ void *dp_get_arp_request_ctx(struct wlan_objmgr_psoc *psoc)
  */
 QDF_STATUS dp_get_arp_stats_event_handler(struct wlan_objmgr_psoc *psoc,
 					  struct dp_rsp_stats *rsp);
+
+/**
+ * dp_trace_init() - Initialize DP trace
+ * @psoc: psoc handle
+ *
+ * Return: None
+ */
+
+void dp_trace_init(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * dp_set_dump_dp_trace() - set DP trace dump level
+ * @cmd_type : command type
+ * @count: count
+ *
+ * Return: None
+ */
+void dp_set_dump_dp_trace(uint16_t cmd_type, uint16_t count);
 #endif

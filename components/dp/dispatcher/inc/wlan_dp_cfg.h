@@ -53,5 +53,16 @@
  */
 #define DP_TRACE_CONFIG_DEFAULT_THRESH_TIME_LIMIT (10)
 
+/* Default proto bitmap in case its missing in gDptraceConfig string */
+#define DP_TRACE_CONFIG_DEFAULT_BITMAP \
+			(QDF_NBUF_PKT_TRAC_TYPE_EAPOL |\
+			QDF_NBUF_PKT_TRAC_TYPE_DHCP |\
+			QDF_NBUF_PKT_TRAC_TYPE_MGMT_ACTION |\
+			QDF_NBUF_PKT_TRAC_TYPE_ARP |\
+			QDF_NBUF_PKT_TRAC_TYPE_ICMP |\
+			QDF_NBUF_PKT_TRAC_TYPE_ICMPv6)\
+
+/* Default verbosity, in case its missing in gDptraceConfig string*/
+#define DP_TRACE_CONFIG_DEFAULT_VERBOSTY QDF_DP_TRACE_VERBOSITY_LOW
 #endif
 #endif /* WLAN_DP_CFG_H__ */

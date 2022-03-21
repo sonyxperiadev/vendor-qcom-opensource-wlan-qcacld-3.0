@@ -154,6 +154,158 @@ int is_dp_intf_valid(struct wlan_dp_intf *dp_intf)
 	return validate_interface_id(dp_intf->intf_id);
 }
 
+#ifdef CONFIG_DP_TRACE
+/**
+ * dp_convert_string_to_u8_array() - used to convert string into u8 array
+ * @str: String to be converted
+ * @array: Array where converted value is stored
+ * @len: Length of the populated array
+ * @array_max_len: Maximum length of the array
+ * @to_hex: true, if conversion required for hex string
+ *
+ * This API is called to convert string (each byte separated by
+ * a comma) into an u8 array
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS dp_convert_string_to_array(char *str, uint8_t *array,
+					     uint8_t *len,
+					     uint16_t array_max_len,
+					     bool to_hex)
+{
+	char *format, *s = str;
+
+	if (!str || !array || !len)
+		return QDF_STATUS_E_INVAL;
+
+	format = (to_hex) ? "%02x" : "%d";
+
+	*len = 0;
+	while ((s) && (*len < array_max_len)) {
+		int val;
+		/* Increment length only if sscanf successfully extracted
+		 * one element. Any other return value means error.
+		 * Ignore it.
+		 */
+		if (sscanf(s, format, &val) == 1) {
+			array[*len] = (uint8_t)val;
+			*len += 1;
+		}
+
+		s = strpbrk(s, ",");
+		if (s)
+			s++;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * dp_string_to_u8_array() - used to convert string into u8 array
+ * @str: String to be converted
+ * @array: Array where converted value is stored
+ * @len: Length of the populated array
+ * @array_max_len: Maximum length of the array
+ *
+ * Return: QDF_STATUS
+ */
+static
+QDF_STATUS dp_string_to_u8_array(char *str, uint8_t *array,
+				 uint8_t *len, uint16_t array_max_len)
+{
+	return dp_convert_string_to_array(str, array, len,
+					  array_max_len, false);
+}
+
+void dp_trace_init(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_dp_psoc_context *dp_ctx;
+	struct wlan_dp_psoc_cfg *config;
+	bool live_mode = DP_TRACE_CONFIG_DEFAULT_LIVE_MODE;
+	uint8_t thresh = DP_TRACE_CONFIG_DEFAULT_THRESH;
+	uint16_t thresh_time_limit = DP_TRACE_CONFIG_DEFAULT_THRESH_TIME_LIMIT;
+	uint8_t verbosity = DP_TRACE_CONFIG_DEFAULT_VERBOSTY;
+	uint32_t proto_bitmap = DP_TRACE_CONFIG_DEFAULT_BITMAP;
+	uint8_t config_params[DP_TRACE_CONFIG_NUM_PARAMS];
+	uint8_t num_entries = 0;
+	uint32_t bw_compute_interval;
+
+	dp_ctx = dp_psoc_get_priv(psoc);
+	if (!dp_ctx) {
+		dp_err("Unable to get DP context");
+		return;
+	}
+
+	config = &dp_ctx->dp_cfg;
+
+	qdf_dp_set_proto_event_bitmap(config->dp_proto_event_bitmap);
+
+	if (!config->enable_dp_trace) {
+		dp_err("dp trace is disabled from ini");
+		return;
+	}
+
+	dp_string_to_u8_array(config->dp_trace_config, config_params,
+			      &num_entries, sizeof(config_params));
+
+	/* calculating, num bw timer intervals in a second (1000ms) */
+	bw_compute_interval = DP_BUS_BW_CFG(config->bus_bw_compute_interval);
+
+	if (bw_compute_interval <= 1000 && bw_compute_interval > 0) {
+		thresh_time_limit = 1000 / bw_compute_interval;
+	} else if (bw_compute_interval > 1000) {
+		dp_err("busBandwidthComputeInterval > 1000, using 1000");
+		thresh_time_limit = 1;
+	} else {
+		dp_err("busBandwidthComputeInterval is 0, using defaults");
+	}
+
+	switch (num_entries) {
+	case 4:
+		proto_bitmap = config_params[3];
+		/* fallthrough */
+	case 3:
+		verbosity = config_params[2];
+		/* fallthrough */
+	case 2:
+		thresh = config_params[1];
+		/* fallthrough */
+	case 1:
+		live_mode = config_params[0];
+		/* fallthrough */
+	default:
+		dp_debug("live_mode %u thresh %u time_limit %u verbosity %u bitmap 0x%x",
+			 live_mode, thresh, thresh_time_limit,
+			 verbosity, proto_bitmap);
+	};
+
+	qdf_dp_trace_init(live_mode, thresh, thresh_time_limit,
+			  verbosity, proto_bitmap);
+}
+
+void dp_set_dump_dp_trace(uint16_t cmd_type, uint16_t count)
+{
+	dp_debug("DUMP_DP_TRACE_LEVEL: %d %d",
+		 cmd_type, count);
+	if (cmd_type == DUMP_DP_TRACE)
+		qdf_dp_trace_dump_all(count, QDF_TRACE_DEFAULT_PDEV_ID);
+	else if (cmd_type == ENABLE_DP_TRACE_LIVE_MODE)
+		qdf_dp_trace_enable_live_mode();
+	else if (cmd_type == CLEAR_DP_TRACE_BUFFER)
+		qdf_dp_trace_clear_buffer();
+	else if (cmd_type == DISABLE_DP_TRACE_LIVE_MODE)
+		qdf_dp_trace_disable_live_mode();
+}
+#else
+static void dp_trace_init(struct wlan_dp_psoc_cfg *config)
+{
+}
+
+void dp_set_dump_dp_trace(uint16_t cmd_type, uint16_t count)
+{
+}
+#endif
+
 static void dp_cfg_init(struct wlan_dp_psoc_context *ctx)
 {
 }

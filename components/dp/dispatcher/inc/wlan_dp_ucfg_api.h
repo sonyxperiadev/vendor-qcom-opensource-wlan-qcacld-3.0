@@ -667,6 +667,15 @@ void ucfg_dp_set_nud_stats_cb(struct wlan_objmgr_psoc *psoc, void *cookie);
 void ucfg_dp_clear_nud_stats_cb(struct wlan_objmgr_psoc *psoc);
 
 /**
+ * ucfg_dp_set_dump_dp_trace() - set DP Trace
+ * @cmd_type : command
+ * @count : Number of lines to dump
+ *
+ * Return: None
+ */
+void ucfg_dp_set_dump_dp_trace(uint16_t cmd_type, uint16_t count);
+
+/**
  * ucfg_dp_req_get_arp_stats() - Send Get ARP set request to FW
  * @psoc: psoc context
  * @params : Get ARP stats param
