@@ -119,7 +119,7 @@
 #include "target_if_cm_roam_event.h"
 #include "wlan_fwol_ucfg_api.h"
 
-#define WMA_LOG_COMPLETION_TIMER 3000 /* 3 seconds */
+#define WMA_LOG_COMPLETION_TIMER 500 /* 500 msecs */
 #define WMI_TLV_HEADROOM 128
 
 static uint32_t g_fw_wlan_feat_caps;
