@@ -584,6 +584,15 @@ void hdd_get_max_tx_bitrate(struct hdd_context *hdd_ctx,
 			    struct hdd_adapter *adapter);
 
 /**
+ * wlan_hdd_display_tx_multiq_stats() - display Tx multi queue stats
+ * @context: hdd context
+ * @vdev_id: vdev id
+ *
+ * Return: none
+ */
+void wlan_hdd_display_tx_multiq_stats(hdd_cb_handle context, uint8_t vdev_id);
+
+/**
  * hdd_report_max_rate() - Fill the max rate stats in the station info structure
  * to be sent to the userspace.
  * @adapter: pointer to adapter

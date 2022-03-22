@@ -121,6 +121,7 @@
 #include "wlan_hdd_bus_bandwidth.h"
 #include <wlan_hdd_cm_api.h>
 #include "wlan_hdd_mlo.h"
+#include "wlan_dp_public_struct.h"
 
 /*
  * Preprocessor definitions and constants
@@ -3825,8 +3826,27 @@ int hdd_wlan_clear_stats(struct hdd_adapter *adapter, int stats_id);
 void wlan_hdd_display_tx_rx_histogram(struct hdd_context *hdd_ctx);
 void wlan_hdd_clear_tx_rx_histogram(struct hdd_context *hdd_ctx);
 
+/**
+ * hdd_cb_handle_to_context() - turn an HDD handle into an HDD context
+ * @hdd_handle: HDD handle to be converted
+ *
+ * Return: HDD context referenced by @hdd_cb_handle
+ */
+static inline
+struct hdd_context *hdd_cb_handle_to_context(hdd_cb_handle hdd_handle)
+{
+	return (struct hdd_context *)hdd_handle;
+}
+
+/**
+ * wlan_hdd_display_netif_queue_history() - display netif queue history
+ * @context: opaque handle to hdd context
+ * @verb_lvl: Verbosity levels for stats
+ *
+ * Return: none
+ */
 void
-wlan_hdd_display_netif_queue_history(struct hdd_context *hdd_ctx,
+wlan_hdd_display_netif_queue_history(hdd_cb_handle context,
 				     enum qdf_stats_verbosity_level verb_lvl);
 
 /**

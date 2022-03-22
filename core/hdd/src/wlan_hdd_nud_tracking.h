@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -157,6 +158,14 @@ void hdd_nud_flush_work(struct hdd_adapter *adapter);
  */
 void hdd_nud_indicate_roam(struct hdd_adapter *adapter);
 
+/**
+ * hdd_nud_failure_work() - Handle NUD failuire work
+ * @context: HDD context pointer
+ * @vdev_id: vdev id
+ *
+ * Return: None
+ */
+void hdd_nud_failure_work(hdd_cb_handle context, uint8_t vdev_id);
 #else
 static inline void hdd_nud_set_gateway_addr(struct hdd_adapter *adapter,
 					    struct qdf_mac_addr gw_mac_addr)
@@ -203,6 +212,11 @@ hdd_nud_flush_work(struct hdd_adapter *adapter)
 
 static inline void
 hdd_nud_indicate_roam(struct hdd_adapter *adapter)
+{
+}
+
+static inline void
+hdd_nud_failure_work(hdd_cb_handle context, uint8_t vdev_id)
 {
 }
 #endif /* WLAN_NUD_TRACKING */

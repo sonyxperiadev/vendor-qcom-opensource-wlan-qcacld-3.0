@@ -414,9 +414,21 @@ void hdd_deregister_tx_flow_control(struct hdd_adapter *adapter)
 	}
 }
 
-void hdd_get_tx_resource(struct hdd_adapter *adapter,
-			 struct qdf_mac_addr *mac_addr, uint16_t timer_value)
+void hdd_get_tx_resource(uint8_t vdev_id,
+			 struct qdf_mac_addr *mac_addr)
 {
+	struct hdd_adapter *adapter;
+	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
+	uint16_t timer_value = WLAN_HDD_TX_FLOW_CONTROL_OS_Q_BLOCK_TIME;
+
+	adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
+	if (!adapter)
+		return;
+
+	if (adapter->device_mode == QDF_P2P_GO_MODE ||
+	    adapter->device_mode == QDF_SAP_MODE)
+		timer_value = WLAN_SAP_HDD_TX_FLOW_CONTROL_OS_Q_BLOCK_TIME;
+
 	if (false ==
 	    cdp_fc_get_tx_resource(cds_get_context(QDF_MODULE_ID_SOC),
 				   OL_TXRX_PDEV_ID,
@@ -440,7 +452,55 @@ void hdd_get_tx_resource(struct hdd_adapter *adapter,
 		}
 	}
 }
+
+unsigned int
+hdd_get_tx_flow_low_watermark(hdd_cb_handle cb_ctx, uint8_t intf_id)
+{
+	struct hdd_context *hdd_ctx = hdd_cb_handle_to_context(cb_ctx);
+	struct hdd_adapter *adapter;
+
+	adapter = hdd_get_adapter_by_vdev(hdd_ctx, intf_id);
+	if (!adapter)
+		return 0;
+
+	return adapter->tx_flow_low_watermark;
+}
 #endif /* QCA_LL_LEGACY_TX_FLOW_CONTROL */
+
+#ifdef RECEIVE_OFFLOAD
+qdf_napi_struct
+*hdd_legacy_gro_get_napi(qdf_nbuf_t nbuf, bool enable_rxthread)
+{
+	struct qca_napi_info *qca_napii;
+	struct qca_napi_data *napid;
+	struct napi_struct *napi_to_use;
+
+	napid = hdd_napi_get_all();
+	if (unlikely(!napid))
+		return NULL;
+
+	qca_napii = hif_get_napi(QDF_NBUF_CB_RX_CTX_ID(nbuf), napid);
+	if (unlikely(!qca_napii))
+		return NULL;
+
+	/*
+	 * As we are breaking context in Rxthread mode, there is rx_thread NAPI
+	 * corresponds each hif_napi.
+	 */
+	if (enable_rxthread)
+		napi_to_use =  &qca_napii->rx_thread_napi;
+	else
+		napi_to_use = &qca_napii->napi;
+
+	return (qdf_napi_struct *)napi_to_use;
+}
+#else
+qdf_napi_struct
+*hdd_legacy_gro_get_napi(qdf_nbuf_t nbuf, bool enable_rxthread)
+{
+	return NULL;
+}
+#endif
 
 uint32_t hdd_txrx_get_tx_ack_count(struct hdd_adapter *adapter)
 {
@@ -2176,20 +2236,27 @@ void hdd_disable_rx_ol_for_low_tput(struct hdd_context *hdd_ctx, bool disable)
 #endif /* RECEIVE_OFFLOAD */
 
 #ifdef WLAN_FEATURE_TSF_PLUS_SOCK_TS
-static inline void hdd_tsf_timestamp_rx(struct hdd_context *hdd_ctx,
-					qdf_nbuf_t netbuf,
-					uint64_t target_time)
+void hdd_tsf_timestamp_rx(hdd_cb_handle ctx, qdf_nbuf_t netbuf)
 {
+	struct hdd_context *hdd_ctx = hdd_cb_handle_to_context(ctx);
+
 	if (!hdd_tsf_is_rx_set(hdd_ctx))
 		return;
 
-	hdd_rx_timestamp(netbuf, target_time);
+	hdd_rx_timestamp(netbuf, ktime_to_us(netbuf->tstamp));
 }
-#else
-static inline void hdd_tsf_timestamp_rx(struct hdd_context *hdd_ctx,
-					qdf_nbuf_t netbuf,
-					uint64_t target_time)
+
+void hdd_get_tsf_time_cb(uint8_t vdev_id, uint64_t input_time,
+			 uint64_t *tsf_time)
 {
+	struct hdd_adapter *adapter;
+	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
+
+	adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
+	if (!adapter)
+		return;
+
+	hdd_get_tsf_time(adapter, input_time, tsf_time);
 }
 #endif
 
