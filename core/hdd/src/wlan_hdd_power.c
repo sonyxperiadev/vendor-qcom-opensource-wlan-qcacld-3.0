@@ -2168,7 +2168,6 @@ int wlan_hdd_set_powersave(struct hdd_adapter *adapter,
 				goto end;
 		}
 
-		ucfg_mlme_set_user_ps(hdd_ctx->psoc, adapter->vdev_id, true);
 		ucfg_mlme_is_bmps_enabled(hdd_ctx->psoc, &is_bmps_enabled);
 		if (is_bmps_enabled) {
 			hdd_debug("Wlan driver Entering Power save");
@@ -2196,7 +2195,6 @@ int wlan_hdd_set_powersave(struct hdd_adapter *adapter,
 	} else {
 		hdd_debug("Wlan driver Entering Full Power");
 
-		ucfg_mlme_set_user_ps(hdd_ctx->psoc, adapter->vdev_id, false);
 		/*
 		 * Enter Full power command received from GUI
 		 * this means we are disconnected
@@ -2894,6 +2892,9 @@ static int __wlan_hdd_cfg80211_set_power_mgmt(struct wiphy *wiphy,
 		hdd_debug("Driver Module not enabled return success");
 		return 0;
 	}
+
+	ucfg_mlme_set_user_ps(hdd_ctx->psoc, adapter->vdev_id,
+			      allow_power_save);
 
 	status = wlan_hdd_set_powersave(adapter, allow_power_save, timeout);
 
