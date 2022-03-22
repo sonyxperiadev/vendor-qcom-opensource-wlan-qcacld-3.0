@@ -1123,6 +1123,10 @@ int wlan_son_cbs_enable(struct wlan_objmgr_vdev *vdev)
 	QDF_STATUS status;
 
 	cbs = g_son_cbs[wlan_vdev_get_id(vdev)];
+	if (!cbs) {
+		son_err("invalid cbs");
+		return -EINVAL;
+	}
 	psoc = wlan_vdev_get_psoc(vdev);
 	if (!psoc) {
 		son_err("invalid psoc");
@@ -1217,7 +1221,7 @@ int wlan_son_cbs_disable(struct wlan_objmgr_vdev *vdev)
 	struct son_cbs *cbs;
 
 	if (!vdev) {
-		son_err("invalid psoc");
+		son_err("invalid vdev");
 		return -EINVAL;
 	}
 	psoc = wlan_vdev_get_psoc(vdev);
@@ -1226,7 +1230,7 @@ int wlan_son_cbs_disable(struct wlan_objmgr_vdev *vdev)
 		return -EINVAL;
 	}
 	cbs = g_son_cbs[wlan_vdev_get_id(vdev)];
-	if (!cbs->vdev) {
+	if (!cbs || !cbs->vdev) {
 		son_err("vdev null");
 		return -EINVAL;
 	}
@@ -1260,7 +1264,7 @@ int wlan_son_set_cbs(struct wlan_objmgr_vdev *vdev,
 {
 	son_debug("Enable: %u", enable);
 
-	if (!vdev && !g_son_cbs[wlan_vdev_get_id(vdev)])
+	if (!vdev || !g_son_cbs[wlan_vdev_get_id(vdev)])
 		return -EINVAL;
 
 	if (enable)
