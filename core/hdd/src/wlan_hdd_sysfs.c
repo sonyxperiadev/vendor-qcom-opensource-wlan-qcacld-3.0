@@ -909,9 +909,10 @@ void hdd_create_adapter_sysfs_files(struct hdd_adapter *adapter)
 	case QDF_STA_MODE:
 	case QDF_P2P_DEVICE_MODE:
 	case QDF_P2P_CLIENT_MODE:
-			hdd_sysfs_create_sta_adapter_root_obj(adapter);
+		hdd_sysfs_create_sta_adapter_root_obj(adapter);
 		break;
 	case QDF_SAP_MODE:
+	case QDF_P2P_GO_MODE:
 		hdd_sysfs_create_sap_adapter_root_obj(adapter);
 		break;
 	case QDF_MONITOR_MODE:
@@ -934,10 +935,11 @@ void hdd_destroy_adapter_sysfs_files(struct hdd_adapter *adapter)
 	case QDF_STA_MODE:
 	case QDF_P2P_DEVICE_MODE:
 	case QDF_P2P_CLIENT_MODE:
-			hdd_sysfs_destroy_sta_adapter_root_obj(adapter);
+		hdd_sysfs_destroy_sta_adapter_root_obj(adapter);
 		break;
 	case QDF_SAP_MODE:
-			hdd_sysfs_destroy_sap_adapter_root_obj(adapter);
+	case QDF_P2P_GO_MODE:
+		hdd_sysfs_destroy_sap_adapter_root_obj(adapter);
 		break;
 	case QDF_MONITOR_MODE:
 		hdd_sysfs_destroy_monitor_adapter_root_obj(adapter);
