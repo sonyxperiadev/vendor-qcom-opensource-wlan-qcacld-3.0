@@ -29,13 +29,44 @@
 #include <qdf_types.h>
 #include <wlan_objmgr_vdev_obj.h>
 
+#if defined(FEATURE_LRO)
 /**
- * osif_dp_lro_rx() - Handle Rx processing via LRO
+ * osif_dp_lro_rx() - Handle Rx procesing via LRO
  * @vdev: Vdev obj mgr
  * @nbuf: network buffer
  *
  * Return: QDF_STATUS_SUCCESS if processed via LRO or non zero return code
  */
-QDF_STATUS osif_dp_lro_rx(struct wlan_objmgr_vdev *vdev, qdf_nbuf_t nbuf);
+QDF_STATUS osif_dp_lro_rx(qdf_netdev_t dev, qdf_nbuf_t nbuf);
+
+void osif_dp_lro_display_stats(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * osif_dp_lro_set_reset() - vendor command for Disable/Enable LRO
+ * @vdev: Vdev obj mgr
+ * @enable_flag: enable or disable LRO.
+ *
+ * Return: none
+ */
+QDF_STATUS
+osif_dp_lro_set_reset(struct wlan_objmgr_vdev *vdev, uint8_t enable_flag);
+
+#else
+static inline
+QDF_STATUS osif_dp_lro_rx(qdf_netdev_t dev, qdf_nbuf_t nbuf)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline void osif_dp_lro_display_stats(struct wlan_objmgr_vdev *vdev)
+{
+}
+
+static inline QDF_STATUS
+osif_dp_lro_set_reset(struct wlan_objmgr_vdev *vdev, uint8_t enable_flag)
+{
+	return 0;
+}
+#endif /* FEATURE_LRO */
 
 #endif /* _OSIF_DP_LRO_H_ */
