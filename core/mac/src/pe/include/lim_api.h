@@ -566,6 +566,25 @@ lim_fill_pe_session(struct mac_context *mac_ctx,
 		    struct pe_session *session,
 		    struct bss_description *bss_desc);
 
+#ifdef WLAN_FEATURE_11BE_MLO
+QDF_STATUS
+lim_gen_link_specific_probe_rsp(struct mac_context *mac_ctx,
+				struct pe_session *session_entry,
+				uint8_t *probe_rsp,
+				uint32_t probe_rsp_len,
+				int32_t rssi);
+#else
+static inline QDF_STATUS
+lim_gen_link_specific_probe_rsp(struct mac_context *mac_ctx,
+				struct pe_session *session_entry,
+				uint8_t *probe_rsp,
+				uint32_t probe_rsp_len,
+				int32_t rssi)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+#endif
+
 #if defined(WLAN_FEATURE_ROAM_OFFLOAD) && defined(WLAN_FEATURE_11BE_MLO)
 /**
  * lim_cm_roam_create_session() - Create pe session for legacy to MLO roaming

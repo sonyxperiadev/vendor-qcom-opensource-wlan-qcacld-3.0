@@ -163,12 +163,6 @@ lim_populate_ml_probe_req(struct mac_context *mac,
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
-	/* if num partner links is > 0
-	 * means complete profiles were sent by AP
-	 */
-	if (session->lim_join_req->partner_info.num_partner_links)
-		return QDF_STATUS_SUCCESS;
-
 	ml_prb_req = qdf_mem_malloc(sizeof(struct wlan_ml_probe_req));
 	if (!ml_prb_req)
 		return QDF_STATUS_E_NULL_VALUE;
@@ -181,6 +175,7 @@ lim_populate_ml_probe_req(struct mac_context *mac,
 	ml_prb_req->ml_ie_ff.elem_id = WLAN_ELEMID_EXTN_ELEM;
 	/* Fill the Multi link extn Element ID IE Type (0x6B) */
 	ml_prb_req->ml_ie_ff.elem_id_ext = WLAN_EXTN_ELEMID_MULTI_LINK;
+	ml_probe_len++;
 
 	/* Set ML IE multi link control bitmap:
 	 * ML probe variant type = 1
@@ -195,12 +190,11 @@ lim_populate_ml_probe_req(struct mac_context *mac,
 		     WLAN_ML_CTRL_PBM_IDX,
 		     WLAN_ML_CTRL_PBM_BITS,
 		     1);
-	ml_probe_len += sizeof(struct wlan_ie_multilink);
-	ml_prb_req->common_info_len = 1;
-	ml_probe_len++;
+	ml_probe_len += WLAN_ML_CTRL_SIZE;
+	ml_prb_req->common_info_len = 2;
+	ml_probe_len += ml_prb_req->common_info_len;
 	/* mld id is always 0 for tx link for SAP or AP */
 	ml_prb_req->mld_id = 0;
-	ml_probe_len++;
 
 	stacontrol = htole16(stacontrol);
 	partner_info = session->lim_join_req->partner_info;
@@ -210,7 +204,7 @@ lim_populate_ml_probe_req(struct mac_context *mac,
 	     link++) {
 		ml_prb_req->sta_profile[link].sub_elem_id = 0;
 		ml_prb_req->sta_profile[link].per_sta_len =
-			WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_SIZE + 2;
+			WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_SIZE;
 		ml_probe_len += 2;
 
 		QDF_SET_BITS(stacontrol,
@@ -228,9 +222,9 @@ lim_populate_ml_probe_req(struct mac_context *mac,
 	ml_prb_req->ml_ie_ff.elem_len = ml_probe_len;
 	*ml_probe_req_len = ml_probe_len;
 
-	pe_nofl_debug("Send ML probe req");
+	pe_nofl_debug("Send ML probe req %d", ml_probe_len);
 	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-			   ml_probe, ml_probe_len);
+			   ml_probe, ml_probe_len + 2);
 
 	return QDF_STATUS_SUCCESS;
 }
