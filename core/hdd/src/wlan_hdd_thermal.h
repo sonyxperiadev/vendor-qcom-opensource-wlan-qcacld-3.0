@@ -163,22 +163,24 @@ hdd_send_thermal_mitigation_val(struct hdd_context *hdd_ctx, uint32_t level,
 #ifdef FEATURE_WPSS_THERMAL_MITIGATION
 /**
  * hdd_thermal_fill_clientid_priority() - fill the client id/priority
- *
+ * @hdd_ctx: pointer to hdd contex structure
  * @mon_id: Thermal monitor id ie.. apps or wpss
- * @priority: Priority of the client to be considered
+ * @priority_apps: Priority of the apps client to be considered
+ * @priority_wpps: Priority of the wpps client to be considered
+ * @params: pointer to thermal mitigation parameters
  *
- * Fill the clientid/priority for the firmware to consider.
+ * Fill the clientid/priority for the firmwaire to consider.
  *
  * Return: none
  */
 void
-hdd_thermal_fill_clientid_priority(uint8_t mon_id, uint8_t priority_apps,
-				   uint8_t priority_wpps,
+hdd_thermal_fill_clientid_priority(struct hdd_context *hdd_ctx, uint8_t mon_id,
+				   uint8_t priority_apps, uint8_t priority_wpps,
 				   struct thermal_mitigation_params *params);
 #else
 static inline void
-hdd_thermal_fill_clientid_priority(uint8_t mon_id, uint8_t priority_apps,
-				   uint8_t priority_wpps,
+hdd_thermal_fill_clientid_priority(struct hdd_context *hdd_ctx, uint8_t mon_id,
+				   uint8_t priority_apps, uint8_t priority_wpps,
 				   struct thermal_mitigation_params *params)
 {
 }
