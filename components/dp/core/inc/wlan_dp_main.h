@@ -135,6 +135,30 @@ dp_get_intf_by_macaddr(struct wlan_dp_psoc_context *dp_ctx,
 		       struct qdf_mac_addr *addr);
 
 /**
+ * dp_peer_obj_create_notification(): dp peer create handler
+ * @peer: peer which is going to created by objmgr
+ * @arg: argument for vdev create handler
+ *
+ * Register this api with objmgr to detect peer is created
+ *
+ * Return: QDF_STATUS status in case of success else return error
+ */
+QDF_STATUS
+dp_peer_obj_create_notification(struct wlan_objmgr_peer *peer, void *arg);
+
+/**
+ * dp_peer_obj_destroy_notification(): dp peer delete handler
+ * @peer: peer which is going to delete by objmgr
+ * @arg: argument for vdev delete handler
+ *
+ * Register this api with objmgr to detect peer is deleted
+ *
+ * Return: QDF_STATUS status in case of success else return error
+ */
+QDF_STATUS
+dp_peer_obj_destroy_notification(struct wlan_objmgr_peer *peer, void *arg);
+
+/**
  * dp_vdev_obj_destroy_notification() - Free per DP vdev object
  * @vdev: vdev context
  * @arg: Pointer to arguments

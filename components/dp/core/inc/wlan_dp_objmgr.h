@@ -44,6 +44,26 @@
 #define dp_comp_psoc_put_ref(psoc) wlan_objmgr_psoc_release_ref(psoc, WLAN_DP_ID)
 
 /**
+ * dp_get_peer_priv_obj: get DP priv object from peer object
+ * @peer: pointer to peer object
+ *
+ * Return: pointer to DP peer private object
+ */
+static inline struct wlan_dp_sta_info *
+dp_get_peer_priv_obj(struct wlan_objmgr_peer *peer)
+{
+	struct wlan_dp_sta_info *peer_info;
+
+	peer_info = wlan_objmgr_peer_get_comp_private_obj(peer, WLAN_COMP_DP);
+	if (!peer_info) {
+		dp_err("peer is null");
+		return NULL;
+	}
+
+	return peer_info;
+}
+
+/**
  * dp_get_vdev_priv_obj() - Wrapper to retrieve vdev priv obj
  * @vdev: vdev pointer
  *

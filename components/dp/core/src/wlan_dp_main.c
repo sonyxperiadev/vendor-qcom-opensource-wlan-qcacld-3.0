@@ -761,6 +761,58 @@ void dp_mic_init_work(struct wlan_dp_intf *dp_intf)
 }
 
 QDF_STATUS
+dp_peer_obj_create_notification(struct wlan_objmgr_peer *peer, void *arg)
+{
+	struct wlan_dp_sta_info *sta_info;
+	QDF_STATUS status;
+
+	sta_info = qdf_mem_malloc(sizeof(*sta_info));
+	if (!sta_info)
+		return QDF_STATUS_E_NOMEM;
+
+	status = wlan_objmgr_peer_component_obj_attach(peer, WLAN_COMP_DP,
+						       sta_info,
+						       QDF_STATUS_SUCCESS);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		dp_err("DP peer attach failed");
+		qdf_mem_free(sta_info);
+	}
+
+	qdf_mem_copy(sta_info->sta_mac.bytes, peer->macaddr,
+		     QDF_MAC_ADDR_SIZE);
+	sta_info->pending_eap_frm_type = 0;
+	sta_info->dhcp_phase = DHCP_PHASE_ACK;
+	sta_info->dhcp_nego_status = DHCP_NEGO_STOP;
+
+	dp_info("sta info crated mac:" QDF_MAC_ADDR_FMT,
+		       QDF_MAC_ADDR_REF(&sta_info->sta_mac));
+
+	return status;
+}
+
+QDF_STATUS
+dp_peer_obj_destroy_notification(struct wlan_objmgr_peer *peer, void *arg)
+{
+	struct wlan_dp_sta_info *sta_info;
+	QDF_STATUS status;
+
+	sta_info = dp_get_peer_priv_obj(peer);
+	if (!sta_info) {
+		dp_err("DP_peer_obj is NULL");
+		return QDF_STATUS_E_FAULT;
+	}
+
+	status = wlan_objmgr_peer_component_obj_detach(peer, WLAN_COMP_DP,
+						       sta_info);
+	if (QDF_IS_STATUS_ERROR(status))
+		dp_err("DP peer detach failed");
+
+	qdf_mem_free(sta_info);
+
+	return status;
+}
+
+QDF_STATUS
 dp_vdev_obj_create_notification(struct wlan_objmgr_vdev *vdev, void *arg)
 {
 	struct wlan_objmgr_psoc *psoc;

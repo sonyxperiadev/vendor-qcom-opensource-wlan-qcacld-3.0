@@ -179,7 +179,33 @@ QDF_STATUS ucfg_dp_init(void)
 		dp_err("Failed to register vdev destroy handler");
 		goto fail_destroy_vdev;
 	}
-	return status;
+
+	status = wlan_objmgr_register_peer_create_handler(
+		WLAN_COMP_DP,
+		dp_peer_obj_create_notification,
+		NULL);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		dp_err("wlan_objmgr_register_peer_create_handler failed");
+		goto fail_create_peer;
+	}
+
+	status = wlan_objmgr_register_peer_destroy_handler(
+		WLAN_COMP_DP,
+		dp_peer_obj_destroy_notification,
+		NULL);
+	if (QDF_IS_STATUS_ERROR(status))
+		dp_err("wlan_objmgr_register_peer_destroy_handler failed");
+	else
+		return QDF_STATUS_SUCCESS;
+
+	wlan_objmgr_unregister_peer_create_handler(WLAN_COMP_DP,
+					dp_peer_obj_create_notification,
+					NULL);
+
+fail_create_peer:
+	wlan_objmgr_unregister_vdev_destroy_handler(WLAN_COMP_DP,
+					dp_vdev_obj_destroy_notification,
+					NULL);
 
 fail_destroy_vdev:
 	wlan_objmgr_unregister_vdev_create_handler(
@@ -214,6 +240,20 @@ QDF_STATUS ucfg_dp_deinit(void)
 	QDF_STATUS status;
 
 	dp_info("DP module dispatcher deinit");
+
+	/* de-register peer delete handler functions. */
+	status = wlan_objmgr_unregister_peer_destroy_handler(
+				WLAN_COMP_DP,
+				dp_peer_obj_destroy_notification, NULL);
+	if (QDF_IS_STATUS_ERROR(status))
+		dp_err("Failed to unregister DP peer destroy handler: %d", status);
+
+	/* de-register peer create handler functions. */
+	status = wlan_objmgr_unregister_peer_create_handler(
+				WLAN_COMP_DP,
+				dp_peer_obj_create_notification, NULL);
+	if (QDF_IS_STATUS_ERROR(status))
+		dp_err("Failed to unregister DP peer create handler: %d", status);
 
 	status = wlan_objmgr_unregister_vdev_destroy_handler(
 				WLAN_COMP_DP,
