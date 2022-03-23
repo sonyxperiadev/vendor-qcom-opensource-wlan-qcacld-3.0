@@ -34,6 +34,14 @@
  */
 void osif_dp_classify_pkt(struct sk_buff *skb);
 
+/**
+ * osif_dp_mark_pkt_type() - Mark pkt type in CB
+ * @skb - sk buff
+ *
+ * Return: None
+ */
+void osif_dp_mark_pkt_type(struct sk_buff *skb);
+
 /* wait time for nud stats in milliseconds */
 #define WLAN_WAIT_TIME_NUD_STATS 800
 /* nud stats skb max length */
@@ -61,6 +69,14 @@ void osif_dp_classify_pkt(struct sk_buff *skb);
 	QCA_WLAN_VENDOR_CONNECTIVITY_CHECK_SET_TCP_SYN_ACK
 #define CONNECTIVITY_CHECK_SET_TCP_ACK \
 	QCA_WLAN_VENDOR_CONNECTIVITY_CHECK_SET_TCP_ACK
+
+/**
+ * os_if_dp_register_txrx_callbacks() - Register TX/RX OSIF callbacks
+ * @cb_obj: Call back object pointer for ops registration
+ *
+ * Return: None
+ */
+void os_if_dp_register_txrx_callbacks(struct wlan_dp_psoc_callbacks *cb_obj);
 
 /**
  * os_if_dp_register_hdd_callbacks() - Register callback handlers

@@ -1249,6 +1249,7 @@ void os_if_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 	cb_obj->os_if_dp_nud_stats_info = os_if_dp_nud_stats_info;
 	cb_obj->osif_dp_process_sta_mic_error = osif_dp_process_sta_mic_error;
 	cb_obj->osif_dp_process_sap_mic_error = osif_dp_process_sap_mic_error;
+	os_if_dp_register_txrx_callbacks(cb_obj);
 
 	ucfg_dp_register_hdd_callbacks(psoc, cb_obj);
 	os_if_dp_register_event_handler(psoc);
