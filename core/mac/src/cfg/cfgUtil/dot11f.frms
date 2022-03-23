@@ -2505,16 +2505,6 @@ IE reduced_neighbor_report (EID_RNR_IE)
 		tbtt_offset, 1;
 		bss_params, 1;
 	}
-	tbtt_info_4 (tbtt_info_len IS 4)
-	{
-		tbtt_offset, 1;
-		{
-		     mld_id:                    8;
-		     link_id:                   4;
-		     bss_param_change_cnt:      8;
-		     reserved:                  12;
-		}
-	}
 	tbtt_info_5 (tbtt_info_len IS 5)
 	{
 		tbtt_offset, 1;
@@ -2543,17 +2533,6 @@ IE reduced_neighbor_report (EID_RNR_IE)
 		bssid[6];
 		bss_params, 1;
 		psd_20mhz, 1;
-	}
-	tbtt_info_10 (tbtt_info_len IS 10)
-	{
-		tbtt_offset, 1;
-		bssid[6];
-		{
-		     mld_id:                    8;
-		     link_id:                   4;
-		     bss_param_change_cnt:      8;
-		     reserved:                  12;
-		}
 	}
 	tbtt_info_11 (tbtt_info_len IS 11)
 	{

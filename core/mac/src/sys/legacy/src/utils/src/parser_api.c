@@ -8988,12 +8988,12 @@ void populate_dot11f_mlo_rnr(struct mac_context *mac_ctx,
 			continue;
 		}
 		if (!rnr_populated) {
-			populate_dot11f_rnr_tbtt_info_10(mac_ctx, session,
+			populate_dot11f_rnr_tbtt_info_16(mac_ctx, session,
 							 link_session, dot11f);
 			pe_debug("mlo vdev id %d populate vdev id %d link id %d op class %d chan num %d in RNR IE",
 				 wlan_vdev_get_id(session->vdev),
 				 wlan_vdev_get_id(wlan_vdev_list[link]),
-				 dot11f->tbtt_info.tbtt_info_10.link_id,
+				 dot11f->tbtt_info.tbtt_info_16.link_id,
 				 dot11f->op_class, dot11f->channel_num);
 			rnr_populated = true;
 		}
@@ -9001,7 +9001,7 @@ void populate_dot11f_mlo_rnr(struct mac_context *mac_ctx,
 	}
 }
 
-void populate_dot11f_rnr_tbtt_info_10(struct mac_context *mac_ctx,
+void populate_dot11f_rnr_tbtt_info_16(struct mac_context *mac_ctx,
 				      struct pe_session *pe_session,
 				      struct pe_session *rnr_session,
 				      tDot11fIEreduced_neighbor_report *dot11f)
@@ -9036,13 +9036,13 @@ void populate_dot11f_rnr_tbtt_info_10(struct mac_context *mac_ctx,
 	dot11f->channel_num = wlan_reg_freq_to_chan(mac_ctx->pdev,
 						    rnr_session->curr_op_freq);
 	dot11f->tbtt_info_count = 0;
-	dot11f->tbtt_info_len = 10;
-	qdf_mem_copy(dot11f->tbtt_info.tbtt_info_10.bssid,
+	dot11f->tbtt_info_len = 16;
+	qdf_mem_copy(dot11f->tbtt_info.tbtt_info_16.bssid,
 		     rnr_session->self_mac_addr, sizeof(tSirMacAddr));
-	dot11f->tbtt_info.tbtt_info_10.mld_id = 0;
-	dot11f->tbtt_info.tbtt_info_10.link_id = wlan_vdev_get_link_id(
+	dot11f->tbtt_info.tbtt_info_16.mld_id = 0;
+	dot11f->tbtt_info.tbtt_info_16.link_id = wlan_vdev_get_link_id(
 							rnr_session->vdev);
-	dot11f->tbtt_info.tbtt_info_10.bss_param_change_cnt =
+	dot11f->tbtt_info.tbtt_info_16.bss_param_change_cnt =
 		rnr_session->mlo_link_info.link_ie.bss_param_change_cnt;
 }
 

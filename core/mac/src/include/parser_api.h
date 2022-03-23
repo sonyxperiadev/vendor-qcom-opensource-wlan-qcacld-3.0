@@ -1387,7 +1387,7 @@ void populate_dot11f_mlo_rnr(struct mac_context *mac_ctx,
 			     tDot11fIEreduced_neighbor_report *dot11f);
 
 /**
- * populate_dot11f_rnr_tbtt_info_10() - populate rnr with tbtt_info length 10
+ * populate_dot11f_rnr_tbtt_info_16() - populate rnr with tbtt_info length 16
  * @mac_ctx: pointer to mac_context
  * @pe_session: pe session
  * @rnr_session: session to populate in rnr ie
@@ -1395,7 +1395,7 @@ void populate_dot11f_mlo_rnr(struct mac_context *mac_ctx,
  *
  * Return: void
  */
-void populate_dot11f_rnr_tbtt_info_10(struct mac_context *mac_ctx,
+void populate_dot11f_rnr_tbtt_info_16(struct mac_context *mac_ctx,
 				      struct pe_session *pe_session,
 				      struct pe_session *rnr_session,
 				      tDot11fIEreduced_neighbor_report *dot11f);
@@ -1425,7 +1425,7 @@ static inline void populate_dot11f_mlo_rnr(
 {
 }
 
-static inline void populate_dot11f_rnr_tbtt_info_10(
+static inline void populate_dot11f_rnr_tbtt_info_16(
 			struct mac_context *mac_ctx,
 			struct pe_session *pe_session,
 			struct pe_session *rnr_session,
