@@ -30,10 +30,13 @@
 #include "wlan_dp_cfg.h"
 #include "wlan_dp_objmgr.h"
 #include <cdp_txrx_misc.h>
+#include <dp_rx_thread.h>
 #include "qdf_periodic_work.h"
 #include <cds_api.h>
 #include "pld_common.h"
 #include "wlan_dp_nud_tracking.h"
+#include <i_qdf_net_stats.h>
+#include <qdf_types.h>
 
 #ifndef NUM_TX_RX_HISTOGRAM
 #define NUM_TX_RX_HISTOGRAM 128
@@ -143,6 +146,9 @@ struct wlan_dp_psoc_cfg {
 	uint32_t fisa_enable;
 
 	int icmp_req_to_fw_mark_interval;
+
+	bool lro_enable;
+	bool gro_enable;
 };
 
 /**
@@ -188,6 +194,60 @@ struct dp_stats {
 	struct dp_dns_stats dns_stats;
 	struct dp_tcp_stats tcp_stats;
 	struct dp_icmpv4_stats icmpv4_stats;
+	struct dp_dhcp_stats dhcp_stats;
+	struct dp_eapol_stats eapol_stats;
+};
+
+/**
+ * struct dhcp_phase - Per Peer DHCP Phases
+ * @DHCP_PHASE_ACK: upon receiving DHCP_ACK/NAK message in REQUEST phase or
+ *         DHCP_DELINE message in OFFER phase
+ * @DHCP_PHASE_DISCOVER: upon receiving DHCP_DISCOVER message in ACK phase
+ * @DHCP_PHASE_OFFER: upon receiving DHCP_OFFER message in DISCOVER phase
+ * @DHCP_PHASE_REQUEST: upon receiving DHCP_REQUEST message in OFFER phase or
+ *         ACK phase (Renewal process)
+ */
+enum dhcp_phase {
+	DHCP_PHASE_ACK,
+	DHCP_PHASE_DISCOVER,
+	DHCP_PHASE_OFFER,
+	DHCP_PHASE_REQUEST
+};
+
+/**
+ * struct dhcp_nego_status - Per Peer DHCP Negotiation Status
+ * @DHCP_NEGO_STOP: when the peer is in ACK phase or client disassociated
+ * @DHCP_NEGO_IN_PROGRESS: when the peer is in DISCOVER or REQUEST
+ *         (Renewal process) phase
+ */
+enum dhcp_nego_status {
+	DHCP_NEGO_STOP,
+	DHCP_NEGO_IN_PROGRESS
+};
+
+/**
+ * Pending frame type of EAP_FAILURE, bit number used in "pending_eap_frm_type"
+ * of sta_info.
+ */
+#define DP_PENDING_TYPE_EAP_FAILURE  0
+
+enum bss_intf_state {
+	BSS_INTF_STOP,
+	BSS_INTF_START,
+};
+
+struct wlan_dp_sta_info {
+	struct qdf_mac_addr sta_mac;
+	unsigned long pending_eap_frm_type;
+	enum dhcp_phase dhcp_phase;
+	enum dhcp_nego_status dhcp_nego_status;
+};
+
+struct wlan_dp_conn_info {
+	struct qdf_mac_addr bssid;
+	struct qdf_mac_addr peer_macaddr;
+	uint8_t proxy_arp_service;
+	uint8_t is_authenticated;
 };
 
 /**
@@ -197,11 +257,20 @@ struct dp_stats {
  * @device_mode: Device Mode
  * @intf_id: Interface ID
  * @node: list node for membership in the interface list
- * @tx_rx_disallow_mask: TX/RX disallow mask
  * @vdev: object manager vdev context
  * @dev: netdev reference
  * @stats: Netdev stats
  * @mic_work: Work to handle MIC error
+ * @num_active_task: Active task count
+ * @sap_tx_block_mask: SAP TX block mask
+ * @gro_disallowed: GRO disallowed flag
+ * @gro_flushed: GRO flushed flag
+ * @runtime_disable_rx_thread: Runtime Rx thread flag
+ * @rx_stack: function pointer Rx packet handover
+ * @tx_fn: function pointer to send Tx packet
+ * @conn_info: STA connection information
+ * @bss_state: AP BSS state
+ * @qdf_sta_eap_frm_done_event: EAP frame event management
  */
 struct wlan_dp_intf {
 	struct wlan_dp_psoc_context *dp_ctx;
@@ -214,7 +283,6 @@ struct wlan_dp_intf {
 
 	qdf_list_node_t node;
 
-	uint32_t tx_rx_disallow_mask;
 	struct wlan_objmgr_vdev *vdev;
 	qdf_netdev_t dev;
 	/**Device TX/RX statistics*/
@@ -229,7 +297,6 @@ struct wlan_dp_intf {
 	qdf_net_dev_stats stats;
 	bool con_status;
 	bool dad;
-	uint8_t active_ac;
 	uint32_t pkt_type_bitmap;
 	uint32_t track_arp_ip;
 	uint8_t dns_payload[256];
@@ -244,14 +311,33 @@ struct wlan_dp_intf {
 	uint64_t prev_fwd_tx_packets;
 	uint64_t prev_fwd_rx_packets;
 #endif /*WLAN_FEATURE_DP_BUS_BANDWIDTH*/
-#ifdef WLAN_FEATURE_MSCS
-	unsigned long mscs_prev_tx_vo_pkts;
-	uint32_t mscs_counter;
-#endif /* WLAN_FEATURE_MSCS */
 	struct dp_mic_work mic_work;
 #ifdef WLAN_NUD_TRACKING
 	struct dp_nud_tracking_info nud_tracking;
 #endif
+	qdf_atomic_t num_active_task;
+	uint32_t sap_tx_block_mask;
+
+	uint8_t gro_disallowed[DP_MAX_RX_THREADS];
+	uint8_t gro_flushed[DP_MAX_RX_THREADS];
+
+	bool runtime_disable_rx_thread;
+	ol_txrx_rx_fp rx_stack;
+	ol_txrx_tx_fp tx_fn;
+	struct wlan_dp_conn_info conn_info;
+
+	enum bss_intf_state bss_state;
+	qdf_event_t qdf_sta_eap_frm_done_event;
+};
+
+/**
+ * enum RX_OFFLOAD - Receive offload modes
+ * @CFG_LRO_ENABLED: Large Rx offload
+ * @CFG_GRO_ENABLED: Generic Rx Offload
+ */
+enum RX_OFFLOAD {
+	CFG_LRO_ENABLED = 1,
+	CFG_GRO_ENABLED,
 };
 
 /**
@@ -296,9 +382,7 @@ struct wlan_dp_psoc_context {
 	/* For Rx thread non GRO/LRO packet accounting */
 	uint64_t no_rx_offload_pkt_cnt;
 	uint64_t no_tx_offload_pkt_cnt;
-#ifdef QCA_CONFIG_SMP
-	bool is_ol_rx_thread_suspended;
-#endif
+
 	bool wlan_suspended;
 	/* Flag keeps track of wiphy suspend/resume */
 	bool is_wiphy_suspended;
@@ -329,10 +413,6 @@ struct wlan_dp_psoc_context {
 	qdf_atomic_t disable_rx_ol_in_concurrency;
 	/* disable RX offload (GRO/LRO) in low throughput scenarios */
 	qdf_atomic_t disable_rx_ol_in_low_tput;
-#ifdef WLAN_NS_OFFLOAD
-	/* IPv6 notifier callback for handling NS offload on change in IP */
-	struct notifier_block ipv6_notifier;
-#endif
 
 	uint16_t txrx_hist_idx;
 	struct tx_rx_histogram *txrx_hist;
@@ -341,5 +421,23 @@ struct wlan_dp_psoc_context {
 #ifdef FEATURE_BUS_BANDWIDTH_MGR
 	struct bbm_context *bbm_ctx;
 #endif
+
+	QDF_STATUS(*receive_offload_cb)(struct wlan_dp_intf *, qdf_nbuf_t nbuf);
+
+	struct {
+		qdf_atomic_t rx_aggregation;
+		uint8_t gro_force_flush[DP_MAX_RX_THREADS];
+		bool force_gro_enable;
+	}
+	dp_agg_param;
+
+	qdf_atomic_t rx_skip_qdisc_chk_conc;
+
+	uint32_t arp_connectivity_map;
+
+	qdf_wake_lock_t rx_wake_lock;
+
+	enum RX_OFFLOAD ol_enable;
 };
+
 #endif /* end  of _WLAN_DP_PRIV_STRUCT_H_ */

@@ -134,6 +134,31 @@ struct wlan_dp_intf*
 dp_get_intf_by_macaddr(struct wlan_dp_psoc_context *dp_ctx,
 		       struct qdf_mac_addr *addr);
 
+/* MAX iteration count to wait for dp packet process to complete */
+#define DP_TASK_MAX_WAIT_CNT  100
+/* Milli seconds to wait when packet is getting processed */
+#define DP_TASK_WAIT_TIME 200
+
+#define DP_TX_FN_CLR (1 << 0)
+#define DP_TX_SAP_STOP (1 << 1)
+#define DP_TX_DFS_CAC_BLOCK (1 << 2)
+#define WLAN_DP_SUSPEND (1 << 3)
+
+/**
+ * dp_wait_complete_tasks: Wait for DP tasks to complete
+ * @dp_ctx: DP context pointer
+ *
+ * This function waits for dp tasks like TX to be completed
+ *
+ * Return: None
+ */
+void dp_wait_complete_tasks(struct wlan_dp_psoc_context *dp_ctx);
+
+#define NUM_RX_QUEUES 5
+
+#define dp_enter() QDF_TRACE_ENTER(QDF_MODULE_ID_DP, "enter")
+#define dp_exit() QDF_TRACE_EXIT(QDF_MODULE_ID_DP, "exit")
+
 /**
  * dp_peer_obj_create_notification(): dp peer create handler
  * @peer: peer which is going to created by objmgr
@@ -332,10 +357,12 @@ dp_del_latency_critical_client(struct wlan_objmgr_vdev *vdev,
 }
 
 /**
- * is_dp_intf_valid() - Check if interface is valid
- * @dp_intf: DP interface
+ * is_dp_intf_valid() - to check DP interface valid
+ * @dp_intf: DP interface pointer
  *
- * Return: 0 if interface is valid, else error code
+ * API to check whether DP interface is valid
+ *
+ * Return: non zero value on interface valid
  */
 int is_dp_intf_valid(struct wlan_dp_intf *dp_intf);
 
@@ -551,4 +578,22 @@ void dp_trace_init(struct wlan_objmgr_psoc *psoc);
  * Return: None
  */
 void dp_set_dump_dp_trace(uint16_t cmd_type, uint16_t count);
+
+#ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
+#define DP_BUS_BW_CFG(bus_bw_cfg)	bus_bw_cfg
+#define DP_BUS_BW_GET_RX_LVL(dp_ctx)	(dp_ctx)->cur_rx_level
+static inline bool
+dp_is_low_tput_gro_enable(struct wlan_dp_psoc_context *dp_ctx)
+{
+	return (qdf_atomic_read(&dp_ctx->low_tput_gro_enable)) ? true : false;
+}
+#else
+#define DP_BUS_BW_CFG(bus_bw_cfg)	0
+#define DP_BUS_BW_GET_RX_LVL(dp_ctx)	0
+static inline bool
+dp_is_low_tput_gro_enable(struct wlan_dp_psoc_context *dp_ctx)
+{
+	return false;
+}
+#endif
 #endif

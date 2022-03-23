@@ -138,6 +138,260 @@ void ucfg_dp_resume_wlan(struct wlan_objmgr_psoc *psoc);
 QDF_STATUS
 ucfg_dp_update_config(struct wlan_objmgr_psoc *psoc,
 		      struct wlan_dp_user_config *req);
+/**
+ * ucfg_dp_wait_complete_tasks() - wait for DP tasks to complete
+ * Called from legacy layer to wait DP tasks completion
+ *
+ * Return: None
+ */
+void
+ucfg_dp_wait_complete_tasks(void);
+
+/**
+ * ucfg_dp_remove_conn_info() - Remove DP STA intf connection info
+ * @vdev: vdev mapped to STA DP interface
+ *
+ * Return: QDF_STATUS
+ */
+void
+ucfg_dp_remove_conn_info(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_conn_info_set_bssid() - set BSSID info in STA intf
+ * @vdev: vdev mapped to STA DP interface
+ * @bssid: BSSID mac
+ *
+ * Return: None
+ */
+void ucfg_dp_conn_info_set_bssid(struct wlan_objmgr_vdev *vdev,
+				 struct qdf_mac_addr *bssid);
+
+/**
+ * ucfg_dp_conn_info_set_arp_service() - set ARP service info
+ * @vdev: vdev mapped to STA DP interface
+ * @proxy_arp_service: ARP service info
+ *
+ * Return: None
+ */
+void ucfg_dp_conn_info_set_arp_service(struct wlan_objmgr_vdev *vdev,
+				       uint8_t proxy_arp_service);
+
+/**
+ * ucfg_dp_conn_info_set_peer_authenticate() - set Peer authenticated state
+ * @vdev: vdev mapped to STA DP interface
+ * is_authenticated: Peer authenticated info
+ *
+ * Return: None
+ */
+void ucfg_dp_conn_info_set_peer_authenticate(struct wlan_objmgr_vdev *vdev,
+					     uint8_t is_authenticated);
+
+/**
+ * ucfg_dp_conn_info_set_peer_mac() - set peer mac info in DP intf
+ * @vdev: vdev mapped to STA DP interface
+ * peer_mac: Peer MAC information
+ *
+ * Return: None
+ */
+void ucfg_dp_conn_info_set_peer_mac(struct wlan_objmgr_vdev *vdev,
+				    struct qdf_mac_addr *peer_mac);
+
+/**
+ * ucfg_dp_softap_check_wait_for_tx_eap_pkt() - wait for TX EAP pkt in SAP
+ * @vdev: vdev mapped to SAP DP interface
+ * mac_addr: Peer MAC address info
+ *
+ * Return: None
+ */
+void ucfg_dp_softap_check_wait_for_tx_eap_pkt(struct wlan_objmgr_vdev *vdev,
+					      struct qdf_mac_addr *mac_addr);
+
+/**
+ * ucfg_dp_update_dhcp_state_on_disassoc() - update DHCP during disassoc
+ * @vdev: vdev mapped to SAP DP interface
+ * mac_addr: Peer MAC address info
+ *
+ * Return: None
+ */
+void ucfg_dp_update_dhcp_state_on_disassoc(struct wlan_objmgr_vdev *vdev,
+					   struct qdf_mac_addr *mac_addr);
+
+/**
+ * ucfg_dp_set_dfs_cac_tx() - update DFS CAC TX block info
+ * @vdev: vdev mapped to SAP DP interface
+ * tx_block: true if TX need to be blocked
+ *
+ * Return: None
+ */
+void ucfg_dp_set_dfs_cac_tx(struct wlan_objmgr_vdev *vdev,
+			    bool tx_block);
+
+/**
+ * ucfg_dp_set_bss_state_start() - update BSS state for SAP intf
+ * @vdev: vdev mapped to SAP DP interface
+ * start: true if BSS state is started
+ *
+ * Return: None
+ */
+void ucfg_dp_set_bss_state_start(struct wlan_objmgr_vdev *vdev, bool start);
+
+/**
+ * ucfg_dp_lro_set_reset() - LRO set/reset in DP
+ * @vdev: vdev mapped to DP interface
+ * enable_flag: Enable/disable LRO feature
+ *
+ * Return: 0 on success and non zero on failure.
+ */
+QDF_STATUS ucfg_dp_lro_set_reset(struct wlan_objmgr_vdev *vdev,
+				 uint8_t enable_flag);
+/**
+ * ucfg_dp_is_ol_enabled() - Get ol enable/disable info
+ * @psoc: PSOC mapped to DP context
+ *
+ * Return: true if OL enabled
+ */
+bool ucfg_dp_is_ol_enabled(struct wlan_objmgr_psoc *psoc);
+
+#ifdef RECEIVE_OFFLOAD
+/**
+ * ucfg_dp_rx_handle_concurrency() - Handle concurrency setting in DP
+ * @psoc: PSOC mapped to DP context
+ * @is_wifi3_0_target: true if it is wifi3.0 target
+ * @is_concurrency: Is concurrency enabled/disabled
+ *
+ * Return: None
+ */
+void ucfg_dp_rx_handle_concurrency(struct wlan_objmgr_psoc *psoc,
+				   bool is_wifi3_0_target,
+				   bool is_concurrency);
+#else
+static inline
+void ucfg_dp_rx_handle_concurrency(struct wlan_objmgr_psoc *psoc,
+				   bool is_wifi3_0_target,
+				   bool is_concurrency) { }
+#endif
+
+/**
+ * ucfg_dp_is_rx_common_thread_enabled() - Get common thread enable/disable info
+ * @psoc: PSOC mapped to DP context
+ *
+ * Return: true if common thread enabled
+ */
+bool ucfg_dp_is_rx_common_thread_enabled(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_dp_is_rx_threads_enabled() - Get RX DP threads info
+ * @psoc: PSOC mapped to DP context
+ *
+ * Return: true if DP RX threads enabled
+ */
+bool ucfg_dp_is_rx_threads_enabled(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_dp_rx_ol_init() - Initialize Rx offload mode (LRO or GRO)
+ * @psoc: PSOC mapped to DP context
+ *
+ * Return: 0 on success and non zero on failure.
+ */
+QDF_STATUS ucfg_dp_rx_ol_init(struct wlan_objmgr_psoc *psoc,
+			      bool is_wifi3_0_target);
+
+/**
+ * ucfg_dp_init_txrx() - Initialize STA DP init TX/RX
+ * @vdev: vdev mapped to STA DP interface
+ *
+ * Return: 0 on success and non zero on failure.
+ */
+QDF_STATUS ucfg_dp_init_txrx(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_deinit_txrx() - Deinitialize STA DP init TX/RX
+ * @vdev: vdev mapped to STA DP interface
+ *
+ * Return: 0 on success and non zero on failure.
+ */
+QDF_STATUS ucfg_dp_deinit_txrx(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_softap_init_txrx() - Initialize SAP DP init TX/RX
+ * @vdev: vdev mapped to SAP DP interface
+ *
+ * Return: 0 on success and non zero on failure.
+ */
+QDF_STATUS ucfg_dp_softap_init_txrx(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_softap_deinit_txrx() - Deinitialize SAP DP init TX/RX
+ * @vdev: vdev mapped to SAP DP interface
+ *
+ * Return: 0 on success and non zero on failure.
+ */
+QDF_STATUS ucfg_dp_softap_deinit_txrx(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_start_xmit() - Transmit packet on STA interface
+ * @nbuf: n/w buffer to transmitted
+ * @vdev: vdev mapped to STA DP interface
+ *
+ * Return: 0 on success and non zero on failure.
+ */
+QDF_STATUS
+ucfg_dp_start_xmit(qdf_nbuf_t nbuf, struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_rx_packet_cbk() - Receive packet on STA interface
+ * @nbuf: n/w buffer to be received
+ * @vdev: vdev mapped to STA DP interface
+ *
+ * Return: 0 on success and non zero on failure.
+ */
+QDF_STATUS ucfg_dp_rx_packet_cbk(struct wlan_objmgr_vdev *vdev,
+				 qdf_nbuf_t nbuf);
+
+/**
+ * ucfg_dp_tx_timeout() - called during transmission timeout on STA
+ * @vdev: vdev mapped to STA DP interface
+ *
+ * Return: None
+ */
+void ucfg_dp_tx_timeout(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_softap_tx_timeout() - called during transmission timeout on SAP
+ * @vdev: vdev mapped to SAP DP interface
+ *
+ * Return: None
+ */
+void ucfg_dp_softap_tx_timeout(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_softap_start_xmit() - Transmit packet on SAP interface
+ * @nbuf: n/w buffer to transmitted
+ * @vdev: vdev mapped to SAP DP interface
+ *
+ * Return: 0 on success and non zero on failure.
+ */
+QDF_STATUS
+ucfg_dp_softap_start_xmit(qdf_nbuf_t nbuf, struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_get_dev_stats() - Get netdev stats info
+ * @intf_addr: DP interface MAC address
+ *
+ * Return: qdf_net_dev_stats info
+ */
+qdf_net_dev_stats *ucfg_dp_get_dev_stats(struct qdf_mac_addr *intf_addr);
+
+/**
+ * ucfg_dp_inc_rx_pkt_stats() - DP increment RX pkt stats
+ * @vdev: VDEV mapped to DP interface
+ * pkt_len: packet length to be incremented in stats
+ *
+ * Return: None
+ */
+void ucfg_dp_inc_rx_pkt_stats(struct wlan_objmgr_vdev *vdev,
+			      uint32_t pkt_len,
+			      bool delivered);
 
 /**
  * ucfg_dp_get_rx_softirq_yield_duration() - Get rx soft IRQ yield duration
@@ -153,6 +407,72 @@ ucfg_dp_get_rx_softirq_yield_duration(struct wlan_objmgr_psoc *psoc);
  * @soc: soc handle
  */
 void ucfg_dp_register_rx_mic_error_ind_handler(void *soc);
+
+/**
+ * ucfg_dp_sta_register_txrx_ops() - Register ops for TX/RX operations in STA
+ * @vdev: vdev mapped to STA DP interface
+ *
+ * Return: 0 on success and non zero on failure.
+ */
+QDF_STATUS ucfg_dp_sta_register_txrx_ops(struct wlan_objmgr_vdev *vdev);
+
+#ifdef FEATURE_WLAN_TDLS
+/**
+ * ucfg_dp_tdlsta_register_txrx_ops() - Register ops for TX/RX operations
+ * @vdev: vdev mapped to TDLS STA DP interface
+ *
+ * Return: 0 on success and non zero on failure.
+ */
+QDF_STATUS ucfg_dp_tdlsta_register_txrx_ops(struct wlan_objmgr_vdev *vdev);
+#else
+static inline
+QDF_STATUS ucfg_dp_tdlsta_register_txrx_ops(struct wlan_objmgr_vdev *vdev)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+#endif
+
+/**
+ * ucfg_dp_ocb_register_txrx_ops() - Register ops for TX/RX operations
+ * @vdev: vdev mapped to OCB DP interface
+ *
+ * Return: 0 on success and non zero on failure.
+ */
+QDF_STATUS ucfg_dp_ocb_register_txrx_ops(struct wlan_objmgr_vdev *vdev);
+
+#ifdef FEATURE_MONITOR_MODE_SUPPORT
+/**
+ * ucfg_dp_mon_register_txrx_ops() - Register ops for TX/RX operations
+ * @vdev: vdev mapped to Monitor mode DP interface
+ *
+ * Return: 0 on success and non zero on failure.
+ */
+QDF_STATUS ucfg_dp_mon_register_txrx_ops(struct wlan_objmgr_vdev *vdev);
+#else
+static inline
+QDF_STATUS ucfg_dp_mon_register_txrx_ops(struct wlan_objmgr_vdev *vdev)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+#endif
+
+/**
+ * ucfg_dp_softap_register_txrx_ops() - Register ops for TX/RX operations
+ * @vdev: vdev mapped to SAP mode DP interface
+ *
+ * Return: 0 on success and non zero on failure.
+ */
+QDF_STATUS ucfg_dp_softap_register_txrx_ops(struct wlan_objmgr_vdev *vdev,
+					    struct ol_txrx_ops *txrx_ops);
+
+/**
+ * ucfg_dp_register_pkt_capture_callbacks() - Register ops for pkt capture operations
+ * @vdev: vdev mapped to DP interface
+ *
+ * Return: 0 on success and non zero on failure.
+ */
+QDF_STATUS
+ucfg_dp_register_pkt_capture_callbacks(struct wlan_objmgr_vdev *vdev);
 
 /**
  * ucfg_dp_bbm_context_init() - Initialize BBM context
@@ -498,6 +818,14 @@ void ucfg_dp_set_pkt_type_bitmap_value(struct wlan_objmgr_vdev *vdev,
 				       uint32_t value);
 
 /**
+ * ucfg_dp_intf_get_pkt_type_bitmap_value() - Get packt type bitmap info
+ * @intf_ctx: DP interface context
+ *
+ * Return: bitmap information
+ */
+uint32_t ucfg_dp_intf_get_pkt_type_bitmap_value(void *intf_ctx);
+
+/**
  * ucfg_dp_set_track_dest_ipv4_value() - Set track_dest_ipv4 value
  * @vdev: vdev context
  *
@@ -732,4 +1060,93 @@ uint32_t ucfg_dp_get_bus_bw_compute_interval(struct wlan_objmgr_psoc *psoc);
  * Return: current bandwidth level
  */
 int ucfg_dp_get_current_throughput_level(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_dp_get_txrx_stats() - get current bandwidth level
+ * @vdev: vdev handle
+ * @dp_stats : dp_stats pointer
+ *
+ * This function update dp_stats pointer with DP component
+ * txrx stats
+ * Return: 0 on success
+ */
+QDF_STATUS ucfg_dp_get_txrx_stats(struct wlan_objmgr_vdev *vdev,
+				  struct dp_tx_rx_stats *dp_stats);
+
+/**
+ * ucfg_dp_reset_cont_txtimeout_cnt() - Reset Tx Timeout count
+ * @vdev: vdev handle
+ *
+ * Return: None
+ */
+void ucfg_dp_reset_cont_txtimeout_cnt(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_set_rx_thread_affinity() - Set rx thread affinity mask
+ * @psoc: psoc handle
+ *
+ * Return: None
+ */
+void ucfg_dp_set_rx_thread_affinity(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_dp_get_disable_rx_ol_val() - Get Rx OL concurrency value
+ * @psoc: psoc handle
+ * @disable_conc : disable rx OL concurrency value
+ * @disable_low_tput : disable rx OL low tput value
+ *
+ * this function reads and update value in pointer variable
+ * passed as arguments to function.
+ *
+ * Return: None
+ */
+
+void ucfg_dp_get_disable_rx_ol_val(struct wlan_objmgr_psoc *psoc,
+				   uint8_t *disable_conc,
+				   uint8_t *disable_low_tput);
+
+/**
+ * ucfg_dp_get_rx_aggregation_val() - Get Rx aggregation values
+ * @psoc: psoc handle
+ *
+ * Return: Rx aggregation value
+ */
+uint32_t ucfg_dp_get_rx_aggregation_val(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_dp_set_rx_aggregation_val() - Set rx aggregation value
+ * @psoc: psoc handle
+ * @value : value to be set
+ *
+ * Return: None
+ */
+void ucfg_dp_set_rx_aggregation_val(struct wlan_objmgr_psoc *psoc,
+				    uint32_t value);
+
+/**
+ * ucfg_dp_set_force_gro_enable() - Set force gro enable
+ * @psoc: psoc handle
+ * @value : value to be set
+ *
+ * Return: None
+ */
+void ucfg_dp_set_force_gro_enable(struct wlan_objmgr_psoc *psoc, bool value);
+
+/**
+ * ucfg_dp_runtime_disable_rx_thread() - Disable rx thread
+ * @psoc: psoc handle
+ * @value : value to be set (true/false)
+ *
+ * Return: None
+ */
+void ucfg_dp_runtime_disable_rx_thread(struct wlan_objmgr_vdev *vdev,
+				       bool value);
+
+/**
+ * ucfg_dp_get_napi_enabled() - Get NAPI enabled/disabled info
+ * @psoc: psoc handle mapped to DP context
+ *
+ * Return: true if NAPI enabled
+ */
+bool ucfg_dp_get_napi_enabled(struct wlan_objmgr_psoc *psoc);
 #endif /* _WLAN_DP_UCFG_API_H_ */

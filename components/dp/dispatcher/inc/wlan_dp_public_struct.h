@@ -32,6 +32,66 @@
 #include <ani_system_defs.h>
 #include "cdp_txrx_ops.h"
 #include <qdf_defer.h>
+#include <qdf_types.h>
+
+#define DP_MAX_SUBTYPES_TRACKED	4
+
+enum dp_rx_offld_flush_cb {
+	DP_RX_FLUSH_LRO,
+	DP_RX_FLUSH_THREAD,
+	DP_RX_FLUSH_NAPI,
+};
+
+enum dp_nbuf_push_type {
+	DP_NBUF_PUSH_NI,
+	DP_NBUF_PUSH_NAPI,
+	DP_NBUF_PUSH_BH_DISABLE,
+	DP_NBUF_PUSH_SIMPLE,
+};
+
+/**
+ * struct dp_eapol_stats - eapol debug stats count
+ * @eapol_m1_count: eapol m1 count
+ * @eapol_m2_count: eapol m2 count
+ * @eapol_m3_count: eapol m3 count
+ * @eapol_m4_count: eapol m4 count
+ * @tx_dropped: no of tx frames dropped by host
+ * @tx_noack_cnt: no of frames for which there is no ack
+ * @rx_delivered: no. of frames delivered to network stack
+ * @rx_refused: no of frames not delivered to network stack
+ */
+struct dp_eapol_stats {
+	uint16_t eapol_m1_count;
+	uint16_t eapol_m2_count;
+	uint16_t eapol_m3_count;
+	uint16_t eapol_m4_count;
+	uint16_t tx_dropped[DP_MAX_SUBTYPES_TRACKED];
+	uint16_t tx_noack_cnt[DP_MAX_SUBTYPES_TRACKED];
+	uint16_t rx_delivered[DP_MAX_SUBTYPES_TRACKED];
+	uint16_t rx_refused[DP_MAX_SUBTYPES_TRACKED];
+};
+
+/**
+ * struct dp_dhcp_stats - dhcp debug stats count
+ * @dhcp_dis_count: dhcp discovery count
+ * @dhcp_off_count: dhcp offer count
+ * @dhcp_req_count: dhcp request count
+ * @dhcp_ack_count: dhcp ack count
+ * @tx_dropped: no of tx frames dropped by host
+ * @tx_noack_cnt: no of frames for which there is no ack
+ * @rx_delivered: no. of frames delivered to network stack
+ * @rx_refused: no of frames not delivered to network stack
+ */
+struct dp_dhcp_stats {
+	uint16_t dhcp_dis_count;
+	uint16_t dhcp_off_count;
+	uint16_t dhcp_req_count;
+	uint16_t dhcp_ack_count;
+	uint16_t tx_dropped[DP_MAX_SUBTYPES_TRACKED];
+	uint16_t tx_noack_cnt[DP_MAX_SUBTYPES_TRACKED];
+	uint16_t rx_delivered[DP_MAX_SUBTYPES_TRACKED];
+	uint16_t rx_refused[DP_MAX_SUBTYPES_TRACKED];
+};
 
 #ifdef TX_MULTIQ_PER_AC
 #define TX_GET_QUEUE_IDX(ac, off) (((ac) * TX_QUEUES_PER_AC) + (off))
@@ -530,10 +590,41 @@ union wlan_tp_data {
  * @dp_nud_failure_work: Callback API to handle NUD failuire work
  */
 struct wlan_dp_psoc_callbacks {
-	void (*os_if_dp_gro_rx)(struct sk_buff *skb, uint8_t napi_to_use,
-				bool flush_gro);
 	hdd_cb_handle callback_ctx;
 
+	QDF_STATUS (*dp_get_nw_intf_mac_by_vdev_mac)(struct qdf_mac_addr *mac_addr,
+						     struct qdf_mac_addr *intf_mac);
+	unsigned int (*dp_get_tx_flow_low_watermark)(hdd_cb_handle cb_ctx,
+						     uint8_t intf_id);
+	void (*dp_get_tx_resource)(uint8_t intf_id, struct qdf_mac_addr *mac_addr);
+	void (*dp_get_tsf_time)(uint8_t intf_id,
+				uint64_t input_time, uint64_t *tsf_time);
+
+	void (*dp_tsf_timestamp_rx)(hdd_cb_handle ctx, qdf_nbuf_t nbuf);
+
+	QDF_STATUS (*dp_nbuf_push_pkt)(qdf_nbuf_t nbuf,
+				       enum dp_nbuf_push_type type);
+
+	QDF_STATUS (*dp_rx_napi_gro_flush)(qdf_napi_struct *napi_to_use,
+					   qdf_nbuf_t nbuf,
+					   uint8_t *force_flush);
+	QDF_STATUS (*dp_rx_napi_gro_receive)(qdf_napi_struct *napi_to_use,
+					     qdf_nbuf_t nbuf);
+
+	QDF_STATUS (*dp_lro_rx_cb)(qdf_netdev_t netdev, qdf_nbuf_t nbuf);
+
+	qdf_napi_struct *(*dp_gro_rx_legacy_get_napi)(qdf_nbuf_t nbuf,
+						      bool enable_rx_thread);
+
+	void (*dp_register_rx_offld_flush_cb)(enum dp_rx_offld_flush_cb type);
+
+	QDF_STATUS (*dp_rx_check_qdisc_configured)(qdf_netdev_t dev,
+						   uint8_t rx_ctx_id);
+
+	bool (*dp_is_gratuitous_arp_unsolicited_na)(qdf_nbuf_t nbuf);
+
+	QDF_STATUS (*dp_send_rx_pkt_over_nl)(qdf_netdev_t dev, uint8_t *addr,
+					     qdf_nbuf_t nbuf, bool unecrypted);
 	bool
 	(*wlan_dp_sta_get_dot11mode)(hdd_cb_handle context, uint8_t vdev_id,
 				     enum qca_wlan_802_11_mode *dot11_mode);
@@ -626,6 +717,7 @@ struct wlan_dp_psoc_nb_ops {
  */
 struct wlan_dp_user_config {
 	bool ipa_enable;
+	uint32_t arp_connectivity_map;
 };
 
 #endif /* end  of _WLAN_DP_PUBLIC_STRUCT_H_ */

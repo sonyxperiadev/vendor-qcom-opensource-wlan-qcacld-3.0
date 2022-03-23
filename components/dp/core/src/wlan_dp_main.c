@@ -31,6 +31,7 @@
 #include <wlan_cm_ucfg_api.h>
 #include "wlan_dp_nud_tracking.h"
 #include "target_if_dp_comp.h"
+#include "wlan_dp_txrx.h"
 
 /* Global DP context */
 static struct wlan_dp_psoc_context *gp_dp_ctx;
@@ -151,7 +152,56 @@ int is_dp_intf_valid(struct wlan_dp_intf *dp_intf)
 		dp_err("Interface is NULL");
 		return -EINVAL;
 	}
+
+	if (!dp_intf->dev) {
+		dp_err("DP interface net_device is null");
+		return -EINVAL;
+	}
+
+	if (!(dp_intf->dev->flags & IFF_UP)) {
+		dp_info_rl("DP interface '%s' is not up",
+			   dp_intf->dev->name);
+		return -EAGAIN;
+	}
+
 	return validate_interface_id(dp_intf->intf_id);
+}
+
+static QDF_STATUS
+dp_intf_wait_for_task_complete(struct wlan_dp_intf *dp_intf)
+{
+	int count = DP_TASK_MAX_WAIT_CNT;
+	int r;
+
+	while (count) {
+		r = atomic_read(&dp_intf->num_active_task);
+
+		if (!r)
+			return QDF_STATUS_SUCCESS;
+
+		if (--count) {
+			dp_err_rl("Waiting for DP task to complete: %d", count);
+			qdf_sleep(DP_TASK_WAIT_TIME);
+		}
+	}
+
+	dp_err("Timed-out waiting for DP task completion");
+	return QDF_STATUS_E_TIMEOUT;
+}
+
+void dp_wait_complete_tasks(struct wlan_dp_psoc_context *dp_ctx)
+{
+	struct wlan_dp_intf *dp_intf, *dp_intf_next = NULL;
+
+	dp_for_each_intf_held_safe(dp_ctx, dp_intf, dp_intf_next) {
+		/*
+		 * If timeout happens for one interface better to bail out
+		 * instead of waiting for other intefaces task completion
+		 */
+		if (qdf_atomic_read(&dp_intf->num_active_task))
+			if (dp_intf_wait_for_task_complete(dp_intf))
+				break;
+	}
 }
 
 #ifdef CONFIG_DP_TRACE
@@ -297,7 +347,7 @@ void dp_set_dump_dp_trace(uint16_t cmd_type, uint16_t count)
 		qdf_dp_trace_disable_live_mode();
 }
 #else
-static void dp_trace_init(struct wlan_dp_psoc_cfg *config)
+void dp_trace_init(struct wlan_objmgr_psoc *psoc)
 {
 }
 
@@ -820,6 +870,7 @@ dp_vdev_obj_create_notification(struct wlan_objmgr_vdev *vdev, void *arg)
 	struct wlan_dp_intf *dp_intf;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	struct qdf_mac_addr *mac_addr;
+	struct qdf_mac_addr intf_mac;
 
 	dp_info("DP VDEV OBJ create notification");
 
@@ -832,6 +883,14 @@ dp_vdev_obj_create_notification(struct wlan_objmgr_vdev *vdev, void *arg)
 	dp_ctx =  dp_psoc_get_priv(psoc);
 	mac_addr = (struct qdf_mac_addr *)wlan_vdev_mlme_get_macaddr(vdev);
 
+	status = dp_ctx->dp_ops.dp_get_nw_intf_mac_by_vdev_mac(mac_addr,
+							       &intf_mac);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		dp_err("Failed to get intf mac:" QDF_MAC_ADDR_FMT,
+		       QDF_MAC_ADDR_REF(mac_addr));
+		return QDF_STATUS_E_INVAL;
+	}
+
 	dp_intf = dp_get_intf_by_macaddr(dp_ctx, mac_addr);
 	if (!dp_intf) {
 		dp_err("Failed to get dp intf mac:" QDF_MAC_ADDR_FMT,
@@ -842,6 +901,18 @@ dp_vdev_obj_create_notification(struct wlan_objmgr_vdev *vdev, void *arg)
 	dp_intf->device_mode = wlan_vdev_mlme_get_opmode(vdev);
 	dp_intf->intf_id = vdev->vdev_objmgr.vdev_id;
 	dp_intf->vdev = vdev;
+	qdf_atomic_init(&dp_intf->num_active_task);
+
+	if (dp_intf->device_mode == QDF_SAP_MODE ||
+	    dp_intf->device_mode == QDF_P2P_GO_MODE) {
+		dp_intf->sap_tx_block_mask = DP_TX_FN_CLR | DP_TX_SAP_STOP;
+
+		status = qdf_event_create(&dp_intf->qdf_sta_eap_frm_done_event);
+		if (!QDF_IS_STATUS_SUCCESS(status)) {
+			dp_err("eap frm done event init failed!!");
+			return status;
+		}
+	}
 
 	status = wlan_objmgr_vdev_component_obj_attach(vdev,
 						       WLAN_COMP_DP,
@@ -878,6 +949,21 @@ dp_vdev_obj_destroy_notification(struct wlan_objmgr_vdev *vdev, void *arg)
 	dp_nud_flush_work(dp_intf);
 	dp_mic_flush_work(dp_intf);
 
+	status = dp_intf_wait_for_task_complete(dp_intf);
+	if (QDF_IS_STATUS_ERROR(status))
+		return status;
+
+	if (dp_intf->device_mode == QDF_SAP_MODE ||
+	    dp_intf->device_mode == QDF_P2P_GO_MODE) {
+		status = qdf_event_destroy(&dp_intf->qdf_sta_eap_frm_done_event);
+		if (!QDF_IS_STATUS_SUCCESS(status)) {
+			dp_err("eap frm done event destroy failed!!");
+			return status;
+		}
+	}
+	qdf_mem_zero(&dp_intf->conn_info, sizeof(struct wlan_dp_conn_info));
+	dp_intf->intf_id = WLAN_UMAC_VDEV_ID_MAX;
+	dp_intf->vdev = NULL;
 	status = wlan_objmgr_vdev_component_obj_detach(vdev,
 						       WLAN_COMP_DP,
 						       (void *)dp_intf);
@@ -994,6 +1080,8 @@ dp_psoc_obj_destroy_notification(struct wlan_objmgr_psoc *psoc, void *arg)
 		dp_err("Failed to detach psoc component obj");
 		return status;
 	}
+
+	dp_reset_all_intfs_connectivity_stats(dp_ctx);
 
 	return status;
 }

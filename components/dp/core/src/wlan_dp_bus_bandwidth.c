@@ -38,6 +38,7 @@
 #include "wlan_dp_periodic_sta_stats.h"
 #include "wlan_mlme_ucfg_api.h"
 #include <i_qdf_net_stats.h>
+#include "wlan_dp_txrx.h"
 
 #ifdef FEATURE_BUS_BANDWIDTH_MGR
 /**
@@ -1524,11 +1525,9 @@ static void dp_pld_request_bus_bandwidth(struct wlan_dp_psoc_context *dp_ctx,
 							rx_packets);
 
 		if (rx_packets < dp_ctx->dp_cfg.bus_bw_low_threshold)
-			dp_ops->dp_disable_rx_ol_for_low_tput(ctx,
-							      true);
+			dp_disable_rx_ol_for_low_tput(dp_ctx, true);
 		else
-			dp_ops->dp_disable_rx_ol_for_low_tput(ctx,
-							      false);
+			dp_disable_rx_ol_for_low_tput(dp_ctx, false);
 
 		/*
 		 * force disable pktlog and only re-enable based
