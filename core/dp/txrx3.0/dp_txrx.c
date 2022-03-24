@@ -206,7 +206,7 @@ int dp_rx_tm_get_pending(ol_txrx_soc_handle soc)
 #ifdef DP_MEM_PRE_ALLOC
 
 /* Max entries in FISA Flow table */
-#define FISA_RX_FT_SIZE 128
+#define FISA_RX_FT_SIZE 256
 
 /* Num elements in REO ring */
 #define REO_DST_RING_SIZE 1024
