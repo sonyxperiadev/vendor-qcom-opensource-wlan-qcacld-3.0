@@ -35,7 +35,7 @@
 #include "wlan_p2p_main.h"
 #include "wlan_p2p_roc.h"
 #include "wlan_p2p_off_chan_tx.h"
-#include "wlan_p2p_cfg.h"
+#include "cfg_p2p.h"
 #include "cfg_ucfg_api.h"
 #include "wlan_mlme_api.h"
 

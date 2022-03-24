@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -32,7 +33,7 @@
 #include <wlan_objmgr_cmn.h>
 #include "wlan_policy_mgr_api.h"
 #include "wlan_scan_ucfg_api.h"
-#include "wlan_tdls_cfg.h"
+#include "cfg_tdls.h"
 #include "cfg_ucfg_api.h"
 #include "wlan_tdls_api.h"
 
