@@ -63,7 +63,7 @@
 #include "wlan_mlme_public_struct.h"
 #include <wlan_crypto_global_api.h>
 #include "wlan_qct_sys.h"
-#include "wlan_blm_api.h"
+#include "wlan_dlm_api.h"
 #include "wlan_policy_mgr_i.h"
 #include "wlan_scan_utils_api.h"
 #include "wlan_p2p_cfg_api.h"
@@ -6649,6 +6649,26 @@ cm_csr_connect_done_ind(struct wlan_objmgr_vdev *vdev,
 				sme_err("Failed to enable mcc_adaptive_sched");
 				return -EAGAIN;
 			}
+		}
+	} else {
+		QDF_STATUS status = QDF_STATUS_SUCCESS;
+		uint32_t quota_val;
+
+		quota_val =
+			ucfg_mlme_get_user_mcc_quota_percentage(mac_ctx->psoc);
+
+		if (quota_val) {
+			if (enable_mcc_adaptive_sch) {
+				policy_mgr_set_dynamic_mcc_adaptive_sch(
+							mac_ctx->psoc, false);
+				status = sme_set_mas(false);
+			}
+			if (status == QDF_STATUS_SUCCESS)
+				sme_cli_set_command(wlan_vdev_get_id(vdev),
+						    WMA_VDEV_MCC_SET_TIME_QUOTA,
+						    quota_val, VDEV_CMD);
+		} else {
+			sme_debug("no applicable user mcc/quota");
 		}
 	}
 

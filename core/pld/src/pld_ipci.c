@@ -35,6 +35,9 @@
 #include "osif_psoc_sync.h"
 
 #ifdef CONFIG_PLD_IPCI_ICNSS
+
+#define WCN6750_DEVICE_ID 0x6750
+
 /**
  * pld_ipci_probe() - Probe function for platform driver
  * @dev: device
@@ -479,8 +482,18 @@ static int pld_ipci_set_thermal_state(struct device *dev,
 #define PLD_IPCI_OPS_NAME "pld_ipci"
 #endif
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0))
+static struct device_info pld_ipci_dev_info[] = {
+	{ "wcn6750", WCN6750_DEVICE_ID },
+	{ 0 }
+};
+#endif
+
 struct icnss_driver_ops pld_ipci_ops = {
 	.name       = PLD_IPCI_OPS_NAME,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0))
+	.dev_info   = pld_ipci_dev_info,
+#endif
 	.probe      = pld_ipci_probe,
 	.remove     = pld_ipci_remove,
 	.shutdown   = pld_ipci_shutdown,

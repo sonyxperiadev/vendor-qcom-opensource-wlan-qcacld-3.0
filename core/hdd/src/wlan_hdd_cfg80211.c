@@ -145,7 +145,7 @@
 #include "wlan_hdd_coex_config.h"
 #include "wlan_hdd_bcn_recv.h"
 #include "wlan_hdd_connectivity_logging.h"
-#include "wlan_blm_ucfg_api.h"
+#include "wlan_dlm_ucfg_api.h"
 #include "wlan_hdd_hw_capability.h"
 #include "wlan_hdd_oemdata.h"
 #include "os_if_fwol.h"
@@ -178,6 +178,7 @@
 #include "wlan_pkt_capture_ucfg_api.h"
 #include "os_if_pkt_capture.h"
 #include "wlan_hdd_son.h"
+#include "wlan_hdd_mcc_quota.h"
 
 #define g_mode_rates_size (12)
 #define a_mode_rates_size (8)
@@ -4093,7 +4094,7 @@ __wlan_hdd_cfg80211_set_scanning_mac_oui(struct wiphy *wiphy,
 		  scan_mac_oui.oui[0], scan_mac_oui.oui[1],
 		  scan_mac_oui.oui[2], scan_mac_oui.vdev_id);
 
-	hdd_update_ie_whitelist_attr(&scan_mac_oui.ie_whitelist, hdd_ctx);
+	hdd_update_ie_allowlist_attr(&scan_mac_oui.ie_allowlist, hdd_ctx);
 
 	mac_handle = hdd_ctx->mac_handle;
 	status = sme_set_scanning_mac_oui(mac_handle, &scan_mac_oui);
@@ -4435,7 +4436,7 @@ const struct nla_policy wlan_hdd_set_roam_param_policy[
 };
 
 /**
- * hdd_set_white_list() - parse white list
+ * hdd_set_allow_list() - parse allow list
  * @hdd_ctx:        HDD context
  * @rso_config: rso config
  * @tb:            list of attributes
@@ -4443,7 +4444,7 @@ const struct nla_policy wlan_hdd_set_roam_param_policy[
  *
  * Return: 0 on success; error number on failure
  */
-static int hdd_set_white_list(struct hdd_context *hdd_ctx,
+static int hdd_set_allow_list(struct hdd_context *hdd_ctx,
 			      struct rso_config_params *rso_config,
 			      struct nlattr **tb, uint8_t vdev_id)
 {
@@ -4612,7 +4613,7 @@ fail:
 }
 
 /**
- * hdd_set_blacklist_bssid() - parse set blacklist bssid
+ * hdd_set_denylist_bssid() - parse set denylist bssid
  * @hdd_ctx:        HDD context
  * @rso_config:   roam params
  * @tb:            list of attributes
@@ -4620,10 +4621,10 @@ fail:
  *
  * Return: 0 on success; error number on failure
  */
-static int hdd_set_blacklist_bssid(struct hdd_context *hdd_ctx,
-				   struct rso_config_params *rso_config,
-				   struct nlattr **tb,
-				   uint8_t vdev_id)
+static int hdd_set_denylist_bssid(struct hdd_context *hdd_ctx,
+				  struct rso_config_params *rso_config,
+				  struct nlattr **tb,
+				  uint8_t vdev_id)
 {
 	int rem, i;
 	uint32_t count;
@@ -4712,7 +4713,7 @@ static int hdd_set_blacklist_bssid(struct hdd_context *hdd_ctx,
 	qdf_mem_free(deny_list_bssid);
 	mac_handle = hdd_ctx->mac_handle;
 	sme_update_roam_params(mac_handle, vdev_id,
-			       rso_config, REASON_ROAM_SET_BLACKLIST_BSSID);
+			       rso_config, REASON_ROAM_SET_DENYLIST_BSSID);
 
 	return 0;
 fail:
@@ -5821,7 +5822,7 @@ static int hdd_set_ext_roam_params(struct hdd_context *hdd_ctx,
 	hdd_debug("Req Id: %u Cmd Type: %u", req_id, cmd_type);
 	switch (cmd_type) {
 	case QCA_WLAN_VENDOR_ROAMING_SUBCMD_SSID_WHITE_LIST:
-		ret = hdd_set_white_list(hdd_ctx, rso_config, tb, vdev_id);
+		ret = hdd_set_allow_list(hdd_ctx, rso_config, tb, vdev_id);
 		if (ret)
 			goto fail;
 		break;
@@ -5912,7 +5913,7 @@ static int hdd_set_ext_roam_params(struct hdd_context *hdd_ctx,
 			goto fail;
 		break;
 	case QCA_WLAN_VENDOR_ROAMING_SUBCMD_SET_BLACKLIST_BSSID:
-		ret = hdd_set_blacklist_bssid(hdd_ctx, rso_config, tb, vdev_id);
+		ret = hdd_set_denylist_bssid(hdd_ctx, rso_config, tb, vdev_id);
 		if (ret)
 			goto fail;
 		break;
@@ -7208,7 +7209,8 @@ const struct nla_policy wlan_hdd_wifi_config_policy[
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_SCAN_DEFAULT_IES] = {.type = NLA_BINARY},
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_COMMAND] = {.type = NLA_U32},
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_VALUE] = {.type = NLA_U32},
-	[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA] = {.type = NLA_U32},
+	[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_DATA] = {.type = NLA_BINARY,
+						      .len = 5000 },
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_LENGTH] = {.type = NLA_U32},
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_GENERIC_FLAGS] = {.type = NLA_U32},
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_IFINDEX] = {.type = NLA_U32},
@@ -17638,6 +17640,7 @@ const struct wiphy_vendor_command hdd_wiphy_vendor_commands[] = {
 			      QCA_WLAN_VENDOR_ATTR_ROAM_EVENTS_MAX)
 	},
 #endif
+	FEATURE_MCC_QUOTA_VENDOR_COMMANDS
 };
 
 struct hdd_context *hdd_cfg80211_wiphy_alloc(void)
@@ -21918,7 +21921,7 @@ static int __wlan_hdd_cfg80211_set_mac_acl(struct wiphy *wiphy,
 		} else if (eSAP_ACCEPT_UNLESS_DENIED == config->SapMacaddr_acl) {
 			config->num_deny_mac = params->n_acl_entries;
 			for (i = 0; i < params->n_acl_entries; i++) {
-				hdd_debug("** Add ACL MAC entry %i in BlackList :"
+				hdd_debug("** Add ACL MAC entry %i in DenyList :"
 					QDF_MAC_ADDR_FMT, i,
 					QDF_MAC_ADDR_REF(
 						params->mac_addrs[i].addr));
@@ -23363,6 +23366,9 @@ hdd_convert_cfgdot11mode_to_80211mode(enum csr_cfgdot11mode mode)
 		return QCA_WLAN_802_11_MODE_11AX;
 	case eCSR_CFG_DOT11_MODE_11AX_ONLY:
 		return QCA_WLAN_802_11_MODE_11AX;
+	case eCSR_CFG_DOT11_MODE_11BE:
+	case eCSR_CFG_DOT11_MODE_11BE_ONLY:
+		return QCA_WLAN_802_11_MODE_11BE;
 	case eCSR_CFG_DOT11_MODE_ABG:
 	case eCSR_CFG_DOT11_MODE_AUTO:
 	default:

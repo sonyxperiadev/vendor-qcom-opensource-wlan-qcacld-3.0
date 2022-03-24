@@ -1799,9 +1799,9 @@ void lim_set_twt_peer_capabilities(struct mac_context *mac_ctx,
 #endif /* WLAN_SUPPORT_TWT */
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
-static void pe_set_rmf_caps(struct mac_context *mac_ctx,
-			    struct pe_session *ft_session,
-			    struct roam_offload_synch_ind *roam_synch)
+static void pe_update_crypto_params(struct mac_context *mac_ctx,
+				    struct pe_session *ft_session,
+				    struct roam_offload_synch_ind *roam_synch)
 {
 	uint8_t *assoc_body;
 	uint16_t len;
@@ -2705,7 +2705,7 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 			sizeof(roam_sync_ind_ptr->ssid.ssid));
 	qdf_mem_copy(roam_sync_ind_ptr->ssid.ssid, ft_session_ptr->ssId.ssId,
 		     roam_sync_ind_ptr->ssid.length);
-	pe_set_rmf_caps(mac_ctx, ft_session_ptr, roam_sync_ind_ptr);
+	pe_update_crypto_params(mac_ctx, ft_session_ptr, roam_sync_ind_ptr);
 	/* Next routine may update nss based on dot11Mode */
 
 	lim_ft_prepare_add_bss_req(mac_ctx, ft_session_ptr, bss_desc);
@@ -3395,7 +3395,7 @@ void
 lim_mlo_roam_delete_link_peer(struct pe_session *pe_session,
 			      tpDphHashNode sta_ds)
 {
-	struct wlan_objmgr_peer *peer;
+	struct wlan_objmgr_peer *peer = NULL;
 	struct mac_context *mac;
 
 	mac = cds_get_context(QDF_MODULE_ID_PE);
@@ -3415,6 +3415,10 @@ lim_mlo_roam_delete_link_peer(struct pe_session *pe_session,
 	peer = wlan_objmgr_get_peer_by_mac(mac->psoc,
 					   sta_ds->staAddr,
 					   WLAN_LEGACY_MAC_ID);
+	if (!peer) {
+		mlo_err("Peer is null");
+		return;
+	}
 
 	wlan_mlo_link_peer_delete(peer);
 

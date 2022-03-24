@@ -485,10 +485,9 @@ uint32_t hdd_txrx_get_tx_ack_count(struct hdd_adapter *adapter)
 
 #ifdef FEATURE_WLAN_DIAG_SUPPORT
 /**
- * qdf_event_eapol_log() - send event to wlan diag
+ * hdd_event_eapol_log() - send event to wlan diag
  * @skb: skb ptr
  * @dir: direction
- * @eapol_key_info: eapol key info
  *
  * Return: None
  */
@@ -549,15 +548,57 @@ int hdd_set_udp_qos_upgrade_config(struct hdd_adapter *adapter,
 }
 
 /**
- * wlan_hdd_classify_pkt() - classify packet
- * @skb - sk buff
+ * wlan_hdd_mark_critical_pkt() - Identify and mark critical packets
+ * @skb: skb ptr
  *
- * Return: none
+ * Return: None
  */
-void wlan_hdd_classify_pkt(struct sk_buff *skb)
+static void wlan_hdd_mark_critical_pkt(struct sk_buff *skb)
+{
+	if (qdf_nbuf_is_ipv4_eapol_pkt(skb)) {
+		QDF_NBUF_CB_GET_PACKET_TYPE(skb) =
+				QDF_NBUF_CB_PACKET_TYPE_EAPOL;
+	} else if (qdf_nbuf_is_ipv4_arp_pkt(skb)) {
+		QDF_NBUF_CB_GET_PACKET_TYPE(skb) =
+				QDF_NBUF_CB_PACKET_TYPE_ARP;
+	} else if (qdf_nbuf_is_ipv4_dhcp_pkt(skb)) {
+		QDF_NBUF_CB_GET_PACKET_TYPE(skb) =
+				QDF_NBUF_CB_PACKET_TYPE_DHCP;
+	} else if (qdf_nbuf_is_ipv6_dhcp_pkt(skb)) {
+		QDF_NBUF_CB_GET_PACKET_TYPE(skb) =
+				QDF_NBUF_CB_PACKET_TYPE_DHCPV6;
+	} else if (qdf_nbuf_is_icmpv6_pkt(skb)) {
+		QDF_NBUF_CB_GET_PACKET_TYPE(skb) =
+			QDF_NBUF_CB_PACKET_TYPE_ICMPv6;
+	}
+
+	QDF_NBUF_CB_TX_EXTRA_IS_CRITICAL(skb) = true;
+}
+
+/**
+ * wlan_hdd_mark_non_critical_pkt() - Identify and mark non-critical packets
+ * @skb: skb ptr
+ *
+ * Return: None
+ */
+static void wlan_hdd_mark_non_critical_pkt(struct sk_buff *skb)
+{
+	if (qdf_nbuf_is_icmp_pkt(skb))
+		QDF_NBUF_CB_GET_PACKET_TYPE(skb) =
+				QDF_NBUF_CB_PACKET_TYPE_ICMP;
+	else if (qdf_nbuf_is_ipv4_wapi_pkt(skb))
+		QDF_NBUF_CB_GET_PACKET_TYPE(skb) =
+			QDF_NBUF_CB_PACKET_TYPE_WAPI;
+}
+
+void wlan_hdd_mark_pkt_type(struct sk_buff *skb)
 {
 	struct ethhdr *eh = (struct ethhdr *)skb->data;
 
+	/*
+	 * Zero out CB before accessing it. Expection is that cb is accessed
+	 * for the first time here on TX path in hard_start_xmit.
+	 */
 	qdf_mem_zero(skb->cb, sizeof(skb->cb));
 
 	/* check destination mac address is broadcast/multicast */
@@ -566,24 +607,14 @@ void wlan_hdd_classify_pkt(struct sk_buff *skb)
 	else if (is_multicast_ether_addr((uint8_t *)eh))
 		QDF_NBUF_CB_GET_IS_MCAST(skb) = true;
 
-	if (qdf_nbuf_is_ipv4_arp_pkt(skb))
-		QDF_NBUF_CB_GET_PACKET_TYPE(skb) =
-			QDF_NBUF_CB_PACKET_TYPE_ARP;
-	else if (qdf_nbuf_is_ipv4_dhcp_pkt(skb))
-		QDF_NBUF_CB_GET_PACKET_TYPE(skb) =
-			QDF_NBUF_CB_PACKET_TYPE_DHCP;
-	else if (qdf_nbuf_is_ipv4_eapol_pkt(skb))
-		QDF_NBUF_CB_GET_PACKET_TYPE(skb) =
-			QDF_NBUF_CB_PACKET_TYPE_EAPOL;
-	else if (qdf_nbuf_is_ipv4_wapi_pkt(skb))
-		QDF_NBUF_CB_GET_PACKET_TYPE(skb) =
-			QDF_NBUF_CB_PACKET_TYPE_WAPI;
-	else if (qdf_nbuf_is_icmp_pkt(skb))
-		QDF_NBUF_CB_GET_PACKET_TYPE(skb) =
-			QDF_NBUF_CB_PACKET_TYPE_ICMP;
-	else if (qdf_nbuf_is_icmpv6_pkt(skb))
-		QDF_NBUF_CB_GET_PACKET_TYPE(skb) =
-			QDF_NBUF_CB_PACKET_TYPE_ICMPv6;
+	/*
+	 * TX Packets in the HI_PRIO queue are assumed to be critical and
+	 * marked accordingly.
+	 */
+	if (skb->queue_mapping == TX_GET_QUEUE_IDX(HDD_LINUX_AC_HI_PRIO, 0))
+		wlan_hdd_mark_critical_pkt(skb);
+	else
+		wlan_hdd_mark_non_critical_pkt(skb);
 }
 
 /**
@@ -1134,8 +1165,11 @@ static void __hdd_hard_start_xmit(struct sk_buff *skb,
 		goto drop_pkt;
 	}
 
-	wlan_hdd_classify_pkt(skb);
-
+	/*
+	 * wlan_hdd_mark_pkt_type zeros out skb->cb.  All skb->cb access
+	 * should be after it.
+	 */
+	wlan_hdd_mark_pkt_type(skb);
 	QDF_NBUF_CB_TX_EXTRA_FRAG_FLAGS_NOTIFY_COMP(skb) = 1;
 
 	if (QDF_NBUF_CB_GET_PACKET_TYPE(skb) == QDF_NBUF_CB_PACKET_TYPE_ARP) {

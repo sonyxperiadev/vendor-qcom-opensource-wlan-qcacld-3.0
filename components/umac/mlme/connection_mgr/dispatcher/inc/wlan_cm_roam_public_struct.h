@@ -25,7 +25,7 @@
 #include "wlan_objmgr_cmn.h"
 #include "reg_services_public_struct.h"
 #include "wlan_cm_bss_score_param.h"
-#include "wlan_blm_public_struct.h"
+#include "wlan_dlm_public_struct.h"
 #include "wmi_unified_param.h"
 #include "wmi_unified_sta_param.h"
 #include "wlan_cm_public_struct.h"
@@ -64,7 +64,7 @@
 #define REASON_ROAM_SET_SSID_ALLOWED                26
 #define REASON_ROAM_SET_FAVORED_BSSID               27
 #define REASON_ROAM_GOOD_RSSI_CHANGED               28
-#define REASON_ROAM_SET_BLACKLIST_BSSID             29
+#define REASON_ROAM_SET_DENYLIST_BSSID              29
 #define REASON_ROAM_SCAN_HI_RSSI_MAXCOUNT_CHANGED   30
 #define REASON_ROAM_SCAN_HI_RSSI_DELTA_CHANGED      31
 #define REASON_ROAM_SCAN_HI_RSSI_DELAY_CHANGED      32
@@ -445,7 +445,8 @@ struct owe_transition_mode_info {
  * @reassoc_timer: reassoc timer
  * @ctx: reassoc timer context
  * @cm_rso_lock: RSO lock
- * @rsn_cap: original rsn caps from the connect req from supplicant
+ * @orig_sec_info: original security info coming from the connect req from
+ * supplicant, without intersection of the peer capability
  * @country_code: country code from connected AP's beacon IE
  * @disable_hi_rssi: disable high rssi
  * @roam_control_enable: Flag used to cache the status of roam control
@@ -497,7 +498,7 @@ struct rso_config {
 	struct reassoc_timer_ctx ctx;
 #endif
 	qdf_mutex_t cm_rso_lock;
-	uint16_t rsn_cap;
+	struct security_info orig_sec_info;
 	uint8_t country_code[REG_ALPHA2_LEN + 1];
 	bool disable_hi_rssi;
 	bool roam_control_enable;
@@ -570,10 +571,10 @@ struct rso_roam_policy_params {
 /**
  * struct rso_params - global RSO params
  * @num_ssid_allowed_list: The number of SSID profiles that are
- *                         in the Whitelist. When roaming, we
+ *                         in the Allowlist. When roaming, we
  *                         consider the BSSID's with this SSID
  *                         also for roaming apart from the connected one's
- * @ssid_allowed_list: Whitelist SSID's
+ * @ssid_allowed_list: Allowlist SSID's
  * @num_bssid_favored: Number of BSSID's which have a preference over others
  * @bssid_favored: Favorable BSSID's
  * @bssid_favored_factor: RSSI to be added to this BSSID to prefer it
@@ -671,6 +672,7 @@ enum roam_cfg_param {
 	IS_SINGLE_PMK,
 	LOST_LINK_RSSI,
 	ROAM_BAND,
+	HI_RSSI_SCAN_RSSI_DELTA,
 };
 
 /**
@@ -747,6 +749,8 @@ struct wlan_cm_roam_vendor_btm_params {
  *                   floor in dB
  * @bg_rssi_threshold: Value of rssi threshold to trigger roaming
  *                     after background scan.
+ * @num_allowed_authmode: Number of allowerd authmode
+ * @allowed_authmode: List of allowed authmode other than connected
  */
 struct ap_profile {
 	uint32_t flags;
@@ -758,6 +762,8 @@ struct ap_profile {
 	uint32_t rsn_mcastmgmtcipherset;
 	uint32_t rssi_abs_thresh;
 	uint8_t bg_rssi_threshold;
+	uint32_t num_allowed_authmode;
+	uint32_t allowed_authmode[WLAN_CRYPTO_AUTH_MAX];
 };
 
 /**
@@ -808,6 +814,14 @@ struct ap_profile {
  * @oce_wan_scoring: OCE WAN metrics percentage information
  * @eht_caps_weightage: EHT caps weightage out of total score in %
  * @mlo_weightage: MLO weightage out of total score in %
+ * @security_weightage: Security(WPA/WPA2/WPA3) weightage out of
+ * total score in %
+ * @security_index_score: Security scoring percentage information.
+ *                BITS 0-7 :- It contains scoring percentage of WPA security
+ *                BITS 8-15  :- It contains scoring percentage of WPA2 security
+ *                BITS 16-23 :- It contains scoring percentage of WPA3 security
+ *                BITS 24-31 :- reserved
+ *                The value of each index must be 0-100
  */
 struct scoring_param {
 	uint32_t disable_bitmap;
@@ -839,6 +853,8 @@ struct scoring_param {
 	uint8_t eht_caps_weightage;
 	uint8_t mlo_weightage;
 #endif
+	int32_t security_weightage;
+	uint32_t security_index_score;
 };
 
 /**
@@ -987,16 +1003,16 @@ struct wlan_roam_mawc_params {
  *                                  parameters
  * @op_bitmap: bitmap to determine reason of roaming
  * @vdev_id: vdev id
- * @num_bssid_black_list: The number of BSSID's that we should avoid
- *                        connecting to. It is like a blacklist of BSSID's.
- * @num_ssid_white_list: The number of SSID profiles that are in the
- *                       Whitelist. When roaming, we consider the BSSID's with
+ * @num_bssid_deny_list: The number of BSSID's that we should avoid
+ *                        connecting to. It is like a denylist of BSSID's.
+ * @num_ssid_allow_list: The number of SSID profiles that are in the
+ *                       Allowlist. When roaming, we consider the BSSID's with
  *                       this SSID also for roaming apart from the connected
  *                       one's
  * @num_bssid_preferred_list: Number of BSSID's which have a preference over
  *                            others
- * @bssid_avoid_list: Blacklist SSID's
- * @ssid_allowed_list: Whitelist SSID's
+ * @bssid_avoid_list: Denylist SSID's
+ * @ssid_allowed_list: Allowlist SSID's
  * @bssid_favored: Favorable BSSID's
  * @bssid_favored_factor: RSSI to be added to this BSSID to prefer it
  * @lca_disallow_config_present: LCA [Last Connected AP] disallow config
@@ -1008,8 +1024,8 @@ struct wlan_roam_mawc_params {
  *                             AP's, in units of db
  * @num_disallowed_aps: How many APs the target should maintain in its LCA
  *                      list
- * @delta_rssi: (dB units) when AB in RSSI blacklist improved by at least
- *              delta_rssi,it will be removed from blacklist
+ * @delta_rssi: (dB units) when AB in RSSI denylist improved by at least
+ *              delta_rssi,it will be removed from denylist
  *
  * This structure holds all the key parameters related to
  * initial connection and roaming connections.
@@ -1018,8 +1034,8 @@ struct wlan_roam_mawc_params {
 struct roam_scan_filter_params {
 	uint32_t op_bitmap;
 	uint8_t vdev_id;
-	uint32_t num_bssid_black_list;
-	uint32_t num_ssid_white_list;
+	uint32_t num_bssid_deny_list;
+	uint32_t num_ssid_allow_list;
 	uint32_t num_bssid_preferred_list;
 	struct qdf_mac_addr bssid_avoid_list[MAX_BSSID_AVOID_LIST];
 	struct wlan_ssid ssid_allowed_list[MAX_SSID_ALLOWED_LIST];
@@ -1893,7 +1909,7 @@ enum roam_rt_stats_type {
  * @timestamp:   Fw timestamp at which the frame was Tx/Rx'ed
  * @type:        Frame Type
  * @subtype:     Frame subtype
- * @is_req:      Frame is request frame or response frame
+ * @is_rsp:      True if frame is response frame else false
  * @seq_num:     Frame sequence number from the 802.11 header
  * @status_code: Status code from 802.11 spec, section 9.4.1.9
  * @tx_status: Frame TX status defined by enum qdf_dp_tx_rx_status
@@ -1906,7 +1922,7 @@ struct roam_frame_info {
 	uint32_t timestamp;
 	uint8_t type;
 	uint8_t subtype;
-	uint8_t is_req;
+	uint8_t is_rsp;
 	enum qdf_dp_tx_rx_status tx_status;
 	uint16_t seq_num;
 	uint16_t status_code;
@@ -2048,16 +2064,16 @@ enum roam_reason {
 };
 
 /*
- * struct roam_blacklist_timeout - BTM blacklist entry
- * @bssid: bssid that is to be blacklisted
- * @timeout: time duration for which the bssid is blacklisted
+ * struct roam_denylist_timeout - BTM denylist entry
+ * @bssid: bssid that is to be denylisted
+ * @timeout: time duration for which the bssid is denylisted
  * @received_time: boot timestamp at which the firmware event was received
- * @rssi: rssi value for which the bssid is blacklisted
+ * @rssi: rssi value for which the bssid is denylisted
  * @reject_reason: reason to add the BSSID to DLM
  * @original_timeout: original timeout sent by the AP
  * @source: Source of adding the BSSID to DLM
  */
-struct roam_blacklist_timeout {
+struct roam_denylist_timeout {
 	struct qdf_mac_addr bssid;
 	uint32_t timeout;
 	qdf_time_t received_time;
@@ -2068,15 +2084,15 @@ struct roam_blacklist_timeout {
 };
 
 /*
- * struct roam_blacklist_event - Blacklist event entries destination structure
+ * struct roam_denylist_event - Denylist event entries destination structure
  * @vdev_id: vdev id
  * @num_entries: total entries sent over the event
- * @roam_blacklist: blacklist details
+ * @roam_denylist: denylist details
  */
-struct roam_blacklist_event {
+struct roam_denylist_event {
 	uint8_t vdev_id;
 	uint32_t num_entries;
-	struct roam_blacklist_timeout roam_blacklist[];
+	struct roam_denylist_timeout roam_denylist[];
 };
 
 /*
@@ -2158,6 +2174,16 @@ struct roam_offload_roam_event {
 };
 
 /**
+ * struct roam_frame_stats  - Roam frame stats
+ * @num_frame: number of frames
+ * @frame_info: Roam frame info
+ */
+struct roam_frame_stats {
+	uint8_t num_frame;
+	struct roam_frame_info frame_info[WLAN_ROAM_MAX_FRAME_INFO];
+};
+
+/**
  * struct roam_stats_event - Data carried by stats event
  * @vdev_id: vdev id
  * @num_tlv: Number of roam scans triggered
@@ -2165,6 +2191,7 @@ struct roam_offload_roam_event {
  * @trigger: Roam trigger related details
  * @scan: Roam scan event details
  * @result: Roam result related info
+ * @frame_stats: Info on frame exchange during roaming
  * @data_11kv: Neighbor report/BTM request related data
  * @btm_rsp: BTM response related data
  * @roam_init_info: Roam initial related data
@@ -2178,6 +2205,7 @@ struct roam_stats_event {
 	struct wmi_roam_trigger_info trigger[MAX_ROAM_SCAN_STATS_TLV];
 	struct wmi_roam_scan_data scan[MAX_ROAM_SCAN_STATS_TLV];
 	struct wmi_roam_result result[MAX_ROAM_SCAN_STATS_TLV];
+	struct roam_frame_stats frame_stats[MAX_ROAM_SCAN_STATS_TLV];
 	struct wmi_neighbor_report_data data_11kv[MAX_ROAM_SCAN_STATS_TLV];
 	struct roam_btm_response_data btm_rsp[MAX_ROAM_SCAN_STATS_TLV];
 	struct roam_initial_data roam_init_info[MAX_ROAM_SCAN_STATS_TLV];
@@ -2466,7 +2494,7 @@ struct roam_scan_candidate_frame {
  * @roam_sync_event: RX ops function pointer for roam sync event
  * @roam_sync_frame_event: Rx ops function pointer for roam sync frame event
  * @roam_event_rx: Rx ops function pointer for roam info event
- * @btm_blacklist_event: Rx ops function pointer for btm blacklist event
+ * @btm_denylist_event: Rx ops function pointer for btm denylist event
  * @vdev_disconnect_event: Rx ops function pointer for vdev disconnect event
  * @roam_scan_chan_list_event: Rx ops function pointer for roam scan ch event
  * @roam_stats_event_rx: Rx ops function pointer for roam stats event
@@ -2482,8 +2510,8 @@ struct wlan_cm_roam_rx_ops {
 	QDF_STATUS (*roam_sync_frame_event)(struct wlan_objmgr_psoc *psoc,
 					    struct roam_synch_frame_ind *frm);
 	QDF_STATUS (*roam_event_rx)(struct roam_offload_roam_event *roam_event);
-	QDF_STATUS (*btm_blacklist_event)(struct wlan_objmgr_psoc *psoc,
-					  struct roam_blacklist_event *list);
+	QDF_STATUS (*btm_denylist_event)(struct wlan_objmgr_psoc *psoc,
+					 struct roam_denylist_event *list);
 	QDF_STATUS
 	(*vdev_disconnect_event)(struct vdev_disconnect_event_data *data);
 	QDF_STATUS

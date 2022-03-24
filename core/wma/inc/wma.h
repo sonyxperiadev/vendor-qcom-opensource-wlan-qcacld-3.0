@@ -290,6 +290,12 @@
 #define WMA_DEFAULT_HW_MODE_INDEX 0xFFFF
 #define TWO_THIRD (2/3)
 
+#ifdef WLAN_FEATURE_SON
+#define WMA_SON_MAX_PEER_EXT_STATS 16
+#else
+#define WMA_SON_MAX_PEER_EXT_STATS 0
+#endif
+
 /**
  * WMA hardware mode list bit-mask definitions.
  * Bits 4:0, 31:29 are unused.

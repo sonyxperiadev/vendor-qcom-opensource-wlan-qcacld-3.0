@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -20,9 +20,9 @@
  * DOC: define UCFG APIs exposed by the denylist mgr component
  */
 
-#include <wlan_blm_ucfg_api.h>
-#include <wlan_blm_core.h>
-#include <wlan_blm_api.h>
+#include <wlan_dlm_ucfg_api.h>
+#include <wlan_dlm_core.h>
+#include <wlan_dlm_api.h>
 #include "wlan_pmo_obj_mgmt_api.h"
 
 QDF_STATUS ucfg_dlm_init(void)

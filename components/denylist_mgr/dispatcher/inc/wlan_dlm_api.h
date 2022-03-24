@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -25,10 +25,10 @@
 
 #include "qdf_types.h"
 #include "wlan_objmgr_pdev_obj.h"
-#include <wlan_blm_public_struct.h>
+#include <wlan_dlm_public_struct.h>
 
 #ifdef FEATURE_DENYLIST_MGR
-#include "wlan_blm_core.h"
+#include "wlan_dlm_core.h"
 
 /**
  * wlan_dlm_add_bssid_to_reject_list() - Add BSSID to the specific reject list.

@@ -182,7 +182,7 @@
 #include <target_type.h>
 #include <wlan_hdd_debugfs_coex.h>
 #include <wlan_hdd_debugfs_config.h>
-#include "wlan_blm_ucfg_api.h"
+#include "wlan_dlm_ucfg_api.h"
 #include "ftm_time_sync_ucfg_api.h"
 #include "ol_txrx.h"
 #include "wlan_hdd_sta_info.h"
@@ -4072,7 +4072,7 @@ static void hdd_skip_acs_scan_timer_deinit(struct hdd_context *hdd_ctx) {}
  *
  * Return: 0 on success and errno on failure
  */
-static int hdd_update_country_code(struct hdd_context *hdd_ctx)
+int hdd_update_country_code(struct hdd_context *hdd_ctx)
 {
 	if (!country_code)
 		return 0;
@@ -6237,7 +6237,32 @@ free_net_dev:
 	return NULL;
 }
 
-static QDF_STATUS hdd_register_interface(struct hdd_adapter *adapter, bool rtnl_held)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
+static int
+hdd_register_netdevice(struct hdd_adapter *adapter, struct net_device *dev,
+		       struct hdd_adapter_create_param *params)
+{
+	int ret;
+
+	if (params->is_add_virtual_iface)
+		ret = wlan_cfg80211_register_netdevice(dev);
+	else
+		ret = register_netdevice(dev);
+
+	return ret;
+}
+#else
+static int
+hdd_register_netdevice(struct hdd_adapter *adapter, struct net_device *dev,
+		       struct hdd_adapter_create_param *params)
+{
+	return register_netdevice(dev);
+}
+#endif
+
+static QDF_STATUS
+hdd_register_interface(struct hdd_adapter *adapter, bool rtnl_held,
+		       struct hdd_adapter_create_param *params)
 {
 	struct net_device *dev = adapter->dev;
 	int ret;
@@ -6256,7 +6281,7 @@ static QDF_STATUS hdd_register_interface(struct hdd_adapter *adapter, bool rtnl_
 			}
 		}
 
-		ret = register_netdevice(dev);
+		ret = hdd_register_netdevice(adapter, dev, params);
 		if (ret) {
 			hdd_err("register_netdevice(%s) failed, err = 0x%x",
 				dev->name, ret);
@@ -6971,6 +6996,25 @@ void hdd_sta_destroy_ctx_all(struct hdd_context *hdd_ctx)
 }
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
+static void
+hdd_unregister_netdevice(struct hdd_adapter *adapter, struct net_device *dev)
+{
+	if (adapter->is_virtual_iface) {
+		wlan_cfg80211_unregister_netdevice(dev);
+		adapter->is_virtual_iface = false;
+	} else {
+		unregister_netdevice(dev);
+	}
+}
+#else
+static void
+hdd_unregister_netdevice(struct hdd_adapter *adapter, struct net_device *dev)
+{
+	unregister_netdevice(dev);
+}
+#endif
+
 static void hdd_cleanup_adapter(struct hdd_context *hdd_ctx,
 				struct hdd_adapter *adapter,
 				bool rtnl_held)
@@ -7009,7 +7053,7 @@ static void hdd_cleanup_adapter(struct hdd_context *hdd_ctx,
 
 	if (test_bit(NET_DEVICE_REGISTERED, &adapter->event_flags)) {
 		if (rtnl_held)
-			unregister_netdevice(dev);
+			hdd_unregister_netdevice(adapter, dev);
 		else
 			unregister_netdev(dev);
 		/*
@@ -7644,7 +7688,7 @@ struct hdd_adapter *hdd_open_adapter(struct hdd_context *hdd_ctx,
 			break;
 		}
 
-		status = hdd_register_interface(adapter, rtnl_held);
+		status = hdd_register_interface(adapter, rtnl_held, params);
 		if (QDF_STATUS_SUCCESS != status)
 			goto err_free_netdev;
 
@@ -7680,7 +7724,7 @@ struct hdd_adapter *hdd_open_adapter(struct hdd_context *hdd_ctx,
 			NL80211_IFTYPE_P2P_GO;
 		adapter->device_mode = session_type;
 
-		status = hdd_register_interface(adapter, rtnl_held);
+		status = hdd_register_interface(adapter, rtnl_held, params);
 		if (QDF_STATUS_SUCCESS != status)
 			goto err_free_netdev;
 
@@ -7721,7 +7765,7 @@ struct hdd_adapter *hdd_open_adapter(struct hdd_context *hdd_ctx,
 
 		adapter->wdev.iftype = NL80211_IFTYPE_STATION;
 		adapter->device_mode = session_type;
-		status = hdd_register_interface(adapter, rtnl_held);
+		status = hdd_register_interface(adapter, rtnl_held, params);
 		if (QDF_STATUS_SUCCESS != status)
 			goto err_free_netdev;
 
@@ -9319,6 +9363,27 @@ struct hdd_adapter *hdd_get_adapter_by_iface_name(struct hdd_context *hdd_ctx,
 	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter,
 					   dbgid) {
 		if (!qdf_str_cmp(adapter->dev->name, iface_name)) {
+			hdd_adapter_dev_put_debug(adapter, dbgid);
+			if (next_adapter)
+				hdd_adapter_dev_put_debug(next_adapter,
+							  dbgid);
+			return adapter;
+		}
+		hdd_adapter_dev_put_debug(adapter, dbgid);
+	}
+
+	return NULL;
+}
+
+struct hdd_adapter *hdd_get_adapter_by_ifindex(struct hdd_context *hdd_ctx,
+					       uint32_t if_index)
+{
+	struct hdd_adapter *adapter, *next_adapter = NULL;
+	wlan_net_dev_ref_dbgid dbgid = NET_DEV_HOLD_GET_ADAPTER;
+
+	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter,
+					   dbgid) {
+		if (adapter->dev->ifindex == if_index) {
 			hdd_adapter_dev_put_debug(adapter, dbgid);
 			if (next_adapter)
 				hdd_adapter_dev_put_debug(next_adapter,
@@ -11972,28 +12037,30 @@ void hdd_switch_sap_channel(struct hdd_adapter *adapter, uint8_t channel,
 		hdd_ap_ctx->sap_config.ch_width_orig, forced);
 }
 
-void hdd_switch_sap_chan_freq(struct hdd_adapter *adapter, qdf_freq_t chan_freq,
-			      bool forced)
+QDF_STATUS hdd_switch_sap_chan_freq(struct hdd_adapter *adapter,
+				    qdf_freq_t chan_freq, bool forced)
 {
 	struct hdd_ap_ctx *hdd_ap_ctx;
 	struct hdd_context *hdd_ctx;
 
 	if (hdd_validate_adapter(adapter))
-		return;
+		return QDF_STATUS_E_INVAL;
 
 	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 
 	if(wlan_hdd_validate_context(hdd_ctx))
-		return;
+		return QDF_STATUS_E_INVAL;
 
 	hdd_ap_ctx = WLAN_HDD_GET_AP_CTX_PTR(adapter);
 
 	hdd_debug("chan freq:%d width:%d",
 		  chan_freq, hdd_ap_ctx->sap_config.ch_width_orig);
 
-	policy_mgr_change_sap_channel_with_csa(
-		hdd_ctx->psoc, adapter->vdev_id, chan_freq,
-		hdd_ap_ctx->sap_config.ch_width_orig, forced);
+	return policy_mgr_change_sap_channel_with_csa(hdd_ctx->psoc,
+						      adapter->vdev_id,
+						      chan_freq,
+						      hdd_ap_ctx->sap_config.ch_width_orig,
+						      forced);
 }
 
 int hdd_update_acs_timer_reason(struct hdd_adapter *adapter, uint8_t reason)
@@ -12194,43 +12261,47 @@ void hdd_unsafe_channel_restart_sap(struct hdd_context *hdd_ctxt)
 						    adapter->vdev_id,
 						    CSA_REASON_UNSAFE_CHANNEL);
 			hdd_err("Unable to find safe chan, Stop the SAP if restriction mask is set else stop SAP");
-				hdd_stop_sap_set_tx_power(hdd_ctxt->psoc,
-							  adapter);
+			hdd_stop_sap_set_tx_power(hdd_ctxt->psoc, adapter);
+			hdd_adapter_dev_put_debug(adapter, dbgid);
+			continue;
+		}
+		/*
+		 * SAP restart due to unsafe channel. While
+		 * restarting the SAP, make sure to clear
+		 * acs_channel, channel to reset to
+		 * 0. Otherwise these settings will override
+		 * the ACS while restart.
+		 */
+		hdd_ctxt->acs_policy.acs_chan_freq =
+					AUTO_CHANNEL_SELECT;
+		ucfg_mlme_get_sap_internal_restart(hdd_ctxt->psoc,
+						   &value);
+		if (value) {
+			wlan_hdd_set_sap_csa_reason(hdd_ctxt->psoc,
+						    adapter->vdev_id,
+						    CSA_REASON_UNSAFE_CHANNEL);
+			status = hdd_switch_sap_chan_freq(adapter,
+							  restart_freq,
+							  true);
+			if (QDF_IS_STATUS_SUCCESS(status)) {
+				hdd_adapter_dev_put_debug(adapter, dbgid);
+				if (next_adapter)
+					hdd_adapter_dev_put_debug(next_adapter,
+								  dbgid);
+				return;
+			} else {
+				hdd_debug("CSA failed, check next SAP");
+			}
 		} else {
-			/*
-			 * SAP restart due to unsafe channel. While
-			 * restarting the SAP, make sure to clear
-			 * acs_channel, channel to reset to
-			 * 0. Otherwise these settings will override
-			 * the ACS while restart.
-			 */
-			hdd_ctxt->acs_policy.acs_chan_freq =
-						AUTO_CHANNEL_SELECT;
-			ucfg_mlme_get_sap_internal_restart(hdd_ctxt->psoc,
-							   &value);
-			if (value) {
-				wlan_hdd_set_sap_csa_reason(hdd_ctxt->psoc,
-						adapter->vdev_id,
-						CSA_REASON_UNSAFE_CHANNEL);
-				hdd_switch_sap_chan_freq(adapter, restart_freq,
-							 true);
-				hdd_adapter_dev_put_debug(adapter, dbgid);
-				if (next_adapter)
-					hdd_adapter_dev_put_debug(next_adapter,
-								  dbgid);
-				return;
-			}
-			else {
-				hdd_debug("sending coex indication");
-				wlan_hdd_send_svc_nlink_msg(
-						hdd_ctxt->radio_index,
-						WLAN_SVC_LTE_COEX_IND, NULL, 0);
-				hdd_adapter_dev_put_debug(adapter, dbgid);
-				if (next_adapter)
-					hdd_adapter_dev_put_debug(next_adapter,
-								  dbgid);
-				return;
-			}
+			hdd_debug("sending coex indication");
+			wlan_hdd_send_svc_nlink_msg(
+					hdd_ctxt->radio_index,
+					WLAN_SVC_LTE_COEX_IND, NULL, 0);
+			hdd_adapter_dev_put_debug(adapter, dbgid);
+			if (next_adapter)
+				hdd_adapter_dev_put_debug(next_adapter,
+							  dbgid);
+			return;
 		}
 		/* dev_put has to be done here */
 		hdd_adapter_dev_put_debug(adapter, dbgid);
@@ -14660,14 +14731,9 @@ static int hdd_features_init(struct hdd_context *hdd_ctx)
 	mac_handle_t mac_handle;
 	bool b_cts2self, is_imps_enabled;
 	bool rf_test_mode;
+	bool conn_policy;
 
 	hdd_enter();
-
-	ret = hdd_update_country_code(hdd_ctx);
-	if (ret) {
-		hdd_err("Failed to update country code; errno:%d", ret);
-		return -EINVAL;
-	}
 
 	ret = hdd_init_mws_coex(hdd_ctx);
 	if (ret)
@@ -14759,6 +14825,16 @@ static int hdd_features_init(struct hdd_context *hdd_ctx)
 		wlan_cm_set_6ghz_key_mgmt_mask(hdd_ctx->psoc,
 					       ALLOWED_KEYMGMT_6G_MASK);
 	}
+
+	status = ucfg_mlme_is_relaxed_6ghz_conn_policy_enabled(hdd_ctx->psoc,
+							       &conn_policy);
+	if (!QDF_IS_STATUS_SUCCESS(status)) {
+		hdd_err("Get 6ghz relaxed connection policy failed");
+		return QDF_STATUS_E_FAILURE;
+	}
+	if (conn_policy)
+		wlan_cm_set_relaxed_6ghz_conn_policy(hdd_ctx->psoc, true);
+
 	hdd_thermal_stats_cmd_init(hdd_ctx);
 	sme_set_cal_failure_event_cb(hdd_ctx->mac_handle,
 				     hdd_cal_fail_send_event);
@@ -17255,9 +17331,11 @@ static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 	char buf[3];
 	static const char wlan_off_str[] = "OFF";
 	static const char wlan_on_str[] = "ON";
+	static const char wlan_wait_for_ready_str[] = "WAIT_FOR_READY";
 	int ret;
 	unsigned long rc;
 	struct hdd_context *hdd_ctx;
+	bool is_wait_for_ready = false;
 
 	if (copy_from_user(buf, user_buf, 3)) {
 		pr_err("Failed to read buffer\n");
@@ -17273,7 +17351,11 @@ static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 	if (strncmp(buf, wlan_on_str, strlen(wlan_on_str)) == 0)
 		pr_info("Wifi Turning On from UI\n");
 
-	if (strncmp(buf, wlan_on_str, strlen(wlan_on_str)) != 0) {
+	if (strncmp(buf, wlan_wait_for_ready_str,
+		    strlen(wlan_wait_for_ready_str)) == 0) {
+		is_wait_for_ready = true;
+		pr_info("Wifi wait for ready from UI\n");
+	} else if (strncmp(buf, wlan_on_str, strlen(wlan_on_str)) != 0) {
 		pr_err("Invalid value received from framework");
 		goto exit;
 	}
@@ -17287,6 +17369,9 @@ static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 			return ret;
 		}
 	}
+
+	if (is_wait_for_ready)
+		return count;
 
 	/*
 	 * Flush idle shutdown work for cases to synchronize the wifi on
@@ -18249,6 +18334,7 @@ void hdd_shutdown_wlan_in_suspend(struct hdd_context *hdd_ctx)
 #define SHUTDOWN_IN_SUSPEND_PREVENT_TIMEOUT 5
 
 	if (!hdd_is_any_interface_open(hdd_ctx)) {
+		hdd_ctx->shutdown_in_suspend = true;
 		qdf_delayed_work_start(&hdd_ctx->psoc_idle_timeout_work,
 				       SHUTDOWN_IN_SUSPEND_WAIT_TIMEOUT);
 		hdd_prevent_suspend_timeout(SHUTDOWN_IN_SUSPEND_PREVENT_TIMEOUT,
@@ -19027,43 +19113,43 @@ static int hdd_update_pmo_config(struct hdd_context *hdd_ctx)
 	return qdf_status_to_os_return(status);
 }
 
-void hdd_update_ie_whitelist_attr(struct probe_req_whitelist_attr *ie_whitelist,
+void hdd_update_ie_allowlist_attr(struct probe_req_allowlist_attr *ie_allowlist,
 				  struct hdd_context *hdd_ctx)
 {
-	struct wlan_fwol_ie_whitelist whitelist = {0};
+	struct wlan_fwol_ie_allowlist allowlist = {0};
 	struct wlan_objmgr_psoc *psoc = hdd_ctx->psoc;
 	QDF_STATUS status;
-	bool is_ie_whitelist_enable = false;
+	bool is_ie_allowlist_enable = false;
 	uint8_t i = 0;
 
-	status = ucfg_fwol_get_ie_whitelist(psoc, &is_ie_whitelist_enable);
+	status = ucfg_fwol_get_ie_allowlist(psoc, &is_ie_allowlist_enable);
 	if (QDF_IS_STATUS_ERROR(status)) {
-		hdd_err("Unable to get IE whitelist param");
+		hdd_err("Unable to get IE allowlist param");
 		return;
 	}
 
-	ie_whitelist->white_list = is_ie_whitelist_enable;
-	if (!ie_whitelist->white_list)
+	ie_allowlist->allow_list = is_ie_allowlist_enable;
+	if (!ie_allowlist->allow_list)
 		return;
 
-	status = ucfg_fwol_get_all_whitelist_params(psoc, &whitelist);
+	status = ucfg_fwol_get_all_allowlist_params(psoc, &allowlist);
 	if (QDF_IS_STATUS_ERROR(status)) {
-		hdd_err("Unable to get all whitelist params");
+		hdd_err("Unable to get all allowlist params");
 		return;
 	}
 
-	ie_whitelist->ie_bitmap[0] = whitelist.ie_bitmap_0;
-	ie_whitelist->ie_bitmap[1] = whitelist.ie_bitmap_1;
-	ie_whitelist->ie_bitmap[2] = whitelist.ie_bitmap_2;
-	ie_whitelist->ie_bitmap[3] = whitelist.ie_bitmap_3;
-	ie_whitelist->ie_bitmap[4] = whitelist.ie_bitmap_4;
-	ie_whitelist->ie_bitmap[5] = whitelist.ie_bitmap_5;
-	ie_whitelist->ie_bitmap[6] = whitelist.ie_bitmap_6;
-	ie_whitelist->ie_bitmap[7] = whitelist.ie_bitmap_7;
+	ie_allowlist->ie_bitmap[0] = allowlist.ie_bitmap_0;
+	ie_allowlist->ie_bitmap[1] = allowlist.ie_bitmap_1;
+	ie_allowlist->ie_bitmap[2] = allowlist.ie_bitmap_2;
+	ie_allowlist->ie_bitmap[3] = allowlist.ie_bitmap_3;
+	ie_allowlist->ie_bitmap[4] = allowlist.ie_bitmap_4;
+	ie_allowlist->ie_bitmap[5] = allowlist.ie_bitmap_5;
+	ie_allowlist->ie_bitmap[6] = allowlist.ie_bitmap_6;
+	ie_allowlist->ie_bitmap[7] = allowlist.ie_bitmap_7;
 
-	ie_whitelist->num_vendor_oui = whitelist.no_of_probe_req_ouis;
-	for (i = 0; i < ie_whitelist->num_vendor_oui; i++)
-		ie_whitelist->voui[i] = whitelist.probe_req_voui[i];
+	ie_allowlist->num_vendor_oui = allowlist.no_of_probe_req_ouis;
+	for (i = 0; i < ie_allowlist->num_vendor_oui; i++)
+		ie_allowlist->voui[i] = allowlist.probe_req_voui[i];
 }
 
 QDF_STATUS hdd_update_score_config(struct hdd_context *hdd_ctx)
@@ -19121,7 +19207,7 @@ int hdd_update_scan_config(struct hdd_context *hdd_ctx)
 		return -EIO;
 	}
 	scan_cfg.sta_miracast_mcc_rest_time = mcast_mcc_rest_time;
-	hdd_update_ie_whitelist_attr(&scan_cfg.ie_whitelist, hdd_ctx);
+	hdd_update_ie_allowlist_attr(&scan_cfg.ie_allowlist, hdd_ctx);
 
 	status = ucfg_scan_update_user_config(psoc, &scan_cfg);
 	if (status != QDF_STATUS_SUCCESS) {

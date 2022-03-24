@@ -334,8 +334,7 @@ void lim_update_short_slot_time(struct mac_context *mac, tSirMacAddr peerMacAddr
  * @frame_type: Type of mgmt frame
  * @frame: Frame pointer
  * @frame_len: Length og mgmt frame
- * @session_id: session id
- * @psession_entry: PE Session Entry
+ * @vdev_id: session id
  * @rx_freq: Frequency on which packet is received
  * @rx_rssi: rssi value
  * @rx_flags: RXMGMT flags to be set for the frame. Defined in enum rxmgmt_flags
@@ -347,8 +346,7 @@ void lim_update_short_slot_time(struct mac_context *mac, tSirMacAddr peerMacAddr
 */
 void lim_send_sme_mgmt_frame_ind(struct mac_context *mac_ctx, uint8_t frame_type,
 				 uint8_t *frame, uint32_t frame_len,
-				 uint16_t session_id, uint32_t rx_freq,
-				 struct pe_session *psession_entry,
+				 uint16_t vdev_id, uint32_t rx_freq,
 				 int8_t rx_rssi, enum rxmgmt_flags rx_flags);
 
 /*
@@ -561,14 +559,14 @@ int
 lim_assoc_rej_get_remaining_delta(struct sir_rssi_disallow_lst *node);
 
 /**
- * lim_rem_blacklist_entry_with_lowest_delta() - Remove the entry with lowest
+ * lim_rem_denylist_entry_with_lowest_delta() - Remove the entry with lowest
  * time delta
  * @list: rssi based rejected BSSID list
  *
  * Return: QDF_STATUS
  */
 QDF_STATUS
-lim_rem_blacklist_entry_with_lowest_delta(qdf_list_t *list);
+lim_rem_denylist_entry_with_lowest_delta(qdf_list_t *list);
 
 static inline enum reg_wifi_band lim_get_rf_band(uint32_t chan_freq)
 {
@@ -1098,7 +1096,7 @@ bool lim_get_vdev_rmf_capable(struct mac_context *mac,
 			      struct pe_session *session);
 
 /**
- * lim_add_bssid_to_reject_list:- Add rssi reject Ap info to blacklist mgr.
+ * lim_add_bssid_to_reject_list:- Add rssi reject Ap info to denylist mgr.
  * @pdev: pdev
  * @entry: info of the BSSID to be put in rssi reject list.
  *

@@ -452,7 +452,7 @@ static bool sap_chan_sel_init(mac_handle_t mac_handle,
 		/* Initialise max ACS weight for all channels */
 		pSpectCh->weight = SAP_ACS_WEIGHT_MAX;
 
-		/* check if the channel is in NOL blacklist */
+		/* check if the channel is in NOL denylist */
 		if (sap_dfs_is_channel_in_nol_list(
 					sap_ctx, *pChans,
 					PHY_SINGLE_CHANNEL_CENTERED)) {

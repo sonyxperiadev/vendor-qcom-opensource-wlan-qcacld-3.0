@@ -66,7 +66,7 @@
 #include "qdf_util.h"
 #include "wlan_qct_sys.h"
 #include <wlan_scan_ucfg_api.h>
-#include <wlan_blm_api.h>
+#include <wlan_dlm_api.h>
 #include <lim_assoc_utils.h>
 #include "wlan_mlme_ucfg_api.h"
 #include "nan_ucfg_api.h"
@@ -8149,11 +8149,11 @@ QDF_STATUS lim_send_mlo_caps_ie(struct mac_context *mac_ctx,
 
 	status_2g = lim_send_ie(mac_ctx, vdev_id, DOT11F_EID_MLO_IE,
 				CDS_BAND_2GHZ, &mlo_caps[2],
-				mlo_cap_total_len);
+				EHT_CAP_OUI_LEN + QDF_MAC_ADDR_SIZE);
 
 	status_5g = lim_send_ie(mac_ctx, vdev_id, DOT11F_EID_MLO_IE,
 				CDS_BAND_5GHZ, &mlo_caps[2],
-				mlo_cap_total_len);
+				EHT_CAP_OUI_LEN + QDF_MAC_ADDR_SIZE);
 
 	if (QDF_IS_STATUS_SUCCESS(status_2g) &&
 	    QDF_IS_STATUS_SUCCESS(status_5g)) {
@@ -8769,7 +8769,7 @@ lim_assoc_rej_get_remaining_delta(struct sir_rssi_disallow_lst *node)
 }
 
 QDF_STATUS
-lim_rem_blacklist_entry_with_lowest_delta(qdf_list_t *list)
+lim_rem_denylist_entry_with_lowest_delta(qdf_list_t *list)
 {
 	struct sir_rssi_disallow_lst *oldest_node = NULL;
 	struct sir_rssi_disallow_lst *cur_node;
@@ -8817,7 +8817,7 @@ lim_add_bssid_to_reject_list(struct wlan_objmgr_pdev *pdev,
 	ap_info.source = entry->source;
 	ap_info.rssi_reject_params.received_time = entry->received_time;
 	ap_info.rssi_reject_params.original_timeout = entry->original_timeout;
-	/* Add this ap info to the rssi reject ap type in blacklist manager */
+	/* Add this ap info to the rssi reject ap type in denylist manager */
 	wlan_dlm_add_bssid_to_reject_list(pdev, &ap_info);
 }
 
@@ -8950,8 +8950,7 @@ enum rateid lim_get_min_session_txrate(struct pe_session *session)
 
 void lim_send_sme_mgmt_frame_ind(struct mac_context *mac_ctx, uint8_t frame_type,
 				 uint8_t *frame, uint32_t frame_len,
-				 uint16_t session_id, uint32_t rx_freq,
-				 struct pe_session *psession_entry,
+				 uint16_t vdev_id, uint32_t rx_freq,
 				 int8_t rx_rssi, enum rxmgmt_flags rx_flags)
 {
 	tpSirSmeMgmtFrameInd sme_mgmt_frame = NULL;
@@ -8965,13 +8964,13 @@ void lim_send_sme_mgmt_frame_ind(struct mac_context *mac_ctx, uint8_t frame_type
 
 	if (qdf_is_macaddr_broadcast(
 		(struct qdf_mac_addr *)(frame + 4)) &&
-		!session_id) {
+		!vdev_id) {
 		pe_debug("Broadcast action frame");
-		session_id = SME_SESSION_ID_BROADCAST;
+		vdev_id = SME_SESSION_ID_BROADCAST;
 	}
 
 	sme_mgmt_frame->frame_len = frame_len;
-	sme_mgmt_frame->sessionId = session_id;
+	sme_mgmt_frame->sessionId = vdev_id;
 	sme_mgmt_frame->frameType = frame_type;
 	sme_mgmt_frame->rxRssi = rx_rssi;
 	sme_mgmt_frame->rx_freq = rx_freq;
@@ -8984,7 +8983,9 @@ void lim_send_sme_mgmt_frame_ind(struct mac_context *mac_ctx, uint8_t frame_type
 		mac_ctx->mgmt_frame_ind_cb(sme_mgmt_frame);
 	else
 		pe_debug_rl("Management indication callback not registered!!");
+
 	qdf_mem_free(sme_mgmt_frame);
+
 	return;
 }
 

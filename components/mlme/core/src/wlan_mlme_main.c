@@ -354,6 +354,28 @@ static void mlme_init_wds_config_cfg(struct wlan_objmgr_psoc *psoc,
 }
 #endif
 
+#ifdef CONFIG_BAND_6GHZ
+/**
+ * mlme_init_relaxed_6ghz_conn_policy() - initialize relaxed 6GHz
+ *                                        policy connection flag
+ * @psoc: Pointer to PSOC
+ * @gen: pointer to generic CFG items
+ *
+ * Return: None
+ */
+static void mlme_init_relaxed_6ghz_conn_policy(struct wlan_objmgr_psoc *psoc,
+					       struct wlan_mlme_generic *gen)
+{
+	gen->relaxed_6ghz_conn_policy =
+		cfg_default(CFG_RELAXED_6GHZ_CONN_POLICY);
+}
+#else
+static void mlme_init_relaxed_6ghz_conn_policy(struct wlan_objmgr_psoc *psoc,
+					       struct wlan_mlme_generic *gen)
+{
+}
+#endif
+
 /**
  * mlme_init_mgmt_hw_tx_retry_count_cfg() - initialize mgmt hw tx retry count
  * @psoc: Pointer to PSOC
@@ -461,6 +483,7 @@ static void mlme_init_generic_cfg(struct wlan_objmgr_psoc *psoc,
 	gen->tx_retry_multiplier = cfg_get(psoc, CFG_TX_RETRY_MULTIPLIER);
 	mlme_init_wds_config_cfg(psoc, gen);
 	mlme_init_mgmt_hw_tx_retry_count_cfg(psoc, gen);
+	mlme_init_relaxed_6ghz_conn_policy(psoc, gen);
 }
 
 static void mlme_init_edca_ani_cfg(struct wlan_objmgr_psoc *psoc,
@@ -2460,7 +2483,6 @@ mlme_init_dot11_mode_cfg(struct wlan_objmgr_psoc *psoc,
 
 /**
  * mlme_iot_parse_aggr_info - parse aggr related items in ini
- *
  * @psoc: PSOC pointer
  * @iot: IOT related CFG items
  *
@@ -2566,7 +2588,6 @@ end:
 
 /**
  * mlme_iot_parse_aggr_info - parse IOT related items in ini
- *
  * @psoc: PSOC pointer
  * @iot: IOT related CFG items
  *
@@ -2581,7 +2602,6 @@ mlme_init_iot_cfg(struct wlan_objmgr_psoc *psoc,
 
 /**
  * mlme_init_dual_sta_config - Initialize dual sta configuratons
- *
  * @gen: Generic CFG config items
  *
  * Return: None
@@ -2594,6 +2614,26 @@ mlme_init_dual_sta_config(struct wlan_mlme_generic *gen)
 				QCA_WLAN_CONCURRENT_STA_POLICY_UNBIASED;
 }
 
+#ifdef WLAN_FEATURE_MCC_QUOTA
+/**
+ * mlme_init_user_mcc_quota_config - Initialize mcc quota
+ * @gen: Generic CFG config items
+ *
+ * Return: None
+ */
+static void
+mlme_init_user_mcc_quota_config(struct wlan_mlme_generic *gen)
+{
+	gen->user_mcc_quota.quota = 0;
+	gen->user_mcc_quota.op_mode = QDF_MAX_NO_OF_MODE;
+	gen->user_mcc_quota.vdev_id = WLAN_UMAC_VDEV_ID_MAX;
+}
+#else
+static void
+mlme_init_user_mcc_quota_config(struct wlan_mlme_generic *gen)
+{
+}
+#endif
 QDF_STATUS mlme_cfg_on_psoc_enable(struct wlan_objmgr_psoc *psoc)
 {
 	struct wlan_mlme_psoc_ext_obj *mlme_obj;
@@ -2649,6 +2689,7 @@ QDF_STATUS mlme_cfg_on_psoc_enable(struct wlan_objmgr_psoc *psoc)
 	mlme_init_ratemask_cfg(psoc, &mlme_cfg->ratemask_cfg);
 	mlme_init_iot_cfg(psoc, &mlme_cfg->iot);
 	mlme_init_dual_sta_config(&mlme_cfg->gen);
+	mlme_init_user_mcc_quota_config(&mlme_cfg->gen);
 
 	return status;
 }

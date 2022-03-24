@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -135,7 +135,9 @@ static QDF_STATUS p2p_vdev_check_valid(struct tx_action_context *tx_ctx)
 	    (tx_ctx->frame_info.sub_type == P2P_MGMT_ACTION) &&
 	    (tx_ctx->frame_info.public_action_type ==
 	     P2P_PUBLIC_ACTION_NOT_SUPPORT) &&
-	    (tx_ctx->frame_info.action_type == P2P_ACTION_NOT_SUPPORT)) {
+	    (tx_ctx->frame_info.action_type == P2P_ACTION_NOT_SUPPORT) &&
+	    !(wlan_vdev_mlme_feat_cap_get(vdev, WLAN_VDEV_F_SON) &&
+	      !tx_ctx->off_chan)) {
 		p2p_debug("drop action frame for SAP");
 		status = QDF_STATUS_E_FAILURE;
 	}
@@ -182,7 +184,9 @@ static QDF_STATUS p2p_vdev_check_valid(struct tx_action_context *tx_ctx)
 	    (tx_ctx->frame_info.sub_type == P2P_MGMT_ACTION) &&
 	    (tx_ctx->frame_info.public_action_type ==
 	     P2P_PUBLIC_ACTION_NOT_SUPPORT) &&
-	    (tx_ctx->frame_info.action_type == P2P_ACTION_NOT_SUPPORT)) {
+	    (tx_ctx->frame_info.action_type == P2P_ACTION_NOT_SUPPORT) &&
+	    !(wlan_vdev_mlme_feat_cap_get(vdev, WLAN_VDEV_F_SON) &&
+	      !tx_ctx->off_chan)) {
 		p2p_debug("drop action frame for SAP");
 		status = QDF_STATUS_E_FAILURE;
 	}

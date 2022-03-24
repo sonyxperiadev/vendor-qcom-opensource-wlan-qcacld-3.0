@@ -507,6 +507,10 @@ ifeq ($(CONFIG_QCACLD_WLAN_CONNECTIVITY_LOGGING), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_connectivity_logging.o
 endif
 
+ifeq ($(CONFIG_WLAN_FEATURE_MCC_QUOTA), y)
+HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_mcc_quota.o
+endif
+
 $(call add-wlan-objs,hdd,$(HDD_OBJS))
 
 ###### OSIF_SYNC ########
@@ -605,6 +609,7 @@ MAC_INC := 	-I$(WLAN_ROOT)/$(MAC_INC_DIR) \
 
 MAC_DPH_OBJS :=	$(MAC_SRC_DIR)/dph/dph_hash_table.o
 
+ifeq ($(KERNEL_SUPPORTS_NESTED_COMPOSITES),y)
 MAC_LIM_OBJS := $(MAC_SRC_DIR)/pe/lim/lim_aid_mgmt.o \
 		$(MAC_SRC_DIR)/pe/lim/lim_admit_control.o \
 		$(MAC_SRC_DIR)/pe/lim/lim_api.o \
@@ -637,6 +642,10 @@ MAC_LIM_OBJS := $(MAC_SRC_DIR)/pe/lim/lim_aid_mgmt.o \
 		$(MAC_SRC_DIR)/pe/lim/lim_timer_utils.o \
 		$(MAC_SRC_DIR)/pe/lim/lim_trace.o \
 		$(MAC_SRC_DIR)/pe/lim/lim_utils.o
+else
+#composite of all of the above is in lim.c
+MAC_LIM_OBJS := $(MAC_SRC_DIR)/pe/lim/lim.o
+endif
 
 ifeq ($(CONFIG_QCOM_TDLS), y)
 MAC_LIM_OBJS += $(MAC_SRC_DIR)/pe/lim/lim_process_tdls.o
@@ -1566,17 +1575,17 @@ $(call add-wlan-objs,mlme,$(MLME_OBJS))
 
 ####### DENYLIST_MGR ########
 
-BLM_DIR := components/blacklist_mgr
-BLM_INC := -I$(WLAN_ROOT)/$(BLM_DIR)/core/inc \
-                -I$(WLAN_ROOT)/$(BLM_DIR)/dispatcher/inc
+DLM_DIR := components/denylist_mgr
+DLM_INC := -I$(WLAN_ROOT)/$(DLM_DIR)/core/inc \
+                -I$(WLAN_ROOT)/$(DLM_DIR)/dispatcher/inc
 ifeq ($(CONFIG_FEATURE_DENYLIST_MGR), y)
-BLM_OBJS :=    $(BLM_DIR)/core/src/wlan_blm_main.o \
-                $(BLM_DIR)/core/src/wlan_blm_core.o \
-                $(BLM_DIR)/dispatcher/src/wlan_blm_ucfg_api.o \
-                $(BLM_DIR)/dispatcher/src/wlan_blm_tgt_api.o
+DLM_OBJS :=    $(DLM_DIR)/core/src/wlan_dlm_main.o \
+                $(DLM_DIR)/core/src/wlan_dlm_core.o \
+                $(DLM_DIR)/dispatcher/src/wlan_dlm_ucfg_api.o \
+                $(DLM_DIR)/dispatcher/src/wlan_dlm_tgt_api.o
 endif
 
-$(call add-wlan-objs,blm,$(BLM_OBJS))
+$(call add-wlan-objs,dlm,$(DLM_OBJS))
 
 ######### CONNECTIVITY_LOGGING #########
 CONN_LOGGING_DIR := components/cmn_services/logging
@@ -1679,8 +1688,8 @@ CLD_TARGET_IF_OBJ += $(CLD_TARGET_IF_DIR)/disa/src/target_if_disa.o
 endif
 
 ifeq ($(CONFIG_FEATURE_DENYLIST_MGR), y)
-CLD_TARGET_IF_INC += -I$(WLAN_ROOT)/$(CLD_TARGET_IF_DIR)/blacklist_mgr/inc
-CLD_TARGET_IF_OBJ += $(CLD_TARGET_IF_DIR)/blacklist_mgr/src/target_if_blm.o
+CLD_TARGET_IF_INC += -I$(WLAN_ROOT)/$(CLD_TARGET_IF_DIR)/denylist_mgr/inc
+CLD_TARGET_IF_OBJ += $(CLD_TARGET_IF_DIR)/denylist_mgr/src/target_if_dlm.o
 endif
 
 ifeq ($(CONFIG_WLAN_FEATURE_ACTION_OUI), y)
@@ -2937,7 +2946,7 @@ INCS +=		$(UMAC_SM_INC)
 INCS +=		$(UMAC_MLME_INC)
 INCS +=		$(MLME_INC)
 INCS +=		$(FWOL_INC)
-INCS +=		$(BLM_INC)
+INCS +=		$(DLM_INC)
 INCS +=		$(CONN_LOGGING_INC)
 
 ifeq ($(CONFIG_REMOVE_PKT_LOG), n)
@@ -4262,7 +4271,7 @@ cppflags-$(CONFIG_IPA_SET_RESET_TX_DB_PA) += -DIPA_SET_RESET_TX_DB_PA
 cppflags-$(CONFIG_DEVICE_FORCE_WAKE_ENABLE) += -DDEVICE_FORCE_WAKE_ENABLE
 cppflags-$(CONFIG_WINDOW_REG_PLD_LOCK_ENABLE) += -DWINDOW_REG_PLD_LOCK_ENABLE
 cppflags-$(CONFIG_DUMP_REO_QUEUE_INFO_IN_DDR) += -DDUMP_REO_QUEUE_INFO_IN_DDR
-cppflags-$(CONFIG_WLAN_FEATURE_REDUCE_RX_THREADS) += -DWLAN_FEATURE_REDUCE_RX_THREADS
+cppflags-$(CONFIG_DP_RX_REFILL_CPU_PERF_AFFINE_MASK) += -DDP_RX_REFILL_CPU_PERF_AFFINE_MASK
 
 ifdef CONFIG_MAX_CLIENTS_ALLOWED
 ccflags-y += -DWLAN_MAX_CLIENTS_ALLOWED=$(CONFIG_MAX_CLIENTS_ALLOWED)
@@ -4316,6 +4325,19 @@ cppflags-$(CONFIG_FEATURE_MCL_REPEATER) += -DFEATURE_MCL_REPEATER
 ccflags-$(CONFIG_IPA_WDI3_TX_TWO_PIPES) += -DIPA_WDI3_TX_TWO_PIPES
 
 cppflags-$(CONFIG_DP_TX_TRACKING) += -DDP_TX_TRACKING
+
+ifdef CONFIG_CHIP_VERSION
+cppflags-y += -DCHIP_VERSION=$(CONFIG_CHIP_VERSION)
+endif
+
+cppflags-$(CONFIG_WLAN_FEATURE_MARK_FIRST_WAKEUP_PACKET) += -DWLAN_FEATURE_MARK_FIRST_WAKEUP_PACKET
+
+ifeq ($(CONFIG_WLAN_FEATURE_MCC_QUOTA), y)
+cppflags-y += -DWLAN_FEATURE_MCC_QUOTA
+ifdef CONFIG_WLAN_MCC_MIN_CHANNEL_QUOTA
+ccflags-y += -DWLAN_MCC_MIN_CHANNEL_QUOTA=$(CONFIG_WLAN_MCC_MIN_CHANNEL_QUOTA)
+endif
+endif
 
 KBUILD_CPPFLAGS += $(cppflags-y)
 

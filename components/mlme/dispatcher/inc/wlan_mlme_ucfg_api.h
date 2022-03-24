@@ -2761,6 +2761,23 @@ ucfg_mlme_set_rf_test_mode_enabled(struct wlan_objmgr_psoc *psoc, bool value)
 }
 
 /**
+ * ucfg_mlme_is_relaxed_6ghz_conn_policy_enabled() - Get 6ghz relaxed
+ *                                                   connection policy flag
+ * @psoc: pointer to psoc object
+ * @value: Value that needs to be set from the caller
+ *
+ * Inline UCFG API to be used by HDD/OSIF callers
+ *
+ * Return: QDF Status
+ */
+static inline QDF_STATUS
+ucfg_mlme_is_relaxed_6ghz_conn_policy_enabled(struct wlan_objmgr_psoc *psoc,
+					      bool *value)
+{
+	return wlan_mlme_is_relaxed_6ghz_conn_policy_enabled(psoc, value);
+}
+
+/**
  * ucfg_mlme_get_opr_rate() - Get operational rate set
  * @psoc: pointer to vdev object
  * @buf: buffer to get rates set
@@ -4426,7 +4443,6 @@ bool ucfg_mlme_get_coex_unsafe_chan_reg_disable(
  *
  * Return: QDF_STATUS
  */
-
 static inline QDF_STATUS
 ucfg_set_ratemask_params(struct wlan_objmgr_vdev *vdev,
 			 uint8_t num_ratemask,
@@ -4434,5 +4450,55 @@ ucfg_set_ratemask_params(struct wlan_objmgr_vdev *vdev,
 {
 	return wlan_mlme_update_ratemask_params(vdev, num_ratemask,
 						rate_params);
+}
+
+/*
+ * ucfg_mlme_set_user_mcc_quota() - Set the user set mcc quota in mlme
+ * value
+ * @psoc: pointer to psoc object
+ * @quota: pointer to user mcc quota object
+ *
+ * Return: QDF Status
+ */
+static inline
+QDF_STATUS ucfg_mlme_set_user_mcc_quota(struct wlan_objmgr_psoc *psoc,
+					struct wlan_user_mcc_quota *quota)
+{
+	return wlan_mlme_set_user_mcc_quota(psoc, quota);
+}
+
+/**
+ * ucfg_mlme_get_user_mcc_quota() - Get the user set mcc quota from mlme
+ * value
+ * @psoc: pointer to psoc object
+ * @quota: pointer to user mcc quota object
+ *
+ * Return: QDF Status
+ */
+static inline
+QDF_STATUS ucfg_mlme_get_user_mcc_quota(struct wlan_objmgr_psoc *psoc,
+					struct wlan_user_mcc_quota *quota)
+{
+	return wlan_mlme_get_user_mcc_quota(psoc, quota);
+}
+
+/**
+ * ucfg_mlme_get_user_mcc_quota_percentage() - Get user mcc quota percentage
+ * duty-cycle for a i/f type or mode
+ * @psoc: pointer to psoc object
+ *
+ * MCC duty-cycle value in below format
+ * ******************************************************
+ * |bit 31-24 | bit 23-16 | bits 15-8   |bits 7-0   |
+ * | Unused   | Quota for | chan. # for |chan. # for|
+ * |          | 1st chan  | 1st chan.   |2nd chan.  |
+ * *****************************************************
+ *
+ * Return: primary iface MCC duty-cycle value
+ */
+static inline
+uint32_t ucfg_mlme_get_user_mcc_quota_percentage(struct wlan_objmgr_psoc *psoc)
+{
+	return  wlan_mlme_get_user_mcc_duty_cycle_percentage(psoc);
 }
 #endif /* _WLAN_MLME_UCFG_API_H_ */

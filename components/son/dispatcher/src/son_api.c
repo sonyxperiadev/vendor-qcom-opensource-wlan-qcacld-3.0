@@ -91,6 +91,65 @@ static void wlan_son_is_he_supported(struct wlan_objmgr_psoc *psoc,
 }
 #endif /*WLAN_FEATURE_11AX*/
 
+QDF_STATUS wlan_son_peer_ext_stat_enable(struct wlan_objmgr_pdev *pdev,
+					 uint8_t *mac_addr,
+					 struct wlan_objmgr_vdev *vdev,
+					 uint32_t stats_count,
+					 uint32_t enable)
+{
+	struct wlan_lmac_if_tx_ops *tx_ops;
+	struct wlan_objmgr_psoc *psoc;
+
+	if (!pdev) {
+		qdf_err("invalid pdev");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+	psoc = wlan_pdev_get_psoc(pdev);
+	if (!psoc) {
+		qdf_err("invalid psoc");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+	tx_ops = wlan_psoc_get_lmac_if_txops(psoc);
+	if (!tx_ops) {
+		qdf_err("invalid tx_ops");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+	if (tx_ops->son_tx_ops.peer_ext_stats_enable)
+		return tx_ops->son_tx_ops.peer_ext_stats_enable(pdev,
+								mac_addr, vdev,
+								stats_count,
+								enable);
+
+	return QDF_STATUS_E_NULL_VALUE;
+}
+
+QDF_STATUS wlan_son_peer_req_inst_stats(struct wlan_objmgr_pdev *pdev,
+					uint8_t *mac_addr,
+					struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_lmac_if_tx_ops *tx_ops;
+	struct wlan_objmgr_psoc *psoc;
+
+	if (!pdev) {
+		qdf_err("invalid pdev");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+	psoc = wlan_pdev_get_psoc(pdev);
+	if (!psoc) {
+		qdf_err("invalid psoc");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+	tx_ops = wlan_psoc_get_lmac_if_txops(psoc);
+	if (!tx_ops) {
+		qdf_err("invalid tx_ops");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+	if (tx_ops->son_tx_ops.son_send_null)
+		return tx_ops->son_tx_ops.son_send_null(pdev, mac_addr, vdev);
+
+	return QDF_STATUS_E_NULL_VALUE;
+}
+
 uint32_t wlan_son_get_chan_flag(struct wlan_objmgr_pdev *pdev,
 				qdf_freq_t freq, bool flag_160,
 				struct ch_params *chan_params)

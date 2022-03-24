@@ -4098,7 +4098,7 @@ static QDF_STATUS sap_get_freq_list(struct sap_context *sap_ctx,
 		     )))
 			continue;
 
-		/* check if the channel is in NOL blacklist */
+		/* check if the channel is in NOL denylist */
 		if (!WLAN_REG_IS_6GHZ_CHAN_FREQ(WLAN_REG_CH_TO_FREQ(
 					loop_count))) {
 			if (sap_dfs_is_channel_in_nol_list(

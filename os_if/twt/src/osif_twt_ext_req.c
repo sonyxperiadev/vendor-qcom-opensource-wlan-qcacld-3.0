@@ -895,6 +895,35 @@ int osif_twt_send_responder_disable_cmd(struct wlan_objmgr_psoc *psoc,
 	return osif_twt_responder_disable(psoc, &req);
 }
 
+void osif_twt_teardown_in_ps_disable(struct wlan_objmgr_psoc *psoc,
+				     struct qdf_mac_addr *mac_addr,
+				     uint8_t vdev_id)
+{
+	struct twt_del_dialog_param params = {0};
+	int ret;
+	struct wlan_objmgr_vdev *vdev;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id, WLAN_TWT_ID);
+	if (!vdev) {
+		osif_err("vdev is NULL");
+		return;
+	}
+
+	params.dialog_id = TWT_ALL_SESSIONS_DIALOG_ID;
+	params.vdev_id = vdev_id;
+	qdf_copy_macaddr(&params.peer_macaddr, mac_addr);
+
+	if (ucfg_twt_is_setup_done(psoc, mac_addr, params.dialog_id)) {
+		osif_debug("vdev%d: Terminate existing TWT session %d due to ps disable",
+			  params.vdev_id, params.dialog_id);
+		ret = osif_send_sta_twt_teardown_req(vdev, psoc, &params);
+		if (ret)
+			osif_debug("TWT teardown is failed on vdev: %d",
+				   vdev_id);
+	}
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_TWT_ID);
+}
+
 int osif_twt_get_capabilities(struct wlan_objmgr_vdev *vdev)
 {
 	struct wlan_objmgr_psoc *psoc;
@@ -945,14 +974,6 @@ int osif_twt_setup_req(struct wlan_objmgr_vdev *vdev,
 	}
 
 	vdev_id = wlan_vdev_get_id(vdev);
-	ret = osif_is_twt_command_allowed(vdev, vdev_id, psoc);
-	if (ret)
-		return ret;
-
-	if (osif_twt_setup_conc_allowed(psoc, vdev_id)) {
-		osif_err_rl("TWT setup reject: SCC or MCC concurrency exists");
-		return -EAGAIN;
-	}
 
 	ret = wlan_cfg80211_nla_parse_nested(tb2,
 					 QCA_WLAN_VENDOR_ATTR_TWT_SETUP_MAX,
@@ -985,6 +1006,15 @@ int osif_twt_setup_req(struct wlan_objmgr_vdev *vdev,
 	if (!params.flag_bcast && !(peer_cap & WLAN_TWT_CAPA_RESPONDER)) {
 		osif_err_rl("TWT setup reject: TWT responder not supported");
 		return -EOPNOTSUPP;
+	}
+
+	ret = osif_is_twt_command_allowed(vdev, vdev_id, psoc);
+	if (ret)
+		return ret;
+
+	if (osif_twt_setup_conc_allowed(psoc, vdev_id)) {
+		osif_err_rl("TWT setup reject: SCC or MCC concurrency exists");
+		return -EAGAIN;
 	}
 
 	ucfg_twt_cfg_get_congestion_timeout(psoc, &congestion_timeout);
@@ -2011,7 +2041,7 @@ osif_twt_sta_get_session_params(struct wlan_objmgr_vdev *vdev,
 		qdf_copy_macaddr(&params[0].peer_mac, &bcast_addr);
 	}
 
-	if (!ucfg_twt_is_setup_done(psoc, &params[0].peer_mac,
+	if (!ucfg_twt_is_setup_done(psoc, &peer_mac,
 				    params[0].dialog_id)) {
 		osif_debug("vdev%d: TWT session %d setup incomplete", vdev_id,
 			   params[0].dialog_id);

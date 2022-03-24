@@ -1290,6 +1290,18 @@ enum mlme_cfg_frame_type {
 
 #define MAX_MGMT_HW_TX_RETRY_COUNT 127
 
+/**
+ * struct wlan_user_mcc_quota - User MCC quota configuration
+ * @op_mode: Mode for which MCC quota needs to be applied
+ * @quota: User MCC quota value
+ * @vdev_id: Intended VDEV id for the quota
+ */
+struct wlan_user_mcc_quota {
+	enum QDF_OPMODE op_mode;
+	uint8_t quota;
+	uint8_t vdev_id;
+};
+
 /* struct wlan_mlme_generic - Generic CFG config items
  *
  * @band_capability: HW Band Capability - Both or 2.4G only or 5G only
@@ -1340,6 +1352,7 @@ enum mlme_cfg_frame_type {
  * @dual_sta_policy_cfg: Dual STA policies configuration
  * @tx_retry_multiplier: TX xretry extension parameter
  * @mgmt_hw_tx_retry_count: MGMT HW tx retry count for frames
+ * @relaxed_6ghz_conn_policy: 6GHz relaxed connection policy
  */
 struct wlan_mlme_generic {
 	uint32_t band_capability;
@@ -1387,6 +1400,12 @@ struct wlan_mlme_generic {
 	struct dual_sta_policy dual_sta_policy;
 	uint32_t tx_retry_multiplier;
 	uint8_t mgmt_hw_tx_retry_count[CFG_FRAME_TYPE_MAX];
+#ifdef CONFIG_BAND_6GHZ
+	bool relaxed_6ghz_conn_policy;
+#endif
+#ifdef WLAN_FEATURE_MCC_QUOTA
+	struct wlan_user_mcc_quota user_mcc_quota;
+#endif
 };
 
 /*

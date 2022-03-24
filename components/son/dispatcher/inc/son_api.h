@@ -206,6 +206,35 @@ QDF_STATUS
 wlan_son_register_mlme_deliver_cb(struct wlan_objmgr_psoc *psoc,
 				  mlme_deliver_cb cb,
 				  enum SON_MLME_DELIVER_CB_TYPE type);
+/**
+ * wlan_son_peer_ext_stat_enable() - sends EXT stats command to FW
+ * @pdev: pointer to pdev
+ * @mac_addr: MAC address of the target peer
+ * @vdev: Pointer to vdev
+ * @stats_count: Stats count
+ * @enable: Enable / disable ext stats
+ *
+ * Return: QDF_STATUS_SUCCESS on success else failure
+ */
+QDF_STATUS wlan_son_peer_ext_stat_enable(struct wlan_objmgr_pdev *pdev,
+					 uint8_t *mac_addr,
+					 struct wlan_objmgr_vdev *vdev,
+					 uint32_t stats_count,
+					 uint32_t enable);
+
+/**
+ * wlan_son_peer_req_inst_stats() - Requests for instantaneous stats for
+ *				    the target mac_addr from FW via
+ *				    WMI_REQUEST_STATS_CMDID.
+ * @pdev: pointer to pdev
+ * @mac_addr: MAC address of the target peer
+ * @vdev: Pointer to vdev
+ *
+ * Return: QDF_STATUS_SUCCESS on success else failure
+ */
+QDF_STATUS wlan_son_peer_req_inst_stats(struct wlan_objmgr_pdev *pdev,
+					uint8_t *mac_addr,
+					struct wlan_objmgr_vdev *vdev);
 
 /**
  * wlan_son_get_chan_flag() - get chan flag

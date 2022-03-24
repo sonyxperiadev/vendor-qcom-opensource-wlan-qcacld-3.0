@@ -1614,10 +1614,14 @@ static void hdd_country_change_update_sta(struct hdd_context *hdd_ctx)
 								    adapter,
 								    oper_freq);
 
-			if (phy_changed || freq_changed || width_changed) {
+			if (hdd_is_vdev_in_conn_state(adapter) &&
+			    (phy_changed || freq_changed || width_changed)) {
+				hdd_debug("changed: phy %d, freq %d, width %d",
+					  phy_changed, freq_changed,
+					  width_changed);
 				wlan_hdd_cm_issue_disconnect(adapter,
-							 REASON_UNSPEC_FAILURE,
-							 false);
+							REASON_UNSPEC_FAILURE,
+							false);
 				sta_ctx->reg_phymode = csr_phy_mode;
 			}
 			break;
@@ -1897,6 +1901,7 @@ int hdd_regulatory_init(struct hdd_context *hdd_ctx, struct wiphy *wiphy)
 	struct regulatory_channel *cur_chan_list;
 	enum country_src cc_src;
 	uint8_t alpha2[REG_ALPHA2_LEN + 1];
+	int ret;
 
 	cur_chan_list = qdf_mem_malloc(sizeof(*cur_chan_list) * NUM_CHANNELS);
 	if (!cur_chan_list) {
@@ -1908,6 +1913,12 @@ int hdd_regulatory_init(struct hdd_context *hdd_ctx, struct wiphy *wiphy)
 	ucfg_reg_register_chan_change_callback(hdd_ctx->psoc,
 					       hdd_regulatory_dyn_cbk,
 					       NULL);
+
+	ret = hdd_update_country_code(hdd_ctx);
+	if (ret) {
+		hdd_err("Failed to update country code; errno:%d", ret);
+		return -EINVAL;
+	}
 
 	wiphy->regulatory_flags |= REGULATORY_WIPHY_SELF_MANAGED;
 	/* Check the kernel version for upstream commit aced43ce780dc5 that

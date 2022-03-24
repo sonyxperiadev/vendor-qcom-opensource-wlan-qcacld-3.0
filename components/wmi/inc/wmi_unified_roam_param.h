@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -21,7 +22,7 @@
 #ifndef _WMI_UNIFIED_ROAM_PARAM_H_
 #define _WMI_UNIFIED_ROAM_PARAM_H_
 
-#include <wlan_blm_public_struct.h>
+#include <wlan_dlm_public_struct.h>
 #include <wlan_cm_bss_score_param.h>
 
 /**

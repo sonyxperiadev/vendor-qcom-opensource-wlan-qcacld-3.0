@@ -359,8 +359,8 @@ int wma_passpoint_match_event_handler(void *handle,
 
 #endif
 
-int wma_handle_btm_blacklist_event(void *handle, uint8_t *cmd_param_info,
-				   uint32_t len);
+int wma_handle_btm_denylist_event(void *handle, uint8_t *cmd_param_info,
+				  uint32_t len);
 
 #ifdef FEATURE_WLAN_EXTSCAN
 int wma_extscan_wow_event_callback(void *handle, void *event, uint32_t len);

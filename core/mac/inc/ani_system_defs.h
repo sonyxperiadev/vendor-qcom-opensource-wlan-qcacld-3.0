@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2019, 2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -58,6 +59,7 @@ typedef enum eAniAuthType {
 	SIR_FILS_SK_WITHOUT_PFS = 4,
 	SIR_FILS_SK_WITH_PFS = 5,
 	SIR_FILS_PK_AUTH = 6,
+	eSIR_AUTH_TYPE_PASN = 7,
 	eSIR_AUTH_TYPE_OWE,
 	eSIR_AUTO_SWITCH,
 	eSIR_DONOT_USE_AUTH_TYPE = SIR_MAX_ENUM_SIZE

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2015-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -392,7 +393,7 @@ int hdd_napi_apply_throughput_policy(struct hdd_context *hddctx,
 	if (req_state != napid->napi_mode) {
 		/* [re]set the floor frequency of high cluster */
 		rc = hdd_napi_perfd_cpufreq(req_state);
-		/* blacklist/boost_mode on/off */
+		/* denylist/boost_mode on/off */
 		rc = hdd_napi_event(NAPI_EVT_TPUT_STATE, (void *)req_state);
 	}
 	return rc;
@@ -485,7 +486,7 @@ int hdd_display_napi_stats(void)
 	}
 	hdd_nofl_info("[NAPI %u][BL %d]:  scheds   polls   comps    done t-lim p-lim  corr  max_time napi-buckets(%d)",
 		      napid->napi_mode,
-		      hif_napi_cpu_blacklist(napid, BLACKLIST_QUERY),
+		      hif_napi_cpu_denylist(napid, DENYLIST_QUERY),
 		      QCA_NAPI_NUM_BUCKETS);
 
 	for (i = 0; i < CE_COUNT_MAX; i++)

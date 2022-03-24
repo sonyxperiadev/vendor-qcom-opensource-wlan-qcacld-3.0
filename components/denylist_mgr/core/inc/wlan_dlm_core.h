@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -23,7 +23,7 @@
 #ifndef _WLAN_DLM_CORE_H_
 #define _WLAN_DLM_CORE_H_
 
-#include <wlan_blm_main.h>
+#include <wlan_dlm_main.h>
 
 #define DLM_IS_AP_AVOIDED_BY_USERSPACE(cur_node) \
 			(cur_node)->userspace_avoidlist

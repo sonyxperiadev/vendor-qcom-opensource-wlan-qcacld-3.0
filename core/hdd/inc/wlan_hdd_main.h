@@ -1248,6 +1248,7 @@ struct hdd_context;
  * @delete_in_progress: Flag to indicate that the adapter delete is in
  *			progress, and any operation using rtnl lock inside
  *			the driver can be avoided/skipped.
+ * @is_virtual_iface: Indicates that netdev is called from virtual interface
  * @mon_adapter: hdd_adapter of monitor mode.
  * @set_mac_addr_req_ctx: Set MAC address command request context
  */
@@ -1569,6 +1570,7 @@ struct hdd_adapter {
 	/* Flag to indicate whether it is a pre cac adapter or not */
 	bool is_pre_cac_adapter;
 	bool delete_in_progress;
+	bool is_virtual_iface;
 #ifdef WLAN_FEATURE_BIG_DATA_STATS
 	struct big_data_stats_event big_data_stats;
 #endif
@@ -3560,10 +3562,10 @@ void hdd_switch_sap_channel(struct hdd_adapter *adapter, uint8_t channel,
  * Moves the SAP interface by invoking the function which
  * executes the callback to perform channel switch using (E)CSA.
  *
- * Return: None
+ * Return: QDF_STATUS_SUCCESS if successfully
  */
-void hdd_switch_sap_chan_freq(struct hdd_adapter *adapter, qdf_freq_t chan_freq,
-			      bool forced);
+QDF_STATUS hdd_switch_sap_chan_freq(struct hdd_adapter *adapter,
+				    qdf_freq_t chan_freq, bool forced);
 
 #if defined(FEATURE_WLAN_CH_AVOID)
 void hdd_unsafe_channel_restart_sap(struct hdd_context *hdd_ctx);
@@ -3745,7 +3747,22 @@ void hdd_indicate_mgmt_frame(tSirSmeMgmtFrameInd *frame_ind);
  *
  */
 struct hdd_adapter *hdd_get_adapter_by_iface_name(struct hdd_context *hdd_ctx,
-					     const char *iface_name);
+						  const char *iface_name);
+
+/**
+ * hdd_get_adapter_by_ifindex() - Return adapter associated with an ifndex
+ * @hdd_ctx: hdd context.
+ * @if_index: netdev interface index
+ *
+ * This function is used to get the adapter associated with a netdev with the
+ * given interface index.
+ *
+ * Return: adapter pointer if found, NULL otherwise
+ *
+ */
+struct hdd_adapter *hdd_get_adapter_by_ifindex(struct hdd_context *hdd_ctx,
+					       uint32_t if_index);
+
 enum phy_ch_width hdd_map_nl_chan_width(enum nl80211_chan_width ch_width);
 
 /**
@@ -4375,13 +4392,13 @@ void hdd_chip_pwr_save_fail_detected_cb(hdd_handle_t hdd_handle,
 				*data);
 
 /**
- * hdd_update_ie_whitelist_attr() - Copy probe req ie whitelist attrs from cfg
- * @ie_whitelist: output parameter
+ * hdd_update_ie_allowlist_attr() - Copy probe req ie allowlist attrs from cfg
+ * @ie_allowlist: output parameter
  * @hdd_ctx: pointer to hdd context
  *
  * Return: None
  */
-void hdd_update_ie_whitelist_attr(struct probe_req_whitelist_attr *ie_whitelist,
+void hdd_update_ie_allowlist_attr(struct probe_req_allowlist_attr *ie_allowlist,
 				  struct hdd_context *hdd_ctx);
 
 /**
@@ -4584,6 +4601,16 @@ uint32_t hdd_wlan_get_version(struct hdd_context *hdd_ctx,
  * Return: assembled rate code
  */
 int hdd_assemble_rate_code(uint8_t preamble, uint8_t nss, uint8_t rate);
+
+/**
+ * hdd_update_country_code - Update country code
+ * @hdd_ctx: HDD context
+ *
+ * Update country code based on module parameter country_code
+ *
+ * Return: 0 on success and errno on failure
+ */
+int hdd_update_country_code(struct hdd_context *hdd_ctx);
 
 /**
  * hdd_set_11ax_rate() - set 11ax rate

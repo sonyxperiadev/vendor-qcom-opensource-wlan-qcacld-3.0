@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1488,8 +1489,8 @@ static int wlan_hdd_send_ext_scan_capability(struct hdd_context *hdd_ctx)
 	(sizeof(data->max_hotlist_ssids) + NLA_HDRLEN) +
 	(sizeof(data->max_number_epno_networks) + NLA_HDRLEN) +
 	(sizeof(data->max_number_epno_networks_by_ssid) + NLA_HDRLEN) +
-	(sizeof(data->max_number_of_white_listed_ssid) + NLA_HDRLEN) +
-	(sizeof(data->max_number_of_black_listed_bssid) + NLA_HDRLEN);
+	(sizeof(data->max_number_of_allow_listed_ssid) + NLA_HDRLEN) +
+	(sizeof(data->max_number_of_deny_listed_bssid) + NLA_HDRLEN);
 
 	skb = cfg80211_vendor_cmd_alloc_reply_skb(hdd_ctx->wiphy, nl_buf_len);
 
@@ -1521,10 +1522,10 @@ static int wlan_hdd_send_ext_scan_capability(struct hdd_context *hdd_ctx)
 					data->max_number_epno_networks);
 	hdd_debug("max_number_epno_networks_by_ssid %u",
 					data->max_number_epno_networks_by_ssid);
-	hdd_debug("max_number_of_white_listed_ssid %u",
-					data->max_number_of_white_listed_ssid);
-	hdd_debug("max_number_of_black_listed_bssid (%u)",
-					data->max_number_of_black_listed_bssid);
+	hdd_debug("max_number_of_allow_listed_ssid %u",
+		  data->max_number_of_allow_listed_ssid);
+	hdd_debug("max_number_of_deny_listed_bssid (%u)",
+		  data->max_number_of_deny_listed_bssid);
 
 	if (nla_put_u32(skb, PARAM_REQUEST_ID, data->requestId) ||
 	    nla_put_u32(skb, PARAM_STATUS, data->status) ||
@@ -1547,10 +1548,10 @@ static int wlan_hdd_send_ext_scan_capability(struct hdd_context *hdd_ctx)
 			data->max_number_epno_networks) ||
 	    nla_put_u32(skb, MAX_NUM_EPNO_NETS_BY_SSID,
 			data->max_number_epno_networks_by_ssid) ||
-	    nla_put_u32(skb, MAX_NUM_WHITELISTED_SSID,
-			data->max_number_of_white_listed_ssid) ||
-	    nla_put_u32(skb, MAX_NUM_BLACKLISTED_BSSID,
-			data->max_number_of_black_listed_bssid)) {
+	    nla_put_u32(skb, MAX_NUM_ALLOWLISTED_SSID,
+			data->max_number_of_allow_listed_ssid) ||
+	    nla_put_u32(skb, MAX_NUM_DENYLISTED_BSSID,
+			data->max_number_of_deny_listed_bssid)) {
 		hdd_err("nla put fail");
 		goto nla_put_failure;
 	}

@@ -516,8 +516,6 @@ sch_set_fixed_beacon_fields(struct mac_context *mac_ctx, struct pe_session *sess
 		return QDF_STATUS_E_NOMEM;
 	}
 
-	pe_debug("Setting fixed beacon fields");
-
 	/*
 	 * First set the fixed fields:
 	 * set the TFP headers, set the mac header
@@ -591,9 +589,6 @@ sch_set_fixed_beacon_fields(struct mac_context *mac_ctx, struct pe_session *sess
 			n_status);
 	}
 	session->schBeaconOffsetBegin = offset + (uint16_t) n_bytes;
-	pe_debug("Initialized beacon begin, offset %d fixed size %d", offset,
-		 session->schBeaconOffsetBegin);
-
 	/* Initialize the 'new' fields at the end of the beacon */
 	is_6ghz_chsw =
 		WLAN_REG_IS_6GHZ_CHAN_FREQ(session->curr_op_freq) ||
@@ -924,11 +919,6 @@ sch_set_fixed_beacon_fields(struct mac_context *mac_ctx, struct pe_session *sess
 				session->schBeaconOffsetBegin + TIM_IE_SIZE +
 				ecsa_count_offset;
 
-	pe_debug("vdev id %d csa_count_offset %d ecsa_count_offset %d",
-		 session->vdev_id,
-		 mac_ctx->sch.csa_count_offset,
-		 mac_ctx->sch.ecsa_count_offset);
-
 	if (wlan_vdev_mlme_is_mlo_ap(session->vdev))
 		lim_upt_mlo_partner_info(mac_ctx, session,
 					 session->pSchBeaconFrameEnd, n_bytes,
@@ -945,8 +935,7 @@ sch_set_fixed_beacon_fields(struct mac_context *mac_ctx, struct pe_session *sess
 	bcn_size_left = SIR_MAX_BEACON_SIZE - TIM_IE_SIZE -
 				session->schBeaconOffsetBegin -
 				(uint16_t)n_bytes;
-	pe_debug("max_bcn_size_left %d and addn_ielen %d", bcn_size_left,
-		 addn_ielen);
+
 	/* TODO: Append additional IE here. */
 	if (addn_ielen > 0)
 		sch_append_addn_ie(mac_ctx, session,
@@ -966,8 +955,10 @@ sch_set_fixed_beacon_fields(struct mac_context *mac_ctx, struct pe_session *sess
 	else
 		mac_ctx->sch.p2p_ie_offset = 0;
 
-	pe_debug("Initialized beacon end, offset %d",
-		session->schBeaconOffsetEnd);
+	pe_debug("vdev %d: beacon begin offset %d fixed size %d csa_count_offset %d ecsa_count_offset %d max_bcn_size_left %d addn_ielen %d beacon end offset %d",
+		 session->vdev_id, offset, session->schBeaconOffsetBegin,
+		 mac_ctx->sch.csa_count_offset, mac_ctx->sch.ecsa_count_offset,
+		 bcn_size_left, addn_ielen, session->schBeaconOffsetEnd);
 	mac_ctx->sch.beacon_changed = 1;
 	qdf_mem_free(bcn_1);
 	qdf_mem_free(bcn_2);

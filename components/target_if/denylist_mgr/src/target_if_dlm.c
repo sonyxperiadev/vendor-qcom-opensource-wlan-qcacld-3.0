@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -18,45 +18,36 @@
  */
 /**
  * DOC: Target interface file for denylist manager component to
- * declare api's which shall be used by denylist manager component
+ * Implement api's which shall be used by denylist manager component
  * in target if internally.
  */
 
-#ifndef __TARGET_IF_DLM_H
-#define __TARGET_IF_DLM_H
-
-#include "wlan_blm_public_struct.h"
+#include <target_if_dlm.h>
+#include "target_if.h"
 
 #if defined(WLAN_FEATURE_ROAM_OFFLOAD)
-/**
- * target_if_dlm_send_reject_ap_list() - API to send reject ap list to FW
- * @pdev: pdev object
- * @reject_params: This contains the reject ap list, and the num of BSSIDs
- *
- * This API will send the reject ap list to the target for it to handle roaming
- * case scenarios.
- *
- * Return: Qdf status
- */
 QDF_STATUS
 target_if_dlm_send_reject_ap_list(struct wlan_objmgr_pdev *pdev,
-				  struct reject_ap_params *reject_params);
-
-/**
- * target_if_dlm_register_tx_ops() - Register dlm tx ops
- * @dlm_tx_ops: DLM tx ops
- *
- * This API will register the tx ops used by the DLM to send commands to the
- * target.
- *
- * Return: void
- */
-void target_if_dlm_register_tx_ops(struct wlan_dlm_tx_ops *dlm_tx_ops);
-#else
-static inline void target_if_dlm_register_tx_ops(
-	struct wlan_dlm_tx_ops *dlm_tx_ops)
+				  struct reject_ap_params *reject_params)
 {
-}
-#endif //WLAN_FEATURE_ROAM_OFFLOAD
+	struct wmi_unified *wmi_handle;
 
-#endif //__TARGET_IF_DLM_H
+	wmi_handle = get_wmi_unified_hdl_from_pdev(pdev);
+	if (!wmi_handle) {
+		target_if_err("Invalid wmi handle");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	return wmi_unified_send_reject_ap_list(wmi_handle, reject_params);
+}
+
+void target_if_dlm_register_tx_ops(struct wlan_dlm_tx_ops *dlm_tx_ops)
+{
+	if (!dlm_tx_ops) {
+		target_if_err("dlm_tx_ops is null");
+		return;
+	}
+
+	dlm_tx_ops->dlm_send_reject_ap_list = target_if_dlm_send_reject_ap_list;
+}
+#endif

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -17,37 +17,35 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 /**
- * DOC: Target interface file for denylist manager component to
- * Implement api's which shall be used by denylist manager component
- * in target if internally.
+ * DOC: Implements public API for denylist manager to interact with target/WMI
  */
 
-#include <target_if_blm.h>
-#include "target_if.h"
+#include "wlan_dlm_tgt_api.h"
 
 #if defined(WLAN_FEATURE_ROAM_OFFLOAD)
 QDF_STATUS
-target_if_dlm_send_reject_ap_list(struct wlan_objmgr_pdev *pdev,
-				  struct reject_ap_params *reject_params)
+tgt_dlm_send_reject_list_to_fw(struct wlan_objmgr_pdev *pdev,
+			       struct reject_ap_params *reject_params)
 {
-	struct wmi_unified *wmi_handle;
+	struct wlan_dlm_tx_ops *dlm_tx_ops;
+	struct dlm_pdev_priv_obj *dlm_priv;
 
-	wmi_handle = get_wmi_unified_hdl_from_pdev(pdev);
-	if (!wmi_handle) {
-		target_if_err("Invalid wmi handle");
-		return QDF_STATUS_E_INVAL;
+	dlm_priv = dlm_get_pdev_obj(pdev);
+
+	if (!dlm_priv) {
+		dlm_err("dlm_priv is NULL");
+		return QDF_STATUS_E_FAILURE;
 	}
-
-	return wmi_unified_send_reject_ap_list(wmi_handle, reject_params);
-}
-
-void target_if_dlm_register_tx_ops(struct wlan_dlm_tx_ops *dlm_tx_ops)
-{
+	dlm_tx_ops = &dlm_priv->dlm_tx_ops;
 	if (!dlm_tx_ops) {
-		target_if_err("dlm_tx_ops is null");
-		return;
+		dlm_err("dlm_tx_ops is NULL");
+		return QDF_STATUS_E_FAILURE;
 	}
 
-	dlm_tx_ops->dlm_send_reject_ap_list = target_if_dlm_send_reject_ap_list;
+	if (dlm_tx_ops->dlm_send_reject_ap_list)
+		return dlm_tx_ops->dlm_send_reject_ap_list(pdev, reject_params);
+	dlm_err("Tx ops not registered, failed to send reject list to FW");
+
+	return QDF_STATUS_E_FAILURE;
 }
 #endif

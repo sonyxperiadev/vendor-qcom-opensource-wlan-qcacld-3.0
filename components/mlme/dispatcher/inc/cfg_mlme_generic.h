@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -177,6 +177,30 @@ enum wlan_wds_mode {
 		"rf_test_mode_enabled", \
 		1, \
 		"rf test mode Enable Flag")
+
+#ifdef CONFIG_BAND_6GHZ
+/**
+ * relaxed_6ghz_conn_policy - Enable 6ghz relaxed connection policy
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This cfg is used to set 6Ghz relaxed connection policies where STA
+ * will be allowed to operate in VLP mode and scan/connect to 6 GHz BSS
+ * with unmatching country code.
+ *
+ * Related: None
+ *
+ * Supported Feature: STA
+ */
+#define CFG_RELAXED_6GHZ_CONN_POLICY CFG_BOOL( \
+		"relaxed_6ghz_conn_policy", \
+		0, \
+		"6ghz relaxed connection policy")
+#define CFG_RELAX_6GHZ_CONN_POLICY	CFG(CFG_RELAXED_6GHZ_CONN_POLICY)
+#else
+#define CFG_RELAX_6GHZ_CONN_POLICY
+#endif
 
 /*
  * <ini>
@@ -971,5 +995,6 @@ enum wlan_wds_mode {
 	CFG(CFG_RF_TEST_MODE_SUPP_ENABLED) \
 	CFG_WDS_MODE_ALL \
 	CFG(CFG_TX_RETRY_MULTIPLIER) \
-	CFG(CFG_MGMT_FRAME_HW_TX_RETRY_COUNT)
+	CFG(CFG_MGMT_FRAME_HW_TX_RETRY_COUNT) \
+	CFG_RELAX_6GHZ_CONN_POLICY
 #endif /* __CFG_MLME_GENERIC_H */

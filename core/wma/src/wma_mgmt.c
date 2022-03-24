@@ -44,7 +44,7 @@
 #include "lim_session_utils.h"
 
 #include "cds_utils.h"
-#include "wlan_blm_api.h"
+#include "wlan_dlm_api.h"
 #if !defined(REMOVE_PKT_LOG)
 #include "pktlog_ac.h"
 #else

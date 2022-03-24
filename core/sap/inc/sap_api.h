@@ -112,8 +112,8 @@ typedef enum {
 } eSapMacAddrACL;
 
 typedef enum {
-	eSAP_BLACK_LIST = 0,   /* List of mac addresses NOT allowed to assoc */
-	eSAP_WHITE_LIST = 1,   /* List of mac addresses allowed to assoc */
+	SAP_DENY_LIST = 0,   /* List of mac addresses NOT allowed to assoc */
+	SAP_ALLOW_LIST = 1,   /* List of mac addresses allowed to assoc */
 } eSapACLType;
 
 typedef enum {
@@ -149,7 +149,7 @@ typedef enum {
 	eSAP_DISCONNECT_ALL_P2P_CLIENT,
 	eSAP_MAC_TRIG_STOP_BSS_EVENT,
 	/*
-	 * Event send when a STA in neither white list or black list tries to
+	 * Event send when a STA in neither allow list or deny list tries to
 	 * associate in softap mode
 	 */
 	eSAP_UNKNOWN_STA_JOIN,
@@ -1078,11 +1078,11 @@ QDF_STATUS wlansap_get_acl_mode(struct sap_context *sap_ctx,
  * wlansap_modify_acl() - Update ACL entries
  * @sap_ctx: Pointer to the SAP context
  * @peer_sta_mac: peer sta mac to be updated.
- * @list_type: white/Black list type.
+ * @list_type: allow/Deny list type.
  * @cmd: command to be executed on ACL.
  *
  * This function is called when a peer needs to be added or deleted from the
- * white/black ACL
+ * allow/deny ACL
  *
  * Return: Status
  */

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -42,7 +42,7 @@
 #include "lim_ser_des_utils.h"
 #include "lim_send_messages.h"
 #include "sch_api.h"
-#include "wlan_blm_api.h"
+#include "wlan_dlm_api.h"
 #include "wlan_connectivity_logging.h"
 
 /**
