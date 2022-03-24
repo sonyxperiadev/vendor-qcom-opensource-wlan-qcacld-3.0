@@ -2279,7 +2279,6 @@ struct wlan_mlme_power {
  * @auth_rsp_timeout: authenticate response timeout
  * @assoc_failure_timeout: assoc failure timeout
  * @reassoc_failure_timeout: re-assoc failure timeout
- * @probe_after_hb_fail_timeout: Probe after HB fail timeout
  * @olbc_detect_timeout: OLBC detect timeout
  * @addts_rsp_timeout: ADDTS rsp timeout value
  * @heart_beat_threshold: Heart beat threshold
@@ -2295,7 +2294,6 @@ struct wlan_mlme_timeout {
 	uint32_t auth_rsp_timeout;
 	uint32_t assoc_failure_timeout;
 	uint32_t reassoc_failure_timeout;
-	uint32_t probe_after_hb_fail_timeout;
 	uint32_t olbc_detect_timeout;
 	uint32_t addts_rsp_timeout;
 	uint32_t heart_beat_threshold;

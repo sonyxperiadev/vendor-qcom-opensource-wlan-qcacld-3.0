@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -578,7 +579,6 @@ uint8_t *mac_trace_get_lim_msg_string(uint16_t lim_msg)
 		CASE_RETURN_STRING(SIR_LIM_ASSOC_FAIL_TIMEOUT);
 		CASE_RETURN_STRING(SIR_LIM_REASSOC_FAIL_TIMEOUT);
 		CASE_RETURN_STRING(SIR_LIM_HEART_BEAT_TIMEOUT);
-		CASE_RETURN_STRING(SIR_LIM_PROBE_HB_FAILURE_TIMEOUT);
 		CASE_RETURN_STRING(SIR_LIM_ADDTS_RSP_TIMEOUT);
 		CASE_RETURN_STRING(SIR_LIM_LINK_TEST_DURATION_TIMEOUT);
 		CASE_RETURN_STRING(SIR_LIM_CNF_WAIT_TIMEOUT);

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -54,7 +55,6 @@ static uint8_t *__lim_trace_get_timer_string(uint16_t timerId)
 		CASE_RETURN_STRING(eLIM_CNF_WAIT_TIMER);
 		CASE_RETURN_STRING(eLIM_AUTH_RSP_TIMER);
 		CASE_RETURN_STRING(eLIM_UPDATE_OLBC_CACHE_TIMER);
-		CASE_RETURN_STRING(eLIM_PROBE_AFTER_HB_TIMER);
 		CASE_RETURN_STRING(eLIM_ADDTS_RSP_TIMER);
 		CASE_RETURN_STRING(eLIM_CHANNEL_SWITCH_TIMER);
 		CASE_RETURN_STRING(eLIM_WPS_OVERLAP_TIMER);

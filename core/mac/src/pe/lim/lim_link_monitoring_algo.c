@@ -459,9 +459,6 @@ void lim_handle_heart_beat_failure(struct mac_context *mac_ctx,
 	WLAN_HOST_DIAG_LOG_REPORT(log_ptr);
 #endif /* FEATURE_WLAN_DIAG_SUPPORT */
 
-	/* Ensure HB Status for the session has been reseted */
-	session->LimHBFailureStatus = false;
-
 	if (LIM_IS_STA_ROLE(session) &&
 	    lim_is_sb_disconnect_allowed(session)) {
 		if (!mac_ctx->sys.gSysEnableLinkMonitorMode) {

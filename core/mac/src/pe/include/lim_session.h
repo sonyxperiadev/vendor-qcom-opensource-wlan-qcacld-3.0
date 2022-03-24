@@ -440,10 +440,6 @@ struct pe_session {
 	tLimChannelSwitchInfo gLimChannelSwitch;
 	/* *********************End 11H related**************************** */
 
-	/*Flag to Track Status/Indicate HBFailure on this session */
-	bool LimHBFailureStatus;
-	int32_t hb_failure_ap_rssi;
-
 	uint32_t gLimPhyMode;
 	uint8_t txLdpcIniFeatureEnabled;
 	/**

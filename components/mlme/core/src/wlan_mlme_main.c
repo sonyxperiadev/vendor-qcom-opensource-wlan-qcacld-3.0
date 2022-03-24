@@ -715,8 +715,6 @@ static void mlme_init_timeout_cfg(struct wlan_objmgr_psoc *psoc,
 			cfg_get(psoc, CFG_ASSOC_FAILURE_TIMEOUT);
 	timeouts->reassoc_failure_timeout =
 			cfg_get(psoc, CFG_REASSOC_FAILURE_TIMEOUT);
-	timeouts->probe_after_hb_fail_timeout =
-			cfg_get(psoc, CFG_PROBE_AFTER_HB_FAIL_TIMEOUT);
 	timeouts->olbc_detect_timeout =
 			cfg_get(psoc, CFG_OLBC_DETECT_TIMEOUT);
 	timeouts->addts_rsp_timeout =

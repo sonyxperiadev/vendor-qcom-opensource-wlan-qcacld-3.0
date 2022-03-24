@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2019, 2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -127,27 +128,6 @@
 		1000, \
 		CFG_VALUE_OR_DEFAULT, \
 		"reassoc failure timeout")
-
-/*
- * <ini>
- * probe_after_hb_fail_timeout - Probe after HB failure timeout value
- * @Min: 10
- * @Max: 10000
- * @Default: 70
- *
- * This cfg is used to configure the Probe after HB failure timeout.
- *
- * Usage: Internal
- *
- * </ini>
- */
-#define CFG_PROBE_AFTER_HB_FAIL_TIMEOUT CFG_INI_UINT( \
-		"probe_after_hb_fail_timeout", \
-		10, \
-		10000, \
-		70, \
-		CFG_VALUE_OR_DEFAULT, \
-		"probe after HB fail timeout")
 
 /*
  * <ini>
@@ -315,7 +295,6 @@
 	CFG(CFG_AUTH_RSP_TIMEOUT) \
 	CFG(CFG_ASSOC_FAILURE_TIMEOUT) \
 	CFG(CFG_REASSOC_FAILURE_TIMEOUT) \
-	CFG(CFG_PROBE_AFTER_HB_FAIL_TIMEOUT) \
 	CFG(CFG_OLBC_DETECT_TIMEOUT) \
 	CFG(CFG_ADDTS_RSP_TIMEOUT) \
 	CFG(CFG_HEART_BEAT_THRESHOLD) \

@@ -464,9 +464,6 @@ void lim_deactivate_timers(struct mac_context *mac_ctx)
 	/* Deactivate Authentication failure timer. */
 	tx_timer_deactivate(&lim_timer->gLimAuthFailureTimer);
 
-	/* Deactivate wait-for-probe-after-Heartbeat timer. */
-	tx_timer_deactivate(&lim_timer->gLimProbeAfterHBTimer);
-
 	/* Deactivate cnf wait timer */
 	for (n = 0; n < (mac_ctx->lim.maxStation + 1); n++) {
 		tx_timer_deactivate(&lim_timer->gpLimCnfWaitTimer[n]);
@@ -613,9 +610,6 @@ void lim_cleanup_mlm(struct mac_context *mac_ctx)
 
 		/* Delete Authentication failure timer. */
 		tx_timer_delete(&lim_timer->gLimAuthFailureTimer);
-
-		/* Delete wait-for-probe-after-Heartbeat timer. */
-		tx_timer_delete(&lim_timer->gLimProbeAfterHBTimer);
 
 		/* Delete cnf wait timer */
 		for (n = 0; n < (mac_ctx->lim.maxStation + 1); n++) {
@@ -4477,30 +4471,6 @@ void lim_handle_heart_beat_timeout_for_session(struct mac_context *mac_ctx,
 					(LIM_IS_STA_ROLE(psession_entry)))
 			lim_handle_heart_beat_failure(mac_ctx, psession_entry);
 	}
-	/*
-	 * In the function lim_handle_heart_beat_failure things can change
-	 * so check for the session entry  valid and the other things
-	 * again
-	 */
-	if ((psession_entry->valid == true) &&
-		(psession_entry->bssType == eSIR_INFRASTRUCTURE_MODE) &&
-			(LIM_IS_STA_ROLE(psession_entry)) &&
-				(psession_entry->LimHBFailureStatus == true)) {
-		tLimTimers *lim_timer  = &mac_ctx->lim.lim_timers;
-		/*
-		 * Activate Probe After HeartBeat Timer incase HB
-		 * Failure detected
-		 */
-		pe_debug("Sending Probe for Session: %d",
-			psession_entry->vdev_id);
-		lim_deactivate_and_change_timer(mac_ctx,
-			eLIM_PROBE_AFTER_HB_TIMER);
-		MTRACE(mac_trace(mac_ctx, TRACE_CODE_TIMER_ACTIVATE, 0,
-			eLIM_PROBE_AFTER_HB_TIMER));
-		if (tx_timer_activate(&lim_timer->gLimProbeAfterHBTimer)
-					!= TX_SUCCESS)
-			pe_err("Fail to re-activate Probe-after-hb timer");
-	}
 }
 
 void lim_process_add_sta_rsp(struct mac_context *mac_ctx,
@@ -4559,76 +4529,6 @@ void lim_update_beacon(struct mac_context *mac_ctx)
 						REASON_DEFAULT);
 		}
 	}
-}
-
-/**
- * lim_handle_heart_beat_failure_timeout - handle heart beat failure
- * @mac_ctx: pointer to Global Mac Structure
- *
- * Function handle heart beat failure timeout
- *
- * Return: none
- */
-void lim_handle_heart_beat_failure_timeout(struct mac_context *mac_ctx)
-{
-	uint8_t i;
-	struct pe_session *psession_entry;
-	/*
-	 * Probe response is not received  after HB failure.
-	 * This is handled by LMM sub module.
-	 */
-	for (i = 0; i < mac_ctx->lim.maxBssId; i++) {
-		if (mac_ctx->lim.gpSession[i].valid != true)
-			continue;
-		psession_entry = &mac_ctx->lim.gpSession[i];
-		if (psession_entry->LimHBFailureStatus != true)
-			continue;
-		pe_debug("SME: %d MLME: %d HB-Count: %d",
-				psession_entry->limSmeState,
-				psession_entry->limMlmState,
-				psession_entry->LimRxedBeaconCntDuringHB);
-
-#ifdef FEATURE_WLAN_DIAG_SUPPORT_LIM
-		lim_diag_event_report(mac_ctx, WLAN_PE_DIAG_HB_FAILURE_TIMEOUT,
-					psession_entry, 0, 0);
-#endif
-		if (lim_is_sb_disconnect_allowed(psession_entry) &&
-		    (!LIM_IS_CONNECTION_ACTIVE(psession_entry) ||
-		     /*
-		      * Disconnect even if we have not received a single
-		      * beacon after connection.
-		      */
-		     !psession_entry->currentBssBeaconCnt)) {
-			pe_nofl_info("HB fail vdev %d",psession_entry->vdev_id);
-			lim_send_deauth_mgmt_frame(mac_ctx,
-				REASON_DISASSOC_DUE_TO_INACTIVITY,
-				psession_entry->bssId, psession_entry, false);
-
-			/*
-			 * AP did not respond to Probe Request.
-			 * Tear down link with it.
-			 */
-			lim_tear_down_link_with_ap(mac_ctx,
-						psession_entry->peSessionId,
-						REASON_BEACON_MISSED,
-						eLIM_LINK_MONITORING_DISASSOC);
-			mac_ctx->lim.gLimProbeFailureAfterHBfailedCnt++;
-		} else {
-			pe_err("Unexpected wt-probe-timeout in state");
-			lim_print_mlm_state(mac_ctx, LOGE,
-				psession_entry->limMlmState);
-			if (mac_ctx->sme.tx_queue_cb)
-				mac_ctx->sme.tx_queue_cb(mac_ctx->hdd_handle,
-						psession_entry->smeSessionId,
-						WLAN_WAKE_ALL_NETIF_QUEUE,
-						WLAN_CONTROL_PATH);
-		}
-	}
-	/*
-	 * Deactivate Timer ProbeAfterHB Timer -> As its a oneshot timer,
-	 * need not deactivate the timer
-	 * tx_timer_deactivate(&mac->lim.lim_timers.gLimProbeAfterHBTimer);
-	 */
 }
 
 struct pe_session *lim_is_ap_session_active(struct mac_context *mac)

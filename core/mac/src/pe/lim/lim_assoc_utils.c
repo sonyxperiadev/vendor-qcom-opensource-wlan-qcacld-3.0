@@ -457,7 +457,6 @@ lim_cleanup_rx_path(struct mac_context *mac, tpDphHashNode sta,
 		       eLIM_MLM_WT_DEL_STA_RSP_STATE));
 		pe_session->limMlmState = eLIM_MLM_WT_DEL_STA_RSP_STATE;
 		/* Deactivating probe after heart beat timer */
-		lim_deactivate_and_change_timer(mac, eLIM_PROBE_AFTER_HB_TIMER);
 		lim_deactivate_and_change_timer(mac, eLIM_JOIN_FAIL_TIMER);
 	}
 #ifdef WLAN_DEBUG

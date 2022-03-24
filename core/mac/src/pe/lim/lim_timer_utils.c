@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -125,18 +126,6 @@ static bool lim_create_non_ap_timers(struct mac_context *mac)
 		return false;
 	}
 
-	/* Change timer to reactivate it in future */
-	cfgValue = SYS_MS_TO_TICKS(
-		mac->mlme_cfg->timeouts.probe_after_hb_fail_timeout);
-	if (tx_timer_create(mac, &mac->lim.lim_timers.gLimProbeAfterHBTimer,
-			    "Probe after Heartbeat TIMEOUT",
-			    lim_timer_handler,
-			    SIR_LIM_PROBE_HB_FAILURE_TIMEOUT,
-			    cfgValue, 0, TX_NO_ACTIVATE) != TX_SUCCESS) {
-		pe_err("unable to create ProbeAfterHBTimer");
-		return false;
-	}
-
 	/*
 	 * SAE auth timer of 5secs. This is required for duration of entire SAE
 	 * authentication.
@@ -255,7 +244,6 @@ err_timer:
 	while (((int32_t)-- i) >= 0) {
 		tx_timer_delete(&mac->lim.lim_timers.gpLimCnfWaitTimer[i]);
 	}
-	tx_timer_delete(&mac->lim.lim_timers.gLimProbeAfterHBTimer);
 	tx_timer_delete(&mac->lim.lim_timers.gLimAuthFailureTimer);
 	tx_timer_delete(&mac->lim.lim_timers.gLimAddtsRspTimer);
 	tx_timer_delete(&mac->lim.lim_timers.gLimAssocFailureTimer);
@@ -621,33 +609,6 @@ void lim_deactivate_and_change_timer(struct mac_context *mac, uint32_t timerId)
 			/* Could not change Association failure timer. */
 			/* Log error */
 			pe_err("unable to change Assoc failure timer");
-		}
-
-		break;
-
-	case eLIM_PROBE_AFTER_HB_TIMER:
-		if (tx_timer_deactivate
-			    (&mac->lim.lim_timers.gLimProbeAfterHBTimer) !=
-		    TX_SUCCESS) {
-			/* Could not deactivate Heartbeat timer. */
-			/* Log error */
-			pe_err("unable to deactivate probeAfterHBTimer");
-		} else {
-			pe_debug("Deactivated probe after hb timer");
-		}
-
-		/* Change timer to reactivate it in future */
-		val = SYS_MS_TO_TICKS(
-			mac->mlme_cfg->timeouts.probe_after_hb_fail_timeout);
-
-		if (tx_timer_change(&mac->lim.lim_timers.gLimProbeAfterHBTimer,
-				    val, 0) != TX_SUCCESS) {
-			/* Could not change HeartBeat timer. */
-			/* Log error */
-			pe_err("unable to change ProbeAfterHBTimer");
-		} else {
-			pe_debug("Probe after HB timer value is changed: %u",
-				val);
 		}
 
 		break;

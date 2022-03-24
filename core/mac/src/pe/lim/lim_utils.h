@@ -791,7 +791,6 @@ static inline uint16_t ch_width_in_mhz(enum phy_ch_width ch_width)
 }
 
 struct pe_session *lim_is_ap_session_active(struct mac_context *mac);
-void lim_handle_heart_beat_failure_timeout(struct mac_context *mac);
 
 #define limGetWscIEPtr(mac, ie, ie_len) \
 	wlan_get_vendor_ie_ptr_from_oui(SIR_MAC_WSC_OUI, \
