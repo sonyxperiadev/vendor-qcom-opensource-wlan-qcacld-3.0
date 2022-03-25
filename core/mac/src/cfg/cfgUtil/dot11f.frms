@@ -3805,21 +3805,15 @@ IE mlo_ie (EID_EXTN_ID_ELEMENT) OUI (0x6B)
     {
         type: 3;
         reserved: 1;
-        mld_mac_addr_present: 1;
         link_id_info_present: 1;
         bss_param_change_cnt_present: 1;
         medium_sync_delay_info_present: 1;
         eml_capab_present: 1;
         mld_capab_present: 1;
-        reserved_1: 6;
+        reserved_1: 7;
     }
-    OPTIONAL UNION mld_mac_addr (DISCRIMINATOR mld_mac_addr_present)
-    {
-        info (mld_mac_addr_present IS 1)
-        {
-            mld_mac_addr[6];
-        }
-    };
+    common_info_length, 1;
+    mld_mac_addr[6];
     OPTIONAL UNION link_id_info (DISCRIMINATOR link_id_info_present)
     {
         info (link_id_info_present IS 1)
@@ -3854,11 +3848,12 @@ IE mlo_ie (EID_EXTN_ID_ELEMENT) OUI (0x6B)
         {
             {
                 emlsr_support: 1;
-                emlsr_delay: 3;
+                emlsr_padding_delay: 3;
+                emlsr_transition_delay: 3;
                 emlmr_support: 1;
                 emlmr_delay: 3;
                 transition_timeout: 4;
-                reserved: 4;
+                reserved: 1;
             }
             {
                 emlmr_rx_nss: 4;
@@ -3875,7 +3870,8 @@ IE mlo_ie (EID_EXTN_ID_ELEMENT) OUI (0x6B)
                 srs_support: 1;
                 tid_link_map_supported: 2;
                 str_freq_separation: 5;
-                reserved: 4;
+                aar_support: 1;
+                reserved: 3;
             }
         }
     };

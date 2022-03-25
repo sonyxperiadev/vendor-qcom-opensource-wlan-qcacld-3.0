@@ -64,22 +64,24 @@ void wlan_hdd_get_mlo_link_id(struct hdd_beacon_data *beacon,
 	if (ie) {
 		hdd_debug("find a mlo ie in beacon data");
 		*num_link = 1;
-		ie++; //WLAN_MAC_EID_EXT
-		len = *ie++; //length
-		ie++; //MLO_IE_OUI_TYPE
+		ie++; /* WLAN_MAC_EID_EXT */
+		len = *ie++; /* length */
+		ie++; /* MLO_IE_OUI_TYPE */
 		len--;
-		ie++; //Multi-Link Control field 2octets
+		ie++; /* Multi-Link Control field 2octets */
 		ie++;
 		len--;
 		len--;
-		ie += QDF_MAC_ADDR_SIZE; //mld mac addr
+		ie++; /* Common Info Length */
+		len--;
+		ie += QDF_MAC_ADDR_SIZE; /* mld mac addr */
 		len -= QDF_MAC_ADDR_SIZE;
-		*link_id = *ie++; //link id
+		*link_id = *ie++; /* link id */
 		len--;
 		while (len > 0) {
-			ie++; //sub element ID
+			ie++; /* sub element ID */
 			len--;
-			link_len = *ie++; //length of sub element ID
+			link_len = *ie++; /* length of sub element ID */
 			len--;
 			ie += link_len;
 			len -= link_len;

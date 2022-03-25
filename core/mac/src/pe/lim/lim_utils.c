@@ -8013,8 +8013,6 @@ void lim_set_mlo_caps(struct mac_context *mac, struct pe_session *session,
 
 		mlo_ie_info->type = dot11_cap.type;
 		mlo_ie_info->reserved = dot11_cap.reserved;
-		mlo_ie_info->mld_mac_addr_present =
-				dot11_cap.mld_mac_addr_present;
 		mlo_ie_info->link_id_info_present =
 				dot11_cap.link_id_info_present;
 		mlo_ie_info->bss_param_change_cnt_present =
@@ -8024,8 +8022,9 @@ void lim_set_mlo_caps(struct mac_context *mac, struct pe_session *session,
 		mlo_ie_info->eml_capab_present = dot11_cap.eml_capab_present;
 		mlo_ie_info->mld_capab_present = dot11_cap.mld_capab_present;
 		mlo_ie_info->reserved_1 = dot11_cap.reserved_1;
-		qdf_mem_copy(&mlo_ie_info->mld_mac_addr.info.mld_mac_addr,
-			     &dot11_cap.mld_mac_addr.info.mld_mac_addr,
+		mlo_ie_info->common_info_length = dot11_cap.common_info_length;
+		qdf_mem_copy(&mlo_ie_info->mld_mac_addr,
+			     &dot11_cap.mld_mac_addr,
 			     QDF_MAC_ADDR_SIZE);
 		ie_start[1] += QDF_MAC_ADDR_SIZE;
 	}

@@ -3282,12 +3282,12 @@ sir_convert_assoc_req_frame2_struct(struct mac_context *mac,
 		pAssocReq->mlo_info.num_partner_links =
 					ar->mlo_ie.num_sta_profile;
 		qdf_mem_copy(pAssocReq->mld_mac,
-			     ar->mlo_ie.mld_mac_addr.info.mld_mac_addr,
+			     ar->mlo_ie.mld_mac_addr,
 			     QDF_MAC_ADDR_SIZE);
 		pe_debug("Partner link count: %d, MLD mac addr: " QDF_MAC_ADDR_FMT,
 			 ar->mlo_ie.num_sta_profile,
 			 QDF_MAC_ADDR_REF(
-				ar->mlo_ie.mld_mac_addr.info.mld_mac_addr));
+				ar->mlo_ie.mld_mac_addr));
 	}
 	pe_debug("ht %d vht %d opmode %d vendor vht %d he %d he 6ghband %d eht %d",
 		 ar->HTCaps.present, ar->VHTCaps.present,
@@ -3788,12 +3788,11 @@ sir_convert_assoc_resp_frame2_struct(struct mac_context *mac,
 		dot11f_parse_assoc_rsp_mlo_partner_info(session_entry,
 							frame, frame_len);
 		pAssocRsp->mlo_ie.mlo_ie.present = ar->mlo_ie.present;
-		pAssocRsp->mlo_ie.mlo_ie.mld_mac_addr_present =
-					ar->mlo_ie.mld_mac_addr_present;
 		qdf_mem_copy(
-		&pAssocRsp->mlo_ie.mlo_ie.mld_mac_addr.info.mld_mac_addr,
-		&ar->mlo_ie.mld_mac_addr.info.mld_mac_addr, QDF_MAC_ADDR_SIZE);
-
+		&pAssocRsp->mlo_ie.mlo_ie.mld_mac_addr,
+		&ar->mlo_ie.mld_mac_addr, QDF_MAC_ADDR_SIZE);
+		pAssocRsp->mlo_ie.mlo_ie.common_info_length =
+					ar->mlo_ie.common_info_length;
 		pAssocRsp->mlo_ie.mlo_ie.link_id_info_present =
 					ar->mlo_ie.link_id_info_present;
 		pAssocRsp->mlo_ie.mlo_ie.link_id_info.info.link_id =
@@ -3804,7 +3803,7 @@ sir_convert_assoc_resp_frame2_struct(struct mac_context *mac,
 			 ar->mlo_ie.num_sta_profile,
 			 ar->mlo_ie.link_id_info.info.link_id,
 			 QDF_MAC_ADDR_REF(
-				ar->mlo_ie.mld_mac_addr.info.mld_mac_addr));
+				ar->mlo_ie.mld_mac_addr));
 	}
 	pe_debug("ht %d vht %d vendor vht: cap %d op %d, he %d he 6ghband %d eht %d eht320 %d, max idle: present %d val %d, he mu edca %d wmm %d qos %d",
 		 ar->HTCaps.present, ar->VHTCaps.present,
@@ -4027,7 +4026,7 @@ sir_convert_reassoc_req_frame2_struct(struct mac_context *mac,
 		pAssocReq->mlo_info.num_partner_links =
 					ar->mlo_ie.num_sta_profile;
 		qdf_mem_copy(pAssocReq->mld_mac,
-			     ar->mlo_ie.mld_mac_addr.info.mld_mac_addr,
+			     ar->mlo_ie.mld_mac_addr,
 			     QDF_MAC_ADDR_SIZE);
 	}
 
@@ -8270,20 +8269,32 @@ QDF_STATUS populate_dot11f_assoc_rsp_mlo_ie(struct mac_context *mac_ctx,
 	tDot11fFfStatus sta_status;
 	tDot11fIEP2PAssocRes sta_p2p_assoc_res;
 	tDot11fIEnon_inheritance sta_non_inheritance;
+	uint8_t common_info_len = 0, len = 0;
 
 	mlo_ie->present = 1;
-	mlo_ie->mld_mac_addr_present = 1;
 	mlo_ie->type = 0;
-	qdf_mem_copy(mlo_ie->mld_mac_addr.info.mld_mac_addr,
+
+	/* Common Info Length*/
+	common_info_len += WLAN_ML_BV_CINFO_LENGTH_SIZE;
+	qdf_mem_copy(mlo_ie->mld_mac_addr,
 		     session->vdev->mlo_dev_ctx->mld_addr.bytes,
-		     sizeof(mlo_ie->mld_mac_addr.info.mld_mac_addr));
+		     sizeof(mlo_ie->mld_mac_addr));
+	common_info_len += QDF_MAC_ADDR_SIZE;
+
 	mlo_ie->link_id_info_present = 1;
 	mlo_ie->link_id_info.info.link_id = wlan_vdev_get_link_id(
 							session->vdev);
+	common_info_len += WLAN_ML_BV_CINFO_LINKIDINFO_SIZE;
+
 	mlo_ie->bss_param_change_cnt_present = 1;
 	mlo_ie->bss_param_change_cnt.info.bss_param_change_count =
 		session->mlo_link_info.link_ie.bss_param_change_cnt;
+	common_info_len += WLAN_ML_BV_CINFO_BSSPARAMCHNGCNT_SIZE;
+
 	mlo_ie->mld_capab_present = 1;
+	common_info_len += WLAN_ML_BV_CINFO_MLDCAP_SIZE;
+
+	mlo_ie->common_info_length = common_info_len;
 
 	assoc_req = session->parsedAssocReq[sta->assocId];
 	for (link = 0; link < assoc_req->mlo_info.num_partner_links; link++) {
@@ -8340,6 +8351,20 @@ QDF_STATUS populate_dot11f_assoc_rsp_mlo_ie(struct mac_context *mac_ctx,
 		/* sta control */
 		sta_data += 2;
 		sta_len_left -= 2;
+
+		/*
+		 * 1 Bytes for STA Info Length + 6 bytes for STA MAC Address +
+		 * 2 Bytes for Becon Interval + 2 Bytes for DTIM Info
+		 */
+		len = WLAN_ML_BV_LINFO_PERSTAPROF_STAINFO_LENGTH_SIZE +
+		      QDF_MAC_ADDR_SIZE + WLAN_BEACONINTERVAL_LEN +
+		      sizeof(struct wlan_ml_bv_linfo_perstaprof_stainfo_dtiminfo);
+		*sta_data = len;
+
+		/* STA Info Length */
+		sta_data += WLAN_ML_BV_LINFO_PERSTAPROF_STAINFO_LENGTH_SIZE;
+		sta_len_left -= WLAN_ML_BV_LINFO_PERSTAPROF_STAINFO_LENGTH_SIZE;
+
 		/*mac addr*/
 		qdf_mem_copy(sta_data, link_session->self_mac_addr,
 			     QDF_MAC_ADDR_SIZE);
@@ -8804,36 +8829,45 @@ QDF_STATUS populate_dot11f_bcn_mlo_ie(struct mac_context *mac_ctx,
 	uint8_t *sta_data;
 	uint32_t sta_len_left;
 	uint32_t sta_len_consumed;
+	uint8_t common_info_length = 0;
 
+	/* Common Info Length */
+	common_info_length += WLAN_ML_BV_CINFO_LENGTH_SIZE;
 	qdf_mem_zero(&mac_ctx->sch.sch_mlo_partner,
 		     sizeof(mac_ctx->sch.sch_mlo_partner));
 	sch_info = &mac_ctx->sch.sch_mlo_partner;
 	mlo_ie->present = 1;
-	mlo_ie->mld_mac_addr_present = 1;
 	mlo_ie->type = 0;
 	tmp_offset += 1; /* Element ID */
 	tmp_offset += 1; /* length */
 	tmp_offset += 1; /* Element ID extension */
 	tmp_offset += 2; /* Multi-link control */
-	qdf_mem_copy(mlo_ie->mld_mac_addr.info.mld_mac_addr,
+	qdf_mem_copy(mlo_ie->mld_mac_addr,
 		     session->vdev->mlo_dev_ctx->mld_addr.bytes,
-		     sizeof(mlo_ie->mld_mac_addr.info.mld_mac_addr));
+		     sizeof(mlo_ie->mld_mac_addr));
+	tmp_offset += 1; /* Common Info Length */
 	tmp_offset += 6; /* mld mac addr */
+	common_info_length += QDF_MAC_ADDR_SIZE;
 	mlo_ie->link_id_info_present = 1;
 	mlo_ie->link_id_info.info.link_id = wlan_vdev_get_link_id(
 						session->vdev);
 	tmp_offset += 1; /* link id */
+	common_info_length += WLAN_ML_BV_CINFO_LINKIDINFO_SIZE;
 	mlo_ie->bss_param_change_cnt_present = 1;
 	mlo_ie->bss_param_change_cnt.info.bss_param_change_count =
 		session->mlo_link_info.link_ie.bss_param_change_cnt;
 	tmp_offset += 1; /* bss parameters change count */
+	common_info_length += WLAN_ML_BV_CINFO_BSSPARAMCHNGCNT_SIZE;
 	mlo_ie->mld_capab_present = 1;
 	tmp_offset += 2; /* mld capabilities */
+	common_info_length += WLAN_ML_BV_CINFO_MLDCAP_SIZE;
 	sch_info->num_links = 0;
 
 	lim_get_mlo_vdev_list(session, &vdev_count, wlan_vdev_list);
 	mlo_ie->mld_capabilities.info.max_simultaneous_link_num =
 							vdev_count - 1;
+
+	mlo_ie->common_info_length = common_info_length;
 	sch_info->mlo_ie_link_info_ofst = tmp_offset;
 	for (link = 0; link < vdev_count; link++) {
 		if (!wlan_vdev_list[link])
@@ -9021,10 +9055,9 @@ populate_dot11f_probe_req_mlo_ie(struct mac_context *mac_ctx,
 
 	mlo_ie->present = 1;
 	mlo_ie->type = 1;
-	mlo_ie->mld_mac_addr_present = 1;
 	mld_addr = wlan_vdev_mlme_get_mldaddr(session->vdev);
-	qdf_mem_copy(&mlo_ie->mld_mac_addr.info.mld_mac_addr, mld_addr,
-		     sizeof(mlo_ie->mld_mac_addr.info.mld_mac_addr));
+	qdf_mem_copy(&mlo_ie->mld_mac_addr, mld_addr,
+		     sizeof(mlo_ie->mld_mac_addr));
 	mlo_ie->link_id_info_present = 0;
 
 	return QDF_STATUS_SUCCESS;
@@ -9036,21 +9069,26 @@ populate_dot11f_mlo_caps(struct mac_context *mac_ctx,
 			 tDot11fIEmlo_ie *mlo_ie)
 {
 	uint8_t *mld_addr;
+	uint8_t common_info_len = 0;
 
 	mlo_ie->present = 1;
 	mlo_ie->type = 0;
-	mlo_ie->mld_mac_addr_present = 1;
+	/* Common Info Length */
+	common_info_len += WLAN_ML_BV_CINFO_LENGTH_SIZE;
 	mld_addr = wlan_vdev_mlme_get_mldaddr(session->vdev);
-	qdf_mem_copy(&mlo_ie->mld_mac_addr.info.mld_mac_addr, mld_addr,
-		     sizeof(mlo_ie->mld_mac_addr.info.mld_mac_addr));
+	qdf_mem_copy(&mlo_ie->mld_mac_addr, mld_addr,
+		     sizeof(mlo_ie->mld_mac_addr));
+	common_info_len += QDF_MAC_ADDR_SIZE;
 	mlo_ie->link_id_info_present = 0;
 
 	mlo_ie->bss_param_change_cnt_present = 0;
 	mlo_ie->medium_sync_delay_info_present = 0;
 	mlo_ie->eml_capab_present = 0;
 	mlo_ie->mld_capab_present = 1;
+	common_info_len += WLAN_ML_BV_CINFO_MLDCAP_SIZE;
 	mlo_ie->reserved = 0;
 	mlo_ie->reserved_1 = 0;
+	mlo_ie->common_info_length = common_info_len;
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -9068,10 +9106,10 @@ sir_convert_mlo_probe_rsp_frame2_struct(tDot11fProbeResponse *pr,
 	qdf_mem_zero((uint8_t *)mlo_ie_ptr, sizeof(tSirMultiLink_IE));
 
 	mlo_ie_ptr->mlo_ie.present = pr->mlo_ie.present;
-	mlo_ie_ptr->mlo_ie.mld_mac_addr_present =
-			pr->mlo_ie.mld_mac_addr_present;
-	qdf_mem_copy(&mlo_ie_ptr->mlo_ie.mld_mac_addr.info.mld_mac_addr,
-		     &pr->mlo_ie.mld_mac_addr.info.mld_mac_addr,
+	mlo_ie_ptr->mlo_ie.common_info_length =
+				pr->mlo_ie.common_info_length;
+	qdf_mem_copy(&mlo_ie_ptr->mlo_ie.mld_mac_addr,
+		     &pr->mlo_ie.mld_mac_addr,
 		     QDF_MAC_ADDR_SIZE);
 
 	mlo_ie_ptr->mlo_ie.link_id_info_present =
@@ -9976,11 +10014,13 @@ QDF_STATUS populate_dot11f_auth_mlo_ie(struct mac_context *mac_ctx,
 	pe_debug("Populate Auth MLO IEs");
 
 	mlo_ie->present = 1;
-	mlo_ie->mld_mac_addr_present = 1;
 	mlo_ie->type = 0;
 
-	mld_addr = (struct qdf_mac_addr *)wlan_vdev_mlme_get_mldaddr(pe_session->vdev);
+	mlo_ie->common_info_length = WLAN_ML_BV_CINFO_LENGTH_SIZE;
+	mld_addr = (struct qdf_mac_addr *)wlan_vdev_mlme_get_mldaddr(
+							pe_session->vdev);
 	qdf_mem_copy(&mlo_ie->mld_mac_addr, mld_addr, QDF_MAC_ADDR_SIZE);
+	mlo_ie->common_info_length += QDF_MAC_ADDR_SIZE;
 
 	pe_debug("MLD mac addr: " QDF_MAC_ADDR_FMT, mld_addr);
 
@@ -10017,7 +10057,7 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 	uint8_t op_class;
 	uint8_t *p_sta_prof;
 	uint32_t len_consumed;
-	uint8_t len_remaining;
+	uint8_t len_remaining, len;
 	tDot11fIEnon_inheritance sta_prof_non_inherit;
 	tDot11fFfCapabilities mlo_cap;
 	tDot11fIEHTCaps ht_caps;
@@ -10037,18 +10077,19 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 	mlo_ie = &frm->mlo_ie;
 
 	mlo_ie->present = 1;
-	mlo_ie->mld_mac_addr_present = 1;
 	mlo_ie->type = 0;
+	mlo_ie->common_info_length = WLAN_ML_BV_CINFO_LENGTH_SIZE;
 	mld_addr = (struct qdf_mac_addr *)wlan_vdev_mlme_get_mldaddr(pe_session->vdev);
-	qdf_mem_copy(&mlo_ie->mld_mac_addr.info.mld_mac_addr,
+	qdf_mem_copy(&mlo_ie->mld_mac_addr,
 		     mld_addr,
 		     QDF_MAC_ADDR_SIZE);
+	mlo_ie->common_info_length += QDF_MAC_ADDR_SIZE;
 	mlo_ie->link_id_info_present = 0;
 
 	mlo_ie->bss_param_change_cnt_present = 0;
 	mlo_ie->medium_sync_delay_info_present = 0;
 	mlo_ie->eml_capab_present = 0;
-	mlo_ie->mld_capab_present = 0;
+	mlo_ie->mld_capab_present = 1;
 
 	/* find out number of links from bcn or prb rsp */
 	total_sta_prof = 1;
@@ -10104,6 +10145,17 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 		/* 2 Bytes for sta control field*/
 		p_sta_prof += 2;
 		len_remaining -= 2;
+
+		/* 1 Bytes for STA Info Length + 6 bytes for STA MAC Address*/
+		len = WLAN_ML_BV_LINFO_PERSTAPROF_STAINFO_LENGTH_SIZE +
+		      QDF_MAC_ADDR_SIZE;
+		*p_sta_prof = len;
+
+		/* 1 Byte for STA Info Length */
+		p_sta_prof += WLAN_ML_BV_LINFO_PERSTAPROF_STAINFO_LENGTH_SIZE;
+		len_remaining -=
+			WLAN_ML_BV_LINFO_PERSTAPROF_STAINFO_LENGTH_SIZE;
+
 		/* Copying sta mac address in sta info field */
 		qdf_mem_copy(p_sta_prof, vdev->vdev_mlme.macaddr,
 			     QDF_MAC_ADDR_SIZE);
