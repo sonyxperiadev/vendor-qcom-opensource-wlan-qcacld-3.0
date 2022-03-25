@@ -3949,6 +3949,9 @@ void hdd_dp_cfg_update(struct wlan_objmgr_psoc *psoc,
 	config->rx_thread_affinity_mask =
 		cfg_get(psoc, CFG_DP_RX_THREAD_CPU_MASK);
 	config->fisa_enable = cfg_get(psoc, CFG_DP_RX_FISA_ENABLE);
+	config->enable_fisa_lru_deletion =
+				cfg_get(psoc, CFG_DP_RX_FISA_LRU_DEL_ENABLE);
+
 	if (cfg_len < CFG_DP_RPS_RX_QUEUE_CPU_MAP_LIST_LEN) {
 		qdf_str_lcopy(config->cpu_map_list,
 			      cfg_get(psoc, CFG_DP_RPS_RX_QUEUE_CPU_MAP_LIST),
