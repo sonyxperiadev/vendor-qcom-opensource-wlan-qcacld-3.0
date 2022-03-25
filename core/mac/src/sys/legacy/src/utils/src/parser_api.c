@@ -4052,7 +4052,9 @@ sir_beacon_ie_ese_bcn_report(struct mac_context *mac,
 	   for Bcn report mandatory Ies */
 	uint16_t numBytes = 0, freeBytes = 0;
 	uint8_t *pos = NULL;
+	uint32_t freq;
 
+	freq = WMA_GET_RX_FREQ(pPayload);
 	/* Zero-init our [out] parameter, */
 	qdf_mem_zero((uint8_t *) &eseBcnReportMandatoryIe,
 		    sizeof(eseBcnReportMandatoryIe));
@@ -4073,6 +4075,18 @@ sir_beacon_ie_ese_bcn_report(struct mac_context *mac,
 		pe_debug("There were warnings while unpacking Beacon IEs (0x%08x, %d bytes):",
 			status, nPayload);
 	}
+
+	status = lim_strip_and_decode_eht_cap(pPayload + WLAN_BEACON_IES_OFFSET,
+					      nPayload - WLAN_BEACON_IES_OFFSET,
+					      &pBies->eht_cap,
+					      pBies->he_cap,
+					      freq);
+	if (status != QDF_STATUS_SUCCESS) {
+		pe_err("Failed to extract eht cap");
+		qdf_mem_free(pBies);
+		return status;
+	}
+
 	/* & "transliterate" from a 'tDot11fBeaconIEs' to a 'eseBcnReportMandatoryIe'... */
 	if (!pBies->SSID.present) {
 		pe_debug("Mandatory IE SSID not present!");
@@ -4319,7 +4333,9 @@ sir_parse_beacon_ie(struct mac_context *mac,
 {
 	tDot11fBeaconIEs *pBies;
 	uint32_t status;
+	uint32_t freq;
 
+	freq = WMA_GET_RX_FREQ(pPayload);
 	/* Zero-init our [out] parameter, */
 	qdf_mem_zero((uint8_t *) pBeaconStruct, sizeof(tSirProbeRespBeacon));
 
@@ -4341,6 +4357,18 @@ sir_parse_beacon_ie(struct mac_context *mac,
 	} else if (DOT11F_WARNED(status)) {
 		pe_debug("warnings (0x%08x, %d bytes):", status, nPayload);
 	}
+
+	status = lim_strip_and_decode_eht_cap(pPayload + WLAN_BEACON_IES_OFFSET,
+					      nPayload - WLAN_BEACON_IES_OFFSET,
+					      &pBies->eht_cap,
+					      pBies->he_cap,
+					      freq);
+	if (status != QDF_STATUS_SUCCESS) {
+		pe_err("Failed to extract eht cap");
+		qdf_mem_free(pBies);
+		return QDF_STATUS_E_FAILURE;
+	}
+
 	/* & "transliterate" from a 'tDot11fBeaconIEs' to a 'tSirProbeRespBeacon'... */
 	if (!pBies->SSID.present) {
 		pe_debug("Mandatory IE SSID not present!");
@@ -4637,10 +4665,12 @@ sir_convert_beacon_frame2_struct(struct mac_context *mac,
 	uint32_t status, nPayload;
 	uint8_t *pPayload;
 	tpSirMacMgmtHdr pHdr;
+	uint32_t freq;
 
 	pPayload = WMA_GET_RX_MPDU_DATA(pFrame);
 	nPayload = WMA_GET_RX_PAYLOAD_LEN(pFrame);
 	pHdr = WMA_GET_RX_MAC_HEADER(pFrame);
+	freq = WMA_GET_RX_FREQ(pFrame);
 
 	/* Zero-init our [out] parameter, */
 	qdf_mem_zero((uint8_t *) pBeaconStruct, sizeof(tSirProbeRespBeacon));
@@ -4662,6 +4692,18 @@ sir_convert_beacon_frame2_struct(struct mac_context *mac,
 		qdf_mem_free(pBeacon);
 		return QDF_STATUS_E_FAILURE;
 	}
+
+	status = lim_strip_and_decode_eht_cap(pPayload + WLAN_BEACON_IES_OFFSET,
+					      nPayload - WLAN_BEACON_IES_OFFSET,
+					      &pBeacon->eht_cap,
+					      pBeacon->he_cap,
+					      freq);
+	if (status != QDF_STATUS_SUCCESS) {
+		pe_err("Failed to extract eht cap");
+		qdf_mem_free(pBeacon);
+		return QDF_STATUS_E_FAILURE;
+	}
+
 	/* & "transliterate" from a 'tDot11fBeacon' to a 'tSirProbeRespBeacon'... */
 	/* Timestamp */
 	qdf_mem_copy((uint8_t *) pBeaconStruct->timeStamp,
@@ -9114,6 +9156,7 @@ QDF_STATUS wlan_parse_bss_description_ies(struct mac_context *mac_ctx,
 					  tDot11fBeaconIEs *ie_struct)
 {
 	int ie_len = wlan_get_ielen_from_bss_description(bss_desc);
+	QDF_STATUS status;
 
 	if (ie_len <= 0 || !ie_struct) {
 		pe_err("BSS description has invalid IE : %d", ie_len);
@@ -9123,6 +9166,15 @@ QDF_STATUS wlan_parse_bss_description_ies(struct mac_context *mac_ctx,
 			  (mac_ctx, (uint8_t *)bss_desc->ieFields,
 			  ie_len, ie_struct, false))) {
 		pe_err("Beacon IE parsing failed");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	status = lim_strip_and_decode_eht_cap((uint8_t *)bss_desc->ieFields,
+					      ie_len, &ie_struct->eht_cap,
+					      ie_struct->he_cap,
+					      bss_desc->chan_freq);
+	if (status != QDF_STATUS_SUCCESS) {
+		pe_err("Failed to extract eht cap");
 		return QDF_STATUS_E_FAILURE;
 	}
 

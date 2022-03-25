@@ -5175,6 +5175,14 @@ void lim_process_tpe_ie_from_beacon(struct mac_context *mac,
 		pe_debug("warnings (0x%08x, %d bytes):", status, buf_len);
 	}
 
+	status = lim_strip_and_decode_eht_cap(buf, buf_len, &bcn_ie->eht_cap,
+					      bcn_ie->he_cap,
+					      session->curr_op_freq);
+	if (status != QDF_STATUS_SUCCESS) {
+		pe_err("Failed to extract eht cap");
+		return;
+	}
+
 	lim_parse_tpe_ie(mac, session, bcn_ie->transmit_power_env,
 			 bcn_ie->num_transmit_power_env, &bcn_ie->he_op,
 			 has_tpe_updated);
