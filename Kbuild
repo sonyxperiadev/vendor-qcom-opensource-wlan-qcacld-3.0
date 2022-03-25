@@ -1734,7 +1734,11 @@ P2P_OBJS := $(P2P_DISPATCHER_OBJ_DIR)/wlan_p2p_ucfg_api.o \
 	    $(P2P_CORE_OBJ_DIR)/wlan_p2p_off_chan_tx.o \
 	    $(P2P_OS_IF_SRC)/wlan_cfg80211_p2p.o \
 	    $(P2P_TARGET_IF_SRC)/target_if_p2p.o
-
+ifeq ($(CONFIG_WLAN_FEATURE_MCC_QUOTA), y)
+P2P_OBJS += $(P2P_DISPATCHER_OBJ_DIR)/wlan_p2p_mcc_quota_tgt_api.o \
+	    $(P2P_CORE_OBJ_DIR)/wlan_p2p_mcc_quota.o \
+	    $(P2P_TARGET_IF_SRC)/target_if_p2p_mcc_quota.o
+endif
 $(call add-wlan-objs,p2p,$(P2P_OBJS))
 
 ###### UMAC POLICY MGR ########
