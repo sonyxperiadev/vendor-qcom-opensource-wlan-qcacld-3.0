@@ -3273,7 +3273,7 @@ IE he_6ghz_band_cap (EID_EXTN_ID_ELEMENT) OUI (0x3B)
 IE eht_cap (EID_EXTN_ID_ELEMENT) OUI (0x6C)
 {
     {
-	nsep_pri_access: 1;
+	epcs_pri_access: 1;
 	eht_om_ctl: 1;
 	triggered_txop_sharing_mode1: 1;
 	triggered_txop_sharing_mode2: 1;
@@ -3326,6 +3326,11 @@ IE eht_cap (EID_EXTN_ID_ELEMENT) OUI (0x6C)
 	mu_bformer_160mhz: 1;
 	mu_bformer_320mhz: 1;
 	tb_sounding_feedback_rl: 1;
+    }
+    {
+	rx_1k_qam_in_wider_bw_dl_ofdma: 1;
+	rx_4k_qam_in_wider_bw_dl_ofdma: 1;
+	reserved3: 6;
     }
     {
 	bw_20_rx_max_nss_for_mcs_0_to_7: 4;
