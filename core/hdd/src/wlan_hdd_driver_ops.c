@@ -51,7 +51,11 @@
 #include "wlan_hdd_bus_bandwidth.h"
 
 #ifdef MODULE
+#ifdef WLAN_WEAR_CHIPSET
+#define WLAN_MODULE_NAME  "wlan"
+#else
 #define WLAN_MODULE_NAME  module_name(THIS_MODULE)
+#endif
 #else
 #define WLAN_MODULE_NAME  "wlan"
 #endif
