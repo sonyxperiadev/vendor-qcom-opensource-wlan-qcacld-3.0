@@ -8456,7 +8456,7 @@ void lim_set_eht_caps(struct mac_context *mac, struct pe_session *session,
 		/* convert from unpacked to packed structure */
 		eht_cap = (struct wlan_eht_cap_info *)&ie[2 + EHT_CAP_OUI_SIZE];
 
-		eht_cap->nsep_pri_access = dot11_cap.nsep_pri_access;
+		eht_cap->epcs_pri_access = dot11_cap.epcs_pri_access;
 		eht_cap->eht_om_ctl = dot11_cap.eht_om_ctl;
 		eht_cap->triggered_txop_sharing_mode1 =
 			dot11_cap.triggered_txop_sharing_mode1;
@@ -8529,6 +8529,10 @@ void lim_set_eht_caps(struct mac_context *mac, struct pe_session *session,
 		eht_cap->mu_bformer_320mhz = dot11_cap.mu_bformer_320mhz;
 		eht_cap->tb_sounding_feedback_rl =
 			dot11_cap.tb_sounding_feedback_rl;
+		eht_cap->rx_1k_qam_in_wider_bw_dl_ofdma =
+			dot11_cap.rx_1k_qam_in_wider_bw_dl_ofdma;
+		eht_cap->rx_4k_qam_in_wider_bw_dl_ofdma =
+			dot11_cap.rx_4k_qam_in_wider_bw_dl_ofdma;
 
 		if ((is_band_2g && !dot11_he_cap.chan_width_0) ||
 			(!is_band_2g && !dot11_he_cap.chan_width_1 &&

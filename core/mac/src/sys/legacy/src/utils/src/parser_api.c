@@ -6840,8 +6840,8 @@ const uint8_t *lim_get_ext_ie_ptr_from_ext_id(const uint8_t *ie,
 					       ie, ie_len);
 }
 
-/* 1 byte ext id, 2 bytes mac cap, 8 bytes phy cap */
-#define EHTCAP_FIXED_LEN 11
+/* 1 byte ext id, 2 bytes mac cap, 9 bytes phy cap */
+#define EHTCAP_FIXED_LEN 12
 #define EHTCAP_MACBYTE_IDX0      0
 #define EHTCAP_MACBYTE_IDX1      1
 
@@ -6853,6 +6853,7 @@ const uint8_t *lim_get_ext_ie_ptr_from_ext_id(const uint8_t *ie,
 #define EHTCAP_PHYBYTE_IDX5      5
 #define EHTCAP_PHYBYTE_IDX6      6
 #define EHTCAP_PHYBYTE_IDX7      7
+#define EHTCAP_PHYBYTE_IDX8      8
 
 #define WLAN_IE_HDR_LEN          2
 
@@ -6930,14 +6931,14 @@ enum EHT_PER_BW_TXRX_MCS_NSS_MAP_IDX {
 				     (num_bits))
 
 /* byte 0 */
-#define EHTCAP_MAC_NSEPPRIACCESS_GET_FROM_IE(__eht_cap_mac) \
+#define EHTCAP_MAC_EPCSPRIACCESS_GET_FROM_IE(__eht_cap_mac) \
 			ehtcap_ie_get(__eht_cap_mac[EHTCAP_MACBYTE_IDX0], \
-				      EHTCAP_MAC_NSEPPRIACCESS_IDX, \
-				      EHTCAP_MAC_NSEPPRIACCESS_BITS)
-#define EHTCAP_MAC_NSEPPRIACCESS_SET_TO_IE(__eht_cap_mac, __value) \
+				      EHTCAP_MAC_EPCSPRIACCESS_IDX, \
+				      EHTCAP_MAC_EPCSPRIACCESS_BITS)
+#define EHTCAP_MAC_EPCSPRIACCESS_SET_TO_IE(__eht_cap_mac, __value) \
 			ehtcap_ie_set(&__eht_cap_mac[EHTCAP_MACBYTE_IDX0], \
-				      EHTCAP_MAC_NSEPPRIACCESS_IDX, \
-				      EHTCAP_MAC_NSEPPRIACCESS_BITS, __value)
+				      EHTCAP_MAC_EPCSPRIACCESS_IDX, \
+				      EHTCAP_MAC_EPCSPRIACCESS_BITS, __value)
 
 #define EHTCAP_MAC_EHTOMCTRL_GET_FROM_IE(__eht_cap_mac) \
 			ehtcap_ie_get(__eht_cap_mac[EHTCAP_MACBYTE_IDX0], \
@@ -7370,6 +7371,25 @@ enum EHT_PER_BW_TXRX_MCS_NSS_MAP_IDX {
 				      EHTCAP_PHY_TB_SOUNDING_FEEDBACK_RL_IDX, \
 				      EHTCAP_PHY_TB_SOUNDING_FEEDBACK_RL_BITS, \
 				      value)
+#define EHTCAP_PHY_RX_1K_QAM_IN_WIDER_BW_DL_OFDMA_GET_FROM_IE(__eht_cap_phy) \
+		ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX8], \
+			      EHTCAP_PHY_RX_1K_QAM_IN_WIDER_BW_DL_OFDMA_IDX, \
+			      EHTCAP_PHY_RX_1K_QAM_IN_WIDER_BW_DL_OFDMA_BITS)
+#define EHTCAP_PHY_RX_1K_QAM_IN_WIDER_BW_DL_OFDMA_SET_TO_IE(__eht_cap_phy, value) \
+		ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX8], \
+			      EHTCAP_PHY_RX_1K_QAM_IN_WIDER_BW_DL_OFDMA_IDX, \
+			      EHTCAP_PHY_RX_1K_QAM_IN_WIDER_BW_DL_OFDMA_BITS, \
+			      value)
+
+#define EHTCAP_PHY_RX_4K_QAM_IN_WIDER_BW_DL_OFDMA_GET_FROM_IE(__eht_cap_phy) \
+		ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX8], \
+			      EHTCAP_PHY_RX_4K_QAM_IN_WIDER_BW_DL_OFDMA_IDX, \
+			      EHTCAP_PHY_RX_4K_QAM_IN_WIDER_BW_DL_OFDMA_BITS)
+#define EHTCAP_PHY_RX_4K_QAM_IN_WIDER_BW_DL_OFDMA_SET_TO_IE(__eht_cap_phy, value) \
+		ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX8], \
+			      EHTCAP_PHY_RX_4K_QAM_IN_WIDER_BW_DL_OFDMA_IDX, \
+			      EHTCAP_PHY_RX_4K_QAM_IN_WIDER_BW_DL_OFDMA_BITS, \
+			      value)
 static
 QDF_STATUS lim_ieee80211_unpack_ehtcap(const uint8_t *eht_cap_ie,
 				       tDot11fIEeht_cap *dot11f_eht_cap,
@@ -7389,8 +7409,8 @@ QDF_STATUS lim_ieee80211_unpack_ehtcap(const uint8_t *eht_cap_ie,
 	qdf_mem_zero(dot11f_eht_cap, (sizeof(tDot11fIEeht_cap)));
 
 	dot11f_eht_cap->present = 1;
-	dot11f_eht_cap->nsep_pri_access =
-		    EHTCAP_MAC_NSEPPRIACCESS_GET_FROM_IE(ehtcap->eht_mac_cap);
+	dot11f_eht_cap->epcs_pri_access =
+		    EHTCAP_MAC_EPCSPRIACCESS_GET_FROM_IE(ehtcap->eht_mac_cap);
 
 	dot11f_eht_cap->eht_om_ctl =
 		    EHTCAP_MAC_EHTOMCTRL_GET_FROM_IE(ehtcap->eht_mac_cap);
@@ -7566,6 +7586,14 @@ QDF_STATUS lim_ieee80211_unpack_ehtcap(const uint8_t *eht_cap_ie,
 
 	dot11f_eht_cap->tb_sounding_feedback_rl =
 			EHTCAP_PHY_TB_SOUNDING_FB_RL_GET_FROM_IE(
+					ehtcap->eht_phy_cap.phy_cap_bytes);
+
+	dot11f_eht_cap->rx_1k_qam_in_wider_bw_dl_ofdma =
+			EHTCAP_PHY_RX_1K_QAM_IN_WIDER_BW_DL_OFDMA_GET_FROM_IE(
+					ehtcap->eht_phy_cap.phy_cap_bytes);
+
+	dot11f_eht_cap->rx_4k_qam_in_wider_bw_dl_ofdma =
+			EHTCAP_PHY_RX_4K_QAM_IN_WIDER_BW_DL_OFDMA_GET_FROM_IE(
 					ehtcap->eht_phy_cap.phy_cap_bytes);
 
 	/* Fill EHT MCS and NSS set field */
@@ -7788,8 +7816,8 @@ void lim_ieee80211_pack_ehtcap(uint8_t *ie, tDot11fIEeht_cap dot11f_eht_cap,
 	 */
 	qdf_mem_copy(&ehtcap->elem_id_extn, EHT_CAP_OUI_TYPE, EHT_CAP_OUI_SIZE);
 
-	val = dot11f_eht_cap.nsep_pri_access;
-	EHTCAP_MAC_NSEPPRIACCESS_SET_TO_IE(ehtcap->eht_mac_cap, val);
+	val = dot11f_eht_cap.epcs_pri_access;
+	EHTCAP_MAC_EPCSPRIACCESS_SET_TO_IE(ehtcap->eht_mac_cap, val);
 
 	val = dot11f_eht_cap.eht_om_ctl;
 	EHTCAP_MAC_EHTOMCTRL_SET_TO_IE(ehtcap->eht_mac_cap, val);
@@ -7960,6 +7988,14 @@ void lim_ieee80211_pack_ehtcap(uint8_t *ie, tDot11fIEeht_cap dot11f_eht_cap,
 	val = dot11f_eht_cap.tb_sounding_feedback_rl;
 	EHTCAP_PHY_TB_SOUNDING_FB_RL_SET_TO_IE(
 				     ehtcap->eht_phy_cap.phy_cap_bytes,	val);
+
+	val = dot11f_eht_cap.rx_1k_qam_in_wider_bw_dl_ofdma;
+	EHTCAP_PHY_RX_1K_QAM_IN_WIDER_BW_DL_OFDMA_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+
+	val = dot11f_eht_cap.rx_4k_qam_in_wider_bw_dl_ofdma;
+	EHTCAP_PHY_RX_4K_QAM_IN_WIDER_BW_DL_OFDMA_SET_TO_IE(
+				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
 
 	/* Fill EHT MCS and NSS set field */
 	if ((is_band_2g && !dot11f_he_cap.chan_width_0) ||
