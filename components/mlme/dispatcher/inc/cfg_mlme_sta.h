@@ -512,6 +512,30 @@
 			CFG_VALUE_OR_DEFAULT, \
 			"Max modulated dtim")
 
+/*
+ * <ini>
+ * @Min: 0
+ * @Max: 2000
+ * @Default: 500
+ *
+ * This ini is used to set default ConDTIMSkipping_MaxTime in ms
+ *
+ * Related: None
+ *
+ * Supported Feature: STA
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_MAX_LI_MODULATED_DTIM_MS CFG_INI_UINT( \
+			"ConDTIMSkipping_MaxTime", \
+			0, \
+			2000, \
+			500, \
+			CFG_VALUE_OR_DEFAULT, \
+			"DTIM skipping max time")
+
 #ifdef WLAN_FEATURE_11BE_MLO
 /*
  * <cfg>
@@ -560,6 +584,7 @@
 	CFG(CFG_WT_CNF_TIMEOUT) \
 	CFG(CFG_CURRENT_RSSI) \
 	CFG(CFG_TX_POWER_CTRL) \
-	CFG_SINGLE_LINK_MLO_CONN_CFG
+	CFG_SINGLE_LINK_MLO_CONN_CFG \
+	CFG(CFG_MAX_LI_MODULATED_DTIM_MS)
 
 #endif /* CFG_MLME_STA_H__ */

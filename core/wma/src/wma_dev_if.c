@@ -4990,6 +4990,7 @@ static void wma_add_sta_req_sta_mode(tp_wma_handle wma, tpAddStaParams params)
 				wmi_service_listen_interval_offload_support)) {
 		struct wlan_objmgr_vdev *vdev;
 		uint32_t moddtim;
+		bool is_connection_roaming_cfg_set = 0;
 
 		wma_debug("listen interval offload enabled, setting params");
 		status = wma_vdev_set_param(wma->wmi_handle,
@@ -5000,6 +5001,21 @@ static void wma_add_sta_req_sta_mode(tp_wma_handle wma, tpAddStaParams params)
 			wma_err("can't set MAX_LI for session: %d",
 				params->smesessionId);
 		}
+
+		ucfg_mlme_get_connection_roaming_ini_present(
+						wma->psoc,
+						&is_connection_roaming_cfg_set);
+		if (is_connection_roaming_cfg_set) {
+			status = wma_vdev_set_param(
+					wma->wmi_handle,
+					params->smesessionId,
+					WMI_VDEV_PARAM_MAX_LI_OF_MODDTIM_MS,
+					wma->sta_max_li_mod_dtim_ms);
+			if (status != QDF_STATUS_SUCCESS)
+				wma_err("can't set MAX_LI_MS for session: %d",
+					params->smesessionId);
+		}
+
 		status = wma_vdev_set_param(wma->wmi_handle,
 					    params->smesessionId,
 					    WMI_VDEV_PARAM_DYNDTIM_CNT,

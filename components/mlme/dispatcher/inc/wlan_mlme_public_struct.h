@@ -1643,6 +1643,7 @@ enum station_prefer_bw {
  * @usr_disabled_roaming:           User config for roaming disable
  * @usr_scan_probe_unicast_ra:      User config unicast probe req in scan
  * @single_link_mlo_conn:           Single link mlo connection is configured
+ * @max_li_modulated_dtim_time_ms: Max modulated DTIM time in ms.
  */
 struct wlan_mlme_sta_cfg {
 	uint32_t sta_keep_alive_period;
@@ -1672,6 +1673,7 @@ struct wlan_mlme_sta_cfg {
 #ifdef WLAN_FEATURE_11BE_MLO
 	bool single_link_mlo_conn;
 #endif
+	uint16_t max_li_modulated_dtim_time_ms;
 };
 
 /**

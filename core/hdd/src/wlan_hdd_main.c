@@ -13822,6 +13822,9 @@ static int hdd_update_cds_config(struct hdd_context *hdd_ctx)
 	ucfg_mlme_get_sap_max_modulated_dtim(hdd_ctx->psoc,
 					     &cds_cfg->sta_maxlimod_dtim);
 
+	ucfg_mlme_get_max_modulated_dtim_ms(hdd_ctx->psoc,
+					    &cds_cfg->sta_maxlimod_dtim_ms);
+
 	status = ucfg_mlme_get_crash_inject(hdd_ctx->psoc, &crash_inject);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		hdd_err("Failed to get crash inject ini config");
@@ -19452,7 +19455,6 @@ static int hdd_update_pmo_config(struct hdd_context *hdd_ctx)
 	psoc_cfg.d0_wow_supported = wma_d0_wow_is_supported();
 	ucfg_mlme_get_sap_max_modulated_dtim(hdd_ctx->psoc,
 					     &psoc_cfg.sta_max_li_mod_dtim);
-
 
 	hdd_lpass_populate_pmo_config(&psoc_cfg, hdd_ctx);
 

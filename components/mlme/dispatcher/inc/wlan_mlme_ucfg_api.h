@@ -3678,6 +3678,22 @@ ucfg_mlme_get_sta_miracast_mcc_rest_time(struct wlan_objmgr_psoc *psoc,
 }
 
 /**
+ * ucfg_mlme_get_max_modulated_dtim_ms() - get sap max modulated dtim
+ * @psoc: pointer to psoc object
+ * @value: Value that needs to be set from the caller
+ *
+ * Inline UCFG API to be used by HDD/OSIF callers
+ *
+ * Return: QDF Status
+ */
+static inline QDF_STATUS
+ucfg_mlme_get_max_modulated_dtim_ms(struct wlan_objmgr_psoc *psoc,
+				    uint16_t *value)
+{
+	return wlan_mlme_get_max_modulated_dtim_ms(psoc, value);
+}
+
+/**
  * ucfg_mlme_get_sap_mcc_chnl_avoid() - Check if SAP MCC needs to be avoided
  *
  * @psoc: pointer to psoc object

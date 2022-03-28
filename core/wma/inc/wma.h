@@ -852,6 +852,7 @@ struct wma_wlm_stats_data {
  * @RArateLimitInterval: RA rate limit interval
  * @is_lpass_enabled: Flag to indicate if LPASS feature is enabled or not
  * @staMaxLIModDtim: station max listen interval
+ * @sta_max_li_mod_dtim_ms: station max listen interval in ms
  * @staModDtim: station mode DTIM
  * @staDynamicDtim: station dynamic DTIM
  * @hw_bd_id: hardware board id
@@ -975,6 +976,7 @@ typedef struct {
 	bool is_lpass_enabled;
 #endif
 	uint8_t staMaxLIModDtim;
+	uint16_t sta_max_li_mod_dtim_ms;
 	uint8_t staModDtim;
 	uint8_t staDynamicDtim;
 	uint32_t hw_bd_id;

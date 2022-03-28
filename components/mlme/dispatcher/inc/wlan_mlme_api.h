@@ -2302,6 +2302,18 @@ wlan_mlme_get_sta_miracast_mcc_rest_time(struct wlan_objmgr_psoc *psoc,
 					 uint32_t *value);
 
 /**
+ * wlan_mlme_get_max_modulated_dtim_ms() - get the max modulated dtim in ms
+ * restart
+ * @psoc: pointer to psoc object
+ * @value: Value that needs to be set from the caller
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+wlan_mlme_get_max_modulated_dtim_ms(struct wlan_objmgr_psoc *psoc,
+				    uint16_t *value);
+
+/**
  * wlan_mlme_get_scan_probe_unicast_ra() - Get scan probe unicast RA cfg
  * @psoc: pointer to psoc object
  * @value: value which needs to filled by API
