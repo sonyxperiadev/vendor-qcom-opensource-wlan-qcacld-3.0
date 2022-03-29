@@ -1546,6 +1546,7 @@ MLME_OBJS +=    $(CM_DIR)/dispatcher/src/wlan_cm_tgt_if_tx_api.o \
 		$(CM_DIR)/dispatcher/src/wlan_cm_roam_api.o \
 		$(CM_DIR)/dispatcher/src/wlan_cm_roam_ucfg_api.o \
 		$(CM_TGT_IF_DIR)/src/target_if_cm_roam_offload.o \
+		$(CM_TGT_IF_DIR)/src/target_if_cm_roam_event.o \
 		$(CM_DIR)/core/src/wlan_cm_roam_offload.o \
 		$(CM_DIR)/core/src/wlan_cm_vdev_connect.o \
 		$(CM_DIR)/core/src/wlan_cm_vdev_disconnect.o
@@ -1555,8 +1556,7 @@ MLME_OBJS +=    $(CM_DIR)/utf/src/cm_utf.o
 endif
 
 ifeq ($(CONFIG_QCACLD_WLAN_LFR3), y)
-MLME_OBJS +=    $(CM_TGT_IF_DIR)/src/target_if_cm_roam_event.o \
-		$(CM_DIR)/core/src/wlan_cm_roam_fw_sync.o \
+MLME_OBJS +=    $(CM_DIR)/core/src/wlan_cm_roam_fw_sync.o \
 		$(CM_DIR)/core/src/wlan_cm_roam_offload_event.o
 endif
 

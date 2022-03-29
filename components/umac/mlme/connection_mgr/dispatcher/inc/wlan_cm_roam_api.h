@@ -1218,6 +1218,21 @@ cm_roam_candidate_event_handler(struct wlan_objmgr_psoc *psoc,
 {
 	return QDF_STATUS_SUCCESS;
 }
+
+static inline QDF_STATUS
+cm_roam_sync_event_handler(struct wlan_objmgr_psoc *psoc,
+			   uint8_t *event, uint32_t len,
+			   struct roam_offload_synch_ind *sync_ind)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+cm_roam_sync_frame_event_handler(struct wlan_objmgr_psoc *psoc,
+				 struct roam_synch_frame_ind *frame_ind)
+{
+	return QDF_STATUS_SUCCESS;
+}
 #endif /* WLAN_FEATURE_ROAM_OFFLOAD */
 
 #ifdef WLAN_FEATURE_FIPS

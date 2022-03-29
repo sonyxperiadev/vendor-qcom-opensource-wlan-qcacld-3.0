@@ -3179,6 +3179,10 @@ QDF_STATUS wma_open(struct wlan_objmgr_psoc *psoc,
 	/* Register Converged Event handlers */
 	init_deinit_register_tgt_psoc_ev_handlers(psoc);
 
+	/* Register LFR2/3 common Roam Event handler */
+	target_if_roam_register_common_events(psoc);
+
+	/* Register Roam offload Event handlers */
 	target_if_roam_offload_register_events(psoc);
 
 	/* Initialize max_no_of_peers for wma_get_number_of_peers_supported() */
