@@ -302,6 +302,9 @@ enum policy_mgr_mac_use {
  *	channel on 2.4 Ghz & 2.4 Ghz channels
  * @PM_SCC_ON_5_SCC_ON_24_5G: SCC channel on 5 Ghz, SCC channel
  *	on 2.4 Ghz & 5 Ghz channels
+ * @PM_SCC_ON_5_5G_24G: SCC channel on 5 Ghz, 5 Ghz channels & 2.4 Ghz channels
+ * @PM_SCC_ON_5_5G_SCC_ON_24G: SCC channel on 5 Ghz, 5 Ghz channels &
+ *	SCC channel on 2.4 Ghz
  * @PM_SCC_ON_24_SCC_ON_5_24G: SCC channel on 2.4 Ghz, SCC
  *	channel on 5 Ghz & 2.4 Ghz channels
  * @PM_SCC_ON_24_SCC_ON_5_5G: SCC channel on 2.4 Ghz, SCC
@@ -319,6 +322,7 @@ enum policy_mgr_mac_use {
  * @PM_24G_SCC_CH_SBS_CH_5G: 2.4 Ghz channels, SCC channel,
  *      SBS channels & rest of the 5G channels
  * @PM_24G_SBS_CH_MCC_CH: 2.4 Ghz channels, SBS channels & MCC channels
+ * @PM_SBS_CH_2G: SBS channels & 2.4 Ghz channels
  * @PM_MAX_PCL_TYPE: Max place holder
  *
  * These are generic IDs that identify the various roles
@@ -337,6 +341,8 @@ enum policy_mgr_pcl_type {
 	PM_5G_SCC_CH,
 	PM_SCC_ON_5_SCC_ON_24_24G,
 	PM_SCC_ON_5_SCC_ON_24_5G,
+	PM_SCC_ON_5_5G_24G,
+	PM_SCC_ON_5_5G_SCC_ON_24G,
 	PM_SCC_ON_24_SCC_ON_5_24G,
 	PM_SCC_ON_24_SCC_ON_5_5G,
 	PM_SCC_ON_5_SCC_ON_24,
@@ -355,6 +361,7 @@ enum policy_mgr_pcl_type {
 	PM_SCC_CH_SBS_CH_24G,
 	PM_SBS_CH_SCC_CH_5G_24G,
 	PM_SCC_CH_MCC_CH_SBS_CH_24G,
+	PM_SBS_CH_2G,
 	PM_MAX_PCL_TYPE
 };
 
