@@ -7680,10 +7680,8 @@ sir_convert_mlo_probe_rsp_frame2_struct(tDot11fProbeResponse *pr,
 	if (!pr)
 		return QDF_STATUS_E_NULL_VALUE;
 
-	if (!pr->mlo_ie.present) {
-		pe_err("MLO IE not present");
+	if (!pr->mlo_ie.present)
 		return QDF_STATUS_E_NULL_VALUE;
-	}
 
 	qdf_mem_zero((uint8_t *)mlo_ie_ptr, sizeof(tSirMultiLink_IE));
 
