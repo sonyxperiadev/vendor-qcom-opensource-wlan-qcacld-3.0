@@ -30,6 +30,7 @@
 #include "wlan_hdd_main.h" /* hdd_err/warn... */
 #include "qdf_types.h"     /* QDF_MODULE_ID_... */
 #include "ce_api.h"
+#include "wlan_dp_ucfg_api.h"
 
 /*  guaranteed to be initialized to zero/NULL by the standard */
 static struct qca_napi_data *hdd_napi_ctx;
@@ -139,7 +140,7 @@ int hdd_napi_create(void)
 	}
 
 	rc = hdd_napi_event(NAPI_EVT_INI_FILE,
-			    (void *)hdd_ctx->napi_enable);
+			    (void *)ucfg_dp_get_napi_enabled(hdd_ctx->psoc));
 	napid->user_cpu_affin_mask =
 		hdd_ctx->config->napi_cpu_affinity_mask;
 

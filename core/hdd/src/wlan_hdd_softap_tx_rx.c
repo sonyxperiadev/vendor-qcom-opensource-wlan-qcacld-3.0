@@ -43,6 +43,7 @@
 #include "wlan_p2p_ucfg_api.h"
 #include <wlan_hdd_regulatory.h>
 #include "wlan_ipa_ucfg_api.h"
+#include "wlan_dp_ucfg_api.h"
 #include "wlan_policy_mgr_ucfg.h"
 #include "wlan_mlme_twt_ucfg_api.h"
 #include <wma_types.h>
@@ -55,6 +56,7 @@
 #ifdef FEATURE_WDS
 #include <net/llc_pdu.h>
 #endif
+#include <os_if_dp.h>
 
 /* Preprocessor definitions and constants */
 #undef QCA_HDD_SAP_DUMP_SK_BUFF
@@ -697,101 +699,23 @@ static void __hdd_softap_hard_start_xmit(struct sk_buff *skb,
 	sme_ac_enum_type ac = SME_AC_BE;
 	struct hdd_adapter *adapter = (struct hdd_adapter *)netdev_priv(dev);
 	struct hdd_context *hdd_ctx = adapter->hdd_ctx;
-	struct qdf_mac_addr *dest_mac_addr;
-	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
-	uint32_t num_seg;
 	struct hdd_tx_rx_stats *stats = &adapter->hdd_stats.tx_rx_stats;
 	int cpu = qdf_get_smp_processor_id();
-	uint16_t dump_level = cfg_get(hdd_ctx->psoc,
-				      CFG_ENABLE_DEBUG_PACKET_LOG);
+	QDF_STATUS status;
 
-	dest_mac_addr = (struct qdf_mac_addr *)skb->data;
-	++stats->per_cpu[cpu].tx_called;
-	stats->cont_txtimeout_cnt = 0;
-
-	if (QDF_IS_STATUS_ERROR(hdd_softap_validate_driver_state(adapter)))
-		goto drop_pkt;
-
-	wlan_hdd_mark_pkt_type(skb);
-
-	hdd_pkt_add_timestamp(adapter, QDF_PKT_TX_DRIVER_ENTRY,
-			      qdf_get_log_timestamp(), skb);
-
-	if (QDF_IS_STATUS_ERROR(hdd_softap_validate_peer_state(adapter, skb)))
-		goto drop_pkt;
-
-	hdd_softap_get_tx_resource(adapter, skb);
+	osif_dp_mark_pkt_type(skb);
 
 	/* Get TL AC corresponding to Qdisc queue index/AC. */
 	ac = hdd_qdisc_ac_to_tl_ac[skb->queue_mapping];
 	++stats->per_cpu[cpu].tx_classified_ac[ac];
 
-	skb = hdd_sap_skb_orphan(adapter, skb);
-	if (!skb)
-		goto drop_pkt_accounting;
-
-
-	qdf_net_buf_debug_acquire_skb(skb, __FILE__, __LINE__);
-
-	adapter->stats.tx_bytes += skb->len;
-
-	if (qdf_nbuf_is_tso(skb)) {
-		num_seg = qdf_nbuf_get_tso_num_seg(skb);
-		adapter->stats.tx_packets += num_seg;
-	} else {
-		++adapter->stats.tx_packets;
-		hdd_ctx->no_tx_offload_pkt_cnt++;
-	}
-
-	QDF_NBUF_CB_TX_EXTRA_FRAG_FLAGS_NOTIFY_COMP(skb) = 0;
-
-	if (qdf_unlikely(QDF_NBUF_CB_GET_PACKET_TYPE(skb) ==
-			 QDF_NBUF_CB_PACKET_TYPE_DHCP))
-		hdd_softap_inspect_dhcp_packet(adapter, skb, QDF_TX);
-
-	if (qdf_unlikely(QDF_NBUF_CB_GET_PACKET_TYPE(skb) ==
-			 QDF_NBUF_CB_PACKET_TYPE_EAPOL)) {
-		hdd_softap_inspect_tx_eap_pkt(adapter, skb, false);
-		hdd_event_eapol_log(skb, QDF_TX);
-	}
-
-	if (qdf_unlikely(dump_level >= DEBUG_PKTLOG_TYPE_EAPOL))
-		hdd_debug_pkt_dump(skb, skb->len,  &dump_level);
-
-	hdd_softap_config_tx_pkt_tracing(adapter, skb);
-
-	/* check whether need to linearize skb, like non-linear udp data */
-	if (hdd_skb_nontso_linearize(skb) != QDF_STATUS_SUCCESS) {
-		hdd_sapd_debug_rl("skb %pK linearize failed. drop the pkt",
-				  skb);
+	status = ucfg_dp_softap_start_xmit((qdf_nbuf_t)skb, adapter->vdev);
+	if (QDF_IS_STATUS_ERROR(status))
 		++stats->per_cpu[cpu].tx_dropped_ac[ac];
-		goto drop_pkt_and_release_skb;
-	}
-
-	if (adapter->tx_fn(soc, adapter->vdev_id, (qdf_nbuf_t)skb)) {
-		hdd_sapd_debug_rl("Failed to send packet to txrx for sta: "
-				  QDF_MAC_ADDR_FMT,
-				  QDF_MAC_ADDR_REF(dest_mac_addr->bytes));
-		++stats->per_cpu[cpu].tx_dropped_ac[ac];
-		goto drop_pkt_and_release_skb;
-	}
 
 	netif_trans_update(dev);
 
 	wlan_hdd_sar_unsolicited_timer_start(hdd_ctx);
-
-	return;
-
-drop_pkt_and_release_skb:
-	qdf_net_buf_debug_release_skb(skb);
-drop_pkt:
-	qdf_dp_trace_data_pkt(skb, QDF_TRACE_DEFAULT_PDEV_ID,
-			      QDF_DP_TRACE_DROP_PACKET_RECORD, 0,
-			      QDF_TX);
-	kfree_skb(skb);
-drop_pkt_accounting:
-	++adapter->stats.tx_dropped;
-	++stats->per_cpu[cpu].tx_dropped;
 }
 
 netdev_tx_t hdd_softap_hard_start_xmit(struct sk_buff *skb,
@@ -820,8 +744,8 @@ static void __hdd_softap_tx_timeout(struct net_device *dev)
 {
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
 	struct hdd_context *hdd_ctx;
+	struct wlan_objmgr_vdev *vdev;
 	struct netdev_queue *txq;
-	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
 	int i;
 
 	DPTRACE(qdf_dp_trace(NULL, QDF_DP_TRACE_HDD_SOFTAP_TX_TIMEOUT,
@@ -857,26 +781,14 @@ static void __hdd_softap_tx_timeout(struct net_device *dev)
 
 	wlan_hdd_display_adapter_netif_queue_history(adapter);
 
-	cdp_dump_flow_pool_info(cds_get_context(QDF_MODULE_ID_SOC));
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+	if (vdev) {
+		ucfg_dp_softap_tx_timeout(vdev);
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+	}
+
 	QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_DEBUG,
 			"carrier state: %d", netif_carrier_ok(dev));
-
-	++adapter->hdd_stats.tx_rx_stats.tx_timeout_cnt;
-	++adapter->hdd_stats.tx_rx_stats.cont_txtimeout_cnt;
-
-	if (adapter->hdd_stats.tx_rx_stats.cont_txtimeout_cnt >
-	    HDD_TX_STALL_THRESHOLD) {
-		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_ERROR,
-			  "Detected data stall due to continuous TX timeouts");
-		adapter->hdd_stats.tx_rx_stats.cont_txtimeout_cnt = 0;
-
-		if (hdd_is_data_stall_event_enabled(HDD_HOST_SAP_TX_TIMEOUT))
-			cdp_post_data_stall_event(soc,
-					  DATA_STALL_LOG_INDICATOR_HOST_DRIVER,
-					  DATA_STALL_LOG_HOST_SOFTAP_TX_TIMEOUT,
-					  OL_TXRX_PDEV_ID, 0xFF,
-					  DATA_STALL_LOG_RECOVERY_TRIGGER_PDR);
-	}
 }
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
@@ -1264,6 +1176,7 @@ QDF_STATUS hdd_softap_deregister_sta(struct hdd_adapter *adapter,
 	struct qdf_mac_addr *mac_addr;
 	struct hdd_station_info *sta = *sta_info;
 	struct hdd_ap_ctx *ap_ctx;
+	struct wlan_objmgr_vdev *vdev;
 
 	if (!adapter) {
 		hdd_err("NULL adapter");
@@ -1306,7 +1219,12 @@ QDF_STATUS hdd_softap_deregister_sta(struct hdd_adapter *adapter,
 			hdd_debug("WLAN_CLIENT_DISCONNECT event failed");
 	}
 
-	hdd_del_latency_critical_client(adapter, sta->dot11_mode);
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+	if (!vdev)
+		return QDF_STATUS_E_INVAL;
+
+	ucfg_dp_del_latency_critical_client(vdev, sta->dot11_mode);
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 
 	ap_ctx = WLAN_HDD_GET_AP_CTX_PTR(adapter);
 	if (!QDF_IS_ADDR_BROADCAST(sta->sta_mac.bytes) &&
@@ -1336,6 +1254,7 @@ QDF_STATUS hdd_softap_register_sta(struct hdd_adapter *adapter,
 	bool wmm_enabled = false;
 	enum qca_wlan_802_11_mode dot11mode = QCA_WLAN_802_11_MODE_INVALID;
 	bool is_macaddr_broadcast = false;
+	struct wlan_objmgr_vdev *vdev;
 
 	if (event) {
 		wmm_enabled = event->wmmEnabled;
@@ -1368,7 +1287,12 @@ QDF_STATUS hdd_softap_register_sta(struct hdd_adapter *adapter,
 	}
 
 	txrx_desc.is_qos_enabled = wmm_enabled;
-	hdd_add_latency_critical_client(adapter, dot11mode);
+
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+	if (!vdev)
+		return QDF_STATUS_E_INVAL;
+
+	ucfg_dp_add_latency_critical_client(vdev, dot11mode);
 
 	if (is_macaddr_broadcast) {
 		/*
@@ -1377,29 +1301,11 @@ QDF_STATUS hdd_softap_register_sta(struct hdd_adapter *adapter,
 		 * started.
 		 */
 		qdf_mem_zero(&txrx_ops, sizeof(txrx_ops));
-
-		txrx_ops.tx.tx_comp = hdd_softap_notify_tx_compl_cbk;
-
-		if (adapter->hdd_ctx->enable_dp_rx_threads) {
-			txrx_ops.rx.rx = hdd_rx_pkt_thread_enqueue_cbk;
-			txrx_ops.rx.rx_stack = hdd_softap_rx_packet_cbk;
-			txrx_ops.rx.rx_flush = hdd_rx_flush_packet_cbk;
-			txrx_ops.rx.rx_gro_flush =
-					hdd_rx_thread_gro_flush_ind_cbk;
-			adapter->rx_stack = hdd_softap_rx_packet_cbk;
-		} else {
-			txrx_ops.rx.rx = hdd_softap_rx_packet_cbk;
-		}
-
-		txrx_ops.get_tsf_time = hdd_get_tsf_time;
 		txrx_ops.tx.tx_classify_critical_pkt_cb =
 					hdd_wmm_classify_pkt_cb;
-		cdp_vdev_register(soc,
-				  adapter->vdev_id,
-				  (ol_osif_vdev_handle)adapter,
-				  &txrx_ops);
-		adapter->tx_fn = txrx_ops.tx.tx;
+		ucfg_dp_softap_register_txrx_ops(vdev, &txrx_ops);
 	}
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 
 	qdf_status = cdp_peer_register(soc, OL_TXRX_PDEV_ID, &txrx_desc);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {

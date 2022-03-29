@@ -47,6 +47,7 @@
 #include "wlan_reg_ucfg_api.h"
 #include "wlan_hdd_sta_info.h"
 #include "wlan_hdd_object_manager.h"
+#include "wlan_dp_ucfg_api.h"
 
 #define WE_WLAN_VERSION     1
 
@@ -961,7 +962,7 @@ static __iw_softap_setparam(struct net_device *dev,
 					sizeof(adapter->hdd_stats));
 			break;
 		case CDP_TXRX_HIST_STATS:
-			wlan_hdd_clear_tx_rx_histogram(hdd_ctx);
+			ucfg_wlan_dp_clear_tx_rx_histogram(hdd_ctx->psoc);
 			break;
 		case CDP_HDD_NETIF_OPER_HISTORY:
 			wlan_hdd_clear_netif_queue_history(hdd_ctx);

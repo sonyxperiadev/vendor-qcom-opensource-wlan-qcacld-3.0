@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -453,7 +453,7 @@ void hdd_ipa_send_nbuf_to_network(qdf_nbuf_t nbuf, qdf_netdev_t dev)
 {
 	struct hdd_adapter *adapter = (struct hdd_adapter *) netdev_priv(dev);
 	int result;
-	unsigned int cpu_index;
+	bool delivered = false;
 	uint32_t enabled;
 	struct hdd_tx_rx_stats *stats;
 
@@ -502,24 +502,24 @@ void hdd_ipa_send_nbuf_to_network(qdf_nbuf_t nbuf, qdf_netdev_t dev)
 	nbuf->protocol = eth_type_trans(nbuf, nbuf->dev);
 	nbuf->ip_summed = CHECKSUM_NONE;
 
-	cpu_index = wlan_hdd_get_cpu();
-
-	++stats->per_cpu[cpu_index].rx_packets;
-
 	/*
 	 * Update STA RX exception packet stats.
 	 * For SAP as part of IPA HW stats are updated.
 	 */
 
-	++adapter->stats.rx_packets;
-	adapter->stats.rx_bytes += nbuf->len;
-
 	result = hdd_ipa_aggregated_rx_ind(nbuf);
 	if (result == NET_RX_SUCCESS)
-		++stats->per_cpu[cpu_index].rx_delivered;
-	else
-		++stats->per_cpu[cpu_index].rx_refused;
-
+		delivered = true;
+	/*
+	 * adapter->vdev is directly dereferenced because this is per packet
+	 * path, hdd_get_vdev_by_user() usage will be very costly as it involves
+	 * lock access.
+	 * Expectation here is vdev will be present during TX/RX processing
+	 * and also DP internally maintaining vdev ref count
+	 */
+	ucfg_dp_inc_rx_pkt_stats(adapter->vdev,
+				 nbuf->len,
+				 delivered);
 	/*
 	 * Restore PF_WAKE_UP_IDLE flag in the task structure
 	 */

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -562,14 +562,6 @@ bool cds_is_group_addr(uint8_t *mac_addr)
 	else
 		return false;
 }
-
-/**
- * cds_get_connectivity_stats_pkt_bitmap() - get pkt-type bitmap
- * @context: osif dev context
- *
- * Return: pkt bitmap to track
- */
-uint32_t cds_get_connectivity_stats_pkt_bitmap(void *context);
 
 #ifdef FEATURE_ALIGN_STATS_FROM_DP
 /**

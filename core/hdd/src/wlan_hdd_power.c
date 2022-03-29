@@ -90,6 +90,7 @@
 #include "qdf_types.h"
 #include <linux/cpuidle.h>
 #include <cdp_txrx_ctrl.h>
+#include "wlan_dp_ucfg_api.h"
 
 /* Preprocessor definitions and constants */
 #ifdef QCA_WIFI_EMULATION
@@ -1695,6 +1696,8 @@ hdd_suspend_wlan(void)
 
 	hdd_ctx->hdd_wlan_suspended = true;
 
+	ucfg_dp_suspend_wlan(hdd_ctx->psoc);
+
 	hdd_configure_sar_sleep_index(hdd_ctx);
 
 	hdd_wlan_suspend_resume_event(HDD_WLAN_EARLY_SUSPEND);
@@ -1754,6 +1757,7 @@ static int hdd_resume_wlan(void)
 	}
 
 	ucfg_ipa_resume(hdd_ctx->pdev);
+	ucfg_dp_resume_wlan(hdd_ctx->psoc);
 	status = ucfg_pmo_psoc_user_space_resume_req(hdd_ctx->psoc,
 						     QDF_SYSTEM_SUSPEND);
 	if (QDF_IS_STATUS_ERROR(status))
@@ -2341,10 +2345,10 @@ static int __wlan_hdd_cfg80211_resume_wlan(struct wiphy *wiphy)
 		goto exit_with_code;
 	}
 	/* Resume tlshim Rx thread */
-	if (hdd_ctx->enable_rxthread)
+	if (ucfg_dp_is_rx_common_thread_enabled(hdd_ctx->psoc))
 		wlan_hdd_rx_thread_resume(hdd_ctx);
 
-	if (hdd_ctx->enable_dp_rx_threads)
+	if (ucfg_dp_is_rx_threads_enabled(hdd_ctx->psoc))
 		dp_txrx_resume(cds_get_context(QDF_MODULE_ID_SOC));
 
 	if (ucfg_pkt_capture_get_mode(hdd_ctx->psoc) !=
@@ -2647,12 +2651,12 @@ static int __wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
 	}
 	hdd_ctx->is_scheduler_suspended = true;
 
-	if (hdd_ctx->enable_rxthread) {
+	if (ucfg_dp_is_rx_common_thread_enabled(hdd_ctx->psoc)) {
 		if (wlan_hdd_rx_thread_suspend(hdd_ctx))
 			goto resume_ol_rx;
 	}
 
-	if (hdd_ctx->enable_dp_rx_threads) {
+	if (ucfg_dp_is_rx_threads_enabled(hdd_ctx->psoc)) {
 		if (dp_txrx_suspend(cds_get_context(QDF_MODULE_ID_SOC)))
 			goto resume_ol_rx;
 	}
@@ -2691,7 +2695,7 @@ static int __wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
 	return 0;
 
 resume_dp_thread:
-	if (hdd_ctx->enable_dp_rx_threads)
+	if (ucfg_dp_is_rx_threads_enabled(hdd_ctx->psoc))
 		dp_txrx_resume(cds_get_context(QDF_MODULE_ID_SOC));
 
 	/* Resume packet capture MON thread */
