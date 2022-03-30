@@ -1345,9 +1345,20 @@ static void os_if_son_reg_get_op_channels(struct wlan_objmgr_pdev *pdev,
 	uint8_t n_opclasses = 0;
 	/* nsoc = Number of supported operating classes */
 	uint8_t nsoc = 0;
-	struct regdmn_ap_cap_opclass_t *reg_ap_cap =
-		qdf_mem_malloc(max_supp_op_class * sizeof(*reg_ap_cap));
+	struct regdmn_ap_cap_opclass_t *reg_ap_cap;
+	struct wlan_objmgr_psoc *psoc;
 
+	if (!pdev || !op_chan) {
+		osif_err("invalid input parameters");
+		return;
+	}
+	psoc = wlan_pdev_get_psoc(pdev);
+	if (!psoc) {
+		osif_err("NULL psoc");
+		return;
+	}
+
+	reg_ap_cap = qdf_mem_malloc(max_supp_op_class * sizeof(*reg_ap_cap));
 	if (!reg_ap_cap) {
 		osif_err("Memory allocation failure");
 		return;
@@ -1361,13 +1372,13 @@ static void os_if_son_reg_get_op_channels(struct wlan_objmgr_pdev *pdev,
 	osif_debug("n_opclasses: %u op_chan->opclass: %u",
 		   n_opclasses, op_chan->opclass);
 	for (idx = 0; reg_ap_cap[idx].op_class && idx < n_opclasses; idx++) {
+		if ((reg_ap_cap[idx].ch_width == BW_160_MHZ) ||
+		    (op_chan->opclass != reg_ap_cap[idx].op_class))
+			continue;
 		osif_debug("idx: %d op_class: %u ch_width: %d  max_tx_pwr_dbm: %u",
 			   idx, reg_ap_cap[idx].op_class,
 			   reg_ap_cap[idx].ch_width,
 			   reg_ap_cap[idx].max_tx_pwr_dbm);
-		if ((reg_ap_cap[idx].ch_width == BW_160_MHZ) ||
-		    (op_chan->opclass != reg_ap_cap[idx].op_class))
-			continue;
 		if (reg_ap_cap[idx].op_class == op_chan->opclass) {
 			switch (reg_ap_cap[idx].ch_width) {
 			case BW_20_MHZ:
@@ -1378,8 +1389,8 @@ static void os_if_son_reg_get_op_channels(struct wlan_objmgr_pdev *pdev,
 				op_chan->ch_width = CH_WIDTH_40MHZ;
 				break;
 			case BW_80_MHZ:
-				if (reg_ap_cap[idx].behav_limit ==
-				    BIT(BEHAV_BW80_PLUS))
+				if (reg_ap_cap[idx].behav_limit == BIT(BEHAV_BW80_PLUS) &&
+				    ucfg_mlme_get_restricted_80p80_bw_supp(psoc))
 					op_chan->ch_width = CH_WIDTH_80P80MHZ;
 				else
 					op_chan->ch_width = CH_WIDTH_80MHZ;
@@ -1396,10 +1407,10 @@ static void os_if_son_reg_get_op_channels(struct wlan_objmgr_pdev *pdev,
 			qdf_mem_copy(op_chan->oper_chan_num,
 				     reg_ap_cap[idx].sup_chan_list,
 				     reg_ap_cap[idx].num_supported_chan);
-			osif_debug("num of supported channel: %u",
-				   op_chan->num_oper_chan);
 		}
 	}
+	osif_debug("num of supported channel: %u",
+		   op_chan->num_oper_chan);
 	/*
 	 * TBD: DFS channel support needs to be added
 	 * Variable nsoc will be update whenever we add DFS
