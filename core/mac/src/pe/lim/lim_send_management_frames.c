@@ -5594,6 +5594,29 @@ returnAfterError:
 #define IS_PE_SESSION_HE_MODE(_session) false
 #endif
 
+#ifdef FEATURE_WLAN_TDLS
+static bool lim_tdls_peer_support_he(tpDphHashNode sta_ds)
+{
+	bool peer_he_cap = false;
+
+	if (sta_ds) {
+		peer_he_cap = lim_is_sta_he_capable(sta_ds);
+		if (sta_ds->staType == STA_ENTRY_TDLS_PEER && peer_he_cap)
+			return true;
+		else
+			return false;
+	} else {
+		return false;
+	}
+}
+#else
+static inline
+bool lim_tdls_peer_support_he(tpDphHashNode sta_ds)
+{
+	return false;
+}
+#endif
+
 QDF_STATUS lim_send_addba_response_frame(struct mac_context *mac_ctx,
 		tSirMacAddr peer_mac, uint16_t tid,
 		struct pe_session *session, uint8_t addba_extn_present,
@@ -5614,7 +5637,7 @@ QDF_STATUS lim_send_addba_response_frame(struct mac_context *mac_ctx,
 	uint8_t he_frag = 0;
 	tpDphHashNode sta_ds = NULL;
 	uint16_t aid;
-	bool he_cap = false, peer_he_cap = false;
+	bool he_cap = false;
 	struct wlan_mlme_qos *qos_aggr;
 
 	vdev_id = session->vdev_id;
@@ -5676,15 +5699,13 @@ QDF_STATUS lim_send_addba_response_frame(struct mac_context *mac_ctx,
 	}
 
 	frm.addba_param_set.tid = tid;
-	if (sta_ds)
-		peer_he_cap = lim_is_sta_he_capable(sta_ds);
 
 	/* Enable RX AMSDU only in HE mode if supported */
 	if (mac_ctx->is_usr_cfg_amsdu_enabled &&
 	    ((IS_PE_SESSION_HE_MODE(session) &&
 	      WLAN_REG_IS_24GHZ_CH_FREQ(session->curr_op_freq)) ||
 	     !WLAN_REG_IS_24GHZ_CH_FREQ(session->curr_op_freq) ||
-	     (sta_ds && sta_ds->staType == STA_ENTRY_TDLS_PEER && peer_he_cap)))
+	     lim_tdls_peer_support_he(sta_ds)))
 		frm.addba_param_set.amsdu_supp = amsdu_support;
 	else
 		frm.addba_param_set.amsdu_supp = 0;
