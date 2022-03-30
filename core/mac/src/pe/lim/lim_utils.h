@@ -2803,4 +2803,18 @@ void
 lim_fill_oci_params(struct mac_context *mac, struct pe_session *session,
 		    tDot11fIEoci *oci);
 
+#ifdef WLAN_FEATURE_SAE
+/**
+ * lim_process_sae_msg() - Process SAE message
+ * @mac: Global MAC pointer
+ * @body: Buffer pointer
+ *
+ * Return: None
+ */
+void lim_process_sae_msg(struct mac_context *mac, struct sir_sae_msg *body);
+#else
+static inline void lim_process_sae_msg(struct mac_context *mac, void *body);
+{}
+#endif
+
 #endif /* __LIM_UTILS_H */
