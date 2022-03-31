@@ -741,7 +741,6 @@ struct csr_del_sta_params {
 	uint8_t subtype;
 };
 
-#ifdef SAP_CP_CLEANUP
 /* Struct bss_dot11_config - Dot11 parameters for
  * SAP operation
  * @vdev_id: vdev id
@@ -765,12 +764,10 @@ struct bss_dot11_config {
 	tSirMacRateSet opr_rates;
 	tSirMacRateSet ext_rates;
 };
-#endif
 
 typedef QDF_STATUS (*csr_roam_complete_cb)(struct wlan_objmgr_psoc *psoc,
 					   uint8_t session_id,
 					   struct csr_roam_info *param,
-					   uint32_t roam_id,
 					   eRoamCmdStatus roam_status,
 					   eCsrRoamResult roam_result);
 typedef QDF_STATUS (*csr_session_open_cb)(uint8_t session_id,
@@ -976,7 +973,6 @@ tSirNwType
 csr_convert_mode_to_nw_type(enum csr_cfgdot11mode dot11_mode,
 			    enum reg_wifi_band band);
 
-#ifdef SAP_CP_CLEANUP
 /*
  * csr_roam_get_phy_mode_band_for_bss() - CSR API to get phy mode and
  * band for particular dot11 config
@@ -988,5 +984,4 @@ csr_convert_mode_to_nw_type(enum csr_cfgdot11mode dot11_mode,
 enum csr_cfgdot11mode
 csr_roam_get_phy_mode_band_for_bss(struct mac_context *mac,
 				   struct bss_dot11_config *dot11_cfg);
-#endif
 #endif

@@ -1460,10 +1460,7 @@ QDF_STATUS sap_clear_session_param(mac_handle_t mac_handle,
 	mac_ctx->sap.sapCtxList[sapctx->sessionId].sapPersona =
 		QDF_MAX_NO_OF_MODE;
 	sap_clear_global_dfs_param(mac_handle, sapctx);
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	sap_free_roam_profile(&sapctx->csr_roamProfile);
-#endif
+
 	sap_err("Set sapCtxList null for session %d", sapctx->sessionId);
 	qdf_mem_zero(sapctx, sizeof(*sapctx));
 	sapctx->sessionId = WLAN_UMAC_VDEV_ID_MAX;
@@ -1596,12 +1593,8 @@ static QDF_STATUS sap_goto_stopping(struct sap_context *sap_ctx)
 	}
 
 	sap_update_mcs_rate(sap_ctx, false);
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	sap_free_roam_profile(&sap_ctx->csr_roamProfile);
-#else
 	qdf_mem_zero(&sap_ctx->sap_bss_cfg, sizeof(sap_ctx->sap_bss_cfg));
-#endif
+
 	status = sme_roam_stop_bss(MAC_HANDLE(mac_ctx), sap_ctx->sessionId);
 	if (status != QDF_STATUS_SUCCESS) {
 		sap_err("Calling sme_roam_stop_bss status = %d", status);
@@ -2866,17 +2859,9 @@ static void sap_validate_chanmode_and_chwidth(struct mac_context *mac_ctx,
 	if (WLAN_REG_IS_5GHZ_CH_FREQ(sap_ctx->chan_freq) &&
 	    (sap_ctx->phyMode == eCSR_DOT11_MODE_11g ||
 	     sap_ctx->phyMode == eCSR_DOT11_MODE_11g_ONLY)) {
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-		sap_ctx->csr_roamProfile.phyMode = eCSR_DOT11_MODE_11a;
-#endif
 		sap_ctx->phyMode = eCSR_DOT11_MODE_11a;
 	} else if (WLAN_REG_IS_24GHZ_CH_FREQ(sap_ctx->chan_freq) &&
 		   (sap_ctx->phyMode == eCSR_DOT11_MODE_11a)) {
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-		sap_ctx->csr_roamProfile.phyMode = eCSR_DOT11_MODE_11g;
-#endif
 		sap_ctx->phyMode = eCSR_DOT11_MODE_11g;
 	}
 
@@ -2925,13 +2910,10 @@ static QDF_STATUS sap_goto_starting(struct sap_context *sap_ctx,
 				    mac_handle_t mac_handle)
 {
 	QDF_STATUS qdf_status = QDF_STATUS_E_FAILURE;
-/* To be removed after SAP CSR cleanup changes */
-#ifdef SAP_CP_CLEANUP
 	struct bss_dot11_config dot11_cfg = {0};
 	tSirMacRateSet *opr_rates = &sap_ctx->sap_bss_cfg.operationalRateSet;
 	tSirMacRateSet *ext_rates = &sap_ctx->sap_bss_cfg.extendedRateSet;
 	uint8_t h2e;
-#endif
 
 	/*
 	 * check if channel is in DFS_NOL or if the channel
@@ -2980,25 +2962,6 @@ static QDF_STATUS sap_goto_starting(struct sap_context *sap_ctx,
 		  "SAP_INIT", "SAP_STARTING", sap_ctx->phyMode,
 		  sap_ctx->ch_params.ch_width);
 	/* Specify the channel */
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	sap_ctx->csr_roamProfile.ChannelInfo.numOfChannels =
-					1;
-	sap_ctx->csr_roamProfile.ChannelInfo.freq_list =
-		&sap_ctx->csr_roamProfile.op_freq;
-	sap_ctx->csr_roamProfile.op_freq = sap_ctx->chan_freq;
-
-	sap_ctx->csr_roamProfile.ch_params = sap_ctx->ch_params;
-	sap_get_cac_dur_dfs_region(sap_ctx,
-				   &sap_ctx->csr_roamProfile.cac_duration_ms,
-				   &sap_ctx->csr_roamProfile.dfs_regdomain,
-				   sap_ctx->chan_freq,
-				   &sap_ctx->ch_params);
-	mlme_set_cac_required(sap_ctx->vdev,
-			      !!sap_ctx->csr_roamProfile.cac_duration_ms);
-	sap_ctx->csr_roamProfile.beacon_tx_rate =
-			sap_ctx->beacon_tx_rate;
-#else
 	sap_get_cac_dur_dfs_region(sap_ctx,
 				   &sap_ctx->sap_bss_cfg.cac_duration_ms,
 				   &sap_ctx->sap_bss_cfg.dfs_regdomain,
@@ -3066,7 +3029,6 @@ static QDF_STATUS sap_goto_starting(struct sap_context *sap_ctx,
 			sap_err("rates full, can not add H2E bss membership");
 		}
 	}
-#endif
 	sap_debug("notify hostapd about chan freq selection: %d",
 		  sap_ctx->chan_freq);
 	sap_signal_hdd_event(sap_ctx, NULL,
@@ -3080,15 +3042,8 @@ static QDF_STATUS sap_goto_starting(struct sap_context *sap_ctx,
 
 	sap_debug("session: %d", sap_ctx->sessionId);
 
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	qdf_status = sme_bss_start(mac_handle, sap_ctx->sessionId,
-				   &sap_ctx->csr_roamProfile,
-				   &sap_ctx->csr_roamId);
-#else
 	qdf_status = sme_start_bss(mac_handle, sap_ctx->sessionId,
 				   &sap_ctx->sap_bss_cfg);
-#endif
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status))
 		sap_err("Failed to issue sme_roam_connect");
 
@@ -3714,161 +3669,6 @@ QDF_STATUS sap_fsm(struct sap_context *sap_ctx, struct sap_sm_event *sap_event)
 	}
 	return qdf_status;
 }
-
-#ifndef SAP_CP_CLEANUP
-eSapStatus
-sapconvert_to_csr_profile(struct sap_config *config, eCsrRoamBssType bssType,
-			  struct csr_roam_profile *profile)
-{
-	int qdf_status = QDF_STATUS_SUCCESS;
-	bool chan_switch_hostapd_rate_enabled = true;
-	struct mac_context *mac_ctx;
-	uint8_t mcc_to_scc_switch = 0;
-
-	mac_ctx = sap_get_mac_context();
-	if (!mac_ctx) {
-		sap_err("Invalid MAC context");
-		return eSAP_STATUS_FAILURE;
-	}
-
-	/* Create Roam profile for SoftAP to connect */
-	profile->BSSType = eCSR_BSS_TYPE_INFRA_AP;
-	profile->SSIDs.numOfSSIDs = 1;
-	profile->csrPersona = config->persona;
-
-	qdf_mem_zero(profile->SSIDs.SSIDList[0].SSID.ssId,
-		     sizeof(profile->SSIDs.SSIDList[0].SSID.ssId));
-
-	/* Flag to not broadcast the SSID information */
-	profile->SSIDs.SSIDList[0].ssidHidden =
-		config->SSIDinfo.ssidHidden;
-
-	profile->SSIDs.SSIDList[0].SSID.length =
-		config->SSIDinfo.ssid.length;
-	qdf_mem_copy(&profile->SSIDs.SSIDList[0].SSID.ssId,
-		     config->SSIDinfo.ssid.ssId,
-		     sizeof(config->SSIDinfo.ssid.ssId));
-
-	profile->privacy = config->privacy;
-
-	if (config->authType == eSAP_SHARED_KEY) {
-		profile->csr80211AuthType = eSIR_SHARED_KEY;
-	} else if (config->authType == eSAP_OPEN_SYSTEM) {
-		profile->csr80211AuthType = eSIR_OPEN_SYSTEM;
-	} else {
-		profile->csr80211AuthType = eSIR_AUTO_SWITCH;
-	}
-
-	if (profile->pRSNReqIE) {
-		sap_debug("pRSNReqIE already allocated.");
-		qdf_mem_free(profile->pRSNReqIE);
-		profile->pRSNReqIE = NULL;
-	}
-
-	/* set the RSN/WPA IE */
-	profile->nRSNReqIELength = config->RSNWPAReqIELength;
-	if (config->RSNWPAReqIELength) {
-		profile->pRSNReqIE =
-			qdf_mem_malloc(config->RSNWPAReqIELength);
-		if (!profile->pRSNReqIE)
-			return eSAP_STATUS_FAILURE;
-
-		qdf_mem_copy(profile->pRSNReqIE, config->RSNWPAReqIE,
-			     config->RSNWPAReqIELength);
-		profile->nRSNReqIELength = config->RSNWPAReqIELength;
-	}
-
-	/* set the phyMode to accept anything */
-	/* Best means everything because it covers all the things we support */
-	/* eCSR_DOT11_MODE_BEST */
-	profile->phyMode = config->SapHw_mode;
-
-	/* Configure beaconInterval */
-	profile->beaconInterval = (uint16_t) config->beacon_int;
-
-	/* set DTIM period */
-	profile->dtimPeriod = config->dtim_period;
-
-	/* wps config info */
-	profile->wps_state = config->wps_state;
-
-	if (config->probeRespIEsBufferLen > 0 &&
-	    config->pProbeRespIEsBuffer) {
-		profile->add_ie_params.probeRespDataLen =
-			config->probeRespIEsBufferLen;
-		profile->add_ie_params.probeRespData_buff =
-			config->pProbeRespIEsBuffer;
-	} else {
-		profile->add_ie_params.probeRespDataLen = 0;
-		profile->add_ie_params.probeRespData_buff = NULL;
-	}
-	/*assoc resp IE */
-	if (config->assocRespIEsLen > 0 &&
-	    config->pAssocRespIEsBuffer) {
-		profile->add_ie_params.assocRespDataLen =
-			config->assocRespIEsLen;
-		profile->add_ie_params.assocRespData_buff =
-			config->pAssocRespIEsBuffer;
-	} else {
-		profile->add_ie_params.assocRespDataLen = 0;
-		profile->add_ie_params.assocRespData_buff = NULL;
-	}
-
-	if (config->probeRespBcnIEsLen > 0 &&
-	    config->pProbeRespBcnIEsBuffer) {
-		profile->add_ie_params.probeRespBCNDataLen =
-			config->probeRespBcnIEsLen;
-		profile->add_ie_params.probeRespBCNData_buff =
-			config->pProbeRespBcnIEsBuffer;
-	} else {
-		profile->add_ie_params.probeRespBCNDataLen = 0;
-		profile->add_ie_params.probeRespBCNData_buff = NULL;
-	}
-
-	if (config->supported_rates.numRates) {
-		qdf_mem_copy(profile->supported_rates.rate,
-				config->supported_rates.rate,
-				config->supported_rates.numRates);
-		profile->supported_rates.numRates =
-			config->supported_rates.numRates;
-	}
-
-	if (config->extended_rates.numRates) {
-		qdf_mem_copy(profile->extended_rates.rate,
-				config->extended_rates.rate,
-				config->extended_rates.numRates);
-		profile->extended_rates.numRates =
-			config->extended_rates.numRates;
-	}
-
-	profile->require_h2e = config->require_h2e;
-
-	qdf_status = ucfg_mlme_get_sap_chan_switch_rate_enabled(
-					mac_ctx->psoc,
-					&chan_switch_hostapd_rate_enabled);
-	if (!QDF_IS_STATUS_SUCCESS(qdf_status))
-		sap_err("ucfg_mlme_get_sap_chan_switch_rate_enabled, set def");
-
-	profile->chan_switch_hostapd_rate_enabled =
-					chan_switch_hostapd_rate_enabled;
-	if (QDF_STATUS_SUCCESS ==
-		ucfg_policy_mgr_get_mcc_scc_switch(mac_ctx->psoc,
-						   &mcc_to_scc_switch)) {
-		if (mcc_to_scc_switch != QDF_MCC_TO_SCC_SWITCH_DISABLE)
-			profile->chan_switch_hostapd_rate_enabled = false;
-	}
-
-	return eSAP_STATUS_SUCCESS;
-}
-
-void sap_free_roam_profile(struct csr_roam_profile *profile)
-{
-	if (profile->pRSNReqIE) {
-		qdf_mem_free(profile->pRSNReqIE);
-		profile->pRSNReqIE = NULL;
-	}
-}
-#endif
 
 void sap_sort_mac_list(struct qdf_mac_addr *macList, uint16_t size)
 {
@@ -4702,7 +4502,6 @@ bool sap_is_conc_sap_doing_scc_dfs(mac_handle_t mac_handle,
 	return false;
 }
 
-#ifdef SAP_CP_CLEANUP
 /**
  * sap_build_start_bss_config() - Fill the start bss request for SAP
  * @sap_bss_cfg: start bss config
@@ -4793,4 +4592,3 @@ sap_build_start_bss_config(struct start_bss_config *sap_bss_cfg,
 
 	return;
 }
-#endif

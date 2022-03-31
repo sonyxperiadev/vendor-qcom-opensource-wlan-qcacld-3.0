@@ -519,19 +519,6 @@ QDF_STATUS sme_process_msg(struct mac_context *mac, struct scheduler_msg *pMsg);
 
 QDF_STATUS sme_mc_process_handler(struct scheduler_msg *msg);
 
-#ifndef SAP_CP_CLEANUP
-/**
- * sme_bss_start() - A wrapper function to request CSR to inititiate start bss
- * @mac_handle: mac handle
- * @vdev_id: the vdev id.
- * @profile: description of bss to start
- * @roam_id: to get back the request ID
- *
- * Return QDF_STATUS
- */
-QDF_STATUS sme_bss_start(mac_handle_t mac_handle, uint8_t vdev_id,
-			 struct csr_roam_profile *profile, uint32_t *roam_id);
-#endif
 /**
  * sme_roam_ndi_stop() - API to request stop ndi
  * @mac_handle: Opaque handle to the global MAC context
@@ -1270,25 +1257,6 @@ QDF_STATUS sme_set_auto_shutdown_timer(mac_handle_t mac_handle,
 				       uint32_t timer_value);
 #endif
 
-#ifndef SAP_CP_CLEANUP
-/**
- * sme_roam_channel_change_req() - Channel change to new target channel
- * @mac_handle: handle returned by mac_open
- * @bssid: mac address of BSS
- * @vdev_id: vdev_id
- * @ch_params: target channel information
- * @profile: CSR profile
- *
- * API to Indicate Channel change to new target channel
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS sme_roam_channel_change_req(mac_handle_t mac_handle,
-				       struct qdf_mac_addr bssid,
-				       uint8_t vdev_id,
-				       struct ch_params *ch_params,
-				       struct csr_roam_profile *profile);
-#endif
 QDF_STATUS sme_roam_start_beacon_req(mac_handle_t mac_handle,
 				     struct qdf_mac_addr bssid,
 				     uint8_t dfsCacWaitStatus);
@@ -4489,7 +4457,6 @@ QDF_STATUS sme_update_vdev_mac_addr(struct wlan_objmgr_psoc *psoc,
 				    bool update_sta_self_peer, int req_status);
 #endif
 
-#ifdef SAP_CP_CLEANUP
 /**
  * sme_get_network_params() - SME API to get dot11 config for SAP
  * functionality
@@ -4549,5 +4516,4 @@ void sme_fill_channel_change_request(mac_handle_t mac_handle,
  */
 QDF_STATUS sme_send_channel_change_req(mac_handle_t mac_handle,
 				      struct channel_change_req *req);
-#endif
 #endif /* #if !defined( __SME_API_H ) */

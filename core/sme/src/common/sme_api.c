@@ -79,10 +79,7 @@
 #include <cm_utf.h>
 #include <wlan_mlo_mgr_sta.h>
 #include <wlan_mlo_mgr_main.h>
-
-#ifdef SAP_CP_CLEANUP
 #include "wlan_policy_mgr_ucfg.h"
-#endif
 
 static QDF_STATUS init_sme_cmd_list(struct mac_context *mac);
 
@@ -1315,7 +1312,7 @@ static QDF_STATUS dfs_msg_processor(struct mac_context *mac,
 	}
 
 	/* Indicate Radar Event to SAP */
-	csr_roam_call_callback(mac, session_id, roam_info, 0,
+	csr_roam_call_callback(mac, session_id, roam_info,
 			       roam_status, roam_result);
 	qdf_mem_free(roam_info);
 	return status;
@@ -1342,7 +1339,7 @@ sme_unprotected_mgmt_frm_ind(struct mac_context *mac,
 	roam_info->frameType = pSmeMgmtFrm->frameType;
 
 	/* forward the mgmt frame to HDD */
-	csr_roam_call_callback(mac, SessionId, roam_info, 0,
+	csr_roam_call_callback(mac, SessionId, roam_info,
 			       eCSR_ROAM_UNPROT_MGMT_FRAME_IND, 0);
 
 	qdf_mem_free(roam_info);
@@ -1369,7 +1366,7 @@ QDF_STATUS sme_update_new_channel_event(mac_handle_t mac_handle,
 		  "sapdfs: Updated new channel event");
 
 	/* Indicate channel Event to SAP */
-	csr_roam_call_callback(mac, session_id, roamInfo, 0,
+	csr_roam_call_callback(mac, session_id, roamInfo,
 			       roamStatus, roamResult);
 
 	qdf_mem_free(roamInfo);
@@ -1415,7 +1412,7 @@ static QDF_STATUS sme_extended_change_channel_ind(struct mac_context *mac_ctx,
 		 session_id);
 
 	/* Indicate Ext Channel Change event to SAP */
-	csr_roam_call_callback(mac_ctx, session_id, roam_info, 0,
+	csr_roam_call_callback(mac_ctx, session_id, roam_info,
 			       roam_status, roam_result);
 	qdf_mem_free(roam_info);
 	return status;
@@ -1612,7 +1609,7 @@ static QDF_STATUS sme_tsm_ie_ind(struct mac_context *mac,
 	roam_info->tsm_ie.state = pSmeTsmIeInd->tsm_ie.state;
 	roam_info->tsm_ie.msmt_interval = pSmeTsmIeInd->tsm_ie.msmt_interval;
 	/* forward the tsm ie information to HDD */
-	csr_roam_call_callback(mac, SessionId, roam_info, 0,
+	csr_roam_call_callback(mac, SessionId, roam_info,
 			       eCSR_ROAM_TSM_IE_IND, 0);
 	qdf_mem_free(roam_info);
 	return status;
@@ -2922,8 +2919,6 @@ QDF_STATUS sme_process_msg(struct mac_context *mac, struct scheduler_msg *pMsg)
 		sme_process_twt_notify_event(mac, pMsg->bodyptr);
 		qdf_mem_free(pMsg->bodyptr);
 		break;
-/* To be removed after SAP CSR cleanup changes */
-#ifdef SAP_CP_CLEANUP
 	case eWNI_SME_START_BSS_RSP:
 		csr_roam_roaming_state_start_bss_rsp_processor(mac,
 							       pMsg->bodyptr);
@@ -2934,7 +2929,6 @@ QDF_STATUS sme_process_msg(struct mac_context *mac, struct scheduler_msg *pMsg)
 							      pMsg->bodyptr);
 		qdf_mem_free(pMsg->bodyptr);
 		break;
-#endif
 	default:
 
 		if ((pMsg->type >= eWNI_SME_MSG_TYPES_BEGIN)
@@ -3128,34 +3122,6 @@ eCsrPhyMode sme_get_phy_mode(mac_handle_t mac_handle)
 	return mac->roam.configParam.phyMode;
 }
 
-#ifndef SAP_CP_CLEANUP
-QDF_STATUS sme_bss_start(mac_handle_t mac_handle, uint8_t vdev_id,
-			 struct csr_roam_profile *profile,
-			 uint32_t *roam_id)
-{
-	QDF_STATUS status = QDF_STATUS_E_FAILURE;
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-
-	if (!mac)
-		return QDF_STATUS_E_FAILURE;
-
-	MTRACE(qdf_trace(QDF_MODULE_ID_SME,
-			 TRACE_CODE_SME_RX_HDD_MSG_CONNECT, vdev_id, 0));
-
-	if (!CSR_IS_SESSION_VALID(mac, vdev_id)) {
-		sme_err("Invalid sessionID: %d", vdev_id);
-		return QDF_STATUS_E_INVAL;
-	}
-	status = sme_acquire_global_lock(&mac->sme);
-	if (QDF_IS_STATUS_ERROR(status))
-		return status;
-
-	status = csr_bss_start(mac, vdev_id, profile, roam_id);
-	sme_release_global_lock(&mac->sme);
-
-	return status;
-}
-#else
 QDF_STATUS sme_get_network_params(struct mac_context *mac,
 				  struct bss_dot11_config *dot11_cfg)
 {
@@ -3259,7 +3225,7 @@ QDF_STATUS sme_start_bss(mac_handle_t mac_handle, uint8_t vdev_id,
 
 	return status;
 }
-#endif
+
 /*
  * sme_set_phy_mode() -
  * Changes the PhyMode.
@@ -3357,14 +3323,8 @@ QDF_STATUS sme_roam_stop_bss(mac_handle_t mac_handle, uint8_t vdev_id)
 	if (QDF_IS_STATUS_ERROR(status))
 		return status;
 
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	status = csr_roam_issue_stop_bss_cmd(mac, vdev_id,
-					     eCSR_BSS_TYPE_INFRA_AP, false);
-#else
 	status = csr_roam_issue_stop_bss_cmd(mac, vdev_id,
 					     eCSR_BSS_TYPE_INFRA_AP);
-#endif
 	sme_release_global_lock(&mac->sme);
 
 	return status;
@@ -8486,26 +8446,6 @@ QDF_STATUS sme_set_mas(uint32_t val)
 	return QDF_STATUS_SUCCESS;
 }
 
-#ifndef SAP_CP_CLEANUP
-QDF_STATUS sme_roam_channel_change_req(mac_handle_t mac_handle,
-				       struct qdf_mac_addr bssid,
-				       uint8_t vdev_id,
-				       struct ch_params *ch_params,
-				       struct csr_roam_profile *profile)
-{
-	QDF_STATUS status = QDF_STATUS_E_FAILURE;
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-
-	status = sme_acquire_global_lock(&mac->sme);
-	if (QDF_IS_STATUS_SUCCESS(status)) {
-
-		status = csr_roam_channel_change_req(mac, bssid, vdev_id,
-						     ch_params, profile);
-		sme_release_global_lock(&mac->sme);
-	}
-	return status;
-}
-#else
 QDF_STATUS sme_send_channel_change_req(mac_handle_t mac_handle,
 				      struct channel_change_req *req)
 {
@@ -8519,7 +8459,6 @@ QDF_STATUS sme_send_channel_change_req(mac_handle_t mac_handle,
 	}
 	return status;
 }
-#endif
 
 /*
  * sme_process_channel_change_resp() -
@@ -8557,7 +8496,7 @@ static QDF_STATUS sme_process_channel_change_resp(struct mac_context *mac,
 		roamResult = eCSR_ROAM_RESULT_CHANNEL_CHANGE_FAILURE;
 	}
 
-	csr_roam_call_callback(mac, session_id, roam_info, 0,
+	csr_roam_call_callback(mac, session_id, roam_info,
 			       eCSR_ROAM_SET_CHANNEL_RSP, roamResult);
 
 	qdf_mem_free(roam_info);
@@ -16264,7 +16203,6 @@ void sme_roam_events_deregister_callback(mac_handle_t mac_handle)
 }
 #endif
 
-#ifdef SAP_CP_CLEANUP
 static QDF_STATUS sme_send_start_bss_msg(struct mac_context *mac,
 					 struct start_bss_config *cfg)
 {
@@ -16440,4 +16378,3 @@ void sme_fill_channel_change_request(mac_handle_t mac_handle,
 				dot11_cfg.ext_rates.numRates;
 	}
 }
-#endif

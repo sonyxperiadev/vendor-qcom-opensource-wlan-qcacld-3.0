@@ -397,8 +397,7 @@ static QDF_STATUS sme_ese_send_beacon_req_scan_results(
 
 		roam_info->pEseBcnReportRsp = bcn_report;
 		status = csr_roam_call_callback(mac_ctx, session_id, roam_info,
-						0, eCSR_ROAM_ESE_BCN_REPORT_IND,
-						0);
+						eCSR_ROAM_ESE_BCN_REPORT_IND, 0);
 
 		/* Free the memory allocated to IE */
 		for (i = 0; i < j; i++)

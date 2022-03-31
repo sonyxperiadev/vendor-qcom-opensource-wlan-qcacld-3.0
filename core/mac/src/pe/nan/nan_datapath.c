@@ -403,15 +403,9 @@ void lim_ndi_del_bss_rsp(struct mac_context * mac_ctx,
 end:
 	/* Delete PE session once BSS is deleted */
 	if (session_entry) {
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-		lim_send_sme_rsp(mac_ctx, eWNI_SME_STOP_BSS_RSP,
-			rc, session_entry->smeSessionId);
-#else
 		lim_send_stop_bss_response(mac_ctx,
 					   session_entry->vdev_id,
 					   rc);
-#endif
 		pe_delete_session(mac_ctx, session_entry);
 		session_entry = NULL;
 	}

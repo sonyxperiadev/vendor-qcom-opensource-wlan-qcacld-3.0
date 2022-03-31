@@ -139,13 +139,7 @@ struct sap_context {
 
 	/* Include the associations MAC addresses */
 	uint8_t self_mac_addr[CDS_MAC_ADDRESS_LEN];
-#ifndef SAP_CP_CLEANUP
-	/* Include the SME(CSR) context here */
-	struct csr_roam_profile csr_roamProfile;
-	uint32_t csr_roamId;
-#else
 	struct start_bss_config sap_bss_cfg;
-#endif
 
 	/* SAP event Callback to hdd */
 	sap_event_cb sap_event_cb;
@@ -250,9 +244,7 @@ struct sap_context {
 #ifdef FEATURE_WLAN_CH_AVOID_EXT
 	uint32_t restriction_mask;
 #endif
-#ifdef SAP_CP_CLEANUP
 	bool require_h2e;
-#endif
 };
 
 /*----------------------------------------------------------------------------
@@ -330,15 +322,6 @@ sap_signal_hdd_event(struct sap_context *sap_ctx,
 		  eSapHddEvent sapHddevent, void *);
 
 QDF_STATUS sap_fsm(struct sap_context *sap_ctx, struct sap_sm_event *sap_event);
-
-#ifndef SAP_CP_CLEANUP
-eSapStatus
-sapconvert_to_csr_profile(struct sap_config *config,
-			  eCsrRoamBssType bssType,
-			  struct csr_roam_profile *profile);
-
-void sap_free_roam_profile(struct csr_roam_profile *profile);
-#endif
 
 QDF_STATUS
 sap_is_peer_mac_allowed(struct sap_context *sap_ctx, uint8_t *peerMac);
@@ -512,9 +495,7 @@ sap_chan_bond_dfs_sub_chan(struct sap_context *sap_context,
 			   qdf_freq_t channel_freq,
 			   ePhyChanBondState bond_state);
 
-#ifdef SAP_CP_CLEANUP
 void
 sap_build_start_bss_config(struct start_bss_config *sap_bss_cfg,
 			   struct sap_config *config);
-#endif
 #endif

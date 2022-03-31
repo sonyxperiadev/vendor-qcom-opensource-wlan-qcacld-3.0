@@ -432,9 +432,8 @@ bool hdd_adapter_is_ap(struct hdd_adapter *adapter)
 }
 
 QDF_STATUS hdd_common_roam_callback(struct wlan_objmgr_psoc *psoc,
-				     uint8_t session_id,
+				    uint8_t session_id,
 				    struct csr_roam_info *roam_info,
-				    uint32_t roam_id,
 				    eRoamCmdStatus roam_status,
 				    eCsrRoamResult roam_result)
 {
@@ -455,13 +454,13 @@ QDF_STATUS hdd_common_roam_callback(struct wlan_objmgr_psoc *psoc,
 	case QDF_NDI_MODE:
 	case QDF_P2P_CLIENT_MODE:
 	case QDF_P2P_DEVICE_MODE:
-		status = hdd_sme_roam_callback(adapter, roam_info, roam_id,
+		status = hdd_sme_roam_callback(adapter, roam_info,
 					       roam_status, roam_result);
 		break;
 	case QDF_SAP_MODE:
 	case QDF_P2P_GO_MODE:
 		status = wlansap_roam_callback(adapter->session.ap.sap_context,
-					       roam_info, roam_id, roam_status,
+					       roam_info, roam_status,
 					       roam_result);
 		break;
 	default:
@@ -8743,12 +8742,7 @@ int wlan_hdd_set_mon_chan(struct hdd_adapter *adapter, qdf_freq_t freq,
 	struct hdd_mon_set_ch_info *ch_info = &sta_ctx->ch_info;
 	QDF_STATUS status;
 	struct qdf_mac_addr bssid;
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	struct csr_roam_profile roam_profile;
-#else
 	struct channel_change_req *req;
-#endif
 	struct ch_params ch_params;
 	enum phy_ch_width max_fw_bw;
 	enum phy_ch_width ch_width;
@@ -8791,15 +8785,6 @@ int wlan_hdd_set_mon_chan(struct hdd_adapter *adapter, qdf_freq_t freq,
 	}
 
 	hdd_debug("Set monitor mode frequency %d", freq);
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	qdf_mem_zero(&roam_profile, sizeof(roam_profile));
-	roam_profile.ChannelInfo.freq_list = &ch_info->freq;
-	roam_profile.ChannelInfo.numOfChannels = 1;
-	roam_profile.phyMode = ch_info->phy_mode;
-	roam_profile.ch_params.ch_width = bandwidth;
-	hdd_select_cbmode(adapter, freq, 0, &roam_profile.ch_params);
-#endif
 	qdf_mem_copy(bssid.bytes, adapter->mac_addr.bytes,
 		     QDF_MAC_ADDR_SIZE);
 
@@ -8828,13 +8813,7 @@ int wlan_hdd_set_mon_chan(struct hdd_adapter *adapter, qdf_freq_t freq,
 		return qdf_status_to_os_return(status);
 	}
 	adapter->monitor_mode_vdev_up_in_progress = true;
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	status = sme_roam_channel_change_req(hdd_ctx->mac_handle,
-					     bssid, adapter->vdev_id,
-					     &roam_profile.ch_params,
-					     &roam_profile);
-#else
+
 	qdf_mem_zero(&ch_params, sizeof(struct ch_params));
 
 	req = qdf_mem_malloc(sizeof(struct channel_change_req));
@@ -8855,7 +8834,6 @@ int wlan_hdd_set_mon_chan(struct hdd_adapter *adapter, qdf_freq_t freq,
 					ch_info->phy_mode);
 	status = sme_send_channel_change_req(hdd_ctx->mac_handle, req);
 	qdf_mem_free(req);
-#endif
 	if (status) {
 		hdd_err("Status: %d Failed to set sme_roam Channel for monitor mode",
 			status);

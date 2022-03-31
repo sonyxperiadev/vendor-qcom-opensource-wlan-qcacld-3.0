@@ -1066,33 +1066,6 @@ bool csr_is_bssid_match(struct qdf_mac_addr *pProfBssid,
 	return fMatch;
 }
 
-#ifndef SAP_CP_CLEANUP
-void csr_release_profile(struct mac_context *mac,
-			 struct csr_roam_profile *pProfile)
-{
-	if (pProfile) {
-		if (pProfile->BSSIDs.bssid) {
-			qdf_mem_free(pProfile->BSSIDs.bssid);
-			pProfile->BSSIDs.bssid = NULL;
-		}
-		if (pProfile->SSIDs.SSIDList) {
-			qdf_mem_free(pProfile->SSIDs.SSIDList);
-			pProfile->SSIDs.SSIDList = NULL;
-		}
-
-		if (pProfile->ChannelInfo.freq_list) {
-			qdf_mem_free(pProfile->ChannelInfo.freq_list);
-			pProfile->ChannelInfo.freq_list = NULL;
-		}
-		if (pProfile->pRSNReqIE) {
-			qdf_mem_free(pProfile->pRSNReqIE);
-			pProfile->pRSNReqIE = NULL;
-		}
-		qdf_mem_zero(pProfile, sizeof(struct csr_roam_profile));
-	}
-}
-#endif
-
 /* This function use the parameters to decide the CFG value. */
 /* CSR never sets MLME_DOT11_MODE_ALL to the CFG */
 /* So PE should not see MLME_DOT11_MODE_ALL when it gets the CFG value */
@@ -1409,7 +1382,7 @@ QDF_STATUS csr_mlme_vdev_disconnect_all_p2p_client_event(uint8_t vdev_id)
 	if (!mac_ctx)
 		return QDF_STATUS_E_FAILURE;
 
-	return csr_roam_call_callback(mac_ctx, vdev_id, NULL, 0,
+	return csr_roam_call_callback(mac_ctx, vdev_id, NULL,
 				      eCSR_ROAM_DISCONNECT_ALL_P2P_CLIENTS,
 				      eCSR_ROAM_RESULT_NONE);
 }
@@ -1421,7 +1394,7 @@ QDF_STATUS csr_mlme_vdev_stop_bss(uint8_t vdev_id)
 	if (!mac_ctx)
 		return QDF_STATUS_E_FAILURE;
 
-	return csr_roam_call_callback(mac_ctx, vdev_id, NULL, 0,
+	return csr_roam_call_callback(mac_ctx, vdev_id, NULL,
 				      eCSR_ROAM_SEND_P2P_STOP_BSS,
 				      eCSR_ROAM_RESULT_NONE);
 }

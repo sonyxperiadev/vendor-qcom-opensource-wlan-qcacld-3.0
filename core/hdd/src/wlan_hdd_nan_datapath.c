@@ -331,70 +331,16 @@ end:
 static int hdd_ndi_start_bss(struct hdd_adapter *adapter)
 {
 	QDF_STATUS status;
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	uint32_t roam_id;
-	struct csr_roam_profile *roam_profile;
-	mac_handle_t mac_handle;
-#else
 	struct bss_dot11_config dot11_cfg = {0};
 	struct start_bss_config ndi_bss_cfg = {0};
 	tCsrChannelInfo ch_info;
 	mac_handle_t mac_handle = hdd_adapter_get_mac_handle(adapter);
 	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-#endif
 	struct hdd_context *hdd_ctx;
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	uint8_t wmm_mode = 0;
-	uint8_t value = 0;
-#endif
+
 	hdd_enter();
 	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	roam_profile = hdd_roam_profile(adapter);
 
-	status = ucfg_mlme_get_wmm_mode(hdd_ctx->psoc, &wmm_mode);
-	if (!QDF_IS_STATUS_SUCCESS(status)) {
-		hdd_err("Get wmm_mode failed");
-		return -EINVAL;
-	}
-
-	if (HDD_WMM_USER_MODE_NO_QOS == wmm_mode) {
-		/* QoS not enabled in cfg file*/
-		roam_profile->uapsd_mask = 0;
-	} else {
-		/* QoS enabled, update uapsd mask from cfg file*/
-		status = ucfg_mlme_get_wmm_uapsd_mask(hdd_ctx->psoc, &value);
-		if (!QDF_IS_STATUS_SUCCESS(status)) {
-			hdd_err("Get uapsd_mask failed");
-			return -EINVAL;
-		}
-		roam_profile->uapsd_mask = value;
-	}
-
-	roam_profile->csrPersona = adapter->device_mode;
-
-	status = hdd_ndi_config_ch_list(hdd_ctx, &roam_profile->ChannelInfo);
-	if (!QDF_IS_STATUS_SUCCESS(status)) {
-		hdd_err("Get uapsd_mask failed");
-		return -EINVAL;
-	}
-	roam_profile->SSIDs.numOfSSIDs = 1;
-	roam_profile->SSIDs.SSIDList->SSID.length = 0;
-
-	roam_profile->phyMode = eCSR_DOT11_MODE_AUTO;
-	roam_profile->BSSType = eCSR_BSS_TYPE_NDI;
-	roam_profile->BSSIDs.numOfBSSIDs = 1;
-	qdf_mem_copy((void *)(roam_profile->BSSIDs.bssid),
-		&adapter->mac_addr.bytes[0],
-		QDF_MAC_ADDR_SIZE);
-
-	mac_handle = hdd_adapter_get_mac_handle(adapter);
-	status = sme_bss_start(mac_handle, adapter->vdev_id,
-			       roam_profile, &roam_id);
-#else
 	status = hdd_ndi_config_ch_list(hdd_ctx, &ch_info);
 	if (!QDF_IS_STATUS_SUCCESS(status)) {
 		hdd_err("Unable to retrieve channel list for NAN");
@@ -431,7 +377,7 @@ static int hdd_ndi_start_bss(struct hdd_adapter *adapter)
 
 	status = sme_start_bss(mac_handle, adapter->vdev_id,
 			       &ndi_bss_cfg);
-#endif
+
 	if (QDF_IS_STATUS_ERROR(status)) {
 		hdd_err("NDI sme_RoamConnect session %d failed with status %d -> NotConnected",
 			adapter->vdev_id, status);
@@ -441,14 +387,8 @@ static int hdd_ndi_start_bss(struct hdd_adapter *adapter)
 	} else {
 		hdd_info("sme_RoamConnect issued successfully for NDI");
 	}
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	qdf_mem_free(roam_profile->ChannelInfo.freq_list);
-	roam_profile->ChannelInfo.freq_list = NULL;
-	roam_profile->ChannelInfo.numOfChannels = 0;
-#else
+
 	qdf_mem_free(ch_info.freq_list);
-#endif
 	hdd_exit();
 
 	return 0;
@@ -535,7 +475,7 @@ static int hdd_get_random_nan_mac_addr(struct hdd_context *hdd_ctx,
 
 void hdd_ndp_event_handler(struct hdd_adapter *adapter,
 			   struct csr_roam_info *roam_info,
-			   uint32_t roam_id, eRoamCmdStatus roam_status,
+			   eRoamCmdStatus roam_status,
 			   eCsrRoamResult roam_result)
 {
 	bool success;

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -269,7 +270,6 @@ bool hdd_is_any_sta_connected(struct hdd_context *hdd_ctx);
  * hdd_sme_roam_callback() - hdd sme roam callback
  * @context: pointer to adapter context
  * @roam_info: pointer to roam info
- * @roam_id: roam id
  * @roam_status: roam status
  * @roam_result: roam result
  *
@@ -277,7 +277,6 @@ bool hdd_is_any_sta_connected(struct hdd_context *hdd_ctx);
  */
 QDF_STATUS hdd_sme_roam_callback(void *context,
 				 struct csr_roam_info *roam_info,
-				 uint32_t roam_id,
 				 eRoamCmdStatus roam_status,
 				 eCsrRoamResult roam_result);
 

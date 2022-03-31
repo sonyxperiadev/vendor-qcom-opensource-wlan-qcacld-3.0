@@ -445,17 +445,10 @@ static bool __lim_process_sme_sys_ready_ind(struct mac_context *mac,
  *
  * Return: None.
  */
-#ifndef SAP_CP_CLEANUP
-static void
-lim_configure_ap_start_bss_session(struct mac_context *mac_ctx,
-				   struct pe_session *session,
-				   struct start_bss_req *sme_start_bss_req)
-#else
 static void
 lim_configure_ap_start_bss_session(struct mac_context *mac_ctx,
 				   struct pe_session *session,
 				   struct start_bss_config *sme_start_bss_req)
-#endif
 {
 	bool sap_uapsd;
 	uint16_t ht_cap = cfg_default(CFG_AP_PROTECTION_MODE);
@@ -766,12 +759,7 @@ __lim_handle_sme_start_bss_request(struct mac_context *mac_ctx, uint32_t *msg_bu
 	uint32_t val = 0;
 	tSirMacChanNum channel_number;
 	tLimMlmStartReq *mlm_start_req = NULL;
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	struct start_bss_req *sme_start_bss_req = NULL;
-#else
 	struct start_bss_config *sme_start_bss_req = NULL;
-#endif
 	tSirResultCodes ret_code = eSIR_SME_SUCCESS;
 	uint8_t session_id;
 	struct pe_session *session = NULL;
@@ -1199,13 +1187,7 @@ free:
 		pe_delete_session(mac_ctx, session);
 		session = NULL;
 	}
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	lim_send_sme_start_bss_rsp(mac_ctx, eWNI_SME_START_BSS_RSP, ret_code,
-				   session, vdev_id);
-#else
 	 lim_send_sme_start_bss_rsp(mac_ctx, ret_code, session, vdev_id);
-#endif
 }
 
 /**
@@ -5968,14 +5950,8 @@ void lim_send_stop_bss_failure_resp(struct mac_context *mac_ctx,
 
 	MTRACE(mac_trace(mac_ctx, TRACE_CODE_SME_STATE, session->peSessionId,
 			  session->limSmeState));
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	lim_send_sme_rsp(mac_ctx, eWNI_SME_STOP_BSS_RSP,
-			 eSIR_SME_STOP_BSS_FAILURE, session->smeSessionId);
-#else
 	lim_send_stop_bss_response(mac_ctx, session->vdev_id,
 				   eSIR_SME_STOP_BSS_FAILURE);
-#endif
 }
 
 static void lim_flush_all_peer_from_serialization_queue(
@@ -6148,28 +6124,11 @@ __lim_handle_sme_stop_bss_request(struct mac_context *mac, uint32_t *msg_buf)
 	struct stop_bss_req stop_bss_req;
 	tLimSmeStates prevState;
 	struct pe_session *pe_session;
-/* To be removed after SAP CSR cleanup changes */
-#ifdef SAP_CP_CLEANUP
 	struct qdf_mac_addr bssid;
-#endif
 	uint8_t vdev_id;
 	uint8_t session_id;
 
 	qdf_mem_copy(&stop_bss_req, msg_buf, sizeof(stop_bss_req));
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	vdev_id = stop_bss_req.sessionId;
-
-	pe_session = pe_find_session_by_bssid(mac,
-				stop_bss_req.bssid.bytes,
-				&session_id);
-	if (!pe_session) {
-		pe_err("session does not exist for given BSSID");
-		lim_send_sme_rsp(mac, eWNI_SME_STOP_BSS_RSP,
-				eSIR_SME_INVALID_PARAMETERS, vdev_id);
-		return;
-	}
-#else
 	vdev_id = stop_bss_req.vdev_id;
 	wlan_mlme_get_mac_vdev_id(mac->pdev, vdev_id, &bssid);
 
@@ -6182,7 +6141,6 @@ __lim_handle_sme_stop_bss_request(struct mac_context *mac, uint32_t *msg_buf)
 					   eSIR_SME_INVALID_PARAMETERS);
 		return;
 	}
-#endif
 
 #ifdef FEATURE_WLAN_DIAG_SUPPORT_LIM    /* FEATURE_WLAN_DIAG_SUPPORT */
 	lim_diag_event_report(mac, WLAN_PE_DIAG_STOP_BSS_REQ_EVENT, pe_session,
@@ -6201,15 +6159,8 @@ __lim_handle_sme_stop_bss_request(struct mac_context *mac, uint32_t *msg_buf)
 			GET_LIM_SYSTEM_ROLE(pe_session));
 		lim_print_sme_state(mac, LOGE, pe_session->limSmeState);
 		/* / Send Stop BSS response to host */
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-		lim_send_sme_rsp(mac, eWNI_SME_STOP_BSS_RSP,
-				 eSIR_SME_UNEXPECTED_REQ_RESULT_CODE,
-				 vdev_id);
-#else
 		lim_send_stop_bss_response(mac, vdev_id,
 					   eSIR_SME_UNEXPECTED_REQ_RESULT_CODE);
-#endif
 		return;
 	}
 
@@ -6273,14 +6224,8 @@ void lim_process_sme_del_bss_rsp(struct mac_context *mac,
 	SET_LIM_PROCESS_DEFD_MESGS(mac, true);
 	dph_hash_table_init(mac, &pe_session->dph.dphHashTable);
 	lim_delete_pre_auth_list(mac);
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	lim_send_sme_rsp(mac, eWNI_SME_STOP_BSS_RSP, eSIR_SME_SUCCESS,
-			 pe_session->smeSessionId);
-#else
 	lim_send_stop_bss_response(mac, pe_session->vdev_id,
 				   eSIR_SME_SUCCESS);
-#endif
 	return;
 }
 
@@ -8194,13 +8139,8 @@ static void lim_change_channel(
 static void lim_process_sme_channel_change_request(struct mac_context *mac_ctx,
 		uint32_t *msg_buf)
 {
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	tpSirChanChangeRequest ch_change_req;
-#else
 	struct channel_change_req *ch_change_req;
 	struct qdf_mac_addr bssid;
-#endif
 	struct pe_session *session_entry;
 	uint8_t session_id;      /* PE session_id */
 	int8_t max_tx_pwr;
@@ -8211,32 +8151,11 @@ static void lim_process_sme_channel_change_request(struct mac_context *mac_ctx,
 		pe_err("msg_buf is NULL");
 		return;
 	}
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	ch_change_req = (tpSirChanChangeRequest)msg_buf;
-#else
 	ch_change_req = (struct channel_change_req *)msg_buf;
-#endif
 	target_freq = ch_change_req->target_chan_freq;
 
 	max_tx_pwr = wlan_reg_get_channel_reg_power_for_freq(
 				mac_ctx->pdev, target_freq);
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	if ((ch_change_req->messageType != eWNI_SME_CHANNEL_CHANGE_REQ) ||
-			(max_tx_pwr == WMA_MAX_TXPOWER_INVALID)) {
-		pe_err("Invalid Request/max_tx_pwr");
-		return;
-	}
-	session_entry = pe_find_session_by_bssid(mac_ctx,
-			ch_change_req->bssid, &session_id);
-
-	if (!session_entry) {
-		lim_print_mac_addr(mac_ctx, ch_change_req->bssid, LOGE);
-		pe_err("Session does not exist for given bssId");
-		return;
-	}
-#else
 	if (max_tx_pwr == WMA_MAX_TXPOWER_INVALID) {
 		pe_err("Invalid max tx power");
 		return;
@@ -8250,7 +8169,6 @@ static void lim_process_sme_channel_change_request(struct mac_context *mac_ctx,
 		       QDF_MAC_ADDR_REF(bssid.bytes));
 		return;
 	}
-#endif
 
 	if (session_entry->curr_op_freq == target_freq &&
 	    session_entry->ch_width == ch_change_req->ch_width) {
@@ -8334,18 +8252,10 @@ static void lim_process_sme_channel_change_request(struct mac_context *mac_ctx,
 
 	/* Store the New Channel Params in session_entry */
 	session_entry->ch_width = ch_change_req->ch_width;
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	session_entry->ch_center_freq_seg0 =
-		ch_change_req->center_freq_seg_0;
-	session_entry->ch_center_freq_seg1 =
-		ch_change_req->center_freq_seg_1;
-#else
 	session_entry->ch_center_freq_seg0 =
 			 ch_change_req->center_freq_seg0;
 	session_entry->ch_center_freq_seg1 =
 			ch_change_req->center_freq_seg1;
-#endif
 	session_entry->htSecondaryChannelOffset = ch_change_req->sec_ch_offset;
 	session_entry->htSupportedChannelWidthSet =
 		(ch_change_req->ch_width ? 1 : 0);
@@ -8374,22 +8284,12 @@ static void lim_process_sme_channel_change_request(struct mac_context *mac_ctx,
 
 	session_entry->dot11mode = ch_change_req->dot11mode;
 	session_entry->nwType = ch_change_req->nw_type;
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	qdf_mem_copy(&session_entry->rateSet,
-			&ch_change_req->operational_rateset,
-			sizeof(session_entry->rateSet));
-	qdf_mem_copy(&session_entry->extRateSet,
-			&ch_change_req->extended_rateset,
-			sizeof(session_entry->extRateSet));
-#else
 	qdf_mem_copy(&session_entry->rateSet,
 		     &ch_change_req->opr_rates,
 		     sizeof(session_entry->rateSet));
 	qdf_mem_copy(&session_entry->extRateSet,
 		     &ch_change_req->ext_rates,
 		     sizeof(session_entry->extRateSet));
-#endif
 	lim_change_channel(mac_ctx, session_entry);
 }
 

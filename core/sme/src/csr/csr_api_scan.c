@@ -821,7 +821,6 @@ static QDF_STATUS csr_fill_bss_from_scan_entry(struct mac_context *mac_ctx,
 		return QDF_STATUS_E_NOMEM;
 
 	csr_fill_neg_crypto_info(bss, &scan_entry->neg_sec_info);
-	bss->bss_score = scan_entry->bss_score;
 
 	result_info = &bss->Result;
 	result_info->ssId.length = scan_entry->ssid.length;

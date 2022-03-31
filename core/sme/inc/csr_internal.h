@@ -58,9 +58,6 @@
 	  ((mac)->mlme_cfg->lfr.roam_prefer_5ghz) \
 	)
 
-#define CSR_IS_CHANNEL_24GHZ(chnNum) \
-	(((chnNum) > 0) && ((chnNum) <= 14))
-
 /* Used to determine what to set to the MLME_DOT11_MODE */
 enum csr_cfgdot11mode {
 	eCSR_CFG_DOT11_MODE_ABG,
@@ -82,12 +79,7 @@ enum csr_cfgdot11mode {
 };
 
 enum csr_roam_reason {
-#ifndef SAP_CP_CLEANUP
-	eCsrNoConnection,
-	eCsrStartBss,
-	eCsrStopBss,
-#endif
-	eCsrForcedDisassocSta,
+	eCsrForcedDisassocSta = 1,
 	eCsrForcedDeauthSta,
 };
 
@@ -96,7 +88,6 @@ enum csr_roam_substate {
 	eCSR_ROAM_SUBSTATE_START_BSS_REQ,
 	eCSR_ROAM_SUBSTATE_DISASSOC_REQ,
 	eCSR_ROAM_SUBSTATE_STOP_BSS_REQ,
-	eCSR_ROAM_SUBSTATE_CONFIG,
 	eCSR_ROAM_SUBSTATE_DEAUTH_REQ,
 	eCSR_ROAM_SUBSTATE_WAIT_FOR_KEY,
 	/*  max is 15 unless the bitfield is expanded... */
@@ -130,33 +121,6 @@ struct bss_config_param {
 	tSirMacCapabilityInfo BssCap;
 };
 
-#ifndef SAP_CP_CLEANUP
-struct csr_roamstart_bssparams {
-	tSirMacSSid ssId;
-
-	tSirNwType sirNwType;
-	ePhyChanBondState cb_mode;
-	tSirMacRateSet operationalRateSet;
-	tSirMacRateSet extendedRateSet;
-	uint32_t operation_chan_freq;
-	struct ch_params ch_params;
-	enum csr_cfgdot11mode uCfgDot11Mode;
-	uint8_t privacy;
-	tAniAuthType authType;
-	uint16_t bcn_int; /* If this is 0, SME'll fill in for caller */
-	uint32_t dtimPeriod;
-	uint8_t ssidHidden;
-	uint8_t wps_state;
-	uint16_t nRSNIELength;  /* If 0, pRSNIE is ignored. */
-	uint8_t *pRSNIE;        /* If not null, it has IE byte stream for RSN */
-	/* Flag used to indicate update beaconInterval */
-	bool update_bcn_int;
-	struct add_ie_params add_ie_params;
-	uint16_t beacon_tx_rate;
-	uint32_t cac_duration_ms;
-	uint32_t dfs_regdomain;
-};
-#else
 /* struct csr_roamstart_bssparams: csr bss parameters
  * @cb_mode: channel bonding mode
  * @bcn_int: beacon interval
@@ -167,15 +131,9 @@ struct csr_roamstart_bssparams {
 	uint16_t bcn_int;
 	bool update_bcn_int;
 };
-#endif
 
 struct roam_cmd {
-	uint32_t roamId;
 	enum csr_roam_reason roamReason;
-#ifndef SAP_CP_CLEANUP
-	struct csr_roam_profile roamProfile;
-	bool fReleaseProfile;             /* whether to free roamProfile */
-#endif
 	tSirMacAddr peerMac;
 	enum wlan_reason_code reason;
 };
@@ -314,7 +272,6 @@ struct csr_roam_session {
 };
 
 struct csr_roamstruct {
-	uint32_t nextRoamId;
 	struct csr_config configParam;
 	enum csr_roam_state curState[WLAN_MAX_VDEVS];
 	enum csr_roam_substate curSubState[WLAN_MAX_VDEVS];
@@ -331,18 +288,12 @@ struct csr_roamstruct {
 	spinlock_t roam_state_lock;
 };
 
-#define GET_NEXT_ROAM_ID(pRoamStruct)  (((pRoamStruct)->nextRoamId + 1 == 0) ? \
-			1 : (pRoamStruct)->nextRoamId)
 #define CSR_IS_ROAM_STATE(mac, state, sessionId) \
 			((state) == (mac)->roam.curState[sessionId])
 #define CSR_IS_ROAM_STOP(mac, sessionId) \
 		CSR_IS_ROAM_STATE((mac), eCSR_ROAMING_STATE_STOP, sessionId)
-#define CSR_IS_ROAM_INIT(mac, sessionId) \
-		 CSR_IS_ROAM_STATE((mac), eCSR_ROAMING_STATE_INIT, sessionId)
 #define CSR_IS_ROAM_JOINING(mac, sessionId)  \
 		CSR_IS_ROAM_STATE(mac, eCSR_ROAMING_STATE_JOINING, sessionId)
-#define CSR_IS_ROAM_IDLE(mac, sessionId) \
-		CSR_IS_ROAM_STATE(mac, eCSR_ROAMING_STATE_IDLE, sessionId)
 #define CSR_IS_ROAM_JOINED(mac, sessionId) \
 		CSR_IS_ROAM_STATE(mac, eCSR_ROAMING_STATE_JOINED, sessionId)
 #define CSR_IS_ROAM_SUBSTATE(mac, subState, sessionId) \
@@ -358,9 +309,6 @@ struct csr_roamstruct {
 #define CSR_IS_ROAM_SUBSTATE_STOP_BSS_REQ(mac, sessionId) \
 		CSR_IS_ROAM_SUBSTATE((mac), \
 			eCSR_ROAM_SUBSTATE_STOP_BSS_REQ, sessionId)
-#define CSR_IS_ROAM_SUBSTATE_CONFIG(mac, sessionId) \
-		CSR_IS_ROAM_SUBSTATE((mac), \
-		eCSR_ROAM_SUBSTATE_CONFIG, sessionId)
 #define CSR_IS_ROAM_SUBSTATE_WAITFORKEY(mac, sessionId) \
 		CSR_IS_ROAM_SUBSTATE((mac), \
 			eCSR_ROAM_SUBSTATE_WAIT_FOR_KEY, sessionId)
@@ -563,25 +511,6 @@ QDF_STATUS csr_get_tsm_stats(struct mac_context *mac,
 		void *pContext, uint8_t tid);
 #endif
 
-#ifndef SAP_CP_CLEANUP
-/**
- * csr_roam_channel_change_req() - Post channel change request to LIM
- * @mac: mac context
- * @bssid: SAP bssid
- * @vdev_id: vdev_id
- * @ch_params: channel information
- * @profile: CSR profile
- *
- * This API is primarily used to post Channel Change Req for SAP
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS csr_roam_channel_change_req(struct mac_context *mac,
-				       struct qdf_mac_addr bssid,
-				       uint8_t vdev_id,
-				       struct ch_params *ch_params,
-				       struct csr_roam_profile *profile);
-#else
 /**
  * csr_send_channel_change_req() - Post channel change request to LIM
  * @mac : mac context
@@ -593,7 +522,6 @@ QDF_STATUS csr_roam_channel_change_req(struct mac_context *mac,
  */
 QDF_STATUS csr_send_channel_change_req(struct mac_context *mac,
 				       struct channel_change_req *req);
-#endif
 
 /* Post Beacon Tx Start Indication */
 QDF_STATUS csr_roam_start_beacon_req(struct mac_context *mac,

@@ -275,15 +275,9 @@ lim_set_rs_nie_wp_aiefrom_sme_start_bss_req_message(struct mac_context *mac_ctx,
 	return true;
 }
 
-#ifndef SAP_CP_CLEANUP
-bool lim_is_sme_start_bss_req_valid(struct mac_context *mac_ctx,
-				    struct start_bss_req *start_bss_req,
-				    enum bss_type bss_type)
-#else
 bool lim_is_sme_start_bss_req_valid(struct mac_context *mac_ctx,
 				    struct start_bss_config *start_bss_req,
 				    enum bss_type bss_type)
-#endif
 {
 	uint8_t i = 0;
 	tSirMacRateSet *opr_rates = &start_bss_req->operationalRateSet;

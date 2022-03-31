@@ -59,7 +59,6 @@ void lim_send_sme_rsp(struct mac_context *mac_ctx, uint16_t msg_type,
 /**
  * lim_send_sme_start_bss_rsp() - Send Start BSS response
  * @mac: Pointer to Global MAC structure
- * @msgType: Indicates message type
  * @resultCode: Indicates the result of previously issued request
  * @pe_session: PE session associated with the BSS
  * @smesessionId: ID of the SME session associated with the BSS
@@ -67,18 +66,10 @@ void lim_send_sme_rsp(struct mac_context *mac_ctx, uint16_t msg_type,
  * This function is called to send eWNI_SME_START_BSS_RSP
  * message to applications above MAC Software.
  */
-#ifndef SAP_CP_CLEANUP
-void lim_send_sme_start_bss_rsp(struct mac_context *mac,
-				uint16_t msgType,
-				tSirResultCodes resultCode,
-				struct pe_session *pe_session,
-				uint8_t smesessionId);
-#else
 void lim_send_sme_start_bss_rsp(struct mac_context *mac,
 				tSirResultCodes resultCode,
 				struct pe_session *pe_session,
 				uint8_t smesessionId);
-#endif
 
 /**
  * lim_send_sme_join_reassoc_rsp() - Send Response to Upper Layers
@@ -289,7 +280,6 @@ void lim_handle_mlo_sta_csa_param(struct wlan_objmgr_vdev *vdev,
 				  struct csa_offload_params *csa_params);
 #endif /* WLAN_FEATURE_11BE_MLO */
 
-#ifdef SAP_CP_CLEANUP
 /** lim_send_stop_bss_response() - Send stop bss response to CSR
  *
  * @mac_ctx : Global mac ctx
@@ -300,5 +290,4 @@ void lim_handle_mlo_sta_csa_param(struct wlan_objmgr_vdev *vdev,
  */
 void lim_send_stop_bss_response(struct mac_context *mac_ctx, uint8_t vdev_id,
 				tSirResultCodes result_code);
-#endif
 #endif /* __LIM_SEND_SME_RSP_H */

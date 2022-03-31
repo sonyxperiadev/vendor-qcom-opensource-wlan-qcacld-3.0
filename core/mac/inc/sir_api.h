@@ -687,52 +687,6 @@ struct add_ie_params {
 	uint8_t *probeRespBCNData_buff;
 };
 
-#ifndef SAP_CP_CLEANUP
-/* / Definition for kick starting BSS */
-/* / ---> MAC */
-/**
- * Usage of ssId, numSSID & ssIdList:
- * ---------------------------------
- * 1. ssId.length of zero indicates that Broadcast/Suppress SSID
- *    feature is enabled.
- * 2. If ssId.length is zero, MAC SW will advertise NULL SSID
- *    and interpret the SSID list from numSSID & ssIdList.
- * 3. If ssId.length is non-zero, MAC SW will advertise the SSID
- *    specified in the ssId field and it is expected that
- *    application will set numSSID to one (only one SSID present
- *    in the list) and SSID in the list is same as ssId field.
- * 4. Application will always set numSSID >= 1.
- */
-/* ***** NOTE: Please make sure all codes are updated if inserting field into
- * this structure..********** */
-struct start_bss_req {
-	uint16_t messageType;   /* eWNI_SME_START_BSS_REQ */
-	uint16_t length;
-	uint8_t vdev_id;
-	uint16_t beaconInterval;
-	uint8_t dot11mode;
-	tSirMacSSid ssId;
-	uint32_t oper_ch_freq;
-	uint8_t vht_channel_width;
-	uint8_t center_freq_seg0;
-	uint8_t center_freq_seg1;
-	uint8_t sec_ch_offset;
-	uint8_t privacy;
-	uint8_t ssidHidden;
-	tAniAuthType authType;
-	uint32_t dtimPeriod;
-	uint8_t wps_state;
-	tSirRSNie rsnIE;        /* RSN IE to be sent in */
-	tSirNwType nwType;      /* Indicates 11a/b/g */
-	tSirMacRateSet operationalRateSet;      /* Has 11a or 11b rates */
-	tSirMacRateSet extendedRateSet; /* Has 11g rates */
-	struct add_ie_params add_ie_params;
-	uint16_t beacon_tx_rate;
-	uint32_t cac_duration_ms;
-	uint32_t dfs_regdomain;
-
-};
-#endif
 #define GET_IE_LEN_IN_BSS(lenInBss) (lenInBss + sizeof(lenInBss) - \
 			    ((uintptr_t)OFFSET_OF(struct bss_description,\
 						  ieFields)))
@@ -804,10 +758,6 @@ struct bss_description {
 /* / issued start BSS request */
 /* / MAC ---> */
 struct start_bss_rsp {
-#ifndef SAP_CP_CLEANUP
-	uint16_t messageType;   /* eWNI_SME_START_BSS_RSP */
-	uint16_t length;
-#endif
 	uint8_t vdev_id;
 	tSirResultCodes status_code;
 	uint32_t staId;         /* Station ID for Self */
@@ -1222,16 +1172,6 @@ struct deauth_cnf {
 	struct qdf_mac_addr peer_macaddr;
 };
 
-#ifndef SAP_CP_CLEANUP
-/* / Definition for stop BSS request message */
-struct stop_bss_req {
-	uint16_t messageType;   /* eWNI_SME_STOP_BSS_REQ */
-	uint16_t length;
-	uint8_t sessionId;      /* Session ID */
-	tSirResultCodes reasonCode;
-	struct qdf_mac_addr bssid;      /* Self BSSID */
-};
-#else
 struct stop_bss_req {
 	uint8_t vdev_id;
 	uint32_t cmd_id;
@@ -1241,7 +1181,6 @@ struct stop_bss_rsp {
 	uint8_t vdev_id;
 	tSirResultCodes status_code;
 };
-#endif
 
 /* / Definition for Channel Switch indication for station */
 /* / MAC ---> */
@@ -2260,25 +2199,6 @@ typedef struct sSirSmeDfsChannelList {
 	/* Ch num including bonded channels on which the RADAR is present */
 	uint8_t channels[SIR_DFS_MAX_20M_SUB_CH];
 } tSirSmeDfsChannelList, *tpSirSmeDfsChannelList;
-
-#ifndef SAP_CP_CLEANUP
-typedef struct sSirChanChangeRequest {
-	uint16_t messageType;
-	uint16_t messageLen;
-	uint32_t target_chan_freq;
-	uint8_t sec_ch_offset;
-	enum phy_ch_width ch_width;
-	uint8_t center_freq_seg_0;
-	uint8_t center_freq_seg_1;
-	uint8_t bssid[QDF_MAC_ADDR_SIZE];
-	uint32_t dot11mode;
-	tSirNwType nw_type;
-	tSirMacRateSet operational_rateset;
-	tSirMacRateSet extended_rateset;
-	uint32_t cac_duration_ms;
-	uint32_t dfs_regdomain;
-} tSirChanChangeRequest, *tpSirChanChangeRequest;
-#endif
 
 typedef struct sSirChanChangeResponse {
 	uint8_t sessionId;
@@ -5251,7 +5171,6 @@ struct sir_update_session_txq_edca_param {
 	tSirMacEdcaParamRecord txq_edca_params;
 };
 
-#ifdef SAP_CP_CLEANUP
 /* struct channel_change_req - Change channel
  * request for SAP
  * @vdev_id: vdev id
@@ -5335,6 +5254,5 @@ struct start_bss_config {
 	uint32_t cac_duration_ms;
 	uint32_t dfs_regdomain;
 };
-#endif
 
 #endif /* __SIR_API_H */

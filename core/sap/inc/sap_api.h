@@ -693,7 +693,6 @@ struct sap_context;
  * wlansap_roam_callback() - API to get the events for SAP persona
  * @ctx: callback context registered with SME (sap context is registered)
  * @csr_roam_info: pointer to SME CSR roam info structure
- * @roam_id: roam id being used
  * @roam_status: status of the event reported by SME to SAP
  * @roam_result: result of the event reported by SME to SAP
  *
@@ -705,7 +704,6 @@ struct sap_context;
  */
 QDF_STATUS wlansap_roam_callback(void *ctx,
 				 struct csr_roam_info *csr_roam_info,
-				 uint32_t roam_id,
 				 eRoamCmdStatus roam_status,
 				 eCsrRoamResult roam_result);
 
