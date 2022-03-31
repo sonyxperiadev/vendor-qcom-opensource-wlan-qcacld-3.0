@@ -4631,6 +4631,9 @@ int hdd_wlan_start_modules(struct hdd_context *hdd_ctx, bool reinit)
 			break;
 		}
 
+		if (pld_is_ipa_offload_disabled(qdf_dev->dev))
+			ucfg_ipa_set_pld_enable(false);
+
 		ucfg_ipa_component_config_update(hdd_ctx->psoc);
 
 		hdd_update_cds_ac_specs_params(hdd_ctx);
