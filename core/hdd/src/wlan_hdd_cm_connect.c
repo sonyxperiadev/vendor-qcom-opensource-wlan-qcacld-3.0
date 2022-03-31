@@ -30,7 +30,6 @@
 #include "wlan_hdd_connectivity_logging.h"
 #include <osif_cm_req.h>
 #include <wlan_logging_sock_svc.h>
-#include <wlan_hdd_periodic_sta_stats.h>
 #include <wlan_hdd_green_ap.h>
 #include <wlan_hdd_p2p.h>
 #include <wlan_p2p_ucfg_api.h>
@@ -52,7 +51,7 @@
 #include "wlan_hdd_hostapd.h"
 #include <wlan_twt_ucfg_ext_api.h>
 #include <osif_twt_internal.h>
-#include <wlan_dp_ucfg_api.h>
+#include "wlan_dp_ucfg_api.h"
 
 bool hdd_cm_is_vdev_associated(struct hdd_adapter *adapter)
 {

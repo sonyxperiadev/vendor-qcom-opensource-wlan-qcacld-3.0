@@ -126,10 +126,6 @@ HDD_OBJS := 	$(HDD_SRC_DIR)/wlan_hdd_assoc.o \
 		$(HDD_SRC_DIR)/wlan_hdd_wmm.o \
 		$(HDD_SRC_DIR)/wlan_hdd_wowl.o\
 
-ifeq ($(CONFIG_WLAN_FEATURE_PERIODIC_STA_STATS), y)
-HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_periodic_sta_stats.o
-endif
-
 ifeq ($(CONFIG_UNIT_TEST), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_unit_test.o
 endif
@@ -191,10 +187,6 @@ endif
 
 ifeq ($(CONFIG_WLAN_FEATURE_LPSS), y)
 HDD_OBJS +=	$(HDD_SRC_DIR)/wlan_hdd_lpass.o
-endif
-
-ifeq ($(CONFIG_WLAN_LRO), y)
-HDD_OBJS +=     $(HDD_SRC_DIR)/wlan_hdd_lro.o
 endif
 
 ifeq ($(CONFIG_WLAN_NAPI), y)
@@ -485,10 +477,6 @@ HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_cm_disconnect.o
 
 ifeq ($(CONFIG_WLAN_BOOTUP_MARKER), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_bootup_marker.o
-endif
-
-ifeq ($(CONFIG_FEATURE_BUS_BANDWIDTH_MGR),y)
-HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_bus_bandwidth.o
 endif
 
 ifeq ($(CONFIG_FEATURE_WLAN_CH_AVOID_EXT),y)
