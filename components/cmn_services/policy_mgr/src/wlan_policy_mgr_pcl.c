@@ -2908,6 +2908,8 @@ bool policy_mgr_is_3rd_conn_on_same_band_allowed(struct wlan_objmgr_psoc *psoc,
 	case PM_5G_SCC_CH:
 	case PM_SCC_ON_5_SCC_ON_24_24G:
 	case PM_SCC_ON_5_SCC_ON_24_5G:
+	case PM_SCC_ON_5_5G_24G:
+	case PM_SCC_ON_5_5G_SCC_ON_24G:
 	case PM_SCC_ON_24_SCC_ON_5_24G:
 	case PM_SCC_ON_24_SCC_ON_5_5G:
 	case PM_SCC_ON_5_SCC_ON_24:
@@ -2925,6 +2927,7 @@ bool policy_mgr_is_3rd_conn_on_same_band_allowed(struct wlan_objmgr_psoc *psoc,
 	case PM_24G_MCC_CH:
 	case PM_5G_MCC_CH:
 	case PM_24G_SBS_CH_MCC_CH:
+	case PM_SBS_CH_2G:
 		ret = true;
 		break;
 	default:

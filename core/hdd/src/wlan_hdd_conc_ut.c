@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2015-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -277,14 +278,14 @@ static void _validate_scc(bool *status, uint32_t *first_idx,
 	if (second_connection_chnl) {
 		if (*first_idx >= pcl_len) {
 			snprintf(reason, reason_length,
-				 "no 2rd scc ch");
+				 "no 2nd scc ch");
 			*status = false;
 			return;
 		}
 		if (pcl_freqs[*first_idx] != first_connection_chnl &&
 		    pcl_freqs[*first_idx] != second_connection_chnl) {
 			snprintf(reason, reason_length,
-				 "2rd scc ch is not correct %d expect %d %d",
+				 "2nd scc ch is not correct %d expect %d %d",
 				 pcl_freqs[*first_idx],
 				 first_connection_chnl,
 				 second_connection_chnl);
@@ -698,6 +699,53 @@ static bool wlan_hdd_validate_pcl(struct hdd_context *hdd_ctx,
 			return false;
 		}
 		break;
+	case PM_SCC_ON_5_5G_24G:
+		if ((!WLAN_REG_IS_5GHZ_CH_FREQ(pcl_freqs[0]) &&
+		     !WLAN_REG_IS_6GHZ_CHAN_FREQ(pcl_freqs[0])) ||
+			(pcl_freqs[0] != first_connection_chnl &&
+			 pcl_freqs[0] != second_connection_chnl)) {
+			snprintf(reason, reason_length,
+				 "No 5Ghz chnl/scc");
+			return false;
+		}
+		if (!WLAN_REG_IS_5GHZ_CH_FREQ(
+			pcl_freqs[pcl_len - (NUM_24GHZ_CHANNELS - 1)]) &&
+		    !WLAN_REG_IS_6GHZ_CHAN_FREQ(
+			pcl_freqs[pcl_len - (NUM_24GHZ_CHANNELS - 1)])) {
+			snprintf(reason, reason_length,
+				 "No 5Ghz chnls");
+			return false;
+		}
+		if (!WLAN_REG_IS_24GHZ_CH_FREQ(pcl_freqs[pcl_len - 1])) {
+			snprintf(reason, reason_length,
+				 "No 24Ghz chnls");
+			return false;
+		}
+		break;
+	case PM_SCC_ON_5_5G_SCC_ON_24G:
+		if ((!WLAN_REG_IS_5GHZ_CH_FREQ(pcl_freqs[0]) &&
+		     !WLAN_REG_IS_6GHZ_CHAN_FREQ(pcl_freqs[0])) ||
+			(pcl_freqs[0] != first_connection_chnl &&
+			 pcl_freqs[0] != second_connection_chnl)) {
+			snprintf(reason, reason_length,
+				 "No 5Ghz chnl/scc");
+			return false;
+		}
+		if (!WLAN_REG_IS_5GHZ_CH_FREQ(
+				pcl_freqs[pcl_len - 2]) &&
+		    !WLAN_REG_IS_6GHZ_CHAN_FREQ(
+				pcl_freqs[pcl_len - 2])) {
+			snprintf(reason, reason_length,
+				 "No 5Ghz chnls");
+			return false;
+		}
+		if (!WLAN_REG_IS_24GHZ_CH_FREQ(pcl_freqs[pcl_len - 1]) ||
+		    (pcl_freqs[1] != first_connection_chnl &&
+		     pcl_freqs[1] != second_connection_chnl)) {
+			snprintf(reason, reason_length,
+				 "No 24Ghz chnl/scc");
+			return false;
+		}
 	case PM_SCC_ON_24_SCC_ON_5_24G:
 		if (!WLAN_REG_IS_24GHZ_CH_FREQ(pcl_freqs[0]) ||
 			(pcl_freqs[0] != first_connection_chnl &&
@@ -846,6 +894,10 @@ static bool wlan_hdd_validate_pcl(struct hdd_context *hdd_ctx,
 		validate_24g;
 		validate_end;
 		break;
+	case PM_SBS_CH_2G:
+		validate_sbs;
+		validate_24g;
+		validate_end;
 	default:
 		snprintf(reason, reason_length,
 			"Unknown option");

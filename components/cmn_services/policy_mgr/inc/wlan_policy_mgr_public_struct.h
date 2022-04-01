@@ -172,6 +172,8 @@ enum policy_mgr_pcl_group_id {
  * @POLICY_MGR_PCL_ORDER_NONE: no order
  * @POLICY_MGR_PCL_ORDER_24G_THEN_5G: 2.4 Ghz channel followed by 5 Ghz channel
  * @POLICY_MGR_PCL_ORDER_5G_THEN_2G: 5 Ghz channel followed by 2.4 Ghz channel
+ * @POLICY_MGR_PCL_ORDER_2G: 2G channels
+ * @POLICY_MGR_PCL_ORDER_5G: 5G channels
  *
  * Order in which the PCL is requested
  */
@@ -179,6 +181,8 @@ enum policy_mgr_pcl_channel_order {
 	POLICY_MGR_PCL_ORDER_NONE,
 	POLICY_MGR_PCL_ORDER_24G_THEN_5G,
 	POLICY_MGR_PCL_ORDER_5G_THEN_2G,
+	POLICY_MGR_PCL_ORDER_2G,
+	POLICY_MGR_PCL_ORDER_5G,
 };
 
 /**
