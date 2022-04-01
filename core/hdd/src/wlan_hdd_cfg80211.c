@@ -19998,6 +19998,7 @@ static int __wlan_hdd_cfg80211_add_key(struct wiphy *wiphy,
 		break;
 	case QDF_STA_MODE:
 	case QDF_P2P_CLIENT_MODE:
+	case QDF_NAN_DISC_MODE:
 		errno = wlan_hdd_add_key_sta(hdd_ctx->pdev, adapter, pairwise,
 					     key_index, &ft_mode);
 		if (ft_mode)
