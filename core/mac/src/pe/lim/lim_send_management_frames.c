@@ -6355,22 +6355,32 @@ static void lim_tx_mgmt_frame(struct mac_context *mac_ctx, uint8_t vdev_id,
 {
 	tpSirMacFrameCtl fc = (tpSirMacFrameCtl)frame;
 	QDF_STATUS qdf_status;
-	struct pe_session *session;
+	struct pe_session *session = NULL;
 	uint16_t auth_ack_status;
 	enum rateid min_rid = RATEID_DEFAULT;
+	enum QDF_OPMODE opmode;
+	uint16_t session_id;
 
-	session = pe_find_session_by_vdev_id(mac_ctx, vdev_id);
-	if (!session) {
-		cds_packet_free((void *)packet);
-		pe_err("session not found for given vdev_id %d",
-		       vdev_id);
-		return;
+	opmode = wlan_get_opmode_from_vdev_id(mac_ctx->pdev, vdev_id);
+	if (opmode != QDF_NAN_DISC_MODE) {
+		session = pe_find_session_by_vdev_id(mac_ctx, vdev_id);
+		if (!session) {
+			cds_packet_free((void *)packet);
+			pe_err("session not found for given vdev_id %d",
+			       vdev_id);
+			return;
+		}
+		session_id = session->peSessionId;
+	} else {
+		session_id = vdev_id;
 	}
 
 	qdf_mtrace(QDF_MODULE_ID_PE, QDF_MODULE_ID_WMA, TRACE_CODE_TX_MGMT,
-		   session->peSessionId, 0);
+		   session_id, 0);
 
-	min_rid = lim_get_min_session_txrate(session);
+	if (opmode != QDF_NAN_DISC_MODE) {
+		min_rid = lim_get_min_session_txrate(session);
+	}
 
 	qdf_status = wma_tx_frameWithTxComplete(mac_ctx, packet,
 					 (uint16_t)msg_len,
@@ -6379,7 +6389,7 @@ static void lim_tx_mgmt_frame(struct mac_context *mac_ctx, uint8_t vdev_id,
 					 lim_auth_tx_complete_cnf,
 					 0, vdev_id, false, 0, min_rid, 0);
 	MTRACE(qdf_trace(QDF_MODULE_ID_PE, TRACE_CODE_TX_COMPLETE,
-		session->peSessionId, qdf_status));
+		session_id, qdf_status));
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		pe_err("*** Could not send Auth frame (subType: %d), retCode=%X ***",
 			fc->subType, qdf_status);
