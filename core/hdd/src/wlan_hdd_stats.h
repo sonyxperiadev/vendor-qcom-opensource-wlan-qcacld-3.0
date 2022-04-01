@@ -28,6 +28,9 @@
 #define WLAN_HDD_STATS_H
 
 #include "wlan_hdd_main.h"
+#ifdef WLAN_FEATURE_11BE_MLO
+#include "wlan_mlo_mgr_cmn.h"
+#endif
 
 #define INVALID_MCS_IDX 255
 #define MAX_HT_MCS_IDX 8

@@ -2916,6 +2916,8 @@ typedef struct {
 	uint32_t reqId;
 	uint8_t staId;
 	uint32_t paramIdMask;
+	bool is_mlo_req;
+	uint32_t mlo_vdev_id_bitmap;
 } tSirLLStatsGetReq, *tpSirLLStatsGetReq;
 
 typedef struct {
@@ -3141,6 +3143,7 @@ struct wifi_peer_info {
  * @ac_stats: per-Access Category statistics
  * @num_offload_stats: @offload_stats record count
  * @offload_stats: per-offload statistics
+ * @vdev_id: vdev id
  *
  * Statistics corresponding to 2nd most LSB in wifi statistics bitmap
  * for getting statistics
@@ -3155,6 +3158,7 @@ struct wifi_interface_stats {
 	wmi_wmm_ac_stats ac_stats[WIFI_AC_MAX];
 	uint32_t num_offload_stats;
 	wmi_iface_offload_stats offload_stats[WMI_OFFLOAD_STATS_TYPE_MAX];
+	uint8_t vdev_id;
 };
 
 /**

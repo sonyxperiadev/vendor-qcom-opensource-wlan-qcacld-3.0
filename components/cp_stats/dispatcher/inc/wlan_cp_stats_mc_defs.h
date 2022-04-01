@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -30,6 +31,7 @@
 #include "qdf_event.h"
 /* For WMI_MAX_CHAINS */
 #include "wmi_unified.h"
+#include "wlan_mlo_mgr_cmn.h"
 
 #ifdef QCA_SUPPORT_MC_CP_STATS
 #include "wlan_cp_stats_public_structs.h"
@@ -228,6 +230,7 @@ struct medium_assess_data {
  * @vdev_id: vdev_id of request
  * @pdev_id: pdev_id of request
  * @peer_mac_addr: peer mac address
+ * @ml_vdev_info: mlo_stats_vdev_params structure
  */
 struct request_info {
 	void *cookie;
@@ -250,6 +253,9 @@ struct request_info {
 	uint32_t vdev_id;
 	uint32_t pdev_id;
 	uint8_t peer_mac_addr[QDF_MAC_ADDR_SIZE];
+#ifdef WLAN_FEATURE_11BE_MLO
+	struct mlo_stats_vdev_params ml_vdev_info;
+#endif
 };
 
 /**

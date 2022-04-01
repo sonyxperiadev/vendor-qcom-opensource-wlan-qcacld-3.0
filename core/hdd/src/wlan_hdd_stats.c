@@ -1006,6 +1006,42 @@ static void hdd_link_layer_process_peer_stats(struct hdd_adapter *adapter,
 	cfg80211_vendor_cmd_reply(vendor_event);
 }
 
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(CFG80211_11BE_BASIC)
+/**
+ * hdd_cache_ll_iface_stats() - Caches ll_stats received from fw to adapter
+ * @hdd_ctx: Pointer to hdd_context
+ * @if_stat: Pointer to stats data
+ *
+ * After receiving Link Layer Interface statistics from FW. This function
+ * converts the firmware data to the NL data and caches them to the adapter.
+ *
+ * Return: None
+ */
+static void
+hdd_cache_ll_iface_stats(struct hdd_context *hdd_ctx,
+			 struct wifi_interface_stats *if_stat)
+{
+	struct hdd_adapter *adapter;
+
+	adapter = hdd_get_adapter_by_vdev(hdd_ctx, if_stat->vdev_id);
+	/*
+	 * There is no need for wlan_hdd_validate_context here. This is a NB
+	 * operation that will come with DSC synchronization. This ensures that
+	 * no driver transition will take place as long as this operation is
+	 * not complete. Thus the need to check validity of hdd_context is not
+	 * required.
+	 */
+	hdd_nofl_debug("Copying iface stats into the adapter");
+	adapter->ll_iface_stats = *if_stat;
+}
+#else
+static void
+hdd_cache_ll_iface_stats(struct hdd_context *hdd_ctx,
+			 struct wifi_interface_stats *if_stat)
+{
+}
+#endif
+
 /**
  * hdd_link_layer_process_iface_stats() - This function is called after
  * @adapter: Pointer to device adapter
@@ -1026,6 +1062,10 @@ hdd_link_layer_process_iface_stats(struct hdd_adapter *adapter,
 	struct sk_buff *vendor_event;
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 
+	if (if_stat->vdev_id != adapter->vdev_id) {
+		hdd_cache_ll_iface_stats(hdd_ctx, if_stat);
+		return;
+	}
 	/*
 	 * There is no need for wlan_hdd_validate_context here. This is a NB
 	 * operation that will come with DSC synchronization. This ensures that
@@ -1483,6 +1523,12 @@ static void hdd_process_ll_stats(tSirLLStatsResults *results,
 		}
 		qdf_mem_copy(stats->result, results->results,
 			     sizeof(struct wifi_interface_stats));
+
+		/* Firmware doesn't send peerstats event if no peers are
+		 * connected. HDD should not wait for any peerstats in
+		 * this case and return the status to middleware after
+		 * receiving iface stats
+		 */
 		if (!results->num_peers)
 			priv->request_bitmap &= ~(WMI_LINK_STATS_ALL_PEER);
 		priv->request_bitmap &= ~stats->result_param_id;
@@ -1589,6 +1635,38 @@ static void hdd_debugfs_process_ll_stats(struct hdd_adapter *adapter,
 
 }
 
+static void
+wlan_hdd_update_ll_stats_request_bitmap(struct hdd_context *hdd_ctx,
+					struct osif_request *request,
+					tSirLLStatsResults *results)
+{
+	struct hdd_ll_stats_priv *priv = osif_request_priv(request);
+	bool is_mlo_link;
+
+	/* The radio stats event is expected at the last, for MLO ll_stats */
+	if (priv->request_bitmap != WMI_LINK_STATS_RADIO &&
+	    results->paramId == WMI_LINK_STATS_RADIO) {
+		hdd_err("req_id %d resp_id %u req_bitmap 0x%x resp_bitmap 0x%x",
+			priv->request_id, results->rspId,
+			priv->request_bitmap, results->paramId);
+		QDF_DEBUG_PANIC("Out of order event received for MLO_LL_STATS");
+	}
+
+	is_mlo_link = wlan_vdev_mlme_get_is_mlo_link(hdd_ctx->psoc,
+						     results->ifaceId);
+	/* In case of MLO Connection, set the request_bitmap */
+	if (is_mlo_link && results->paramId == WMI_LINK_STATS_IFACE) {
+		/* The radio stats are received at the last, hence set
+		 * the request_bitmap for MLO link vdev iface stats.
+		 */
+		if (!(priv->request_bitmap & results->paramId))
+			priv->request_bitmap |= results->paramId;
+
+		hdd_nofl_debug("MLO_LL_STATS set request_bitmap = 0x%x",
+			       priv->request_bitmap);
+	}
+}
+
 void wlan_hdd_cfg80211_link_layer_stats_callback(hdd_handle_t hdd_handle,
 						 int indication_type,
 						 tSirLLStatsResults *results,
@@ -1629,12 +1707,14 @@ void wlan_hdd_cfg80211_link_layer_stats_callback(hdd_handle_t hdd_handle,
 			return;
 		}
 
-		adapter = hdd_get_adapter_by_vdev(hdd_ctx, priv->vdev_id);
+		adapter = hdd_get_adapter_by_vdev(hdd_ctx, results->ifaceId);
 		if (!adapter) {
-			hdd_err("invalid vdev %d", priv->vdev_id);
+			hdd_err("invalid vdev %d", results->ifaceId);
 			return;
 		}
 
+		wlan_hdd_update_ll_stats_request_bitmap(hdd_ctx, request,
+							results);
 		if (results->rspId == DEBUGFS_LLSTATS_REQID) {
 			hdd_debugfs_process_ll_stats(adapter, results, request);
 		 } else {
@@ -1945,12 +2025,48 @@ static void cache_station_stats_cb(struct stats_event *ev, void *cookie)
 	}
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
 static QDF_STATUS
-wlan_hdd_set_station_stats_request_pending(struct hdd_adapter *adapter)
+wlan_hdd_get_mlo_vdev_params(struct hdd_adapter *adapter,
+			     struct request_info *req_info,
+			     tSirLLStatsGetReq *req)
+{
+	struct wlan_objmgr_psoc *psoc = adapter->hdd_ctx->psoc;
+	struct mlo_stats_vdev_params *info = &req_info->ml_vdev_info;
+	int i;
+	uint32_t bmap = 0;
+	QDF_STATUS status;
+
+	req->is_mlo_req = wlan_vdev_mlme_get_is_mlo_vdev(psoc,
+							 adapter->vdev_id);
+	status = mlo_get_mlstats_vdev_params(psoc, info, adapter->vdev_id);
+	if (QDF_IS_STATUS_ERROR(status))
+		return status;
+	for (i = 0; i < info->ml_vdev_count; i++)
+		bmap |= (1 << info->ml_vdev_id[i]);
+	req->mlo_vdev_id_bitmap = bmap;
+	return QDF_STATUS_SUCCESS;
+}
+#else
+static QDF_STATUS
+wlan_hdd_get_mlo_vdev_params(struct hdd_adapter *adapter,
+			     struct request_info *req_info,
+			     tSirLLStatsGetReq *req)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
+static QDF_STATUS
+wlan_hdd_set_station_stats_request_pending(struct hdd_adapter *adapter,
+					   tSirLLStatsGetReq *req)
 {
 	struct wlan_objmgr_peer *peer;
 	struct request_info info = {0};
 	struct wlan_objmgr_vdev *vdev;
+	struct wlan_objmgr_psoc *psoc = adapter->hdd_ctx->psoc;
+	bool is_mlo_vdev = false;
+	QDF_STATUS status;
 
 	if (!adapter->hdd_ctx->is_get_station_clubbed_in_ll_stats_req)
 		return QDF_STATUS_E_INVAL;
@@ -1968,6 +2084,15 @@ wlan_hdd_set_station_stats_request_pending(struct hdd_adapter *adapter)
 	info.cookie = adapter;
 	info.u.get_station_stats_cb = cache_station_stats_cb;
 	info.vdev_id = adapter->vdev_id;
+	is_mlo_vdev = wlan_vdev_mlme_get_is_mlo_vdev(psoc, adapter->vdev_id);
+	if (is_mlo_vdev) {
+		status = wlan_hdd_get_mlo_vdev_params(adapter, &info, req);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			hdd_err("unable to get vdev params for mlo stats");
+			return status;
+		}
+	}
+
 	info.pdev_id = wlan_objmgr_pdev_get_pdev_id(wlan_vdev_get_pdev(vdev));
 	peer = wlan_objmgr_vdev_try_get_bsspeer(vdev, WLAN_OSIF_STATS_ID);
 	if (!peer) {
@@ -2036,7 +2161,8 @@ static QDF_STATUS wlan_hdd_stats_request_needed(struct hdd_adapter *adapter)
 
 #else
 static QDF_STATUS
-wlan_hdd_set_station_stats_request_pending(struct hdd_adapter *adapter)
+wlan_hdd_set_station_stats_request_pending(struct hdd_adapter *adapter,
+					   tSirLLStatsGetReq *req)
 {
 	return QDF_STATUS_SUCCESS;
 }
@@ -2072,7 +2198,7 @@ static int wlan_hdd_send_ll_stats_req(struct hdd_adapter *adapter,
 
 	hdd_enter_dev(adapter->dev);
 
-	status = wlan_hdd_set_station_stats_request_pending(adapter);
+	status = wlan_hdd_set_station_stats_request_pending(adapter, req);
 	if (status == QDF_STATUS_E_ALREADY)
 		return qdf_status_to_os_return(status);
 

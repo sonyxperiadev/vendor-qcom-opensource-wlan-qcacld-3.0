@@ -2614,6 +2614,46 @@ wma_send_ll_stats_get_cmd(tp_wma_handle wma_handle,
 }
 #endif
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static QDF_STATUS
+wma_update_params_for_mlo_stats(tp_wma_handle wma,
+				const tpSirLLStatsGetReq getReq,
+				struct ll_stats_get_params *cmd)
+{
+	struct wlan_objmgr_vdev *vdev;
+	uint8_t *mld_addr;
+
+	cmd->is_mlo_req = getReq->is_mlo_req;
+
+	vdev = wma->interfaces[getReq->staId].vdev;
+	if (!vdev) {
+		wma_err("Failed to get vdev for vdev_%d", getReq->staId);
+		return QDF_STATUS_E_FAILURE;
+	}
+	if (getReq->is_mlo_req) {
+		cmd->vdev_id_bitmap = getReq->mlo_vdev_id_bitmap;
+		mld_addr = wlan_vdev_mlme_get_mldaddr(vdev);
+		if (!mld_addr) {
+			wma_err("Failed to get mld_macaddr for vdev_%d",
+				getReq->staId);
+			return QDF_STATUS_E_FAILURE;
+		}
+		qdf_mem_copy(cmd->mld_macaddr.bytes, mld_addr,
+			     QDF_MAC_ADDR_SIZE);
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+#else
+static QDF_STATUS
+wma_update_params_for_mlo_stats(tp_wma_handle wma,
+				const tpSirLLStatsGetReq getReq,
+				struct ll_stats_get_params *cmd)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 QDF_STATUS wma_process_ll_stats_get_req(tp_wma_handle wma,
 				 const tpSirLLStatsGetReq getReq)
 {
@@ -2621,6 +2661,7 @@ QDF_STATUS wma_process_ll_stats_get_req(tp_wma_handle wma,
 	uint8_t *addr;
 	struct ll_stats_get_params cmd = {0};
 	int ret;
+	QDF_STATUS status;
 
 	if (!getReq || !wma) {
 		wma_err("input pointer is NULL");
@@ -2647,6 +2688,13 @@ QDF_STATUS wma_process_ll_stats_get_req(tp_wma_handle wma,
 		return QDF_STATUS_E_FAILURE;
 	}
 	qdf_mem_copy(cmd.peer_macaddr.bytes, addr, QDF_MAC_ADDR_SIZE);
+
+	status = wma_update_params_for_mlo_stats(wma, getReq, &cmd);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		wma_err("Failed to update params for mlo_stats");
+		return status;
+	}
+
 	ret = wma_send_ll_stats_get_cmd(wma, &cmd);
 	if (ret) {
 		wma_err("Failed to send get link stats request");
@@ -2806,6 +2854,9 @@ int wma_unified_link_iface_stats_event_handler(void *handle,
 		offload_stats++;
 		iface_offload_stats++;
 	}
+
+	/* Copying vdev_id info into the iface_stat for MLO*/
+	iface_stat->vdev_id = fixed_param->vdev_id;
 
 	/* call hdd callback with Link Layer Statistics
 	 * vdev_id/ifacId in link_stats_results will be

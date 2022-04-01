@@ -1319,6 +1319,7 @@ struct hdd_adapter {
 #endif
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(CFG80211_11BE_BASIC)
 	struct hdd_mlo_adapter_info mlo_adapter_info;
+	struct wifi_interface_stats ll_iface_stats;
 #endif
 #ifdef WLAN_FEATURE_DYNAMIC_MAC_ADDR_UPDATE
 	void *set_mac_addr_req_ctx;
