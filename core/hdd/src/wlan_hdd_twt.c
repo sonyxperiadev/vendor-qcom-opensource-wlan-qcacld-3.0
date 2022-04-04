@@ -260,6 +260,9 @@ static int hdd_twt_configure(struct hdd_adapter *adapter,
 		ret = osif_twt_clear_session_traffic_stats(vdev,
 							   twt_param_attr);
 		break;
+	case QCA_WLAN_TWT_SET_PARAM:
+		ret = osif_twt_set_param(vdev, twt_param_attr);
+		break;
 	default:
 		hdd_err("Invalid TWT Operation");
 		ret = -EINVAL;
@@ -334,10 +337,8 @@ qca_wlan_vendor_twt_nudge_dialog_policy[QCA_WLAN_VENDOR_ATTR_TWT_NUDGE_MAX + 1] 
 };
 
 static const struct nla_policy
-qca_wlan_vendor_twt_set_param_policy[
-	QCA_WLAN_VENDOR_ATTR_TWT_SET_PARAM_MAX + 1] = {
-		[QCA_WLAN_VENDOR_ATTR_TWT_SET_PARAM_AP_AC_VALUE] = {
-			.type = NLA_U8 },
+qca_wlan_vendor_twt_set_param_policy[QCA_WLAN_VENDOR_ATTR_TWT_SET_PARAM_MAX + 1] = {
+	[QCA_WLAN_VENDOR_ATTR_TWT_SET_PARAM_AP_AC_VALUE] = {.type = NLA_U8 },
 };
 
 static
