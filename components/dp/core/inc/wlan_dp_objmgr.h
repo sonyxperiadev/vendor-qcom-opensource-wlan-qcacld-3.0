@@ -29,6 +29,20 @@
 #include "wlan_objmgr_psoc_obj.h"
 #include "wlan_utility.h"
 
+/* Get/Put Ref */
+
+#define dp_comp_peer_get_ref(peer) wlan_objmgr_peer_try_get_ref(peer, WLAN_DP_ID)
+#define dp_comp_peer_put_ref(peer) wlan_objmgr_peer_release_ref(peer, WLAN_DP_ID)
+
+#define dp_comp_vdev_get_ref(vdev) wlan_objmgr_vdev_try_get_ref(vdev, WLAN_DP_ID)
+#define dp_comp_vdev_put_ref(vdev) wlan_objmgr_vdev_release_ref(vdev, WLAN_DP_ID)
+
+#define dp_comp_pdev_get_ref(pdev) wlan_objmgr_pdev_try_get_ref(pdev, WLAN_DP_ID)
+#define dp_comp_pdev_put_ref(pdev) wlan_objmgr_pdev_release_ref(pdev, WLAN_DP_ID)
+
+#define dp_comp_psoc_get_ref(psoc) wlan_objmgr_psoc_try_get_ref(psoc, WLAN_DP_ID)
+#define dp_comp_psoc_put_ref(psoc) wlan_objmgr_psoc_release_ref(psoc, WLAN_DP_ID)
+
 /**
  * dp_get_vdev_priv_obj() - Wrapper to retrieve vdev priv obj
  * @vdev: vdev pointer
@@ -38,7 +52,16 @@
 static inline struct wlan_dp_intf *
 dp_get_vdev_priv_obj(struct wlan_objmgr_vdev *vdev)
 {
-	return NULL;
+	struct wlan_dp_intf *obj;
+
+	if (!vdev) {
+		dp_err("vdev is null");
+		return NULL;
+	}
+
+	obj = wlan_objmgr_vdev_get_comp_private_obj(vdev, WLAN_COMP_DP);
+
+	return obj;
 }
 
 /**
@@ -50,6 +73,11 @@ dp_get_vdev_priv_obj(struct wlan_objmgr_vdev *vdev)
 static inline struct wlan_dp_psoc_context *
 dp_psoc_get_priv(struct wlan_objmgr_psoc *psoc)
 {
-	return NULL;
+	struct wlan_dp_psoc_context *dp_ctx;
+
+	dp_ctx = wlan_objmgr_psoc_get_comp_private_obj(psoc, WLAN_COMP_DP);
+	QDF_BUG(dp_ctx);
+
+	return dp_ctx;
 }
 #endif /* __WLAN_DP_OBJMGR_H */

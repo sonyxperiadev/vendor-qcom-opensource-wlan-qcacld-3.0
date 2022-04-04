@@ -26,7 +26,6 @@
 #include "wlan_cmn.h"
 #include "wlan_objmgr_cmn.h"
 #include "wlan_objmgr_global_obj.h"
-#include "wmi_unified.h"
 #include "qdf_status.h"
 
 /**
@@ -39,10 +38,18 @@ struct wlan_dp_psoc_callbacks {
 				bool flush_gro);
 };
 
+/**
+ * struct wlan_dp_psoc_sb_ops - struct containing callback
+ * to south bound APIs. callbacks to call traget_if APIs
+ */
 struct wlan_dp_psoc_sb_ops {
 	/*TODO to add target if TX ops*/
 };
 
+/**
+ * struct wlan_dp_psoc_nb_ops - struct containing callback
+ * to north bound APIs. callbacks APIs to be called by target_if APIs
+ */
 struct wlan_dp_psoc_nb_ops {
 	/*TODO to add target if RX ops*/
 };
