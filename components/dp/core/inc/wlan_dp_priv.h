@@ -86,6 +86,12 @@ struct wlan_dp_psoc_cfg {
 	uint32_t rx_reap_loop_pkt_limit;
 	uint32_t rx_hp_oos_update_limit;
 	uint64_t rx_softirq_max_yield_duration_ns;
+#ifdef WLAN_FEATURE_PERIODIC_STA_STATS
+	/* Periodicity of logging */
+	uint32_t periodic_stats_timer_interval;
+	/* Duration for which periodic logging should be done */
+	uint32_t periodic_stats_timer_duration;
+#endif /* WLAN_FEATURE_PERIODIC_STA_STATS */
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
 	/* bandwidth threshold for ultra high bandwidth */
 	uint32_t bus_bw_ultra_high_threshold;
@@ -266,6 +272,13 @@ struct wlan_dp_intf {
 	qdf_netdev_t dev;
 	/**Device TX/RX statistics*/
 	struct dp_stats dp_stats;
+#ifdef WLAN_FEATURE_PERIODIC_STA_STATS
+	/* Indicate whether to display sta periodic stats */
+	bool is_sta_periodic_stats_enabled;
+	uint16_t periodic_stats_timer_count;
+	uint32_t periodic_stats_timer_counter;
+	qdf_mutex_t sta_periodic_stats_lock;
+#endif /* WLAN_FEATURE_PERIODIC_STA_STATS */
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
 	unsigned long prev_rx_packets;
 	unsigned long prev_tx_packets;

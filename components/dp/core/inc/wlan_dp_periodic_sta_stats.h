@@ -38,7 +38,7 @@ void dp_periodic_sta_stats_config(struct wlan_dp_psoc_cfg *config,
 
 /**
  * dp_periodic_sta_stats_init() - Initialize periodic stats display flag
- * @adapter: Pointer to the station adapter
+ * @dp_intf: Pointer to the station interface
  *
  * Return: none
  */
@@ -54,23 +54,23 @@ void dp_periodic_sta_stats_display(struct wlan_dp_psoc_context *dp_ctx);
 
 /**
  * dp_periodic_sta_stats_start() - Start displaying periodic stats for STA
- * @adapter: Pointer to the station adapter
+ * @vdev: vdev handle
  *
  * Return: none
  */
-void dp_periodic_sta_stats_start(struct wlan_dp_intf *dp_intf);
+void dp_periodic_sta_stats_start(struct wlan_objmgr_vdev *vdev);
 
 /**
  * dp_periodic_sta_stats_stop() - Stop displaying periodic stats for STA
- * @adapter: Pointer to the station adapter
+ * @vdev: vdev handle
  *
  * Return: none
  */
-void dp_periodic_sta_stats_stop(struct wlan_dp_intf *dp_intf);
+void dp_periodic_sta_stats_stop(struct wlan_objmgr_vdev *vdev);
 
 /**
  * dp_periodic_sta_stats_mutex_create() - Create mutex for STA periodic stats
- * @adapter: Pointer to the station adapter
+ * @dp_intf: Pointer to the station interface
  *
  * Return: none
  */
@@ -78,7 +78,7 @@ void dp_periodic_sta_stats_mutex_create(struct wlan_dp_intf *dp_intf);
 
 /**
  * dp_periodic_sta_stats_mutex_destroy() - Destroy STA periodic stats mutex
- * @adapter: Pointer to the station adapter
+ * @dp_intf: Pointer to the station interface
  *
  * Return: none
  */
@@ -96,11 +96,11 @@ dp_periodic_sta_stats_config(struct wlan_dp_psoc_cfg *config,
 {
 }
 
-static inline void dp_periodic_sta_stats_start(struct wlan_dp_intf *dp_intf)
+static inline void dp_periodic_sta_stats_start(struct wlan_objmgr_vdev *vdev)
 {
 }
 
-static inline void dp_periodic_sta_stats_stop(struct wlan_dp_intf *dp_intf)
+static inline void dp_periodic_sta_stats_stop(struct wlan_objmgr_vdev *vdev)
 {
 }
 

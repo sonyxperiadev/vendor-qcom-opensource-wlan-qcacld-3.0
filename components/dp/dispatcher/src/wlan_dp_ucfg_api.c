@@ -29,6 +29,7 @@
 #include "wlan_pmo_obj_mgmt_api.h"
 #include "wlan_dp_objmgr.h"
 #include "wlan_dp_bus_bandwidth.h"
+#include "wlan_dp_periodic_sta_stats.h"
 
 void ucfg_dp_update_inf_mac(struct wlan_objmgr_psoc *psoc,
 			    struct qdf_mac_addr *cur_mac,
@@ -79,6 +80,9 @@ ucfg_dp_create_intf(struct wlan_objmgr_psoc *psoc,
 	qdf_list_insert_front(&dp_ctx->intf_list, &dp_intf->node);
 	qdf_spin_unlock_bh(&dp_ctx->intf_list_lock);
 
+	dp_periodic_sta_stats_init(dp_intf);
+	dp_periodic_sta_stats_mutex_create(dp_intf);
+
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -101,6 +105,7 @@ ucfg_dp_destroy_intf(struct wlan_objmgr_psoc *psoc,
 		return QDF_STATUS_E_FAILURE;
 	}
 
+	dp_periodic_sta_stats_mutex_destroy(dp_intf);
 	qdf_spin_lock_bh(&dp_ctx->intf_list_lock);
 	qdf_list_remove_node(&dp_ctx->intf_list, &dp_intf->node);
 	qdf_spin_unlock_bh(&dp_ctx->intf_list_lock);
@@ -490,6 +495,16 @@ void ucfg_dp_bbm_apply_independent_policy(struct wlan_objmgr_psoc *psoc,
 void ucfg_dp_set_rx_mode_rps(bool enable)
 {
 	dp_set_rx_mode_rps(enable);
+}
+
+void ucfg_dp_periodic_sta_stats_start(struct wlan_objmgr_vdev *vdev)
+{
+	dp_periodic_sta_stats_start(vdev);
+}
+
+void ucfg_dp_periodic_sta_stats_stop(struct wlan_objmgr_vdev *vdev)
+{
+	dp_periodic_sta_stats_stop(vdev);
 }
 
 void ucfg_dp_try_send_rps_ind(struct wlan_objmgr_vdev *vdev)

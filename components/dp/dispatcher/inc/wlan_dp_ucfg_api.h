@@ -160,6 +160,22 @@ void ucfg_dp_bbm_apply_independent_policy(struct wlan_objmgr_psoc *psoc,
 					  struct bbm_params *params);
 
 /**
+ * ucfg_dp_periodic_sta_stats_start() - Start displaying periodic stats for STA
+ * @adapter: Pointer to the station adapter
+ *
+ * Return: none
+ */
+void ucfg_dp_periodic_sta_stats_start(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_periodic_sta_stats_stop() - Stop displaying periodic stats for STA
+ * @adapter: Pointer to the station adapter
+ *
+ * Return: none
+ */
+void ucfg_dp_periodic_sta_stats_stop(struct wlan_objmgr_vdev *vdev);
+
+/**
  * ucfg_dp_set_rx_mode_rps() - Enable/disable RPS in SAP mode
  * @enable: Set true to enable RPS in SAP mode
  *
