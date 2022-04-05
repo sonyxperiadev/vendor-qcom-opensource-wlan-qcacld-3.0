@@ -1969,6 +1969,22 @@ struct hdd_rtpm_tput_policy_context {
 #endif
 
 /**
+ * enum wlan_state_ctrl_str_id - state contrl param string id
+ * @WLAN_OFF_STR: Turn OFF WiFi
+ * @WLAN_ON_STR: Turn ON WiFi
+ * @WLAN_ENABLE_STR: Enable WiFi
+ * @WLAN_DISABLE_STR: Disable Wifi
+ * @WLAN_WAIT_FOR_READY_STR: Driver should wait for ongoing recovery
+ */
+enum wlan_state_ctrl_str_id {
+	WLAN_OFF_STR   = 0,
+	WLAN_ON_STR,
+	WLAN_ENABLE_STR,
+	WLAN_DISABLE_STR,
+	WLAN_WAIT_FOR_READY_STR
+};
+
+/**
  * struct hdd_context - hdd shared driver and psoc/device context
  * @psoc: object manager psoc context
  * @pdev: object manager pdev context
@@ -1997,6 +2013,7 @@ struct hdd_rtpm_tput_policy_context {
  * @dump_in_progress: Stores value of dump in progress
  * @hdd_dual_sta_policy: Concurrent STA policy configuration
  * @rx_skip_qdisc_chk_conc: flag to skip ingress qdisc check in concurrency
+ * @is_wlan_disabled: if wlan is disabled by userspace
  */
 struct hdd_context {
 	struct wlan_objmgr_psoc *psoc;
@@ -2379,6 +2396,7 @@ struct hdd_context {
 #ifdef CONFIG_WLAN_FREQ_LIST
 	uint8_t power_type;
 #endif
+	bool is_wlan_disabled;
 };
 
 /**

@@ -4379,6 +4379,9 @@ ifeq ($(CONFIG_DP_HW_TX_DELAY_STATS_ENABLE), y)
 cppflags-y += -DHW_TX_DELAY_STATS_ENABLE
 endif
 
+#Flags to enable/disable Dynamic WLAN interface control feature
+cppflags-$(CONFIG_WLAN_DYNAMIC_IFACE_CTRL) += -DFEATURE_WLAN_DYNAMIC_IFACE_CTRL
+
 KBUILD_CPPFLAGS += $(cppflags-y)
 
 # Currently, for versions of gcc which support it, the kernel Makefile

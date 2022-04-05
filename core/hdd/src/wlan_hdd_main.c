@@ -1460,6 +1460,11 @@ int __wlan_hdd_validate_context(struct hdd_context *hdd_ctx, const char *func)
 		return -EAGAIN;
 	}
 
+	if (hdd_ctx->is_wlan_disabled) {
+		hdd_debug("WLAN is disabled by user space");
+		return -EAGAIN;
+	}
+
 	return 0;
 }
 
@@ -4987,6 +4992,12 @@ static int __hdd_open(struct net_device *dev)
 	if (!cds_is_driver_loaded()) {
 		hdd_err("Failed to start the wlan driver!!");
 		return -EIO;
+	}
+
+	ret = wlan_hdd_validate_context(hdd_ctx);
+	if (ret) {
+		hdd_err("Can't start WLAN module, WiFi Disabled");
+		return ret;
 	}
 
 	ret = hdd_trigger_psoc_idle_restart(hdd_ctx);
@@ -17486,41 +17497,132 @@ static void hdd_inform_wifi_off(void)
 	osif_psoc_sync_op_stop(psoc_sync);
 }
 
+static int hdd_validate_wlan_string(const char __user *user_buf)
+{
+	char buf[15];
+	int i;
+	static const char * const wlan_str[] = {
+		[WLAN_OFF_STR] = "OFF",
+		[WLAN_ON_STR] = "ON",
+		[WLAN_ENABLE_STR] = "ENABLE",
+		[WLAN_DISABLE_STR] = "DISABLE",
+		[WLAN_WAIT_FOR_READY_STR] = "WAIT_FOR_READY"
+	};
+
+	if (copy_from_user(buf, user_buf, sizeof(buf))) {
+		pr_err("Failed to read buffer\n");
+		return -EINVAL;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(wlan_str); i++) {
+		if (qdf_str_ncmp(buf, wlan_str[i], strlen(wlan_str[i])) == 0)
+			return i;
+	}
+
+	return -EINVAL;
+}
+
+#ifdef FEATURE_WLAN_DYNAMIC_IFACE_CTRL
+#define WIFI_DISABLE_SLEEP (10)
+#define WIFI_DISABLE_MAX_RETRY_ATTEMPTS (10)
+
+static int hdd_disable_wifi(struct hdd_context *hdd_ctx)
+{
+	int ret;
+	int retries = 0;
+	void *hif_ctx;
+
+	if (!hdd_ctx) {
+		hdd_err_rl("hdd_ctx is Null");
+		return -EINVAL;
+	}
+
+	if (hdd_ctx->is_wlan_disabled) {
+		hdd_err_rl("Wifi already disabled");
+		return -EINVAL;
+	}
+
+	hdd_debug("Initiating WLAN idle shutdown");
+	if (hdd_is_any_interface_open(hdd_ctx)) {
+		hdd_err("Interfaces still open, cannot process wifi disable");
+		return -EAGAIN;
+	}
+
+	hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
+
+	hdd_prevent_suspend(WIFI_POWER_EVENT_WAKELOCK_DRIVER_IDLE_SHUTDOWN);
+
+	while (retries < WIFI_DISABLE_MAX_RETRY_ATTEMPTS) {
+		if (hif_ctx) {
+			/*
+			 * Trigger runtime sync resume before psoc_idle_shutdown
+			 * such that resume can happen successfully
+			 */
+			hif_pm_runtime_sync_resume(hif_ctx,
+						   RTPM_ID_SOC_IDLE_SHUTDOWN);
+		}
+		ret = pld_idle_shutdown(hdd_ctx->parent_dev,
+					hdd_psoc_idle_shutdown);
+
+		if (-EAGAIN == ret || hdd_ctx->is_wiphy_suspended) {
+			hdd_debug("System suspend in progress.Retries done:%d",
+				  retries);
+			msleep(WIFI_DISABLE_SLEEP);
+			retries++;
+		}
+		break;
+	}
+	hdd_allow_suspend(WIFI_POWER_EVENT_WAKELOCK_DRIVER_IDLE_SHUTDOWN);
+
+	if (retries > WIFI_DISABLE_MAX_RETRY_ATTEMPTS) {
+		hdd_debug("Max retries reached");
+		return -EINVAL;
+	}
+	hdd_ctx->is_wlan_disabled = true;
+
+	return 0;
+}
+#else
+static int hdd_disable_wifi(struct hdd_context *hdd_ctx)
+{
+	return 0;
+}
+#endif /* FEATURE_WLAN_DYNAMIC_IFACE_CTRL */
+
 static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 						const char __user *user_buf,
 						size_t count,
 						loff_t *f_pos)
 {
-	char buf[3];
-	static const char wlan_off_str[] = "OFF";
-	static const char wlan_on_str[] = "ON";
-	static const char wlan_wait_for_ready_str[] = "WAIT_FOR_READY";
-	int ret;
+	int id, ret;
 	unsigned long rc;
 	struct hdd_context *hdd_ctx;
 	bool is_wait_for_ready = false;
 
-	if (copy_from_user(buf, user_buf, 3)) {
-		pr_err("Failed to read buffer\n");
-		return -EINVAL;
-	}
 
-	if (strncmp(buf, wlan_off_str, strlen(wlan_off_str)) == 0) {
+	id = hdd_validate_wlan_string(user_buf);
+
+	switch (id) {
+	case WLAN_OFF_STR:
 		pr_info("Wifi turning off from UI\n");
 		hdd_inform_wifi_off();
 		goto exit;
-	}
-
-	if (strncmp(buf, wlan_on_str, strlen(wlan_on_str)) == 0)
+	case WLAN_ON_STR:
 		pr_info("Wifi Turning On from UI\n");
-
-	if (strncmp(buf, wlan_wait_for_ready_str,
-		    strlen(wlan_wait_for_ready_str)) == 0) {
+		break;
+	case WLAN_WAIT_FOR_READY_STR:
 		is_wait_for_ready = true;
 		pr_info("Wifi wait for ready from UI\n");
-	} else if (strncmp(buf, wlan_on_str, strlen(wlan_on_str)) != 0) {
-		pr_err("Invalid value received from framework");
-		goto exit;
+		break;
+	case WLAN_ENABLE_STR:
+		pr_info("Enabling WiFi\n");
+		break;
+	case WLAN_DISABLE_STR:
+		pr_info("Disabling WiFi\n");
+		break;
+	default:
+		hdd_err_rl("Invalid value received from framework");
+		return -EINVAL;
 	}
 
 	hdd_info("is_driver_loaded %d is_driver_recovering %d",
@@ -17546,6 +17648,25 @@ static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
 	if (hdd_ctx)
 		hdd_psoc_idle_timer_stop(hdd_ctx);
+
+	if (id == WLAN_DISABLE_STR) {
+		ret = hdd_disable_wifi(hdd_ctx);
+		if (ret)
+			return ret;
+	}
+
+	if (id == WLAN_ENABLE_STR) {
+		if (!hdd_ctx) {
+			hdd_err_rl("hdd_ctx is Null");
+			return -EINVAL;
+		}
+
+		if (!hdd_ctx->is_wlan_disabled) {
+			hdd_err_rl("WiFi is already enabled");
+			return -EINVAL;
+		}
+		hdd_ctx->is_wlan_disabled = false;
+	}
 
 exit:
 	return count;
