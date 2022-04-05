@@ -2660,7 +2660,7 @@ policy_mgr_add_24g_to_pcl(uint32_t *pcl_freqs, uint8_t *pcl_weights,
 		pcl_freqs[i + *index] = chlist_24g[i];
 	}
 
-	*index = i;
+	*index += i;
 	policy_mgr_debug("Add 24g chlist len %d len %d index %d",
 			 chlist_24g_len, num_to_add, *index);
 }
