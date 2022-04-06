@@ -2817,4 +2817,37 @@ static inline void lim_process_sae_msg(struct mac_context *mac, void *body);
 {}
 #endif
 
+/**
+ * lim_get_he_max_mcs_idx() - get max mcs index from he cap
+ * @ch_width: channel width
+ * @he_cap: pointer to tDot11fIEhe_cap
+ *
+ * Return: max mcs index from he cap
+ */
+uint8_t lim_get_he_max_mcs_idx(enum phy_ch_width ch_width,
+			       tDot11fIEhe_cap *he_cap);
+
+/**
+ * lim_get_vht_max_mcs_idx() - get max mcs index from vht cap
+ * @vht_cap: pointer to tDot11fIEVHTCaps
+ *
+ * Return: max mcs index from vht cap
+ */
+uint8_t lim_get_vht_max_mcs_idx(tDot11fIEVHTCaps *vht_cap);
+
+/**
+ * lim_get_ht_max_mcs_idx() - get max mcs index from ht cap
+ * @ht_cap: pointer to tDot11fIEHTCaps
+ *
+ * Return: max mcs index from ht cap
+ */
+uint8_t lim_get_ht_max_mcs_idx(tDot11fIEHTCaps *ht_cap);
+
+/**
+ * lim_get_max_rate_idx() - get max rate index from tSirMacRateSet
+ * @rateset: pointer to tSirMacRateSet
+ *
+ * Return: max rate index from tSirMacRateSet
+ */
+uint8_t lim_get_max_rate_idx(tSirMacRateSet *rateset);
 #endif /* __LIM_UTILS_H */

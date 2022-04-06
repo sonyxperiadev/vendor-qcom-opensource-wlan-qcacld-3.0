@@ -3253,6 +3253,8 @@ void csr_roam_joined_state_msg_processor(struct mac_context *mac, void *msg_buf)
 		roam_info->max_supp_idx = pUpperLayerAssocCnf->max_supp_idx;
 		roam_info->max_ext_idx = pUpperLayerAssocCnf->max_ext_idx;
 		roam_info->max_mcs_idx = pUpperLayerAssocCnf->max_mcs_idx;
+		roam_info->max_real_mcs_idx =
+					pUpperLayerAssocCnf->max_real_mcs_idx;
 		roam_info->rx_mcs_map = pUpperLayerAssocCnf->rx_mcs_map;
 		roam_info->tx_mcs_map = pUpperLayerAssocCnf->tx_mcs_map;
 		roam_info->ecsa_capable = pUpperLayerAssocCnf->ecsa_capable;
@@ -3776,6 +3778,7 @@ csr_send_assoc_ind_to_upper_layer_cnf_msg(struct mac_context *mac,
 	cnf->max_supp_idx = ind->max_supp_idx;
 	cnf->max_ext_idx = ind->max_ext_idx;
 	cnf->max_mcs_idx = ind->max_mcs_idx;
+	cnf->max_real_mcs_idx = ind->max_real_mcs_idx;
 	cnf->rx_mcs_map = ind->rx_mcs_map;
 	cnf->tx_mcs_map = ind->tx_mcs_map;
 	cnf->ecsa_capable = ind->ecsa_capable;

@@ -130,13 +130,6 @@ uint8_t ucfg_son_get_tx_power(struct element_info assoc_req_ies)
 	return wlan_son_get_node_tx_power(assoc_req_ies);
 }
 
-uint8_t ucfg_son_get_max_mcs(uint8_t mode, uint8_t supp_idx, uint8_t ext_idx,
-			     uint8_t ht_mcs_idx, uint8_t vht_mcs_map)
-{
-	return wlan_son_get_max_mcs(mode, supp_idx, ext_idx, ht_mcs_idx,
-				    vht_mcs_map);
-}
-
 QDF_STATUS ucfg_son_get_peer_rrm_info(struct element_info assoc_req_ies,
 				      uint8_t *rrmcaps,
 				      bool *is_beacon_meas_supported)

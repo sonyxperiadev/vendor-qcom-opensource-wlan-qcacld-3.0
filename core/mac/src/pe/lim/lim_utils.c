@@ -9989,3 +9989,71 @@ QDF_STATUS lim_pre_vdev_start(struct mac_context *mac,
 
 	return lim_set_ch_phy_mode(mlme_obj->vdev, session->dot11mode);
 }
+
+uint8_t lim_get_he_max_mcs_idx(enum phy_ch_width ch_width,
+			       tDot11fIEhe_cap *he_cap)
+{
+	uint16_t hecap_rxmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_80_80 + 1];
+	uint16_t hecap_txmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_80_80 + 1];
+
+	qdf_mem_zero(hecap_rxmcsnssmap, sizeof(hecap_rxmcsnssmap));
+	qdf_mem_zero(hecap_txmcsnssmap, sizeof(hecap_txmcsnssmap));
+
+	qdf_mem_copy(&hecap_rxmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_80],
+		     &he_cap->rx_he_mcs_map_lt_80,
+		     sizeof(u_int16_t));
+	qdf_mem_copy(&hecap_txmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_80],
+		     &he_cap->tx_he_mcs_map_lt_80,
+		     sizeof(u_int16_t));
+	if (he_cap->chan_width_2) {
+		qdf_mem_copy(&hecap_rxmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_160],
+			     &he_cap->rx_he_mcs_map_160,
+			     sizeof(u_int16_t));
+		qdf_mem_copy(&hecap_txmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_160],
+			     &he_cap->tx_he_mcs_map_160,
+			     sizeof(u_int16_t));
+	}
+	if (he_cap->chan_width_3) {
+		qdf_mem_copy(&hecap_rxmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_80_80],
+			     &he_cap->rx_he_mcs_map_80_80,
+			     sizeof(u_int16_t));
+		qdf_mem_copy(&hecap_txmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_80_80],
+			     &he_cap->tx_he_mcs_map_80_80,
+			     sizeof(u_int16_t));
+	}
+
+	return mlme_get_max_he_mcs_idx(ch_width, hecap_rxmcsnssmap,
+				       hecap_txmcsnssmap);
+}
+
+uint8_t lim_get_vht_max_mcs_idx(tDot11fIEVHTCaps *vht_cap)
+{
+	return mlme_get_max_vht_mcs_idx(vht_cap->rxMCSMap & 0xff,
+					vht_cap->txMCSMap & 0xff);
+}
+
+uint8_t lim_get_ht_max_mcs_idx(tDot11fIEHTCaps *ht_cap)
+{
+	uint8_t i, maxidx = INVALID_MCS_NSS_INDEX;
+
+	for (i = 0; i < 8; i++) {
+		if (ht_cap->supportedMCSSet[0] & (1 << i))
+			maxidx = i;
+	}
+
+	return maxidx;
+}
+
+uint8_t lim_get_max_rate_idx(tSirMacRateSet *rateset)
+{
+	uint8_t maxidx;
+	int i;
+
+	maxidx = rateset->rate[0] & 0x7f;
+	for (i = 1; i < rateset->numRates; i++) {
+		if ((rateset->rate[i] & 0x7f) > maxidx)
+			maxidx = rateset->rate[i] & 0x7f;
+	}
+
+	return maxidx;
+}

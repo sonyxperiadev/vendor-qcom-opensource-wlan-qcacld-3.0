@@ -3520,4 +3520,46 @@ wlan_mlme_get_user_mcc_duty_cycle_percentage(struct wlan_objmgr_psoc *psoc)
 	return 0;
 }
 #endif /* WLAN_FEATURE_MCC_QUOTA */
+
+/**
+ * mlme_get_max_he_mcs_idx() -  get max mcs index from he cap information
+ * @mcs_ch_width: channel width
+ * @hecap_rxmcsnssmap: rx mcs map from he cap
+ * @hecap_txmcsnssmap: tx mcs map from he cap
+ *
+ * Return: the maximum MCS supported
+ */
+uint8_t mlme_get_max_he_mcs_idx(enum phy_ch_width mcs_ch_width,
+				u_int16_t *hecap_rxmcsnssmap,
+				u_int16_t *hecap_txmcsnssmap);
+
+/**
+ * mlme_get_max_vht_mcs_idx() -  get max mcs index from vht cap information
+ * @rx_vht_mcs_map: rx mcs map from vht cap
+ * @tx_vht_mcs_map: tx mcs map from vht cap
+ *
+ * Return: the maximum MCS supported
+ */
+uint8_t mlme_get_max_vht_mcs_idx(u_int16_t rx_vht_mcs_map,
+				 u_int16_t tx_vht_mcs_map);
+
+#ifdef WLAN_FEATURE_SON
+/**
+ * mlme_set_vdev_max_mcs_idx() - Save max mcs index of vdev
+ * @vdev: pointer to vdev object
+ * @max_mcs_idx: max_mcs_idx to save
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS mlme_save_vdev_max_mcs_idx(struct wlan_objmgr_vdev *vdev,
+				      uint8_t max_mcs_idx);
+
+/**
+ * mlme_get_vdev_max_mcs_idx() - Get max mcs index of vdev
+ * @vdev: pointer to vdev object
+ *
+ * Return max mcs index of vdev
+ */
+uint8_t mlme_get_vdev_max_mcs_idx(struct wlan_objmgr_vdev *vdev);
+#endif /* WLAN_FEATURE_SON */
 #endif /* _WLAN_MLME_API_H_ */

@@ -1341,29 +1341,6 @@ uint8_t wlan_son_get_node_tx_power(struct element_info assoc_req_ies)
 		return 0;
 }
 
-uint8_t wlan_son_get_max_mcs(uint8_t mode, uint8_t supp_idx, uint8_t ext_idx,
-			     uint8_t ht_mcs_idx, uint8_t vht_mcs_map)
-{
-	uint8_t maxidx = MAX_HE_MCS_IDX;
-
-	/* check supported rates */
-	if (supp_idx != 0xff && maxidx < supp_idx)
-		maxidx = supp_idx;
-
-	/* check extended rates */
-	if (ext_idx != 0xff && maxidx < ext_idx)
-		maxidx = ext_idx;
-
-	/* check for HT Mode */
-	if (mode == SIR_SME_PHY_MODE_HT)
-		maxidx = ht_mcs_idx;
-
-	if (mode == SIR_SME_PHY_MODE_VHT)
-		maxidx = (vht_mcs_map & DATA_RATE_11AC_MCS_MASK);
-
-	return maxidx;
-}
-
 QDF_STATUS wlan_son_get_peer_rrm_info(struct element_info assoc_req_ies,
 				      uint8_t *rrmcaps,
 				      bool *is_beacon_meas_supported)

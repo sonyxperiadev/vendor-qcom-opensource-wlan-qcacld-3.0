@@ -2303,11 +2303,11 @@ static QDF_STATUS hdd_son_get_node_info(struct wlan_objmgr_vdev *vdev,
 	ucfg_mlme_get_peer_phymode(psoc, mac_addr, &peer_phymode);
 	node_info->phymode = wlan_hdd_son_get_ieee_phymode(peer_phymode);
 	node_info->max_txpower = ucfg_son_get_tx_power(sta_info->assoc_req_ies);
-	node_info->max_MCS = ucfg_son_get_max_mcs(sta_info->mode,
-						  sta_info->max_supp_idx,
-						  sta_info->max_ext_idx,
-						  sta_info->max_mcs_idx,
-						  sta_info->rx_mcs_map);
+	node_info->max_MCS = sta_info->max_real_mcs_idx;
+	if (node_info->max_MCS == INVALID_MCS_NSS_INDEX) {
+		hdd_err("invalid mcs");
+		return QDF_STATUS_E_FAILURE;
+	}
 	if (sta_info->vht_present)
 		node_info->is_mu_mimo_supported =
 				sta_info->vht_caps.vht_cap_info
@@ -2397,7 +2397,7 @@ uint32_t hdd_son_get_peer_max_mcs_idx(struct wlan_objmgr_vdev *vdev,
 		return ret;
 	}
 
-	ret = sta_info->max_mcs_idx;
+	ret = sta_info->max_real_mcs_idx;
 
 	hdd_put_sta_info_ref(&adapter->sta_info_list, &sta_info, true,
 			     STA_INFO_SOFTAP_GET_STA_INFO);

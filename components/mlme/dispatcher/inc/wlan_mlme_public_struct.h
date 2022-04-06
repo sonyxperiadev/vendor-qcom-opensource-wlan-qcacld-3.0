@@ -104,6 +104,11 @@
 /* Default beacon interval of 100 ms */
 #define CUSTOM_CONC_GO_BI 100
 
+#define HECAP_TXRX_MCS_NSS_IDX_80    (0)
+#define HECAP_TXRX_MCS_NSS_IDX_160   (1)
+#define HECAP_TXRX_MCS_NSS_IDX_80_80 (2)
+#define INVALID_MCS_NSS_INDEX         0xff
+
 enum diagwlan_status_eventsubtype {
 	DIAG_WLAN_STATUS_CONNECT = 0,
 	DIAG_WLAN_STATUS_DISCONNECT

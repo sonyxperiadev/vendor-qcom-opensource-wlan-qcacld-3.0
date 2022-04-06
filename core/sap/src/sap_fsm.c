@@ -2287,6 +2287,8 @@ QDF_STATUS sap_signal_hdd_event(struct sap_context *sap_ctx,
 		reassoc_complete->max_supp_idx = csr_roaminfo->max_supp_idx;
 		reassoc_complete->max_ext_idx = csr_roaminfo->max_ext_idx;
 		reassoc_complete->max_mcs_idx = csr_roaminfo->max_mcs_idx;
+		reassoc_complete->max_real_mcs_idx =
+						csr_roaminfo->max_real_mcs_idx;
 		reassoc_complete->rx_mcs_map = csr_roaminfo->rx_mcs_map;
 		reassoc_complete->tx_mcs_map = csr_roaminfo->tx_mcs_map;
 		reassoc_complete->ecsa_capable = csr_roaminfo->ecsa_capable;

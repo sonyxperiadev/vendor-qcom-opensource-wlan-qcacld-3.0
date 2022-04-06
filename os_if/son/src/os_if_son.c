@@ -1763,7 +1763,11 @@ QDF_STATUS os_if_son_get_node_datarate_info(struct wlan_objmgr_vdev *vdev,
 		ucfg_son_get_min_and_max_power(psoc, &max_tx_power,
 					       &min_tx_power);
 		node_info->max_txpower = max_tx_power;
-		node_info->max_MCS = MAX_HE_MCS_IDX;
+		node_info->max_MCS = ucfg_mlme_get_vdev_max_mcs_idx(vdev);
+		if (node_info->max_MCS == INVALID_MCS_NSS_INDEX) {
+			osif_err("invalid mcs index");
+			return QDF_STATUS_E_INVAL;
+		}
 		osif_debug("node info: max_chwidth: %u, phymode: %u, num_streams: %d, max_mcs: %d, max_txpower: %d",
 			   node_info->max_chwidth, node_info->phymode,
 			   node_info->num_streams, node_info->max_MCS,

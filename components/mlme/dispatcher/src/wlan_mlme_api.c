@@ -5607,3 +5607,101 @@ wlan_mlme_get_user_mcc_duty_cycle_percentage(struct wlan_objmgr_psoc *psoc)
 	return quota_value;
 }
 #endif /* WLAN_FEATURE_MCC_QUOTA */
+
+uint8_t mlme_get_max_he_mcs_idx(enum phy_ch_width mcs_ch_width,
+				u_int16_t *hecap_rxmcsnssmap,
+				u_int16_t *hecap_txmcsnssmap)
+{
+	uint8_t rx_max_mcs, tx_max_mcs, max_mcs = INVALID_MCS_NSS_INDEX;
+
+	switch (mcs_ch_width) {
+	case CH_WIDTH_80P80MHZ:
+		if (hecap_rxmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_80_80] &&
+		    hecap_txmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_80_80]) {
+			rx_max_mcs = hecap_rxmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_80_80] & 0x03;
+			tx_max_mcs = hecap_txmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_80_80] & 0x03;
+			max_mcs = rx_max_mcs < tx_max_mcs ? rx_max_mcs : tx_max_mcs;
+			if (max_mcs < 0x03)
+				max_mcs = 7 + 2 * max_mcs;
+		}
+		/* fallthrough */
+	case CH_WIDTH_160MHZ:
+		if (hecap_rxmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_160] &&
+		    hecap_txmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_160]) {
+			rx_max_mcs = hecap_rxmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_160] & 0x03;
+			tx_max_mcs = hecap_txmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_160] & 0x03;
+			max_mcs = rx_max_mcs < tx_max_mcs ? rx_max_mcs : tx_max_mcs;
+			if (max_mcs < 0x03)
+				max_mcs = 7 + 2 * max_mcs;
+		}
+		/* fallthrough */
+	default:
+		if (hecap_rxmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_80] &&
+		    hecap_txmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_80]) {
+			rx_max_mcs = hecap_rxmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_80] & 0x03;
+			tx_max_mcs = hecap_txmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_80] & 0x03;
+			max_mcs = rx_max_mcs < tx_max_mcs ? rx_max_mcs : tx_max_mcs;
+			if (max_mcs < 0x03)
+				max_mcs = 7 + 2 * max_mcs;
+		}
+	}
+
+	return max_mcs;
+}
+
+uint8_t mlme_get_max_vht_mcs_idx(u_int16_t rx_vht_mcs_map,
+				 u_int16_t tx_vht_mcs_map)
+{
+	uint8_t rx_max_mcs, tx_max_mcs, max_mcs = INVALID_MCS_NSS_INDEX;
+
+	if (rx_vht_mcs_map && tx_vht_mcs_map) {
+		rx_max_mcs = rx_vht_mcs_map & 0x03;
+		tx_max_mcs = tx_vht_mcs_map & 0x03;
+		max_mcs = rx_max_mcs < tx_max_mcs ? rx_max_mcs : tx_max_mcs;
+		if (max_mcs < 0x03)
+			return 7 + max_mcs;
+	}
+
+	return max_mcs;
+}
+
+#ifdef WLAN_FEATURE_SON
+QDF_STATUS mlme_save_vdev_max_mcs_idx(struct wlan_objmgr_vdev *vdev,
+				      uint8_t max_mcs_idx)
+{
+	struct mlme_legacy_priv *mlme_priv;
+
+	if (!vdev) {
+		mlme_legacy_err("invalid vdev");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_legacy_err("vdev legacy private object is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	mlme_priv->max_mcs_index = max_mcs_idx;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+uint8_t mlme_get_vdev_max_mcs_idx(struct wlan_objmgr_vdev *vdev)
+{
+	struct mlme_legacy_priv *mlme_priv;
+
+	if (!vdev) {
+		mlme_legacy_err("invalid vdev");
+		return INVALID_MCS_NSS_INDEX;
+	}
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_legacy_err("vdev legacy private object is NULL");
+		return INVALID_MCS_NSS_INDEX;
+	}
+
+	return mlme_priv->max_mcs_index;
+}
+#endif /* WLAN_FEATURE_SON */

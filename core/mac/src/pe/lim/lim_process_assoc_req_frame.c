@@ -2872,20 +2872,6 @@ static void lim_fill_assoc_ind_info(struct mac_context *mac_ctx,
 	return;
 }
 
-static uint8_t lim_get_max_rate_idx(tSirMacRateSet *rateset)
-{
-	uint8_t maxidx;
-	int i;
-
-	maxidx = rateset->rate[0] & 0x7f;
-	for (i = 1; i < rateset->numRates; i++) {
-		if ((rateset->rate[i] & 0x7f) > maxidx)
-			maxidx = rateset->rate[i] & 0x7f;
-	}
-
-	return maxidx;
-}
-
 static void fill_mlm_assoc_ind_vht(tpSirAssocReq assocreq,
 		tpDphHashNode stads,
 		tpLimMlmAssocInd assocind)
@@ -2964,6 +2950,42 @@ static void lim_fill_assoc_ind_he_bw_info(tpLimMlmAssocInd assoc_ind,
 	}
 }
 
+/**
+ * lim_fill_assoc_ind_real_max_mcs_idx() - fill max real mcs index to assoc ind
+ * @assoc_ind: assoc_ind to fill
+ * @assoc_req: pointer to tpSirAssocReq
+ * @sta_ds: pointer to tpDphHashNode
+ * @session: pointer to session
+ *
+ * Return: void
+ */
+static void lim_fill_assoc_ind_real_max_mcs_idx(tpLimMlmAssocInd assoc_ind,
+						tpSirAssocReq assoc_req,
+						tpDphHashNode sta_ds,
+						struct pe_session *session)
+{
+	assoc_ind->max_real_mcs_idx = INVALID_MCS_NSS_INDEX;
+
+	if (lim_is_sta_he_capable(sta_ds) &&
+	    lim_is_session_he_capable(session))
+		assoc_ind->max_real_mcs_idx = lim_get_he_max_mcs_idx(
+					sta_ds->ch_width, &assoc_req->he_cap);
+
+	if (assoc_ind->max_real_mcs_idx == INVALID_MCS_NSS_INDEX &&
+	    sta_ds->mlmStaContext.vhtCapability)
+		assoc_ind->max_real_mcs_idx =
+				lim_get_vht_max_mcs_idx(&assoc_req->VHTCaps);
+
+	if (assoc_ind->max_real_mcs_idx == INVALID_MCS_NSS_INDEX)
+		assoc_ind->max_real_mcs_idx = assoc_ind->max_mcs_idx;
+
+	if (assoc_ind->max_real_mcs_idx == INVALID_MCS_NSS_INDEX)
+		assoc_ind->max_real_mcs_idx = assoc_ind->max_ext_idx;
+
+	if (assoc_ind->max_real_mcs_idx == INVALID_MCS_NSS_INDEX)
+		assoc_ind->max_real_mcs_idx = assoc_ind->max_supp_idx;
+}
+
 bool lim_fill_lim_assoc_ind_params(
 		tpLimMlmAssocInd assoc_ind,
 		struct mac_context *mac_ctx,
@@ -2974,7 +2996,6 @@ bool lim_fill_lim_assoc_ind_params(
 	uint16_t rsn_len;
 	uint32_t phy_mode;
 	const uint8_t *wpsie = NULL;
-	uint8_t maxidx, i;
 	bool wme_enable;
 	struct wlan_objmgr_vdev *vdev;
 	struct vdev_mlme_obj *mlme_obj;
@@ -3132,9 +3153,9 @@ bool lim_fill_lim_assoc_ind_params(
 	assoc_ind->rx_stbc = false;
 	assoc_ind->ch_width = eHT_CHANNEL_WIDTH_20MHZ;
 	assoc_ind->mode = SIR_SME_PHY_MODE_LEGACY;
-	assoc_ind->max_supp_idx = 0xff;
-	assoc_ind->max_ext_idx = 0xff;
-	assoc_ind->max_mcs_idx = 0xff;
+	assoc_ind->max_supp_idx = INVALID_MCS_NSS_INDEX;
+	assoc_ind->max_ext_idx = INVALID_MCS_NSS_INDEX;
+	assoc_ind->max_mcs_idx = INVALID_MCS_NSS_INDEX;
 	assoc_ind->rx_mcs_map = 0xff;
 	assoc_ind->tx_mcs_map = 0xff;
 
@@ -3164,13 +3185,8 @@ bool lim_fill_lim_assoc_ind_params(
 			eHT_CHANNEL_WIDTH_20MHZ;
 		/* mode */
 		assoc_ind->mode = SIR_SME_PHY_MODE_HT;
-		maxidx = 0;
-		for (i = 0; i < 8; i++) {
-			if (assoc_req->HTCaps.supportedMCSSet[0] &
-			    (1 << i))
-				maxidx = i;
-		}
-		assoc_ind->max_mcs_idx = maxidx;
+		assoc_ind->max_mcs_idx = lim_get_ht_max_mcs_idx(
+						&assoc_req->HTCaps);
 	}
 	fill_mlm_assoc_ind_vht(assoc_req, sta_ds, assoc_ind);
 	if (assoc_req->ExtCap.present) {
@@ -3218,6 +3234,8 @@ bool lim_fill_lim_assoc_ind_params(
 				assoc_req->is_sae_authenticated;
 	/* updates HE bandwidth in assoc indication */
 	lim_fill_assoc_ind_he_bw_info(assoc_ind, sta_ds, session_entry);
+	lim_fill_assoc_ind_real_max_mcs_idx(assoc_ind, assoc_req,
+					    sta_ds, session_entry);
 
 	vdev = session_entry->vdev;
 	if (!vdev)

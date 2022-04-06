@@ -741,6 +741,58 @@ static inline void lim_fill_cc_mode(struct mac_context *mac_ctx,
 }
 #endif
 
+#ifdef WLAN_FEATURE_SON
+/**
+ * lim_save_max_mcs_idx() - save max mcs index to mlme component
+ * @mac_ctx: Pointer to Global MAC structure
+ * @session: pointer to pe session
+ *
+ * Return: void
+ */
+static void
+lim_save_max_mcs_idx(struct mac_context *mac_ctx, struct pe_session *session)
+{
+	tDot11fIEVHTCaps vht_cap;
+	tDot11fIEhe_cap he_cap;
+	tDot11fIEHTCaps ht_cap;
+	u_int8_t session_max_mcs_idx = INVALID_MCS_NSS_INDEX;
+
+	if (IS_DOT11_MODE_HE(session->dot11mode)) {
+		qdf_mem_zero(&he_cap, sizeof(tDot11fIEhe_cap));
+		populate_dot11f_he_caps(mac_ctx, session, &he_cap);
+		session_max_mcs_idx = lim_get_he_max_mcs_idx(session->ch_width,
+							     &he_cap);
+	}
+	if (session_max_mcs_idx == INVALID_MCS_NSS_INDEX &&
+	    IS_DOT11_MODE_VHT(session->dot11mode)) {
+		qdf_mem_zero(&vht_cap, sizeof(tDot11fIEVHTCaps));
+		populate_dot11f_vht_caps(mac_ctx, session, &vht_cap);
+		session_max_mcs_idx = lim_get_vht_max_mcs_idx(&vht_cap);
+	}
+	if (session_max_mcs_idx == INVALID_MCS_NSS_INDEX &&
+	    IS_DOT11_MODE_HT(session->dot11mode)) {
+		qdf_mem_zero(&ht_cap, sizeof(tDot11fIEHTCaps));
+		populate_dot11f_ht_caps(mac_ctx, session, &ht_cap);
+		session_max_mcs_idx = lim_get_ht_max_mcs_idx(&ht_cap);
+	}
+	if (session_max_mcs_idx == INVALID_MCS_NSS_INDEX &&
+	    session->extRateSet.numRates)
+		session_max_mcs_idx =
+				lim_get_max_rate_idx(&session->extRateSet);
+
+	if (session_max_mcs_idx == INVALID_MCS_NSS_INDEX &&
+	    session->rateSet.numRates)
+		session_max_mcs_idx =
+				lim_get_max_rate_idx(&session->rateSet);
+
+	mlme_save_vdev_max_mcs_idx(session->vdev, session_max_mcs_idx);
+}
+#else
+static void
+lim_save_max_mcs_idx(struct mac_context *mac_ctx, struct pe_session *session)
+{
+}
+#endif
 
 /**
  * __lim_handle_sme_start_bss_request() - process SME_START_BSS_REQ message
@@ -1146,7 +1198,7 @@ __lim_handle_sme_start_bss_request(struct mac_context *mac_ctx, uint32_t *msg_bu
 			mac_ctx->mlme_cfg->power.local_power_constraint = 0;
 
 		mlm_start_req->beacon_tx_rate = session->beacon_tx_rate;
-
+		lim_save_max_mcs_idx(mac_ctx, session);
 		session->limPrevSmeState = session->limSmeState;
 		session->limSmeState = eLIM_SME_WT_START_BSS_STATE;
 

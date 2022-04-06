@@ -448,19 +448,6 @@ int wlan_son_anqp_frame(struct wlan_objmgr_vdev *vdev, int subtype,
 uint8_t wlan_son_get_node_tx_power(struct element_info assoc_req_ies);
 
 /**
- * wlan_son_get_max_mcs() - calculate the max mcs supported by the node
- * @mode: current phymode
- * @supp_idx: max supported idx
- * @ext_idx: max extended idx
- * @ht_mcs_idx: max mcs index for HT
- * @vht_mcs_map: mcs map for VHT
- *
- * return: max_mcs for the node
- */
-uint8_t wlan_son_get_max_mcs(uint8_t mode, uint8_t supp_idx, uint8_t ext_idx,
-			     uint8_t ht_mcs_idx, uint8_t vht_mcs_map);
-
-/**
  * wlan_son_get_peer_rrm_info() - Get RRM info for peer
  * @assoc_req_ies: assoc req ies
  * @rrmcaps: rrm capabilities
@@ -544,13 +531,6 @@ int wlan_son_anqp_frame(struct wlan_objmgr_vdev *vdev, int subtype,
 
 static inline
 uint8_t wlan_son_get_node_tx_power(struct element_info assoc_req_ies)
-{
-	return 0;
-}
-
-static inline
-uint8_t wlan_son_get_max_mcs(uint8_t mode, uint8_t supp_idx, uint8_t ext_idx,
-			     uint8_t ht_mcs_idx, uint8_t vht_mcs_map)
 {
 	return 0;
 }

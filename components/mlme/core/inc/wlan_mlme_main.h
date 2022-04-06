@@ -431,6 +431,7 @@ struct wait_for_key_timer {
  * @ba_2k_jump_iot_ap: This is set to true if connected to the ba 2k jump IOT AP
  * @is_usr_ps_enabled: Is Power save enabled
  * @notify_co_located_ap_upt_rnr: Notify co located AP to update RNR or not
+ * @max_mcs_index: Max supported mcs index of vdev
  */
 struct mlme_legacy_priv {
 	bool chan_switch_in_progress;
@@ -472,6 +473,9 @@ struct mlme_legacy_priv {
 	bool ba_2k_jump_iot_ap;
 	bool is_usr_ps_enabled;
 	bool notify_co_located_ap_upt_rnr;
+#ifdef WLAN_FEATURE_SON
+	uint8_t max_mcs_index;
+#endif
 };
 
 /**

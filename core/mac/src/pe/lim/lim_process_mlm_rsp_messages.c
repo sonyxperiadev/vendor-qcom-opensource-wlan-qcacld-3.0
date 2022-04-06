@@ -787,6 +787,7 @@ lim_fill_sme_assoc_ind_params(
 	sme_assoc_ind->max_supp_idx = assoc_ind->max_supp_idx;
 	sme_assoc_ind->max_ext_idx = assoc_ind->max_ext_idx;
 	sme_assoc_ind->max_mcs_idx = assoc_ind->max_mcs_idx;
+	sme_assoc_ind->max_real_mcs_idx = assoc_ind->max_real_mcs_idx;
 	sme_assoc_ind->rx_mcs_map = assoc_ind->rx_mcs_map;
 	sme_assoc_ind->tx_mcs_map = assoc_ind->tx_mcs_map;
 	sme_assoc_ind->ecsa_capable = assoc_ind->ecsa_capable;

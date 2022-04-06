@@ -4530,4 +4530,18 @@ ucfg_mlme_get_wds_mode(struct wlan_objmgr_psoc *psoc)
 {
 	return wlan_mlme_get_wds_mode(psoc);
 }
+
+#ifdef WLAN_FEATURE_SON
+/**
+ * ucfg_mlme_get_vdev_max_mcs_idx() - Get max mcs idx of given vdev
+ * @vdev: pointer to vdev object
+ *
+ * Return: max mcs idx of given vdev
+ */
+static inline uint8_t
+ucfg_mlme_get_vdev_max_mcs_idx(struct wlan_objmgr_vdev *vdev)
+{
+	return mlme_get_vdev_max_mcs_idx(vdev);
+}
+#endif /* WLAN_FEATURE_SON */
 #endif /* _WLAN_MLME_UCFG_API_H_ */
