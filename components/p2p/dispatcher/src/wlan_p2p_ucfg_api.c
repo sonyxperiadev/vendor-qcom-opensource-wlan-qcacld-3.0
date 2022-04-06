@@ -304,12 +304,6 @@ QDF_STATUS ucfg_p2p_mgmt_tx(struct wlan_objmgr_psoc *soc,
 	QDF_STATUS status;
 	int32_t id;
 
-	p2p_debug("soc:%pK, vdev_id:%d, freq:%d, wait:%d, buf_len:%d,"
-		  " cck:%d, no ack:%d, off chan:%d",
-		  soc, mgmt_frm->vdev_id, mgmt_frm->chan_freq,
-		  mgmt_frm->wait, mgmt_frm->len, mgmt_frm->no_cck,
-		  mgmt_frm->dont_wait_for_ack, mgmt_frm->off_chan);
-
 	if (!soc) {
 		p2p_err("psoc context passed is NULL");
 		return QDF_STATUS_E_INVAL;
@@ -359,6 +353,11 @@ QDF_STATUS ucfg_p2p_mgmt_tx(struct wlan_objmgr_psoc *soc,
 
 	p2p_rand_mac_tx(pdev, tx_action);
 
+	p2p_debug("soc:%pK, vdev_id:%d, freq:%d, wait:%d, buf_len:%d, cck:%d, no ack:%d, off chan:%d cookie = 0x%llx",
+		  soc, mgmt_frm->vdev_id, mgmt_frm->chan_freq,
+		  mgmt_frm->wait, mgmt_frm->len, mgmt_frm->no_cck,
+		  mgmt_frm->dont_wait_for_ack, mgmt_frm->off_chan, *cookie);
+
 	msg.type = P2P_MGMT_TX;
 	msg.bodyptr = tx_action;
 	msg.callback = p2p_process_cmd;
@@ -374,8 +373,6 @@ QDF_STATUS ucfg_p2p_mgmt_tx(struct wlan_objmgr_psoc *soc,
 		qdf_mem_free(tx_action);
 		p2p_err("post msg fail:%d", status);
 	}
-
-	p2p_debug("cookie = 0x%llx", *cookie);
 
 	return status;
 }
