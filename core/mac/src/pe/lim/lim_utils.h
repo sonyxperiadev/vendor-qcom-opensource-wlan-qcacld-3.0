@@ -2187,6 +2187,61 @@ lim_update_stads_eht_bw_320mhz(struct pe_session *session,
 }
 #endif /* WLAN_FEATURE_11BE */
 
+#ifdef WLAN_FEATURE_11BE_MLO
+/**
+ * lim_intersect_ap_emlsr_caps() - Intersect AP and self STA EHT capabilities
+ * @session: pointer to PE session
+ * @add_bss: pointer to ADD BSS params
+ * @beacon: pointer to beacon
+ * @assoc_rsp: pointer to assoc response
+ *
+ * Return: None
+ */
+void lim_intersect_ap_emlsr_caps(struct pe_session *session,
+				 struct bss_params *add_bss,
+				 tpSirAssocRsp assoc_rsp);
+
+/**
+ * lim_update_stads_emlsr_caps() - Copy eMLSR capability into STA DPH hash table
+ *                                 entry
+ * @mac_ctx: pointer to mac context
+ * @sta_ds: pointer to sta dph hash table entry
+ * @assoc_rsp: pointer to assoc response
+ *
+ * Return: None
+ */
+void lim_update_stads_emlsr_caps(struct mac_context *mac_ctx,
+				 tpDphHashNode sta_ds, tpSirAssocRsp assoc_rsp);
+
+/**
+ * lim_is_mlo_in_emlsr_mode() - Check if MLO is in eMLSR mode.
+ * @mac_ctx: pointer to mac context
+ * @vdev_id: vdev ID
+ *
+ * Return: True if both STA and peer support eMLSR capability, else False
+ */
+bool lim_is_mlo_in_emlsr_mode(struct mac_context *mac_ctx, uint8_t vdev_id);
+#else
+static inline void
+lim_intersect_ap_emlsr_caps(struct pe_session *session,
+			    struct bss_params *add_bss,
+			    tpSirAssocRsp assoc_rsp)
+{
+}
+
+static inline
+void lim_update_stads_emlsr_caps(struct mac_context *mac_ctx,
+				 tpDphHashNode sta_ds, tpSirAssocRsp assoc_rsp)
+{
+}
+
+static inline
+bool lim_is_mlo_in_emlsr_mode(struct mac_context *mac_ctx, uint8_t vdev_id)
+{
+	return false;
+}
+#endif /* WLAN_FEATURE_11BE_MLO */
+
 #if defined(CONFIG_BAND_6GHZ) && defined(WLAN_FEATURE_11AX)
 /**
  * lim_send_he_6g_band_caps_ie() - Send HE 6ghz band caps to FW

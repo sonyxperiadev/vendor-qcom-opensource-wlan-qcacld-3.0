@@ -207,6 +207,8 @@ void lim_update_assoc_sta_datas(struct mac_context *mac_ctx,
 	lim_update_stads_eht_caps(mac_ctx, sta_ds, assoc_rsp,
 				  session_entry, beacon);
 
+	lim_update_stads_emlsr_caps(mac_ctx, sta_ds, assoc_rsp);
+
 	if (lim_is_sta_he_capable(sta_ds))
 		he_cap = &assoc_rsp->he_cap;
 

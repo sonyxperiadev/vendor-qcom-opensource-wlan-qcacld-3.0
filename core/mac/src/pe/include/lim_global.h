@@ -247,6 +247,7 @@ typedef struct tLimPreAuthTable {
  * @owe_ie:         Pointer to OWE IE
  * @owe_ie_len:     Length of OWE IE
  * @eht_capable:     802.11be EHT capability
+ * @emlsr_capable:   802.11be eMLSR capability
  */
 struct lim_sta_context {
 	tLimMlmStates mlmState;
@@ -274,6 +275,9 @@ struct lim_sta_context {
 	uint32_t owe_ie_len;
 #ifdef WLAN_FEATURE_11BE
 	bool eht_capable;
+#endif
+#ifdef WLAN_FEATURE_11BE_MLO
+	bool emlsr_capable;
 #endif
 };
 

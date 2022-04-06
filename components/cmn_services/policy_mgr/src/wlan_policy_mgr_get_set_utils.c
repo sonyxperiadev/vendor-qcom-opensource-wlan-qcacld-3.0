@@ -696,6 +696,7 @@ static void policy_mgr_get_hw_mode_params(
  * @hw_mode_id: hw mode id value used by firmware
  * @dbs_mode: dbs_mode for the dbs_hw_mode
  * @sbs_mode: sbs_mode for the sbs_hw_mode
+ * @emlsr_mode: emlsr_mode for the emlsr_hw_mode
  *
  * This function sets TX-RX stream, bandwidth and DBS mode in
  * hw_mode_list.
@@ -706,9 +707,10 @@ static void policy_mgr_set_hw_mode_params(struct wlan_objmgr_psoc *psoc,
 			struct policy_mgr_mac_ss_bw_info mac0_ss_bw_info,
 			struct policy_mgr_mac_ss_bw_info mac1_ss_bw_info,
 			uint32_t pos, uint32_t hw_mode_id, uint32_t dbs_mode,
-			uint32_t sbs_mode)
+			uint32_t sbs_mode, uint64_t emlsr_mode)
 {
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	uint64_t legacy_hwmode_lst;
 
 	pm_ctx = policy_mgr_get_context(psoc);
 	if (!pm_ctx) {
@@ -749,6 +751,11 @@ static void policy_mgr_set_hw_mode_params(struct wlan_objmgr_psoc *psoc,
 	POLICY_MGR_HW_MODE_ID_SET(
 		pm_ctx->hw_mode.hw_mode_list[pos],
 		hw_mode_id);
+
+	legacy_hwmode_lst = pm_ctx->hw_mode.hw_mode_list[pos];
+	POLICY_MGR_HW_MODE_EMLSR_MODE_SET(
+	    pm_ctx->hw_mode.hw_mode_list[pos],
+	    legacy_hwmode_lst, emlsr_mode);
 }
 
 static void
@@ -1103,6 +1110,10 @@ policy_mgr_update_mac_freq_info(struct wlan_objmgr_psoc *psoc,
 			policy_mgr_update_sbs_freq_info(pm_ctx);
 
 		break;
+	case WMI_HW_MODE_EMLSR:
+		policy_mgr_update_freq_info(pm_ctx, mac_cap, MODE_EMLSR,
+					    phy_id);
+		break;
 	default:
 		policy_mgr_err("HW mode not defined %d",
 			       hw_config_type);
@@ -1137,6 +1148,7 @@ static const char *policy_mgr_hw_mode_to_str(enum policy_mgr_mode hw_mode)
 	CASE_RETURN_STRING(MODE_SBS);
 	CASE_RETURN_STRING(MODE_SBS_UPPER_SHARE);
 	CASE_RETURN_STRING(MODE_SBS_LOWER_SHARE);
+	CASE_RETURN_STRING(MODE_EMLSR);
 	default:
 		return "Unknown";
 	}
@@ -1222,6 +1234,7 @@ QDF_STATUS policy_mgr_update_hw_mode_list(struct wlan_objmgr_psoc *psoc,
 	uint32_t i, j = 0;
 	enum wmi_hw_mode_config_type hw_config_type;
 	uint32_t dbs_mode, sbs_mode;
+	uint64_t emlsr_mode;
 	struct policy_mgr_mac_ss_bw_info mac0_ss_bw_info = {0};
 	struct policy_mgr_mac_ss_bw_info mac1_ss_bw_info = {0};
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
@@ -1302,11 +1315,20 @@ QDF_STATUS policy_mgr_update_hw_mode_list(struct wlan_objmgr_psoc *psoc,
 			    (hw_config_type == WMI_HW_MODE_DBS_OR_SBS)))
 				sbs_mode = HW_MODE_SBS;
 		}
+		/* eMLSR mode */
+		if (hw_config_type == WMI_HW_MODE_EMLSR) {
+			tmp = &info->mac_phy_cap[j++];
+			policy_mgr_get_hw_mode_params(tmp, &mac1_ss_bw_info);
+			policy_mgr_update_mac_freq_info(psoc, pm_ctx,
+							hw_config_type,
+							tmp->phy_id, tmp);
+			emlsr_mode = HW_MODE_EMLSR;
+		}
 
 		/* Updating HW mode list */
 		policy_mgr_set_hw_mode_params(psoc, mac0_ss_bw_info,
 			mac1_ss_bw_info, i, tmp->hw_mode_id, dbs_mode,
-			sbs_mode);
+			sbs_mode, emlsr_mode);
 	}
 
 	/*
@@ -2152,6 +2174,26 @@ bool policy_mgr_is_hw_dbs_capable(struct wlan_objmgr_psoc *psoc)
 	}
 
 	return true;
+}
+
+bool policy_mgr_is_hw_emlsr_capable(struct wlan_objmgr_psoc *psoc)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	uint64_t param, i;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return false;
+	}
+	for (i = 0; i < pm_ctx->num_dbs_hw_modes; i++) {
+		param = pm_ctx->hw_mode.hw_mode_list[i];
+		if (POLICY_MGR_HW_MODE_EMLSR_MODE_GET(param))
+			return true;
+	}
+
+	return false;
 }
 
 bool policy_mgr_is_current_hwmode_dbs(struct wlan_objmgr_psoc *psoc)

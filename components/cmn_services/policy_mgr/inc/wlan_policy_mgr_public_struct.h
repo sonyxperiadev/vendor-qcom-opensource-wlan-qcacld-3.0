@@ -166,6 +166,16 @@ enum hw_mode_sbs_capab {
 };
 
 /**
+ * enum hw_mode_emlsr_capab - EMLSR HW mode capability
+ * @HW_MODE_EMLSR_NONE: Non EMLSR capable
+ * @HW_MODE_EMLSR: EMLSR capable
+ */
+enum hw_mode_emlsr_capab {
+	HW_MODE_EMLSR_NONE,
+	HW_MODE_EMLSR,
+};
+
+/**
  * enum hw_mode_mac_band_cap - mac band capability
  * @HW_MODE_MAC_BAND_NONE: No band requirement.
  * @HW_MODE_MAC_BAND_2G: 2G band supported.
@@ -1307,6 +1317,7 @@ struct policy_mgr_disabled_ml_link_info {
  * @mac0_band_cap: mac0 band (5g/2g) capability
  * @dbs_cap: DBS capabality
  * @agile_dfs_cap: Agile DFS capabality
+ * @emlsr_cap: eMLSR capability
  * @action_type: for dbs mode, the field indicates the "Action type" to be
  * used to switch to the mode. To help the hw mode validation.
  */
@@ -1321,6 +1332,7 @@ struct policy_mgr_hw_mode_params {
 	uint8_t dbs_cap;
 	uint8_t agile_dfs_cap;
 	uint8_t sbs_cap;
+	uint8_t emlsr_cap;
 	enum policy_mgr_conc_next_action action_type;
 };
 
@@ -1432,6 +1444,7 @@ struct policy_mgr_freq_range {
  * @MODE_SBS:               SBS mode with either high share or low share
  * @MODE_SBS_UPPER_SHARE:   Higher 5Ghz shared with 2.4Ghz
  * @MODE_SBS_LOWER_SHARE:   LOWER 5Ghz shared with 2.4Ghz
+ * #MODE_EMLSR:             eMLSR mode
  * @MODE_HW_MAX: MAX
  */
 enum policy_mgr_mode {
@@ -1440,6 +1453,7 @@ enum policy_mgr_mode {
 	MODE_SBS,
 	MODE_SBS_UPPER_SHARE,
 	MODE_SBS_LOWER_SHARE,
+	MODE_EMLSR,
 	MODE_HW_MAX,
 };
 
@@ -1454,7 +1468,7 @@ enum policy_mgr_mode {
  *                      and current HW mode.
  */
 struct dbs_hw_mode_info {
-	uint32_t *hw_mode_list;
+	uint64_t *hw_mode_list;
 	qdf_freq_t sbs_lower_band_end_freq;
 	struct policy_mgr_freq_range freq_range_caps[MODE_HW_MAX][MAX_MAC];
 	struct policy_mgr_freq_range cur_mac_freq_range[MAX_MAC];

@@ -8865,6 +8865,59 @@ void lim_update_stads_eht_bw_320mhz(struct pe_session *session,
 
 #endif
 
+#ifdef WLAN_FEATURE_11BE_MLO
+void lim_update_stads_emlsr_caps(struct mac_context *mac_ctx,
+				 tpDphHashNode sta_ds, tpSirAssocRsp assoc_rsp)
+{
+	if (!assoc_rsp->mlo_ie.mlo_ie.eml_capabilities.info.emlsr_support) {
+		pe_debug("eMLSR cap not present in assoc rsp");
+		sta_ds->mlmStaContext.emlsr_capable = false;
+		return;
+	}
+
+	sta_ds->mlmStaContext.emlsr_capable = true;
+}
+
+void lim_intersect_ap_emlsr_caps(struct pe_session *session,
+				 struct bss_params *add_bss,
+				 tpSirAssocRsp assoc_rsp)
+{
+	if (session->is_emlsr_capable && assoc_rsp &&
+	    assoc_rsp->mlo_ie.mlo_ie.eml_capabilities.info.emlsr_support) {
+		add_bss->staContext.emlsr_support = true;
+		add_bss->staContext.link_id =
+		    assoc_rsp->mlo_ie.mlo_ie.link_id_info.info.link_id;
+		add_bss->staContext.emlsr_trans_timeout =
+		    assoc_rsp->mlo_ie.mlo_ie.eml_capabilities.info.transition_timeout;
+	} else {
+		add_bss->staContext.emlsr_support = false;
+	}
+}
+
+bool lim_is_mlo_in_emlsr_mode(struct mac_context *mac_ctx, uint8_t vdev_id)
+{
+	struct pe_session *session;
+	tpDphHashNode sta_ds = NULL;
+	uint16_t aid;
+
+	session = pe_find_session_by_vdev_id(mac_ctx, vdev_id);
+	if (!session) {
+		pe_err("Session does not exist for given vdev_id %d", vdev_id);
+		return false;
+	}
+
+	sta_ds = dph_lookup_hash_entry(mac_ctx, session->bssId, &aid,
+				       &session->dph.dphHashTable);
+	if (!sta_ds) {
+		pe_debug("No STA DS entry found for " QDF_MAC_ADDR_FMT,
+			 QDF_MAC_ADDR_REF(session->bssId));
+		return false;
+	}
+
+	return session->is_emlsr_capable && sta_ds->mlmStaContext.emlsr_capable;
+}
+#endif
+
 #if defined(CONFIG_BAND_6GHZ) && defined(WLAN_FEATURE_11AX)
 QDF_STATUS lim_send_he_6g_band_caps_ie(struct mac_context *mac_ctx,
 				       struct pe_session *session,

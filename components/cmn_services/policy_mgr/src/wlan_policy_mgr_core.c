@@ -511,7 +511,7 @@ QDF_STATUS policy_mgr_get_hw_mode_from_idx(
 		uint32_t idx,
 		struct policy_mgr_hw_mode_params *hw_mode)
 {
-	uint32_t param;
+	uint64_t param;
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
 	uint8_t mac0_min_ss;
 	uint8_t mac1_min_ss;
@@ -549,6 +549,7 @@ QDF_STATUS policy_mgr_get_hw_mode_from_idx(
 	hw_mode->dbs_cap = POLICY_MGR_HW_MODE_DBS_MODE_GET(param);
 	hw_mode->agile_dfs_cap = POLICY_MGR_HW_MODE_AGILE_DFS_GET(param);
 	hw_mode->sbs_cap = POLICY_MGR_HW_MODE_SBS_MODE_GET(param);
+	hw_mode->emlsr_cap = POLICY_MGR_HW_MODE_EMLSR_MODE_GET(param);
 	if (hw_mode->dbs_cap) {
 		mac0_min_ss = QDF_MIN(hw_mode->mac0_tx_ss, hw_mode->mac0_rx_ss);
 		mac1_min_ss = QDF_MIN(hw_mode->mac1_tx_ss, hw_mode->mac1_rx_ss);

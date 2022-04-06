@@ -693,6 +693,7 @@ struct pe_session {
 #ifdef WLAN_FEATURE_11BE_MLO
 	struct mlo_link_ie_info mlo_link_info;
 	struct mlo_partner_info ml_partner_info;
+	bool is_emlsr_capable;
 #endif
 #endif /* WLAN_FEATURE_11BE */
 	uint8_t user_edca_set;

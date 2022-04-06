@@ -2797,6 +2797,15 @@ bool policy_mgr_is_dbs_scan_allowed(struct wlan_objmgr_psoc *psoc);
 bool policy_mgr_is_hw_sbs_capable(struct wlan_objmgr_psoc *psoc);
 
 /**
+ * policy_mgr_is_hw_emlsr_capable() - Check if HW is EMLSR capable
+ * @psoc: PSOC object information
+ * Checks if the HW is EMLSR capable
+ *
+ * Return: true if the HW is EMLSR capable
+ */
+bool policy_mgr_is_hw_emlsr_capable(struct wlan_objmgr_psoc *psoc);
+
+/**
  * policy_mgr_2_freq_always_on_same_mac() - Function to check whether both the
  * input frequencies are on same mac in all supported mode/freq range
  * @psoc: Pointer to Psoc

@@ -3931,6 +3931,12 @@ sir_convert_assoc_resp_frame2_struct(struct mac_context *mac,
 	fils_convert_assoc_rsp_frame2_struct(ar, pAssocRsp);
 	sir_convert_assoc_resp_frame2_mlo_struct(frame, frame_len,
 						 session_entry, ar, pAssocRsp);
+	if (ar->mlo_ie.eml_capab_present) {
+		pAssocRsp->mlo_ie.mlo_ie.eml_capabilities.info.emlsr_support =
+			ar->mlo_ie.eml_capabilities.info.emlsr_support;
+		pAssocRsp->mlo_ie.mlo_ie.eml_capabilities.info.transition_timeout =
+			ar->mlo_ie.eml_capabilities.info.transition_timeout;
+	}
 	pe_debug("ht %d vht %d vendor vht: cap %d op %d, he %d he 6ghband %d eht %d eht320 %d, max idle: present %d val %d, he mu edca %d wmm %d qos %d",
 		 ar->HTCaps.present, ar->VHTCaps.present,
 		 ar->vendor_vht_ie.VHTCaps.present,
@@ -10571,6 +10577,8 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 	uint8_t *p_sta_prof;
 	uint32_t len_consumed;
 	uint8_t len_remaining, len;
+	bool emlsr_cap = false;
+	struct wlan_objmgr_psoc *psoc;
 	tDot11fIEnon_inheritance sta_prof_non_inherit;
 	tDot11fFfCapabilities mlo_cap;
 	tDot11fIEHTCaps ht_caps;
@@ -10585,6 +10593,12 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 
 	if (!frm)
 		return QDF_STATUS_E_NULL_VALUE;
+
+	psoc = wlan_vdev_get_psoc(pe_session->vdev);
+	if (!psoc) {
+		pe_err("Invalid psoc");
+		return QDF_STATUS_E_FAILURE;
+	}
 
 	pe_debug("Populate Assoc req MLO IEs");
 
@@ -10613,6 +10627,16 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 		mlo_ie->mld_capabilities.info.aar_support = 0;
 	}
 
+	emlsr_cap = policy_mgr_is_hw_emlsr_capable(psoc);
+	pe_session->is_emlsr_capable = emlsr_cap;
+
+	if (emlsr_cap) {
+		mlo_ie->eml_capab_present = 1;
+		mlo_ie->eml_capabilities.info.emlsr_support = 1;
+		mlo_ie->eml_capabilities.info.emlmr_support = 0;
+		mlo_ie->eml_capabilities.info.transition_timeout = 0;
+		mlo_ie->eml_capabilities.info.emlsr_padding_delay = 0;
+	}
 	/* find out number of links from bcn or prb rsp */
 	partner_info = &pe_session->lim_join_req->partner_info;
 	total_sta_prof = partner_info->num_partner_links;
