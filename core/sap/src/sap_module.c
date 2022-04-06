@@ -3274,6 +3274,7 @@ qdf_freq_t wlansap_get_chan_band_restrict(struct sap_context *sap_ctx,
 			sap_debug("set 40M when switch SAP to 2G");
 			restart_ch_width = CH_WIDTH_40MHZ;
 		}
+		*csa_reason = CSA_REASON_BAND_RESTRICTED;
 	} else if (sap_band == REG_BAND_2G && (band & BIT(REG_BAND_5G)) &&
 		   sap_ctx->chan_freq_before_switch_band &&
 		   wlan_reg_is_enable_in_secondary_list_for_freq(mac->pdev,
