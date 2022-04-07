@@ -125,6 +125,24 @@ void wma_eht_update_tgt_services(struct wmi_unified *wmi_handle,
 	}
 }
 
+static void
+wma_update_eht_cap_support_for_320mhz(struct target_psoc_info *tgt_hdl,
+				      tDot11fIEeht_cap *eht_cap)
+{
+	struct wlan_psoc_host_mac_phy_caps_ext2 *cap;
+
+	cap = target_psoc_get_mac_phy_cap_ext2_for_mode(
+			tgt_hdl, WMI_HOST_HW_MODE_SINGLE);
+	if (!cap) {
+		wma_debug("HW_MODE_SINGLE does not exist");
+		return;
+	}
+
+	eht_cap->support_320mhz_6ghz = WMI_EHTCAP_PHY_320MHZIN6GHZ_GET(
+			cap->eht_cap_phy_info_5G);
+	wma_debug("Support for 320MHz 0x%01x", eht_cap->support_320mhz_6ghz);
+}
+
 void wma_update_target_ext_eht_cap(struct target_psoc_info *tgt_hdl,
 				   struct wma_tgt_cfg *tgt_cfg)
 {
@@ -185,6 +203,9 @@ void wma_update_target_ext_eht_cap(struct target_psoc_info *tgt_hdl,
 		}
 	}
 	qdf_mem_copy(eht_cap, &eht_cap_mac, sizeof(tDot11fIEeht_cap));
+
+	wma_update_eht_cap_support_for_320mhz(tgt_hdl, eht_cap);
+
 	wma_print_eht_cap(eht_cap);
 }
 
