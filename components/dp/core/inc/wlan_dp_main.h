@@ -390,4 +390,33 @@ void dp_try_set_rps_cpu_mask(struct wlan_objmgr_psoc *psoc);
  */
 void dp_clear_rps_cpu_mask(struct wlan_dp_psoc_context *dp_ctx);
 
+/**
+ * dp_mic_init_work() - init mic error work
+ * @dp_intf: Pointer to dp interface
+ *
+ * Return: None
+ */
+void dp_mic_init_work(struct wlan_dp_intf *dp_intf);
+
+/**
+ * dp_mic_deinit_work() - deinitialize mic error work
+ * @dp_intf: Pointer to dp interface
+ *
+ * Return: None
+ */
+void dp_mic_deinit_work(struct wlan_dp_intf *dp_intf);
+
+/**
+ * dp_rx_mic_error_ind() - MIC error indication handler
+ * @psoc: opaque handle for UMAC psoc object
+ * @pdev_id: physical device instance id
+ * @mic_failure_info: mic failure information
+ *
+ * This function indicates the Mic failure to the supplicant
+ *
+ * Return: None
+ */
+void
+dp_rx_mic_error_ind(struct cdp_ctrl_objmgr_psoc *psoc, uint8_t pdev_id,
+		    struct cdp_rx_mic_err_info *mic_failure_info);
 #endif

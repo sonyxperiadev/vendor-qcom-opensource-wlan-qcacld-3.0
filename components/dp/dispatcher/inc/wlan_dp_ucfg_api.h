@@ -32,6 +32,7 @@
 #include <wlan_objmgr_vdev_obj.h>
 #include "pld_common.h"
 #include <wlan_dp_public_struct.h>
+#include <cdp_txrx_misc.h>
 
 /**
  * ucfg_dp_create_intf() - update DP interface MAC address
@@ -129,6 +130,12 @@ ucfg_dp_update_config(struct wlan_objmgr_psoc *psoc,
  */
 uint64_t
 ucfg_dp_get_rx_softirq_yield_duration(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_dp_register_rx_mic_error_ind_handler : register mic error handler.
+ * @soc: soc handle
+ */
+void ucfg_dp_register_rx_mic_error_ind_handler(void *soc);
 
 /**
  * ucfg_dp_bbm_context_init() - Initialize BBM context

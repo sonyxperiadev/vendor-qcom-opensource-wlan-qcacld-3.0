@@ -36,6 +36,7 @@
 #include <wlan_cm_ucfg_api.h>
 #include <qdf_threads.h>
 #include "wlan_dp_periodic_sta_stats.h"
+#include "wlan_mlme_ucfg_api.h"
 #include <i_qdf_net_stats.h>
 
 #ifdef FEATURE_BUS_BANDWIDTH_MGR
@@ -1019,6 +1020,149 @@ static void wlan_dp_deinit_tx_rx_histogram(struct wlan_dp_psoc_context *dp_ctx)
 }
 
 /**
+ * wlan_dp_display_txrx_stats() - Display tx/rx histogram stats
+ * @dp_ctx: dp context
+ *
+ * Return: none
+ */
+static void wlan_dp_display_txrx_stats(struct wlan_dp_psoc_context *dp_ctx)
+{
+	struct wlan_dp_intf *dp_intf = NULL, *next_dp_intf = NULL;
+	struct dp_tx_rx_stats *stats;
+	hdd_cb_handle ctx = dp_ctx->dp_ops.callback_ctx;
+	int i = 0;
+	uint32_t total_rx_pkt, total_rx_dropped,
+		 total_rx_delv, total_rx_refused;
+	uint32_t total_tx_pkt;
+	uint32_t total_tx_dropped;
+	uint32_t total_tx_orphaned;
+
+	dp_for_each_intf_held_safe(dp_ctx, dp_intf, next_dp_intf) {
+		total_rx_pkt = 0;
+		total_rx_dropped = 0;
+		total_rx_delv = 0;
+		total_rx_refused = 0;
+		total_tx_pkt = 0;
+		total_tx_dropped = 0;
+		total_tx_orphaned = 0;
+		stats = &dp_intf->dp_stats.tx_rx_stats;
+
+		if (dp_intf->intf_id == WLAN_INVALID_VDEV_ID)
+			continue;
+
+		dp_info("dp_intf: %u", dp_intf->intf_id);
+		for (i = 0; i < NUM_CPUS; i++) {
+			total_rx_pkt += stats->per_cpu[i].rx_packets;
+			total_rx_dropped += stats->per_cpu[i].rx_dropped;
+			total_rx_delv += stats->per_cpu[i].rx_delivered;
+			total_rx_refused += stats->per_cpu[i].rx_refused;
+			total_tx_pkt += stats->per_cpu[i].tx_called;
+			total_tx_dropped += stats->per_cpu[i].tx_dropped;
+			total_tx_orphaned += stats->per_cpu[i].tx_orphaned;
+		}
+
+		for (i = 0; i < NUM_CPUS; i++) {
+			if (!stats->per_cpu[i].tx_called)
+				continue;
+
+			dp_info("Tx CPU[%d]: called %u, dropped %u, orphaned %u",
+				i, stats->per_cpu[i].tx_called,
+				stats->per_cpu[i].tx_dropped,
+				stats->per_cpu[i].tx_orphaned);
+		}
+
+		dp_info("TX - called %u, dropped %u orphan %u",
+			total_tx_pkt, total_tx_dropped,
+			total_tx_orphaned);
+
+		dp_ctx->dp_ops.wlan_dp_display_tx_multiq_stats(ctx, dp_intf->intf_id);
+
+		for (i = 0; i < NUM_CPUS; i++) {
+			if (stats->per_cpu[i].rx_packets == 0)
+				continue;
+			dp_info("Rx CPU[%d]: packets %u, dropped %u, delivered %u, refused %u",
+				i, stats->per_cpu[i].rx_packets,
+				stats->per_cpu[i].rx_dropped,
+				stats->per_cpu[i].rx_delivered,
+				stats->per_cpu[i].rx_refused);
+		}
+
+		dp_info("RX - packets %u, dropped %u, unsol_arp_mcast_drp %u, delivered %u, refused %u GRO - agg %u drop %u non-agg %u flush_skip %u low_tput_flush %u disabled(conc %u low-tput %u)",
+			total_rx_pkt, total_rx_dropped,
+			qdf_atomic_read(&stats->rx_usolict_arp_n_mcast_drp),
+			total_rx_delv,
+			total_rx_refused, stats->rx_aggregated,
+			stats->rx_gro_dropped, stats->rx_non_aggregated,
+			stats->rx_gro_flush_skip,
+			stats->rx_gro_low_tput_flush,
+			qdf_atomic_read(&dp_ctx->disable_rx_ol_in_concurrency),
+			qdf_atomic_read(&dp_ctx->disable_rx_ol_in_low_tput));
+	}
+}
+
+/**
+ * dp_display_periodic_stats() - Function to display periodic stats
+ * @dp_ctx - handle to dp context
+ * @bool data_in_interval - true, if data detected in bw time interval
+ *
+ * The periodicity is determined by dp_ctx->dp_cfg->periodic_stats_disp_time.
+ * Stats show up in wlan driver logs.
+ *
+ * Returns: None
+ */
+static void dp_display_periodic_stats(struct wlan_dp_psoc_context *dp_ctx,
+				      bool data_in_interval)
+{
+	static uint32_t counter;
+	static bool data_in_time_period;
+	ol_txrx_soc_handle soc;
+	uint32_t periodic_stats_disp_time = 0;
+	hdd_cb_handle ctx = dp_ctx->dp_ops.callback_ctx;
+
+	ucfg_mlme_stats_get_periodic_display_time(dp_ctx->psoc,
+						  &periodic_stats_disp_time);
+	if (!periodic_stats_disp_time)
+		return;
+
+	soc = cds_get_context(QDF_MODULE_ID_SOC);
+	if (!soc)
+		return;
+
+	counter++;
+	if (data_in_interval)
+		data_in_time_period = data_in_interval;
+
+	if (counter * dp_ctx->dp_cfg.bus_bw_compute_interval >=
+		periodic_stats_disp_time * 1000) {
+		if (data_in_time_period) {
+			wlan_dp_display_txrx_stats(dp_ctx);
+			dp_txrx_ext_dump_stats(soc, CDP_DP_RX_THREAD_STATS);
+			cdp_display_stats(soc,
+					  CDP_RX_RING_STATS,
+					  QDF_STATS_VERBOSITY_LEVEL_LOW);
+			cdp_display_stats(soc,
+					  CDP_DP_NAPI_STATS,
+					  QDF_STATS_VERBOSITY_LEVEL_LOW);
+			cdp_display_stats(soc,
+					  CDP_TXRX_PATH_STATS,
+					  QDF_STATS_VERBOSITY_LEVEL_LOW);
+			cdp_display_stats(soc,
+					  CDP_DUMP_TX_FLOW_POOL_INFO,
+					  QDF_STATS_VERBOSITY_LEVEL_LOW);
+			cdp_display_stats(soc,
+					  CDP_DP_SWLM_STATS,
+					  QDF_STATS_VERBOSITY_LEVEL_LOW);
+			dp_ctx->dp_ops.wlan_dp_display_netif_queue_history
+				(ctx, QDF_STATS_VERBOSITY_LEVEL_LOW);
+			cdp_display_txrx_hw_info(soc);
+			qdf_dp_trace_dump_stats();
+		}
+		counter = 0;
+		data_in_time_period = false;
+	}
+}
+
+/**
  * dp_pm_qos_update_cpu_mask() - Prepare CPU mask for PM_qos voting
  * @mask: return variable of cpumask for the TPUT
  * @enable_perf_cluster: Enable PERF cluster or not
@@ -1470,9 +1614,8 @@ static void dp_pld_request_bus_bandwidth(struct wlan_dp_psoc_context *dp_ctx,
 	 * scheduler thread can utilize CPU.
 	 */
 	if (!dp_ops->dp_is_roaming_in_progress(ctx)) {
-		dp_ops->dp_display_periodic_stats(ctx,
-						  (total_pkts > 0) ?
-						  true : false);
+		dp_display_periodic_stats(dp_ctx, (total_pkts > 0) ?
+					  true : false);
 		dp_periodic_sta_stats_display(dp_ctx);
 	}
 }

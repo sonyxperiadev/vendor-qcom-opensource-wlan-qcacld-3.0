@@ -29,6 +29,47 @@
 #include "qdf_status.h"
 #include <wlan_nlink_common.h>
 #include <qca_vendor.h>
+#include <ani_system_defs.h>
+#include <qdf_defer.h>
+
+/**
+ * struct dp_mic_info - mic error info in dp
+ * @ta_mac_addr: transmitter mac address
+ * @multicast: Flag for multicast
+ * @key_id: Key ID
+ * @tsc: Sequence number
+ * @vdev_id: vdev id
+ *
+ */
+struct dp_mic_error_info {
+	struct qdf_mac_addr ta_mac_addr;
+	bool multicast;
+	uint8_t key_id;
+	uint8_t tsc[SIR_CIPHER_SEQ_CTR_SIZE];
+	uint16_t vdev_id;
+};
+
+enum dp_mic_work_status {
+	DP_MIC_UNINITIALIZED,
+	DP_MIC_INITIALIZED,
+	DP_MIC_SCHEDULED,
+	DP_MIC_DISABLED
+};
+
+/**
+ * struct dp_mic_work - mic work info in dp
+ * @mic_error_work: mic error work
+ * @status: sattus of mic error work
+ * @info: Pointer to mic error information
+ * @lock: lock to synchronixe mic error work
+ *
+ */
+struct dp_mic_work {
+	qdf_work_t work;
+	enum dp_mic_work_status status;
+	struct dp_mic_error_info *info;
+	qdf_spinlock_t lock;
+};
 
 /**
  * typedef hdd_cb_handle - HDD Handle
@@ -208,6 +249,10 @@ union wlan_tp_data {
  * @dp_is_roaming_in_progress:Callback to check if roaming is in progress
  * @dp_is_ap_active:Callback to check if AP is active
  * @dp_napi_apply_throughput_policy:Callback to apply NAPI throughput policy
+ * @wlan_dp_display_tx_multiq_stats: Callback to display Tx Mulit queue stats
+ * @wlan_dp_display_netif_queue_history: Callback to display Netif queue history
+ * @osif_dp_process_sta_mic_error: osif callback to process STA MIC error
+ * @osif_dp_process_sap_mic_error: osif callback to process SAP MIC error
  */
 struct wlan_dp_psoc_callbacks {
 	void (*os_if_dp_gro_rx)(struct sk_buff *skb, uint8_t napi_to_use,
@@ -242,12 +287,19 @@ struct wlan_dp_psoc_callbacks {
 					uint8_t user_triggered, int size);
 	bool (*dp_is_roaming_in_progress)(hdd_cb_handle context);
 	bool (*dp_is_ap_active)(hdd_cb_handle context, uint8_t vdev_id);
-	void (*dp_display_periodic_stats)(hdd_cb_handle context, bool interval);
 	void (*dp_disable_rx_ol_for_low_tput)(hdd_cb_handle context,
 					      bool disable);
 	int (*dp_napi_apply_throughput_policy)(hdd_cb_handle context,
 					       uint64_t tx_packets,
 					       uint64_t rx_packets);
+	void (*wlan_dp_display_tx_multiq_stats)(hdd_cb_handle context,
+						uint8_t vdev_id);
+	void (*wlan_dp_display_netif_queue_history)(hdd_cb_handle context,
+				enum qdf_stats_verbosity_level verb_lvl);
+	void (*osif_dp_process_sta_mic_error)(struct dp_mic_error_info *info,
+					      struct wlan_objmgr_vdev *vdev);
+	void (*osif_dp_process_sap_mic_error)(struct dp_mic_error_info *info,
+					      struct wlan_objmgr_vdev *vdev);
 };
 
 /**

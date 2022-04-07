@@ -82,6 +82,7 @@ ucfg_dp_create_intf(struct wlan_objmgr_psoc *psoc,
 
 	dp_periodic_sta_stats_init(dp_intf);
 	dp_periodic_sta_stats_mutex_create(dp_intf);
+	dp_mic_init_work(dp_intf);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -106,6 +107,8 @@ ucfg_dp_destroy_intf(struct wlan_objmgr_psoc *psoc,
 	}
 
 	dp_periodic_sta_stats_mutex_destroy(dp_intf);
+	dp_mic_deinit_work(dp_intf);
+
 	qdf_spin_lock_bh(&dp_ctx->intf_list_lock);
 	qdf_list_remove_node(&dp_ctx->intf_list, &dp_intf->node);
 	qdf_spin_unlock_bh(&dp_ctx->intf_list_lock);
@@ -478,6 +481,11 @@ ucfg_dp_get_rx_softirq_yield_duration(struct wlan_objmgr_psoc *psoc)
 	return dp_ctx->dp_cfg.rx_softirq_max_yield_duration_ns;
 }
 
+void ucfg_dp_register_rx_mic_error_ind_handler(void *soc)
+{
+	cdp_register_rx_mic_error_ind_handler(soc, dp_rx_mic_error_ind);
+}
+
 int ucfg_dp_bbm_context_init(struct wlan_objmgr_psoc *psoc)
 {
 	return dp_bbm_context_init(psoc);
@@ -623,6 +631,10 @@ void ucfg_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 	dp_ctx->dp_ops.dp_pm_qos_add_request = cb_obj->dp_pm_qos_add_request;
 	dp_ctx->dp_ops.dp_pm_qos_remove_request =
 		cb_obj->dp_pm_qos_remove_request;
+	dp_ctx->dp_ops.wlan_dp_display_tx_multiq_stats =
+		cb_obj->wlan_dp_display_tx_multiq_stats;
+	dp_ctx->dp_ops.wlan_dp_display_netif_queue_history =
+		cb_obj->wlan_dp_display_netif_queue_history;
 	dp_ctx->dp_ops.dp_send_mscs_action_frame =
 		cb_obj->dp_send_mscs_action_frame;
 	dp_ctx->dp_ops.dp_pktlog_enable_disable =
@@ -630,8 +642,6 @@ void ucfg_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 	dp_ctx->dp_ops.dp_is_roaming_in_progress =
 		cb_obj->dp_is_roaming_in_progress;
 	dp_ctx->dp_ops.dp_is_ap_active = cb_obj->dp_is_ap_active;
-	dp_ctx->dp_ops.dp_display_periodic_stats =
-		cb_obj->dp_display_periodic_stats;
 	dp_ctx->dp_ops.dp_disable_rx_ol_for_low_tput =
 		cb_obj->dp_disable_rx_ol_for_low_tput;
 	dp_ctx->dp_ops.dp_napi_apply_throughput_policy =

@@ -258,6 +258,7 @@ struct dp_stats {
  * @vdev: object manager vdev context
  * @dev: netdev reference
  * @stats: Netdev stats
+ * @mic_work: Work to handle MIC error
  */
 struct wlan_dp_intf {
 	struct wlan_dp_psoc_context *dp_ctx;
@@ -294,7 +295,7 @@ struct wlan_dp_intf {
 	unsigned long mscs_prev_tx_vo_pkts;
 	uint32_t mscs_counter;
 #endif /* WLAN_FEATURE_MSCS */
-
+	struct dp_mic_work mic_work;
 };
 
 /**
@@ -368,6 +369,10 @@ struct wlan_dp_psoc_context {
 	struct dp_rtpm_tput_policy_context rtpm_tput_policy_ctx;
 #endif
 #endif /*WLAN_FEATURE_DP_BUS_BANDWIDTH*/
+	/* disable RX offload (GRO/LRO) in concurrency scenarios */
+	qdf_atomic_t disable_rx_ol_in_concurrency;
+	/* disable RX offload (GRO/LRO) in low throughput scenarios */
+	qdf_atomic_t disable_rx_ol_in_low_tput;
 #ifdef WLAN_NS_OFFLOAD
 	/* IPv6 notifier callback for handling NS offload on change in IP */
 	struct notifier_block ipv6_notifier;

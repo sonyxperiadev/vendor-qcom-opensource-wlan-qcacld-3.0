@@ -28,6 +28,7 @@
 #include <wlan_nlink_common.h>
 #include <qdf_net_types.h>
 #include "wlan_objmgr_vdev_obj.h"
+#include <wlan_cm_ucfg_api.h>
 
 /* Global DP context */
 static struct wlan_dp_psoc_context *gp_dp_ctx;
@@ -123,8 +124,226 @@ dp_get_intf_by_macaddr(struct wlan_dp_psoc_context *dp_ctx,
 	return NULL;
 }
 
+/**
+ * validate_interface_id() - Check if interface ID is valid
+ * @intf_id: interface ID
+ *
+ * Return: 0 on success, error code on failure
+ */
+static int validate_interface_id(uint8_t intf_id)
+{
+	if (intf_id == WLAN_UMAC_VDEV_ID_MAX) {
+		dp_err("Interface is not up");
+		return -EINVAL;
+	}
+	if (intf_id >= WLAN_MAX_VDEVS) {
+		dp_err("Bad interface id:%u", intf_id);
+		return -EINVAL;
+	}
+	return 0;
+}
+
+/**
+ * is_dp_intf_valid() - Check if interface is valid
+ * @dp_intf: interface context
+ *
+ * Return: 0 on success, error code on failure
+ */
+static int is_dp_intf_valid(struct wlan_dp_intf *dp_intf)
+{
+	if (!dp_intf) {
+		dp_err("Interface is NULL");
+		return -EINVAL;
+	}
+	return validate_interface_id(dp_intf->intf_id);
+}
+
 static void dp_cfg_init(struct wlan_dp_psoc_context *ctx)
 {
+}
+
+/**
+ * __dp_process_mic_error() - Indicate mic error to supplicant
+ * @dp_intf: Pointer to dp interface
+ *
+ * Return: None
+ */
+static void
+__dp_process_mic_error(struct wlan_dp_intf *dp_intf)
+{
+	struct wlan_dp_psoc_callbacks *ops = &dp_intf->dp_ctx->dp_ops;
+	struct wlan_objmgr_vdev *vdev = dp_intf->vdev;
+
+	if (!vdev) {
+		dp_err("vdev is NULL");
+		return;
+	}
+
+	if (dp_comp_vdev_get_ref(vdev)) {
+		dp_err("vdev ref get error");
+		return;
+	}
+
+	if ((dp_intf->device_mode == QDF_STA_MODE ||
+	     dp_intf->device_mode == QDF_P2P_CLIENT_MODE) &&
+	    ucfg_cm_is_vdev_active(vdev))
+		ops->osif_dp_process_sta_mic_error(dp_intf->mic_work.info,
+						   vdev);
+	else if (dp_intf->device_mode == QDF_SAP_MODE ||
+		 dp_intf->device_mode == QDF_P2P_GO_MODE)
+		ops->osif_dp_process_sap_mic_error(dp_intf->mic_work.info,
+						   vdev);
+	else
+		dp_err("Invalid interface type:%d", dp_intf->device_mode);
+
+	dp_comp_vdev_put_ref(vdev);
+}
+
+/**
+ * dp_process_mic_error() - process mic error work
+ * @data: void pointer to dp interface
+ *
+ * Return: None
+ */
+static void
+dp_process_mic_error(void *data)
+{
+	struct wlan_dp_intf *dp_intf = data;
+
+	if (is_dp_intf_valid(dp_intf))
+		goto exit;
+
+	__dp_process_mic_error(dp_intf);
+
+exit:
+	qdf_spin_lock_bh(&dp_intf->mic_work.lock);
+	if (dp_intf->mic_work.info) {
+		qdf_mem_free(dp_intf->mic_work.info);
+		dp_intf->mic_work.info = NULL;
+	}
+	if (dp_intf->mic_work.status == DP_MIC_SCHEDULED)
+		dp_intf->mic_work.status = DP_MIC_INITIALIZED;
+	qdf_spin_unlock_bh(&dp_intf->mic_work.lock);
+}
+
+void
+dp_rx_mic_error_ind(struct cdp_ctrl_objmgr_psoc *psoc, uint8_t pdev_id,
+		    struct cdp_rx_mic_err_info *mic_failure_info)
+{
+	struct dp_mic_error_info *dp_mic_info;
+	struct wlan_objmgr_vdev *vdev;
+	struct wlan_dp_intf *dp_intf;
+
+	if (!psoc)
+		return;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc((struct wlan_objmgr_psoc *)psoc,
+						    mic_failure_info->vdev_id,
+						    WLAN_DP_ID);
+	if (!vdev)
+		return;
+	dp_intf = dp_get_vdev_priv_obj(vdev);
+	if (!dp_intf) {
+		dp_comp_vdev_put_ref(vdev);
+		return;
+	}
+
+	dp_mic_info = qdf_mem_malloc(sizeof(*dp_mic_info));
+	if (!dp_mic_info) {
+		dp_comp_vdev_put_ref(vdev);
+		return;
+	}
+
+	qdf_copy_macaddr(&dp_mic_info->ta_mac_addr,
+			 &mic_failure_info->ta_mac_addr);
+	dp_mic_info->multicast = mic_failure_info->multicast;
+	dp_mic_info->key_id = mic_failure_info->key_id;
+	qdf_mem_copy(&dp_mic_info->tsc, &mic_failure_info->tsc,
+		     SIR_CIPHER_SEQ_CTR_SIZE);
+	dp_mic_info->vdev_id = mic_failure_info->vdev_id;
+
+	qdf_spin_lock_bh(&dp_intf->mic_work.lock);
+	if (dp_intf->mic_work.status != DP_MIC_INITIALIZED) {
+		qdf_spin_unlock_bh(&dp_intf->mic_work.lock);
+		qdf_mem_free(dp_mic_info);
+		dp_comp_vdev_put_ref(vdev);
+		return;
+	}
+	/*
+	 * Store mic error info pointer in dp_intf
+	 * for freeing up the alocated memory in case
+	 * the work scheduled below is flushed or deinitialized.
+	 */
+	dp_intf->mic_work.status = DP_MIC_SCHEDULED;
+	dp_intf->mic_work.info = dp_mic_info;
+	qdf_sched_work(0, &dp_intf->mic_work.work);
+	qdf_spin_unlock_bh(&dp_intf->mic_work.lock);
+	dp_comp_vdev_put_ref(vdev);
+}
+
+/**
+ * dp_mic_flush_work() - disable and flush pending mic work
+ * @dp_intf: Pointer to dp interface
+ *
+ * Return: None
+ */
+static void
+dp_mic_flush_work(struct wlan_dp_intf *dp_intf)
+{
+	dp_info("Flush the MIC error work");
+
+	qdf_spin_lock_bh(&dp_intf->mic_work.lock);
+	if (dp_intf->mic_work.status != DP_MIC_SCHEDULED) {
+		qdf_spin_unlock_bh(&dp_intf->mic_work.lock);
+		return;
+	}
+	dp_intf->mic_work.status = DP_MIC_DISABLED;
+	qdf_spin_unlock_bh(&dp_intf->mic_work.lock);
+
+	qdf_flush_work(&dp_intf->mic_work.work);
+}
+
+/**
+ * dp_mic_enable_work() - enable mic error work
+ * @dp_intf: Pointer to dp interface
+ *
+ * Return: None
+ */
+static void dp_mic_enable_work(struct wlan_dp_intf *dp_intf)
+{
+	dp_info("Enable the MIC error work");
+
+	qdf_spin_lock_bh(&dp_intf->mic_work.lock);
+	if (dp_intf->mic_work.status == DP_MIC_DISABLED)
+		dp_intf->mic_work.status = DP_MIC_INITIALIZED;
+	qdf_spin_unlock_bh(&dp_intf->mic_work.lock);
+}
+
+void dp_mic_deinit_work(struct wlan_dp_intf *dp_intf)
+{
+	dp_info("DeInitialize the MIC error work");
+
+	if (dp_intf->mic_work.status != DP_MIC_UNINITIALIZED) {
+		qdf_destroy_work(NULL, &dp_intf->mic_work.work);
+
+		qdf_spin_lock_bh(&dp_intf->mic_work.lock);
+		dp_intf->mic_work.status = DP_MIC_UNINITIALIZED;
+		if (dp_intf->mic_work.info) {
+			qdf_mem_free(dp_intf->mic_work.info);
+			dp_intf->mic_work.info = NULL;
+		}
+		qdf_spin_unlock_bh(&dp_intf->mic_work.lock);
+		qdf_spinlock_destroy(&dp_intf->mic_work.lock);
+	}
+}
+
+void dp_mic_init_work(struct wlan_dp_intf *dp_intf)
+{
+	qdf_spinlock_create(&dp_intf->mic_work.lock);
+	qdf_create_work(0, &dp_intf->mic_work.work,
+			dp_process_mic_error, dp_intf);
+	dp_intf->mic_work.status = DP_MIC_INITIALIZED;
+	dp_intf->mic_work.info = NULL;
 }
 
 QDF_STATUS
@@ -167,6 +386,8 @@ dp_vdev_obj_create_notification(struct wlan_objmgr_vdev *vdev, void *arg)
 		return status;
 	}
 
+	dp_mic_enable_work(dp_intf);
+
 	return status;
 }
 
@@ -184,6 +405,8 @@ dp_vdev_obj_destroy_notification(struct wlan_objmgr_vdev *vdev, void *arg)
 		dp_err("Failed to get DP interface obj");
 		return QDF_STATUS_E_INVAL;
 	}
+
+	dp_mic_flush_work(dp_intf);
 
 	status = wlan_objmgr_vdev_component_obj_detach(vdev,
 						       WLAN_COMP_DP,

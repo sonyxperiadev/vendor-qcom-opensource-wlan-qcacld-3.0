@@ -27,6 +27,7 @@
 #include <cdp_txrx_cmn.h>
 #include "qca_vendor.h"
 #include "wlan_dp_ucfg_api.h"
+#include "osif_vdev_sync.h"
 
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
 /**
@@ -157,11 +158,105 @@ void osif_dp_send_tcp_param_update_event(struct wlan_objmgr_psoc *psoc,
 }
 #endif /*WLAN_FEATURE_DP_BUS_BANDWIDTH*/
 
+/**
+ * osif_dp_get_net_dev_from_vdev() - Get netdev object from vdev
+ * @vdev: Pointer to vdev manager
+ * @out_net_dev: Pointer to output netdev
+ *
+ * Return: 0 on success, error code on failure
+ */
+static int osif_dp_get_net_dev_from_vdev(struct wlan_objmgr_vdev *vdev,
+					 struct net_device **out_net_dev)
+{
+	struct vdev_osif_priv *priv;
+
+	if (!vdev)
+		return -EINVAL;
+
+	priv = wlan_vdev_get_ospriv(vdev);
+	if (!priv || !priv->wdev || !priv->wdev->netdev)
+		return -EINVAL;
+
+	*out_net_dev = priv->wdev->netdev;
+
+	return 0;
+}
+
+/**
+ * osif_dp_process_sta_mic_error() - Indicate STA mic error to supplicant
+ * @info: MIC error information
+ * @vdev: vdev handle
+ *
+ * Return: None
+ */
+static void
+osif_dp_process_sta_mic_error(struct dp_mic_error_info *info,
+			      struct wlan_objmgr_vdev *vdev)
+{
+	struct net_device *dev;
+	struct osif_vdev_sync *vdev_sync;
+	int errno;
+
+	errno = osif_dp_get_net_dev_from_vdev(vdev, &dev);
+	if (errno) {
+		dp_err("failed to get netdev");
+		return;
+	}
+	if (osif_vdev_sync_op_start(dev, &vdev_sync))
+		return;
+
+	/* inform mic failure to nl80211 */
+	cfg80211_michael_mic_failure(dev,
+				     (uint8_t *)&info->ta_mac_addr,
+				     info->multicast ?
+				     NL80211_KEYTYPE_GROUP :
+				     NL80211_KEYTYPE_PAIRWISE,
+				     info->key_id,
+				     info->tsc,
+				     GFP_KERNEL);
+}
+
+/**
+ * osif_dp_process_sap_mic_error() - Indicate SAP mic error to supplicant
+ * @info: MIC error information
+ * @vdev: vdev handle
+ *
+ * Return: None
+ */
+static void
+osif_dp_process_sap_mic_error(struct dp_mic_error_info *info,
+			      struct wlan_objmgr_vdev *vdev)
+{
+	struct net_device *dev;
+	int errno;
+	struct osif_vdev_sync *vdev_sync;
+
+	errno = osif_dp_get_net_dev_from_vdev(vdev, &dev);
+	if (errno) {
+		dp_err("failed to get netdev");
+		return;
+	}
+	if (osif_vdev_sync_op_start(dev, &vdev_sync))
+		return;
+
+	/* inform mic failure to nl80211 */
+	cfg80211_michael_mic_failure(dev,
+				     (uint8_t *)&info->ta_mac_addr,
+				     info->multicast ?
+				     NL80211_KEYTYPE_GROUP :
+				     NL80211_KEYTYPE_PAIRWISE,
+				     info->key_id,
+				     info->tsc,
+				     GFP_KERNEL);
+}
+
 void os_if_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 				     struct wlan_dp_psoc_callbacks *cb_obj)
 {
 	cb_obj->osif_dp_send_tcp_param_update_event =
 		osif_dp_send_tcp_param_update_event;
+	cb_obj->osif_dp_process_sta_mic_error = osif_dp_process_sta_mic_error;
+	cb_obj->osif_dp_process_sap_mic_error = osif_dp_process_sap_mic_error;
 
 	ucfg_dp_register_hdd_callbacks(psoc, cb_obj);
 }
