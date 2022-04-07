@@ -734,7 +734,7 @@ int hdd_ndi_open(const char *iface_name, bool is_add_virtual_iface)
 	return 0;
 }
 
-int hdd_ndi_start(char *iface_name, uint16_t transaction_id)
+int hdd_ndi_start(const char *iface_name, uint16_t transaction_id)
 {
 	int ret;
 	QDF_STATUS status;
@@ -832,7 +832,8 @@ static int hdd_delete_ndi_intf(struct wiphy *wiphy, struct wireless_dev *wdev)
 }
 #endif
 
-int hdd_ndi_delete(uint8_t vdev_id, char *iface_name, uint16_t transaction_id)
+int hdd_ndi_delete(uint8_t vdev_id, const char *iface_name,
+		   uint16_t transaction_id)
 {
 	int ret;
 	struct hdd_adapter *adapter;
@@ -1021,15 +1022,6 @@ void hdd_ndp_session_end_handler(struct hdd_adapter *adapter)
 	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_NAN_ID);
 }
 
-/**
- * hdd_ndp_new_peer_handler() - NDP new peer indication handler
- * @vdev_id: vdev id
- * @sta_id: station id
- * @peer_mac_addr: peer mac address
- * @first_peer: first peer
- *
- * Return: none
- */
 int hdd_ndp_new_peer_handler(uint8_t vdev_id, uint16_t sta_id,
 			struct qdf_mac_addr *peer_mac_addr, bool first_peer)
 {
@@ -1131,13 +1123,6 @@ void hdd_cleanup_ndi(struct hdd_context *hdd_ctx,
 	}
 }
 
-/**
- * hdd_ndp_peer_departed_handler() - Handle NDP peer departed indication
- * @adapter: pointer to adapter context
- * @ind_params: indication parameters
- *
- * Return: none
- */
 void hdd_ndp_peer_departed_handler(uint8_t vdev_id, uint16_t sta_id,
 			struct qdf_mac_addr *peer_mac_addr, bool last_peer)
 {

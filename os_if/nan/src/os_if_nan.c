@@ -220,7 +220,7 @@ static void os_if_get_ndi_vdev_by_ifname_cb(struct wlan_objmgr_psoc *psoc,
  * Return : vdev object if found, NULL otherwise
  */
 static struct wlan_objmgr_vdev *
-os_if_get_ndi_vdev_by_ifname(struct wlan_objmgr_psoc *psoc, char *ifname)
+os_if_get_ndi_vdev_by_ifname(struct wlan_objmgr_psoc *psoc, const char *ifname)
 {
 	QDF_STATUS status;
 	struct ndi_find_vdev_filter filter = {0};
@@ -299,7 +299,7 @@ static int os_if_nan_ndi_open(struct wlan_objmgr_psoc *psoc,
 #endif
 
 static int __os_if_nan_process_ndi_create(struct wlan_objmgr_psoc *psoc,
-					  char *iface_name,
+					  const char *iface_name,
 					  struct nlattr **tb)
 {
 	int ret;
@@ -339,7 +339,7 @@ static int __os_if_nan_process_ndi_create(struct wlan_objmgr_psoc *psoc,
 }
 
 static int
-osif_nla_str(struct nlattr **tb, size_t attr_id, char **out_str)
+osif_nla_str(struct nlattr **tb, size_t attr_id, const char **out_str)
 {
 	if (!tb || !tb[attr_id])
 		return -EINVAL;
@@ -367,7 +367,7 @@ static int osif_net_dev_from_vdev(struct wlan_objmgr_vdev *vdev,
 }
 
 static int osif_net_dev_from_ifname(struct wlan_objmgr_psoc *psoc,
-				    char *iface_name,
+				    const char *iface_name,
 				    struct net_device **out_net_dev)
 {
 	struct wlan_objmgr_vdev *vdev;
@@ -396,7 +396,7 @@ static int os_if_nan_process_ndi_create(struct wlan_objmgr_psoc *psoc,
 					struct wireless_dev *wdev)
 {
 	struct osif_vdev_sync *vdev_sync;
-	char *ifname;
+	const char *ifname;
 	int errno;
 
 	osif_debug("enter");
@@ -447,7 +447,7 @@ static int os_if_nan_process_ndi_create(struct wlan_objmgr_psoc *psoc,
 	struct device *dev;
 	struct net_device *net_dev;
 	struct osif_vdev_sync *vdev_sync;
-	char *ifname;
+	const char *ifname;
 	int errno;
 
 	osif_debug("enter");
@@ -486,7 +486,7 @@ destroy_sync:
 #endif
 
 static int __os_if_nan_process_ndi_delete(struct wlan_objmgr_psoc *psoc,
-					  char *iface_name,
+					  const char *iface_name,
 					  struct nlattr **tb)
 {
 	uint8_t vdev_id;
@@ -537,7 +537,7 @@ static int os_if_nan_process_ndi_delete(struct wlan_objmgr_psoc *psoc,
 {
 	struct net_device *net_dev;
 	struct osif_vdev_sync *vdev_sync;
-	char *ifname;
+	const char *ifname;
 	int errno;
 
 	osif_debug("enter");
@@ -573,7 +573,7 @@ static int os_if_nan_process_ndi_delete(struct wlan_objmgr_psoc *psoc,
 {
 	struct net_device *net_dev;
 	struct osif_vdev_sync *vdev_sync;
-	char *ifname;
+	const char *ifname;
 	int errno;
 
 	osif_debug("enter");
@@ -697,7 +697,7 @@ static int os_if_nan_parse_security_params(struct nlattr **tb,
  * Return:  0 on success or error code on failure
  */
 static int __os_if_nan_process_ndp_initiator_req(struct wlan_objmgr_psoc *psoc,
-						 char *iface_name,
+						 const char *iface_name,
 						 struct nlattr **tb)
 {
 	int ret = 0;
@@ -821,7 +821,7 @@ static int os_if_nan_process_ndp_initiator_req(struct wlan_objmgr_psoc *psoc,
 {
 	struct net_device *net_dev;
 	struct osif_vdev_sync *vdev_sync;
-	char *ifname;
+	const char *ifname;
 	int errno;
 
 	errno = osif_nla_str(tb, QCA_WLAN_VENDOR_ATTR_NDP_IFACE_STR, &ifname);
@@ -870,7 +870,7 @@ static int __os_if_nan_process_ndp_responder_req(struct wlan_objmgr_psoc *psoc,
 	enum nan_datapath_state state;
 	struct wlan_objmgr_vdev *nan_vdev = NULL;
 	struct nan_datapath_responder_req req = {0};
-	char *iface_name;
+	const char *iface_name;
 	int errno;
 
 	if (!tb[QCA_WLAN_VENDOR_ATTR_NDP_RESPONSE_CODE]) {

@@ -82,7 +82,7 @@ void hdd_cleanup_ndi(struct hdd_context *hdd_ctx,
  *
  * Return: 0 upon success
  */
-int hdd_ndi_start(char *iface_name, uint16_t transaction_id);
+int hdd_ndi_start(const char *iface_name, uint16_t transaction_id);
 
 /**
  * hdd_add_ndi_intf(): Add NDI interface
@@ -93,6 +93,82 @@ int hdd_ndi_start(char *iface_name, uint16_t transaction_id);
  */
 struct wireless_dev *hdd_add_ndi_intf(struct hdd_context *hdd_ctx,
 				      const char *name);
+
+enum nan_datapath_state;
+struct nan_datapath_inf_create_rsp;
+
+/**
+ * hdd_ndi_open(): Open NDI interface
+ * @iface_name: NDI interface name
+ * @is_add_virtual_iface: is this interface getting created through add virtual
+ * interface
+ *
+ * Return: 0 on success, error code on failure
+ */
+int hdd_ndi_open(const char *iface_name, bool is_add_virtual_iface);
+
+/**
+ * hdd_ndi_delete(): Delete NDI interface
+ * @vdev_id: vdev id of the NDI interface
+ * @iface_name: NDI interface name
+ * @transaction_id: Transaction id
+ *
+ * Return: 0 on success, error code on failure
+ */
+int hdd_ndi_delete(uint8_t vdev_id, const char *iface_name,
+		   uint16_t transaction_id);
+
+/**
+ * hdd_ndi_close(): Close NDI interface
+ * @vdev_id: vdev id of the NDI interface
+ *
+ * Return: None
+ */
+void hdd_ndi_close(uint8_t vdev_id);
+
+/**
+ * hdd_ndi_drv_ndi_create_rsp_handler(): ndi create response handler
+ * @vdev_id: vdev id of the NDI interface
+ * @ndi_rsp: NDI create response
+ *
+ * Return: None
+ */
+void hdd_ndi_drv_ndi_create_rsp_handler(uint8_t vdev_id,
+					struct nan_datapath_inf_create_rsp *ndi_rsp);
+
+/**
+ * hdd_ndi_drv_ndi_create_rsp_handler(): ndi delete response handler
+ * @vdev_id: vdev id of the NDI interface
+ *
+ * Return: None
+ */
+void hdd_ndi_drv_ndi_delete_rsp_handler(uint8_t vdev_id);
+
+/**
+ * hdd_ndp_new_peer_handler(): NDP new peer indication handler
+ * @vdev_id: vdev id
+ * @sta_id: STA ID
+ * @peer_mac_addr: MAC address of the peer
+ * @first_peer: Indicates if it is first peer
+ *
+ * Return: 0 on success, error code on failure
+ */
+int hdd_ndp_new_peer_handler(uint8_t vdev_id, uint16_t sta_id,
+			     struct qdf_mac_addr *peer_mac_addr,
+			     bool first_peer);
+
+/**
+ * hdd_ndp_peer_departed_handler(): Handle NDP peer departed indication
+ * @vdev_id: vdev id
+ * @sta_id: STA ID
+ * @peer_mac_addr: MAC address of the peer
+ * @first_peer: Indicates if it is last peer
+ *
+ * Return: None
+ */
+void hdd_ndp_peer_departed_handler(uint8_t vdev_id, uint16_t sta_id,
+				   struct qdf_mac_addr *peer_mac_addr,
+				   bool last_peer);
 
 #else
 #define WLAN_HDD_IS_NDI(adapter)	(false)
@@ -126,23 +202,59 @@ static inline void hdd_cleanup_ndi(struct hdd_context *hdd_ctx,
 {
 }
 
-static inline int hdd_ndi_start(char *iface_name, uint16_t transaction_id)
+static inline int hdd_ndi_start(const char *iface_name, uint16_t transaction_id)
 {
 	return 0;
 }
-#endif /* WLAN_FEATURE_NAN */
+
+static inline struct wireless_dev *hdd_add_ndi_intf(struct hdd_context *hdd_ctx,
+						    const char *name)
+{
+	return NULL;
+}
 
 enum nan_datapath_state;
 struct nan_datapath_inf_create_rsp;
 
-int hdd_ndi_open(const char *iface_name, bool is_add_virtual_iface);
-int hdd_ndi_delete(uint8_t vdev_id, char *iface_name, uint16_t transaction_id);
-void hdd_ndi_close(uint8_t vdev_id);
-void hdd_ndi_drv_ndi_create_rsp_handler(uint8_t vdev_id,
-			       struct nan_datapath_inf_create_rsp *ndi_rsp);
-void hdd_ndi_drv_ndi_delete_rsp_handler(uint8_t vdev_id);
-int hdd_ndp_new_peer_handler(uint8_t vdev_id, uint16_t sta_id,
-			struct qdf_mac_addr *peer_mac_addr, bool first_peer);
-void hdd_ndp_peer_departed_handler(uint8_t vdev_id, uint16_t sta_id,
-			struct qdf_mac_addr *peer_mac_addr, bool last_peer);
+static inline int
+hdd_ndi_open(const char *iface_name, bool is_add_virtual_iface)
+{
+	return 0;
+}
+
+static inline int
+hdd_ndi_delete(uint8_t vdev_id, const char *iface_name, uint16_t transaction_id)
+{
+	return 0;
+}
+
+static inline void hdd_ndi_close(uint8_t vdev_id)
+{
+}
+
+static inline void
+hdd_ndi_drv_ndi_create_rsp_handler(uint8_t vdev_id,
+				   struct nan_datapath_inf_create_rsp *ndi_rsp)
+{
+}
+
+static inline void hdd_ndi_drv_ndi_delete_rsp_handler(uint8_t vdev_id)
+{
+}
+
+static inline int hdd_ndp_new_peer_handler(uint8_t vdev_id, uint16_t sta_id,
+					   struct qdf_mac_addr *peer_mac_addr,
+					   bool first_peer)
+{
+	return 0;
+}
+
+static inline void hdd_ndp_peer_departed_handler(uint8_t vdev_id,
+						 uint16_t sta_id,
+						 struct qdf_mac_addr *peer_mac_addr,
+						 bool last_peer)
+{
+}
+#endif /* WLAN_FEATURE_NAN */
+
 #endif /* __WLAN_HDD_NAN_DATAPATH_H */
