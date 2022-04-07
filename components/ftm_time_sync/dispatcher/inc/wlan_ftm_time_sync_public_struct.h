@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -41,12 +42,12 @@ enum ftm_time_sync_mode {
 
 /**
  * enum ftm_time_sync_role - ftm time sync role
- * @FTM_TIMESYNC_SLAVE_ROLE: Slave/STA role
- * @FTM_TIMESYNC_MASTER_ROLE: Master/SAP role
+ * @FTM_TIMESYNC_TARGET_ROLE: Target/STA role
+ * @FTM_TIMESYNC_INITIATOR_ROLE: Initiator/SAP role
  */
 enum ftm_time_sync_role {
-	FTM_TIMESYNC_SLAVE_ROLE,
-	FTM_TIMESYNC_MASTER_ROLE,
+	FTM_TIMESYNC_TARGET_ROLE,
+	FTM_TIMESYNC_INITIATOR_ROLE,
 };
 
 /**
@@ -87,13 +88,13 @@ struct wlan_ftm_time_sync_tx_ops {
  * struct wlan_ftm_time_sync_rx_ops - structure of rx operation function
  *				      pointers for ftm time_sync component
  * @ftm_time_sync_register_start_stop: register ftm time_sync start stop event
- * @ftm_time_sync_regiser_master_slave_offset: register master slave qtime
- *					       offset event
+ * @ftm_time_sync_regiser_initiator_target_offset: register initiator target
+ *						   qtime offset event
  */
 struct wlan_ftm_time_sync_rx_ops {
 	QDF_STATUS (*ftm_time_sync_register_start_stop)
 					(struct wlan_objmgr_psoc *psoc);
-	QDF_STATUS (*ftm_time_sync_regiser_master_slave_offset)
+	QDF_STATUS (*ftm_time_sync_regiser_initiator_target_offset)
 					(struct wlan_objmgr_psoc *psoc);
 };
 #endif /*_WLAN_TIME_SYNC_FTM_PUBLIC_STRUCT_H_ */

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -136,7 +137,7 @@ void ucfg_ftm_time_sync_update_sta_connect_state(
 	}
 
 	role = ftm_time_sync_get_role(psoc);
-	if (role == FTM_TIMESYNC_SLAVE_ROLE) {
+	if (role == FTM_TIMESYNC_TARGET_ROLE) {
 		if (sta_state == FTM_TIME_SYNC_STA_CONNECTED)
 			ftm_time_sync_send_trigger(vdev);
 		else
@@ -162,7 +163,7 @@ void ucfg_ftm_time_sync_update_bss_state(struct wlan_objmgr_vdev *vdev,
 		return;
 
 	role = ftm_time_sync_get_role(psoc);
-	if (role == FTM_TIMESYNC_MASTER_ROLE) {
+	if (role == FTM_TIMESYNC_INITIATOR_ROLE) {
 		if (ap_state == FTM_TIME_SYNC_BSS_STARTED)
 			ftm_time_sync_send_trigger(vdev);
 		else
