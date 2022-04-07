@@ -748,12 +748,10 @@ static void csr_roam_sort_channel_for_early_stop(struct mac_context *mac_ctx,
 			}
 		}
 	}
-	QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_DEBUG,
-		"greedy=%d, non-greedy=%d, tot=%d",
-		num_greedy_chan, num_non_greedy_chan, num_channel);
+	sme_debug("greedy=%d, non-greedy=%d, tot=%d", num_greedy_chan,
+		  num_non_greedy_chan, num_channel);
 	if ((num_greedy_chan + num_non_greedy_chan) != num_channel) {
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			"incorrect sorting of channels");
+		sme_err("incorrect sorting of channels");
 		goto scan_list_sort_error;
 	}
 	/* Copy the Greedy channels first */
@@ -1001,10 +999,8 @@ QDF_STATUS csr_update_channel_list(struct mac_context *mac)
 			if ((roam_policy->dfs_mode ==
 				STA_ROAM_POLICY_DFS_DISABLED) &&
 				(channel_state == CHANNEL_STATE_DFS)) {
-				QDF_TRACE(QDF_MODULE_ID_SME,
-					QDF_TRACE_LEVEL_DEBUG,
-					FL("skip dfs channel frequency %d"),
-					channel_freq);
+				sme_debug("skip dfs channel frequency %d",
+					  channel_freq);
 				continue;
 			}
 			if (roam_policy->skip_unsafe_channels &&
@@ -1026,10 +1022,8 @@ QDF_STATUS csr_update_channel_list(struct mac_context *mac)
 					roam_policy->sap_operating_band ==
 							BAND_5G);
 				if (is_unsafe_chan && is_same_band) {
-					QDF_TRACE(QDF_MODULE_ID_SME,
-					QDF_TRACE_LEVEL_DEBUG,
-					FL("ignoring unsafe channel freq %d"),
-					channel_freq);
+					sme_debug("ignoring unsafe channel freq %d",
+						  channel_freq);
 					continue;
 				}
 			}
@@ -1045,18 +1039,14 @@ QDF_STATUS csr_update_channel_list(struct mac_context *mac)
 					pScan->base_channels.channel_freq_list[i]) {
 					pChanList->chanParam[num_channel].pwr =
 						MAX_PWR_FCC_CHAN_12;
-					QDF_TRACE(QDF_MODULE_ID_SME,
-						  QDF_TRACE_LEVEL_DEBUG,
-						  "txpow for channel 12 is %d",
+					sme_debug("txpow for channel 12 is %d",
 						  MAX_PWR_FCC_CHAN_12);
 				}
 				if (2472 ==
 					pScan->base_channels.channel_freq_list[i]) {
 					pChanList->chanParam[num_channel].pwr =
 						MAX_PWR_FCC_CHAN_13;
-					QDF_TRACE(QDF_MODULE_ID_SME,
-						  QDF_TRACE_LEVEL_DEBUG,
-						  "txpow for channel 13 is %d",
+					sme_debug("txpow for channel 13 is %d",
 						  MAX_PWR_FCC_CHAN_13);
 				}
 			}
@@ -1086,8 +1076,7 @@ QDF_STATUS csr_update_channel_list(struct mac_context *mac)
 		csr_roam_sort_channel_for_early_stop(mac, pChanList,
 						     num_channel);
 	else
-		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
-			FL("Early Stop Scan Feature not supported"));
+		sme_debug("Early Stop Scan Feature not supported");
 
 	if ((mac->roam.configParam.uCfgDot11Mode ==
 				eCSR_CFG_DOT11_MODE_AUTO) ||
@@ -1257,8 +1246,7 @@ void csr_set_global_cfgs(struct mac_context *mac)
  */
 static void csr_packetdump_timer_handler(void *pv)
 {
-	QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
-			"%s Invoking packetdump deregistration API", __func__);
+	sme_debug("Invoking packetdump deregistration API");
 	wlan_deregister_txrx_packetdump(OL_TXRX_PDEV_ID);
 }
 
@@ -3139,8 +3127,7 @@ void csr_roaming_state_msg_processor(struct mac_context *mac, void *msg_buf)
 	case eWNI_SME_DISASSOC_RSP:
 		/* or the Disassociate response message... */
 		if (CSR_IS_ROAM_SUBSTATE_DISASSOC_REQ(mac, pSmeRsp->vdev_id)) {
-			QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
-				 "eWNI_SME_DISASSOC_RSP subState = %s",
+			sme_debug("eWNI_SME_DISASSOC_RSP subState = %s",
 				  mac_trace_getcsr_roam_sub_state(
 				  mac->roam.curSubState[pSmeRsp->vdev_id]));
 			csr_roam_roaming_state_disassoc_rsp_processor(mac,
