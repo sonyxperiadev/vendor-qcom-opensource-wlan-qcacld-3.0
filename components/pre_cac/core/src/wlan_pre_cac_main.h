@@ -27,6 +27,7 @@
 
 #include <qdf_types.h>
 #include "wlan_objmgr_vdev_obj.h"
+#include "wlan_pre_cac_public_struct.h"
 
 #define pre_cac_log(level, args...) \
 	QDF_TRACE(QDF_MODULE_ID_WLAN_PRE_CAC, level, ## args)
@@ -171,4 +172,13 @@ QDF_STATUS pre_cac_init(void);
  * Return: None
  */
 void pre_cac_deinit(void);
+
+/**
+ * pre_cac_set_osif_cb(): set pre cac osif callbacks
+ * @osif_pre_cac_ops: pre cac ops
+ *
+ *
+ * Return: None
+ */
+void pre_cac_set_osif_cb(struct pre_cac_ops *osif_pre_cac_ops);
 #endif /* end of _WLAN_PRE_CAC_MAIN_H_ */

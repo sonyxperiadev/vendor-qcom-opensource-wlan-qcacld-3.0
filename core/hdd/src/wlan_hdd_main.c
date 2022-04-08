@@ -223,6 +223,8 @@
 #include "osif_twt_util.h"
 #include "wlan_twt_ucfg_ext_api.h"
 #include "wlan_hdd_mcc_quota.h"
+#include "osif_pre_cac.h"
+#include "wlan_hdd_pre_cac.h"
 
 #ifdef MULTI_CLIENT_LL_SUPPORT
 #define WLAM_WLM_HOST_DRIVER_PORT_ID 0xFFFFFF
@@ -17864,10 +17866,16 @@ static QDF_STATUS hdd_component_cb_init(void)
 
 	status = osif_twt_register_cb();
 	if (QDF_IS_STATUS_ERROR(status))
-		goto cm_unregister_cb;
+		goto hdd_vdev_mgr_unregister_cb;
+
+	status = hdd_pre_cac_register_cb();
+	if (QDF_IS_STATUS_ERROR(status))
+		goto hdd_vdev_mgr_unregister_cb;
 
 	return QDF_STATUS_SUCCESS;
 
+hdd_vdev_mgr_unregister_cb:
+	hdd_vdev_mgr_unregister_cb();
 cm_unregister_cb:
 	hdd_cm_unregister_cb();
 	return status;
@@ -17883,9 +17891,9 @@ cm_unregister_cb:
  */
 static void hdd_component_cb_deinit(void)
 {
-	hdd_cm_unregister_cb();
-
+	hdd_pre_cac_unregister_cb();
 	hdd_vdev_mgr_unregister_cb();
+	hdd_cm_unregister_cb();
 }
 
 /**

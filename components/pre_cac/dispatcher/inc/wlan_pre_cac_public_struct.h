@@ -14,24 +14,13 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#ifndef _WLAN_PRE_CAC_PUBLIC_STRUCT_H_
+#define _WLAN_PRE_CAC_PUBLIC_STRUCT_H_
+
 /**
- * DOC: Public API implementation of pre cac called by north bound iface.
+ * pre_cac_ops: pre cac osif callbacks
  */
+struct pre_cac_ops {
+};
 
-#include "../../core/src/wlan_pre_cac_main.h"
-#include "wlan_pre_cac_ucfg_api.h"
-
-void ucfg_pre_cac_set_osif_cb(struct pre_cac_ops *osif_pre_cac_ops)
-{
-	pre_cac_set_osif_cb(osif_pre_cac_ops);
-}
-
-QDF_STATUS ucfg_pre_cac_init(void)
-{
-	return pre_cac_init();
-}
-
-void ucfg_pre_cac_deinit(void)
-{
-	pre_cac_deinit();
-}
+#endif /* _WLAN_PRE_CAC_PUBLIC_STRUCT_H_ */

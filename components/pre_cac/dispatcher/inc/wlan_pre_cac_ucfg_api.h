@@ -24,6 +24,7 @@
 
 #include <qdf_status.h>
 #include <qdf_types.h>
+#include "wlan_pre_cac_public_struct.h"
 
 #ifdef PRE_CAC_SUPPORT
 /**
@@ -45,6 +46,14 @@ QDF_STATUS ucfg_pre_cac_init(void);
  * Return: None
  */
 void ucfg_pre_cac_deinit(void);
+
+/*
+ * ucfg_pre_cac_set_osif_cb() - set pre cac osif callbacks.
+ * @pre_cac_ops: pre cac ops
+ *
+ * Return: None
+ */
+void ucfg_pre_cac_set_osif_cb(struct pre_cac_ops *pre_cac_ops);
 #else
 static inline
 QDF_STATUS ucfg_pre_cac_init(void)
@@ -54,6 +63,11 @@ QDF_STATUS ucfg_pre_cac_init(void)
 
 static inline
 void ucfg_pre_cac_deinit(void)
+{
+}
+
+static inline void
+ucfg_pre_cac_set_osif_cb(struct pre_cac_ops *pre_cac_ops)
 {
 }
 #endif /* PRE_CAC_SUPPORT */

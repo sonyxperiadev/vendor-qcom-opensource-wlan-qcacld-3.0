@@ -14,24 +14,29 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/**
- * DOC: Public API implementation of pre cac called by north bound iface.
- */
-
-#include "../../core/src/wlan_pre_cac_main.h"
+#include <qdf_types.h>
+#include "osif_pre_cac.h"
+#include "wlan_pre_cac_public_struct.h"
 #include "wlan_pre_cac_ucfg_api.h"
 
-void ucfg_pre_cac_set_osif_cb(struct pre_cac_ops *osif_pre_cac_ops)
+static struct osif_pre_cac_legacy_ops *osif_pre_cac_legacy_ops;
+
+void osif_pre_cac_set_legacy_cb(struct osif_pre_cac_legacy_ops *osif_legacy_ops)
 {
-	pre_cac_set_osif_cb(osif_pre_cac_ops);
+	osif_pre_cac_legacy_ops = osif_legacy_ops;
 }
 
-QDF_STATUS ucfg_pre_cac_init(void)
+void osif_pre_cac_reset_legacy_cb(void)
 {
-	return pre_cac_init();
+	osif_pre_cac_legacy_ops = NULL;
 }
 
-void ucfg_pre_cac_deinit(void)
+static struct pre_cac_ops pre_cac_ops = {
+};
+
+QDF_STATUS osif_pre_cac_register_cb(void)
 {
-	pre_cac_deinit();
+	ucfg_pre_cac_set_osif_cb(&pre_cac_ops);
+
+	return QDF_STATUS_SUCCESS;
 }

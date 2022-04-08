@@ -87,6 +87,24 @@ void hdd_send_conditional_chan_switch_status(struct hdd_context *hdd_ctx,
  * Return: None
  */
 void hdd_close_pre_cac_adapter(struct hdd_context *hdd_ctx);
+
+/**
+ * hdd_pre_cac_register_cb() - Sets legacy callbacks to osif
+ *
+ * API to set legacy callbacks to osif
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS hdd_pre_cac_register_cb(void);
+
+/**
+ * void hdd_pre_cac_unregister_cb(void)() - Resets legacy callbacks to osif
+ *
+ * API to reset legacy callbacks to osif
+ *
+ * Return: QDF_STATUS
+ */
+void hdd_pre_cac_unregister_cb(void);
 #else
 static inline void wlan_hdd_sap_pre_cac_success(void *data)
 {
@@ -116,6 +134,15 @@ hdd_send_conditional_chan_switch_status(struct hdd_context *hdd_ctx,
 
 static inline void
 hdd_close_pre_cac_adapter(struct hdd_context *hdd_ctx)
+{
+}
+
+static inline QDF_STATUS hdd_pre_cac_register_cb(void)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline void hdd_pre_cac_unregister_cb(void)
 {
 }
 #endif /* PRE_CAC_SUPPORT */

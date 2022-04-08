@@ -23,6 +23,8 @@
 #include "wlan_pre_cac_main.h"
 #include "wlan_objmgr_global_obj.h"
 
+struct pre_cac_ops *glbl_pre_cac_ops;
+
 struct pre_cac_vdev_priv *
 pre_cac_vdev_get_priv_fl(struct wlan_objmgr_vdev *vdev,
 			 const char *func, uint32_t line)
@@ -51,6 +53,11 @@ pre_cac_psoc_get_priv_fl(struct wlan_objmgr_psoc *psoc,
 		pre_cac_nofl_err("%s:%u: psoc_priv is NULL", func, line);
 
 	return psoc_priv;
+}
+
+void pre_cac_set_osif_cb(struct pre_cac_ops *osif_pre_cac_ops)
+{
+	glbl_pre_cac_ops = osif_pre_cac_ops;
 }
 
 QDF_STATUS

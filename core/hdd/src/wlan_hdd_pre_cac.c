@@ -18,6 +18,8 @@
 #include "osif_vdev_sync.h"
 #include "wlan_hdd_hostapd.h"
 #include "wlan_hdd_pre_cac.h"
+#include <qdf_types.h>
+#include "osif_pre_cac.h"
 
 void hdd_send_conditional_chan_switch_status(struct hdd_context *hdd_ctx,
 					     struct wireless_dev *wdev,
@@ -752,4 +754,19 @@ destroy_sync:
 		osif_vdev_sync_destroy(vdev_sync);
 
 	return errno;
+}
+
+struct osif_pre_cac_legacy_ops pre_cac_legacy_ops = {
+};
+
+QDF_STATUS hdd_pre_cac_register_cb(void)
+{
+	osif_pre_cac_set_legacy_cb(&pre_cac_legacy_ops);
+
+	return osif_pre_cac_register_cb();
+}
+
+void hdd_pre_cac_unregister_cb(void)
+{
+	osif_pre_cac_reset_legacy_cb();
 }

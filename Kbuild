@@ -1671,12 +1671,16 @@ $(call add-wlan-objs,ftm_time_sync,$(FTM_TIME_SYNC_OBJS))
 
 WLAN_PRE_CAC_DIR := components/pre_cac
 WLAN_PRE_CAC_INC := -I$(WLAN_ROOT)/$(WLAN_PRE_CAC_DIR)/dispatcher/inc
+PRE_CAC_OSIF_DIR := os_if/pre_cac
+WLAN_PRE_CAC_INC := -I$(WLAN_ROOT)/$(WLAN_PRE_CAC_DIR)/dispatcher/inc \
+		  -I$(WLAN_ROOT)/$(PRE_CAC_OSIF_DIR)/inc
 
 ifeq ($(CONFIG_FEATURE_WLAN_PRE_CAC), y)
 WLAN_PRE_CAC_OBJS := $(HDD_SRC_DIR)/wlan_hdd_pre_cac.o \
 		$(WLAN_PRE_CAC_DIR)/core/src/wlan_pre_cac_main.o \
 		$(WLAN_PRE_CAC_DIR)/dispatcher/src/wlan_pre_cac_ucfg_api.o \
-		$(WLAN_PRE_CAC_DIR)/dispatcher/src/wlan_pre_cac_api.o
+		$(WLAN_PRE_CAC_DIR)/dispatcher/src/wlan_pre_cac_api.o \
+		$(PRE_CAC_OSIF_DIR)/src/osif_pre_cac.o
 endif
 
 $(call add-wlan-objs,wlan_pre_cac,$(WLAN_PRE_CAC_OBJS))
