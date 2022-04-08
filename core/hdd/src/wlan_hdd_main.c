@@ -8050,6 +8050,7 @@ static inline void hdd_dump_func_call_map(void)
 }
 #endif
 
+#ifdef PRE_CAC_SUPPORT
 static void hdd_close_pre_cac_adapter(struct hdd_context *hdd_ctx)
 {
 	struct hdd_adapter *pre_cac_adapter;
@@ -8075,6 +8076,12 @@ static void hdd_close_pre_cac_adapter(struct hdd_context *hdd_ctx)
 	osif_vdev_sync_trans_stop(vdev_sync);
 	osif_vdev_sync_destroy(vdev_sync);
 }
+#else
+static inline void
+hdd_close_pre_cac_adapter(struct hdd_context *hdd_ctx)
+{
+}
+#endif
 
 QDF_STATUS hdd_stop_adapter_ext(struct hdd_context *hdd_ctx,
 				struct hdd_adapter *adapter)
@@ -18825,14 +18832,7 @@ void hdd_set_conparam(int32_t con_param)
 	curr_con_mode = con_param;
 }
 
-/**
- * hdd_clean_up_pre_cac_interface() - Clean up the pre cac interface
- * @hdd_ctx: HDD context
- *
- * Cleans up the pre cac interface, if it exists
- *
- * Return: None
- */
+#ifdef PRE_CAC_SUPPORT
 void hdd_clean_up_pre_cac_interface(struct hdd_context *hdd_ctx)
 {
 	uint8_t vdev_id;
@@ -18857,6 +18857,7 @@ void hdd_clean_up_pre_cac_interface(struct hdd_context *hdd_ctx)
 	qdf_sched_work(0, &hdd_ctx->sap_pre_cac_work);
 
 }
+#endif
 
 /**
  * hdd_svc_fw_crashed_ind() - API to send FW CRASHED IND to Userspace

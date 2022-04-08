@@ -1079,6 +1079,7 @@ static QDF_STATUS hdd_send_radar_event(struct hdd_context *hdd_context,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef PRE_CAC_SUPPORT
 /**
  * hdd_send_conditional_chan_switch_status() - Send conditional channel switch
  * status
@@ -1264,6 +1265,7 @@ static void wlan_hdd_sap_pre_cac_success(void *data)
 
 	osif_vdev_sync_trans_stop(vdev_sync);
 }
+#endif
 
 #ifdef FEATURE_WLAN_AP_AP_ACS_OPTIMIZE
 /**
@@ -2292,6 +2294,11 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 		hdd_son_deliver_cac_status_event(adapter, true);
 		break;
 	}
+/*
+ * The code under this macro will be removed
+ * once pre_cac componentization is done
+ */
+#ifdef PRE_CAC_SUPPORT
 	case eSAP_DFS_RADAR_DETECT_DURING_PRE_CAC:
 		hdd_debug("notification for radar detect during pre cac:%d",
 			adapter->vdev_id);
@@ -2319,6 +2326,7 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 				(void *)adapter);
 		qdf_sched_work(0, &hdd_ctx->sap_pre_cac_work);
 		break;
+#endif
 	case eSAP_DFS_NO_AVAILABLE_CHANNEL:
 		wlan_hdd_send_svc_nlink_msg
 			(hdd_ctx->radio_index,

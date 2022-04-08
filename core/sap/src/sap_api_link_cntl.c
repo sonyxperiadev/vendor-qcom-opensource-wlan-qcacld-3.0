@@ -990,6 +990,31 @@ static bool sap_is_csa_restart_state(struct wlan_objmgr_psoc *psoc,
 	return QDF_IS_STATUS_SUCCESS(status);
 }
 
+#ifdef PRE_CAC_SUPPORT
+static void wlan_sap_pre_cac_radar_ind(struct sap_context *sap_ctx,
+				       struct mac_context *mac_ctx)
+{
+	qdf_mc_timer_t *dfs_timer = &mac_ctx->sap.SapDfsInfo.sap_dfs_cac_timer;
+
+	sap_debug("sapdfs: Radar detect on pre cac:%d", sap_ctx->sessionId);
+	if (!sap_ctx->dfs_cac_offload) {
+		qdf_mc_timer_stop(dfs_timer);
+		qdf_mc_timer_destroy(dfs_timer);
+	}
+
+	mac_ctx->sap.SapDfsInfo.is_dfs_cac_timer_running = false;
+	sap_signal_hdd_event(sap_ctx, NULL,
+			     eSAP_DFS_RADAR_DETECT_DURING_PRE_CAC,
+			     (void *)eSAP_STATUS_SUCCESS);
+}
+#else
+static inline void
+wlan_sap_pre_cac_radar_ind(struct sap_context *sap_ctx,
+			   struct mac_context *mac_ctx)
+{
+}
+#endif
+
 QDF_STATUS wlansap_roam_callback(void *ctx,
 				 struct csr_roam_info *csr_roam_info,
 				 eRoamCmdStatus roam_status,
@@ -1095,19 +1120,7 @@ QDF_STATUS wlansap_roam_callback(void *ctx,
 		}
 
 		if (sap_ctx->is_pre_cac_on) {
-			sap_debug("sapdfs: Radar detect on pre cac:%d",
-				  sap_ctx->sessionId);
-			if (!sap_ctx->dfs_cac_offload) {
-				qdf_mc_timer_stop(
-				&mac_ctx->sap.SapDfsInfo.sap_dfs_cac_timer);
-				qdf_mc_timer_destroy(
-				&mac_ctx->sap.SapDfsInfo.sap_dfs_cac_timer);
-			}
-			mac_ctx->sap.SapDfsInfo.is_dfs_cac_timer_running =
-				false;
-			sap_signal_hdd_event(sap_ctx, NULL,
-					eSAP_DFS_RADAR_DETECT_DURING_PRE_CAC,
-					(void *) eSAP_STATUS_SUCCESS);
+			wlan_sap_pre_cac_radar_ind(sap_ctx, mac_ctx);
 			break;
 		}
 

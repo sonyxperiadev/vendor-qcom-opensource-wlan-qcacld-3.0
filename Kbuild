@@ -996,6 +996,9 @@ cppflags-$(CONFIG_QDF_TEST) += -DWLAN_TRACKER_TEST
 cppflags-$(CONFIG_QDF_TEST) += -DWLAN_TYPES_TEST
 cppflags-$(CONFIG_WLAN_HANG_EVENT) += -DWLAN_HANG_EVENT
 
+#Flag to enable pre_cac
+cppflags-$(CONFIG_FEATURE_WLAN_PRE_CAC)  += -DPRE_CAC_SUPPORT
+
 ############ WBUFF ############
 WBUFF_OS_DIR :=	wbuff
 WBUFF_OS_INC_DIR := $(WBUFF_OS_DIR)/inc

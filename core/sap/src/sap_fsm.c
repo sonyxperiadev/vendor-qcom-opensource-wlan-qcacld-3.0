@@ -2635,6 +2635,7 @@ static QDF_STATUS sap_cac_start_notify(mac_handle_t mac_handle)
 	return qdf_status;
 }
 
+#ifdef PRE_CAC_SUPPORT
 /**
  * wlansap_update_pre_cac_end() - Update pre cac end to upper layer
  * @sap_context: SAP context
@@ -2666,17 +2667,8 @@ static QDF_STATUS wlansap_update_pre_cac_end(struct sap_context *sap_context,
 	return QDF_STATUS_SUCCESS;
 }
 
-/**
- * sap_cac_end_notify() - Notify CAC end to HDD
- * @mac_handle: Opaque handle to the global MAC context
- *
- * Function will be called to notify eSAP_DFS_CAC_END event to HDD
- *
- * Return: QDF_STATUS_SUCCESS if the notification was sent, otherwise
- *         an appropriate QDF_STATUS error
- */
-static QDF_STATUS sap_cac_end_notify(mac_handle_t mac_handle,
-				     struct csr_roam_info *roamInfo)
+QDF_STATUS sap_cac_end_notify(mac_handle_t mac_handle,
+			      struct csr_roam_info *roamInfo)
 {
 	uint8_t intf;
 	struct mac_context *mac = MAC_CONTEXT(mac_handle);
@@ -2770,6 +2762,7 @@ static QDF_STATUS sap_cac_end_notify(mac_handle_t mac_handle,
 	mac->sap.SapDfsInfo.cac_state = eSAP_DFS_SKIP_CAC;
 	return qdf_status;
 }
+#endif
 
 /**
  * sap_validate_dfs_nol() - Validate SAP channel with NOL list

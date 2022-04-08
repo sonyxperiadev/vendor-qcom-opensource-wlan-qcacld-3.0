@@ -855,7 +855,7 @@ QDF_STATUS wlan_sap_update_next_channel(struct sap_context *sap_ctx,
 					uint8_t channel,
 					enum phy_ch_width chan_bw);
 
-#ifdef FEATURE_SAP_COND_CHAN_SWITCH
+#if defined(FEATURE_SAP_COND_CHAN_SWITCH) && defined(PRE_CAC_SUPPORT)
 /**
  * wlan_sap_set_pre_cac_status() - Set the pre cac status
  * @sap_ctx: SAP context
@@ -895,6 +895,7 @@ wlan_sap_set_chan_freq_before_pre_cac(struct sap_context *sap_ctx,
 }
 #endif
 
+#ifdef PRE_CAC_SUPPORT
 /**
  * wlan_sap_set_pre_cac_complete_status() - Sets pre cac complete status
  * @sap_ctx: SAP context
@@ -917,6 +918,26 @@ bool wlan_sap_is_pre_cac_context(struct sap_context *context);
 
 bool wlan_sap_is_pre_cac_active(mac_handle_t handle);
 QDF_STATUS wlan_sap_get_pre_cac_vdev_id(mac_handle_t handle, uint8_t *vdev_id);
+#else
+static inline QDF_STATUS
+wlan_sap_set_pre_cac_complete_status(struct sap_context *sap_ctx,
+				     bool status)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline bool
+wlan_sap_is_pre_cac_context(struct sap_context *context)
+{
+	return false;
+}
+
+static inline bool wlan_sap_is_pre_cac_active(mac_handle_t handle)
+{
+	return false;
+}
+#endif
+
 #ifdef FEATURE_WLAN_MCC_TO_SCC_SWITCH
 /**
  * wlansap_check_cc_intf() - Get interfering concurrent channel
@@ -1809,6 +1830,28 @@ static inline void sap_acs_set_puncture_support(struct sap_context *sap_ctx,
 {
 }
 #endif /* WLAN_FEATURE_11BE */
+
+#ifdef PRE_CAC_SUPPORT
+/**
+ * sap_cac_end_notify() - Notify CAC end to HDD
+ * @mac_handle: Opaque handle to the global MAC context
+ *
+ * Function will be called to notify eSAP_DFS_CAC_END event to HDD
+ *
+ * Return: QDF_STATUS_SUCCESS if the notification was sent, otherwise
+ *         an appropriate QDF_STATUS error
+ */
+QDF_STATUS sap_cac_end_notify(mac_handle_t mac_handle,
+			      struct csr_roam_info *roamInfo);
+#else
+static inline QDF_STATUS
+sap_cac_end_notify(mac_handle_t mac_handle,
+		   struct csr_roam_info *roamInfo)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif /* PRE_CAC_SUPPORT */
+
 #ifdef __cplusplus
 }
 #endif
