@@ -654,6 +654,24 @@ static bool wlan_hdd_validate_pcl(struct hdd_context *hdd_ctx,
 			return false;
 		}
 		break;
+	case PM_SCC_ON_5_CH_5G:
+		if ((!WLAN_REG_IS_5GHZ_CH_FREQ(pcl_freqs[0]) &&
+		     !WLAN_REG_IS_6GHZ_CHAN_FREQ(pcl_freqs[0])) ||
+			(pcl_freqs[0] != first_connection_chnl &&
+			 pcl_freqs[0] != second_connection_chnl)) {
+			snprintf(reason, reason_length,
+				 "No 5Ghz scc chnl");
+			return false;
+		}
+		if (!WLAN_REG_IS_5GHZ_CH_FREQ(
+				pcl_freqs[pcl_len - 1]) &&
+		    !WLAN_REG_IS_6GHZ_CHAN_FREQ(
+				pcl_freqs[pcl_len - 1])) {
+			snprintf(reason, reason_length,
+				 "No 5Ghz chnl");
+			return false;
+		}
+		break;
 	case PM_SCC_ON_5_SCC_ON_24_24G:
 		if ((!WLAN_REG_IS_5GHZ_CH_FREQ(pcl_freqs[0]) &&
 		     !WLAN_REG_IS_6GHZ_CHAN_FREQ(pcl_freqs[0])) ||

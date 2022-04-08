@@ -302,6 +302,7 @@ enum policy_mgr_mac_use {
  * @PM_SCC_CH_5G: SCC channel & 5 Ghz channels
  * @PM_24G_SCC_CH: 2.4 Ghz channels & SCC channel
  * @PM_5G_SCC_CH: 5 Ghz channels & SCC channel
+ * @PM_SCC_ON_5_CH_5G: 5 Ghz SCC channel & 5 Ghz channels
  * @PM_SCC_ON_5_SCC_ON_24_24G: SCC channel on 5 Ghz, SCC
  *	channel on 2.4 Ghz & 2.4 Ghz channels
  * @PM_SCC_ON_5_SCC_ON_24_5G: SCC channel on 5 Ghz, SCC channel
@@ -343,6 +344,7 @@ enum policy_mgr_pcl_type {
 	PM_SCC_CH_5G,
 	PM_24G_SCC_CH,
 	PM_5G_SCC_CH,
+	PM_SCC_ON_5_CH_5G,
 	PM_SCC_ON_5_SCC_ON_24_24G,
 	PM_SCC_ON_5_SCC_ON_24_5G,
 	PM_SCC_ON_5_5G_24G,
