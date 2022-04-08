@@ -6163,6 +6163,30 @@ static int wlan_hdd_get_sta_stats(struct wiphy *wiphy,
 	return 0;
 }
 
+static
+struct hdd_adapter *hdd_get_adapter_by_bssid(struct hdd_context *hdd_ctx,
+					     const uint8_t *bssid)
+{
+	struct hdd_adapter *adapter, *next_adapter = NULL;
+	struct hdd_station_ctx *sta_ctx;
+	wlan_net_dev_ref_dbgid dbgid = NET_DEV_HOLD_GET_ADAPTER_BY_BSSID;
+
+	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter,
+					   dbgid) {
+		sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
+		if (qdf_is_macaddr_equal(&sta_ctx->conn_info.bssid,
+					 (struct qdf_mac_addr *)bssid)) {
+			hdd_adapter_dev_put_debug(adapter, dbgid);
+			if (next_adapter)
+				hdd_adapter_dev_put_debug(next_adapter,
+							  dbgid);
+			return adapter;
+		}
+		hdd_adapter_dev_put_debug(adapter, dbgid);
+	}
+	return NULL;
+}
+
 /**
  * __wlan_hdd_cfg80211_get_station() - get station statistics
  * @wiphy: Pointer to wiphy
@@ -6222,6 +6246,11 @@ static int __wlan_hdd_cfg80211_get_station(struct wiphy *wiphy,
 		}
 		return wlan_hdd_get_sap_stats(adapter, sinfo);
 	} else {
+		adapter = hdd_get_adapter_by_bssid(hdd_ctx, mac);
+		if (!adapter) {
+			adapter = WLAN_HDD_GET_PRIV_PTR(dev);
+			hdd_err_rl("the bssid is invalid");
+		}
 		return wlan_hdd_get_sta_stats(wiphy, adapter, mac, sinfo);
 	}
 }

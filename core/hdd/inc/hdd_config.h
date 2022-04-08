@@ -1654,7 +1654,7 @@ struct dhcp_server {
  *
  * @Min: 0
  * @Max: 5000
- * Default: 200
+ * Default: 400
  *
  * This ini is used as duration in milliseconds for which cached station stats
  * are valid. Driver sends the cached information as response, if it gets the
@@ -1671,7 +1671,7 @@ struct dhcp_server {
 			"sta_stats_cache_expiry_time", \
 			0, \
 			5000, \
-			200, \
+			400, \
 			CFG_VALUE_OR_DEFAULT, \
 			"Station stats cache expiry")
 
