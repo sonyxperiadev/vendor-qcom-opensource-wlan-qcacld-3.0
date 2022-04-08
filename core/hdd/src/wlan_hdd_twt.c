@@ -4006,7 +4006,8 @@ hdd_twt_request_session_traffic_stats(struct hdd_adapter *adapter,
 						skb_len);
 	if (!reply_skb) {
 		hdd_err("Get stats - alloc reply_skb failed");
-		return -ENOMEM;
+		errno = -ENOMEM;
+		goto free_event;
 	}
 
 	status = hdd_twt_pack_get_stats_resp_nlmsg(
@@ -4016,14 +4017,23 @@ hdd_twt_request_session_traffic_stats(struct hdd_adapter *adapter,
 						event->num_twt_infra_cp_stats);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		hdd_err("Get stats - Failed to pack nl response");
-		wlan_cfg80211_vendor_free_skb(reply_skb);
-		return qdf_status_to_os_return(status);
+		errno = qdf_status_to_os_return(status);
+		goto free_skb;
 	}
 
 	qdf_mem_free(event->twt_infra_cp_stats);
 	qdf_mem_free(event);
 
 	return wlan_cfg80211_vendor_cmd_reply(reply_skb);
+
+free_skb:
+	wlan_cfg80211_vendor_free_skb(reply_skb);
+
+free_event:
+	qdf_mem_free(event->twt_infra_cp_stats);
+	qdf_mem_free(event);
+
+	return errno;
 }
 
 /**
