@@ -1669,8 +1669,14 @@ $(call add-wlan-objs,ftm_time_sync,$(FTM_TIME_SYNC_OBJS))
 
 ########## WLAN PRE_CAC ##########
 
+WLAN_PRE_CAC_DIR := components/pre_cac
+WLAN_PRE_CAC_INC := -I$(WLAN_ROOT)/$(WLAN_PRE_CAC_DIR)/dispatcher/inc
+
 ifeq ($(CONFIG_FEATURE_WLAN_PRE_CAC), y)
-WLAN_PRE_CAC_OBJS := $(HDD_SRC_DIR)/wlan_hdd_pre_cac.o
+WLAN_PRE_CAC_OBJS := $(HDD_SRC_DIR)/wlan_hdd_pre_cac.o \
+		$(WLAN_PRE_CAC_DIR)/core/src/wlan_pre_cac_main.o \
+		$(WLAN_PRE_CAC_DIR)/dispatcher/src/wlan_pre_cac_ucfg_api.o \
+		$(WLAN_PRE_CAC_DIR)/dispatcher/src/wlan_pre_cac_api.o
 endif
 
 $(call add-wlan-objs,wlan_pre_cac,$(WLAN_PRE_CAC_OBJS))
@@ -3001,6 +3007,7 @@ INCS +=		$(DISA_INC)
 INCS +=		$(ACTION_OUI_INC)
 INCS +=		$(PKT_CAPTURE_INC)
 INCS +=		$(FTM_TIME_SYNC_INC)
+INCS +=		$(WLAN_PRE_CAC_INC)
 
 INCS +=		$(UMAC_DISP_INC)
 INCS +=		$(UMAC_SCAN_INC)
