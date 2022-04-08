@@ -3757,36 +3757,6 @@ static inline int wlan_hdd_get_cpu(void)
 }
 #endif
 
-#ifdef PRE_CAC_SUPPORT
-/**
- * wlan_hdd_sap_pre_cac_failure() - Process the pre cac failure
- * @data: AP adapter
- *
- * Deletes the pre cac adapter
- *
- * Return: None
- */
-void wlan_hdd_sap_pre_cac_failure(void *data);
-/**
- * hdd_clean_up_pre_cac_interface() - Clean up the pre cac interface
- * @hdd_ctx: HDD context
- *
- * Cleans up the pre cac interface, if it exists
- *
- * Return: None
- */
-void hdd_clean_up_pre_cac_interface(struct hdd_context *hdd_ctx);
-#else
-static inline void wlan_hdd_sap_pre_cac_failure(void *data)
-{
-}
-
-static inline void
-hdd_clean_up_pre_cac_interface(struct hdd_context *hdd_ctx)
-{
-}
-#endif /* PRE_CAC_SUPPORT */
-
 void wlan_hdd_txrx_pause_cb(uint8_t vdev_id,
 	enum netif_action_type action, enum netif_reason_type reason);
 

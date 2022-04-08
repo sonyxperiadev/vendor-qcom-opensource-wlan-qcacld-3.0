@@ -164,7 +164,7 @@
 #include "wlan_policy_mgr_ucfg.h"
 #include "qdf_func_tracker.h"
 #include "pld_common.h"
-
+#include "wlan_hdd_pre_cac.h"
 
 #ifdef CNSS_GENL
 #ifdef CONFIG_CNSS_OUT_OF_TREE
@@ -8095,39 +8095,6 @@ static void hdd_dump_func_call_map(void)
 }
 #else
 static inline void hdd_dump_func_call_map(void)
-{
-}
-#endif
-
-#ifdef PRE_CAC_SUPPORT
-static void hdd_close_pre_cac_adapter(struct hdd_context *hdd_ctx)
-{
-	struct hdd_adapter *pre_cac_adapter;
-	struct osif_vdev_sync *vdev_sync;
-	int errno;
-
-	pre_cac_adapter = hdd_get_adapter_by_iface_name(hdd_ctx,
-							SAP_PRE_CAC_IFNAME);
-	if (!pre_cac_adapter)
-		return;
-
-	errno = osif_vdev_sync_trans_start_wait(pre_cac_adapter->dev,
-						&vdev_sync);
-	if (errno)
-		return;
-
-	osif_vdev_sync_unregister(pre_cac_adapter->dev);
-	osif_vdev_sync_wait_for_ops(vdev_sync);
-
-	wlan_hdd_release_intf_addr(hdd_ctx, pre_cac_adapter->mac_addr.bytes);
-	hdd_close_adapter(hdd_ctx, pre_cac_adapter, true);
-
-	osif_vdev_sync_trans_stop(vdev_sync);
-	osif_vdev_sync_destroy(vdev_sync);
-}
-#else
-static inline void
-hdd_close_pre_cac_adapter(struct hdd_context *hdd_ctx)
 {
 }
 #endif
@@ -19167,33 +19134,6 @@ void hdd_set_conparam(int32_t con_param)
 {
 	curr_con_mode = con_param;
 }
-
-#ifdef PRE_CAC_SUPPORT
-void hdd_clean_up_pre_cac_interface(struct hdd_context *hdd_ctx)
-{
-	uint8_t vdev_id;
-	QDF_STATUS status;
-	struct hdd_adapter *precac_adapter;
-
-	status = wlan_sap_get_pre_cac_vdev_id(hdd_ctx->mac_handle, &vdev_id);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		hdd_err("failed to get pre cac vdev id");
-		return;
-	}
-
-	precac_adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
-	if (!precac_adapter) {
-		hdd_err("invalid pre cac adapter");
-		return;
-	}
-
-	qdf_create_work(0, &hdd_ctx->sap_pre_cac_work,
-			wlan_hdd_sap_pre_cac_failure,
-			(void *)precac_adapter);
-	qdf_sched_work(0, &hdd_ctx->sap_pre_cac_work);
-
-}
-#endif
 
 /**
  * hdd_svc_fw_crashed_ind() - API to send FW CRASHED IND to Userspace

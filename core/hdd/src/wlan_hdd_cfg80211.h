@@ -552,25 +552,6 @@ void hdd_send_roam_scan_ch_list_event(struct hdd_context *hdd_ctx,
 
 int wlan_hdd_cfg80211_update_apies(struct hdd_adapter *adapter);
 
-#ifdef PRE_CAC_SUPPORT
-/**
- * wlan_hdd_request_pre_cac() - Start pre CAC in the driver
- * @hdd_ctx: the HDD context to operate against
- * @chan_freq: channel freq option provided by userspace
- *
- * Sets the driver to the required hardware mode and start an adapter for
- * pre CAC which will mimic an AP.
- *
- * Return: Zero on success, non-zero value on error
- */
-int wlan_hdd_request_pre_cac(struct hdd_context *hdd_ctx, uint32_t chan_freq);
-#else
-static inline int
-wlan_hdd_request_pre_cac(struct hdd_context *hdd_ctx, uint32_t chan_freq)
-{
-	return 0;
-}
-#endif
 int wlan_hdd_sap_cfg_dfs_override(struct hdd_adapter *adapter);
 
 int wlan_hdd_enable_dfs_chan_scan(struct hdd_context *hdd_ctx,

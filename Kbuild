@@ -1667,6 +1667,14 @@ endif
 
 $(call add-wlan-objs,ftm_time_sync,$(FTM_TIME_SYNC_OBJS))
 
+########## WLAN PRE_CAC ##########
+
+ifeq ($(CONFIG_FEATURE_WLAN_PRE_CAC), y)
+WLAN_PRE_CAC_OBJS := $(HDD_SRC_DIR)/wlan_hdd_pre_cac.o
+endif
+
+$(call add-wlan-objs,wlan_pre_cac,$(WLAN_PRE_CAC_OBJS))
+
 ########## CLD TARGET_IF #######
 CLD_TARGET_IF_DIR := components/target_if
 

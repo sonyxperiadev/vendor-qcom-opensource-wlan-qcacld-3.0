@@ -54,6 +54,7 @@
 #include "nan_ucfg_api.h"
 #include "wlan_pkt_capture_ucfg_api.h"
 #include "wlan_hdd_object_manager.h"
+#include "wlan_hdd_pre_cac.h"
 
 /* Ms to Time Unit Micro Sec */
 #define MS_TO_TU_MUS(x)   ((x) * 1024)
