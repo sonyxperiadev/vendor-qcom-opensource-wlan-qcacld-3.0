@@ -2817,8 +2817,26 @@ bool policy_mgr_is_dbs_scan_allowed(struct wlan_objmgr_psoc *psoc);
 bool policy_mgr_is_hw_sbs_capable(struct wlan_objmgr_psoc *psoc);
 
 /**
+ * policy_mgr_2_freq_always_on_same_mac() - Function to check whether both the
+ * input frequencies are on same mac in all supported mode/freq range
+ *
+ * @psoc: Pointer to Psoc
+ * @freq_1: Frequency 1 to check
+ * @freq_2: Frequency 2 to check
+ *
+ * This Function check whether both the input frequency exist in the same mac
+ * in all supported mode/freq range
+ *
+ * Return:True if both the frequency exist on the same mac in all supported
+ * mode/freq range.
+ *
+ */
+bool policy_mgr_2_freq_always_on_same_mac(struct wlan_objmgr_psoc *psoc,
+					  qdf_freq_t freq_1, qdf_freq_t freq_2);
+
+/**
  * policy_mgr_are_2_freq_on_same_mac() - Function to check whether both the
- * input frequencies are on same mac
+ * input frequencies are on same mac in current freq range
  *
  * @psoc: Pointer to Psoc
  * @freq_1: Frequency 1 to check
@@ -2835,8 +2853,29 @@ policy_mgr_are_2_freq_on_same_mac(struct wlan_objmgr_psoc *psoc,
 				  qdf_freq_t  freq_2);
 
 /**
+ * policy_mgr_3_freq_always_on_same_mac() - Function to check whether all three
+ * input frequencies will always in same mac in all supported mode/freq range
+ *
+ * @psoc: Pointer to Psoc
+ * @freq_1: Frequency 1 to check
+ * @freq_2: Frequency 2 to check
+ * @freq_3: Frequency 3 to check
+ *
+ * This Function check whether all three input frequencies exist in the same
+ * mac in all supported mode/freq range.
+ *
+ * Return:True if all three frequency exist on the same mac in all supported
+ * mode/freq range
+ *
+ */
+bool
+policy_mgr_3_freq_always_on_same_mac(struct wlan_objmgr_psoc *psoc,
+				     qdf_freq_t freq_1, qdf_freq_t freq_2,
+				     qdf_freq_t freq_3);
+
+/**
  * policy_mgr_are_3_freq_on_same_mac() - Function to check whether all three
- * input frequencies are in same mac
+ * input frequencies are in same mac in current freq range
  *
  * @psoc: Pointer to Psoc
  * @freq_1: Frequency 1 to check
@@ -2853,6 +2892,34 @@ bool
 policy_mgr_are_3_freq_on_same_mac(struct wlan_objmgr_psoc *psoc,
 				  qdf_freq_t freq_1, qdf_freq_t freq_2,
 				  qdf_freq_t freq_3);
+
+/**
+ * policy_mgr_allow_4th_new_freq() - Function to check whether 4th freq can
+ * be allowed wthout leading to 3 home freq on same mac
+ *
+ * @psoc: Pointer to Psoc
+ * @freq1: Frequency 1
+ * @freq2: Frequency 2
+ * @freq3: Frequency 3
+ * @new_ch_freq: freq to check with reference to freq1 freq2 and freq3
+ *
+ * Return:True if all 4 freq doesnt cause 3 home frequency on same mac
+ *
+ */
+#ifdef FEATURE_FOURTH_CONNECTION
+bool
+policy_mgr_allow_4th_new_freq(struct wlan_objmgr_psoc *psoc,
+			      qdf_freq_t freq1, qdf_freq_t freq2,
+			      qdf_freq_t freq3, qdf_freq_t new_ch_freq);
+#else
+static inline bool
+policy_mgr_allow_4th_new_freq(struct wlan_objmgr_psoc *psoc,
+			      qdf_freq_t freq1, qdf_freq_t freq2,
+			      qdf_freq_t freq3, qdf_freq_t new_ch_freq)
+{
+	return false;
+}
+#endif
 
 /**
  * policy_mgr_are_sbs_chan() - Function to check whether both the

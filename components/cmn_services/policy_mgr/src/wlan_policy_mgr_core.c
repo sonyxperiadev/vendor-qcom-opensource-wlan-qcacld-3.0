@@ -3411,7 +3411,7 @@ bool policy_mgr_allow_same_mac_diff_freq(struct wlan_objmgr_psoc *psoc,
 			policy_mgr_rl_debug("don't allow 3rd home channel on same MAC");
 			allow = false;
 		}
-	} else if (policy_mgr_are_3_freq_on_same_mac(psoc, ch_freq,
+	} else if (policy_mgr_3_freq_always_on_same_mac(psoc, ch_freq,
 					pm_conc_connection_list[0].freq,
 					pm_conc_connection_list[1].freq)) {
 			policy_mgr_rl_debug("don't allow 3rd home channel on same MAC");
@@ -3454,7 +3454,7 @@ bool policy_mgr_allow_same_mac_same_freq(struct wlan_objmgr_psoc *psoc,
 		 * and therefore a 3rd connection with the
 		 * same MAC is possible.
 		 */
-	} else if (policy_mgr_are_2_freq_on_same_mac(psoc, ch_freq,
+	} else if (policy_mgr_2_freq_always_on_same_mac(psoc, ch_freq,
 					pm_conc_connection_list[0].freq) &&
 		   !policy_mgr_is_3rd_conn_on_same_band_allowed(psoc, mode)) {
 			policy_mgr_rl_debug("don't allow 3rd home channel on same MAC – for sta+multi-AP");
@@ -3464,23 +3464,9 @@ bool policy_mgr_allow_same_mac_same_freq(struct wlan_objmgr_psoc *psoc,
 	return allow;
 }
 
-/**
- * policy_mgr_allow_new_home_channel() - Check for allowed number of
- * home channels
- * @mode: policy_mgr_con_mode of new connection,
- * @channel: channel on which new connection is coming up
- * @num_connections: number of current connections
- * @is_dfs_ch: DFS channel or not
- *
- * When a new connection is about to come up check if current
- * concurrency combination including the new connection is
- * allowed or not based on the HW capability
- *
- * Return: True/False
- */
 bool policy_mgr_allow_new_home_channel(
 	struct wlan_objmgr_psoc *psoc, enum policy_mgr_con_mode mode,
-	uint32_t ch_freq, uint32_t num_connections, bool is_dfs_ch)
+	qdf_freq_t ch_freq, uint32_t num_connections, bool is_dfs_ch)
 {
 	bool status = true;
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
@@ -3497,11 +3483,17 @@ bool policy_mgr_allow_new_home_channel(
 		QDF_MCC_TO_SCC_SWITCH_FORCE_PREFERRED_WITHOUT_DISCONNECTION;
 
 	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
-	if (num_connections == 2) {
+	if (num_connections == 3) {
+		status = policy_mgr_allow_4th_new_freq(psoc,
+						pm_conc_connection_list[0].freq,
+						pm_conc_connection_list[1].freq,
+						pm_conc_connection_list[2].freq,
+						ch_freq);
+	} else if (num_connections == 2) {
 	/* No SCC or MCC combination is allowed with / on DFS channel */
-		on_same_mac = policy_mgr_are_2_freq_on_same_mac(psoc,
-				pm_conc_connection_list[0].freq,
-				pm_conc_connection_list[1].freq);
+		on_same_mac = policy_mgr_2_freq_always_on_same_mac(psoc,
+					pm_conc_connection_list[0].freq,
+					pm_conc_connection_list[1].freq);
 		if (force_switch_without_dis && is_dfs_ch &&
 		    ((pm_conc_connection_list[0].ch_flagext &
 		      (IEEE80211_CHAN_DFS | IEEE80211_CHAN_DFS_CFREQ2)) ||
@@ -3533,7 +3525,7 @@ bool policy_mgr_allow_new_home_channel(
 		 */
 		if ((pm_conc_connection_list[0].mode != PM_NAN_DISC_MODE) &&
 		    (mode != PM_NAN_DISC_MODE))
-			status = policy_mgr_are_2_freq_on_same_mac(psoc,
+			status = policy_mgr_2_freq_always_on_same_mac(psoc,
 								   ch_freq,
 					pm_conc_connection_list[0].freq);
 	}
@@ -3742,7 +3734,7 @@ policy_mgr_check_force_scc_two_connection(struct wlan_objmgr_psoc *psoc,
 		return;
 	}
 
-	if (!policy_mgr_are_3_freq_on_same_mac(psoc, sap_ch_freq,
+	if (!policy_mgr_3_freq_always_on_same_mac(psoc, sap_ch_freq,
 					pm_conc_connection_list[0].freq,
 					pm_conc_connection_list[1].freq)) {
 		/*

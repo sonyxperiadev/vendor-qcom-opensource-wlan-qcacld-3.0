@@ -1361,6 +1361,54 @@ policy_mgr_is_cur_freq_range_sbs(struct wlan_objmgr_psoc *psoc)
 	return false;
 }
 
+bool policy_mgr_2_freq_always_on_same_mac(struct wlan_objmgr_psoc *psoc,
+					  qdf_freq_t freq_1, qdf_freq_t freq_2)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	struct policy_mgr_freq_range *freq_range;
+	bool is_dbs_mode_same_mac = true;
+	bool is_sbs_mode_same_mac = true;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx)
+		return false;
+
+	/* if HW is not DBS return true*/
+	if (!policy_mgr_is_hw_dbs_capable(psoc))
+		return true;
+
+	/* Check for DBS mode first */
+	freq_range = pm_ctx->hw_mode.freq_range_caps[MODE_DBS];
+	is_dbs_mode_same_mac =
+		policy_mgr_are_2_freq_in_freq_range(pm_ctx, freq_range,
+						    freq_1, freq_2);
+
+	/*
+	 * if not leading to same mac in dbs mode or SBS not supported no need
+	 * to check further
+	 */
+	if (!is_dbs_mode_same_mac ||
+	    !policy_mgr_is_hw_sbs_capable(psoc))
+		goto skip_sbs;
+
+	/* Check for SBS mode */
+	is_sbs_mode_same_mac =
+		policy_mgr_are_2_freq_in_sbs_freq_range(pm_ctx, freq_1, freq_2);
+
+skip_sbs:
+	policy_mgr_debug("freq1 %d freq2 %d: Same mac:: DBS:%d SBS:%d",
+			 freq_1, freq_2, is_dbs_mode_same_mac,
+			 is_sbs_mode_same_mac);
+	/*
+	 * if in SBS and DBS mode, both is leading to freqs on same mac,
+	 * return true else return false.
+	 */
+	if (is_dbs_mode_same_mac && is_sbs_mode_same_mac)
+		return true;
+
+	return false;
+}
+
 bool policy_mgr_are_2_freq_on_same_mac(struct wlan_objmgr_psoc *psoc,
 				       qdf_freq_t freq_1,
 				       qdf_freq_t  freq_2)
@@ -1380,12 +1428,6 @@ bool policy_mgr_are_2_freq_on_same_mac(struct wlan_objmgr_psoc *psoc,
 		return true;
 
 	policy_mgr_rl_debug("freq_1 %d freq_2 %d", freq_1, freq_2);
-	if (!policy_mgr_is_hw_sbs_capable(psoc)) {
-		/* If not SBS capable but DBS capable */
-		freq_range = pm_ctx->hw_mode.freq_range_caps[MODE_DBS];
-		return policy_mgr_are_2_freq_in_freq_range(pm_ctx, freq_range,
-							   freq_1, freq_2);
-	}
 
 	/* HW is DBS/SBS capable */
 	status = policy_mgr_get_current_hw_mode(psoc, &hw_mode);
@@ -1406,19 +1448,10 @@ bool policy_mgr_are_2_freq_on_same_mac(struct wlan_objmgr_psoc *psoc,
 							   freq_1, freq_2);
 
 	/*
-	 * Current HW is SMM check, if they can lead to SBS or DBS without being
-	 * in same mac, return true only if Both will lead to same mac
+	 * If current HW mode is not DBS/SBS, check if in all supported mode
+	 * it they will be on same mac
 	 */
-	if (!policy_mgr_are_2_freq_in_sbs_freq_range(pm_ctx, freq_1, freq_2))
-		return false;
-
-	/*
-	 * If SBS lead to same mac, check if DBS mode will also lead to same
-	 * mac
-	 */
-	freq_range = pm_ctx->hw_mode.freq_range_caps[MODE_DBS];
-	return policy_mgr_are_2_freq_in_freq_range(pm_ctx, freq_range,
-						   freq_1, freq_2);
+	return policy_mgr_2_freq_always_on_same_mac(psoc, freq_1, freq_2);
 }
 
 static bool
@@ -1469,6 +1502,57 @@ policy_mgr_are_3_freq_in_sbs_freq_range(struct policy_mgr_psoc_priv_obj *pm_ctx,
 }
 
 bool
+policy_mgr_3_freq_always_on_same_mac(struct wlan_objmgr_psoc *psoc,
+				     qdf_freq_t freq_1, qdf_freq_t freq_2,
+				     qdf_freq_t freq_3)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	struct policy_mgr_freq_range *freq_range;
+	bool is_dbs_mode_same_mac = true;
+	bool is_sbs_mode_same_mac = true;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx)
+		return false;
+
+	/* if HW is not DBS return true*/
+	if (!policy_mgr_is_hw_dbs_capable(psoc))
+		return true;
+
+	/* Check for DBS mode first */
+	freq_range = pm_ctx->hw_mode.freq_range_caps[MODE_DBS];
+	is_dbs_mode_same_mac =
+		policy_mgr_are_3_freq_in_freq_range(pm_ctx, freq_range,
+						    freq_1, freq_2, freq_3);
+
+	/*
+	 * if not leading to same mac in dbs mode or SBS not supported no need
+	 * to check further
+	 */
+	if (!is_dbs_mode_same_mac ||
+	    !policy_mgr_is_hw_sbs_capable(psoc))
+		goto skip_sbs;
+
+	/* Check for SBS mode */
+	is_sbs_mode_same_mac =
+		policy_mgr_are_3_freq_in_sbs_freq_range(pm_ctx, freq_1, freq_2,
+							freq_3);
+
+skip_sbs:
+	policy_mgr_debug("freq1 %d freq2 %d freq3 %d: Same mac:: DBS:%d SBS:%d",
+			 freq_1, freq_2, freq_3, is_dbs_mode_same_mac,
+			 is_sbs_mode_same_mac);
+	/*
+	 * if in SBS and DBS mode, both is leading to freqs on same mac,
+	 * return true else return false.
+	 */
+	if (is_dbs_mode_same_mac && is_sbs_mode_same_mac)
+		return true;
+
+	return false;
+}
+
+bool
 policy_mgr_are_3_freq_on_same_mac(struct wlan_objmgr_psoc *psoc,
 				  qdf_freq_t freq_1, qdf_freq_t freq_2,
 				  qdf_freq_t freq_3)
@@ -1489,13 +1573,6 @@ policy_mgr_are_3_freq_on_same_mac(struct wlan_objmgr_psoc *psoc,
 
 	policy_mgr_rl_debug("freq_1 %d freq_2 %d freq_3 %d", freq_1, freq_2,
 			    freq_3);
-	if (!policy_mgr_is_hw_sbs_capable(psoc)) {
-		/* If not SBS capable but DBS capable */
-		freq_range = pm_ctx->hw_mode.freq_range_caps[MODE_DBS];
-		return policy_mgr_are_3_freq_in_freq_range(pm_ctx, freq_range,
-							   freq_1, freq_2,
-							   freq_3);
-	}
 
 	/* HW is DBS/SBS capable, get current HW mode */
 	status = policy_mgr_get_current_hw_mode(psoc, &hw_mode);
@@ -1516,20 +1593,91 @@ policy_mgr_are_3_freq_on_same_mac(struct wlan_objmgr_psoc *psoc,
 							   freq_1, freq_2,
 							   freq_3);
 	/*
-	 * Current HW is SMM check, if they can lead to SBS or DBS without being
-	 * in same mac, return true only if both will lead to same mac
+	 * If current HW mode is not DBS/SBS, check if in all supported mode
+	 * it they will be on same mac
 	 */
-	if (!policy_mgr_are_3_freq_in_sbs_freq_range(pm_ctx, freq_1, freq_2,
-						     freq_3))
-		return false;
-	/*
-	 * If SBS lead to same mac, check if DBS mode will also lead to same mac
-	 */
-	freq_range = pm_ctx->hw_mode.freq_range_caps[MODE_DBS];
-
-	return policy_mgr_are_3_freq_in_freq_range(pm_ctx, freq_range, freq_1,
-						   freq_2, freq_3);
+	return policy_mgr_3_freq_always_on_same_mac(psoc, freq_1, freq_2,
+						    freq_3);
 }
+
+#ifdef FEATURE_FOURTH_CONNECTION
+bool
+policy_mgr_allow_4th_new_freq(struct wlan_objmgr_psoc *psoc,
+			      qdf_freq_t freq1, qdf_freq_t freq2,
+			      qdf_freq_t freq3, qdf_freq_t new_ch_freq)
+{
+	struct policy_mgr_freq_range *dbs_freq_range;
+	bool is_dbs_mode_3_home_freq = false;
+	bool is_sbs_mode_3_home_freq = false;
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx)
+		return false;
+
+	if (!freq1 || !freq2 || !freq3 || !new_ch_freq) {
+		policy_mgr_info("one or more freq are 0: freq1 %d freq2 %d freq3 %d new_freq %d",
+				freq1, freq2, freq3, new_ch_freq);
+		return false;
+	}
+
+	/* Check for DBS mode first */
+	dbs_freq_range = pm_ctx->hw_mode.freq_range_caps[MODE_DBS];
+	/*
+	 * If existing freq leading to 3 home channel in DBS mode, check SBS.
+	 * Else check if new_ch_freq can cause 3 home freq with existing 2 home
+	 * freq on same mac.
+	 */
+	if (policy_mgr_are_3_freq_in_freq_range(pm_ctx, dbs_freq_range, freq1,
+						freq2, freq3) ||
+	    policy_mgr_are_3_freq_in_freq_range(pm_ctx, dbs_freq_range, freq1,
+						freq2, new_ch_freq) ||
+	    policy_mgr_are_3_freq_in_freq_range(pm_ctx, dbs_freq_range, freq1,
+						freq3, new_ch_freq) ||
+	    policy_mgr_are_3_freq_in_freq_range(pm_ctx, dbs_freq_range, freq2,
+						freq3, new_ch_freq))
+		is_dbs_mode_3_home_freq = true;
+
+	/*
+	 * if allowed in dbs mode or SBS not supported no need
+	 * to check further
+	 */
+	if (!is_dbs_mode_3_home_freq ||
+	    !policy_mgr_is_hw_sbs_capable(psoc))
+		goto skip_sbs_check;
+
+	/* Check for SBS mode */
+	/*
+	 * If existing freq leading to 3 home channel in SBS mode, skip the
+	 * check. Else check if new_ch_freq can cause 3 home freq with
+	 * existing 2 home home freq on same mac
+	 */
+	if (policy_mgr_are_3_freq_in_sbs_freq_range(pm_ctx, freq1,
+						    freq2, freq3) ||
+	    policy_mgr_are_3_freq_in_sbs_freq_range(pm_ctx, freq1, freq2,
+						    new_ch_freq) ||
+	    policy_mgr_are_3_freq_in_sbs_freq_range(pm_ctx, freq1, freq3,
+						    new_ch_freq) ||
+	    policy_mgr_are_3_freq_in_sbs_freq_range(pm_ctx, freq2, freq3,
+						    new_ch_freq))
+		is_sbs_mode_3_home_freq = true;
+
+skip_sbs_check:
+	policy_mgr_debug("freq1 %d freq2 %d freq3 %d new_freq %d: leads to 3 home freq:: DBS:%d SBS:%d",
+			 freq1, freq2, freq3, new_ch_freq,
+			 is_dbs_mode_3_home_freq, is_sbs_mode_3_home_freq);
+	/*
+	 * if in SBS or DBS mode, it can be allowed without leading to 3 home
+	 * freq on same mac, return true.
+	 * Return false only if in both mode it will lead to 3 home freq on same
+	 * mac.
+	 */
+	if (!is_dbs_mode_3_home_freq || !is_sbs_mode_3_home_freq)
+		return true;
+
+	return false;
+}
+#endif
 
 bool policy_mgr_are_sbs_chan(struct wlan_objmgr_psoc *psoc, qdf_freq_t freq_1,
 			     qdf_freq_t freq_2)
