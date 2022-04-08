@@ -3811,6 +3811,107 @@ policy_mgr_get_same_band_iface_frq(struct wlan_objmgr_psoc *psoc,
 		policy_mgr_get_iface_5g_freq(psoc, allow_6ghz));
 }
 
+/**
+ * policy_mgr_check_force_scc_three_connection() - Check 3 connection cases
+ * to find the force SCC channel for SAP/GO
+ * @psoc: Pointer to Psoc
+ * @vdev_id: vdev id of SAP/GO
+ * @intf_ch_freq: interference channel frequency
+ * @sap_ch_freq: SAP/GO current home channel frequency
+ * @acs_band: acs band perference
+ * @allow_6ghz: interface supports 6Ghz band
+ *
+ * This function gets the force SCC channel in 3 connections case.
+ *
+ * Return: QDF_STATUS_SUCCESS if success
+ */
+static QDF_STATUS
+policy_mgr_check_force_scc_three_connection(struct wlan_objmgr_psoc *psoc,
+					    uint8_t vdev_id,
+					    qdf_freq_t *intf_ch_freq,
+					    qdf_freq_t sap_ch_freq,
+					    uint32_t acs_band,
+					    bool allow_6ghz)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	enum policy_mgr_con_mode mode;
+	QDF_STATUS status;
+	uint32_t i;
+	struct policy_mgr_pcl_list pcl;
+	bool allow_2ghz_only = true;
+	uint32_t scc_ch_freq_on_same_band = 0;
+	uint32_t scc_ch_freq_on_diff_band_freq = 0;
+	uint32_t scc_ch_freq_same_as_sap = 0;
+	enum QDF_OPMODE op_mode;
+	uint32_t pcl_freq;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	op_mode = wlan_get_opmode_vdev_id(pm_ctx->pdev, vdev_id);
+	mode = policy_mgr_convert_device_mode_to_qdf_type(op_mode);
+
+	qdf_mem_zero(&pcl, sizeof(pcl));
+	status = policy_mgr_get_pcl(psoc, mode, pcl.pcl_list, &pcl.pcl_len,
+				    pcl.weight_list,
+				    QDF_ARRAY_SIZE(pcl.weight_list));
+	if (QDF_IS_STATUS_ERROR(status) || !pcl.pcl_len) {
+		policy_mgr_err("get pcl failed for mode: %d, pcl len %d", mode,
+			       pcl.pcl_len);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (acs_band == QCA_ACS_MODE_IEEE80211ANY ||
+	    acs_band == QCA_ACS_MODE_IEEE80211A ||
+	    !WLAN_REG_IS_24GHZ_CH_FREQ(sap_ch_freq))
+		allow_2ghz_only = false;
+
+	/* qdf_conc_list_lock has been locked by caller.
+	 * The preferred force SCC channel is SAP original channel,
+	 * and then the SCC channel on the same band, and then the SCC
+	 * channel on the different band.
+	 * We will make sure the PCL only contains valid channels - not
+	 * causing 3 vif on same mac.
+	 * If none of channels are available, we have to keep SAP channel
+	 * unchanged, and that may cause SAP MCC.
+	 */
+	for (i = 0; i < pcl.pcl_len; i++) {
+		pcl_freq = pcl.pcl_list[i];
+
+		if (!allow_6ghz && WLAN_REG_IS_6GHZ_CHAN_FREQ(pcl_freq))
+			continue;
+		if (allow_2ghz_only && !WLAN_REG_IS_24GHZ_CH_FREQ(pcl_freq))
+			continue;
+
+		if (!(pcl_freq == pm_conc_connection_list[0].freq ||
+		      pcl_freq == pm_conc_connection_list[1].freq ||
+		      pcl_freq == pm_conc_connection_list[2].freq))
+			continue;
+
+		if (sap_ch_freq == pcl_freq)
+			scc_ch_freq_same_as_sap = pcl_freq;
+		else if (!scc_ch_freq_on_same_band &&
+			 WLAN_REG_IS_SAME_BAND_FREQS(sap_ch_freq, pcl_freq))
+			scc_ch_freq_on_same_band = pcl_freq;
+		else if (!scc_ch_freq_on_diff_band_freq)
+			scc_ch_freq_on_diff_band_freq = pcl_freq;
+	}
+
+	if (scc_ch_freq_same_as_sap)
+		*intf_ch_freq = scc_ch_freq_same_as_sap;
+	else if (scc_ch_freq_on_same_band)
+		*intf_ch_freq = scc_ch_freq_on_same_band;
+	else if (scc_ch_freq_on_diff_band_freq)
+		*intf_ch_freq = scc_ch_freq_on_diff_band_freq;
+	else
+		*intf_ch_freq = 0;
+
+	return QDF_STATUS_SUCCESS;
+}
+
 static void
 policy_mgr_check_force_scc_two_connection(struct wlan_objmgr_psoc *psoc,
 					  qdf_freq_t *intf_ch_freq,
@@ -4167,6 +4268,13 @@ sbs_check:
 							  same_band_present,
 							  acs_band,
 							  allow_6ghz);
+		break;
+	case 3:
+		policy_mgr_check_force_scc_three_connection(psoc, vdev_id,
+							    intf_ch_freq,
+							    sap_ch_freq,
+							    acs_band,
+							    allow_6ghz);
 		break;
 	default:
 		policy_mgr_debug("invalid num_connections: %d",
