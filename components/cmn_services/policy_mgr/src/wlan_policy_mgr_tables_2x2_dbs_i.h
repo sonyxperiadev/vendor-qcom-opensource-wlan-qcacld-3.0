@@ -1919,10 +1919,11 @@ fourth_connection_pcl_dbs_table
 	[PM_STA_MODE] = { PM_5G, PM_5G, PM_5G } },
 	[PM_STA_SAP_SCC_5_SAP_24_DBS] = {
 	[PM_STA_MODE] = { PM_24G, PM_24G, PM_24G } },
-	[PM_STA_SAP_SCC_24_STA_5_DBS] = {
-	[PM_SAP_MODE] = { PM_5G, PM_5G, PM_5G } },
-	[PM_STA_SAP_SCC_5_STA_24_DBS] = {
-	[PM_SAP_MODE] = { PM_24G, PM_24G, PM_24G } },
+	[PM_STA_SAP_24_STA_5_DBS] = {
+	[PM_SAP_MODE] = { PM_SCC_ON_5_CH_5G, PM_SCC_ON_5_CH_5G,
+			 PM_SCC_ON_5_CH_5G} },
+	[PM_STA_SAP_5_STA_24_DBS] = {
+	[PM_SAP_MODE] = { PM_SBS_CH_2G, PM_SBS_CH_2G, PM_SBS_CH_2G } },
 	[PM_NAN_DISC_SAP_SCC_24_NDI_5_DBS] = {
 	[PM_SAP_MODE] = { PM_5G, PM_5G, PM_5G } },
 	[PM_NAN_DISC_NDI_SCC_24_SAP_5_DBS] = {
@@ -1990,7 +1991,12 @@ fourth_connection_pcl_dbs_table
 	[PM_NAN_DISC_24_STA_24_STA_5_SMM] = {
 	[PM_NDI_MODE] = { PM_5G, PM_5G, PM_5G } },
 	[PM_NAN_DISC_24_STA_24_STA_5_DBS] = {
-	[PM_NDI_MODE] = { PM_5G, PM_5G, PM_5G } }
+	[PM_NDI_MODE] = { PM_5G, PM_5G, PM_5G } },
+	[PM_STA_SAP_24_STA_5_DBS] = {
+	[PM_SAP_MODE] = { PM_SCC_ON_5_CH_5G, PM_SCC_ON_5_CH_5G,
+			 PM_SCC_ON_5_CH_5G} },
+	[PM_STA_SAP_5_STA_24_DBS] = {
+	[PM_SAP_MODE] = { PM_SBS_CH_2G, PM_SBS_CH_2G, PM_SBS_CH_2G } }
 };
 #endif
 #endif
