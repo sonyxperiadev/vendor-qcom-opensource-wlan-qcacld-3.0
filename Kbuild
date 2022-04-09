@@ -766,14 +766,18 @@ SME_INC_DIR :=	$(SME_DIR)/inc
 SME_SRC_DIR :=	$(SME_DIR)/src
 
 SME_INC := 	-I$(WLAN_ROOT)/$(SME_INC_DIR) \
-		-I$(WLAN_ROOT)/$(SME_SRC_DIR)/csr
+		-I$(WLAN_ROOT)/$(SME_SRC_DIR)/csr \
+		-I$(WLAN_ROOT)/$(SME_SRC_DIR)/qos \
+		-I$(WLAN_ROOT)/$(SME_SRC_DIR)/common \
+		-I$(WLAN_ROOT)/$(SME_SRC_DIR)/rrm \
+		-I$(WLAN_ROOT)/$(SME_SRC_DIR)/nan
 
+ifeq ($(KERNEL_SUPPORTS_NESTED_COMPOSITES),y)
 SME_CSR_OBJS := $(SME_SRC_DIR)/csr/csr_api_roam.o \
 		$(SME_SRC_DIR)/csr/csr_api_scan.o \
 		$(SME_SRC_DIR)/csr/csr_cmd_process.o \
 		$(SME_SRC_DIR)/csr/csr_link_list.o \
 		$(SME_SRC_DIR)/csr/csr_util.o \
-
 
 SME_QOS_OBJS := $(SME_SRC_DIR)/qos/sme_qos.o
 
@@ -793,7 +797,9 @@ SME_OBJS :=	$(SME_CMN_OBJS) \
 		$(SME_RRM_OBJS) \
 		$(SME_NAN_OBJS) \
 		$(SME_NDP_OBJS)
-
+else # KERNEL_SUPPORTS_NESTED_COMPOSITES
+SME_OBJS := $(SME_SRC_DIR)/sme.o
+endif
 $(call add-wlan-objs,sme,$(SME_OBJS))
 
 ############ NLINK ############
