@@ -2337,16 +2337,33 @@ WIFI_POS_API_INC := -I$(WLAN_COMMON_INC)/umac/wifi_pos/inc
 
 
 ifeq ($(CONFIG_WIFI_POS_CONVERGED), y)
+
+WIFI_POS_CLD_DIR := components/wifi_pos
+WIFI_POS_CLD_CORE_DIR := $(WIFI_POS_CLD_DIR)/core
+WIFI_POS_CLD_CORE_SRC := $(WIFI_POS_CLD_CORE_DIR)/src
+WIFI_POS_CLD_DISP_DIR := $(WIFI_POS_CLD_DIR)/dispatcher
+
 WIFI_POS_OBJS := $(WIFI_POS_CORE_DIR)/wifi_pos_api.o \
 		 $(WIFI_POS_CORE_DIR)/wifi_pos_main.o \
 		 $(WIFI_POS_CORE_DIR)/wifi_pos_ucfg.o \
 		 $(WIFI_POS_CORE_DIR)/wifi_pos_utils.o \
+		 $(WIFI_POS_CLD_DISP_DIR)/src/wifi_pos_ucfg_api.o \
 		 $(WIFI_POS_OS_IF_DIR)/os_if_wifi_pos.o \
 		 $(WIFI_POS_OS_IF_DIR)/os_if_wifi_pos_utils.o \
 		 $(WIFI_POS_OS_IF_DIR)/wlan_cfg80211_wifi_pos.o \
 		 $(WIFI_POS_TGT_DIR)/target_if_wifi_pos.o \
 		 $(WIFI_POS_TGT_DIR)/target_if_wifi_pos_rx_ops.o \
 		 $(WIFI_POS_TGT_DIR)/target_if_wifi_pos_tx_ops.o
+
+ifeq ($(CONFIG_WIFI_POS_PASN), y)
+WIFI_POS_OBJS += $(WIFI_POS_CORE_DIR)/wifi_pos_pasn_api.o
+WIFI_POS_OBJS += $(WIFI_POS_CLD_CORE_SRC)/wlan_wifi_pos_interface.o
+endif
+
+WIFI_POS_CLD_INC :=	-I$(WLAN_ROOT)/$(WIFI_POS_CLD_CORE_DIR)/inc \
+			-I$(WLAN_ROOT)/$(WIFI_POS_CLD_DISP_DIR)/inc
+
+cppflags-$(CONFIG_WIFI_POS_PASN) += -DWLAN_FEATURE_RTT_11AZ_SUPPORT
 endif
 
 $(call add-wlan-objs,wifi_pos,$(WIFI_POS_OBJS))
@@ -2831,6 +2848,11 @@ endif
 ifeq ($(CONFIG_WLAN_MWS_INFO_DEBUGFS), y)
 WMA_OBJS +=	$(WMA_SRC_DIR)/wma_coex.o
 endif
+ifeq ($(CONFIG_WIFI_POS_CONVERGED), y)
+ifeq ($(CONFIG_WIFI_POS_PASN), y)
+WMA_OBJS +=	$(WMA_SRC_DIR)/wma_pasn_peer_api.o
+endif
+endif
 
 $(call add-wlan-objs,wma,$(WMA_OBJS))
 
@@ -2967,6 +2989,7 @@ INCS += 	$(HAL_INC) \
 endif
 
 ################ WIFI POS ################
+INCS +=		$(WIFI_POS_CLD_INC)
 INCS +=		$(WIFI_POS_API_INC)
 INCS +=		$(WIFI_POS_TGT_INC)
 INCS +=		$(WIFI_POS_OS_IF_INC)

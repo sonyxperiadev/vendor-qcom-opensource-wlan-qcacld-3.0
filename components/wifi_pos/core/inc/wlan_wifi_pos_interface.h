@@ -34,19 +34,22 @@ QDF_STATUS
 wifi_pos_register_legacy_ops(struct wlan_objmgr_psoc *psoc);
 
 /**
- * ucfg_wifi_pos_set_legacy_ops() - Wrapper to set legacy ops
- * @psoc: PSOC pointer
+ * wifi_pos_deregister_legacy_ops() - Deregister wifi pos legacy callbacks
+ * @psoc: Psoc pointer
  *
  * Return: QDF_STATUS
  */
-static inline QDF_STATUS
-ucfg_wifi_pos_set_legacy_ops(struct wlan_objmgr_psoc *psoc)
-{
-	return wifi_pos_register_legacy_ops(psoc);
-}
+QDF_STATUS
+wifi_pos_deregister_legacy_ops(struct wlan_objmgr_psoc *psoc);
 #else
 static inline QDF_STATUS
-ucfg_wifi_pos_set_legacy_ops(struct wlan_objmgr_psoc *psoc)
+wifi_pos_register_legacy_ops(struct wlan_objmgr_psoc *psoc)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+wifi_pos_deregister_legacy_ops(struct wlan_objmgr_psoc *psoc)
 {
 	return QDF_STATUS_SUCCESS;
 }

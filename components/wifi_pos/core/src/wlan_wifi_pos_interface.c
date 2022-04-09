@@ -17,8 +17,7 @@
  * DOC: define internal APIs related to the mlme component, legacy APIs are
  *	called for the time being, but will be cleaned up after convergence
  */
-#include "wma_api.h"
-#include "wma.h"
+#include "wma_pasn_peer_api.h"
 #include "wifi_pos_api.h"
 #include "wlan_wifi_pos_interface.h"
 
@@ -35,7 +34,7 @@ static QDF_STATUS wlan_wifi_pos_pasn_peer_create(struct wlan_objmgr_psoc *psoc,
 						 struct qdf_mac_addr *peer_addr,
 						 uint8_t vdev_id)
 {
-	return wma_create_ranging_peer(psoc, peer_addr, vdev_id);
+	return wma_pasn_peer_create(psoc, peer_addr, vdev_id);
 }
 
 /**
@@ -51,7 +50,7 @@ static QDF_STATUS wlan_wifi_pos_pasn_peer_delete(struct wlan_objmgr_psoc *psoc,
 						 uint8_t vdev_id,
 						 bool no_fw_peer_delete)
 {
-	return wma_remove_pasn_peer(psoc, peer_addr, vdev_id,
+	return wma_pasn_peer_remove(psoc, peer_addr, vdev_id,
 				    no_fw_peer_delete);
 }
 
@@ -64,5 +63,11 @@ QDF_STATUS
 wifi_pos_register_legacy_ops(struct wlan_objmgr_psoc *psoc)
 {
 	return wifi_pos_set_legacy_ops(psoc, &wifi_pos_ops);
+}
+
+QDF_STATUS
+wifi_pos_deregister_legacy_ops(struct wlan_objmgr_psoc *psoc)
+{
+	return wifi_pos_set_legacy_ops(psoc, NULL);
 }
 #endif

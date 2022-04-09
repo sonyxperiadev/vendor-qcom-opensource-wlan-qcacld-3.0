@@ -31,9 +31,25 @@ ucfg_wifi_pos_psoc_open(struct wlan_objmgr_psoc *psoc)
 	if (QDF_IS_STATUS_ERROR(status))
 		wifi_pos_err("Register OSIF ops failed");
 
-	status = ucfg_wifi_pos_set_legacy_ops(psoc);
+	status = wifi_pos_register_legacy_ops(psoc);
 	if (QDF_IS_STATUS_ERROR(status))
 		wifi_pos_err("Set legacy ops failed");
+
+	return status;
+}
+
+QDF_STATUS
+ucfg_wifi_pos_psoc_close(struct wlan_objmgr_psoc *psoc)
+{
+	QDF_STATUS status;
+
+	status = wifi_pos_deregister_legacy_ops(psoc);
+	if (QDF_IS_STATUS_ERROR(status))
+		wifi_pos_err("Set legacy ops failed");
+
+	status = osif_wifi_pos_deregister_ops(psoc);
+	if (QDF_IS_STATUS_ERROR(status))
+		wifi_pos_err("Register OSIF ops failed");
 
 	return status;
 }

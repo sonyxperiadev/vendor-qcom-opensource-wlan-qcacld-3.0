@@ -221,6 +221,7 @@
 #include "wlan_vdev_mgr_ucfg_api.h"
 #include <wlan_objmgr_psoc_obj_i.h>
 #include <wlan_objmgr_vdev_obj_i.h>
+#include "wifi_pos_ucfg_api.h"
 #include "osif_vdev_mgr_util.h"
 #include <son_ucfg_api.h>
 #include "osif_twt_util.h"
@@ -4957,7 +4958,7 @@ static int hdd_deactivate_wifi_pos(void)
 	if (ret)
 		hdd_err("os_if_wifi_pos_deregister_nl failed");
 
-	return  ret;
+	return ret;
 }
 
 /**
@@ -18449,8 +18450,14 @@ QDF_STATUS hdd_component_psoc_open(struct wlan_objmgr_psoc *psoc)
 	if (QDF_IS_STATUS_ERROR(status))
 		goto err_twt;
 
+	status = ucfg_wifi_pos_psoc_open(psoc);
+	if (QDF_IS_STATUS_ERROR(status))
+		goto err_wifi_pos;
+
 	return status;
 
+err_wifi_pos:
+	ucfg_twt_psoc_close(psoc);
 err_twt:
 	ucfg_nan_psoc_close(psoc);
 err_nan:
@@ -18473,6 +18480,7 @@ err_dlm:
 
 void hdd_component_psoc_close(struct wlan_objmgr_psoc *psoc)
 {
+	ucfg_wifi_pos_psoc_close(psoc);
 	ucfg_twt_psoc_close(psoc);
 	ucfg_nan_psoc_close(psoc);
 	ucfg_tdls_psoc_close(psoc);
