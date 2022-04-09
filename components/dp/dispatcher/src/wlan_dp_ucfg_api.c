@@ -971,6 +971,16 @@ void ucfg_dp_set_dump_dp_trace(uint16_t cmd_type, uint16_t count)
 	dp_set_dump_dp_trace(cmd_type, count);
 }
 
+int ucfg_dp_get_current_throughput_level(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
+
+	if (!dp_ctx)
+		return 0;
+
+	return dp_get_current_throughput_level(dp_ctx);
+}
+
 QDF_STATUS
 ucfg_dp_req_get_arp_stats(struct wlan_objmgr_psoc *psoc,
 			  struct dp_get_arp_stats_params *params)
@@ -1047,4 +1057,15 @@ void ucfg_dp_register_event_handler(struct wlan_objmgr_psoc *psoc,
 
 	dp_ctx->nb_ops.osif_dp_get_arp_stats_evt =
 		cb_obj->osif_dp_get_arp_stats_evt;
+}
+
+uint32_t ucfg_dp_get_bus_bw_compute_interval(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
+
+	if (!dp_ctx) {
+		dp_err("DP ctx is NULL");
+		return 0;
+	}
+	return dp_ctx->dp_cfg.bus_bw_compute_interval;
 }

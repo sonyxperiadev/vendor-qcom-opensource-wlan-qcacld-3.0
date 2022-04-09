@@ -35,14 +35,6 @@
 #include "pld_common.h"
 #include "wlan_dp_nud_tracking.h"
 
-#ifndef NUM_CPUS
-#ifdef QCA_CONFIG_SMP
-#define NUM_CPUS NR_CPUS
-#else
-#define NUM_CPUS 1
-#endif
-#endif
-
 #ifndef NUM_TX_RX_HISTOGRAM
 #define NUM_TX_RX_HISTOGRAM 128
 #endif
@@ -121,11 +113,6 @@ struct wlan_dp_psoc_cfg {
 	bool enable_latency_crit_clients;
 #endif /*WLAN_FEATURE_DP_BUS_BANDWIDTH*/
 
-#ifdef WLAN_FEATURE_MSCS
-	uint32_t mscs_pkt_threshold;
-	uint32_t mscs_voice_interval;
-#endif /* WLAN_FEATURE_MSCS */
-
 #ifdef QCA_SUPPORT_TXRX_DRIVER_TCP_DEL_ACK
 	bool del_ack_enable;
 	uint32_t del_ack_threshold_high;
@@ -133,7 +120,6 @@ struct wlan_dp_psoc_cfg {
 	uint16_t del_ack_timer_value;
 	uint16_t del_ack_pkt_count;
 #endif
-	uint32_t napi_cpu_affinity_mask;
 	/* CPU affinity mask for rx_thread */
 	uint32_t rx_thread_ul_affinity_mask;
 	uint32_t rx_thread_affinity_mask;
@@ -157,8 +143,6 @@ struct wlan_dp_psoc_cfg {
 	uint32_t fisa_enable;
 
 	int icmp_req_to_fw_mark_interval;
-
-	uint32_t cfg_wmi_credit_cnt;
 };
 
 /**
@@ -192,52 +176,6 @@ struct tx_rx_histogram {
 	bool is_rx_pm_qos_high;
 	bool is_tx_pm_qos_high;
 	uint64_t qtime;
-};
-
-struct dp_tx_rx_stats {
-	struct {
-		/* start_xmit stats */
-		__u32    tx_called;
-		__u32    tx_dropped;
-		__u32    tx_orphaned;
-		__u32    tx_classified_ac[WLAN_MAX_AC];
-		__u32    tx_dropped_ac[WLAN_MAX_AC];
-#ifdef TX_MULTIQ_PER_AC
-		/* Neither valid socket nor skb->hash */
-		uint32_t inv_sk_and_skb_hash;
-		/* skb->hash already calculated */
-		uint32_t qselect_existing_skb_hash;
-		/* valid tx queue id in socket */
-		uint32_t qselect_sk_tx_map;
-		/* skb->hash calculated in select queue */
-		uint32_t qselect_skb_hash_calc;
-#endif
-		/* rx stats */
-		__u32 rx_packets;
-		__u32 rx_dropped;
-		__u32 rx_delivered;
-		__u32 rx_refused;
-	} per_cpu[NUM_CPUS];
-
-	qdf_atomic_t rx_usolict_arp_n_mcast_drp;
-
-	/* rx gro */
-	__u32 rx_aggregated;
-	__u32 rx_gro_dropped;
-	__u32 rx_non_aggregated;
-	__u32 rx_gro_flush_skip;
-	__u32 rx_gro_low_tput_flush;
-
-	/* txflow stats */
-	bool     is_txflow_paused;
-	__u32    txflow_pause_cnt;
-	__u32    txflow_unpause_cnt;
-	__u32    txflow_timer_cnt;
-
-	/*tx timeout stats*/
-	__u32 tx_timeout_cnt;
-	__u32 cont_txtimeout_cnt;
-	u64 jiffies_last_txtimeout;
 };
 
 /**

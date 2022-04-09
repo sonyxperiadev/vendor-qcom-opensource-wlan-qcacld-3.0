@@ -51,6 +51,14 @@
 #define NUM_TX_QUEUES (4 * TX_QUEUES_PER_AC)
 #endif
 
+#ifndef NUM_CPUS
+#ifdef QCA_CONFIG_SMP
+#define NUM_CPUS NR_CPUS
+#else
+#define NUM_CPUS 1
+#endif
+#endif
+
 /**
  * struct dp_arp_stats - arp debug stats count
  * @tx_arp_req_count: no. of arp req received from network stack
@@ -220,6 +228,52 @@ struct dp_rsp_stats {
 	bool connect_stats_present;
 	uint32_t tcp_ack_recvd;
 	uint32_t icmpv4_rsp_recvd;
+};
+
+struct dp_tx_rx_stats {
+	struct {
+		/* start_xmit stats */
+		__u32    tx_called;
+		__u32    tx_dropped;
+		__u32    tx_orphaned;
+		__u32    tx_classified_ac[WLAN_MAX_AC];
+		__u32    tx_dropped_ac[WLAN_MAX_AC];
+#ifdef TX_MULTIQ_PER_AC
+		/* Neither valid socket nor skb->hash */
+		uint32_t inv_sk_and_skb_hash;
+		/* skb->hash already calculated */
+		uint32_t qselect_existing_skb_hash;
+		/* valid tx queue id in socket */
+		uint32_t qselect_sk_tx_map;
+		/* skb->hash calculated in select queue */
+		uint32_t qselect_skb_hash_calc;
+#endif
+		/* rx stats */
+		__u32 rx_packets;
+		__u32 rx_dropped;
+		__u32 rx_delivered;
+		__u32 rx_refused;
+	} per_cpu[NUM_CPUS];
+
+	qdf_atomic_t rx_usolict_arp_n_mcast_drp;
+
+	/* rx gro */
+	__u32 rx_aggregated;
+	__u32 rx_gro_dropped;
+	__u32 rx_non_aggregated;
+	__u32 rx_gro_flush_skip;
+	__u32 rx_gro_low_tput_flush;
+
+	/* txflow stats */
+	bool     is_txflow_paused;
+	__u32    txflow_pause_cnt;
+	__u32    txflow_unpause_cnt;
+	__u32    txflow_timer_cnt;
+
+	/*tx timeout stats*/
+	__u32 tx_timeout_cnt;
+	__u32 cont_txtimeout_cnt;
+	u64 last_txtimeout;
 };
 
 /**

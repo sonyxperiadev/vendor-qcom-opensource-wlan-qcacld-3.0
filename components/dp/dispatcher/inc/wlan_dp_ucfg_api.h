@@ -716,4 +716,20 @@ void ucfg_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
  */
 void ucfg_dp_register_event_handler(struct wlan_objmgr_psoc *psoc,
 				    struct wlan_dp_psoc_nb_ops *cb_obj);
+
+/**
+ * ucfg_dp_get_bus_bw_compute_interval() - Get bus bandwidth compute interval
+ * @psoc: psoc handle
+ *
+ * Returns: Bus bandwidth compute interval
+ */
+uint32_t ucfg_dp_get_bus_bw_compute_interval(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_dp_get_current_throughput_level() - get current bandwidth level
+ * @psoc: psoc handle
+ *
+ * Return: current bandwidth level
+ */
+int ucfg_dp_get_current_throughput_level(struct wlan_objmgr_psoc *psoc);
 #endif /* _WLAN_DP_UCFG_API_H_ */

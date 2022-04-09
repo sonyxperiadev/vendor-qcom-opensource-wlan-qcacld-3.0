@@ -305,9 +305,275 @@ void dp_set_dump_dp_trace(uint16_t cmd_type, uint16_t count)
 {
 }
 #endif
+#ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
+/**
+ * dp_ini_bus_bandwidth() - Initialize INIs concerned about bus bandwidth
+ * @config: pointer to dp config
+ * @psoc: pointer to psoc obj
+ *
+ * Return: none
+ */
+static void dp_ini_bus_bandwidth(struct wlan_dp_psoc_cfg *config,
+				 struct wlan_objmgr_psoc *psoc)
+{
+	config->bus_bw_ultra_high_threshold =
+		cfg_get(psoc, CFG_DP_BUS_BANDWIDTH_ULTRA_HIGH_THRESHOLD);
+	config->bus_bw_very_high_threshold =
+		cfg_get(psoc, CFG_DP_BUS_BANDWIDTH_VERY_HIGH_THRESHOLD);
+	config->bus_bw_dbs_threshold =
+		cfg_get(psoc, CFG_DP_BUS_BANDWIDTH_DBS_THRESHOLD);
+	config->bus_bw_high_threshold =
+		cfg_get(psoc, CFG_DP_BUS_BANDWIDTH_HIGH_THRESHOLD);
+	config->bus_bw_medium_threshold =
+		cfg_get(psoc, CFG_DP_BUS_BANDWIDTH_MEDIUM_THRESHOLD);
+	config->bus_bw_low_threshold =
+		cfg_get(psoc, CFG_DP_BUS_BANDWIDTH_LOW_THRESHOLD);
+	config->bus_bw_compute_interval =
+		cfg_get(psoc, CFG_DP_BUS_BANDWIDTH_COMPUTE_INTERVAL);
+	config->bus_low_cnt_threshold =
+		cfg_get(psoc, CFG_DP_BUS_LOW_BW_CNT_THRESHOLD);
+	config->enable_latency_crit_clients =
+		cfg_get(psoc, CFG_DP_BUS_HANDLE_LATENCY_CRITICAL_CLIENTS);
+}
 
+/**
+ * dp_ini_tcp_settings() - Initialize INIs concerned about tcp settings
+ * @config: pointer to dp config
+ * @psoc: pointer to psoc obj
+ *
+ * Return: none
+ */
+static void dp_ini_tcp_settings(struct wlan_dp_psoc_cfg *config,
+				struct wlan_objmgr_psoc *psoc)
+{
+	config->enable_tcp_limit_output =
+		cfg_get(psoc, CFG_DP_ENABLE_TCP_LIMIT_OUTPUT);
+	config->enable_tcp_adv_win_scale =
+		cfg_get(psoc, CFG_DP_ENABLE_TCP_ADV_WIN_SCALE);
+	config->enable_tcp_delack =
+		cfg_get(psoc, CFG_DP_ENABLE_TCP_DELACK);
+	config->tcp_delack_thres_high =
+		cfg_get(psoc, CFG_DP_TCP_DELACK_THRESHOLD_HIGH);
+	config->tcp_delack_thres_low =
+		cfg_get(psoc, CFG_DP_TCP_DELACK_THRESHOLD_LOW);
+	config->tcp_delack_timer_count =
+		cfg_get(psoc, CFG_DP_TCP_DELACK_TIMER_COUNT);
+	config->tcp_tx_high_tput_thres =
+		cfg_get(psoc, CFG_DP_TCP_TX_HIGH_TPUT_THRESHOLD);
+	config->enable_tcp_param_update =
+		cfg_get(psoc, CFG_DP_ENABLE_TCP_PARAM_UPDATE);
+}
+
+#else
+static void dp_ini_bus_bandwidth(struct wlan_dp_psoc_cfg *config,
+				 struct wlan_objmgr_psoc *psoc)
+{
+}
+
+static void dp_ini_tcp_settings(struct wlan_dp_psoc_cfg *config,
+				struct wlan_objmgr_psoc *psoc)
+{
+}
+#endif /*WLAN_FEATURE_DP_BUS_BANDWIDTH*/
+
+#ifdef CONFIG_DP_TRACE
+/**
+ * dp_trace_cfg_update() - initialize DP Trace config
+ * @config : Configuration paramerts
+ * @psoc: psoc handle
+ */
+static void
+dp_trace_cfg_update(struct wlan_dp_psoc_cfg *config,
+		    struct wlan_objmgr_psoc *psoc)
+{
+	qdf_size_t array_out_size;
+
+	config->enable_dp_trace = cfg_get(psoc, CFG_DP_ENABLE_DP_TRACE);
+	qdf_uint8_array_parse(cfg_get(psoc, CFG_DP_DP_TRACE_CONFIG),
+			      config->dp_trace_config,
+			      sizeof(config->dp_trace_config), &array_out_size);
+	config->dp_proto_event_bitmap = cfg_get(psoc,
+						CFG_DP_PROTO_EVENT_BITMAP);
+}
+#else
+static void
+dp_trace_cfg_update(struct wlan_dp_psoc_cfg *config,
+		    struct wlan_objmgr_psoc *psoc)
+{
+}
+#endif
+#ifdef WLAN_NUD_TRACKING
+/**
+ * dp_nud_tracking_cfg_update() - initialize NUD Tracking config
+ * @config : Configuration paramerts
+ * @psoc: psoc handle
+ */
+static void
+dp_nud_tracking_cfg_update(struct wlan_dp_psoc_cfg *config,
+			   struct wlan_objmgr_psoc *psoc)
+{
+	config->enable_nud_tracking = cfg_get(psoc, CFG_DP_ENABLE_NUD_TRACKING);
+}
+#else
+static void
+dp_nud_tracking_cfg_update(struct wlan_dp_psoc_cfg *config,
+			   struct wlan_objmgr_psoc *psoc)
+{
+}
+#endif
+
+#ifdef QCA_SUPPORT_TXRX_DRIVER_TCP_DEL_ACK
+/**
+ * dp_ini_tcp_del_ack_settings() - initialize TCP delack config
+ * @config : Configuration paramerts
+ * @psoc: psoc handle
+ */
+static void dp_ini_tcp_del_ack_settings(struct wlan_dp_psoc_cfg *config,
+					struct wlan_objmgr_psoc *psoc)
+{
+	config->del_ack_threshold_high =
+		cfg_get(psoc, CFG_DP_DRIVER_TCP_DELACK_HIGH_THRESHOLD);
+	config->del_ack_threshold_low =
+		cfg_get(psoc, CFG_DP_DRIVER_TCP_DELACK_LOW_THRESHOLD);
+	config->del_ack_enable =
+		cfg_get(psoc, CFG_DP_DRIVER_TCP_DELACK_ENABLE);
+	config->del_ack_pkt_count =
+		cfg_get(psoc, CFG_DP_DRIVER_TCP_DELACK_PKT_CNT);
+	config->del_ack_timer_value =
+		cfg_get(psoc, CFG_DP_DRIVER_TCP_DELACK_TIMER_VALUE);
+}
+#else
+static void dp_ini_tcp_del_ack_settings(struct wlan_dp_psoc_cfg *config,
+					struct wlan_objmgr_psoc *psoc)
+{
+}
+#endif
+
+#ifdef WLAN_SUPPORT_TXRX_HL_BUNDLE
+/**
+ * dp_hl_bundle_cfg_update() - initialize TxRx HL bundle config
+ * @config : Configuration paramerts
+ * @psoc: psoc handle
+ */
+static void dp_hl_bundle_cfg_update(struct wlan_dp_psoc_cfg *config,
+				    struct wlan_objmgr_psoc *psoc)
+{
+	config->pkt_bundle_threshold_high =
+		cfg_get(psoc, CFG_DP_HL_BUNDLE_HIGH_TH);
+	config->pkt_bundle_threshold_low =
+		cfg_get(psoc, CFG_DP_HL_BUNDLE_LOW_TH);
+	config->pkt_bundle_timer_value =
+		cfg_get(psoc, CFG_DP_HL_BUNDLE_TIMER_VALUE);
+	config->pkt_bundle_size =
+		cfg_get(psoc, CFG_DP_HL_BUNDLE_SIZE);
+}
+#else
+static void dp_hl_bundle_cfg_update(struct wlan_dp_psoc_cfg *config,
+				    struct wlan_objmgr_psoc *psoc)
+{
+}
+#endif
+
+/**
+ * dp_set_rx_mode_value() - set rx_mode values
+ * @dp_ctx: DP context
+ *
+ * Return: none
+ */
+static void dp_set_rx_mode_value(struct wlan_dp_psoc_context *dp_ctx)
+{
+	uint32_t rx_mode = dp_ctx->dp_cfg.rx_mode;
+	enum QDF_GLOBAL_MODE con_mode = 0;
+
+	con_mode = cds_get_conparam();
+
+	/* RPS has higher priority than dynamic RPS when both bits are set */
+	if (rx_mode & CFG_ENABLE_RPS && rx_mode & CFG_ENABLE_DYNAMIC_RPS)
+		rx_mode &= ~CFG_ENABLE_DYNAMIC_RPS;
+
+	if (rx_mode & CFG_ENABLE_RX_THREAD && rx_mode & CFG_ENABLE_RPS) {
+		dp_warn("rx_mode wrong configuration. Make it default");
+		rx_mode = CFG_RX_MODE_DEFAULT;
+	}
+
+	if (rx_mode & CFG_ENABLE_RX_THREAD) {
+		dp_ctx->enable_rxthread = true;
+	} else if (rx_mode & CFG_ENABLE_DP_RX_THREADS) {
+		if (con_mode == QDF_GLOBAL_MONITOR_MODE)
+			dp_ctx->enable_dp_rx_threads = false;
+		else
+			dp_ctx->enable_dp_rx_threads = true;
+	}
+
+	if (rx_mode & CFG_ENABLE_RPS)
+		dp_ctx->rps = true;
+
+	if (rx_mode & CFG_ENABLE_NAPI)
+		dp_ctx->napi_enable = true;
+
+	if (rx_mode & CFG_ENABLE_DYNAMIC_RPS)
+		dp_ctx->dynamic_rps = true;
+
+	dp_info("rx_mode:%u dp_rx_threads:%u rx_thread:%u napi:%u rps:%u dynamic rps %u",
+		rx_mode, dp_ctx->enable_dp_rx_threads,
+		dp_ctx->enable_rxthread, dp_ctx->napi_enable,
+		dp_ctx->rps, dp_ctx->dynamic_rps);
+}
+
+/**
+ * dp_cfg_init() - initialize target specific configuration
+ * @ctx: dp context handle
+ */
 static void dp_cfg_init(struct wlan_dp_psoc_context *ctx)
 {
+	struct wlan_dp_psoc_cfg *config = &ctx->dp_cfg;
+	struct wlan_objmgr_psoc *psoc = ctx->psoc;
+	uint16_t cfg_len;
+
+	cfg_len = qdf_str_len(cfg_get(psoc, CFG_DP_RPS_RX_QUEUE_CPU_MAP_LIST))
+		  + 1;
+	dp_ini_bus_bandwidth(config, psoc);
+	dp_ini_tcp_settings(config, psoc);
+
+	dp_ini_tcp_del_ack_settings(config, psoc);
+
+	dp_hl_bundle_cfg_update(config, psoc);
+
+	config->rx_thread_ul_affinity_mask =
+		cfg_get(psoc, CFG_DP_RX_THREAD_UL_CPU_MASK);
+	config->rx_thread_affinity_mask =
+		cfg_get(psoc, CFG_DP_RX_THREAD_CPU_MASK);
+	config->fisa_enable = cfg_get(psoc, CFG_DP_RX_FISA_ENABLE);
+	if (cfg_len < CFG_DP_RPS_RX_QUEUE_CPU_MAP_LIST_LEN) {
+		qdf_str_lcopy(config->cpu_map_list,
+			      cfg_get(psoc, CFG_DP_RPS_RX_QUEUE_CPU_MAP_LIST),
+			      cfg_len);
+	} else {
+		dp_err("ini string length greater than max size %d",
+		       CFG_DP_RPS_RX_QUEUE_CPU_MAP_LIST_LEN);
+		cfg_len = qdf_str_len(cfg_default(CFG_DP_RPS_RX_QUEUE_CPU_MAP_LIST));
+		qdf_str_lcopy(config->cpu_map_list,
+			      cfg_default(CFG_DP_RPS_RX_QUEUE_CPU_MAP_LIST),
+			      cfg_len);
+	}
+	config->tx_orphan_enable = cfg_get(psoc, CFG_DP_TX_ORPHAN_ENABLE);
+	config->rx_mode = cfg_get(psoc, CFG_DP_RX_MODE);
+	dp_set_rx_mode_value(ctx);
+	config->multicast_replay_filter =
+		cfg_get(psoc, CFG_DP_FILTER_MULTICAST_REPLAY);
+	config->rx_wakelock_timeout =
+		cfg_get(psoc, CFG_DP_RX_WAKELOCK_TIMEOUT);
+	config->num_dp_rx_threads = cfg_get(psoc, CFG_DP_NUM_DP_RX_THREADS);
+	config->icmp_req_to_fw_mark_interval =
+		cfg_get(psoc, CFG_DP_ICMP_REQ_TO_FW_MARK_INTERVAL);
+
+	config->rx_softirq_max_yield_duration_ns =
+		cfg_get(psoc,
+			CFG_DP_RX_SOFTIRQ_MAX_YIELD_TIME_NS);
+
+	dp_trace_cfg_update(config, psoc);
+	dp_nud_tracking_cfg_update(config, psoc);
+	dp_trace_cfg_update(config, psoc);
 }
 
 /**

@@ -76,6 +76,10 @@ void dp_periodic_sta_stats_display(struct wlan_dp_psoc_context *dp_ctx)
 void dp_periodic_sta_stats_config(struct dp_config *config,
 				  struct wlan_objmgr_psoc *psoc)
 {
+	config->periodic_stats_timer_interval =
+		cfg_get(psoc, CFG_PERIODIC_STATS_TIMER_INTERVAL);
+	config->periodic_stats_timer_duration =
+		cfg_get(psoc, CFG_PERIODIC_STATS_TIMER_DURATION);
 }
 
 void dp_periodic_sta_stats_start(struct wlan_objmgr_vdev *vdev)
