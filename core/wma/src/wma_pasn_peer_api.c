@@ -184,10 +184,32 @@ wma_pasn_handle_peer_create_conf(tp_wma_handle wma,
 				 QDF_STATUS status, uint8_t vdev_id)
 {
 	struct wlan_lmac_if_wifi_pos_rx_ops *rx_ops;
+	struct wlan_objmgr_vdev *vdev;
+	enum QDF_OPMODE mode;
 
 	if (status)
 		wma_pasn_peer_remove(wma->psoc, peer_mac, vdev_id,
 				     QDF_IS_STATUS_ERROR(status));
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(wma->psoc, vdev_id,
+						    WLAN_LEGACY_WMA_ID);
+	if (!vdev) {
+		wma_err("Vdev is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	mode = wlan_vdev_mlme_get_opmode(vdev);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_WMA_ID);
+
+	/*
+	 * Only in I-sta case update the wifi pos module to
+	 * track the peer to initiate PASN authentication.
+	 * For R-STA, return from here.
+	 */
+	if (mode != QDF_STA_MODE) {
+		wma_debug("PASN opmode:%d is not sta", mode);
+		return QDF_STATUS_SUCCESS;
+	}
 
 	rx_ops = wifi_pos_get_rx_ops(wma->psoc);
 	if (!rx_ops || !rx_ops->wifi_pos_ranging_peer_create_rsp_cb) {
