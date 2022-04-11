@@ -2235,11 +2235,6 @@ __wlan_hdd_cfg80211_ll_stats_get(struct wiphy *wiphy,
 		return -EINVAL;
 	}
 
-	if (adapter->device_mode == QDF_SAP_MODE) {
-		hdd_nofl_debug("LL_STATS get is not supported for SAP mode");
-		return -EINVAL;
-	}
-
 	if (hdd_cm_is_vdev_roaming(adapter)) {
 		hdd_err("Roaming in progress, cannot process the request");
 		return -EBUSY;
