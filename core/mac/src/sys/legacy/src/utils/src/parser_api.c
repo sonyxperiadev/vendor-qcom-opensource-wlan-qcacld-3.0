@@ -10768,7 +10768,7 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 	uint32_t len_consumed;
 	uint16_t len_remaining, len;
 	QDF_STATUS status;
-	bool emlsr_cap = false;
+	bool emlsr_cap, emlsr_enabled = false;
 	struct wlan_objmgr_psoc *psoc;
 	tDot11fIEnon_inheritance sta_prof_non_inherit;
 	tDot11fFfCapabilities mlo_cap;
@@ -10820,9 +10820,11 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 	}
 
 	emlsr_cap = policy_mgr_is_hw_emlsr_capable(psoc);
-	pe_session->is_emlsr_capable = emlsr_cap;
 
-	if (emlsr_cap) {
+	wlan_mlme_get_emlsr_mode_enabled(psoc, &emlsr_enabled);
+	pe_session->is_emlsr_capable = emlsr_cap && emlsr_enabled;
+
+	if (pe_session->is_emlsr_capable) {
 		mlo_ie->eml_capab_present = 1;
 		presence_bitmap |= WLAN_ML_BV_CTRL_PBM_EMLCAP_P;
 		mlo_ie->common_info_length += WLAN_ML_BV_CINFO_EMLCAP_SIZE;

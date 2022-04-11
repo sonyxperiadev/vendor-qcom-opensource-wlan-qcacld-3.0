@@ -221,6 +221,30 @@ enum debug_packet_log_type {
 #define CFG_RELAX_6GHZ_CONN_POLICY
 #endif
 
+#ifdef WLAN_FEATURE_11BE_MLO
+/*
+ * emlsr_mode_enable - Enable eMLSR mode support
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This cfg is used to enable eMLSR mode
+ * If 0 - MLMR mode (Default mode)
+ * If 1 - eMLSR mode
+ *
+ * Related: None
+ *
+ * Supported Feature: STA
+ */
+#define CFG_EMLSR_MODE_ENABLE CFG_BOOL( \
+		"emlsr_mode_enable", \
+		0, \
+		"eMLSR mode enable flag")
+#define CFG_EMLSR_MODE_ENABLED	CFG(CFG_EMLSR_MODE_ENABLE)
+#else
+#define CFG_EMLSR_MODE_ENABLED
+#endif
+
 /*
  * <ini>
  * BandCapability - Preferred band (0: 2.4G, 5G, and 6G,
@@ -1016,5 +1040,6 @@ enum debug_packet_log_type {
 	CFG_WDS_MODE_ALL \
 	CFG(CFG_TX_RETRY_MULTIPLIER) \
 	CFG(CFG_MGMT_FRAME_HW_TX_RETRY_COUNT) \
-	CFG_RELAX_6GHZ_CONN_POLICY
+	CFG_RELAX_6GHZ_CONN_POLICY \
+	CFG_EMLSR_MODE_ENABLED
 #endif /* __CFG_MLME_GENERIC_H */
