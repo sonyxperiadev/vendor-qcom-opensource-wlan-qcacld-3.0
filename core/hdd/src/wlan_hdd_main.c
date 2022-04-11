@@ -17506,7 +17506,8 @@ static int hdd_validate_wlan_string(const char __user *user_buf)
 		[WLAN_ON_STR] = "ON",
 		[WLAN_ENABLE_STR] = "ENABLE",
 		[WLAN_DISABLE_STR] = "DISABLE",
-		[WLAN_WAIT_FOR_READY_STR] = "WAIT_FOR_READY"
+		[WLAN_WAIT_FOR_READY_STR] = "WAIT_FOR_READY",
+		[WLAN_FORCE_DISABLE_STR] = "FORCE_DISABLE"
 	};
 
 	if (copy_from_user(buf, user_buf, sizeof(buf))) {
@@ -17525,12 +17526,43 @@ static int hdd_validate_wlan_string(const char __user *user_buf)
 #ifdef FEATURE_WLAN_DYNAMIC_IFACE_CTRL
 #define WIFI_DISABLE_SLEEP (10)
 #define WIFI_DISABLE_MAX_RETRY_ATTEMPTS (10)
+static bool g_soft_unload;
+
+bool hdd_get_wlan_driver_status(void)
+{
+	return g_soft_unload;
+}
+
+static void hdd_wlan_soft_driver_load(void)
+{
+	if (g_soft_unload) {
+		hdd_driver_load();
+		g_soft_unload = false;
+	}
+	pr_info("Enabling WiFi\n");
+}
+
+static void hdd_wlan_soft_driver_unload(void)
+{
+	if (g_soft_unload) {
+		hdd_debug_rl("WiFi is already disabled");
+		return;
+	}
+	pr_info("Initiating soft driver unload\n");
+	g_soft_unload = true;
+	hdd_driver_unload();
+}
 
 static int hdd_disable_wifi(struct hdd_context *hdd_ctx)
 {
 	int ret;
 	int retries = 0;
 	void *hif_ctx;
+
+	if (g_soft_unload) {
+		hdd_err_rl("WiFi is disabled");
+		return -EINVAL;
+	}
 
 	if (!hdd_ctx) {
 		hdd_err_rl("hdd_ctx is Null");
@@ -17583,6 +17615,14 @@ static int hdd_disable_wifi(struct hdd_context *hdd_ctx)
 	return 0;
 }
 #else
+static void hdd_wlan_soft_driver_load(void)
+{
+}
+
+static void hdd_wlan_soft_driver_unload(void)
+{
+}
+
 static int hdd_disable_wifi(struct hdd_context *hdd_ctx)
 {
 	return 0;
@@ -17615,11 +17655,14 @@ static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 		pr_info("Wifi wait for ready from UI\n");
 		break;
 	case WLAN_ENABLE_STR:
-		pr_info("Enabling WiFi\n");
+		hdd_wlan_soft_driver_load();
 		break;
 	case WLAN_DISABLE_STR:
 		pr_info("Disabling WiFi\n");
 		break;
+	case WLAN_FORCE_DISABLE_STR:
+		hdd_wlan_soft_driver_unload();
+		goto exit;
 	default:
 		hdd_err_rl("Invalid value received from framework");
 		return -EINVAL;
@@ -17667,7 +17710,6 @@ static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 		}
 		hdd_ctx->is_wlan_disabled = false;
 	}
-
 exit:
 	return count;
 }
@@ -18636,6 +18678,7 @@ int hdd_driver_load(void)
 	struct osif_driver_sync *driver_sync;
 	QDF_STATUS status;
 	int errno;
+	bool soft_load;
 
 	pr_err("%s: Loading driver v%s\n", WLAN_MODULE_NAME,
 	       g_wlan_driver_version);
@@ -18708,12 +18751,21 @@ int hdd_driver_load(void)
 		goto pld_deinit;
 	}
 
+	/* If a soft unload of driver is done, we don't call
+	 * wlan_hdd_state_ctrl_param_destroy() to maintain sync
+	 * with userspace. In Symmetry, during soft load, avoid
+	 * calling wlan_hdd_state_ctrl_param_create().
+	 */
+	soft_load = hdd_get_wlan_driver_status();
+	if (soft_load)
+		goto out;
+
 	errno = wlan_hdd_state_ctrl_param_create();
 	if (errno) {
 		hdd_err("Failed to create ctrl param; errno:%d", errno);
 		goto unregister_driver;
 	}
-
+out:
 	hdd_debug("%s: driver loaded", WLAN_MODULE_NAME);
 	hdd_place_marker(NULL, "DRIVER LOADED", NULL);
 
@@ -18764,6 +18816,7 @@ void hdd_driver_unload(void)
 	struct hdd_context *hdd_ctx;
 	QDF_STATUS status;
 	void *hif_ctx;
+	bool soft_unload;
 
 	pr_info("%s: Unloading driver v%s\n", WLAN_MODULE_NAME,
 		QWLAN_VERSIONSTR);
@@ -18812,7 +18865,9 @@ void hdd_driver_unload(void)
 	 */
 	osif_driver_sync_trans_stop(driver_sync);
 
-	wlan_hdd_state_ctrl_param_destroy();
+	soft_unload = hdd_get_wlan_driver_status();
+	if (!soft_unload)
+		wlan_hdd_state_ctrl_param_destroy();
 
 	/* trigger SoC remove */
 	wlan_hdd_unregister_driver();

@@ -1968,6 +1968,20 @@ struct hdd_rtpm_tput_policy_context {
 };
 #endif
 
+#ifdef FEATURE_WLAN_DYNAMIC_IFACE_CTRL
+/**
+ * hdd_get_wlan_driver_status() - get status of soft driver unload
+ *
+ * Return: true if wifi is disabled by soft driver unload, else false
+ */
+bool hdd_get_wlan_driver_status(void);
+#else
+static inline bool hdd_get_wlan_driver_status(void)
+{
+	return false;
+}
+#endif
+
 /**
  * enum wlan_state_ctrl_str_id - state contrl param string id
  * @WLAN_OFF_STR: Turn OFF WiFi
@@ -1975,13 +1989,15 @@ struct hdd_rtpm_tput_policy_context {
  * @WLAN_ENABLE_STR: Enable WiFi
  * @WLAN_DISABLE_STR: Disable Wifi
  * @WLAN_WAIT_FOR_READY_STR: Driver should wait for ongoing recovery
+ * @WLAN_FORCE_DISABLE_STR: Disable Wifi by soft driver unload
  */
 enum wlan_state_ctrl_str_id {
 	WLAN_OFF_STR   = 0,
 	WLAN_ON_STR,
 	WLAN_ENABLE_STR,
 	WLAN_DISABLE_STR,
-	WLAN_WAIT_FOR_READY_STR
+	WLAN_WAIT_FOR_READY_STR,
+	WLAN_FORCE_DISABLE_STR
 };
 
 /**
