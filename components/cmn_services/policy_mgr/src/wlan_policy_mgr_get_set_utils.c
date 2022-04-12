@@ -6958,14 +6958,14 @@ uint8_t policy_mgr_get_roam_enabled_sta_session_id(
 	pm_ctx = policy_mgr_get_context(psoc);
 	if (!pm_ctx) {
 		policy_mgr_err("Invalid Context");
-		return false;
+		return WLAN_UMAC_VDEV_ID_MAX;
 	}
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
 						    WLAN_POLICY_MGR_ID);
 	if (!vdev) {
 		policy_mgr_err("Invalid vdev");
-		return false;
+		return WLAN_UMAC_VDEV_ID_MAX;
 	}
 
 	if (wlan_vdev_mlme_is_link_sta_vdev(vdev)) {
