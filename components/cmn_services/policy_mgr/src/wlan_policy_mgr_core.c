@@ -40,6 +40,7 @@
 #include "wlan_mlo_mgr_public_structs.h"
 #endif
 #include "wlan_cm_ucfg_api.h"
+#include "target_if.h"
 
 #define POLICY_MGR_MAX_CON_STRING_LEN   100
 #define LOWER_END_FREQ_5GHZ 4900
@@ -82,6 +83,8 @@ QDF_STATUS policy_mgr_get_updated_scan_config(
 		bool single_mac_scan_with_dfs)
 {
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	uint32_t conc_scan_config_bits = 0;
+	struct target_psoc_info *tgt_hdl;
 
 	pm_ctx = policy_mgr_get_context(psoc);
 	if (!pm_ctx) {
@@ -90,11 +93,21 @@ QDF_STATUS policy_mgr_get_updated_scan_config(
 	}
 	*scan_config = pm_ctx->dual_mac_cfg.cur_scan_config;
 
-	WMI_DBS_CONC_SCAN_CFG_DBS_SCAN_SET(*scan_config, dbs_scan);
+	tgt_hdl = wlan_psoc_get_tgt_if_handle(psoc);
+	if (!tgt_hdl) {
+		policy_mgr_err("tgt_hdl NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+	conc_scan_config_bits = target_if_get_conc_scan_config_bits(tgt_hdl);
+
+	WMI_DBS_CONC_SCAN_CFG_DBS_SCAN_SET(*scan_config, dbs_scan &
+					   WMI_DBS_CONC_SCAN_CFG_DBS_SCAN_GET(conc_scan_config_bits));
 	WMI_DBS_CONC_SCAN_CFG_AGILE_SCAN_SET(*scan_config,
-			dbs_plus_agile_scan);
+					     dbs_plus_agile_scan &
+					     WMI_DBS_CONC_SCAN_CFG_AGILE_SCAN_GET(conc_scan_config_bits));
 	WMI_DBS_CONC_SCAN_CFG_AGILE_DFS_SCAN_SET(*scan_config,
-			single_mac_scan_with_dfs);
+						 single_mac_scan_with_dfs &
+						 WMI_DBS_CONC_SCAN_CFG_AGILE_DFS_SCAN_GET(conc_scan_config_bits));
 
 	policy_mgr_debug("scan_config:%x ", *scan_config);
 	return QDF_STATUS_SUCCESS;
