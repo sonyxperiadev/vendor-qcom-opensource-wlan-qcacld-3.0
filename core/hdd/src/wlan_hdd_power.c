@@ -1791,7 +1791,9 @@ static void hdd_ssr_restart_sap(struct hdd_context *hdd_ctx)
 					   NET_DEV_HOLD_SSR_RESTART_SAP) {
 		if (adapter->device_mode == QDF_SAP_MODE) {
 			if (test_bit(SOFTAP_INIT_DONE, &adapter->event_flags)) {
-				hdd_debug("Restart prev SAP session");
+				hdd_debug(
+				"Restart prev SAP session, event_flags 0x%lx(%s)",
+				adapter->event_flags, (adapter->dev)->name);
 				wlan_hdd_start_sap(adapter, true);
 			}
 		}
