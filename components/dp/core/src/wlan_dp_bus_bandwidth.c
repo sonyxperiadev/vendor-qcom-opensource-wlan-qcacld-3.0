@@ -30,6 +30,13 @@
 #include <wlan_nlink_common.h>
 #include "wlan_ipa_ucfg_api.h"
 #include "dp_txrx.h"
+#include "wlan_mlme_vdev_mgr_interface.h"
+#include "hif.h"
+#include "qdf_trace.h"
+#include <wlan_cm_ucfg_api.h>
+#include <qdf_threads.h>
+#include "wlan_dp_periodic_sta_stats.h"
+#include <i_qdf_net_stats.h>
 
 #ifdef FEATURE_BUS_BANDWIDTH_MGR
 /**
@@ -842,14 +849,1016 @@ void dp_set_driver_del_ack_enable(uint16_t vdev_id,
 #define DP_BW_GET_DIFF(_x, _y) ((unsigned long)((ULONG_MAX - (_y)) + (_x) + 1))
 
 #ifdef RX_PERFORMANCE
-bool dp_is_current_high_throughput(struct wlan_objmgr_psoc *psoc)
+bool dp_is_current_high_throughput(struct wlan_dp_psoc_context *dp_ctx)
 {
-	struct wlan_dp_psoc_context *dp_ctx = dp_get_psoc_priv_obj(psoc);
-
 	if (dp_ctx->cur_vote_level < PLD_BUS_WIDTH_MEDIUM)
 		return false;
 	else
 		return true;
 }
 #endif /* RX_PERFORMANCE */
+
+/**
+ * wlan_dp_validate_context() - check the DP context
+ * @dp_ctx: Global DP context pointer
+ *
+ * Return: 0 if the context is valid. Error code otherwise
+ */
+static int wlan_dp_validate_context(struct wlan_dp_psoc_context *dp_ctx)
+{
+	if (!dp_ctx) {
+		dp_err("DP context is null");
+		return -ENODEV;
+	}
+
+	if (cds_is_driver_recovering()) {
+		dp_info("Recovery in progress; state:0x%x",
+			cds_get_driver_state());
+		return -EAGAIN;
+	}
+
+	if (cds_is_load_or_unload_in_progress()) {
+		dp_info("Load/unload in progress; state:0x%x",
+			cds_get_driver_state());
+		return -EAGAIN;
+	}
+
+	if (cds_is_driver_in_bad_state()) {
+		dp_info("Driver in bad state; state:0x%x",
+			cds_get_driver_state());
+		return -EAGAIN;
+	}
+
+	if (cds_is_fw_down()) {
+		dp_info("FW is down; state:0x%x", cds_get_driver_state());
+		return -EAGAIN;
+	}
+
+	return 0;
+}
+
+/**
+ * dp_tp_level_to_str() - Convert TPUT level to string
+ * @level: TPUT level
+ *
+ * Return: converted string
+ */
+static uint8_t *dp_tp_level_to_str(uint32_t level)
+{
+	switch (level) {
+	/* initialize the wlan sub system */
+	case WLAN_SVC_TP_NONE:
+		return "NONE";
+	case WLAN_SVC_TP_LOW:
+		return "LOW";
+	case WLAN_SVC_TP_MEDIUM:
+		return "MED";
+	case WLAN_SVC_TP_HIGH:
+		return "HIGH";
+	default:
+		return "INVAL";
+	}
+}
+
+void wlan_dp_display_tx_rx_histogram(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
+	int i;
+
+	if (!dp_ctx) {
+		dp_err("Unable to get DP context");
+		return;
+	}
+
+	dp_nofl_info("BW compute Interval: %d ms",
+		     dp_ctx->dp_cfg.bus_bw_compute_interval);
+	dp_nofl_info("BW TH - Very High: %d High: %d Med: %d Low: %d DBS: %d",
+		     dp_ctx->dp_cfg.bus_bw_very_high_threshold,
+		     dp_ctx->dp_cfg.bus_bw_high_threshold,
+		     dp_ctx->dp_cfg.bus_bw_medium_threshold,
+		     dp_ctx->dp_cfg.bus_bw_low_threshold,
+		     dp_ctx->dp_cfg.bus_bw_dbs_threshold);
+	dp_nofl_info("Enable TCP DEL ACK: %d",
+		     dp_ctx->en_tcp_delack_no_lro);
+	dp_nofl_info("TCP DEL High TH: %d TCP DEL Low TH: %d",
+		     dp_ctx->dp_cfg.tcp_delack_thres_high,
+		     dp_ctx->dp_cfg.tcp_delack_thres_low);
+	dp_nofl_info("TCP TX HIGH TP TH: %d (Use to set tcp_output_bytes_lim)",
+		     dp_ctx->dp_cfg.tcp_tx_high_tput_thres);
+
+	dp_nofl_info("Total entries: %d Current index: %d",
+		     NUM_TX_RX_HISTOGRAM, dp_ctx->txrx_hist_idx);
+
+	if (dp_ctx->txrx_hist) {
+		dp_nofl_info("[index][timestamp]: interval_rx, interval_tx, bus_bw_level, RX TP Level, TX TP Level, Rx:Tx pm_qos");
+
+		for (i = 0; i < NUM_TX_RX_HISTOGRAM; i++) {
+			struct tx_rx_histogram *hist;
+
+			/* using dp_log to avoid printing function name */
+			if (dp_ctx->txrx_hist[i].qtime <= 0)
+				continue;
+			hist = &dp_ctx->txrx_hist[i];
+			dp_nofl_info("[%3d][%15llu]: %6llu, %6llu, %s, %s, %s, %s:%s",
+				     i, hist->qtime, hist->interval_rx,
+				     hist->interval_tx,
+				     pld_bus_width_type_to_str(hist->next_vote_level),
+				     dp_tp_level_to_str(hist->next_rx_level),
+				     dp_tp_level_to_str(hist->next_tx_level),
+				     hist->is_rx_pm_qos_high ? "HIGH" : "LOW",
+				     hist->is_tx_pm_qos_high ? "HIGH" : "LOW");
+		}
+	}
+}
+
+void wlan_dp_clear_tx_rx_histogram(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
+
+	if (!dp_ctx) {
+		dp_err("Unable to get DP context");
+		return;
+	}
+
+	dp_ctx->txrx_hist_idx = 0;
+	if (dp_ctx->txrx_hist)
+		qdf_mem_zero(dp_ctx->txrx_hist,
+			     (sizeof(struct tx_rx_histogram) *
+			     NUM_TX_RX_HISTOGRAM));
+}
+
+/**
+ * wlan_dp_init_tx_rx_histogram() - init tx/rx histogram stats
+ * @dp_ctx: dp context
+ *
+ * Return: 0 for success or error code
+ */
+static int wlan_dp_init_tx_rx_histogram(struct wlan_dp_psoc_context *dp_ctx)
+{
+	dp_ctx->txrx_hist = qdf_mem_malloc(
+		(sizeof(struct tx_rx_histogram) * NUM_TX_RX_HISTOGRAM));
+	if (!dp_ctx->txrx_hist)
+		return -ENOMEM;
+
+	return 0;
+}
+
+/**
+ * wlan_dp_deinit_tx_rx_histogram() - deinit tx/rx histogram stats
+ * @dp_ctx: dp context
+ *
+ * Return: none
+ */
+static void wlan_dp_deinit_tx_rx_histogram(struct wlan_dp_psoc_context *dp_ctx)
+{
+	if (!dp_ctx || !dp_ctx->txrx_hist)
+		return;
+
+	qdf_mem_free(dp_ctx->txrx_hist);
+	dp_ctx->txrx_hist = NULL;
+}
+
+/**
+ * dp_pm_qos_update_cpu_mask() - Prepare CPU mask for PM_qos voting
+ * @mask: return variable of cpumask for the TPUT
+ * @enable_perf_cluster: Enable PERF cluster or not
+ *
+ * By default, the function sets CPU mask for silver cluster unless
+ * enable_perf_cluster is set as true.
+ *
+ * Return: none
+ */
+static inline void dp_pm_qos_update_cpu_mask(qdf_cpu_mask *mask,
+					     bool enable_perf_cluster)
+{
+	qdf_cpumask_set_cpu(0, mask);
+	qdf_cpumask_set_cpu(1, mask);
+	qdf_cpumask_set_cpu(2, mask);
+	qdf_cpumask_set_cpu(3, mask);
+
+	if (enable_perf_cluster) {
+		qdf_cpumask_set_cpu(4, mask);
+		qdf_cpumask_set_cpu(5, mask);
+		qdf_cpumask_set_cpu(6, mask);
+	}
+}
+
+/**
+ * dp_bus_bandwidth_work_tune_rx() - Function to tune for RX
+ * @dp_ctx: handle to dp context
+ * @rx_packets: receive packet count in last bus bandwidth interval
+ * @diff_us: delta time since last invocation.
+ * @next_rx_level: pointer to next_rx_level to be filled
+ * @cpu_mask: pm_qos cpu_mask needed for RX, to be filled
+ * @is_rx_pm_qos_high: pointer indicating if high qos is needed, to be filled
+ *
+ * The function tunes various aspects of driver based on a running average
+ * of RX packets received in last bus bandwidth interval.
+ *
+ * Returns: true if RX level has changed, else return false
+ */
+static
+bool dp_bus_bandwidth_work_tune_rx(struct wlan_dp_psoc_context *dp_ctx,
+				   const uint64_t rx_packets,
+				   uint64_t diff_us,
+				   enum wlan_tp_level *next_rx_level,
+				   qdf_cpu_mask *cpu_mask,
+				   bool *is_rx_pm_qos_high)
+{
+	bool rx_level_change = false;
+	bool rxthread_high_tput_req;
+	uint32_t bw_interval_us;
+	uint32_t delack_timer_cnt = dp_ctx->dp_cfg.tcp_delack_timer_count;
+	uint64_t avg_rx;
+	uint64_t no_rx_offload_pkts, avg_no_rx_offload_pkts;
+	uint64_t rx_offload_pkts, avg_rx_offload_pkts;
+
+	bw_interval_us = dp_ctx->dp_cfg.bus_bw_compute_interval * 1000;
+	no_rx_offload_pkts = dp_ctx->no_rx_offload_pkt_cnt;
+	dp_ctx->no_rx_offload_pkt_cnt = 0;
+
+	/* adjust for any sched delays */
+	no_rx_offload_pkts = no_rx_offload_pkts * bw_interval_us;
+	no_rx_offload_pkts = qdf_do_div(no_rx_offload_pkts, (uint32_t)diff_us);
+
+	/* average no-offload RX packets over last 2 BW intervals */
+	avg_no_rx_offload_pkts = (no_rx_offload_pkts +
+				  dp_ctx->prev_no_rx_offload_pkts) / 2;
+	dp_ctx->prev_no_rx_offload_pkts = no_rx_offload_pkts;
+
+	if (rx_packets >= no_rx_offload_pkts)
+		rx_offload_pkts = rx_packets - no_rx_offload_pkts;
+	else
+		rx_offload_pkts = 0;
+
+	/* average offloaded RX packets over last 2 BW intervals */
+	avg_rx_offload_pkts = (rx_offload_pkts +
+			       dp_ctx->prev_rx_offload_pkts) / 2;
+	dp_ctx->prev_rx_offload_pkts = rx_offload_pkts;
+
+	avg_rx = avg_no_rx_offload_pkts + avg_rx_offload_pkts;
+
+	qdf_cpumask_clear(cpu_mask);
+
+	if (avg_no_rx_offload_pkts > dp_ctx->dp_cfg.bus_bw_high_threshold) {
+		rxthread_high_tput_req = true;
+		*is_rx_pm_qos_high = true;
+		/*Todo: move hdd implementation to qdf */
+		dp_pm_qos_update_cpu_mask(cpu_mask, true);
+	} else if (avg_rx > dp_ctx->dp_cfg.bus_bw_high_threshold) {
+		rxthread_high_tput_req = false;
+		*is_rx_pm_qos_high = false;
+		dp_pm_qos_update_cpu_mask(cpu_mask, false);
+	} else {
+		*is_rx_pm_qos_high = false;
+		rxthread_high_tput_req = false;
+	}
+
+	/*
+	 * Takes care to set Rx_thread affinity for below case
+	 * 1)LRO/GRO not supported ROME case
+	 * 2)when rx_ol is disabled in cases like concurrency etc
+	 * 3)For UDP cases
+	 */
+	if (cds_sched_handle_throughput_req(rxthread_high_tput_req))
+		dp_warn("Rx thread high_tput(%d) affinity request failed",
+			rxthread_high_tput_req);
+
+	/* fine-tuning parameters for RX Flows */
+	if (avg_rx > dp_ctx->dp_cfg.tcp_delack_thres_high) {
+		if (dp_ctx->cur_rx_level != WLAN_SVC_TP_HIGH &&
+		    ++dp_ctx->rx_high_ind_cnt == delack_timer_cnt) {
+			*next_rx_level = WLAN_SVC_TP_HIGH;
+		}
+	} else {
+		dp_ctx->rx_high_ind_cnt = 0;
+		*next_rx_level = WLAN_SVC_TP_LOW;
+	}
+
+	if (dp_ctx->cur_rx_level != *next_rx_level) {
+		struct wlan_rx_tp_data rx_tp_data = {0};
+
+		dp_ctx->cur_rx_level = *next_rx_level;
+		rx_level_change = true;
+		/* Send throughput indication only if it is enabled.
+		 * Disabling tcp_del_ack will revert the tcp stack behavior
+		 * to default delayed ack. Note that this will disable the
+		 * dynamic delayed ack mechanism across the system
+		 */
+		if (dp_ctx->en_tcp_delack_no_lro)
+			rx_tp_data.rx_tp_flags |= TCP_DEL_ACK_IND;
+
+		if (dp_ctx->dp_cfg.enable_tcp_adv_win_scale)
+			rx_tp_data.rx_tp_flags |= TCP_ADV_WIN_SCL;
+
+		rx_tp_data.level = *next_rx_level;
+		wlan_dp_update_tcp_rx_param(dp_ctx, &rx_tp_data);
+	}
+
+	return rx_level_change;
+}
+
+/**
+ * dp_bus_bandwidth_work_tune_tx() - Function to tune for TX
+ * @dp_ctx: handle to dp context
+ * @tx_packets: transmit packet count in last bus bandwidth interval
+ * @diff_us: delta time since last invocation.
+ * @next_tx_level: pointer to next_tx_level to be filled
+ * @cpu_mask: pm_qos cpu_mask needed for TX, to be filled
+ * @is_tx_pm_qos_high: pointer indicating if high qos is needed, to be filled
+ *
+ * The function tunes various aspects of the driver based on a running average
+ * of TX packets received in last bus bandwidth interval.
+ *
+ * Returns: true if TX level has changed, else return false
+ */
+static
+bool dp_bus_bandwidth_work_tune_tx(struct wlan_dp_psoc_context *dp_ctx,
+				   const uint64_t tx_packets,
+				   uint64_t diff_us,
+				   enum wlan_tp_level *next_tx_level,
+				   qdf_cpu_mask *cpu_mask,
+				   bool *is_tx_pm_qos_high)
+{
+	bool tx_level_change = false;
+	uint32_t bw_interval_us;
+	uint64_t no_tx_offload_pkts, avg_no_tx_offload_pkts;
+	uint64_t tx_offload_pkts, avg_tx_offload_pkts;
+	uint64_t avg_tx;
+
+	bw_interval_us = dp_ctx->dp_cfg.bus_bw_compute_interval * 1000;
+	no_tx_offload_pkts = dp_ctx->no_tx_offload_pkt_cnt;
+
+	/* adjust for any sched delays */
+	no_tx_offload_pkts = no_tx_offload_pkts * bw_interval_us;
+	no_tx_offload_pkts = qdf_do_div(no_tx_offload_pkts, (uint32_t)diff_us);
+
+	/* average no-offload TX packets over last 2 BW intervals */
+	avg_no_tx_offload_pkts = (no_tx_offload_pkts +
+				  dp_ctx->prev_no_tx_offload_pkts) / 2;
+	dp_ctx->no_tx_offload_pkt_cnt = 0;
+	dp_ctx->prev_no_tx_offload_pkts = no_tx_offload_pkts;
+
+	if (tx_packets >= no_tx_offload_pkts)
+		tx_offload_pkts = tx_packets - no_tx_offload_pkts;
+	else
+		tx_offload_pkts = 0;
+
+	/* average offloaded TX packets over last 2 BW intervals */
+	avg_tx_offload_pkts = (tx_offload_pkts +
+			       dp_ctx->prev_tx_offload_pkts) / 2;
+	dp_ctx->prev_tx_offload_pkts = tx_offload_pkts;
+
+	avg_tx = avg_no_tx_offload_pkts + avg_tx_offload_pkts;
+
+	/* fine-tuning parameters for TX Flows */
+	dp_ctx->prev_tx = tx_packets;
+
+	qdf_cpumask_clear(cpu_mask);
+
+	if (avg_no_tx_offload_pkts >
+		dp_ctx->dp_cfg.bus_bw_very_high_threshold) {
+		dp_pm_qos_update_cpu_mask(cpu_mask, true);
+		*is_tx_pm_qos_high = true;
+	} else if (avg_tx > dp_ctx->dp_cfg.bus_bw_high_threshold) {
+		dp_pm_qos_update_cpu_mask(cpu_mask, false);
+		*is_tx_pm_qos_high = false;
+	} else {
+		*is_tx_pm_qos_high = false;
+	}
+
+	if (avg_tx > dp_ctx->dp_cfg.tcp_tx_high_tput_thres)
+		*next_tx_level = WLAN_SVC_TP_HIGH;
+	else
+		*next_tx_level = WLAN_SVC_TP_LOW;
+
+	if (dp_ctx->dp_cfg.enable_tcp_limit_output &&
+	    dp_ctx->cur_tx_level != *next_tx_level) {
+		struct wlan_tx_tp_data tx_tp_data = {0};
+
+		dp_ctx->cur_tx_level = *next_tx_level;
+		tx_level_change = true;
+		tx_tp_data.level = *next_tx_level;
+		tx_tp_data.tcp_limit_output = true;
+		wlan_dp_update_tcp_tx_param(dp_ctx, &tx_tp_data);
+	}
+
+	return tx_level_change;
+}
+
+/**
+ * dp_pld_request_bus_bandwidth() - Function to control bus bandwidth
+ * @dp_ctx: handle to DP context
+ * @tx_packets: transmit packet count received in BW interval
+ * @rx_packets: receive packet count received in BW interval
+ * @diff_us: delta time since last invocation.
+ *
+ * The function controls the bus bandwidth and dynamic control of
+ * tcp delayed ack configuration.
+ *
+ * Returns: None
+ */
+static void dp_pld_request_bus_bandwidth(struct wlan_dp_psoc_context *dp_ctx,
+					 const uint64_t tx_packets,
+					 const uint64_t rx_packets,
+					 const uint64_t diff_us)
+{
+	uint16_t index;
+	bool vote_level_change = false;
+	bool rx_level_change;
+	bool tx_level_change;
+	bool dptrace_high_tput_req;
+	u64 total_pkts = tx_packets + rx_packets;
+	enum pld_bus_width_type next_vote_level = PLD_BUS_WIDTH_IDLE;
+	static enum wlan_tp_level next_rx_level = WLAN_SVC_TP_NONE;
+	enum wlan_tp_level next_tx_level = WLAN_SVC_TP_NONE;
+	qdf_cpu_mask pm_qos_cpu_mask_tx, pm_qos_cpu_mask_rx, pm_qos_cpu_mask;
+	bool is_rx_pm_qos_high;
+	bool is_tx_pm_qos_high;
+	enum tput_level tput_level;
+	struct bbm_params param = {0};
+	bool legacy_client = false;
+	void *hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
+	ol_txrx_soc_handle soc = cds_get_context(QDF_MODULE_ID_SOC);
+	static enum tput_level prev_tput_level = TPUT_LEVEL_NONE;
+	struct wlan_dp_psoc_callbacks *dp_ops = &dp_ctx->dp_ops;
+	hdd_cb_handle ctx = dp_ops->callback_ctx;
+
+	if (!soc)
+		return;
+
+	if (dp_ctx->high_bus_bw_request) {
+		next_vote_level = PLD_BUS_WIDTH_VERY_HIGH;
+		tput_level = TPUT_LEVEL_VERY_HIGH;
+	} else if (total_pkts > dp_ctx->dp_cfg.bus_bw_ultra_high_threshold) {
+		next_vote_level = PLD_BUS_WIDTH_ULTRA_HIGH;
+		tput_level = TPUT_LEVEL_ULTRA_HIGH;
+	} else if (total_pkts > dp_ctx->dp_cfg.bus_bw_very_high_threshold) {
+		next_vote_level = PLD_BUS_WIDTH_VERY_HIGH;
+		tput_level = TPUT_LEVEL_VERY_HIGH;
+	} else if (total_pkts > dp_ctx->dp_cfg.bus_bw_high_threshold) {
+		next_vote_level = PLD_BUS_WIDTH_HIGH;
+		tput_level = TPUT_LEVEL_HIGH;
+	} else if (total_pkts > dp_ctx->dp_cfg.bus_bw_medium_threshold) {
+		next_vote_level = PLD_BUS_WIDTH_MEDIUM;
+		tput_level = TPUT_LEVEL_MEDIUM;
+	} else if (total_pkts > dp_ctx->dp_cfg.bus_bw_low_threshold) {
+		next_vote_level = PLD_BUS_WIDTH_LOW;
+		tput_level = TPUT_LEVEL_LOW;
+	} else {
+		next_vote_level = PLD_BUS_WIDTH_IDLE;
+		tput_level = TPUT_LEVEL_IDLE;
+	}
+
+	/*
+	 * DBS mode requires more DDR/SNOC resources, vote to ultra high
+	 * only when TPUT can reach VHT80 KPI and IPA is disabled,
+	 * for other cases, follow general voting logic
+	 */
+	if (!ucfg_ipa_is_fw_wdi_activated(dp_ctx->pdev) &&
+	    policy_mgr_is_current_hwmode_dbs(dp_ctx->psoc) &&
+	    (total_pkts > dp_ctx->dp_cfg.bus_bw_dbs_threshold)) {
+		next_vote_level = PLD_BUS_WIDTH_ULTRA_HIGH;
+		tput_level = TPUT_LEVEL_ULTRA_HIGH;
+	}
+
+	param.policy = BBM_TPUT_POLICY;
+	param.policy_info.tput_level = tput_level;
+
+	dp_rtpm_tput_policy_apply(dp_ctx, tput_level);
+
+	dptrace_high_tput_req =
+			next_vote_level > PLD_BUS_WIDTH_IDLE ? true : false;
+
+	if (qdf_atomic_read(&dp_ctx->num_latency_critical_clients))
+		legacy_client = true;
+
+	dp_low_tput_gro_flush_skip_handler(dp_ctx, next_vote_level,
+					   legacy_client);
+
+	if (dp_ctx->cur_vote_level != next_vote_level) {
+		/* Set affinity for tx completion grp interrupts */
+		if (tput_level >= TPUT_LEVEL_VERY_HIGH &&
+		    prev_tput_level < TPUT_LEVEL_VERY_HIGH)
+			hif_set_grp_intr_affinity(hif_ctx,
+				cdp_get_tx_rings_grp_bitmap(soc), true);
+		else if (tput_level < TPUT_LEVEL_VERY_HIGH &&
+			 prev_tput_level >= TPUT_LEVEL_VERY_HIGH)
+			hif_set_grp_intr_affinity(hif_ctx,
+				cdp_get_tx_rings_grp_bitmap(soc),
+				false);
+
+		prev_tput_level = tput_level;
+		dp_ctx->cur_vote_level = next_vote_level;
+		vote_level_change = true;
+
+		if ((next_vote_level == PLD_BUS_WIDTH_LOW) ||
+		    (next_vote_level == PLD_BUS_WIDTH_IDLE)) {
+			dp_ops->dp_pld_remove_pm_qos(ctx);
+			if (dp_ctx->dynamic_rps)
+				dp_clear_rps_cpu_mask(dp_ctx);
+		} else {
+			dp_ops->dp_pld_request_pm_qos(ctx);
+			if (dp_ctx->dynamic_rps)
+				/*Todo : check once hdd_set_rps_cpu_mask */
+				dp_set_rps_cpu_mask(dp_ctx);
+		}
+
+		if (dp_ctx->dp_cfg.rx_thread_ul_affinity_mask) {
+			if (next_vote_level == PLD_BUS_WIDTH_HIGH &&
+			    tx_packets >
+			    dp_ctx->dp_cfg.bus_bw_high_threshold &&
+			    rx_packets >
+			    dp_ctx->dp_cfg.bus_bw_low_threshold)
+				cds_sched_handle_rx_thread_affinity_req(true);
+			else if (next_vote_level != PLD_BUS_WIDTH_HIGH)
+				cds_sched_handle_rx_thread_affinity_req(false);
+		}
+
+		dp_ops->dp_napi_apply_throughput_policy(ctx,
+							tx_packets,
+							rx_packets);
+
+		if (rx_packets < dp_ctx->dp_cfg.bus_bw_low_threshold)
+			dp_ops->dp_disable_rx_ol_for_low_tput(ctx,
+							      true);
+		else
+			dp_ops->dp_disable_rx_ol_for_low_tput(ctx,
+							      false);
+
+		/*
+		 * force disable pktlog and only re-enable based
+		 * on ini config
+		 */
+		if (next_vote_level >= PLD_BUS_WIDTH_HIGH)
+			dp_ops->dp_pktlog_enable_disable(ctx,
+							 false, 0, 0);
+		else if (cds_is_packet_log_enabled())
+			dp_ops->dp_pktlog_enable_disable(ctx,
+							 true, 0, 0);
+	}
+
+	qdf_dp_trace_apply_tput_policy(dptrace_high_tput_req);
+
+	rx_level_change = dp_bus_bandwidth_work_tune_rx(dp_ctx,
+							rx_packets,
+							diff_us,
+							&next_rx_level,
+							&pm_qos_cpu_mask_rx,
+							&is_rx_pm_qos_high);
+
+	tx_level_change = dp_bus_bandwidth_work_tune_tx(dp_ctx,
+							tx_packets,
+							diff_us,
+							&next_tx_level,
+							&pm_qos_cpu_mask_tx,
+							&is_tx_pm_qos_high);
+
+	index = dp_ctx->txrx_hist_idx;
+
+	if (vote_level_change) {
+		/* Clear mask if BW is not HIGH or more */
+		if (next_vote_level < PLD_BUS_WIDTH_HIGH) {
+			is_rx_pm_qos_high = false;
+			is_tx_pm_qos_high = false;
+			qdf_cpumask_clear(&pm_qos_cpu_mask);
+		} else {
+			qdf_cpumask_clear(&pm_qos_cpu_mask);
+			qdf_cpumask_or(&pm_qos_cpu_mask,
+				       &pm_qos_cpu_mask_tx,
+				       &pm_qos_cpu_mask_rx);
+
+			/* Default mask in case throughput is high */
+			if (qdf_cpumask_empty(&pm_qos_cpu_mask))
+				dp_pm_qos_update_cpu_mask(&pm_qos_cpu_mask,
+							  false);
+		}
+		dp_ops->dp_pm_qos_update_request(ctx, &pm_qos_cpu_mask);
+	}
+
+	if (vote_level_change || tx_level_change || rx_level_change) {
+		dp_info("tx:%llu[%llu(off)+%llu(no-off)] rx:%llu[%llu(off)+%llu(no-off)] next_level(vote %u rx %u tx %u rtpm %d) pm_qos(rx:%u,%*pb tx:%u,%*pb)",
+			tx_packets,
+			dp_ctx->prev_tx_offload_pkts,
+			dp_ctx->prev_no_tx_offload_pkts,
+			rx_packets,
+			dp_ctx->prev_rx_offload_pkts,
+			dp_ctx->prev_no_rx_offload_pkts,
+			next_vote_level, next_rx_level, next_tx_level,
+			dp_rtpm_tput_policy_get_vote(dp_ctx),
+			is_rx_pm_qos_high,
+			qdf_cpumask_pr_args(&pm_qos_cpu_mask_rx),
+			is_tx_pm_qos_high,
+			qdf_cpumask_pr_args(&pm_qos_cpu_mask_tx));
+
+		dp_ctx->txrx_hist[index].next_tx_level = next_tx_level;
+		dp_ctx->txrx_hist[index].next_rx_level = next_rx_level;
+		dp_ctx->txrx_hist[index].is_rx_pm_qos_high =
+							is_rx_pm_qos_high;
+		dp_ctx->txrx_hist[index].is_tx_pm_qos_high =
+							is_tx_pm_qos_high;
+		dp_ctx->txrx_hist[index].next_vote_level = next_vote_level;
+		dp_ctx->txrx_hist[index].interval_rx = rx_packets;
+		dp_ctx->txrx_hist[index].interval_tx = tx_packets;
+		dp_ctx->txrx_hist[index].qtime = qdf_get_log_timestamp();
+		dp_ctx->txrx_hist_idx++;
+		dp_ctx->txrx_hist_idx &= NUM_TX_RX_HISTOGRAM_MASK;
+	}
+
+	/* Roaming is a high priority job but gets processed in scheduler
+	 * thread, bypassing printing stats so that kworker exits quickly and
+	 * scheduler thread can utilize CPU.
+	 */
+	if (!dp_ops->dp_is_roaming_in_progress(ctx)) {
+		dp_ops->dp_display_periodic_stats(ctx,
+						  (total_pkts > 0) ?
+						  true : false);
+		dp_periodic_sta_stats_display(dp_ctx);
+	}
+}
+
+/**
+ * __dp_bus_bw_work_handler() - Bus bandwidth work handler
+ * @dp_ctx: handle to DP context
+ *
+ * The function handles the bus bandwidth work schedule
+ *
+ * Returns: None
+ */
+static void __dp_bus_bw_work_handler(struct wlan_dp_psoc_context *dp_ctx)
+{
+	struct wlan_objmgr_vdev *vdev;
+	struct wlan_dp_intf *dp_intf = NULL, *con_sap_dp_intf = NULL;
+	struct wlan_dp_intf *dp_intf_next = NULL;
+	uint64_t tx_packets = 0, rx_packets = 0, tx_bytes = 0;
+	uint64_t fwd_tx_packets = 0, fwd_rx_packets = 0;
+	uint64_t fwd_tx_packets_diff = 0, fwd_rx_packets_diff = 0;
+	uint64_t total_tx = 0, total_rx = 0;
+	A_STATUS ret;
+	bool connected = false;
+	uint32_t ipa_tx_packets = 0, ipa_rx_packets = 0;
+	uint64_t sta_tx_bytes = 0, sap_tx_bytes = 0;
+	uint64_t diff_us;
+	uint64_t curr_time_us;
+	uint32_t bw_interval_us;
+	hdd_cb_handle ctx = dp_ctx->dp_ops.callback_ctx;
+
+	if (wlan_dp_validate_context(dp_ctx))
+		goto stop_work;
+
+	if (dp_ctx->is_wiphy_suspended)
+		return;
+
+	bw_interval_us = dp_ctx->dp_cfg.bus_bw_compute_interval * 1000;
+
+	curr_time_us = qdf_get_log_timestamp();
+	diff_us = qdf_log_timestamp_to_usecs(
+			curr_time_us - dp_ctx->bw_vote_time);
+	dp_ctx->bw_vote_time = curr_time_us;
+
+	dp_for_each_intf_held_safe(dp_ctx, dp_intf, dp_intf_next) {
+		if (is_dp_intf_valid(dp_intf))
+			continue;
+
+		vdev = dp_intf->vdev;
+		if (dp_comp_vdev_get_ref(vdev))
+			continue;
+
+		if ((dp_intf->device_mode == QDF_STA_MODE ||
+		     dp_intf->device_mode == QDF_P2P_CLIENT_MODE) &&
+		    !ucfg_cm_is_vdev_active(vdev)) {
+			dp_comp_vdev_put_ref(vdev);
+			continue;
+		}
+
+		if ((dp_intf->device_mode == QDF_SAP_MODE ||
+		     dp_intf->device_mode == QDF_P2P_GO_MODE) &&
+		     !dp_ctx->dp_ops.dp_is_ap_active(ctx,
+						     dp_intf->intf_id)) {
+			dp_comp_vdev_put_ref(vdev);
+			continue;
+		}
+
+		tx_packets += DP_BW_GET_DIFF(
+			QDF_NET_DEV_STATS_TX_PKTS(&dp_intf->stats),
+			dp_intf->prev_tx_packets);
+		rx_packets += DP_BW_GET_DIFF(
+			QDF_NET_DEV_STATS_RX_PKTS(&dp_intf->stats),
+			dp_intf->prev_rx_packets);
+		tx_bytes = DP_BW_GET_DIFF(
+			QDF_NET_DEV_STATS_TX_BYTES(&dp_intf->stats),
+			dp_intf->prev_tx_bytes);
+
+		if (dp_intf->device_mode == QDF_STA_MODE &&
+		    ucfg_cm_is_vdev_active(vdev))
+			dp_ctx->dp_ops.dp_send_mscs_action_frame(ctx,
+							dp_intf->intf_id);
+
+		if (dp_intf->device_mode == QDF_SAP_MODE ||
+		    dp_intf->device_mode == QDF_P2P_GO_MODE ||
+		    dp_intf->device_mode == QDF_NDI_MODE) {
+			ret = cdp_get_intra_bss_fwd_pkts_count(
+				cds_get_context(QDF_MODULE_ID_SOC),
+				dp_intf->intf_id,
+				&fwd_tx_packets, &fwd_rx_packets);
+			if (ret == A_OK) {
+				fwd_tx_packets_diff += DP_BW_GET_DIFF(
+					fwd_tx_packets,
+					dp_intf->prev_fwd_tx_packets);
+				fwd_rx_packets_diff += DP_BW_GET_DIFF(
+					fwd_tx_packets,
+					dp_intf->prev_fwd_rx_packets);
+			}
+		}
+
+		if (dp_intf->device_mode == QDF_SAP_MODE) {
+			con_sap_dp_intf = dp_intf;
+			sap_tx_bytes =
+				QDF_NET_DEV_STATS_TX_BYTES(&dp_intf->stats);
+		}
+
+		if (dp_intf->device_mode == QDF_STA_MODE)
+			sta_tx_bytes =
+				QDF_NET_DEV_STATS_TX_BYTES(&dp_intf->stats);
+
+		dp_set_driver_del_ack_enable(dp_intf->intf_id, dp_ctx,
+					     rx_packets);
+
+		dp_set_vdev_bundle_require_flag(dp_intf->intf_id, dp_ctx,
+						tx_bytes);
+
+		total_rx += QDF_NET_DEV_STATS_RX_PKTS(&dp_intf->stats);
+		total_tx += QDF_NET_DEV_STATS_TX_PKTS(&dp_intf->stats);
+
+		qdf_spin_lock_bh(&dp_ctx->bus_bw_lock);
+		dp_intf->prev_tx_packets =
+			QDF_NET_DEV_STATS_TX_PKTS(&dp_intf->stats);
+		dp_intf->prev_rx_packets =
+			QDF_NET_DEV_STATS_RX_PKTS(&dp_intf->stats);
+		dp_intf->prev_fwd_tx_packets = fwd_tx_packets;
+		dp_intf->prev_fwd_rx_packets = fwd_rx_packets;
+		dp_intf->prev_tx_bytes =
+			QDF_NET_DEV_STATS_TX_BYTES(&dp_intf->stats);
+		qdf_spin_unlock_bh(&dp_ctx->bus_bw_lock);
+		connected = true;
+		dp_comp_vdev_put_ref(vdev);
+	}
+
+	if (!connected) {
+		dp_err("bus bandwidth timer running in disconnected state");
+		goto stop_work;
+	}
+
+	/* add intra bss forwarded tx and rx packets */
+	tx_packets += fwd_tx_packets_diff;
+	rx_packets += fwd_rx_packets_diff;
+
+	/* Send embedded Tx packet bytes on STA & SAP interface to IPA driver */
+	ucfg_ipa_update_tx_stats(dp_ctx->pdev, sta_tx_bytes, sap_tx_bytes);
+
+	dp_ipa_set_perf_level(dp_ctx, &tx_packets, &rx_packets,
+			      &ipa_tx_packets, &ipa_rx_packets);
+	if (con_sap_dp_intf) {
+		QDF_NET_DEV_STATS_TX_PKTS(&con_sap_dp_intf->stats) +=
+			ipa_tx_packets;
+		QDF_NET_DEV_STATS_RX_PKTS(&con_sap_dp_intf->stats) +=
+			ipa_rx_packets;
+	}
+
+	tx_packets = tx_packets * bw_interval_us;
+	tx_packets = qdf_do_div(tx_packets, (uint32_t)diff_us);
+
+	rx_packets = rx_packets * bw_interval_us;
+	rx_packets = qdf_do_div(rx_packets, (uint32_t)diff_us);
+
+	dp_pld_request_bus_bandwidth(dp_ctx, tx_packets, rx_packets, diff_us);
+
+	return;
+
+stop_work:
+	qdf_periodic_work_stop_async(&dp_ctx->bus_bw_work);
+}
+
+/**
+ * dp_bus_bw_work_handler() - Bus bandwidth work handler
+ * @context: handle to DP context
+ *
+ * The function handles the bus bandwidth work schedule
+ *
+ * Returns: None
+ */
+static void dp_bus_bw_work_handler(void *context)
+{
+	struct wlan_dp_psoc_context *dp_ctx = context;
+	struct qdf_op_sync *op_sync;
+
+	if (qdf_op_protect(&op_sync))
+		return;
+
+	__dp_bus_bw_work_handler(dp_ctx);
+
+	qdf_op_unprotect(op_sync);
+}
+
+int dp_bus_bandwidth_init(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
+	hdd_cb_handle ctx = dp_ctx->dp_ops.callback_ctx;
+	QDF_STATUS status;
+
+	if (QDF_GLOBAL_FTM_MODE == cds_get_conparam())
+		return QDF_STATUS_SUCCESS;
+
+	dp_enter();
+
+	qdf_spinlock_create(&dp_ctx->bus_bw_lock);
+
+	dp_ctx->dp_ops.dp_pm_qos_add_request(ctx);
+
+	wlan_dp_init_tx_rx_histogram(dp_ctx);
+	status = qdf_periodic_work_create(&dp_ctx->bus_bw_work,
+					  dp_bus_bw_work_handler,
+					  dp_ctx);
+
+	dp_exit();
+
+	return qdf_status_to_os_return(status);
+}
+
+void dp_bus_bandwidth_deinit(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
+	hdd_cb_handle ctx = dp_ctx->dp_ops.callback_ctx;
+
+	if (QDF_GLOBAL_FTM_MODE == cds_get_conparam())
+		return;
+
+	dp_enter();
+
+	/* it is expecting the timer has been stopped or not started
+	 * when coming deinit.
+	 */
+	QDF_BUG(!qdf_periodic_work_stop_sync(&dp_ctx->bus_bw_work));
+
+	qdf_periodic_work_destroy(&dp_ctx->bus_bw_work);
+	qdf_spinlock_destroy(&dp_ctx->bus_bw_lock);
+	wlan_dp_deinit_tx_rx_histogram(dp_ctx);
+	dp_ctx->dp_ops.dp_pm_qos_remove_request(ctx);
+
+	dp_exit();
+}
+
+/**
+ * __dp_bus_bw_compute_timer_start() - start the bus bandwidth timer
+ * @psoc: psoc handle
+ *
+ * Return: None
+ */
+static void __dp_bus_bw_compute_timer_start(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
+
+	if (QDF_GLOBAL_FTM_MODE == cds_get_conparam())
+		return;
+
+	qdf_periodic_work_start(&dp_ctx->bus_bw_work,
+				dp_ctx->dp_cfg.bus_bw_compute_interval);
+	dp_ctx->bw_vote_time = qdf_get_log_timestamp();
+}
+
+void dp_bus_bw_compute_timer_start(struct wlan_objmgr_psoc *psoc)
+{
+	dp_enter();
+
+	__dp_bus_bw_compute_timer_start(psoc);
+
+	dp_exit();
+}
+
+void dp_bus_bw_compute_timer_try_start(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
+	hdd_cb_handle ctx = dp_ctx->dp_ops.callback_ctx;
+
+	dp_enter();
+
+	if (dp_ctx->dp_ops.dp_any_adapter_connected(ctx))
+		__dp_bus_bw_compute_timer_start(psoc);
+
+	dp_exit();
+}
+
+/**
+ * __dp_bus_bw_compute_timer_stop() - stop the bus bandwidth timer
+ * @psoc: psoc handle
+ *
+ * Return: None
+ */
+static void __dp_bus_bw_compute_timer_stop(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
+	hdd_cb_handle ctx = dp_ctx->dp_ops.callback_ctx;
+
+	struct bbm_params param = {0};
+	bool is_any_adapter_conn =
+		dp_ctx->dp_ops.dp_any_adapter_connected(ctx);
+
+	if (QDF_GLOBAL_FTM_MODE == cds_get_conparam())
+		return;
+
+	if (!qdf_periodic_work_stop_sync(&dp_ctx->bus_bw_work))
+		goto exit;
+
+	ucfg_ipa_set_perf_level(dp_ctx->pdev, 0, 0);
+
+	dp_reset_tcp_delack(psoc);
+
+	if (!is_any_adapter_conn)
+		dp_reset_tcp_adv_win_scale(dp_ctx);
+
+	cdp_pdev_reset_driver_del_ack(cds_get_context(QDF_MODULE_ID_SOC),
+				      OL_TXRX_PDEV_ID);
+	cdp_pdev_reset_bundle_require_flag(cds_get_context(QDF_MODULE_ID_SOC),
+					   OL_TXRX_PDEV_ID);
+
+	dp_ctx->bw_vote_time = 0;
+
+exit:
+	/**
+	 * This check if for the case where the bus bw timer is forcibly
+	 * stopped. We should remove the bus bw voting, if no adapter is
+	 * connected
+	 */
+	if (!is_any_adapter_conn) {
+		uint64_t interval_us =
+			dp_ctx->dp_cfg.bus_bw_compute_interval * 1000;
+		qdf_atomic_set(&dp_ctx->num_latency_critical_clients, 0);
+		dp_pld_request_bus_bandwidth(dp_ctx, 0, 0, interval_us);
+	}
+	param.policy = BBM_TPUT_POLICY;
+	param.policy_info.tput_level = TPUT_LEVEL_NONE;
+	dp_bbm_apply_independent_policy(psoc, &param);
+}
+
+void dp_bus_bw_compute_timer_stop(struct wlan_objmgr_psoc *psoc)
+{
+	dp_enter();
+
+	__dp_bus_bw_compute_timer_stop(psoc);
+
+	dp_exit();
+}
+
+void dp_bus_bw_compute_timer_try_stop(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
+	hdd_cb_handle ctx = dp_ctx->dp_ops.callback_ctx;
+
+	dp_enter();
+
+	if (!dp_ctx->dp_ops.dp_any_adapter_connected(ctx))
+		__dp_bus_bw_compute_timer_stop(psoc);
+
+	dp_exit();
+}
+
+void dp_bus_bw_compute_prev_txrx_stats(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_objmgr_psoc *psoc = wlan_vdev_get_psoc(vdev);
+
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
+
+	if (QDF_GLOBAL_FTM_MODE == cds_get_conparam())
+		return;
+
+	qdf_spin_lock_bh(&dp_ctx->bus_bw_lock);
+	dp_intf->prev_tx_packets = QDF_NET_DEV_STATS_TX_PKTS(&dp_intf->stats);
+	dp_intf->prev_rx_packets = QDF_NET_DEV_STATS_RX_PKTS(&dp_intf->stats);
+	dp_intf->prev_tx_bytes = QDF_NET_DEV_STATS_TX_BYTES(&dp_intf->stats);
+
+	cdp_get_intra_bss_fwd_pkts_count(cds_get_context(QDF_MODULE_ID_SOC),
+					 dp_intf->intf_id,
+					 &dp_intf->prev_fwd_tx_packets,
+					 &dp_intf->prev_fwd_rx_packets);
+	qdf_spin_unlock_bh(&dp_ctx->bus_bw_lock);
+}
+
+void dp_bus_bw_compute_reset_prev_txrx_stats(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_objmgr_psoc *psoc = wlan_vdev_get_psoc(vdev);
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
+
+	if (QDF_GLOBAL_FTM_MODE == cds_get_conparam())
+		return;
+
+	qdf_spin_lock_bh(&dp_ctx->bus_bw_lock);
+	dp_intf->prev_tx_packets = 0;
+	dp_intf->prev_rx_packets = 0;
+	dp_intf->prev_fwd_tx_packets = 0;
+	dp_intf->prev_fwd_rx_packets = 0;
+	dp_intf->prev_tx_bytes = 0;
+	qdf_spin_unlock_bh(&dp_ctx->bus_bw_lock);
+}
 #endif /* WLAN_FEATURE_DP_BUS_BANDWIDTH */

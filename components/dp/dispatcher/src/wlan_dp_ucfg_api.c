@@ -358,6 +358,7 @@ QDF_STATUS ucfg_dp_psoc_open(struct wlan_objmgr_psoc *psoc)
 	ucfg_dp_store_qdf_dev(psoc);
 	dp_rtpm_tput_policy_init(psoc);
 	dp_register_pmo_handler();
+	dp_bus_bandwidth_init(psoc);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -366,6 +367,7 @@ QDF_STATUS ucfg_dp_psoc_close(struct wlan_objmgr_psoc *psoc)
 {
 	dp_rtpm_tput_policy_deinit(psoc);
 	dp_unregister_pmo_handler();
+	dp_bus_bandwidth_deinit(psoc);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -522,6 +524,79 @@ void ucfg_dp_try_set_rps_cpu_mask(struct wlan_objmgr_psoc *psoc)
 	dp_try_set_rps_cpu_mask(psoc);
 }
 
+void ucfg_dp_add_latency_critical_client(struct wlan_objmgr_vdev *vdev,
+					 enum qca_wlan_802_11_mode phymode)
+{
+	dp_add_latency_critical_client(vdev, phymode);
+}
+
+void ucfg_dp_del_latency_critical_client(struct wlan_objmgr_vdev *vdev,
+					 enum qca_wlan_802_11_mode phymode)
+{
+	dp_del_latency_critical_client(vdev, phymode);
+}
+
+void ucfg_dp_reset_tcp_delack(struct wlan_objmgr_psoc *psoc)
+{
+	dp_reset_tcp_delack(psoc);
+}
+
+void
+ucfg_dp_set_current_throughput_level(struct wlan_objmgr_psoc *psoc,
+				     enum pld_bus_width_type next_vote_level)
+{
+	dp_set_current_throughput_level(psoc, next_vote_level);
+}
+
+void
+ucfg_dp_set_high_bus_bw_request(struct wlan_objmgr_psoc *psoc,
+				uint8_t vdev_id,
+				bool high_bus_bw)
+{
+	dp_set_high_bus_bw_request(psoc, vdev_id, high_bus_bw);
+}
+
+void ucfg_wlan_dp_display_tx_rx_histogram(struct wlan_objmgr_psoc *psoc)
+{
+	wlan_dp_display_tx_rx_histogram(psoc);
+}
+
+void ucfg_wlan_dp_clear_tx_rx_histogram(struct wlan_objmgr_psoc *psoc)
+{
+	wlan_dp_clear_tx_rx_histogram(psoc);
+}
+
+void ucfg_dp_bus_bw_compute_timer_start(struct wlan_objmgr_psoc *psoc)
+{
+	dp_bus_bw_compute_timer_start(psoc);
+}
+
+void ucfg_dp_bus_bw_compute_timer_try_start(struct wlan_objmgr_psoc *psoc)
+{
+	dp_bus_bw_compute_timer_try_start(psoc);
+}
+
+void ucfg_dp_bus_bw_compute_timer_stop(struct wlan_objmgr_psoc *psoc)
+{
+	dp_bus_bw_compute_timer_stop(psoc);
+}
+
+void ucfg_dp_bus_bw_compute_timer_try_stop(struct wlan_objmgr_psoc *psoc)
+{
+	dp_bus_bw_compute_timer_try_stop(psoc);
+}
+
+void ucfg_dp_bus_bw_compute_prev_txrx_stats(struct wlan_objmgr_vdev *vdev)
+{
+	dp_bus_bw_compute_prev_txrx_stats(vdev);
+}
+
+void
+ucfg_dp_bus_bw_compute_reset_prev_txrx_stats(struct wlan_objmgr_vdev *vdev)
+{
+	dp_bus_bw_compute_reset_prev_txrx_stats(vdev);
+}
+
 void ucfg_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 				    struct wlan_dp_psoc_callbacks *cb_obj)
 {
@@ -541,4 +616,24 @@ void ucfg_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 	dp_ctx->dp_ops.dp_any_adapter_connected =
 		cb_obj->dp_any_adapter_connected;
 	dp_ctx->dp_ops.dp_send_svc_nlink_msg = cb_obj->dp_send_svc_nlink_msg;
+	dp_ctx->dp_ops.dp_pm_qos_update_request =
+		cb_obj->dp_pm_qos_update_request;
+	dp_ctx->dp_ops.dp_pld_remove_pm_qos = cb_obj->dp_pld_remove_pm_qos;
+	dp_ctx->dp_ops.dp_pld_request_pm_qos = cb_obj->dp_pld_request_pm_qos;
+	dp_ctx->dp_ops.dp_pm_qos_add_request = cb_obj->dp_pm_qos_add_request;
+	dp_ctx->dp_ops.dp_pm_qos_remove_request =
+		cb_obj->dp_pm_qos_remove_request;
+	dp_ctx->dp_ops.dp_send_mscs_action_frame =
+		cb_obj->dp_send_mscs_action_frame;
+	dp_ctx->dp_ops.dp_pktlog_enable_disable =
+		cb_obj->dp_pktlog_enable_disable;
+	dp_ctx->dp_ops.dp_is_roaming_in_progress =
+		cb_obj->dp_is_roaming_in_progress;
+	dp_ctx->dp_ops.dp_is_ap_active = cb_obj->dp_is_ap_active;
+	dp_ctx->dp_ops.dp_display_periodic_stats =
+		cb_obj->dp_display_periodic_stats;
+	dp_ctx->dp_ops.dp_disable_rx_ol_for_low_tput =
+		cb_obj->dp_disable_rx_ol_for_low_tput;
+	dp_ctx->dp_ops.dp_napi_apply_throughput_policy =
+		cb_obj->dp_napi_apply_throughput_policy;
 }

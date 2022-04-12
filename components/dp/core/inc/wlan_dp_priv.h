@@ -31,6 +31,8 @@
 #include "wlan_dp_objmgr.h"
 #include <cdp_txrx_misc.h>
 #include "qdf_periodic_work.h"
+#include <cds_api.h>
+#include "pld_common.h"
 
 #ifndef NUM_CPUS
 #ifdef QCA_CONFIG_SMP
@@ -255,6 +257,7 @@ struct dp_stats {
  * @tx_rx_disallow_mask: TX/RX disallow mask
  * @vdev: object manager vdev context
  * @dev: netdev reference
+ * @stats: Netdev stats
  */
 struct wlan_dp_intf {
 	struct wlan_dp_psoc_context *dp_ctx;
@@ -279,6 +282,7 @@ struct wlan_dp_intf {
 	uint32_t periodic_stats_timer_counter;
 	qdf_mutex_t sta_periodic_stats_lock;
 #endif /* WLAN_FEATURE_PERIODIC_STA_STATS */
+	qdf_net_dev_stats stats;
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
 	unsigned long prev_rx_packets;
 	unsigned long prev_tx_packets;
@@ -377,5 +381,4 @@ struct wlan_dp_psoc_context {
 	struct bbm_context *bbm_ctx;
 #endif
 };
-
 #endif /* end  of _WLAN_DP_PRIV_STRUCT_H_ */

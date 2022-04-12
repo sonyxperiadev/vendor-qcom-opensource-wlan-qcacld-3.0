@@ -30,6 +30,7 @@
 #include <wlan_objmgr_psoc_obj.h>
 #include "wlan_dp_public_struct.h"
 #include "wlan_dp_priv.h"
+#include <cdp_txrx_misc.h>
 
 typedef const enum bus_bw_level
 	bus_bw_table_type[QCA_WLAN_802_11_MODE_INVALID][TPUT_LEVEL_MAX];
@@ -153,6 +154,27 @@ dp_rtpm_tput_policy_get_vote(struct wlan_dp_psoc_context *dp_ctx)
 	return -EINVAL;
 }
 #endif /* WLAN_FEATURE_DP_BUS_BANDWIDTH && FEATURE_RUNTIME_PM */
+
+/**
+ * dp_set_high_bus_bw_request() - Set High Bandwidth request value
+ * @psoc: psoc handle
+ * @vdev_id: Vdev ID
+ * @high_bus_bw : Flag to set or clear high bandwidth request
+ *
+ * Return: None
+ */
+static inline void dp_set_high_bus_bw_request(struct wlan_objmgr_psoc *psoc,
+					      uint8_t vdev_id,
+					      bool high_bus_bw)
+{
+	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
+
+	if (high_bus_bw)
+		dp_ctx->high_bus_bw_request |= (1 << vdev_id);
+	else
+		dp_ctx->high_bus_bw_request &= ~(1 << vdev_id);
+}
+
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
 /**
  * dp_reset_tcp_delack() - Reset tcp delack value to default
@@ -177,23 +199,159 @@ void wlan_dp_update_tcp_rx_param(struct wlan_dp_psoc_context *dp_ctx,
 #ifdef RX_PERFORMANCE
 /**
  * dp_is_current_high_throughput() - Check if vote level is high
- * @psoc: psoc handle
+ * @dp_ctx: Pointer to DP context
  *
  * Function used to check if vote level is high
  *
  * Return: True if vote level is high
  */
-bool dp_is_current_high_throughput(struct wlan_objmgr_psoc *psoc);
+bool dp_is_current_high_throughput(struct wlan_dp_psoc_context *dp_ctx);
 #else
 static inline
-bool dp_is_current_high_throughput(struct wlan_objmgr_psoc *psoc)
+bool dp_is_current_high_throughput(struct wlan_dp_psoc_context *dp_ctx)
 {
 	return false;
 }
 #endif /* RX_PERFORMANCE */
+
+/**
+ * dp_reset_tcp_delack() - Reset TCP delack
+ * @psoc: psoc handle
+ *
+ * Return: None
+ */
+void dp_reset_tcp_delack(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * dp_get_current_throughput_level() - Get the current vote
+ * level
+ * @dp_ctx: DP Context handle
+ *
+ * Return: current vote level
+ */
+static inline enum pld_bus_width_type
+dp_get_current_throughput_level(struct wlan_dp_psoc_context *dp_ctx)
+{
+	return dp_ctx->cur_vote_level;
+}
+
+/**
+ * dp_set_current_throughput_level() - update the current vote
+ * level
+ * @psoc: psoc object
+ * @next_vote_level: pld_bus_width_type voting level
+ *
+ * This function updates the current vote level to the new level
+ * provided
+ *
+ * Return: None
+ */
+static inline void
+dp_set_current_throughput_level(struct wlan_objmgr_psoc *psoc,
+				enum pld_bus_width_type next_vote_level)
+{
+	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
+
+	dp_ctx->cur_vote_level = next_vote_level;
+}
+
+/**
+ * wlan_dp_display_tx_rx_histogram() - display tx rx histogram
+ * @psoc: psoc handle
+ *
+ * Return: none
+ */
+void wlan_dp_display_tx_rx_histogram(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * wlan_dp_clear_tx_rx_histogram() - clear tx rx histogram
+ * @psoc: psoc handle
+ *
+ * Return: none
+ */
+void wlan_dp_clear_tx_rx_histogram(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * dp_bus_bandwidth_init() - Initialize bus bandwidth data structures.
+ * @psoc: psoc handle
+ *
+ * Initialize bus bandwidth related data structures like spinlock and timer.
+ *
+ * Return: None.
+ */
+int dp_bus_bandwidth_init(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * dp_bus_bandwidth_deinit() - De-initialize bus bandwidth data structures.
+ * @psoc: psoc handle
+ *
+ * De-initialize bus bandwidth related data structures like timer.
+ *
+ * Return: None.
+ */
+void dp_bus_bandwidth_deinit(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * dp_bus_bw_compute_timer_start() - start the bandwidth timer
+ * @psoc: psoc handle
+ *
+ * Return: None
+ */
+void dp_bus_bw_compute_timer_start(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * dp_bus_bw_compute_timer_try_start() - try to start the bandwidth timer
+ * @psoc: psoc handle
+ *
+ * This function ensures there is at least one interface in the assoc state
+ * before starting the bandwidth timer.
+ *
+ * Return: None
+ */
+void dp_bus_bw_compute_timer_try_start(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * dp_bus_bw_compute_timer_stop() - stop the bandwidth timer
+ * @psoc: psoc handle
+ *
+ * Return: None
+ */
+void dp_bus_bw_compute_timer_stop(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * dp_bus_bw_compute_timer_try_stop() - try to stop the bandwidth timer
+ * @psoc: psoc handle
+ *
+ * This function ensures there are no interface in the assoc state before
+ * stopping the bandwidth timer.
+ *
+ * Return: None
+ */
+void dp_bus_bw_compute_timer_try_stop(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * dp_bus_bw_compute_prev_txrx_stats() - get tx and rx stats
+ * @vdev: vdev handle
+ *
+ * This function get the collected tx and rx stats before starting
+ * the bus bandwidth timer.
+ *
+ * Return: None
+ */
+void dp_bus_bw_compute_prev_txrx_stats(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * dp_bus_bw_compute_reset_prev_txrx_stats() - reset previous tx and rx stats
+ * @vdev: vdev handle
+ *
+ * This function resets the previous tx rx stats.
+ *
+ * Return: None
+ */
+void dp_bus_bw_compute_reset_prev_txrx_stats(struct wlan_objmgr_vdev *vdev);
 #else
 static inline
-void dp_reset_tcp_delack(struct wlan_objmgr_psoc *psoc);
+void dp_reset_tcp_delack(struct wlan_objmgr_psoc *psoc)
 {
 }
 
@@ -204,9 +362,72 @@ void wlan_dp_update_tcp_rx_param(struct wlan_dp_psoc_context *dp_ctx,
 }
 
 static inline
-bool dp_is_current_high_throughput(struct wlan_objmgr_psoc *psoc)
+bool dp_is_current_high_throughput(struct wlan_dp_psoc_context *dp_ctx)
 {
 	return false;
 }
+
+static inline enum pld_bus_width_type
+dp_get_current_throughput_level(struct wlan_dp_psoc_context *dp_ctx)
+{
+	return PLD_BUS_WIDTH_NONE;
+}
+
+static inline
+void dp_set_current_throughput_level(struct wlan_objmgr_psoc *psoc,
+				     enum pld_bus_width_type next_vote_level)
+{
+}
+
+static inline
+void wlan_dp_display_tx_rx_histogram(struct wlan_objmgr_psoc *psoc)
+{
+}
+
+static inline
+void wlan_dp_clear_tx_rx_histogram(struct wlan_objmgr_psoc *psoc)
+{
+}
+
+static inline
+void dp_bus_bandwidth_init(struct wlan_objmgr_psoc *psoc)
+{
+}
+
+static inline
+void dp_bus_bandwidth_deinit(struct wlan_objmgr_psoc *psoc)
+{
+}
+
+static inline
+void dp_bus_bw_compute_timer_start(struct wlan_objmgr_psoc *psoc)
+{
+}
+
+static inline
+void dp_bus_bw_compute_timer_try_start(struct wlan_objmgr_psoc *psoc)
+{
+}
+
+static inline
+void dp_bus_bw_compute_timer_stop(struct wlan_objmgr_psoc *psoc)
+{
+}
+
+static inline
+void dp_bus_bw_compute_timer_try_stop(struct wlan_objmgr_psoc *psoc)
+{
+}
+
+static inline
+void dp_bus_bw_compute_prev_txrx_stats(struct wlan_objmgr_vdev *vdev)
+{
+}
+
+static inline
+void dp_bus_bw_compute_reset_prev_txrx_stats(struct wlan_objmgr_vdev *vdev)
+{
+}
+
 #endif /* WLAN_FEATURE_DP_BUS_BANDWIDTH */
 #endif /* WLAN_DP_BUS_BANDWIDTH_H */

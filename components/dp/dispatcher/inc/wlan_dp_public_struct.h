@@ -198,6 +198,16 @@ union wlan_tp_data {
  * @dp_any_adapter_connected: Callback to check if any adapter is connected
  * @dp_send_svc_nlink_msg: Callback API to send svc nlink message
  * @osif_dp_send_tcp_param_update_event: OS IF callback to send TCP param
+ * @dp_send_mscs_action_frame: Callback to send MSCS action frame
+ * @dp_pm_qos_add_request: Callback to send add pm qos request
+ * @dp_pm_qos_remove_request: Callback to send remove pm qos request
+ * @dp_pm_qos_update_request: Callback to send update pm qos request
+ * @dp_pld_remove_pm_qos: Callback to send remove pld pm qos request
+ * @dp_pld_request_pm_qos: Callback to send pld pm qos request
+ * @dp_pktlog_enable_disable:Callback to set packet log
+ * @dp_is_roaming_in_progress:Callback to check if roaming is in progress
+ * @dp_is_ap_active:Callback to check if AP is active
+ * @dp_napi_apply_throughput_policy:Callback to apply NAPI throughput policy
  */
 struct wlan_dp_psoc_callbacks {
 	void (*os_if_dp_gro_rx)(struct sk_buff *skb, uint8_t napi_to_use,
@@ -219,6 +229,25 @@ struct wlan_dp_psoc_callbacks {
 	(*osif_dp_send_tcp_param_update_event)(struct wlan_objmgr_psoc *psoc,
 					       union wlan_tp_data *data,
 					       uint8_t dir);
+	void (*dp_send_mscs_action_frame)(hdd_cb_handle context,
+					  uint8_t vdev_id);
+	void (*dp_pm_qos_add_request)(hdd_cb_handle context);
+	void (*dp_pm_qos_remove_request)(hdd_cb_handle context);
+	void (*dp_pm_qos_update_request)(hdd_cb_handle context,
+					 cpumask_t *mask);
+	void (*dp_pld_remove_pm_qos)(hdd_cb_handle context);
+	void (*dp_pld_request_pm_qos)(hdd_cb_handle context);
+	int (*dp_pktlog_enable_disable)(hdd_cb_handle context,
+					bool enable_disable_flag,
+					uint8_t user_triggered, int size);
+	bool (*dp_is_roaming_in_progress)(hdd_cb_handle context);
+	bool (*dp_is_ap_active)(hdd_cb_handle context, uint8_t vdev_id);
+	void (*dp_display_periodic_stats)(hdd_cb_handle context, bool interval);
+	void (*dp_disable_rx_ol_for_low_tput)(hdd_cb_handle context,
+					      bool disable);
+	int (*dp_napi_apply_throughput_policy)(hdd_cb_handle context,
+					       uint64_t tx_packets,
+					       uint64_t rx_packets);
 };
 
 /**

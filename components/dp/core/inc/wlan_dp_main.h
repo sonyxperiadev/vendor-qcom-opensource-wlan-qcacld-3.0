@@ -29,6 +29,9 @@
 
 #define NUM_RX_QUEUES 5
 
+#define dp_enter() QDF_TRACE_ENTER(QDF_MODULE_ID_DP, "enter")
+#define dp_exit() QDF_TRACE_EXIT(QDF_MODULE_ID_DP, "exit")
+
 /**
  * dp_allocate_ctx() - Allocate DP context
  *
@@ -237,6 +240,72 @@ void dp_dettach_ctx(void);
  * Return: dp context.
  */
 struct wlan_dp_psoc_context *dp_get_context(void);
+
+/**
+ * dp_add_latency_critical_client() - Add latency critical client
+ * @vdev: pointer to vdev object (Should not be NULL)
+ * @phymode: the phymode of the connected adapter
+ *
+ * This function checks if the present connection is latency critical
+ * and adds to the latency critical clients count and informs the
+ * datapath about this connection being latency critical.
+ *
+ * Returns: None
+ */
+static inline void
+dp_add_latency_critical_client(struct wlan_objmgr_vdev *vdev,
+			       enum qca_wlan_802_11_mode phymode)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	switch (phymode) {
+	case QCA_WLAN_802_11_MODE_11A:
+	case QCA_WLAN_802_11_MODE_11G:
+		qdf_atomic_inc(&dp_intf->dp_ctx->num_latency_critical_clients);
+
+		dp_debug("Adding latency critical connection for vdev %d",
+			 dp_intf->intf_id);
+		cdp_vdev_inform_ll_conn(cds_get_context(QDF_MODULE_ID_SOC),
+					dp_intf->intf_id,
+					CDP_VDEV_LL_CONN_ADD);
+		break;
+	default:
+		break;
+	}
+}
+
+/**
+ * dp_del_latency_critical_client() - Add tlatency critical client
+ * @vdev: pointer to vdev object (Should not be NULL)
+ * @phymode: the phymode of the connected adapter
+ *
+ * This function checks if the present connection was latency critical
+ * and removes from the latency critical clients count and informs the
+ * datapath about the removed connection being latency critical.
+ *
+ * Returns: None
+ */
+static inline void
+dp_del_latency_critical_client(struct wlan_objmgr_vdev *vdev,
+			       enum qca_wlan_802_11_mode phymode)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	switch (phymode) {
+	case QCA_WLAN_802_11_MODE_11A:
+	case QCA_WLAN_802_11_MODE_11G:
+		qdf_atomic_dec(&dp_intf->dp_ctx->num_latency_critical_clients);
+
+		dp_info("Removing latency critical connection for vdev %d",
+			dp_intf->intf_id);
+		cdp_vdev_inform_ll_conn(cds_get_context(QDF_MODULE_ID_SOC),
+					dp_intf->intf_id,
+					CDP_VDEV_LL_CONN_DEL);
+		break;
+	default:
+		break;
+	}
+}
 
 /**
  * dp_send_rps_ind() - send rps indication to daemon

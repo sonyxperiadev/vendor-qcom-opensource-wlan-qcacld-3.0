@@ -30,6 +30,7 @@
 #include <wlan_objmgr_psoc_obj.h>
 #include <wlan_objmgr_pdev_obj.h>
 #include <wlan_objmgr_vdev_obj.h>
+#include "pld_common.h"
 #include <wlan_dp_public_struct.h>
 
 /**
@@ -215,6 +216,147 @@ void ucfg_dp_reg_ipa_rsp_ind(struct wlan_objmgr_pdev *pdev);
 void ucfg_dp_try_set_rps_cpu_mask(struct wlan_objmgr_psoc *psoc);
 
 /**
+ * ucfg_dp_add_latency_critical_client() - Add latency critical client
+ * @vdev: vdev handle (Should not be NULL)
+ * @phymode: the phymode of the connected adapter
+ *
+ * This function checks if the present connection is latency critical
+ * and adds to the latency critical clients count and informs the
+ * datapath about this connection being latency critical.
+ *
+ * Returns: None
+ */
+void ucfg_dp_add_latency_critical_client(struct wlan_objmgr_vdev *vdev,
+					 enum qca_wlan_802_11_mode phymode);
+
+/**
+ * ucfg_dp_del_latency_critical_client() - Remove latency critical client
+ * @vdev: vdev handle (Should not be NULL)
+ * @phymode: the phymode of the connected adapter
+ *
+ * This function checks if the present connection was latency critical
+ * and removes from the latency critical clients count and informs the
+ * datapath about the removed connection being latency critical.
+ *
+ * Returns: None
+ */
+void ucfg_dp_del_latency_critical_client(struct wlan_objmgr_vdev *vdev,
+					 enum qca_wlan_802_11_mode phymode);
+
+/**
+ * ucfg_dp_reset_tcp_delack() - Reset TCP delay ACK
+ * level
+ * @psoc: psoc handle
+ *
+ * Return: None
+ */
+void ucfg_dp_reset_tcp_delack(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_dp_set_current_throughput_level() - update the current vote
+ * level
+ * @psoc: psoc handle
+ * @next_vote_level: pld_bus_width_type voting level
+ *
+ * This function updates the current vote level to the new level
+ * provided
+ *
+ * Return: None
+ */
+void
+ucfg_dp_set_current_throughput_level(struct wlan_objmgr_psoc *psoc,
+				     enum pld_bus_width_type next_vote_level);
+
+/**
+ * ucfg_wlan_dp_display_tx_rx_histogram() - display tx rx histogram
+ * @psoc: psoc handle
+ *
+ * Return: none
+ */
+void ucfg_wlan_dp_display_tx_rx_histogram(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_wlan_dp_clear_tx_rx_histogram() - clear tx rx histogram
+ * @psoc: psoc handle
+ *
+ * Return: none
+ */
+void ucfg_wlan_dp_clear_tx_rx_histogram(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_dp_set_high_bus_bw_request() - Set high bandwidth request.
+ * @psoc: psoc handle
+ * @vdev_id: vdev_id
+ * @high_bus_bw : High bus bandwidth requested
+ *
+ * Return: None.
+ */
+void
+ucfg_dp_set_high_bus_bw_request(struct wlan_objmgr_psoc *psoc,
+				uint8_t vdev_id,
+				bool high_bus_bw);
+
+/**
+ * ucfg_dp_bus_bw_compute_timer_start() - start the bandwidth timer
+ * @psoc: psoc handle
+ *
+ * Return: None
+ */
+void ucfg_dp_bus_bw_compute_timer_start(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_dp_bus_bw_compute_timer_try_start() - try to start the bandwidth timer
+ * @psoc: psoc handle
+ *
+ * This function ensures there is at least one intf in the associated state
+ * before starting the bandwidth timer.
+ *
+ * Return: None
+ */
+void ucfg_dp_bus_bw_compute_timer_try_start(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_dp_bus_bw_compute_timer_stop() - stop the bandwidth timer
+ * @psoc: psoc handle
+ *
+ * Return: None
+ */
+void ucfg_dp_bus_bw_compute_timer_stop(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_dp_bus_bw_compute_timer_try_stop() - try to stop the bandwidth timer
+ * @psoc: psoc handle
+ *
+ * This function ensures there are no interface in the associated state before
+ * stopping the bandwidth timer.
+ *
+ * Return: None
+ */
+void ucfg_dp_bus_bw_compute_timer_try_stop(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_dp_bus_bw_compute_prev_txrx_stats() - get tx and rx stats
+ * @vdev: vdev handle
+ *
+ * This function get the collected tx and rx stats before starting
+ * the bus bandwidth timer.
+ *
+ * Return: None
+ */
+void ucfg_dp_bus_bw_compute_prev_txrx_stats(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_dp_bus_bw_compute_reset_prev_txrx_stats() - reset previous txrx stats
+ * @vdev: vdev handle
+ *
+ * This function resets the adapter previous tx rx stats.
+ *
+ * Return: None
+ */
+void
+ucfg_dp_bus_bw_compute_reset_prev_txrx_stats(struct wlan_objmgr_vdev *vdev);
+
+/**
  * ucfg_dp_register_hdd_callbacks() - Resiter HDD callbacks with DP component
  * @psoc: psoc handle
  * @cb_obj: Callback object
@@ -223,5 +365,4 @@ void ucfg_dp_try_set_rps_cpu_mask(struct wlan_objmgr_psoc *psoc);
  */
 void ucfg_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 				    struct wlan_dp_psoc_callbacks *cb_obj);
-
 #endif /* _WLAN_DP_UCFG_API_H_ */
