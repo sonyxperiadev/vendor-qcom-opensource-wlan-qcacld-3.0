@@ -3169,6 +3169,7 @@ QDF_STATUS policy_mgr_decr_active_session(struct wlan_objmgr_psoc *psoc,
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
 	QDF_STATUS qdf_status;
 	bool mcc_mode;
+	uint32_t session_count;
 
 	pm_ctx = policy_mgr_get_context(psoc);
 	if (!pm_ctx) {
@@ -3189,7 +3190,7 @@ QDF_STATUS policy_mgr_decr_active_session(struct wlan_objmgr_psoc *psoc,
 	policy_mgr_update_sta_scc_info_for_later_check(pm_ctx,
 						       mode,
 						       session_id);
-
+	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
 	switch (mode) {
 	case QDF_STA_MODE:
 	case QDF_P2P_CLIENT_MODE:
@@ -3203,6 +3204,9 @@ QDF_STATUS policy_mgr_decr_active_session(struct wlan_objmgr_psoc *psoc,
 	default:
 		break;
 	}
+	policy_mgr_decr_connection_count(psoc, session_id);
+	session_count = pm_ctx->no_of_active_sessions[mode];
+	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
 
 	if (mode != QDF_NAN_DISC_MODE &&
 	    pm_ctx->dp_cbacks.hdd_v2_flow_pool_unmap)
@@ -3211,13 +3215,10 @@ QDF_STATUS policy_mgr_decr_active_session(struct wlan_objmgr_psoc *psoc,
 	if (mode == QDF_NDI_MODE &&
 	    pm_ctx->hdd_cbacks.wlan_hdd_indicate_active_ndp_cnt)
 		pm_ctx->hdd_cbacks.wlan_hdd_indicate_active_ndp_cnt(
-				psoc, session_id,
-				pm_ctx->no_of_active_sessions[mode]);
+				psoc, session_id, session_count);
 
 	policy_mgr_debug("No.# of active sessions for mode %d = %d",
-		mode, pm_ctx->no_of_active_sessions[mode]);
-
-	policy_mgr_decr_connection_count(psoc, session_id);
+			 mode, session_count);
 
 	/* Notify tdls */
 	if (pm_ctx->tdls_cbacks.tdls_notify_decrement_session)
