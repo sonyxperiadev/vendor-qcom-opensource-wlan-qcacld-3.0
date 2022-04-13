@@ -6484,7 +6484,8 @@ bool policy_mgr_allow_sap_go_concurrency(struct wlan_objmgr_psoc *psoc,
 		}
 
 		if (policy_mgr_dual_beacon_on_single_mac_mcc_capable(psoc) &&
-		    (mode == PM_SAP_MODE) && (con_mode == PM_SAP_MODE))
+		    (mode == PM_SAP_MODE || mode == PM_P2P_GO_MODE) &&
+		    (con_mode == PM_SAP_MODE || con_mode == PM_P2P_GO_MODE))
 			return true;
 
 		if (policy_mgr_dual_beacon_on_single_mac_scc_capable(psoc) &&
