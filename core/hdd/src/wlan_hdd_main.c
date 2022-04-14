@@ -14745,6 +14745,17 @@ static inline void hdd_cal_fail_send_event(uint8_t cal_type, uint8_t reason)
 }
 #endif
 
+bool hdd_is_data_stall_event_enabled(uint32_t evt)
+{
+	uint32_t bitmap = cdp_cfg_get(cds_get_context(QDF_MODULE_ID_SOC),
+				      cfg_dp_enable_data_stall);
+
+	if (bitmap & HDD_DATA_STALL_ENABLE || bitmap & evt)
+		return true;
+
+	return false;
+}
+
 /**
  * hdd_features_init() - Init features
  * @hdd_ctx:	HDD context
@@ -14762,6 +14773,7 @@ static int hdd_features_init(struct hdd_context *hdd_ctx)
 	bool b_cts2self, is_imps_enabled;
 	bool rf_test_mode;
 	bool conn_policy;
+	uint32_t fw_data_stall_evt;
 
 	hdd_enter();
 
@@ -14776,10 +14788,13 @@ static int hdd_features_init(struct hdd_context *hdd_ctx)
 	ucfg_mlme_is_imps_enabled(hdd_ctx->psoc, &is_imps_enabled);
 	hdd_set_idle_ps_config(hdd_ctx, is_imps_enabled);
 
+	fw_data_stall_evt = cdp_cfg_get(cds_get_context(QDF_MODULE_ID_SOC),
+					cfg_dp_enable_data_stall) &
+			    FW_DATA_STALL_EVT_MASK;
+
 	/* Send Enable/Disable data stall detection cmd to FW */
 	sme_cli_set_command(0, WMI_PDEV_PARAM_DATA_STALL_DETECT_ENABLE,
-	cdp_cfg_get(cds_get_context(QDF_MODULE_ID_SOC),
-		    cfg_dp_enable_data_stall), PDEV_CMD);
+			    fw_data_stall_evt, PDEV_CMD);
 
 	ucfg_mlme_get_go_cts2self_for_sta(hdd_ctx->psoc, &b_cts2self);
 	if (b_cts2self)

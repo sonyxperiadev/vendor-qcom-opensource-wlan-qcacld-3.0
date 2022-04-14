@@ -5390,4 +5390,20 @@ static inline int hdd_set_suspend_mode(struct hdd_context *hdd_ctx)
  * schedule idle shutdown work queue when no interface open.
  */
 void hdd_shutdown_wlan_in_suspend(struct hdd_context *hdd_ctx);
+
+#define HDD_DATA_STALL_ENABLE      BIT(0)
+#define HDD_HOST_STA_TX_TIMEOUT    BIT(16)
+#define HDD_HOST_SAP_TX_TIMEOUT    BIT(17)
+#define HDD_HOST_NUD_FAILURE       BIT(18)
+#define HDD_TIMEOUT_WLM_MODE       BIT(31)
+#define FW_DATA_STALL_EVT_MASK     0x8000FFFF
+
+/**
+ * hdd_is_data_stall_event_enabled() - Check if data stall detection is enabled
+ * @evt: Data stall event to be checked
+ *
+ * Return: True if the data stall event is enabled
+ */
+bool hdd_is_data_stall_event_enabled(uint32_t evt);
+
 #endif /* end #if !defined(WLAN_HDD_MAIN_H) */

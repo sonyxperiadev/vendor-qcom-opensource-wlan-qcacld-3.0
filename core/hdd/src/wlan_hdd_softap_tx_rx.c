@@ -870,7 +870,7 @@ static void __hdd_softap_tx_timeout(struct net_device *dev)
 			  "Detected data stall due to continuous TX timeouts");
 		adapter->hdd_stats.tx_rx_stats.cont_txtimeout_cnt = 0;
 
-		if (cdp_cfg_get(soc, cfg_dp_enable_data_stall))
+		if (hdd_is_data_stall_event_enabled(HDD_HOST_SAP_TX_TIMEOUT))
 			cdp_post_data_stall_event(soc,
 					  DATA_STALL_LOG_INDICATOR_HOST_DRIVER,
 					  DATA_STALL_LOG_HOST_SOFTAP_TX_TIMEOUT,
