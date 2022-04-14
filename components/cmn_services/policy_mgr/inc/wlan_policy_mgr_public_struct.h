@@ -174,6 +174,8 @@ enum policy_mgr_pcl_group_id {
  * @POLICY_MGR_PCL_ORDER_5G_THEN_2G: 5 Ghz channel followed by 2.4 Ghz channel
  * @POLICY_MGR_PCL_ORDER_2G: 2G channels
  * @POLICY_MGR_PCL_ORDER_5G: 5G channels
+ * @POLICY_MGR_PCL_ORDER_5G_LOW : 5G low share
+ * @POLICY_MGR_PCL_ORDER_5G_HIGH : 5G High share
  *
  * Order in which the PCL is requested
  */
@@ -183,6 +185,8 @@ enum policy_mgr_pcl_channel_order {
 	POLICY_MGR_PCL_ORDER_5G_THEN_2G,
 	POLICY_MGR_PCL_ORDER_2G,
 	POLICY_MGR_PCL_ORDER_5G,
+	POLICY_MGR_PCL_ORDER_5G_LOW,
+	POLICY_MGR_PCL_ORDER_5G_HIGH,
 };
 
 /**
@@ -368,6 +372,9 @@ enum policy_mgr_pcl_type {
 	PM_SBS_CH_SCC_CH_5G_24G,
 	PM_SCC_CH_MCC_CH_SBS_CH_24G,
 	PM_SBS_CH_2G,
+	PM_CH_5G_LOW,
+	PM_CH_5G_HIGH,
+
 	PM_MAX_PCL_TYPE
 };
 
@@ -881,6 +888,19 @@ enum policy_mgr_two_connection_mode {
  * and second STA on 5Ghz SMM
  * @PM_NAN_DISC_24_STA_24_STA_5_DBS: NAN Disc on 2.4Ghz and first STA on 2.4Ghz
  * and second STA on 5Ghz DBS
+ * @PM_STA_24_SAP_5_LOW_MCC_STA_5_HIGH_SBS : First STA on 2.4 & SAP on low 5G
+ * MCC on mac 0 and second STA on high 5g on mac1
+ * @PM_STA_24_SAP_5_HIGH_MCC_STA_5_LOW_SBS : First STA on 2.4 & SAP on high 5G
+ * MCC on mac 0 and second STA on high 5g on mac1
+ * @PM_STA_SAP_5_LOW_STA_5_HIGH_SBS : First STA on low 5G & SAP on low 5G
+ * SCC/MCC on mac0 and second STA on high 5G on mac1
+ * @PM_STA_SAP_5_HIGH_STA_5_LOW_SBS : First STA on high 5G & SAP on high 5G
+ * SCC/MCC on mac1 and second STA on low 5G on mac0
+ * @PM_STA_5_LOW_SAP_24_MCC_STA_5_HIGH_SBS : First STA on low 5G & SAP on high
+ * 2.4G MCC on mac0 and second STA on high 5g on mac1
+ * @PM_STA_5_HIGH_SAP_24_MCC_STA_5_LOW_SBS : First STA on high 5G & SAP on 2.4G
+ * MCC on mac1 and second STA on low 5g on mac0
+ *
  */
 enum policy_mgr_three_connection_mode {
 	PM_STA_SAP_SCC_24_SAP_5_DBS,
@@ -911,6 +931,12 @@ enum policy_mgr_three_connection_mode {
 	PM_NAN_DISC_24_STA_5_STA_24_DBS,
 	PM_NAN_DISC_24_STA_24_STA_5_SMM,
 	PM_NAN_DISC_24_STA_24_STA_5_DBS,
+	PM_STA_24_SAP_5_LOW_MCC_STA_5_HIGH_SBS,
+	PM_STA_24_SAP_5_HIGH_MCC_STA_5_LOW_SBS,
+	PM_STA_SAP_5_LOW_STA_5_HIGH_SBS,
+	PM_STA_SAP_5_HIGH_STA_5_LOW_SBS,
+	PM_STA_5_LOW_SAP_24_MCC_STA_5_HIGH_SBS,
+	PM_STA_5_HIGH_SAP_24_MCC_STA_5_LOW_SBS,
 
 	PM_MAX_THREE_CONNECTION_MODE
 };

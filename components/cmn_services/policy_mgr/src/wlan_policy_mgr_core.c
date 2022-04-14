@@ -2265,6 +2265,110 @@ get_sub_channels(struct wlan_objmgr_psoc *psoc,
 			chlist2, chlist2_len);
 }
 
+/**
+ * add_sbs_chlist_to_pcl() - add sbs channel list in pcl
+ *
+ * @psoc: psoc object
+ * @pcl_freqs: pcl frequencies
+ * @pcl_weights: pcl weight
+ * @pcl_sz: pcl size
+ * @index: pcl index
+ * @weight: provided weight for pcl list
+ * @skip_dfs_channel: to skip dfs channels or not
+ * @skip_6gh_channel: to skip 6g channels or not
+ * @chlist_5: 5g channel list
+ * @chlist_len_5: 5g channel list length
+ * @chlist_6: 6g channel list
+ * @chlist_len_6: 6g channel list length
+ * order: pcl order
+ *
+ * Get the pcl list based on current sbs concurrency
+ *
+ * Return: None
+ */
+static void
+add_sbs_chlist_to_pcl(struct wlan_objmgr_psoc *psoc,
+		      uint32_t *pcl_freqs, uint8_t *pcl_weights,
+		      uint32_t pcl_sz, uint32_t *index, uint32_t weight,
+		      bool skip_dfs_channel, bool skip_6gh_channel,
+		      const uint32_t *chlist_5, uint8_t chlist_len_5,
+		      const uint32_t *chlist_6, uint8_t chlist_len_6,
+		      enum policy_mgr_pcl_channel_order order)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	qdf_freq_t sbs_cut_off_freq;
+	uint32_t i;
+
+	if (!policy_mgr_is_hw_sbs_capable(psoc))
+		return;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return;
+	}
+	sbs_cut_off_freq = policy_mgr_get_sbs_cut_off_freq(psoc);
+	if (order == POLICY_MGR_PCL_ORDER_5G_LOW) {
+		for (i = 0; i < chlist_len_5 && *index < pcl_sz; i++) {
+			if (chlist_5[i] > sbs_cut_off_freq)
+				return;
+
+			if (skip_dfs_channel &&
+			    wlan_reg_is_dfs_for_freq(pm_ctx->pdev, chlist_5[i]))
+				continue;
+
+			pcl_freqs[*index] = chlist_5[i];
+			pcl_weights[*index] = weight;
+			(*index)++;
+		}
+		for (i = 0; i < chlist_len_6 && *index < pcl_sz &&
+		     !skip_6gh_channel; i++) {
+			if (chlist_6[i] > sbs_cut_off_freq)
+				return;
+
+			if (skip_dfs_channel &&
+			    wlan_reg_is_dfs_for_freq(pm_ctx->pdev, chlist_6[i]))
+				continue;
+
+			pcl_freqs[*index] = chlist_6[i];
+			pcl_weights[*index] = weight;
+			(*index)++;
+		}
+	} else if (order == POLICY_MGR_PCL_ORDER_5G_HIGH) {
+		for (i = 0; i < chlist_len_5 && *index < pcl_sz; i++) {
+			if (chlist_5[i] < sbs_cut_off_freq)
+				continue;
+
+			if (skip_dfs_channel &&
+			    wlan_reg_is_dfs_for_freq(pm_ctx->pdev, chlist_5[i]))
+				continue;
+
+			pcl_freqs[*index] = chlist_5[i];
+			pcl_weights[*index] = weight;
+			(*index)++;
+		}
+		for (i = 0; i < chlist_len_6 && *index < pcl_sz &&
+		     !skip_6gh_channel; i++) {
+			if (chlist_6[i] < sbs_cut_off_freq)
+				return;
+
+			if (skip_dfs_channel &&
+			    wlan_reg_is_dfs_for_freq(pm_ctx->pdev, chlist_6[i]))
+				continue;
+
+			pcl_freqs[*index] = chlist_6[i];
+			pcl_weights[*index] = weight;
+			(*index)++;
+		}
+
+	} else {
+		policy_mgr_debug("invalid order");
+		return;
+	}
+
+	policy_mgr_debug("new pcl index %d", *index);
+}
+
 static void
 add_chlist_to_pcl(struct wlan_objmgr_pdev *pdev,
 		  uint32_t *pcl_freqs, uint8_t *pcl_weights,
@@ -3313,18 +3417,30 @@ QDF_STATUS policy_mgr_get_channel_list(struct wlan_objmgr_psoc *psoc,
 				  len, WEIGHT_OF_GROUP1_PCL_CHANNELS,
 				  sbs_freqs, sbs_num,
 				  skip_dfs_channel, skip_6ghz_channel);
-		if (!sbs_num)
-			add_chlist_to_pcl(pm_ctx->pdev,
-					  pcl_channels, pcl_weights, pcl_sz,
-					  len, WEIGHT_OF_GROUP1_PCL_CHANNELS,
-					  scc_freqs, scc_num,
-					  skip_dfs_channel, skip_6ghz_channel);
 		add_chlist_to_pcl(pm_ctx->pdev,
 				  pcl_channels, pcl_weights, pcl_sz,
 				  len, WEIGHT_OF_GROUP2_PCL_CHANNELS,
 				  channel_list_24, chan_index_24,
 				  false, false);
 		status = QDF_STATUS_SUCCESS;
+		break;
+	case PM_CH_5G_LOW:
+		add_sbs_chlist_to_pcl(psoc,  pcl_channels,
+				      pcl_weights, pcl_sz,
+				      len, WEIGHT_OF_GROUP1_PCL_CHANNELS,
+				      skip_dfs_channel, skip_6ghz_channel,
+				      channel_list_5, chan_index_5,
+				      channel_list_6, chan_index_6,
+				      POLICY_MGR_PCL_ORDER_5G_LOW);
+		break;
+	case PM_CH_5G_HIGH:
+		add_sbs_chlist_to_pcl(psoc,  pcl_channels,
+				      pcl_weights, pcl_sz,
+				      len, WEIGHT_OF_GROUP1_PCL_CHANNELS,
+				      skip_dfs_channel, skip_6ghz_channel,
+				      channel_list_5, chan_index_5,
+				      channel_list_6, chan_index_6,
+				      POLICY_MGR_PCL_ORDER_5G_HIGH);
 		break;
 	default:
 		policy_mgr_err("unknown pcl value %d", pcl);

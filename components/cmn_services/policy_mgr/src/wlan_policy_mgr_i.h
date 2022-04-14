@@ -215,7 +215,7 @@ extern policy_mgr_next_action_three_connection_table_type
 
 #ifdef FEATURE_FOURTH_CONNECTION
 extern const enum policy_mgr_pcl_type
-	fourth_connection_pcl_dbs_table
+	fourth_connection_pcl_dbs_sbs_table
 	[PM_MAX_THREE_CONNECTION_MODE][PM_MAX_NUM_OF_MODE]
 	[PM_MAX_CONC_PRIORITY_MODE];
 #endif

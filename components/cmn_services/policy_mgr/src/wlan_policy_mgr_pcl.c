@@ -1056,7 +1056,8 @@ static enum policy_mgr_pcl_type policy_mgr_get_pcl_4_port(
 	}
 
 	/* SAP and P2P Go have same result in 4th port pcl table */
-	if (mode == PM_SAP_MODE || mode == PM_P2P_GO_MODE) {
+	if (mode == PM_SAP_MODE || mode == PM_P2P_GO_MODE ||
+	    mode == PM_P2P_CLIENT_MODE) {
 		mode = PM_SAP_MODE;
 	}
 
@@ -1074,7 +1075,7 @@ static enum policy_mgr_pcl_type policy_mgr_get_pcl_4_port(
 	}
 	policy_mgr_debug("Index for 4th port pcl table: %d", fourth_index);
 
-	pcl = fourth_connection_pcl_dbs_table[fourth_index][mode][pref];
+	pcl = fourth_connection_pcl_dbs_sbs_table[fourth_index][mode][pref];
 
 	return pcl;
 }
@@ -2065,6 +2066,8 @@ enum policy_mgr_three_connection_mode
 				psoc, PM_SAP_MODE, &list_sap[count_sap]);
 	count_sap += policy_mgr_mode_specific_connection_count(
 				psoc, PM_P2P_GO_MODE, &list_sap[count_sap]);
+	count_sap += policy_mgr_mode_specific_connection_count(
+				psoc, PM_P2P_CLIENT_MODE, &list_sap[count_sap]);
 	count_sta = policy_mgr_mode_specific_connection_count(
 				psoc, PM_STA_MODE, list_sta);
 	count_ndi = policy_mgr_mode_specific_connection_count(
@@ -2929,6 +2932,8 @@ bool policy_mgr_is_3rd_conn_on_same_band_allowed(struct wlan_objmgr_psoc *psoc,
 	case PM_5G_MCC_CH:
 	case PM_24G_SBS_CH_MCC_CH:
 	case PM_SBS_CH_2G:
+	case PM_CH_5G_LOW:
+	case PM_CH_5G_HIGH:
 		ret = true;
 		break;
 	default:

@@ -3337,6 +3337,19 @@ void policy_mgr_init_dbs_hw_mode(struct wlan_objmgr_psoc *psoc,
 
 QDF_STATUS policy_mgr_update_sbs_freq(struct wlan_objmgr_psoc *psoc,
 				      struct target_psoc_info *tgt_hdl);
+
+/**
+ * policy_mgr_get_sbs_cut_off_freq() - Function to get SBS 5g cut off freq
+ *
+ * @psoc: PSOC object information
+ *
+ * This function to get sbs cut off freq
+ *
+ * Return: cut of freq
+ *
+ */
+qdf_freq_t policy_mgr_get_sbs_cut_off_freq(struct wlan_objmgr_psoc *psoc);
+
 /**
  * policy_mgr_update_hw_mode_list() - Function to initialize DBS
  * HW modes in policy manager component

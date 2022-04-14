@@ -1296,6 +1296,47 @@ QDF_STATUS policy_mgr_update_sbs_freq(struct wlan_objmgr_psoc *psoc,
 	return QDF_STATUS_SUCCESS;
 }
 
+qdf_freq_t policy_mgr_get_sbs_cut_off_freq(struct wlan_objmgr_psoc *psoc)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	struct policy_mgr_freq_range *first_mac_range, *second_mac_range;
+	qdf_freq_t sbs_cut_off_freq = 0;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return 0;
+	}
+
+	if (pm_ctx->hw_mode.sbs_lower_band_end_freq)
+		return pm_ctx->hw_mode.sbs_lower_band_end_freq;
+	/*
+	 * if cutoff freq is not available from FW (i.e SBS is not dynamic)
+	 * get it from SBS freq range
+	 */
+	first_mac_range = &pm_ctx->hw_mode.freq_range_caps[MODE_SBS][0];
+
+	second_mac_range =
+		&pm_ctx->hw_mode.freq_range_caps[MODE_SBS][1];
+
+	/*
+	 * SBS range is low 5Ghz shared with 2.4Ghz: The low_5Ghz of shared
+	 * mac will be starting of 5Ghz and low_5Ghz of non-shared mac will be
+	 * the cutoff freq
+	 *
+	 * SBS range is high 5Ghz shared with 2.4Ghz: The low_5Ghz of shared
+	 * mac will be cutoff freq and low_5Ghz of non-shared mac will be
+	 * the starting of 5Ghz
+	 *
+	 * so, maximum of low_5Ghz will be cutoff freq
+	 */
+	sbs_cut_off_freq = QDF_MAX(second_mac_range->low_5ghz_freq,
+				   first_mac_range->low_5ghz_freq) - 1;
+	policy_mgr_debug("sbs cutoff freq %d", sbs_cut_off_freq);
+
+	return sbs_cut_off_freq;
+}
+
 static bool
 policy_mgr_2_freq_same_mac_in_freq_range(
 				struct policy_mgr_psoc_priv_obj *pm_ctx,
@@ -2164,6 +2205,7 @@ bool policy_mgr_is_hw_sbs_capable(struct wlan_objmgr_psoc *psoc)
 	}
 
 	if (!policy_mgr_find_if_fw_supports_dbs(psoc)) {
+		policy_mgr_rl_debug("fw doesn't support dual band");
 		return false;
 	}
 
