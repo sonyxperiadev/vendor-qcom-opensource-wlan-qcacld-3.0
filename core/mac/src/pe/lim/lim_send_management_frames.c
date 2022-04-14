@@ -1855,8 +1855,6 @@ lim_send_assoc_rsp_mgmt_frame(struct mac_context *mac_ctx,
 		      frm.HTCaps.present, frm.VHTCaps.present,
 		      frm.vendor_vht_ie.present, frm.he_cap.present,
 		      frm.eht_cap.present);
-	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-			   frame, (uint16_t)bytes);
 
 	if (!wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq) ||
 	    pe_session->opmode == QDF_P2P_CLIENT_MODE ||
@@ -2811,8 +2809,6 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 	pe_nofl_info("Assoc req TX: vdev %d to "QDF_MAC_ADDR_FMT" seq num %d",
 		     pe_session->vdev_id, QDF_MAC_ADDR_REF(pe_session->bssId),
 		     mac_ctx->mgmtSeqNum);
-	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-			  frame, (uint16_t)(sizeof(tSirMacMgmtHdr) + payload));
 
 	min_rid = lim_get_min_session_txrate(pe_session);
 	lim_diag_event_report(mac_ctx, WLAN_PE_DIAG_ASSOC_START_EVENT,
@@ -3375,8 +3371,6 @@ alloc_packet:
 		     vdev_id, auth_frame->authTransactionSeqNumber,
 		     mac_ctx->mgmtSeqNum, auth_frame->authStatusCode,
 		     mac_hdr->fc.wep, QDF_MAC_ADDR_REF(mac_hdr->da));
-	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-			   frame, frame_len);
 
 	if ((session->ftPEContext.pFTPreAuthReq) &&
 	    (!wlan_reg_is_24ghz_ch_freq(

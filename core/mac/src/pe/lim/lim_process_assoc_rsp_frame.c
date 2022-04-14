@@ -878,8 +878,6 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 			GET_LIM_SYSTEM_ROLE(session_entry),
 			session_entry->limMlmState, rssi,
 			QDF_MAC_ADDR_REF(hdr->sa));
-	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-			   (uint8_t *)hdr, frame_len + SIR_MAC_HDR_LEN_3A);
 
 	beacon = qdf_mem_malloc(sizeof(tSchBeaconStruct));
 	if (!beacon)

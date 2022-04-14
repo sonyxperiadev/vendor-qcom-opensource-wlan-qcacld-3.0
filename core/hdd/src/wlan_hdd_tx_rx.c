@@ -1117,6 +1117,7 @@ static void __hdd_hard_start_xmit(struct sk_buff *skb,
 	bool is_dhcp = false;
 	struct hdd_tx_rx_stats *stats = &adapter->hdd_stats.tx_rx_stats;
 	int cpu = qdf_get_smp_processor_id();
+	uint16_t dump_level;
 
 #ifdef QCA_WIFI_FTM
 	if (hdd_get_conparam() == QDF_GLOBAL_FTM_MODE) {
@@ -1140,6 +1141,8 @@ static void __hdd_hard_start_xmit(struct sk_buff *skb,
 		hdd_err_rl("Device is system suspended, drop pkt");
 		goto drop_pkt;
 	}
+
+	dump_level = cfg_get(hdd_ctx->psoc, CFG_ENABLE_DEBUG_PACKET_LOG);
 
 	/*
 	 * wlan_hdd_mark_pkt_type zeros out skb->cb.  All skb->cb access
@@ -1183,6 +1186,9 @@ static void __hdd_hard_start_xmit(struct sk_buff *skb,
 		   QDF_NBUF_CB_PACKET_TYPE_ICMPv6)) {
 		hdd_mark_icmp_req_to_fw(hdd_ctx, skb);
 	}
+
+	if (qdf_unlikely(dump_level >= DEBUG_PKTLOG_TYPE_EAPOL))
+		hdd_debug_pkt_dump(skb, skb->len, &dump_level);
 
 	hdd_pkt_add_timestamp(adapter, QDF_PKT_TX_DRIVER_ENTRY,
 			      qdf_get_log_timestamp(), skb);
@@ -2607,7 +2613,7 @@ QDF_STATUS hdd_rx_packet_cbk(void *adapter_context,
 	bool is_eapol, send_over_nl;
 	bool is_dhcp;
 	struct hdd_tx_rx_stats *stats;
-
+	uint16_t dump_level;
 	/* Sanity check on inputs */
 	if (unlikely((!adapter_context) || (!rxBuf))) {
 		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_ERROR,
@@ -2629,6 +2635,8 @@ QDF_STATUS hdd_rx_packet_cbk(void *adapter_context,
 			  "%s: HDD context is Null", __func__);
 		return QDF_STATUS_E_FAILURE;
 	}
+
+	dump_level = cfg_get(hdd_ctx->psoc, CFG_ENABLE_DEBUG_PACKET_LOG);
 
 	cpu_index = wlan_hdd_get_cpu();
 	stats = &adapter->hdd_stats.tx_rx_stats;
@@ -2655,6 +2663,7 @@ QDF_STATUS hdd_rx_packet_cbk(void *adapter_context,
 						__func__);
 				track_arp = true;
 			}
+			dump_level &= DEBUG_PKTLOG_TYPE_ARP;
 		} else if (qdf_nbuf_is_ipv4_eapol_pkt(skb)) {
 			subtype = qdf_nbuf_get_eapol_subtype(skb);
 			send_over_nl = true;
@@ -2667,6 +2676,7 @@ QDF_STATUS hdd_rx_packet_cbk(void *adapter_context,
 						eapol_m3_count;
 				is_eapol = true;
 			}
+			dump_level &= DEBUG_PKTLOG_TYPE_EAPOL;
 		} else if (qdf_nbuf_is_ipv4_dhcp_pkt(skb)) {
 			subtype = qdf_nbuf_get_dhcp_subtype(skb);
 			if (subtype == QDF_PROTO_DHCP_OFFER) {
@@ -2678,6 +2688,9 @@ QDF_STATUS hdd_rx_packet_cbk(void *adapter_context,
 						dhcp_ack_count;
 				is_dhcp = true;
 			}
+			dump_level &= DEBUG_PKTLOG_TYPE_DHCP;
+		} else {
+			dump_level = DEBUG_PKTLOG_TYPE_NONE;
 		}
 
 		hdd_pkt_add_timestamp(adapter, QDF_PKT_RX_DRIVER_EXIT,
@@ -2715,6 +2728,11 @@ QDF_STATUS hdd_rx_packet_cbk(void *adapter_context,
 
 		dest_mac_addr = (struct qdf_mac_addr *)(skb->data);
 		mac_addr = (struct qdf_mac_addr *)(skb->data+QDF_MAC_ADDR_SIZE);
+
+		if (dump_level)
+			qdf_trace_hex_dump(QDF_MODULE_ID_HDD,
+					   QDF_TRACE_LEVEL_DEBUG,
+					   skb->data, skb->len - skb->data_len);
 
 		vdev = hdd_objmgr_get_vdev_by_user(adapter,
 						   WLAN_OSIF_TDLS_ID);

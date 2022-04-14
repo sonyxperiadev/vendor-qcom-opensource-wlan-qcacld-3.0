@@ -2662,10 +2662,6 @@ void lim_process_assoc_req_frame(struct mac_context *mac_ctx,
 		return;
 	}
 
-	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-			   (uint8_t *)hdr,
-			   frame_len + WMA_GET_RX_MAC_HEADER_LEN(rx_pkt_info));
-
 	if (false == lim_chk_sa_da(mac_ctx, hdr, session, sub_type))
 		return;
 

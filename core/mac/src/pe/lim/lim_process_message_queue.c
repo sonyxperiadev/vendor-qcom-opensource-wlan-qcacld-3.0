@@ -1305,19 +1305,24 @@ lim_handle80211_frames(struct mac_context *mac, struct scheduler_msg *limMsg,
 	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_ERROR, pHdr,
 			   WMA_GET_RX_MPDU_HEADER_LEN(pRxPacketInfo));
 #endif
-	if (mac->mlme_cfg->gen.debug_packet_log & 0x1) {
-		if ((fc.type == SIR_MAC_MGMT_FRAME) &&
+	if (fc.type == SIR_MAC_MGMT_FRAME) {
+		if ((mac->mlme_cfg->gen.debug_packet_log &
+		    DEBUG_PKTLOG_TYPE_MGMT) &&
 		    (fc.subType != SIR_MAC_MGMT_PROBE_REQ) &&
 		    (fc.subType != SIR_MAC_MGMT_PROBE_RSP) &&
-		    (fc.subType != SIR_MAC_MGMT_BEACON)) {
+		    (fc.subType != SIR_MAC_MGMT_BEACON) &&
+		    (fc.subType != SIR_MAC_MGMT_ACTION)) {
 			pe_debug("RX MGMT - Type %hu, SubType %hu, seq num[%d]",
-				   fc.type,
-				   fc.subType,
-				   ((pHdr->seqControl.seqNumHi <<
-				   HIGH_SEQ_NUM_OFFSET) |
-				   pHdr->seqControl.seqNumLo));
+				 fc.type, fc.subType,
+				 ((pHdr->seqControl.seqNumHi << HIGH_SEQ_NUM_OFFSET) |
+				 pHdr->seqControl.seqNumLo));
+			QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE,
+					   QDF_TRACE_LEVEL_DEBUG, pHdr,
+					   WMA_GET_RX_PAYLOAD_LEN(pRxPacketInfo)
+					   + SIR_MAC_HDR_LEN_3A);
 		}
 	}
+
 #ifdef FEATURE_WLAN_EXTSCAN
 	if (WMA_IS_EXTSCAN_SCAN_SRC(pRxPacketInfo) ||
 		WMA_IS_EPNO_SCAN_SRC(pRxPacketInfo)) {
@@ -1483,6 +1488,19 @@ lim_handle80211_frames(struct mac_context *mac, struct scheduler_msg *limMsg,
 				lim_process_action_frame_no_session(mac,
 								    pRxPacketInfo);
 			else {
+				if (mac->mlme_cfg->gen.debug_packet_log &
+				    DEBUG_PKTLOG_TYPE_ACTION) {
+					pe_debug("RX MGMT - Type %hu, SubType %hu, seq num[%d]",
+						 fc.type, fc.subType,
+						 ((pHdr->seqControl.seqNumHi << HIGH_SEQ_NUM_OFFSET) |
+						 pHdr->seqControl.seqNumLo));
+					QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE,
+							   QDF_TRACE_LEVEL_DEBUG,
+							   pHdr,
+							   WMA_GET_RX_PAYLOAD_LEN(pRxPacketInfo)
+							   + SIR_MAC_HDR_LEN_3A);
+				}
+
 				if (WMA_GET_RX_UNKNOWN_UCAST
 					    (pRxPacketInfo))
 					lim_handle_unknown_a2_index_frames

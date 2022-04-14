@@ -2658,14 +2658,29 @@ QDF_STATUS wma_tx_packet(void *wma_context, void *tx_frame, uint16_t frmLen,
 		chanfreq = 0;
 	}
 
-	if (mac->mlme_cfg->gen.debug_packet_log & 0x1) {
-		if ((pFc->type == SIR_MAC_MGMT_FRAME) &&
+	if (pFc->type == SIR_MAC_MGMT_FRAME) {
+		if ((mac->mlme_cfg->gen.debug_packet_log &
+		    DEBUG_PKTLOG_TYPE_MGMT) &&
 		    (pFc->subType != SIR_MAC_MGMT_PROBE_REQ) &&
-		    (pFc->subType != SIR_MAC_MGMT_PROBE_RSP)) {
+		    (pFc->subType != SIR_MAC_MGMT_PROBE_RSP) &&
+		    (pFc->subType != SIR_MAC_MGMT_ACTION)) {
 			wma_debug("TX MGMT - Type %hu, SubType %hu seq_num[%d]",
-				 pFc->type, pFc->subType,
+				  pFc->type, pFc->subType,
+				  ((mHdr->seqControl.seqNumHi << 4) |
+				  mHdr->seqControl.seqNumLo));
+			qdf_trace_hex_dump(QDF_MODULE_ID_WMA,
+					   QDF_TRACE_LEVEL_DEBUG, pData,
+					   frmLen);
+		} else if ((mac->mlme_cfg->gen.debug_packet_log &
+			   DEBUG_PKTLOG_TYPE_ACTION) &&
+			   (pFc->subType == SIR_MAC_MGMT_ACTION)) {
+			wma_debug("TX MGMT - Type %hu, SubType %hu seq_num[%d]",
+				  pFc->type, pFc->subType,
 				 ((mHdr->seqControl.seqNumHi << 4) |
 				 mHdr->seqControl.seqNumLo));
+			qdf_trace_hex_dump(QDF_MODULE_ID_WMA,
+					   QDF_TRACE_LEVEL_DEBUG, pData,
+					   frmLen);
 		}
 	}
 

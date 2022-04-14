@@ -54,6 +54,23 @@ enum wlan_wds_mode {
 	WLAN_WDS_MODE_MAX = WLAN_WDS_MODE_LAST - 1,
 };
 
+/* debug_packet_log_type: Debug packet log type
+ * DEBUG_PKTLOG_TYPE_NONE: Debug packet log is disabled
+ * DEBUG_PKTLOG_TYPE_MGMT: Management frames logging is enabled.
+ * DEBUG_PKTLOG_TYPE_EAPOL: EAPOL packets logging is enabled.
+ * DEBUG_PKTLOG_TYPE_DHCP: DHCP packets logging is enabled.
+ * DEBUG_PKTLOG_TYPE_ACTION: Action frames logging is enabled.
+ * DEBUG_PKTLOG_TYPE_ARP: ARP packets logging is enabled.
+ */
+enum debug_packet_log_type {
+	DEBUG_PKTLOG_TYPE_NONE   = 0x0,
+	DEBUG_PKTLOG_TYPE_MGMT   = 0x1,
+	DEBUG_PKTLOG_TYPE_EAPOL  = 0x2,
+	DEBUG_PKTLOG_TYPE_DHCP   = 0x4,
+	DEBUG_PKTLOG_TYPE_ACTION = 0x8,
+	DEBUG_PKTLOG_TYPE_ARP    = 0x10,
+};
+
 /*
  * pmfSaQueryMaxRetries - Control PMF SA query retries for SAP
  * @Min: 0
@@ -602,15 +619,16 @@ enum wlan_wds_mode {
  * gEnableDebugLog - Enable/Disable the Connection related logs
  * @Min: 0
  * @Max: 0xFF
- * @Default: 0x0F
+ * @Default: 0x01
  *
  * This ini is used to enable/disable the connection related logs
- * 0x1 - Enable mgmt pkt logs (excpet probe req/rsp, beacons).
- * 0x2 - Enable EAPOL pkt logs.
- * 0x4 - Enable DHCP pkt logs.
- * 0x8 - Enable mgmt action frames logs.
- * 0x0 - Disable all the above connection related logs.
- * The default value of 0x0F will enable all the above logs
+ * 0x1  - Enable mgmt pkt logs (except probe req/rsp, beacons).
+ * 0x2  - Enable EAPOL pkt logs.
+ * 0x4  - Enable DHCP pkt logs.
+ * 0x8  - Enable mgmt action frames logs.
+ * 0x10 - Enable ARP pkt logs.
+ * 0x0  - Disable all the above connection related logs.
+ * The default value of 0x01 will enable all the mgmt logs
  *
  * Related: None
  *
@@ -622,7 +640,7 @@ enum wlan_wds_mode {
  */
 #define CFG_ENABLE_DEBUG_PACKET_LOG CFG_INI_UINT( \
 				"gEnableDebugLog", \
-				0, 0xFF, 0x0F, \
+				0, 0xFF, 0x01, \
 				CFG_VALUE_OR_DEFAULT, \
 				"Enable debug log")
 
