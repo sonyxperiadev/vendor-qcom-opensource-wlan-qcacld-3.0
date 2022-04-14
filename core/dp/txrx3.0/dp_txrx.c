@@ -510,7 +510,11 @@ void dp_prealloc_deinit(void)
 						p->size,
 						p->va_unaligned,
 						p->pa_unaligned, 0);
-			qdf_mem_zero(p, sizeof(*p));
+			p->in_use = false;
+			p->va_unaligned = NULL;
+			p->va_aligned = NULL;
+			p->pa_unaligned = 0;
+			p->pa_aligned = 0;
 		}
 	}
 
@@ -528,7 +532,8 @@ void dp_prealloc_deinit(void)
 				mp->pages.num_pages);
 			qdf_mem_multi_pages_free(qdf_ctx, &mp->pages,
 						 0, mp->cacheable);
-			qdf_mem_zero(mp, sizeof(*mp));
+			mp->in_use = false;
+			qdf_mem_zero(&mp->pages, sizeof(mp->pages));
 		}
 	}
 
@@ -546,7 +551,9 @@ void dp_prealloc_deinit(void)
 						up->size,
 						up->va_unaligned,
 						up->pa_unaligned, 0);
-			qdf_mem_zero(up, sizeof(*up));
+			up->in_use = false;
+			up->va_unaligned = NULL;
+			up->pa_unaligned = 0;
 		}
 	}
 
