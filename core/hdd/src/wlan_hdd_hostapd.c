@@ -2142,9 +2142,6 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 			if (QDF_IS_STATUS_ERROR(status))
 				hdd_debug("set hw mode change not done");
 		}
-		hdd_debug("check for SAP restart");
-		policy_mgr_check_concurrent_intf_and_restart_sap(
-						hdd_ctx->psoc);
 
 		if (!wlan_reg_is_6ghz_chan_freq(ap_ctx->operating_chan_freq))
 			wlan_reg_set_ap_pwr_and_update_chan_list(hdd_ctx->pdev,
