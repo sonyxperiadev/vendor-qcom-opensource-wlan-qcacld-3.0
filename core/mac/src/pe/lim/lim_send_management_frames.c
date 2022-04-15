@@ -2180,6 +2180,25 @@ QDF_STATUS lim_fill_adaptive_11r_ie(struct pe_session *pe_session,
 }
 #endif
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static void
+lim_send_assoc_req_mgmt_frame_mlo(struct mac_context *mac_ctx,
+				  struct pe_session *pe_session,
+				  tDot11fAssocRequest *frm)
+{
+	if ((wlan_vdev_mlme_get_opmode(pe_session->vdev) == QDF_STA_MODE) &&
+	    wlan_vdev_mlme_is_mlo_vdev(pe_session->vdev))
+		populate_dot11f_assoc_req_mlo_ie(mac_ctx, pe_session, frm);
+}
+#else /* WLAN_FEATURE_11BE_MLO */
+static inline void
+lim_send_assoc_req_mgmt_frame_mlo(struct mac_context *mac_ctx,
+				  struct pe_session *pe_session,
+				  tDot11fAssocRequest *frm)
+{
+}
+#endif /* WLAN_FEATURE_11BE_MLO */
+
 /**
  * lim_send_assoc_req_mgmt_frame() - Send association request
  * @mac_ctx: Handle to MAC context
@@ -2459,12 +2478,8 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 
 	if (lim_is_session_eht_capable(pe_session))
 		populate_dot11f_eht_caps(mac_ctx, pe_session, &frm->eht_cap);
+	lim_send_assoc_req_mgmt_frame_mlo(mac_ctx, pe_session, frm);
 
-#ifdef WLAN_FEATURE_11BE_MLO
-	if ((wlan_vdev_mlme_get_opmode(pe_session->vdev) == QDF_STA_MODE) &&
-	    wlan_vdev_mlme_is_mlo_vdev(pe_session->vdev))
-		populate_dot11f_assoc_req_mlo_ie(mac_ctx, pe_session, frm);
-#endif
 	if (pe_session->is11Rconnection) {
 		struct bss_description *bssdescr;
 

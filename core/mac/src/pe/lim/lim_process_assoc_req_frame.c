@@ -2983,6 +2983,25 @@ static void lim_fill_assoc_ind_real_max_mcs_idx(tpLimMlmAssocInd assoc_ind,
 		assoc_ind->max_real_mcs_idx = assoc_ind->max_supp_idx;
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static void
+lim_fill_lim_assoc_ind_mac_addr_copy(tpLimMlmAssocInd assoc_ind,
+				     tpDphHashNode sta_ds,
+				     uint32_t num_bytes)
+{
+	qdf_mem_copy((uint8_t *)assoc_ind->peer_mld_addr,
+		     (uint8_t *)sta_ds->mld_addr,
+		     num_bytes);
+}
+#else /* WLAN_FEATURE_11BE_MLO */
+static inline void
+lim_fill_lim_assoc_ind_mac_addr_copy(tpLimMlmAssocInd assoc_ind,
+				     tpDphHashNode sta_ds,
+				     uint32_t num_bytes)
+{
+}
+#endif /* WLAN_FEATURE_11BE_MLO */
+
 bool lim_fill_lim_assoc_ind_params(
 		tpLimMlmAssocInd assoc_ind,
 		struct mac_context *mac_ctx,
@@ -3018,10 +3037,8 @@ bool lim_fill_lim_assoc_ind_params(
 
 	qdf_mem_copy((uint8_t *)assoc_ind->peerMacAddr,
 		     (uint8_t *)sta_ds->staAddr, sizeof(tSirMacAddr));
-#ifdef WLAN_FEATURE_11BE_MLO
-	qdf_mem_copy((uint8_t *)assoc_ind->peer_mld_addr,
-		     (uint8_t *)sta_ds->mld_addr, sizeof(tSirMacAddr));
-#endif
+	lim_fill_lim_assoc_ind_mac_addr_copy(assoc_ind, sta_ds,
+					     sizeof(tSirMacAddr));
 	assoc_ind->aid = sta_ds->assocId;
 	qdf_mem_copy((uint8_t *)&assoc_ind->ssId,
 		     (uint8_t *)&assoc_req->ssId,

@@ -2068,6 +2068,24 @@ QDF_STATUS sap_populate_peer_assoc_info(struct mac_context *mac_ctx,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static void
+sap_reassoc_mld_copy(struct csr_roam_info *csr_roaminfo,
+		     tSap_StationAssocReassocCompleteEvent *reassoc_complete)
+{
+	qdf_copy_macaddr(&reassoc_complete->sta_mld,
+			 &csr_roaminfo->peer_mld);
+	sap_debug("reassoc_complete->staMld: " QDF_MAC_ADDR_FMT,
+		  QDF_MAC_ADDR_REF(reassoc_complete->sta_mld.bytes));
+}
+#else /* WLAN_FEATURE_11BE_MLO */
+static inline void
+sap_reassoc_mld_copy(struct csr_roam_info *csr_roaminfo,
+		     tSap_StationAssocReassocCompleteEvent *reassoc_complete)
+{
+}
+#endif /* WLAN_FEATURE_11BE_MLO */
+
 /**
  * sap_signal_hdd_event() - send event notification
  * @sap_ctx: Sap Context
@@ -2250,12 +2268,7 @@ QDF_STATUS sap_signal_hdd_event(struct sap_context *sap_ctx,
 
 		qdf_copy_macaddr(&reassoc_complete->staMac,
 				 &csr_roaminfo->peerMac);
-#ifdef WLAN_FEATURE_11BE_MLO
-		qdf_copy_macaddr(&reassoc_complete->sta_mld,
-				 &csr_roaminfo->peer_mld);
-		sap_debug("reassoc_complete->staMld: " QDF_MAC_ADDR_FMT,
-			  QDF_MAC_ADDR_REF(reassoc_complete->sta_mld.bytes));
-#endif
+		sap_reassoc_mld_copy(csr_roaminfo, reassoc_complete);
 		reassoc_complete->staId = csr_roaminfo->staId;
 		reassoc_complete->status_code = csr_roaminfo->status_code;
 

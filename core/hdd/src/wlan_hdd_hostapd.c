@@ -1898,6 +1898,74 @@ static QDF_STATUS hdd_hostapd_chan_change(struct hdd_adapter *adapter,
 				      chan_change, legacy_phymode);
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static inline QDF_STATUS
+hdd_hostapd_sap_register_mlo_sta(struct hdd_adapter *adapter,
+				 struct hdd_ap_ctx *ap_ctx,
+				 struct hdd_context *hdd_ctx,
+				 tSap_StationAssocReassocCompleteEvent *event,
+				 bool bAuthRequired,
+				 uint8_t *notify_new_sta)
+{
+	uint8_t *mld;
+	QDF_STATUS qdf_status;
+	struct wlan_objmgr_peer *peer;
+
+	hdd_debug("Registering STA MLD :" QDF_MAC_ADDR_FMT,
+		  QDF_MAC_ADDR_REF(event->sta_mld.bytes));
+	qdf_status = hdd_softap_register_sta(adapter,
+					     bAuthRequired,
+					     ap_ctx->privacy,
+					     (struct qdf_mac_addr *)
+					     &event->sta_mld,
+					     event);
+
+	if (!QDF_IS_STATUS_SUCCESS(qdf_status))
+		hdd_err("Failed to register STA MLD %d "
+			QDF_MAC_ADDR_FMT, qdf_status,
+			QDF_MAC_ADDR_REF(event->sta_mld.bytes));
+
+	peer = wlan_objmgr_get_peer_by_mac(hdd_ctx->psoc,
+					   event->staMac.bytes,
+					   WLAN_OSIF_ID);
+	if (!peer) {
+		hdd_err("Peer object not found");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (bAuthRequired) {
+		mld = wlan_peer_mlme_get_mldaddr(peer);
+		if (!wlan_peer_mlme_is_assoc_peer(peer) &&
+		    !qdf_is_macaddr_zero((struct qdf_mac_addr *)mld)) {
+			hdd_err("skip userspace notification");
+			*notify_new_sta = 0;
+		}
+	} else {
+		if (!qdf_is_macaddr_zero((struct qdf_mac_addr *)
+				peer->mldaddr) &&
+		    !wlan_peer_mlme_is_assoc_peer(peer)) {
+			wlan_objmgr_peer_release_ref(peer, WLAN_OSIF_ID);
+			return QDF_STATUS_E_NOSUPPORT;
+		}
+	}
+
+	wlan_objmgr_peer_release_ref(peer, WLAN_OSIF_ID);
+
+	return QDF_STATUS_SUCCESS;
+}
+#else /* WLAN_FEATURE_11BE_MLO */
+static inline QDF_STATUS
+hdd_hostapd_sap_register_mlo_sta(struct hdd_adapter *adapter,
+				 struct hdd_ap_ctx *ap_ctx,
+				 struct hdd_context *hdd_ctx,
+				 tSap_StationAssocReassocCompleteEvent *event,
+				 bool bAuthRequired,
+				 uint8_t *notify_new_sta)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif /* WLAN_FEATURE_11BE_MLO */
+
 QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 				    void *context)
 {
@@ -1934,10 +2002,6 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 	struct sap_config *sap_config;
 	struct sap_context *sap_ctx = NULL;
 	uint8_t pdev_id;
-#ifdef WLAN_FEATURE_11BE_MLO
-	struct wlan_objmgr_peer *peer;
-	uint8_t *mld;
-#endif
 	bool notify_new_sta = true;
 	struct wlan_objmgr_vdev *vdev;
 
@@ -2435,38 +2499,18 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 				hdd_err("Failed to register STA %d "
 					QDF_MAC_ADDR_FMT, qdf_status,
 					QDF_MAC_ADDR_REF(wrqu.addr.sa_data));
-#ifdef WLAN_FEATURE_11BE_MLO
-			hdd_debug("Registering STA MLD :" QDF_MAC_ADDR_FMT,
-				  QDF_MAC_ADDR_REF(event->sta_mld.bytes));
-			qdf_status = hdd_softap_register_sta(
-						adapter,
-						true,
-						ap_ctx->privacy,
-						(struct qdf_mac_addr *)
-						&event->sta_mld,
-						event);
-			if (!QDF_IS_STATUS_SUCCESS(qdf_status))
-				hdd_err("Failed to register STA MLD %d "
-					QDF_MAC_ADDR_FMT, qdf_status,
-					QDF_MAC_ADDR_REF(event->sta_mld.bytes));
+			qdf_status = hdd_hostapd_sap_register_mlo_sta(adapter,
+								      ap_ctx,
+								      hdd_ctx,
+								      event,
+								      bAuthRequired,
+								      (uint8_t *)&notify_new_sta);
 
-			peer = wlan_objmgr_get_peer_by_mac(hdd_ctx->psoc,
-							   event->staMac.bytes,
-							   WLAN_OSIF_ID);
-			if (!peer) {
-				hdd_err("Peer object not found");
+			if (qdf_status == QDF_STATUS_E_NOSUPPORT)
+				goto skip_reassoc;
+			else if (qdf_status == QDF_STATUS_E_INVAL)
 				return QDF_STATUS_E_INVAL;
-			}
 
-			mld = wlan_peer_mlme_get_mldaddr(peer);
-			if (!wlan_peer_mlme_is_assoc_peer(peer) &&
-			    !qdf_is_macaddr_zero((struct qdf_mac_addr *)mld)) {
-				hdd_err("skip userspace notification");
-				notify_new_sta = false;
-			}
-
-			wlan_objmgr_peer_release_ref(peer, WLAN_OSIF_ID);
-#endif
 		} else {
 			qdf_status = hdd_softap_register_sta(
 						adapter,
@@ -2481,38 +2525,17 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 				hdd_err("Failed to register STA %d "
 					QDF_MAC_ADDR_FMT, qdf_status,
 					QDF_MAC_ADDR_REF(wrqu.addr.sa_data));
-#ifdef WLAN_FEATURE_11BE_MLO
-			hdd_debug("Registering STA MLD :" QDF_MAC_ADDR_FMT,
-				  QDF_MAC_ADDR_REF(event->sta_mld.bytes));
-			qdf_status = hdd_softap_register_sta(
-						adapter,
-						false,
-						ap_ctx->privacy,
-						(struct qdf_mac_addr *)
-						&event->sta_mld,
-						event);
-			if (!QDF_IS_STATUS_SUCCESS(qdf_status))
-				hdd_err("Failed to register STA MLD %d "
-					QDF_MAC_ADDR_FMT, qdf_status,
-					QDF_MAC_ADDR_REF(event->sta_mld.bytes));
-			peer = wlan_objmgr_get_peer_by_mac(hdd_ctx->psoc,
-							   event->staMac.bytes,
-							   WLAN_OSIF_ID);
-			if (!peer) {
-				hdd_err("Peer object not found");
+			qdf_status = hdd_hostapd_sap_register_mlo_sta(adapter,
+								      ap_ctx,
+								      hdd_ctx,
+								      event,
+								      bAuthRequired,
+								      (uint8_t *)&notify_new_sta);
+
+			if (qdf_status == QDF_STATUS_E_NOSUPPORT)
+				goto skip_reassoc;
+			else if (qdf_status == QDF_STATUS_E_INVAL)
 				return QDF_STATUS_E_INVAL;
-			}
-
-			if (!qdf_is_macaddr_zero((struct qdf_mac_addr *)
-							peer->mldaddr) &&
-			    !wlan_peer_mlme_is_assoc_peer(peer)) {
-				wlan_objmgr_peer_release_ref(peer,
-							     WLAN_OSIF_ID);
-				break;
-			}
-
-			wlan_objmgr_peer_release_ref(peer, WLAN_OSIF_ID);
-#endif
 		}
 
 		sta_id = event->staId;
@@ -2968,6 +2991,8 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 		goto stopbss;
 		return QDF_STATUS_SUCCESS;
 	}
+
+skip_reassoc:
 	hdd_wext_send_event(dev, we_event, &wrqu,
 			    (char *)we_custom_event_generic);
 	qdf_mem_free(we_custom_start_event);

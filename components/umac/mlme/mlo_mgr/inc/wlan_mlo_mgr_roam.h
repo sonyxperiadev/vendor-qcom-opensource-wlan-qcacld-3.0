@@ -220,10 +220,15 @@ mlo_roam_get_link_id(uint8_t vdev_id,
 	return 0;
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO_ADV_FEATURE
+void mlo_cm_roam_sync_cb(struct wlan_objmgr_vdev *vdev,
+			 void *event, uint32_t event_data_len);
+#else
 static inline void
 mlo_cm_roam_sync_cb(struct wlan_objmgr_vdev *vdev,
 		    void *event, uint32_t event_data_len)
 {}
+#endif
 
 static inline bool
 is_multi_link_roam(struct roam_offload_synch_ind *sync_ind)

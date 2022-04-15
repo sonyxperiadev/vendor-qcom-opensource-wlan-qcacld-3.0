@@ -3171,6 +3171,25 @@ void csr_roaming_state_msg_processor(struct mac_context *mac, void *msg_buf)
 	}
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static void
+csr_roam_assoc_cnf_mld_copy(struct csr_roam_info *roam_info,
+			    tSirSmeAssocIndToUpperLayerCnf *pUpperLayerAssocCnf,
+			    uint32_t num_bytes)
+{
+	qdf_mem_copy(roam_info->peer_mld.bytes,
+		     pUpperLayerAssocCnf->peer_mld_addr,
+		     num_bytes);
+}
+#else /* WLAN_FEATURE_11BE_MLO */
+static inline void
+csr_roam_assoc_cnf_mld_copy(struct csr_roam_info *roam_info,
+			    tSirSmeAssocIndToUpperLayerCnf *pUpperLayerAssocCnf,
+			    uint32_t num_bytes)
+{
+}
+#endif /* WLAN_FEATURE_11BE_MLO */
+
 void csr_roam_joined_state_msg_processor(struct mac_context *mac, void *msg_buf)
 {
 	tSirSmeRsp *pSirMsg = (tSirSmeRsp *)msg_buf;
@@ -3228,11 +3247,9 @@ void csr_roam_joined_state_msg_processor(struct mac_context *mac, void *msg_buf)
 		qdf_mem_copy(roam_info->peerMac.bytes,
 			     pUpperLayerAssocCnf->peerMacAddr,
 			     sizeof(tSirMacAddr));
-#ifdef WLAN_FEATURE_11BE_MLO
-		qdf_mem_copy(roam_info->peer_mld.bytes,
-			     pUpperLayerAssocCnf->peer_mld_addr,
-			     sizeof(tSirMacAddr));
-#endif
+		csr_roam_assoc_cnf_mld_copy(roam_info,
+					    pUpperLayerAssocCnf,
+					    sizeof(tSirMacAddr));
 		qdf_mem_copy(&roam_info->bssid,
 			     pUpperLayerAssocCnf->bssId,
 			     sizeof(struct qdf_mac_addr));
@@ -3731,6 +3748,22 @@ static bool csr_is_sae_peer_allowed(struct mac_context *mac_ctx,
 	return is_allowed;
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static void
+csr_send_assoc_ind_to_upper_layer_mac_copy(tSirSmeAssocIndToUpperLayerCnf *cnf,
+					   struct assoc_ind *ind)
+{
+	qdf_mem_copy(&cnf->peer_mld_addr, &ind->peer_mld_addr,
+		     sizeof(cnf->peer_mld_addr));
+}
+#else /* WLAN_FEATURE_11BE_MLO */
+static inline void
+csr_send_assoc_ind_to_upper_layer_mac_copy(tSirSmeAssocIndToUpperLayerCnf *cnf,
+					   struct assoc_ind *ind)
+{
+}
+#endif /* WLAN_FEATURE_11BE_MLO */
+
 static QDF_STATUS
 csr_send_assoc_ind_to_upper_layer_cnf_msg(struct mac_context *mac,
 					  struct assoc_ind *ind,
@@ -3755,10 +3788,7 @@ csr_send_assoc_ind_to_upper_layer_cnf_msg(struct mac_context *mac,
 	qdf_mem_copy(&cnf->bssId, &ind->bssId, sizeof(cnf->bssId));
 	qdf_mem_copy(&cnf->peerMacAddr, &ind->peerMacAddr,
 		     sizeof(cnf->peerMacAddr));
-#ifdef WLAN_FEATURE_11BE_MLO
-	qdf_mem_copy(&cnf->peer_mld_addr, &ind->peer_mld_addr,
-		     sizeof(cnf->peer_mld_addr));
-#endif
+	csr_send_assoc_ind_to_upper_layer_mac_copy(cnf, ind);
 	cnf->aid = ind->staId;
 	cnf->wmmEnabledSta = ind->wmmEnabledSta;
 	cnf->rsnIE = ind->rsnIE;
