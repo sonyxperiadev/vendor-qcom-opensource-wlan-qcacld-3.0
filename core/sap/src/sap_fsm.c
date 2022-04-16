@@ -891,6 +891,42 @@ static bool is_mcc_preferred(struct sap_context *sap_context,
 	return false;
 }
 
+/**
+ * sap_process_force_scc_with_go_start - Check GO force SCC or not
+ * psoc: psoc object
+ * sap_context: sap_context
+ *
+ * This function checks the current SAP MCC or not with the GO's home channel.
+ * If it is, skip the GO's force SCC. The SAP will do force SCC after
+ * GO's started.
+ *
+ * Return: true if skip GO's force SCC
+ */
+static bool
+sap_process_force_scc_with_go_start(struct wlan_objmgr_psoc *psoc,
+				    struct sap_context *sap_context)
+{
+	uint8_t existing_vdev_id = WLAN_UMAC_VDEV_ID_MAX;
+	enum policy_mgr_con_mode existing_vdev_mode = PM_MAX_NUM_OF_MODE;
+	uint32_t con_freq;
+	enum phy_ch_width ch_width;
+
+	existing_vdev_id =
+		policy_mgr_fetch_existing_con_info(psoc,
+						   sap_context->sessionId,
+						   sap_context->chan_freq,
+						   &existing_vdev_mode,
+						   &con_freq, &ch_width);
+	if (existing_vdev_id < WLAN_UMAC_VDEV_ID_MAX &&
+	    existing_vdev_mode == PM_SAP_MODE) {
+		sap_debug("concurrent sap vdev: %d on freq %d, skip GO force scc",
+			  existing_vdev_id, con_freq);
+		return true;
+	}
+
+	return false;
+}
+
 #ifdef WLAN_FEATURE_P2P_P2P_STA
 /**
  * sap_set_forcescc_required - set force scc flag for provided p2p go vdev
@@ -1047,6 +1083,11 @@ sap_validate_chan(struct sap_context *sap_context,
 		*/
 		go_force_scc = policy_mgr_go_scc_enforced(mac_ctx->psoc);
 		sap_debug("go force scc enabled %d", go_force_scc);
+
+		if (sap_process_force_scc_with_go_start(mac_ctx->psoc,
+							sap_context))
+			goto validation_done;
+
 		if (go_force_scc) {
 			is_go_scc_strict =
 				policy_mgr_is_go_scc_strict(mac_ctx->psoc);

@@ -89,7 +89,9 @@ if_mgr_ap_start_bss_complete(struct wlan_objmgr_vdev *vdev,
 		/* Enable Roaming after start bss in case of failure/success */
 		if_mgr_enable_roaming(pdev, vdev, RSO_START_BSS);
 	}
-
+	if (wlan_vdev_mlme_get_opmode(vdev) == QDF_P2P_GO_MODE)
+		policy_mgr_check_sap_go_force_scc(psoc, vdev,
+						  CSA_REASON_GO_BSS_STARTED);
 	ifmgr_debug("check for SAP restart");
 	policy_mgr_check_concurrent_intf_and_restart_sap(psoc);
 

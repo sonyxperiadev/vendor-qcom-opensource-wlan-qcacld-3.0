@@ -79,6 +79,40 @@
 typedef int (*send_mode_change_event_cb)(void);
 
 /**
+ * enum sap_csa_reason_code - SAP channel switch reason code
+ * @CSA_REASON_UNKNOWN: Unknown reason
+ * @CSA_REASON_STA_CONNECT_DFS_TO_NON_DFS: STA connection from DFS to NON DFS.
+ * @CSA_REASON_USER_INITIATED: User initiated form north bound.
+ * @CSA_REASON_PEER_ACTION_FRAME: Action frame received on sta iface.
+ * @CSA_REASON_PRE_CAC_SUCCESS: Pre CAC success.
+ * @CSA_REASON_CONCURRENT_STA_CHANGED_CHANNEL: concurrent sta changed channel.
+ * @CSA_REASON_UNSAFE_CHANNEL: Unsafe channel.
+ * @CSA_REASON_LTE_COEX: LTE coex.
+ * @CSA_REASON_CONCURRENT_NAN_EVENT: NAN concurrency.
+ * @CSA_REASON_BAND_RESTRICTED: band disabled or re-enabled
+ * @CSA_REASON_DCS: DCS
+ * @CSA_REASON_CHAN_DISABLED: channel is disabled
+ * @CSA_REASON_CHAN_PASSIVE: channel is passive
+ * @CSA_REASON_GO_BSS_STARED: P2P go started
+ */
+enum sap_csa_reason_code {
+	CSA_REASON_UNKNOWN,
+	CSA_REASON_STA_CONNECT_DFS_TO_NON_DFS,
+	CSA_REASON_USER_INITIATED,
+	CSA_REASON_PEER_ACTION_FRAME,
+	CSA_REASON_PRE_CAC_SUCCESS,
+	CSA_REASON_CONCURRENT_STA_CHANGED_CHANNEL,
+	CSA_REASON_UNSAFE_CHANNEL,
+	CSA_REASON_LTE_COEX,
+	CSA_REASON_CONCURRENT_NAN_EVENT,
+	CSA_REASON_BAND_RESTRICTED,
+	CSA_REASON_DCS,
+	CSA_REASON_CHAN_DISABLED,
+	CSA_REASON_CHAN_PASSIVE,
+	CSA_REASON_GO_BSS_STARTED,
+};
+
+/**
  * enum hw_mode_ss_config - Possible spatial stream configuration
  * @HW_MODE_SS_0x0: Unused Tx and Rx of MAC
  * @HW_MODE_SS_1x1: 1 Tx SS and 1 Rx SS
@@ -1522,15 +1556,31 @@ struct go_plus_go_force_scc {
 };
 
 /**
+ * struct sap_plus_go_force_scc - structure to hold
+ * params for forcescc restart in sap plus go
+ *
+ * @reason: channel change reason code
+ * @initiator_vdev_id: the first interface ID to trigger CSA
+ * @responder_vdev_id: the second interface ID to follow CSA
+ */
+struct sap_plus_go_force_scc {
+	enum sap_csa_reason_code reason;
+	uint8_t initiator_vdev_id;
+	uint8_t responder_vdev_id;
+};
+
+/**
  * struct sta_ap_intf_check_work_ctx - sta_ap_intf_check_work
  * related info
  * @psoc: pointer to PSOC object information
  * @go_plus_go_force_scc: structure to hold params of
  *			  curr and first p2p go ctx
+ * @sap_plus_go_force_scc: sap p2p force SCC ctx
  */
 struct sta_ap_intf_check_work_ctx {
 	struct wlan_objmgr_psoc *psoc;
 	struct go_plus_go_force_scc go_plus_go_force_scc;
+	struct sap_plus_go_force_scc sap_plus_go_force_scc;
 };
 
 #endif /* __WLAN_POLICY_MGR_PUBLIC_STRUCT_H */

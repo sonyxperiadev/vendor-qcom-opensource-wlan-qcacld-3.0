@@ -111,6 +111,21 @@ QDF_STATUS hdd_sap_restart_with_channel_switch(struct wlan_objmgr_psoc *psoc,
 QDF_STATUS hdd_sap_restart_chan_switch_cb(struct wlan_objmgr_psoc *psoc,
 					  uint8_t vdev_id, uint32_t ch_freq,
 					  uint32_t channel_bw, bool forced);
+
+/**
+ * wlan_hdd_check_cc_intf_cb() - Check force SCC for vdev interface.
+ * @psoc: PSOC object information
+ * @vdev_id: vdev id
+ * @ch_freq: channel frequency to switch to
+ *
+ * This function will return a channel frequency to avoid MCC for SAP/GO.
+ *
+ * Return: QDF_STATUS_SUCCESS if successfully
+ *
+ */
+QDF_STATUS wlan_hdd_check_cc_intf_cb(struct wlan_objmgr_psoc *psoc,
+				     uint8_t vdev_id, uint32_t *ch_freq);
+
 /**
  * wlan_hdd_get_channel_for_sap_restart() - Function to get
  * suitable channel and restart SAP

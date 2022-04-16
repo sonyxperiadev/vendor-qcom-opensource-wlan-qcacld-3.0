@@ -2099,6 +2099,194 @@ end:
 	pm_ctx->last_disconn_sta_freq = 0;
 }
 
+/**
+ * policy_mgr_handle_sap_plus_go_force_scc() - Do SAP/GO force SCC
+ * @psoc: soc object
+ *
+ * This function will check SAP/GO channel state and select channel
+ * to avoid MCC, then do channel change on the second interface.
+ *
+ * Return: QDF_STATUS_SUCCESS if successfully handle the SAP/GO
+ * force SCC.
+ */
+static QDF_STATUS
+policy_mgr_handle_sap_plus_go_force_scc(struct wlan_objmgr_psoc *psoc)
+{
+	QDF_STATUS status = QDF_STATUS_E_INVAL;
+	uint8_t existing_vdev_id = WLAN_UMAC_VDEV_ID_MAX;
+	enum policy_mgr_con_mode existing_vdev_mode = PM_MAX_NUM_OF_MODE;
+	enum policy_mgr_con_mode vdev_con_mode;
+	uint32_t existing_ch_freq, chan_freq, intf_ch_freq;
+	enum phy_ch_width existing_ch_width;
+	uint8_t vdev_id;
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	struct sta_ap_intf_check_work_ctx *work_info;
+	struct ch_params ch_params = {0};
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return status;
+	}
+
+	work_info = pm_ctx->sta_ap_intf_check_work_info;
+	if (!work_info) {
+		policy_mgr_err("invalid work info");
+		return status;
+	}
+	if (work_info->sap_plus_go_force_scc.reason == CSA_REASON_UNKNOWN)
+		return status;
+
+	vdev_id = work_info->sap_plus_go_force_scc.initiator_vdev_id;
+	chan_freq = wlan_get_operation_chan_freq_vdev_id(pm_ctx->pdev, vdev_id);
+	vdev_con_mode = policy_mgr_convert_device_mode_to_qdf_type(
+			wlan_get_opmode_vdev_id(pm_ctx->pdev, vdev_id));
+
+	existing_vdev_id =
+		policy_mgr_fetch_existing_con_info(
+				psoc,
+				vdev_id,
+				chan_freq,
+				&existing_vdev_mode,
+				&existing_ch_freq, &existing_ch_width);
+	policy_mgr_debug("initiator vdev %d mode %d freq %d, existing vdev %d mode %d freq %d reason %d",
+			 vdev_id, vdev_con_mode, chan_freq, existing_vdev_id,
+			 existing_vdev_mode, existing_ch_freq,
+			 work_info->sap_plus_go_force_scc.reason);
+
+	if (existing_vdev_id == WLAN_UMAC_VDEV_ID_MAX)
+		goto force_scc_done;
+
+	if (!((vdev_con_mode == PM_P2P_GO_MODE &&
+	       existing_vdev_mode == PM_SAP_MODE) ||
+	      (vdev_con_mode == PM_SAP_MODE &&
+	       existing_vdev_mode == PM_P2P_GO_MODE)))
+		goto force_scc_done;
+
+	if (!pm_ctx->hdd_cbacks.wlan_check_cc_intf_cb)
+		goto force_scc_done;
+
+	intf_ch_freq = 0;
+	status = pm_ctx->hdd_cbacks.wlan_check_cc_intf_cb(psoc,
+							  existing_vdev_id,
+							  &intf_ch_freq);
+	policy_mgr_debug("vdev %d freq %d intf %d status %d",
+			 existing_vdev_id, existing_ch_freq,
+			 intf_ch_freq, status);
+	if (QDF_IS_STATUS_ERROR(status))
+		goto force_scc_done;
+	if (!intf_ch_freq || intf_ch_freq == existing_ch_freq)
+		goto force_scc_done;
+
+	ch_params.ch_width = existing_ch_width;
+	if (pm_ctx->hdd_cbacks.wlan_get_ap_prefer_conc_ch_params) {
+		status = pm_ctx->hdd_cbacks.wlan_get_ap_prefer_conc_ch_params(
+			psoc, existing_vdev_id, intf_ch_freq, &ch_params);
+		if (QDF_IS_STATUS_ERROR(status))
+			policy_mgr_debug("no candidate valid bw for vdev %d intf %d",
+					 existing_vdev_id, intf_ch_freq);
+	}
+
+	status = policy_mgr_valid_sap_conc_channel_check(
+		    psoc, &intf_ch_freq, existing_ch_freq, existing_vdev_id,
+		    &ch_params);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		policy_mgr_err("warning no candidate freq for vdev %d freq %d intf %d",
+			       existing_vdev_id, existing_ch_freq,
+			       intf_ch_freq);
+		goto force_scc_done;
+	}
+
+	if (pm_ctx->hdd_cbacks.wlan_hdd_set_sap_csa_reason)
+		pm_ctx->hdd_cbacks.wlan_hdd_set_sap_csa_reason(
+				psoc, existing_vdev_id,
+				work_info->sap_plus_go_force_scc.reason);
+
+	status = policy_mgr_change_sap_channel_with_csa(
+			psoc, existing_vdev_id, intf_ch_freq,
+			ch_params.ch_width, true);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		policy_mgr_err("warning sap/go vdev %d freq %d intf %d csa failed",
+			       existing_vdev_id, existing_ch_freq,
+			       intf_ch_freq);
+	}
+
+force_scc_done:
+	work_info->sap_plus_go_force_scc.reason = CSA_REASON_UNKNOWN;
+	work_info->sap_plus_go_force_scc.initiator_vdev_id =
+					WLAN_UMAC_VDEV_ID_MAX;
+	work_info->sap_plus_go_force_scc.responder_vdev_id =
+					WLAN_UMAC_VDEV_ID_MAX;
+
+	return status;
+}
+
+void
+policy_mgr_check_sap_go_force_scc(struct wlan_objmgr_psoc *psoc,
+				  struct wlan_objmgr_vdev *vdev,
+				  enum sap_csa_reason_code reason_code)
+{
+	uint8_t existing_vdev_id = WLAN_UMAC_VDEV_ID_MAX;
+	enum policy_mgr_con_mode existing_vdev_mode = PM_MAX_NUM_OF_MODE;
+	enum policy_mgr_con_mode vdev_con_mode;
+	uint32_t con_freq, chan_freq;
+	enum phy_ch_width ch_width;
+	uint8_t vdev_id;
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	struct sta_ap_intf_check_work_ctx *work_info;
+
+	if (reason_code != CSA_REASON_GO_BSS_STARTED &&
+	    reason_code != CSA_REASON_USER_INITIATED)
+		return;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return;
+	}
+	if (!vdev) {
+		policy_mgr_err("vdev is null");
+		return;
+	}
+	vdev_id = wlan_vdev_get_id(vdev);
+	work_info = pm_ctx->sta_ap_intf_check_work_info;
+	if (!work_info) {
+		policy_mgr_err("invalid work info");
+		return;
+	}
+
+	chan_freq = wlan_get_operation_chan_freq(vdev);
+	vdev_con_mode = policy_mgr_convert_device_mode_to_qdf_type(
+			wlan_vdev_mlme_get_opmode(vdev));
+
+	existing_vdev_id =
+		policy_mgr_fetch_existing_con_info(psoc,
+						   vdev_id,
+						   chan_freq,
+						   &existing_vdev_mode,
+						   &con_freq, &ch_width);
+	if (existing_vdev_id == WLAN_UMAC_VDEV_ID_MAX)
+		return;
+
+	if (!((vdev_con_mode == PM_P2P_GO_MODE &&
+	       existing_vdev_mode == PM_SAP_MODE) ||
+	      (vdev_con_mode == PM_SAP_MODE &&
+	       existing_vdev_mode == PM_P2P_GO_MODE)))
+		return;
+
+	work_info->sap_plus_go_force_scc.reason = reason_code;
+	work_info->sap_plus_go_force_scc.initiator_vdev_id = vdev_id;
+	work_info->sap_plus_go_force_scc.responder_vdev_id = existing_vdev_id;
+
+	policy_mgr_debug("initiator vdev %d freq %d, existing vdev %d freq %d reason %d",
+			 vdev_id, chan_freq, existing_vdev_id,
+			 con_freq, reason_code);
+
+	if (!qdf_delayed_work_start(&pm_ctx->sta_ap_intf_check_work,
+				    WAIT_BEFORE_GO_FORCESCC_RESTART))
+		policy_mgr_debug("change interface request already queued");
+}
+
 static void __policy_mgr_check_sta_ap_concurrent_ch_intf(
 				struct policy_mgr_psoc_priv_obj *pm_ctx)
 {
@@ -2119,8 +2307,9 @@ static void __policy_mgr_check_sta_ap_concurrent_ch_intf(
 	 * valid in case of GO+GO force scc only. So, for valid vdev id move
 	 * first GO to newly formed GO channel.
 	 */
-	policy_mgr_debug("p2p go vdev id: %d",
-			 work_info->go_plus_go_force_scc.vdev_id);
+	policy_mgr_debug("p2p go vdev id: %d csa reason: %d",
+			 work_info->go_plus_go_force_scc.vdev_id,
+			 work_info->sap_plus_go_force_scc.reason);
 	if (pm_ctx->sta_ap_intf_check_work_info->go_plus_go_force_scc.vdev_id <
 	    WLAN_UMAC_VDEV_ID_MAX) {
 		policy_mgr_do_go_plus_go_force_scc(
@@ -2128,6 +2317,14 @@ static void __policy_mgr_check_sta_ap_concurrent_ch_intf(
 			work_info->go_plus_go_force_scc.ch_freq,
 			work_info->go_plus_go_force_scc.ch_width);
 		work_info->go_plus_go_force_scc.vdev_id = WLAN_UMAC_VDEV_ID_MAX;
+		goto end;
+	}
+	/*
+	 * Check if force scc is required for GO + SAP case.
+	 */
+	if (pm_ctx->sta_ap_intf_check_work_info->sap_plus_go_force_scc.reason !=
+	    CSA_REASON_UNKNOWN) {
+		status = policy_mgr_handle_sap_plus_go_force_scc(pm_ctx->psoc);
 		goto end;
 	}
 

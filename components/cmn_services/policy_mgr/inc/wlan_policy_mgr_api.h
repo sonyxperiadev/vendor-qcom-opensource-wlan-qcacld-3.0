@@ -69,38 +69,6 @@ typedef const enum policy_mgr_conc_next_action
 	 PM_FW_MODE_STA_P2P_BIT_POS)
 
 /**
- * enum sap_csa_reason_code - SAP channel switch reason code
- * @CSA_REASON_UNKNOWN: Unknown reason
- * @CSA_REASON_STA_CONNECT_DFS_TO_NON_DFS: STA connection from DFS to NON DFS.
- * @CSA_REASON_USER_INITIATED: User initiated form north bound.
- * @CSA_REASON_PEER_ACTION_FRAME: Action frame received on sta iface.
- * @CSA_REASON_PRE_CAC_SUCCESS: Pre CAC success.
- * @CSA_REASON_CONCURRENT_STA_CHANGED_CHANNEL: concurrent sta changed channel.
- * @CSA_REASON_UNSAFE_CHANNEL: Unsafe channel.
- * @CSA_REASON_LTE_COEX: LTE coex.
- * @CSA_REASON_CONCURRENT_NAN_EVENT: NAN concurrency.
- * @CSA_REASON_BAND_RESTRICTED: band disabled or re-enabled
- * @CSA_REASON_DCS: DCS
- * @CSA_REASON_CHAN_DISABLED: channel is disabled
- * @CSA_REASON_CHAN_PASSIVE: channel is passive
- */
-enum sap_csa_reason_code {
-	CSA_REASON_UNKNOWN,
-	CSA_REASON_STA_CONNECT_DFS_TO_NON_DFS,
-	CSA_REASON_USER_INITIATED,
-	CSA_REASON_PEER_ACTION_FRAME,
-	CSA_REASON_PRE_CAC_SUCCESS,
-	CSA_REASON_CONCURRENT_STA_CHANGED_CHANNEL,
-	CSA_REASON_UNSAFE_CHANNEL,
-	CSA_REASON_LTE_COEX,
-	CSA_REASON_CONCURRENT_NAN_EVENT,
-	CSA_REASON_BAND_RESTRICTED,
-	CSA_REASON_DCS,
-	CSA_REASON_CHAN_DISABLED,
-	CSA_REASON_CHAN_PASSIVE,
-};
-
-/**
  * enum PM_AP_DFS_MASTER_MODE - AP dfs master mode
  * @PM_STA_SAP_ON_DFS_DEFAULT - Disallow STA+SAP SCC on DFS channel
  * @PM_STA_SAP_ON_DFS_MASTER_MODE_DISABLED - Allow STA+SAP SCC
@@ -790,27 +758,6 @@ policy_mgr_is_p2p_p2p_conc_supported(struct wlan_objmgr_psoc *psoc)
 }
 #endif
 
-#define GO_FORCE_SCC_DISABLE 0
-#define GO_FORCE_SCC_STRICT 1
-#define GO_FORCE_SCC_LIBERAL 2
-#ifdef WLAN_FEATURE_P2P_P2P_STA
-/**
- * Stay in MCC for 1 second, in case of first p2p go channel
- * needs to be moved to curr go channel
- */
-#define WAIT_BEFORE_GO_FORCESCC_RESTART (1000)
-
-/**
- * policy_mgr_is_go_scc_strict() - Get GO force SCC enabled or not
- * @psoc: psoc object
- *
- * This function checks if force SCC logic should be used on GO interface
- * as a strict mode.
- *
- * Return: True if p2p needs o be start on provided channel only.
- */
-bool policy_mgr_is_go_scc_strict(struct wlan_objmgr_psoc *psoc);
-
 /**
  * policy_mgr_fetch_existing_con_info() - check if another vdev
  * is present and find mode, freq , vdev id and chan width
@@ -835,6 +782,27 @@ policy_mgr_fetch_existing_con_info(struct wlan_objmgr_psoc *psoc,
 				   enum policy_mgr_con_mode *mode,
 				   uint32_t *con_freq,
 				   enum phy_ch_width *ch_width);
+
+#define GO_FORCE_SCC_DISABLE 0
+#define GO_FORCE_SCC_STRICT 1
+#define GO_FORCE_SCC_LIBERAL 2
+/**
+ * Stay in MCC for 1 second, in case of first p2p go channel
+ * needs to be moved to curr go channel
+ */
+#define WAIT_BEFORE_GO_FORCESCC_RESTART (1000)
+
+#ifdef WLAN_FEATURE_P2P_P2P_STA
+/**
+ * policy_mgr_is_go_scc_strict() - Get GO force SCC enabled or not
+ * @psoc: psoc object
+ *
+ * This function checks if force SCC logic should be used on GO interface
+ * as a strict mode.
+ *
+ * Return: True if p2p needs o be start on provided channel only.
+ */
+bool policy_mgr_is_go_scc_strict(struct wlan_objmgr_psoc *psoc);
 
 /**
  * policy_mgr_process_forcescc_for_go () - start work queue to move first p2p go
@@ -881,17 +849,6 @@ bool policy_mgr_is_go_scc_strict(struct wlan_objmgr_psoc *psoc)
 }
 
 static inline
-uint8_t policy_mgr_fetch_existing_con_info(struct wlan_objmgr_psoc *psoc,
-					   uint8_t vdev_id,
-					   uint32_t curr_go_freq,
-					   enum policy_mgr_con_mode *mode,
-					   uint32_t *con_freq,
-					   enum phy_ch_width *ch_width)
-{
-	return WLAN_UMAC_VDEV_ID_MAX;
-}
-
-static inline
 void policy_mgr_process_forcescc_for_go(
 		struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 		uint32_t ch_freq, uint32_t ch_width,
@@ -904,6 +861,24 @@ void policy_mgr_do_go_plus_go_force_scc(
 		uint32_t ch_freq, uint32_t ch_width)
 {}
 #endif
+
+/**
+ * policy_mgr_check_sap_go_force_scc() - Check SAP GO MCC and save interface
+ * information
+ * @psoc: pointer to psoc
+ * @vdev: initiator vdev
+ * @reason_code: CSA reason code
+ *
+ * This API will check SAP and GO are coexistent on same band MCC or not. If
+ * it is, the interface ids will be saved and a delayed workqueue will be
+ * scheduled. The workqueue will handle the new channel selection and change
+ * the channel of second interface to avoid MCC.
+ *
+ * Return: void
+ */
+void policy_mgr_check_sap_go_force_scc(struct wlan_objmgr_psoc *psoc,
+				       struct wlan_objmgr_vdev *vdev,
+				       enum sap_csa_reason_code reason_code);
 
 /**
  * policy_mgr_set_pcl_for_existing_combo() - SET PCL for existing combo
@@ -1744,6 +1719,7 @@ struct policy_mgr_sme_cbacks {
  * @wlan_get_ap_prefer_conc_ch_params: get prefer ap channel bw parameters
  *  based on target channel frequency and concurrent connections.
  * @wlan_get_sap_acs_band: get acs band from sap config
+ * @wlan_check_cc_intf_cb: get interference frequency of input SAP/GO interface
  */
 struct policy_mgr_hdd_cbacks {
 	QDF_STATUS (*sap_restart_chan_switch_cb)(struct wlan_objmgr_psoc *psoc,
@@ -1772,6 +1748,9 @@ struct policy_mgr_hdd_cbacks {
 			struct ch_params *ch_params);
 	uint32_t (*wlan_get_sap_acs_band)(struct wlan_objmgr_psoc *psoc,
 					  uint8_t vdev_id, uint32_t *acs_band);
+	QDF_STATUS (*wlan_check_cc_intf_cb)(struct wlan_objmgr_psoc *psoc,
+					    uint8_t vdev_id,
+					    uint32_t *ch_freq);
 };
 
 /**

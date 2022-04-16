@@ -2878,6 +2878,9 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 			hdd_dcs_hostapd_set_chan(
 				hdd_ctx, adapter->vdev_id,
 				adapter->session.ap.operating_chan_freq);
+		policy_mgr_check_sap_go_force_scc(
+				hdd_ctx->psoc, adapter->vdev,
+				ap_ctx->sap_context->csa_reason);
 		qdf_status = qdf_event_set(&hostapd_state->qdf_event);
 		if (!QDF_IS_STATUS_SUCCESS(qdf_status))
 			hdd_err("qdf_event_set failed! status: %d",
@@ -3462,6 +3465,40 @@ QDF_STATUS hdd_sap_restart_chan_switch_cb(struct wlan_objmgr_psoc *psoc,
 						   ap_adapter,
 						   ch_freq,
 						   channel_bw, forced);
+}
+
+QDF_STATUS wlan_hdd_check_cc_intf_cb(struct wlan_objmgr_psoc *psoc,
+				     uint8_t vdev_id, uint32_t *ch_freq)
+{
+	struct hdd_adapter *ap_adapter;
+	struct sap_context *sap_context;
+
+	ap_adapter = wlan_hdd_get_adapter_from_vdev(psoc, vdev_id);
+	if (!ap_adapter) {
+		hdd_err("ap_adapter is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!test_bit(SOFTAP_BSS_STARTED, &ap_adapter->event_flags)) {
+		hdd_err("SOFTAP_BSS_STARTED not set");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	sap_context = WLAN_HDD_GET_SAP_CTX_PTR(ap_adapter);
+	if (!sap_context) {
+		hdd_err("sap_context is null");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (QDF_IS_STATUS_ERROR(wlansap_context_get(sap_context))) {
+		hdd_err("sap_context is invalid");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	*ch_freq = wlansap_check_cc_intf(sap_context);
+	wlansap_context_put(sap_context);
+
+	return QDF_STATUS_SUCCESS;
 }
 
 void wlan_hdd_set_sap_csa_reason(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,

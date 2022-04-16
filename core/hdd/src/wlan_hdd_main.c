@@ -3879,6 +3879,7 @@ static void hdd_register_policy_manager_callback(
 			wlan_get_ap_prefer_conc_ch_params;
 	hdd_cbacks.wlan_get_sap_acs_band =
 			wlan_get_sap_acs_band;
+	hdd_cbacks.wlan_check_cc_intf_cb = wlan_hdd_check_cc_intf_cb;
 
 	if (QDF_STATUS_SUCCESS !=
 	    policy_mgr_register_hdd_cb(psoc, &hdd_cbacks)) {

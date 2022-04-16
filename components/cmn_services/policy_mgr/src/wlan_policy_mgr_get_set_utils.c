@@ -7437,7 +7437,6 @@ bool policy_mgr_go_scc_enforced(struct wlan_objmgr_psoc *psoc)
 	return false;
 }
 
-#ifdef WLAN_FEATURE_P2P_P2P_STA
 uint8_t
 policy_mgr_fetch_existing_con_info(struct wlan_objmgr_psoc *psoc,
 				   uint8_t vdev_id, uint32_t freq,
@@ -7460,13 +7459,14 @@ policy_mgr_fetch_existing_con_info(struct wlan_objmgr_psoc *psoc,
 		if ((pm_conc_connection_list[conn_index].mode ==
 		    PM_P2P_GO_MODE ||
 		    pm_conc_connection_list[conn_index].mode ==
+		    PM_SAP_MODE ||
+		    pm_conc_connection_list[conn_index].mode ==
 		    PM_P2P_CLIENT_MODE ||
 		    pm_conc_connection_list[conn_index].mode ==
 		    PM_STA_MODE) &&
 		    pm_conc_connection_list[conn_index].in_use &&
-		    wlan_reg_is_same_band_freqs(
-				freq,
-				pm_conc_connection_list[conn_index].freq) &&
+		    policy_mgr_are_2_freq_on_same_mac(
+			psoc, freq, pm_conc_connection_list[conn_index].freq) &&
 		    freq != pm_conc_connection_list[conn_index].freq &&
 		    vdev_id != pm_conc_connection_list[conn_index].vdev_id) {
 			qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
@@ -7483,9 +7483,11 @@ policy_mgr_fetch_existing_con_info(struct wlan_objmgr_psoc *psoc,
 		}
 	}
 	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+
 	return WLAN_UMAC_VDEV_ID_MAX;
 }
 
+#ifdef WLAN_FEATURE_P2P_P2P_STA
 bool policy_mgr_is_go_scc_strict(struct wlan_objmgr_psoc *psoc)
 {
 	struct policy_mgr_psoc_priv_obj *pm_ctx;

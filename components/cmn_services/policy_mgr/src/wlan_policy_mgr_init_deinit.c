@@ -342,6 +342,8 @@ QDF_STATUS policy_mgr_psoc_open(struct wlan_objmgr_psoc *psoc)
 	pm_ctx->sta_ap_intf_check_work_info->psoc = psoc;
 	pm_ctx->sta_ap_intf_check_work_info->go_plus_go_force_scc.vdev_id =
 						WLAN_UMAC_VDEV_ID_MAX;
+	pm_ctx->sta_ap_intf_check_work_info->sap_plus_go_force_scc.reason =
+						CSA_REASON_UNKNOWN;
 	if (QDF_IS_STATUS_ERROR(qdf_delayed_work_create(
 				&pm_ctx->sta_ap_intf_check_work,
 				policy_mgr_check_sta_ap_concurrent_ch_intf,
@@ -730,6 +732,8 @@ QDF_STATUS policy_mgr_register_hdd_cb(struct wlan_objmgr_psoc *psoc,
 		hdd_cbacks->wlan_get_ap_prefer_conc_ch_params;
 	pm_ctx->hdd_cbacks.wlan_get_sap_acs_band =
 		hdd_cbacks->wlan_get_sap_acs_band;
+	pm_ctx->hdd_cbacks.wlan_check_cc_intf_cb =
+		hdd_cbacks->wlan_check_cc_intf_cb;
 
 	return QDF_STATUS_SUCCESS;
 }
