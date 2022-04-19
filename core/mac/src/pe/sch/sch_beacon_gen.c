@@ -668,7 +668,8 @@ sch_set_fixed_beacon_fields(struct mac_context *mac_ctx, struct pe_session *sess
 			 * Populate the Channel Switch Wrapper Element if
 			 * SAP operates in 40/80 Mhz Channel Width.
 			 */
-			if (true == session->dfsIncludeChanWrapperIe) {
+			if (!is_6ghz_chsw &&
+			    session->dfsIncludeChanWrapperIe == true) {
 				populate_dot11f_chan_switch_wrapper(mac_ctx,
 					&bcn_2->ChannelSwitchWrapper, session);
 				pe_debug("wrapper: width:%d f0:%d f1:%d",
