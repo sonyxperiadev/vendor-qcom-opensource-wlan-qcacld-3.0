@@ -1393,6 +1393,43 @@ wlansap_set_chan_params_for_csa(struct mac_context *mac,
 	return QDF_STATUS_SUCCESS;
 }
 
+bool
+wlansap_override_csa_strict_for_sap(mac_handle_t mac_handle,
+				    struct sap_context *sap_ctx,
+				    uint32_t target_chan_freq,
+				    bool strict)
+{
+	uint8_t existing_vdev_id = WLAN_UMAC_VDEV_ID_MAX;
+	enum policy_mgr_con_mode existing_vdev_mode = PM_MAX_NUM_OF_MODE;
+	uint32_t con_freq;
+	enum phy_ch_width ch_width;
+	struct mac_context *mac_ctx = MAC_CONTEXT(mac_handle);
+
+	if (!mac_ctx || !sap_ctx->vdev ||
+	    wlan_vdev_mlme_get_opmode(sap_ctx->vdev) != QDF_SAP_MODE)
+		return strict;
+
+	if (sap_ctx->csa_reason != CSA_REASON_USER_INITIATED)
+		return strict;
+
+	if (!policy_mgr_is_force_scc(mac_ctx->psoc))
+		return strict;
+
+	existing_vdev_id =
+		policy_mgr_fetch_existing_con_info(
+				mac_ctx->psoc,
+				sap_ctx->sessionId,
+				target_chan_freq,
+				&existing_vdev_mode,
+				&con_freq, &ch_width);
+	if (existing_vdev_id < WLAN_UMAC_VDEV_ID_MAX &&
+	    (existing_vdev_mode == PM_STA_MODE ||
+	     existing_vdev_mode == PM_P2P_CLIENT_MODE))
+		return strict;
+
+	return true;
+}
+
 QDF_STATUS wlansap_set_channel_change_with_csa(struct sap_context *sap_ctx,
 					       uint32_t target_chan_freq,
 					       enum phy_ch_width target_bw,

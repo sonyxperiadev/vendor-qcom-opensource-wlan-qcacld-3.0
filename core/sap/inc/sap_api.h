@@ -1612,6 +1612,27 @@ uint32_t wlansap_get_safe_channel_from_pcl_for_sap(struct sap_context *sap_ctx);
 qdf_freq_t wlansap_get_chan_band_restrict(struct sap_context *sap_ctx,
 					  enum sap_csa_reason_code *csa_reason);
 
+/**
+ * wlansap_override_csa_strict_for_sap() - check user CSA strict or not
+ * @mac: mac ctx
+ * @sap_ctx: sap context
+ * @target_chan_freq: target channel frequency in MHz
+ * @strict: CSA strict flag
+ *
+ * If force SCC enabled, user trigger SAP CSA and target channel
+ * doesn't cause MCC with existing STA/CLI, then override strict flag to
+ * true, so that driver can skip the overlap interference check and
+ * allow the CSA go through. This is to allow SAP/GO force SCC in
+ * same band.
+ *
+ * Return: true if CSA is strict, otherwise false
+ */
+bool
+wlansap_override_csa_strict_for_sap(mac_handle_t mac_handle,
+				    struct sap_context *sap_ctx,
+				    uint32_t target_chan_freq,
+				    bool strict);
+
 #ifdef FEATURE_RADAR_HISTORY
 /**
  * wlansap_query_radar_history() -  get radar history info

@@ -3189,6 +3189,10 @@ int hdd_softap_set_channel_change(struct net_device *dev, int target_chan_freq,
 	}
 	if (wlan_vdev_mlme_get_opmode(vdev) == QDF_P2P_GO_MODE)
 		is_p2p_go_session = true;
+	else
+		forced = wlansap_override_csa_strict_for_sap(
+					hdd_ctx->mac_handle, sap_ctx,
+					target_chan_freq, forced);
 	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_ID);
 
 	strict = is_p2p_go_session;
