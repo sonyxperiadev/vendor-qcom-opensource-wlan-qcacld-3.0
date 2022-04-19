@@ -623,7 +623,7 @@ struct pe_session {
 	bool sae_pmk_cached;
 	bool recvd_deauth_while_roaming;
 	bool recvd_disassoc_while_roaming;
-	bool deauth_disassoc_rc;
+	uint16_t deauth_disassoc_rc;
 	enum wmi_obss_color_collision_evt_type obss_color_collision_dec_evt;
 	bool is_session_obss_color_collision_det_enabled;
 	tSirMacEdcaParamRecord ap_mu_edca_params[QCA_WLAN_AC_ALL];
