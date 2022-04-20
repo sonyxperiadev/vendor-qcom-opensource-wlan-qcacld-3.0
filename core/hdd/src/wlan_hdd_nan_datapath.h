@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -50,7 +51,7 @@ void hdd_nan_datapath_target_config(struct hdd_context *hdd_ctx,
 						struct wma_tgt_cfg *cfg);
 void hdd_ndp_event_handler(struct hdd_adapter *adapter,
 			   struct csr_roam_info *roam_info,
-			   uint32_t roam_id, eRoamCmdStatus roam_status,
+			   eRoamCmdStatus roam_status,
 			   eCsrRoamResult roam_result);
 int wlan_hdd_cfg80211_process_ndp_cmd(struct wiphy *wiphy,
 	struct wireless_dev *wdev, const void *data, int data_len);
@@ -92,7 +93,6 @@ static inline void hdd_nan_datapath_target_config(struct hdd_context *hdd_ctx,
 }
 static inline void hdd_ndp_event_handler(struct hdd_adapter *adapter,
 					 struct csr_roam_info *roam_info,
-					 uint32_t roam_id,
 					 eRoamCmdStatus roam_status,
 					 eCsrRoamResult roam_result)
 {

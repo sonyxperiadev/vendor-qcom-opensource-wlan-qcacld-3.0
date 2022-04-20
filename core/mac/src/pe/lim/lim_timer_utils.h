@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2014, 2016-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -44,7 +45,6 @@ enum limtimertype {
 	eLIM_CNF_WAIT_TIMER,
 	eLIM_AUTH_RSP_TIMER,
 	eLIM_UPDATE_OLBC_CACHE_TIMER,
-	eLIM_PROBE_AFTER_HB_TIMER,
 	eLIM_ADDTS_RSP_TIMER,
 	eLIM_CHANNEL_SWITCH_TIMER,
 	eLIM_WPS_OVERLAP_TIMER,

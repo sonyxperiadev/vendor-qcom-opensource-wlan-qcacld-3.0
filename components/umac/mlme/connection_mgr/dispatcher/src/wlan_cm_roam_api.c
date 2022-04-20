@@ -2826,15 +2826,15 @@ cm_stats_log_roam_scan_candidates(struct wmi_roam_candidate_info *ap,
 
 	for (i = 0; i < num_entries; i++) {
 		mlme_get_converted_timestamp(ap->timestamp, time);
-		mlme_get_converted_timestamp(ap->bl_timestamp, time2);
+		mlme_get_converted_timestamp(ap->dl_timestamp, time2);
 		mlme_nofl_info(QDF_MAC_ADDR_FMT " %17s %4d %-4s %4d %3d/%-4d %2d/%-4d %5d %7d %7d %17s %9d",
 			       QDF_MAC_ADDR_REF(ap->bssid.bytes), time,
 			  ap->freq,
 			  ((ap->type == 0) ? "C_AP" :
 			  ((ap->type == 2) ? "R_AP" : "P_AP")),
 			  ap->etp, ap->rssi, ap->rssi_score, ap->cu_load,
-			  ap->cu_score, ap->total_score, ap->bl_reason,
-			  ap->bl_source, time2, ap->bl_original_timeout);
+			  ap->cu_score, ap->total_score, ap->dl_reason,
+			  ap->dl_source, time2, ap->dl_original_timeout);
 		/* Update roam candidates info to userspace */
 		cm_roam_candidate_info_event(ap, i);
 		ap++;
@@ -2844,6 +2844,7 @@ cm_stats_log_roam_scan_candidates(struct wmi_roam_candidate_info *ap,
 /**
  * cm_roam_stats_print_scan_info  - Print the roam scan details and candidate AP
  * details
+ * @psoc:      psoc common object
  * @scan:      Pointer to the received tlv after sanitization
  * @vdev_id:   Vdev ID
  * @trigger:   Roam scan trigger reason
@@ -2855,7 +2856,8 @@ cm_stats_log_roam_scan_candidates(struct wmi_roam_candidate_info *ap,
  * Return: None
  */
 static void
-cm_roam_stats_print_scan_info(struct wmi_roam_scan_data *scan, uint8_t vdev_id,
+cm_roam_stats_print_scan_info(struct wlan_objmgr_psoc *psoc,
+			      struct wmi_roam_scan_data *scan, uint8_t vdev_id,
 			      uint32_t trigger, uint32_t timestamp)
 {
 	uint16_t num_ch = scan->num_chan;
@@ -2865,7 +2867,7 @@ cm_roam_stats_print_scan_info(struct wmi_roam_scan_data *scan, uint8_t vdev_id,
 	char time[TIME_STRING_LEN];
 
 	/* Update roam scan info to userspace */
-	cm_roam_scan_info_event(scan, vdev_id);
+	cm_roam_scan_info_event(psoc, scan, vdev_id);
 
 	buf = qdf_mem_malloc(ROAM_CHANNEL_BUF_SIZE);
 	if (!buf)
@@ -2913,6 +2915,7 @@ cm_roam_stats_print_scan_info(struct wmi_roam_scan_data *scan, uint8_t vdev_id,
 
 /**
  * cm_roam_stats_print_roam_result()  - Print roam result related info
+ * @psoc: Pointer to psoc object
  * @res:     Roam result strucure pointer
  * @vdev_id: Vdev id
  *
@@ -2921,7 +2924,9 @@ cm_roam_stats_print_scan_info(struct wmi_roam_scan_data *scan, uint8_t vdev_id,
  * Return: None
  */
 static void
-cm_roam_stats_print_roam_result(struct wmi_roam_result *res,
+cm_roam_stats_print_roam_result(struct wlan_objmgr_psoc *psoc,
+				struct wmi_roam_trigger_info *trigger,
+				struct wmi_roam_result *res,
 				struct wmi_roam_scan_data *scan_data,
 				uint8_t vdev_id)
 {
@@ -2929,7 +2934,7 @@ cm_roam_stats_print_roam_result(struct wmi_roam_result *res,
 	char time[TIME_STRING_LEN];
 
 	/* Update roam result info to userspace */
-	cm_roam_result_info_event(res, scan_data, vdev_id);
+	cm_roam_result_info_event(psoc, trigger, res, scan_data, vdev_id);
 
 	buf = qdf_mem_malloc(ROAM_FAILURE_BUF_SIZE);
 	if (!buf)
@@ -3166,13 +3171,16 @@ cm_roam_stats_event_handler(struct wlan_objmgr_psoc *psoc,
 
 		if (stats_info->scan[i].present &&
 		    stats_info->trigger[i].present)
-			cm_roam_stats_print_scan_info(&stats_info->scan[i],
+			cm_roam_stats_print_scan_info(psoc,
+					  &stats_info->scan[i],
 					  stats_info->vdev_id,
 					  stats_info->trigger[i].trigger_reason,
 					  stats_info->trigger[i].timestamp);
 
 		if (stats_info->result[i].present) {
-			cm_roam_stats_print_roam_result(&stats_info->result[i],
+			cm_roam_stats_print_roam_result(psoc,
+							&stats_info->trigger[i],
+							&stats_info->result[i],
 							&stats_info->scan[i],
 							stats_info->vdev_id);
 			status = wlan_cm_update_roam_states(psoc,
@@ -3246,7 +3254,8 @@ cm_roam_stats_event_handler(struct wlan_objmgr_psoc *psoc,
 
 		if (stats_info->scan[0].present &&
 		    stats_info->trigger[0].present)
-			cm_roam_stats_print_scan_info(&stats_info->scan[0],
+			cm_roam_stats_print_scan_info(psoc,
+					  &stats_info->scan[0],
 					  stats_info->vdev_id,
 					  stats_info->trigger[0].trigger_reason,
 					  stats_info->trigger[0].timestamp);

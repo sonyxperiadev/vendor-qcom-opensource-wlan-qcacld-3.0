@@ -3265,6 +3265,36 @@ fail:
 	return ret;
 }
 
+#ifdef FEATURE_WDS
+/*
+ * wma_cdp_cp_peer_del_response - handle peer delete response
+ * @psoc: psoc object pointer
+ * @mac_addr: Mac address of the peer
+ * @vdev_id: id of virtual device object
+ *
+ * when peer map v2 is enabled, cdp_peer_teardown() does not remove the AST from
+ * hash table. Call cdp_cp_peer_del_response() when peer delete response is
+ * received from fw to delete the AST entry from the AST hash.
+ *
+ * Return: None
+ */
+static void
+wma_cdp_cp_peer_del_response(struct wlan_objmgr_psoc *psoc,
+			     uint8_t *peer_mac, uint8_t vdev_id)
+{
+	ol_txrx_soc_handle soc_txrx_handle;
+
+	soc_txrx_handle = wlan_psoc_get_dp_handle(psoc);
+	cdp_cp_peer_del_response(soc_txrx_handle, vdev_id, peer_mac);
+}
+#else
+static void
+wma_cdp_cp_peer_del_response(struct wlan_objmgr_psoc *psoc,
+			     uint8_t *peer_mac, uint8_t vdev_id)
+{
+}
+#endif
+
 /**
  * wma_peer_delete_handler() - peer delete response handler
  * @handle: wma handle
@@ -3348,6 +3378,7 @@ int wma_peer_delete_handler(void *handle, uint8_t *cmd_param_info,
 		cm_free_join_req(req_msg->user_data);
 	}
 
+	wma_cdp_cp_peer_del_response(wma->psoc, macaddr, event->vdev_id);
 	qdf_mem_free(req_msg);
 
 	return status;

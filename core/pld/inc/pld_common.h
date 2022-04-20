@@ -204,6 +204,16 @@ enum pld_bus_event {
 	PLD_BUS_EVENT_INVALID = 0xFFFF,
 };
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+/**
+ * enum pld_device_config - Get PLD device config
+ * @PLD_IPA_DISABLD: IPA is disabled
+ */
+enum pld_device_config {
+	PLD_IPA_DISABLED,
+};
+#endif
+
 /**
  * struct pld_uevent_data - uevent status received from platform driver
  * @uevent: uevent type
@@ -1132,6 +1142,21 @@ const char *pld_bus_width_type_to_str(enum pld_bus_width_type level);
  */
 int pld_get_thermal_state(struct device *dev, unsigned long *thermal_state,
 			  int mon_id);
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+/**
+ * pld_is_ipa_offload_disabled() - Check if IPA offload is enabled or not
+ * @dev: The device structure
+ *
+ * Return: Non-zero code for IPA offload disable; zero for IPA offload enable
+ */
+int pld_is_ipa_offload_disabled(struct device *dev);
+#else
+int pld_is_ipa_offload_disabled(struct device *dev);
+{
+	return 0;
+}
+#endif
 
 #if defined(CNSS_MEM_PRE_ALLOC) && defined(FEATURE_SKB_PRE_ALLOC)
 

@@ -1225,6 +1225,10 @@ QDF_STATUS ucfg_fwol_configure_vdev_params(struct wlan_objmgr_psoc *psoc,
 		status = fwol_set_sap_sho(psoc, vdev_id, value);
 		if (QDF_IS_STATUS_ERROR(status))
 			return status;
+
+		status = fwol_set_sap_wds_config(psoc, vdev_id);
+		if (QDF_IS_STATUS_ERROR(status))
+			return status;
 	}
 
 	return status;

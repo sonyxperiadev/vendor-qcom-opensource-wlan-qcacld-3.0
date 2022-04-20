@@ -4501,4 +4501,16 @@ uint32_t ucfg_mlme_get_user_mcc_quota_percentage(struct wlan_objmgr_psoc *psoc)
 {
 	return  wlan_mlme_get_user_mcc_duty_cycle_percentage(psoc);
 }
+
+/**
+ * ucfg_mlme_get_wds_mode() - Get the configured WDS mode
+ * @psoc: pointer to psoc object
+ *
+ * Return: supported wds mode from enum wlan_wds_mode
+ */
+static inline uint32_t
+ucfg_mlme_get_wds_mode(struct wlan_objmgr_psoc *psoc)
+{
+	return wlan_mlme_get_wds_mode(psoc);
+}
 #endif /* _WLAN_MLME_UCFG_API_H_ */

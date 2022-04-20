@@ -4840,7 +4840,6 @@ bool hdd_adapter_is_ap(struct hdd_adapter *adapter);
 QDF_STATUS hdd_common_roam_callback(struct wlan_objmgr_psoc *psoc,
 				    uint8_t session_id,
 				    struct csr_roam_info *roam_info,
-				    uint32_t roam_id,
 				    eRoamCmdStatus roam_status,
 				    eCsrRoamResult roam_result);
 

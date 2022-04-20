@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2019, 2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -29,44 +30,6 @@
 #include "sme_nan_datapath.h"
 
 /**
- * csr_roam_start_ndi() - Start connection for NAN datapath
- * @mac_ctx: Global MAC context
- * @session: SME session ID
- * @profile: Configuration profile
- *
- * Return: Success or failure code
- */
-QDF_STATUS csr_roam_start_ndi(struct mac_context *mac_ctx, uint32_t session,
-			struct csr_roam_profile *profile)
-{
-	QDF_STATUS status;
-	struct bss_config_param bss_cfg;
-
-	qdf_mem_zero(&bss_cfg, sizeof(struct bss_config_param));
-	/* Build BSS configuration from profile */
-	status = csr_roam_prepare_bss_config_from_profile(mac_ctx, profile,
-							  session,
-							  &bss_cfg);
-	if (QDF_IS_STATUS_SUCCESS(status)) {
-		mac_ctx->roam.roamSession[session].bssParams.uCfgDot11Mode
-			= bss_cfg.uCfgDot11Mode;
-		/* Copy profile parameters to PE session */
-		csr_roam_prepare_bss_params(mac_ctx, session, profile,
-					    &bss_cfg);
-		/*
-		 * Following routine will eventually call
-		 * csrRoamIssueStartBss through csrRoamCcmCfgSetCallback
-		 */
-		status = csr_roam_set_bss_config_cfg(mac_ctx, session, profile,
-						     &bss_cfg);
-	}
-
-	sme_debug("profile config validity: %d", status);
-
-	return status;
-}
-
-/**
  * csr_roam_update_ndp_return_params() - updates ndp return parameters
  * @mac_ctx: MAC context handle
  * @result: result of the roaming command
@@ -84,7 +47,7 @@ void csr_roam_update_ndp_return_params(struct mac_context *mac_ctx,
 {
 
 	switch (result) {
-	case eCsrStartBssSuccess:
+	case CSR_SAP_START_BSS_SUCCESS:
 		roam_info->ndp.ndi_create_params.reason = 0;
 		roam_info->ndp.ndi_create_params.status =
 					NDP_RSP_STATUS_SUCCESS;
@@ -92,21 +55,21 @@ void csr_roam_update_ndp_return_params(struct mac_context *mac_ctx,
 		*roam_status = eCSR_ROAM_NDP_STATUS_UPDATE;
 		*roam_result = eCSR_ROAM_RESULT_NDI_CREATE_RSP;
 		break;
-	case eCsrStartBssFailure:
+	case CSR_SAP_START_BSS_FAILURE:
 		roam_info->ndp.ndi_create_params.status = NDP_RSP_STATUS_ERROR;
 		roam_info->ndp.ndi_create_params.reason =
 					NDP_NAN_DATA_IFACE_CREATE_FAILED;
 		*roam_status = eCSR_ROAM_NDP_STATUS_UPDATE;
 		*roam_result = eCSR_ROAM_RESULT_NDI_CREATE_RSP;
 		break;
-	case eCsrStopBssSuccess:
+	case CSR_SAP_STOP_BSS_SUCCESS:
 		roam_info->ndp.ndi_delete_params.reason = 0;
 		roam_info->ndp.ndi_delete_params.status =
 						NDP_RSP_STATUS_SUCCESS;
 		*roam_status = eCSR_ROAM_NDP_STATUS_UPDATE;
 		*roam_result = eCSR_ROAM_RESULT_NDI_DELETE_RSP;
 		break;
-	case eCsrStopBssFailure:
+	case CSR_SAP_STOP_BSS_FAILURE:
 		roam_info->ndp.ndi_delete_params.status = NDP_RSP_STATUS_ERROR;
 		roam_info->ndp.ndi_delete_params.reason =
 					NDP_NAN_DATA_IFACE_DELETE_FAILED;

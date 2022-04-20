@@ -193,6 +193,11 @@ int wlan_hdd_cfg80211_set_mcc_quota(struct wiphy *wiphy,
 		return -EINVAL;
 	}
 
+	if (mcc_quota.op_mode != QDF_P2P_GO_MODE) {
+		hdd_debug("Support only P2P GO mode now");
+		return -EOPNOTSUPP;
+	}
+
 	ucfg_mlme_set_user_mcc_quota(psoc, &mcc_quota);
 
 	duty_cycle = ucfg_mlme_get_user_mcc_quota_percentage(psoc);

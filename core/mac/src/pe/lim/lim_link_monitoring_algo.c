@@ -370,7 +370,6 @@ lim_tear_down_link_with_ap(struct mac_context *mac, uint8_t sessionId,
 
 	if (sta) {
 		tLimMlmDeauthInd mlmDeauthInd;
-		struct qdf_mac_addr connected_bssid;
 
 		if ((sta->mlmStaContext.disassocReason ==
 		    REASON_DEAUTH_NETWORK_LEAVING) ||
@@ -419,20 +418,9 @@ lim_tear_down_link_with_ap(struct mac_context *mac, uint8_t sessionId,
 		mlmDeauthInd.deauthTrigger =
 			sta->mlmStaContext.cleanupTrigger;
 
-		if (LIM_IS_STA_ROLE(pe_session)) {
-			if (reasonCode == REASON_BEACON_MISSED) {
-				qdf_copy_macaddr(
-					&connected_bssid,
-					(struct qdf_mac_addr *)sta->staAddr);
-				cm_roam_beacon_loss_disconnect_event(
-					connected_bssid,
-					pe_session->hb_failure_ap_rssi,
-					pe_session->vdev_id);
-			}
-;
+		if (LIM_IS_STA_ROLE(pe_session))
 			lim_post_sme_message(mac, LIM_MLM_DEAUTH_IND,
-				     (uint32_t *) &mlmDeauthInd);
-		}
+					     (uint32_t *)&mlmDeauthInd);
 
 		if (mac->mlme_cfg->gen.fatal_event_trigger)
 			cds_flush_logs(WLAN_LOG_TYPE_FATAL,
@@ -470,9 +458,6 @@ void lim_handle_heart_beat_failure(struct mac_context *mac_ctx,
 		log_ptr->bcn_rx_cnt = session->LimRxedBeaconCntDuringHB;
 	WLAN_HOST_DIAG_LOG_REPORT(log_ptr);
 #endif /* FEATURE_WLAN_DIAG_SUPPORT */
-
-	/* Ensure HB Status for the session has been reseted */
-	session->LimHBFailureStatus = false;
 
 	if (LIM_IS_STA_ROLE(session) &&
 	    lim_is_sb_disconnect_allowed(session)) {

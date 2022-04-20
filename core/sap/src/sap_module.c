@@ -306,20 +306,7 @@ QDF_STATUS sap_init_ctx(struct sap_context *sap_ctx,
 		sap_err("Invalid SAP pointer");
 		return QDF_STATUS_E_FAULT;
 	}
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	/* Now configure the roaming profile links. To SSID and bssid.*/
-	/* We have room for two SSIDs. */
-	sap_ctx->csr_roamProfile.SSIDs.numOfSSIDs = 1;   /* This is true for now. */
-	sap_ctx->csr_roamProfile.SSIDs.SSIDList = sap_ctx->SSIDList;     /* Array of two */
-	sap_ctx->csr_roamProfile.SSIDs.SSIDList[0].SSID.length = 0;
-	sap_ctx->csr_roamProfile.SSIDs.SSIDList[0].ssidHidden =
-		sap_ctx->SSIDList[0].ssidHidden;
 
-	sap_ctx->csr_roamProfile.BSSIDs.numOfBSSIDs = 1; /* This is true for now. */
-	sap_ctx->csr_roamProfile.BSSIDs.bssid = &sap_ctx->bssid;
-	sap_ctx->csr_roamProfile.csrPersona = mode;
-#endif
 	sap_ctx->csa_reason = CSA_REASON_UNKNOWN;
 	qdf_mem_copy(sap_ctx->self_mac_addr, addr, QDF_MAC_ADDR_SIZE);
 
@@ -378,10 +365,7 @@ QDF_STATUS sap_deinit_ctx(struct sap_context *sap_ctx)
 		sap_ctx->freq_list = NULL;
 		sap_ctx->num_of_channel = 0;
 	}
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	sap_free_roam_profile(&sap_ctx->csr_roamProfile);
-#endif
+
 	if (sap_ctx->sessionId != WLAN_UMAC_VDEV_ID_MAX) {
 		/* empty queues/lists/pkts if any */
 		sap_clear_session_param(MAC_HANDLE(mac), sap_ctx,
@@ -539,19 +523,6 @@ wlansap_set_scan_acs_channel_params(struct sap_config *config,
 	psap_ctx->acs_cfg = &config->acs_cfg;
 	psap_ctx->ch_width_orig = config->acs_cfg.ch_width;
 	psap_ctx->sec_ch_freq = config->sec_ch_freq;
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	/*
-	 * Set the BSSID to your "self MAC Addr" read
-	 * the mac address from Configuation ITEM received
-	 * from HDD
-	 */
-	psap_ctx->csr_roamProfile.BSSIDs.numOfBSSIDs = 1;
-
-	/* Save a copy to SAP context */
-	qdf_mem_copy(psap_ctx->csr_roamProfile.BSSIDs.bssid,
-		config->self_macaddr.bytes, QDF_MAC_ADDR_SIZE);
-#endif
 	qdf_mem_copy(psap_ctx->self_mac_addr,
 		config->self_macaddr.bytes, QDF_MAC_ADDR_SIZE);
 
@@ -763,23 +734,9 @@ QDF_STATUS wlansap_start_bss(struct sap_context *sap_ctx,
 	sap_ctx->disabled_mcs13 = false;
 	sap_ctx->phyMode = config->SapHw_mode;
 	sap_ctx->csa_reason = CSA_REASON_UNKNOWN;
-
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	/* Set the BSSID to your "self MAC Addr" read the mac address
-		from Configuation ITEM received from HDD */
-	sap_ctx->csr_roamProfile.BSSIDs.numOfBSSIDs = 1;
-	qdf_mem_copy(sap_ctx->csr_roamProfile.BSSIDs.bssid,
-		     sap_ctx->self_mac_addr, sizeof(struct qdf_mac_addr));
-
-	/* Save a copy to SAP context */
-	qdf_mem_copy(sap_ctx->csr_roamProfile.BSSIDs.bssid,
-		     config->self_macaddr.bytes, QDF_MAC_ADDR_SIZE);
-
-	/* copy the configuration items to csrProfile */
-	sapconvert_to_csr_profile(config, eCSR_BSS_TYPE_INFRA_AP,
-			       &sap_ctx->csr_roamProfile);
-#endif
+	sap_ctx->require_h2e = config->require_h2e;
+	qdf_mem_copy(sap_ctx->bssid.bytes, config->self_macaddr.bytes,
+		     QDF_MAC_ADDR_SIZE);
 	qdf_mem_copy(sap_ctx->self_mac_addr,
 		     config->self_macaddr.bytes, QDF_MAC_ADDR_SIZE);
 	/*
@@ -841,14 +798,14 @@ QDF_STATUS wlansap_start_bss(struct sap_context *sap_ctx,
 	/* Store the HDD callback in SAP context */
 	sap_ctx->sap_event_cb = sap_event_cb;
 
+	sap_ctx->sap_bss_cfg.vdev_id = sap_ctx->sessionId;
+	sap_build_start_bss_config(&sap_ctx->sap_bss_cfg, config);
 	/* Handle event */
 	qdf_status = sap_fsm(sap_ctx, &sap_event);
 fail:
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
 	if (QDF_IS_STATUS_ERROR(qdf_status))
-		sap_free_roam_profile(&sap_ctx->csr_roamProfile);
-#endif
+		qdf_mem_zero(&sap_ctx->sap_bss_cfg,
+			     sizeof(sap_ctx->sap_bss_cfg));
 	return qdf_status;
 } /* wlansap_start_bss */
 
@@ -1782,7 +1739,6 @@ void wlansap_get_sec_channel(uint8_t sec_ch_offset,
 	}
 }
 
-#ifdef SAP_CP_CLEANUP
 /**
  * wlansap_fill_channel_change_request() - Fills the channel change request
  * @sap_ctx: sap context
@@ -1796,9 +1752,97 @@ static void
 wlansap_fill_channel_change_request(struct sap_context *sap_ctx,
 				    struct channel_change_req *req)
 {
+	struct mac_context *mac_ctx = sap_get_mac_context();
+	struct bss_dot11_config dot11_cfg = {0};
+	uint8_t h2e;
+
+	dot11_cfg.vdev_id = sap_ctx->sessionId;
+	dot11_cfg.bss_op_ch_freq = sap_ctx->chan_freq;
+	dot11_cfg.phy_mode = sap_ctx->phyMode;
+	dot11_cfg.privacy = sap_ctx->sap_bss_cfg.privacy;
+
+	/* Rates configured from start_bss will have
+	 * hostapd rates if hostapd chan rates are enabled
+	 */
+	qdf_mem_copy(dot11_cfg.opr_rates.rate,
+		     sap_ctx->sap_bss_cfg.operationalRateSet.rate,
+		     sap_ctx->sap_bss_cfg.operationalRateSet.numRates);
+	dot11_cfg.opr_rates.numRates =
+		sap_ctx->sap_bss_cfg.operationalRateSet.numRates;
+
+	qdf_mem_copy(dot11_cfg.ext_rates.rate,
+		     sap_ctx->sap_bss_cfg.extendedRateSet.rate,
+		     sap_ctx->sap_bss_cfg.extendedRateSet.numRates);
+	dot11_cfg.ext_rates.numRates =
+		sap_ctx->sap_bss_cfg.extendedRateSet.numRates;
+	sme_get_network_params(mac_ctx, &dot11_cfg);
+
+	req->vdev_id = sap_ctx->sessionId;
+	req->target_chan_freq = sap_ctx->chan_freq;
+	req->sec_ch_offset = sap_ctx->ch_params.sec_ch_offset;
+	req->ch_width =  sap_ctx->ch_params.ch_width;
+	req->center_freq_seg0 = sap_ctx->ch_params.center_freq_seg0;
+	req->center_freq_seg1 = sap_ctx->ch_params.center_freq_seg1;
+	req->dot11mode = dot11_cfg.dot11_mode;
+	req->nw_type = dot11_cfg.nw_type;
+
+	sap_get_cac_dur_dfs_region(sap_ctx,
+				   &req->cac_duration_ms,
+				   &req->dfs_regdomain,
+				   sap_ctx->chan_freq,
+				   &sap_ctx->ch_params);
+	mlme_set_cac_required(sap_ctx->vdev,
+			      !!req->cac_duration_ms);
+
+	/* Update the rates in sap_bss_cfg for subsequent channel switch */
+	if (dot11_cfg.opr_rates.numRates) {
+		qdf_mem_copy(req->opr_rates.rate,
+			     dot11_cfg.opr_rates.rate,
+			     dot11_cfg.opr_rates.numRates);
+		qdf_mem_copy(sap_ctx->sap_bss_cfg.operationalRateSet.rate,
+			     dot11_cfg.opr_rates.rate,
+			     dot11_cfg.opr_rates.numRates);
+		req->opr_rates.numRates = dot11_cfg.opr_rates.numRates;
+		sap_ctx->sap_bss_cfg.operationalRateSet.numRates =
+					dot11_cfg.opr_rates.numRates;
+	} else {
+		qdf_mem_zero(&sap_ctx->sap_bss_cfg.operationalRateSet,
+			     sizeof(tSirMacRateSet));
+	}
+
+	if (dot11_cfg.ext_rates.numRates) {
+		qdf_mem_copy(req->ext_rates.rate,
+			     dot11_cfg.ext_rates.rate,
+			     sizeof(dot11_cfg.ext_rates.numRates));
+		qdf_mem_copy(sap_ctx->sap_bss_cfg.extendedRateSet.rate,
+			     dot11_cfg.ext_rates.rate,
+			     dot11_cfg.ext_rates.numRates);
+		req->ext_rates.numRates = dot11_cfg.ext_rates.numRates;
+		sap_ctx->sap_bss_cfg.extendedRateSet.numRates =
+					dot11_cfg.ext_rates.numRates;
+	} else {
+		qdf_mem_zero(&sap_ctx->sap_bss_cfg.extendedRateSet,
+			     sizeof(tSirMacRateSet));
+	}
+
+	if (sap_ctx->require_h2e) {
+		h2e = WLAN_BASIC_RATE_MASK |
+			WLAN_BSS_MEMBERSHIP_SELECTOR_SAE_H2E;
+		if (req->ext_rates.numRates < SIR_MAC_MAX_NUMBER_OF_RATES) {
+			req->ext_rates.rate[req->ext_rates.numRates] = h2e;
+			req->ext_rates.numRates++;
+			sap_debug("H2E bss membership add to ext support rate");
+		} else if (req->opr_rates.numRates <
+						SIR_MAC_MAX_NUMBER_OF_RATES) {
+			req->opr_rates.rate[req->opr_rates.numRates] = h2e;
+			req->opr_rates.numRates++;
+			sap_debug("H2E bss membership add to support rate");
+		} else {
+			sap_err("rates full, can not add H2E bss membership");
+		}
+	}
 	return;
 }
-#endif
 
 QDF_STATUS wlansap_channel_change_request(struct sap_context *sap_ctx,
 					  uint32_t target_chan_freq)
@@ -1807,6 +1851,7 @@ QDF_STATUS wlansap_channel_change_request(struct sap_context *sap_ctx,
 	struct mac_context *mac_ctx;
 	eCsrPhyMode phy_mode;
 	struct ch_params *ch_params;
+	struct channel_change_req *ch_change_req;
 
 	if (!target_chan_freq) {
 		sap_err("channel 0 requested");
@@ -1834,20 +1879,12 @@ QDF_STATUS wlansap_channel_change_request(struct sap_context *sap_ctx,
 	else if (WLAN_REG_IS_24GHZ_CH_FREQ(target_chan_freq) &&
 		 (phy_mode == eCSR_DOT11_MODE_11a))
 		phy_mode = eCSR_DOT11_MODE_11g;
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	sap_ctx->csr_roamProfile.phyMode = phy_mode;
-#endif
 	sap_ctx->phyMode = phy_mode;
 
 	if (!sap_ctx->chan_freq) {
 		sap_err("Invalid channel list");
 		return QDF_STATUS_E_FAULT;
 	}
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	sap_ctx->csr_roamProfile.ChannelInfo.freq_list[0] = target_chan_freq;
-#endif
 	/*
 	 * We are getting channel bonding mode from sapDfsInfor structure
 	 * because we've implemented channel width fallback mechanism for DFS
@@ -1864,26 +1901,17 @@ QDF_STATUS wlansap_channel_change_request(struct sap_context *sap_ctx,
 	sap_ctx->chan_freq = target_chan_freq;
 	wlansap_get_sec_channel(ch_params->sec_ch_offset, sap_ctx->chan_freq,
 				&sap_ctx->sec_ch_freq);
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	sap_ctx->csr_roamProfile.ch_params = *ch_params;
-#endif
 	sap_dfs_set_current_channel(sap_ctx);
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	sap_get_cac_dur_dfs_region(sap_ctx,
-				   &sap_ctx->csr_roamProfile.cac_duration_ms,
-				   &sap_ctx->csr_roamProfile.dfs_regdomain,
-				   sap_ctx->chan_freq, &sap_ctx->ch_params);
-	mlme_set_cac_required(sap_ctx->vdev,
-			      !!sap_ctx->csr_roamProfile.cac_duration_ms);
 
-	status = sme_roam_channel_change_req(MAC_HANDLE(mac_ctx),
-					     sap_ctx->bssid,
-					     sap_ctx->sessionId,
-					     ch_params,
-					     &sap_ctx->csr_roamProfile);
-#endif
+	ch_change_req = qdf_mem_malloc(sizeof(struct channel_change_req));
+	if (!ch_change_req)
+		return QDF_STATUS_E_FAILURE;
+
+	wlansap_fill_channel_change_request(sap_ctx, ch_change_req);
+
+	status = sme_send_channel_change_req(MAC_HANDLE(mac_ctx),
+					     ch_change_req);
+	qdf_mem_free(ch_change_req);
 	sap_debug("chan_freq:%d phy_mode %d width:%d offset:%d seg0:%d seg1:%d",
 		  sap_ctx->chan_freq, phy_mode, ch_params->ch_width,
 		  ch_params->sec_ch_offset, ch_params->center_freq_seg0,
@@ -2529,10 +2557,6 @@ QDF_STATUS wlansap_acs_chselect(struct sap_context *sap_context,
 
 	sap_context->acs_cfg = &config->acs_cfg;
 	sap_context->ch_width_orig = config->acs_cfg.ch_width;
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	sap_context->csr_roamProfile.phyMode = config->acs_cfg.hw_mode;
-#endif
 	sap_context->phyMode = config->acs_cfg.hw_mode;
 
 	/*

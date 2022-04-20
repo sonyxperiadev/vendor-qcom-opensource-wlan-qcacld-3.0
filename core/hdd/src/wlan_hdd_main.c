@@ -432,9 +432,8 @@ bool hdd_adapter_is_ap(struct hdd_adapter *adapter)
 }
 
 QDF_STATUS hdd_common_roam_callback(struct wlan_objmgr_psoc *psoc,
-				     uint8_t session_id,
+				    uint8_t session_id,
 				    struct csr_roam_info *roam_info,
-				    uint32_t roam_id,
 				    eRoamCmdStatus roam_status,
 				    eCsrRoamResult roam_result)
 {
@@ -455,13 +454,13 @@ QDF_STATUS hdd_common_roam_callback(struct wlan_objmgr_psoc *psoc,
 	case QDF_NDI_MODE:
 	case QDF_P2P_CLIENT_MODE:
 	case QDF_P2P_DEVICE_MODE:
-		status = hdd_sme_roam_callback(adapter, roam_info, roam_id,
+		status = hdd_sme_roam_callback(adapter, roam_info,
 					       roam_status, roam_result);
 		break;
 	case QDF_SAP_MODE:
 	case QDF_P2P_GO_MODE:
 		status = wlansap_roam_callback(adapter->session.ap.sap_context,
-					       roam_info, roam_id, roam_status,
+					       roam_info, roam_status,
 					       roam_result);
 		break;
 	default:
@@ -5417,6 +5416,10 @@ status_ret:
 	}
 	sme_vdev_set_data_tx_callback(adapter->vdev);
 
+	/* Update FW WoW pattern with new MAC address */
+	ucfg_pmo_del_wow_pattern(adapter->vdev);
+	ucfg_pmo_register_wow_default_patterns(adapter->vdev);
+
 	return ret;
 }
 
@@ -6041,10 +6044,15 @@ static const struct net_device_ops wlan_drv_ops = {
 	.ndo_set_features = hdd_set_features,
 	.ndo_tx_timeout = hdd_tx_timeout,
 	.ndo_get_stats = hdd_get_stats,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0)
 	.ndo_do_ioctl = hdd_ioctl,
+#endif
 	.ndo_set_mac_address = hdd_set_mac_address,
 	.ndo_select_queue = hdd_select_queue,
 	.ndo_set_rx_mode = hdd_set_multicast_list,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0)
+	.ndo_siocdevprivate = hdd_dev_private_ioctl,
+#endif
 };
 
 #ifdef FEATURE_MONITOR_MODE_SUPPORT
@@ -6440,6 +6448,7 @@ int hdd_vdev_destroy(struct hdd_adapter *adapter)
 	ucfg_scan_vdev_set_disable(vdev, REASON_VDEV_DOWN);
 	wlan_hdd_scan_abort(adapter);
 	wlan_cfg80211_cleanup_scan_queue(hdd_ctx->pdev, adapter->dev);
+	ucfg_son_disable_cbs(vdev);
 	/* Disable serialization for vdev before sending vdev delete */
 	wlan_ser_vdev_queue_disable(vdev);
 	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_ID);
@@ -6473,7 +6482,6 @@ int hdd_vdev_destroy(struct hdd_adapter *adapter)
 					  QDF_VDEV_DELETE_RESPONSE_TIMED_OUT);
 	}
 
-	ucfg_son_disable_cbs(vdev);
 	hdd_nofl_debug("vdev %d destroyed successfully", vdev_id);
 
 send_status:
@@ -7295,7 +7303,7 @@ int hdd_set_fw_params(struct hdd_adapter *adapter)
 	uint8_t enable_tx_sch_delay, dfs_chan_ageout_time;
 	uint32_t dtim_sel_diversity, enable_secondary_rate;
 	bool sap_xlna_bypass;
-	bool enable_ofdm_scrambler_seed;
+	bool enable_ofdm_scrambler_seed = false;
 
 	hdd_enter_dev(adapter->dev);
 
@@ -8734,10 +8742,7 @@ int wlan_hdd_set_mon_chan(struct hdd_adapter *adapter, qdf_freq_t freq,
 	struct hdd_mon_set_ch_info *ch_info = &sta_ctx->ch_info;
 	QDF_STATUS status;
 	struct qdf_mac_addr bssid;
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	struct csr_roam_profile roam_profile;
-#endif
+	struct channel_change_req *req;
 	struct ch_params ch_params;
 	enum phy_ch_width max_fw_bw;
 	enum phy_ch_width ch_width;
@@ -8780,15 +8785,6 @@ int wlan_hdd_set_mon_chan(struct hdd_adapter *adapter, qdf_freq_t freq,
 	}
 
 	hdd_debug("Set monitor mode frequency %d", freq);
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	qdf_mem_zero(&roam_profile, sizeof(roam_profile));
-	roam_profile.ChannelInfo.freq_list = &ch_info->freq;
-	roam_profile.ChannelInfo.numOfChannels = 1;
-	roam_profile.phyMode = ch_info->phy_mode;
-	roam_profile.ch_params.ch_width = bandwidth;
-	hdd_select_cbmode(adapter, freq, 0, &roam_profile.ch_params);
-#endif
 	qdf_mem_copy(bssid.bytes, adapter->mac_addr.bytes,
 		     QDF_MAC_ADDR_SIZE);
 
@@ -8817,13 +8813,27 @@ int wlan_hdd_set_mon_chan(struct hdd_adapter *adapter, qdf_freq_t freq,
 		return qdf_status_to_os_return(status);
 	}
 	adapter->monitor_mode_vdev_up_in_progress = true;
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	status = sme_roam_channel_change_req(hdd_ctx->mac_handle,
-					     bssid, adapter->vdev_id,
-					     &roam_profile.ch_params,
-					     &roam_profile);
-#endif
+
+	qdf_mem_zero(&ch_params, sizeof(struct ch_params));
+
+	req = qdf_mem_malloc(sizeof(struct channel_change_req));
+	if (!req)
+		return -ENOMEM;
+	req->vdev_id = adapter->vdev_id;
+	req->target_chan_freq = ch_info->freq;
+	req->ch_width = ch_width;
+
+	ch_params.ch_width = ch_width;
+	hdd_select_cbmode(adapter, freq, 0, &ch_params);
+
+	req->sec_ch_offset = ch_params.sec_ch_offset;
+	req->center_freq_seg0 = ch_params.center_freq_seg0;
+	req->center_freq_seg1 = ch_params.center_freq_seg1;
+
+	sme_fill_channel_change_request(hdd_ctx->mac_handle, req,
+					ch_info->phy_mode);
+	status = sme_send_channel_change_req(hdd_ctx->mac_handle, req);
+	qdf_mem_free(req);
 	if (status) {
 		hdd_err("Status: %d Failed to set sme_roam Channel for monitor mode",
 			status);

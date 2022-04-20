@@ -1403,7 +1403,6 @@ static void hdd_change_peer_state_after_set_key(struct hdd_adapter *adapter,
  * hdd_roam_set_key_complete_handler() - Update the security parameters
  * @adapter: pointer to adapter
  * @roam_info: pointer to roam info
- * @roam_id: roam id
  * @roam_status: roam status
  * @roam_result: roam result
  *
@@ -1412,7 +1411,6 @@ static void hdd_change_peer_state_after_set_key(struct hdd_adapter *adapter,
 static QDF_STATUS
 hdd_roam_set_key_complete_handler(struct hdd_adapter *adapter,
 				  struct csr_roam_info *roam_info,
-				  uint32_t roam_id,
 				  eRoamCmdStatus roam_status,
 				  eCsrRoamResult roam_result)
 {
@@ -2107,19 +2105,8 @@ void wlan_hdd_ft_set_key_delay(struct wlan_objmgr_vdev *vdev)
 }
 #endif
 
-/**
- * hdd_sme_roam_callback() - hdd sme roam callback
- * @context: pointer to adapter context
- * @roam_info: pointer to roam info
- * @roam_id: roam id
- * @roam_status: roam status
- * @roam_result: roam result
- *
- * Return: QDF_STATUS enumeration
- */
 QDF_STATUS
 hdd_sme_roam_callback(void *context, struct csr_roam_info *roam_info,
-		      uint32_t roam_id,
 		      eRoamCmdStatus roam_status, eCsrRoamResult roam_result)
 {
 	QDF_STATUS qdf_ret_status = QDF_STATUS_SUCCESS;
@@ -2127,9 +2114,9 @@ hdd_sme_roam_callback(void *context, struct csr_roam_info *roam_info,
 	struct hdd_station_ctx *sta_ctx = NULL;
 	struct hdd_context *hdd_ctx;
 
-	hdd_debug("CSR Callback: status=%s (%d) result= %s (%d) roamID=%d",
+	hdd_debug("CSR Callback: status=%s (%d) result= %s (%d)",
 		  get_e_roam_cmd_status_str(roam_status), roam_status,
-		  get_e_csr_roam_result_str(roam_result), roam_result, roam_id);
+		  get_e_csr_roam_result_str(roam_result), roam_result);
 
 	/* Sanity check */
 	if ((!adapter) || (WLAN_HDD_ADAPTER_MAGIC != adapter->magic)) {
@@ -2152,7 +2139,7 @@ hdd_sme_roam_callback(void *context, struct csr_roam_info *roam_info,
 	{
 		qdf_ret_status =
 			hdd_roam_set_key_complete_handler(adapter, roam_info,
-							  roam_id, roam_status,
+							  roam_status,
 							  roam_result);
 		if (eCSR_ROAM_RESULT_AUTHENTICATED == roam_result)
 			hdd_debug("set key complete, session: %d",
@@ -2190,8 +2177,8 @@ hdd_sme_roam_callback(void *context, struct csr_roam_info *roam_info,
 		break;
 
 	case eCSR_ROAM_NDP_STATUS_UPDATE:
-		hdd_ndp_event_handler(adapter, roam_info, roam_id, roam_status,
-			roam_result);
+		hdd_ndp_event_handler(adapter, roam_info, roam_status,
+				      roam_result);
 		break;
 	case eCSR_ROAM_SAE_COMPUTE:
 		if (roam_info)

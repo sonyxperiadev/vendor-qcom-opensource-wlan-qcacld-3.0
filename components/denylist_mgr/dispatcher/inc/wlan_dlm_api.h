@@ -92,13 +92,13 @@ wlan_dlm_get_bssid_reject_list(struct wlan_objmgr_pdev *pdev,
 }
 
 /**
- * wlan_dlm_dump_blcklist_bssid() - dump the denylisted BSSIDs from DLM
+ * wlan_dlm_dump_denylist_bssid() - dump the denylisted BSSIDs from DLM
  * @pdev: pdev object
  *
  * Return: None
  */
 static inline void
-wlan_dlm_dump_blcklist_bssid(struct wlan_objmgr_pdev *pdev)
+wlan_dlm_dump_denylist_bssid(struct wlan_objmgr_pdev *pdev)
 {
 	return dlm_dump_denylist_bssid(pdev);
 }

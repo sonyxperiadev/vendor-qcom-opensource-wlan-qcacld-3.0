@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -32,6 +32,7 @@
 #include <qdf_idr.h>
 #include <qdf_mc_timer.h>
 #include <wlan_scan_public_structs.h>
+#include "wlan_p2p_ucfg_api.h"
 
 #define MAX_QUEUE_LENGTH 20
 #define P2P_NOA_ATTR_IND 0x1090
@@ -237,6 +238,7 @@ struct p2p_param {
  * @p2p_idr:          p2p idr
  * @param:            p2p parameters to be used
  * @connection_status:Global P2P connection status
+ * @mcc_quota_ev_os_if_cb:  callback to OS IF to indicate mcc quota event
  */
 struct p2p_soc_priv_obj {
 	struct wlan_objmgr_psoc *soc;
@@ -254,6 +256,9 @@ struct p2p_soc_priv_obj {
 	struct p2p_param param;
 #ifdef WLAN_FEATURE_P2P_DEBUG
 	enum p2p_connection_status connection_status;
+#endif
+#ifdef WLAN_FEATURE_MCC_QUOTA
+	mcc_quota_event_callback mcc_quota_ev_os_if_cb;
 #endif
 };
 

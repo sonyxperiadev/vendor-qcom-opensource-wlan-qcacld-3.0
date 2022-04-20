@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -24,6 +25,7 @@
 #include <wlan_p2p_public_struct.h>
 #include "target_if.h"
 #include "target_if_p2p.h"
+#include "target_if_p2p_mcc_quota.h"
 #include "init_deinit_lmac.h"
 
 static inline struct wlan_lmac_if_p2p_rx_ops *
@@ -474,6 +476,8 @@ void target_if_p2p_register_tx_ops(struct wlan_lmac_if_tx_ops *tx_ops)
 		target_if_p2p_register_macaddr_rx_filter_evt_handler;
 	p2p_tx_ops->set_mac_addr_rx_filter_cmd =
 		target_if_p2p_set_mac_addr_rx_filter_cmd;
+	target_if_mcc_quota_register_tx_ops(tx_ops);
+
 	/* register P2P listen offload callbacks */
 	target_if_p2p_lo_register_tx_ops(p2p_tx_ops);
 }

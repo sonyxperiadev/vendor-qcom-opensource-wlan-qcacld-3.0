@@ -39,6 +39,7 @@
  * lim_is_sme_start_bss_req_valid() - To validate sme start bss request
  * @mac_ctx: Pointer to Global MAC structure
  * @start_bss_req: Pointer to received SME_START_BSS_REQ message
+ * @bss_type: bss type
  *
  * This function is called by lim_process_sme_req_messages() upon
  * receiving SME_START_BSS_REQ message from application.
@@ -46,15 +47,9 @@
  * Return: true when received SME_START_BSS_REQ is formatted correctly false
  *         otherwise
  */
-#ifndef SAP_CP_CLEANUP
-bool lim_is_sme_start_bss_req_valid(struct mac_context *mac_ctx,
-				    struct start_bss_req *start_bss_req,
-				    enum bss_type bss_type);
-#else
 bool lim_is_sme_start_bss_req_valid(struct mac_context *mac_ctx,
 				    struct start_bss_config *start_bss_req,
 				    enum bss_type bss_type);
-#endif
 uint8_t lim_set_rs_nie_wp_aiefrom_sme_start_bss_req_message(struct mac_context *,
 							    tpSirRSNie, struct pe_session *);
 
@@ -103,8 +98,6 @@ bool lim_is_sme_deauth_req_valid(struct mac_context *mac,
  */
 bool lim_is_sme_set_context_req_valid(struct mac_context *,
 				      struct set_context_req *set_context_req);
-
-uint8_t lim_is_sme_stop_bss_req_valid(uint32_t *);
 
 /**
  * lim_is_sme_disassoc_cnf_valid() - Validate disassoc cnf message

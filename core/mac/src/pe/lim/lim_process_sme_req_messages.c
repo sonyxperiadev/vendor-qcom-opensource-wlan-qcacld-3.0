@@ -445,17 +445,10 @@ static bool __lim_process_sme_sys_ready_ind(struct mac_context *mac,
  *
  * Return: None.
  */
-#ifndef SAP_CP_CLEANUP
-static void
-lim_configure_ap_start_bss_session(struct mac_context *mac_ctx,
-				   struct pe_session *session,
-				   struct start_bss_req *sme_start_bss_req)
-#else
 static void
 lim_configure_ap_start_bss_session(struct mac_context *mac_ctx,
 				   struct pe_session *session,
 				   struct start_bss_config *sme_start_bss_req)
-#endif
 {
 	bool sap_uapsd;
 	uint16_t ht_cap = cfg_default(CFG_AP_PROTECTION_MODE);
@@ -766,12 +759,7 @@ __lim_handle_sme_start_bss_request(struct mac_context *mac_ctx, uint32_t *msg_bu
 	uint32_t val = 0;
 	tSirMacChanNum channel_number;
 	tLimMlmStartReq *mlm_start_req = NULL;
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	struct start_bss_req *sme_start_bss_req = NULL;
-#else
 	struct start_bss_config *sme_start_bss_req = NULL;
-#endif
 	tSirResultCodes ret_code = eSIR_SME_SUCCESS;
 	uint8_t session_id;
 	struct pe_session *session = NULL;
@@ -1199,8 +1187,7 @@ free:
 		pe_delete_session(mac_ctx, session);
 		session = NULL;
 	}
-	lim_send_sme_start_bss_rsp(mac_ctx, eWNI_SME_START_BSS_RSP, ret_code,
-				   session, vdev_id);
+	 lim_send_sme_start_bss_rsp(mac_ctx, ret_code, session, vdev_id);
 }
 
 /**
@@ -5619,10 +5606,11 @@ void __lim_process_sme_disassoc_cnf(struct mac_context *mac, uint32_t *msg_buf)
 
 	if (!lim_is_sme_disassoc_cnf_valid(mac, &smeDisassocCnf, pe_session)) {
 		pe_err("received invalid SME_DISASSOC_CNF message");
-		status = lim_prepare_disconnect_done_ind(mac, &msg,
-						pe_session->smeSessionId,
-						eSIR_SME_INVALID_PARAMETERS,
-						&smeDisassocCnf.bssid.bytes[0]);
+		status = lim_prepare_disconnect_done_ind(
+					mac, &msg,
+					pe_session->smeSessionId,
+					eSIR_SME_INVALID_PARAMETERS,
+					&smeDisassocCnf.peer_macaddr.bytes[0]);
 		if (QDF_IS_STATUS_SUCCESS(status))
 			lim_send_sme_disassoc_deauth_ntf(mac,
 							 QDF_STATUS_SUCCESS,
@@ -5656,10 +5644,11 @@ void __lim_process_sme_disassoc_cnf(struct mac_context *mac, uint32_t *msg_buf)
 				pe_session->limSmeState);
 			lim_print_sme_state(mac, LOGE,
 					    pe_session->limSmeState);
-			status = lim_prepare_disconnect_done_ind(mac, &msg,
-						pe_session->smeSessionId,
-						eSIR_SME_INVALID_STATE,
-						&smeDisassocCnf.bssid.bytes[0]);
+			status = lim_prepare_disconnect_done_ind(
+					mac, &msg,
+					pe_session->smeSessionId,
+					eSIR_SME_INVALID_STATE,
+					&smeDisassocCnf.peer_macaddr.bytes[0]);
 			if (QDF_IS_STATUS_SUCCESS(status))
 				lim_send_sme_disassoc_deauth_ntf(mac,
 							QDF_STATUS_SUCCESS,
@@ -5674,10 +5663,11 @@ void __lim_process_sme_disassoc_cnf(struct mac_context *mac, uint32_t *msg_buf)
 	default:                /* eLIM_UNKNOWN_ROLE */
 		pe_err("received unexpected SME_DISASSOC_CNF role %d",
 			GET_LIM_SYSTEM_ROLE(pe_session));
-		status = lim_prepare_disconnect_done_ind(mac, &msg,
-						pe_session->smeSessionId,
-						eSIR_SME_INVALID_STATE,
-						&smeDisassocCnf.bssid.bytes[0]);
+		status = lim_prepare_disconnect_done_ind(
+					mac, &msg,
+					pe_session->smeSessionId,
+					eSIR_SME_INVALID_STATE,
+					&smeDisassocCnf.peer_macaddr.bytes[0]);
 		if (QDF_IS_STATUS_SUCCESS(status))
 			lim_send_sme_disassoc_deauth_ntf(mac,
 							 QDF_STATUS_SUCCESS,
@@ -5695,10 +5685,11 @@ void __lim_process_sme_disassoc_cnf(struct mac_context *mac, uint32_t *msg_buf)
 			pe_err("DISASSOC_CNF for a STA with no context, addr= "
 				QDF_MAC_ADDR_FMT,
 				QDF_MAC_ADDR_REF(smeDisassocCnf.peer_macaddr.bytes));
-			status = lim_prepare_disconnect_done_ind(mac, &msg,
-						pe_session->smeSessionId,
-						eSIR_SME_INVALID_PARAMETERS,
-						&smeDisassocCnf.bssid.bytes[0]);
+			status = lim_prepare_disconnect_done_ind(
+					mac, &msg,
+					pe_session->smeSessionId,
+					eSIR_SME_INVALID_PARAMETERS,
+					&smeDisassocCnf.peer_macaddr.bytes[0]);
 			if (QDF_IS_STATUS_SUCCESS(status))
 				lim_send_sme_disassoc_deauth_ntf(mac,
 							QDF_STATUS_SUCCESS,
@@ -5959,9 +5950,53 @@ void lim_send_stop_bss_failure_resp(struct mac_context *mac_ctx,
 
 	MTRACE(mac_trace(mac_ctx, TRACE_CODE_SME_STATE, session->peSessionId,
 			  session->limSmeState));
+	lim_send_stop_bss_response(mac_ctx, session->vdev_id,
+				   eSIR_SME_STOP_BSS_FAILURE);
+}
 
-	lim_send_sme_rsp(mac_ctx, eWNI_SME_STOP_BSS_RSP,
-			 eSIR_SME_STOP_BSS_FAILURE, session->smeSessionId);
+static void lim_flush_all_peer_from_serialization_queue(
+				struct mac_context *mac_ctx,
+				struct pe_session *session)
+{
+	struct wlan_serialization_queued_cmd_info cmd = {0};
+	struct wlan_objmgr_vdev *vdev;
+
+	vdev = session->vdev;
+	if (!vdev) {
+		pe_err("vdev is null");
+		return;
+	}
+
+	pe_debug("vdev id is %d for disconnect/deauth cmd", session->vdev_id);
+
+	/* Flush any pending NB peer deauth command */
+	cmd.vdev = vdev;
+	cmd.cmd_type = WLAN_SER_CMD_FORCE_DEAUTH_STA;
+	cmd.req_type = WLAN_SER_CANCEL_VDEV_NON_SCAN_CMD_TYPE;
+	cmd.requestor = WLAN_UMAC_COMP_MLME;
+	cmd.queue_type = WLAN_SERIALIZATION_PENDING_QUEUE;
+
+	wlan_serialization_cancel_request(&cmd);
+
+	/* Flush any pending NB peer disassoc command */
+	qdf_mem_zero(&cmd, sizeof(cmd));
+	cmd.vdev = vdev;
+	cmd.cmd_type = WLAN_SER_CMD_FORCE_DISASSOC_STA;
+	cmd.req_type = WLAN_SER_CANCEL_VDEV_NON_SCAN_CMD_TYPE;
+	cmd.requestor = WLAN_UMAC_COMP_MLME;
+	cmd.queue_type = WLAN_SERIALIZATION_PENDING_QUEUE;
+
+	wlan_serialization_cancel_request(&cmd);
+
+	/* Flush any pending SB peer deauth/disconnect command */
+	qdf_mem_zero(&cmd, sizeof(cmd));
+	cmd.vdev = vdev;
+	cmd.cmd_type = WLAN_SER_CMD_WM_STATUS_CHANGE;
+	cmd.req_type = WLAN_SER_CANCEL_VDEV_NON_SCAN_CMD_TYPE;
+	cmd.requestor = WLAN_UMAC_COMP_MLME;
+	cmd.queue_type = WLAN_SERIALIZATION_PENDING_QUEUE;
+
+	wlan_serialization_cancel_request(&cmd);
 }
 
 void lim_delete_all_peers(struct pe_session *session)
@@ -6005,6 +6040,17 @@ void lim_delete_all_peers(struct pe_session *session)
 			QDF_ASSERT(0);
 		}
 	}
+
+	/**
+	 * Scenario: CSA happens and south bound disconnection got queued
+	 * in serialization parallelly.
+	 * As part of CSA, remove all peer from serialization, so that when
+	 * south bound disconnection becomes active, it should not lead to a
+	 * race where the peer is trying to connect and the driver is trying
+	 * to disconnect the same peer, leading to an active command timeout
+	 */
+	lim_flush_all_peer_from_serialization_queue(mac_ctx, session);
+
 	lim_disconnect_complete(session, false);
 	if (mac_ctx->del_peers_ind_cb)
 		mac_ctx->del_peers_ind_cb(mac_ctx->psoc, session->vdev_id);
@@ -6078,29 +6124,24 @@ __lim_handle_sme_stop_bss_request(struct mac_context *mac, uint32_t *msg_buf)
 	struct stop_bss_req stop_bss_req;
 	tLimSmeStates prevState;
 	struct pe_session *pe_session;
-	uint8_t smesessionId;
-	uint8_t sessionId;
+	struct qdf_mac_addr bssid;
+	uint8_t vdev_id;
+	uint8_t session_id;
 
 	qdf_mem_copy(&stop_bss_req, msg_buf, sizeof(stop_bss_req));
-	smesessionId = stop_bss_req.sessionId;
+	vdev_id = stop_bss_req.vdev_id;
+	wlan_mlme_get_mac_vdev_id(mac->pdev, vdev_id, &bssid);
 
-	if (!lim_is_sme_stop_bss_req_valid(msg_buf)) {
-		pe_warn("received invalid SME_STOP_BSS_REQ message");
-		/* Send Stop BSS response to host */
-		lim_send_sme_rsp(mac, eWNI_SME_STOP_BSS_RSP,
-				 eSIR_SME_INVALID_PARAMETERS, smesessionId);
-		return;
-	}
-
-	pe_session = pe_find_session_by_bssid(mac,
-				stop_bss_req.bssid.bytes,
-				&sessionId);
+	pe_session = pe_find_session_by_bssid(mac, bssid.bytes,
+					       &session_id);
 	if (!pe_session) {
-		pe_err("session does not exist for given BSSID");
-		lim_send_sme_rsp(mac, eWNI_SME_STOP_BSS_RSP,
-				 eSIR_SME_INVALID_PARAMETERS, smesessionId);
+		pe_err("session does not exist for bssid " QDF_MAC_ADDR_FMT,
+		       QDF_MAC_ADDR_REF(bssid.bytes));
+		lim_send_stop_bss_response(mac, vdev_id,
+					   eSIR_SME_INVALID_PARAMETERS);
 		return;
 	}
+
 #ifdef FEATURE_WLAN_DIAG_SUPPORT_LIM    /* FEATURE_WLAN_DIAG_SUPPORT */
 	lim_diag_event_report(mac, WLAN_PE_DIAG_STOP_BSS_REQ_EVENT, pe_session,
 			      0, 0);
@@ -6118,17 +6159,13 @@ __lim_handle_sme_stop_bss_request(struct mac_context *mac, uint32_t *msg_buf)
 			GET_LIM_SYSTEM_ROLE(pe_session));
 		lim_print_sme_state(mac, LOGE, pe_session->limSmeState);
 		/* / Send Stop BSS response to host */
-		lim_send_sme_rsp(mac, eWNI_SME_STOP_BSS_RSP,
-				 eSIR_SME_UNEXPECTED_REQ_RESULT_CODE,
-				 smesessionId);
+		lim_send_stop_bss_response(mac, vdev_id,
+					   eSIR_SME_UNEXPECTED_REQ_RESULT_CODE);
 		return;
 	}
 
 	if (LIM_IS_AP_ROLE(pe_session))
 		lim_wpspbc_close(mac, pe_session);
-
-	pe_debug("RECEIVED STOP_BSS_REQ with reason code=%d",
-		stop_bss_req.reasonCode);
 
 	prevState = pe_session->limSmeState;
 	pe_session->limPrevSmeState = prevState;
@@ -6138,8 +6175,8 @@ __lim_handle_sme_stop_bss_request(struct mac_context *mac, uint32_t *msg_buf)
 		       (mac, TRACE_CODE_SME_STATE, pe_session->peSessionId,
 		       pe_session->limSmeState));
 
-	pe_session->smeSessionId = smesessionId;
-	pe_session->stop_bss_reason = stop_bss_req.reasonCode;
+	pe_session->smeSessionId = vdev_id;
+	pe_session->stop_bss_reason = 0;
 
 	if (!LIM_IS_NDI_ROLE(pe_session)) {
 		/* Free the buffer allocated in START_BSS_REQ */
@@ -6187,8 +6224,8 @@ void lim_process_sme_del_bss_rsp(struct mac_context *mac,
 	SET_LIM_PROCESS_DEFD_MESGS(mac, true);
 	dph_hash_table_init(mac, &pe_session->dph.dphHashTable);
 	lim_delete_pre_auth_list(mac);
-	lim_send_sme_rsp(mac, eWNI_SME_STOP_BSS_RSP, eSIR_SME_SUCCESS,
-			 pe_session->smeSessionId);
+	lim_send_stop_bss_response(mac, pe_session->vdev_id,
+				   eSIR_SME_SUCCESS);
 	return;
 }
 
@@ -6456,7 +6493,7 @@ __lim_process_sme_addts_req(struct mac_context *mac, uint32_t *msg_buf)
 	/* ship out the message now */
 	lim_send_addts_req_action_frame(mac, peerMac, &pSirAddts->req,
 					pe_session);
-	pe_err("Sent ADDTS request");
+	pe_debug("Sent ADDTS request");
 	/* start a timer to wait for the response */
 	if (pSirAddts->timeout)
 		timeout = pSirAddts->timeout;
@@ -6819,6 +6856,8 @@ lim_process_sme_update_session_edca_txq_params(struct mac_context *mac_ctx,
 			msg->txq_edca_params.aci.aifsn;
 	pe_session->gLimEdcaParams[ac].txoplimit =
 			msg->txq_edca_params.txoplimit;
+	pe_session->gLimEdcaParams[ac].user_edca_set =
+			msg->txq_edca_params.user_edca_set;
 
 	lim_send_edca_params(mac_ctx,
 			     pe_session->gLimEdcaParams,
@@ -8100,12 +8139,8 @@ static void lim_change_channel(
 static void lim_process_sme_channel_change_request(struct mac_context *mac_ctx,
 		uint32_t *msg_buf)
 {
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	tpSirChanChangeRequest ch_change_req;
-#else
 	struct channel_change_req *ch_change_req;
-#endif
+	struct qdf_mac_addr bssid;
 	struct pe_session *session_entry;
 	uint8_t session_id;      /* PE session_id */
 	int8_t max_tx_pwr;
@@ -8116,27 +8151,22 @@ static void lim_process_sme_channel_change_request(struct mac_context *mac_ctx,
 		pe_err("msg_buf is NULL");
 		return;
 	}
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	ch_change_req = (tpSirChanChangeRequest)msg_buf;
-#endif
+	ch_change_req = (struct channel_change_req *)msg_buf;
 	target_freq = ch_change_req->target_chan_freq;
 
 	max_tx_pwr = wlan_reg_get_channel_reg_power_for_freq(
 				mac_ctx->pdev, target_freq);
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	if ((ch_change_req->messageType != eWNI_SME_CHANNEL_CHANGE_REQ) ||
-			(max_tx_pwr == WMA_MAX_TXPOWER_INVALID)) {
-		pe_err("Invalid Request/max_tx_pwr");
+	if (max_tx_pwr == WMA_MAX_TXPOWER_INVALID) {
+		pe_err("Invalid max tx power");
 		return;
 	}
-#endif
-	session_entry = pe_find_session_by_bssid(mac_ctx,
-			ch_change_req->bssid, &session_id);
+	wlan_mlme_get_mac_vdev_id(mac_ctx->pdev,
+				  ch_change_req->vdev_id, &bssid);
+	session_entry = pe_find_session_by_bssid(mac_ctx, bssid.bytes,
+						 &session_id);
 	if (!session_entry) {
-		lim_print_mac_addr(mac_ctx, ch_change_req->bssid, LOGE);
-		pe_err("Session does not exist for given bssId");
+		pe_err("Session does not exist for bssid " QDF_MAC_ADDR_FMT,
+		       QDF_MAC_ADDR_REF(bssid.bytes));
 		return;
 	}
 
@@ -8223,9 +8253,9 @@ static void lim_process_sme_channel_change_request(struct mac_context *mac_ctx,
 	/* Store the New Channel Params in session_entry */
 	session_entry->ch_width = ch_change_req->ch_width;
 	session_entry->ch_center_freq_seg0 =
-		ch_change_req->center_freq_seg_0;
+			 ch_change_req->center_freq_seg0;
 	session_entry->ch_center_freq_seg1 =
-		ch_change_req->center_freq_seg_1;
+			ch_change_req->center_freq_seg1;
 	session_entry->htSecondaryChannelOffset = ch_change_req->sec_ch_offset;
 	session_entry->htSupportedChannelWidthSet =
 		(ch_change_req->ch_width ? 1 : 0);
@@ -8255,12 +8285,11 @@ static void lim_process_sme_channel_change_request(struct mac_context *mac_ctx,
 	session_entry->dot11mode = ch_change_req->dot11mode;
 	session_entry->nwType = ch_change_req->nw_type;
 	qdf_mem_copy(&session_entry->rateSet,
-			&ch_change_req->operational_rateset,
-			sizeof(session_entry->rateSet));
+		     &ch_change_req->opr_rates,
+		     sizeof(session_entry->rateSet));
 	qdf_mem_copy(&session_entry->extRateSet,
-			&ch_change_req->extended_rateset,
-			sizeof(session_entry->extRateSet));
-
+		     &ch_change_req->ext_rates,
+		     sizeof(session_entry->extRateSet));
 	lim_change_channel(mac_ctx, session_entry);
 }
 

@@ -463,4 +463,21 @@ QDF_STATUS fwol_set_sap_sho(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 QDF_STATUS fwol_configure_hw_assist(struct wlan_objmgr_pdev *pdev,
 				    bool disable_hw_assist);
 
+/**
+ * fwol_set_sap_wds_config() - API to configure WDS mode on SAP vdev
+ * @psoc: pointer to the psoc object
+ * @vdev_id: vdev id
+ *
+ * Return: QDF_STATUS
+ */
+#ifdef FEATURE_WDS
+QDF_STATUS
+fwol_set_sap_wds_config(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id);
+#else
+static inline QDF_STATUS
+fwol_set_sap_wds_config(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 #endif

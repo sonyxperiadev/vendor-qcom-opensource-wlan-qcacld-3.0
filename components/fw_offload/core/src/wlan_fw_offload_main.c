@@ -857,3 +857,25 @@ QDF_STATUS fwol_configure_hw_assist(struct wlan_objmgr_pdev *pdev,
 
 	return status;
 }
+
+#ifdef FEATURE_WDS
+QDF_STATUS
+fwol_set_sap_wds_config(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
+{
+	QDF_STATUS status;
+	struct vdev_set_params vdev_param;
+
+	if (!wlan_mlme_get_wds_mode(psoc))
+		return QDF_STATUS_SUCCESS;
+
+	vdev_param.vdev_id = vdev_id;
+	vdev_param.param_id = WMI_VDEV_PARAM_WDS;
+	vdev_param.param_value = true;
+
+	status = tgt_fwol_vdev_param_send(psoc, vdev_param);
+	if (QDF_IS_STATUS_ERROR(status))
+		fwol_err("WMI_VDEV_PARAM_WDS failed %d", status);
+
+	return status;
+}
+#endif

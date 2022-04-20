@@ -1867,9 +1867,6 @@ static void lim_process_messages(struct mac_context *mac_ctx,
 							session_entry);
 		}
 		break;
-	case SIR_LIM_PROBE_HB_FAILURE_TIMEOUT:
-		lim_handle_heart_beat_failure_timeout(mac_ctx);
-		break;
 	case SIR_LIM_CNF_WAIT_TIMEOUT:
 		/* Does not receive CNF or dummy packet */
 		lim_handle_cnf_wait_timeout(mac_ctx, (uint16_t) msg->bodyval);

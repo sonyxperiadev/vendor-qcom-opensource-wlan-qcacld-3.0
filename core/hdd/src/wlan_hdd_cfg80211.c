@@ -179,6 +179,7 @@
 #include "os_if_pkt_capture.h"
 #include "wlan_hdd_son.h"
 #include "wlan_hdd_mcc_quota.h"
+#include "wlan_cfg80211_wifi_pos.h"
 
 #define g_mode_rates_size (12)
 #define a_mode_rates_size (8)
@@ -18100,6 +18101,19 @@ static void wlan_hdd_update_eapol_over_nl80211_flags(struct wiphy *wiphy)
 }
 #endif
 
+#ifdef CFG80211_MULTI_AKM_CONNECT_SUPPORT
+static void
+wlan_hdd_update_max_connect_akm(struct wiphy *wiphy)
+{
+	wiphy->max_num_akms_connect = WLAN_CM_MAX_CONNECT_AKMS;
+}
+#else
+static void
+wlan_hdd_update_max_connect_akm(struct wiphy *wiphy)
+{
+}
+#endif
+
 /*
  * FUNCTION: wlan_hdd_cfg80211_init
  * This function is called by hdd_wlan_startup()
@@ -18236,6 +18250,9 @@ int wlan_hdd_cfg80211_init(struct device *dev,
 
 	hdd_add_channel_switch_support(&wiphy->flags);
 	wiphy->max_num_csa_counters = WLAN_HDD_MAX_NUM_CSA_COUNTERS;
+
+	wlan_hdd_update_max_connect_akm(wiphy);
+
 	wlan_hdd_cfg80211_action_frame_randomization_init(wiphy);
 
 	wlan_hdd_set_nan_supported_bands(wiphy);
@@ -18462,6 +18479,39 @@ static void wlan_hdd_update_lfr_wiphy(struct hdd_context *hdd_ctx)
 }
 #endif
 
+#if defined (CFG80211_SA_QUERY_OFFLOAD_SUPPORT) || \
+	    (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0))
+/**
+ * wlan_hdd_set_sa_query_offload_wiphy() - set sa query offload cap in sme cap
+ * @hdd_ctx: HDD context
+ *
+ * This function set sa query offload cap for ap sme capabilities in wiphy
+ *
+ * Return: void
+ */
+static void wlan_hdd_set_sa_query_offload_wiphy(struct hdd_context *hdd_ctx)
+{
+	hdd_ctx->wiphy->ap_sme_capa |= NL80211_AP_SME_SA_QUERY_OFFLOAD;
+}
+
+/**
+ * wlan_hdd_update_ap_sme_cap_wiphy() - update ap sme capabilities in wiphy
+ * @hdd_ctx: HDD context
+ *
+ * This function update ap sme capabilities in wiphy
+ *
+ * Return: void
+ */
+static void wlan_hdd_update_ap_sme_cap_wiphy(struct hdd_context *hdd_ctx)
+{
+	wlan_hdd_set_sa_query_offload_wiphy(hdd_ctx);
+}
+#else
+static void wlan_hdd_update_ap_sme_cap_wiphy(struct hdd_context *hdd_ctx)
+{
+}
+#endif
+
 /*
  * In this function, wiphy structure is updated after QDF
  * initialization. In wlan_hdd_cfg80211_init, only the
@@ -18488,6 +18538,7 @@ void wlan_hdd_update_wiphy(struct hdd_context *hdd_ctx)
 	wlan_hdd_update_ht_cap(hdd_ctx);
 	wlan_hdd_update_band_cap_in_wiphy(hdd_ctx);
 	wlan_hdd_update_lfr_wiphy(hdd_ctx);
+	wlan_hdd_update_ap_sme_cap_wiphy(hdd_ctx);
 
 	fils_enabled = 0;
 	status = ucfg_mlme_get_fils_enabled_info(hdd_ctx->psoc,
@@ -18552,6 +18603,8 @@ void wlan_hdd_update_wiphy(struct hdd_context *hdd_ctx)
 	mac_spoofing_enabled = ucfg_scan_is_mac_spoofing_enabled(hdd_ctx->psoc);
 	if (mac_spoofing_enabled)
 		wlan_hdd_cfg80211_scan_randomization_init(wiphy);
+
+	wlan_wifi_pos_cfg80211_set_wiphy_ext_feature(wiphy, hdd_ctx->psoc);
 }
 
 /**
@@ -20546,6 +20599,7 @@ static int __wlan_hdd_set_txq_params(struct wiphy *wiphy,
 	txq_edca_params.txoplimit = params->txop;
 	txq_edca_params.aci.aci =
 			ieee_ac_to_qca_ac[params->ac];
+	txq_edca_params.user_edca_set = 1;
 
 	status = sme_update_session_txq_edca_params(mac_handle,
 						    adapter->vdev_id,
@@ -22421,12 +22475,7 @@ static int __wlan_hdd_cfg80211_set_mon_ch(struct wiphy *wiphy,
 	QDF_STATUS status;
 	mac_handle_t mac_handle;
 	struct qdf_mac_addr bssid;
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	struct csr_roam_profile roam_profile;
-#else
 	struct channel_change_req *req;
-#endif
 	struct ch_params ch_params = {0};
 	int ret;
 	enum channel_state chan_freq_state;
@@ -22480,13 +22529,7 @@ static int __wlan_hdd_cfg80211_set_mon_ch(struct wiphy *wiphy,
 	}
 	sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
 	ch_info = &sta_ctx->ch_info;
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	roam_profile.ChannelInfo.freq_list = &ch_info->freq;
-	roam_profile.ChannelInfo.numOfChannels = 1;
-	roam_profile.phyMode = ch_info->phy_mode;
-	roam_profile.ch_params.ch_width = ch_width;
-#endif
+
 	if (WLAN_REG_IS_24GHZ_CH_FREQ(chandef->chan->center_freq) &&
 	    chandef->width == NL80211_CHAN_WIDTH_40 &&
 	    chandef->center_freq1) {
@@ -22497,11 +22540,6 @@ static int __wlan_hdd_cfg80211_set_mon_ch(struct wiphy *wiphy,
 	}
 	hdd_debug("set mon ch:width=%d, freq %d sec_ch_2g_freq=%d",
 		  chandef->width, chandef->chan->center_freq, sec_ch_2g_freq);
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	hdd_select_cbmode(adapter, chandef->chan->center_freq, sec_ch_2g_freq,
-			  &roam_profile.ch_params);
-#endif
 	qdf_mem_copy(bssid.bytes, adapter->mac_addr.bytes,
 		     QDF_MAC_ADDR_SIZE);
 
@@ -22527,13 +22565,29 @@ static int __wlan_hdd_cfg80211_set_mon_ch(struct wiphy *wiphy,
 		return qdf_status_to_os_return(status);
 	}
 	adapter->monitor_mode_vdev_up_in_progress = true;
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
-	status = sme_roam_channel_change_req(mac_handle, bssid,
-					     adapter->vdev_id,
-					     &roam_profile.ch_params,
-					     &roam_profile);
-#endif
+
+	qdf_mem_zero(&ch_params, sizeof(struct ch_params));
+
+	req = qdf_mem_malloc(sizeof(struct channel_change_req));
+	if (!req)
+		return -ENOMEM;
+
+	req->vdev_id = adapter->vdev_id;
+	req->target_chan_freq = ch_info->freq;
+	req->ch_width = ch_width;
+
+	ch_params.ch_width = ch_width;
+	hdd_select_cbmode(adapter, chandef->chan->center_freq, sec_ch_2g_freq,
+			  &ch_params);
+
+	req->sec_ch_offset = ch_params.sec_ch_offset;
+	req->center_freq_seg0 = ch_params.center_freq_seg0;
+	req->center_freq_seg1 = ch_params.center_freq_seg1;
+
+	sme_fill_channel_change_request(mac_handle, req, ch_info->phy_mode);
+	status = sme_send_channel_change_req(mac_handle, req);
+	qdf_mem_free(req);
+
 	if (status) {
 		hdd_err_rl("Failed to set sme_RoamChannel for monitor mode status: %d",
 			   status);
@@ -23554,7 +23608,7 @@ static int __wlan_hdd_cfg80211_set_bitrate_mask(struct wiphy *wiphy,
 	uint8_t rate_index;
 	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
 	uint8_t vdev_id;
-	uint8_t gi_val;
+	u8 gi_val = 0;
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(5, 10, 0))
 	uint8_t auto_rate_he_gi = 0;
 #endif

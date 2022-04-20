@@ -59,7 +59,6 @@ void lim_send_sme_rsp(struct mac_context *mac_ctx, uint16_t msg_type,
 /**
  * lim_send_sme_start_bss_rsp() - Send Start BSS response
  * @mac: Pointer to Global MAC structure
- * @msgType: Indicates message type
  * @resultCode: Indicates the result of previously issued request
  * @pe_session: PE session associated with the BSS
  * @smesessionId: ID of the SME session associated with the BSS
@@ -68,7 +67,6 @@ void lim_send_sme_rsp(struct mac_context *mac_ctx, uint16_t msg_type,
  * message to applications above MAC Software.
  */
 void lim_send_sme_start_bss_rsp(struct mac_context *mac,
-				uint16_t msgType,
 				tSirResultCodes resultCode,
 				struct pe_session *pe_session,
 				uint8_t smesessionId);
@@ -282,4 +280,14 @@ void lim_handle_mlo_sta_csa_param(struct wlan_objmgr_vdev *vdev,
 				  struct csa_offload_params *csa_params);
 #endif /* WLAN_FEATURE_11BE_MLO */
 
+/** lim_send_stop_bss_response() - Send stop bss response to CSR
+ *
+ * @mac_ctx : Global mac ctx
+ * @vdev_id : vdev_id
+ * @result_code: result
+ *
+ * Return: None
+ */
+void lim_send_stop_bss_response(struct mac_context *mac_ctx, uint8_t vdev_id,
+				tSirResultCodes result_code);
 #endif /* __LIM_SEND_SME_RSP_H */

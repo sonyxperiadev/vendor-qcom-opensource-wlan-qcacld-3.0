@@ -81,17 +81,43 @@ void lim_send_sme_rsp(struct mac_context *mac_ctx, uint16_t msg_type,
 	msg.bodyval = 0;
 	MTRACE(mac_trace(mac_ctx, TRACE_CODE_TX_SME_MSG, vdev_id, msg.type));
 
-#ifdef FEATURE_WLAN_DIAG_SUPPORT_LIM    /* FEATURE_WLAN_DIAG_SUPPORT */
-	switch (msg_type) {
-	case eWNI_SME_STOP_BSS_RSP:
-		lim_diag_event_report(mac_ctx, WLAN_PE_DIAG_STOP_BSS_RSP_EVENT,
-				NULL, (uint16_t) result_code, 0);
-		break;
-	}
-#endif /* FEATURE_WLAN_DIAG_SUPPORT */
 	lim_sys_process_mmh_msg_api(mac_ctx, &msg);
 }
 
+void
+lim_send_stop_bss_response(struct mac_context *mac_ctx, uint8_t vdev_id,
+			   tSirResultCodes result_code)
+{
+	struct scheduler_msg msg = {0};
+	struct stop_bss_rsp *stop_bss_rsp;
+	struct pe_session *pe_session;
+
+	pe_debug("Sending stop bss response with reasonCode: %s",
+		 lim_result_code_str(result_code));
+
+	pe_session = pe_find_session_by_vdev_id(mac_ctx, vdev_id);
+	if (!pe_session) {
+		pe_err("Unable to find session for stop bss response");
+		return;
+	}
+
+	stop_bss_rsp = qdf_mem_malloc(sizeof(*stop_bss_rsp));
+	if (!stop_bss_rsp)
+		return;
+
+	stop_bss_rsp->status_code = result_code;
+	stop_bss_rsp->vdev_id = vdev_id;
+
+	msg.type = eWNI_SME_STOP_BSS_RSP;
+	msg.bodyptr = stop_bss_rsp;
+	msg.bodyval = 0;
+
+#ifdef FEATURE_WLAN_DIAG_SUPPORT_LIM    /* FEATURE_WLAN_DIAG_SUPPORT */
+	lim_diag_event_report(mac_ctx, WLAN_PE_DIAG_STOP_BSS_RSP_EVENT,
+			      NULL, (uint16_t) result_code, 0);
+#endif /* FEATURE_WLAN_DIAG_SUPPORT */
+	lim_sys_process_mmh_msg_api(mac_ctx, &msg);
+}
 /**
  * lim_get_max_rate_flags() - Get rate flags
  * @mac_ctx: Pointer to global MAC structure
@@ -573,7 +599,6 @@ void lim_send_sme_join_reassoc_rsp(struct mac_context *mac_ctx,
 }
 
 void lim_send_sme_start_bss_rsp(struct mac_context *mac,
-				uint16_t msgType,
 				tSirResultCodes resultCode,
 				struct pe_session *pe_session,
 				uint8_t smesessionId)
@@ -582,19 +607,16 @@ void lim_send_sme_start_bss_rsp(struct mac_context *mac,
 	struct scheduler_msg mmhMsg = {0};
 	struct start_bss_rsp *start_bss_rsp;
 
-	pe_debug("Sending message: %s with reasonCode: %s",
-		       lim_msg_str(msgType), lim_result_code_str(resultCode));
+	pe_debug("Sending start bss response with reasonCode: %s",
+		 lim_result_code_str(resultCode));
 
 	start_bss_rsp = qdf_mem_malloc(sizeof(*start_bss_rsp));
 	if (!start_bss_rsp)
 		return;
-
-	start_bss_rsp->messageType = msgType;
-	start_bss_rsp->length = sizeof(*start_bss_rsp);
-	start_bss_rsp->sessionId = smesessionId;
+	start_bss_rsp->vdev_id = smesessionId;
 	start_bss_rsp->status_code = resultCode;
 
-	mmhMsg.type = msgType;
+	mmhMsg.type = eWNI_SME_START_BSS_RSP;
 	mmhMsg.bodyptr = start_bss_rsp;
 	mmhMsg.bodyval = 0;
 	if (!pe_session) {

@@ -207,10 +207,9 @@ void lim_process_mlm_start_cnf(struct mac_context *mac, uint32_t *msg_buf)
 		pe_session = NULL;
 		pe_err("Start BSS Failed");
 	}
-	/* Send response to Host */
-	lim_send_sme_start_bss_rsp(mac, eWNI_SME_START_BSS_RSP,
-				((tLimMlmStartCnf *)msg_buf)->resultCode,
-				pe_session, smesessionId);
+	lim_send_sme_start_bss_rsp(mac,
+				   ((tLimMlmStartCnf *)msg_buf)->resultCode,
+				   pe_session, smesessionId);
 	if (pe_session &&
 	    (((tLimMlmStartCnf *)msg_buf)->resultCode == eSIR_SME_SUCCESS)) {
 		lim_ndi_mlme_vdev_up_transition(pe_session);
@@ -1265,6 +1264,7 @@ QDF_STATUS lim_sta_handle_connect_fail(join_params *param)
 	struct pe_session *session;
 	struct mac_context *mac_ctx;
 	tpDphHashNode sta_ds = NULL;
+	QDF_STATUS status;
 
 	if (!param) {
 		pe_err("param is NULL");
@@ -1314,37 +1314,14 @@ QDF_STATUS lim_sta_handle_connect_fail(join_params *param)
 	session->lim_join_req = NULL;
 
 error:
-	/*
-	 * Delete the session if JOIN failure occurred.
-	 * if the peer is not created, then there is no
-	 * need to send down the set link state which will
-	 * try to delete the peer. Instead a join response
-	 * failure should be sent to the upper layers.
-	 */
-	if (param->result_code != eSIR_SME_PEER_CREATE_FAILED) {
-		QDF_STATUS status;
+	session->prot_status_code = param->prot_status_code;
+	session->result_code = param->result_code;
 
-		session->prot_status_code = param->prot_status_code;
-		session->result_code = param->result_code;
+	status = wma_send_vdev_stop(session->smeSessionId);
+	if (QDF_IS_STATUS_ERROR(status))
+		lim_join_result_callback(mac_ctx, session->smeSessionId);
 
-		status = wma_send_vdev_stop(session->smeSessionId);
-		if (QDF_IS_STATUS_ERROR(status)) {
-			lim_join_result_callback(mac_ctx,
-						 session->smeSessionId);
-		}
-
-		return status;
-	}
-
-
-	lim_send_sme_join_reassoc_rsp(mac_ctx, eWNI_SME_JOIN_RSP,
-				      param->result_code,
-				      param->prot_status_code,
-				      session, session->smeSessionId);
-	if (param->result_code == eSIR_SME_PEER_CREATE_FAILED)
-		pe_delete_session(mac_ctx, session);
-
-	return QDF_STATUS_SUCCESS;
+	return status;
 }
 
 /**
@@ -1697,8 +1674,7 @@ void lim_process_ap_mlm_del_bss_rsp(struct mac_context *mac,
 	/* Initialize number of associated stations during cleanup */
 	pe_session->gLimNumOfCurrentSTAs = 0;
 end:
-	lim_send_sme_rsp(mac, eWNI_SME_STOP_BSS_RSP, rc,
-			 pe_session->smeSessionId);
+	lim_send_stop_bss_response(mac, pe_session->vdev_id, rc);
 	pe_delete_session(mac, pe_session);
 }
 

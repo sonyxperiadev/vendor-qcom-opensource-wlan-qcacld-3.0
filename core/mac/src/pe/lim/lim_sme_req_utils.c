@@ -275,21 +275,13 @@ lim_set_rs_nie_wp_aiefrom_sme_start_bss_req_message(struct mac_context *mac_ctx,
 	return true;
 }
 
-#ifndef SAP_CP_CLEANUP
-bool lim_is_sme_start_bss_req_valid(struct mac_context *mac_ctx,
-				    struct start_bss_req *start_bss_req,
-				    enum bss_type bss_type)
-#else
 bool lim_is_sme_start_bss_req_valid(struct mac_context *mac_ctx,
 				    struct start_bss_config *start_bss_req,
 				    enum bss_type bss_type)
-#endif
 {
 	uint8_t i = 0;
-/* To be removed after SAP CSR cleanup changes */
-#ifndef SAP_CP_CLEANUP
 	tSirMacRateSet *opr_rates = &start_bss_req->operationalRateSet;
-#endif
+
 	switch (bss_type) {
 	case eSIR_INFRASTRUCTURE_MODE:
 		/**
@@ -498,29 +490,3 @@ bool lim_is_sme_set_context_req_valid(struct mac_context *mac,
 end:
 	return valid;
 } /*** end lim_is_sme_set_context_req_valid() ***/
-
-/**
- * lim_is_sme_stop_bss_req_valid()
- *
- ***FUNCTION:
- * This function is called by lim_process_sme_req_messages() upon
- * receiving SME_STOP_BSS_REQ message from application.
- *
- ***LOGIC:
- * Message validity checks are performed in this function
- *
- ***ASSUMPTIONS:
- *
- ***NOTE:
- *
- * @param  pMsg - Pointer to received SME_STOP_BSS_REQ message
- * @return true  when received SME_STOP_BSS_REQ is formatted correctly
- *         false otherwise
- */
-
-uint8_t lim_is_sme_stop_bss_req_valid(uint32_t *pMsg)
-{
-	uint8_t valid = true;
-
-	return valid;
-} /*** end lim_is_sme_stop_bss_req_valid() ***/

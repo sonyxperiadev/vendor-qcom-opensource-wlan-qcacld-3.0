@@ -511,6 +511,14 @@ ifeq ($(CONFIG_WLAN_FEATURE_MCC_QUOTA), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_mcc_quota.o
 endif
 
+ifeq ($(CONFIG_FEATURE_WDS), y)
+HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_wds.o
+endif
+
+ifeq ($(CONFIG_DP_HW_TX_DELAY_STATS_ENABLE), y)
+HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_dp_tx_delay_stats.o
+endif
+
 $(call add-wlan-objs,hdd,$(HDD_OBJS))
 
 ###### OSIF_SYNC ########
@@ -1955,6 +1963,11 @@ WMI_OBJS += $(WMI_OBJ_DIR)/wmi_unified_11be_tlv.o
 WMI_OBJS += $(WMI_OBJ_DIR)/wmi_unified_11be_api.o
 endif
 
+ifeq ($(CONFIG_FEATURE_WDS), y)
+WMI_OBJS += $(WMI_OBJ_DIR)/wmi_unified_wds_api.o
+WMI_OBJS += $(WMI_OBJ_DIR)/wmi_unified_wds_tlv.o
+endif
+
 $(call add-wlan-objs,wmi,$(WMI_OBJS))
 
 ########### FWLOG ###########
@@ -2275,7 +2288,10 @@ WIFI_POS_OBJS := $(WIFI_POS_CORE_DIR)/wifi_pos_api.o \
 		 $(WIFI_POS_CORE_DIR)/wifi_pos_ucfg.o \
 		 $(WIFI_POS_CORE_DIR)/wifi_pos_utils.o \
 		 $(WIFI_POS_OS_IF_DIR)/os_if_wifi_pos.o \
-		 $(WIFI_POS_TGT_DIR)/target_if_wifi_pos.o
+		 $(WIFI_POS_OS_IF_DIR)/wlan_cfg80211_wifi_pos.o \
+		 $(WIFI_POS_TGT_DIR)/target_if_wifi_pos.o \
+		 $(WIFI_POS_TGT_DIR)/target_if_wifi_pos_rx_ops.o \
+		 $(WIFI_POS_TGT_DIR)/target_if_wifi_pos_tx_ops.o
 endif
 
 $(call add-wlan-objs,wifi_pos,$(WIFI_POS_OBJS))
@@ -3769,7 +3785,7 @@ cppflags-$(CONFIG_DYNAMIC_RX_AGGREGATION) += -DWLAN_FEATURE_DYNAMIC_RX_AGGREGATI
 cppflags-$(CONFIG_DP_FEATURE_HW_COOKIE_CONVERSION) += -DDP_FEATURE_HW_COOKIE_CONVERSION
 cppflags-$(CONFIG_DP_HW_COOKIE_CONVERT_EXCEPTION) += -DDP_HW_COOKIE_CONVERT_EXCEPTION
 cppflags-$(CONFIG_TX_ADDR_INDEX_SEARCH) += -DTX_ADDR_INDEX_SEARCH
-
+cppflags-$(CONFIG_DP_RX_DELIVER_ALL_OOR_FRAMES) += -DDP_RX_DELIVER_ALL_OOR_FRAMES
 cppflags-$(CONFIG_RX_HASH_DEBUG) += -DRX_HASH_DEBUG
 
 ifeq ($(CONFIG_QCA6290_11AX), y)
@@ -3795,6 +3811,8 @@ cppflags-$(CONFIG_SYSTEM_PM_CHECK) += -DSYSTEM_PM_CHECK
 cppflags-$(CONFIG_DISABLE_EAPOL_INTRABSS_FWD) += -DDISABLE_EAPOL_INTRABSS_FWD
 cppflags-$(CONFIG_TX_AGGREGATION_SIZE_ENABLE) += -DTX_AGGREGATION_SIZE_ENABLE
 cppflags-$(CONFIG_TX_MULTI_TCL) += -DTX_MULTI_TCL
+cppflags-$(CONFIG_WLAN_DP_DISABLE_TCL_CMD_CRED_SRNG) += -DWLAN_DP_DISABLE_TCL_CMD_CRED_SRNG
+cppflags-$(CONFIG_WLAN_DP_DISABLE_TCL_STATUS_SRNG) += -DWLAN_DP_DISABLE_TCL_STATUS_SRNG
 
 # Enable Low latency
 cppflags-$(CONFIG_WLAN_FEATURE_LL_MODE) += -DWLAN_FEATURE_LL_MODE
@@ -4321,6 +4339,8 @@ endif
 cppflags-$(CONFIG_FEATURE_WDS) += -DFEATURE_WDS
 cppflags-$(CONFIG_FEATURE_MEC) += -DFEATURE_MEC
 cppflags-$(CONFIG_FEATURE_MCL_REPEATER) += -DFEATURE_MCL_REPEATER
+cppflags-$(CONFIG_WDS_CONV_TARGET_IF_OPS_ENABLE) += -DWDS_CONV_TARGET_IF_OPS_ENABLE
+cppflags-$(CONFIG_BYPASS_WDS_OL_OPS) += -DBYPASS_OL_OPS
 
 ccflags-$(CONFIG_IPA_WDI3_TX_TWO_PIPES) += -DIPA_WDI3_TX_TWO_PIPES
 
@@ -4337,6 +4357,10 @@ cppflags-y += -DWLAN_FEATURE_MCC_QUOTA
 ifdef CONFIG_WLAN_MCC_MIN_CHANNEL_QUOTA
 ccflags-y += -DWLAN_MCC_MIN_CHANNEL_QUOTA=$(CONFIG_WLAN_MCC_MIN_CHANNEL_QUOTA)
 endif
+endif
+
+ifeq ($(CONFIG_DP_HW_TX_DELAY_STATS_ENABLE), y)
+cppflags-y += -DHW_TX_DELAY_STATS_ENABLE
 endif
 
 KBUILD_CPPFLAGS += $(cppflags-y)

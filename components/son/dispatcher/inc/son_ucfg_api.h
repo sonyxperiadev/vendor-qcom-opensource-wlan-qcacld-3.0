@@ -203,6 +203,28 @@ QDF_STATUS ucfg_son_get_peer_rrm_info(struct element_info assoc_req_ies,
 				      uint8_t *rrmcaps,
 				      bool *is_beacon_meas_supported);
 
+/**
+ * ucfg_son_vdev_get_supported_txrx_streams() - get supported spatial streams
+ * @vdev: pointer to vdev
+ * @num_tx_streams: pointer to number of tx streams
+ * @num_rx_streams: pointer to number of rx streams
+ *
+ * Return: QDF_STATUS_SUCCESS on Success else failure.
+ */
+QDF_STATUS
+ucfg_son_vdev_get_supported_txrx_streams(struct wlan_objmgr_vdev *vdev,
+					 uint32_t *num_tx_streams,
+					 uint32_t *num_rx_streams);
+/**
+ * ucfg_son_get_vht_cap() - get the vht capability ie
+ * @psoc: psoc object
+ * @vht_caps: VHT caps bit fields
+ *
+ * Return: QDF_STATUS_SUCCESS on Success else failure.
+ */
+QDF_STATUS ucfg_son_get_vht_cap(struct wlan_objmgr_psoc *psoc,
+				int32_t *vht_caps);
+
 #ifdef WLAN_FEATURE_SON
 /* ucfg_son_disable_cbs() - son cbs disable
  * @vdev: vdev pointer

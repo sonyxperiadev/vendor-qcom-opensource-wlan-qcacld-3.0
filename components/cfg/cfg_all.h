@@ -17,7 +17,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "wlan_policy_mgr_cfg.h"
+#include "cfg_policy_mgr.h"
 #include "cfg_define.h"
 #include "cfg_converged.h"
 #include "cfg_mlme.h"
@@ -25,13 +25,13 @@
 #include "cfg_ipa.h"
 
 #ifdef CONVERGED_P2P_ENABLE
-#include "wlan_p2p_cfg.h"
+#include "cfg_p2p.h"
 #else
 #define CFG_P2P_ALL
 #endif
 
 #ifdef FEATURE_WLAN_TDLS
-#include "wlan_tdls_cfg.h"
+#include "cfg_tdls.h"
 #else
 #define CFG_TDLS_ALL
 #endif
@@ -48,7 +48,7 @@
 #include "hdd_config.h"
 #include "hdd_dp_cfg.h"
 #include "cfg_legacy_dp.h"
-#include "wlan_cfg_dlm.h"
+#include "cfg_dlm.h"
 #include "cfg_pkt_capture.h"
 
 /* Maintain Alphabetic order here while adding components */

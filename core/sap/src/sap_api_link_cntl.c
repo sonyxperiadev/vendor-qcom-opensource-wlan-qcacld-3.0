@@ -992,7 +992,6 @@ static bool sap_is_csa_restart_state(struct wlan_objmgr_psoc *psoc,
 
 QDF_STATUS wlansap_roam_callback(void *ctx,
 				 struct csr_roam_info *csr_roam_info,
-				 uint32_t roam_id,
 				 eRoamCmdStatus roam_status,
 				 eCsrRoamResult roam_result)
 {

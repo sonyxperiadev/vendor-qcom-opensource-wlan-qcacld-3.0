@@ -108,6 +108,7 @@
 #endif
 #include "wlan_hdd_son.h"
 #include "wlan_hdd_mcc_quota.h"
+#include "wlan_hdd_wds.h"
 
 #define ACS_SCAN_EXPIRY_TIMEOUT_S 4
 
@@ -1935,6 +1936,7 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 	uint8_t *mld;
 #endif
 	bool notify_new_sta = true;
+	struct wlan_objmgr_vdev *vdev;
 
 	dev = context;
 	if (!dev) {
@@ -2144,6 +2146,17 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 		if (!wlan_reg_is_6ghz_chan_freq(ap_ctx->operating_chan_freq))
 			wlan_reg_set_ap_pwr_and_update_chan_list(hdd_ctx->pdev,
 								 REG_INDOOR_AP);
+
+		/*
+		 * Enable wds source port learning on the dp vdev in AP mode
+		 * when WDS feature is enabled.
+		 */
+		vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_ID);
+		if (vdev) {
+			if (wlan_vdev_mlme_get_opmode(vdev) == QDF_SAP_MODE)
+				hdd_wds_config_dp_repeater_mode(vdev);
+			hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_ID);
+		}
 		/*
 		 * set this event at the very end because once this events
 		 * get set, caller thread is waiting to do further processing.
@@ -2410,7 +2423,9 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 						(struct qdf_mac_addr *)
 						wrqu.addr.sa_data,
 						event);
-			if (!QDF_IS_STATUS_SUCCESS(qdf_status))
+			if (QDF_IS_STATUS_SUCCESS(qdf_status))
+				hdd_fill_station_info(adapter, event);
+			else
 				hdd_err("Failed to register STA %d "
 					QDF_MAC_ADDR_FMT, qdf_status,
 					QDF_MAC_ADDR_REF(wrqu.addr.sa_data));
@@ -2454,7 +2469,9 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 						(struct qdf_mac_addr *)
 						wrqu.addr.sa_data,
 						event);
-			if (!QDF_IS_STATUS_SUCCESS(qdf_status))
+			if (QDF_IS_STATUS_SUCCESS(qdf_status))
+				hdd_fill_station_info(adapter, event);
+			else
 				hdd_err("Failed to register STA %d "
 					QDF_MAC_ADDR_FMT, qdf_status,
 					QDF_MAC_ADDR_REF(wrqu.addr.sa_data));
@@ -2493,8 +2510,6 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 		}
 
 		sta_id = event->staId;
-		if (QDF_IS_STATUS_SUCCESS(qdf_status))
-			hdd_fill_station_info(adapter, event);
 
 		if (ucfg_ipa_is_enabled()) {
 			status = ucfg_ipa_wlan_evt(hdd_ctx->pdev,
@@ -2552,6 +2567,11 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 						 (const u8 *)&event->
 						 staMac.bytes[0],
 						 sta_info, GFP_KERNEL);
+
+			if (adapter->device_mode == QDF_SAP_MODE &&
+			    ucfg_mlme_get_wds_mode(hdd_ctx->psoc))
+				hdd_softap_ind_l2_update(adapter,
+							 &event->staMac);
 			qdf_mem_free(sta_info);
 		}
 		/* Lets abort scan to ensure smooth authentication for client */
@@ -3851,9 +3871,14 @@ const struct net_device_ops net_ops_struct = {
 	.ndo_tx_timeout = hdd_softap_tx_timeout,
 	.ndo_get_stats = hdd_get_stats,
 	.ndo_set_mac_address = hdd_hostapd_set_mac_address,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0)
 	.ndo_do_ioctl = hdd_ioctl,
+#endif
 	.ndo_change_mtu = hdd_hostapd_change_mtu,
 	.ndo_select_queue = hdd_select_queue,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0)
+	.ndo_siocdevprivate = hdd_dev_private_ioctl,
+#endif
 };
 
 #ifdef WLAN_FEATURE_TSF_PTP
@@ -5662,6 +5687,7 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 	struct s_ext_cap *p_ext_cap;
 	enum reg_phymode reg_phy_mode, updated_phy_mode;
 	struct sap_context *sap_ctx;
+	struct wlan_objmgr_vdev *vdev;
 
 	hdd_enter();
 
@@ -5670,6 +5696,10 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 		return ret;
 
 	if (policy_mgr_is_sta_mon_concurrency(hdd_ctx->psoc))
+		return -EINVAL;
+
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_HDD_ID_OBJ_MGR);
+	if (!vdev)
 		return -EINVAL;
 
 	ucfg_mlme_get_sap_force_11n_for_11ac(hdd_ctx->psoc,
@@ -5682,12 +5712,12 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 
 	if (deliver_start_evt) {
 		status = ucfg_if_mgr_deliver_event(
-					adapter->vdev,
-					WLAN_IF_MGR_EV_AP_START_BSS,
+					vdev, WLAN_IF_MGR_EV_AP_START_BSS,
 					NULL);
 		if (!QDF_IS_STATUS_SUCCESS(status)) {
 			hdd_err("start bss failed!!");
-			return -EINVAL;
+			ret = -EINVAL;
+			goto deliver_start_err;
 		}
 	}
 	/*
@@ -5808,7 +5838,7 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 						    &target_bigtk_support);
 			if (target_bigtk_support &&
 			    p_ext_cap->beacon_protection_enable)
-				mlme_set_bigtk_support(adapter->vdev, true);
+				mlme_set_bigtk_support(vdev, true);
 		}
 
 		/* Overwrite second AP's channel with first only when:
@@ -6172,6 +6202,8 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 	}
 
 	config->ch_params.ch_width = config->ch_width_orig;
+	if (wlan_vdev_mlme_is_mlo_ap(vdev))
+		wlan_reg_set_create_punc_bitmap(&config->ch_params, true);
 	if ((config->ch_params.ch_width == CH_WIDTH_80P80MHZ) &&
 	    ucfg_mlme_get_restricted_80p80_bw_supp(hdd_ctx->psoc)) {
 		if (!((config->ch_params.center_freq_seg0 == 138 &&
@@ -6235,8 +6267,7 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 				policy_mgr_convert_device_mode_to_qdf_type(
 					adapter->device_mode),
 				config->chan_freq, HW_MODE_20_MHZ,
-				policy_mgr_get_conc_ext_flags(adapter->vdev,
-							      false))) {
+				policy_mgr_get_conc_ext_flags(vdev, false))) {
 			mutex_unlock(&hdd_ctx->sap_lock);
 
 			hdd_err("This concurrency combination is not allowed");
@@ -6320,12 +6351,12 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 	}
 
 	wlan_hdd_dhcp_offload_enable(hdd_ctx, adapter);
-	ucfg_p2p_status_start_bss(adapter->vdev);
+	ucfg_p2p_status_start_bss(vdev);
 
 	/* Check and restart SAP if it is on unsafe channel */
 	hdd_unsafe_channel_restart_sap(hdd_ctx);
 
-	ucfg_ftm_time_sync_update_bss_state(adapter->vdev,
+	ucfg_ftm_time_sync_update_bss_state(vdev,
 					    FTM_TIME_SYNC_BSS_STARTED);
 
 	hdd_set_connection_in_progress(false);
@@ -6348,7 +6379,7 @@ free:
 	wlan_twt_concurrency_update(hdd_ctx);
 	if (deliver_start_evt) {
 		status = ucfg_if_mgr_deliver_event(
-					adapter->vdev,
+					vdev,
 					WLAN_IF_MGR_EV_AP_START_BSS_COMPLETE,
 					NULL);
 		if (!QDF_IS_STATUS_SUCCESS(status)) {
@@ -6357,6 +6388,9 @@ free:
 		}
 	}
 	qdf_mem_free(sme_config);
+deliver_start_err:
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_HDD_ID_OBJ_MGR);
+
 	return ret;
 }
 
