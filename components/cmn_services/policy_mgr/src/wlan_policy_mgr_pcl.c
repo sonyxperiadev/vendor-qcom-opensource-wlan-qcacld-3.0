@@ -2045,6 +2045,267 @@ policy_mgr_get_third_connection_pcl_table_index(
 }
 
 #ifdef FEATURE_FOURTH_CONNECTION
+#ifdef WLAN_FEATURE_11BE_MLO
+/**
+ * policy_mgr_get_index_for_ml_sta_sap_dbs() - Find the index for next
+ * connection for ML STA + SAP, in case current HW mode is DBS and ML STA is
+ * 2.4 GHZ + 5 GHZ/6 GHZ OR if SBS is not supported.
+ * @pm_ctx: policy manager context
+ * @index: Index to return for next connection
+ * @sap_freq: SAP freq
+ * @sta_freq_list: STA freq list
+ * @ml_sta_idx: ML STA index in freq_list
+ *
+ * This function finds the index for next
+ * connection for ML STA + SAP, in case current HW mode is DBS and ML STA is
+ * 2.4 GHZ + 5 GHZ/6 GHZ OR if SBS is not supported.
+ *
+ * Return: none
+ */
+static void
+policy_mgr_get_index_for_ml_sta_sap_dbs(
+	struct policy_mgr_psoc_priv_obj *pm_ctx,
+	enum policy_mgr_three_connection_mode *index, qdf_freq_t sap_freq,
+	qdf_freq_t *sta_freq_list, uint8_t *ml_sta_idx)
+{
+	/* If ML STA and SAP all are on same band */
+	if ((WLAN_REG_IS_24GHZ_CH_FREQ(sta_freq_list[ml_sta_idx[0]]) ==
+	     WLAN_REG_IS_24GHZ_CH_FREQ(sta_freq_list[ml_sta_idx[1]])) &&
+	    (WLAN_REG_IS_24GHZ_CH_FREQ(sta_freq_list[ml_sta_idx[0]]) ==
+	     WLAN_REG_IS_24GHZ_CH_FREQ(sap_freq))) {
+		policy_mgr_err("Invalid mode for ML STA %d and %d are on same band as SAP %d",
+			       sta_freq_list[ml_sta_idx[0]],
+			       sta_freq_list[ml_sta_idx[1]], sap_freq);
+		return;
+	}
+
+	/*
+	 * If ML STA is MCC and SAP is on differet band and is not sharing mac
+	 * with any link. SAP on same band is handled above, so ML STA on same
+	 * band mean SAP cannot be on same band. This can happen if SBS is not
+	 * enabled.
+	 */
+	if (WLAN_REG_IS_24GHZ_CH_FREQ(sta_freq_list[ml_sta_idx[0]]) ==
+	    WLAN_REG_IS_24GHZ_CH_FREQ(sta_freq_list[ml_sta_idx[1]])) {
+		if (WLAN_REG_IS_24GHZ_CH_FREQ(sap_freq))
+			/*
+			 * As all 3 cannot be on same band, so if SAP is 2.4 GHZ
+			 * mean both ML STA are on 5 / 6 GHZ
+			 */
+			*index = PM_STA_STA_5_SAP_24_DBS;
+		else
+			/*
+			 * As all 3 cannot be on same band, so if SAP is
+			 *  5 / 6 GHZ, mean both ML STA are on 2.4 GHZ.
+			 */
+			policy_mgr_err("Invalid mode for ML STA %d and %d are on 2.4 GHZ, sap freq %d",
+				       sta_freq_list[ml_sta_idx[0]],
+				       sta_freq_list[ml_sta_idx[1]], sap_freq);
+
+		return;
+	}
+
+	/*
+	 * if ML STA is 2 GHZ + 5 GHZ/6 GHZ DBS, check with which freq the SAP
+	 * will share mac, and return index as per it.
+	 */
+	if (WLAN_REG_IS_24GHZ_CH_FREQ(sap_freq))
+		*index = PM_STA_SAP_24_STA_5_DBS;
+	else
+		*index = PM_STA_SAP_5_STA_24_DBS;
+}
+
+/**
+ * policy_mgr_get_index_for_ml_sta_sap_sbs() - Find the index for next
+ * connection for ML STA + SAP, in case current HW mode is SBS or ML STA is
+ * with 5 GHZ + 5 GHZ/6 GHZ SBS separation.
+ * @pm_ctx: policy manager context
+ * @index: Index to return for next connection
+ * @sap_freq: SAP freq
+ * @sta_freq_list: STA freq list
+ * @ml_sta_idx: ML STA index in freq_list
+ *
+ * This function finds the index for next
+ * connection for ML STA + SAP, in case current HW mode is SBS or ML STA is
+ * with 5 GHZ + 5 GHZ/6 GHZ SBS separation.
+ *
+ * Return: none
+ */
+static void policy_mgr_get_index_for_ml_sta_sap_sbs(
+	struct policy_mgr_psoc_priv_obj *pm_ctx,
+	enum policy_mgr_three_connection_mode *index, qdf_freq_t sap_freq,
+	qdf_freq_t *sta_freq_list, uint8_t *ml_sta_idx)
+{
+	qdf_freq_t sbs_cut_off_freq;
+
+	/*
+	 * Sanity check: At least one of the 3 combo (ML STA OR SAP + one of
+	 * ML STA link) needs to be creating SBS separation for
+	 * HW mode to be in SBS, if not it shouldn't have entered this API.
+	 */
+	if (!policy_mgr_are_sbs_chan(pm_ctx->psoc, sta_freq_list[ml_sta_idx[0]],
+				     sta_freq_list[ml_sta_idx[1]]) &&
+	    !policy_mgr_are_sbs_chan(pm_ctx->psoc, sap_freq,
+				     sta_freq_list[ml_sta_idx[0]]) &&
+	    !policy_mgr_are_sbs_chan(pm_ctx->psoc, sap_freq,
+				     sta_freq_list[ml_sta_idx[1]])) {
+		policy_mgr_err("SAP freq (%d) and ML STA freq %d and %d, none of the 2 connections/3 vdevs are leading to SBS",
+			       sap_freq,
+			       sta_freq_list[ml_sta_idx[0]],
+			       sta_freq_list[ml_sta_idx[1]]);
+		return;
+	}
+
+	sbs_cut_off_freq =  policy_mgr_get_sbs_cut_off_freq(pm_ctx->psoc);
+	if (!sbs_cut_off_freq) {
+		policy_mgr_err("Invalid cutoff freq");
+		return;
+	}
+
+	if (WLAN_REG_IS_24GHZ_CH_FREQ(sap_freq)) {
+		/*
+		 * if SAP is 2.4 GHZ that means both ML STA needs to
+		 * be with 5 GHZ + 5 GHZ/6 GHZ SBS separation. If not, it would
+		 * have failed the sanity check. So Get STA link with
+		 * which SAP freq is sharing mac and select index accordingly
+		 */
+		if (policy_mgr_2_freq_same_mac_in_sbs(
+						pm_ctx, sap_freq,
+						sta_freq_list[ml_sta_idx[0]])) {
+			/*
+			 * SAP is sharig mac with link ml_sta_idx[0], so check
+			 * if ml_sta_idx[0] is lower 5 GHZ or high 5 GHZ and
+			 * select index
+			 */
+			if (sta_freq_list[ml_sta_idx[0]] < sbs_cut_off_freq)
+				*index = PM_STA_5_LOW_SAP_24_MCC_STA_5_HIGH_SBS;
+			else
+				*index = PM_STA_5_HIGH_SAP_24_MCC_STA_5_LOW_SBS;
+		} else {
+			/*
+			 * SAP is sharig mac with link ml_sta_idx[1], so check
+			 * if ml_sta_idx[1] is lower 5 GHZ or high 5 GHZ and
+			 * select index
+			 */
+			if (sta_freq_list[ml_sta_idx[1]] < sbs_cut_off_freq)
+				*index = PM_STA_5_LOW_SAP_24_MCC_STA_5_HIGH_SBS;
+			else
+				*index = PM_STA_5_HIGH_SAP_24_MCC_STA_5_LOW_SBS;
+		}
+
+		return;
+	}
+
+	/* SAP freq is 5 GHZ or 6 GHZ and one ML sta is on 2.4 GHZ */
+	if (WLAN_REG_IS_24GHZ_CH_FREQ(sta_freq_list[ml_sta_idx[0]]) ||
+	    WLAN_REG_IS_24GHZ_CH_FREQ(sta_freq_list[ml_sta_idx[1]])) {
+		/*
+		 * If (2 GHZ + 5 GHZ/6 GHZ) ML is MCC i.e Both sta links are on
+		 * same mac and SAP is on separate mac. This can happen if SBS
+		 * is not dynamic and is low 5 GHZ shared, with ML STA on 5 GHZ
+		 * low along with SAP 5Ghz high and vice versa. As both links
+		 * of ML STA and sap are on different mac, so set index based
+		 * on sap frequency whether it is in 5 GHZ low band or 5 GHZ
+		 * high Band.
+		 */
+		if (policy_mgr_2_freq_same_mac_in_sbs(
+					pm_ctx, sta_freq_list[ml_sta_idx[0]],
+					sta_freq_list[ml_sta_idx[1]])) {
+			if (sap_freq < sbs_cut_off_freq)
+				*index = PM_STA_24_STA_5_HIGH_MCC_SAP_5_LOW_SBS;
+			else
+				*index = PM_STA_24_STA_5_LOW_MCC_SAP_5_HIGH_SBS;
+		} else {
+			/*
+			 * STA ML is (2 GHZ + 5 GHZ/6 GHZ) select as per the SAP
+			 * freq, as for current mode to be in SBS, SAP will
+			 * share mac with STA 2.4 GHZ Link or will not share
+			 * mac at all (2 GHZ + 5 GHZ/6 GHZ MCC). Other case i.e
+			 * 2 links on 5 GHZ and one STA link on 2 GHZ is DBS and
+			 * sanity check already taken care this at start of the
+			 * func.
+			 */
+			if (sap_freq < sbs_cut_off_freq)
+				*index = PM_STA_24_SAP_5_LOW_MCC_STA_5_HIGH_SBS;
+			else
+				*index = PM_STA_24_SAP_5_HIGH_MCC_STA_5_LOW_SBS;
+		}
+		return;
+	}
+	/*
+	 * If (5 GHZ + 5 GHZ/6 GHZ) ML is MCC i.e SAP is not sharing mac
+	 * with any link. This can happen if SBS is not dynamic and is
+	 * low 5 GHZ shared, with ML STA on 5 GHZ low along with SAP 5 GHZ
+	 * high and vice versa. As both ML sta link are on same mac and
+	 * sap is on different mac, so decide whether ML links are sharing
+	 * low 5 GHZ frequency or high 5 GHZ frequency based on sap frequency
+	 */
+	if (policy_mgr_2_freq_same_mac_in_sbs(
+				pm_ctx, sta_freq_list[ml_sta_idx[0]],
+				sta_freq_list[ml_sta_idx[1]])) {
+		if (sap_freq < sbs_cut_off_freq)
+			*index = PM_STA_STA_5_HIGH_MCC_SAP_5_LOW_SBS;
+		else
+			*index = PM_STA_STA_5_LOW_MCC_SAP_5_HIGH_SBS;
+	} else {
+		/*
+		 * STA ML is (5 GHZ + 5 GHZ/6 GHZ SBS/MCC), select as per the
+		 * SAP freq, as for current mode to be in SBS, SAP will share
+		 * mac with the corresponding low/high 5 GHZ
+		 * (5 GHZ + 5 GHZ/6 GHZ SBS) or will not share mac at all
+		 * (5 GHZ +5 GHZ/6 GHZ MCC). Other case sanity already
+		 * taken care at start of the func.
+		 */
+		if (sap_freq < sbs_cut_off_freq)
+			*index = PM_STA_SAP_5_LOW_STA_5_HIGH_SBS;
+		else
+			*index = PM_STA_SAP_5_HIGH_STA_5_LOW_SBS;
+	}
+}
+
+static void
+policy_mgr_get_index_for_ml_sta_sap(
+			struct policy_mgr_psoc_priv_obj *pm_ctx,
+			enum policy_mgr_three_connection_mode *index,
+			qdf_freq_t sap_freq, qdf_freq_t *sta_freq_list,
+			uint8_t *ml_sta_idx)
+{
+	/*
+	 * P2P GO/P2P CLI are treated as SAP to optimize as pcl
+	 * table is same for all three.
+	 */
+	policy_mgr_debug("channel: sap0: %d, ML STA link0: %d, ML STA link1: %d",
+			 sap_freq, sta_freq_list[ml_sta_idx[0]],
+			 sta_freq_list[ml_sta_idx[1]]);
+	if (policy_mgr_is_current_hwmode_sbs(pm_ctx->psoc) ||
+	    policy_mgr_are_sbs_chan(pm_ctx->psoc, sta_freq_list[ml_sta_idx[0]],
+				    sta_freq_list[ml_sta_idx[1]])) {
+		/* if current mode is SBS or the ML STA is 5+5/6Ghz SBS */
+		policy_mgr_get_index_for_ml_sta_sap_sbs(pm_ctx, index,
+							sap_freq,
+							sta_freq_list,
+							ml_sta_idx);
+		return;
+	}
+	/*
+	 * current HW mode is DBS and ML STA is 2.4 GHZ + 5 GHZ or SBS
+	 * is not enabled
+	 */
+	policy_mgr_get_index_for_ml_sta_sap_dbs(pm_ctx, index, sap_freq,
+						sta_freq_list, ml_sta_idx);
+}
+
+#else /* WLAN_FEATURE_11BE_MLO */
+
+static inline void
+policy_mgr_get_index_for_ml_sta_sap(
+			struct policy_mgr_psoc_priv_obj *pm_ctx,
+			enum policy_mgr_three_connection_mode *index,
+			qdf_freq_t sap_freq, qdf_freq_t *sta_freq_list,
+			uint8_t *ml_sta_idx) {}
+
+#endif /* WLAN_FEATURE_11BE_MLO */
+
 enum policy_mgr_three_connection_mode
 		policy_mgr_get_fourth_connection_pcl_table_index(
 		struct wlan_objmgr_psoc *psoc)
@@ -2056,10 +2317,16 @@ enum policy_mgr_three_connection_mode
 	uint32_t count_sta = 0;
 	uint32_t count_ndi = 0;
 	uint32_t count_nan_disc = 0;
+	uint8_t num_ml_sta = 0, num_non_ml_sta = 0;
 	uint32_t list_sap[MAX_NUMBER_OF_CONC_CONNECTIONS];
 	uint32_t list_sta[MAX_NUMBER_OF_CONC_CONNECTIONS];
 	uint32_t list_ndi[MAX_NUMBER_OF_CONC_CONNECTIONS];
 	uint32_t list_nan_disc[MAX_NUMBER_OF_CONC_CONNECTIONS];
+	uint8_t ml_sta_idx[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
+	uint8_t non_ml_sta_idx[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
+	qdf_freq_t freq_list[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
+	uint8_t vdev_id_list[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
+	qdf_freq_t sap_freq = 0;
 
 	pm_ctx = policy_mgr_get_context(psoc);
 	if (!pm_ctx) {
@@ -2081,12 +2348,18 @@ enum policy_mgr_three_connection_mode
 				psoc, PM_P2P_CLIENT_MODE, &list_sap[count_sap]);
 	count_sta = policy_mgr_mode_specific_connection_count(
 				psoc, PM_STA_MODE, list_sta);
+	policy_mgr_get_ml_and_non_ml_sta_count(psoc, &num_ml_sta, ml_sta_idx,
+					       &num_non_ml_sta, non_ml_sta_idx,
+					       freq_list, vdev_id_list);
+
 	count_ndi = policy_mgr_mode_specific_connection_count(
 				psoc, PM_NDI_MODE, list_ndi);
 	count_nan_disc = policy_mgr_mode_specific_connection_count(
 				psoc, PM_NAN_DISC_MODE, list_nan_disc);
-	policy_mgr_debug("sap/ago %d, sta %d, ndi %d nan disc %d",
-			 count_sap, count_sta, count_ndi, count_nan_disc);
+	policy_mgr_debug("sap/go/cli:%d sta:%d ndi:%d nan disc:%d ml_sta:%d",
+			 count_sap, count_sta, count_ndi, count_nan_disc,
+			 num_ml_sta);
+
 	if (count_sap == 2 && count_sta == 1) {
 		policy_mgr_debug(
 			"channel: sap0: %d, sap1: %d, sta0: %d",
@@ -2124,7 +2397,11 @@ enum policy_mgr_three_connection_mode
 		} else {
 			index =  PM_MAX_THREE_CONNECTION_MODE;
 		}
-	} else if (count_sap == 1 && count_sta == 2) {
+	} else if (num_ml_sta == 2 && count_sap == 1) {
+		sap_freq = pm_conc_connection_list[list_sap[0]].freq;
+		policy_mgr_get_index_for_ml_sta_sap(pm_ctx, &index, sap_freq,
+						    freq_list, ml_sta_idx);
+	} else if (count_sap == 1 && count_sta == 2 && !num_ml_sta) {
 		policy_mgr_debug(
 			"channel: sap0: %d, sta0: %d, sta1: %d",
 			pm_conc_connection_list[list_sap[0]].freq,

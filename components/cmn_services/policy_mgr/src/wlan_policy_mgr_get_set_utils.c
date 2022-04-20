@@ -1401,7 +1401,7 @@ policy_mgr_2_freq_same_mac_in_freq_range(
 	return false;
 }
 
-static bool
+bool
 policy_mgr_2_freq_same_mac_in_sbs(struct policy_mgr_psoc_priv_obj *pm_ctx,
 				  qdf_freq_t freq_1, qdf_freq_t freq_2)
 {

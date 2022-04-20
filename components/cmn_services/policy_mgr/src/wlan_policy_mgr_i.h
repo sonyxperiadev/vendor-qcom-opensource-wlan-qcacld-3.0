@@ -845,4 +845,19 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 				       uint32_t ch_freq,
 				       enum hw_mode_bandwidth bw,
 				       uint32_t ext_flags);
+
+/**
+ * policy_mgr_2_freq_same_mac_in_sbs() - to check provided frequencies are
+ * in sbs freq range or not
+ *
+ * @pm_ctx: policy mgr psoc priv object
+ * @freq_1: first frequency
+ * @freq_2: second frequency
+ *
+ * This API is used to check provided frequencies are in sbs freq range or not
+ *
+ * Return: true/false.
+ */
+bool policy_mgr_2_freq_same_mac_in_sbs(struct policy_mgr_psoc_priv_obj *pm_ctx,
+				       qdf_freq_t freq_1, qdf_freq_t freq_2);
 #endif

@@ -852,8 +852,12 @@ enum policy_mgr_two_connection_mode {
  * SAP on 2.4 G
  * @PM_STA_SAP_24_STA_5_DBS: STA & SAP connection on 2.4 Ghz SCC/MCC, another
  * STA on 5G
+ * @PM_STA_STA_24_SAP_5_DBS: STA & STA connection on 2.4 GHZ SCC/MCC,
+ * SAP on 5 GHZ
  * @PM_STA_SAP_5_STA_24_DBS: STA & SAP connection on 5 Ghz SCC/MCC, another
  * STA on 2.4 G
+ * @PM_STA_STA_5_SAP_24_DBS: STA & STA connection on 5 GHZ SCC/MCC,
+ * SAP on 2.4 GHZ
  * @PM_NAN_DISC_SAP_SCC_24_NDI_5_DBS: NAN_DISC & SAP connection on 2.4 Ghz SCC,
  * NDI/NDP on 5 G
  * @PM_NAN_DISC_NDI_SCC_24_SAP_5_DBS: NAN_DISC & NDI/NDP connection on 2.4 Ghz
@@ -890,25 +894,39 @@ enum policy_mgr_two_connection_mode {
  * and second STA on 5Ghz SMM
  * @PM_NAN_DISC_24_STA_24_STA_5_DBS: NAN Disc on 2.4Ghz and first STA on 2.4Ghz
  * and second STA on 5Ghz DBS
- * @PM_STA_24_SAP_5_LOW_MCC_STA_5_HIGH_SBS : First STA on 2.4 & SAP on low 5G
- * MCC on mac 0 and second STA on high 5g on mac1
- * @PM_STA_24_SAP_5_HIGH_MCC_STA_5_LOW_SBS : First STA on 2.4 & SAP on high 5G
- * MCC on mac 0 and second STA on high 5g on mac1
- * @PM_STA_SAP_5_LOW_STA_5_HIGH_SBS : First STA on low 5G & SAP on low 5G
- * SCC/MCC on mac0 and second STA on high 5G on mac1
- * @PM_STA_SAP_5_HIGH_STA_5_LOW_SBS : First STA on high 5G & SAP on high 5G
- * SCC/MCC on mac1 and second STA on low 5G on mac0
- * @PM_STA_5_LOW_SAP_24_MCC_STA_5_HIGH_SBS : First STA on low 5G & SAP on high
- * 2.4G MCC on mac0 and second STA on high 5g on mac1
- * @PM_STA_5_HIGH_SAP_24_MCC_STA_5_LOW_SBS : First STA on high 5G & SAP on 2.4G
- * MCC on mac1 and second STA on low 5g on mac0
+ * @PM_STA_STA_SAP_MCC_SCC_5G_HIGH_PLUS_5_LOW_SBS: ANY 2 link on 5 GHZ high mac
+ * and one link on 5 GHZ low doing SBS
+ * @PM_STA_24_SAP_5_HIGH_MCC_STA_5_LOW_SBS : First STA on 2.4 GHZ & SAP on high
+ * 5 GHZ MCC on mac 0 and second STA on low 5 GHZ on mac1 doing SBS
+ * @PM_STA_24_STA_5_HIGH_MCC_SAP_5_LOW_SBS : First STA on 2.4 GHZ & second STA
+ * on high 5 GHZ MCC on mac 0 and SAP on high 5 GHZ on mac1 doing SBS
+ * @PM_STA_SAP_5_HIGH_STA_5_LOW_SBS : First STA on high 5 GHZ & SAP on high
+ * 5 GHZ SCC/MCC on mac0 and second STA on low 5 GHZ on mac1 doing SBS
+ * @PM_STA_5_HIGH_SAP_24_MCC_STA_5_LOW_SBS : First STA on high 5 GHZ & SAP on
+ * 2.4 GHZ MCC on mac0 and second STA on low 5 GHZ on mac1 doing SBS
+ * @PM_STA_STA_5_HIGH_MCC_SAP_5_LOW_SBS : First STA on high 5 GHZ & Second STA
+ * on high 5 GHZ MCC on mac0 and SAP on low 5 GHZ on mac1 doing SBS
+ * @PM_STA_STA_SAP_MCC_SCC_5G_LOW_PLUS_5_HIGH_SBS: Any 2 link on low 5 GHZ mac
+ * and one link on high 5 GHZ freq doing SBS
+ * @PM_STA_24_SAP_5_LOW_MCC_STA_5_HIGH_SBS : First STA on 2.4 GHZ & SAP on low
+ * 5 GHZ MCC on mac 0 and second STA on high 5 GHZ on mac1 doing SBS
+ * @PM_STA_24_STA_5_LOW_MCC_SAP_5_HIGH_SBS : First STA on 2.4 & second STA on
+ * low 5G MCC on mac 0 and SAP on high 5g on mac1 doing SBS
+ * @PM_STA_SAP_5_LOW_STA_5_HIGH_SBS : First STA on low 5 GHZ & SAP on low 5 GHZ
+ * SCC/MCC on mac0 and second STA on high 5 GHZ on mac1 doing SBS
+ * @PM_STA_5_LOW_SAP_24_MCC_STA_5_HIGH_SBS : First STA on low 5 GHZ & SAP on
+ * 2.4 GHZ MCC on mac0 and second STA on high 5 GHZ on mac1 doing SBS
+ * @PM_STA_STA_5_LOW_MCC_SAP_5_HIGH_SBS : First STA on high 5 GHZ & Second STA
+ * on high 5 GHZ MCC on mac0 and SAP on low 5 GHZ on mac1 doing SBS
  *
  */
 enum policy_mgr_three_connection_mode {
 	PM_STA_SAP_SCC_24_SAP_5_DBS,
 	PM_STA_SAP_SCC_5_SAP_24_DBS,
 	PM_STA_SAP_24_STA_5_DBS,
+	PM_STA_STA_24_SAP_5_DBS = PM_STA_SAP_24_STA_5_DBS,
 	PM_STA_SAP_5_STA_24_DBS,
+	PM_STA_STA_5_SAP_24_DBS = PM_STA_SAP_5_STA_24_DBS,
 	PM_NAN_DISC_SAP_SCC_24_NDI_5_DBS,
 	PM_NAN_DISC_NDI_SCC_24_SAP_5_DBS,
 	PM_SAP_NDI_SCC_5_NAN_DISC_24_DBS,
@@ -933,14 +951,30 @@ enum policy_mgr_three_connection_mode {
 	PM_NAN_DISC_24_STA_5_STA_24_DBS,
 	PM_NAN_DISC_24_STA_24_STA_5_SMM,
 	PM_NAN_DISC_24_STA_24_STA_5_DBS,
-	PM_STA_24_SAP_5_LOW_MCC_STA_5_HIGH_SBS,
-	PM_STA_24_SAP_5_HIGH_MCC_STA_5_LOW_SBS,
-	PM_STA_SAP_5_LOW_STA_5_HIGH_SBS,
-	PM_STA_SAP_5_HIGH_STA_5_LOW_SBS,
-	PM_STA_5_LOW_SAP_24_MCC_STA_5_HIGH_SBS,
-	PM_STA_5_HIGH_SAP_24_MCC_STA_5_LOW_SBS,
+	PM_STA_STA_SAP_MCC_SCC_5G_HIGH_PLUS_5_LOW_SBS,
+	PM_STA_24_SAP_5_HIGH_MCC_STA_5_LOW_SBS =
+		PM_STA_STA_SAP_MCC_SCC_5G_HIGH_PLUS_5_LOW_SBS,
+	PM_STA_24_STA_5_HIGH_MCC_SAP_5_LOW_SBS =
+		PM_STA_STA_SAP_MCC_SCC_5G_HIGH_PLUS_5_LOW_SBS,
+	PM_STA_SAP_5_HIGH_STA_5_LOW_SBS =
+		PM_STA_STA_SAP_MCC_SCC_5G_HIGH_PLUS_5_LOW_SBS,
+	PM_STA_5_HIGH_SAP_24_MCC_STA_5_LOW_SBS =
+		PM_STA_STA_SAP_MCC_SCC_5G_HIGH_PLUS_5_LOW_SBS,
+	PM_STA_STA_5_HIGH_MCC_SAP_5_LOW_SBS =
+		PM_STA_STA_SAP_MCC_SCC_5G_HIGH_PLUS_5_LOW_SBS,
+	PM_STA_STA_SAP_MCC_SCC_5G_LOW_PLUS_5_HIGH_SBS,
+	PM_STA_24_SAP_5_LOW_MCC_STA_5_HIGH_SBS =
+		PM_STA_STA_SAP_MCC_SCC_5G_LOW_PLUS_5_HIGH_SBS,
+	PM_STA_24_STA_5_LOW_MCC_SAP_5_HIGH_SBS =
+		PM_STA_STA_SAP_MCC_SCC_5G_LOW_PLUS_5_HIGH_SBS,
+	PM_STA_SAP_5_LOW_STA_5_HIGH_SBS =
+		PM_STA_STA_SAP_MCC_SCC_5G_LOW_PLUS_5_HIGH_SBS,
+	PM_STA_5_LOW_SAP_24_MCC_STA_5_HIGH_SBS =
+		PM_STA_STA_SAP_MCC_SCC_5G_LOW_PLUS_5_HIGH_SBS,
+	PM_STA_STA_5_LOW_MCC_SAP_5_HIGH_SBS =
+		PM_STA_STA_SAP_MCC_SCC_5G_LOW_PLUS_5_HIGH_SBS,
 
-	PM_MAX_THREE_CONNECTION_MODE
+	PM_MAX_THREE_CONNECTION_MODE,
 };
 #endif
 
