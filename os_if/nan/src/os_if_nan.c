@@ -381,18 +381,6 @@ static int osif_net_dev_from_ifname(struct wlan_objmgr_psoc *psoc,
 	return 0;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-static bool os_if_is_ndi_create_allowed_from_vendor_cmd(void)
-{
-	return false;
-}
-#else
-static bool os_if_is_ndi_create_allowed_from_vendor_cmd(void)
-{
-	return true;
-}
-#endif
-
 static int os_if_nan_process_ndi_create(struct wlan_objmgr_psoc *psoc,
 					struct nlattr **tb)
 {
@@ -402,10 +390,6 @@ static int os_if_nan_process_ndi_create(struct wlan_objmgr_psoc *psoc,
 	char *ifname;
 	int errno;
 
-	if (!os_if_is_ndi_create_allowed_from_vendor_cmd()) {
-		osif_err_rl("ndi create not allowed from vendor command");
-		return -EPERM;
-	}
 	errno = osif_nla_str(tb, QCA_WLAN_VENDOR_ATTR_NDP_IFACE_STR, &ifname);
 	if (errno)
 		return errno;
@@ -438,18 +422,6 @@ destroy_sync:
 	return errno;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-static bool os_if_is_ndi_delete_allowed_from_vendor_cmd(void)
-{
-	return false;
-}
-#else
-static bool os_if_is_ndi_delete_allowed_from_vendor_cmd(void)
-{
-	return true;
-}
-#endif
-
 static int __os_if_nan_process_ndi_delete(struct wlan_objmgr_psoc *psoc,
 					  char *iface_name,
 					  struct nlattr **tb)
@@ -460,11 +432,6 @@ static int __os_if_nan_process_ndi_delete(struct wlan_objmgr_psoc *psoc,
 	uint16_t transaction_id;
 	struct nan_callbacks cb_obj;
 	struct wlan_objmgr_vdev *nan_vdev = NULL;
-
-	if (!os_if_is_ndi_delete_allowed_from_vendor_cmd()) {
-		osif_err_rl("ndi delete not allowed from vendor command");
-		return -EPERM;
-	}
 
 	if (!tb[QCA_WLAN_VENDOR_ATTR_NDP_TRANSACTION_ID]) {
 		osif_err("Transaction id is unavailable");
