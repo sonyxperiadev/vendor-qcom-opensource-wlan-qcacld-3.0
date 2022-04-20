@@ -3482,6 +3482,8 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 		goto out;
 	}
 
+	hdd_handle_acs_2g_preferred_sap_conc(hdd_ctx->psoc, adapter,
+					     sap_config);
 	hdd_avoid_acs_channels(hdd_ctx, sap_config);
 
 	pm_mode =

@@ -94,6 +94,7 @@ typedef int (*send_mode_change_event_cb)(void);
  * @CSA_REASON_CHAN_DISABLED: channel is disabled
  * @CSA_REASON_CHAN_PASSIVE: channel is passive
  * @CSA_REASON_GO_BSS_STARED: P2P go started
+ * @CSA_REASON_SAP_ACS: 2.4 GHz perferred SAP ACS starting
  */
 enum sap_csa_reason_code {
 	CSA_REASON_UNKNOWN,
@@ -110,6 +111,7 @@ enum sap_csa_reason_code {
 	CSA_REASON_CHAN_DISABLED,
 	CSA_REASON_CHAN_PASSIVE,
 	CSA_REASON_GO_BSS_STARTED,
+	CSA_REASON_SAP_ACS
 };
 
 /**
