@@ -1819,6 +1819,18 @@ sap_cac_end_notify(mac_handle_t mac_handle,
 }
 #endif /* PRE_CAC_SUPPORT */
 
+#ifdef WLAN_FEATURE_SAP_ACS_OPTIMIZE
+static inline bool sap_is_acs_scan_optimize_enable(void)
+{
+	return true;
+}
+#else
+static inline bool sap_is_acs_scan_optimize_enable(void)
+{
+	return false;
+}
+#endif
+
 #ifdef __cplusplus
 }
 #endif

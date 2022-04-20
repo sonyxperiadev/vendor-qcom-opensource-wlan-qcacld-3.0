@@ -3187,7 +3187,8 @@ void lim_process_rx_channel_status_event(struct mac_context *mac_ctx, void *buf)
 		return;
 	}
 
-	if (mac_ctx->sap.acs_with_more_param)
+	if (mac_ctx->sap.acs_with_more_param ||
+	    sap_is_acs_scan_optimize_enable())
 		lim_add_channel_status_info(mac_ctx, chan_status,
 					    chan_status->channel_id);
 	else

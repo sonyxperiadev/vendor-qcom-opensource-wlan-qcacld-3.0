@@ -5112,7 +5112,8 @@ int wma_chan_info_event_handler(void *handle, uint8_t *event_buf,
 	mode = wlan_vdev_mlme_get_opmode(vdev);
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_WMA_ID);
 
-	if (mac->sap.acs_with_more_param && mode == QDF_SAP_MODE) {
+	if ((mac->sap.acs_with_more_param && mode == QDF_SAP_MODE) ||
+	    sap_is_acs_scan_optimize_enable()) {
 		channel_status = qdf_mem_malloc(sizeof(*channel_status));
 		if (!channel_status)
 			return -ENOMEM;
