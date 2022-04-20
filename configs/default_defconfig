@@ -548,15 +548,12 @@ CONFIG_MCC_TO_SCC_SWITCH := y
 ifeq ($(CONFIG_SLUB_DEBUG_ON), y)
 	# Enable Obj Mgr Degug services if slub build
 	CONFIG_WLAN_OBJMGR_DEBUG:= y
-	CONFIG_MPC_UT_FRAMEWORK := y
 	CONFIG_LOCK_STATS_ON:= y
 	CONFIG_WLAN_OBJMGR_REF_ID_TRACE := y
 endif
 
 ifeq ($(CONFIG_WLAN_SYSFS), y)
-ifeq ($(CONFIG_MPC_UT_FRAMEWORK), y)
 	CONFIG_WLAN_SYSFS_RANGE_EXT := y
-endif
 endif
 
 ifeq (y,$(findstring y,$(CONFIG_QCA_WIFI_SDIO) $(CONFIG_HIF_USB)))
