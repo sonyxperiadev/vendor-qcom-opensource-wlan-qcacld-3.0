@@ -174,8 +174,8 @@ enum policy_mgr_pcl_group_id {
  * @POLICY_MGR_PCL_ORDER_5G_THEN_2G: 5 Ghz channel followed by 2.4 Ghz channel
  * @POLICY_MGR_PCL_ORDER_2G: 2G channels
  * @POLICY_MGR_PCL_ORDER_5G: 5G channels
- * @POLICY_MGR_PCL_ORDER_5G_LOW : 5G low share
- * @POLICY_MGR_PCL_ORDER_5G_HIGH : 5G High share
+ * @POLICY_MGR_PCL_ORDER_5G_LOW : 5G low band i.e 5G freq < sbs cutoff freq
+ * @POLICY_MGR_PCL_ORDER_5G_HIGH : 5G High band i.e 5G freq > sbs cutoff freq
  *
  * Order in which the PCL is requested
  */
@@ -332,6 +332,8 @@ enum policy_mgr_mac_use {
  *      SBS channels & rest of the 5G channels
  * @PM_24G_SBS_CH_MCC_CH: 2.4 Ghz channels, SBS channels & MCC channels
  * @PM_SBS_CH_2G: SBS channels & 2.4 Ghz channels
+ * @PM_CH_5G_LOW: 5G frequencies < sbs cut off freq
+ * @PM_CH_5G_HIGH: 5G frequencies > sbs cut off freq
  * @PM_MAX_PCL_TYPE: Max place holder
  *
  * These are generic IDs that identify the various roles
