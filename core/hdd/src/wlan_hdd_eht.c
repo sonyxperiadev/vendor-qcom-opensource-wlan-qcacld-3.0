@@ -133,6 +133,9 @@ hdd_update_wiphy_eht_caps_6ghz(struct hdd_context *hdd_ctx,
 		phy_info[0] |= CHAN_WIDTH_SET_160MHZ_IN_5G;
 	if (max_fw_bw >= WNI_CFG_VHT_CHANNEL_WIDTH_80_PLUS_80MHZ)
 		phy_info[0] |= CHAN_WIDTH_SET_80PLUS80_MHZ_IN_5G;
+
+	if (eht_cap.support_320mhz_6ghz)
+		phy_info[0] |= IEEE80211_EHT_PHY_CAP0_320MHZ_IN_6GHZ;
 }
 
 #ifdef CFG80211_RU_PUNCT_SUPPORT
