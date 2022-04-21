@@ -2952,6 +2952,19 @@ bool policy_mgr_is_current_hwmode_dbs(struct wlan_objmgr_psoc *psoc);
 bool policy_mgr_is_current_hwmode_sbs(struct wlan_objmgr_psoc *psoc);
 
 /**
+ * policy_mgr_is_curr_hwmode_emlsr() - Function to check if current HW mode is
+ * eMLSR
+ *
+ * @psoc: Pointer to psoc
+ *
+ * This Function checks if current HW mode is eMLSR
+ *
+ * Return:True if current HW mode is eMLSR.
+ *
+ */
+bool policy_mgr_is_curr_hwmode_emlsr(struct wlan_objmgr_psoc *psoc);
+
+/**
  * policy_mgr_is_dp_hw_dbs_capable() - if hardware is capable of dbs 2x2
  * or 1X1 for Data Path (HW mode)
  * @psoc: PSOC object information
@@ -4290,6 +4303,20 @@ bool policy_mgr_is_mlo_in_mode_sbs(struct wlan_objmgr_psoc *psoc,
 				   enum policy_mgr_con_mode mode,
 				   uint8_t *mlo_vdev_lst, uint8_t *num_mlo);
 
+/**
+ * policy_mgr_is_mlo_in_mode_emlsr() - Check whether current connection is eMLSR
+ * @psoc: PSOC object information
+ * @mlo_vdev_lst: Pointer to mlo vdev list, this function wil fill this with
+ *                list of mlo vdev
+ * @num_mlo: Pointer to number of mlo link, this function will fill this with
+ *           number of mlo links
+ *
+ * Return: True if current connection is in eMLSR mode i.e. Both STA and AP
+ *         support eMLSR connection along with vendor command selection
+ */
+bool policy_mgr_is_mlo_in_mode_emlsr(struct wlan_objmgr_psoc *psoc,
+				     uint8_t *mlo_vdev_lst, uint8_t *num_mlo);
+
 /*
  * policy_mgr_handle_ml_sta_links_on_vdev_up_csa() - Handle enable/disable
  * link on vdev UP and channel change
@@ -4331,6 +4358,10 @@ void policy_mgr_handle_ml_sta_link_on_traffic_type_change(
 void policy_mgr_handle_ml_sta_links_on_vdev_down(struct wlan_objmgr_psoc *psoc,
 						 enum QDF_OPMODE mode,
 						 uint8_t vdev_id);
+
+void policy_mgr_handle_emlsr_sta_concurrency(struct wlan_objmgr_psoc *psoc,
+					     struct wlan_objmgr_vdev *vdev,
+					     bool is_ap_up, bool sta_coming_up);
 #else
 
 static inline bool policy_mgr_is_mlo_sap_concurrency_allowed(
@@ -4371,6 +4402,13 @@ policy_mgr_handle_ml_sta_link_on_traffic_type_change(
 						struct wlan_objmgr_psoc *psoc,
 						struct wlan_objmgr_vdev *vdev)
 {
+}
+
+static inline
+bool policy_mgr_is_mlo_in_mode_emlsr(struct wlan_objmgr_psoc *psoc,
+				     uint8_t *mlo_vdev_lst, uint8_t *num_mlo)
+{
+	return false;
 }
 
 static inline

@@ -1287,6 +1287,7 @@ QDF_STATUS policy_mgr_update_hw_mode_list(struct wlan_objmgr_psoc *psoc,
 		hw_config_type = tmp->hw_mode_config_type;
 		dbs_mode = HW_MODE_DBS_NONE;
 		sbs_mode = HW_MODE_SBS_NONE;
+		emlsr_mode = HW_MODE_EMLSR_NONE;
 		mac1_ss_bw_info.mac_tx_stream = 0;
 		mac1_ss_bw_info.mac_rx_stream = 0;
 		mac1_ss_bw_info.mac_bw = 0;
@@ -4760,6 +4761,116 @@ bool policy_mgr_is_mlo_in_mode_sbs(struct wlan_objmgr_psoc *psoc,
 	}
 
 	return is_sbs_link;
+}
+
+bool policy_mgr_is_curr_hwmode_emlsr(struct wlan_objmgr_psoc *psoc)
+{
+	struct policy_mgr_hw_mode_params hw_mode;
+
+	if (!policy_mgr_is_hw_emlsr_capable(psoc))
+		return false;
+
+	if (QDF_STATUS_SUCCESS != policy_mgr_get_current_hw_mode(psoc,
+								 &hw_mode))
+		return false;
+
+	if (!hw_mode.emlsr_cap)
+		return false;
+
+	return true;
+}
+
+bool policy_mgr_is_mlo_in_mode_emlsr(struct wlan_objmgr_psoc *psoc,
+				     uint8_t *mlo_vdev_lst, uint8_t *num_mlo)
+{
+	bool emlsr_connection = false;
+	uint32_t mode_num = 0;
+	uint8_t i, mlo_idx = 0;
+	struct wlan_objmgr_vdev *temp_vdev;
+	uint8_t vdev_id_list[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
+
+	mode_num = policy_mgr_get_mode_specific_conn_info(psoc, NULL,
+							  vdev_id_list,
+							  PM_STA_MODE);
+
+	if (!mode_num || mode_num < 2)
+		goto end;
+
+	for (i = 0; i < mode_num; i++) {
+		temp_vdev = wlan_objmgr_get_vdev_by_id_from_psoc(
+							psoc, vdev_id_list[i],
+							WLAN_POLICY_MGR_ID);
+		if (!temp_vdev) {
+			policy_mgr_err("invalid vdev for id %d",
+				       vdev_id_list[i]);
+			goto end;
+		}
+
+		if (wlan_vdev_mlme_is_mlo_vdev(temp_vdev)) {
+			if (mlo_vdev_lst)
+				mlo_vdev_lst[mlo_idx] = vdev_id_list[i];
+			mlo_idx++;
+		}
+		/* Check if existing vdev is eMLSR STA */
+		if (wlan_vdev_mlme_get_emlsr_caps(temp_vdev))
+			emlsr_connection = true;
+
+		wlan_objmgr_vdev_release_ref(temp_vdev, WLAN_POLICY_MGR_ID);
+	}
+end:
+	if (num_mlo)
+		*num_mlo = mlo_idx;
+
+	return emlsr_connection;
+}
+
+void policy_mgr_handle_emlsr_sta_concurrency(struct wlan_objmgr_psoc *psoc,
+					     struct wlan_objmgr_vdev *vdev,
+					     bool ap_coming_up,
+					     bool sta_coming_up)
+{
+	uint8_t num_mlo = 0;
+	uint8_t mlo_vdev_lst[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
+	bool is_mlo_emlsr;
+	struct mac_context *mac_ctx = cds_get_context(QDF_MODULE_ID_SME);
+
+	if (!mac_ctx)
+		return;
+
+	is_mlo_emlsr = policy_mgr_is_mlo_in_mode_emlsr(psoc, mlo_vdev_lst,
+						       &num_mlo);
+
+	if (num_mlo < 2) {
+		policy_mgr_debug("vdev %d AP_state %d MLO Sta links %d",
+				 wlan_vdev_get_id(vdev), ap_coming_up, num_mlo);
+		return;
+	}
+
+	policy_mgr_debug("vdev %d: AP coming up %d STA coming up %d num_mlo %d is_mlo_emlsr %d",
+			 wlan_vdev_get_id(vdev), ap_coming_up, sta_coming_up,
+			 num_mlo, is_mlo_emlsr);
+
+	if (!is_mlo_emlsr)
+		return;
+
+	if (ap_coming_up || sta_coming_up) {
+		/*
+		 * During SAP/STA up, If eMLSR STA is present,
+		 * then Disable one of the links. FW will decide which link.
+		 */
+		policy_mgr_mlo_sta_set_link(psoc, MLO_LINK_FORCE_REASON_CONNECT,
+					    MLO_LINK_FORCE_MODE_INACTIVE_NUM,
+					    num_mlo, mlo_vdev_lst);
+		return;
+	}
+
+	/*
+	 * During SAP/STA down, if eMLSR STA is present, re-enable both the
+	 * links, as one of them was disabled during up.
+	 */
+	policy_mgr_mlo_sta_set_link(psoc, MLO_LINK_FORCE_REASON_DISCONNECT,
+				    MLO_LINK_FORCE_MODE_NO_FORCE,
+				    num_mlo, mlo_vdev_lst);
 }
 
 static uint8_t

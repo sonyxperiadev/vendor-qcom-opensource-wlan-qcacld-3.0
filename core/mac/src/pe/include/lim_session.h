@@ -805,7 +805,6 @@ struct pe_session {
 	struct mlo_partner_info ml_partner_info;
 	uint16_t mlo_ie_total_len;
 	struct wlan_mlo_ie mlo_ie;
-	bool is_emlsr_capable;
 #endif
 #endif /* WLAN_FEATURE_11BE */
 	uint8_t user_edca_set;

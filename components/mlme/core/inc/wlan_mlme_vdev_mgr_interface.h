@@ -527,4 +527,25 @@ QDF_STATUS wlan_sap_stop_bss(uint8_t vdev_id);
  */
 qdf_freq_t wlan_get_conc_freq(void);
 
+#ifdef WLAN_FEATURE_11BE_MLO
+/**
+ * wlan_handle_emlsr_sta_concurrency() - Handle concurrency scenarios with
+ * existing eMLSR connection when a new cktn request is received.
+ *
+ * @vdev: pointer to vdev on which new connection is coming up
+ * @ap_coming_up: Check if the new cktn request is SAP/P2P GO/NAN
+ * @sta_coming_up: Check if the new cktn request is STA/P2P Client
+ *
+ * Return: none
+ */
+void
+wlan_handle_emlsr_sta_concurrency(struct wlan_objmgr_vdev *vdev,
+				  bool ap_coming_up, bool sta_coming_up);
+#else
+static inline void
+wlan_handle_emlsr_sta_concurrency(struct wlan_objmgr_vdev *vdev,
+				  bool ap_coming_up, bool sta_coming_up)
+{
+}
+#endif
 #endif

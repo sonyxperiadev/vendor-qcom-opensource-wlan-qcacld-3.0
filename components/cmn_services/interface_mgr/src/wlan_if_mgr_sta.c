@@ -34,6 +34,7 @@
 #include <wlan_mlo_mgr_cmn.h>
 #include <wlan_cm_roam_api.h>
 #include "wlan_nan_api.h"
+#include "wlan_mlme_vdev_mgr_interface.h"
 #ifdef WLAN_FEATURE_11BE_MLO
 #include <wlan_mlo_mgr_sta.h>
 #endif
@@ -68,6 +69,10 @@ QDF_STATUS if_mgr_connect_start(struct wlan_objmgr_vdev *vdev,
 							 &vdev_id_list[sta_cnt],
 							 PM_SAP_MODE);
 	op_mode = wlan_vdev_mlme_get_opmode(vdev);
+
+	if (op_mode == QDF_STA_MODE || op_mode == QDF_P2P_CLIENT_MODE)
+		wlan_handle_emlsr_sta_concurrency(vdev, false, true);
+
 	if (op_mode == QDF_P2P_CLIENT_MODE || sap_cnt || sta_cnt) {
 		for (i = 0; i < sta_cnt + sap_cnt; i++) {
 			if (vdev_id_list[i] == wlan_vdev_get_id(vdev))
@@ -199,6 +204,10 @@ QDF_STATUS if_mgr_disconnect_complete(struct wlan_objmgr_vdev *vdev,
 	psoc = wlan_pdev_get_psoc(pdev);
 	if (!psoc)
 		return QDF_STATUS_E_FAILURE;
+
+	if (wlan_vdev_mlme_get_opmode(vdev) == QDF_STA_MODE ||
+	    wlan_vdev_mlme_get_opmode(vdev) == QDF_P2P_CLIENT_MODE)
+		wlan_handle_emlsr_sta_concurrency(vdev, false, false);
 
 	status = if_mgr_enable_roaming_after_p2p_disconnect(pdev, vdev,
 							RSO_INVALID_REQUESTOR);

@@ -10771,6 +10771,7 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 	QDF_STATUS status;
 	bool emlsr_cap, emlsr_enabled = false;
 	struct wlan_objmgr_psoc *psoc;
+	struct vdev_mlme_obj *mlme_obj;
 	tDot11fIEnon_inheritance sta_prof_non_inherit;
 	tDot11fFfCapabilities mlo_cap;
 	tDot11fIEHTCaps ht_caps;
@@ -10790,6 +10791,12 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 	psoc = wlan_vdev_get_psoc(pe_session->vdev);
 	if (!psoc) {
 		pe_err("Invalid psoc");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	mlme_obj = wlan_vdev_mlme_get_cmpt_obj(pe_session->vdev);
+	if (!mlme_obj) {
+		pe_err(" VDEV MLME component object is NULL");
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -10820,12 +10827,18 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 		mlo_ie->mld_capabilities_info.aar_support = 0;
 	}
 
+	/* Check if HW supports eMLSR mode */
 	emlsr_cap = policy_mgr_is_hw_emlsr_capable(psoc);
 
+	/* Check if eMLSR is selected through vendor cmd */
 	wlan_mlme_get_emlsr_mode_enabled(psoc, &emlsr_enabled);
-	pe_session->is_emlsr_capable = emlsr_cap && emlsr_enabled;
 
-	if (pe_session->is_emlsr_capable) {
+	wlan_vdev_mlme_set_emlsr_caps(pe_session->vdev,
+				      emlsr_cap && emlsr_enabled);
+
+	/* If there is an existing connection, then do not allow eMLSR */
+	if (emlsr_cap && emlsr_enabled &&
+	    !policy_mgr_get_connection_count(psoc)) {
 		mlo_ie->eml_capab_present = 1;
 		presence_bitmap |= WLAN_ML_BV_CTRL_PBM_EMLCAP_P;
 		mlo_ie->common_info_length += WLAN_ML_BV_CINFO_EMLCAP_SIZE;
