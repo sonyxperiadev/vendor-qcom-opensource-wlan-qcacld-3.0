@@ -50,6 +50,11 @@ static const uint16_t sap_mand_5g_freq_list[] = {5745, 5765, 5785, 5805};
 struct policy_mgr_conc_connection_info
 	pm_conc_connection_list[MAX_NUMBER_OF_CONC_CONNECTIONS];
 
+#ifdef WLAN_FEATURE_11BE_MLO
+struct policy_mgr_disabled_ml_link_info
+	pm_disabled_ml_links[MAX_NUMBER_OF_DISABLE_LINK];
+#endif
+
 struct policy_mgr_psoc_priv_obj *policy_mgr_get_context(
 		struct wlan_objmgr_psoc *psoc)
 {
@@ -1462,6 +1467,30 @@ static void policy_mgr_dump_sbs_concurrency(struct wlan_objmgr_psoc *psoc,
 	policy_mgr_dump_dual_mac_concurrency(pm_ctx, cc_mode, length);
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+void
+policy_mgr_dump_disabled_ml_links(struct policy_mgr_psoc_priv_obj *pm_ctx)
+{
+	uint8_t buf[POLICY_MGR_MAX_CON_STRING_LEN] = {0};
+	uint32_t len = 0, count = 0, i;
+
+	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
+	for (i = 0; i < MAX_NUMBER_OF_DISABLE_LINK; i++) {
+		if (pm_disabled_ml_links[i].in_use) {
+			len += qdf_scnprintf(buf + len,
+					    POLICY_MGR_MAX_CON_STRING_LEN - len,
+					    "vdev %d :Mode %d freq %d, ",
+					    pm_disabled_ml_links[i].vdev_id,
+					    pm_disabled_ml_links[i].mode,
+					    pm_disabled_ml_links[i].freq);
+			count++;
+		}
+	}
+	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+	policy_mgr_debug("Disabled links(%d): %s", count, buf);
+}
+#endif
+
 /**
  * policy_mgr_dump_current_concurrency() - To dump the current
  * concurrency combination
@@ -1542,6 +1571,7 @@ void policy_mgr_dump_current_concurrency(struct wlan_objmgr_psoc *psoc)
 				 num_connections);
 		break;
 	}
+	policy_mgr_dump_disabled_ml_links(pm_ctx);
 
 	return;
 }

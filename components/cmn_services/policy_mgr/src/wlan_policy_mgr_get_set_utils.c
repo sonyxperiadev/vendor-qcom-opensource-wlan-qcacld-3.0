@@ -3047,6 +3047,192 @@ policy_mgr_validate_conn_info(struct wlan_objmgr_psoc *psoc)
 	return panic;
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+bool policy_mgr_is_ml_vdev_id(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
+{
+	struct wlan_objmgr_vdev *vdev;
+	bool is_mlo = false;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_POLICY_MGR_ID);
+	if (!vdev)
+		return is_mlo;
+
+	if (wlan_vdev_mlme_is_mlo_vdev(vdev))
+		is_mlo = true;
+
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
+
+	return is_mlo;
+}
+
+uint32_t policy_mgr_get_disabled_ml_links_count(struct wlan_objmgr_psoc *psoc)
+{
+	uint32_t i, count = 0;
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid pm_ctx");
+		return count;
+	}
+
+	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
+	for (i = 0; i < MAX_NUMBER_OF_DISABLE_LINK; i++) {
+		if (pm_disabled_ml_links[i].in_use)
+			count++;
+	}
+	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+
+	return count;
+}
+
+static QDF_STATUS
+policy_mgr_delete_from_disabled_links(struct policy_mgr_psoc_priv_obj *pm_ctx,
+				      uint8_t vdev_id)
+{
+	int i;
+
+	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
+	for (i = 0; i < MAX_NUMBER_OF_DISABLE_LINK; i++) {
+		if (pm_disabled_ml_links[i].in_use &&
+		    pm_disabled_ml_links[i].vdev_id == vdev_id) {
+			pm_disabled_ml_links[i].in_use = false;
+			policy_mgr_debug("Disabled link removed for vdev %d",
+					 vdev_id);
+			break;
+		}
+	}
+	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+	/* Return failure if not found */
+	if (i >= MAX_NUMBER_OF_DISABLE_LINK)
+		return QDF_STATUS_E_EXISTS;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+void policy_mgr_move_vdev_from_disabled_to_connection_tbl(
+						struct wlan_objmgr_psoc *psoc,
+						uint8_t vdev_id)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	QDF_STATUS status;
+	enum QDF_OPMODE mode;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid pm_ctx");
+		return;
+	}
+	mode = wlan_get_opmode_from_vdev_id(pm_ctx->pdev, vdev_id);
+	if (mode != QDF_STA_MODE) {
+		policy_mgr_err("vdev %d opmode %d is not STA", vdev_id, mode);
+		return;
+	}
+
+	if (!policy_mgr_is_ml_vdev_id(psoc, vdev_id)) {
+		policy_mgr_err("vdev %d is not ML", vdev_id);
+		return;
+	}
+
+	status = policy_mgr_delete_from_disabled_links(pm_ctx, vdev_id);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		policy_mgr_err("Disabled link not found for vdev %d", vdev_id);
+		return;
+	}
+
+	/*
+	 * Add entry to pm_conc_connection_list if remove from disabled links
+	 * was success
+	 */
+	policy_mgr_incr_active_session(psoc, mode, vdev_id);
+}
+
+static QDF_STATUS
+policy_mgr_add_to_disabled_links(struct policy_mgr_psoc_priv_obj *pm_ctx,
+				 qdf_freq_t freq, enum QDF_OPMODE mode,
+				 uint8_t vdev_id)
+{
+	int i;
+	enum policy_mgr_con_mode pm_mode;
+
+	pm_mode = policy_mgr_convert_device_mode_to_qdf_type(mode);
+
+	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
+	for (i = 0; i < MAX_NUMBER_OF_DISABLE_LINK; i++) {
+		if (pm_disabled_ml_links[i].in_use &&
+		    pm_disabled_ml_links[i].vdev_id == vdev_id)
+			break;
+	}
+
+	if (i < MAX_NUMBER_OF_DISABLE_LINK) {
+		pm_disabled_ml_links[i].freq = freq;
+		qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+		policy_mgr_info("Disabled link already present vdev_id %d, update freq %d",
+				vdev_id, freq);
+
+		return QDF_STATUS_E_EXISTS;
+	}
+
+	for (i = 0; i < MAX_NUMBER_OF_DISABLE_LINK; i++) {
+		if (!pm_disabled_ml_links[i].in_use) {
+			/* add in empty place */
+			pm_disabled_ml_links[i].vdev_id = vdev_id;
+			pm_disabled_ml_links[i].mode = pm_mode;
+			pm_disabled_ml_links[i].in_use = true;
+			pm_disabled_ml_links[i].freq = freq;
+			break;
+		}
+	}
+	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+	if (i >= MAX_NUMBER_OF_DISABLE_LINK) {
+		policy_mgr_err("No empty entry found to disable link for vdev %d",
+			       vdev_id);
+		return QDF_STATUS_E_RESOURCES;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+void policy_mgr_move_vdev_from_connection_to_disabled_tbl(
+						struct wlan_objmgr_psoc *psoc,
+						uint8_t vdev_id)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	qdf_freq_t freq;
+	enum QDF_OPMODE mode;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid pm_ctx");
+		return;
+	}
+
+	mode = wlan_get_opmode_from_vdev_id(pm_ctx->pdev, vdev_id);
+	if (mode != QDF_STA_MODE) {
+		policy_mgr_err("vdev %d opmode %d is not STA", vdev_id, mode);
+		return;
+	}
+
+	if (!policy_mgr_is_ml_vdev_id(psoc, vdev_id)) {
+		policy_mgr_err("vdev %d is not ML", vdev_id);
+		return;
+	}
+	freq = wlan_get_operation_chan_freq_vdev_id(pm_ctx->pdev, vdev_id);
+	/* Remove entry if present in pm_conc_connection_list */
+	policy_mgr_decr_session_set_pcl(psoc, mode, vdev_id);
+
+	policy_mgr_add_to_disabled_links(pm_ctx, freq, mode, vdev_id);
+}
+#else
+static inline QDF_STATUS
+policy_mgr_delete_from_disabled_links(struct policy_mgr_psoc_priv_obj *pm_ctx,
+				      uint8_t vdev_id)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 void policy_mgr_incr_active_session(struct wlan_objmgr_psoc *psoc,
 				enum QDF_OPMODE mode,
 				uint8_t session_id)
@@ -3240,10 +3426,16 @@ QDF_STATUS policy_mgr_decr_active_session(struct wlan_objmgr_psoc *psoc,
 	qdf_status = policy_mgr_check_conn_with_mode_and_vdev_id(psoc,
 			policy_mgr_convert_device_mode_to_qdf_type(mode),
 			session_id);
-	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
+	if (QDF_IS_STATUS_ERROR(qdf_status)) {
 		policy_mgr_debug("No connection with mode:%d vdev_id:%d",
 			policy_mgr_convert_device_mode_to_qdf_type(mode),
 			session_id);
+		/*
+		 * In case of disconnect try delete the link from disabled link
+		 * as well, if its not present in pm_conc_connection_list,
+		 * it can be present in pm_disabled_ml_links.
+		 */
+		policy_mgr_delete_from_disabled_links(pm_ctx, session_id);
 		return qdf_status;
 	}
 
@@ -5734,6 +5926,7 @@ void policy_mgr_dump_connection_status_info(struct wlan_objmgr_psoc *psoc)
 				 pm_conc_connection_list[i].ch_flagext);
 	}
 	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+	policy_mgr_dump_disabled_ml_links(pm_ctx);
 
 	policy_mgr_dump_freq_range(pm_ctx);
 	policy_mgr_validate_conn_info(psoc);

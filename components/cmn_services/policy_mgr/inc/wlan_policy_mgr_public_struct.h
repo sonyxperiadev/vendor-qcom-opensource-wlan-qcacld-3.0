@@ -64,6 +64,11 @@
 #define MAX_NUMBER_OF_CONC_CONNECTIONS 3
 #endif
 
+#ifdef WLAN_FEATURE_11BE_MLO
+/* Max MLO VDEVS - 1 as all vdevs cannot be disabled */
+#define MAX_NUMBER_OF_DISABLE_LINK WLAN_UMAC_MLO_MAX_VDEVS - 1
+#endif
+
 /* Policy manager default request id */
 #define POLICY_MGR_DEF_REQ_ID 0
 
@@ -1228,6 +1233,23 @@ struct policy_mgr_conc_connection_info {
 	uint16_t      ch_flagext;
 	enum conn_6ghz_flag conn_6ghz_flag;
 };
+
+#ifdef WLAN_FEATURE_11BE_MLO
+/**
+ * struct policy_mgr_disabled_ml_link_info - information of all existing
+ * disabled ml link
+ * @in_use: if the table entry is active
+ * @mode: connection type
+ * @freq: Channel frequency
+ * @vdev_id: vdev id of the connection
+ */
+struct policy_mgr_disabled_ml_link_info {
+	bool in_use;
+	enum policy_mgr_con_mode mode;
+	qdf_freq_t freq;
+	uint8_t vdev_id;
+};
+#endif
 
 /**
  * struct policy_mgr_hw_mode_params - HW mode params

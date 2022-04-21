@@ -836,6 +836,13 @@ cm_fw_roam_sync_propagation(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 	}
 
 	cm_process_roam_keys(vdev, rsp, cm_id);
+	/*
+	 * Re-enable the disabled link on roaming as desision
+	 * will be taken again to disable the link on roam sync completion.
+	 */
+	if (wlan_vdev_mlme_is_mlo_vdev(vdev))
+		policy_mgr_move_vdev_from_disabled_to_connection_tbl(psoc,
+								     vdev_id);
 	mlme_cm_osif_connect_complete(vdev, connect_rsp);
 
 	/**

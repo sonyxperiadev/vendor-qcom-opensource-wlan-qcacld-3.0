@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -422,6 +422,15 @@ static void policy_mgr_init_non_dbs_pcl(struct wlan_objmgr_psoc *psoc)
 }
 #endif
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static inline void policy_mgr_memzero_disabled_ml_list(void)
+{
+	qdf_mem_zero(pm_disabled_ml_links, sizeof(pm_disabled_ml_links));
+}
+#else
+static inline void policy_mgr_memzero_disabled_ml_list(void) {}
+#endif
+
 QDF_STATUS policy_mgr_psoc_enable(struct wlan_objmgr_psoc *psoc)
 {
 	QDF_STATUS status;
@@ -438,6 +447,7 @@ QDF_STATUS policy_mgr_psoc_enable(struct wlan_objmgr_psoc *psoc)
 
 	/* init pm_conc_connection_list */
 	qdf_mem_zero(pm_conc_connection_list, sizeof(pm_conc_connection_list));
+	policy_mgr_memzero_disabled_ml_list();
 	policy_mgr_clear_concurrent_session_count(psoc);
 	/* init dbs_opportunistic_timer */
 	status = qdf_mc_timer_init(&pm_ctx->dbs_opportunistic_timer,

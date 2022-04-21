@@ -994,6 +994,74 @@ QDF_STATUS policy_mgr_decr_active_session(struct wlan_objmgr_psoc *psoc,
 void policy_mgr_decr_session_set_pcl(struct wlan_objmgr_psoc *psoc,
 		enum QDF_OPMODE mode, uint8_t session_id);
 
+#ifdef WLAN_FEATURE_11BE_MLO
+/**
+ * policy_mgr_is_mlo_vdev_id() - check if vdev id is part of ML
+ * @psoc: PSOC object information
+ * @vdev_id: vdev id to check
+ *
+ * Return: true if vdev is part of ml
+ */
+bool policy_mgr_is_ml_vdev_id(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id);
+
+/**
+ * policy_mgr_get_disabled_ml_links_count() - provides the count of
+ * disabled ml links
+ * @psoc: PSOC object information
+ *
+ * This function provides the count of disabled ml links
+ *
+ * Return: disabled ml links count
+ */
+uint32_t policy_mgr_get_disabled_ml_links_count(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * policy_mgr_move_vdev_from_disabled_to_connection_tbl() - re-enable a ml link
+ * and move it from disabled link table to pm_conc_connection_list
+ * @psoc: PSOC object information
+ * @vdev_id: vdev id
+ *
+ * Return: None
+ */
+void policy_mgr_move_vdev_from_disabled_to_connection_tbl(
+						struct wlan_objmgr_psoc *psoc,
+						uint8_t vdev_id);
+
+/**
+ * policy_mgr_move_vdev_from_connection_to_disabled_tbl() - Add/move the link
+ * vdev to disable a ml link table
+ * @psoc: PSOC object information
+ * @vdev_id: vdev id
+ *
+ * Return: None
+ */
+void policy_mgr_move_vdev_from_connection_to_disabled_tbl(
+						struct wlan_objmgr_psoc *psoc,
+						uint8_t vdev_id);
+#else
+static inline bool
+policy_mgr_is_ml_vdev_id(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
+{
+	return false;
+}
+
+static inline uint32_t
+policy_mgr_get_disabled_ml_links_count(struct wlan_objmgr_psoc *psoc)
+{
+	return 0;
+}
+
+static inline void
+policy_mgr_move_vdev_from_disabled_to_connection_tbl(
+						struct wlan_objmgr_psoc *psoc,
+						uint8_t vdev_id) {}
+
+static inline void
+policy_mgr_move_vdev_from_connection_to_disabled_tbl(
+						struct wlan_objmgr_psoc *psoc,
+						uint8_t vdev_id) {}
+#endif
+
 /**
  * policy_mgr_skip_dfs_ch() - skip dfs channel or not
  * @psoc: pointer to soc
