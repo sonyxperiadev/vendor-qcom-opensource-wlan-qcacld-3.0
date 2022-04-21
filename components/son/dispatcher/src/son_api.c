@@ -990,9 +990,11 @@ static int wlan_cbs_iterate(struct son_cbs *cbs)
 	int offset_array_idx;
 	struct wlan_objmgr_psoc *psoc;
 
-	if (!cbs || !cbs->vdev)
-		return -EINVAL;
 	qdf_spin_lock_bh(&g_cbs_lock);
+	if (!cbs || !cbs->vdev) {
+		qdf_spin_unlock_bh(&g_cbs_lock);
+		return -EINVAL;
+	}
 	son_debug("dwell_split_cnt: %d", cbs->dwell_split_cnt);
 	if (cbs->dwell_split_cnt < 0) {
 		psoc = wlan_vdev_get_psoc(cbs->vdev);
