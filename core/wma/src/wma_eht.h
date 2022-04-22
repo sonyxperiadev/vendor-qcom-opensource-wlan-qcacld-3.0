@@ -20,6 +20,13 @@
 
 #include "wma.h"
 
+enum EHT_TXRX_MCS_NSS_IDX {
+	EHTCAP_TXRX_MCS_NSS_IDX0,
+	EHTCAP_TXRX_MCS_NSS_IDX1,
+	EHTCAP_TXRX_MCS_NSS_IDX2,
+	EHTCAP_TXRX_MCS_NSS_IDXMAX,
+};
+
 #if defined(WLAN_FEATURE_11BE)
 /*
  * wma_eht_update_tgt_services() - update tgt cfg to indicate 11be support

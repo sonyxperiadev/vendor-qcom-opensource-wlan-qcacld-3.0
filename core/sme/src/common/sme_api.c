@@ -10679,11 +10679,11 @@ void sme_update_tgt_eht_cap(mac_handle_t mac_handle,
 	struct mac_context *mac_ctx = MAC_CONTEXT(mac_handle);
 
 	qdf_mem_copy(&mac_ctx->eht_cap_2g,
-		     &cfg->eht_cap_2g,
+		     &cfg->eht_cap,
 		     sizeof(tDot11fIEeht_cap));
 
 	qdf_mem_copy(&mac_ctx->eht_cap_5g,
-		     &cfg->eht_cap_5g,
+		     &cfg->eht_cap,
 		     sizeof(tDot11fIEeht_cap));
 }
 
