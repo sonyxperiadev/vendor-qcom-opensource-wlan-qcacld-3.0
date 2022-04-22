@@ -1038,6 +1038,19 @@ void policy_mgr_move_vdev_from_disabled_to_connection_tbl(
 void policy_mgr_move_vdev_from_connection_to_disabled_tbl(
 						struct wlan_objmgr_psoc *psoc,
 						uint8_t vdev_id);
+
+/**
+ * policy_mgr_handle_link_enable_disable_resp() - enable/disable a ml link
+ * @vdev: vdev
+ * @arg: req structure
+ * evt: response event
+ *
+ * Return: None
+ */
+void
+policy_mgr_handle_link_enable_disable_resp(struct wlan_objmgr_vdev *vdev,
+					  void *arg,
+					  struct mlo_link_set_active_resp *evt);
 #else
 static inline bool
 policy_mgr_is_ml_vdev_id(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)

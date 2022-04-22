@@ -3896,6 +3896,8 @@ wlan_mlo_sta_mlo_concurency_set_link(struct wlan_objmgr_vdev *vdev,
 	req->ctx.vdev = vdev;
 	req->param.reason = reason;
 	req->param.force_mode = mode;
+	req->ctx.set_mlo_link_cb = policy_mgr_handle_link_enable_disable_resp;
+	req->ctx.cb_arg = req;
 
 	/* set MLO vdev bit mask for all case */
 	wlan_mlo_fill_active_link_vdev_bitmap(req, mlo_vdev_lst, num_mlo_vdev);

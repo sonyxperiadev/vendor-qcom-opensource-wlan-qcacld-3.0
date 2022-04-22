@@ -3224,6 +3224,111 @@ void policy_mgr_move_vdev_from_connection_to_disabled_tbl(
 
 	policy_mgr_add_to_disabled_links(pm_ctx, freq, mode, vdev_id);
 }
+
+static void
+policy_mgr_enable_disable_link_from_vdev_bitmask(struct wlan_objmgr_psoc *psoc,
+						 unsigned long enable_vdev_mask,
+						 unsigned long disable_vdev_mask,
+						 uint8_t start_vdev_id)
+{
+	uint8_t i;
+
+	/* Enable required link if enable_vdev_mask preset */
+	for (i = 0; enable_vdev_mask && i < WLAN_MAX_VDEVS; i++) {
+		if (qdf_test_and_clear_bit(i, &enable_vdev_mask))
+			policy_mgr_move_vdev_from_disabled_to_connection_tbl(
+							psoc,
+							i + start_vdev_id);
+	}
+
+	/* Disable required link if disable_mask preset */
+	for (i = 0; disable_vdev_mask && i < WLAN_MAX_VDEVS; i++) {
+		if (qdf_test_and_clear_bit(i, &disable_vdev_mask))
+			policy_mgr_move_vdev_from_connection_to_disabled_tbl(
+							psoc,
+							i + start_vdev_id);
+	}
+}
+
+void
+policy_mgr_handle_link_enable_disable_resp(struct wlan_objmgr_vdev *vdev,
+					  void *arg,
+					  struct mlo_link_set_active_resp *resp)
+{
+	struct mlo_link_set_active_req *req = arg;
+	uint8_t i;
+	struct wlan_objmgr_psoc *psoc;
+
+	psoc = wlan_vdev_get_psoc(vdev);
+	if (!psoc) {
+		policy_mgr_err("Psoc is Null");
+		return;
+	}
+	if (!req || !resp) {
+		policy_mgr_err("arguments or event empty for vdev %d",
+			       wlan_vdev_get_id(vdev));
+		return;
+	}
+
+	if (resp->status) {
+		policy_mgr_err("Set link status %d, for mode %d reason %d vdev bitmask 0x%x",
+			       resp->status, req->param.force_mode,
+			       req->param.reason, req->param.vdev_bitmap[0]);
+		return;
+	}
+
+	policy_mgr_debug("Req mode %d reason %d, bitmask[0] = 0x%x, resp: active %d inactive %d, active[0] 0x%x inactive[0] 0x%x",
+			 req->param.force_mode, req->param.reason,
+			 req->param.vdev_bitmap[0],
+			 resp->active_sz, resp->inactive_sz,
+			 resp->active[0], resp->inactive[0]);
+	switch (req->param.force_mode) {
+	case MLO_LINK_FORCE_MODE_ACTIVE:
+		for (i = 0; i < resp->active_sz; i++)
+			policy_mgr_enable_disable_link_from_vdev_bitmask(psoc,
+					resp->active[i], 0, i * 32);
+		break;
+	case MLO_LINK_FORCE_MODE_INACTIVE:
+		for (i = 0; i < resp->inactive_sz; i++)
+			policy_mgr_enable_disable_link_from_vdev_bitmask(psoc,
+				0, resp->inactive[i], i * 32);
+		break;
+	case MLO_LINK_FORCE_MODE_ACTIVE_NUM:
+		/*
+		 * MLO_LINK_FORCE_MODE_ACTIVE_NUM return which vdev is active
+		 * So XOR of the requested ML vdev and active vdev bit will give
+		 * the vdev bits to disable
+		 */
+		for (i = 0; i < resp->active_sz; i++)
+			policy_mgr_enable_disable_link_from_vdev_bitmask(psoc,
+				resp->active[i],
+				resp->active[i] ^ req->param.vdev_bitmap[i],
+				i * 32);
+		break;
+	case MLO_LINK_FORCE_MODE_INACTIVE_NUM:
+		/*
+		 * MLO_LINK_FORCE_MODE_INACTIVE_NUM return which vdev is
+		 * inactive So XOR of the requested ML vdev and inactive vdev
+		 * bit will give the vdev bits to be enable.
+		 */
+		for (i = 0; i < resp->inactive_sz; i++)
+			policy_mgr_enable_disable_link_from_vdev_bitmask(psoc,
+				resp->inactive[i] ^ req->param.vdev_bitmap[i],
+				resp->inactive[i], i * 32);
+		break;
+	case MLO_LINK_FORCE_MODE_NO_FORCE:
+		/* Enable all the ML vdev id sent in request */
+		for (i = 0; i < req->param.num_vdev_bitmap; i++)
+			policy_mgr_enable_disable_link_from_vdev_bitmask(psoc,
+					req->param.vdev_bitmap[i], 0, i * 32);
+		break;
+	default:
+		policy_mgr_err("Invalid request req mode %d",
+			       req->param.force_mode);
+		break;
+	}
+}
+
 #else
 static inline QDF_STATUS
 policy_mgr_delete_from_disabled_links(struct policy_mgr_psoc_priv_obj *pm_ctx,
