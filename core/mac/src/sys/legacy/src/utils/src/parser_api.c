@@ -7651,7 +7651,6 @@ QDF_STATUS lim_ieee80211_unpack_ehtcap(const uint8_t *eht_cap_ie,
 			ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
 				      EHTCAP_TX_MCS_NSS_MAP_IDX,
 				      EHTCAP_TX_MCS_NSS_MAP_BITS);
-		idx++;
 
 		dot11f_eht_cap->bw_20_rx_max_nss_for_mcs_8_and_9 =
 			ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
@@ -7669,7 +7668,7 @@ QDF_STATUS lim_ieee80211_unpack_ehtcap(const uint8_t *eht_cap_ie,
 				      EHTCAP_RX_MCS_NSS_MAP_IDX,
 				      EHTCAP_RX_MCS_NSS_MAP_BITS);
 
-		dot11f_eht_cap->bw_20_rx_max_nss_for_mcs_10_and_11 =
+		dot11f_eht_cap->bw_20_tx_max_nss_for_mcs_10_and_11 =
 			ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
 				      EHTCAP_TX_MCS_NSS_MAP_IDX,
 				      EHTCAP_TX_MCS_NSS_MAP_BITS);
@@ -7680,120 +7679,120 @@ QDF_STATUS lim_ieee80211_unpack_ehtcap(const uint8_t *eht_cap_ie,
 				      EHTCAP_RX_MCS_NSS_MAP_IDX,
 				      EHTCAP_RX_MCS_NSS_MAP_BITS);
 
-		dot11f_eht_cap->bw_20_rx_max_nss_for_mcs_12_and_13 =
+		dot11f_eht_cap->bw_20_tx_max_nss_for_mcs_12_and_13 =
 			ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
 				      EHTCAP_TX_MCS_NSS_MAP_IDX,
 				      EHTCAP_TX_MCS_NSS_MAP_BITS);
 		idx++;
-	}
+	} else {
+		if ((is_band_2g && dot11f_he_cap.chan_width_0) ||
+		    (!is_band_2g && dot11f_he_cap.chan_width_1)) {
+			dot11f_eht_cap->bw_le_80_rx_max_nss_for_mcs_0_to_9 =
+				ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
+					      EHTCAP_RX_MCS_NSS_MAP_IDX,
+					      EHTCAP_RX_MCS_NSS_MAP_BITS);
 
-	if ((is_band_2g && dot11f_he_cap.chan_width_0) ||
-	    (!is_band_2g && dot11f_he_cap.chan_width_1)) {
-		dot11f_eht_cap->bw_le_80_rx_max_nss_for_mcs_0_to_9 =
-			ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
-				      EHTCAP_RX_MCS_NSS_MAP_IDX,
-				      EHTCAP_RX_MCS_NSS_MAP_BITS);
+			dot11f_eht_cap->bw_le_80_tx_max_nss_for_mcs_0_to_9 =
+				ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
+					      EHTCAP_TX_MCS_NSS_MAP_IDX,
+					      EHTCAP_TX_MCS_NSS_MAP_BITS);
+			idx++;
 
-		dot11f_eht_cap->bw_le_80_tx_max_nss_for_mcs_0_to_9 =
-			ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
-				      EHTCAP_TX_MCS_NSS_MAP_IDX,
-				      EHTCAP_TX_MCS_NSS_MAP_BITS);
-		idx++;
+			dot11f_eht_cap->bw_le_80_rx_max_nss_for_mcs_10_and_11 =
+				ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
+					      EHTCAP_RX_MCS_NSS_MAP_IDX,
+					      EHTCAP_RX_MCS_NSS_MAP_BITS);
 
-		dot11f_eht_cap->bw_le_80_rx_max_nss_for_mcs_10_and_11 =
-			ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
-				      EHTCAP_RX_MCS_NSS_MAP_IDX,
-				      EHTCAP_RX_MCS_NSS_MAP_BITS);
+			dot11f_eht_cap->bw_le_80_tx_max_nss_for_mcs_10_and_11 =
+				ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
+					      EHTCAP_TX_MCS_NSS_MAP_IDX,
+					      EHTCAP_TX_MCS_NSS_MAP_BITS);
+			idx++;
 
-		dot11f_eht_cap->bw_le_80_tx_max_nss_for_mcs_10_and_11 =
-			ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
-				      EHTCAP_TX_MCS_NSS_MAP_IDX,
-				      EHTCAP_TX_MCS_NSS_MAP_BITS);
-		idx++;
+			dot11f_eht_cap->bw_le_80_rx_max_nss_for_mcs_12_and_13 =
+				ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
+					      EHTCAP_RX_MCS_NSS_MAP_IDX,
+					      EHTCAP_RX_MCS_NSS_MAP_BITS);
 
-		dot11f_eht_cap->bw_le_80_rx_max_nss_for_mcs_12_and_13 =
-			ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
-				      EHTCAP_RX_MCS_NSS_MAP_IDX,
-				      EHTCAP_RX_MCS_NSS_MAP_BITS);
+			dot11f_eht_cap->bw_le_80_tx_max_nss_for_mcs_12_and_13 =
+				ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
+					      EHTCAP_TX_MCS_NSS_MAP_IDX,
+					      EHTCAP_TX_MCS_NSS_MAP_BITS);
+			idx++;
+		}
 
-		dot11f_eht_cap->bw_le_80_rx_max_nss_for_mcs_12_and_13 =
-			ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
-				      EHTCAP_TX_MCS_NSS_MAP_IDX,
-				      EHTCAP_TX_MCS_NSS_MAP_BITS);
-		idx++;
-	}
+		if ((dot11f_he_cap.chan_width_6 | dot11f_he_cap.chan_width_5 |
+		     dot11f_he_cap.chan_width_4 | dot11f_he_cap.chan_width_3 |
+		     dot11f_he_cap.chan_width_2 | dot11f_he_cap.chan_width_1 |
+		     dot11f_he_cap.chan_width_0) == 1) {
+			dot11f_eht_cap->bw_160_rx_max_nss_for_mcs_0_to_9 =
+				ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
+					      EHTCAP_RX_MCS_NSS_MAP_IDX,
+					      EHTCAP_RX_MCS_NSS_MAP_BITS);
 
-	if ((dot11f_he_cap.chan_width_6 | dot11f_he_cap.chan_width_5 |
-	     dot11f_he_cap.chan_width_4 | dot11f_he_cap.chan_width_3 |
-	     dot11f_he_cap.chan_width_2 | dot11f_he_cap.chan_width_1 |
-	     dot11f_he_cap.chan_width_0) == 1) {
-		dot11f_eht_cap->bw_160_rx_max_nss_for_mcs_0_to_9 =
-			ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
-				      EHTCAP_RX_MCS_NSS_MAP_IDX,
-				      EHTCAP_RX_MCS_NSS_MAP_BITS);
+			dot11f_eht_cap->bw_160_tx_max_nss_for_mcs_0_to_9 =
+				ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
+					      EHTCAP_TX_MCS_NSS_MAP_IDX,
+					      EHTCAP_TX_MCS_NSS_MAP_BITS);
+			idx++;
 
-		dot11f_eht_cap->bw_160_tx_max_nss_for_mcs_0_to_9 =
-			ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
-				      EHTCAP_TX_MCS_NSS_MAP_IDX,
-				      EHTCAP_TX_MCS_NSS_MAP_BITS);
-		idx++;
+			dot11f_eht_cap->bw_160_rx_max_nss_for_mcs_10_and_11 =
+				ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
+					      EHTCAP_RX_MCS_NSS_MAP_IDX,
+					      EHTCAP_RX_MCS_NSS_MAP_BITS);
 
-		dot11f_eht_cap->bw_160_rx_max_nss_for_mcs_10_and_11 =
-			ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
-				      EHTCAP_RX_MCS_NSS_MAP_IDX,
-				      EHTCAP_RX_MCS_NSS_MAP_BITS);
+			dot11f_eht_cap->bw_160_tx_max_nss_for_mcs_10_and_11 =
+				ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
+					      EHTCAP_TX_MCS_NSS_MAP_IDX,
+					      EHTCAP_TX_MCS_NSS_MAP_BITS);
+			idx++;
 
-		dot11f_eht_cap->bw_160_tx_max_nss_for_mcs_10_and_11 =
-			ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
-				      EHTCAP_TX_MCS_NSS_MAP_IDX,
-				      EHTCAP_TX_MCS_NSS_MAP_BITS);
-		idx++;
+			dot11f_eht_cap->bw_160_rx_max_nss_for_mcs_12_and_13 =
+				ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
+					      EHTCAP_RX_MCS_NSS_MAP_IDX,
+					      EHTCAP_RX_MCS_NSS_MAP_BITS);
 
-		dot11f_eht_cap->bw_160_rx_max_nss_for_mcs_12_and_13 =
-			ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
-				      EHTCAP_RX_MCS_NSS_MAP_IDX,
-				      EHTCAP_RX_MCS_NSS_MAP_BITS);
+			dot11f_eht_cap->bw_160_tx_max_nss_for_mcs_12_and_13 =
+				ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
+					      EHTCAP_TX_MCS_NSS_MAP_IDX,
+					      EHTCAP_TX_MCS_NSS_MAP_BITS);
+			idx++;
+		}
 
-		dot11f_eht_cap->bw_160_rx_max_nss_for_mcs_12_and_13 =
-			ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
-				      EHTCAP_TX_MCS_NSS_MAP_IDX,
-				      EHTCAP_TX_MCS_NSS_MAP_BITS);
-		idx++;
-	}
+		if (dot11f_eht_cap->support_320mhz_6ghz) {
+			dot11f_eht_cap->bw_320_rx_max_nss_for_mcs_0_to_9 =
+				ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
+					      EHTCAP_RX_MCS_NSS_MAP_IDX,
+					      EHTCAP_RX_MCS_NSS_MAP_BITS);
 
-	if (dot11f_eht_cap->support_320mhz_6ghz) {
-		dot11f_eht_cap->bw_320_rx_max_nss_for_mcs_0_to_9 =
-			ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
-				      EHTCAP_RX_MCS_NSS_MAP_IDX,
-				      EHTCAP_RX_MCS_NSS_MAP_BITS);
+			dot11f_eht_cap->bw_320_tx_max_nss_for_mcs_0_to_9 =
+				ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
+					      EHTCAP_TX_MCS_NSS_MAP_IDX,
+					      EHTCAP_TX_MCS_NSS_MAP_BITS);
+			idx++;
 
-		dot11f_eht_cap->bw_320_tx_max_nss_for_mcs_0_to_9 =
-			ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
-				      EHTCAP_TX_MCS_NSS_MAP_IDX,
-				      EHTCAP_TX_MCS_NSS_MAP_BITS);
-		idx++;
+			dot11f_eht_cap->bw_320_rx_max_nss_for_mcs_10_and_11 =
+				ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
+					      EHTCAP_RX_MCS_NSS_MAP_IDX,
+					      EHTCAP_RX_MCS_NSS_MAP_BITS);
 
-		dot11f_eht_cap->bw_320_rx_max_nss_for_mcs_10_and_11 =
-			ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
-				      EHTCAP_RX_MCS_NSS_MAP_IDX,
-				      EHTCAP_RX_MCS_NSS_MAP_BITS);
+			dot11f_eht_cap->bw_320_tx_max_nss_for_mcs_10_and_11 =
+				ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
+					      EHTCAP_TX_MCS_NSS_MAP_IDX,
+					      EHTCAP_TX_MCS_NSS_MAP_BITS);
+			idx++;
 
-		dot11f_eht_cap->bw_320_tx_max_nss_for_mcs_10_and_11 =
-			ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
-				      EHTCAP_TX_MCS_NSS_MAP_IDX,
-				      EHTCAP_TX_MCS_NSS_MAP_BITS);
-		idx++;
+			dot11f_eht_cap->bw_320_rx_max_nss_for_mcs_12_and_13 =
+				ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
+					      EHTCAP_RX_MCS_NSS_MAP_IDX,
+					      EHTCAP_RX_MCS_NSS_MAP_BITS);
 
-		dot11f_eht_cap->bw_320_rx_max_nss_for_mcs_12_and_13 =
-			ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
-				      EHTCAP_RX_MCS_NSS_MAP_IDX,
-				      EHTCAP_RX_MCS_NSS_MAP_BITS);
-
-		dot11f_eht_cap->bw_320_rx_max_nss_for_mcs_12_and_13 =
-			ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
-				      EHTCAP_TX_MCS_NSS_MAP_IDX,
-				      EHTCAP_TX_MCS_NSS_MAP_BITS);
-		idx++;
+			dot11f_eht_cap->bw_320_tx_max_nss_for_mcs_12_and_13 =
+				ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
+					      EHTCAP_TX_MCS_NSS_MAP_IDX,
+					      EHTCAP_TX_MCS_NSS_MAP_BITS);
+			idx++;
+		}
 	}
 
 	/* Fill in TxRx EHT NSS & MCS support */
@@ -8070,7 +8069,7 @@ void lim_ieee80211_pack_ehtcap(uint8_t *ie, tDot11fIEeht_cap dot11f_eht_cap,
 			      EHTCAP_RX_MCS_NSS_MAP_IDX,
 			      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
 
-		val = dot11f_eht_cap.bw_20_rx_max_nss_for_mcs_10_and_11;
+		val = dot11f_eht_cap.bw_20_tx_max_nss_for_mcs_10_and_11;
 		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
 			      EHTCAP_TX_MCS_NSS_MAP_IDX,
 			      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
@@ -8081,121 +8080,122 @@ void lim_ieee80211_pack_ehtcap(uint8_t *ie, tDot11fIEeht_cap dot11f_eht_cap,
 			      EHTCAP_RX_MCS_NSS_MAP_IDX,
 			      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
 
-		val = dot11f_eht_cap.bw_20_rx_max_nss_for_mcs_12_and_13;
+		val = dot11f_eht_cap.bw_20_tx_max_nss_for_mcs_12_and_13;
 		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
 			      EHTCAP_TX_MCS_NSS_MAP_IDX,
 			      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
 		idx++;
+	} else {
+		if ((is_band_2g && dot11f_he_cap.chan_width_0) ||
+		    (!is_band_2g && dot11f_he_cap.chan_width_1)) {
+			val = dot11f_eht_cap.bw_le_80_rx_max_nss_for_mcs_0_to_9;
+			ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+				      EHTCAP_RX_MCS_NSS_MAP_IDX,
+				      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
+
+			val = dot11f_eht_cap.bw_le_80_tx_max_nss_for_mcs_0_to_9;
+			ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+				      EHTCAP_TX_MCS_NSS_MAP_IDX,
+				      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
+			idx++;
+
+			val = dot11f_eht_cap.bw_le_80_rx_max_nss_for_mcs_10_and_11;
+			ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+				      EHTCAP_RX_MCS_NSS_MAP_IDX,
+				      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
+
+			val = dot11f_eht_cap.bw_le_80_tx_max_nss_for_mcs_10_and_11;
+			ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+				      EHTCAP_TX_MCS_NSS_MAP_IDX,
+				      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
+			idx++;
+
+			val = dot11f_eht_cap.bw_le_80_rx_max_nss_for_mcs_12_and_13;
+			ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+				      EHTCAP_RX_MCS_NSS_MAP_IDX,
+				      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
+
+			val = dot11f_eht_cap.bw_le_80_tx_max_nss_for_mcs_12_and_13;
+			ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+				      EHTCAP_TX_MCS_NSS_MAP_IDX,
+				      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
+			idx++;
+		}
+
+		if ((dot11f_he_cap.chan_width_6 | dot11f_he_cap.chan_width_5 |
+		     dot11f_he_cap.chan_width_4 | dot11f_he_cap.chan_width_3 |
+		     dot11f_he_cap.chan_width_2 | dot11f_he_cap.chan_width_1 |
+		     dot11f_he_cap.chan_width_0) == 1) {
+			val = dot11f_eht_cap.bw_160_rx_max_nss_for_mcs_0_to_9;
+			ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+				      EHTCAP_RX_MCS_NSS_MAP_IDX,
+				      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
+
+			val = dot11f_eht_cap.bw_160_tx_max_nss_for_mcs_0_to_9;
+			ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+				      EHTCAP_TX_MCS_NSS_MAP_IDX,
+				      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
+			idx++;
+
+			val = dot11f_eht_cap.bw_160_rx_max_nss_for_mcs_10_and_11;
+			ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+				      EHTCAP_RX_MCS_NSS_MAP_IDX,
+				      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
+
+			val = dot11f_eht_cap.bw_160_tx_max_nss_for_mcs_10_and_11;
+			ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+				      EHTCAP_TX_MCS_NSS_MAP_IDX,
+				      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
+			idx++;
+
+			val = dot11f_eht_cap.bw_160_rx_max_nss_for_mcs_12_and_13;
+			ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+				      EHTCAP_RX_MCS_NSS_MAP_IDX,
+				      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
+
+			val = dot11f_eht_cap.bw_160_tx_max_nss_for_mcs_12_and_13;
+			ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+				      EHTCAP_TX_MCS_NSS_MAP_IDX,
+				      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
+			idx++;
+		}
+
+		if (chwidth_320) {
+			val = dot11f_eht_cap.bw_320_rx_max_nss_for_mcs_0_to_9;
+			ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+				      EHTCAP_RX_MCS_NSS_MAP_IDX,
+				      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
+
+			val = dot11f_eht_cap.bw_320_tx_max_nss_for_mcs_0_to_9;
+			ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+				      EHTCAP_TX_MCS_NSS_MAP_IDX,
+				      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
+			idx++;
+
+			val = dot11f_eht_cap.bw_320_rx_max_nss_for_mcs_10_and_11;
+			ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+				      EHTCAP_RX_MCS_NSS_MAP_IDX,
+				      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
+
+			val = dot11f_eht_cap.bw_320_tx_max_nss_for_mcs_10_and_11;
+			ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+				      EHTCAP_TX_MCS_NSS_MAP_IDX,
+				      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
+			idx++;
+
+			val = dot11f_eht_cap.bw_320_rx_max_nss_for_mcs_12_and_13;
+			ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+				      EHTCAP_RX_MCS_NSS_MAP_IDX,
+				      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
+
+			val = dot11f_eht_cap.bw_320_tx_max_nss_for_mcs_12_and_13;
+			ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
+				      EHTCAP_TX_MCS_NSS_MAP_IDX,
+				      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
+			idx++;
+		}
 	}
 
-	if ((is_band_2g && dot11f_he_cap.chan_width_0) ||
-	    (!is_band_2g && dot11f_he_cap.chan_width_1)) {
-		val = dot11f_eht_cap.bw_le_80_rx_max_nss_for_mcs_0_to_9;
-		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
-			      EHTCAP_RX_MCS_NSS_MAP_IDX,
-			      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
-
-		val = dot11f_eht_cap.bw_le_80_tx_max_nss_for_mcs_0_to_9;
-		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
-			      EHTCAP_TX_MCS_NSS_MAP_IDX,
-			      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
-		idx++;
-
-		val = dot11f_eht_cap.bw_le_80_rx_max_nss_for_mcs_10_and_11;
-		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
-			      EHTCAP_RX_MCS_NSS_MAP_IDX,
-			      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
-
-		val = dot11f_eht_cap.bw_le_80_tx_max_nss_for_mcs_10_and_11;
-		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
-			      EHTCAP_TX_MCS_NSS_MAP_IDX,
-			      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
-		idx++;
-
-		val = dot11f_eht_cap.bw_le_80_rx_max_nss_for_mcs_12_and_13;
-		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
-			      EHTCAP_RX_MCS_NSS_MAP_IDX,
-			      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
-
-		val = dot11f_eht_cap.bw_le_80_rx_max_nss_for_mcs_12_and_13;
-		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
-			      EHTCAP_TX_MCS_NSS_MAP_IDX,
-			      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
-		idx++;
-	}
-
-	if ((dot11f_he_cap.chan_width_6 | dot11f_he_cap.chan_width_5 |
-	     dot11f_he_cap.chan_width_4 | dot11f_he_cap.chan_width_3 |
-	     dot11f_he_cap.chan_width_2 | dot11f_he_cap.chan_width_1 |
-	     dot11f_he_cap.chan_width_0) == 1) {
-		val = dot11f_eht_cap.bw_160_rx_max_nss_for_mcs_0_to_9;
-		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
-			      EHTCAP_RX_MCS_NSS_MAP_IDX,
-			      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
-
-		val = dot11f_eht_cap.bw_160_tx_max_nss_for_mcs_0_to_9;
-		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
-			      EHTCAP_TX_MCS_NSS_MAP_IDX,
-			      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
-		idx++;
-
-		val = dot11f_eht_cap.bw_160_rx_max_nss_for_mcs_10_and_11;
-		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
-			      EHTCAP_RX_MCS_NSS_MAP_IDX,
-			      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
-
-		val = dot11f_eht_cap.bw_160_tx_max_nss_for_mcs_10_and_11;
-		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
-			      EHTCAP_TX_MCS_NSS_MAP_IDX,
-			      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
-		idx++;
-
-		val = dot11f_eht_cap.bw_160_rx_max_nss_for_mcs_12_and_13;
-		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
-			      EHTCAP_RX_MCS_NSS_MAP_IDX,
-			      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
-
-		val = dot11f_eht_cap.bw_160_rx_max_nss_for_mcs_12_and_13;
-		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
-			      EHTCAP_TX_MCS_NSS_MAP_IDX,
-			      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
-		idx++;
-	}
-
-	if (chwidth_320) {
-		val = dot11f_eht_cap.bw_320_rx_max_nss_for_mcs_0_to_9;
-		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
-			      EHTCAP_RX_MCS_NSS_MAP_IDX,
-			      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
-
-		val = dot11f_eht_cap.bw_320_tx_max_nss_for_mcs_0_to_9;
-		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
-			      EHTCAP_TX_MCS_NSS_MAP_IDX,
-			      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
-		idx++;
-
-		val = dot11f_eht_cap.bw_320_rx_max_nss_for_mcs_10_and_11;
-		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
-			      EHTCAP_RX_MCS_NSS_MAP_IDX,
-			      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
-
-		val = dot11f_eht_cap.bw_320_tx_max_nss_for_mcs_10_and_11;
-		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
-			      EHTCAP_TX_MCS_NSS_MAP_IDX,
-			      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
-		idx++;
-
-		val = dot11f_eht_cap.bw_320_rx_max_nss_for_mcs_12_and_13;
-		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
-			      EHTCAP_RX_MCS_NSS_MAP_IDX,
-			      EHTCAP_RX_MCS_NSS_MAP_BITS, val);
-
-		val = dot11f_eht_cap.bw_320_rx_max_nss_for_mcs_12_and_13;
-		ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
-			      EHTCAP_TX_MCS_NSS_MAP_IDX,
-			      EHTCAP_TX_MCS_NSS_MAP_BITS, val);
-		idx++;
-	}
 	/* Fill in TxRx EHT NSS & MCS support */
 	mcs_map_len = idx;
 	ehtcap->elem_len = EHTCAP_FIXED_LEN + mcs_map_len;
