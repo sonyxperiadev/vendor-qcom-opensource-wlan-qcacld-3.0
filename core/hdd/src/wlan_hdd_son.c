@@ -2276,9 +2276,36 @@ wlan_hdd_son_get_ieee_phymode(enum wlan_phymode wlan_phymode)
 	return wlanphymode2ieeephymode[wlan_phymode];
 }
 
-static QDF_STATUS hdd_son_get_node_info(struct wlan_objmgr_vdev *vdev,
-					uint8_t *mac_addr,
-					wlan_node_info *node_info)
+static QDF_STATUS hdd_son_get_node_info_sta(struct wlan_objmgr_vdev *vdev,
+					    uint8_t *mac_addr,
+					    wlan_node_info *node_info)
+{
+	struct hdd_adapter *adapter = wlan_hdd_get_adapter_from_objmgr(vdev);
+	struct hdd_station_ctx *sta_ctx;
+	struct hdd_context *hdd_ctx;
+
+	hdd_ctx = adapter->hdd_ctx;
+	if (wlan_hdd_validate_context(hdd_ctx))
+		return QDF_STATUS_E_FAILURE;
+
+	if (!hdd_cm_is_vdev_associated(adapter)) {
+		hdd_debug_rl("STA adapter not connected");
+		/* Still return success and framework will see default stats */
+		return QDF_STATUS_SUCCESS;
+	}
+
+	hdd_get_max_tx_bitrate(hdd_ctx, adapter);
+
+	sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
+	node_info->tx_bitrate = cfg80211_calculate_bitrate(
+			&sta_ctx->cache_conn_info.max_tx_bitrate);
+	hdd_debug("tx_bitrate %u", node_info->tx_bitrate);
+	return QDF_STATUS_SUCCESS;
+}
+
+static QDF_STATUS hdd_son_get_node_info_sap(struct wlan_objmgr_vdev *vdev,
+					    uint8_t *mac_addr,
+					    wlan_node_info *node_info)
 {
 	struct hdd_adapter *adapter = wlan_hdd_get_adapter_from_objmgr(vdev);
 	struct hdd_station_info *sta_info;
@@ -2319,6 +2346,20 @@ static QDF_STATUS hdd_son_get_node_info(struct wlan_objmgr_vdev *vdev,
 	hdd_put_sta_info_ref(&adapter->sta_info_list, &sta_info, true,
 			     STA_INFO_SON_GET_DATRATE_INFO);
 	return QDF_STATUS_SUCCESS;
+}
+
+static QDF_STATUS hdd_son_get_node_info(struct wlan_objmgr_vdev *vdev,
+					uint8_t *mac_addr,
+					wlan_node_info *node_info)
+{
+	struct hdd_adapter *adapter = wlan_hdd_get_adapter_from_objmgr(vdev);
+
+	if (adapter->device_mode == QDF_STA_MODE)
+		return hdd_son_get_node_info_sta(vdev, mac_addr, node_info);
+	else if (adapter->device_mode == QDF_SAP_MODE)
+		return hdd_son_get_node_info_sap(vdev, mac_addr, node_info);
+	else
+		return QDF_STATUS_SUCCESS;
 }
 
 static QDF_STATUS hdd_son_get_peer_capability(struct wlan_objmgr_vdev *vdev,

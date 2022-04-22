@@ -1783,6 +1783,8 @@ QDF_STATUS os_if_son_get_node_datarate_info(struct wlan_objmgr_vdev *vdev,
 	return status;
 }
 
+qdf_export_symbol(os_if_son_get_node_datarate_info);
+
 uint32_t os_if_son_get_peer_max_mcs_idx(struct wlan_objmgr_vdev *vdev,
 					struct wlan_objmgr_peer *peer)
 {
