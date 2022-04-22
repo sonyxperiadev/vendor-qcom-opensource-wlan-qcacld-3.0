@@ -1791,3 +1791,14 @@ uint32_t os_if_son_get_peer_max_mcs_idx(struct wlan_objmgr_vdev *vdev,
 
 	return 0;
 }
+
+int os_if_son_get_sta_stats(struct wlan_objmgr_vdev *vdev, uint8_t *mac_addr,
+			    struct ieee80211_nodestats *stats)
+{
+	if (g_son_os_if_cb.os_if_get_sta_stats)
+		return g_son_os_if_cb.os_if_get_sta_stats(vdev, mac_addr,
+							  stats);
+
+	return 0;
+}
+qdf_export_symbol(os_if_son_get_sta_stats);

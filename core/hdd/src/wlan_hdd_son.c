@@ -32,7 +32,7 @@
 #include <wlan_hdd_son.h>
 #include <wlan_hdd_object_manager.h>
 #include <wlan_hdd_stats.h>
-
+#include "wlan_cfg80211_mc_cp_stats.h"
 
 /**
  * hdd_son_is_acs_in_progress() - whether acs is in progress or not
@@ -2407,6 +2407,40 @@ uint32_t hdd_son_get_peer_max_mcs_idx(struct wlan_objmgr_vdev *vdev,
 	return ret;
 }
 
+/**
+ * hdd_son_sta_stats() - get connected sta rssi and estimated data rate
+ * @vdev: pointer to vdev
+ * @mac_addr: connected sta mac addr
+ * @stats: pointer to ieee80211_nodestats
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+static int hdd_son_get_sta_stats(struct wlan_objmgr_vdev *vdev,
+				 uint8_t *mac_addr,
+				 struct ieee80211_nodestats *stats)
+{
+	struct stats_event *stats_info;
+	int ret = 0;
+
+	stats_info = wlan_cfg80211_mc_cp_stats_get_peer_rssi(
+			vdev, mac_addr, &ret);
+	if (ret || !stats_info) {
+		hdd_err("get peer rssi fail");
+		wlan_cfg80211_mc_cp_stats_free_stats_event(stats_info);
+		return ret;
+	}
+	stats->ns_rssi = stats_info->peer_stats[0].peer_rssi;
+	stats->ns_last_tx_rate = stats_info->peer_stats[0].tx_rate;
+	stats->ns_last_rx_rate = stats_info->peer_stats[0].rx_rate;
+	hdd_debug("sta " QDF_MAC_ADDR_FMT " rssi %d tx %u kbps, rx %u kbps",
+		  QDF_MAC_ADDR_REF(mac_addr), stats->ns_rssi,
+		  stats->ns_last_tx_rate,
+		  stats->ns_last_rx_rate);
+	wlan_cfg80211_mc_cp_stats_free_stats_event(stats_info);
+
+	return ret;
+}
+
 void hdd_son_register_callbacks(struct hdd_context *hdd_ctx)
 {
 	struct son_callbacks cb_obj = {0};
@@ -2445,6 +2479,7 @@ void hdd_son_register_callbacks(struct hdd_context *hdd_ctx)
 	cb_obj.os_if_get_node_info = hdd_son_get_node_info;
 	cb_obj.os_if_get_peer_capability = hdd_son_get_peer_capability;
 	cb_obj.os_if_get_peer_max_mcs_idx = hdd_son_get_peer_max_mcs_idx;
+	cb_obj.os_if_get_sta_stats = hdd_son_get_sta_stats;
 
 	os_if_son_register_hdd_callbacks(hdd_ctx->psoc, &cb_obj);
 
