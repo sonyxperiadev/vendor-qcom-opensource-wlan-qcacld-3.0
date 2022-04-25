@@ -10952,12 +10952,19 @@ __wlan_hdd_cfg80211_set_wifi_test_config(struct wiphy *wiphy,
 					       adapter->vdev_id, buff_size);
 		if (ret_val)
 			goto send_err;
-		if (buff_size > 64)
+
+		if (buff_size > 512)
+			/* Configure ADDBA req buffer size to 1024 */
+			set_val = HDD_BA_MODE_1024;
+		else if (buff_size > 256)
+			/* Configure ADDBA req buffer size to 512 */
+			set_val = HDD_BA_MODE_512;
+		else if (buff_size > 64)
 			/* Configure ADDBA req buffer size to 256 */
-			set_val = 3;
+			set_val = HDD_BA_MODE_256;
 		else
 			/* Configure ADDBA req buffer size to 64 */
-			set_val = 2;
+			set_val = HDD_BA_MODE_64;
 		ret_val = wma_cli_set_command(adapter->vdev_id,
 				WMI_VDEV_PARAM_BA_MODE, set_val, VDEV_CMD);
 		if (ret_val)

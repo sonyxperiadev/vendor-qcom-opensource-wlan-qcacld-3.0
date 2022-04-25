@@ -635,6 +635,26 @@ enum hdd_chain_mode {
 };
 
 /**
+ * hdd_ba_mode: Representation of Number to configure BA mode
+ * @HDD_BA_MODE_AUTO: Auto mode
+ * @HDD_BA_MODE_MANUAL: Manual mode
+ * @HDD_BA_MODE_64: For buffer size 64
+ * @HDD_BA_MODE_256: For buffer size 256
+ * @HDD_BA_MODE_128: placeholder, not valid
+ * @HDD_BA_MODE_512: For buffer size 512
+ * @HDD_BA_MODE_1024: For buffer size 1024
+ */
+enum hdd_ba_mode {
+	HDD_BA_MODE_AUTO,
+	HDD_BA_MODE_MANUAL,
+	HDD_BA_MODE_64,
+	HDD_BA_MODE_256,
+	HDD_BA_MODE_128,
+	HDD_BA_MODE_512,
+	HDD_BA_MODE_1024,
+};
+
+/**
  * hdd_set_rate_bw(): Set the bandwidth for the given rate_info
  * @info: The rate info for which the bandwidth should be set
  * @hdd_bw: HDD representation of a rate info bandwidth
