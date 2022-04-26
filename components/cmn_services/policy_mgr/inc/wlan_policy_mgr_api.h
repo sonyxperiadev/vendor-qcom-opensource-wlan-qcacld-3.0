@@ -255,6 +255,34 @@ QDF_STATUS policy_mgr_get_force_1x1(struct wlan_objmgr_psoc *psoc,
 				    uint8_t *force_1x1);
 
 /**
+ * policy_mgr_get_max_conc_cxns() - to get configured max concurrent active
+ * connection count
+ *
+ * @psoc: pointer to psoc
+ *
+ * This API is used to query the configured max concurrent active connection
+ * count.
+ *
+ * Return: max active connection count
+ */
+uint32_t policy_mgr_get_max_conc_cxns(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * policy_mgr_set_max_conc_cxns() - to set supported max concurrent active
+ * connection count to policy mgr
+ *
+ * @psoc: pointer to psoc
+ * @max_conc_cxns: max active connection count
+ *
+ * This API is used to update the max concurrent active connection
+ * count to policy mgr
+ *
+ * Return: QDF_STATUS_SUCCESS if set successfully
+ */
+QDF_STATUS policy_mgr_set_max_conc_cxns(struct wlan_objmgr_psoc *psoc,
+					uint32_t max_conc_cxns);
+
+/**
  * policy_mgr_set_sta_sap_scc_on_dfs_chnl() - to set sta_sap_scc_on_dfs_chnl
  * @psoc: pointer to psoc
  * @sta_sap_scc_on_dfs_chnl: value to be set

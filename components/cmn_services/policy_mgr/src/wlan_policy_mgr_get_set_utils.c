@@ -143,6 +143,37 @@ QDF_STATUS policy_mgr_get_force_1x1(struct wlan_objmgr_psoc *psoc,
 	return QDF_STATUS_SUCCESS;
 }
 
+uint32_t policy_mgr_get_max_conc_cxns(struct wlan_objmgr_psoc *psoc)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("pm_ctx is NULL");
+		return 0;
+	}
+
+	return pm_ctx->cfg.max_conc_cxns;
+}
+
+QDF_STATUS policy_mgr_set_max_conc_cxns(struct wlan_objmgr_psoc *psoc,
+					uint32_t max_conc_cxns)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("pm_ctx is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	policy_mgr_debug("set max_conc_cxns %d old %d", max_conc_cxns,
+			 pm_ctx->cfg.max_conc_cxns);
+	pm_ctx->cfg.max_conc_cxns = max_conc_cxns;
+
+	return QDF_STATUS_SUCCESS;
+}
+
 QDF_STATUS
 policy_mgr_set_sta_sap_scc_on_dfs_chnl(struct wlan_objmgr_psoc *psoc,
 				       uint8_t sta_sap_scc_on_dfs_chnl)

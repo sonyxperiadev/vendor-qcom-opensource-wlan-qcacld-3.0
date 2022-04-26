@@ -380,7 +380,8 @@ static void wma_set_default_tgt_config(tp_wma_handle wma_handle,
 		ucfg_pmo_get_sap_mode_bus_suspend(wma_handle->psoc);
 	tgt_cfg->is_go_connected_d3wow_enabled =
 		ucfg_pmo_get_go_mode_bus_suspend(wma_handle->psoc);
-
+	tgt_cfg->num_max_active_vdevs =
+		policy_mgr_get_max_conc_cxns(wma_handle->psoc);
 	cfg_nan_get_max_ndi(wma_handle->psoc,
 			    &tgt_cfg->max_ndi);
 
@@ -5687,6 +5688,8 @@ static int wma_update_hdd_cfg(tp_wma_handle wma_handle)
 	tgt_cfg.eeprom_rd_ext = wma_handle->reg_cap.eeprom_rd_ext;
 
 	tgt_cfg.max_intf_count = wlan_res_cfg->num_vdevs;
+	policy_mgr_set_max_conc_cxns(wma_handle->psoc,
+				     wlan_res_cfg->num_max_active_vdevs);
 
 	qdf_mem_copy(tgt_cfg.hw_macaddr.bytes, wma_handle->hwaddr,
 		     ATH_MAC_LEN);
