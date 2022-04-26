@@ -2362,6 +2362,52 @@ QDF_STATUS lim_check_assoc_req(struct mac_context *mac_ctx,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef WLAN_SUPPORT_TWT
+/* lim_set_sap_peer_twt_cap() - Set SAP peer twt requestor and responder bit
+ * @session: PE session handle
+ * @ext_cap: pointer to ext cap
+ *
+ * This function is used to update SAP peer twt requestor and responder bit
+ * from ext cap of assoc request received by SAP
+ *
+ * Return: None
+ */
+static void lim_set_sap_peer_twt_cap(struct pe_session *session,
+				     struct s_ext_cap *ext_cap)
+{
+	session->peer_twt_requestor = ext_cap->twt_requestor_support;
+	session->peer_twt_responder = ext_cap->twt_responder_support;
+
+	pe_debug("Ext Cap peer TWT requestor: %d, responder: %d",
+		 ext_cap->twt_requestor_support,
+		 ext_cap->twt_responder_support);
+}
+#else
+static inline void
+lim_set_sap_peer_twt_cap(struct pe_session *session,
+			 struct s_ext_cap *ext_cap)
+{
+}
+#endif
+
+/* lim_update_ap_ext_cap() - Update SAP with ext capabilities
+ * @session: PE session handle
+ * @ assoc_req: pointer to assoc req
+ *
+ * This function is called by lim_proc_assoc_req_frm_cmn to
+ * update SAP ext capabilities
+ *
+ * Return: None
+ */
+static void lim_update_ap_ext_cap(struct pe_session *session,
+				  tpSirAssocReq assoc_req)
+{
+	struct s_ext_cap *ext_cap;
+
+	ext_cap = (struct s_ext_cap *)assoc_req->ExtCap.bytes;
+	lim_set_sap_peer_twt_cap(session, ext_cap);
+}
+
 QDF_STATUS lim_proc_assoc_req_frm_cmn(struct mac_context *mac_ctx,
 				      uint8_t sub_type,
 				      struct pe_session *session,
@@ -2489,6 +2535,9 @@ QDF_STATUS lim_proc_assoc_req_frm_cmn(struct mac_context *mac_ctx,
 					  &pmf_connection,
 					  &akm_type))
 		goto error;
+
+	/* Update ap ext cap */
+	lim_update_ap_ext_cap(session, assoc_req);
 
 	/* Extract pre-auth context for the STA, if any. */
 	sta_pre_auth_ctx = lim_search_pre_auth_list(mac_ctx, sa);

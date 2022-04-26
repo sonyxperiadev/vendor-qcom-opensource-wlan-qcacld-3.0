@@ -2208,6 +2208,27 @@ static bool lim_is_add_sta_params_eht_capable(tpAddStaParams add_sta_params)
 
 #endif
 
+#ifdef WLAN_SUPPORT_TWT
+/**
+ * lim_update_peer_twt_caps() - Update peer twt caps to add sta params
+ * @add_sta_params: pointer to add sta params
+ * @@session_entry: pe session entry
+ *
+ * Return: None
+ */
+static void lim_update_peer_twt_caps(tpAddStaParams add_sta_params,
+				    struct pe_session *session_entry)
+{
+	add_sta_params->twt_requestor = session_entry->peer_twt_requestor;
+	add_sta_params->twt_responder = session_entry->peer_twt_responder;
+}
+#else
+static inline void
+lim_update_peer_twt_caps(tpAddStaParams add_sta_params,
+			     struct pe_session *session_entry)
+{}
+#endif
+
 /**
  * lim_add_sta()- called to add an STA context at hardware
  * @mac_ctx: pointer to global mac structure
@@ -2567,6 +2588,9 @@ lim_add_sta(struct mac_context *mac_ctx,
 
 	lim_update_he_stbc_capable(add_sta_params);
 	lim_update_he_mcs_12_13(add_sta_params, sta_ds);
+
+	/* Send peer twt req and res bit during peer assoc command */
+	lim_update_peer_twt_caps(add_sta_params, session_entry);
 
 	msg_q.type = WMA_ADD_STA_REQ;
 	msg_q.reserved = 0;
