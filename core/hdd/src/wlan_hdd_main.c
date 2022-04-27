@@ -8886,7 +8886,7 @@ int wlan_hdd_set_mon_chan(struct hdd_adapter *adapter, qdf_freq_t freq,
 	if (!req)
 		return -ENOMEM;
 	req->vdev_id = adapter->vdev_id;
-	req->target_chan_freq = ch_info->freq;
+	req->target_chan_freq = freq;
 	req->ch_width = ch_width;
 
 	ch_params.ch_width = ch_width;

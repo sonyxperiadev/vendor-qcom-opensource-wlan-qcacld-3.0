@@ -22887,7 +22887,7 @@ static int __wlan_hdd_cfg80211_set_mon_ch(struct wiphy *wiphy,
 		return -ENOMEM;
 
 	req->vdev_id = adapter->vdev_id;
-	req->target_chan_freq = ch_info->freq;
+	req->target_chan_freq = chandef->chan->center_freq;
 	req->ch_width = ch_width;
 
 	ch_params.ch_width = ch_width;
