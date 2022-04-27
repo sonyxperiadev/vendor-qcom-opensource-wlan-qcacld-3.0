@@ -3564,9 +3564,7 @@ QDF_STATUS sme_qos_process_ft_reassoc_rsp_ev(struct mac_context *mac_ctx,
 				 csr_conn_info->nAssocReqLength +
 				 csr_conn_info->nAssocRspLength));
 
-#ifdef WLAN_FEATURE_ROAM_OFFLOAD
-	if (!MLME_IS_ROAM_SYNCH_IN_PROGRESS(mac_ctx->psoc, sessionid)) {
-#endif
+	if (!wlan_cm_is_roam_sync_in_progress(mac_ctx->psoc, sessionid)) {
 		for (ac = QCA_WLAN_AC_BE; ac < QCA_WLAN_AC_ALL; ac++) {
 			ac_info = &qos_session->ac_info[ac];
 			sme_qos_find_matching_tspec(mac_ctx, sessionid, ac,
@@ -3592,8 +3590,8 @@ QDF_STATUS sme_qos_process_ft_reassoc_rsp_ev(struct mac_context *mac_ctx,
 			}
 		} else
 			sme_debug("LFR3-11r ric_rsplen is zero or ric_data_desc is not present or wmmtspec is not present");
-	}
 #endif
+	}
 
 	/* Send the Aggregated QoS request to HAL */
 	status = sme_qos_ft_aggr_qos_req(mac_ctx, sessionid);
@@ -4486,7 +4484,7 @@ static bool sme_qos_ft_handoff_required(struct mac_context *mac,
 	csr_roam_session = CSR_GET_SESSION(mac, session_id);
 
 	if (csr_roam_session &&
-	    MLME_IS_ROAM_SYNCH_IN_PROGRESS(mac->psoc, session_id) &&
+	    wlan_cm_is_roam_sync_in_progress(mac->psoc, session_id) &&
 	    csr_roam_is_ese_assoc(mac, session_id) &&
 	    csr_roam_session->connectedInfo.nTspecIeLength)
 		return true;
