@@ -105,6 +105,7 @@ static int hdd_close_ndi(struct hdd_adapter *adapter)
 	if (errno)
 		hdd_err("failed to destroy vdev: %d", errno);
 
+	adapter->is_virtual_iface = true;
 	/* We are good to close the adapter */
 	hdd_close_adapter(hdd_ctx, adapter, true);
 
