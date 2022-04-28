@@ -1434,6 +1434,7 @@ static void dp_pld_request_bus_bandwidth(struct wlan_dp_psoc_context *dp_ctx,
 	qdf_cpu_mask pm_qos_cpu_mask_tx, pm_qos_cpu_mask_rx, pm_qos_cpu_mask;
 	bool is_rx_pm_qos_high;
 	bool is_tx_pm_qos_high;
+	bool pmqos_on_low_tput = false;
 	enum tput_level tput_level;
 	struct bbm_params param = {0};
 	bool legacy_client = false;
@@ -1583,6 +1584,13 @@ static void dp_pld_request_bus_bandwidth(struct wlan_dp_psoc_context *dp_ctx,
 			is_rx_pm_qos_high = false;
 			is_tx_pm_qos_high = false;
 			qdf_cpumask_clear(&pm_qos_cpu_mask);
+			if (next_vote_level == PLD_BUS_WIDTH_LOW &&
+			    rx_packets > tx_packets &&
+			    !legacy_client) {
+				pmqos_on_low_tput = true;
+				dp_pm_qos_update_cpu_mask(&pm_qos_cpu_mask,
+							  false);
+			}
 		} else {
 			qdf_cpumask_clear(&pm_qos_cpu_mask);
 			qdf_cpumask_or(&pm_qos_cpu_mask,
@@ -1598,7 +1606,7 @@ static void dp_pld_request_bus_bandwidth(struct wlan_dp_psoc_context *dp_ctx,
 	}
 
 	if (vote_level_change || tx_level_change || rx_level_change) {
-		dp_info("tx:%llu[%llu(off)+%llu(no-off)] rx:%llu[%llu(off)+%llu(no-off)] next_level(vote %u rx %u tx %u rtpm %d) pm_qos(rx:%u,%*pb tx:%u,%*pb)",
+		dp_info("tx:%llu[%llu(off)+%llu(no-off)] rx:%llu[%llu(off)+%llu(no-off)] next_level(vote %u rx %u tx %u rtpm %d) pm_qos(rx:%u,%*pb tx:%u,%*pb on_low_tput:%u)",
 			tx_packets,
 			dp_ctx->prev_tx_offload_pkts,
 			dp_ctx->prev_no_tx_offload_pkts,
@@ -1610,7 +1618,8 @@ static void dp_pld_request_bus_bandwidth(struct wlan_dp_psoc_context *dp_ctx,
 			is_rx_pm_qos_high,
 			qdf_cpumask_pr_args(&pm_qos_cpu_mask_rx),
 			is_tx_pm_qos_high,
-			qdf_cpumask_pr_args(&pm_qos_cpu_mask_tx));
+			qdf_cpumask_pr_args(&pm_qos_cpu_mask_tx),
+			pmqos_on_low_tput);
 
 		if (dp_ctx->txrx_hist) {
 			dp_ctx->txrx_hist[index].next_tx_level = next_tx_level;
