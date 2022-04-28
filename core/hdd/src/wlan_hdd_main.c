@@ -17533,13 +17533,16 @@ bool hdd_get_wlan_driver_status(void)
 	return g_soft_unload;
 }
 
-static void hdd_wlan_soft_driver_load(void)
+static int hdd_wlan_soft_driver_load(void)
 {
-	if (g_soft_unload) {
-		hdd_driver_load();
-		g_soft_unload = false;
+	if (!g_soft_unload) {
+		pr_info("Enabling WiFi\n");
+		return -EINVAL;
 	}
-	pr_info("Enabling WiFi\n");
+
+	hdd_driver_load();
+	g_soft_unload = false;
+	return 0;
 }
 
 static void hdd_wlan_soft_driver_unload(void)
@@ -17559,19 +17562,9 @@ static int hdd_disable_wifi(struct hdd_context *hdd_ctx)
 	int retries = 0;
 	void *hif_ctx;
 
-	if (g_soft_unload) {
-		hdd_err_rl("WiFi is disabled");
-		return -EINVAL;
-	}
-
-	if (!hdd_ctx) {
-		hdd_err_rl("hdd_ctx is Null");
-		return -EINVAL;
-	}
-
 	if (hdd_ctx->is_wlan_disabled) {
-		hdd_err_rl("Wifi already disabled");
-		return -EINVAL;
+		hdd_err_rl("Wifi is already disabled");
+		return 0;
 	}
 
 	hdd_debug("Initiating WLAN idle shutdown");
@@ -17615,8 +17608,9 @@ static int hdd_disable_wifi(struct hdd_context *hdd_ctx)
 	return 0;
 }
 #else
-static void hdd_wlan_soft_driver_load(void)
+static int hdd_wlan_soft_driver_load(void)
 {
+	return -EINVAL;
 }
 
 static void hdd_wlan_soft_driver_unload(void)
@@ -17638,6 +17632,7 @@ static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 	unsigned long rc;
 	struct hdd_context *hdd_ctx;
 	bool is_wait_for_ready = false;
+	bool is_wlan_force_disabled;
 
 
 	id = hdd_validate_wlan_string(user_buf);
@@ -17655,9 +17650,13 @@ static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 		pr_info("Wifi wait for ready from UI\n");
 		break;
 	case WLAN_ENABLE_STR:
-		hdd_wlan_soft_driver_load();
+		if (!hdd_wlan_soft_driver_load())
+			goto exit;
 		break;
 	case WLAN_DISABLE_STR:
+		is_wlan_force_disabled = hdd_get_wlan_driver_status();
+		if (is_wlan_force_disabled)
+			goto exit;
 		pr_info("Disabling WiFi\n");
 		break;
 	case WLAN_FORCE_DISABLE_STR:
@@ -17693,6 +17692,11 @@ static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 		hdd_psoc_idle_timer_stop(hdd_ctx);
 
 	if (id == WLAN_DISABLE_STR) {
+		if (!hdd_ctx) {
+			hdd_err_rl("hdd_ctx is Null");
+			goto exit;
+		}
+
 		ret = hdd_disable_wifi(hdd_ctx);
 		if (ret)
 			return ret;
@@ -17701,12 +17705,12 @@ static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 	if (id == WLAN_ENABLE_STR) {
 		if (!hdd_ctx) {
 			hdd_err_rl("hdd_ctx is Null");
-			return -EINVAL;
+			goto exit;
 		}
 
 		if (!hdd_ctx->is_wlan_disabled) {
 			hdd_err_rl("WiFi is already enabled");
-			return -EINVAL;
+			goto exit;
 		}
 		hdd_ctx->is_wlan_disabled = false;
 	}
