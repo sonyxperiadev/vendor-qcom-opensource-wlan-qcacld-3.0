@@ -82,6 +82,7 @@
 #include <wlan_mlme_main.h>
 #include <wlan_cm_api.h>
 #include "wlan_pkt_capture_ucfg_api.h"
+#include "wma_eht.h"
 
 struct wma_search_rate {
 	int32_t rate;
@@ -759,24 +760,6 @@ static void wma_cp_stats_set_rate_flag(tp_wma_handle wma, uint8_t vdev_id)
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_WMA_ID);
 }
 
-#ifdef WLAN_FEATURE_11BE
-/**
- * wma_get_bss_eht_capable() - whether bss is eht capable or not
- * @add_bss: add_bss params
- *
- * Return: true if eht capable is present
- */
-static bool wma_get_bss_eht_capable(struct bss_params *add_bss)
-{
-	return add_bss->eht_capable;
-}
-#else
-static bool wma_get_bss_eht_capable(struct bss_params *add_bss)
-{
-	return false;
-}
-#endif
-
 #ifdef WLAN_FEATURE_11AX
 /**
  * wma_set_bss_rate_flags_he() - set rate flags based on BSS capability
@@ -870,7 +853,7 @@ void wma_set_bss_rate_flags(tp_wma_handle wma, uint8_t vdev_id,
 	struct wma_txrx_node *iface = &wma->interfaces[vdev_id];
 	struct vdev_mlme_obj *vdev_mlme;
 	enum tx_rate_info *rate_flags;
-
+	QDF_STATUS qdf_status;
 
 	vdev_mlme = wlan_vdev_mlme_get_cmpt_obj(iface->vdev);
 	if (!vdev_mlme) {
@@ -880,14 +863,15 @@ void wma_set_bss_rate_flags(tp_wma_handle wma, uint8_t vdev_id,
 	rate_flags = &vdev_mlme->mgmt.rate_info.rate_flags;
 	*rate_flags = 0;
 
-	if (QDF_STATUS_SUCCESS !=
-		wma_set_bss_rate_flags_he(rate_flags, add_bss)) {
-		if (add_bss->vhtCapable) {
-			*rate_flags = wma_get_vht_rate_flags(add_bss->ch_width);
-		}
-		/* avoid to conflict with htCapable flag */
-		else if (add_bss->htCapable) {
-			*rate_flags |= wma_get_ht_rate_flags(add_bss->ch_width);
+	qdf_status = wma_set_bss_rate_flags_eht(rate_flags, add_bss);
+	if (QDF_IS_STATUS_ERROR(qdf_status)) {
+		if (QDF_STATUS_SUCCESS !=
+			wma_set_bss_rate_flags_he(rate_flags, add_bss)) {
+			if (add_bss->vhtCapable)
+				*rate_flags = wma_get_vht_rate_flags(add_bss->ch_width);
+			/* avoid to conflict with htCapable flag */
+			else if (add_bss->htCapable)
+				*rate_flags |= wma_get_ht_rate_flags(add_bss->ch_width);
 		}
 	}
 

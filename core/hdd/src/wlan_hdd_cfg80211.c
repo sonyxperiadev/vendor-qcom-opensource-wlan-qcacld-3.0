@@ -23713,6 +23713,12 @@ void wlan_hdd_deinit_chan_info(struct hdd_context *hdd_ctx)
 		qdf_mem_free(chan);
 }
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0)) || defined(CFG80211_11BE_BASIC)
+#define SET_RATE_INFO_BW_320 RATE_INFO_BW_320
+#else
+#define SET_RATE_INFO_BW_320 RATE_INFO_BW_160
+#endif
+
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 0, 0)) || defined(WITH_BACKPORTS)
 static enum rate_info_bw hdd_map_hdd_bw_to_os(enum hdd_rate_info_bw hdd_bw)
 {
@@ -23729,6 +23735,8 @@ static enum rate_info_bw hdd_map_hdd_bw_to_os(enum hdd_rate_info_bw hdd_bw)
 		return RATE_INFO_BW_80;
 	case HDD_RATE_BW_160:
 		return RATE_INFO_BW_160;
+	case HDD_RATE_BW_320:
+		return SET_RATE_INFO_BW_320;
 	}
 
 	hdd_err("Unhandled HDD_RATE_BW: %d", hdd_bw);

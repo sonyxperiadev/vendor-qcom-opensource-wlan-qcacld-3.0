@@ -69,10 +69,11 @@
 #include <cdp_txrx_host_stats.h>
 #include "wlan_mlme_ucfg_api.h"
 #include <wlan_cp_stats_mc_tgt_api.h>
+#include "wma_eht.h"
 
 /* MCS Based rate table */
 /* HT MCS parameters with Nss = 1 */
-static struct index_data_rate_type mcs_nss1[] = {
+static const struct index_data_rate_type mcs_nss1[] = {
 	/* MCS L20  S20   L40   S40 */
 	{0,  {65,  72},  {135,  150 } },
 	{1,  {130, 144}, {270,  300 } },
@@ -85,7 +86,7 @@ static struct index_data_rate_type mcs_nss1[] = {
 };
 
 /* HT MCS parameters with Nss = 2 */
-static struct index_data_rate_type mcs_nss2[] = {
+static const struct index_data_rate_type mcs_nss2[] = {
 	/* MCS L20  S20    L40   S40 */
 	{0,  {130,  144},  {270,  300 } },
 	{1,  {260,  289},  {540,  600 } },
@@ -99,7 +100,7 @@ static struct index_data_rate_type mcs_nss2[] = {
 
 /* MCS Based VHT rate table */
 /* MCS parameters with Nss = 1*/
-static struct index_vht_data_rate_type vht_mcs_nss1[] = {
+static const struct index_vht_data_rate_type vht_mcs_nss1[] = {
 	/* MCS L20  S20    L40   S40    L80   S80    L160  S160*/
 	{0,  {65,   72 }, {135,  150},  {293,  325}, {585, 650} },
 	{1,  {130,  144}, {270,  300},  {585,  650}, {1170, 1300} },
@@ -114,7 +115,7 @@ static struct index_vht_data_rate_type vht_mcs_nss1[] = {
 };
 
 /*MCS parameters with Nss = 2*/
-static struct index_vht_data_rate_type vht_mcs_nss2[] = {
+static const struct index_vht_data_rate_type vht_mcs_nss2[] = {
 	/* MCS L20  S20    L40    S40    L80    S80    L160   S160*/
 	{0,  {130,  144},  {270,  300},  { 585,  650}, {1170, 1300} },
 	{1,  {260,  289},  {540,  600},  {1170, 1300}, {2340, 2600} },
@@ -131,7 +132,7 @@ static struct index_vht_data_rate_type vht_mcs_nss2[] = {
 #ifdef WLAN_FEATURE_11AX
 /* MCS Based HE rate table */
 /* MCS parameters with Nss = 1*/
-static struct index_he_data_rate_type he_mcs_nss1[] = {
+static const struct index_he_data_rate_type he_mcs_nss1[] = {
 /* MCS,  {dcm0:0.8/1.6/3.2}, {dcm1:0.8/1.6/3.2} */
 	{0,  {{86,   81,   73  }, {43,   40,  36 } }, /* HE20 */
 	     {{172,  163,  146 }, {86,   81,  73 } }, /* HE40 */
@@ -192,7 +193,7 @@ static struct index_he_data_rate_type he_mcs_nss1[] = {
 };
 
 /*MCS parameters with Nss = 2*/
-static struct index_he_data_rate_type he_mcs_nss2[] = {
+static const struct index_he_data_rate_type he_mcs_nss2[] = {
 /* MCS,  {dcm0:0.8/1.6/3.2}, {dcm1:0.8/1.6/3.2} */
 	{0,  {{172,   163,   146 }, {86,   81,   73 } }, /* HE20 */
 	     {{344,   325,   293 }, {172,  163,  146} }, /* HE40 */
@@ -279,26 +280,10 @@ void wma_swap_bytes(void *pv, uint32_t n)
 #define SWAPME(x, len) wma_swap_bytes(&x, len)
 #endif /* BIG_ENDIAN_HOST */
 
-/**
- * wma_mcs_rate_match() - find the match mcs rate
- * @raw_rate: the rate to look up
- * @is_he: if it is he rate
- * @nss1_rate: the nss1 rate
- * @nss2_rate: the nss2 rate
- * @nss: the nss in use
- * @guard_interval: to get guard interval from rate
- *
- * This is a helper function to find the match of the tx_rate
- * and return nss/guard interval.
- *
- * Return: the found rate or 0 otherwise
- */
-static inline uint16_t wma_mcs_rate_match(uint16_t raw_rate,
-					  bool is_he,
-					  uint16_t *nss1_rate,
-					  uint16_t *nss2_rate,
-					  uint8_t *nss,
-					  enum txrate_gi *guard_interval)
+uint16_t wma_mcs_rate_match(uint16_t raw_rate, bool is_he,
+			    const uint16_t *nss1_rate,
+			    const uint16_t *nss2_rate,
+			    uint8_t *nss, enum txrate_gi *guard_interval)
 {
 	uint8_t gi_index;
 	uint8_t gi_index_max = 2;
@@ -358,8 +343,8 @@ static uint16_t wma_match_he_rate(uint16_t raw_rate,
 	uint8_t dcm_index_max = 1;
 	uint8_t dcm_index = 0;
 	uint16_t match_rate = 0;
-	uint16_t *nss1_rate;
-	uint16_t *nss2_rate;
+	const uint16_t *nss1_rate;
+	const uint16_t *nss2_rate;
 
 	*p_index = 0;
 	if (!(rate_flags & (TX_RATE_HE160 | TX_RATE_HE80 | TX_RATE_HE40 |
@@ -478,13 +463,19 @@ uint8_t wma_get_mcs_idx(uint16_t raw_rate, enum tx_rate_info rate_flags,
 {
 	uint8_t  index = 0;
 	uint16_t match_rate = 0;
-	uint16_t *nss1_rate;
-	uint16_t *nss2_rate;
+	const uint16_t *nss1_rate;
+	const uint16_t *nss2_rate;
 
 	wma_debug("Rates from FW:  raw_rate:%d rate_flgs: 0x%x is_he_mcs_12_13_supported: %d nss: %d",
 		  raw_rate, rate_flags, is_he_mcs_12_13_supported, *nss);
 
 	*mcs_rate_flag = rate_flags;
+
+	match_rate = wma_match_eht_rate(raw_rate, rate_flags,
+					nss, dcm, guard_interval,
+					mcs_rate_flag, &index);
+	if (match_rate)
+		goto rate_found;
 
 	match_rate = wma_match_he_rate(raw_rate, rate_flags,
 				       is_he_mcs_12_13_supported,

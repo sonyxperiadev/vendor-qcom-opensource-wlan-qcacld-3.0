@@ -1022,7 +1022,9 @@ void wma_update_rate_flags_after_vdev_restart(tp_wma_handle wma,
 	des_chan = wlan_vdev_mlme_get_des_chan(iface->vdev);
 	bss_phymode = des_chan->ch_phymode;
 
-	if (IS_WLAN_PHYMODE_HE(bss_phymode)) {
+	if (wma_is_eht_phymode_supported(bss_phymode)) {
+		rate_flags = wma_get_eht_rate_flags(des_chan->ch_width);
+	} else if (IS_WLAN_PHYMODE_HE(bss_phymode)) {
 		rate_flags = wma_get_he_rate_flags(des_chan->ch_width);
 	} else if (IS_WLAN_PHYMODE_VHT(bss_phymode)) {
 		rate_flags = wma_get_vht_rate_flags(des_chan->ch_width);

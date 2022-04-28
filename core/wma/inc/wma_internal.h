@@ -1756,4 +1756,22 @@ int wma_latency_level_event_handler(void *wma_ctx, uint8_t *event_buff,
  */
 int wma_get_ani_level_evt_handler(void *handle, uint8_t *event_buf,
 				  uint32_t len);
+/**
+ * wma_mcs_rate_match() - find the match mcs rate
+ * @raw_rate: the rate to look up
+ * @is_he: if it is he rate
+ * @nss1_rate: the nss1 rate
+ * @nss2_rate: the nss2 rate
+ * @nss: the nss in use
+ * @guard_interval: to get guard interval from rate
+ *
+ * This is a helper function to find the match of the tx_rate
+ * and return nss/guard interval.
+ *
+ * Return: the found rate or 0 otherwise
+ */
+uint16_t wma_mcs_rate_match(uint16_t raw_rate, bool is_he,
+			    const uint16_t *nss1_rate,
+			    const uint16_t *nss2_rate,
+			    uint8_t *nss, enum txrate_gi *guard_interval);
 #endif

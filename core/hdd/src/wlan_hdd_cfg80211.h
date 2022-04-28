@@ -597,6 +597,7 @@ int wlan_hdd_change_hw_mode_for_given_chnl(struct hdd_adapter *adapter,
  * @HDD_RATE_BW_40: 40MHz
  * @HDD_RATE_BW_80: 80MHz
  * @HDD_RATE_BW_160: 160 MHz
+ * @HDD_RATE_BW_320: 320 MHz
  */
 enum hdd_rate_info_bw {
 	HDD_RATE_BW_5,
@@ -605,6 +606,7 @@ enum hdd_rate_info_bw {
 	HDD_RATE_BW_40,
 	HDD_RATE_BW_80,
 	HDD_RATE_BW_160,
+	HDD_RATE_BW_320,
 };
 
 /**

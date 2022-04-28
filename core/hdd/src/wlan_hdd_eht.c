@@ -346,4 +346,55 @@ void hdd_sysfs_11be_rate_destroy(struct hdd_adapter *adapter)
 	device_remove_file(&adapter->dev->dev, &dev_attr_11be_rate);
 }
 
+/**
+ * hdd_map_eht_gi_to_os() - map txrate_gi to os guard interval
+ * @guard_interval: guard interval get from fw rate
+ *
+ * Return: os guard interval value
+ */
+static inline uint8_t hdd_map_eht_gi_to_os(enum txrate_gi guard_interval)
+{
+	switch (guard_interval) {
+	case TXRATE_GI_0_8_US:
+		return NL80211_RATE_INFO_EHT_GI_0_8;
+	case TXRATE_GI_1_6_US:
+		return NL80211_RATE_INFO_EHT_GI_1_6;
+	case TXRATE_GI_3_2_US:
+		return NL80211_RATE_INFO_EHT_GI_3_2;
+	default:
+		return NL80211_RATE_INFO_EHT_GI_0_8;
+	}
+}
+
+/**
+ * wlan_hdd_fill_os_eht_rateflags() - Fill EHT related rate_info
+ * @os_rate: rate info for os
+ * @rate_flags: rate flags
+ * @dcm: dcm from rate
+ * @guard_interval: guard interval from rate
+ *
+ * Return: none
+ */
+void wlan_hdd_fill_os_eht_rateflags(struct rate_info *os_rate,
+				    enum tx_rate_info rate_flags,
+				    uint8_t dcm,
+				    enum txrate_gi guard_interval)
+{
+	/* as fw not yet report ofdma to host, so don't
+	 * fill RATE_INFO_BW_EHT_RU.
+	 */
+	if (rate_flags & (TX_RATE_EHT80 | TX_RATE_EHT40 |
+	    TX_RATE_EHT20 | TX_RATE_EHT160 | TX_RATE_EHT320)) {
+		if (rate_flags & TX_RATE_EHT320)
+			hdd_set_rate_bw(os_rate, HDD_RATE_BW_320);
+		else if (rate_flags & TX_RATE_EHT160)
+			hdd_set_rate_bw(os_rate, HDD_RATE_BW_160);
+		else if (rate_flags & TX_RATE_EHT80)
+			hdd_set_rate_bw(os_rate, HDD_RATE_BW_80);
+		else if (rate_flags & TX_RATE_EHT40)
+			hdd_set_rate_bw(os_rate, HDD_RATE_BW_40);
+
+		os_rate->flags |= RATE_INFO_FLAGS_EHT_MCS;
+	}
+}
 #endif
