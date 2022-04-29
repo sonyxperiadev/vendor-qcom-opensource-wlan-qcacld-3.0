@@ -3895,12 +3895,13 @@ wlan_mlo_sta_mlo_concurency_set_link(struct wlan_objmgr_vdev *vdev,
 	}
 
 	status = mlo_ser_set_link_req(req);
-	if (QDF_IS_STATUS_ERROR(status))
+	if (QDF_IS_STATUS_ERROR(status)) {
 		mlme_err("vdev %d: Failed to set link mode %d num_mlo_vdev %d reason %d",
 			 wlan_vdev_get_id(vdev), mode, num_mlo_vdev,
 			 reason);
+		qdf_mem_free(req);
+	}
 
-	qdf_mem_free(req);
 }
 #endif
 
