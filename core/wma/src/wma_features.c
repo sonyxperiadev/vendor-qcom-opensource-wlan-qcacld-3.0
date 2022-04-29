@@ -684,8 +684,10 @@ enum wlan_phymode wma_chan_phy_mode(uint32_t freq, enum phy_ch_width chan_width,
 	if (!wma)
 		return WLAN_PHYMODE_AUTO;
 
-	if (chan_width >= CH_WIDTH_INVALID) {
-		wma_err_rl("Invalid channel width %d", chan_width);
+	if (chan_width >= CH_WIDTH_INVALID || !bw_val ||
+	    (wlan_reg_is_24ghz_ch_freq(freq) && bw_val > 40)) {
+		wma_err_rl("Invalid channel width %d freq %d",
+			   chan_width, freq);
 		return WLAN_PHYMODE_AUTO;
 	}
 
