@@ -4288,6 +4288,28 @@ void policy_mgr_handle_ml_sta_link_concurrency(struct wlan_objmgr_psoc *psoc,
 					       struct wlan_objmgr_vdev *vdev,
 					       bool is_connect);
 
+/*
+ * policy_mgr_handle_sap_cli_go_ml_sta_up_csa() - Handle enable/disable
+ * link on CLI/GO/SAP/ML_STA vdev UP and channel change
+ * @psoc: objmgr psoc
+ * @vdev_id: vdev_id which went UP or changed channel
+ *
+ * Return: void
+ */
+void
+policy_mgr_handle_sap_cli_go_ml_sta_up_csa(struct wlan_objmgr_psoc *psoc,
+					   uint8_t vdev_id);
+
+/*
+ * policy_mgr_re_enable_ml_sta_on_p2p_sap_down() - Handle enable
+ * link on CLI/GO/SAP/ML_STA down
+ * @psoc: objmgr psoc
+ * @vdev_id: vdev_id which went down
+ *
+ * Return: void
+ */
+void policy_mgr_re_enable_ml_sta_on_p2p_sap_down(struct wlan_objmgr_psoc *psoc,
+						 uint8_t vdev_id);
 #else
 
 static inline bool policy_mgr_is_mlo_sap_concurrency_allowed(
@@ -4327,6 +4349,18 @@ static inline
 void policy_mgr_handle_ml_sta_link_concurrency(struct wlan_objmgr_psoc *psoc,
 					       struct wlan_objmgr_vdev *vdev,
 					       bool is_connect)
+{
+}
+
+static inline void
+policy_mgr_handle_sap_cli_go_ml_sta_up_csa(struct wlan_objmgr_psoc *psoc,
+					   uint8_t vdev_id)
+{
+}
+
+static inline
+void policy_mgr_re_enable_ml_sta_on_p2p_sap_down(struct wlan_objmgr_psoc *psoc,
+						 uint8_t vdev_id)
 {
 }
 #endif

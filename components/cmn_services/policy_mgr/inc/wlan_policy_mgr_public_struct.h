@@ -69,6 +69,10 @@
 #define MAX_NUMBER_OF_DISABLE_LINK WLAN_UMAC_MLO_MAX_VDEVS - 1
 #endif
 
+/* BIT 0 for low latency and BIT 1 for HIGH TPUT */
+#define PM_VDEV_TRAFFIC_LOW_LATENCY 0x1
+#define PM_VDEV_TRAFFIC_HIGH_TPUT 0x2
+
 /* Policy manager default request id */
 #define POLICY_MGR_DEF_REQ_ID 0
 

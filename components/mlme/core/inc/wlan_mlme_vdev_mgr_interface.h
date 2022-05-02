@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -432,6 +432,14 @@ bool mlme_is_notify_co_located_ap_update_rnr(struct wlan_objmgr_vdev *vdev);
  */
 void mlme_set_notify_co_located_ap_update_rnr(struct wlan_objmgr_vdev *vdev,
 					      bool update_rnr);
+
+/**
+ * wlan_is_vdev_traffic_ll_ht() - if vdev traffic type is low latency or high TP
+ * @vdev: vdev pointer
+ *
+ * Return: true is LL or HT is set.
+ */
+bool wlan_is_vdev_traffic_ll_ht(struct wlan_objmgr_vdev *vdev);
 
 /**
  * mlme_get_assoc_type() - get associate type

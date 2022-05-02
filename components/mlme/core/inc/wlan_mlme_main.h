@@ -62,7 +62,6 @@
 #define QCN_IE_ATTR_ID_VHT_MCS11 2
 #define QCN_IE_ATTR_ID_ALL 0xFF
 
-
 #define mlme_legacy_fatal(params...) QDF_TRACE_FATAL(QDF_MODULE_ID_MLME, params)
 #define mlme_legacy_err(params...) QDF_TRACE_ERROR(QDF_MODULE_ID_MLME, params)
 #define mlme_legacy_warn(params...) QDF_TRACE_WARN(QDF_MODULE_ID_MLME, params)
@@ -436,6 +435,7 @@ struct wait_for_key_timer {
  * @is_usr_ps_enabled: Is Power save enabled
  * @notify_co_located_ap_upt_rnr: Notify co located AP to update RNR or not
  * @max_mcs_index: Max supported mcs index of vdev
+ * @vdev_traffic_type: to set if vdev is LOW_LATENCY or HIGH_TPUT
  */
 struct mlme_legacy_priv {
 	bool chan_switch_in_progress;
@@ -483,6 +483,7 @@ struct mlme_legacy_priv {
 #ifdef WLAN_FEATURE_SON
 	uint8_t max_mcs_index;
 #endif
+	uint8_t vdev_traffic_type;
 };
 
 /**

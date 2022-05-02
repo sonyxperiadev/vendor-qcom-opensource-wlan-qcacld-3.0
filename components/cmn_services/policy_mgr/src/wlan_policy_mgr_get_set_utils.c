@@ -4893,6 +4893,370 @@ policy_mgr_handle_ml_sta_link_concurrency(struct wlan_objmgr_psoc *psoc,
 						       vdev_id_list);
 }
 
+static bool
+policy_mgr_is_mode_p2p_sap(enum policy_mgr_con_mode mode)
+{
+	return (mode == PM_SAP_MODE) || (mode == PM_P2P_CLIENT_MODE) ||
+	       (mode == PM_P2P_GO_MODE);
+}
+
+static bool
+policy_mgr_is_vdev_high_tput_or_low_latency(struct wlan_objmgr_psoc *psoc,
+					    uint8_t vdev_id)
+{
+	struct wlan_objmgr_vdev *vdev;
+	bool is_vdev_ll_ht;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_POLICY_MGR_ID);
+	if (!vdev) {
+		policy_mgr_err("invalid vdev for id %d", vdev_id);
+		return false;
+	}
+	is_vdev_ll_ht = wlan_is_vdev_traffic_ll_ht(vdev);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
+
+	return is_vdev_ll_ht;
+}
+
+/*
+ * policy_mgr_get_affected_links_for_go_sap_cli() - Check if any of the P2P OR
+ * SAP is causing MCC with a ML link and also is configured high tput or low
+ * latency
+ * @psoc: psoc ctx
+ * @num_ml_sta: Number of ML STA present
+ * @ml_vdev_lst: ML STA vdev id list
+ * @ml_freq_lst: ML STA freq list
+ * @num_p2p_sap: Number of P2P and SAP present
+ * @p2p_sap_vdev_lst: P2P and SAP vdev id list
+ * @p2p_sap_freq_lst: P2P and SAP freq list
+ *
+ * Return: Number of links causing MCC with any of the P2P or SAP which is
+ * configured high tput or low latency
+ */
+static uint8_t
+policy_mgr_get_affected_links_for_go_sap_cli(struct wlan_objmgr_psoc *psoc,
+					     uint8_t num_ml_sta,
+					     uint8_t *ml_vdev_lst,
+					     qdf_freq_t *ml_freq_lst,
+					     uint8_t num_p2p_sap,
+					     uint8_t *p2p_sap_vdev_lst,
+					     qdf_freq_t *p2p_sap_freq_lst)
+{
+	uint8_t i = 0, k = 0, num_affected_links = 0;
+
+	if (!num_p2p_sap || num_ml_sta < 2)
+		return num_affected_links;
+
+	while (i < num_ml_sta) {
+		/* if any link is causing MCC with GO/GC/AP, set mcc as true.*/
+		for (k = 0; k < num_p2p_sap; k++) {
+			/* Continue if SCC */
+			if (ml_freq_lst[i] == p2p_sap_freq_lst[k])
+				continue;
+			/* Continue if high tput ot low latency is not set */
+			if (!policy_mgr_is_vdev_high_tput_or_low_latency(psoc,
+			    p2p_sap_vdev_lst[k]))
+				continue;
+			/* If both freq are on same mac then its MCC */
+			if (policy_mgr_are_2_freq_on_same_mac(psoc,
+							ml_freq_lst[i],
+							p2p_sap_freq_lst[k])) {
+				policy_mgr_debug("ml sta vdev %d (freq %d) and p2p/sap vdev %d (freq %d) are MCC",
+						 ml_vdev_lst[i], ml_freq_lst[i],
+						 p2p_sap_vdev_lst[k],
+						 p2p_sap_freq_lst[k]);
+				num_affected_links++;
+			}
+		}
+		i++;
+	}
+
+	return num_affected_links;
+}
+
+/*
+ * policy_mgr_get_ml_sta_and_p2p_cli_go_sap_info() - Get number of ML STA,
+ * P2P and SAP interfaces and their vdev ids and freq list
+ * @pm_ctx: pm_ctx ctx
+ * @num_ml_sta: Return number of ML STA present
+ * @num_disabled_ml_sta: Return number of disabled ML STA links
+ * @ml_vdev_lst: Return ML STA vdev id list
+ * @ml_freq_lst: Return ML STA freq list
+ * @num_p2p_sap: Return number of P2P and SAP present
+ * @p2p_sap_vdev_lst: Return P2P and SAP vdev id list
+ * @p2p_sap_freq_lst: Return P2P and SAP freq list
+ *
+ * Return: void
+ */
+static void
+policy_mgr_get_ml_sta_and_p2p_cli_go_sap_info(
+					struct policy_mgr_psoc_priv_obj *pm_ctx,
+					uint8_t *num_ml_sta,
+					uint8_t *num_disabled_ml_sta,
+					uint8_t *ml_vdev_lst,
+					qdf_freq_t *ml_freq_lst,
+					uint8_t *num_p2p_sap,
+					uint8_t *p2p_sap_vdev_lst,
+					qdf_freq_t *p2p_sap_freq_lst)
+{
+	enum policy_mgr_con_mode mode;
+	struct wlan_objmgr_vdev *vdev;
+	uint8_t vdev_id, conn_index;
+	qdf_freq_t freq;
+
+	*num_ml_sta = 0;
+	*num_p2p_sap = 0;
+	*num_disabled_ml_sta = 0;
+
+	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
+	for (conn_index = 0; conn_index < MAX_NUMBER_OF_CONC_CONNECTIONS;
+	     conn_index++) {
+		if (!pm_conc_connection_list[conn_index].in_use)
+			continue;
+		mode = pm_conc_connection_list[conn_index].mode;
+		if (!policy_mgr_is_mode_p2p_sap(mode) && mode != PM_STA_MODE)
+			continue;
+		vdev_id = pm_conc_connection_list[conn_index].vdev_id;
+		freq = pm_conc_connection_list[conn_index].freq;
+
+		if (policy_mgr_is_mode_p2p_sap(mode)) {
+			/* add p2p and sap vdev and freq list */
+			p2p_sap_vdev_lst[*num_p2p_sap] = vdev_id;
+			p2p_sap_freq_lst[(*num_p2p_sap)++] = freq;
+			continue;
+		}
+
+		/* add ml sta vdev and freq list */
+		vdev = wlan_objmgr_get_vdev_by_id_from_psoc(pm_ctx->psoc,
+							    vdev_id,
+							    WLAN_POLICY_MGR_ID);
+		if (!vdev) {
+			policy_mgr_err("invalid vdev for id %d", vdev_id);
+			continue;
+		}
+
+		if (wlan_vdev_mlme_is_mlo_vdev(vdev)) {
+			ml_vdev_lst[*num_ml_sta] = vdev_id;
+			ml_freq_lst[(*num_ml_sta)++] = freq;
+		}
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
+	}
+	/* Get disabled link info as well and keep it at last */
+	for (conn_index = 0; conn_index < MAX_NUMBER_OF_DISABLE_LINK;
+	     conn_index++) {
+		if (!pm_disabled_ml_links[conn_index].in_use)
+			continue;
+		if (pm_disabled_ml_links[conn_index].mode != PM_STA_MODE)
+			continue;
+		ml_vdev_lst[*num_ml_sta] =
+				pm_disabled_ml_links[conn_index].vdev_id;
+		ml_freq_lst[(*num_ml_sta)++] =
+			pm_disabled_ml_links[conn_index].freq;
+		(*num_disabled_ml_sta)++;
+	}
+	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+}
+
+/*
+ * policy_mgr_sta_ml_link_enable_allowed() - Check with given ML links and
+ * existing concurrencies, a disabled ml link can be enabled back.
+ * @psoc: psoc ctx
+ * @num_disabled_ml_sta: Number of existing disabled links
+ * @num_ml_sta: Number of total ML STA links
+ * @ml_freq_lst: ML STA freq list
+ * @ml_vdev_lst: ML STA vdev id list
+ *
+ * Return: if link can be enabled or not
+ */
+static bool
+policy_mgr_sta_ml_link_enable_allowed(struct wlan_objmgr_psoc *psoc,
+				      uint8_t num_disabled_ml_sta,
+				      uint8_t num_ml_sta,
+				      qdf_freq_t *ml_freq_lst,
+				      uint8_t *ml_vdev_lst)
+{
+	union conc_ext_flag conc_ext_flags;
+	uint8_t disabled_link_vdev_id;
+	qdf_freq_t disabled_link_freq;
+	struct wlan_objmgr_vdev *vdev;
+
+	/* If no link is disabled nothing to do */
+	if (!num_disabled_ml_sta || num_ml_sta < 2)
+		return false;
+
+	/* Disabled link is at the last index */
+	disabled_link_vdev_id = ml_vdev_lst[num_ml_sta - 1];
+	disabled_link_freq = ml_freq_lst[num_ml_sta - 1];
+	policy_mgr_debug("disabled_link_vdev_id %d disabled_link_freq %d",
+			 disabled_link_vdev_id, disabled_link_freq);
+	if (!disabled_link_freq)
+		return false;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, disabled_link_vdev_id,
+						    WLAN_POLICY_MGR_ID);
+	if (!vdev) {
+		policy_mgr_err("invalid vdev for id %d", disabled_link_vdev_id);
+		return false;
+	}
+	conc_ext_flags.value = policy_mgr_get_conc_ext_flags(vdev, false);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
+
+	return policy_mgr_allow_concurrency(psoc, PM_STA_MODE,
+					    disabled_link_freq, HW_MODE_20_MHZ,
+					    conc_ext_flags.value);
+}
+
+void
+policy_mgr_handle_sap_cli_go_ml_sta_up_csa(struct wlan_objmgr_psoc *psoc,
+					   uint8_t vdev_id)
+{
+	uint8_t num_ml_sta = 0, num_p2p_sap = 0, num_disabled_ml_sta = 0;
+	uint8_t num_affected_link;
+	uint8_t ml_sta_vdev_lst[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
+	uint8_t p2p_sap_vdev_lst[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
+	qdf_freq_t ml_freq_lst[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
+	qdf_freq_t p2p_sap_freq_lst[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
+	struct wlan_objmgr_vdev *vdev;
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return;
+	}
+
+	policy_mgr_get_ml_sta_and_p2p_cli_go_sap_info(pm_ctx, &num_ml_sta,
+						      &num_disabled_ml_sta,
+						      ml_sta_vdev_lst,
+						      ml_freq_lst, &num_p2p_sap,
+						      p2p_sap_vdev_lst,
+						      p2p_sap_freq_lst);
+
+	policy_mgr_debug("vdev %d: num_ml_sta %d disabled %d num_p2p_sap %d",
+			 vdev_id, num_ml_sta, num_disabled_ml_sta, num_p2p_sap);
+	if (num_ml_sta < 2 || num_ml_sta > MAX_NUMBER_OF_CONC_CONNECTIONS ||
+	    num_p2p_sap > MAX_NUMBER_OF_CONC_CONNECTIONS) {
+		policy_mgr_err("vdev %d: invalid num_ml_sta %d disabled %d num_p2p_sap %d",
+			       vdev_id, num_ml_sta, num_disabled_ml_sta,
+			       num_p2p_sap);
+		return;
+	}
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_POLICY_MGR_ID);
+	if (!vdev) {
+		policy_mgr_err("vdev %d: invalid vdev", vdev_id);
+		return;
+	}
+
+	num_affected_link = policy_mgr_get_affected_links_for_go_sap_cli(psoc,
+						num_ml_sta, ml_sta_vdev_lst,
+						ml_freq_lst, num_p2p_sap,
+						p2p_sap_vdev_lst,
+						p2p_sap_freq_lst);
+
+	if (!num_affected_link) {
+		policy_mgr_debug("vdev %d: no affected link found", vdev_id);
+		goto enable_link;
+	}
+
+	wlan_mlo_sta_mlo_concurency_set_link(vdev,
+					     MLO_LINK_FORCE_REASON_CONNECT,
+					     MLO_LINK_FORCE_MODE_ACTIVE_NUM,
+					     num_ml_sta, ml_sta_vdev_lst);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
+
+	return;
+enable_link:
+
+	/*
+	 * if no affected link and link can be allowed to enable then renable
+	 * the disabled link.
+	 */
+	if (policy_mgr_sta_ml_link_enable_allowed(psoc, num_disabled_ml_sta,
+						  num_ml_sta, ml_freq_lst,
+						  ml_sta_vdev_lst))
+		wlan_mlo_sta_mlo_concurency_set_link(vdev,
+					MLO_LINK_FORCE_REASON_DISCONNECT,
+					MLO_LINK_FORCE_MODE_NO_FORCE,
+					num_ml_sta, ml_sta_vdev_lst);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
+}
+
+void policy_mgr_re_enable_ml_sta_on_p2p_sap_down(struct wlan_objmgr_psoc *psoc,
+						 uint8_t vdev_id)
+{
+	uint8_t num_ml_sta = 0, num_p2p_sap = 0, num_disabled_ml_sta = 0;
+	uint8_t num_affected_link = 0;
+	uint8_t ml_sta_vdev_lst[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
+	uint8_t p2p_sap_vdev_lst[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
+	qdf_freq_t ml_freq_lst[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
+	qdf_freq_t p2p_sap_freq_lst[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
+	struct wlan_objmgr_vdev *vdev;
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return;
+	}
+
+	policy_mgr_get_ml_sta_and_p2p_cli_go_sap_info(pm_ctx, &num_ml_sta,
+						      &num_disabled_ml_sta,
+						      ml_sta_vdev_lst,
+						      ml_freq_lst, &num_p2p_sap,
+						      p2p_sap_vdev_lst,
+						      p2p_sap_freq_lst);
+
+	policy_mgr_debug("vdev %d: num_ml_sta %d disabled %d num_p2p_sap %d",
+			 vdev_id, num_ml_sta, num_disabled_ml_sta, num_p2p_sap);
+
+	if (num_ml_sta < 2 || num_ml_sta > MAX_NUMBER_OF_CONC_CONNECTIONS ||
+	    num_p2p_sap > MAX_NUMBER_OF_CONC_CONNECTIONS) {
+		policy_mgr_err("vdev %d: invalid num_ml_sta %d disabled %d num_p2p_sap %d",
+			       vdev_id, num_ml_sta, num_disabled_ml_sta,
+			       num_p2p_sap);
+		return;
+	}
+
+	/* If link can not be allowed to enable then skip checking further. */
+	if (!policy_mgr_sta_ml_link_enable_allowed(psoc, num_disabled_ml_sta,
+						   num_ml_sta, ml_freq_lst,
+						   ml_sta_vdev_lst))
+		return;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_POLICY_MGR_ID);
+	if (!vdev) {
+		policy_mgr_err("vdev %d: invalid vdev", vdev_id);
+		return;
+	}
+	/*
+	 * If num_p2p_sap is non zero, ie p2p or sap still present check if
+	 * disable link is still required, if not enable the link.
+	 *
+	 * If num_p2p_sap is 0, ie only ml sta is present, enable the link.
+	 */
+	if (num_p2p_sap)
+		num_affected_link =
+			policy_mgr_get_affected_links_for_go_sap_cli(psoc,
+						num_ml_sta, ml_sta_vdev_lst,
+						ml_freq_lst, num_p2p_sap,
+						p2p_sap_vdev_lst,
+						p2p_sap_freq_lst);
+
+	if (num_affected_link)
+		policy_mgr_debug("vdev %d: Affected link present, dont reanabe ML link",
+				 vdev_id);
+	else
+		wlan_mlo_sta_mlo_concurency_set_link(vdev,
+					MLO_LINK_FORCE_REASON_DISCONNECT,
+					MLO_LINK_FORCE_MODE_NO_FORCE,
+					num_ml_sta, ml_sta_vdev_lst);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
+}
+
 #else
 static bool
 policy_mgr_allow_sta_concurrency(struct wlan_objmgr_psoc *psoc,

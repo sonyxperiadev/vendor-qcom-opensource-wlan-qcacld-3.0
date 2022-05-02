@@ -1053,6 +1053,23 @@ bool mlme_is_notify_co_located_ap_update_rnr(struct wlan_objmgr_vdev *vdev)
 	return mlme_priv->notify_co_located_ap_upt_rnr;
 }
 
+bool wlan_is_vdev_traffic_ll_ht(struct wlan_objmgr_vdev *vdev)
+{
+	struct mlme_legacy_priv *mlme_priv;
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_legacy_err("vdev legacy private object is NULL");
+		return false;
+	}
+
+	if (mlme_priv->vdev_traffic_type & PM_VDEV_TRAFFIC_LOW_LATENCY ||
+	    mlme_priv->vdev_traffic_type & PM_VDEV_TRAFFIC_HIGH_TPUT)
+		return true;
+
+	return false;
+}
+
 enum vdev_assoc_type  mlme_get_assoc_type(struct wlan_objmgr_vdev *vdev)
 {
 	struct mlme_legacy_priv *mlme_priv;
