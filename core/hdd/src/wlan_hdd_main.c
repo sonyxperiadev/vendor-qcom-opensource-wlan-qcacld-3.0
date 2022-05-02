@@ -225,6 +225,7 @@
 #include "wlan_hdd_mcc_quota.h"
 #include "osif_pre_cac.h"
 #include "wlan_hdd_pre_cac.h"
+#include "wlan_osif_features.h"
 
 #ifdef MULTI_CLIENT_LL_SUPPORT
 #define WLAM_WLM_HOST_DRIVER_PORT_ID 0xFFFFFF

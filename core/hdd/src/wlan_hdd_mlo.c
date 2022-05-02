@@ -25,6 +25,7 @@
 #include "wlan_hdd_main.h"
 #include "wlan_hdd_mlo.h"
 #include "osif_vdev_sync.h"
+#include "wlan_osif_features.h"
 
 #if defined(CFG80211_11BE_BASIC)
 void hdd_update_mld_mac_addr(struct hdd_context *hdd_ctx,

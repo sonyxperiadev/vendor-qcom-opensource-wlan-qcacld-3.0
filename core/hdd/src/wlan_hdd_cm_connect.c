@@ -52,6 +52,7 @@
 #include "wlan_hdd_hostapd.h"
 #include <wlan_twt_ucfg_ext_api.h>
 #include <osif_twt_internal.h>
+#include "wlan_osif_features.h"
 
 bool hdd_cm_is_vdev_associated(struct hdd_adapter *adapter)
 {

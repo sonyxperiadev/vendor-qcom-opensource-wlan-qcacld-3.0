@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -24,6 +25,7 @@
 
 #if !defined(WLAN_HDD_EHT_H)
 #define WLAN_HDD_EHT_H
+#include "wlan_osif_features.h"
 
 struct hdd_context;
 struct wma_tgt_cfg;

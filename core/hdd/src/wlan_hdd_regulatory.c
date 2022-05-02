@@ -37,6 +37,7 @@
 #include "sap_api.h"
 #include "wlan_hdd_hostapd.h"
 #include "osif_psoc_sync.h"
+#include "wlan_osif_features.h"
 
 #define REG_RULE_2412_2462    REG_RULE(2412-10, 2462+10, 40, 0, 20, 0)
 

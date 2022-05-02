@@ -121,6 +121,7 @@
 #include "wlan_hdd_bus_bandwidth.h"
 #include <wlan_hdd_cm_api.h>
 #include "wlan_hdd_mlo.h"
+#include "wlan_osif_features.h"
 
 /*
  * Preprocessor definitions and constants

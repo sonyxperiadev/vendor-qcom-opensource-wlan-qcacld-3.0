@@ -25,6 +25,7 @@
 #if !defined(WLAN_HDD_MLO_H)
 #define WLAN_HDD_MLO_H
 #include <wlan_hdd_main.h>
+#include "wlan_osif_features.h"
 
 /**
  * struct hdd_adapter_create_param - adapter create parameters

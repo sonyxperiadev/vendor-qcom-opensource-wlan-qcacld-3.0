@@ -110,6 +110,7 @@
 #include "wlan_hdd_mcc_quota.h"
 #include "wlan_hdd_wds.h"
 #include "wlan_hdd_pre_cac.h"
+#include "wlan_osif_features.h"
 
 #define ACS_SCAN_EXPIRY_TIMEOUT_S 4
 

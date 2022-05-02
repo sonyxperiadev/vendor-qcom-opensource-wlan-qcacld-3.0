@@ -180,6 +180,7 @@
 #include "wlan_hdd_son.h"
 #include "wlan_hdd_mcc_quota.h"
 #include "wlan_cfg80211_wifi_pos.h"
+#include "wlan_osif_features.h"
 
 #define g_mode_rates_size (12)
 #define a_mode_rates_size (8)

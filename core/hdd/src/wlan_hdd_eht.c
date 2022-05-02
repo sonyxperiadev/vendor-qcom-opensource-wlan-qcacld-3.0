@@ -31,6 +31,7 @@
 #include "qc_sap_ioctl.h"
 #include "wma_api.h"
 #include "wlan_hdd_sysfs.h"
+#include "wlan_osif_features.h"
 
 #if defined(WLAN_FEATURE_11BE) && defined(CFG80211_11BE_BASIC)
 #define CHAN_WIDTH_SET_40MHZ_IN_2G \
