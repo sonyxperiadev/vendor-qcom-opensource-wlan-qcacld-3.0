@@ -438,7 +438,7 @@ static void lim_copy_ml_partner_info(struct cm_vdev_join_rsp *rsp,
 		if (chan) {
 			rsp_partner_info->partner_link_info[i].chan_freq =
 				wlan_reg_chan_opclass_to_freq(chan, op_class,
-							      true);
+							      false);
 		} else {
 			pe_debug("Failed to get channel info for link ID:%d",
 				 link_id);

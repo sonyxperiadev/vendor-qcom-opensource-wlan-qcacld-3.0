@@ -10223,7 +10223,7 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 			continue;
 		}
 		chan_freq = wlan_reg_chan_opclass_to_freq(chan, op_class,
-							  true);
+							  false);
 		if (WLAN_REG_IS_24GHZ_CH_FREQ(chan_freq)) {
 			wlan_populate_basic_rates(&b_rates, false, true);
 			wlan_populate_basic_rates(&e_rates, true, false);
@@ -10324,7 +10324,9 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 						WLAN_EXTN_ELEMID_HECAP;
 		}
 
-		populate_dot11f_he_6ghz_cap(mac_ctx, NULL, &he_6ghz_band_cap);
+		if (WLAN_REG_IS_6GHZ_CHAN_FREQ(chan_freq))
+			populate_dot11f_he_6ghz_cap(mac_ctx, NULL,
+						    &he_6ghz_band_cap);
 		if ((he_6ghz_band_cap.present &&
 		     frm->he_6ghz_band_cap.present &&
 		     qdf_mem_cmp(&he_6ghz_band_cap, &frm->he_6ghz_band_cap,
