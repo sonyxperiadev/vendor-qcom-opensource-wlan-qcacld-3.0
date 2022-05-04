@@ -2962,7 +2962,7 @@ lim_fill_pe_session(struct mac_context *mac_ctx, struct pe_session *session,
 	tSirMacCapabilityInfo *ap_cap_info;
 	uint8_t wmm_mode, value;
 	struct wlan_mlme_lfr_cfg *lfr = &mac_ctx->mlme_cfg->lfr;
-	struct cm_roam_values_copy config;
+	struct cm_roam_values_copy config = {};
 	bool ese_ver_present;
 	int8_t reg_max;
 	struct ps_global_info *ps_global_info = &mac_ctx->sme.ps_global_info;

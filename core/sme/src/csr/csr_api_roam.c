@@ -2972,7 +2972,7 @@ QDF_STATUS csr_roam_ndi_stop(struct mac_context *mac_ctx, uint8_t vdev_id)
 static void csr_fill_single_pmk(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 				struct bss_description *bss_desc)
 {
-	struct cm_roam_values_copy src_cfg;
+	struct cm_roam_values_copy src_cfg = {};
 
 	src_cfg.bool_value = bss_desc->is_single_pmk;
 	wlan_cm_roam_cfg_set_value(psoc, vdev_id,
@@ -4877,7 +4877,7 @@ QDF_STATUS csr_set_pmk_cache_ft(struct mac_context *mac, uint8_t vdev_id,
 		sme_debug("Auth type: %x update the MDID in cache", akm);
 		cm_update_pmk_cache_ft(mac->psoc, vdev_id);
 	} else {
-		struct cm_roam_values_copy src_cfg;
+		struct cm_roam_values_copy src_cfg = {};
 		struct scan_filter *scan_filter;
 		qdf_list_t *list = NULL;
 		struct scan_cache_node *first_node = NULL;
@@ -5334,7 +5334,7 @@ static void csr_fill_connected_profile(struct mac_context *mac_ctx,
 	struct bss_description *bss_desc = NULL;
 	tDot11fBeaconIEs *bcn_ies;
 	sme_QosAssocInfo assoc_info;
-	struct cm_roam_values_copy src_cfg;
+	struct cm_roam_values_copy src_cfg = {};
 	bool is_ese = false;
 	uint8_t country_code[REG_ALPHA2_LEN + 1];
 
@@ -5433,7 +5433,7 @@ QDF_STATUS cm_csr_connect_rsp(struct wlan_objmgr_vdev *vdev,
 	struct mac_context *mac_ctx;
 	uint8_t vdev_id = wlan_vdev_get_id(vdev);
 	struct csr_roam_session *session;
-	struct cm_roam_values_copy src_config;
+	struct cm_roam_values_copy src_config = {};
 
 	/*
 	 * This API is to update legacy struct and should be removed once
