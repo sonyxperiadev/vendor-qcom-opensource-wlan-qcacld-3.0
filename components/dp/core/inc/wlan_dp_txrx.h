@@ -24,6 +24,7 @@
 #include <qdf_pkt_add_timestamp.h>
 #include <enet.h>
 #include <qdf_tracepoint.h>
+#include "wlan_dp_priv.h"
 
 /** DP Tx Time out value */
 #define DP_TX_TIMEOUT   qdf_system_msecs_to_ticks(5000)
@@ -51,6 +52,14 @@
 #define DP_CONNECTIVITY_CHECK_SET_TCP_SYN	6
 #define DP_CONNECTIVITY_CHECK_SET_TCP_SYN_ACK	7
 #define DP_CONNECTIVITY_CHECK_SET_TCP_ACK	8
+
+/**
+ * wlan_dp_intf_get_pkt_type_bitmap_value() - Get packt type bitmap info
+ * @intf_ctx: DP interface context
+ *
+ * Return: bitmap information
+ */
+uint32_t wlan_dp_intf_get_pkt_type_bitmap_value(void *intf_ctx);
 
 /**
  * dp_reset_all_intfs_connectivity_stats() - reset connectivity stats

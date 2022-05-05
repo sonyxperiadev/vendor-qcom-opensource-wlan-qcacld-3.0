@@ -43,6 +43,18 @@
 #include <wlan_tdls_ucfg_api.h>
 #include <qdf_trace.h>
 
+uint32_t wlan_dp_intf_get_pkt_type_bitmap_value(void *intf_ctx)
+{
+	struct wlan_dp_intf *dp_intf = (struct wlan_dp_intf *)intf_ctx;
+
+	if (!dp_intf) {
+		dp_err("DP Context is NULL");
+		return 0;
+	}
+
+	return dp_intf->pkt_type_bitmap;
+}
+
 #ifdef QCA_LL_LEGACY_TX_FLOW_CONTROL
 void dp_get_tx_resource(struct wlan_dp_intf *dp_intf,
 			struct qdf_mac_addr *mac_addr)
