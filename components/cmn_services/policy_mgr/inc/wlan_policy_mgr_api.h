@@ -4267,48 +4267,30 @@ bool policy_mgr_is_mlo_in_mode_sbs(struct wlan_objmgr_psoc *psoc,
 				   uint8_t *mlo_vdev_lst, uint8_t *num_mlo);
 
 /*
- * policy_mgr_handle_sap_mlo_sta_concurrency() - Handle SAP MLO STA concurrency
- *                                             such as:
- *       1) If MLO STA is present with both links in 5/6 Ghz then SAP comes up
- *          on 2.4 Ghz, then Disable one of the links
- *       2) If MLO STA is present with both links in 5/6 Ghz and SAP, which was
- *          present on 2.4 ghz, stops then renable both the as one of the links
- *          were disabled because of sap on 2.4 ghz.
- *
- * @vdev: vdev mlme object
- * @is_ap_up: bool to represent sap state
- *
- * Return: Void
- */
-void policy_mgr_handle_sap_mlo_sta_concurrency(struct wlan_objmgr_psoc *psoc,
-					       struct wlan_objmgr_vdev *vdev,
-					       bool is_ap_up);
-
-void policy_mgr_handle_ml_sta_link_concurrency(struct wlan_objmgr_psoc *psoc,
-					       struct wlan_objmgr_vdev *vdev,
-					       bool is_connect);
-
-/*
- * policy_mgr_handle_sap_cli_go_ml_sta_up_csa() - Handle enable/disable
- * link on CLI/GO/SAP/ML_STA vdev UP and channel change
+ * policy_mgr_handle_ml_sta_links_on_vdev_up_csa() - Handle enable/disable
+ * link on vdev UP and channel change
  * @psoc: objmgr psoc
+ * @mode: mode of vdev that went UP or changed channel
  * @vdev_id: vdev_id which went UP or changed channel
  *
  * Return: void
  */
 void
-policy_mgr_handle_sap_cli_go_ml_sta_up_csa(struct wlan_objmgr_psoc *psoc,
-					   uint8_t vdev_id);
+policy_mgr_handle_ml_sta_links_on_vdev_up_csa(struct wlan_objmgr_psoc *psoc,
+					      enum QDF_OPMODE mode,
+					      uint8_t vdev_id);
 
 /*
- * policy_mgr_re_enable_ml_sta_on_p2p_sap_down() - Handle enable
- * link on CLI/GO/SAP/ML_STA down
+ * policy_mgr_handle_ml_sta_links_on_vdev_down() - Handle enable
+ * link on any vdev down
  * @psoc: objmgr psoc
+ * @mode: mode of vdev that went down
  * @vdev_id: vdev_id which went down
  *
  * Return: void
  */
-void policy_mgr_re_enable_ml_sta_on_p2p_sap_down(struct wlan_objmgr_psoc *psoc,
+void policy_mgr_handle_ml_sta_links_on_vdev_down(struct wlan_objmgr_psoc *psoc,
+						 enum QDF_OPMODE mode,
 						 uint8_t vdev_id);
 #else
 
@@ -4338,28 +4320,16 @@ bool policy_mgr_is_mlo_in_mode_sbs(struct wlan_objmgr_psoc *psoc,
 	return false;
 }
 
-static inline
-void policy_mgr_handle_sap_mlo_sta_concurrency(struct wlan_objmgr_psoc *psoc,
-					       struct wlan_objmgr_vdev *vdev,
-					       bool is_ap_up)
-{
-}
-
-static inline
-void policy_mgr_handle_ml_sta_link_concurrency(struct wlan_objmgr_psoc *psoc,
-					       struct wlan_objmgr_vdev *vdev,
-					       bool is_connect)
-{
-}
-
 static inline void
-policy_mgr_handle_sap_cli_go_ml_sta_up_csa(struct wlan_objmgr_psoc *psoc,
-					   uint8_t vdev_id)
+policy_mgr_handle_ml_sta_links_on_vdev_up_csa(struct wlan_objmgr_psoc *psoc,
+					      enum QDF_OPMODE mode,
+					      uint8_t vdev_id)
 {
 }
 
 static inline
-void policy_mgr_re_enable_ml_sta_on_p2p_sap_down(struct wlan_objmgr_psoc *psoc,
+void policy_mgr_handle_ml_sta_links_on_vdev_down(struct wlan_objmgr_psoc *psoc,
+						 enum QDF_OPMODE mode,
 						 uint8_t vdev_id)
 {
 }
