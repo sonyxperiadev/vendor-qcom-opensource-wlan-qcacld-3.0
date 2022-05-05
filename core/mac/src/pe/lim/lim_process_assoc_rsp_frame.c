@@ -813,7 +813,7 @@ lim_update_sta_vdev_punc(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 
 	des_chan = wlan_vdev_mlme_get_des_chan(vdev);
 	des_chan->puncture_bitmap =
-		*(uint16_t *)assoc_resp->eht_op.disable_sub_chan_bitmap;
+		*(uint16_t *)assoc_resp->eht_op.disabled_sub_chan_bitmap;
 	pe_debug("sta vdev %d puncture %d", vdev_id, des_chan->puncture_bitmap);
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
 }

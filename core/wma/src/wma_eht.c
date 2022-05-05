@@ -488,6 +488,8 @@ void wma_print_eht_cap(tDot11fIEeht_cap *eht_cap)
 		       eht_cap->scs_traffic_desc);
 	wma_nofl_debug("\tMaximum MPDU Length: 0x%01x",
 		       eht_cap->max_mpdu_len);
+	wma_nofl_debug("\tMaximum A-MPDU Length Exponent Extension: 0x%01x",
+		       eht_cap->max_a_mpdu_len_exponent_ext);
 
 	/* EHT PHY Capabilities */
 	wma_nofl_debug("\t320 MHz In 6 GHz: 0x%01x",

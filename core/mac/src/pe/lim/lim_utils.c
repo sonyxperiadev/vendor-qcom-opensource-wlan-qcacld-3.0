@@ -8631,6 +8631,8 @@ void lim_set_eht_caps(struct mac_context *mac, struct pe_session *session,
 			dot11_cap.scs_traffic_desc;
 		eht_cap->max_mpdu_len =
 			dot11_cap.max_mpdu_len;
+		eht_cap->max_a_mpdu_len_exponent_ext =
+			dot11_cap.max_a_mpdu_len_exponent_ext;
 		eht_cap->support_320mhz_6ghz = dot11_cap.support_320mhz_6ghz;
 		eht_cap->ru_242tone_wt_20mhz = dot11_cap.ru_242tone_wt_20mhz;
 		eht_cap->ndp_4x_eht_ltf_3dot2_us_gi =
@@ -10128,9 +10130,9 @@ static void lim_update_ap_puncture(struct pe_session *session,
 				   struct ch_params *ch_params)
 {
 	if (ch_params->reg_punc_bitmap) {
-		*(uint16_t *)session->eht_op.disable_sub_chan_bitmap =
+		*(uint16_t *)session->eht_op.disabled_sub_chan_bitmap =
 					ch_params->reg_punc_bitmap;
-		session->eht_op.disable_sub_chan_bitmap_present = true;
+		session->eht_op.disabled_sub_chan_bitmap_present = true;
 		pe_debug("vdev %d, puncture %d", session->vdev_id,
 			 ch_params->reg_punc_bitmap);
 	}
