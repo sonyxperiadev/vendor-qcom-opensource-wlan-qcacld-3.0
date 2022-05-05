@@ -69,26 +69,21 @@ wlan_son_register_mlme_deliver_cb(struct wlan_objmgr_psoc *psoc,
 /**
  * wlan_son_is_he_supported() - is he supported or not
  * @psoc: pointer to psoc
- * @he_supported: he supported or not
  *
- * Return: void
+ * Return: true if supports, false otherwise
  */
 #ifdef WLAN_FEATURE_11AX
-static void wlan_son_is_he_supported(struct wlan_objmgr_psoc *psoc,
-				     bool *he_supported)
+static bool wlan_son_is_he_supported(struct wlan_objmgr_psoc *psoc)
 {
-	tDot11fIEhe_cap *he_cap = NULL;
+	tDot11fIEhe_cap he_cap = {0};
 
-	*he_supported = false;
-	mlme_cfg_get_he_caps(psoc, he_cap);
-	if (he_cap && he_cap->present)
-		*he_supported = true;
+	mlme_cfg_get_he_caps(psoc, &he_cap);
+	return !!he_cap.present;
 }
 #else
-static void wlan_son_is_he_supported(struct wlan_objmgr_psoc *psoc,
-				     bool *he_supported)
+static bool wlan_son_is_he_supported(struct wlan_objmgr_psoc *psoc)
 {
-	*he_supported = false;
+	return false;
 }
 #endif /*WLAN_FEATURE_11AX*/
 
@@ -173,8 +168,7 @@ uint32_t wlan_son_get_chan_flag(struct wlan_objmgr_pdev *pdev,
 		return flags;
 	}
 
-	wlan_son_is_he_supported(psoc, &is_he_enabled);
-
+	is_he_enabled = wlan_son_is_he_supported(psoc);
 	wlan_mlme_get_sub_20_chan_width(wlan_pdev_get_psoc(pdev),
 					&sub_20_channel_width);
 
