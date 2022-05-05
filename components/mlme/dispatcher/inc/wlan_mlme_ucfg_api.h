@@ -4360,6 +4360,32 @@ ucfg_mlme_set_roam_reason_vsie_status(struct wlan_objmgr_psoc *psoc,
 #endif
 
 /**
+ * ucfg_mlme_set_vdev_traffic_low_latency()  - Set/clear vdev low latency
+ * config
+ * @psoc: pointer to psoc object
+ * @vdev_id: Vdev id
+ * @set: Flag to indicate set or clear
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+ucfg_mlme_set_vdev_traffic_low_latency(struct wlan_objmgr_psoc *psoc,
+				       uint8_t vdev_id, bool set);
+
+/**
+ * ucfg_mlme_set_vdev_traffic_high_throughput()  - Set/clear vdev high
+ * throughput config
+ * @psoc: pointer to psoc object
+ * @vdev_id: Vdev id
+ * @set: Flag to indicate set or clear
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+ucfg_mlme_set_vdev_traffic_high_throughput(struct wlan_objmgr_psoc *psoc,
+					   uint8_t vdev_id, bool set);
+
+/**
  * ucfg_mlme_set_user_ps()  - Set the PS user config
  * @psoc: pointer to psoc object
  * @vdev_id: Vdev id

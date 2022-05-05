@@ -29,6 +29,8 @@
 #include "wlan_mlme_vdev_mgr_interface.h"
 #include <include/wlan_pdev_mlme.h>
 #include "wlan_pdev_mlme_api.h"
+#include "wlan_vdev_mgr_tgt_if_tx_api.h"
+#include "wlan_policy_mgr_public_struct.h"
 
 QDF_STATUS ucfg_mlme_global_init(void)
 {
@@ -306,6 +308,102 @@ ucfg_mlme_set_fine_time_meas_cap(struct wlan_objmgr_psoc *psoc,
 	mlme_obj->cfg.wifi_pos_cfg.fine_time_meas_cap = fine_time_meas_cap;
 
 	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+ucfg_mlme_set_vdev_traffic_low_latency(struct wlan_objmgr_psoc *psoc,
+				       uint8_t vdev_id, bool set)
+{
+	struct wlan_objmgr_vdev *vdev;
+	struct mlme_legacy_priv *mlme_priv;
+	struct vdev_mlme_obj *vdev_mlme;
+	struct vdev_set_params param = {0};
+	QDF_STATUS status;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_MLME_OBJMGR_ID);
+	if (!vdev) {
+		mlme_legacy_err("vdev object is NULL for vdev %d",
+				vdev_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	vdev_mlme = wlan_vdev_mlme_get_cmpt_obj(vdev);
+	if (!vdev_mlme) {
+		mlme_legacy_err("vdev vdev_mlme object is NULL");
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
+		return QDF_STATUS_E_FAILURE;
+	}
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_legacy_err("vdev legacy private object is NULL");
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (set)
+		mlme_priv->vdev_traffic_type |= PM_VDEV_TRAFFIC_LOW_LATENCY;
+	else
+		mlme_priv->vdev_traffic_type &= ~PM_VDEV_TRAFFIC_LOW_LATENCY;
+
+	mlme_legacy_debug("low_latency flag 0x%x set %d on vdev %d",
+			  mlme_priv->vdev_traffic_type, set, vdev_id);
+	param.param_id = wmi_vdev_param_set_traffic_config;
+	param.vdev_id = vdev_id;
+	param.param_value = mlme_priv->vdev_traffic_type;
+	status = tgt_vdev_mgr_set_param_send(vdev_mlme, &param);
+
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
+
+	return status;
+}
+
+QDF_STATUS
+ucfg_mlme_set_vdev_traffic_high_throughput(struct wlan_objmgr_psoc *psoc,
+					   uint8_t vdev_id, bool set)
+{
+	struct wlan_objmgr_vdev *vdev;
+	struct mlme_legacy_priv *mlme_priv;
+	struct vdev_mlme_obj *vdev_mlme;
+	struct vdev_set_params param = {0};
+	QDF_STATUS status;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_MLME_OBJMGR_ID);
+	if (!vdev) {
+		mlme_legacy_err("vdev object is NULL for vdev %d",
+				vdev_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	vdev_mlme = wlan_vdev_mlme_get_cmpt_obj(vdev);
+	if (!vdev_mlme) {
+		mlme_legacy_err("vdev vdev_mlme object is NULL");
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
+		return QDF_STATUS_E_FAILURE;
+	}
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_legacy_err("vdev legacy private object is NULL");
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (set)
+		mlme_priv->vdev_traffic_type |= PM_VDEV_TRAFFIC_HIGH_TPUT;
+	else
+		mlme_priv->vdev_traffic_type &= ~PM_VDEV_TRAFFIC_HIGH_TPUT;
+
+	mlme_legacy_debug("high_throughput flag 0x%x set %d on vdev %d",
+			  mlme_priv->vdev_traffic_type, set, vdev_id);
+	param.param_id = wmi_vdev_param_set_traffic_config;
+	param.vdev_id = vdev_id;
+	param.param_value = mlme_priv->vdev_traffic_type;
+	status = tgt_vdev_mgr_set_param_send(vdev_mlme, &param);
+
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
+
+	return status;
 }
 
 QDF_STATUS

@@ -4532,6 +4532,9 @@ static int drv_cmd_miracast(struct hdd_adapter *adapter,
 
 	/* Filtertype value should be either 0-Disabled, 1-Source, 2-sink */
 	hdd_ctx->miracast_value = filter_type;
+	ucfg_mlme_set_vdev_traffic_low_latency(hdd_ctx->psoc, adapter->vdev_id,
+					       filter_type !=
+					       MIRACAST_DISABLED);
 
 	ret_status = sme_set_miracast(hdd_ctx->mac_handle, filter_type);
 	if (QDF_STATUS_SUCCESS != ret_status) {
