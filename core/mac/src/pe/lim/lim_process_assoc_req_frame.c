@@ -1823,6 +1823,8 @@ static bool lim_update_sta_ds(struct mac_context *mac_ctx, tSirMacAddr sa,
 	}
 	lim_update_stads_he_6ghz_op(session, sta_ds);
 	lim_update_sta_ds_op_classes(assoc_req, sta_ds);
+	lim_update_stads_eht_bw_320mhz(session, sta_ds);
+
 	/* Add STA context at MAC HW (BMU, RHP & TFP) */
 	sta_ds->qosMode = false;
 	sta_ds->lleEnabled = false;

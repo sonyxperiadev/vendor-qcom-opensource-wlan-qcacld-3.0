@@ -8265,6 +8265,11 @@ static void lim_intersect_eht_caps(tDot11fIEeht_cap *rcvd_eht,
 					peer_eht->mu_bformer_160mhz : 0;
 	peer_eht->mu_bformer_320mhz = session_eht->su_beamformee ?
 					peer_eht->mu_bformer_320mhz : 0;
+
+	if (session_eht->support_320mhz_6ghz && rcvd_eht->support_320mhz_6ghz)
+		peer_eht->support_320mhz_6ghz = 1;
+	else
+		peer_eht->support_320mhz_6ghz = 0;
 }
 
 void lim_update_usr_eht_cap(struct mac_context *mac_ctx,
@@ -8833,6 +8838,27 @@ void lim_update_stads_eht_caps(struct mac_context *mac_ctx,
 
 	qdf_mem_copy(&sta_ds->eht_config, &assoc_rsp->eht_cap,
 		     sizeof(tDot11fIEeht_cap));
+}
+
+void lim_update_stads_eht_bw_320mhz(struct pe_session *session,
+				    tpDphHashNode sta_ds)
+{
+	tDot11fIEeht_cap *peer_eht = &sta_ds->eht_config;
+
+	if (!IS_DOT11_MODE_EHT(session->dot11mode) || !peer_eht->present)
+		return;
+
+	/* EHT only defines 320 MHz. If session is not in 320 MHz, BW will be
+	 * set in HE mode.
+	 *
+	 * Set ch_width to 320 MHz only when session is in 320 MHz and peer eht
+	 * caps support 320 MHz after eht caps intersection.
+	 */
+	if (session->ch_width == CH_WIDTH_320MHZ &&
+	    peer_eht->support_320mhz_6ghz) {
+		sta_ds->ch_width = CH_WIDTH_320MHZ;
+		pe_debug("ch_width %d", sta_ds->ch_width);
+	}
 }
 
 #endif

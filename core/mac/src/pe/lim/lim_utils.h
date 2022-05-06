@@ -1997,6 +1997,19 @@ void lim_update_stads_eht_caps(struct mac_context *mac_ctx,
 			       struct pe_session *session_entry,
 			       tSchBeaconStruct *beacon);
 
+/**
+ * lim_update_stads_eht_bw_320mhz() - Set ch_width to 320MHz for sta_ds
+ * @session: pointer to PE session
+ * @sta_ds: pointer to sta dph hash table entry
+ *
+ * Set ch_width to 320 MHz only when session is in 320 MHz and peer eht
+ * caps support 320 MHz after eht caps intersection.
+ *
+ * Return: None
+ */
+void lim_update_stads_eht_bw_320mhz(struct pe_session *session,
+				    tpDphHashNode sta_ds);
+
 #else
 static inline bool lim_is_session_eht_capable(struct pe_session *session)
 {
@@ -2150,6 +2163,12 @@ lim_update_stads_eht_caps(struct mac_context *mac_ctx,
 			  tpDphHashNode sta_ds, tpSirAssocRsp assoc_rsp,
 			  struct pe_session *session_entry,
 			  tSchBeaconStruct *beacon)
+{
+}
+
+static inline void
+lim_update_stads_eht_bw_320mhz(struct pe_session *session,
+			       tpDphHashNode sta_ds)
 {
 }
 #endif /* WLAN_FEATURE_11BE */
