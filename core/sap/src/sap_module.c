@@ -1187,10 +1187,10 @@ wlansap_get_target_eht_phy_ch_width(void)
 {
 	uint32_t max_fw_bw = sme_get_eht_ch_width();
 
-	if (max_fw_bw == WNI_CFG_EHT_CHANNEL_WIDTH_160MHZ)
-		return CH_WIDTH_160MHZ;
-	else if (max_fw_bw == WNI_CFG_EHT_CHANNEL_WIDTH_320MHZ)
+	if (max_fw_bw == WNI_CFG_EHT_CHANNEL_WIDTH_320MHZ)
 		return CH_WIDTH_320MHZ;
+	else if (max_fw_bw == WNI_CFG_VHT_CHANNEL_WIDTH_160MHZ)
+		return CH_WIDTH_160MHZ;
 	else
 		return CH_WIDTH_80MHZ;
 }

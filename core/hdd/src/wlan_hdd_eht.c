@@ -209,10 +209,10 @@ void hdd_update_wiphy_eht_cap(struct hdd_context *hdd_ctx)
 		hdd_ctx->iftype_data_5g->eht_cap.has_eht = eht_cap_cfg.present;
 		if (hdd_ctx->iftype_data_5g->eht_cap.has_eht) {
 			hdd_ctx->iftype_data_5g->he_cap.has_he = true;
-			if (max_fw_bw >= WNI_CFG_EHT_CHANNEL_WIDTH_80MHZ)
+			if (max_fw_bw >= WNI_CFG_VHT_CHANNEL_WIDTH_80MHZ)
 				phy_info_5g[0] |=
 					CHAN_WIDTH_SET_40MHZ_80MHZ_IN_5G;
-			if (max_fw_bw >= WNI_CFG_EHT_CHANNEL_WIDTH_160MHZ)
+			if (max_fw_bw >= WNI_CFG_VHT_CHANNEL_WIDTH_160MHZ)
 				phy_info_5g[0] |=
 					CHAN_WIDTH_SET_160MHZ_IN_5G;
 		}

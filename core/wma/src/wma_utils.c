@@ -5055,28 +5055,24 @@ int wma_oem_event_handler(void *wma_ctx, uint8_t *event_buff, uint32_t len)
 #ifdef WLAN_FEATURE_11BE
 uint32_t wma_get_eht_ch_width(void)
 {
-#ifdef TBD
-	uint32_t fw_ch_wd = WNI_CFG_EHT_CHANNEL_WIDTH_80MHZ;
-	tp_wma_handle wm_hdl = cds_get_context(QDF_MODULE_ID_WMA);
-	struct target_psoc_info *tgt_hdl;
-	int eht_cap_info;
+	tDot11fIEeht_cap eht_cap;
+	tp_wma_handle wma;
 
-	if (!wm_hdl)
-		return fw_ch_wd;
+	wma = cds_get_context(QDF_MODULE_ID_WMA);
+	if (qdf_unlikely(!wma)) {
+		wma_err_rl("wma handle is NULL");
+		goto vht_ch_width;
+	}
 
-	tgt_hdl = wlan_psoc_get_tgt_if_handle(wm_hdl->psoc);
-	if (!tgt_hdl)
-		return fw_ch_wd;
+	if (QDF_IS_STATUS_ERROR(mlme_cfg_get_eht_caps(wma->psoc, &eht_cap))) {
+		wma_err_rl("Failed to get eht caps");
+		goto vht_ch_width;
+	}
 
-	eht_cap_info = target_if_get_eht_cap_info(tgt_hdl);
-	if (eht_cap_info & WMI_EHT_CAP_CH_WIDTH_160MHZ)
-		fw_ch_wd = WNI_CFG_EHT_CHANNEL_WIDTH_160MHZ;
-	else if (eht_cap_info & WMI_EHT_CAP_CH_WIDTH_320MHZ)
-		fw_ch_wd = WNI_CFG_EHT_CHANNEL_WIDTH_320MHZ;
+	if (eht_cap.support_320mhz_6ghz)
+		return WNI_CFG_EHT_CHANNEL_WIDTH_320MHZ;
 
-	return fw_ch_wd;
-#else
-	return WNI_CFG_EHT_CHANNEL_WIDTH_320MHZ;
-#endif
+vht_ch_width:
+	return wma_get_vht_ch_width();
 }
 #endif

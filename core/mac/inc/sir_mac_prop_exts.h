@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2011-2015, 2017-2019, 2021 The Linux Foundation.
  * All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -82,9 +83,7 @@
 #define WNI_CFG_VHT_CHANNEL_WIDTH_80_PLUS_80MHZ	3
 
 #ifdef WLAN_FEATURE_11BE
-#define WNI_CFG_EHT_CHANNEL_WIDTH_80MHZ 4
-#define WNI_CFG_EHT_CHANNEL_WIDTH_160MHZ 5
-#define WNI_CFG_EHT_CHANNEL_WIDTH_320MHZ 6
+#define WNI_CFG_EHT_CHANNEL_WIDTH_320MHZ 4
 #endif
 
 #endif /* __MAC_PROP_EXTS_H */
