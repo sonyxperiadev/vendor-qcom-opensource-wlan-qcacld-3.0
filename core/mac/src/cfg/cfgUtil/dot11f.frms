@@ -3237,6 +3237,35 @@ IE he_op (EID_EXTN_ID_ELEMENT) OUI (0x24)
     };
 }
 
+IE spatial_reuse (EID_EXTN_ID_ELEMENT) OUI (0x27)
+{
+    {
+        psr_disallow: 1;
+        non_srg_pd_sr_disallow: 1;
+        non_srg_offset_present: 1;
+        srg_info_present: 1;
+        sr_value15_allow: 1;
+        reserved: 3;
+    }
+    OPTIONAL UNION non_srg_offset (DISCRIMINATOR non_srg_offset_present)
+    {
+        info (non_srg_offset_present IS 1)
+        {
+            non_srg_pd_max_offset, 1;
+        }
+    };
+    OPTIONAL UNION srg_info (DISCRIMINATOR srg_info_present)
+    {
+        info (srg_info_present IS 1)
+        {
+            srg_pd_min_offset, 1;
+            srg_pd_max_offset, 1;
+            srg_color[8];
+            srg_partial_bssid[8];
+        }
+    };
+}
+
 IE he_6ghz_band_cap (EID_EXTN_ID_ELEMENT) OUI (0x3B)
 {
     { // capabilities_information
@@ -3831,6 +3860,7 @@ FRAME Beacon                              // C.f. Sec. 7.2.3.1
     OPTIE  esp_information;
     OPTIE  he_cap;
     OPTIE  he_op;
+    OPTIE  spatial_reuse;
     OPTIE  bss_color_change;
     OPTIE  mu_edca_param_set;
     OPTIE  he_6ghz_band_cap;
@@ -3935,6 +3965,7 @@ FRAME Beacon2
     OPTIE  esp_information;
     OPTIE  he_cap;
     OPTIE  he_op;
+    OPTIE  spatial_reuse;
     OPTIE  bss_color_change;
     OPTIE  mu_edca_param_set;
     OPTIE  he_6ghz_band_cap;
@@ -4013,6 +4044,7 @@ FRAME BeaconIEs
     OPTIE  esp_information;
     OPTIE  he_cap;
     OPTIE  he_op;
+    OPTIE  spatial_reuse;
     OPTIE  bss_color_change;
     OPTIE  mu_edca_param_set;
     OPTIE  he_6ghz_band_cap;
@@ -4129,6 +4161,7 @@ FRAME AssocResponse                       // 7.2.3.5
     OPTIE  fils_hlp_container;
     OPTIE  he_cap;
     OPTIE  he_op;
+    OPTIE  spatial_reuse;
     OPTIE  bss_color_change;
     OPTIE  mu_edca_param_set;
     OPTIE  he_6ghz_band_cap;
@@ -4227,6 +4260,7 @@ FRAME ReAssocResponse                     // 7.2.3.7
     OPTIE  OperatingMode;
     OPTIE  he_cap;
     OPTIE  he_op;
+    OPTIE  spatial_reuse;
     OPTIE  bss_color_change;
     OPTIE  mu_edca_param_set;
     OPTIE  he_6ghz_band_cap;
@@ -4313,6 +4347,7 @@ FRAME ProbeResponse                       // 7.2.3.9
     OPTIE  esp_information;
     OPTIE  he_cap;
     OPTIE  he_op;
+    OPTIE  spatial_reuse;
     OPTIE  bss_color_change;
     OPTIE  mu_edca_param_set;
     OPTIE  he_6ghz_band_cap;
