@@ -104,6 +104,7 @@
 #endif
 
 #include "son_api.h"
+#include "wlan_vdev_mgr_tgt_if_tx_defs.h"
 
 /*
  * FW only supports 8 clients in SAP/GO mode for D3 WoW feature
@@ -1598,6 +1599,7 @@ QDF_STATUS wma_remove_peer(tp_wma_handle wma, uint8_t *mac_addr,
 	uint32_t bitmap = 1 << CDP_PEER_DELETE_NO_SPECIAL;
 	bool peer_unmap_conf_support_enabled;
 	uint8_t peer_vdev_id;
+	struct peer_delete_cmd_params del_param = {0};
 
 	if (!wma->interfaces[vdev_id].peer_count) {
 		wma_err("Can't remove peer with peer_addr "QDF_MAC_ADDR_FMT" vdevid %d peer_count %d",
@@ -1646,8 +1648,10 @@ QDF_STATUS wma_remove_peer(tp_wma_handle wma, uint8_t *mac_addr,
 	wlan_roam_debug_log(vdev_id, DEBUG_PEER_DELETE_SEND,
 			    DEBUG_INVALID_PEER_ID, peer_addr, NULL,
 			    0, 0);
+
+	del_param.vdev_id = vdev_id;
 	qdf_status = wmi_unified_peer_delete_send(wma->wmi_handle, peer_addr,
-						  vdev_id);
+						  &del_param);
 	if (QDF_IS_STATUS_ERROR(qdf_status)) {
 		wma_err("Peer delete could not be sent to firmware %d",
 			qdf_status);
