@@ -3999,6 +3999,9 @@ cppflags-$(CONFIG_SAE_SINGLE_PMK) += -DWLAN_SAE_SINGLE_PMK
 #Flag to enable/disable multi client low latency feature support
 cppflags-$(CONFIG_MULTI_CLIENT_LL_SUPPORT) += -DMULTI_CLIENT_LL_SUPPORT
 
+#Flag to enable/disable vendor handoff control feature support
+cppflags-$(CONFIG_WLAN_VENDOR_HANDOFF_CONTROL) += -DWLAN_VENDOR_HANDOFF_CONTROL
+
 #Flag to enable/disable mscs feature
 cppflags-$(CONFIG_FEATURE_MSCS) += -DWLAN_FEATURE_MSCS
 

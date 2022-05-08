@@ -288,6 +288,23 @@ wlan_mlme_get_wlm_multi_client_ll_caps(struct wlan_objmgr_psoc *psoc)
 QDF_STATUS wlan_mlme_set_band_capability(struct wlan_objmgr_psoc *psoc,
 					 uint32_t band_capability);
 
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+/**
+ * wlan_mlme_get_vendor_handoff_control_caps() - Get the vendor handoff control
+ * capability flag
+ * @psoc: pointer to psoc object
+ *
+ * Return: True if vendor handoff control caps present
+ */
+bool wlan_mlme_get_vendor_handoff_control_caps(struct wlan_objmgr_psoc *psoc);
+#else
+static inline bool
+wlan_mlme_get_vendor_handoff_control_caps(struct wlan_objmgr_psoc *psoc)
+{
+	return false;
+}
+#endif
+
 /**
  * wlan_mlme_set_dual_sta_policy() - Set the dual sta config
  * @psoc: pointer to psoc object

@@ -1067,6 +1067,13 @@ ucfg_mlme_cfg_get_multi_client_ll_ini_support(struct wlan_objmgr_psoc *psoc,
 }
 #endif
 
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+bool ucfg_mlme_get_vendor_handoff_control_caps(struct wlan_objmgr_psoc *psoc)
+{
+	return wlan_mlme_get_vendor_handoff_control_caps(psoc);
+}
+#endif
+
 #ifdef FEATURE_WLAN_ESE
 QDF_STATUS
 ucfg_mlme_is_ese_enabled(struct wlan_objmgr_psoc *psoc, bool *val)

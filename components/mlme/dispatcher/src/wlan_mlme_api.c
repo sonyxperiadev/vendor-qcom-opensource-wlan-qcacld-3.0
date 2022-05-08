@@ -242,6 +242,14 @@ QDF_STATUS wlan_mlme_set_band_capability(struct wlan_objmgr_psoc *psoc,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+bool wlan_mlme_get_vendor_handoff_control_caps(struct wlan_objmgr_psoc *psoc)
+{
+	return wlan_psoc_nif_fw_ext2_cap_get(psoc,
+					     WLAN_SOC_VENDOR_HANDOFF_CONTROL);
+}
+#endif
+
 QDF_STATUS wlan_mlme_set_dual_sta_policy(struct wlan_objmgr_psoc *psoc,
 					 uint8_t dual_sta_config)
 

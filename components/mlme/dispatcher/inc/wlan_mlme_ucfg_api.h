@@ -292,6 +292,23 @@ QDF_STATUS ucfg_mlme_set_band_capability(struct wlan_objmgr_psoc *psoc,
 	return wlan_mlme_set_band_capability(psoc, band_capability);
 }
 
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+/**
+ * ucfg_mlme_get_vendor_handoff_control_caps() - Get vendor handoff control
+ * capability of FW
+ * @psoc: pointer to psoc object
+ *
+ * Return: true if vendor handoff feature supported
+ */
+bool ucfg_mlme_get_vendor_handoff_control_caps(struct wlan_objmgr_psoc *psoc);
+#else
+static inline
+bool ucfg_mlme_get_vendor_handoff_control_caps(struct wlan_objmgr_psoc *psoc)
+{
+	return false;
+}
+#endif
+
 /**
  * ucfg_mlme_set_dual_sta_policy() - Configures the Concurrent STA policy
  * value
