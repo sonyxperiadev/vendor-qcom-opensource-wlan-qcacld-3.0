@@ -737,8 +737,7 @@ lim_send_probe_rsp_mgmt_frame(struct mac_context *mac_ctx,
 	if (((pe_session->opmode == QDF_SAP_MODE) ||
 	    (pe_session->opmode == QDF_P2P_GO_MODE)) &&
 	    (true == mac_ctx->sap.SapDfsInfo.is_dfs_cac_timer_running)) {
-		QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_INFO,
-			  FL("CAC timer is running, probe response dropped"));
+		pe_info("CAC timer is running, probe response dropped");
 		return;
 	}
 	if (wlan_vdev_is_up(pe_session->vdev) != QDF_STATUS_SUCCESS)
@@ -3951,8 +3950,7 @@ lim_send_disassoc_mgmt_frame(struct mac_context *mac,
 	if (((pe_session->opmode == QDF_SAP_MODE) ||
 	     (pe_session->opmode == QDF_P2P_GO_MODE)) &&
 	    (true == mac->sap.SapDfsInfo.is_dfs_cac_timer_running)) {
-		QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_INFO,
-			  FL("CAC timer is running, drop disassoc from going out"));
+		pe_info("CAC timer is running, drop disassoc from going out");
 		if (waitForAck)
 			lim_send_disassoc_cnf(mac);
 		return;
@@ -4163,15 +4161,11 @@ lim_send_deauth_mgmt_frame(struct mac_context *mac,
 	if ((pe_session->opmode == QDF_SAP_MODE) ||
 	    (pe_session->opmode == QDF_P2P_GO_MODE)) {
 		if (mac->sap.SapDfsInfo.is_dfs_cac_timer_running) {
-			QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_INFO,
-				  FL
-				  ("CAC timer is running, drop the deauth from going out"));
+			pe_info("CAC timer is running, drop the deauth from going out");
 			drop_deauth = true;
 		}
 		if (nReason == REASON_HOST_TRIGGERED_SILENT_DEAUTH) {
-			QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_INFO,
-				  FL
-				  ("Silent deauth, remove the peer"));
+			pe_info("Silent deauth, remove the peer");
 			drop_deauth = true;
 		}
 		if (drop_deauth) {

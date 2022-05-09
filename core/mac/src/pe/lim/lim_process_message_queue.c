@@ -598,8 +598,7 @@ static bool def_msg_decision(struct mac_context *mac_ctx,
 				 lim_msg_str(lim_msg->type));
 			/* Defer processing this message */
 			if (lim_defer_msg(mac_ctx, lim_msg) != TX_SUCCESS) {
-				QDF_TRACE(QDF_MODULE_ID_PE, LOGE,
-					  FL("Unable to Defer Msg"));
+				pe_err("Unable to Defer Msg");
 				lim_log_session_states(mac_ctx);
 				lim_handle_defer_msg_error(mac_ctx, lim_msg);
 			}
@@ -1053,14 +1052,12 @@ static void lim_handle_unknown_a2_index_frames(struct mac_context *mac_ctx,
 	mac_hdr = WMA_GET_RX_MPDUHEADER3A(rx_pkt_buffer);
 
 	if (IEEE80211_IS_MULTICAST(mac_hdr->addr2)) {
-		QDF_TRACE(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-			FL("Ignoring A2 Invalid Packet received for MC/BC:"));
+		pe_debug("Ignoring A2 Invalid Packet received for MC/BC:");
 		lim_print_mac_addr(mac_ctx, mac_hdr->addr2, LOGD);
 		return;
 	}
-	QDF_TRACE(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-			FL("type=0x%x, subtype=0x%x"),
-		mac_hdr->fc.type, mac_hdr->fc.subType);
+	pe_debug("type=0x%x, subtype=0x%x",
+		 mac_hdr->fc.type, mac_hdr->fc.subType);
 	/* Currently only following type and subtype are handled.
 	 * If there are more combinations, then add switch-case
 	 * statements.
@@ -1121,9 +1118,7 @@ lim_check_mgmt_registered_frames(struct mac_context *mac_ctx, uint8_t *buff_desc
 		if ((type == SIR_MAC_MGMT_FRAME)
 		    && (fc.type == SIR_MAC_MGMT_FRAME)
 		    && (sub_type == SIR_MAC_MGMT_RESERVED15)) {
-			QDF_TRACE(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-				FL
-				("rcvd frm match for SIR_MAC_MGMT_RESERVED15"));
+			pe_debug("rcvd frm match for SIR_MAC_MGMT_RESERVED15");
 			match = true;
 			break;
 		}
@@ -1707,11 +1702,9 @@ static void lim_process_messages(struct mac_context *mac_ctx,
 		lim_handle80211_frames(mac_ctx, &new_msg, &defer_msg);
 
 		if (defer_msg == true) {
-			QDF_TRACE(QDF_MODULE_ID_PE, LOGD,
-					FL("Defer Msg type=%x"), msg->type);
+			pe_debug("Defer Msg type=%x", msg->type);
 			if (lim_defer_msg(mac_ctx, msg) != TX_SUCCESS) {
-				QDF_TRACE(QDF_MODULE_ID_PE, LOGE,
-						FL("Unable to Defer Msg"));
+				pe_err("Unable to Defer Msg %x", msg->type);
 				lim_log_session_states(mac_ctx);
 				lim_decrement_pending_mgmt_count(mac_ctx);
 				cds_pkt_return_packet(body_ptr);
@@ -2337,11 +2330,9 @@ void lim_log_session_states(struct mac_context *mac_ctx)
 
 	for (i = 0; i < mac_ctx->lim.maxBssId; i++) {
 		if (mac_ctx->lim.gpSession[i].valid) {
-			QDF_TRACE(QDF_MODULE_ID_PE, LOGD,
-				FL("sysRole(%d) Session (%d)"),
+			pe_debug("sysRole(%d) Session (%d)",
 				mac_ctx->lim.gLimSystemRole, i);
-			QDF_TRACE(QDF_MODULE_ID_PE, LOGD,
-				FL("SME: Curr %s,Prev %s,MLM: Curr %s,Prev %s"),
+			pe_debug("SME: Curr %s,Prev %s,MLM: Curr %s,Prev %s",
 				lim_sme_state_str(
 				mac_ctx->lim.gpSession[i].limSmeState),
 				lim_sme_state_str(

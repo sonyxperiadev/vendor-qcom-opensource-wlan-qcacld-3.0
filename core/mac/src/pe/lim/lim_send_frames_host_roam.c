@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -802,10 +803,9 @@ void lim_process_rx_scan_handler(struct wlan_objmgr_vdev *vdev,
 	struct mac_context *mac_ctx;
 	enum sir_scan_event_type event_type;
 
-	QDF_TRACE(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-		  "event: %u, id: 0x%x, requestor: 0x%x, freq: %u, reason: %u",
-		  event->type, event->scan_id, event->requester,
-		  event->chan_freq, event->reason);
+	pe_debug("event: %u, id: 0x%x, requestor: 0x%x, freq: %u, reason: %u",
+		 event->type, event->scan_id, event->requester,
+		 event->chan_freq, event->reason);
 
 	mac_ctx = (struct mac_context *)arg;
 	event_type = 0x1 << event->type;
@@ -817,9 +817,8 @@ void lim_process_rx_scan_handler(struct wlan_objmgr_vdev *vdev,
 	case SIR_SCAN_EVENT_STARTED:
 		break;
 	case SIR_SCAN_EVENT_COMPLETED:
-		QDF_TRACE(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-			  "No.of beacons and probe response received per scan %d",
-			  mac_ctx->lim.beacon_probe_rsp_cnt_per_scan);
+		pe_debug("No.of beacons and probe response received per scan %d",
+			 mac_ctx->lim.beacon_probe_rsp_cnt_per_scan);
 	/* Fall through */
 	case SIR_SCAN_EVENT_FOREIGN_CHANNEL:
 	case SIR_SCAN_EVENT_START_FAILED:
@@ -834,8 +833,6 @@ void lim_process_rx_scan_handler(struct wlan_objmgr_vdev *vdev,
 	case SIR_SCAN_EVENT_DEQUEUED:
 	case SIR_SCAN_EVENT_PREEMPTED:
 	default:
-		QDF_TRACE(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-			  "Received unhandled scan event %u",
-			  event_type);
+		pe_debug("Received unhandled scan event %u", event_type);
 	}
 }

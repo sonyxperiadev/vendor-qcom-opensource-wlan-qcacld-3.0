@@ -8131,10 +8131,8 @@ static void lim_process_sme_start_beacon_req(struct mac_context *mac, uint32_t *
 		 * Tx right after the WMA_ADD_BSS_RSP.
 		 */
 		lim_apply_configuration(mac, pe_session);
-		QDF_TRACE(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-			  FL("Start Beacon with ssid %s Ch freq %d"),
-			  pe_session->ssId.ssId,
-			  pe_session->curr_op_freq);
+		pe_debug("Start Beacon with ssid %s Ch freq %d",
+			 pe_session->ssId.ssId, pe_session->curr_op_freq);
 		lim_send_beacon(mac, pe_session);
 		lim_enable_obss_detection_config(mac, pe_session);
 		lim_send_obss_color_collision_cfg(mac, pe_session,
@@ -8501,12 +8499,8 @@ static void lim_process_modify_add_ies(struct mac_context *mac_ctx,
 		break;
 	case eUPDATE_IE_ASSOC_RESP:
 		/* assoc resp IE */
-		if (add_ie_params->assocRespDataLen == 0) {
-			QDF_TRACE(QDF_MODULE_ID_PE,
-					QDF_TRACE_LEVEL_ERROR, FL(
-				"assoc resp add ie not present %d"),
-				add_ie_params->assocRespDataLen);
-		}
+		if (!add_ie_params->assocRespDataLen)
+			pe_err("assoc resp add ie not present");
 		/* search through the buffer and modify the IE */
 		break;
 	case eUPDATE_IE_PROBE_BCN:

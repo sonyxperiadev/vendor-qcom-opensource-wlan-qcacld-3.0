@@ -118,12 +118,10 @@ ap_beacon_process_24_ghz(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 			return;
 #ifdef FEATURE_WLAN_ESE
 		if (session->isESEconnection)
-			QDF_TRACE(QDF_MODULE_ID_PE,
-				  QDF_TRACE_LEVEL_INFO,
-				  FL("[INFOLOG]ESE 11g erpPresent=%d useProtection=%d nonErpPresent=%d"),
-				  bcn_struct->erpPresent,
-				  bcn_struct->erpIEInfo.useProtection,
-				  bcn_struct->erpIEInfo.nonErpPresent);
+			pe_info("[INFOLOG]ESE 11g erpPresent=%d useProtection=%d nonErpPresent=%d",
+				bcn_struct->erpPresent,
+				bcn_struct->erpIEInfo.useProtection,
+				bcn_struct->erpIEInfo.nonErpPresent);
 #endif
 		lim_enable_overlap11g_protection(mac_ctx, bcn_prm,
 						 mac_hdr, session);
@@ -145,11 +143,10 @@ ap_beacon_process_24_ghz(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 	if (tmp_exp) {
 #ifdef FEATURE_WLAN_ESE
 		if (session->isESEconnection) {
-			QDF_TRACE(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_INFO,
-				  FL("[INFOLOG]ESE 11g erpPresent=%d useProtection=%d nonErpPresent=%d"),
-				  bcn_struct->erpPresent,
-				  bcn_struct->erpIEInfo.useProtection,
-				  bcn_struct->erpIEInfo.nonErpPresent);
+			pe_info("[INFOLOG]ESE 11g erpPresent=%d useProtection=%d nonErpPresent=%d",
+				bcn_struct->erpPresent,
+				bcn_struct->erpIEInfo.useProtection,
+				bcn_struct->erpIEInfo.nonErpPresent);
 		}
 #endif
 		lim_enable_overlap11g_protection(mac_ctx, bcn_prm,

@@ -310,14 +310,12 @@ void pe_delete_fils_info(struct pe_session *session)
 	struct pe_fils_session *fils_info;
 
 	if (!session || (session && !session->valid)) {
-		QDF_TRACE(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-			  FL("session is not valid"));
+		pe_debug("session is not valid");
 		return;
 	}
 	fils_info = session->fils_info;
 	if (!fils_info) {
-		QDF_TRACE(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-			  FL("fils info not found"));
+		pe_debug("fils info not found");
 		return;
 	}
 	if (fils_info->keyname_nai_data)
@@ -354,8 +352,7 @@ static void pe_init_fils_info(struct pe_session *session)
 	struct pe_fils_session *fils_info;
 
 	if (!session || (session && !session->valid)) {
-		QDF_TRACE(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-			  FL("session is not valid"));
+		pe_debug("session is not valid");
 		return;
 	}
 	session->fils_info = qdf_mem_malloc(sizeof(struct pe_fils_session));

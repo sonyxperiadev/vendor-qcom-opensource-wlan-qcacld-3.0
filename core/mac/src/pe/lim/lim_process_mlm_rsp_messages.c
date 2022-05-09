@@ -254,10 +254,9 @@ void lim_process_mlm_start_cnf(struct mac_context *mac, uint32_t *msg_buf)
 
 		if (send_bcon_ind) {
 			/* Configure beacon and send beacons to HAL */
-			QDF_TRACE(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-					"Start Beacon with ssid %s Ch freq %d",
-					pe_session->ssId.ssId,
-					pe_session->curr_op_freq);
+			pe_debug("Start Beacon with ssid %s Ch freq %d",
+				 pe_session->ssId.ssId,
+				 pe_session->curr_op_freq);
 			lim_send_beacon(mac, pe_session);
 			lim_enable_obss_detection_config(mac, pe_session);
 			lim_send_obss_color_collision_cfg(mac, pe_session,
@@ -3182,9 +3181,7 @@ void lim_process_rx_channel_status_event(struct mac_context *mac_ctx, void *buf)
 	struct lim_channel_status *chan_status = buf;
 
 	if (!chan_status) {
-		QDF_TRACE(QDF_MODULE_ID_PE,
-			  QDF_TRACE_LEVEL_ERROR,
-			  "%s: ACS evt report buf NULL", __func__);
+		pe_err("ACS evt report buf NULL");
 		return;
 	}
 
@@ -3192,8 +3189,7 @@ void lim_process_rx_channel_status_event(struct mac_context *mac_ctx, void *buf)
 		lim_add_channel_status_info(mac_ctx, chan_status,
 					    chan_status->channel_id);
 	else
-		QDF_TRACE(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_WARN,
-			  "%s: Error evt report", __func__);
+		pe_warn("Error evt report");
 
 	qdf_mem_free(buf);
 
