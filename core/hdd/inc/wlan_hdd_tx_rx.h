@@ -579,16 +579,6 @@ wlan_hdd_dump_queue_history_state(struct hdd_netif_queue_history *q_hist,
 				  char *buf, uint32_t size);
 
 /**
- * wlan_hdd_rx_rpm_mark_last_busy() - Check if dp rx marked last busy
- * @hdd_ctx: Pointer to hdd context
- * @hif_ctx: Pointer to hif context
- *
- * Return: dp mark last busy less than runtime delay value
- */
-bool wlan_hdd_rx_rpm_mark_last_busy(struct hdd_context *hdd_ctx,
-				    void *hif_ctx);
-
-/**
  * hdd_sta_notify_tx_comp_cb() - notify tx comp callback registered with dp
  * @skb: pointer to skb
  * @ctx: osif context

@@ -1223,11 +1223,11 @@ int wlan_hdd_pm_qos_notify(struct notifier_block *nb, unsigned long curr_val,
 	if (!hdd_ctx->runtime_pm_prevented &&
 	    is_any_sta_connected &&
 	    !wlan_hdd_is_cpu_cxpc_allowed(curr_val)) {
-		hif_pm_runtime_get_noresume(hif_ctx, RTPM_ID_QOS_NOTIFY);
+		hif_rtpm_get(HIF_RTPM_GET_NORESUME, HIF_RTPM_ID_PM_QOS_NOTIFY);
 		hdd_ctx->runtime_pm_prevented = true;
 	} else if (hdd_ctx->runtime_pm_prevented &&
 		   wlan_hdd_is_cpu_cxpc_allowed(curr_val)) {
-		hif_pm_runtime_put(hif_ctx, RTPM_ID_QOS_NOTIFY);
+		hif_rtpm_put(HIF_RTPM_PUT_NOIDLE, HIF_RTPM_ID_PM_QOS_NOTIFY);
 		hdd_ctx->runtime_pm_prevented = false;
 	}
 
@@ -2363,13 +2363,10 @@ exit_with_code:
 
 static int _wlan_hdd_cfg80211_resume_wlan(struct wiphy *wiphy)
 {
-	void *hif_ctx;
 	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
 	int errno;
 
-	hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
-	if (hif_ctx)
-		hif_pm_runtime_put(hif_ctx, RTPM_ID_SUSPEND_RESUME);
+	qdf_rtpm_put(QDF_RTPM_PUT, QDF_RTPM_ID_WIPHY_SUSPEND);
 
 	if (!hdd_ctx) {
 		hdd_err_rl("hdd context is null");
@@ -2723,13 +2720,13 @@ static int _wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
 	if (!hif_ctx)
 		return -EINVAL;
 
-	errno = hif_pm_runtime_get_sync(hif_ctx, RTPM_ID_SUSPEND_RESUME);
+	errno = qdf_rtpm_get(QDF_RTPM_GET_SYNC, QDF_RTPM_ID_WIPHY_SUSPEND);
 	if (errno)
 		return errno;
 
 	errno = __wlan_hdd_cfg80211_suspend_wlan(wiphy, wow);
 	if (errno) {
-		hif_pm_runtime_put(hif_ctx, RTPM_ID_SUSPEND_RESUME);
+		qdf_rtpm_put(QDF_RTPM_PUT, QDF_RTPM_ID_WIPHY_SUSPEND);
 		return errno;
 	}
 

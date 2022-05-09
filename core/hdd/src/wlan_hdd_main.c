@@ -1583,6 +1583,9 @@ static void hdd_runtime_suspend_context_init(struct hdd_context *hdd_ctx)
 	qdf_runtime_lock_init(&ctx->monitor_mode);
 	qdf_runtime_lock_init(&ctx->wow_unit_test);
 
+	qdf_rtpm_register(QDF_RTPM_ID_WIPHY_SUSPEND, NULL);
+	qdf_rtpm_register(QDF_RTPM_ID_PM_QOS_NOTIFY, NULL);
+
 	ctx->is_user_wakelock_acquired = false;
 
 	wlan_scan_runtime_pm_init(hdd_ctx->pdev);
@@ -1606,6 +1609,9 @@ static void hdd_runtime_suspend_context_deinit(struct hdd_context *hdd_ctx)
 	qdf_runtime_lock_deinit(&ctx->user);
 	qdf_runtime_lock_deinit(&ctx->connect);
 	qdf_runtime_lock_deinit(&ctx->dfs);
+
+	qdf_rtpm_deregister(QDF_RTPM_ID_WIPHY_SUSPEND);
+	qdf_rtpm_deregister(QDF_RTPM_ID_PM_QOS_NOTIFY);
 
 	wlan_scan_runtime_pm_deinit(hdd_ctx->pdev);
 }
@@ -4274,7 +4280,6 @@ static int hdd_wlan_register_pm_qos_notifier(struct hdd_context *hdd_ctx)
  */
 static void hdd_wlan_unregister_pm_qos_notifier(struct hdd_context *hdd_ctx)
 {
-	void *hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
 	int ret;
 
 	if (hdd_ctx->config->runtime_pm != hdd_runtime_pm_dynamic) {
@@ -4290,7 +4295,7 @@ static void hdd_wlan_unregister_pm_qos_notifier(struct hdd_context *hdd_ctx)
 	qdf_spin_lock_irqsave(&hdd_ctx->pm_qos_lock);
 
 	if (hdd_ctx->runtime_pm_prevented) {
-		hif_pm_runtime_put_noidle(hif_ctx, RTPM_ID_QOS_NOTIFY);
+		hif_rtpm_put(HIF_RTPM_PUT_NOIDLE, HIF_RTPM_ID_PM_QOS_NOTIFY);
 		hdd_ctx->runtime_pm_prevented = false;
 	}
 
@@ -13296,7 +13301,7 @@ static void hdd_psoc_idle_timeout_callback(void *priv)
 		 * Trigger runtime sync resume before psoc_idle_shutdown
 		 * such that resume can happen successfully
 		 */
-		hif_pm_runtime_sync_resume(hif_ctx, RTPM_ID_SOC_IDLE_SHUTDOWN);
+		qdf_rtpm_sync_resume();
 	}
 
 	hdd_info("Psoc idle timeout elapsed; starting psoc shutdown");
@@ -17883,8 +17888,7 @@ static int hdd_disable_wifi(struct hdd_context *hdd_ctx)
 			 * Trigger runtime sync resume before psoc_idle_shutdown
 			 * such that resume can happen successfully
 			 */
-			hif_pm_runtime_sync_resume(hif_ctx,
-						   RTPM_ID_SOC_IDLE_SHUTDOWN);
+			qdf_rtpm_sync_resume();
 		}
 		ret = pld_idle_shutdown(hdd_ctx->parent_dev,
 					hdd_psoc_idle_shutdown);
@@ -19129,7 +19133,7 @@ void hdd_driver_unload(void)
 		 * Trigger runtime sync resume before setting unload in progress
 		 * such that resume can happen successfully
 		 */
-		hif_pm_runtime_sync_resume(hif_ctx, RTPM_ID_DRIVER_UNLOAD);
+		qdf_rtpm_sync_resume();
 	}
 
 	cds_set_driver_loaded(false);

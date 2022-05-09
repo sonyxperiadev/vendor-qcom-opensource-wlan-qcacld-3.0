@@ -814,7 +814,6 @@ static int hdd_soc_recovery_reinit(struct device *dev,
 static void __hdd_soc_remove(struct device *dev)
 {
 	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
-	void *hif_ctx;
 
 	QDF_BUG(hdd_ctx);
 	if (!hdd_ctx)
@@ -823,15 +822,7 @@ static void __hdd_soc_remove(struct device *dev)
 	pr_info("%s: Removing driver v%s\n", WLAN_MODULE_NAME,
 		QWLAN_VERSIONSTR);
 
-	hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
-	if (hif_ctx) {
-		/*
-		 * Trigger runtime sync resume before setting unload in progress
-		 * such that resume can happen successfully
-		 */
-		hif_pm_runtime_sync_resume(hif_ctx, RTPM_ID_SOC_REMOVE);
-	}
-
+	qdf_rtpm_sync_resume();
 	cds_set_driver_loaded(false);
 	cds_set_unload_in_progress(true);
 	if (!hdd_wait_for_debugfs_threads_completion())
