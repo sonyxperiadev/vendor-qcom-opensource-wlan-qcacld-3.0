@@ -1437,7 +1437,11 @@ cm_connect_complete_ind(struct wlan_objmgr_vdev *vdev,
 			rsp->freq);
 
 	if (QDF_IS_STATUS_SUCCESS(rsp->connect_status)) {
-		policy_mgr_incr_active_session(psoc, op_mode, vdev_id);
+		if (policy_mgr_ml_link_vdev_need_to_be_disabled(psoc, vdev))
+			policy_mgr_move_vdev_from_connection_to_disabled_tbl(
+								psoc, vdev_id);
+		else
+			policy_mgr_incr_active_session(psoc, op_mode, vdev_id);
 		cm_process_connect_complete(psoc, pdev, vdev, rsp);
 		wlan_tdls_notify_sta_connect(vdev_id,
 					     mlme_get_tdls_chan_switch_prohibited(vdev),

@@ -1040,6 +1040,18 @@ void policy_mgr_move_vdev_from_connection_to_disabled_tbl(
 						uint8_t vdev_id);
 
 /**
+ * policy_mgr_ml_link_vdev_need_to_be_disabled() - check if ml link need to be
+ * disabled during connection.
+ * @psoc: psoc
+ * @vdev: vdev
+ *
+ * Return: true if STA link is need to be disabled else false.
+ */
+bool
+policy_mgr_ml_link_vdev_need_to_be_disabled(struct wlan_objmgr_psoc *psoc,
+					    struct wlan_objmgr_vdev *vdev);
+
+/**
  * policy_mgr_handle_link_enable_disable_resp() - enable/disable a ml link
  * @vdev: vdev
  * @arg: req structure
@@ -1068,6 +1080,13 @@ static inline void
 policy_mgr_move_vdev_from_disabled_to_connection_tbl(
 						struct wlan_objmgr_psoc *psoc,
 						uint8_t vdev_id) {}
+
+static inline bool
+policy_mgr_ml_link_vdev_need_to_be_disabled(struct wlan_objmgr_psoc *psoc,
+					    struct wlan_objmgr_vdev *vdev)
+{
+	return false;
+}
 
 static inline void
 policy_mgr_move_vdev_from_connection_to_disabled_tbl(

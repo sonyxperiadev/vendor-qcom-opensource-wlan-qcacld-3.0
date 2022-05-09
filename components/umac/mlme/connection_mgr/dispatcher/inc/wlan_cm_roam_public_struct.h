@@ -2399,6 +2399,9 @@ struct cm_hw_mode_trans_ind {
 	struct policy_mgr_pdev_mac_freq_map mac_freq_map[MAX_FREQ_RANGE_NUM];
 };
 
+/* If link is disabled, during roam sync */
+#define CM_ROAM_LINK_FLAG_DISABLE    0x1
+
 /*
  * struct ml_setup_link_param - MLO setup link param
  * @vdev_id: vdev id of the link

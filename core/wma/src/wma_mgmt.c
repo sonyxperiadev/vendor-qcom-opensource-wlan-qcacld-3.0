@@ -1371,9 +1371,12 @@ static void wma_set_mlo_capability(tp_wma_handle wma,
 		req->mlo_params.mlo_assoc_link =
 					wlan_peer_mlme_is_assoc_peer(peer);
 		WLAN_ADDR_COPY(req->mlo_params.mld_mac, peer->mldaddr);
-		wma_debug("assoc_link %d " QDF_MAC_ADDR_FMT,
+		if (policy_mgr_ml_link_vdev_need_to_be_disabled(psoc, vdev))
+			req->mlo_params.mlo_force_link_inactive = 1;
+		wma_debug("assoc_link %d" QDF_MAC_ADDR_FMT ", force inactive %d",
 			  req->mlo_params.mlo_assoc_link,
-			  QDF_MAC_ADDR_REF(peer->mldaddr));
+			  QDF_MAC_ADDR_REF(peer->mldaddr),
+			  req->mlo_params.mlo_force_link_inactive);
 	} else {
 		wma_debug("Peer MLO context is NULL");
 		req->mlo_params.mlo_enabled = false;

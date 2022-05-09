@@ -3225,6 +3225,31 @@ void policy_mgr_move_vdev_from_connection_to_disabled_tbl(
 	policy_mgr_add_to_disabled_links(pm_ctx, freq, mode, vdev_id);
 }
 
+bool
+policy_mgr_ml_link_vdev_need_to_be_disabled(struct wlan_objmgr_psoc *psoc,
+					    struct wlan_objmgr_vdev *vdev)
+{
+	union conc_ext_flag conc_ext_flags;
+
+	if (wlan_vdev_mlme_get_opmode(vdev) != QDF_STA_MODE)
+		return false;
+
+	/* Check only for link vdev */
+	if (!wlan_vdev_mlme_is_mlo_vdev(vdev) ||
+	    !wlan_vdev_mlme_is_mlo_link_vdev(vdev))
+		return false;
+
+	conc_ext_flags.value = policy_mgr_get_conc_ext_flags(vdev, false);
+	/*
+	 * For non-assoc link vdev set link as disabled if concurency is
+	 * not allowed
+	 */
+	return !policy_mgr_allow_concurrency(psoc, PM_STA_MODE,
+					     wlan_get_operation_chan_freq(vdev),
+					     HW_MODE_20_MHZ,
+					     conc_ext_flags.value);
+}
+
 static void
 policy_mgr_enable_disable_link_from_vdev_bitmask(struct wlan_objmgr_psoc *psoc,
 						 unsigned long enable_vdev_mask,
