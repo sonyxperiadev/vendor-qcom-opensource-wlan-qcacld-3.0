@@ -50,7 +50,7 @@
 #include <wlan_objmgr_vdev_obj.h>
 #include <wlan_objmgr_pdev_obj.h>
 #include "wlan_reg_services_api.h"
-#include <wlan_scan_ucfg_api.h>
+#include <wlan_scan_api.h>
 #include <wlan_scan_utils_api.h>
 
 /* IF MGR API header file */
@@ -248,7 +248,7 @@ wlansap_calculate_chan_from_scan_result(mac_handle_t mac_handle,
 		filter->age_threshold = qdf_get_time_of_the_day_ms() -
 						sap_ctx->acs_req_timestamp;
 
-	list = ucfg_scan_get_result(mac_ctx->pdev, filter);
+	list = wlan_scan_get_result(mac_ctx->pdev, filter);
 
 	if (filter)
 		qdf_mem_free(filter);
@@ -259,7 +259,7 @@ wlansap_calculate_chan_from_scan_result(mac_handle_t mac_handle,
 	wlansap_send_acs_success_event(sap_ctx, scan_id);
 
 	oper_channel = sap_select_channel(mac_handle, sap_ctx, list);
-	ucfg_scan_purge_results(list);
+	wlan_scan_purge_results(list);
 
 	return oper_channel;
 }

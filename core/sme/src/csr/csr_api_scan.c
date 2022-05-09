@@ -42,7 +42,7 @@
 #include "wlan_hdd_main.h"
 #include "pld_common.h"
 #include "csr_internal.h"
-#include <wlan_scan_ucfg_api.h>
+#include <wlan_scan_api.h>
 #include <wlan_scan_api.h>
 #include <wlan_scan_utils_api.h>
 #include <wlan_objmgr_vdev_obj.h>
@@ -887,7 +887,7 @@ QDF_STATUS csr_scan_get_result(struct mac_context *mac_ctx,
 		return QDF_STATUS_E_INVAL;
 	}
 
-	list = ucfg_scan_get_result(pdev, filter);
+	list = wlan_scan_get_result(pdev, filter);
 	if (list) {
 		num_bss = qdf_list_size(list);
 		sme_debug("num_entries %d", num_bss);
@@ -935,7 +935,7 @@ QDF_STATUS csr_scan_get_result(struct mac_context *mac_ctx,
 
 error:
 	if (list)
-		ucfg_scan_purge_results(list);
+		wlan_scan_purge_results(list);
 	if (pdev)
 		wlan_objmgr_pdev_release_ref(pdev, WLAN_LEGACY_MAC_ID);
 

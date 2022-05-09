@@ -53,7 +53,7 @@
 #include <linux/netdevice.h>
 #include <net/cfg80211.h>
 #include <qca_vendor.h>
-#include <wlan_scan_ucfg_api.h>
+#include <wlan_scan_api.h>
 #include "wlan_reg_services_api.h"
 #include "wlan_mlme_ucfg_api.h"
 #include "wlan_policy_mgr_ucfg.h"
@@ -1261,8 +1261,8 @@ QDF_STATUS sap_channel_sel(struct sap_context *sap_context)
 		}
 
 		/* Initiate a SCAN request */
-		ucfg_scan_init_default_params(vdev, req);
-		scan_id = ucfg_scan_get_scan_id(mac_ctx->psoc);
+		wlan_scan_init_default_params(vdev, req);
+		scan_id = wlan_scan_get_scan_id(mac_ctx->psoc);
 		req->scan_req.scan_id = scan_id;
 		req->scan_req.vdev_id = vdev_id;
 		req->scan_req.scan_f_passive = false;
@@ -1281,7 +1281,7 @@ QDF_STATUS sap_channel_sel(struct sap_context *sap_context)
 		/* Set requestType to Full scan */
 
 		sap_context->acs_req_timestamp = qdf_get_time_of_the_day_ms();
-		qdf_ret_status = ucfg_scan_start(req);
+		qdf_ret_status = wlan_scan_start(req);
 		if (qdf_ret_status != QDF_STATUS_SUCCESS) {
 			sap_err("scan request  fail %d!!!", qdf_ret_status);
 			sap_info("SAP Configuring default ch, Ch_freq=%d",

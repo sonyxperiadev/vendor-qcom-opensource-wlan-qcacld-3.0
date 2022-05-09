@@ -47,7 +47,7 @@
 #include "cds_ieee80211_common_i.h"
 #include "cds_regdomain.h"
 #include "wlan_policy_mgr_api.h"
-#include <wlan_scan_ucfg_api.h>
+#include <wlan_scan_api.h>
 #include "wlan_reg_services_api.h"
 #include <wlan_dfs_utils_api.h>
 #include <wlan_reg_ucfg_api.h>
@@ -324,7 +324,7 @@ QDF_STATUS sap_init_ctx(struct sap_context *sap_ctx,
 	/* Register with scan component only during init */
 	if (!reinit)
 		sap_ctx->req_id =
-			ucfg_scan_register_requester(mac->psoc, "SAP",
+			wlan_scan_register_requester(mac->psoc, "SAP",
 					sap_scan_event_callback, sap_ctx);
 
 	if (!reinit) {
@@ -358,7 +358,7 @@ QDF_STATUS sap_deinit_ctx(struct sap_context *sap_ctx)
 		sap_err("Invalid MAC context");
 		return QDF_STATUS_E_FAULT;
 	}
-	ucfg_scan_unregister_requester(mac->psoc, sap_ctx->req_id);
+	wlan_scan_unregister_requester(mac->psoc, sap_ctx->req_id);
 
 	if (sap_ctx->freq_list) {
 		qdf_mem_free(sap_ctx->freq_list);

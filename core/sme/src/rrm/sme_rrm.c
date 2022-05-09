@@ -35,7 +35,7 @@
 #include "csr_inside_api.h"
 
 #include "rrm_global.h"
-#include <wlan_scan_ucfg_api.h>
+#include <wlan_scan_api.h>
 #include <wlan_scan_utils_api.h>
 #include <wlan_reg_services_api.h>
 #include <wlan_utility.h>
@@ -821,8 +821,8 @@ QDF_STATUS sme_rrm_issue_scan_req(struct mac_context *mac_ctx, uint8_t idx)
 			qdf_mem_free(req);
 			goto send_ind;
 		}
-		ucfg_scan_init_default_params(vdev, req);
-		req->scan_req.scan_id = ucfg_scan_get_scan_id(mac_ctx->psoc);
+		wlan_scan_init_default_params(vdev, req);
+		req->scan_req.scan_id = wlan_scan_get_scan_id(mac_ctx->psoc);
 		sme_rrm_ctx->scan_id = req->scan_req.scan_id;
 
 		sme_debug("RRM_SCN: rrm_idx:%d scan_id:%d",
@@ -945,7 +945,7 @@ QDF_STATUS sme_rrm_issue_scan_req(struct mac_context *mac_ctx, uint8_t idx)
 		 */
 		req->scan_req.scan_type = SCAN_TYPE_RRM;
 
-		status = ucfg_scan_start(req);
+		status = wlan_scan_start(req);
 		wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
 		if (QDF_IS_STATUS_ERROR(status))
 			goto send_ind;
@@ -1807,7 +1807,7 @@ QDF_STATUS rrm_start(struct mac_context *mac_ctx)
 
 
 	/* Register with scan component */
-	req_id = ucfg_scan_register_requester(mac_ctx->psoc,
+	req_id = wlan_scan_register_requester(mac_ctx->psoc,
 					      "RRM",
 					      sme_rrm_scan_event_callback,
 					      mac_ctx);
@@ -1832,8 +1832,7 @@ QDF_STATUS rrm_stop(struct mac_context *mac_ctx)
 		smerrmctx->req_id = 0;
 	}
 
-	ucfg_scan_unregister_requester(mac_ctx->psoc,
-				       req_id);
+	wlan_scan_unregister_requester(mac_ctx->psoc, req_id);
 
 	return QDF_STATUS_SUCCESS;
 }

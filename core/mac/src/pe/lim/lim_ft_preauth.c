@@ -32,7 +32,7 @@
 #include <lim_session.h>
 #include <lim_session_utils.h>
 #include <lim_admit_control.h>
-#include <wlan_scan_ucfg_api.h>
+#include <wlan_scan_api.h>
 #include "wma.h"
 #include "wlan_crypto_global_api.h"
 
@@ -708,13 +708,13 @@ QDF_STATUS lim_send_preauth_scan_offload(struct mac_context *mac_ctx,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	ucfg_scan_init_default_params(vdev, req);
+	wlan_scan_init_default_params(vdev, req);
 
 	qdf_mem_copy(req->scan_req.bssid_list,
 		     (uint8_t *)ft_preauth_req->currbssId,
 		     QDF_MAC_ADDR_SIZE);
 
-	req->scan_req.scan_id = ucfg_scan_get_scan_id(mac_ctx->psoc);
+	req->scan_req.scan_id = wlan_scan_get_scan_id(mac_ctx->psoc);
 	if (!req->scan_req.scan_id) {
 		wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
 		qdf_mem_free(req);
@@ -734,8 +734,8 @@ QDF_STATUS lim_send_preauth_scan_offload(struct mac_context *mac_ctx,
 	req->scan_req.dwell_time_active = LIM_FT_PREAUTH_SCAN_TIME;
 	req->scan_req.dwell_time_passive = LIM_FT_PREAUTH_SCAN_TIME;
 
-	status = ucfg_scan_start(req);
-	if (status != QDF_STATUS_SUCCESS)
+	status = wlan_scan_start(req);
+	if (QDF_IS_STATUS_ERROR(status))
 		/* Don't free req here, ucfg_scan_start will do free */
 		pe_info("Issue scan req failed");
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);

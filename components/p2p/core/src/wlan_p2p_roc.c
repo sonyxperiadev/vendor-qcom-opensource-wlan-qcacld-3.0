@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -22,7 +23,7 @@
 
 #include <wlan_mgmt_txrx_utils_api.h>
 #include <wlan_scan_public_structs.h>
-#include <wlan_scan_ucfg_api.h>
+#include <wlan_scan_api.h>
 #include <wlan_objmgr_psoc_obj.h>
 #include <wlan_objmgr_global_obj.h>
 #include <wlan_objmgr_pdev_obj.h>
@@ -100,7 +101,7 @@ static QDF_STATUS p2p_scan_start(struct p2p_roc_context *roc_ctx)
 		goto fail;
 	}
 
-	ucfg_scan_init_default_params(vdev, req);
+	wlan_scan_init_default_params(vdev, req);
 
 	if (!roc_ctx->duration) {
 		roc_ctx->duration = P2P_ROC_DEFAULT_DURATION;
@@ -109,7 +110,7 @@ static QDF_STATUS p2p_scan_start(struct p2p_roc_context *roc_ctx)
 	}
 
 	pdev = wlan_vdev_get_pdev(vdev);
-	roc_ctx->scan_id = ucfg_scan_get_scan_id(p2p_soc_obj->soc);
+	roc_ctx->scan_id = wlan_scan_get_scan_id(p2p_soc_obj->soc);
 	req->vdev = vdev;
 	req->scan_req.scan_id = roc_ctx->scan_id;
 	req->scan_req.scan_type = SCAN_TYPE_P2P_LISTEN;
@@ -185,7 +186,7 @@ static QDF_STATUS p2p_scan_start(struct p2p_roc_context *roc_ctx)
 	p2p_debug("FW requested roc duration is:%d",
 		  req->scan_req.dwell_time_passive);
 
-	status = ucfg_scan_start(req);
+	status = wlan_scan_start(req);
 
 	p2p_debug("start scan, scan req id:%d, scan id:%d, status:%d",
 		p2p_soc_obj->scan_req_id, roc_ctx->scan_id, status);

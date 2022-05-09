@@ -377,7 +377,7 @@ QDF_STATUS lim_start(struct mac_context *mac)
 	}
 
 	mac->lim.req_id =
-		ucfg_scan_register_requester(mac->psoc,
+		wlan_scan_register_requester(mac->psoc,
 					     "LIM",
 					     lim_process_rx_scan_handler,
 					     mac);
@@ -526,7 +526,7 @@ void lim_cleanup(struct mac_context *mac)
 
 	lim_ft_cleanup_all_ft_sessions(mac);
 
-	ucfg_scan_unregister_requester(mac->psoc, mac->lim.req_id);
+	wlan_scan_unregister_requester(mac->psoc, mac->lim.req_id);
 } /*** end lim_cleanup() ***/
 
 #ifdef WLAN_FEATURE_MEMDUMP_ENABLE
