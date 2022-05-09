@@ -58,7 +58,7 @@
 #include "../../core/src/vdev_mgr_ops.h"
 #include "wma.h"
 #include <../../core/src/wlan_cm_vdev_api.h>
-#include <wlan_action_oui_ucfg_api.h>
+#include "wlan_action_oui_main.h"
 #include <wlan_cm_api.h>
 #include <wlan_mlme_api.h>
 #include <wlan_mlme_ucfg_api.h>
@@ -1791,9 +1791,9 @@ static void lim_check_oui_and_update_session(struct mac_context *mac_ctx,
 	vendor_ap_search_attr.enable_5g =
 				wlan_reg_is_5ghz_ch_freq(bss_desc->chan_freq);
 
-	force_max_nss = ucfg_action_oui_search(mac_ctx->psoc,
-					&vendor_ap_search_attr,
-					ACTION_OUI_FORCE_MAX_NSS);
+	force_max_nss = wlan_action_oui_search(mac_ctx->psoc,
+					       &vendor_ap_search_attr,
+					       ACTION_OUI_FORCE_MAX_NSS);
 
 	if (!mac_ctx->mlme_cfg->vht_caps.vht_cap_info.enable2x2) {
 		force_max_nss = false;
@@ -1811,7 +1811,7 @@ static void lim_check_oui_and_update_session(struct mac_context *mac_ctx,
 	 * WMI_VDEV_PARAM_ABG_MODE_TX_CHAIN_NUM
 	 */
 	is_vendor_ap_present =
-			ucfg_action_oui_search(mac_ctx->psoc,
+			wlan_action_oui_search(mac_ctx->psoc,
 					       &vendor_ap_search_attr,
 					       ACTION_OUI_CCKM_1X1);
 	if (is_vendor_ap_present) {
@@ -1827,7 +1827,7 @@ static void lim_check_oui_and_update_session(struct mac_context *mac_ctx,
 	 * mode to 11N.
 	 */
 	is_vendor_ap_present =
-		ucfg_action_oui_search(mac_ctx->psoc,
+		wlan_action_oui_search(mac_ctx->psoc,
 				       &vendor_ap_search_attr,
 				       ACTION_OUI_SWITCH_TO_11N_MODE);
 	if (mac_ctx->roam.configParam.is_force_1x1 &&
@@ -1838,19 +1838,19 @@ static void lim_check_oui_and_update_session(struct mac_context *mac_ctx,
 	     session->dot11mode == MLME_DOT11_MODE_11AC_ONLY))
 		session->dot11mode = MLME_DOT11_MODE_11N;
 
-	follow_ap_edca = ucfg_action_oui_search(mac_ctx->psoc,
-				    &vendor_ap_search_attr,
-				    ACTION_OUI_DISABLE_AGGRESSIVE_EDCA);
+	follow_ap_edca = wlan_action_oui_search(mac_ctx->psoc,
+						&vendor_ap_search_attr,
+						ACTION_OUI_DISABLE_AGGRESSIVE_EDCA);
 	mlme_set_follow_ap_edca_flag(session->vdev, follow_ap_edca);
 
-	if (ucfg_action_oui_search(mac_ctx->psoc, &vendor_ap_search_attr,
+	if (wlan_action_oui_search(mac_ctx->psoc, &vendor_ap_search_attr,
 				   ACTION_OUI_HOST_RECONN)) {
 		mlme_set_reconn_after_assoc_timeout_flag(
 			mac_ctx->psoc, session->vdev_id,
 			true);
 	}
 	is_vendor_ap_present =
-			ucfg_action_oui_search(mac_ctx->psoc,
+			wlan_action_oui_search(mac_ctx->psoc,
 					       &vendor_ap_search_attr,
 					       ACTION_OUI_CONNECT_1X1);
 
@@ -1870,9 +1870,9 @@ static void lim_check_oui_and_update_session(struct mac_context *mac_ctx,
 
 	if (!is_vendor_ap_present) {
 		is_vendor_ap_present =
-			ucfg_action_oui_search(mac_ctx->psoc,
-				&vendor_ap_search_attr,
-				ACTION_OUI_CONNECT_1X1_WITH_1_CHAIN);
+			wlan_action_oui_search(mac_ctx->psoc,
+					       &vendor_ap_search_attr,
+					       ACTION_OUI_CONNECT_1X1_WITH_1_CHAIN);
 		if (is_vendor_ap_present)
 			pe_debug("1x1 with 1 Chain AP");
 	}

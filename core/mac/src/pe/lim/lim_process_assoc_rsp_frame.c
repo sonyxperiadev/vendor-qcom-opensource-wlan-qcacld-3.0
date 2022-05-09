@@ -49,8 +49,7 @@
 #include <lim_mlo.h>
 #include "parser_api.h"
 #include "wlan_twt_cfg_ext_api.h"
-#include "wlan_action_oui_ucfg_api.h"
-#include "wlan_action_oui_public_struct.h"
+#include "wlan_action_oui_main.h"
 
 /**
  * lim_update_stads_htcap() - Updates station Descriptor HT capability
@@ -1369,7 +1368,7 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 	if (lim_is_session_he_capable(session_entry)) {
 		attr.ie_data = ie;
 		attr.ie_length = ie_len;
-		bad_ap = ucfg_action_oui_search(mac_ctx->psoc,
+		bad_ap = wlan_action_oui_search(mac_ctx->psoc,
 						&attr,
 						ACTION_OUI_DISABLE_MU_EDCA);
 		session_entry->mu_edca_present = assoc_rsp->mu_edca_present;

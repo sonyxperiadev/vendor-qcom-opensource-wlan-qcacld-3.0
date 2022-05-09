@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2018, 2020-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -21,7 +22,6 @@
  */
 
 #include "wlan_action_oui_ucfg_api.h"
-#include "wlan_action_oui_main.h"
 #include "wlan_action_oui_main.h"
 #include "target_if_action_oui.h"
 #include "wlan_action_oui_tgt_api.h"
@@ -168,28 +168,5 @@ bool ucfg_action_oui_search(struct wlan_objmgr_psoc *psoc,
 			    struct action_oui_search_attr *attr,
 			    enum action_oui_id action_id)
 {
-	struct action_oui_psoc_priv *psoc_priv;
-	bool found = false;
-
-	if (!psoc || !attr) {
-		action_oui_err("Invalid psoc or search attrs");
-		goto exit;
-	}
-
-	if (action_id >= ACTION_OUI_MAXIMUM_ID) {
-		action_oui_err("Invalid action_oui id: %u", action_id);
-		goto exit;
-	}
-
-	psoc_priv = action_oui_psoc_get_priv(psoc);
-	if (!psoc_priv) {
-		action_oui_err("psoc priv is NULL");
-		goto exit;
-	}
-
-	found = action_oui_search(psoc_priv, attr, action_id);
-
-exit:
-
-	return found;
+	return wlan_action_oui_search(psoc, attr, action_id);
 }
