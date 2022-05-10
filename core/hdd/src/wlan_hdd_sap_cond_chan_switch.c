@@ -341,6 +341,7 @@ static int __wlan_hdd_request_pre_cac(struct hdd_context *hdd_ctx,
 		 * feature announcement to not use this temporary interface for
 		 * any activity from user space.
 		 */
+		params.is_add_virtual_iface = 1;
 		pre_cac_adapter = hdd_open_adapter(hdd_ctx, QDF_SAP_MODE,
 						   SAP_PRE_CAC_IFNAME, mac_addr,
 						   NET_NAME_UNKNOWN, true,
