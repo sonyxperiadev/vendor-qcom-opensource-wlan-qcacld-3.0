@@ -14268,6 +14268,7 @@ static int hdd_platform_wlan_mac(struct hdd_context *hdd_ctx)
 	struct device *dev = hdd_ctx->parent_dev;
 	tSirMacAddr mac_addr;
 	QDF_STATUS status;
+	struct qdf_mac_addr hw_macaddr;
 
 	addr = hdd_get_platform_wlan_mac_buff(dev, &no_of_mac_addr);
 
@@ -14288,6 +14289,10 @@ static int hdd_platform_wlan_mac(struct hdd_context *hdd_ctx)
 		qdf_mem_copy(buf, addr, QDF_MAC_ADDR_SIZE);
 		hdd_info("provisioned MAC Addr [%d] "QDF_MAC_ADDR_FMT, iter,
 			 QDF_MAC_ADDR_REF(buf));
+		if (iter == 0) {
+			qdf_mem_copy(&hw_macaddr.bytes, buf, QDF_MAC_ADDR_SIZE);
+			hdd_update_mld_mac_addr(hdd_ctx, hw_macaddr);
+		}
 	}
 
 
@@ -14310,6 +14315,11 @@ static int hdd_platform_wlan_mac(struct hdd_context *hdd_ctx)
 			qdf_mem_copy(buf, addr, QDF_MAC_ADDR_SIZE);
 			hdd_debug("derived MAC Addr [%d] "QDF_MAC_ADDR_FMT, iter,
 				  QDF_MAC_ADDR_REF(buf));
+			if (iter == 0) {
+				qdf_mem_copy(&hw_macaddr.bytes, buf,
+					     QDF_MAC_ADDR_SIZE);
+				hdd_update_mld_mac_addr(hdd_ctx, hw_macaddr);
+			}
 		}
 		hdd_ctx->num_derived_addr = no_of_mac_addr;
 	}
