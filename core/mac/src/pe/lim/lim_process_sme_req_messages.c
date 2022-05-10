@@ -69,6 +69,7 @@
 #include <wlan_vdev_mgr_utils_api.h>
 #include "cfg_ucfg_api.h"
 #include "wlan_twt_cfg_ext_api.h"
+#include <spatial_reuse_api.h>
 
 /* SME REQ processing function templates */
 static bool __lim_process_sme_sys_ready_ind(struct mac_context *, uint32_t *);
@@ -9357,6 +9358,12 @@ void lim_process_set_he_bss_color(struct mac_context *mac_ctx, uint32_t *msg_buf
 	beacon_params.bss_color_disabled = 1;
 	beacon_params.bss_color = session_entry->he_op.bss_color;
 	session_entry->bss_color_changing = 1;
+
+	if (wlan_vdev_mlme_get_he_spr_enabled(session_entry->vdev)) {
+		/* Disable spatial reuse during BSS color change */
+		wlan_spatial_reuse_config_set(session_entry->vdev, 0, 0);
+		wlan_vdev_mlme_set_he_spr_enabled(session_entry->vdev, false);
+	}
 
 	if (sch_set_fixed_beacon_fields(mac_ctx, session_entry) !=
 			QDF_STATUS_SUCCESS) {

@@ -2530,6 +2530,22 @@ $(call add-wlan-objs,son,$(WLAN_SON_OBJS))
 
 #######################################################
 
+######################### SPATIAL_REUSE #########################
+SR_UCFG_DIR := components/spatial_reuse/dispatcher/src
+SR_UCFG_INC := -I$(WLAN_ROOT)/components/spatial_reuse/dispatcher/inc
+SR_TGT_DIR  := $(WLAN_COMMON_ROOT)/target_if/spatial_reuse/src
+SR_TGT_INC  := -I$(WLAN_COMMON_INC)/target_if/spatial_reuse/inc/
+
+ifeq ($(CONFIG_WLAN_FEATURE_11AX), y)
+WLAN_SR_OBJS := $(SR_UCFG_DIR)/spatial_reuse_ucfg_api.o \
+		 $(SR_UCFG_DIR)/spatial_reuse_api.o \
+		 $(SR_TGT_DIR)/target_if_spatial_reuse.o
+endif
+
+$(call add-wlan-objs,spatial_reuse,$(WLAN_SR_OBJS))
+
+#######################################################
+
 ###### COEX ########
 COEX_OS_IF_SRC      := os_if/coex/src
 COEX_TGT_SRC        := components/target_if/coex/src
@@ -3019,7 +3035,11 @@ INCS +=		$(SON_CORE_INC)
 INCS +=		$(SON_UCFG_INC)
 INCS +=		$(SON_TGT_INC)
 INCS +=		$(SON_OS_IF_INC)
+################ SPATIAL_REUSE ################
+INCS +=		$(SR_UCFG_INC)
+INCS +=		$(SR_TGT_INC)
 ##########################################
+
 INCS +=		$(UMAC_OBJMGR_INC)
 INCS +=		$(UMAC_MGMT_TXRX_INC)
 INCS +=		$(PMO_INC)

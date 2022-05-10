@@ -875,6 +875,8 @@ lim_send_probe_rsp_mgmt_frame(struct mac_context *mac_ctx,
 					&frm->he_cap);
 		populate_dot11f_he_operation(mac_ctx, pe_session,
 					     &frm->he_op);
+		populate_dot11f_sr_info(mac_ctx, pe_session,
+					&frm->spatial_reuse);
 		populate_dot11f_he_6ghz_cap(mac_ctx, pe_session,
 					    &frm->he_6ghz_band_cap);
 	}
@@ -1738,6 +1740,8 @@ lim_send_assoc_rsp_mgmt_frame(struct mac_context *mac_ctx,
 		    lim_is_session_he_capable(pe_session)) {
 			populate_dot11f_he_caps(mac_ctx, pe_session,
 						&frm.he_cap);
+			populate_dot11f_sr_info(mac_ctx, pe_session,
+						&frm.spatial_reuse);
 			populate_dot11f_he_operation(mac_ctx, pe_session,
 						     &frm.he_op);
 			populate_dot11f_he_6ghz_cap(mac_ctx, pe_session,

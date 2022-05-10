@@ -57,6 +57,7 @@
 #include "wma.h"
 #include <../../core/src/wlan_cm_vdev_api.h>
 #include <wlan_mlo_mgr_sta.h>
+#include <spatial_reuse_api.h>
 
 void lim_send_sme_rsp(struct mac_context *mac_ctx, uint16_t msg_type,
 		      tSirResultCodes result_code, uint8_t vdev_id)
@@ -2289,6 +2290,37 @@ lim_send_bss_color_change_ie_update(struct mac_context *mac_ctx,
 }
 
 static void
+lim_update_spatial_reuse(struct pe_session *session)
+{
+	struct wlan_objmgr_psoc *psoc;
+	uint32_t conc_vdev_id;
+	uint8_t mac_id, sr_ctrl, non_srg_pd_max_offset;
+	uint8_t vdev_id = session->vdev_id;
+
+	sr_ctrl = wlan_vdev_mlme_get_sr_ctrl(session->vdev);
+	non_srg_pd_max_offset = wlan_vdev_mlme_get_pd_offset(session->vdev);
+	if (non_srg_pd_max_offset && sr_ctrl &&
+	    !wlan_vdev_mlme_get_he_spr_enabled(session->vdev)) {
+		psoc = wlan_vdev_get_psoc(session->vdev);
+		policy_mgr_get_mac_id_by_session_id(psoc,
+						    vdev_id,
+						    &mac_id);
+		conc_vdev_id = policy_mgr_get_conc_vdev_on_same_mac(psoc,
+								    vdev_id,
+								    mac_id);
+		if (conc_vdev_id == WLAN_INVALID_VDEV_ID) {
+		/*
+		 * Enable spatial reuse only if no concurrent
+		 * vdev running on same mac
+		 */
+			wlan_spatial_reuse_config_set(session->vdev, sr_ctrl,
+						      non_srg_pd_max_offset);
+			wlan_vdev_mlme_set_he_spr_enabled(session->vdev, true);
+		}
+	}
+}
+
+static void
 lim_handle_bss_color_change_ie(struct mac_context *mac_ctx,
 					struct pe_session *session)
 {
@@ -2305,6 +2337,12 @@ lim_handle_bss_color_change_ie(struct mac_context *mac_ctx,
 			session->he_bss_color_change.countdown--;
 		} else {
 			session->bss_color_changing = 0;
+			/*
+			 * On OBSS color collision detection, spatial reuse
+			 * gets disabled. Enable spatial reuse if it was
+			 * enabled during AP start
+			 */
+			lim_update_spatial_reuse(session);
 			qdf_mem_zero(&beacon_params, sizeof(beacon_params));
 			session->he_op.bss_col_disabled = 0;
 			session->he_op.bss_color =

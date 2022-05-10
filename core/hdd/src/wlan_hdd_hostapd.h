@@ -449,6 +449,27 @@ void hdd_stop_sap_due_to_invalid_channel(struct work_struct *work);
  */
 bool hdd_is_any_sta_connecting(struct hdd_context *hdd_ctx);
 
+#ifdef WLAN_FEATURE_11AX
+/**
+ * hdd_update_he_obss_pd() - Enable or disable spatial reuse
+ * based on user space input and concurrency combination.
+ * @adapter:  Pointer to hostapd adapter
+ * @params: Pointer to AP configuration from cfg80211
+ * @iface_start: Interface start or not
+ *
+ * Return: void
+ */
+void hdd_update_he_obss_pd(struct hdd_adapter *adapter,
+			   struct cfg80211_ap_settings *params,
+			   bool iface_start);
+#else
+static inline void hdd_update_he_obss_pd(struct hdd_adapter *adapter,
+					 struct cfg80211_ap_settings *params,
+					 bool iface_start)
+{
+}
+#endif
+
 #ifdef WLAN_FEATURE_11BE_MLO
 /**
  * wlan_hdd_mlo_reset() - reset mlo configuration if start bss fails

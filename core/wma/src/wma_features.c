@@ -637,6 +637,77 @@ QDF_STATUS wma_process_dhcp_ind(WMA_HANDLE handle,
 					    &peer_set_param_fp);
 }
 
+#if defined WLAN_FEATURE_11AX
+
+#define NON_SRG_PD_SR_DISALLOWED 0x02
+#define NON_SRG_OFFSET_PRESENT 0x04
+#define NON_SRG_SPR_ENABLE_POS 24
+#define NON_SRG_PARAM_VAL_DBM_UNIT 0x20
+#define NON_SRG_SPR_ENABLE 0x80
+
+QDF_STATUS wma_spr_update(tp_wma_handle wma,
+			  uint8_t vdev_id,
+			  bool enable)
+{
+	struct pdev_params pparam;
+	uint32_t val = 0;
+	wmi_unified_t wmi_handle = wma->wmi_handle;
+	uint8_t mac_id;
+	uint32_t conc_vdev_id;
+	struct wlan_objmgr_vdev *vdev;
+	uint8_t sr_ctrl, non_srg_pd_max_offset;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(wma->psoc, vdev_id,
+						    WLAN_LEGACY_WMA_ID);
+	if (!vdev) {
+		wma_err("Can't get vdev by vdev_id:%d", vdev_id);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	sr_ctrl = wlan_vdev_mlme_get_sr_ctrl(vdev);
+	non_srg_pd_max_offset = wlan_vdev_mlme_get_pd_offset(vdev);
+	if (!(sr_ctrl & NON_SRG_PD_SR_DISALLOWED) &&
+	    (sr_ctrl & NON_SRG_OFFSET_PRESENT)) {
+		policy_mgr_get_mac_id_by_session_id(wma->psoc,
+						    vdev_id,
+						    &mac_id);
+		conc_vdev_id =
+			policy_mgr_get_conc_vdev_on_same_mac(wma->psoc,
+							     vdev_id,
+							     mac_id);
+		if (conc_vdev_id != WLAN_INVALID_VDEV_ID) {
+			wma_debug("Concurrent intf present,SR PD not enabled");
+			goto release_ref;
+		}
+		qdf_mem_zero(&pparam, sizeof(pparam));
+		pparam.param_id = WMI_PDEV_PARAM_SET_CMD_OBSS_PD_THRESHOLD;
+		if (enable) {
+			val = NON_SRG_SPR_ENABLE;
+			val |= NON_SRG_PARAM_VAL_DBM_UNIT;
+			val = val << NON_SRG_SPR_ENABLE_POS;
+			val |= non_srg_pd_max_offset;
+			wlan_vdev_mlme_set_he_spr_enabled(vdev, true);
+		} else {
+			wlan_vdev_mlme_set_he_spr_enabled(vdev, false);
+		}
+
+		pparam.param_value = val;
+
+		wma_debug("non-srg param val: %u, enable: %d",
+			  pparam.param_value, enable);
+
+		wmi_unified_pdev_param_send(wmi_handle, &pparam,
+					    WMA_WILDCARD_PDEV_ID);
+	} else {
+		wma_debug("Spatial reuse not enabled");
+	}
+
+release_ref:
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_WMA_ID);
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 #if defined(WLAN_FEATURE_11BE)
 static enum wlan_phymode
 wma_eht_chan_phy_mode(uint32_t freq, uint8_t dot11_mode, uint16_t bw_val,

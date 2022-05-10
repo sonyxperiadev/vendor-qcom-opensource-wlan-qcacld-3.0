@@ -106,6 +106,7 @@
 #ifdef WLAN_FEATURE_11BE_MLO
 #include <wlan_mlo_mgr_ap.h>
 #endif
+#include "spatial_reuse_ucfg_api.h"
 #include "wlan_hdd_son.h"
 #include "wlan_hdd_mcc_quota.h"
 #include "wlan_hdd_wds.h"
@@ -6495,6 +6496,7 @@ error:
 
 free:
 	wlan_twt_concurrency_update(hdd_ctx);
+	hdd_update_he_obss_pd(adapter, NULL, true);
 	if (deliver_start_evt) {
 		status = ucfg_if_mgr_deliver_event(
 					vdev,
@@ -6662,6 +6664,7 @@ static int __wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy,
 					    false);
 		wlan_twt_concurrency_update(hdd_ctx);
 		wlan_set_sap_user_config_freq(adapter->vdev, 0);
+		hdd_update_he_obss_pd(adapter, NULL, false);
 		status = ucfg_if_mgr_deliver_event(adapter->vdev,
 				WLAN_IF_MGR_EV_AP_STOP_BSS_COMPLETE,
 				NULL);
@@ -7144,6 +7147,66 @@ wlan_util_get_centre_freq(struct wireless_dev *wdev, unsigned int link_id)
 	return wdev->chandef.chan->center_freq;
 }
 #endif
+
+#if defined WLAN_FEATURE_11AX
+void hdd_update_he_obss_pd(struct hdd_adapter *adapter,
+			   struct cfg80211_ap_settings *params,
+			   bool iface_start)
+{
+	struct wlan_objmgr_vdev *vdev, *conc_vdev;
+	uint8_t vdev_id = adapter->vdev_id;
+	uint8_t mac_id;
+	struct wlan_objmgr_psoc *psoc;
+	uint32_t conc_vdev_id;
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)) || \
+	defined(CFG80211_SPATIAL_REUSE_EXT_BACKPORT)
+	struct ieee80211_he_obss_pd *obss_pd;
+#endif
+
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_ID);
+	if (!vdev)
+		return;
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)) || \
+	defined(CFG80211_SPATIAL_REUSE_EXT_BACKPORT)
+	if (params && params->he_obss_pd.enable) {
+		obss_pd = &params->he_obss_pd;
+		ucfg_spatial_reuse_set_sr_config(vdev,
+						 obss_pd->sr_ctrl,
+						 obss_pd->non_srg_max_offset);
+		hdd_debug("obss_pd_enable: %d, sr_ctrl: %d, non_srg_max_offset: %d",
+			  obss_pd->enable, obss_pd->sr_ctrl,
+			  obss_pd->non_srg_max_offset);
+	}
+#endif
+
+	psoc = wlan_vdev_get_psoc(vdev);
+	policy_mgr_get_mac_id_by_session_id(psoc, vdev_id, &mac_id);
+	conc_vdev_id = policy_mgr_get_conc_vdev_on_same_mac(psoc, vdev_id,
+							    mac_id);
+	if (conc_vdev_id != WLAN_INVALID_VDEV_ID) {
+		conc_vdev =
+			wlan_objmgr_get_vdev_by_id_from_psoc(
+							psoc, conc_vdev_id,
+							WLAN_HDD_ID_OBJ_MGR);
+		if (!conc_vdev)
+			goto release_ref;
+
+		if (iface_start) {
+			ucfg_spatial_reuse_send_sr_config(conc_vdev, false);
+			hdd_debug("disable obss pd for vdev:%d", conc_vdev_id);
+		} else {
+			ucfg_spatial_reuse_send_sr_config(conc_vdev, true);
+			hdd_debug("enable obss pd for vdev:%d", conc_vdev_id);
+		}
+		wlan_objmgr_vdev_release_ref(conc_vdev, WLAN_HDD_ID_OBJ_MGR);
+	}
+
+release_ref:
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_ID);
+}
+#endif
+
 /**
  * __wlan_hdd_cfg80211_start_ap() - start soft ap mode
  * @wiphy: Pointer to wiphy structure
@@ -7457,6 +7520,9 @@ static int __wlan_hdd_cfg80211_start_ap(struct wiphy *wiphy,
 		 * the twt_responder flag
 		 */
 		wlan_hdd_update_twt_responder(hdd_ctx, params);
+
+		/* Enable/disable non-srg obss pd spatial reuse */
+		hdd_update_he_obss_pd(adapter, params, true);
 
 		hdd_place_marker(adapter, "TRY TO START", NULL);
 		status =

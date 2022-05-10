@@ -49,6 +49,7 @@
 #include "wlan_reg_services_api.h"
 #include "wlan_cm_roam_api.h"
 #include "wlan_mlo_mgr_sta.h"
+#include <wlan_cmn_ieee80211.h>
 #ifdef WLAN_FEATURE_11BE_MLO
 #include <lim_mlo.h>
 #include <utils_mlo.h>
@@ -7081,6 +7082,32 @@ populate_dot11f_he_operation(struct mac_context *mac_ctx,
 		he_op->oper_info_6g.info.reg_info = ap_pwr_type;
 	}
 	lim_log_he_op(mac_ctx, he_op, session);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+populate_dot11f_sr_info(struct mac_context *mac_ctx,
+			struct pe_session *session,
+			tDot11fIEspatial_reuse *sr_info)
+{
+	uint8_t non_srg_pd_offset;
+	uint8_t sr_ctrl = wlan_vdev_mlme_get_sr_ctrl(session->vdev);
+	bool sr_enabled = wlan_vdev_mlme_get_he_spr_enabled(session->vdev);
+
+	if (!sr_enabled || !sr_ctrl ||
+	    (sr_ctrl & WLAN_HE_NON_SRG_PD_SR_DISALLOWED) ||
+	    !(sr_ctrl & WLAN_HE_NON_SRG_OFFSET_PRESENT))
+		return QDF_STATUS_SUCCESS;
+
+	non_srg_pd_offset = wlan_vdev_mlme_get_pd_offset(session->vdev);
+	sr_info->present = 1;
+	sr_info->psr_disallow = 1;
+	sr_info->non_srg_pd_sr_disallow = 0;
+	sr_info->srg_info_present = 0;
+	sr_info->non_srg_offset_present = 1;
+	sr_info->srg_info_present = 0;
+	sr_info->non_srg_offset.info.non_srg_pd_max_offset = non_srg_pd_offset;
 
 	return QDF_STATUS_SUCCESS;
 }

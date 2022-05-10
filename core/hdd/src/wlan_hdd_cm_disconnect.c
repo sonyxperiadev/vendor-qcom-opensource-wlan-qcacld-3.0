@@ -49,6 +49,7 @@
 #include "wlan_hdd_cfr.h"
 #include "wlan_roam_debug.h"
 #include "wma_api.h"
+#include "wlan_hdd_hostapd.h"
 
 void hdd_handle_disassociation_event(struct hdd_adapter *adapter,
 				     struct qdf_mac_addr *peer_macaddr)
@@ -449,6 +450,7 @@ hdd_cm_disconnect_complete_post_user_update(struct wlan_objmgr_vdev *vdev,
 	hdd_cm_set_default_wlm_mode(adapter);
 	__hdd_cm_disconnect_handler_post_user_update(adapter, vdev);
 	wlan_twt_concurrency_update(hdd_ctx);
+	hdd_update_he_obss_pd(adapter, NULL, false);
 	hdd_cm_reset_udp_qos_upgrade_config(adapter);
 
 	return QDF_STATUS_SUCCESS;

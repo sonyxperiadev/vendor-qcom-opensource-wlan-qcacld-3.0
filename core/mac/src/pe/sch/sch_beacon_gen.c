@@ -744,6 +744,8 @@ sch_set_fixed_beacon_fields(struct mac_context *mac_ctx, struct pe_session *sess
 					&bcn_2->he_cap);
 		populate_dot11f_he_operation(mac_ctx, session,
 					&bcn_2->he_op);
+		populate_dot11f_sr_info(mac_ctx, session,
+					&bcn_2->spatial_reuse);
 		populate_dot11f_he_6ghz_cap(mac_ctx, session,
 					    &bcn_2->he_6ghz_band_cap);
 		populate_dot11f_he_bss_color_change(mac_ctx, session,
@@ -1292,6 +1294,14 @@ void lim_update_probe_rsp_template_ie_bitmap_beacon2(struct mac_context *mac,
 		qdf_mem_copy((void *)&prb_rsp->he_op,
 			     (void *)&beacon2->he_op,
 			     sizeof(beacon2->he_op));
+	}
+
+	if (beacon2->spatial_reuse.present) {
+		set_probe_rsp_ie_bitmap(DefProbeRspIeBitmap,
+					DOT11F_EID_SPATIAL_REUSE);
+		qdf_mem_copy((void *)&prb_rsp->spatial_reuse,
+			     (void *)&beacon2->spatial_reuse,
+			     sizeof(beacon2->spatial_reuse));
 	}
 
 	if (beacon2->he_6ghz_band_cap.present) {
