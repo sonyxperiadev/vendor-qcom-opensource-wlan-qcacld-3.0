@@ -402,6 +402,7 @@ osif_dp_register_arp_unsolicited_cbk(struct wlan_dp_psoc_callbacks *cb_obj)
 #endif
 
 #if defined(CFG80211_CTRL_FRAME_SRC_ADDR_TA_ADDR)
+static
 bool osif_dp_cfg80211_rx_control_port(qdf_netdev_t dev, u8 *ta_addr,
 				      qdf_nbuf_t nbuf, bool unencrypted)
 {
