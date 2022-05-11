@@ -641,7 +641,11 @@ static struct pci_device_id pld_pcie_id_table[] = {
 #elif defined(QCA_WIFI_QCA6490)
 	{ 0x17cb, 0x1103, PCI_ANY_ID, PCI_ANY_ID },
 #elif defined(QCA_WIFI_KIWI)
+#if defined(QCA_WIFI_MANGO)
+	{ 0x17cb, 0x110A, PCI_ANY_ID, PCI_ANY_ID },
+#else
 	{ 0x17cb, 0x1107, PCI_ANY_ID, PCI_ANY_ID },
+#endif
 #elif defined(QCN7605_SUPPORT)
 	{ 0x17cb, 0x1102, PCI_ANY_ID, PCI_ANY_ID },
 #else
