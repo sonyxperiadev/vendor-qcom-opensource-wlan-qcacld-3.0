@@ -1449,6 +1449,9 @@ static void dp_pld_request_bus_bandwidth(struct wlan_dp_psoc_context *dp_ctx,
 	if (dp_ctx->high_bus_bw_request) {
 		next_vote_level = PLD_BUS_WIDTH_VERY_HIGH;
 		tput_level = TPUT_LEVEL_VERY_HIGH;
+	} else if (total_pkts > dp_ctx->dp_cfg.bus_bw_super_high_threshold) {
+		next_vote_level = PLD_BUS_WIDTH_MAX;
+		tput_level = TPUT_LEVEL_SUPER_HIGH;
 	} else if (total_pkts > dp_ctx->dp_cfg.bus_bw_ultra_high_threshold) {
 		next_vote_level = PLD_BUS_WIDTH_ULTRA_HIGH;
 		tput_level = TPUT_LEVEL_ULTRA_HIGH;
@@ -1476,7 +1479,8 @@ static void dp_pld_request_bus_bandwidth(struct wlan_dp_psoc_context *dp_ctx,
 	 */
 	if (!ucfg_ipa_is_fw_wdi_activated(dp_ctx->pdev) &&
 	    policy_mgr_is_current_hwmode_dbs(dp_ctx->psoc) &&
-	    (total_pkts > dp_ctx->dp_cfg.bus_bw_dbs_threshold)) {
+	    (total_pkts > dp_ctx->dp_cfg.bus_bw_dbs_threshold) &&
+	    (tput_level < TPUT_LEVEL_SUPER_HIGH)) {
 		next_vote_level = PLD_BUS_WIDTH_ULTRA_HIGH;
 		tput_level = TPUT_LEVEL_ULTRA_HIGH;
 	}
