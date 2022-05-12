@@ -70,6 +70,10 @@ static bus_bw_table_type bus_bw_table_default = {
 				       BUS_BW_LEVEL_2, BUS_BW_LEVEL_3,
 				       BUS_BW_LEVEL_4, BUS_BW_LEVEL_6,
 				       BUS_BW_LEVEL_7, BUS_BW_LEVEL_8},
+	[QCA_WLAN_802_11_MODE_11BE] = {BUS_BW_LEVEL_NONE, BUS_BW_LEVEL_1,
+				       BUS_BW_LEVEL_2, BUS_BW_LEVEL_3,
+				       BUS_BW_LEVEL_4, BUS_BW_LEVEL_6,
+				       BUS_BW_LEVEL_7, BUS_BW_LEVEL_8},
 };
 
 /**
@@ -101,7 +105,11 @@ static bus_bw_table_type bus_bw_table_low_latency = {
 	[QCA_WLAN_802_11_MODE_11AX] = {BUS_BW_LEVEL_NONE, BUS_BW_LEVEL_8,
 				       BUS_BW_LEVEL_8, BUS_BW_LEVEL_8,
 				       BUS_BW_LEVEL_8, BUS_BW_LEVEL_8,
-				       BUS_BW_LEVEL_8, BUS_BW_LEVEL_8}
+				       BUS_BW_LEVEL_8, BUS_BW_LEVEL_8},
+	[QCA_WLAN_802_11_MODE_11BE] = {BUS_BW_LEVEL_NONE, BUS_BW_LEVEL_8,
+				       BUS_BW_LEVEL_8, BUS_BW_LEVEL_8,
+				       BUS_BW_LEVEL_8, BUS_BW_LEVEL_8,
+				       BUS_BW_LEVEL_8, BUS_BW_LEVEL_8},
 };
 
 /**
@@ -159,6 +167,11 @@ bbm_get_bus_bw_level_vote(struct wlan_dp_intf *dp_intf,
 	struct wlan_dp_psoc_callbacks *cb_obj = &dp_ctx->dp_ops;
 	hdd_cb_handle ctx = cb_obj->callback_ctx;
 
+	if (tput_level >= TPUT_LEVEL_MAX) {
+		dp_err("invalid tput level %d", tput_level);
+		return  BUS_BW_LEVEL_NONE;
+	}
+
 	switch (dp_intf->device_mode) {
 	case QDF_STA_MODE:
 	case QDF_P2P_CLIENT_MODE:
@@ -168,7 +181,8 @@ bbm_get_bus_bw_level_vote(struct wlan_dp_intf *dp_intf,
 			break;
 
 		if (dot11_mode >= QCA_WLAN_802_11_MODE_INVALID) {
-			dp_err("invalid STA/P2P-CLI dot11 mode");
+			dp_err("invalid STA/P2P-CLI dot11 modei %d",
+			       dot11_mode);
 			break;
 		}
 
