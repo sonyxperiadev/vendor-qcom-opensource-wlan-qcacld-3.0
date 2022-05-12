@@ -564,11 +564,6 @@ endif
 endif
 endif
 
-#CE4 completion on HTT HTC packet instead of misc list free
-ifeq ($(CONFIG_CNSS_QCA6490), y)
-	ENABLE_CE4_COMP_DISABLE_HTT_HTC_MISC_LIST = y
-endif
-
 #Whether have QMI support
 CONFIG_QMI_SUPPORT := y
 
@@ -1306,6 +1301,7 @@ ifeq (y,$(filter y,$(CONFIG_LITHIUM) $(CONFIG_BERYLLIUM)))
 	CONFIG_WLAN_SKIP_BAR_UPDATE := y
 	CONFIG_TX_MULTIQ_PER_AC := y
 	CONFIG_WLAN_TRACEPOINTS := y
+	ENABLE_CE4_COMP_DISABLE_HTT_HTC_MISC_LIST := y
 endif
 
 #Flag to enable hdd memory dump feature
