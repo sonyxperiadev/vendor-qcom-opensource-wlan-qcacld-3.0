@@ -8458,7 +8458,8 @@ uint32_t dot11f_unpack_ie_addba_extn_element(tpAniSirGlobal pCtx,
 	tmp75__ = *pBuf;
 	pDst->no_fragmentation = tmp75__ >> 0 & 0x1;
 	pDst->he_frag_operation = tmp75__ >> 1 & 0x3;
-	pDst->reserved = tmp75__ >> 3 & 0x1f;
+	pDst->reserved = tmp75__ >> 3 & 0x3;
+	pDst->extd_buff_size = tmp75__ >> 5 & 0x7;
 	(void)pCtx;
 	return status;
 } /* End dot11f_unpack_ie_addba_extn_element. */
@@ -28073,6 +28074,7 @@ uint32_t dot11f_pack_ie_addba_extn_element(tpAniSirGlobal pCtx,
 		tmp192__ |= (pSrc->no_fragmentation << 0);
 		tmp192__ |= (pSrc->he_frag_operation << 1);
 		tmp192__ |= (pSrc->reserved << 3);
+		tmp192__ |= (pSrc->extd_buff_size << 5);
 		if (unlikely(nBuf < 1))
 			return DOT11F_INCOMPLETE_IE;
 

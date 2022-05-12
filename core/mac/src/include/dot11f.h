@@ -8613,7 +8613,8 @@ typedef struct sDot11fIEaddba_extn_element {
 	uint8_t             present;
 	uint8_t     no_fragmentation:1;
 	uint8_t    he_frag_operation:2;
-	uint8_t             reserved:5;
+	uint8_t             reserved:2;
+	uint8_t       extd_buff_size:3;
 } tDot11fIEaddba_extn_element;
 
 #define DOT11F_EID_ADDBA_EXTN_ELEMENT (159)

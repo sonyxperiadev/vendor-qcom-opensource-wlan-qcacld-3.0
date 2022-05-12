@@ -489,7 +489,8 @@ IE addba_extn_element(EID_ADDBA_EXTN_ELEMENT)
     {
       no_fragmentation: 1;
       he_frag_operation: 2;
-      reserved: 5;
+      reserved: 2;
+      extd_buff_size: 3;
     }
 }
 
