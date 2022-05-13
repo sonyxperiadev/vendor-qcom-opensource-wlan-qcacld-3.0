@@ -34,6 +34,38 @@
 #include <wlan_hdd_stats.h>
 #include "wlan_cfg80211_mc_cp_stats.h"
 
+static const struct son_chan_width {
+	enum ieee80211_cwm_width son_chwidth;
+	enum phy_ch_width phy_chwidth;
+} son_chwidth_info[] = {
+	{
+		.son_chwidth = IEEE80211_CWM_WIDTH20,
+		.phy_chwidth = CH_WIDTH_20MHZ,
+	},
+	{
+		.son_chwidth = IEEE80211_CWM_WIDTH40,
+		.phy_chwidth = CH_WIDTH_40MHZ,
+	},
+	{
+		.son_chwidth = IEEE80211_CWM_WIDTH80,
+		.phy_chwidth = CH_WIDTH_80MHZ,
+	},
+	{
+		.son_chwidth = IEEE80211_CWM_WIDTH160,
+		.phy_chwidth = CH_WIDTH_160MHZ,
+	},
+	{
+		.son_chwidth = IEEE80211_CWM_WIDTH80_80,
+		.phy_chwidth = CH_WIDTH_80P80MHZ,
+	},
+#ifdef WLAN_FEATURE_11BE
+	{
+		.son_chwidth = IEEE80211_CWM_WIDTH320,
+		.phy_chwidth = CH_WIDTH_320MHZ,
+	},
+#endif
+};
+
 /**
  * hdd_son_is_acs_in_progress() - whether acs is in progress or not
  * @vdev: vdev
@@ -164,6 +196,27 @@ static enum ieee80211_cwm_width hdd_chan_width_to_son_chwidth(
 }
 
 /**
+ * hdd_phy_chwidth_to_son_chwidth() - translate phy chan width
+ *                                    to son chan width
+ * @chwidth: phy chan width
+ *
+ * Return: son chan width
+ */
+static enum ieee80211_cwm_width
+hdd_phy_chwidth_to_son_chwidth(enum phy_ch_width chwidth)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(son_chwidth_info); i++) {
+		if (son_chwidth_info[i].phy_chwidth == chwidth)
+			return son_chwidth_info[i].son_chwidth;
+	}
+
+	hdd_err("Unsupported channel width %d", chwidth);
+	return IEEE80211_CWM_WIDTHINVALID;
+}
+
+/**
  * hdd_son_get_chwidth() - get chan width
  * @vdev: vdev
  *
@@ -172,29 +225,16 @@ static enum ieee80211_cwm_width hdd_chan_width_to_son_chwidth(
 static enum ieee80211_cwm_width hdd_son_get_chwidth(
 						struct wlan_objmgr_vdev *vdev)
 {
-	enum eSirMacHTChannelWidth chwidth;
-	struct hdd_adapter *adapter;
-	enum ieee80211_cwm_width son_chwidth = IEEE80211_CWM_WIDTHINVALID;
+	struct wlan_channel *des_chan;
 
 	if (!vdev) {
 		hdd_err("null vdev");
-		return son_chwidth;
-	}
-	adapter = wlan_hdd_get_adapter_from_objmgr(vdev);
-	if (!adapter) {
-		hdd_err("null adapter");
-		return son_chwidth;
+		return IEEE80211_CWM_WIDTHINVALID;
 	}
 
-	chwidth = wma_cli_get_command(adapter->vdev_id, WMI_VDEV_PARAM_CHWIDTH,
-				      VDEV_CMD);
+	des_chan = wlan_vdev_mlme_get_des_chan(vdev);
 
-	if (chwidth < 0) {
-		hdd_err("Failed to get chwidth");
-		return son_chwidth;
-	}
-
-	return hdd_chan_width_to_son_chwidth(chwidth);
+	return hdd_phy_chwidth_to_son_chwidth(des_chan->ch_width);
 }
 
 /**
