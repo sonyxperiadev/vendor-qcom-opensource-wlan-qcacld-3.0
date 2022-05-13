@@ -436,6 +436,7 @@ struct wait_for_key_timer {
  * @notify_co_located_ap_upt_rnr: Notify co located AP to update RNR or not
  * @max_mcs_index: Max supported mcs index of vdev
  * @vdev_traffic_type: to set if vdev is LOW_LATENCY or HIGH_TPUT
+ * @country_ie_for_all_band: take all band channel info in country ie
  */
 struct mlme_legacy_priv {
 	bool chan_switch_in_progress;
@@ -484,6 +485,7 @@ struct mlme_legacy_priv {
 	uint8_t max_mcs_index;
 #endif
 	uint8_t vdev_traffic_type;
+	bool country_ie_for_all_band;
 };
 
 /**

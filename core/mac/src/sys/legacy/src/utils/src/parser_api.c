@@ -607,38 +607,55 @@ populate_dot11f_country(struct mac_context *mac,
 {
 	uint8_t code[REG_ALPHA2_LEN + 1];
 	uint8_t cur_triplet_num_chans = 0;
-	int chan_enum, chan_num, chan_spacing = 0;
+	int chan_enum, chan_num;
 	struct regulatory_channel *sec_cur_chan_list;
 	struct regulatory_channel *cur_chan, *start, *prev;
-	enum reg_wifi_band rf_band = REG_BAND_UNKNOWN;
 	uint8_t buffer_triplets[81][3];
 	uint8_t i, j, num_triplets = 0;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	bool six_gig_started = false;
+	uint8_t band_bitmap;
+	uint32_t band_capability;
+	uint8_t chan_spacing_for_2ghz = 1;
+	uint8_t chan_spacing_for_5ghz_6ghz = 4;
+	struct mlme_legacy_priv *mlme_priv = NULL;
 
 	sec_cur_chan_list = qdf_mem_malloc(NUM_CHANNELS *
 					   sizeof(*sec_cur_chan_list));
 	if (!sec_cur_chan_list)
 		return QDF_STATUS_E_NOMEM;
 
-	lim_get_rf_band_new(mac, &rf_band, pe_session);
-	switch (rf_band) {
-	case REG_BAND_2G:
-		chan_spacing = 1;
-		break;
-	case REG_BAND_5G:
-	case REG_BAND_6G:
-		chan_spacing = 4;
-		break;
-	case REG_BAND_UNKNOWN:
-		pe_err("Wrong reg band for country info");
-		status = QDF_STATUS_E_FAILURE;
-		goto out;
+	if (pe_session) {
+		mlme_priv = wlan_vdev_mlme_get_ext_hdl(pe_session->vdev);
+		if (!mlme_priv) {
+			pe_err("Invalid mlme priv object");
+			status = QDF_STATUS_E_FAILURE;
+			goto out;
+		}
 	}
 
-	chan_num = wlan_reg_get_secondary_band_channel_list(mac->pdev,
-							    BIT(rf_band),
-							    sec_cur_chan_list);
+	if (!pe_session ||
+	    (mlme_priv && mlme_priv->country_ie_for_all_band)) {
+		status = wlan_mlme_get_band_capability(mac->psoc,
+						       &band_capability);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			pe_err("Failed to get MLME Band Capability");
+			goto out;
+		}
+		band_bitmap = (uint8_t)band_capability;
+	} else {
+		if (pe_session->limRFBand == REG_BAND_UNKNOWN) {
+			pe_err("Wrong reg band for country info");
+			status = QDF_STATUS_E_FAILURE;
+			goto out;
+		}
+		band_bitmap = BIT(pe_session->limRFBand);
+	}
+
+	chan_num = wlan_reg_get_secondary_band_channel_list(
+						mac->pdev,
+						band_bitmap,
+						sec_cur_chan_list);
 	if (!chan_num) {
 		pe_err("failed to get cur_chan list");
 		status = QDF_STATUS_E_FAILURE;
@@ -668,7 +685,10 @@ populate_dot11f_country(struct mac_context *mac,
 		}
 
 		if (start && prev &&
-		    prev->chan_num + chan_spacing == cur_chan->chan_num &&
+		    ((prev->chan_num + chan_spacing_for_2ghz ==
+		      cur_chan->chan_num) ||
+		     (prev->chan_num + chan_spacing_for_5ghz_6ghz ==
+		      cur_chan->chan_num)) &&
 		    start->tx_power == cur_chan->tx_power) {
 			/* Can use same entry */
 			prev = cur_chan;

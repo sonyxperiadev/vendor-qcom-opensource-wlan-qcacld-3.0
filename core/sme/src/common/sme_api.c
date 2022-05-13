@@ -16275,3 +16275,32 @@ void sme_fill_channel_change_request(mac_handle_t mac_handle,
 				dot11_cfg.ext_rates.numRates;
 	}
 }
+
+QDF_STATUS sme_update_beacon_country_ie(mac_handle_t mac_handle,
+					uint8_t vdev_id,
+					bool country_ie_for_all_band)
+{
+	struct mac_context *mac = MAC_CONTEXT(mac_handle);
+	struct wlan_objmgr_vdev *vdev;
+	struct mlme_legacy_priv *mlme_priv;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac->psoc, vdev_id,
+						    WLAN_MLME_NB_ID);
+	if (!vdev) {
+		sme_err("vdev object is NULL for vdev_id %d", vdev_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_NB_ID);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	mlme_priv->country_ie_for_all_band = country_ie_for_all_band;
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_NB_ID);
+
+	csr_update_beacon(mac);
+
+	return QDF_STATUS_SUCCESS;
+}

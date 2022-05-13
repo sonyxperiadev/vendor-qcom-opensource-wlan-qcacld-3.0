@@ -1780,6 +1780,79 @@ hdd_hostapd_sap_register_mlo_sta(struct hdd_adapter *adapter,
 }
 #endif /* WLAN_FEATURE_11BE_MLO */
 
+static inline void
+hdd_hostapd_update_beacon_country_ie(struct hdd_adapter *adapter)
+{
+	struct hdd_station_info *sta_info, *tmp = NULL;
+	struct hdd_context *hdd_ctx;
+	struct hdd_ap_ctx *ap_ctx;
+	struct action_oui_search_attr attr;
+	QDF_STATUS status;
+	bool found = false;
+
+	if (!adapter) {
+		hdd_err("invalid adapter");
+		return;
+	}
+
+	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	if (!hdd_ctx) {
+		hdd_err("HDD context is null");
+		return;
+	}
+
+	ap_ctx = WLAN_HDD_GET_AP_CTX_PTR(adapter);
+
+	hdd_for_each_sta_ref_safe(adapter->sta_info_list, sta_info, tmp,
+				  STA_INFO_HOSTAPD_SAP_EVENT_CB) {
+		if (!sta_info->assoc_req_ies.len)
+			goto release_ref;
+
+		qdf_mem_zero(&attr, sizeof(struct action_oui_search_attr));
+		attr.ie_data = sta_info->assoc_req_ies.ptr;
+		attr.ie_length = sta_info->assoc_req_ies.len;
+
+		found = ucfg_action_oui_search(hdd_ctx->psoc,
+					       &attr,
+					       ACTION_OUI_TAKE_ALL_BAND_INFO);
+		if (found) {
+			if (!ap_ctx->country_ie_updated) {
+				status = sme_update_beacon_country_ie(
+						hdd_ctx->mac_handle,
+						adapter->vdev_id,
+						true);
+				if (status == QDF_STATUS_SUCCESS)
+					ap_ctx->country_ie_updated = true;
+				else
+					hdd_err("fail to update country ie");
+			}
+			hdd_put_sta_info_ref(&adapter->sta_info_list,
+					     &sta_info, true,
+					     STA_INFO_HOSTAPD_SAP_EVENT_CB);
+			if (tmp)
+				hdd_put_sta_info_ref(
+					&adapter->sta_info_list,
+					&tmp, true,
+					STA_INFO_HOSTAPD_SAP_EVENT_CB);
+			return;
+		}
+release_ref:
+		hdd_put_sta_info_ref(&adapter->sta_info_list,
+				     &sta_info, true,
+				     STA_INFO_HOSTAPD_SAP_EVENT_CB);
+	}
+
+	if (ap_ctx->country_ie_updated) {
+		status = sme_update_beacon_country_ie(
+						hdd_ctx->mac_handle,
+						adapter->vdev_id, false);
+		if (status == QDF_STATUS_SUCCESS)
+			ap_ctx->country_ie_updated = false;
+		else
+			hdd_err("fail to update country ie");
+	}
+}
+
 QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 				    void *context)
 {
@@ -2381,6 +2454,8 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 		}
 		ap_ctx->ap_active = true;
 
+		hdd_hostapd_update_beacon_country_ie(adapter);
+
 #ifdef FEATURE_WLAN_AUTO_SHUTDOWN
 		wlan_hdd_auto_shutdown_enable(hdd_ctx, false);
 #endif
@@ -2557,6 +2632,8 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 					     &stainfo, true,
 					     STA_INFO_HOSTAPD_SAP_EVENT_CB);
 		}
+
+		hdd_hostapd_update_beacon_country_ie(adapter);
 
 #ifdef FEATURE_WLAN_AUTO_SHUTDOWN
 		wlan_hdd_auto_shutdown_enable(hdd_ctx, true);
