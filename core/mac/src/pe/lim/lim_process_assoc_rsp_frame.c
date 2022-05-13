@@ -1017,6 +1017,19 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 	}
 
 	if (lim_is_session_eht_capable(session_entry)) {
+		status = lim_strip_and_decode_eht_op(
+					body + WLAN_ASSOC_RSP_IES_OFFSET,
+					frame_len - WLAN_ASSOC_RSP_IES_OFFSET,
+					&assoc_rsp->eht_op,
+					assoc_rsp->VHTOperation,
+					assoc_rsp->he_op,
+					assoc_rsp->HTInfo);
+
+		if (status != QDF_STATUS_SUCCESS) {
+			pe_err("Failed to extract eht op");
+			return;
+		}
+
 		status = lim_strip_and_decode_eht_cap(
 					body + WLAN_ASSOC_RSP_IES_OFFSET,
 					frame_len - WLAN_ASSOC_RSP_IES_OFFSET,

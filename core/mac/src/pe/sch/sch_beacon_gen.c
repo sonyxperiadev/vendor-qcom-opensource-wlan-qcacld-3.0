@@ -498,6 +498,7 @@ sch_set_fixed_beacon_fields(struct mac_context *mac_ctx, struct pe_session *sess
 	tDot11fIEExtCap extracted_extcap;
 	bool extcap_present = true, addnie_present = false;
 	bool is_6ghz_chsw;
+	uint8_t *eht_op_ie = NULL, eht_op_ie_len = 0;
 	uint8_t *eht_cap_ie = NULL, eht_cap_ie_len = 0;
 	bool is_band_2g;
 	uint16_t ie_buf_size;
@@ -908,6 +909,36 @@ sch_set_fixed_beacon_fields(struct mac_context *mac_ctx, struct pe_session *sess
 	if (lim_is_session_eht_capable(session)) {
 		ie_buf_size = n_bytes;
 
+		eht_op_ie = qdf_mem_malloc(WLAN_MAX_IE_LEN + 2);
+		if (!eht_op_ie) {
+			pe_err("malloc failed for eht_op_ie");
+			status = QDF_STATUS_E_FAILURE;
+			goto free_and_exit;
+		}
+
+		status = lim_strip_eht_op_ie(mac_ctx,
+					     session->pSchBeaconFrameEnd,
+					     &ie_buf_size, eht_op_ie);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			pe_err("Failed to strip EHT op IE");
+			qdf_mem_free(eht_op_ie);
+			status = QDF_STATUS_E_FAILURE;
+			goto free_and_exit;
+		}
+
+		lim_ieee80211_pack_ehtop(eht_op_ie, bcn_2->eht_op,
+					 bcn_2->VHTOperation,
+					 bcn_2->he_op,
+					 bcn_2->HTInfo);
+		eht_op_ie_len = eht_op_ie[1] + 2;
+
+		/* Copy the EHT operation IE to the end of the frame */
+		qdf_mem_copy(session->pSchBeaconFrameEnd + ie_buf_size,
+			     eht_op_ie, eht_op_ie_len);
+		qdf_mem_free(eht_op_ie);
+		n_bytes = ie_buf_size + eht_op_ie_len;
+
+		ie_buf_size = n_bytes;
 		eht_cap_ie = qdf_mem_malloc(WLAN_MAX_IE_LEN + 2);
 		if (!eht_cap_ie) {
 			pe_err("malloc failed for eht_cap_ie");
@@ -931,7 +962,7 @@ sch_set_fixed_beacon_fields(struct mac_context *mac_ctx, struct pe_session *sess
 					  bcn_2->he_cap, is_band_2g);
 		eht_cap_ie_len = eht_cap_ie[1] + 2;
 
-		/* Copy the EHT IE to the end of the frame */
+		/* Copy the EHT cap IE to the end of the frame */
 		qdf_mem_copy(session->pSchBeaconFrameEnd + ie_buf_size,
 			     eht_cap_ie, eht_cap_ie_len);
 

@@ -1516,6 +1516,17 @@ QDF_STATUS lim_strip_eht_cap_ie(struct mac_context *mac_ctx,
 			    EHT_CAP_OUI_TYPE, EHT_CAP_OUI_SIZE,
 			    eht_cap_ie,	WLAN_MAX_IE_LEN);
 }
+
+QDF_STATUS lim_strip_eht_op_ie(struct mac_context *mac_ctx,
+			       uint8_t *frame_ies,
+			       uint16_t *ie_buf_size,
+			       uint8_t *eht_op_ie)
+{
+	return lim_strip_ie(mac_ctx, frame_ies, ie_buf_size,
+			    WLAN_ELEMID_EXTN_ELEM, ONE_BYTE,
+			    EHT_OP_OUI_TYPE, EHT_OP_OUI_SIZE,
+			    eht_op_ie, WLAN_MAX_IE_LEN);
+}
 #endif
 
 void
@@ -1547,6 +1558,7 @@ lim_send_assoc_rsp_mgmt_frame(struct mac_context *mac_ctx,
 	bool extracted_flag = false;
 	uint8_t retry_int;
 	uint16_t max_retries;
+	uint8_t *eht_op_ie = NULL, eht_op_ie_len = 0;
 	uint8_t *eht_cap_ie = NULL, eht_cap_ie_len = 0;
 	bool is_band_2g;
 	uint16_t ie_buf_size;
@@ -1856,10 +1868,44 @@ lim_send_assoc_rsp_mgmt_frame(struct mac_context *mac_ctx,
 			status);
 	}
 
-	/* Strip EHT capabilities IE */
+	/* Strip EHT operation and EHT capabilities IEs */
 	if (lim_is_session_eht_capable(pe_session)) {
 		ie_buf_size = payload - WLAN_ASSOC_RSP_IES_OFFSET;
+		eht_op_ie = qdf_mem_malloc(WLAN_MAX_IE_LEN + 2);
+		if (!eht_op_ie) {
+			pe_err("malloc failed for eht_op_ie");
+			cds_packet_free((void *)packet);
+			goto error;
+		}
 
+		qdf_status = lim_strip_eht_op_ie(mac_ctx, frame +
+						 sizeof(tSirMacMgmtHdr) +
+						 WLAN_ASSOC_RSP_IES_OFFSET,
+						 &ie_buf_size, eht_op_ie);
+		if (QDF_IS_STATUS_ERROR(qdf_status)) {
+			pe_err("Failed to strip EHT op IE");
+			qdf_mem_free(eht_cap_ie);
+			cds_packet_free((void *)packet);
+			cds_packet_free((void *)packet);
+		}
+
+		lim_ieee80211_pack_ehtop(eht_op_ie, frm.eht_op,
+					 frm.VHTOperation,
+					 frm.he_op,
+					 frm.HTInfo);
+		eht_op_ie_len = eht_op_ie[1] + 2;
+
+		/* Copy the EHT operation IE to the end of the frame */
+		qdf_mem_copy(frame + sizeof(tSirMacMgmtHdr) +
+			     WLAN_ASSOC_RSP_IES_OFFSET + ie_buf_size,
+			     eht_op_ie, eht_op_ie_len);
+		qdf_mem_free(eht_op_ie);
+		bytes = bytes - payload;
+		payload = ie_buf_size + WLAN_ASSOC_RSP_IES_OFFSET +
+			  eht_op_ie_len;
+		bytes = bytes + payload;
+
+		ie_buf_size = payload - WLAN_ASSOC_RSP_IES_OFFSET;
 		eht_cap_ie = qdf_mem_malloc(WLAN_MAX_IE_LEN + 2);
 		if (!eht_cap_ie) {
 			pe_err("malloc failed for eht_cap_ie");
@@ -1885,7 +1931,7 @@ lim_send_assoc_rsp_mgmt_frame(struct mac_context *mac_ctx,
 
 		eht_cap_ie_len = eht_cap_ie[1] + 2;
 
-		/* Copy the EHT IE to the end of the frame */
+		/* Copy the EHT capability IE to the end of the frame */
 		qdf_mem_copy(frame + sizeof(tSirMacMgmtHdr) +
 			     WLAN_ASSOC_RSP_IES_OFFSET + ie_buf_size,
 			     eht_cap_ie, eht_cap_ie_len);

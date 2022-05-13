@@ -1516,7 +1516,7 @@ QDF_STATUS populate_dot11f_eht_operation(struct mac_context *mac_ctx,
  * @dot11f_he_cap: dot11f HE capabilities IE structure
  * @is_band_2g: Flag to indicate whether operating band is 2g or not
  *
- * This API is used to enacode EHT capabilities IE which is of variable in
+ * This API is used to encode EHT capabilities IE which is of variable in
  * length depending on the HE capabilities IE content.
  *
  * Return: Void
@@ -1533,13 +1533,52 @@ void lim_ieee80211_pack_ehtcap(uint8_t *ie, tDot11fIEeht_cap dot11f_eht_cap,
  * @freq: frequency
  *
  * This API is used to strip and decode EHT caps IE which is of varaible in
- * in length depending on the HE capabilities IE content.
+ * length depending on the HE capabilities IE content.
+ *
  * Return: QDF_STATUS
  */
 QDF_STATUS lim_strip_and_decode_eht_cap(uint8_t *ie, uint16_t ie_len,
 					tDot11fIEeht_cap *dot11f_eht_cap,
 					tDot11fIEhe_cap dot11f_he_cap,
 					uint16_t freq);
+
+/**
+ * lim_ieee80211_pack_ehtop() - Pack EHT Operations IE
+ * @ie: output pointer for eht operations IE
+ * @dot11f_eht_cap: dot11f EHT operations IE structure
+ * @dot11f_vht_op: dot11f VHT operation IE structure
+ * @dot11f_he_op: dot11f HE operation IE structure
+ * @dot11f_ht_info: dot11f HT info IE structure
+ *
+ * This API is used to encode EHT operations IE which is of variable in
+ * length depending on the HE capabilities IE content.
+ *
+ * Return: Void
+ */
+void lim_ieee80211_pack_ehtop(uint8_t *ie, tDot11fIEeht_op dot11f_eht_op,
+			      tDot11fIEVHTOperation dot11f_vht_op,
+			      tDot11fIEhe_op dot11f_he_op,
+			      tDot11fIEHTInfo dot11f_ht_info);
+
+/**
+ * lim_strip_and_decode_eht_op() - API to decode EHT Operations IE
+ * @ie: source ie address
+ * @ie_len: source ie length
+ * @dot11f_eht_op: output pointer to dot11f EHT Operations IE structure
+ * @dot11f_vht_op: dot11f VHT operation IE structure
+ * @dot11f_he_op: dot11f HE operation IE structure
+ * @dot11f_ht_info: dot11f HT info IE structure
+ *
+ * This API is used to strip and decode EHT operations IE which is of varaible
+ * in length depending on the HE capabilities IE content.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS lim_strip_and_decode_eht_op(uint8_t *ie, uint16_t ie_len,
+				       tDot11fIEeht_op *dot11f_eht_op,
+				       tDot11fIEVHTOperation dot11f_vht_op,
+				       tDot11fIEhe_op dot11f_he_op,
+				       tDot11fIEHTInfo dot11f_ht_info);
 
 #else
 static inline QDF_STATUS
@@ -1577,6 +1616,24 @@ QDF_STATUS lim_strip_and_decode_eht_cap(uint8_t *ie, uint16_t ie_len,
 					tDot11fIEeht_cap *dot11f_eht_cap,
 					tDot11fIEhe_cap dot11f_he_cap,
 					uint16_t freq)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline void lim_ieee80211_pack_ehtop(uint8_t *ie,
+					    tDot11fIEeht_op dot11f_eht_op,
+					    tDot11fIEVHTOperation dot11f_vht_op,
+					    tDot11fIEhe_op dot11f_he_op,
+					    tDot11fIEHTInfo dot11f_ht_info)
+{
+}
+
+static inline
+QDF_STATUS lim_strip_and_decode_eht_op(uint8_t *ie, uint16_t ie_len,
+				       tDot11fIEeht_op *dot11f_eht_op,
+				       tDot11fIEVHTOperation dot11f_vht_op,
+				       tDot11fIEhe_op dot11f_he_op,
+				       tDot11fIEHTInfo dot11f_ht_info)
 {
 	return QDF_STATUS_SUCCESS;
 }
