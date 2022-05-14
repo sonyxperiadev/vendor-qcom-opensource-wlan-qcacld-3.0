@@ -4853,7 +4853,8 @@ hdd_get_nw_adapter_mac_by_vdev_mac(struct qdf_mac_addr *mac_addr,
 		return QDF_STATUS_E_INVAL;
 	}
 
-	if (adapter->mlo_adapter_info.is_link_adapter) {
+	if (adapter->mlo_adapter_info.is_link_adapter &&
+	    adapter->mlo_adapter_info.associate_with_ml_adapter) {
 		ml_adapter = adapter->mlo_adapter_info.ml_adapter;
 		qdf_copy_macaddr(adapter_mac, &ml_adapter->mac_addr);
 	} else {
