@@ -10089,7 +10089,7 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 	mlo_ie->bss_param_change_cnt_present = 0;
 	mlo_ie->medium_sync_delay_info_present = 0;
 	mlo_ie->eml_capab_present = 0;
-	mlo_ie->mld_capab_present = 1;
+	mlo_ie->mld_capab_present = 0;
 
 	/* find out number of links from bcn or prb rsp */
 	total_sta_prof = 1;
