@@ -1583,7 +1583,7 @@ static inline bool
 dp_is_gratuitous_arp_unsolicited_na(struct wlan_dp_psoc_context *dp_ctx,
 				    qdf_nbuf_t nbuf)
 {
-	if (qdf_unlikely(dp_ctx->dp_ops.dp_is_gratuitous_arp_unsolicited_na(nbuf)))
+	if (qdf_unlikely(dp_ctx->dp_ops.dp_is_gratuitous_arp_unsolicited_na))
 		return dp_ctx->dp_ops.dp_is_gratuitous_arp_unsolicited_na(nbuf);
 
 	return false;
@@ -1802,7 +1802,7 @@ QDF_STATUS dp_rx_packet_cbk(void *dp_intf_context,
 
 		dp_tsf_timestamp_rx(dp_ctx, nbuf);
 
-		if (send_over_nl && SEND_EAPOL_OVER_NL) {
+		if (send_over_nl && dp_ctx->dp_ops.dp_send_rx_pkt_over_nl) {
 			if (dp_ctx->dp_ops.dp_send_rx_pkt_over_nl(dp_intf->dev,
 					(u8 *)&dp_intf->conn_info.peer_macaddr,
 								  nbuf, false))

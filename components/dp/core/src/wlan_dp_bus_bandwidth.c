@@ -1690,10 +1690,10 @@ static void __dp_bus_bw_work_handler(struct wlan_dp_psoc_context *dp_ctx)
 	dp_ctx->bw_vote_time = curr_time_us;
 
 	dp_for_each_intf_held_safe(dp_ctx, dp_intf, dp_intf_next) {
-		if (is_dp_intf_valid(dp_intf))
+		vdev = dp_intf->vdev;
+		if (!vdev)
 			continue;
 
-		vdev = dp_intf->vdev;
 		if (dp_comp_vdev_get_ref(vdev))
 			continue;
 

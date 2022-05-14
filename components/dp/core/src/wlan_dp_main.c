@@ -136,7 +136,7 @@ dp_get_intf_by_macaddr(struct wlan_dp_psoc_context *dp_ctx,
 static int validate_interface_id(uint8_t intf_id)
 {
 	if (intf_id == WLAN_UMAC_VDEV_ID_MAX) {
-		dp_err("Interface is not up");
+		dp_err("Interface is not up: %ps", QDF_RET_IP);
 		return -EINVAL;
 	}
 	if (intf_id >= WLAN_MAX_VDEVS) {
@@ -159,8 +159,8 @@ int is_dp_intf_valid(struct wlan_dp_intf *dp_intf)
 	}
 
 	if (!(dp_intf->dev->flags & IFF_UP)) {
-		dp_info_rl("DP interface '%s' is not up",
-			   dp_intf->dev->name);
+		dp_info_rl("DP interface '%s' is not up %ps",
+			   dp_intf->dev->name, QDF_RET_IP);
 		return -EAGAIN;
 	}
 
@@ -893,7 +893,7 @@ dp_vdev_obj_create_notification(struct wlan_objmgr_vdev *vdev, void *arg)
 		return QDF_STATUS_E_INVAL;
 	}
 
-	dp_intf = dp_get_intf_by_macaddr(dp_ctx, mac_addr);
+	dp_intf = dp_get_intf_by_macaddr(dp_ctx, &intf_mac);
 	if (!dp_intf) {
 		dp_err("Failed to get dp intf mac:" QDF_MAC_ADDR_FMT,
 		       QDF_MAC_ADDR_REF(mac_addr));
