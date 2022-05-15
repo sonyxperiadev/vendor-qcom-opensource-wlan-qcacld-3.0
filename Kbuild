@@ -2454,43 +2454,6 @@ $(call add-wlan-objs,nan,$(WLAN_NAN_OBJS))
 
 #######################################################
 
-######################### DP_COMPONENT #########################
-DP_COMP_CORE_DIR := components/dp/core/src
-DP_COMP_UCFG_DIR := components/dp/dispatcher/src
-DP_COMP_TGT_DIR  := components/target_if/dp/src
-DP_COMP_OS_IF_DIR  := os_if/dp/src
-
-DP_COMP_INC	:= -I$(WLAN_ROOT)/components/dp/core/inc	\
-		-I$(WLAN_ROOT)/components/dp/core/src		\
-		-I$(WLAN_ROOT)/components/dp/dispatcher/inc	\
-		-I$(WLAN_ROOT)/components/target_if/dp/inc	\
-		-I$(WLAN_ROOT)/os_if/dp/inc
-
-WLAN_DP_COMP_OBJS := $(DP_COMP_CORE_DIR)/wlan_dp_main.o \
-                 $(DP_COMP_UCFG_DIR)/wlan_dp_ucfg_api.o \
-                 $(DP_COMP_OS_IF_DIR)/os_if_dp.o \
-		 $(DP_COMP_OS_IF_DIR)/os_if_dp_txrx.o \
-		 $(DP_COMP_CORE_DIR)/wlan_dp_bus_bandwidth.o \
-		 $(DP_COMP_CORE_DIR)/wlan_dp_softap_txrx.o \
-		 $(DP_COMP_CORE_DIR)/wlan_dp_txrx.o \
-		 $(DP_COMP_TGT_DIR)/target_if_dp_comp.o
-
-ifeq ($(CONFIG_WLAN_LRO), y)
-WLAN_DP_COMP_OBJS += $(DP_COMP_OS_IF_DIR)/os_if_dp_lro.o
-endif
-
-ifeq ($(CONFIG_WLAN_NUD_TRACKING), y)
-WLAN_DP_COMP_OBJS += $(DP_COMP_CORE_DIR)/wlan_dp_nud_tracking.o
-endif
-
-ifeq ($(CONFIG_WLAN_FEATURE_PERIODIC_STA_STATS), y)
-WLAN_DP_COMP_OBJS += $(DP_COMP_CORE_DIR)/wlan_dp_periodic_sta_stats.o
-endif
-
-$(call add-wlan-objs,dp_comp,$(WLAN_DP_COMP_OBJS))
-
-#######################################################
-
 ######################### SON #########################
 #SON_CORE_DIR := components/son/core/src
 #SON_CORE_INC := -I$(WLAN_ROOT)/components/son/core/inc
@@ -2991,8 +2954,6 @@ INCS +=		$(NAN_CORE_INC)
 INCS +=		$(NAN_UCFG_INC)
 INCS +=		$(NAN_TGT_INC)
 INCS +=		$(NAN_OS_IF_INC)
-###########DP_COMPONENT ####################
-INCS +=		$(DP_COMP_INC)
 ################ SON ################
 INCS +=		$(SON_CORE_INC)
 INCS +=		$(SON_UCFG_INC)
