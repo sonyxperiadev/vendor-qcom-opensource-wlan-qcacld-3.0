@@ -68,11 +68,13 @@
 #include "wlan_hdd_bcn_recv.h"
 #include "wlan_mlme_twt_ucfg_api.h"
 
+#include "wlan_hdd_nud_tracking.h"
 #include <wlan_cfg80211_crypto.h>
 #include <wlan_crypto_global_api.h>
 #include "wlan_dlm_ucfg_api.h"
 #include "wlan_hdd_sta_info.h"
 #include "wlan_hdd_ftm_time_sync.h"
+#include "wlan_hdd_periodic_sta_stats.h"
 #include "wlan_cm_roam_api.h"
 
 #include <ol_defines.h>
@@ -1208,6 +1210,28 @@ QDF_STATUS hdd_update_dp_vdev_flags(void *cbk_data,
 
 	return status;
 }
+
+#if defined(WLAN_SUPPORT_RX_FISA)
+/**
+ * hdd_rx_register_fisa_ops() - FISA callback functions
+ * @txrx_ops: operations handle holding callback functions
+ * @hdd_rx_fisa_cbk: callback for fisa aggregation handle function
+ * @hdd_rx_fisa_flush: callback function to flush fisa aggregation
+ *
+ * Return: None
+ */
+static inline void
+hdd_rx_register_fisa_ops(struct ol_txrx_ops *txrx_ops)
+{
+	txrx_ops->rx.osif_fisa_rx = hdd_rx_fisa_cbk;
+	txrx_ops->rx.osif_fisa_flush = hdd_rx_fisa_flush_by_ctx_id;
+}
+#else
+static inline void
+hdd_rx_register_fisa_ops(struct ol_txrx_ops *txrx_ops)
+{
+}
+#endif
 
 QDF_STATUS hdd_roam_register_sta(struct hdd_adapter *adapter,
 				 struct qdf_mac_addr *bssid,
