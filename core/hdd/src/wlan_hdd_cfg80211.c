@@ -180,9 +180,6 @@
 #include "wlan_hdd_son.h"
 #include "wlan_hdd_mcc_quota.h"
 #include "wlan_cfg80211_wifi_pos.h"
-#include "wlan_dp_ucfg_api.h"
-#include "os_if_dp.h"
-#include "os_if_dp_lro.h"
 
 #define g_mode_rates_size (12)
 #define a_mode_rates_size (8)
@@ -8414,19 +8411,12 @@ static int hdd_config_listen_interval(struct hdd_adapter *adapter,
 static int hdd_config_lro(struct hdd_adapter *adapter,
 			  const struct nlattr *attr)
 {
-	struct wlan_objmgr_vdev *vdev;
+	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	uint8_t enable_flag;
-	QDF_STATUS status = QDF_STATUS_E_FAULT;
 
 	enable_flag = nla_get_u8(attr);
 
-	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
-	if (vdev) {
-		status = osif_dp_lro_set_reset(vdev, enable_flag);
-		hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
-	}
-
-	return qdf_status_to_os_return(status);
+	return hdd_lro_set_reset(hdd_ctx, adapter, enable_flag);
 }
 
 static int hdd_config_scan_enable(struct hdd_adapter *adapter,
@@ -8914,7 +8904,6 @@ static void hdd_set_wlm_host_latency_level(struct hdd_context *hdd_ctx,
 					   uint32_t latency_host_flags)
 {
 	ol_txrx_soc_handle soc_hdl = cds_get_context(QDF_MODULE_ID_SOC);
-	struct wlan_objmgr_vdev *vdev;
 
 	if (!soc_hdl)
 		return;
@@ -8930,22 +8919,14 @@ static void hdd_set_wlm_host_latency_level(struct hdd_context *hdd_ctx,
 		wlan_hdd_set_pm_qos_request(hdd_ctx, false);
 
 	if (latency_host_flags & WLM_HOST_HBB_FLAG)
-		ucfg_dp_set_high_bus_bw_request(hdd_ctx->psoc,
-						adapter->vdev_id, true);
+		hdd_ctx->high_bus_bw_request |= (1 << adapter->vdev_id);
 	else
-		ucfg_dp_set_high_bus_bw_request(hdd_ctx->psoc,
-						adapter->vdev_id, false);
-
-	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
-	if (!vdev)
-		return;
+		hdd_ctx->high_bus_bw_request &= ~(1 << adapter->vdev_id);
 
 	if (latency_host_flags & WLM_HOST_RX_THREAD_FLAG)
-		ucfg_dp_runtime_disable_rx_thread(vdev, true);
+		adapter->runtime_disable_rx_thread = true;
 	else
-		ucfg_dp_runtime_disable_rx_thread(vdev, false);
-
-	hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+		adapter->runtime_disable_rx_thread = false;
 }
 
 #ifdef MULTI_CLIENT_LL_SUPPORT
@@ -15346,11 +15327,13 @@ static int __wlan_hdd_cfg80211_set_nud_stats(struct wiphy *wiphy,
 					     struct wireless_dev *wdev,
 					     const void *data, int data_len)
 {
+	struct nlattr *tb[STATS_SET_MAX + 1];
 	struct net_device   *dev = wdev->netdev;
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
 	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
-	struct wlan_objmgr_vdev *vdev;
+	struct set_arp_stats_params arp_stats_params = {0};
 	int err = 0;
+	mac_handle_t mac_handle;
 
 	hdd_enter();
 
@@ -15381,13 +15364,81 @@ static int __wlan_hdd_cfg80211_set_nud_stats(struct wiphy *wiphy,
 	if (hdd_is_roaming_in_progress(hdd_ctx))
 		return -EINVAL;
 
-	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
-	if (!vdev)
+	err = wlan_cfg80211_nla_parse(tb, STATS_SET_MAX, data, data_len,
+				      qca_wlan_vendor_set_nud_stats_policy);
+	if (err) {
+		hdd_err("STATS_SET_START ATTR");
+		return err;
+	}
+
+	if (tb[STATS_SET_START]) {
+		/* tracking is enabled for stats other than arp. */
+		if (tb[STATS_SET_DATA_PKT_INFO]) {
+			err = hdd_set_clear_connectivity_check_stats_info(
+						adapter,
+						&arp_stats_params, tb, true);
+			if (err)
+				return -EINVAL;
+
+			/*
+			 * if only tracking dns, then don't send
+			 * wmi command to FW.
+			 */
+			if (!arp_stats_params.pkt_type_bitmap)
+				return err;
+		} else {
+			if (!tb[STATS_GW_IPV4]) {
+				hdd_err("STATS_SET_START CMD");
+				return -EINVAL;
+			}
+
+			arp_stats_params.pkt_type_bitmap =
+						CONNECTIVITY_CHECK_SET_ARP;
+			adapter->pkt_type_bitmap |=
+					arp_stats_params.pkt_type_bitmap;
+			arp_stats_params.flag = true;
+			arp_stats_params.ip_addr =
+					nla_get_u32(tb[STATS_GW_IPV4]);
+			adapter->track_arp_ip = arp_stats_params.ip_addr;
+			arp_stats_params.pkt_type = WLAN_NUD_STATS_ARP_PKT_TYPE;
+		}
+	} else {
+		/* clear stats command received. */
+		if (tb[STATS_SET_DATA_PKT_INFO]) {
+			err = hdd_set_clear_connectivity_check_stats_info(
+						adapter,
+						&arp_stats_params, tb, false);
+			if (err)
+				return -EINVAL;
+
+			/*
+			 * if only tracking dns, then don't send
+			 * wmi command to FW.
+			 */
+			if (!arp_stats_params.pkt_type_bitmap)
+				return err;
+		} else {
+			arp_stats_params.pkt_type_bitmap =
+						CONNECTIVITY_CHECK_SET_ARP;
+			adapter->pkt_type_bitmap &=
+					(~arp_stats_params.pkt_type_bitmap);
+			arp_stats_params.flag = false;
+			qdf_mem_zero(&adapter->hdd_stats.hdd_arp_stats,
+				     sizeof(adapter->hdd_stats.hdd_arp_stats));
+			arp_stats_params.pkt_type = WLAN_NUD_STATS_ARP_PKT_TYPE;
+		}
+	}
+
+	hdd_debug("STATS_SET_START Received flag %d!", arp_stats_params.flag);
+
+	arp_stats_params.vdev_id = adapter->vdev_id;
+
+	mac_handle = hdd_ctx->mac_handle;
+	if (QDF_STATUS_SUCCESS !=
+	    sme_set_nud_debug_stats(mac_handle, &arp_stats_params)) {
+		hdd_err("STATS_SET_START CMD Failed!");
 		return -EINVAL;
-
-	err = osif_dp_set_nud_stats(wiphy, vdev, data, data_len);
-
-	hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+	}
 
 	hdd_exit();
 
@@ -15795,7 +15846,17 @@ static int __wlan_hdd_cfg80211_get_nud_stats(struct wiphy *wiphy,
 	struct net_device *dev = wdev->netdev;
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
 	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
-	struct wlan_objmgr_vdev *vdev;
+	struct get_arp_stats_params arp_stats_params;
+	mac_handle_t mac_handle;
+	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
+	uint32_t pkt_type_bitmap;
+	struct sk_buff *skb;
+	struct osif_request *request = NULL;
+	static const struct osif_request_params params = {
+		.priv_size = 0,
+		.timeout_ms = WLAN_WAIT_TIME_NUD_STATS,
+	};
+	void *cookie = NULL;
 
 	hdd_enter();
 
@@ -15817,14 +15878,102 @@ static int __wlan_hdd_cfg80211_get_nud_stats(struct wiphy *wiphy,
 		return -EINVAL;
 	}
 
-	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
-	if (!vdev)
-		return -EINVAL;
+	request = osif_request_alloc(&params);
+	if (!request) {
+		hdd_err("Request allocation failure");
+		return -ENOMEM;
+	}
 
-	err = osif_dp_get_nud_stats(wiphy, vdev, data, data_len);
+	cookie = osif_request_cookie(request);
 
-	hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+	arp_stats_params.pkt_type = WLAN_NUD_STATS_ARP_PKT_TYPE;
+	arp_stats_params.vdev_id = adapter->vdev_id;
 
+	pkt_type_bitmap = adapter->pkt_type_bitmap;
+
+	/* send NUD failure event only when ARP tracking is enabled. */
+	if (hdd_is_data_stall_event_enabled(HDD_HOST_NUD_FAILURE) &&
+	    !hdd_ctx->config->enable_nud_tracking &&
+	    (pkt_type_bitmap & CONNECTIVITY_CHECK_SET_ARP)) {
+		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_ERROR,
+			  "Data stall due to NUD failure");
+		cdp_post_data_stall_event(soc,
+				      DATA_STALL_LOG_INDICATOR_FRAMEWORK,
+				      DATA_STALL_LOG_NUD_FAILURE,
+				      OL_TXRX_PDEV_ID, 0XFF,
+				      DATA_STALL_LOG_RECOVERY_TRIGGER_PDR);
+	}
+
+	mac_handle = hdd_ctx->mac_handle;
+	if (sme_set_nud_debug_stats_cb(mac_handle, hdd_get_nud_stats_cb,
+				       cookie) != QDF_STATUS_SUCCESS) {
+		hdd_err("Setting NUD debug stats callback failure");
+		err = -EINVAL;
+		goto exit;
+	}
+
+	if (QDF_STATUS_SUCCESS !=
+	    sme_get_nud_debug_stats(mac_handle, &arp_stats_params)) {
+		hdd_err("STATS_SET_START CMD Failed!");
+		err = -EINVAL;
+		goto exit;
+	}
+
+	err = osif_request_wait_for_response(request);
+	if (err) {
+		hdd_err("SME timedout while retrieving NUD stats");
+		err = -ETIMEDOUT;
+		goto exit;
+	}
+
+	skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy,
+						  WLAN_NUD_STATS_LEN);
+	if (!skb) {
+		hdd_err("cfg80211_vendor_cmd_alloc_reply_skb failed");
+		err = -ENOMEM;
+		goto exit;
+	}
+
+	if (nla_put_u16(skb, COUNT_FROM_NETDEV,
+			adapter->hdd_stats.hdd_arp_stats.tx_arp_req_count) ||
+	    nla_put_u16(skb, COUNT_TO_LOWER_MAC,
+			adapter->hdd_stats.hdd_arp_stats.tx_host_fw_sent) ||
+	    nla_put_u16(skb, RX_COUNT_BY_LOWER_MAC,
+			adapter->hdd_stats.hdd_arp_stats.tx_host_fw_sent) ||
+	    nla_put_u16(skb, COUNT_TX_SUCCESS,
+			adapter->hdd_stats.hdd_arp_stats.tx_ack_cnt) ||
+	    nla_put_u16(skb, RSP_RX_COUNT_BY_LOWER_MAC,
+			adapter->hdd_stats.hdd_arp_stats.rx_fw_cnt) ||
+	    nla_put_u16(skb, RSP_RX_COUNT_BY_UPPER_MAC,
+			adapter->hdd_stats.hdd_arp_stats.rx_arp_rsp_count) ||
+	    nla_put_u16(skb, RSP_COUNT_TO_NETDEV,
+			adapter->hdd_stats.hdd_arp_stats.rx_delivered) ||
+	    nla_put_u16(skb, RSP_COUNT_OUT_OF_ORDER_DROP,
+			adapter->hdd_stats.hdd_arp_stats.
+			rx_host_drop_reorder)) {
+		hdd_err("nla put fail");
+		kfree_skb(skb);
+		err = -EINVAL;
+		goto exit;
+	}
+	if (adapter->con_status)
+		nla_put_flag(skb, AP_LINK_ACTIVE);
+	if (adapter->dad)
+		nla_put_flag(skb, AP_LINK_DAD);
+
+	/* ARP tracking is done above. */
+	pkt_type_bitmap &= ~CONNECTIVITY_CHECK_SET_ARP;
+
+	if (pkt_type_bitmap) {
+		if (hdd_populate_connectivity_check_stats_info(adapter, skb)) {
+			err = -EINVAL;
+			goto exit;
+		}
+	}
+
+	cfg80211_vendor_cmd_reply(skb);
+exit:
+	osif_request_put(request);
 	return err;
 }
 
@@ -21012,16 +21161,9 @@ int __wlan_hdd_cfg80211_del_station(struct wiphy *wiphy,
 								     param)))
 			goto fn_end;
 	} else {
-		if (param->reason_code == REASON_1X_AUTH_FAILURE) {
-			struct wlan_objmgr_vdev *vdev;
-
-			vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
-			if (vdev) {
-				ucfg_dp_softap_check_wait_for_tx_eap_pkt(vdev,
-						(struct qdf_mac_addr *)mac);
-				hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
-			}
-		}
+		if (param->reason_code == REASON_1X_AUTH_FAILURE)
+			hdd_softap_check_wait_for_tx_eap_pkt(
+					adapter, (struct qdf_mac_addr *)mac);
 
 		sta_info = hdd_get_sta_info_by_mac(
 						&adapter->sta_info_list,

@@ -49,7 +49,6 @@
 #include "wlan_hdd_cfr.h"
 #include "wlan_roam_debug.h"
 #include "wma_api.h"
-#include "wlan_dp_ucfg_api.h"
 
 void hdd_handle_disassociation_event(struct hdd_adapter *adapter,
 				     struct qdf_mac_addr *peer_macaddr)
@@ -57,7 +56,6 @@ void hdd_handle_disassociation_event(struct hdd_adapter *adapter,
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	struct hdd_station_ctx *sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
 	ol_txrx_soc_handle soc = cds_get_context(QDF_MODULE_ID_SOC);
-	struct wlan_objmgr_vdev *vdev;
 
 	hdd_green_ap_start_state_mc(hdd_ctx, adapter->device_mode, false);
 
@@ -73,17 +71,13 @@ void hdd_handle_disassociation_event(struct hdd_adapter *adapter,
 
 	hdd_lpass_notify_disconnect(adapter);
 
-	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
-	if (vdev) {
-		ucfg_dp_del_latency_critical_client(vdev,
-			hdd_convert_cfgdot11mode_to_80211mode(
-				sta_ctx->conn_info.dot11mode));
-		/* stop timer in sta/p2p_cli */
-		ucfg_dp_bus_bw_compute_reset_prev_txrx_stats(vdev);
-		hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
-	}
-
-	ucfg_dp_bus_bw_compute_timer_try_stop(hdd_ctx->psoc);
+	hdd_del_latency_critical_client(
+		adapter,
+		hdd_convert_cfgdot11mode_to_80211mode(
+			sta_ctx->conn_info.dot11mode));
+	/* stop timer in sta/p2p_cli */
+	hdd_bus_bw_compute_reset_prev_txrx_stats(adapter);
+	hdd_bus_bw_compute_timer_try_stop(hdd_ctx);
 	cdp_display_txrx_hw_info(soc);
 }
 
@@ -124,7 +118,6 @@ void __hdd_cm_disconnect_handler_pre_user_update(struct hdd_adapter *adapter)
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	struct hdd_station_ctx *sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
 	uint32_t time_buffer_size;
-	struct wlan_objmgr_vdev *vdev;
 
 	hdd_stop_tsf_sync(adapter);
 	time_buffer_size = sizeof(sta_ctx->conn_info.connect_time);
@@ -139,12 +132,7 @@ void __hdd_cm_disconnect_handler_pre_user_update(struct hdd_adapter *adapter)
 				  sta_ctx->conn_info.bssid.bytes,
 				  false);
 
-	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
-	if (vdev) {
-		ucfg_dp_periodic_sta_stats_stop(vdev);
-		hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
-	}
-
+	hdd_periodic_sta_stats_stop(adapter);
 	wlan_hdd_auto_shutdown_enable(hdd_ctx, true);
 
 	DPTRACE(qdf_dp_trace_mgmt_pkt(QDF_DP_TRACE_MGMT_PACKET_RECORD,
@@ -190,8 +178,6 @@ void __hdd_cm_disconnect_handler_post_user_update(struct hdd_adapter *adapter,
 	/* Clear saved connection information in HDD */
 	hdd_conn_remove_connect_info(sta_ctx);
 
-	ucfg_dp_remove_conn_info(vdev);
-
 	/* Setting the RTS profile to original value */
 	if (sme_cli_set_command(adapter->vdev_id, WMI_VDEV_PARAM_ENABLE_RTSCTS,
 				cfg_get(hdd_ctx->psoc,
@@ -210,9 +196,9 @@ void __hdd_cm_disconnect_handler_post_user_update(struct hdd_adapter *adapter,
 	}
 	wlan_hdd_clear_link_layer_stats(adapter);
 
-	ucfg_dp_reset_cont_txtimeout_cnt(vdev);
+	adapter->hdd_stats.tx_rx_stats.cont_txtimeout_cnt = 0;
 
-	ucfg_dp_nud_reset_tracking(vdev);
+	hdd_nud_reset_tracking(adapter);
 	hdd_reset_limit_off_chan(adapter);
 
 	hdd_cm_print_bss_info(sta_ctx);
