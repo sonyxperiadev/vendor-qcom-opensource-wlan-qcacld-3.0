@@ -347,22 +347,16 @@ static void __hdd_nud_failure_work(struct hdd_adapter *adapter)
 	hdd_exit();
 }
 
-void hdd_nud_failure_work(hdd_cb_handle context, uint8_t vdev_id)
+/**
+ * hdd_nud_failure_work() - work for nud event
+ * @data: Pointer to hdd_adapter
+ *
+ * Return: None
+ */
+static void hdd_nud_failure_work(void *data)
 {
-	struct hdd_context *hdd_ctx;
-	struct hdd_adapter *adapter;
+	struct hdd_adapter *adapter = data;
 	struct osif_vdev_sync *vdev_sync;
-
-	hdd_ctx = hdd_cb_handle_to_context(context);
-	if (!hdd_ctx) {
-		hdd_err("hdd_ctx is null");
-		return;
-	}
-	adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
-	if (!adapter) {
-		hdd_err("adapter is null");
-		return;
-	}
 
 	if (osif_vdev_sync_op_start(adapter->dev, &vdev_sync))
 		return;

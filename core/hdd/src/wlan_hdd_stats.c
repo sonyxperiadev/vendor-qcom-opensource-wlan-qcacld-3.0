@@ -7363,28 +7363,14 @@ int wlan_hdd_get_temperature(struct hdd_adapter *adapter, int *temperature)
 }
 
 #ifdef TX_MULTIQ_PER_AC
-void wlan_hdd_display_tx_multiq_stats(hdd_cb_handle context, uint8_t vdev_id)
+static inline
+void wlan_hdd_display_tx_multiq_stats(struct hdd_tx_rx_stats *stats)
 {
-	struct hdd_context *hdd_ctx;
-	struct hdd_adapter *adapter;
-	struct hdd_tx_rx_stats *stats;
 	uint32_t total_inv_sk_and_skb_hash = 0;
 	uint32_t total_qselect_existing_skb_hash = 0;
 	uint32_t total_qselect_sk_tx_map = 0;
 	uint32_t total_qselect_skb_hash = 0;
 	uint8_t i;
-
-	hdd_ctx = hdd_cb_handle_to_context(context);
-	if (!hdd_ctx) {
-		hdd_err("hdd_ctx is null");
-		return;
-	}
-	adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
-	if (!adapter) {
-		hdd_err("adapter is null");
-		return;
-	}
-	stats = &adapter->hdd_stats.tx_rx_stats;
 
 	for (i = 0; i < NUM_CPUS; i++) {
 		total_inv_sk_and_skb_hash +=
@@ -7401,7 +7387,8 @@ void wlan_hdd_display_tx_multiq_stats(hdd_cb_handle context, uint8_t vdev_id)
 		  total_qselect_sk_tx_map, total_qselect_skb_hash);
 }
 #else
-void wlan_hdd_display_tx_multiq_stats(hdd_cb_handle context, uint8_t vdev_id)
+static inline
+void wlan_hdd_display_tx_multiq_stats(struct hdd_tx_rx_stats *stats)
 {
 }
 #endif

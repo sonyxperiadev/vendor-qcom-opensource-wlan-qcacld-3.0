@@ -33,7 +33,6 @@
 #include "cdp_txrx_flow_ctrl_legacy.h"
 #include <qdf_tracepoint.h>
 #include <qdf_pkt_add_timestamp.h>
-#include "wlan_dp_public_struct.h"
 
 struct hdd_netif_queue_history;
 struct hdd_context;
@@ -192,45 +191,6 @@ static inline QDF_STATUS hdd_rx_fisa_flush_by_vdev_id(void *dp_soc,
 QDF_STATUS hdd_rx_deliver_to_stack(struct hdd_adapter *adapter,
 				   struct sk_buff *skb);
 
-#ifdef WLAN_FEATURE_TSF_PLUS_SOCK_TS
-/**
- * hdd_tsf_timestamp_rx() - HDD function to set rx packet timestamp
- * @ctx: pointer to HDD context
- * @nbuf: pointer to skb
- *
- * Return: None
- */
-void hdd_tsf_timestamp_rx(hdd_cb_handle ctx, qdf_nbuf_t netbuf);
-
-/**
- * hdd_get_tsf_time_cb() - HDD helper function to get TSF time
- * @vdev_id: vdev id mapped to adapter
- * @input_time: Input time
- * @tsf_time: time from TFS module
- *
- * Return: None
- */
-void hdd_get_tsf_time_cb(uint8_t vdev_id, uint64_t input_time,
-			 uint64_t *tsf_time);
-#else
-static inline
-void hdd_tsf_timestamp_rx(hdd_cb_handle ctx, qdf_nbuf_t netbuf) { }
-
-static inline
-void hdd_get_tsf_time_cb(uint8_t vdev_id, uint64_t input_time,
-			 uint64_t *tsf_time) { }
-#endif
-
-/**
- * hdd_legacy_gro_get_napi() - HDD function to get napi in legacy gro case
- * @nbuf: n/w buffer pointer
- * @enabled_rxthread: Rx thread enabled/disabled
- *
- * Return: qdf napi struct on success, NULL on failure
- */
-qdf_napi_struct
-*hdd_legacy_gro_get_napi(qdf_nbuf_t nbuf, bool enable_rxthread);
-
 /**
  * hdd_rx_thread_gro_flush_ind_cbk() - receive handler to flush GRO packets
  * @adapter: pointer to HDD adapter
@@ -346,23 +306,15 @@ void hdd_deregister_tx_flow_control(struct hdd_adapter *adapter);
 
 /**
  * hdd_get_tx_resource() - check tx resources and take action
- * @vdev_id: vdev id mapped to HDD adapter
+ * @adapter: adapter handle
  * @mac_addr: mac address
+ * @timer_value: timer value
  *
  * Return: none
  */
-void hdd_get_tx_resource(uint8_t vdev_id,
-			 struct qdf_mac_addr *mac_addr);
+void hdd_get_tx_resource(struct hdd_adapter *adapter,
+			 struct qdf_mac_addr *mac_addr, uint16_t timer_value);
 
-/**
- * hdd_get_tx_flow_low_watermark() - Get TX flow low watermark info
- * @hdd_cb_handle: HDD opaque ctx
- * @intf_id: HDD adapter id
- *
- * Return: flow low watermark value
- */
-unsigned int
-hdd_get_tx_flow_low_watermark(hdd_cb_handle cb_ctx, uint8_t intf_id);
 #else
 static inline void hdd_tx_resume_cb(void *adapter_context, bool tx_resume)
 {
@@ -381,21 +333,19 @@ static inline void hdd_deregister_tx_flow_control(struct hdd_adapter *adapter)
 {
 }
 
+
 /**
  * hdd_get_tx_resource() - check tx resources and take action
- * @vdev_id: vdev id mapped to HDD adapter
+ * @adapter: adapter handle
  * @mac_addr: mac address
+ * @timer_value: timer value
  *
  * Return: none
  */
 static inline
-void hdd_get_tx_resource(uint8_t vdev_id,
-			 struct qdf_mac_addr *mac_addr) { }
-
-static inline unsigned int
-hdd_get_tx_flow_low_watermark(hdd_cb_handle cb_ctx, uint8_t intf_id)
+void hdd_get_tx_resource(struct hdd_adapter *adapter,
+			 struct qdf_mac_addr *mac_addr, uint16_t timer_value)
 {
-	return 0;
 }
 #endif /* QCA_LL_LEGACY_TX_FLOW_CONTROL */
 
