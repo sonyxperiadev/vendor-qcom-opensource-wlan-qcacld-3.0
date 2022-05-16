@@ -3600,4 +3600,28 @@ QDF_STATUS mlme_save_vdev_max_mcs_idx(struct wlan_objmgr_vdev *vdev,
  */
 uint8_t mlme_get_vdev_max_mcs_idx(struct wlan_objmgr_vdev *vdev);
 #endif /* WLAN_FEATURE_SON */
+/**
+ * wlan_mlme_set_safe_mode_enable() - set safe_mode_enable flag
+ * based on value set by user space.
+ *
+ * @psoc: psoc context
+ * @safe_mode_enable: safe mode enabled or not
+ *
+ * Return: none
+ */
+void wlan_mlme_set_safe_mode_enable(struct wlan_objmgr_psoc *psoc,
+				    bool safe_mode_enable);
+
+/**
+ * wlan_mlme_get_safe_mode_enable() - get safe_mode_enable set by user
+ * space
+ *
+ * @psoc: psoc context
+ * @safe_mode_enable: safe mode enabled or not
+ *
+ * Return: none
+ */
+void wlan_mlme_get_safe_mode_enable(struct wlan_objmgr_psoc *psoc,
+				    bool *safe_mode_enable);
+
 #endif /* _WLAN_MLME_API_H_ */

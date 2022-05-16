@@ -121,6 +121,7 @@ static void lim_extract_he_op(struct pe_session *session,
 		return;
 	if (!session->he_op.oper_info_6g_present) {
 		pe_debug("6GHz op not present in 6G beacon");
+		session->ap_power_type = REG_VERY_LOW_POWER_AP;
 		return;
 	}
 	session->ch_width = session->he_op.oper_info_6g.info.ch_width;
