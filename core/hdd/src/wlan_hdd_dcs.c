@@ -204,10 +204,63 @@ static void hdd_dcs_cb(struct wlan_objmgr_psoc *psoc, uint8_t mac_id,
 	}
 }
 
+#ifdef CONFIG_AFC_SUPPORT
+/**
+ * hdd_dcs_afc_sel_chan_cb() - Callback to select best SAP channel/bandwidth
+ *                             after channel state update by AFC
+ * @arg: argument
+ * @vdev_id: vdev id of SAP
+ * @cur_freq: SAP current channel frequency
+ * @cur_bw: SAP current channel bandwidth
+ * @pref_bw: pointer to channel bandwidth prefer to set as input and output
+ *           as target bandwidth can set
+ *
+ * Return: Target home channel frequency selected
+ */
+static qdf_freq_t hdd_dcs_afc_sel_chan_cb(void *arg,
+					  uint32_t vdev_id,
+					  qdf_freq_t cur_freq,
+					  enum phy_ch_width cur_bw,
+					  enum phy_ch_width *pref_bw)
+{
+	struct hdd_context *hdd_ctx = (struct hdd_context *)arg;
+	struct hdd_adapter *adapter;
+	struct sap_context *sap_ctx;
+	qdf_freq_t target_freq;
+
+	if (!hdd_ctx)
+		return 0;
+
+	adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
+	if (!adapter)
+		return 0;
+
+	sap_ctx = WLAN_HDD_GET_SAP_CTX_PTR(adapter);
+	if (!sap_ctx)
+		return 0;
+
+	target_freq = sap_afc_dcs_sel_chan(sap_ctx, cur_freq, cur_bw, pref_bw);
+
+	return target_freq;
+}
+#else
+static inline qdf_freq_t hdd_dcs_afc_sel_chan_cb(void *arg,
+						 uint32_t vdev_id,
+						 qdf_freq_t cur_freq,
+						 enum phy_ch_width cur_bw,
+						 enum phy_ch_width *pref_bw)
+{
+	return 0;
+}
+#endif
+
 void hdd_dcs_register_cb(struct hdd_context *hdd_ctx)
 {
 	ucfg_dcs_register_cb(hdd_ctx->psoc, hdd_dcs_cb, hdd_ctx);
 	ucfg_dcs_register_awgn_cb(hdd_ctx->psoc, hdd_dcs_switch_chan_cb);
+	ucfg_dcs_register_afc_sel_chan_cb(hdd_ctx->psoc,
+					  hdd_dcs_afc_sel_chan_cb,
+					  hdd_ctx);
 }
 
 void hdd_dcs_hostapd_set_chan(struct hdd_context *hdd_ctx,

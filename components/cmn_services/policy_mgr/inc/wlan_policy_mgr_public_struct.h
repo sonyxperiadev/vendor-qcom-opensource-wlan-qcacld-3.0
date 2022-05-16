@@ -1289,10 +1289,17 @@ enum conn_6ghz_flag {
 	CONN_6GHZ_FLAG_NO_LEGACY_CLIENT = 0x0008,
 };
 
-#define CONN_6GHZ_CAPABLIE (CONN_6GHZ_FLAG_VALID | \
+#ifdef WLAN_FEATURE_AFC_DCS_SKIP_ACS_RANGE
+/* To support DCS to 6 Ghz channel when AFC response receive */
+#define CONN_6GHZ_CAPABLE (CONN_6GHZ_FLAG_VALID | \
+			     CONN_6GHZ_FLAG_SECURITY_ALLOWED | \
+			     CONN_6GHZ_FLAG_NO_LEGACY_CLIENT)
+#else
+#define CONN_6GHZ_CAPABLE (CONN_6GHZ_FLAG_VALID | \
 			     CONN_6GHZ_FLAG_ACS_OR_USR_ALLOWED | \
 			     CONN_6GHZ_FLAG_SECURITY_ALLOWED | \
 			     CONN_6GHZ_FLAG_NO_LEGACY_CLIENT)
+#endif
 
 /**
  * struct policy_mgr_conc_connection_info - information of all existing

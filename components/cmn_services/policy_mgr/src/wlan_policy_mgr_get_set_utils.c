@@ -8692,7 +8692,7 @@ bool policy_mgr_get_ap_6ghz_capable(struct wlan_objmgr_psoc *psoc,
 					psoc, vdev_id) |
 					CONN_6GHZ_FLAG_NO_LEGACY_CLIENT;
 
-	if ((conn_6ghz_flag & CONN_6GHZ_CAPABLIE) == CONN_6GHZ_CAPABLIE)
+	if ((conn_6ghz_flag & CONN_6GHZ_CAPABLE) == CONN_6GHZ_CAPABLE)
 		is_6g_allowed = true;
 	policy_mgr_debug("vdev %d conn_6ghz_flag %x 6ghz %s", vdev_id,
 			 conn_6ghz_flag, is_6g_allowed ? "allowed" : "deny");
