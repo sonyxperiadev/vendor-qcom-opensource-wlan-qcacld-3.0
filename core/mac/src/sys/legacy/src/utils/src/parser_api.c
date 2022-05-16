@@ -8508,8 +8508,7 @@ QDF_STATUS populate_dot11f_assoc_rsp_mlo_ie(struct mac_context *mac_ctx,
 		session->mlo_link_info.link_ie.bss_param_change_cnt;
 	common_info_len += WLAN_ML_BV_CINFO_BSSPARAMCHNGCNT_SIZE;
 
-	mlo_ie->mld_capab_present = 1;
-	common_info_len += WLAN_ML_BV_CINFO_MLDCAP_SIZE;
+	mlo_ie->mld_capab_present = 0;
 
 	mlo_ie->common_info_length = common_info_len;
 
@@ -9075,9 +9074,7 @@ QDF_STATUS populate_dot11f_bcn_mlo_ie(struct mac_context *mac_ctx,
 		session->mlo_link_info.link_ie.bss_param_change_cnt;
 	tmp_offset += 1; /* bss parameters change count */
 	common_info_length += WLAN_ML_BV_CINFO_BSSPARAMCHNGCNT_SIZE;
-	mlo_ie->mld_capab_present = 1;
-	tmp_offset += 2; /* mld capabilities */
-	common_info_length += WLAN_ML_BV_CINFO_MLDCAP_SIZE;
+	mlo_ie->mld_capab_present = 0;
 	sch_info->num_links = 0;
 
 	lim_get_mlo_vdev_list(session, &vdev_count, wlan_vdev_list);
