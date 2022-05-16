@@ -3109,6 +3109,18 @@ uint8_t lim_get_vht_ch_width(tDot11fIEVHTCaps *vht_cap,
 			     tDot11fIEVHTOperation *vht_op,
 			     tDot11fIEHTInfo *ht_info);
 
+/*
+ * lim_set_tpc_power() - Function to compute and send TPC power level to the
+ * FW based on the opmode of the pe_session
+ *
+ * @mac_ctx:    Pointer to Global MAC structure
+ * @pe_session: Pointer to session
+ *
+ * Return: TPC status
+ */
+bool
+lim_set_tpc_power(struct mac_context *mac_ctx, struct pe_session *session);
+
 /**
  * lim_update_tx_power() - Function to update the TX power for
  * the STA interface based on the SAP concurrency

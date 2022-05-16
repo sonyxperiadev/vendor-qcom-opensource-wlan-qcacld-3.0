@@ -10893,16 +10893,7 @@ uint8_t lim_get_vht_ch_width(tDot11fIEVHTCaps *vht_cap,
 	return ch_width;
 }
 
-/*
- * lim_set_tpc_power() - Function to compute and send TPC power level to the
- * FW based on the opmode of the pe_session
- *
- * @mac_ctx:    Pointer to Global MAC structure
- * @pe_session: Pointer to session
- *
- * Return: TPC status
- */
-static bool
+bool
 lim_set_tpc_power(struct mac_context *mac_ctx, struct pe_session *session)
 {
 	struct wlan_lmac_if_reg_tx_ops *tx_ops;
