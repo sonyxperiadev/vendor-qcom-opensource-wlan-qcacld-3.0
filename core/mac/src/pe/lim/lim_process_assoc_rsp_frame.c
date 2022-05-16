@@ -1040,9 +1040,6 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 			session_entry->assocRspLen = frame_len;
 		}
 	}
-	dot11f_parse_assoc_rsp_mlo_partner_info(session_entry,
-						session_entry->assocRsp,
-						frame_len);
 
 	lim_update_ric_data(mac_ctx, session_entry, assoc_rsp);
 
