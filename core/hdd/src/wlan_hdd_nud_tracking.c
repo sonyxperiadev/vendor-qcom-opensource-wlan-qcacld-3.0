@@ -23,6 +23,7 @@
 
 #include "osif_sync.h"
 #include "wlan_hdd_main.h"
+#include "wlan_dp_ucfg_api.h"
 #include "wlan_dlm_ucfg_api.h"
 #include "hdd_dp_cfg.h"
 #include <cdp_txrx_misc.h>
@@ -338,7 +339,7 @@ static void __hdd_nud_failure_work(struct hdd_adapter *adapter)
 	}
 
 	if (adapter->device_mode == QDF_STA_MODE &&
-	    hdd_is_roam_after_nud_enabled(hdd_ctx->config)) {
+	    ucfg_dp_is_roam_after_nud_enabled(hdd_ctx->psoc)) {
 		hdd_handle_nud_fail_sta(hdd_ctx, adapter);
 		return;
 	}

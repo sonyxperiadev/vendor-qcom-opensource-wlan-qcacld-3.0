@@ -30,6 +30,7 @@
 #if defined(WLAN_SUPPORT_RX_FISA)
 #include "dp_fisa_rx.h"
 #endif
+#include "wlan_dp_ucfg_api.h"
 
 #if defined(WLAN_SUPPORT_RX_FISA)
 static inline
@@ -52,7 +53,7 @@ __hdd_sysfs_dp_aggregation_show(struct hdd_context *hdd_ctx,
 		return -EINVAL;
 
 	hdd_debug("dp_aggregation: %d",
-		  qdf_atomic_read(&hdd_ctx->dp_agg_param.rx_aggregation));
+		  ucfg_dp_get_rx_aggregation_val(hdd_ctx->psoc));
 
 	return 0;
 }
@@ -114,7 +115,7 @@ __hdd_sysfs_dp_aggregation_store(struct hdd_context *hdd_ctx,
 	hdd_debug("dp_aggregation: %d", value);
 
 	hdd_rx_skip_fisa(dp_soc, value);
-	qdf_atomic_set(&hdd_ctx->dp_agg_param.rx_aggregation, !!value);
+	ucfg_dp_set_rx_aggregation_val(hdd_ctx->psoc, !!value);
 
 	return count;
 }

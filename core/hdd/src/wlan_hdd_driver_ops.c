@@ -48,7 +48,7 @@
 #include <qdf_notifier.h>
 #include <qdf_hang_event_notifier.h>
 #include "wlan_hdd_thermal.h"
-#include "wlan_hdd_bus_bandwidth.h"
+#include "wlan_dp_ucfg_api.h"
 
 #ifdef MODULE
 #ifdef WLAN_WEAR_CHIPSET
@@ -99,7 +99,7 @@ static int hdd_get_bandwidth_level(void *data)
 	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
 
 	if (hdd_ctx)
-		ret = hdd_get_current_throughput_level(hdd_ctx);
+		ret = ucfg_dp_get_current_throughput_level(hdd_ctx->psoc);
 
 	return ret;
 }
@@ -464,7 +464,7 @@ int hdd_hif_open(struct device *dev, void *bdev, const struct hif_bus_id *bid,
 			goto mark_target_not_ready;
 		} else {
 			hdd_napi_event(NAPI_EVT_INI_FILE,
-				(void *)hdd_ctx->napi_enable);
+				       (void *)ucfg_dp_get_napi_enabled(hdd_ctx->psoc));
 		}
 	}
 
@@ -975,7 +975,7 @@ static void hdd_soc_recovery_cleanup(void)
 
 	/* cancel/flush any pending/active idle shutdown work */
 	hdd_psoc_idle_timer_stop(hdd_ctx);
-	hdd_bus_bw_compute_timer_stop(hdd_ctx);
+	ucfg_dp_bus_bw_compute_timer_stop(hdd_ctx->psoc);
 
 	/* nothing to do if the soc is already unloaded */
 	if (hdd_ctx->driver_status == DRIVER_MODULES_CLOSED) {
@@ -1057,7 +1057,7 @@ static void hdd_soc_recovery_shutdown(struct device *dev)
 	if (errno)
 		return;
 
-	hdd_wait_for_dp_tx();
+	ucfg_dp_wait_complete_tasks();
 	osif_psoc_sync_wait_for_ops(psoc_sync);
 
 	__hdd_soc_recovery_shutdown();
@@ -1307,7 +1307,7 @@ static int __wlan_hdd_bus_suspend(struct wow_enable_params wow_params,
 	 */
 	param.policy = BBM_NON_PERSISTENT_POLICY;
 	param.policy_info.flag = BBM_APPS_SUSPEND;
-	hdd_bbm_apply_independent_policy(hdd_ctx, &param);
+	ucfg_dp_bbm_apply_independent_policy(hdd_ctx->psoc, &param);
 
 	hdd_info("bus suspend succeeded");
 	return 0;
@@ -1474,7 +1474,7 @@ int wlan_hdd_bus_resume(enum qdf_suspend_type type)
 	 */
 	param.policy = BBM_NON_PERSISTENT_POLICY;
 	param.policy_info.flag = BBM_APPS_RESUME;
-	hdd_bbm_apply_independent_policy(hdd_ctx, &param);
+	ucfg_dp_bbm_apply_independent_policy(hdd_ctx->psoc, &param);
 
 	status = hif_bus_resume(hif_ctx);
 	if (status) {
@@ -1676,7 +1676,7 @@ static int wlan_hdd_runtime_suspend(struct device *dev)
 			  err, delta);
 
 	if (status == QDF_STATUS_SUCCESS)
-		hdd_bus_bw_compute_timer_stop(hdd_ctx);
+		ucfg_dp_bus_bw_compute_timer_stop(hdd_ctx->psoc);
 
 	hdd_debug("Runtime suspend done result: %d", err);
 
@@ -1752,7 +1752,7 @@ static int wlan_hdd_runtime_resume(struct device *dev)
 		hdd_err("PMO Runtime resume failed: %d", status);
 	} else {
 		if (policy_mgr_get_connection_count(hdd_ctx->psoc))
-			hdd_bus_bw_compute_timer_try_start(hdd_ctx);
+			ucfg_dp_bus_bw_compute_timer_try_start(hdd_ctx->psoc);
 	}
 
 	hdd_debug("Runtime resume done");

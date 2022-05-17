@@ -47,6 +47,7 @@
 #include "cdp_txrx_host_stats.h"
 #include "wlan_hdd_object_manager.h"
 #include "wlan_hdd_eht.h"
+#include "wlan_dp_ucfg_api.h"
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 0, 0)) && !defined(WITH_BACKPORTS)
 #define HDD_INFO_SIGNAL                 STATION_INFO_SIGNAL
@@ -6476,7 +6477,7 @@ struct net_device_stats *hdd_get_stats(struct net_device *dev)
 {
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
 
-	return &adapter->stats;
+	return (struct net_device_stats *)ucfg_dp_get_dev_stats(&adapter->mac_addr);
 }
 
 

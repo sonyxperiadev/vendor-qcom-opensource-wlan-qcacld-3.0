@@ -92,6 +92,7 @@
 #include "wlan_hdd_twt.h"
 #include "wlan_cm_roam_ucfg_api.h"
 #include "wlan_hdd_son.h"
+#include "wlan_dp_ucfg_api.h"
 
 /* These are needed to recognize WPA and RSN suite types */
 #define HDD_WPA_OUI_SIZE 4
@@ -296,6 +297,7 @@ static void hdd_start_powersave_timer_on_associated(struct hdd_adapter *adapter)
 void hdd_conn_set_authenticated(struct hdd_adapter *adapter, uint8_t auth_state)
 {
 	struct hdd_station_ctx *sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
+	struct wlan_objmgr_vdev *vdev;
 	char *auth_time;
 	uint32_t time_buffer_size;
 
@@ -303,6 +305,12 @@ void hdd_conn_set_authenticated(struct hdd_adapter *adapter, uint8_t auth_state)
 	hdd_debug("Authenticated state Changed from oldState:%d to State:%d",
 		  sta_ctx->conn_info.is_authenticated, auth_state);
 	sta_ctx->conn_info.is_authenticated = auth_state;
+
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+	if (vdev) {
+		ucfg_dp_conn_info_set_peer_authenticate(vdev, auth_state);
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+	}
 
 	auth_time = sta_ctx->conn_info.auth_time;
 	time_buffer_size = sizeof(sta_ctx->conn_info.auth_time);
@@ -1246,10 +1254,10 @@ QDF_STATUS hdd_roam_register_sta(struct hdd_adapter *adapter,
 {
 	QDF_STATUS qdf_status = QDF_STATUS_E_FAILURE;
 	struct ol_txrx_desc_type txrx_desc = {0};
-	struct ol_txrx_ops txrx_ops;
 	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
 	enum phy_ch_width ch_width;
 	enum wlan_phymode phymode;
+	struct wlan_objmgr_vdev *vdev;
 
 	/* Get the Station ID from the one saved during the association */
 	if (!QDF_IS_ADDR_BROADCAST(bssid->bytes))
@@ -1274,40 +1282,16 @@ QDF_STATUS hdd_roam_register_sta(struct hdd_adapter *adapter,
 		txrx_desc.is_wapi_supported = 0;
 #endif /* FEATURE_WLAN_WAPI */
 
-	/* Register the vdev transmit and receive functions */
-	qdf_mem_zero(&txrx_ops, sizeof(txrx_ops));
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+	if (!vdev)
+		return QDF_STATUS_E_INVAL;
 
-	if (adapter->hdd_ctx->enable_dp_rx_threads) {
-		txrx_ops.rx.rx = hdd_rx_pkt_thread_enqueue_cbk;
-		txrx_ops.rx.rx_stack = hdd_rx_packet_cbk;
-		txrx_ops.rx.rx_flush = hdd_rx_flush_packet_cbk;
-		txrx_ops.rx.rx_gro_flush = hdd_rx_thread_gro_flush_ind_cbk;
-		adapter->rx_stack = hdd_rx_packet_cbk;
-	} else {
-		txrx_ops.rx.rx = hdd_rx_packet_cbk;
-		txrx_ops.rx.rx_stack = NULL;
-		txrx_ops.rx.rx_flush = NULL;
+	qdf_status = ucfg_dp_sta_register_txrx_ops(vdev);
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
+		hdd_err("DP tx/rx ops register failed Status: %d", qdf_status);
+		return qdf_status;
 	}
-
-	if (adapter->hdd_ctx->config->fisa_enable &&
-		(adapter->device_mode != QDF_MONITOR_MODE)) {
-		hdd_debug("FISA feature enabled");
-		hdd_rx_register_fisa_ops(&txrx_ops);
-	}
-
-	txrx_ops.rx.stats_rx = hdd_tx_rx_collect_connectivity_stats_info;
-
-	txrx_ops.tx.tx_comp = hdd_sta_notify_tx_comp_cb;
-	txrx_ops.tx.tx = NULL;
-	txrx_ops.get_tsf_time = hdd_get_tsf_time;
-	cdp_vdev_register(soc, adapter->vdev_id, (ol_osif_vdev_handle)adapter,
-			  &txrx_ops);
-	if (!txrx_ops.tx.tx) {
-		hdd_err("vdev register fail");
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	adapter->tx_fn = txrx_ops.tx.tx;
 
 	if (adapter->device_mode == QDF_NDI_MODE) {
 		phymode = ucfg_mlme_get_vdev_phy_mode(adapter->hdd_ctx->psoc,
@@ -1572,9 +1556,9 @@ QDF_STATUS hdd_roam_register_tdlssta(struct hdd_adapter *adapter,
 {
 	QDF_STATUS qdf_status = QDF_STATUS_E_FAILURE;
 	struct ol_txrx_desc_type txrx_desc = { 0 };
-	struct ol_txrx_ops txrx_ops;
 	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
 	enum phy_ch_width ch_width;
+	struct wlan_objmgr_vdev *vdev;
 
 	/*
 	 * TDLS sta in BSS should be set as STA type TDLS and STA MAC should
@@ -1585,39 +1569,16 @@ QDF_STATUS hdd_roam_register_tdlssta(struct hdd_adapter *adapter,
 	/* set the QoS field appropriately .. */
 	txrx_desc.is_qos_enabled = qos;
 
-	/* Register the vdev transmit and receive functions */
-	qdf_mem_zero(&txrx_ops, sizeof(txrx_ops));
-	if (adapter->hdd_ctx->enable_dp_rx_threads) {
-		txrx_ops.rx.rx = hdd_rx_pkt_thread_enqueue_cbk;
-		txrx_ops.rx.rx_stack = hdd_rx_packet_cbk;
-		txrx_ops.rx.rx_flush = hdd_rx_flush_packet_cbk;
-		txrx_ops.rx.rx_gro_flush = hdd_rx_thread_gro_flush_ind_cbk;
-		adapter->rx_stack = hdd_rx_packet_cbk;
-	} else {
-		txrx_ops.rx.rx = hdd_rx_packet_cbk;
-		txrx_ops.rx.rx_stack = NULL;
-		txrx_ops.rx.rx_flush = NULL;
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+	if (!vdev)
+		return QDF_STATUS_E_INVAL;
+
+	qdf_status = ucfg_dp_tdlsta_register_txrx_ops(vdev);
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
+		hdd_err("DP tx/rx ops register failed Status: %d", qdf_status);
+		return qdf_status;
 	}
-	if (adapter->hdd_ctx->config->fisa_enable &&
-	    adapter->device_mode != QDF_MONITOR_MODE) {
-		hdd_debug("FISA feature enabled");
-		hdd_rx_register_fisa_ops(&txrx_ops);
-	}
-
-	txrx_ops.rx.stats_rx = hdd_tx_rx_collect_connectivity_stats_info;
-
-	txrx_ops.tx.tx_comp = hdd_sta_notify_tx_comp_cb;
-	txrx_ops.tx.tx = NULL;
-
-	cdp_vdev_register(soc, adapter->vdev_id, (ol_osif_vdev_handle)adapter,
-			  &txrx_ops);
-
-	if (!txrx_ops.tx.tx) {
-		hdd_err("vdev register fail");
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	adapter->tx_fn = txrx_ops.tx.tx;
 
 	ch_width = ucfg_mlme_get_peer_ch_width(adapter->hdd_ctx->psoc,
 					       txrx_desc.peer_addr.bytes);

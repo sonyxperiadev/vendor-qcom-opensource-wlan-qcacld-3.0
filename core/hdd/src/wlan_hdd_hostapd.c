@@ -1998,6 +1998,12 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 		ucfg_ipa_set_dfs_cac_tx(hdd_ctx->pdev,
 					ap_ctx->dfs_cac_block_tx);
 
+		vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+		if (vdev) {
+			ucfg_dp_set_dfs_cac_tx(vdev, ap_ctx->dfs_cac_block_tx);
+			hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+		}
+
 		hdd_debug("The value of dfs_cac_block_tx[%d] for ApCtx[%pK]:%d",
 				ap_ctx->dfs_cac_block_tx, ap_ctx,
 				adapter->vdev_id);
@@ -2011,6 +2017,11 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 			 * go through before that.
 			 */
 			hostapd_state->bss_state = BSS_STOP;
+			vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+			if (vdev) {
+				ucfg_dp_set_bss_state_start(vdev, false);
+				hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+			}
 			qdf_event_set(&hostapd_state->qdf_event);
 			goto stopbss;
 		} else {
@@ -2065,6 +2076,11 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 			ap_ctx->operating_chan_freq);
 
 		hostapd_state->bss_state = BSS_START;
+		vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+		if (vdev) {
+			ucfg_dp_set_bss_state_start(vdev, true);
+			hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+		}
 		hdd_start_tsf_sync(adapter);
 
 		hdd_hostapd_set_sap_key(adapter);
@@ -2148,6 +2164,12 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 		if (!con_sap_adapter) {
 			ap_ctx->dfs_cac_block_tx = true;
 			hdd_ctx->dev_dfs_cac_status = DFS_CAC_NEVER_DONE;
+			vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+			if (vdev) {
+				ucfg_dp_set_dfs_cac_tx(vdev,
+						ap_ctx->dfs_cac_block_tx);
+				hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+			}
 		}
 		hdd_nofl_info("Ap stopped vid %d reason=%d", adapter->vdev_id,
 			      ap_ctx->bss_stop_reason);
@@ -2211,6 +2233,13 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 		ap_ctx->dfs_cac_block_tx = false;
 		ucfg_ipa_set_dfs_cac_tx(hdd_ctx->pdev,
 					ap_ctx->dfs_cac_block_tx);
+		vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+		if (vdev) {
+			ucfg_dp_set_dfs_cac_tx(vdev,
+					       ap_ctx->dfs_cac_block_tx);
+			hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+		}
+
 		hdd_ctx->dev_dfs_cac_status = DFS_CAC_ALREADY_DONE;
 		if (QDF_STATUS_SUCCESS !=
 			hdd_send_radar_event(hdd_ctx, eSAP_DFS_CAC_END,
@@ -2421,8 +2450,12 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 
 		/* start timer in sap/p2p_go */
 		if (ap_ctx->ap_active == false) {
-			hdd_bus_bw_compute_prev_txrx_stats(adapter);
-			hdd_bus_bw_compute_timer_start(hdd_ctx);
+			vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+			if (vdev) {
+				ucfg_dp_bus_bw_compute_prev_txrx_stats(vdev);
+				hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+			}
+			ucfg_dp_bus_bw_compute_timer_start(hdd_ctx->psoc);
 		}
 		ap_ctx->ap_active = true;
 
@@ -2569,14 +2602,12 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 			}
 		}
 
-		/* Send DHCP STOP indication to FW */
-		stainfo->dhcp_phase = DHCP_PHASE_ACK;
-		if (stainfo->dhcp_nego_status ==
-					DHCP_NEGO_IN_PROGRESS)
-			hdd_post_dhcp_ind(adapter,
-					  disassoc_comp->staMac.bytes,
-					  WMA_DHCP_STOP_IND);
-		stainfo->dhcp_nego_status = DHCP_NEGO_STOP;
+		vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+		if (vdev) {
+			ucfg_dp_update_dhcp_state_on_disassoc(vdev,
+						      &disassoc_comp->staMac);
+			hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+		}
 
 		hdd_softap_deregister_sta(adapter, &stainfo);
 		hdd_put_sta_info_ref(&adapter->sta_info_list, &stainfo, true,
@@ -2652,8 +2683,12 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 
 		/*stop timer in sap/p2p_go */
 		if (ap_ctx->ap_active == false) {
-			hdd_bus_bw_compute_reset_prev_txrx_stats(adapter);
-			hdd_bus_bw_compute_timer_try_stop(hdd_ctx);
+			vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+			if (vdev) {
+				ucfg_dp_bus_bw_compute_reset_prev_txrx_stats(vdev);
+				hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+			}
+			ucfg_dp_bus_bw_compute_timer_try_stop(hdd_ctx->psoc);
 		}
 		hdd_son_deliver_assoc_disassoc_event(adapter,
 						     disassoc_comp->staMac,
@@ -2839,8 +2874,15 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 		 * channel flag to identify if the channel is DFS
 		 */
 		if (!wlan_reg_is_dfs_for_freq(hdd_ctx->pdev,
-					      ap_ctx->operating_chan_freq))
+					      ap_ctx->operating_chan_freq)) {
 			ap_ctx->dfs_cac_block_tx = false;
+			vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+			if (vdev) {
+				ucfg_dp_set_dfs_cac_tx(vdev,
+						ap_ctx->dfs_cac_block_tx);
+				hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+			}
+		}
 
 		/* Check any other sap need restart */
 		if (ap_ctx->sap_context->csa_reason ==
@@ -2888,6 +2930,12 @@ stopbss:
 		 * re-enabled
 		 */
 		hostapd_state->bss_state = BSS_STOP;
+		vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+		if (vdev) {
+			ucfg_dp_set_bss_state_start(vdev, false);
+			hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+		}
+
 		hdd_stop_tsf_sync(adapter);
 
 #ifdef FEATURE_WLAN_AUTO_SHUTDOWN
@@ -2942,7 +2990,7 @@ stopbss:
 		 */
 		if (eSAP_STOP_BSS_EVENT == event_id) {
 			qdf_event_set(&hostapd_state->qdf_stop_bss_event);
-			hdd_bus_bw_compute_timer_try_stop(hdd_ctx);
+			ucfg_dp_bus_bw_compute_timer_try_stop(hdd_ctx->psoc);
 		}
 
 		hdd_ipa_set_tx_flow_info();
@@ -3968,6 +4016,7 @@ QDF_STATUS hdd_init_ap_mode(struct hdd_adapter *adapter, bool reinit)
 	uint8_t enable_sifs_burst = 0;
 	bool is_6g_sap_fd_enabled = 0;
 	enum reg_6g_ap_type ap_pwr_type;
+	struct wlan_objmgr_vdev *vdev;
 
 	hdd_enter();
 
@@ -4037,7 +4086,9 @@ QDF_STATUS hdd_init_ap_mode(struct hdd_adapter *adapter, bool reinit)
 	qdf_atomic_init(&adapter->cache_sta_count);
 
 	/* Initialize the data path module */
-	hdd_softap_init_tx_rx(adapter);
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+	if (vdev)
+		ucfg_dp_softap_init_txrx(vdev);
 
 	status = hdd_wmm_adapter_init(adapter);
 	if (!QDF_IS_STATUS_SUCCESS(status)) {
@@ -4062,8 +4113,8 @@ QDF_STATUS hdd_init_ap_mode(struct hdd_adapter *adapter, bool reinit)
 
 	ucfg_mlme_is_6g_sap_fd_enabled(hdd_ctx->psoc, &is_6g_sap_fd_enabled);
 	hdd_debug("6g sap fd enabled %d", is_6g_sap_fd_enabled);
-	if (is_6g_sap_fd_enabled)
-		wlan_vdev_mlme_feat_ext_cap_set(adapter->vdev,
+	if (is_6g_sap_fd_enabled && vdev)
+		wlan_vdev_mlme_feat_ext_cap_set(vdev,
 						WLAN_VDEV_FEXT_FILS_DISC_6G_SAP);
 
 	hdd_set_netdev_flags(adapter);
@@ -4081,13 +4132,19 @@ QDF_STATUS hdd_init_ap_mode(struct hdd_adapter *adapter, bool reinit)
 				       &hdd_indicate_peers_deleted);
 	/* rcpi info initialization */
 	qdf_mem_zero(&adapter->rcpi, sizeof(adapter->rcpi));
+
+	if (vdev)
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 	hdd_exit();
 
 	return status;
 
 error_release_softap_tx_rx:
 	hdd_unregister_wext(adapter->dev);
-	hdd_softap_deinit_tx_rx(adapter);
+	if (vdev) {
+		ucfg_dp_softap_deinit_txrx(vdev);
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+	}
 error_deinit_sap_session:
 	hdd_hostapd_deinit_sap_session(adapter);
 error_release_vdev:
@@ -4099,6 +4156,8 @@ void hdd_deinit_ap_mode(struct hdd_context *hdd_ctx,
 			struct hdd_adapter *adapter,
 			bool rtnl_held)
 {
+	struct wlan_objmgr_vdev *vdev;
+
 	hdd_enter_dev(adapter->dev);
 
 	if (test_bit(WMM_INIT_DONE, &adapter->event_flags)) {
@@ -4114,7 +4173,12 @@ void hdd_deinit_ap_mode(struct hdd_context *hdd_ctx,
 		wlan_hdd_enable_roaming(adapter, RSO_SAP_CHANNEL_CHANGE);
 	}
 
-	hdd_softap_deinit_tx_rx(adapter);
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+	if (vdev) {
+		ucfg_dp_softap_deinit_txrx(vdev);
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+	}
+
 	if (hdd_hostapd_deinit_sap_session(adapter))
 		hdd_err("Failed:hdd_hostapd_deinit_sap_session");
 
@@ -6417,6 +6481,8 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 
 	(WLAN_HDD_GET_AP_CTX_PTR(adapter))->dfs_cac_block_tx = true;
 	set_bit(SOFTAP_INIT_DONE, &adapter->event_flags);
+
+	ucfg_dp_set_dfs_cac_tx(vdev, true);
 
 	qdf_event_reset(&hostapd_state->qdf_event);
 

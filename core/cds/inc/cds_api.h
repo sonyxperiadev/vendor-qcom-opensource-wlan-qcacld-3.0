@@ -563,14 +563,6 @@ bool cds_is_group_addr(uint8_t *mac_addr)
 		return false;
 }
 
-/**
- * cds_get_connectivity_stats_pkt_bitmap() - get pkt-type bitmap
- * @context: osif dev context
- *
- * Return: pkt bitmap to track
- */
-uint32_t cds_get_connectivity_stats_pkt_bitmap(void *context);
-
 #ifdef FEATURE_ALIGN_STATS_FROM_DP
 /**
  * cds_dp_get_vdev_stats() - get vdev stats from DP
