@@ -183,8 +183,10 @@ enum policy_mgr_pcl_group_id {
  * @POLICY_MGR_PCL_ORDER_5G_THEN_2G: 5 Ghz channel followed by 2.4 Ghz channel
  * @POLICY_MGR_PCL_ORDER_2G: 2G channels
  * @POLICY_MGR_PCL_ORDER_5G: 5G channels
- * @POLICY_MGR_PCL_ORDER_5G_LOW : 5G low band i.e 5G freq < sbs cutoff freq
- * @POLICY_MGR_PCL_ORDER_5G_HIGH : 5G High band i.e 5G freq > sbs cutoff freq
+ * @POLICY_MGR_PCL_ORDER_SCC_5G_LOW_5G_LOW: 5G Low SCC frequency followed by
+ * 5G low band i.e 5G freq < sbs cutoff freq
+ * @POLICY_MGR_PCL_ORDER_SCC_5G_HIGH_5G_HIGH: 5G High SCC frequency followed by
+ * 5G High band i.e 5G freq > sbs cutoff freq
  *
  * Order in which the PCL is requested
  */
@@ -194,8 +196,8 @@ enum policy_mgr_pcl_channel_order {
 	POLICY_MGR_PCL_ORDER_5G_THEN_2G,
 	POLICY_MGR_PCL_ORDER_2G,
 	POLICY_MGR_PCL_ORDER_5G,
-	POLICY_MGR_PCL_ORDER_5G_LOW,
-	POLICY_MGR_PCL_ORDER_5G_HIGH,
+	POLICY_MGR_PCL_ORDER_SCC_5G_LOW_5G_LOW,
+	POLICY_MGR_PCL_ORDER_SCC_5G_HIGH_5G_HIGH,
 };
 
 /**
@@ -341,8 +343,11 @@ enum policy_mgr_mac_use {
  *      SBS channels & rest of the 5G channels
  * @PM_24G_SBS_CH_MCC_CH: 2.4 Ghz channels, SBS channels & MCC channels
  * @PM_SBS_CH_2G: SBS channels & 2.4 Ghz channels
- * @PM_CH_5G_LOW: 5G frequencies < sbs cut off freq
- * @PM_CH_5G_HIGH: 5G frequencies > sbs cut off freq
+ * @PM_SCC_ON_5G_LOW_5G_LOW: 5G low SCC channel followed by
+ * 5G frequencies < sbs cut off freq
+ * @PM_SCC_ON_5G_HIGH_5G_HIGH: 5G high SCC channel followed by
+ * frequencies > sbs cut off freq
+ *
  * @PM_MAX_PCL_TYPE: Max place holder
  *
  * These are generic IDs that identify the various roles
@@ -383,8 +388,8 @@ enum policy_mgr_pcl_type {
 	PM_SBS_CH_SCC_CH_5G_24G,
 	PM_SCC_CH_MCC_CH_SBS_CH_24G,
 	PM_SBS_CH_2G,
-	PM_CH_5G_LOW,
-	PM_CH_5G_HIGH,
+	PM_SCC_ON_5G_LOW_5G_LOW,
+	PM_SCC_ON_5G_HIGH_5G_HIGH,
 
 	PM_MAX_PCL_TYPE
 };

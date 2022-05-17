@@ -2319,7 +2319,6 @@ get_sub_channels(struct wlan_objmgr_psoc *psoc,
  * @pcl_weights: pcl weight
  * @pcl_sz: pcl size
  * @index: pcl index
- * @weight: provided weight for pcl list
  * @skip_dfs_channel: to skip dfs channels or not
  * @skip_6gh_channel: to skip 6g channels or not
  * @chlist_5: 5g channel list
@@ -2335,7 +2334,7 @@ get_sub_channels(struct wlan_objmgr_psoc *psoc,
 static void
 add_sbs_chlist_to_pcl(struct wlan_objmgr_psoc *psoc,
 		      uint32_t *pcl_freqs, uint8_t *pcl_weights,
-		      uint32_t pcl_sz, uint32_t *index, uint32_t weight,
+		      uint32_t pcl_sz, uint32_t *index,
 		      bool skip_dfs_channel, bool skip_6gh_channel,
 		      const uint32_t *chlist_5, uint8_t chlist_len_5,
 		      const uint32_t *chlist_6, uint8_t chlist_len_6,
@@ -2343,28 +2342,58 @@ add_sbs_chlist_to_pcl(struct wlan_objmgr_psoc *psoc,
 {
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
 	qdf_freq_t sbs_cut_off_freq;
-	uint32_t i;
+	qdf_freq_t scc_freq = 0;
+	uint32_t i, conn_index = 0;
+	struct policy_mgr_conc_connection_info *cl;
 
 	if (!policy_mgr_is_hw_sbs_capable(psoc))
 		return;
+
+	sbs_cut_off_freq = policy_mgr_get_sbs_cut_off_freq(psoc);
+	if (!sbs_cut_off_freq) {
+		policy_mgr_err("Invalid cut off freq");
+		return;
+	}
 
 	pm_ctx = policy_mgr_get_context(psoc);
 	if (!pm_ctx) {
 		policy_mgr_err("Invalid Context");
 		return;
 	}
-	sbs_cut_off_freq = policy_mgr_get_sbs_cut_off_freq(psoc);
-	if (order == POLICY_MGR_PCL_ORDER_5G_LOW) {
+
+	if (order == POLICY_MGR_PCL_ORDER_SCC_5G_LOW_5G_LOW) {
+		/* Add 5G low SCC channel*/
+		qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
+		cl = pm_conc_connection_list;
+		while (PM_CONC_CONNECTION_LIST_VALID_INDEX(conn_index)) {
+			if (!WLAN_REG_IS_24GHZ_CH_FREQ(cl[conn_index].freq) &&
+			    cl[conn_index].freq < sbs_cut_off_freq) {
+				pcl_freqs[*index] = cl[conn_index].freq;
+				scc_freq = cl[conn_index].freq;
+				pcl_weights[*index] =
+						WEIGHT_OF_GROUP1_PCL_CHANNELS;
+				(*index)++;
+				break;
+			}
+
+			conn_index++;
+		}
+		qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+		/* Add rest 5G low channels*/
 		for (i = 0; i < chlist_len_5 && *index < pcl_sz; i++) {
 			if (chlist_5[i] > sbs_cut_off_freq)
 				return;
+
+			/* SCC channel is already added in pcl freq*/
+			if (scc_freq == chlist_5[i])
+				continue;
 
 			if (skip_dfs_channel &&
 			    wlan_reg_is_dfs_for_freq(pm_ctx->pdev, chlist_5[i]))
 				continue;
 
 			pcl_freqs[*index] = chlist_5[i];
-			pcl_weights[*index] = weight;
+			pcl_weights[*index] = WEIGHT_OF_GROUP2_PCL_CHANNELS;
 			(*index)++;
 		}
 		for (i = 0; i < chlist_len_6 && *index < pcl_sz &&
@@ -2372,17 +2401,42 @@ add_sbs_chlist_to_pcl(struct wlan_objmgr_psoc *psoc,
 			if (chlist_6[i] > sbs_cut_off_freq)
 				return;
 
+			/* SCC channel is already added in pcl freq*/
+			if (scc_freq == chlist_6[i])
+				continue;
+
 			if (skip_dfs_channel &&
 			    wlan_reg_is_dfs_for_freq(pm_ctx->pdev, chlist_6[i]))
 				continue;
 
 			pcl_freqs[*index] = chlist_6[i];
-			pcl_weights[*index] = weight;
+			pcl_weights[*index] = WEIGHT_OF_GROUP2_PCL_CHANNELS;
 			(*index)++;
 		}
-	} else if (order == POLICY_MGR_PCL_ORDER_5G_HIGH) {
+	} else if (order == POLICY_MGR_PCL_ORDER_SCC_5G_HIGH_5G_HIGH) {
+		/* Add 5G high SCC channel*/
+		qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
+		cl = pm_conc_connection_list;
+		while (PM_CONC_CONNECTION_LIST_VALID_INDEX(conn_index)) {
+			if (!WLAN_REG_IS_24GHZ_CH_FREQ(cl[conn_index].freq) &&
+			    cl[conn_index].freq > sbs_cut_off_freq) {
+				pcl_freqs[*index] = cl[conn_index].freq;
+				scc_freq = cl[conn_index].freq;
+				pcl_weights[*index] =
+					WEIGHT_OF_GROUP1_PCL_CHANNELS;
+				(*index)++;
+				break;
+			}
+
+			conn_index++;
+		}
+		qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+		/* Add rest 5G high channels*/
 		for (i = 0; i < chlist_len_5 && *index < pcl_sz; i++) {
 			if (chlist_5[i] < sbs_cut_off_freq)
+				continue;
+			/* SCC channel is already added in pcl freq*/
+			if (scc_freq == chlist_5[i])
 				continue;
 
 			if (skip_dfs_channel &&
@@ -2390,7 +2444,7 @@ add_sbs_chlist_to_pcl(struct wlan_objmgr_psoc *psoc,
 				continue;
 
 			pcl_freqs[*index] = chlist_5[i];
-			pcl_weights[*index] = weight;
+			pcl_weights[*index] = WEIGHT_OF_GROUP2_PCL_CHANNELS;
 			(*index)++;
 		}
 		for (i = 0; i < chlist_len_6 && *index < pcl_sz &&
@@ -2398,12 +2452,16 @@ add_sbs_chlist_to_pcl(struct wlan_objmgr_psoc *psoc,
 			if (chlist_6[i] < sbs_cut_off_freq)
 				return;
 
+			/* SCC channel is already added in pcl freq*/
+			if (scc_freq == chlist_6[i])
+				continue;
+
 			if (skip_dfs_channel &&
 			    wlan_reg_is_dfs_for_freq(pm_ctx->pdev, chlist_6[i]))
 				continue;
 
 			pcl_freqs[*index] = chlist_6[i];
-			pcl_weights[*index] = weight;
+			pcl_weights[*index] = WEIGHT_OF_GROUP2_PCL_CHANNELS;
 			(*index)++;
 		}
 
@@ -2413,6 +2471,7 @@ add_sbs_chlist_to_pcl(struct wlan_objmgr_psoc *psoc,
 	}
 
 	policy_mgr_debug("new pcl index %d", *index);
+
 }
 
 static void
@@ -3470,23 +3529,23 @@ QDF_STATUS policy_mgr_get_channel_list(struct wlan_objmgr_psoc *psoc,
 				  false, false);
 		status = QDF_STATUS_SUCCESS;
 		break;
-	case PM_CH_5G_LOW:
+	case PM_SCC_ON_5G_LOW_5G_LOW:
 		add_sbs_chlist_to_pcl(psoc,  pcl_channels,
 				      pcl_weights, pcl_sz,
-				      len, WEIGHT_OF_GROUP1_PCL_CHANNELS,
-				      skip_dfs_channel, skip_6ghz_channel,
+				      len, skip_dfs_channel,
+				      skip_6ghz_channel,
 				      channel_list_5, chan_index_5,
 				      channel_list_6, chan_index_6,
-				      POLICY_MGR_PCL_ORDER_5G_LOW);
+				      POLICY_MGR_PCL_ORDER_SCC_5G_LOW_5G_LOW);
 		break;
-	case PM_CH_5G_HIGH:
+	case PM_SCC_ON_5G_HIGH_5G_HIGH:
 		add_sbs_chlist_to_pcl(psoc,  pcl_channels,
 				      pcl_weights, pcl_sz,
-				      len, WEIGHT_OF_GROUP1_PCL_CHANNELS,
-				      skip_dfs_channel, skip_6ghz_channel,
+				      len, skip_dfs_channel,
+				      skip_6ghz_channel,
 				      channel_list_5, chan_index_5,
 				      channel_list_6, chan_index_6,
-				      POLICY_MGR_PCL_ORDER_5G_HIGH);
+				      POLICY_MGR_PCL_ORDER_SCC_5G_HIGH_5G_HIGH);
 		break;
 	default:
 		policy_mgr_err("unknown pcl value %d", pcl);

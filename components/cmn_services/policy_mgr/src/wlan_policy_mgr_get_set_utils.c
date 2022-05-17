@@ -1484,9 +1484,9 @@ bool policy_mgr_2_freq_always_on_same_mac(struct wlan_objmgr_psoc *psoc,
 			policy_mgr_2_freq_same_mac_in_sbs(pm_ctx, freq_1,
 							  freq_2);
 
-	policy_mgr_debug("freq1 %d freq2 %d: Same mac:: DBS:%d SBS:%d",
-			 freq_1, freq_2, is_dbs_mode_same_mac,
-			 is_sbs_mode_same_mac);
+	policy_mgr_rl_debug("freq1 %d freq2 %d: Same mac:: DBS:%d SBS:%d",
+			    freq_1, freq_2, is_dbs_mode_same_mac,
+			    is_sbs_mode_same_mac);
 	/*
 	 * if in SBS and DBS mode, both is leading to freqs on same mac,
 	 * return true else return false.
@@ -1629,9 +1629,9 @@ policy_mgr_3_freq_always_on_same_mac(struct wlan_objmgr_psoc *psoc,
 			policy_mgr_3_freq_same_mac_in_sbs(pm_ctx, freq_1,
 							  freq_2, freq_3);
 
-	policy_mgr_debug("freq1 %d freq2 %d freq3 %d: Same mac:: DBS:%d SBS:%d",
-			 freq_1, freq_2, freq_3, is_dbs_mode_same_mac,
-			 is_sbs_mode_same_mac);
+	policy_mgr_rl_debug("freq1 %d freq2 %d freq3 %d: Same mac:: DBS:%d SBS:%d",
+			    freq_1, freq_2, freq_3, is_dbs_mode_same_mac,
+			    is_sbs_mode_same_mac);
 	/*
 	 * if in SBS and DBS mode, both is leading to freqs on same mac,
 	 * return true else return false.
@@ -5086,6 +5086,12 @@ policy_mgr_handle_sap_cli_go_ml_sta_up_csa(struct wlan_objmgr_psoc *psoc,
 	if (!num_affected_link) {
 		policy_mgr_debug("vdev %d: no affected link found", vdev_id);
 		goto enable_link;
+	}
+
+	if (num_disabled_ml_sta) {
+		policy_mgr_debug("As a link is already disabled and affected link present (%d), No action required",
+				 num_affected_link);
+		return;
 	}
 
 	wlan_mlo_sta_mlo_concurency_set_link(vdev,
