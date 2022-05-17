@@ -100,4 +100,56 @@ dp_psoc_get_priv(struct wlan_objmgr_psoc *psoc)
 
 	return dp_ctx;
 }
+
+/**
+ * dp_objmgr_get_vdev_by_user() - Get reference of vdev from dp_intf
+ *  with user id
+ * @dp_intf: dp dp_intf
+ * @dbgid: reference count dbg id
+ *
+ * Return: pointer to vdev object for success, NULL for failure
+ */
+#ifdef WLAN_OBJMGR_REF_ID_TRACE
+#define dp_objmgr_get_vdev_by_user(dp_intf, dbgid) \
+	__dp_objmgr_get_vdev_by_user(dp_intf, dbgid, __func__, __LINE__)
+struct wlan_objmgr_vdev *
+__dp_objmgr_get_vdev_by_user(struct wlan_dp_intf *dp_intf,
+			     wlan_objmgr_ref_dbgid id,
+			     const char *func,
+			     int line);
+#else
+#define dp_objmgr_get_vdev_by_user(dp_intf, dbgid) \
+	__dp_objmgr_get_vdev_by_user(dp_intf, dbgid, __func__)
+struct wlan_objmgr_vdev *
+__dp_objmgr_get_vdev_by_user(struct wlan_dp_intf *dp_intf,
+			     wlan_objmgr_ref_dbgid id,
+			     const char *func);
+#endif
+
+/**
+ * dp_objmgr_put_vdev_by_user() - Release reference of vdev object with
+ *  user id
+ * @vdev: pointer to vdev object
+ * @dbgid: reference count dbg id
+ *
+ * This API releases vdev object reference which was acquired using
+ * dp_objmgr_get_vdev_by_user().
+ *
+ * Return: void
+ */
+#ifdef WLAN_OBJMGR_REF_ID_TRACE
+#define dp_objmgr_put_vdev_by_user(vdev, dbgid) \
+	__dp_objmgr_put_vdev_by_user(vdev, dbgid, __func__, __LINE__)
+void
+__dp_objmgr_put_vdev_by_user(struct wlan_objmgr_vdev *vdev,
+			     wlan_objmgr_ref_dbgid id, const char *func,
+			     int line);
+#else
+#define dp_objmgr_put_vdev_by_user(vdev, dbgid) \
+	__dp_objmgr_put_vdev_by_user(vdev, dbgid, __func__)
+void
+__dp_objmgr_put_vdev_by_user(struct wlan_objmgr_vdev *vdev,
+			     wlan_objmgr_ref_dbgid id, const char *func);
+#endif
+
 #endif /* __WLAN_DP_OBJMGR_H */

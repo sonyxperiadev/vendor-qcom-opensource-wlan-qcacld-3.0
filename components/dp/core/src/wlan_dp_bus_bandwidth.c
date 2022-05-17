@@ -1690,17 +1690,14 @@ static void __dp_bus_bw_work_handler(struct wlan_dp_psoc_context *dp_ctx)
 	dp_ctx->bw_vote_time = curr_time_us;
 
 	dp_for_each_intf_held_safe(dp_ctx, dp_intf, dp_intf_next) {
-		vdev = dp_intf->vdev;
+		vdev = dp_objmgr_get_vdev_by_user(dp_intf, WLAN_DP_ID);
 		if (!vdev)
-			continue;
-
-		if (dp_comp_vdev_get_ref(vdev))
 			continue;
 
 		if ((dp_intf->device_mode == QDF_STA_MODE ||
 		     dp_intf->device_mode == QDF_P2P_CLIENT_MODE) &&
 		    !ucfg_cm_is_vdev_active(vdev)) {
-			dp_comp_vdev_put_ref(vdev);
+			dp_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 			continue;
 		}
 
@@ -1708,7 +1705,7 @@ static void __dp_bus_bw_work_handler(struct wlan_dp_psoc_context *dp_ctx)
 		     dp_intf->device_mode == QDF_P2P_GO_MODE) &&
 		     !dp_ctx->dp_ops.dp_is_ap_active(ctx,
 						     dp_intf->intf_id)) {
-			dp_comp_vdev_put_ref(vdev);
+			dp_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 			continue;
 		}
 
@@ -1774,7 +1771,7 @@ static void __dp_bus_bw_work_handler(struct wlan_dp_psoc_context *dp_ctx)
 			QDF_NET_DEV_STATS_TX_BYTES(&dp_intf->stats);
 		qdf_spin_unlock_bh(&dp_ctx->bus_bw_lock);
 		connected = true;
-		dp_comp_vdev_put_ref(vdev);
+		dp_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 	}
 
 	if (!connected) {

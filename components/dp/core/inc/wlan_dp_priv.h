@@ -286,6 +286,7 @@ struct wlan_dp_intf {
 	qdf_list_node_t node;
 
 	struct wlan_objmgr_vdev *vdev;
+	qdf_spinlock_t vdev_lock;
 	qdf_netdev_t dev;
 	/**Device TX/RX statistics*/
 	struct dp_stats dp_stats;

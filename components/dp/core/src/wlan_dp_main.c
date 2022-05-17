@@ -638,15 +638,10 @@ static void
 __dp_process_mic_error(struct wlan_dp_intf *dp_intf)
 {
 	struct wlan_dp_psoc_callbacks *ops = &dp_intf->dp_ctx->dp_ops;
-	struct wlan_objmgr_vdev *vdev = dp_intf->vdev;
+	struct wlan_objmgr_vdev *vdev;
 
+	vdev = dp_objmgr_get_vdev_by_user(dp_intf, WLAN_DP_ID);
 	if (!vdev) {
-		dp_err("vdev is NULL");
-		return;
-	}
-
-	if (dp_comp_vdev_get_ref(vdev)) {
-		dp_err("vdev ref get error");
 		return;
 	}
 
@@ -662,7 +657,7 @@ __dp_process_mic_error(struct wlan_dp_intf *dp_intf)
 	else
 		dp_err("Invalid interface type:%d", dp_intf->device_mode);
 
-	dp_comp_vdev_put_ref(vdev);
+	dp_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 }
 
 /**
@@ -901,8 +896,10 @@ dp_vdev_obj_create_notification(struct wlan_objmgr_vdev *vdev, void *arg)
 	}
 
 	dp_intf->device_mode = wlan_vdev_mlme_get_opmode(vdev);
+	qdf_spin_lock_bh(&dp_intf->vdev_lock);
 	dp_intf->intf_id = vdev->vdev_objmgr.vdev_id;
 	dp_intf->vdev = vdev;
+	qdf_spin_unlock_bh(&dp_intf->vdev_lock);
 	qdf_atomic_init(&dp_intf->num_active_task);
 
 	if (dp_intf->device_mode == QDF_SAP_MODE ||
@@ -965,7 +962,9 @@ dp_vdev_obj_destroy_notification(struct wlan_objmgr_vdev *vdev, void *arg)
 	}
 	qdf_mem_zero(&dp_intf->conn_info, sizeof(struct wlan_dp_conn_info));
 	dp_intf->intf_id = WLAN_UMAC_VDEV_ID_MAX;
+	qdf_spin_lock_bh(&dp_intf->vdev_lock);
 	dp_intf->vdev = NULL;
+	qdf_spin_unlock_bh(&dp_intf->vdev_lock);
 	status = wlan_objmgr_vdev_component_obj_detach(vdev,
 						       WLAN_COMP_DP,
 						       (void *)dp_intf);
@@ -1423,3 +1422,88 @@ QDF_STATUS dp_get_arp_stats_event_handler(struct wlan_objmgr_psoc *psoc,
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_DP_ID);
 	return QDF_STATUS_SUCCESS;
 }
+
+#ifdef WLAN_OBJMGR_REF_ID_TRACE
+struct wlan_objmgr_vdev *
+__dp_objmgr_get_vdev_by_user(struct wlan_dp_intf *dp_intf,
+			     wlan_objmgr_ref_dbgid id,
+			     const char *func, int line)
+{
+	struct wlan_objmgr_vdev *vdev;
+	QDF_STATUS status;
+
+	if (!dp_intf) {
+		dp_err("dp_intf is NULL (via %s, id %d)", func, id);
+		return NULL;
+	}
+
+	qdf_spin_lock_bh(&dp_intf->vdev_lock);
+	vdev = dp_intf->vdev;
+	if (vdev) {
+		status = wlan_objmgr_vdev_try_get_ref_debug(vdev, id, func,
+							    line);
+		if (QDF_IS_STATUS_ERROR(status))
+			vdev = NULL;
+	}
+	qdf_spin_unlock_bh(&dp_intf->vdev_lock);
+
+	if (!vdev)
+		dp_debug("VDEV is NULL (via %s, id %d)", func, id);
+
+	return vdev;
+}
+
+void
+__dp_objmgr_put_vdev_by_user(struct wlan_objmgr_vdev *vdev,
+			     wlan_objmgr_ref_dbgid id, const char *func,
+			     int line)
+{
+	if (!vdev) {
+		dp_err("VDEV is NULL (via %s, id %d)", func, id);
+		return;
+	}
+
+	wlan_objmgr_vdev_release_ref_debug(vdev, id, func, line);
+}
+#else
+struct wlan_objmgr_vdev *
+__dp_objmgr_get_vdev_by_user(struct wlan_dp_intf *dp_intf,
+			     wlan_objmgr_ref_dbgid id,
+			     const char *func)
+{
+	struct wlan_objmgr_vdev *vdev;
+	QDF_STATUS status;
+
+	if (!dp_intf) {
+		dp_err("dp_intf is NULL (via %s, id %d)", func, id);
+		return NULL;
+	}
+
+	qdf_spin_lock_bh(&dp_intf->vdev_lock);
+	vdev = dp_intf->vdev;
+	if (vdev) {
+		status = wlan_objmgr_vdev_try_get_ref(vdev, id);
+		if (QDF_IS_STATUS_ERROR(status))
+			vdev = NULL;
+	}
+	qdf_spin_unlock_bh(&dp_intf->vdev_lock);
+
+	if (!vdev)
+		dp_debug("VDEV is NULL (via %s, id %d)", func, id);
+
+	return vdev;
+}
+
+void
+__dp_objmgr_put_vdev_by_user(struct wlan_objmgr_vdev *vdev,
+			     wlan_objmgr_ref_dbgid id, const char *func)
+{
+	if (!vdev) {
+		dp_err("VDEV is NULL (via %s, id %d)", func, id);
+		return;
+	}
+
+	wlan_objmgr_vdev_release_ref(vdev, id);
+}
+#endif /* WLAN_OBJMGR_REF_ID_TRACE */
+
