@@ -4249,6 +4249,22 @@ QDF_STATUS policy_mgr_check_mon_concurrency(struct wlan_objmgr_psoc *psoc);
 void policy_mgr_get_hw_dbs_max_bw(struct wlan_objmgr_psoc *psoc,
 				  struct dbs_bw *bw_dbs);
 
+/**
+ * policy_mgr_get_radio_combinations() - Query the supported radio combinations
+ * @psoc: soc object
+ * @comb: combination buffer
+ * @comb_max: max combination number can be saved to comb buffer
+ * @comb_num: returned combination number
+ *
+ * This function returns the radio combination information supported by target.
+ *
+ * Return: QDF_STATUS_SUCCESS if query successfully
+ */
+QDF_STATUS policy_mgr_get_radio_combinations(struct wlan_objmgr_psoc *psoc,
+					     struct radio_combination *comb,
+					     uint32_t comb_max,
+					     uint32_t *comb_num);
+
 #ifdef WLAN_FEATURE_11BE_MLO
 /**
  * policy_mgr_is_mlo_sap_concurrency_allowed() - Check for mlo sap allowed

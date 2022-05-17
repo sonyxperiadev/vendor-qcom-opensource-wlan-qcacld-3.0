@@ -1561,6 +1561,23 @@ struct dbs_nss {
 };
 
 /**
+ * Max radio combination numbers
+ */
+#define MAX_RADIO_COMBINATION 16
+
+/**
+ * struct radio_combination - Radio combination
+ * @hw_mode: hw mode type
+ * @band_mask: band support type for each mac
+ * @antenna: antenna support for each mac
+ */
+struct radio_combination {
+	enum policy_mgr_mode hw_mode;
+	uint8_t band_mask[MAX_MAC];
+	uint8_t antenna[MAX_MAC];
+};
+
+/**
  * struct connection_info - connection information
  * @mac_id: The HW mac it is running
  * @vdev_id: vdev id
