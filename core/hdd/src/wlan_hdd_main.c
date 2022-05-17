@@ -444,6 +444,8 @@ struct sock *cesium_nl_srv_sock;
 static void wlan_hdd_auto_shutdown_cb(void);
 #endif
 
+static void hdd_dp_register_callbacks(struct hdd_context *hdd_ctx);
+
 bool hdd_adapter_is_ap(struct hdd_adapter *adapter)
 {
 	if (!adapter) {
@@ -4705,6 +4707,8 @@ int hdd_wlan_start_modules(struct hdd_context *hdd_ctx, bool reinit)
 
 		hdd_update_cds_ac_specs_params(hdd_ctx);
 
+		hdd_dp_register_callbacks(hdd_ctx);
+
 		status = hdd_component_psoc_open(hdd_ctx->psoc);
 		if (QDF_IS_STATUS_ERROR(status)) {
 			hdd_err("Failed to Open legacy components; status: %d",
@@ -5349,11 +5353,49 @@ hdd_set_mld_address(struct hdd_adapter *adapter, struct hdd_context *hdd_ctx,
 		memcpy(&adapter->mld_addr, mac_addr, ETH_ALEN);
 	}
 }
+
+static QDF_STATUS
+hdd_get_nw_adapter_mac_by_vdev_mac(struct qdf_mac_addr *mac_addr,
+				   struct qdf_mac_addr *adapter_mac)
+{
+	struct hdd_context *hdd_ctx;
+	struct hdd_adapter *adapter;
+	struct hdd_adapter *ml_adapter;
+
+	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
+	if (!hdd_ctx) {
+		hdd_err("Invalid HDD context");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	adapter = hdd_get_adapter_by_macaddr(hdd_ctx, mac_addr->bytes);
+	if (!adapter) {
+		hdd_err("Invalid Adapter context");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (adapter->mlo_adapter_info.is_link_adapter) {
+		ml_adapter = adapter->mlo_adapter_info.ml_adapter;
+		qdf_copy_macaddr(adapter_mac, &ml_adapter->mac_addr);
+	} else {
+		qdf_copy_macaddr(adapter_mac, &adapter->mac_addr);
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
 #else
 static void
 hdd_set_mld_address(struct hdd_adapter *adapter, struct hdd_context *hdd_ctx,
 		    struct qdf_mac_addr *mac_addr)
 {
+}
+
+static QDF_STATUS
+hdd_get_nw_adapter_mac_by_vdev_mac(struct qdf_mac_addr *mac_addr,
+				   struct qdf_mac_addr *adapter_mac)
+{
+	qdf_copy_macaddr(adapter_mac, mac_addr);
+	return QDF_STATUS_SUCCESS;
 }
 #endif
 
@@ -11616,6 +11658,473 @@ void hdd_bus_bandwidth_deinit(struct hdd_context *hdd_ctx)
 #endif /*WLAN_FEATURE_DP_BUS_BANDWIDTH*/
 
 /**
+ * wlan_hdd_sta_get_dot11mode() - GET AP client count
+ * @context: HDD context
+ * @vdev_id: vdev ID
+ * @dot11_mode: variable in which mode need to update.
+ *
+ * Return: true on success else false
+ */
+static inline
+bool wlan_hdd_sta_get_dot11mode(hdd_cb_handle context, uint8_t vdev_id,
+				enum qca_wlan_802_11_mode *dot11_mode)
+{
+	struct hdd_context *hdd_ctx;
+	struct hdd_adapter *adapter;
+	struct hdd_station_ctx *sta_ctx;
+	enum csr_cfgdot11mode mode;
+
+	hdd_ctx = hdd_cb_handle_to_context(context);
+	if (!hdd_ctx)
+		return false;
+
+	adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
+	if (!adapter) {
+		hdd_err("adapter is null");
+		return false;
+	}
+	if (!hdd_cm_is_vdev_associated(adapter)) {
+		hdd_err("vdev not associated ");
+		return false;
+	}
+
+	sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
+	mode = sta_ctx->conn_info.dot11mode;
+	*dot11_mode = hdd_convert_cfgdot11mode_to_80211mode(mode);
+	return true;
+}
+
+/**
+ * wlan_hdd_get_ap_client_count() - GET AP client count
+ * @context: HDD context
+ * @vdev_id: vdev ID
+ * @client_count: variable in which number of client need to update.
+ *
+ * Return: true on success else false
+ */
+static inline
+bool wlan_hdd_get_ap_client_count(hdd_cb_handle context, uint8_t vdev_id,
+				  uint16_t *client_count)
+{
+	struct hdd_context *hdd_ctx;
+	struct hdd_adapter *adapter;
+	struct hdd_ap_ctx *ap_ctx;
+	enum qca_wlan_802_11_mode i;
+
+	hdd_ctx = hdd_cb_handle_to_context(context);
+	if (!hdd_ctx) {
+		hdd_err("hdd ctx is null");
+		return false;
+	}
+	adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
+	if (!adapter) {
+		hdd_err("adapter is null");
+		return false;
+	}
+
+	ap_ctx = WLAN_HDD_GET_AP_CTX_PTR(adapter);
+	if (!ap_ctx->ap_active)
+		return false;
+	for (i = QCA_WLAN_802_11_MODE_11B; i < QCA_WLAN_802_11_MODE_INVALID;
+	     i++)
+		client_count[i] = ap_ctx->client_count[i];
+	return true;
+}
+
+/**
+ * wlan_hdd_sta_ndi_connected() - Check if NDI connected
+ * @context: HDD context
+ * @vdev_id: vdev ID
+ *
+ * Return: true if NDI connected else false
+ */
+static inline
+bool wlan_hdd_sta_ndi_connected(hdd_cb_handle context, uint8_t vdev_id)
+{
+	struct hdd_context *hdd_ctx;
+	struct hdd_adapter *adapter;
+
+	hdd_ctx = hdd_cb_handle_to_context(context);
+	if (!hdd_ctx) {
+		hdd_err("hdd_ctx is null");
+		return false;
+	}
+	adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
+	if (!adapter) {
+		hdd_err("adapter is null");
+	return false;
+	}
+	if (WLAN_HDD_GET_STATION_CTX_PTR(adapter)->conn_info.conn_state !=
+					 eConnectionState_NdiConnected)
+		return false;
+	return true;
+}
+
+/**
+ * hdd_pktlog_enable_disable() - Enable/Disable packet logging
+ * @context: HDD context
+ * @enable_disable_flag: Flag to enable/disable
+ * @user_triggered: triggered through iwpriv
+ * @size: buffer size to be used for packetlog
+ *
+ * Return: 0 on success; error number otherwise
+ */
+static inline
+int wlan_hdd_pktlog_enable_disable(hdd_cb_handle context,
+				   bool enable_disable_flag,
+				   uint8_t user_triggered, int size)
+{
+	struct hdd_context *hdd_ctx = hdd_cb_handle_to_context(context);
+
+	if (!hdd_ctx) {
+		hdd_err("hdd_ctx is null");
+		return -EINVAL;
+	}
+	return hdd_pktlog_enable_disable(hdd_ctx, enable_disable_flag,
+					 user_triggered, size);
+}
+
+/**
+ * wlan_hdd_is_roaming_in_progress() - Check if roaming is in progress
+ * @context: HDD context
+ *
+ * Return: true if roaming is in progress else false
+ */
+static inline bool wlan_hdd_is_roaming_in_progress(hdd_cb_handle context)
+{
+	struct hdd_context *hdd_ctx = hdd_cb_handle_to_context(context);
+
+	if (!hdd_ctx) {
+		hdd_err("hdd_ctx is null");
+		return false;
+	}
+	return hdd_is_roaming_in_progress(hdd_ctx);
+}
+
+/**
+ * hdd_is_ap_active() - Check if AP is active
+ * @context: HDD context
+ * @vdev_id: Vdev ID
+ *
+ * Return: true if AP active else false
+ */
+static inline bool hdd_is_ap_active(hdd_cb_handle context, uint8_t vdev_id)
+{
+	struct hdd_context *hdd_ctx;
+	struct hdd_adapter *adapter;
+
+	hdd_ctx = hdd_cb_handle_to_context(context);
+	if (!hdd_ctx) {
+		hdd_err("hdd_ctx is null");
+		return false;
+	}
+	adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
+	if (!adapter) {
+		hdd_err("adapter is null");
+		return false;
+	}
+	return WLAN_HDD_GET_AP_CTX_PTR(adapter)->ap_active;
+}
+
+/**
+ * wlan_hdd_napi_apply_throughput_policy() - Apply NAPI policy
+ * @context: HDD context
+ * @tx_packets: tx_packets
+ * @rx_packets: rx_packets
+ *
+ * Return: 0 on success else error code
+ */
+static inline
+int wlan_hdd_napi_apply_throughput_policy(hdd_cb_handle context,
+					  uint64_t tx_packets,
+					  uint64_t rx_packets)
+{
+	struct hdd_context *hdd_ctx = hdd_cb_handle_to_context(context);
+	int rc = 0;
+
+	if (!hdd_ctx) {
+		hdd_err("hdd_ctx is null");
+		return 0;
+	}
+	if (hdd_ctx->config->napi_cpu_affinity_mask)
+		rc = hdd_napi_apply_throughput_policy(hdd_ctx, tx_packets,
+						      rx_packets);
+	return rc;
+}
+
+/**
+ * hdd_is_link_adapter() - Check if adapter is link adapter
+ * @context: HDD context
+ * @vdev_id: Vdev ID
+ *
+ * Return: true if link adapter else false
+ */
+static inline bool hdd_is_link_adapter(hdd_cb_handle context, uint8_t vdev_id)
+{
+	struct hdd_context *hdd_ctx;
+	struct hdd_adapter *adapter;
+
+	hdd_ctx = hdd_cb_handle_to_context(context);
+	if (!hdd_ctx) {
+		hdd_err("hdd_ctx is null");
+		return false;
+	}
+	adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
+	if (!adapter) {
+		hdd_err("adapter is null");
+		return false;
+	}
+	return hdd_adapter_is_link_adapter(adapter);
+}
+
+/**
+ * hdd_get_pause_map() - Get pause map value
+ * @context: HDD context
+ * @vdev_id: Vdev ID
+ *
+ * Return: pause map value
+ */
+static inline
+uint32_t hdd_get_pause_map(hdd_cb_handle context, uint8_t vdev_id)
+{
+	struct hdd_context *hdd_ctx = hdd_cb_handle_to_context(context);
+	struct hdd_adapter *adapter;
+
+	if (!hdd_ctx) {
+		hdd_err("hdd_ctx is null");
+		return 0;
+	}
+	adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
+	if (!adapter) {
+		hdd_err("adapter is null");
+		return 0;
+	}
+	return adapter->pause_map;
+}
+
+/**
+ * hdd_any_adapter_connected() - Check if any adapter connected.
+ * @context: HDD context
+ *
+ * Return: True if connected else false.
+ */
+static inline bool hdd_any_adapter_connected(hdd_cb_handle context)
+{
+	struct hdd_context *hdd_ctx = hdd_cb_handle_to_context(context);
+
+	if (!hdd_ctx) {
+		hdd_err("hdd_ctx is null");
+		return false;
+	}
+
+	return hdd_is_any_adapter_connected(hdd_ctx);
+}
+
+#ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
+/**
+ * hdd_pld_remove_pm_qos() - Remove PLD PM QoS request
+ * @context: HDD context
+ *
+ * Return: None
+ */
+static inline void hdd_pld_remove_pm_qos(hdd_cb_handle context)
+{
+	struct hdd_context *hdd_ctx = hdd_cb_handle_to_context(context);
+
+	if (!hdd_ctx) {
+		hdd_err("hdd_ctx is null");
+		return;
+	}
+
+	if (!hdd_ctx->hbw_requested) {
+		PLD_REQUEST_PM_QOS(hdd_ctx->parent_dev, 1);
+		hdd_ctx->hbw_requested = true;
+	}
+}
+
+/**
+ * hdd_pld_request_pm_qos() - Request PLD PM QoS request
+ * @context: HDD context
+ *
+ * Return: None
+ */
+static inline void hdd_pld_request_pm_qos(hdd_cb_handle context)
+{
+	struct hdd_context *hdd_ctx = hdd_cb_handle_to_context(context);
+
+	if (!hdd_ctx) {
+		hdd_err("hdd_ctx is null");
+		return;
+	}
+
+	if (hdd_ctx->hbw_requested &&
+	    !hdd_ctx->pm_qos_request) {
+		PLD_REMOVE_PM_QOS(hdd_ctx->parent_dev);
+		hdd_ctx->hbw_requested = false;
+	}
+}
+
+/**
+ * wlan_hdd_pm_qos_update_request() - Update PM QoS request
+ * @context: HDD context
+ * @pm_qos_cpu_mask: CPU mask
+ *
+ * Return: None
+ */
+static inline void
+wlan_hdd_pm_qos_update_request(hdd_cb_handle context,
+			       cpumask_t *pm_qos_cpu_mask)
+{
+	struct hdd_context *hdd_ctx = hdd_cb_handle_to_context(context);
+
+	if (!hdd_ctx) {
+		hdd_err("hdd_ctx is null");
+		return;
+	}
+
+	if (!hdd_ctx->pm_qos_request)
+		hdd_pm_qos_update_request(hdd_ctx, pm_qos_cpu_mask);
+}
+
+/**
+ * wlan_hdd_pm_qos_add_request() - Add PM QoS request
+ * @context: HDD context
+ *
+ * Return: None
+ */
+static inline void wlan_hdd_pm_qos_add_request(hdd_cb_handle context)
+{
+	struct hdd_context *hdd_ctx = hdd_cb_handle_to_context(context);
+
+	if (!hdd_ctx) {
+		hdd_err("hdd_ctx is null");
+		return;
+	}
+
+	hdd_pm_qos_add_request(hdd_ctx);
+}
+
+/**
+ * wlan_hdd_pm_qos_remove_request() - remove PM QoS request
+ * @context: HDD context
+ *
+ * Return: None
+ */
+static inline void wlan_hdd_pm_qos_remove_request(hdd_cb_handle context)
+{
+	struct hdd_context *hdd_ctx = hdd_cb_handle_to_context(context);
+
+	if (!hdd_ctx) {
+		hdd_err("hdd_ctx is null");
+		return;
+	}
+
+	hdd_pm_qos_remove_request(hdd_ctx);
+}
+
+/**
+ * wlan_hdd_send_mscs_action_frame() - Send MSCS action frame
+ * @context: HDD context
+ * @vdev_id: Vdev ID
+ *
+ * Return: None
+ */
+static inline void wlan_hdd_send_mscs_action_frame(hdd_cb_handle context,
+						   uint8_t vdev_id)
+{
+	struct hdd_context *hdd_ctx;
+	struct hdd_adapter *adapter;
+
+	hdd_ctx = hdd_cb_handle_to_context(context);
+	if (!hdd_ctx) {
+		hdd_err("hdd_ctx is null");
+		return;
+	}
+	adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
+	if (!adapter) {
+		hdd_err("adapter is null");
+		return;
+	}
+	hdd_send_mscs_action_frame(hdd_ctx, adapter);
+}
+
+#else
+static inline void hdd_pld_remove_pm_qos(hdd_cb_handle context)
+{
+}
+
+static inline void hdd_pld_request_pm_qos(hdd_cb_handle context)
+{
+}
+
+static inline void
+wlan_hdd_pm_qos_update_request(hdd_cb_handle context,
+			       cpumask_t *pm_qos_cpu_mask)
+{
+}
+
+static inline void wlan_hdd_pm_qos_add_request(hdd_cb_handle context)
+{
+}
+
+static inline void wlan_hdd_pm_qos_remove_request(hdd_cb_handle context)
+{
+}
+
+static inline void wlan_hdd_send_mscs_action_frame(hdd_cb_handle context,
+						   uint8_t vdev_id)
+{
+}
+#endif
+
+/**
+ * hdd_dp_register_callbacks() - Register DP callbacks with HDD
+ * @hdd_ctx: HDD context
+ *
+ * Return: None
+ */
+static void hdd_dp_register_callbacks(struct hdd_context *hdd_ctx)
+{
+	struct wlan_dp_psoc_callbacks cb_obj = {0};
+
+	cb_obj.callback_ctx = (hdd_cb_handle)hdd_ctx;
+	cb_obj.wlan_dp_sta_get_dot11mode = wlan_hdd_sta_get_dot11mode;
+	cb_obj.wlan_dp_get_ap_client_count = wlan_hdd_get_ap_client_count;
+	cb_obj.wlan_dp_sta_ndi_connected = wlan_hdd_sta_ndi_connected;
+	cb_obj.dp_any_adapter_connected = hdd_any_adapter_connected;
+	cb_obj.dp_send_svc_nlink_msg = wlan_hdd_send_svc_nlink_msg;
+	cb_obj.dp_pld_remove_pm_qos = hdd_pld_remove_pm_qos;
+	cb_obj.dp_pld_request_pm_qos = hdd_pld_request_pm_qos;
+	cb_obj.dp_pktlog_enable_disable = wlan_hdd_pktlog_enable_disable;
+	cb_obj.dp_pm_qos_update_cpu_mask = hdd_pm_qos_update_cpu_mask;
+	cb_obj.dp_pm_qos_update_request = wlan_hdd_pm_qos_update_request;
+	cb_obj.dp_pm_qos_add_request = wlan_hdd_pm_qos_add_request;
+	cb_obj.dp_pm_qos_remove_request = wlan_hdd_pm_qos_remove_request;
+	cb_obj.dp_send_mscs_action_frame = wlan_hdd_send_mscs_action_frame;
+	cb_obj.dp_is_roaming_in_progress = wlan_hdd_is_roaming_in_progress;
+	cb_obj.wlan_dp_display_tx_multiq_stats =
+		wlan_hdd_display_tx_multiq_stats;
+	cb_obj.wlan_dp_display_netif_queue_history =
+		wlan_hdd_display_netif_queue_history;
+	cb_obj.dp_is_ap_active = hdd_is_ap_active;
+	cb_obj.dp_napi_apply_throughput_policy =
+		wlan_hdd_napi_apply_throughput_policy;
+	cb_obj.dp_is_link_adapter = hdd_is_link_adapter;
+	cb_obj.dp_nud_failure_work = hdd_nud_failure_work;
+	cb_obj.dp_get_pause_map = hdd_get_pause_map;
+
+	cb_obj.dp_get_nw_intf_mac_by_vdev_mac =
+		hdd_get_nw_adapter_mac_by_vdev_mac;
+	cb_obj.dp_get_tx_resource = hdd_get_tx_resource;
+	cb_obj.dp_get_tx_flow_low_watermark = hdd_get_tx_flow_low_watermark;
+	cb_obj.dp_get_tsf_time = hdd_get_tsf_time_cb;
+	cb_obj.dp_tsf_timestamp_rx = hdd_tsf_timestamp_rx;
+	cb_obj.dp_gro_rx_legacy_get_napi = hdd_legacy_gro_get_napi;
+
+	os_if_dp_register_hdd_callbacks(hdd_ctx->psoc, &cb_obj);
+}
+
+/**
  * __hdd_adapter_param_update_work() - Gist of the work to process
  *				       netdev feature update.
  * @adapter: pointer to adapter structure
@@ -12102,17 +12611,23 @@ wlan_hdd_display_adapter_netif_queue_history(struct hdd_adapter *adapter)
 
 /**
  * wlan_hdd_display_netif_queue_history() - display netif queue history
- * @hdd_ctx: hdd context
+ * @context: hdd context
  *
  * Return: none
  */
 void
-wlan_hdd_display_netif_queue_history(struct hdd_context *hdd_ctx,
+wlan_hdd_display_netif_queue_history(hdd_cb_handle context,
 				     enum qdf_stats_verbosity_level verb_lvl)
 {
 	struct hdd_adapter *adapter = NULL, *next_adapter = NULL;
+	struct hdd_context *hdd_ctx = hdd_cb_handle_to_context(context);
 	wlan_net_dev_ref_dbgid dbgid =
 				NET_DEV_HOLD_DISPLAY_NETIF_QUEUE_HISTORY;
+
+	if (!hdd_ctx) {
+		hdd_err("hdd_ctx is null");
+		return;
+	}
 
 	if (verb_lvl == QDF_STATS_VERBOSITY_LEVEL_LOW) {
 		hdd_display_netif_queue_history_compact(hdd_ctx);
