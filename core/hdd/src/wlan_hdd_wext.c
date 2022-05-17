@@ -87,7 +87,6 @@
 #include "hif.h"
 #endif
 #include "pld_common.h"
-#include "wlan_hdd_lro.h"
 #include "cds_utils.h"
 #include "wlan_osif_request_manager.h"
 #include "os_if_wifi_pos.h"

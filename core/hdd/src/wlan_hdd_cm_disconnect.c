@@ -28,7 +28,6 @@
 #include <osif_cm_req.h>
 #include "wlan_hdd_cm_api.h"
 #include "wlan_ipa_ucfg_api.h"
-#include "wlan_hdd_periodic_sta_stats.h"
 #include "wlan_hdd_stats.h"
 #include "wlan_hdd_scan.h"
 #include "sme_power_save_api.h"

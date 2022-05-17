@@ -119,7 +119,6 @@ struct hdd_config {
 	bool apf_enabled;
 	uint16_t sap_tx_leakage_threshold;
 	bool sap_internal_restart;
-	bool tx_orphan_enable;
 	bool is_11k_offload_supported;
 	bool action_oui_enable;
 	uint8_t action_oui_str[ACTION_OUI_MAXIMUM_ID][ACTION_OUI_MAX_STR_LEN];
@@ -149,51 +148,11 @@ struct hdd_config {
 #ifndef REMOVE_PKT_LOG
 	bool enable_packet_log;
 #endif
-	uint32_t rx_mode;
-	uint32_t tx_comp_loop_pkt_limit;
-	uint32_t rx_reap_loop_pkt_limit;
-	uint32_t rx_hp_oos_update_limit;
-	uint64_t rx_softirq_max_yield_duration_ns;
-#ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
-	/* bandwidth threshold for super high bandwidth */
-	uint32_t bus_bw_super_high_threshold;
-	/* bandwidth threshold for ultra high bandwidth */
-	uint32_t bus_bw_ultra_high_threshold;
-	/* bandwidth threshold for very high bandwidth */
-	uint32_t bus_bw_very_high_threshold;
-	/* bandwidth threshold for DBS mode bandwidth */
-	uint32_t bus_bw_dbs_threshold;
-	/* bandwidth threshold for high bandwidth */
-	uint32_t bus_bw_high_threshold;
-	/* bandwidth threshold for medium bandwidth */
-	uint32_t bus_bw_medium_threshold;
-	/* bandwidth threshold for low bandwidth */
-	uint32_t bus_bw_low_threshold;
-	uint32_t bus_bw_compute_interval;
-	uint32_t enable_tcp_delack;
-	bool     enable_tcp_limit_output;
-	uint32_t enable_tcp_adv_win_scale;
-	uint32_t tcp_delack_thres_high;
-	uint32_t tcp_delack_thres_low;
-	uint32_t tcp_tx_high_tput_thres;
-	uint32_t tcp_delack_timer_count;
-	bool     enable_tcp_param_update;
-	uint32_t bus_low_cnt_threshold;
-	bool enable_latency_crit_clients;
-#endif /*WLAN_FEATURE_DP_BUS_BANDWIDTH*/
 
 #ifdef WLAN_FEATURE_MSCS
 	uint32_t mscs_pkt_threshold;
 	uint32_t mscs_voice_interval;
 #endif /* WLAN_FEATURE_MSCS */
-
-#ifdef QCA_SUPPORT_TXRX_DRIVER_TCP_DEL_ACK
-	bool del_ack_enable;
-	uint32_t del_ack_threshold_high;
-	uint32_t del_ack_threshold_low;
-	uint16_t del_ack_timer_value;
-	uint16_t del_ack_pkt_count;
-#endif
 
 #ifdef QCA_LL_LEGACY_TX_FLOW_CONTROL
 	uint32_t tx_flow_low_watermark;
@@ -207,18 +166,6 @@ struct hdd_config {
 	uint32_t tx_hbw_flow_max_queue_depth;
 #endif /* QCA_LL_LEGACY_TX_FLOW_CONTROL */
 	uint32_t napi_cpu_affinity_mask;
-	/* CPU affinity mask for rx_thread */
-	uint32_t rx_thread_ul_affinity_mask;
-	uint32_t rx_thread_affinity_mask;
-	uint8_t cpu_map_list[CFG_DP_RPS_RX_QUEUE_CPU_MAP_LIST_LEN];
-	bool multicast_replay_filter;
-	uint32_t rx_wakelock_timeout;
-	uint8_t num_dp_rx_threads;
-#ifdef CONFIG_DP_TRACE
-	bool enable_dp_trace;
-	uint8_t dp_trace_config[DP_TRACE_CONFIG_STRING_LENGTH];
-#endif
-	uint8_t enable_nud_tracking;
 	uint32_t operating_chan_freq;
 	uint8_t num_vdevs;
 	uint8_t enable_concurrent_sta[CFG_CONCURRENT_IFACE_MAX_LEN];
@@ -240,14 +187,6 @@ struct hdd_config {
 	uint8_t tsf_ptp_options;
 #endif /* WLAN_FEATURE_TSF_PLUS */
 
-#ifdef WLAN_SUPPORT_TXRX_HL_BUNDLE
-	uint32_t pkt_bundle_threshold_high;
-	uint32_t pkt_bundle_threshold_low;
-	uint16_t pkt_bundle_timer_value;
-	uint16_t pkt_bundle_size;
-#endif
-	uint32_t dp_proto_event_bitmap;
-
 #ifdef SAR_SAFETY_FEATURE
 	uint32_t sar_safety_timeout;
 	uint32_t sar_safety_unsolicited_timeout;
@@ -259,21 +198,12 @@ struct hdd_config {
 	bool config_sar_safety_sleep_index;
 #endif
 	bool get_roam_chan_from_fw;
-	uint32_t fisa_enable;
 	bool enable_fisa_lru_deletion;
-
-#ifdef WLAN_FEATURE_PERIODIC_STA_STATS
-	/* Periodicity of logging */
-	uint32_t periodic_stats_timer_interval;
-	/* Duration for which periodic logging should be done */
-	uint32_t periodic_stats_timer_duration;
-#endif /* WLAN_FEATURE_PERIODIC_STA_STATS */
 	uint8_t nb_commands_interval;
 
 #ifdef FEATURE_CLUB_LL_STATS_AND_GET_STATION
 	uint32_t sta_stats_cache_expiry_time;
 #endif
-	int icmp_req_to_fw_mark_interval;
 	bool read_mac_addr_from_mac_file;
 };
 
