@@ -6957,31 +6957,27 @@ wlan_hdd_is_ap_ap_force_scc_override(struct hdd_adapter *adapter,
 	enum nl80211_channel_type channel_type;
 	uint8_t con_vdev_id;
 	uint32_t con_freq;
-	uint8_t mcc_to_scc_switch;
 	struct ieee80211_channel *ieee_chan;
 	uint32_t freq;
 	QDF_STATUS status;
+	struct wlan_objmgr_vdev *vdev;
 
 	if (!hdd_ctx || !chandef) {
 		hdd_err("hdd context or chandef is NULL");
 		return false;
 	}
 	freq = chandef->chan->center_freq;
-	if (adapter->device_mode == QDF_P2P_GO_MODE &&
-	    policy_mgr_is_p2p_p2p_conc_supported(hdd_ctx->psoc))
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_ID);
+	if (!vdev) {
+		hdd_err("failed to get vdev");
 		return false;
-	if (!policy_mgr_concurrent_beaconing_sessions_running(hdd_ctx->psoc))
+	}
+	if (policy_mgr_is_ap_ap_mcc_allow(hdd_ctx->psoc, vdev)) {
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_ID);
 		return false;
-	if (policy_mgr_dual_beacon_on_single_mac_mcc_capable(hdd_ctx->psoc))
-		return false;
-	if (!policy_mgr_dual_beacon_on_single_mac_scc_capable(hdd_ctx->psoc))
-		return false;
-	ucfg_policy_mgr_get_mcc_scc_switch(hdd_ctx->psoc,
-					   &mcc_to_scc_switch);
-	if ((mcc_to_scc_switch !=
-		QDF_MCC_TO_SCC_SWITCH_FORCE_WITHOUT_DISCONNECTION) &&
-	    (mcc_to_scc_switch != QDF_MCC_TO_SCC_WITH_PREFERRED_BAND))
-		return false;
+	}
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_ID);
+
 	cc_count = policy_mgr_get_mode_specific_conn_info(hdd_ctx->psoc,
 							  &op_freq[0],
 							  &vdev_id[0],

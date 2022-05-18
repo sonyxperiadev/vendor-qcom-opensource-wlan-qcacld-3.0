@@ -4393,4 +4393,17 @@ policy_mgr_get_connected_roaming_vdev_band_mask(struct wlan_objmgr_psoc *psoc,
 bool policy_mgr_is_sta_chan_valid_for_connect_and_roam(
 					struct wlan_objmgr_pdev *pdev,
 					qdf_freq_t freq);
+
+/**
+ * policy_mgr_is_ap_ap_mcc_allow() - Check AP AP MCC allow or not
+ * @psoc: psoc object
+ * @vdev: vdev object of new SAP or P2P GO
+ *
+ * Check if AP AP MCC allow or not when new SAP or P2P GO creating
+ *
+ * Return: True if the target allow AP AP MCC,
+ *         False otherwise.
+ */
+bool policy_mgr_is_ap_ap_mcc_allow(struct wlan_objmgr_psoc *psoc,
+				   struct wlan_objmgr_vdev *vdev);
 #endif /* __WLAN_POLICY_MGR_API_H */

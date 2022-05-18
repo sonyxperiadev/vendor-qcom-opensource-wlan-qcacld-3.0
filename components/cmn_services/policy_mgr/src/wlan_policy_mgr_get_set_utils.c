@@ -7871,3 +7871,33 @@ bool policy_mgr_is_hwmode_offload_enabled(struct wlan_objmgr_psoc *psoc)
 				   wmi_service_hw_mode_policy_offload_support);
 }
 
+bool policy_mgr_is_ap_ap_mcc_allow(struct wlan_objmgr_psoc *psoc,
+				   struct wlan_objmgr_vdev *vdev)
+{
+	enum QDF_OPMODE mode;
+	uint8_t mcc_to_scc_switch;
+
+	if (!psoc || !vdev) {
+		policy_mgr_debug("psoc or vdev is NULL");
+		return false;
+	}
+
+	mode = wlan_vdev_mlme_get_opmode(vdev);
+	policy_mgr_get_mcc_scc_switch(psoc, &mcc_to_scc_switch);
+
+	if (mode == QDF_P2P_GO_MODE &&
+	    policy_mgr_is_p2p_p2p_conc_supported(psoc))
+		return true;
+	if (!policy_mgr_concurrent_beaconing_sessions_running(psoc))
+		return true;
+	if (policy_mgr_dual_beacon_on_single_mac_mcc_capable(psoc))
+		return true;
+	if (!policy_mgr_dual_beacon_on_single_mac_scc_capable(psoc))
+		return true;
+	if ((mcc_to_scc_switch !=
+		QDF_MCC_TO_SCC_SWITCH_FORCE_WITHOUT_DISCONNECTION) &&
+	    (mcc_to_scc_switch != QDF_MCC_TO_SCC_WITH_PREFERRED_BAND))
+		return true;
+
+	return false;
+}
