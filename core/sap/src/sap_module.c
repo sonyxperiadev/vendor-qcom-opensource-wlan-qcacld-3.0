@@ -2333,6 +2333,130 @@ wlansap_reset_sap_config_add_ie(struct sap_config *config,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef WLAN_FEATURE_SON
+QDF_STATUS
+wlansap_son_update_sap_config_phymode(struct wlan_objmgr_vdev *vdev,
+				      struct sap_config *config,
+				      enum qca_wlan_vendor_phy_mode phy_mode)
+{
+	struct wlan_objmgr_pdev *pdev;
+	struct wlan_objmgr_psoc *psoc;
+
+	if (!vdev || !config) {
+		sap_err("Invalid input parameters");
+		return QDF_STATUS_E_FAULT;
+	}
+
+	pdev = wlan_vdev_get_pdev(vdev);
+	if (!pdev) {
+		sap_err("Invalid pdev parameters");
+		return QDF_STATUS_E_FAULT;
+	}
+	psoc = wlan_pdev_get_psoc(pdev);
+	if (!psoc) {
+		sap_err("Invalid psoc parameters");
+		return QDF_STATUS_E_FAULT;
+	}
+	config->sap_orig_hw_mode = config->SapHw_mode;
+	config->ch_width_orig = config->ch_params.ch_width;
+	switch (phy_mode) {
+	case QCA_WLAN_VENDOR_PHY_MODE_11A:
+		config->SapHw_mode = eCSR_DOT11_MODE_11a;
+		config->ch_params.ch_width = CH_WIDTH_20MHZ;
+		break;
+	case QCA_WLAN_VENDOR_PHY_MODE_11B:
+		config->SapHw_mode = eCSR_DOT11_MODE_11b;
+		config->ch_params.ch_width = CH_WIDTH_20MHZ;
+		break;
+	case QCA_WLAN_VENDOR_PHY_MODE_11G:
+		config->SapHw_mode = eCSR_DOT11_MODE_11g;
+		config->ch_params.ch_width = CH_WIDTH_20MHZ;
+		break;
+	case QCA_WLAN_VENDOR_PHY_MODE_11AGN:
+	case QCA_WLAN_VENDOR_PHY_MODE_11NG_HT20:
+	case QCA_WLAN_VENDOR_PHY_MODE_11NA_HT20:
+		config->SapHw_mode = eCSR_DOT11_MODE_11n;
+		config->ch_params.ch_width = CH_WIDTH_20MHZ;
+		break;
+	case QCA_WLAN_VENDOR_PHY_MODE_11NG_HT40PLUS:
+	case QCA_WLAN_VENDOR_PHY_MODE_11NG_HT40MINUS:
+	case QCA_WLAN_VENDOR_PHY_MODE_11NG_HT40:
+	case QCA_WLAN_VENDOR_PHY_MODE_11NA_HT40PLUS:
+	case QCA_WLAN_VENDOR_PHY_MODE_11NA_HT40MINUS:
+	case QCA_WLAN_VENDOR_PHY_MODE_11NA_HT40:
+		config->SapHw_mode = eCSR_DOT11_MODE_11n;
+		config->ch_params.ch_width = CH_WIDTH_40MHZ;
+		break;
+	case QCA_WLAN_VENDOR_PHY_MODE_11AC_VHT20:
+		config->SapHw_mode = eCSR_DOT11_MODE_11ac;
+		config->ch_params.ch_width = CH_WIDTH_20MHZ;
+		break;
+	case QCA_WLAN_VENDOR_PHY_MODE_11AC_VHT40PLUS:
+	case QCA_WLAN_VENDOR_PHY_MODE_11AC_VHT40MINUS:
+	case QCA_WLAN_VENDOR_PHY_MODE_11AC_VHT40:
+		config->SapHw_mode = eCSR_DOT11_MODE_11ac;
+		config->ch_params.ch_width = CH_WIDTH_40MHZ;
+		break;
+	case QCA_WLAN_VENDOR_PHY_MODE_11AC_VHT80:
+		config->SapHw_mode = eCSR_DOT11_MODE_11ac;
+		config->ch_params.ch_width = CH_WIDTH_80MHZ;
+		break;
+	case QCA_WLAN_VENDOR_PHY_MODE_11AC_VHT160:
+		config->SapHw_mode = eCSR_DOT11_MODE_11ac;
+		config->ch_params.ch_width = CH_WIDTH_160MHZ;
+		break;
+	case QCA_WLAN_VENDOR_PHY_MODE_11AX_HE20:
+		config->SapHw_mode = eCSR_DOT11_MODE_11ax;
+		config->ch_params.ch_width = CH_WIDTH_20MHZ;
+		break;
+	case QCA_WLAN_VENDOR_PHY_MODE_11AX_HE40:
+	case QCA_WLAN_VENDOR_PHY_MODE_11AX_HE40PLUS:
+	case QCA_WLAN_VENDOR_PHY_MODE_11AX_HE40MINUS:
+		config->SapHw_mode = eCSR_DOT11_MODE_11ax;
+		config->ch_params.ch_width = CH_WIDTH_40MHZ;
+		break;
+	case QCA_WLAN_VENDOR_PHY_MODE_11AX_HE80:
+		config->SapHw_mode = eCSR_DOT11_MODE_11ax;
+		config->ch_params.ch_width = CH_WIDTH_80MHZ;
+		break;
+	case QCA_WLAN_VENDOR_PHY_MODE_11AX_HE160:
+		config->SapHw_mode = eCSR_DOT11_MODE_11ax;
+		config->ch_params.ch_width = CH_WIDTH_160MHZ;
+		break;
+	case QCA_WLAN_VENDOR_PHY_MODE_AUTO:
+		config->SapHw_mode = eCSR_DOT11_MODE_AUTO;
+		break;
+	default:
+		sap_err("Invalid phy mode %d to configure", phy_mode);
+		break;
+	}
+
+	if (sap_phymode_is_eht(config->SapHw_mode))
+		wlan_reg_set_create_punc_bitmap(&config->ch_params, true);
+	if (config->ch_params.ch_width == CH_WIDTH_80P80MHZ &&
+	    ucfg_mlme_get_restricted_80p80_bw_supp(psoc)) {
+		if (!((config->ch_params.center_freq_seg0 == 138 &&
+		       config->ch_params.center_freq_seg1 == 155) ||
+		      (config->ch_params.center_freq_seg1 == 138 &&
+		       config->ch_params.center_freq_seg0 == 155))) {
+			sap_debug("Falling back to 80 from 80p80 as non supported freq_seq0 %d and freq_seq1 %d",
+				  config->ch_params.mhz_freq_seg0,
+				  config->ch_params.mhz_freq_seg1);
+			config->ch_params.center_freq_seg1 = 0;
+			config->ch_params.mhz_freq_seg1 = 0;
+			config->ch_width_orig = CH_WIDTH_80MHZ;
+			config->ch_params.ch_width = config->ch_width_orig;
+		}
+	}
+
+	wlan_reg_set_channel_params_for_freq(pdev, config->chan_freq,
+					     config->sec_ch_freq,
+					     &config->ch_params);
+
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 #define ACS_WLAN_20M_CH_INC 20
 #define ACS_2G_EXTEND ACS_WLAN_20M_CH_INC
 #define ACS_5G_EXTEND (ACS_WLAN_20M_CH_INC * 3)

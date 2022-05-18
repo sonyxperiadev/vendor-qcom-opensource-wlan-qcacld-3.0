@@ -889,6 +889,9 @@ static int hdd_son_set_phymode(struct wlan_objmgr_vdev *vdev,
 {
 	struct hdd_adapter *adapter;
 	enum qca_wlan_vendor_phy_mode vendor_phy_mode;
+	QDF_STATUS status;
+	struct hdd_ap_ctx *hdd_ap_ctx;
+	struct sap_config *sap_config;
 
 	if (!vdev) {
 		hdd_err("null vdev");
@@ -900,9 +903,25 @@ static int hdd_son_set_phymode(struct wlan_objmgr_vdev *vdev,
 		return -EINVAL;
 	}
 
+	if (!hdd_adapter_is_ap(adapter)) {
+		hdd_err("vdev id %d is not AP", adapter->vdev_id);
+		return -EINVAL;
+	}
+
 	vendor_phy_mode = hdd_son_phy_mode_to_vendor_phy_mode(mode);
 
-	return hdd_set_phy_mode(adapter, vendor_phy_mode);
+	hdd_ap_ctx = WLAN_HDD_GET_AP_CTX_PTR(adapter);
+	sap_config = &hdd_ap_ctx->sap_config;
+	status = wlansap_son_update_sap_config_phymode(vdev, sap_config,
+						       vendor_phy_mode);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		hdd_err("update son phy mode error");
+		return -EINVAL;
+	}
+
+	hdd_restart_sap(adapter);
+
+	return 0;
 }
 
 /**

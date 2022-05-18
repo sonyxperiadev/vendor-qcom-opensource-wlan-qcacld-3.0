@@ -1353,6 +1353,24 @@ void wlansap_extend_to_acs_range(mac_handle_t mac_handle,
 				 uint32_t *bandStartChannel,
 				 uint32_t *bandEndChannel);
 
+#ifdef WLAN_FEATURE_SON
+/**
+ * wlansap_son_update_sap_config_phymode() - update sap config according to
+ *                                           phy_mode. This API is for son,
+ *                                           There is no band switching when
+ *                                           son phy mode is changed.
+ * @sap_ctx:  Pointer to Sap Context
+ * @sap_config:  Pointer to sap config
+ * @phy_mode: pointer to phy mode
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlansap_son_update_sap_config_phymode(struct wlan_objmgr_vdev *vdev,
+				      struct sap_config *config,
+				      enum qca_wlan_vendor_phy_mode phy_mode);
+#endif
+
 /**
  * wlansap_set_dfs_nol() - Set dfs nol
  * @sap_ctx: SAP context
