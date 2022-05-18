@@ -1643,6 +1643,11 @@ wlan_hdd_update_ll_stats_request_bitmap(struct hdd_context *hdd_ctx,
 	struct hdd_ll_stats_priv *priv = osif_request_priv(request);
 	bool is_mlo_link;
 
+	if (!wlan_vdev_mlme_get_is_mlo_vdev(hdd_ctx->psoc, priv->vdev_id)) {
+		hdd_nofl_debug("Can't update req_bitmap for non MLO case");
+		return;
+	}
+
 	/* The radio stats event is expected at the last, for MLO ll_stats */
 	if (priv->request_bitmap != WMI_LINK_STATS_RADIO &&
 	    results->paramId == WMI_LINK_STATS_RADIO) {
