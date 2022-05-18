@@ -60,7 +60,7 @@
 #define P2P_GET_TYPE_FRM_FC(__fc__)         (((__fc__) & 0x0F) >> 2)
 #define P2P_GET_SUBTYPE_FRM_FC(__fc__)      (((__fc__) & 0xF0) >> 4)
 
-#define WLAN_WAIT_TIME_SET_RND 100
+#define WLAN_WAIT_TIME_SET_RND 1000
 
 struct p2p_soc_priv_obj;
 struct cancel_roc_context;
