@@ -30,8 +30,8 @@
 #include <wlan_cmn.h>
 #include <wlan_objmgr_vdev_obj.h>
 #include <wlan_objmgr_peer_obj.h>
-#include "wlan_cm_roam_public_struct.h"
 #include "wlan_wfa_config_public_struct.h"
+#include "wlan_connectivity_logging.h"
 
 #define MAC_MAX_ADD_IE_LENGTH       2048
 
@@ -156,6 +156,7 @@ struct sae_auth_retry {
  * @twt_ctx: TWT context
  * @allow_kickout: True if the peer can be kicked out. Peer can't be kicked
  *                 out if it is being steered
+ * @nss: Peer NSS
  */
 struct peer_mlme_priv_obj {
 	uint8_t last_pn_valid;
@@ -170,6 +171,7 @@ struct peer_mlme_priv_obj {
 #ifdef WLAN_FEATURE_SON
 	bool allow_kickout;
 #endif
+	uint8_t nss;
 };
 
 /**
@@ -410,6 +412,8 @@ struct wait_for_key_timer {
  * @vdev_stop_type: vdev stop type request
  * @roam_off_state: Roam offload state
  * @cm_roam: Roaming configuration
+ * @auth_log: Cached log records for SAE authentication frame
+ * related information.
  * @bigtk_vdev_support: BIGTK feature support for this vdev (SAP)
  * @sae_auth_retry: SAE auth retry information
  * @roam_reason_better_ap: roam due to better AP found
@@ -431,6 +435,7 @@ struct wait_for_key_timer {
  * @ba_2k_jump_iot_ap: This is set to true if connected to the ba 2k jump IOT AP
  * @is_usr_ps_enabled: Is Power save enabled
  * @notify_co_located_ap_upt_rnr: Notify co located AP to update RNR or not
+ * @max_mcs_index: Max supported mcs index of vdev
  */
 struct mlme_legacy_priv {
 	bool chan_switch_in_progress;
@@ -448,6 +453,9 @@ struct mlme_legacy_priv {
 	uint32_t vdev_stop_type;
 	struct wlan_mlme_roam mlme_roam;
 	struct wlan_cm_roam cm_roam;
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+	struct wlan_log_record auth_log[MAX_ROAM_CANDIDATE_AP][WLAN_ROAM_MAX_CACHED_AUTH_FRAMES];
+#endif
 	bool bigtk_vdev_support;
 	struct sae_auth_retry sae_retry;
 	bool roam_reason_better_ap;
@@ -472,6 +480,9 @@ struct mlme_legacy_priv {
 	bool ba_2k_jump_iot_ap;
 	bool is_usr_ps_enabled;
 	bool notify_co_located_ap_upt_rnr;
+#ifdef WLAN_FEATURE_SON
+	uint8_t max_mcs_index;
+#endif
 };
 
 /**
@@ -1012,6 +1023,42 @@ mlme_clear_operations_bitmap(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id);
  */
 QDF_STATUS mlme_get_cfg_wlm_level(struct wlan_objmgr_psoc *psoc,
 				  uint8_t *level);
+
+#ifdef MULTI_CLIENT_LL_SUPPORT
+/**
+ * wlan_mlme_get_wlm_multi_client_ll_caps() - Get the wlm multi client latency
+ * level capability flag
+ * @psoc: pointer to psoc object
+ *
+ * Return: True is multi client ll cap present
+ */
+bool wlan_mlme_get_wlm_multi_client_ll_caps(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * mlme_get_cfg_multi_client_ll_ini_support() - Get the ini value of wlm multi
+ * client latency level feature
+ * @psoc: pointer to psoc object
+ * @multi_client_ll_support: parameter that needs to be filled.
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+mlme_get_cfg_multi_client_ll_ini_support(struct wlan_objmgr_psoc *psoc,
+					 bool *multi_client_ll_support);
+#else
+static inline bool
+wlan_mlme_get_wlm_multi_client_ll_caps(struct wlan_objmgr_psoc *psoc)
+{
+	return false;
+}
+
+static inline QDF_STATUS
+mlme_get_cfg_multi_client_ll_ini_support(struct wlan_objmgr_psoc *psoc,
+					 bool *multi_client_ll_support)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+#endif
 
 /**
  * mlme_get_cfg_wlm_reset() - Get the WLM reset flag

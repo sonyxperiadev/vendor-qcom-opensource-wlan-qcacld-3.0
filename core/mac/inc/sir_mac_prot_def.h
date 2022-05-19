@@ -102,6 +102,7 @@
 #define SIR_MAC_BA_DEFAULT_BUFF_SIZE    64
 
 #define MAX_BA_BUFF_SIZE    256
+#define MAX_EHT_BA_BUFF_SIZE 1024
 
 #ifdef ANI_SUPPORT_11H
 #define SIR_MAC_BASIC_MEASUREMENT_TYPE         0
@@ -686,7 +687,6 @@ typedef struct sSirMacEdcaParamRecord {
 		uint16_t mu_edca_timer;
 	};
 	uint8_t no_ack;
-	uint8_t user_edca_set;
 } qdf_packed tSirMacEdcaParamRecord;
 
 typedef struct sSirMacQosInfo {

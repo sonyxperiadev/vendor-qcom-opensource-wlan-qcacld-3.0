@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -76,4 +77,29 @@ action_oui_psoc_create_notification(struct wlan_objmgr_psoc *psoc, void *arg);
 QDF_STATUS
 action_oui_psoc_destroy_notification(struct wlan_objmgr_psoc *psoc, void *arg);
 
+/**
+ * wlan_action_oui_search() - Check for OUIs and related info in IE data.
+ * @psoc: objmgr psoc object
+ * @attr: pointer to structure containing type of action, beacon IE data etc.,
+ * @action_id: type of action to be checked
+ *
+ * This is a wrapper function which invokes internal function to search
+ * for OUIs and related info (specified from ini file) in vendor specific
+ * data of beacon IE for given action.
+ *
+ * Return: If search is successful return true else false.
+ */
+#ifdef WLAN_FEATURE_ACTION_OUI
+bool wlan_action_oui_search(struct wlan_objmgr_psoc *psoc,
+			    struct action_oui_search_attr *attr,
+			    enum action_oui_id action_id);
+#else
+static inline
+bool wlan_action_oui_search(struct wlan_objmgr_psoc *psoc,
+			    struct action_oui_search_attr *attr,
+			    enum action_oui_id action_id)
+{
+	return false;
+}
+#endif
 #endif /* end  of _WLAN_ACTION_OUI_MAIN_H_ */

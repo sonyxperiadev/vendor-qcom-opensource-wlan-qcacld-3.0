@@ -105,6 +105,7 @@ static int hdd_close_ndi(struct hdd_adapter *adapter)
 	if (errno)
 		hdd_err("failed to destroy vdev: %d", errno);
 
+	adapter->is_virtual_iface = true;
 	/* We are good to close the adapter */
 	hdd_close_adapter(hdd_ctx, adapter, true);
 
@@ -676,7 +677,7 @@ error_init_txrx:
 	return ret_val;
 }
 
-int hdd_ndi_open(char *iface_name)
+int hdd_ndi_open(const char *iface_name, bool is_add_virtual_iface)
 {
 	struct hdd_adapter *adapter, *next_adapter = NULL;
 	struct qdf_mac_addr random_ndi_mac;
@@ -701,6 +702,10 @@ int hdd_ndi_open(char *iface_name)
 		return -EINVAL;
 	}
 
+	params.is_add_virtual_iface = is_add_virtual_iface;
+
+	hdd_debug("is_add_virtual_iface %d", is_add_virtual_iface);
+
 	if (cfg_nan_get_ndi_mac_randomize(hdd_ctx->psoc)) {
 		if (hdd_get_random_nan_mac_addr(hdd_ctx, &random_ndi_mac)) {
 			hdd_err("get random mac address failed");
@@ -715,6 +720,7 @@ int hdd_ndi_open(char *iface_name)
 		}
 	}
 
+	params.is_add_virtual_iface = 1;
 	adapter = hdd_open_adapter(hdd_ctx, QDF_NDI_MODE, iface_name,
 				   ndi_mac_addr, NET_NAME_UNKNOWN, true,
 				   &params);
@@ -729,7 +735,7 @@ int hdd_ndi_open(char *iface_name)
 	return 0;
 }
 
-int hdd_ndi_start(char *iface_name, uint16_t transaction_id)
+int hdd_ndi_start(const char *iface_name, uint16_t transaction_id)
 {
 	int ret;
 	QDF_STATUS status;
@@ -785,7 +791,50 @@ err_handler:
 	return ret;
 }
 
-int hdd_ndi_delete(uint8_t vdev_id, char *iface_name, uint16_t transaction_id)
+struct wireless_dev *hdd_add_ndi_intf(struct hdd_context *hdd_ctx,
+				      const char *name)
+{
+	int ret;
+	struct hdd_adapter *adapter;
+
+	hdd_debug("change mode to NDI");
+
+	ret = hdd_ndi_open(name, true);
+	if (ret) {
+		hdd_err("ndi_open failed");
+		return ERR_PTR(-EINVAL);
+	}
+	adapter = hdd_get_adapter_by_iface_name(hdd_ctx, name);
+	if (!adapter) {
+		hdd_err("adapter is null");
+		return ERR_PTR(-EINVAL);
+	}
+	return adapter->dev->ieee80211_ptr;
+}
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0))
+static int hdd_delete_ndi_intf(struct wiphy *wiphy, struct wireless_dev *wdev)
+{
+	return 0;
+}
+#else
+static int hdd_delete_ndi_intf(struct wiphy *wiphy, struct wireless_dev *wdev)
+{
+	int ret;
+
+	ret = __wlan_hdd_del_virtual_intf(wiphy, wdev);
+
+	if (ret)
+		hdd_err("NDI delete request failed");
+	else
+		hdd_err("NDI delete request successfully issued");
+
+	return ret;
+}
+#endif
+
+int hdd_ndi_delete(uint8_t vdev_id, const char *iface_name,
+		   uint16_t transaction_id)
 {
 	int ret;
 	struct hdd_adapter *adapter;
@@ -819,11 +868,8 @@ int hdd_ndi_delete(uint8_t vdev_id, char *iface_name, uint16_t transaction_id)
 	os_if_nan_set_ndi_state(vdev, NAN_DATA_NDI_DELETING_STATE);
 	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_NAN_ID);
 	/* Delete the interface */
-	ret = __wlan_hdd_del_virtual_intf(hdd_ctx->wiphy, &adapter->wdev);
-	if (ret)
-		hdd_err("NDI delete request failed");
-	else
-		hdd_err("NDI delete request successfully issued");
+	adapter->is_virtual_iface = true;
+	ret = hdd_delete_ndi_intf(hdd_ctx->wiphy, &adapter->wdev);
 
 	return ret;
 }
@@ -920,6 +966,7 @@ void hdd_ndi_close(uint8_t vdev_id)
 		return;
 	}
 
+	adapter->is_virtual_iface = true;
 	hdd_close_ndi(adapter);
 }
 
@@ -976,15 +1023,6 @@ void hdd_ndp_session_end_handler(struct hdd_adapter *adapter)
 	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_NAN_ID);
 }
 
-/**
- * hdd_ndp_new_peer_handler() - NDP new peer indication handler
- * @vdev_id: vdev id
- * @sta_id: station id
- * @peer_mac_addr: peer mac address
- * @first_peer: first peer
- *
- * Return: none
- */
 int hdd_ndp_new_peer_handler(uint8_t vdev_id, uint16_t sta_id,
 			struct qdf_mac_addr *peer_mac_addr, bool first_peer)
 {
@@ -1086,13 +1124,6 @@ void hdd_cleanup_ndi(struct hdd_context *hdd_ctx,
 	}
 }
 
-/**
- * hdd_ndp_peer_departed_handler() - Handle NDP peer departed indication
- * @adapter: pointer to adapter context
- * @ind_params: indication parameters
- *
- * Return: none
- */
 void hdd_ndp_peer_departed_handler(uint8_t vdev_id, uint16_t sta_id,
 			struct qdf_mac_addr *peer_mac_addr, bool last_peer)
 {

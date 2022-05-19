@@ -51,7 +51,11 @@
 #include "wlan_hdd_bus_bandwidth.h"
 
 #ifdef MODULE
+#ifdef WLAN_WEAR_CHIPSET
+#define WLAN_MODULE_NAME  "wlan"
+#else
 #define WLAN_MODULE_NAME  module_name(THIS_MODULE)
+#endif
 #else
 #define WLAN_MODULE_NAME  "wlan"
 #endif
@@ -622,12 +626,6 @@ static int __hdd_soc_probe(struct device *dev,
 		goto dp_prealloc_fail;
 	}
 
-	status = hif_ce_debug_history_prealloc_init();
-	if (status != QDF_STATUS_SUCCESS) {
-		errno = qdf_status_to_os_return(status);
-		goto hif_ce_debug_history_prealloc_fail;
-	}
-
 	errno = hdd_wlan_startup(hdd_ctx);
 	if (errno)
 		goto hdd_context_destroy;
@@ -656,9 +654,6 @@ wlan_exit:
 	hdd_wlan_exit(hdd_ctx);
 
 hdd_context_destroy:
-	hif_ce_debug_history_prealloc_deinit();
-
-hif_ce_debug_history_prealloc_fail:
 	dp_prealloc_deinit();
 
 dp_prealloc_fail:
@@ -859,7 +854,6 @@ static void __hdd_soc_remove(struct device *dev)
 	cds_set_driver_in_bad_state(false);
 	cds_set_unload_in_progress(false);
 
-	hif_ce_debug_history_prealloc_deinit();
 	dp_prealloc_deinit();
 
 	pr_info("%s: Driver De-initialized\n", WLAN_MODULE_NAME);
@@ -993,7 +987,6 @@ static void __hdd_soc_recovery_shutdown(void)
 
 	/* recovery starts via firmware down indication; ensure we got one */
 	QDF_BUG(cds_is_driver_recovering());
-	hdd_init_start_completion();
 
 	/*
 	 * Perform SSR related cleanup if it has not already been done as a
@@ -2090,6 +2083,7 @@ wlan_hdd_pld_uevent(struct device *dev, struct pld_uevent_data *event_data)
 		hdd_dump_log_buffer();
 		cds_set_target_ready(false);
 		cds_set_recovery_in_progress(true);
+		hdd_init_start_completion();
 
 		/* Notify external threads currently waiting on firmware
 		 * by forcefully completing waiting events with a "reset"

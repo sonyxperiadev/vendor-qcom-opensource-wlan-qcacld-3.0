@@ -265,12 +265,14 @@ lim_release_mlo_conn_idx(struct mac_context *mac, uint16_t peer_idx,
 
 /**
  * lim_update_sta_mlo_info() - update sta mlo information
+ * @pe_session: session entry
  * @add_sta_params: pointer to tpAddStaParams
  * @sta_ds: pointer tpDphHashNode
  *
  * Return: Void
  */
-void lim_update_sta_mlo_info(tpAddStaParams add_sta_params,
+void lim_update_sta_mlo_info(struct pe_session *pe_session,
+			     tpAddStaParams add_sta_params,
 			     tpDphHashNode sta_ds);
 
 void lim_set_mlo_caps(struct mac_context *mac, struct pe_session *session,
@@ -294,7 +296,8 @@ lim_release_mlo_conn_idx(struct mac_context *mac, uint16_t peer_idx,
 {
 }
 
-static inline void lim_update_sta_mlo_info(tpAddStaParams add_sta_params,
+static inline void lim_update_sta_mlo_info(struct pe_session *session,
+					   tpAddStaParams add_sta_params,
 					   tpDphHashNode sta_ds)
 {
 }
@@ -1724,6 +1727,11 @@ static inline bool lim_is_sta_eht_capable(tpDphHashNode sta_ds)
 	return sta_ds->mlmStaContext.eht_capable;
 }
 
+QDF_STATUS lim_strip_eht_cap_ie(struct mac_context *mac_ctx,
+				uint8_t *frame_ies,
+				uint16_t *ie_buf_size,
+				uint8_t *eht_cap_ie);
+
 /**
  * lim_populate_eht_mcs_set() - function to populate EHT mcs rate set
  * @mac_ctx: pointer to global mac structure
@@ -1998,6 +2006,15 @@ static inline bool lim_is_session_eht_capable(struct pe_session *session)
 static inline bool lim_is_sta_eht_capable(tpDphHashNode sta_ds)
 {
 	return false;
+}
+
+static inline
+QDF_STATUS lim_strip_eht_cap_ie(struct mac_context *mac_ctx,
+				uint8_t *frame_ies,
+				uint16_t *ie_buf_size,
+				uint8_t *eht_cap_ie)
+{
+	return QDF_STATUS_E_FAILURE;
 }
 
 static inline
@@ -2803,4 +2820,51 @@ void
 lim_fill_oci_params(struct mac_context *mac, struct pe_session *session,
 		    tDot11fIEoci *oci);
 
+#ifdef WLAN_FEATURE_SAE
+/**
+ * lim_process_sae_msg() - Process SAE message
+ * @mac: Global MAC pointer
+ * @body: Buffer pointer
+ *
+ * Return: None
+ */
+void lim_process_sae_msg(struct mac_context *mac, struct sir_sae_msg *body);
+#else
+static inline void lim_process_sae_msg(struct mac_context *mac, void *body);
+{}
+#endif
+
+/**
+ * lim_get_he_max_mcs_idx() - get max mcs index from he cap
+ * @ch_width: channel width
+ * @he_cap: pointer to tDot11fIEhe_cap
+ *
+ * Return: max mcs index from he cap
+ */
+uint8_t lim_get_he_max_mcs_idx(enum phy_ch_width ch_width,
+			       tDot11fIEhe_cap *he_cap);
+
+/**
+ * lim_get_vht_max_mcs_idx() - get max mcs index from vht cap
+ * @vht_cap: pointer to tDot11fIEVHTCaps
+ *
+ * Return: max mcs index from vht cap
+ */
+uint8_t lim_get_vht_max_mcs_idx(tDot11fIEVHTCaps *vht_cap);
+
+/**
+ * lim_get_ht_max_mcs_idx() - get max mcs index from ht cap
+ * @ht_cap: pointer to tDot11fIEHTCaps
+ *
+ * Return: max mcs index from ht cap
+ */
+uint8_t lim_get_ht_max_mcs_idx(tDot11fIEHTCaps *ht_cap);
+
+/**
+ * lim_get_max_rate_idx() - get max rate index from tSirMacRateSet
+ * @rateset: pointer to tSirMacRateSet
+ *
+ * Return: max rate index from tSirMacRateSet
+ */
+uint8_t lim_get_max_rate_idx(tSirMacRateSet *rateset);
 #endif /* __LIM_UTILS_H */

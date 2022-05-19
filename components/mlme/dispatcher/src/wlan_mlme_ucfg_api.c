@@ -952,6 +952,21 @@ ucfg_mlme_set_fast_roam_in_concurrency_enabled(struct wlan_objmgr_psoc *psoc,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef MULTI_CLIENT_LL_SUPPORT
+bool ucfg_mlme_get_wlm_multi_client_ll_caps(struct wlan_objmgr_psoc *psoc)
+{
+	return wlan_mlme_get_wlm_multi_client_ll_caps(psoc);
+}
+
+QDF_STATUS
+ucfg_mlme_cfg_get_multi_client_ll_ini_support(struct wlan_objmgr_psoc *psoc,
+					      bool *multi_client_ll_support)
+{
+	return mlme_get_cfg_multi_client_ll_ini_support(psoc,
+						multi_client_ll_support);
+}
+#endif
+
 #ifdef FEATURE_WLAN_ESE
 QDF_STATUS
 ucfg_mlme_is_ese_enabled(struct wlan_objmgr_psoc *psoc, bool *val)
@@ -1708,5 +1723,38 @@ bool ucfg_mlme_get_coex_unsafe_chan_reg_disable(
 		return cfg_default(CFG_COEX_UNSAFE_CHAN_REG_DISABLE);
 	}
 	return mlme_obj->cfg.reg.coex_unsafe_chan_reg_disable;
+}
+#endif
+
+#ifdef CONNECTION_ROAMING_CFG
+QDF_STATUS
+ucfg_mlme_set_connection_roaming_ini_present(struct wlan_objmgr_psoc *psoc,
+					     bool value)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_INVAL;
+
+	mlme_obj->cfg.connection_roaming_ini_flag = value;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+ucfg_mlme_get_connection_roaming_ini_present(struct wlan_objmgr_psoc *psoc,
+					     bool *value)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+
+	if (!mlme_obj)
+		return QDF_STATUS_E_INVAL;
+
+	*value = mlme_obj->cfg.connection_roaming_ini_flag;
+
+	return QDF_STATUS_SUCCESS;
 }
 #endif

@@ -803,10 +803,10 @@ struct nan_callbacks {
 					struct wlan_objmgr_vdev *vdev,
 					uint32_t type, void *msg);
 	void (*ucfg_nan_request_process_cb)(void *cookie);
-	int (*ndi_open)(char *iface_name);
-	int (*ndi_start)(char *iface_name, uint16_t);
+	int (*ndi_open)(const char *iface_name, bool is_add_virtual_iface);
+	int (*ndi_start)(const char *iface_name, uint16_t);
 	void (*ndi_close)(uint8_t);
-	int (*ndi_delete)(uint8_t, char *iface_name, uint16_t transaction_id);
+	int (*ndi_delete)(uint8_t, const char *iface_name, uint16_t transaction_id);
 	void (*drv_ndi_create_rsp_handler)
 				(uint8_t, struct nan_datapath_inf_create_rsp *);
 	void (*drv_ndi_delete_rsp_handler)(uint8_t);

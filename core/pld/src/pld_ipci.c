@@ -485,7 +485,7 @@ static int pld_ipci_set_thermal_state(struct device *dev,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0))
 static struct device_info pld_ipci_dev_info[] = {
 	{ "wcn6750", WCN6750_DEVICE_ID },
-	{ 0 }
+	{ { 0 } }
 };
 #endif
 

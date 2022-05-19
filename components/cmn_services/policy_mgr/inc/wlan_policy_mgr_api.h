@@ -133,8 +133,11 @@ static inline const char *pcl_type_to_string(uint32_t idx)
 	CASE_RETURN_STRING(PM_SCC_CH_5G);
 	CASE_RETURN_STRING(PM_24G_SCC_CH);
 	CASE_RETURN_STRING(PM_5G_SCC_CH);
+	CASE_RETURN_STRING(PM_SCC_ON_5_CH_5G);
 	CASE_RETURN_STRING(PM_SCC_ON_5_SCC_ON_24_24G);
 	CASE_RETURN_STRING(PM_SCC_ON_5_SCC_ON_24_5G);
+	CASE_RETURN_STRING(PM_SCC_ON_5_5G_24G);
+	CASE_RETURN_STRING(PM_SCC_ON_5_5G_SCC_ON_24G);
 	CASE_RETURN_STRING(PM_SCC_ON_24_SCC_ON_5_24G);
 	CASE_RETURN_STRING(PM_SCC_ON_24_SCC_ON_5_5G);
 	CASE_RETURN_STRING(PM_SCC_ON_5_SCC_ON_24);
@@ -154,6 +157,7 @@ static inline const char *pcl_type_to_string(uint32_t idx)
 	CASE_RETURN_STRING(PM_SCC_CH_SBS_CH_24G);
 	CASE_RETURN_STRING(PM_SBS_CH_SCC_CH_5G_24G);
 	CASE_RETURN_STRING(PM_SCC_CH_MCC_CH_SBS_CH_24G);
+	CASE_RETURN_STRING(PM_SBS_CH_2G);
 	default:
 		return "Unknown";
 	}
@@ -291,6 +295,16 @@ policy_mgr_get_sta_sap_scc_on_dfs_chnl(struct wlan_objmgr_psoc *psoc,
 QDF_STATUS
 policy_mgr_set_multi_sap_allowed_on_same_band(struct wlan_objmgr_psoc *psoc,
 				bool multi_sap_allowed_on_same_band);
+
+/**
+ * policy_mgr_get_sta_sap_scc_allowed_on_indoor_chnl() - Get if STA-SAP scc is
+ * allowed on indoor channel
+ * @psoc: Global psoc pointer
+ *
+ * Return: true if STA-SAP SCC on indoor channel is allowed
+ */
+bool policy_mgr_get_sta_sap_scc_allowed_on_indoor_chnl(
+				struct wlan_objmgr_psoc *psoc);
 
 /**
  * policy_mgr_get_multi_sap_allowed_on_same_band() - to find out if multi sap
@@ -1387,143 +1401,6 @@ policy_mgr_get_preferred_dbs_action_table(
  */
 struct policy_mgr_conc_connection_info *policy_mgr_get_conn_info(
 		uint32_t *len);
-#ifdef MPC_UT_FRAMEWORK
-/**
- * policy_mgr_incr_connection_count_utfw() - adds the new
- * connection to the current connections list
- * @psoc: PSOC object information
- * @vdev_id: vdev id
- * @tx_streams: number of transmit spatial streams
- * @rx_streams: number of receive spatial streams
- * @chain_mask: chain mask
- * @mode: conn mode
- * @ch_freq: channel frequency value
- * @mac_id: mac id
- *
- * This function adds the new connection to the current
- * connections list
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS
-policy_mgr_incr_connection_count_utfw(struct wlan_objmgr_psoc *psoc,
-				      uint32_t vdev_id, uint32_t tx_streams,
-				      uint32_t rx_streams,
-				      uint32_t chain_mask,
-				      enum policy_mgr_con_mode mode,
-				      uint32_t ch_freq, uint32_t mac_id);
-
-/**
- * policy_mgr_update_connection_info_utfw() - updates the
- * existing connection in the current connections list
- * @psoc: PSOC object information
- * @vdev_id: vdev id
- * @tx_streams: number of transmit spatial streams
- * @rx_streams: number of receive spatial streams
- * @chain_mask: chain mask
- * @type: connection type
- * @sub_type: connection subtype
- * @ch_freq: channel frequency value
- * @mac_id: mac id
- *
- * This function updates the connection to the current
- * connections list
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS
-policy_mgr_update_connection_info_utfw(struct wlan_objmgr_psoc *psoc,
-				       uint32_t vdev_id,
-				       uint32_t tx_streams,
-				       uint32_t rx_streams,
-				       uint32_t chain_mask, uint32_t type,
-				       uint32_t sub_type,
-				       uint32_t ch_freq, uint32_t mac_id);
-
-/**
- * policy_mgr_decr_connection_count_utfw() - remove the old
- * connection from the current connections list
- * @psoc: PSOC object information
- * @del_all: delete all entries
- * @vdev_id: vdev id
- *
- * This function removes the old connection from the current
- * connections list
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS policy_mgr_decr_connection_count_utfw(struct wlan_objmgr_psoc *psoc,
-		uint32_t del_all, uint32_t vdev_id);
-
-/**
- * policy_mgr_get_pcl_from_first_conn_table() - Get PCL for new
- * connection from first connection table
- * @type: Connection mode of type 'policy_mgr_con_mode'
- * @sys_pref: System preference
- *
- * Get the PCL for a new connection
- *
- * Return: PCL channels enum
- */
-enum policy_mgr_pcl_type policy_mgr_get_pcl_from_first_conn_table(
-		enum policy_mgr_con_mode type,
-		enum policy_mgr_conc_priority_mode sys_pref);
-
-/**
- * policy_mgr_get_pcl_from_second_conn_table() - Get PCL for new
- * connection from second connection table
- * @idx: index into first connection table
- * @type: Connection mode of type 'policy_mgr_con_mode'
- * @sys_pref: System preference
- * @dbs_capable: if HW DBS capable
- *
- * Get the PCL for a new connection
- *
- * Return: PCL channels enum
- */
-enum policy_mgr_pcl_type policy_mgr_get_pcl_from_second_conn_table(
-	enum policy_mgr_one_connection_mode idx, enum policy_mgr_con_mode type,
-	enum policy_mgr_conc_priority_mode sys_pref, uint8_t dbs_capable);
-
-/**
- * policy_mgr_get_pcl_from_third_conn_table() - Get PCL for new
- * connection from third connection table
- * @idx: index into second connection table
- * @type: Connection mode of type 'policy_mgr_con_mode'
- * @sys_pref: System preference
- * @dbs_capable: if HW DBS capable
- *
- * Get the PCL for a new connection
- *
- * Return: PCL channels enum
- */
-enum policy_mgr_pcl_type policy_mgr_get_pcl_from_third_conn_table(
-	enum policy_mgr_two_connection_mode idx, enum policy_mgr_con_mode type,
-	enum policy_mgr_conc_priority_mode sys_pref, uint8_t dbs_capable);
-#else
-static inline QDF_STATUS policy_mgr_incr_connection_count_utfw(
-		struct wlan_objmgr_psoc *psoc, uint32_t vdev_id,
-		uint32_t tx_streams, uint32_t rx_streams,
-		uint32_t chain_mask, enum policy_mgr_con_mode mode,
-		uint32_t ch_freq, uint32_t mac_id)
-{
-	return QDF_STATUS_SUCCESS;
-}
-static inline QDF_STATUS policy_mgr_update_connection_info_utfw(
-		struct wlan_objmgr_psoc *psoc, uint32_t vdev_id,
-		uint32_t tx_streams, uint32_t rx_streams,
-		uint32_t chain_mask, uint32_t type, uint32_t sub_type,
-		uint32_t ch_freq, uint32_t mac_id)
-{
-	return QDF_STATUS_SUCCESS;
-}
-static inline QDF_STATUS policy_mgr_decr_connection_count_utfw(
-		struct wlan_objmgr_psoc *psoc, uint32_t del_all,
-		uint32_t vdev_id)
-{
-	return QDF_STATUS_SUCCESS;
-}
-#endif
 
 /**
  * policy_mgr_convert_device_mode_to_qdf_type() - provides the
@@ -2814,9 +2691,24 @@ bool policy_mgr_is_dbs_scan_allowed(struct wlan_objmgr_psoc *psoc);
 bool policy_mgr_is_hw_sbs_capable(struct wlan_objmgr_psoc *psoc);
 
 /**
- * policy_mgr_are_2_freq_on_same_mac() - Function to check whether both the
- * input frequencies are on same mac
+ * policy_mgr_2_freq_always_on_same_mac() - Function to check whether both the
+ * input frequencies are on same mac in all supported mode/freq range
+ * @psoc: Pointer to Psoc
+ * @freq_1: Frequency 1 to check
+ * @freq_2: Frequency 2 to check
  *
+ * This Function check whether both the input frequency exist in the same mac
+ * in all supported mode/freq range
+ *
+ * Return:True if both the frequency exist on the same mac in all supported
+ * mode/freq range.
+ */
+bool policy_mgr_2_freq_always_on_same_mac(struct wlan_objmgr_psoc *psoc,
+					  qdf_freq_t freq_1, qdf_freq_t freq_2);
+
+/**
+ * policy_mgr_are_2_freq_on_same_mac() - Function to check whether both the
+ * input frequencies are on same mac in current freq range
  * @psoc: Pointer to Psoc
  * @freq_1: Frequency 1 to check
  * @freq_2: Frequency 2 to check
@@ -2824,7 +2716,6 @@ bool policy_mgr_is_hw_sbs_capable(struct wlan_objmgr_psoc *psoc);
  * This Function check whether both the input frequency exist in the same mac
  *
  * Return:True if both the frequency exist on the same mac.
- *
  */
 bool
 policy_mgr_are_2_freq_on_same_mac(struct wlan_objmgr_psoc *psoc,
@@ -2832,9 +2723,27 @@ policy_mgr_are_2_freq_on_same_mac(struct wlan_objmgr_psoc *psoc,
 				  qdf_freq_t  freq_2);
 
 /**
- * policy_mgr_are_3_freq_on_same_mac() - Function to check whether all three
- * input frequencies are in same mac
+ * policy_mgr_3_freq_always_on_same_mac() - Function to check whether all three
+ * input frequencies will always in same mac in all supported mode/freq range
+ * @psoc: Pointer to Psoc
+ * @freq_1: Frequency 1 to check
+ * @freq_2: Frequency 2 to check
+ * @freq_3: Frequency 3 to check
  *
+ * This Function check whether all three input frequencies exist in the same
+ * mac in all supported mode/freq range.
+ *
+ * Return:True if all three frequency exist on the same mac in all supported
+ * mode/freq range
+ */
+bool
+policy_mgr_3_freq_always_on_same_mac(struct wlan_objmgr_psoc *psoc,
+				     qdf_freq_t freq_1, qdf_freq_t freq_2,
+				     qdf_freq_t freq_3);
+
+/**
+ * policy_mgr_are_3_freq_on_same_mac() - Function to check whether all three
+ * input frequencies are in same mac in current freq range
  * @psoc: Pointer to Psoc
  * @freq_1: Frequency 1 to check
  * @freq_2: Frequency 2 to check
@@ -2844,12 +2753,38 @@ policy_mgr_are_2_freq_on_same_mac(struct wlan_objmgr_psoc *psoc,
  * mac.
  *
  * Return:True if all three frequency exist on the same mac
- *
  */
 bool
 policy_mgr_are_3_freq_on_same_mac(struct wlan_objmgr_psoc *psoc,
 				  qdf_freq_t freq_1, qdf_freq_t freq_2,
 				  qdf_freq_t freq_3);
+
+/**
+ * policy_mgr_allow_4th_new_freq() - Function to check whether 4th freq can
+ * be allowed wthout leading to 3 home freq on same mac
+ * @psoc: Pointer to Psoc
+ * @freq1: Frequency 1
+ * @freq2: Frequency 2
+ * @freq3: Frequency 3
+ * @new_ch_freq: freq to check with reference to freq1 freq2 and freq3
+ *
+ * Return:True if all 4 freq can be allowed without causing 3 home frequency
+ * on same mac
+ */
+#ifdef FEATURE_FOURTH_CONNECTION
+bool
+policy_mgr_allow_4th_new_freq(struct wlan_objmgr_psoc *psoc,
+			      qdf_freq_t freq1, qdf_freq_t freq2,
+			      qdf_freq_t freq3, qdf_freq_t new_ch_freq);
+#else
+static inline bool
+policy_mgr_allow_4th_new_freq(struct wlan_objmgr_psoc *psoc,
+			      qdf_freq_t freq1, qdf_freq_t freq2,
+			      qdf_freq_t freq3, qdf_freq_t new_ch_freq)
+{
+	return false;
+}
+#endif
 
 /**
  * policy_mgr_are_sbs_chan() - Function to check whether both the
@@ -3275,6 +3210,19 @@ void policy_mgr_init_dbs_hw_mode(struct wlan_objmgr_psoc *psoc,
 
 QDF_STATUS policy_mgr_update_sbs_freq(struct wlan_objmgr_psoc *psoc,
 				      struct target_psoc_info *tgt_hdl);
+
+/**
+ * policy_mgr_get_sbs_cut_off_freq() - Function to get SBS 5g cut off freq
+ *
+ * @psoc: PSOC object information
+ *
+ * This function to get sbs cut off freq
+ *
+ * Return: cut of freq
+ *
+ */
+qdf_freq_t policy_mgr_get_sbs_cut_off_freq(struct wlan_objmgr_psoc *psoc);
+
 /**
  * policy_mgr_update_hw_mode_list() - Function to initialize DBS
  * HW modes in policy manager component
@@ -4286,24 +4234,4 @@ bool policy_mgr_is_hwmode_offload_enabled(struct wlan_objmgr_psoc *psoc);
  */
 bool policy_mgr_is_3rd_conn_on_same_band_allowed(struct wlan_objmgr_psoc *psoc,
 						 enum policy_mgr_con_mode mode);
-
-#ifdef MPC_UT_FRAMEWORK
-/**
- * policy_mgr_set_dbs_cap_ut() - Set DBS capability for UT framework
- *
- * @psoc: Pointer to psoc
- * @dbs: Value of DBS capability to be set
- *
- * Sets the DBS capability for unit test framework. If the HW mode is
- * already sent by the FW, only the DBS capability needs to be set. If the
- * FW did not send any HW mode list, a single entry is created and DBS mode
- * is set in it. The DBS capability is also set in the service bit map.
- *
- * Return: None
- */
-void policy_mgr_set_dbs_cap_ut(struct wlan_objmgr_psoc *psoc, uint32_t dbs);
-#else
-static inline void
-policy_mgr_set_dbs_cap_ut(struct wlan_objmgr_psoc *psoc, uint32_t dbs) {}
-#endif
 #endif /* __WLAN_POLICY_MGR_API_H */

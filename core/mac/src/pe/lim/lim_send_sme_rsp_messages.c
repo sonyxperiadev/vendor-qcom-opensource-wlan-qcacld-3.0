@@ -445,7 +445,14 @@ static void lim_copy_ml_partner_info(struct cm_vdev_join_rsp *rsp,
 		}
 	}
 }
-#endif
+#else /* WLAN_FEATURE_11BE_MLO */
+static inline void
+lim_copy_ml_partner_info(struct cm_vdev_join_rsp *rsp,
+			 struct pe_session *pe_session)
+{
+}
+#endif /* WLAN_FEATURE_11BE_MLO */
+
 void lim_cm_send_connect_rsp(struct mac_context *mac_ctx,
 			     struct pe_session *pe_session,
 			     struct cm_vdev_join_req *req,
@@ -478,9 +485,7 @@ void lim_cm_send_connect_rsp(struct mac_context *mac_ctx,
 								connect_status,
 								status_code);
 		lim_free_pession_ies(pe_session);
-#ifdef WLAN_FEATURE_11BE_MLO
 		lim_copy_ml_partner_info(rsp, pe_session);
-#endif
 		if (QDF_IS_STATUS_ERROR(status)) {
 			pe_err("vdev_id: %d cm_id 0x%x : fail to prepare rsp",
 			       rsp->connect_rsp.vdev_id,

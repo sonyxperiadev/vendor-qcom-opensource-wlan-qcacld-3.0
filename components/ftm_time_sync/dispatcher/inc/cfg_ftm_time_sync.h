@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -69,8 +70,8 @@
 /*
  * <ini>
  * time_sync_ftm_role- Time Sync FTM feature Role configuration
- * @Min: 0 - Slave Role
- * @Max: 1 - Master Role
+ * @Min: 0 - Target Role
+ * @Max: 1 - Initiator Role
  * @Default: 0
  *
  * This ini is applicable only if enable_time_sync_ftm is set to 1.

@@ -193,13 +193,37 @@
 				0, \
 				"HE Flex Twt Sched")
 
+/*
+ * <ini>
+ * enable_twt_in_11n - Enable TWT support in 11n mode
+ * @MIN: 0
+ * @MAX: 1
+ * @Default: 0
+ *
+ * This ini is used to enable/disable TWT support 11n mode.
+ * Generally by default TWT support present from HE capable
+ * devices but if this ini is enabled then it will support
+ * partially from 11n mode itself.
+ *
+ * Related: NA
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_TWT_ENABLE_IN_11N CFG_INI_BOOL( \
+		"enable_twt_in_11n", \
+		false, \
+		"enable twt support in 11n mode")
+
 #define CFG_TWT_ALL \
 	CFG(CFG_ENABLE_TWT) \
 	CFG(CFG_TWT_REQUESTOR) \
 	CFG(CFG_TWT_RESPONDER) \
 	CFG(CFG_TWT_CONGESTION_TIMEOUT) \
 	CFG(CFG_BCAST_TWT_REQ_RESP) \
-	CFG(CFG_ENABLE_TWT_24GHZ)
+	CFG(CFG_ENABLE_TWT_24GHZ) \
+	CFG(CFG_TWT_ENABLE_IN_11N)
 #elif !defined(WLAN_SUPPORT_TWT) && !defined(WLAN_TWT_CONV_SUPPORTED)
 #define CFG_TWT_ALL
 #endif

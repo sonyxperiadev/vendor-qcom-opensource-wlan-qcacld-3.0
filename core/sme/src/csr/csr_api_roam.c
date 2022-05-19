@@ -748,12 +748,10 @@ static void csr_roam_sort_channel_for_early_stop(struct mac_context *mac_ctx,
 			}
 		}
 	}
-	QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_DEBUG,
-		"greedy=%d, non-greedy=%d, tot=%d",
-		num_greedy_chan, num_non_greedy_chan, num_channel);
+	sme_debug("greedy=%d, non-greedy=%d, tot=%d", num_greedy_chan,
+		  num_non_greedy_chan, num_channel);
 	if ((num_greedy_chan + num_non_greedy_chan) != num_channel) {
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			"incorrect sorting of channels");
+		sme_err("incorrect sorting of channels");
 		goto scan_list_sort_error;
 	}
 	/* Copy the Greedy channels first */
@@ -1001,10 +999,8 @@ QDF_STATUS csr_update_channel_list(struct mac_context *mac)
 			if ((roam_policy->dfs_mode ==
 				STA_ROAM_POLICY_DFS_DISABLED) &&
 				(channel_state == CHANNEL_STATE_DFS)) {
-				QDF_TRACE(QDF_MODULE_ID_SME,
-					QDF_TRACE_LEVEL_DEBUG,
-					FL("skip dfs channel frequency %d"),
-					channel_freq);
+				sme_debug("skip dfs channel frequency %d",
+					  channel_freq);
 				continue;
 			}
 			if (roam_policy->skip_unsafe_channels &&
@@ -1026,10 +1022,8 @@ QDF_STATUS csr_update_channel_list(struct mac_context *mac)
 					roam_policy->sap_operating_band ==
 							BAND_5G);
 				if (is_unsafe_chan && is_same_band) {
-					QDF_TRACE(QDF_MODULE_ID_SME,
-					QDF_TRACE_LEVEL_DEBUG,
-					FL("ignoring unsafe channel freq %d"),
-					channel_freq);
+					sme_debug("ignoring unsafe channel freq %d",
+						  channel_freq);
 					continue;
 				}
 			}
@@ -1045,18 +1039,14 @@ QDF_STATUS csr_update_channel_list(struct mac_context *mac)
 					pScan->base_channels.channel_freq_list[i]) {
 					pChanList->chanParam[num_channel].pwr =
 						MAX_PWR_FCC_CHAN_12;
-					QDF_TRACE(QDF_MODULE_ID_SME,
-						  QDF_TRACE_LEVEL_DEBUG,
-						  "txpow for channel 12 is %d",
+					sme_debug("txpow for channel 12 is %d",
 						  MAX_PWR_FCC_CHAN_12);
 				}
 				if (2472 ==
 					pScan->base_channels.channel_freq_list[i]) {
 					pChanList->chanParam[num_channel].pwr =
 						MAX_PWR_FCC_CHAN_13;
-					QDF_TRACE(QDF_MODULE_ID_SME,
-						  QDF_TRACE_LEVEL_DEBUG,
-						  "txpow for channel 13 is %d",
+					sme_debug("txpow for channel 13 is %d",
 						  MAX_PWR_FCC_CHAN_13);
 				}
 			}
@@ -1086,8 +1076,7 @@ QDF_STATUS csr_update_channel_list(struct mac_context *mac)
 		csr_roam_sort_channel_for_early_stop(mac, pChanList,
 						     num_channel);
 	else
-		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
-			FL("Early Stop Scan Feature not supported"));
+		sme_debug("Early Stop Scan Feature not supported");
 
 	if ((mac->roam.configParam.uCfgDot11Mode ==
 				eCSR_CFG_DOT11_MODE_AUTO) ||
@@ -1257,8 +1246,7 @@ void csr_set_global_cfgs(struct mac_context *mac)
  */
 static void csr_packetdump_timer_handler(void *pv)
 {
-	QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
-			"%s Invoking packetdump deregistration API", __func__);
+	sme_debug("Invoking packetdump deregistration API");
 	wlan_deregister_txrx_packetdump(OL_TXRX_PDEV_ID);
 }
 
@@ -2984,7 +2972,7 @@ QDF_STATUS csr_roam_ndi_stop(struct mac_context *mac_ctx, uint8_t vdev_id)
 static void csr_fill_single_pmk(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 				struct bss_description *bss_desc)
 {
-	struct cm_roam_values_copy src_cfg;
+	struct cm_roam_values_copy src_cfg = {};
 
 	src_cfg.bool_value = bss_desc->is_single_pmk;
 	wlan_cm_roam_cfg_set_value(psoc, vdev_id,
@@ -3139,8 +3127,7 @@ void csr_roaming_state_msg_processor(struct mac_context *mac, void *msg_buf)
 	case eWNI_SME_DISASSOC_RSP:
 		/* or the Disassociate response message... */
 		if (CSR_IS_ROAM_SUBSTATE_DISASSOC_REQ(mac, pSmeRsp->vdev_id)) {
-			QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
-				 "eWNI_SME_DISASSOC_RSP subState = %s",
+			sme_debug("eWNI_SME_DISASSOC_RSP subState = %s",
 				  mac_trace_getcsr_roam_sub_state(
 				  mac->roam.curSubState[pSmeRsp->vdev_id]));
 			csr_roam_roaming_state_disassoc_rsp_processor(mac,
@@ -3183,6 +3170,25 @@ void csr_roaming_state_msg_processor(struct mac_context *mac, void *msg_buf)
 		break;
 	}
 }
+
+#ifdef WLAN_FEATURE_11BE_MLO
+static void
+csr_roam_assoc_cnf_mld_copy(struct csr_roam_info *roam_info,
+			    tSirSmeAssocIndToUpperLayerCnf *pUpperLayerAssocCnf,
+			    uint32_t num_bytes)
+{
+	qdf_mem_copy(roam_info->peer_mld.bytes,
+		     pUpperLayerAssocCnf->peer_mld_addr,
+		     num_bytes);
+}
+#else /* WLAN_FEATURE_11BE_MLO */
+static inline void
+csr_roam_assoc_cnf_mld_copy(struct csr_roam_info *roam_info,
+			    tSirSmeAssocIndToUpperLayerCnf *pUpperLayerAssocCnf,
+			    uint32_t num_bytes)
+{
+}
+#endif /* WLAN_FEATURE_11BE_MLO */
 
 void csr_roam_joined_state_msg_processor(struct mac_context *mac, void *msg_buf)
 {
@@ -3241,11 +3247,9 @@ void csr_roam_joined_state_msg_processor(struct mac_context *mac, void *msg_buf)
 		qdf_mem_copy(roam_info->peerMac.bytes,
 			     pUpperLayerAssocCnf->peerMacAddr,
 			     sizeof(tSirMacAddr));
-#ifdef WLAN_FEATURE_11BE_MLO
-		qdf_mem_copy(roam_info->peer_mld.bytes,
-			     pUpperLayerAssocCnf->peer_mld_addr,
-			     sizeof(tSirMacAddr));
-#endif
+		csr_roam_assoc_cnf_mld_copy(roam_info,
+					    pUpperLayerAssocCnf,
+					    sizeof(tSirMacAddr));
 		qdf_mem_copy(&roam_info->bssid,
 			     pUpperLayerAssocCnf->bssId,
 			     sizeof(struct qdf_mac_addr));
@@ -3266,6 +3270,8 @@ void csr_roam_joined_state_msg_processor(struct mac_context *mac, void *msg_buf)
 		roam_info->max_supp_idx = pUpperLayerAssocCnf->max_supp_idx;
 		roam_info->max_ext_idx = pUpperLayerAssocCnf->max_ext_idx;
 		roam_info->max_mcs_idx = pUpperLayerAssocCnf->max_mcs_idx;
+		roam_info->max_real_mcs_idx =
+					pUpperLayerAssocCnf->max_real_mcs_idx;
 		roam_info->rx_mcs_map = pUpperLayerAssocCnf->rx_mcs_map;
 		roam_info->tx_mcs_map = pUpperLayerAssocCnf->tx_mcs_map;
 		roam_info->ecsa_capable = pUpperLayerAssocCnf->ecsa_capable;
@@ -3742,6 +3748,22 @@ static bool csr_is_sae_peer_allowed(struct mac_context *mac_ctx,
 	return is_allowed;
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static void
+csr_send_assoc_ind_to_upper_layer_mac_copy(tSirSmeAssocIndToUpperLayerCnf *cnf,
+					   struct assoc_ind *ind)
+{
+	qdf_mem_copy(&cnf->peer_mld_addr, &ind->peer_mld_addr,
+		     sizeof(cnf->peer_mld_addr));
+}
+#else /* WLAN_FEATURE_11BE_MLO */
+static inline void
+csr_send_assoc_ind_to_upper_layer_mac_copy(tSirSmeAssocIndToUpperLayerCnf *cnf,
+					   struct assoc_ind *ind)
+{
+}
+#endif /* WLAN_FEATURE_11BE_MLO */
+
 static QDF_STATUS
 csr_send_assoc_ind_to_upper_layer_cnf_msg(struct mac_context *mac,
 					  struct assoc_ind *ind,
@@ -3766,10 +3788,7 @@ csr_send_assoc_ind_to_upper_layer_cnf_msg(struct mac_context *mac,
 	qdf_mem_copy(&cnf->bssId, &ind->bssId, sizeof(cnf->bssId));
 	qdf_mem_copy(&cnf->peerMacAddr, &ind->peerMacAddr,
 		     sizeof(cnf->peerMacAddr));
-#ifdef WLAN_FEATURE_11BE_MLO
-	qdf_mem_copy(&cnf->peer_mld_addr, &ind->peer_mld_addr,
-		     sizeof(cnf->peer_mld_addr));
-#endif
+	csr_send_assoc_ind_to_upper_layer_mac_copy(cnf, ind);
 	cnf->aid = ind->staId;
 	cnf->wmmEnabledSta = ind->wmmEnabledSta;
 	cnf->rsnIE = ind->rsnIE;
@@ -3789,6 +3808,7 @@ csr_send_assoc_ind_to_upper_layer_cnf_msg(struct mac_context *mac,
 	cnf->max_supp_idx = ind->max_supp_idx;
 	cnf->max_ext_idx = ind->max_ext_idx;
 	cnf->max_mcs_idx = ind->max_mcs_idx;
+	cnf->max_real_mcs_idx = ind->max_real_mcs_idx;
 	cnf->rx_mcs_map = ind->rx_mcs_map;
 	cnf->tx_mcs_map = ind->tx_mcs_map;
 	cnf->ecsa_capable = ind->ecsa_capable;
@@ -4857,7 +4877,7 @@ QDF_STATUS csr_set_pmk_cache_ft(struct mac_context *mac, uint8_t vdev_id,
 		sme_debug("Auth type: %x update the MDID in cache", akm);
 		cm_update_pmk_cache_ft(mac->psoc, vdev_id);
 	} else {
-		struct cm_roam_values_copy src_cfg;
+		struct cm_roam_values_copy src_cfg = {};
 		struct scan_filter *scan_filter;
 		qdf_list_t *list = NULL;
 		struct scan_cache_node *first_node = NULL;
@@ -5314,7 +5334,7 @@ static void csr_fill_connected_profile(struct mac_context *mac_ctx,
 	struct bss_description *bss_desc = NULL;
 	tDot11fBeaconIEs *bcn_ies;
 	sme_QosAssocInfo assoc_info;
-	struct cm_roam_values_copy src_cfg;
+	struct cm_roam_values_copy src_cfg = {};
 	bool is_ese = false;
 	uint8_t country_code[REG_ALPHA2_LEN + 1];
 
@@ -5413,7 +5433,7 @@ QDF_STATUS cm_csr_connect_rsp(struct wlan_objmgr_vdev *vdev,
 	struct mac_context *mac_ctx;
 	uint8_t vdev_id = wlan_vdev_get_id(vdev);
 	struct csr_roam_session *session;
-	struct cm_roam_values_copy src_config;
+	struct cm_roam_values_copy src_config = {};
 
 	/*
 	 * This API is to update legacy struct and should be removed once

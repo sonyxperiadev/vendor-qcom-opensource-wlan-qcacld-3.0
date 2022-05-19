@@ -1219,6 +1219,23 @@ struct rcpi_info {
 
 struct hdd_context;
 
+#ifdef MULTI_CLIENT_LL_SUPPORT
+/* Max host clients which can request the FW arbiter with the latency level */
+#define WLM_MAX_HOST_CLIENT 5
+
+/**
+ * struct wlm_multi_client_info_table - To store multi client id information
+ * @client_id: host id for a client
+ * @port_id: client id coming from upper layer
+ * @in_use: set true for a client when host receives vendor cmd for that client
+ */
+struct wlm_multi_client_info_table {
+	uint32_t client_id;
+	uint32_t port_id;
+	bool in_use;
+};
+#endif
+
 /**
  * struct hdd_adapter - hdd vdev/net_device context
  * @vdev: object manager vdev context
@@ -1232,6 +1249,12 @@ struct hdd_context;
  * @cache_sta_count: number of currently cached stations
  * @acs_complete_event: acs complete event
  * @latency_level: 0 - normal, 1 - xr, 2 - low, 3 - ultralow
+ * @multi_client_ll_support: to check multi client ll support in driver
+ * @client_info: To store multi client id information
+ * @multi_ll_response_cookie: cookie for multi client ll command
+ * @multi_ll_req_in_progress: to check multi client ll request in progress
+ * @multi_ll_resp_expected: to decide whether host will wait for multi client
+ * event or not
  * @last_disconnect_reason: Last disconnected internal reason code
  *                          as per enum qca_disconnect_reason_codes
  * @connect_req_status: Last disconnected internal status code
@@ -1520,6 +1543,13 @@ struct hdd_adapter {
 	uint32_t mon_chan_freq;
 	uint32_t mon_bandwidth;
 	uint16_t latency_level;
+#ifdef MULTI_CLIENT_LL_SUPPORT
+	bool multi_client_ll_support;
+	struct wlm_multi_client_info_table client_info[WLM_MAX_HOST_CLIENT];
+	void *multi_ll_response_cookie;
+	bool multi_ll_req_in_progress;
+	bool multi_ll_resp_expected;
+#endif
 #ifdef FEATURE_MONITOR_MODE_SUPPORT
 	bool monitor_mode_vdev_up_in_progress;
 #endif
@@ -1591,6 +1621,22 @@ struct hdd_adapter {
 #define WLAN_HDD_GET_HOSTAP_STATE_PTR(adapter) \
 				(&(adapter)->session.ap.hostapd_state)
 #define WLAN_HDD_GET_SAP_CTX_PTR(adapter) ((adapter)->session.ap.sap_context)
+
+/**
+ * hdd_is_sta_authenticated() - check if given adapter's STA
+ *				session authenticated
+ * @adapter: adapter pointer
+ *
+ * Return: STA session is_authenticated flag value
+ */
+static inline
+uint8_t hdd_is_sta_authenticated(struct hdd_adapter *adapter)
+{
+	struct hdd_station_ctx *sta_ctx =
+			WLAN_HDD_GET_STATION_CTX_PTR(adapter);
+
+	return sta_ctx->conn_info.is_authenticated;
+}
 
 #ifdef WLAN_FEATURE_NAN
 #define WLAN_HDD_IS_NDP_ENABLED(hdd_ctx) ((hdd_ctx)->nan_datapath_enabled)
@@ -1922,6 +1968,38 @@ struct hdd_rtpm_tput_policy_context {
 };
 #endif
 
+#ifdef FEATURE_WLAN_DYNAMIC_IFACE_CTRL
+/**
+ * hdd_get_wlan_driver_status() - get status of soft driver unload
+ *
+ * Return: true if wifi is disabled by soft driver unload, else false
+ */
+bool hdd_get_wlan_driver_status(void);
+#else
+static inline bool hdd_get_wlan_driver_status(void)
+{
+	return false;
+}
+#endif
+
+/**
+ * enum wlan_state_ctrl_str_id - state contrl param string id
+ * @WLAN_OFF_STR: Turn OFF WiFi
+ * @WLAN_ON_STR: Turn ON WiFi
+ * @WLAN_ENABLE_STR: Enable WiFi
+ * @WLAN_DISABLE_STR: Disable Wifi
+ * @WLAN_WAIT_FOR_READY_STR: Driver should wait for ongoing recovery
+ * @WLAN_FORCE_DISABLE_STR: Disable Wifi by soft driver unload
+ */
+enum wlan_state_ctrl_str_id {
+	WLAN_OFF_STR   = 0,
+	WLAN_ON_STR,
+	WLAN_ENABLE_STR,
+	WLAN_DISABLE_STR,
+	WLAN_WAIT_FOR_READY_STR,
+	WLAN_FORCE_DISABLE_STR
+};
+
 /**
  * struct hdd_context - hdd shared driver and psoc/device context
  * @psoc: object manager psoc context
@@ -1951,6 +2029,7 @@ struct hdd_rtpm_tput_policy_context {
  * @dump_in_progress: Stores value of dump in progress
  * @hdd_dual_sta_policy: Concurrent STA policy configuration
  * @rx_skip_qdisc_chk_conc: flag to skip ingress qdisc check in concurrency
+ * @is_wlan_disabled: if wlan is disabled by userspace
  */
 struct hdd_context {
 	struct wlan_objmgr_psoc *psoc;
@@ -2333,6 +2412,7 @@ struct hdd_context {
 #ifdef CONFIG_WLAN_FREQ_LIST
 	uint8_t power_type;
 #endif
+	bool is_wlan_disabled;
 };
 
 /**
@@ -3675,8 +3755,35 @@ static inline int wlan_hdd_get_cpu(void)
 }
 #endif
 
+#ifdef PRE_CAC_SUPPORT
+/**
+ * wlan_hdd_sap_pre_cac_failure() - Process the pre cac failure
+ * @data: AP adapter
+ *
+ * Deletes the pre cac adapter
+ *
+ * Return: None
+ */
 void wlan_hdd_sap_pre_cac_failure(void *data);
+/**
+ * hdd_clean_up_pre_cac_interface() - Clean up the pre cac interface
+ * @hdd_ctx: HDD context
+ *
+ * Cleans up the pre cac interface, if it exists
+ *
+ * Return: None
+ */
 void hdd_clean_up_pre_cac_interface(struct hdd_context *hdd_ctx);
+#else
+static inline void wlan_hdd_sap_pre_cac_failure(void *data)
+{
+}
+
+static inline void
+hdd_clean_up_pre_cac_interface(struct hdd_context *hdd_ctx)
+{
+}
+#endif /* PRE_CAC_SUPPORT */
 
 void wlan_hdd_txrx_pause_cb(uint8_t vdev_id,
 	enum netif_action_type action, enum netif_reason_type reason);
@@ -4015,6 +4122,20 @@ int hdd_start_station_adapter(struct hdd_adapter *adapter);
 int hdd_start_ap_adapter(struct hdd_adapter *adapter);
 int hdd_configure_cds(struct hdd_context *hdd_ctx);
 int hdd_set_fw_params(struct hdd_adapter *adapter);
+
+#ifdef MULTI_CLIENT_LL_SUPPORT
+/**
+ * wlan_hdd_deinit_multi_client_info_table() - to deinit multi client info table
+ * @adapter: hdd vdev/net_device context
+ *
+ * Return: none
+ */
+void wlan_hdd_deinit_multi_client_info_table(struct hdd_adapter *adapter);
+#else
+static inline void
+wlan_hdd_deinit_multi_client_info_table(struct hdd_adapter *adapter)
+{}
+#endif
 
 /**
  * hdd_wlan_start_modules() - Single driver state machine for starting modules
@@ -5347,4 +5468,20 @@ static inline int hdd_set_suspend_mode(struct hdd_context *hdd_ctx)
  * schedule idle shutdown work queue when no interface open.
  */
 void hdd_shutdown_wlan_in_suspend(struct hdd_context *hdd_ctx);
+
+#define HDD_DATA_STALL_ENABLE      BIT(0)
+#define HDD_HOST_STA_TX_TIMEOUT    BIT(16)
+#define HDD_HOST_SAP_TX_TIMEOUT    BIT(17)
+#define HDD_HOST_NUD_FAILURE       BIT(18)
+#define HDD_TIMEOUT_WLM_MODE       BIT(31)
+#define FW_DATA_STALL_EVT_MASK     0x8000FFFF
+
+/**
+ * hdd_is_data_stall_event_enabled() - Check if data stall detection is enabled
+ * @evt: Data stall event to be checked
+ *
+ * Return: True if the data stall event is enabled
+ */
+bool hdd_is_data_stall_event_enabled(uint32_t evt);
+
 #endif /* end #if !defined(WLAN_HDD_MAIN_H) */

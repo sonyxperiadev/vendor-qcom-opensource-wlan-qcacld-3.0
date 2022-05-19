@@ -202,7 +202,10 @@ char *sta_info_string_from_dbgid(wlan_sta_info_dbgid id);
  * @mode: Mode of the connection
  * @max_supp_idx: Max supported rate index of the station
  * @max_ext_idx: Max extended supported rate index of the station
- * @max_mcs_idx: Max supported mcs index of the station
+ * @max_mcs_idx: Max supported mcs index from ht cap of the station
+ * @max_real_mcs_idx: Max supported mcs index from biggest cap of the station.
+ *                    For example, if station supports HE , first check he cap,
+ *                    then vht cap and so on.
  * @rx_mcs_map: VHT Rx mcs map
  * @tx_mcs_map: VHT Tx mcs map
  * @freq : Frequency of the current station
@@ -273,6 +276,7 @@ struct hdd_station_info {
 	uint8_t max_supp_idx;
 	uint8_t max_ext_idx;
 	uint8_t max_mcs_idx;
+	uint8_t max_real_mcs_idx;
 	uint8_t rx_mcs_map;
 	uint8_t tx_mcs_map;
 	uint32_t freq;

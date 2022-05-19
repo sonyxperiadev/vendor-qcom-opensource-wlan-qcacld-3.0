@@ -45,9 +45,15 @@ static void wma_convert_eht_cap(tDot11fIEeht_cap *eht_cap, uint32_t *mac_cap,
 	eht_cap->present = true;
 
 	/* EHT MAC capabilities */
-	eht_cap->nsep_pri_access = WMI_EHTCAP_MAC_NSEPPRIACCESS_GET(mac_cap);
+	eht_cap->epcs_pri_access = WMI_EHTCAP_MAC_NSEPPRIACCESS_GET(mac_cap);
 	eht_cap->eht_om_ctl = WMI_EHTCAP_MAC_EHTOMCTRL_GET(mac_cap);
-	eht_cap->triggered_txop_sharing = WMI_EHTCAP_MAC_TRIGTXOP_GET(mac_cap);
+	eht_cap->triggered_txop_sharing_mode1 =
+				WMI_EHTCAP_MAC_TRIGTXOPMODE1_GET(mac_cap);
+	eht_cap->triggered_txop_sharing_mode2 =
+				WMI_EHTCAP_MAC_TRIGTXOPMODE2_GET(mac_cap);
+	eht_cap->restricted_twt = WMI_EHTCAP_MAC_RESTRICTTWT_GET(mac_cap);
+	eht_cap->scs_traffic_desc = WMI_EHTCAP_MAC_SCSTRAFFICDESC_GET(mac_cap);
+	eht_cap->max_mpdu_len = WMI_EHTCAP_MAC_MAXMPDULEN_GET(mac_cap);
 
 	/* EHT PHY capabilities */
 	eht_cap->support_320mhz_6ghz = WMI_EHTCAP_PHY_320MHZIN6GHZ_GET(phy_cap);
@@ -109,6 +115,12 @@ static void wma_convert_eht_cap(tDot11fIEeht_cap *eht_cap, uint32_t *mac_cap,
 			phy_cap);
 	eht_cap->mu_bformer_160mhz = WMI_EHTCAP_PHY_MUBFMR160MHZ_GET(phy_cap);
 	eht_cap->mu_bformer_320mhz = WMI_EHTCAP_PHY_MUBFMR320MHZ_GET(phy_cap);
+	eht_cap->tb_sounding_feedback_rl =
+			WMI_EHTCAP_PHY_TBSUNDFBRATELIMIT_GET(phy_cap);
+	eht_cap->rx_1k_qam_in_wider_bw_dl_ofdma =
+			WMI_EHTCAP_PHY_RX1024QAMWIDERBWDLOFDMA_GET(phy_cap);
+	eht_cap->rx_4k_qam_in_wider_bw_dl_ofdma =
+			WMI_EHTCAP_PHY_RX4096QAMWIDERBWDLOFDMA_GET(phy_cap);
 
 	/* TODO: MCS map and PPET */
 }
@@ -123,6 +135,24 @@ void wma_eht_update_tgt_services(struct wmi_unified *wmi_handle,
 	} else {
 		wma_debug("11be is not enabled");
 	}
+}
+
+static void
+wma_update_eht_cap_support_for_320mhz(struct target_psoc_info *tgt_hdl,
+				      tDot11fIEeht_cap *eht_cap)
+{
+	struct wlan_psoc_host_mac_phy_caps_ext2 *cap;
+
+	cap = target_psoc_get_mac_phy_cap_ext2_for_mode(
+			tgt_hdl, WMI_HOST_HW_MODE_SINGLE);
+	if (!cap) {
+		wma_debug("HW_MODE_SINGLE does not exist");
+		return;
+	}
+
+	eht_cap->support_320mhz_6ghz = WMI_EHTCAP_PHY_320MHZIN6GHZ_GET(
+			cap->eht_cap_phy_info_5G);
+	wma_debug("Support for 320MHz 0x%01x", eht_cap->support_320mhz_6ghz);
 }
 
 void wma_update_target_ext_eht_cap(struct target_psoc_info *tgt_hdl,
@@ -185,6 +215,9 @@ void wma_update_target_ext_eht_cap(struct target_psoc_info *tgt_hdl,
 		}
 	}
 	qdf_mem_copy(eht_cap, &eht_cap_mac, sizeof(tDot11fIEeht_cap));
+
+	wma_update_eht_cap_support_for_320mhz(tgt_hdl, eht_cap);
+
 	wma_print_eht_cap(eht_cap);
 }
 
@@ -200,11 +233,19 @@ void wma_print_eht_cap(tDot11fIEeht_cap *eht_cap)
 	wma_debug("EHT Capabilities:");
 
 	/* EHT MAC Capabilities */
-	wma_nofl_debug("\tNSEP Priority Access: 0x%01x",
-		       eht_cap->nsep_pri_access);
+	wma_nofl_debug("\tEPCS Priority Access: 0x%01x",
+		       eht_cap->epcs_pri_access);
 	wma_nofl_debug("\tOM Control: 0x%01x", eht_cap->eht_om_ctl);
-	wma_nofl_debug("\tTriggered TXOP Sharing: 0x%01x",
-		       eht_cap->triggered_txop_sharing);
+	wma_nofl_debug("\tTriggered TXOP Sharing mode-1: 0x%01x",
+		       eht_cap->triggered_txop_sharing_mode1);
+	wma_nofl_debug("\tTriggered TXOP Sharing mode-2: 0x%01x",
+		       eht_cap->triggered_txop_sharing_mode2);
+	wma_nofl_debug("\tRestricted TWT support: 0x%01x",
+		       eht_cap->restricted_twt);
+	wma_nofl_debug("\tSCS Traffic Description Support: 0x%01x",
+		       eht_cap->scs_traffic_desc);
+	wma_nofl_debug("\tMaximum MPDU Length: 0x%01x",
+		       eht_cap->max_mpdu_len);
 
 	/* EHT PHY Capabilities */
 	wma_nofl_debug("\t320 MHz In 6 GHz: 0x%01x",
@@ -280,6 +321,12 @@ void wma_print_eht_cap(tDot11fIEeht_cap *eht_cap)
 		       eht_cap->mu_bformer_160mhz);
 	wma_nofl_debug("\tMU Beamformer BW = 320 MHz: 0x%01x",
 		       eht_cap->mu_bformer_320mhz);
+	wma_nofl_debug("\tTB sounding feedback rate limit: 0x%01x",
+		       eht_cap->tb_sounding_feedback_rl);
+	wma_nofl_debug("\tRx 1024-QAM in wider bandwidth DL OFDMA support: 0x%01x",
+		       eht_cap->rx_1k_qam_in_wider_bw_dl_ofdma);
+	wma_nofl_debug("\tRx 4096-QAM in wider bandwidth DL OFDMA support: 0x%01x",
+		       eht_cap->rx_4k_qam_in_wider_bw_dl_ofdma);
 }
 
 void wma_print_eht_phy_cap(uint32_t *phy_cap)
@@ -363,18 +410,32 @@ void wma_print_eht_phy_cap(uint32_t *phy_cap)
 		       WMI_EHTCAP_PHY_MUBFMR160MHZ_GET(phy_cap));
 	wma_nofl_debug("\tMU Beamformer BW = 320 MHz: 0x%01x",
 		       WMI_EHTCAP_PHY_MUBFMR320MHZ_GET(phy_cap));
+	wma_nofl_debug("\tTB sounding feedback rate limit: 0x%01x",
+		       WMI_EHTCAP_PHY_TBSUNDFBRATELIMIT_GET(phy_cap));
+	wma_nofl_debug("\tRx 1024-QAM in wider bandwidth DL OFDMA support: 0x%01x",
+		       WMI_EHTCAP_PHY_RX1024QAMWIDERBWDLOFDMA_GET(phy_cap));
+	wma_nofl_debug("\tRx 4096-QAM in wider bandwidth DL OFDMA support: 0x%01x",
+		       WMI_EHTCAP_PHY_RX4096QAMWIDERBWDLOFDMA_GET(phy_cap));
 }
 
 void wma_print_eht_mac_cap(uint32_t *mac_cap)
 {
 	wma_debug("EHT MAC Capabilities:");
 
-	wma_nofl_debug("\tNSEP Priority Access: 0x%01x",
-		       WMI_EHTCAP_MAC_NSEPPRIACCESS_GET(mac_cap));
+	wma_nofl_debug("\tEPCS Priority Access: 0x%01x",
+		       WMI_EHTCAP_MAC_EPCSPRIACCESS_GET(mac_cap));
 	wma_nofl_debug("\tOM Control: 0x%01x",
 		       WMI_EHTCAP_MAC_EHTOMCTRL_GET(mac_cap));
-	wma_nofl_debug("\tTriggered TXOP Sharing: 0x%01x",
-		       WMI_EHTCAP_MAC_TRIGTXOP_GET(mac_cap));
+	wma_nofl_debug("\tTriggered TXOP Sharing mode 1 support: 0x%01x",
+		       WMI_EHTCAP_MAC_TRIGTXOPMODE1_GET(mac_cap));
+	wma_nofl_debug("\tTriggered TXOP Sharing mode 2 support: 0x%01x",
+		       WMI_EHTCAP_MAC_TRIGTXOPMODE2_GET(mac_cap));
+	wma_nofl_debug("\tRestricted TWT support: 0x%01x",
+		       WMI_EHTCAP_MAC_RESTRICTTWT_GET(mac_cap));
+	wma_nofl_debug("\tSCS Traffic Description Support: 0x%01x",
+		       WMI_EHTCAP_MAC_SCSTRAFFICDESC_GET(mac_cap));
+	wma_nofl_debug("\tMaximum MPDU Length: 0x%01x",
+		       WMI_EHTCAP_MAC_MAXMPDULEN_GET(mac_cap));
 }
 
 void wma_print_eht_op(tDot11fIEeht_op *eht_ops)
@@ -395,9 +456,10 @@ void wma_populate_peer_eht_cap(struct peer_assoc_params *peer,
 	peer->qos_flag = 1;
 
 	/* EHT MAC Capabilities */
-	WMI_EHTCAP_MAC_NSEPPRIACCESS_SET(mac_cap, eht_cap->nsep_pri_access);
+	WMI_EHTCAP_MAC_EPCSPRIACCESS_SET(mac_cap, eht_cap->epcs_pri_access);
 	WMI_EHTCAP_MAC_EHTOMCTRL_SET(mac_cap, eht_cap->eht_om_ctl);
-	WMI_EHTCAP_MAC_TRIGTXOP_SET(mac_cap, eht_cap->triggered_txop_sharing);
+	WMI_EHTCAP_MAC_TRIGTXOP_SET(mac_cap,
+				    eht_cap->triggered_txop_sharing_mode1);
 
 	/* EHT PHY Capabilities */
 	WMI_EHTCAP_PHY_320MHZIN6GHZ_SET(phy_cap, eht_cap->support_320mhz_6ghz);
@@ -456,6 +518,12 @@ void wma_populate_peer_eht_cap(struct peer_assoc_params *peer,
 	WMI_EHTCAP_PHY_MUBFMRLT80MHZ_SET(phy_cap, eht_cap->mu_bformer_le_80mhz);
 	WMI_EHTCAP_PHY_MUBFMR160MHZ_SET(phy_cap, eht_cap->mu_bformer_160mhz);
 	WMI_EHTCAP_PHY_MUBFMR320MHZ_SET(phy_cap, eht_cap->mu_bformer_320mhz);
+	WMI_EHTCAP_PHY_TBSUNDFBRATELIMIT_SET(phy_cap,
+					eht_cap->tb_sounding_feedback_rl);
+	WMI_EHTCAP_PHY_RX1024QAMWIDERBWDLOFDMA_SET(phy_cap,
+				eht_cap->rx_1k_qam_in_wider_bw_dl_ofdma);
+	WMI_EHTCAP_PHY_RX4096QAMWIDERBWDLOFDMA_SET(phy_cap,
+				eht_cap->rx_4k_qam_in_wider_bw_dl_ofdma);
 
 	qdf_mem_copy(peer->peer_eht_rx_mcs_set, peer->peer_he_rx_mcs_set,
 		     sizeof(peer->peer_he_rx_mcs_set));

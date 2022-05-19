@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -440,65 +440,6 @@ static int32_t hdd_add_tx_bitrate(struct sk_buff *skb,
 	return 0;
 fail:
 	return -EINVAL;
-}
-
-/**
- * hdd_get_max_tx_bitrate() - Get the max tx bitrate of the AP
- * @hdd_ctx: hdd context
- * @adapter: hostapd interface
- *
- * THis function gets the MAX supported rate by AP and cache
- * it into connection info structure
- *
- * Return: None
- */
-static void hdd_get_max_tx_bitrate(struct hdd_context *hdd_ctx,
-				   struct hdd_adapter *adapter)
-{
-	struct station_info sinfo;
-	enum tx_rate_info tx_rate_flags;
-	uint8_t tx_mcs_index, tx_nss = 1;
-	uint16_t my_tx_rate;
-	struct hdd_station_ctx *hdd_sta_ctx;
-	struct wlan_objmgr_vdev *vdev;
-
-	hdd_sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
-
-	qdf_mem_zero(&sinfo, sizeof(struct station_info));
-
-	sinfo.signal = adapter->rssi;
-	tx_rate_flags = adapter->hdd_stats.class_a_stat.tx_rx_rate_flags;
-	tx_mcs_index = adapter->hdd_stats.class_a_stat.tx_mcs_index;
-	my_tx_rate = adapter->hdd_stats.class_a_stat.tx_rate;
-
-	if (!(tx_rate_flags & TX_RATE_LEGACY)) {
-		vdev = hdd_objmgr_get_vdev_by_user(adapter,
-						   WLAN_OSIF_STATS_ID);
-		if (vdev) {
-			/*
-			 * Take static NSS for reporting max rates.
-			 * NSS from FW is not reliable as it changes
-			 * as per the environment quality.
-			 */
-			tx_nss = wlan_vdev_mlme_get_nss(vdev);
-			hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_STATS_ID);
-		} else {
-			tx_nss = adapter->hdd_stats.class_a_stat.tx_nss;
-		}
-		hdd_check_and_update_nss(hdd_ctx, &tx_nss, NULL);
-
-		if (tx_mcs_index == INVALID_MCS_IDX)
-			tx_mcs_index = 0;
-	}
-
-	if (hdd_report_max_rate(adapter, hdd_ctx->mac_handle, &sinfo.txrate,
-				sinfo.signal, tx_rate_flags, tx_mcs_index,
-				my_tx_rate, tx_nss)) {
-		hdd_sta_ctx->cache_conn_info.max_tx_bitrate = sinfo.txrate;
-		hdd_debug("Reporting max tx rate flags %d mcs %d nss %d bw %d",
-			  sinfo.txrate.flags, sinfo.txrate.mcs,
-			  sinfo.txrate.nss, sinfo.txrate.bw);
-	}
 }
 
 /**

@@ -54,10 +54,6 @@ config QCOM_LTE_COEX
 	bool "Enable QCOM LTE Coex feature"
 	default n
 
-config MPC_UT_FRAMEWORK
-	bool "Enable Unit test framework for multiport concurrency"
-	default n
-
 config WLAN_OFFLOAD_PACKETS
 	bool "Enable offload packets feature"
 	default n

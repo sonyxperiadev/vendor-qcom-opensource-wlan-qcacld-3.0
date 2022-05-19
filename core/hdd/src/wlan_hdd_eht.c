@@ -64,22 +64,24 @@ void wlan_hdd_get_mlo_link_id(struct hdd_beacon_data *beacon,
 	if (ie) {
 		hdd_debug("find a mlo ie in beacon data");
 		*num_link = 1;
-		ie++; //WLAN_MAC_EID_EXT
-		len = *ie++; //length
-		ie++; //MLO_IE_OUI_TYPE
+		ie++; /* WLAN_MAC_EID_EXT */
+		len = *ie++; /* length */
+		ie++; /* MLO_IE_OUI_TYPE */
 		len--;
-		ie++; //Multi-Link Control field 2octets
+		ie++; /* Multi-Link Control field 2octets */
 		ie++;
 		len--;
 		len--;
-		ie += QDF_MAC_ADDR_SIZE; //mld mac addr
+		ie++; /* Common Info Length */
+		len--;
+		ie += QDF_MAC_ADDR_SIZE; /* mld mac addr */
 		len -= QDF_MAC_ADDR_SIZE;
-		*link_id = *ie++; //link id
+		*link_id = *ie++; /* link id */
 		len--;
 		while (len > 0) {
-			ie++; //sub element ID
+			ie++; /* sub element ID */
 			len--;
-			link_len = *ie++; //length of sub element ID
+			link_len = *ie++; /* length of sub element ID */
 			len--;
 			ie += link_len;
 			len -= link_len;
@@ -133,6 +135,9 @@ hdd_update_wiphy_eht_caps_6ghz(struct hdd_context *hdd_ctx,
 		phy_info[0] |= CHAN_WIDTH_SET_160MHZ_IN_5G;
 	if (max_fw_bw >= WNI_CFG_VHT_CHANNEL_WIDTH_80_PLUS_80MHZ)
 		phy_info[0] |= CHAN_WIDTH_SET_80PLUS80_MHZ_IN_5G;
+
+	if (eht_cap.support_320mhz_6ghz)
+		phy_info[0] |= IEEE80211_EHT_PHY_CAP0_320MHZ_IN_6GHZ;
 }
 
 #ifdef CFG80211_RU_PUNCT_SUPPORT

@@ -1,5 +1,6 @@
 /*
  *Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -90,10 +91,10 @@ QDF_STATUS tgt_ftm_ts_offset_evt(struct wlan_objmgr_psoc *psoc,
 			FTM_TIME_SYNC_QTIME_PAIR_MAX;
 
 	for (iter = 0; iter < vdev_priv->num_qtime_pair; iter++) {
-		vdev_priv->ftm_ts_priv.time_pair[iter].qtime_master =
-						param->pairs[iter].qtime_master;
-		vdev_priv->ftm_ts_priv.time_pair[iter].qtime_slave =
-						param->pairs[iter].qtime_slave;
+		vdev_priv->ftm_ts_priv.time_pair[iter].qtime_initiator =
+						param->pairs[iter].qtime_initiator;
+		vdev_priv->ftm_ts_priv.time_pair[iter].qtime_target =
+						param->pairs[iter].qtime_target;
 	}
 
 	ftm_time_sync_vdev_put_ref(vdev);

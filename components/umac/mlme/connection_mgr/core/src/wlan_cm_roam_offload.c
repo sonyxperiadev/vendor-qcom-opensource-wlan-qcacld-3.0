@@ -2231,6 +2231,8 @@ cm_roam_scan_offload_fill_scan_params(struct wlan_objmgr_psoc *psoc,
 	/* Parameters updated after association is complete */
 	wlan_scan_cfg_get_passive_dwelltime(psoc,
 					    &scan_params->dwell_time_passive);
+	wlan_scan_cfg_get_min_dwelltime_6g(psoc,
+					   &scan_params->min_dwell_time_6ghz);
 	/*
 	 * Here is the formula,
 	 * T(HomeAway) = N * T(dwell) + (N+1) * T(cs)
@@ -2987,6 +2989,8 @@ static void cm_fill_stop_reason(struct wlan_roam_stop_config *stop_req,
 		stop_req->reason = REASON_DISCONNECTED;
 	else if (reason == REASON_OS_REQUESTED_ROAMING_NOW)
 		stop_req->reason = REASON_OS_REQUESTED_ROAMING_NOW;
+	else if (reason == REASON_ROAM_SET_PRIMARY)
+		stop_req->reason = REASON_ROAM_SET_PRIMARY;
 	else
 		stop_req->reason = REASON_SME_ISSUED;
 }
@@ -4824,7 +4828,7 @@ bool cm_lookup_pmkid_using_bssid(struct wlan_objmgr_psoc *psoc,
 void cm_roam_restore_default_config(struct wlan_objmgr_pdev *pdev,
 				    uint8_t vdev_id)
 {
-	struct cm_roam_values_copy src_config;
+	struct cm_roam_values_copy src_config = {};
 	struct wlan_objmgr_psoc *psoc;
 	struct wlan_mlme_psoc_ext_obj *mlme_obj;
 
@@ -4897,11 +4901,12 @@ cm_store_sae_single_pmk_to_global_cache(struct wlan_objmgr_psoc *psoc,
 }
 
 void cm_check_and_set_sae_single_pmk_cap(struct wlan_objmgr_psoc *psoc,
-					 uint8_t vdev_id)
+					 uint8_t vdev_id, uint8_t *psk_pmk,
+					 uint8_t pmk_len)
 {
 	struct wlan_objmgr_vdev *vdev;
 	struct mlme_pmk_info *pmk_info;
-	struct wlan_crypto_pmksa *pmkid_cache;
+	struct wlan_crypto_pmksa *pmkid_cache, *roam_sync_pmksa;
 	int32_t keymgmt;
 	bool lookup_success;
 	QDF_STATUS status;
@@ -4936,7 +4941,25 @@ void cm_check_and_set_sae_single_pmk_cap(struct wlan_objmgr_psoc *psoc,
 		if (!src_cfg.bool_value)
 			goto end;
 
-		wlan_crypto_set_sae_single_pmk_bss_cap(vdev, &bssid, true);
+		roam_sync_pmksa = qdf_mem_malloc(sizeof(*roam_sync_pmksa));
+		if (roam_sync_pmksa) {
+			qdf_copy_macaddr(&roam_sync_pmksa->bssid, &bssid);
+			roam_sync_pmksa->single_pmk_supported = true;
+			roam_sync_pmksa->pmk_len = pmk_len;
+			qdf_mem_copy(roam_sync_pmksa->pmk, psk_pmk,
+				     roam_sync_pmksa->pmk_len);
+			mlme_debug("SPMK received for " QDF_MAC_ADDR_FMT "pmk_len:%d",
+				QDF_MAC_ADDR_REF(roam_sync_pmksa->bssid.bytes),
+				roam_sync_pmksa->pmk_len);
+			/* update single pmk info for roamed ap to pmk table */
+			wlan_crypto_set_sae_single_pmk_info(vdev,
+							    roam_sync_pmksa);
+
+			qdf_mem_zero(roam_sync_pmksa, sizeof(*roam_sync_pmksa));
+			qdf_mem_free(roam_sync_pmksa);
+		} else {
+			goto end;
+		}
 
 		pmkid_cache = qdf_mem_malloc(sizeof(*pmkid_cache));
 		if (!pmkid_cache)
@@ -5064,7 +5087,7 @@ static void cm_roam_start_init(struct wlan_objmgr_psoc *psoc,
 			       struct wlan_objmgr_pdev *pdev,
 			       struct wlan_objmgr_vdev *vdev)
 {
-	struct cm_roam_values_copy src_cfg;
+	struct cm_roam_values_copy src_cfg = {};
 	bool mdie_present;
 	uint8_t vdev_id = wlan_vdev_get_id(vdev);
 	struct wlan_mlme_psoc_ext_obj *mlme_obj;
@@ -6024,9 +6047,11 @@ cm_roam_mgmt_frame_event(struct roam_frame_info *frame_data,
 	log_record->timestamp_us = qdf_get_time_of_the_day_us();
 	log_record->ktime_us = qdf_ktime_to_us(qdf_ktime_get());
 	log_record->fw_timestamp_us = (uint64_t)frame_data->timestamp * 1000;
+	log_record->bssid = frame_data->bssid;
 	log_record->vdev_id = vdev_id;
 
 	log_record->pkt_info.seq_num = frame_data->seq_num;
+	log_record->pkt_info.auth_algo = frame_data->auth_algo;
 	log_record->pkt_info.rssi = (-1) * frame_data->rssi;
 	log_record->pkt_info.tx_status = frame_data->tx_status;
 	log_record->pkt_info.frame_status_code = frame_data->status_code;
@@ -6040,6 +6065,11 @@ cm_roam_mgmt_frame_event(struct roam_frame_info *frame_data,
 				log_record->pkt_info.rssi =
 					(-1) * scan_data->ap[i].rssi;
 				log_record->bssid = scan_data->ap[i].bssid;
+				break;
+			} else if (qdf_is_macaddr_equal(&log_record->bssid,
+							&scan_data->ap[i].bssid)) {
+				log_record->pkt_info.rssi =
+					(-1) * scan_data->ap[i].rssi;
 				break;
 			}
 		}

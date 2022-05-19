@@ -1565,8 +1565,8 @@ bool policy_mgr_is_sap_restart_required_after_sta_disconnect(
 		policy_mgr_sta_sap_scc_on_lte_coex_chan(psoc);
 	uint8_t sta_sap_scc_on_dfs_chnl_config_value = 0;
 	uint32_t cc_count, i, go_index_start, pcl_len = 0;
-	uint32_t op_ch_freq_list[MAX_NUMBER_OF_CONC_CONNECTIONS];
-	uint8_t vdev_id[MAX_NUMBER_OF_CONC_CONNECTIONS];
+	uint32_t op_ch_freq_list[MAX_NUMBER_OF_CONC_CONNECTIONS * 2];
+	uint8_t vdev_id[MAX_NUMBER_OF_CONC_CONNECTIONS * 2];
 	enum policy_mgr_con_mode mode;
 	uint32_t pcl_channels[NUM_CHANNELS + 1];
 	uint8_t pcl_weight[NUM_CHANNELS + 1];
@@ -1613,8 +1613,9 @@ bool policy_mgr_is_sap_restart_required_after_sta_disconnect(
 			continue;
 		if (sta_sap_scc_on_dfs_chan &&
 		    (sta_sap_scc_on_dfs_chnl_config_value != 2) &&
-		    wlan_reg_is_dfs_for_freq(pm_ctx->pdev,
-					     op_ch_freq_list[i])) {
+		     wlan_reg_is_dfs_for_freq(pm_ctx->pdev,
+					      op_ch_freq_list[i]) &&
+		     pm_ctx->last_disconn_sta_freq == op_ch_freq_list[i]) {
 			sap_vdev_id = vdev_id[i];
 			curr_sap_freq = op_ch_freq_list[i];
 			policy_mgr_debug("sta_sap_scc_on_dfs_chan %u, sta_sap_scc_on_dfs_chnl_config_value %u, dfs sap_ch_freq %u",
@@ -1624,7 +1625,8 @@ bool policy_mgr_is_sap_restart_required_after_sta_disconnect(
 			break;
 		}
 		if (sta_sap_scc_on_lte_coex_chan &&
-		    !policy_mgr_is_safe_channel(psoc, op_ch_freq_list[i])) {
+		    !policy_mgr_is_safe_channel(psoc, op_ch_freq_list[i]) &&
+		    pm_ctx->last_disconn_sta_freq == op_ch_freq_list[i]) {
 			sap_vdev_id = vdev_id[i];
 			curr_sap_freq = op_ch_freq_list[i];
 			policy_mgr_debug("sta_sap_scc_on_lte_coex_chan %u unsafe sap_ch_freq %u",
@@ -2017,6 +2019,7 @@ void policy_mgr_check_sap_restart(struct wlan_objmgr_psoc *psoc,
 
 end:
 	pm_ctx->do_sap_unsafe_ch_check = false;
+	pm_ctx->last_disconn_sta_freq = 0;
 }
 
 static void __policy_mgr_check_sta_ap_concurrent_ch_intf(
@@ -2048,7 +2051,7 @@ static void __policy_mgr_check_sta_ap_concurrent_ch_intf(
 			work_info->go_plus_go_force_scc.ch_freq,
 			work_info->go_plus_go_force_scc.ch_width);
 		work_info->go_plus_go_force_scc.vdev_id = WLAN_UMAC_VDEV_ID_MAX;
-		return;
+		goto end;
 	}
 
 	mcc_to_scc_switch =
@@ -2104,6 +2107,7 @@ static void __policy_mgr_check_sta_ap_concurrent_ch_intf(
 
 end:
 	pm_ctx->do_sap_unsafe_ch_check = false;
+	pm_ctx->last_disconn_sta_freq = 0;
 }
 
 void policy_mgr_check_sta_ap_concurrent_ch_intf(void *data)
@@ -3173,173 +3177,3 @@ ret_value:
 	return value;
 }
 
-#ifdef MPC_UT_FRAMEWORK
-QDF_STATUS policy_mgr_update_connection_info_utfw(
-		struct wlan_objmgr_psoc *psoc,
-		uint32_t vdev_id, uint32_t tx_streams, uint32_t rx_streams,
-		uint32_t chain_mask, uint32_t type, uint32_t sub_type,
-		uint32_t ch_freq, uint32_t mac_id)
-{
-	QDF_STATUS status = QDF_STATUS_E_FAILURE;
-	uint32_t conn_index = 0, found = 0;
-	struct policy_mgr_psoc_priv_obj *pm_ctx;
-	uint16_t ch_flagext = 0;
-
-	pm_ctx = policy_mgr_get_context(psoc);
-	if (!pm_ctx) {
-		policy_mgr_err("Invalid Context");
-		return status;
-	}
-
-	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
-	while (PM_CONC_CONNECTION_LIST_VALID_INDEX(conn_index)) {
-		if (vdev_id == pm_conc_connection_list[conn_index].vdev_id) {
-			/* debug msg */
-			found = 1;
-			break;
-		}
-		conn_index++;
-	}
-	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
-	if (!found) {
-		/* err msg */
-		policy_mgr_err("can't find vdev_id %d in pm_conc_connection_list",
-			vdev_id);
-		return status;
-	}
-	policy_mgr_debug("--> updating entry at index[%d]", conn_index);
-
-	if (wlan_reg_is_dfs_for_freq(pm_ctx->pdev, ch_freq))
-		ch_flagext |= IEEE80211_CHAN_DFS;
-
-	policy_mgr_update_conc_list(psoc, conn_index,
-			policy_mgr_get_mode(type, sub_type),
-			ch_freq, HW_MODE_20_MHZ,
-			mac_id, chain_mask, 0, vdev_id, true, true,
-			ch_flagext);
-
-	return QDF_STATUS_SUCCESS;
-}
-
-QDF_STATUS policy_mgr_incr_connection_count_utfw(
-		struct wlan_objmgr_psoc *psoc,
-		uint32_t vdev_id, uint32_t tx_streams, uint32_t rx_streams,
-		uint32_t chain_mask, enum policy_mgr_con_mode mode,
-		uint32_t ch_freq, uint32_t mac_id)
-{
-	QDF_STATUS status = QDF_STATUS_E_FAILURE;
-	uint32_t conn_index = 0;
-	bool update_conn = true;
-	uint16_t ch_flagext = 0;
-	struct policy_mgr_psoc_priv_obj *pm_ctx;
-
-	conn_index = policy_mgr_get_connection_count(psoc);
-	if (MAX_NUMBER_OF_CONC_CONNECTIONS <= conn_index) {
-		/* err msg */
-		policy_mgr_err("exceeded max connection limit %d",
-			MAX_NUMBER_OF_CONC_CONNECTIONS);
-		return status;
-	}
-	policy_mgr_debug("--> filling entry at index[%d]", conn_index);
-
-	if (mode == PM_STA_MODE || mode == PM_P2P_CLIENT_MODE)
-		update_conn = false;
-
-	pm_ctx = policy_mgr_get_context(psoc);
-	if (!pm_ctx) {
-		policy_mgr_err("Invalid pm context");
-		return false;
-	}
-	if (wlan_reg_is_dfs_for_freq(pm_ctx->pdev, ch_freq))
-		ch_flagext |= IEEE80211_CHAN_DFS;
-	if (mode < PM_MAX_NUM_OF_MODE) {
-		pm_ctx->no_of_active_sessions[mode]++;
-		policy_mgr_update_conc_list(psoc, conn_index, mode, ch_freq,
-					    HW_MODE_20_MHZ, mac_id, chain_mask,
-					    0, vdev_id, true, update_conn,
-					    ch_flagext);
-	}
-
-	return QDF_STATUS_SUCCESS;
-}
-
-QDF_STATUS policy_mgr_decr_connection_count_utfw(struct wlan_objmgr_psoc *psoc,
-		uint32_t del_all, uint32_t vdev_id)
-{
-	QDF_STATUS status;
-	struct policy_mgr_psoc_priv_obj *pm_ctx;
-
-	pm_ctx = policy_mgr_get_context(psoc);
-	if (!pm_ctx) {
-		policy_mgr_err("Invalid pm context");
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	if (del_all) {
-		status = policy_mgr_psoc_disable(psoc);
-		if (!QDF_IS_STATUS_SUCCESS(status)) {
-			policy_mgr_err("Policy manager initialization failed");
-			return QDF_STATUS_E_FAILURE;
-		}
-		status = policy_mgr_psoc_enable(psoc);
-		if (!QDF_IS_STATUS_SUCCESS(status)) {
-			policy_mgr_err("Policy manager initialization failed");
-			return QDF_STATUS_E_FAILURE;
-		}
-	} else {
-		enum policy_mgr_con_mode mode =
-			policy_mgr_get_mode_by_vdev_id(psoc, vdev_id);
-
-		if (mode < PM_MAX_NUM_OF_MODE &&
-		    pm_ctx->no_of_active_sessions[mode]) {
-			pm_ctx->no_of_active_sessions[mode]--;
-			policy_mgr_decr_connection_count(psoc, vdev_id);
-		} else {
-			policy_mgr_err("mode %d unexpected", mode);
-			return QDF_STATUS_E_FAILURE;
-		}
-	}
-
-	return QDF_STATUS_SUCCESS;
-}
-
-enum policy_mgr_pcl_type policy_mgr_get_pcl_from_first_conn_table(
-		enum policy_mgr_con_mode type,
-		enum policy_mgr_conc_priority_mode sys_pref)
-{
-	if ((sys_pref >= PM_MAX_CONC_PRIORITY_MODE) ||
-		(type >= PM_MAX_NUM_OF_MODE))
-		return PM_MAX_PCL_TYPE;
-	return first_connection_pcl_table[type][sys_pref];
-}
-
-enum policy_mgr_pcl_type policy_mgr_get_pcl_from_second_conn_table(
-	enum policy_mgr_one_connection_mode idx, enum policy_mgr_con_mode type,
-	enum policy_mgr_conc_priority_mode sys_pref, uint8_t dbs_capable)
-{
-	if ((idx >= PM_MAX_ONE_CONNECTION_MODE) ||
-		(sys_pref >= PM_MAX_CONC_PRIORITY_MODE) ||
-		(type >= PM_MAX_NUM_OF_MODE))
-		return PM_MAX_PCL_TYPE;
-	if (dbs_capable)
-		return (*second_connection_pcl_dbs_table)[idx][type][sys_pref];
-	else
-		return (*second_connection_pcl_non_dbs_table)
-			[idx][type][sys_pref];
-}
-
-enum policy_mgr_pcl_type policy_mgr_get_pcl_from_third_conn_table(
-	enum policy_mgr_two_connection_mode idx, enum policy_mgr_con_mode type,
-	enum policy_mgr_conc_priority_mode sys_pref, uint8_t dbs_capable)
-{
-	if ((idx >= PM_MAX_TWO_CONNECTION_MODE) ||
-		(sys_pref >= PM_MAX_CONC_PRIORITY_MODE) ||
-		(type >= PM_MAX_NUM_OF_MODE))
-		return PM_MAX_PCL_TYPE;
-	if (dbs_capable)
-		return (*third_connection_pcl_dbs_table)[idx][type][sys_pref];
-	else
-		return (*third_connection_pcl_non_dbs_table)
-			[idx][type][sys_pref];
-}
-#endif

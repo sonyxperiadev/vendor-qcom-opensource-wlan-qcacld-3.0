@@ -416,9 +416,7 @@ QDF_STATUS lim_add_ft_sta_self(struct mac_context *mac_ctx, uint16_t assoc_id,
 	msg_q.bodyptr = add_sta_params;
 	msg_q.bodyval = 0;
 
-	QDF_TRACE(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-			"Sending WMA_ADD_STA_REQ (aid %d)",
-			 add_sta_params->assocId);
+	pe_debug("Sending WMA_ADD_STA_REQ (aid %d)", add_sta_params->assocId);
 	MTRACE(mac_trace_msg_tx(mac_ctx, session_entry->peSessionId,
 			 msg_q.type));
 

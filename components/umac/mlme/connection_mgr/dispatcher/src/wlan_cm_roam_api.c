@@ -34,7 +34,7 @@
 #include "wlan_dlm_api.h"
 #include <../../core/src/wlan_cm_roam_i.h>
 #include "wlan_reg_ucfg_api.h"
-
+#include "wlan_connectivity_logging.h"
 
 /* Support for "Fast roaming" (i.e., ESE, LFR, or 802.11r.) */
 #define BG_SCAN_OCCUPIED_CHANNEL_LIST_LEN 15
@@ -2080,7 +2080,7 @@ QDF_STATUS wlan_cm_set_roam_band_bitmask(struct wlan_objmgr_psoc *psoc,
 					 uint8_t vdev_id,
 					 uint32_t roam_band_bitmask)
 {
-	struct cm_roam_values_copy src_config;
+	struct cm_roam_values_copy src_config = {};
 
 	src_config.uint_value = roam_band_bitmask;
 	return wlan_cm_roam_cfg_set_value(psoc, vdev_id, ROAM_BAND,
@@ -2410,6 +2410,12 @@ cm_handle_roam_offload_events(struct roam_offload_roam_event *roam_event)
 
 QDF_STATUS
 cm_vdev_disconnect_event_handler(struct vdev_disconnect_event_data *data)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+cm_roam_auth_offload_event_handler(struct auth_offload_event *auth_event)
 {
 	return QDF_STATUS_SUCCESS;
 }
@@ -3048,6 +3054,7 @@ cm_get_frame_subtype_str(enum mgmt_subtype frame_subtype)
 	return "Invalid frm";
 }
 
+#define WLAN_SAE_AUTH_ALGO 3
 static void
 cm_roam_print_frame_info(struct roam_frame_stats *frame_data,
 			 struct wmi_roam_scan_data *scan_data, uint8_t vdev_id)
@@ -3061,6 +3068,14 @@ cm_roam_print_frame_info(struct roam_frame_stats *frame_data,
 
 	for (i = 0; i < frame_data->num_frame; i++) {
 		frame_info = &frame_data->frame_info[i];
+		if (frame_info->auth_algo == WLAN_SAE_AUTH_ALGO &&
+		    wlan_is_log_record_present_for_bssid(&frame_info->bssid,
+							 vdev_id)) {
+			wlan_print_cached_sae_auth_logs(&frame_info->bssid,
+							vdev_id);
+			continue;
+		}
+
 		qdf_mem_zero(time, TIME_STRING_LEN);
 		mlme_get_converted_timestamp(frame_info->timestamp, time);
 
@@ -3287,11 +3302,38 @@ cm_roam_stats_event_handler(struct wlan_objmgr_psoc *psoc,
 		}
 	}
 
+	wlan_clear_sae_auth_logs_cache(stats_info->vdev_id);
 err:
 	if (stats_info->roam_msg_info)
 		qdf_mem_free(stats_info->roam_msg_info);
 	qdf_mem_free(stats_info);
 	return status;
+}
+
+bool wlan_cm_is_roam_sync_in_progress(struct wlan_objmgr_psoc *psoc,
+				      uint8_t vdev_id)
+{
+	struct wlan_objmgr_vdev *vdev;
+	bool ret;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_MLME_CM_ID);
+
+	if (!vdev)
+		return false;
+
+	ret = cm_is_vdev_roam_sync_inprogress(vdev);
+
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_CM_ID);
+
+	return ret;
+}
+#else
+QDF_STATUS
+cm_roam_stats_event_handler(struct wlan_objmgr_psoc *psoc,
+			    struct roam_stats_event *stats_info)
+{
+	return QDF_STATUS_SUCCESS;
 }
 #endif
 

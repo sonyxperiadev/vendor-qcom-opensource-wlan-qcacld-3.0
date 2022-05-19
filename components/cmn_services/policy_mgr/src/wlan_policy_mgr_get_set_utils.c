@@ -175,6 +175,20 @@ policy_mgr_get_sta_sap_scc_on_dfs_chnl(struct wlan_objmgr_psoc *psoc,
 	return QDF_STATUS_SUCCESS;
 }
 
+bool
+policy_mgr_get_sta_sap_scc_allowed_on_indoor_chnl(struct wlan_objmgr_psoc *psoc)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("pm_ctx is NULL");
+		return false;
+	}
+
+	return pm_ctx->cfg.sta_sap_scc_on_indoor_channel;
+}
+
 QDF_STATUS
 policy_mgr_set_multi_sap_allowed_on_same_band(struct wlan_objmgr_psoc *psoc,
 					bool multi_sap_allowed_on_same_band)
@@ -1296,10 +1310,52 @@ QDF_STATUS policy_mgr_update_sbs_freq(struct wlan_objmgr_psoc *psoc,
 	return QDF_STATUS_SUCCESS;
 }
 
+qdf_freq_t policy_mgr_get_sbs_cut_off_freq(struct wlan_objmgr_psoc *psoc)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	struct policy_mgr_freq_range *first_mac_range, *second_mac_range;
+	qdf_freq_t sbs_cut_off_freq = 0;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return 0;
+	}
+
+	if (pm_ctx->hw_mode.sbs_lower_band_end_freq)
+		return pm_ctx->hw_mode.sbs_lower_band_end_freq;
+	/*
+	 * if cutoff freq is not available from FW (i.e SBS is not dynamic)
+	 * get it from SBS freq range
+	 */
+	first_mac_range = &pm_ctx->hw_mode.freq_range_caps[MODE_SBS][0];
+
+	second_mac_range =
+		&pm_ctx->hw_mode.freq_range_caps[MODE_SBS][1];
+
+	/*
+	 * SBS range is low 5Ghz shared with 2.4Ghz: The low_5Ghz of shared
+	 * mac will be starting of 5Ghz and low_5Ghz of non-shared mac will be
+	 * the cutoff freq
+	 *
+	 * SBS range is high 5Ghz shared with 2.4Ghz: The low_5Ghz of shared
+	 * mac will be cutoff freq and low_5Ghz of non-shared mac will be
+	 * the starting of 5Ghz
+	 *
+	 * so, maximum of low_5Ghz will be cutoff freq
+	 */
+	sbs_cut_off_freq = QDF_MAX(second_mac_range->low_5ghz_freq,
+				   first_mac_range->low_5ghz_freq) - 1;
+	policy_mgr_debug("sbs cutoff freq %d", sbs_cut_off_freq);
+
+	return sbs_cut_off_freq;
+}
+
 static bool
-policy_mgr_are_2_freq_in_freq_range(struct policy_mgr_psoc_priv_obj *pm_ctx,
-				    struct policy_mgr_freq_range *freq_range,
-				    qdf_freq_t freq_1, qdf_freq_t freq_2)
+policy_mgr_2_freq_same_mac_in_freq_range(
+				struct policy_mgr_psoc_priv_obj *pm_ctx,
+				struct policy_mgr_freq_range *freq_range,
+				qdf_freq_t freq_1, qdf_freq_t freq_2)
 {
 	uint8_t i;
 
@@ -1313,22 +1369,28 @@ policy_mgr_are_2_freq_in_freq_range(struct policy_mgr_psoc_priv_obj *pm_ctx,
 }
 
 static bool
-policy_mgr_are_2_freq_in_sbs_freq_range(struct policy_mgr_psoc_priv_obj *pm_ctx,
-					qdf_freq_t freq_1, qdf_freq_t freq_2)
+policy_mgr_2_freq_same_mac_in_sbs(struct policy_mgr_psoc_priv_obj *pm_ctx,
+				  qdf_freq_t freq_1, qdf_freq_t freq_2)
 {
 	struct policy_mgr_freq_range *sbs_low_share;
 	struct policy_mgr_freq_range *sbs_uppr_share;
 	struct policy_mgr_freq_range *sbs_range;
+
+	/* Return true if non SBS capable HW */
+	if (!policy_mgr_is_hw_sbs_capable(pm_ctx->psoc))
+		return true;
 
 	if (pm_ctx->hw_mode.sbs_lower_band_end_freq) {
 		sbs_uppr_share =
 			pm_ctx->hw_mode.freq_range_caps[MODE_SBS_UPPER_SHARE];
 		sbs_low_share =
 			pm_ctx->hw_mode.freq_range_caps[MODE_SBS_LOWER_SHARE];
-		if (policy_mgr_are_2_freq_in_freq_range(pm_ctx, sbs_low_share,
-							freq_1, freq_2) ||
-		    policy_mgr_are_2_freq_in_freq_range(pm_ctx, sbs_uppr_share,
-							freq_1, freq_2))
+		if (policy_mgr_2_freq_same_mac_in_freq_range(pm_ctx,
+							     sbs_low_share,
+							     freq_1, freq_2) ||
+		    policy_mgr_2_freq_same_mac_in_freq_range(pm_ctx,
+							     sbs_uppr_share,
+							     freq_1, freq_2))
 				return true;
 
 		return false;
@@ -1336,8 +1398,8 @@ policy_mgr_are_2_freq_in_sbs_freq_range(struct policy_mgr_psoc_priv_obj *pm_ctx,
 
 	sbs_range = pm_ctx->hw_mode.freq_range_caps[MODE_SBS];
 
-	return policy_mgr_are_2_freq_in_freq_range(pm_ctx, sbs_range,
-						   freq_1, freq_2);
+	return policy_mgr_2_freq_same_mac_in_freq_range(pm_ctx, sbs_range,
+							freq_1, freq_2);
 }
 
 static bool
@@ -1361,6 +1423,47 @@ policy_mgr_is_cur_freq_range_sbs(struct wlan_objmgr_psoc *psoc)
 	return false;
 }
 
+bool policy_mgr_2_freq_always_on_same_mac(struct wlan_objmgr_psoc *psoc,
+					  qdf_freq_t freq_1, qdf_freq_t freq_2)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	struct policy_mgr_freq_range *freq_range;
+	bool is_dbs_mode_same_mac = true;
+	bool is_sbs_mode_same_mac = true;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx)
+		return false;
+
+	/* if HW is not DBS return true*/
+	if (!policy_mgr_is_hw_dbs_capable(psoc))
+		return true;
+
+	/* Check for DBS mode first */
+	freq_range = pm_ctx->hw_mode.freq_range_caps[MODE_DBS];
+	is_dbs_mode_same_mac =
+		policy_mgr_2_freq_same_mac_in_freq_range(pm_ctx, freq_range,
+							 freq_1, freq_2);
+
+	/* if DBS mode leading to same mac, check for SBS mode */
+	if (is_dbs_mode_same_mac)
+		is_sbs_mode_same_mac =
+			policy_mgr_2_freq_same_mac_in_sbs(pm_ctx, freq_1,
+							  freq_2);
+
+	policy_mgr_debug("freq1 %d freq2 %d: Same mac:: DBS:%d SBS:%d",
+			 freq_1, freq_2, is_dbs_mode_same_mac,
+			 is_sbs_mode_same_mac);
+	/*
+	 * if in SBS and DBS mode, both is leading to freqs on same mac,
+	 * return true else return false.
+	 */
+	if (is_dbs_mode_same_mac && is_sbs_mode_same_mac)
+		return true;
+
+	return false;
+}
+
 bool policy_mgr_are_2_freq_on_same_mac(struct wlan_objmgr_psoc *psoc,
 				       qdf_freq_t freq_1,
 				       qdf_freq_t  freq_2)
@@ -1380,12 +1483,6 @@ bool policy_mgr_are_2_freq_on_same_mac(struct wlan_objmgr_psoc *psoc,
 		return true;
 
 	policy_mgr_rl_debug("freq_1 %d freq_2 %d", freq_1, freq_2);
-	if (!policy_mgr_is_hw_sbs_capable(psoc)) {
-		/* If not SBS capable but DBS capable */
-		freq_range = pm_ctx->hw_mode.freq_range_caps[MODE_DBS];
-		return policy_mgr_are_2_freq_in_freq_range(pm_ctx, freq_range,
-							   freq_1, freq_2);
-	}
 
 	/* HW is DBS/SBS capable */
 	status = policy_mgr_get_current_hw_mode(psoc, &hw_mode);
@@ -1402,30 +1499,23 @@ bool policy_mgr_are_2_freq_on_same_mac(struct wlan_objmgr_psoc *psoc,
 	freq_range = pm_ctx->hw_mode.cur_mac_freq_range;
 	/* current HW is DBS OR SBS check current DBS/SBS freq range */
 	if (hw_mode.dbs_cap || hw_mode.sbs_cap)
-		return policy_mgr_are_2_freq_in_freq_range(pm_ctx, freq_range,
-							   freq_1, freq_2);
+		return policy_mgr_2_freq_same_mac_in_freq_range(pm_ctx,
+								freq_range,
+								freq_1, freq_2);
 
 	/*
-	 * Current HW is SMM check, if they can lead to SBS or DBS without being
-	 * in same mac, return true only if Both will lead to same mac
+	 * If current HW mode is not DBS/SBS, check if in all supported mode
+	 * it they will be on same mac
 	 */
-	if (!policy_mgr_are_2_freq_in_sbs_freq_range(pm_ctx, freq_1, freq_2))
-		return false;
-
-	/*
-	 * If SBS lead to same mac, check if DBS mode will also lead to same
-	 * mac
-	 */
-	freq_range = pm_ctx->hw_mode.freq_range_caps[MODE_DBS];
-	return policy_mgr_are_2_freq_in_freq_range(pm_ctx, freq_range,
-						   freq_1, freq_2);
+	return policy_mgr_2_freq_always_on_same_mac(psoc, freq_1, freq_2);
 }
 
 static bool
-policy_mgr_are_3_freq_in_freq_range(struct policy_mgr_psoc_priv_obj *pm_ctx,
-				    struct policy_mgr_freq_range *freq_range,
-				    qdf_freq_t freq_1, qdf_freq_t freq_2,
-				    qdf_freq_t freq_3)
+policy_mgr_3_freq_same_mac_in_freq_range(
+				struct policy_mgr_psoc_priv_obj *pm_ctx,
+				struct policy_mgr_freq_range *freq_range,
+				qdf_freq_t freq_1, qdf_freq_t freq_2,
+				qdf_freq_t freq_3)
 {
 	uint8_t i;
 
@@ -1440,32 +1530,83 @@ policy_mgr_are_3_freq_in_freq_range(struct policy_mgr_psoc_priv_obj *pm_ctx,
 }
 
 static bool
-policy_mgr_are_3_freq_in_sbs_freq_range(struct policy_mgr_psoc_priv_obj *pm_ctx,
-					qdf_freq_t freq_1, qdf_freq_t freq_2,
-					qdf_freq_t freq_3)
+policy_mgr_3_freq_same_mac_in_sbs(struct policy_mgr_psoc_priv_obj *pm_ctx,
+				  qdf_freq_t freq_1, qdf_freq_t freq_2,
+				  qdf_freq_t freq_3)
 {
 	struct policy_mgr_freq_range *sbs_low_share;
 	struct policy_mgr_freq_range *sbs_uppr_share;
 	struct policy_mgr_freq_range *sbs_range;
+
+	/* Return true if non SBS capable HW */
+	if (!policy_mgr_is_hw_sbs_capable(pm_ctx->psoc))
+		return true;
 
 	if (pm_ctx->hw_mode.sbs_lower_band_end_freq) {
 		sbs_uppr_share =
 			pm_ctx->hw_mode.freq_range_caps[MODE_SBS_UPPER_SHARE];
 		sbs_low_share =
 			pm_ctx->hw_mode.freq_range_caps[MODE_SBS_LOWER_SHARE];
-		if (policy_mgr_are_3_freq_in_freq_range(pm_ctx, sbs_low_share,
-							freq_1, freq_2,
-							freq_3) ||
-		    policy_mgr_are_3_freq_in_freq_range(pm_ctx, sbs_uppr_share,
-							freq_1, freq_2, freq_3))
+		if (policy_mgr_3_freq_same_mac_in_freq_range(pm_ctx,
+							     sbs_low_share,
+							     freq_1, freq_2,
+							     freq_3) ||
+		    policy_mgr_3_freq_same_mac_in_freq_range(pm_ctx,
+							     sbs_uppr_share,
+							     freq_1, freq_2,
+							     freq_3))
 			return true;
 
 		return false;
 	}
 
 	sbs_range = pm_ctx->hw_mode.freq_range_caps[MODE_SBS];
-	return policy_mgr_are_3_freq_in_freq_range(pm_ctx,sbs_range,
-						   freq_1, freq_2, freq_3);
+	return policy_mgr_3_freq_same_mac_in_freq_range(pm_ctx, sbs_range,
+							freq_1, freq_2, freq_3);
+}
+
+bool
+policy_mgr_3_freq_always_on_same_mac(struct wlan_objmgr_psoc *psoc,
+				     qdf_freq_t freq_1, qdf_freq_t freq_2,
+				     qdf_freq_t freq_3)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	struct policy_mgr_freq_range *freq_range;
+	bool is_dbs_mode_same_mac = true;
+	bool is_sbs_mode_same_mac = true;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx)
+		return false;
+
+	/* if HW is not DBS return true*/
+	if (!policy_mgr_is_hw_dbs_capable(psoc))
+		return true;
+
+	/* Check for DBS mode first */
+	freq_range = pm_ctx->hw_mode.freq_range_caps[MODE_DBS];
+	is_dbs_mode_same_mac =
+		policy_mgr_3_freq_same_mac_in_freq_range(pm_ctx, freq_range,
+							 freq_1, freq_2,
+							 freq_3);
+
+	/* if DBS mode leading to same mac, check for SBS mode */
+	if (is_dbs_mode_same_mac)
+		is_sbs_mode_same_mac =
+			policy_mgr_3_freq_same_mac_in_sbs(pm_ctx, freq_1,
+							  freq_2, freq_3);
+
+	policy_mgr_debug("freq1 %d freq2 %d freq3 %d: Same mac:: DBS:%d SBS:%d",
+			 freq_1, freq_2, freq_3, is_dbs_mode_same_mac,
+			 is_sbs_mode_same_mac);
+	/*
+	 * if in SBS and DBS mode, both is leading to freqs on same mac,
+	 * return true else return false.
+	 */
+	if (is_dbs_mode_same_mac && is_sbs_mode_same_mac)
+		return true;
+
+	return false;
 }
 
 bool
@@ -1489,13 +1630,6 @@ policy_mgr_are_3_freq_on_same_mac(struct wlan_objmgr_psoc *psoc,
 
 	policy_mgr_rl_debug("freq_1 %d freq_2 %d freq_3 %d", freq_1, freq_2,
 			    freq_3);
-	if (!policy_mgr_is_hw_sbs_capable(psoc)) {
-		/* If not SBS capable but DBS capable */
-		freq_range = pm_ctx->hw_mode.freq_range_caps[MODE_DBS];
-		return policy_mgr_are_3_freq_in_freq_range(pm_ctx, freq_range,
-							   freq_1, freq_2,
-							   freq_3);
-	}
 
 	/* HW is DBS/SBS capable, get current HW mode */
 	status = policy_mgr_get_current_hw_mode(psoc, &hw_mode);
@@ -1512,24 +1646,65 @@ policy_mgr_are_3_freq_on_same_mac(struct wlan_objmgr_psoc *psoc,
 
 	/* current HW is DBS OR SBS check current DBS/SBS freq range */
 	if (hw_mode.dbs_cap || hw_mode.sbs_cap)
-		return policy_mgr_are_3_freq_in_freq_range(pm_ctx, freq_range,
-							   freq_1, freq_2,
-							   freq_3);
+		return policy_mgr_3_freq_same_mac_in_freq_range(pm_ctx,
+							freq_range,
+							freq_1, freq_2, freq_3);
 	/*
-	 * Current HW is SMM check, if they can lead to SBS or DBS without being
-	 * in same mac, return true only if both will lead to same mac
+	 * If current HW mode is not DBS/SBS, check if in all supported mode
+	 * it they will be on same mac
 	 */
-	if (!policy_mgr_are_3_freq_in_sbs_freq_range(pm_ctx, freq_1, freq_2,
-						     freq_3))
-		return false;
-	/*
-	 * If SBS lead to same mac, check if DBS mode will also lead to same mac
-	 */
-	freq_range = pm_ctx->hw_mode.freq_range_caps[MODE_DBS];
-
-	return policy_mgr_are_3_freq_in_freq_range(pm_ctx, freq_range, freq_1,
-						   freq_2, freq_3);
+	return policy_mgr_3_freq_always_on_same_mac(psoc, freq_1, freq_2,
+						    freq_3);
 }
+
+#ifdef FEATURE_FOURTH_CONNECTION
+
+/**
+ * policy_mgr_4_freq_always_on_same_mac() - Function to check if 4 freq can
+ * lead to 3 home freq on same mac in all modes
+ * @psoc: Pointer to Psoc
+ * @freq1: Frequency 1
+ * @freq2: Frequency 2
+ * @freq3: Frequency 3
+ * @freq4: Frequency 4
+ *
+ * Return:true if any 3 freq cause 3 home frequency on same mac in all modes
+ *
+ */
+static bool
+policy_mgr_4_freq_always_on_same_mac(struct wlan_objmgr_psoc *psoc,
+				     qdf_freq_t freq1, qdf_freq_t freq2,
+				     qdf_freq_t freq3, qdf_freq_t freq4)
+{
+	/* check if any 3 freq are leading to 3 home freq */
+	if (policy_mgr_3_freq_always_on_same_mac(psoc, freq1, freq2, freq3) ||
+	    policy_mgr_3_freq_always_on_same_mac(psoc, freq1, freq2, freq4) ||
+	    policy_mgr_3_freq_always_on_same_mac(psoc, freq1, freq3, freq4) ||
+	    policy_mgr_3_freq_always_on_same_mac(psoc, freq2, freq3, freq4))
+		return true;
+
+	return false;
+}
+
+bool
+policy_mgr_allow_4th_new_freq(struct wlan_objmgr_psoc *psoc,
+			      qdf_freq_t freq1, qdf_freq_t freq2,
+			      qdf_freq_t freq3, qdf_freq_t new_ch_freq)
+{
+	/* if HW is not DBS return false */
+	if (!policy_mgr_is_hw_dbs_capable(psoc))
+		return false;
+
+	if (!freq1 || !freq2 || !freq3 || !new_ch_freq) {
+		policy_mgr_info("one or more freq are 0: freq1 %d freq2 %d freq3 %d new_freq %d",
+				freq1, freq2, freq3, new_ch_freq);
+		return false;
+	}
+
+	return !policy_mgr_4_freq_always_on_same_mac(psoc, freq1, freq2, freq3,
+						     new_ch_freq);
+}
+#endif
 
 bool policy_mgr_are_sbs_chan(struct wlan_objmgr_psoc *psoc, qdf_freq_t freq_1,
 			     qdf_freq_t freq_2)
@@ -1547,7 +1722,7 @@ bool policy_mgr_are_sbs_chan(struct wlan_objmgr_psoc *psoc, qdf_freq_t freq_1,
 	    WLAN_REG_IS_24GHZ_CH_FREQ(freq_2))
 		return false;
 
-	return !policy_mgr_are_2_freq_in_sbs_freq_range(pm_ctx, freq_1, freq_2);
+	return !policy_mgr_2_freq_same_mac_in_sbs(pm_ctx, freq_1, freq_2);
 }
 
 bool policy_mgr_is_current_hwmode_sbs(struct wlan_objmgr_psoc *psoc)
@@ -2044,6 +2219,7 @@ bool policy_mgr_is_hw_sbs_capable(struct wlan_objmgr_psoc *psoc)
 	}
 
 	if (!policy_mgr_find_if_fw_supports_dbs(psoc)) {
+		policy_mgr_rl_debug("fw doesn't support dual band");
 		return false;
 	}
 
@@ -2957,6 +3133,63 @@ void policy_mgr_incr_active_session(struct wlan_objmgr_psoc *psoc,
 	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
 }
 
+/**
+ * policy_mgr_update_sta_scc_info_for_later_check() - function to update sta/sap
+ * scc channel frequency and later check flag.
+ * @pm_ctx: policy manager context pointer
+ * @mode: operation mode
+ * @vdev_id: vdev id
+ *
+ * Return: None
+ */
+static void policy_mgr_update_sta_scc_info_for_later_check(
+		struct policy_mgr_psoc_priv_obj *pm_ctx,
+		enum QDF_OPMODE mode,
+		uint8_t vdev_id)
+{
+	uint32_t conn_index = 0;
+	qdf_freq_t sta_freq = 0;
+
+	if (mode != QDF_STA_MODE && mode != QDF_P2P_CLIENT_MODE)
+		return;
+
+	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
+	while (PM_CONC_CONNECTION_LIST_VALID_INDEX(conn_index)) {
+		if (vdev_id == pm_conc_connection_list[conn_index].vdev_id) {
+			sta_freq = pm_conc_connection_list[conn_index].freq;
+			break;
+		}
+		conn_index++;
+	}
+
+	if (!sta_freq)
+		goto release_mutex;
+
+	/*
+	 * When STA disconnected, we need to move DFS SAP
+	 * to Non-DFS if g_sta_sap_scc_on_dfs_chan enabled.
+	 * The same if g_sta_sap_scc_on_lte_coex_chan enabled,
+	 * need to move SAP on unsafe channel to safe channel.
+	 * The flag will be checked by
+	 * policy_mgr_is_sap_restart_required_after_sta_disconnect.
+	 */
+	conn_index = 0;
+	while (PM_CONC_CONNECTION_LIST_VALID_INDEX(conn_index)) {
+		if (pm_conc_connection_list[conn_index].freq == sta_freq &&
+		    (pm_conc_connection_list[conn_index].mode == PM_SAP_MODE ||
+		    pm_conc_connection_list[conn_index].mode ==
+		    PM_P2P_GO_MODE)) {
+			pm_ctx->do_sap_unsafe_ch_check = true;
+			pm_ctx->last_disconn_sta_freq = sta_freq;
+			break;
+		}
+		conn_index++;
+	}
+
+release_mutex:
+	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+}
+
 QDF_STATUS policy_mgr_decr_active_session(struct wlan_objmgr_psoc *psoc,
 				enum QDF_OPMODE mode,
 				uint8_t session_id)
@@ -2964,6 +3197,7 @@ QDF_STATUS policy_mgr_decr_active_session(struct wlan_objmgr_psoc *psoc,
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
 	QDF_STATUS qdf_status;
 	bool mcc_mode;
+	uint32_t session_count;
 
 	pm_ctx = policy_mgr_get_context(psoc);
 	if (!pm_ctx) {
@@ -2981,6 +3215,10 @@ QDF_STATUS policy_mgr_decr_active_session(struct wlan_objmgr_psoc *psoc,
 		return qdf_status;
 	}
 
+	policy_mgr_update_sta_scc_info_for_later_check(pm_ctx,
+						       mode,
+						       session_id);
+	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
 	switch (mode) {
 	case QDF_STA_MODE:
 	case QDF_P2P_CLIENT_MODE:
@@ -2994,6 +3232,9 @@ QDF_STATUS policy_mgr_decr_active_session(struct wlan_objmgr_psoc *psoc,
 	default:
 		break;
 	}
+	policy_mgr_decr_connection_count(psoc, session_id);
+	session_count = pm_ctx->no_of_active_sessions[mode];
+	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
 
 	if (mode != QDF_NAN_DISC_MODE &&
 	    pm_ctx->dp_cbacks.hdd_v2_flow_pool_unmap)
@@ -3002,13 +3243,10 @@ QDF_STATUS policy_mgr_decr_active_session(struct wlan_objmgr_psoc *psoc,
 	if (mode == QDF_NDI_MODE &&
 	    pm_ctx->hdd_cbacks.wlan_hdd_indicate_active_ndp_cnt)
 		pm_ctx->hdd_cbacks.wlan_hdd_indicate_active_ndp_cnt(
-				psoc, session_id,
-				pm_ctx->no_of_active_sessions[mode]);
+				psoc, session_id, session_count);
 
 	policy_mgr_debug("No.# of active sessions for mode %d = %d",
-		mode, pm_ctx->no_of_active_sessions[mode]);
-
-	policy_mgr_decr_connection_count(psoc, session_id);
+			 mode, session_count);
 
 	/* Notify tdls */
 	if (pm_ctx->tdls_cbacks.tdls_notify_decrement_session)
@@ -3053,16 +3291,6 @@ QDF_STATUS policy_mgr_decr_active_session(struct wlan_objmgr_psoc *psoc,
 		if (pm_ctx->dp_cbacks.hdd_ipa_set_mcc_mode_cb)
 			pm_ctx->dp_cbacks.hdd_ipa_set_mcc_mode_cb(mcc_mode);
 	}
-	/*
-	 * When STA disconnected, we need to move DFS SAP
-	 * to Non-DFS if g_sta_sap_scc_on_dfs_chan enabled.
-	 * The same if g_sta_sap_scc_on_lte_coex_chan enabled,
-	 * need to move SAP on unsafe channel to safe channel.
-	 * The flag will be checked by
-	 * policy_mgr_is_sap_restart_required_after_sta_disconnect.
-	 */
-	if (mode == QDF_STA_MODE || mode == QDF_P2P_CLIENT_MODE)
-		pm_ctx->do_sap_unsafe_ch_check = true;
 
 	if (mode == QDF_SAP_MODE || mode == QDF_P2P_GO_MODE ||
 	    mode == QDF_STA_MODE || mode == QDF_P2P_CLIENT_MODE)
@@ -3308,7 +3536,6 @@ uint32_t policy_mgr_get_mode_specific_conn_info(
 	return count;
 }
 
-#ifdef WLAN_FEATURE_11BE_MLO
 void policy_mgr_get_ml_and_non_ml_sta_count(struct wlan_objmgr_psoc *psoc,
 					    uint8_t *num_ml, uint8_t *ml_idx,
 					    uint8_t *num_non_ml,
@@ -3350,32 +3577,6 @@ void policy_mgr_get_ml_and_non_ml_sta_count(struct wlan_objmgr_psoc *psoc,
 		wlan_objmgr_vdev_release_ref(temp_vdev, WLAN_POLICY_MGR_ID);
 	}
 }
-
-#else
-
-void policy_mgr_get_ml_and_non_ml_sta_count(struct wlan_objmgr_psoc *psoc,
-					    uint8_t *num_ml, uint8_t *ml_idx,
-					    uint8_t *num_non_ml,
-					    uint8_t *non_ml_idx,
-					    qdf_freq_t *freq_list,
-					    uint8_t *vdev_id_list)
-{
-	uint32_t sta_num = 0;
-
-	*num_ml = 0;
-	*num_non_ml = 0;
-
-	sta_num = policy_mgr_get_mode_specific_conn_info(psoc, freq_list,
-							 vdev_id_list,
-							 PM_STA_MODE);
-	if (!sta_num)
-		return;
-
-	*num_non_ml = sta_num;
-	/* copy vdev_id_list to non_ml_idx */
-	*non_ml_idx = *vdev_id_list;
-}
-#endif
 
 bool policy_mgr_concurrent_sta_doing_dbs(struct wlan_objmgr_psoc *psoc)
 {
@@ -6270,7 +6471,8 @@ bool policy_mgr_allow_sap_go_concurrency(struct wlan_objmgr_psoc *psoc,
 		}
 
 		if (policy_mgr_dual_beacon_on_single_mac_mcc_capable(psoc) &&
-		    (mode == PM_SAP_MODE) && (con_mode == PM_SAP_MODE))
+		    (mode == PM_SAP_MODE || mode == PM_P2P_GO_MODE) &&
+		    (con_mode == PM_SAP_MODE || con_mode == PM_P2P_GO_MODE))
 			return true;
 
 		if (policy_mgr_dual_beacon_on_single_mac_scc_capable(psoc) &&
@@ -6759,14 +6961,14 @@ uint8_t policy_mgr_get_roam_enabled_sta_session_id(
 	pm_ctx = policy_mgr_get_context(psoc);
 	if (!pm_ctx) {
 		policy_mgr_err("Invalid Context");
-		return false;
+		return WLAN_UMAC_VDEV_ID_MAX;
 	}
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
 						    WLAN_POLICY_MGR_ID);
 	if (!vdev) {
 		policy_mgr_err("Invalid vdev");
-		return false;
+		return WLAN_UMAC_VDEV_ID_MAX;
 	}
 
 	if (wlan_vdev_mlme_is_link_sta_vdev(vdev)) {
@@ -6897,31 +7099,3 @@ bool policy_mgr_is_hwmode_offload_enabled(struct wlan_objmgr_psoc *psoc)
 				   wmi_service_hw_mode_policy_offload_support);
 }
 
-#ifdef MPC_UT_FRAMEWORK
-void policy_mgr_set_dbs_cap_ut(struct wlan_objmgr_psoc *psoc, uint32_t dbs)
-{
-	struct policy_mgr_psoc_priv_obj *pm_ctx;
-	uint32_t i;
-
-	pm_ctx = policy_mgr_get_context(psoc);
-	if (!pm_ctx) {
-		policy_mgr_err("Invalid Context");
-		return;
-	}
-
-	if (!pm_ctx->hw_mode.hw_mode_list) {
-		pm_ctx->num_dbs_hw_modes = 1;
-		pm_ctx->hw_mode.hw_mode_list =
-			qdf_mem_malloc(sizeof(*pm_ctx->hw_mode.hw_mode_list) *
-				       pm_ctx->num_dbs_hw_modes);
-		if (!pm_ctx->hw_mode.hw_mode_list)
-			return;
-
-		pm_ctx->hw_mode.hw_mode_list[0] = 0x0000;
-	}
-
-	for (i = 0; i < pm_ctx->num_dbs_hw_modes; i++)
-		POLICY_MGR_HW_MODE_DBS_MODE_SET(pm_ctx->hw_mode.hw_mode_list[i],
-						dbs);
-}
-#endif

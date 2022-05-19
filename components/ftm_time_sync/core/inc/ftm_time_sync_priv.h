@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -34,19 +35,19 @@
 
 /**
  * struct wlan_time_sync_pair - wlan time sync pair
- * @qtime_master: master qtime
- * @qtime_slave: slave qtime
+ * @qtime_initiator: initiator qtime
+ * @qtime_target: target qtime
  */
 struct wlan_time_sync_pair {
-	uint64_t qtime_master;
-	uint64_t qtime_slave;
+	uint64_t qtime_initiator;
+	uint64_t qtime_target;
 };
 
 /**
  * struct ftm_time_sync_vdev_priv - Private object to be stored in vdev
  * @qtime_ref: qtime ref
  * @mac_ref: mac time ref
- * @time_pair: array of master/slave qtime pair
+ * @time_pair: array of initiator/target qtime pair
  */
 
 struct ftm_time_sync_priv {
@@ -59,7 +60,7 @@ struct ftm_time_sync_priv {
  * struct ftm_time_sync_cfg - Cfg ini param for FTM time sync
  * @enable: FTM time_sync feature enable/disable
  * @mode: Aggregated/burst mode applicable iff enable = 1
- * @role: Slave/Master Role applicable iff enable = 1
+ * @role: Target/Initiator Role applicable iff enable = 1
  */
 struct ftm_time_sync_cfg {
 	bool enable;
@@ -86,7 +87,7 @@ struct ftm_time_sync_psoc_priv {
  * @ftm_time_sync_mutex: mutex to access ftm time sync priv members
  * @ftm_time_sync_work: work to capture audio qtime and send it to FW
  * @time_sync_interval: interval between two qtime capture
- * @num_qtime_pair: number of qmaster and qslave pair derived
+ * @num_qtime_pair: number of qinitiator and qtarget pair derived
  * @num_reads: number of times the qtime to be captured
  * @valid: send qtime to FW only if this is true
  * @bssid: bssid of connected AP

@@ -287,8 +287,6 @@ static int __wlan_hdd_mgmt_tx(struct wiphy *wiphy, struct wireless_dev *wdev,
 	QDF_STATUS qdf_status;
 	int ret;
 
-	hdd_enter();
-
 	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
 		hdd_err("Command not allowed in FTM mode");
 		return -EINVAL;
@@ -338,12 +336,6 @@ static int __wlan_hdd_mgmt_tx(struct wiphy *wiphy, struct wireless_dev *wdev,
 	}
 
 off_chan_tx:
-	hdd_debug("device_mode:%d type:%d sub_type:%d chan:%d",
-		  adapter->device_mode, type, sub_type,
-		  chan ? chan->center_freq : 0);
-	hdd_debug("wait:%d offchan:%d do_not_wait_ack:%d",
-		  wait, offchan, dont_wait_for_ack);
-
 	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_P2P_ID);
 	if (!vdev) {
 		hdd_err("vdev is NULL");
@@ -357,7 +349,10 @@ off_chan_tx:
 	status = wlan_cfg80211_mgmt_tx(vdev, chan, offchan, wait, buf,
 				       len, no_cck, dont_wait_for_ack, cookie);
 	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_P2P_ID);
-	hdd_debug("mgmt tx, status:%d, cookie:0x%llx", status, *cookie);
+	hdd_debug("device_mode:%d type:%d sub_type:%d chan:%d wait:%d offchan:%d do_not_wait_ack:%d mgmt tx, status:%d, cookie:0x%llx",
+		  adapter->device_mode, type, sub_type,
+		  chan ? chan->center_freq : 0, wait, offchan,
+		  dont_wait_for_ack, status, *cookie);
 
 	return 0;
 }
@@ -790,7 +785,12 @@ struct wireless_dev *__wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
 		if (strnstr(name, "p2p", 3) && mode == QDF_STA_MODE) {
 			hdd_debug("change mode to p2p device");
 			mode = QDF_P2P_DEVICE_MODE;
+		} else if (strnstr(name, "aware_data", 10) &&
+			   mode == QDF_STA_MODE) {
+			hdd_debug("add interface %s", name);
+			return hdd_add_ndi_intf(hdd_ctx, name);
 		}
+
 		device_address = wlan_hdd_get_intf_addr(hdd_ctx, mode);
 		if (!device_address)
 			return ERR_PTR(-EINVAL);

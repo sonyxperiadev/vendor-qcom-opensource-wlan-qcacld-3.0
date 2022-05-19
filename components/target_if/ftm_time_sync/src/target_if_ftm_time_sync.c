@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -115,7 +116,7 @@ target_if_ftm_time_sync_start_stop_event(struct wlan_objmgr_psoc *psoc)
 }
 
 static int
-target_if_time_sync_master_slave_offset_event_handler(ol_scn_t scn_handle,
+target_if_time_sync_initiator_target_offset_event_handler(ol_scn_t scn_handle,
 						      uint8_t *data,
 						      uint32_t len)
 {
@@ -152,7 +153,7 @@ target_if_time_sync_master_slave_offset_event_handler(ol_scn_t scn_handle,
 }
 
 static QDF_STATUS
-target_if_ftm_time_sync_master_slave_offset(struct wlan_objmgr_psoc *psoc)
+target_if_ftm_time_sync_initiator_target_offset(struct wlan_objmgr_psoc *psoc)
 {
 	QDF_STATUS status;
 	wmi_unified_t wmi_handle;
@@ -165,8 +166,8 @@ target_if_ftm_time_sync_master_slave_offset(struct wlan_objmgr_psoc *psoc)
 
 	status = wmi_unified_register_event_handler(
 			wmi_handle,
-			wmi_wlan_time_sync_q_master_slave_offset_eventid,
-			target_if_time_sync_master_slave_offset_event_handler,
+			wmi_wlan_time_sync_q_initiator_target_offset_eventid,
+			target_if_time_sync_initiator_target_offset_event_handler,
 			WMI_RX_SERIALIZER_CTX);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		target_if_err("Ftm time_sync offset event register failed");
@@ -198,7 +199,7 @@ target_if_ftm_time_sync_unregister_ev_handlers(struct wlan_objmgr_psoc *psoc)
 
 	ret = wmi_unified_unregister_event(
 			wmi_handle,
-			wmi_wlan_time_sync_q_master_slave_offset_eventid);
+			wmi_wlan_time_sync_q_initiator_target_offset_eventid);
 	if (QDF_IS_STATUS_ERROR(ret)) {
 		target_if_err("failed to unregister time sync offset evt");
 		status = ret;
@@ -220,8 +221,8 @@ void target_if_ftm_time_sync_register_rx_ops(
 
 	rx_ops->ftm_time_sync_register_start_stop =
 				target_if_ftm_time_sync_start_stop_event;
-	rx_ops->ftm_time_sync_regiser_master_slave_offset =
-				target_if_ftm_time_sync_master_slave_offset;
+	rx_ops->ftm_time_sync_regiser_initiator_target_offset =
+				target_if_ftm_time_sync_initiator_target_offset;
 }
 
 void target_if_ftm_time_sync_register_tx_ops(

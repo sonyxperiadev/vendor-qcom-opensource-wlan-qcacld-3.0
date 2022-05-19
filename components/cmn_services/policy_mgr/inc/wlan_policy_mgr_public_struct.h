@@ -172,6 +172,10 @@ enum policy_mgr_pcl_group_id {
  * @POLICY_MGR_PCL_ORDER_NONE: no order
  * @POLICY_MGR_PCL_ORDER_24G_THEN_5G: 2.4 Ghz channel followed by 5 Ghz channel
  * @POLICY_MGR_PCL_ORDER_5G_THEN_2G: 5 Ghz channel followed by 2.4 Ghz channel
+ * @POLICY_MGR_PCL_ORDER_2G: 2G channels
+ * @POLICY_MGR_PCL_ORDER_5G: 5G channels
+ * @POLICY_MGR_PCL_ORDER_5G_LOW : 5G low band i.e 5G freq < sbs cutoff freq
+ * @POLICY_MGR_PCL_ORDER_5G_HIGH : 5G High band i.e 5G freq > sbs cutoff freq
  *
  * Order in which the PCL is requested
  */
@@ -179,6 +183,10 @@ enum policy_mgr_pcl_channel_order {
 	POLICY_MGR_PCL_ORDER_NONE,
 	POLICY_MGR_PCL_ORDER_24G_THEN_5G,
 	POLICY_MGR_PCL_ORDER_5G_THEN_2G,
+	POLICY_MGR_PCL_ORDER_2G,
+	POLICY_MGR_PCL_ORDER_5G,
+	POLICY_MGR_PCL_ORDER_5G_LOW,
+	POLICY_MGR_PCL_ORDER_5G_HIGH,
 };
 
 /**
@@ -298,10 +306,14 @@ enum policy_mgr_mac_use {
  * @PM_SCC_CH_5G: SCC channel & 5 Ghz channels
  * @PM_24G_SCC_CH: 2.4 Ghz channels & SCC channel
  * @PM_5G_SCC_CH: 5 Ghz channels & SCC channel
+ * @PM_SCC_ON_5_CH_5G: 5 Ghz SCC channel & 5 Ghz channels
  * @PM_SCC_ON_5_SCC_ON_24_24G: SCC channel on 5 Ghz, SCC
  *	channel on 2.4 Ghz & 2.4 Ghz channels
  * @PM_SCC_ON_5_SCC_ON_24_5G: SCC channel on 5 Ghz, SCC channel
  *	on 2.4 Ghz & 5 Ghz channels
+ * @PM_SCC_ON_5_5G_24G: SCC channel on 5 Ghz, 5 Ghz channels & 2.4 Ghz channels
+ * @PM_SCC_ON_5_5G_SCC_ON_24G: SCC channel on 5 Ghz, 5 Ghz channels &
+ *	SCC channel on 2.4 Ghz
  * @PM_SCC_ON_24_SCC_ON_5_24G: SCC channel on 2.4 Ghz, SCC
  *	channel on 5 Ghz & 2.4 Ghz channels
  * @PM_SCC_ON_24_SCC_ON_5_5G: SCC channel on 2.4 Ghz, SCC
@@ -319,6 +331,9 @@ enum policy_mgr_mac_use {
  * @PM_24G_SCC_CH_SBS_CH_5G: 2.4 Ghz channels, SCC channel,
  *      SBS channels & rest of the 5G channels
  * @PM_24G_SBS_CH_MCC_CH: 2.4 Ghz channels, SBS channels & MCC channels
+ * @PM_SBS_CH_2G: SBS channels & 2.4 Ghz channels
+ * @PM_CH_5G_LOW: 5G frequencies < sbs cut off freq
+ * @PM_CH_5G_HIGH: 5G frequencies > sbs cut off freq
  * @PM_MAX_PCL_TYPE: Max place holder
  *
  * These are generic IDs that identify the various roles
@@ -335,8 +350,11 @@ enum policy_mgr_pcl_type {
 	PM_SCC_CH_5G,
 	PM_24G_SCC_CH,
 	PM_5G_SCC_CH,
+	PM_SCC_ON_5_CH_5G,
 	PM_SCC_ON_5_SCC_ON_24_24G,
 	PM_SCC_ON_5_SCC_ON_24_5G,
+	PM_SCC_ON_5_5G_24G,
+	PM_SCC_ON_5_5G_SCC_ON_24G,
 	PM_SCC_ON_24_SCC_ON_5_24G,
 	PM_SCC_ON_24_SCC_ON_5_5G,
 	PM_SCC_ON_5_SCC_ON_24,
@@ -355,6 +373,10 @@ enum policy_mgr_pcl_type {
 	PM_SCC_CH_SBS_CH_24G,
 	PM_SBS_CH_SCC_CH_5G_24G,
 	PM_SCC_CH_MCC_CH_SBS_CH_24G,
+	PM_SBS_CH_2G,
+	PM_CH_5G_LOW,
+	PM_CH_5G_HIGH,
+
 	PM_MAX_PCL_TYPE
 };
 
@@ -828,9 +850,9 @@ enum policy_mgr_two_connection_mode {
  * SAP on 5 G
  * @PM_STA_SAP_SCC_5_SAP_24_DBS: STA & SAP connection on 5 Ghz SCC, another
  * SAP on 2.4 G
- * @PM_STA_SAP_SCC_24_STA_5_DBS: STA & SAP connection on 2.4 Ghz SCC, another
+ * @PM_STA_SAP_24_STA_5_DBS: STA & SAP connection on 2.4 Ghz SCC/MCC, another
  * STA on 5G
- * @PM_STA_SAP_SCC_5_STA_24_DBS: STA & SAP connection on 5 Ghz SCC, another
+ * @PM_STA_SAP_5_STA_24_DBS: STA & SAP connection on 5 Ghz SCC/MCC, another
  * STA on 2.4 G
  * @PM_NAN_DISC_SAP_SCC_24_NDI_5_DBS: NAN_DISC & SAP connection on 2.4 Ghz SCC,
  * NDI/NDP on 5 G
@@ -868,12 +890,25 @@ enum policy_mgr_two_connection_mode {
  * and second STA on 5Ghz SMM
  * @PM_NAN_DISC_24_STA_24_STA_5_DBS: NAN Disc on 2.4Ghz and first STA on 2.4Ghz
  * and second STA on 5Ghz DBS
+ * @PM_STA_24_SAP_5_LOW_MCC_STA_5_HIGH_SBS : First STA on 2.4 & SAP on low 5G
+ * MCC on mac 0 and second STA on high 5g on mac1
+ * @PM_STA_24_SAP_5_HIGH_MCC_STA_5_LOW_SBS : First STA on 2.4 & SAP on high 5G
+ * MCC on mac 0 and second STA on high 5g on mac1
+ * @PM_STA_SAP_5_LOW_STA_5_HIGH_SBS : First STA on low 5G & SAP on low 5G
+ * SCC/MCC on mac0 and second STA on high 5G on mac1
+ * @PM_STA_SAP_5_HIGH_STA_5_LOW_SBS : First STA on high 5G & SAP on high 5G
+ * SCC/MCC on mac1 and second STA on low 5G on mac0
+ * @PM_STA_5_LOW_SAP_24_MCC_STA_5_HIGH_SBS : First STA on low 5G & SAP on high
+ * 2.4G MCC on mac0 and second STA on high 5g on mac1
+ * @PM_STA_5_HIGH_SAP_24_MCC_STA_5_LOW_SBS : First STA on high 5G & SAP on 2.4G
+ * MCC on mac1 and second STA on low 5g on mac0
+ *
  */
 enum policy_mgr_three_connection_mode {
 	PM_STA_SAP_SCC_24_SAP_5_DBS,
 	PM_STA_SAP_SCC_5_SAP_24_DBS,
-	PM_STA_SAP_SCC_24_STA_5_DBS,
-	PM_STA_SAP_SCC_5_STA_24_DBS,
+	PM_STA_SAP_24_STA_5_DBS,
+	PM_STA_SAP_5_STA_24_DBS,
 	PM_NAN_DISC_SAP_SCC_24_NDI_5_DBS,
 	PM_NAN_DISC_NDI_SCC_24_SAP_5_DBS,
 	PM_SAP_NDI_SCC_5_NAN_DISC_24_DBS,
@@ -898,6 +933,12 @@ enum policy_mgr_three_connection_mode {
 	PM_NAN_DISC_24_STA_5_STA_24_DBS,
 	PM_NAN_DISC_24_STA_24_STA_5_SMM,
 	PM_NAN_DISC_24_STA_24_STA_5_DBS,
+	PM_STA_24_SAP_5_LOW_MCC_STA_5_HIGH_SBS,
+	PM_STA_24_SAP_5_HIGH_MCC_STA_5_LOW_SBS,
+	PM_STA_SAP_5_LOW_STA_5_HIGH_SBS,
+	PM_STA_SAP_5_HIGH_STA_5_LOW_SBS,
+	PM_STA_5_LOW_SAP_24_MCC_STA_5_HIGH_SBS,
+	PM_STA_5_HIGH_SAP_24_MCC_STA_5_LOW_SBS,
 
 	PM_MAX_THREE_CONNECTION_MODE
 };
@@ -970,7 +1011,6 @@ enum policy_mgr_band {
 /**
  * enum policy_mgr_conn_update_reason: Reason for conc connection update
  * @POLICY_MGR_UPDATE_REASON_SET_OPER_CHAN: Set probable operating channel
- * @POLICY_MGR_UPDATE_REASON_UT: Unit test related
  * @POLICY_MGR_UPDATE_REASON_START_AP: Start AP
  * @POLICY_MGR_UPDATE_REASON_NORMAL_STA: Connection to Normal STA
  * @POLICY_MGR_UPDATE_REASON_OPPORTUNISTIC: Opportunistic HW mode update
@@ -988,7 +1028,6 @@ enum policy_mgr_band {
  */
 enum policy_mgr_conn_update_reason {
 	POLICY_MGR_UPDATE_REASON_SET_OPER_CHAN,
-	POLICY_MGR_UPDATE_REASON_UT,
 	POLICY_MGR_UPDATE_REASON_START_AP,
 	POLICY_MGR_UPDATE_REASON_NORMAL_STA,
 	POLICY_MGR_UPDATE_REASON_OPPORTUNISTIC,

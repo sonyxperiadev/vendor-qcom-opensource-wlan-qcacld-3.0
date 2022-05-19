@@ -189,6 +189,46 @@ struct mlo_link_ie_info {
 	bool bcn_tmpl_exist;
 	struct mlo_link_ie link_ie;
 };
+
+/**
+ * struct wlan_mlo_ie_info - struct for mlo IE information
+ * @mld_mac_addr: MLD MAC address
+ * @common_info_length: Common Info Length
+ * @reserved_1: reserved bits
+ * @mld_capab_present: MLD capability present
+ * @eml_capab_present: EML capability present
+ * @medium_sync_delay_info_present: Medium sync delay information present
+ * @bss_param_change_cnt_present: BSS parameter change count present
+ * @link_id_info_present: Link ID information present
+ * @reserved: reserved bit
+ * @type: Type bits
+ */
+struct wlan_mlo_ie_info {
+#ifndef ANI_LITTLE_BIT_ENDIAN
+	uint8_t mld_mac_addr[6];
+	uint8_t common_info_length;
+	uint16_t reserved_1:7;
+	uint16_t mld_capab_present:1;
+	uint16_t eml_capab_present:1;
+	uint16_t medium_sync_delay_info_present:1;
+	uint16_t bss_param_change_cnt_present:1;
+	uint16_t link_id_info_present:1;
+	uint16_t reserved:1;
+	uint16_t type:3;
+#else
+	uint16_t type:3;
+	uint16_t reserved:1;
+	uint16_t link_id_info_present:1;
+	uint16_t bss_param_change_cnt_present:1;
+	uint16_t medium_sync_delay_info_present:1;
+	uint16_t eml_capab_present:1;
+	uint16_t mld_capab_present:1;
+	uint16_t reserved_1:7;
+	uint8_t common_info_length;
+	uint8_t mld_mac_addr[6];
+#endif
+} qdf_packed;
+
 #endif
 
 /**
@@ -623,7 +663,7 @@ struct pe_session {
 	bool sae_pmk_cached;
 	bool recvd_deauth_while_roaming;
 	bool recvd_disassoc_while_roaming;
-	bool deauth_disassoc_rc;
+	uint16_t deauth_disassoc_rc;
 	enum wmi_obss_color_collision_evt_type obss_color_collision_dec_evt;
 	bool is_session_obss_color_collision_det_enabled;
 	tSirMacEdcaParamRecord ap_mu_edca_params[QCA_WLAN_AC_ALL];
@@ -655,6 +695,7 @@ struct pe_session {
 	struct mlo_partner_info ml_partner_info;
 #endif
 #endif /* WLAN_FEATURE_11BE */
+	uint8_t user_edca_set;
 };
 
 /*-------------------------------------------------------------------------

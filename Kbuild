@@ -91,6 +91,10 @@ UAPI_INC :=	-I$(WLAN_ROOT)/$(UAPI_DIR)/linux
 COMMON_DIR :=	core/common
 COMMON_INC :=	-I$(WLAN_ROOT)/$(COMMON_DIR)
 
+ifeq (qca_cld3, $(WLAN_WEAR_CHIPSET))
+	cppflags-y += -DWLAN_WEAR_CHIPSET
+endif
+
 ############ HDD ############
 HDD_DIR :=	core/hdd
 HDD_INC_DIR :=	$(HDD_DIR)/inc
@@ -220,10 +224,6 @@ endif
 
 ifeq ($(CONFIG_WLAN_SYNC_TSF), y)
 HDD_OBJS +=	$(HDD_SRC_DIR)/wlan_hdd_tsf.o
-endif
-
-ifeq ($(CONFIG_MPC_UT_FRAMEWORK), y)
-HDD_OBJS +=	$(HDD_SRC_DIR)/wlan_hdd_conc_ut.o
 endif
 
 ifeq ($(CONFIG_WLAN_FEATURE_DISA), y)
@@ -996,6 +996,9 @@ cppflags-$(CONFIG_QDF_TEST) += -DWLAN_TRACKER_TEST
 cppflags-$(CONFIG_QDF_TEST) += -DWLAN_TYPES_TEST
 cppflags-$(CONFIG_WLAN_HANG_EVENT) += -DWLAN_HANG_EVENT
 
+#Flag to enable pre_cac
+cppflags-$(CONFIG_FEATURE_WLAN_PRE_CAC)  += -DPRE_CAC_SUPPORT
+
 ############ WBUFF ############
 WBUFF_OS_DIR :=	wbuff
 WBUFF_OS_INC_DIR := $(WBUFF_OS_DIR)/inc
@@ -1546,6 +1549,7 @@ MLME_OBJS +=    $(CM_DIR)/dispatcher/src/wlan_cm_tgt_if_tx_api.o \
 		$(CM_DIR)/dispatcher/src/wlan_cm_roam_api.o \
 		$(CM_DIR)/dispatcher/src/wlan_cm_roam_ucfg_api.o \
 		$(CM_TGT_IF_DIR)/src/target_if_cm_roam_offload.o \
+		$(CM_TGT_IF_DIR)/src/target_if_cm_roam_event.o \
 		$(CM_DIR)/core/src/wlan_cm_roam_offload.o \
 		$(CM_DIR)/core/src/wlan_cm_vdev_connect.o \
 		$(CM_DIR)/core/src/wlan_cm_vdev_disconnect.o
@@ -1555,8 +1559,7 @@ MLME_OBJS +=    $(CM_DIR)/utf/src/cm_utf.o
 endif
 
 ifeq ($(CONFIG_QCACLD_WLAN_LFR3), y)
-MLME_OBJS +=    $(CM_TGT_IF_DIR)/src/target_if_cm_roam_event.o \
-		$(CM_DIR)/core/src/wlan_cm_roam_fw_sync.o \
+MLME_OBJS +=    $(CM_DIR)/core/src/wlan_cm_roam_fw_sync.o \
 		$(CM_DIR)/core/src/wlan_cm_roam_offload_event.o
 endif
 
@@ -1734,7 +1737,11 @@ P2P_OBJS := $(P2P_DISPATCHER_OBJ_DIR)/wlan_p2p_ucfg_api.o \
 	    $(P2P_CORE_OBJ_DIR)/wlan_p2p_off_chan_tx.o \
 	    $(P2P_OS_IF_SRC)/wlan_cfg80211_p2p.o \
 	    $(P2P_TARGET_IF_SRC)/target_if_p2p.o
-
+ifeq ($(CONFIG_WLAN_FEATURE_MCC_QUOTA), y)
+P2P_OBJS += $(P2P_DISPATCHER_OBJ_DIR)/wlan_p2p_mcc_quota_tgt_api.o \
+	    $(P2P_CORE_OBJ_DIR)/wlan_p2p_mcc_quota.o \
+	    $(P2P_TARGET_IF_SRC)/target_if_p2p_mcc_quota.o
+endif
 $(call add-wlan-objs,p2p,$(P2P_OBJS))
 
 ###### UMAC POLICY MGR ########
@@ -2131,6 +2138,11 @@ endif
 
 ifeq ($(CONFIG_FEATURE_MEC), y)
 DP_OBJS += $(DP_SRC)/dp_txrx_wds.o
+endif
+
+ifeq ($(CONFIG_QCACLD_FEATURE_SON), y)
+DP_OBJS += $(WLAN_COMMON_ROOT)/dp/cmn_dp_api/dp_ratetable.o
+DP_INC += -I$(WLAN_COMMON_INC)/dp/cmn_dp_api
 endif
 
 endif #LITHIUM
@@ -3721,8 +3733,6 @@ cppflags-$(CONFIG_WLAN_LRO) += -DFEATURE_LRO
 
 cppflags-$(CONFIG_FEATURE_AP_MCC_CH_AVOIDANCE) += -DFEATURE_AP_MCC_CH_AVOIDANCE
 
-cppflags-$(CONFIG_MPC_UT_FRAMEWORK) += -DMPC_UT_FRAMEWORK
-
 cppflags-$(CONFIG_FEATURE_EPPING) += -DWLAN_FEATURE_EPPING
 
 cppflags-$(CONFIG_WLAN_OFFLOAD_PACKETS) += -DWLAN_FEATURE_OFFLOAD_PACKETS
@@ -3786,6 +3796,7 @@ cppflags-$(CONFIG_DP_FEATURE_HW_COOKIE_CONVERSION) += -DDP_FEATURE_HW_COOKIE_CON
 cppflags-$(CONFIG_DP_HW_COOKIE_CONVERT_EXCEPTION) += -DDP_HW_COOKIE_CONVERT_EXCEPTION
 cppflags-$(CONFIG_TX_ADDR_INDEX_SEARCH) += -DTX_ADDR_INDEX_SEARCH
 cppflags-$(CONFIG_DP_RX_DELIVER_ALL_OOR_FRAMES) += -DDP_RX_DELIVER_ALL_OOR_FRAMES
+cppflags-$(CONFIG_QCA_SUPPORT_TX_MIN_RATES_FOR_SPECIAL_FRAMES) += -DQCA_SUPPORT_TX_MIN_RATES_FOR_SPECIAL_FRAMES
 cppflags-$(CONFIG_RX_HASH_DEBUG) += -DRX_HASH_DEBUG
 
 ifeq ($(CONFIG_QCA6290_11AX), y)
@@ -3940,6 +3951,9 @@ cppflags-$(CONFIG_ADAPTIVE_11R) += -DWLAN_ADAPTIVE_11R
 #Flag to enable/disable sae single pmk feature feature
 cppflags-$(CONFIG_SAE_SINGLE_PMK) += -DWLAN_SAE_SINGLE_PMK
 
+#Flag to enable/disable multi client low latency feature support
+cppflags-$(CONFIG_MULTI_CLIENT_LL_SUPPORT) += -DMULTI_CLIENT_LL_SUPPORT
+
 #Flag to enable/disable mscs feature
 cppflags-$(CONFIG_FEATURE_MSCS) += -DWLAN_FEATURE_MSCS
 
@@ -4018,6 +4032,9 @@ cppflags-$(CONFIG_EMULATION_2_0) += -DCONFIG_KIWI_EMULATION_2_0
 cppflags-$(CONFIG_WORD_BASED_TLV) += -DCONFIG_WORD_BASED_TLV
 cppflags-$(CONFIG_WLAN_SKIP_BAR_UPDATE) += -DWLAN_SKIP_BAR_UPDATE
 cppflags-$(CONFIG_WLAN_TRACEPOINTS) += -DWLAN_TRACEPOINTS
+
+cppflags-$(CONFIG_QCACLD_FEATURE_SON) += -DFEATURE_PERPKT_INFO
+cppflags-$(CONFIG_QCACLD_FEATURE_SON) += -DQCA_ENHANCED_STATS_SUPPORT
 
 ifdef CONFIG_MAX_LOGS_PER_SEC
 ccflags-y += -DWLAN_MAX_LOGS_PER_SEC=$(CONFIG_MAX_LOGS_PER_SEC)
@@ -4362,6 +4379,9 @@ endif
 ifeq ($(CONFIG_DP_HW_TX_DELAY_STATS_ENABLE), y)
 cppflags-y += -DHW_TX_DELAY_STATS_ENABLE
 endif
+
+#Flags to enable/disable Dynamic WLAN interface control feature
+cppflags-$(CONFIG_WLAN_DYNAMIC_IFACE_CTRL) += -DFEATURE_WLAN_DYNAMIC_IFACE_CTRL
 
 KBUILD_CPPFLAGS += $(cppflags-y)
 

@@ -44,7 +44,7 @@ extern const struct nla_policy vendor_attr_policy[
  * @found_vdev:       found vdev object matching one or more of above params
  */
 struct ndi_find_vdev_filter {
-	char *ifname;
+	const char *ifname;
 	struct wlan_objmgr_vdev *found_vdev;
 };
 

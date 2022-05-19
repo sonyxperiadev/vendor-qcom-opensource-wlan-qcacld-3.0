@@ -50,9 +50,7 @@ static QDF_STATUS sme_post_ps_msg_to_wma(uint16_t type, void *body)
 							 QDF_MODULE_ID_WMA,
 							 QDF_MODULE_ID_WMA,
 							 &msg)) {
-		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
-				"%s: Posting message %d failed",
-				__func__, type);
+		sme_err("Posting message %d failed", type);
 		qdf_mem_free(body);
 		return QDF_STATUS_E_FAILURE;
 	}
@@ -232,8 +230,7 @@ static QDF_STATUS sme_ps_enable_uapsd_req_params(struct mac_context *mac_ctx,
 	if (!QDF_IS_STATUS_SUCCESS(status))
 		return QDF_STATUS_E_FAILURE;
 
-	QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
-		    FL("Msg WMA_ENABLE_UAPSD_REQ Successfully sent to WMA"));
+	sme_debug("Msg WMA_ENABLE_UAPSD_REQ Successfully sent to WMA");
 	sme_set_ps_state(mac_ctx, session_id, ps_state);
 	return QDF_STATUS_SUCCESS;
 }
@@ -268,8 +265,7 @@ static QDF_STATUS sme_ps_disable_uapsd_req_params(struct mac_context *mac_ctx,
 	if (!QDF_IS_STATUS_SUCCESS(status))
 		return QDF_STATUS_E_FAILURE;
 
-	QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
-		FL("Message WMA_DISABLE_UAPSD_REQ Successfully sent to WMA"));
+	sme_debug("Message WMA_DISABLE_UAPSD_REQ Successfully sent to WMA");
 	sme_set_ps_state(mac_ctx, session_id, LEGACY_POWER_SAVE_MODE);
 	return QDF_STATUS_SUCCESS;
 }
@@ -292,8 +288,7 @@ QDF_STATUS sme_ps_process_command(struct mac_context *mac_ctx, uint32_t session_
 		sme_err("Invalid Session_id: %d", session_id);
 		return QDF_STATUS_E_INVAL;
 	}
-	QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
-			FL("Power Save command %d"), command);
+	sme_debug("Power Save command %d", command);
 	switch (command) {
 	case SME_PS_ENABLE:
 		status = sme_ps_enable_ps_req_params(mac_ctx, session_id);
@@ -313,8 +308,7 @@ QDF_STATUS sme_ps_process_command(struct mac_context *mac_ctx, uint32_t session_
 		break;
 	}
 	if (status != QDF_STATUS_SUCCESS) {
-		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
-			FL("Not able to enter in PS, Command: %d"), command);
+		sme_err("Not able to enter in PS, Command: %d", command);
 	}
 	return status;
 }
@@ -614,12 +608,11 @@ QDF_STATUS sme_set_ps_host_offload(mac_handle_t mac_handle,
 	struct scheduler_msg msg = {0};
 	struct mac_context *mac_ctx = MAC_CONTEXT(mac_handle);
 
-	QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
-			"%s: IP address = %d.%d.%d.%d", __func__,
-			request->params.hostIpv4Addr[0],
-			request->params.hostIpv4Addr[1],
-			request->params.hostIpv4Addr[2],
-			request->params.hostIpv4Addr[3]);
+	sme_debug("IP address = %d.%d.%d.%d",
+		  request->params.hostIpv4Addr[0],
+		  request->params.hostIpv4Addr[1],
+		  request->params.hostIpv4Addr[2],
+		  request->params.hostIpv4Addr[3]);
 
 	if (!CSR_IS_SESSION_VALID(mac_ctx, session_id)) {
 		sme_err("CSR session is invalid");
@@ -643,8 +636,7 @@ QDF_STATUS sme_set_ps_host_offload(mac_handle_t mac_handle,
 			scheduler_post_message(QDF_MODULE_ID_SME,
 					       QDF_MODULE_ID_WMA,
 					       QDF_MODULE_ID_WMA, &msg)) {
-		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
-		      FL("Not able to post WMA_SET_HOST_OFFLOAD msg to WMA"));
+		sme_err("Not able to post WMA_SET_HOST_OFFLOAD msg to WMA");
 		qdf_mem_free(request_buf);
 		return QDF_STATUS_E_FAILURE;
 	}
@@ -693,8 +685,8 @@ QDF_STATUS sme_set_ps_ns_offload(mac_handle_t mac_handle,
 			scheduler_post_message(QDF_MODULE_ID_SME,
 					       QDF_MODULE_ID_WMA,
 					       QDF_MODULE_ID_WMA, &msg)) {
-		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
-			"Not able to post SIR_HAL_SET_HOST_OFFLOAD message to HAL");
+		sme_err(
+		"Not able to post SIR_HAL_SET_HOST_OFFLOAD message to HAL");
 		qdf_mem_free(request_buf);
 		return QDF_STATUS_E_FAILURE;
 	}

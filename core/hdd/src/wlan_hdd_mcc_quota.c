@@ -49,6 +49,9 @@
 #include "wlan_mlme_public_struct.h"
 #include "wlan_hdd_object_manager.h"
 #include "sme_api.h"
+#include "wlan_p2p_ucfg_api.h"
+#include "wlan_osif_priv.h"
+#include "wlan_p2p_mcc_quota_public_struct.h"
 
 const struct nla_policy
 set_mcc_quota_policy[QCA_WLAN_VENDOR_ATTR_MCC_QUOTA_MAX + 1] = {
@@ -243,4 +246,145 @@ int wlan_hdd_apply_user_mcc_quota(struct hdd_adapter *adapter)
 	}
 
 	return 0;
+}
+
+/**
+ * wlan_cfg80211_indicate_mcc_quota() - Callback to indicate mcc quota
+ * event to upper layer
+ * @psoc: pointer to soc object
+ * @vdev: vdev oject
+ * @quota_info: quota info
+ *
+ * This callback will be used to indicate mcc quota info to upper layer
+ *
+ * Return: QDF_STATUS_SUCCESS if event is indicated to OS successfully.
+ */
+static QDF_STATUS
+wlan_cfg80211_indicate_mcc_quota(struct wlan_objmgr_psoc *psoc,
+				 struct wlan_objmgr_vdev *vdev,
+				 struct mcc_quota_info *quota_info)
+{
+	uint32_t data_len;
+	struct sk_buff *vendor_event;
+	QDF_STATUS status;
+	struct vdev_osif_priv *vdev_osif_priv;
+	struct wireless_dev *wdev;
+	struct pdev_osif_priv *pdev_osif_priv;
+	struct wlan_objmgr_pdev *pdev;
+	uint32_t idx;
+	uint32_t vdev_id;
+	struct nlattr *quota_attrs, *quota_element;
+
+	if (!vdev) {
+		hdd_debug("null vdev");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	vdev_osif_priv = wlan_vdev_get_ospriv(vdev);
+	if (!vdev_osif_priv || !vdev_osif_priv->wdev) {
+		hdd_debug("null wdev");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	wdev = vdev_osif_priv->wdev;
+	vdev_id = wlan_vdev_get_id(vdev);
+	pdev = wlan_vdev_get_pdev(vdev);
+	if (!pdev) {
+		hdd_debug("null pdev");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	pdev_osif_priv = wlan_pdev_get_ospriv(pdev);
+	if (!pdev_osif_priv || !pdev_osif_priv->wiphy) {
+		hdd_debug("null wiphy");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	/* nested element of QCA_WLAN_VENDOR_ATTR_MCC_QUOTA_CHAN_FREQ and
+	 * QCA_WLAN_VENDOR_ATTR_MCC_QUOTA_CHAN_TIME_PERCENTAGE
+	 */
+	data_len = nla_total_size(nla_total_size(sizeof(uint32_t)) +
+				  nla_total_size(sizeof(uint32_t)));
+	/* nested array of quota element */
+	data_len = nla_total_size(data_len * quota_info->num_chan_quota);
+	/* QCA_WLAN_VENDOR_ATTR_MCC_QUOTA_TYPE and NL msg header */
+	data_len += nla_total_size(sizeof(uint32_t)) + NLMSG_HDRLEN;
+
+	vendor_event = wlan_cfg80211_vendor_event_alloc(pdev_osif_priv->wiphy,
+							wdev, data_len,
+							QCA_NL80211_VENDOR_SUBCMD_MCC_QUOTA_INDEX,
+							GFP_KERNEL);
+	if (!vendor_event) {
+		hdd_debug("cfg80211_vendor_event_alloc failed");
+		return QDF_STATUS_E_NOMEM;
+	}
+	if (nla_put_u32(vendor_event,
+			QCA_WLAN_VENDOR_ATTR_MCC_QUOTA_TYPE,
+			quota_info->type)) {
+		status = QDF_STATUS_E_NOMEM;
+		hdd_debug("add QUOTA_TYPE failed");
+		goto err;
+	}
+
+	quota_attrs = nla_nest_start(vendor_event,
+				     QCA_WLAN_VENDOR_ATTR_MCC_QUOTA_ENTRIES);
+	if (!quota_attrs) {
+		status = QDF_STATUS_E_NOMEM;
+		hdd_debug("add QUOTA_ENTRIES failed");
+		goto err;
+	}
+	hdd_debug("mcc quota vdev %d type %d num %d",
+		  vdev_id, quota_info->type, quota_info->num_chan_quota);
+
+	for (idx = 0; idx < quota_info->num_chan_quota; idx++) {
+		quota_element = nla_nest_start(vendor_event, idx);
+		if (!quota_element) {
+			status = QDF_STATUS_E_NOMEM;
+			hdd_debug("add quota idx failed");
+			goto err;
+		}
+
+		if (nla_put_u32(vendor_event,
+				QCA_WLAN_VENDOR_ATTR_MCC_QUOTA_CHAN_FREQ,
+				quota_info->chan_quota[idx].chan_mhz)) {
+			status = QDF_STATUS_E_NOMEM;
+			hdd_debug("add QUOTA_CHAN_FREQ failed");
+			goto err;
+		}
+
+		if (nla_put_u32(vendor_event,
+				QCA_WLAN_VENDOR_ATTR_MCC_QUOTA_CHAN_TIME_PERCENTAGE,
+				quota_info->chan_quota[idx].channel_time_quota)) {
+			status = QDF_STATUS_E_NOMEM;
+			hdd_debug("add QUOTA_CHAN_TIME_PERCENTAGE failed");
+			goto err;
+		}
+
+		nla_nest_end(vendor_event, quota_element);
+		hdd_debug("mcc quota vdev %d [%d] %d quota %d",
+			  vdev_id, idx, quota_info->chan_quota[idx].chan_mhz,
+			  quota_info->chan_quota[idx].channel_time_quota);
+	}
+	nla_nest_end(vendor_event, quota_attrs);
+
+	wlan_cfg80211_vendor_event(vendor_event, GFP_KERNEL);
+
+	return QDF_STATUS_SUCCESS;
+err:
+	wlan_cfg80211_vendor_free_skb(vendor_event);
+
+	return status;
+}
+
+/**
+ * wlan_hdd_register_mcc_quota_event_callback() - Register hdd callback to get
+ * mcc quota event to upper layer
+ * @hdd_ctx: pointer to hdd context
+ *
+ * Return: void
+ */
+void wlan_hdd_register_mcc_quota_event_callback(struct hdd_context *hdd_ctx)
+{
+	ucfg_p2p_register_mcc_quota_event_os_if_cb(hdd_ctx->psoc,
+						   wlan_cfg80211_indicate_mcc_quota);
 }

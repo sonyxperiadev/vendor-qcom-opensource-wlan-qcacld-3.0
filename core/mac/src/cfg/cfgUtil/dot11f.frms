@@ -2505,16 +2505,6 @@ IE reduced_neighbor_report (EID_RNR_IE)
 		tbtt_offset, 1;
 		bss_params, 1;
 	}
-	tbtt_info_4 (tbtt_info_len IS 4)
-	{
-		tbtt_offset, 1;
-		{
-		     mld_id:                    8;
-		     link_id:                   4;
-		     bss_param_change_cnt:      8;
-		     reserved:                  12;
-		}
-	}
 	tbtt_info_5 (tbtt_info_len IS 5)
 	{
 		tbtt_offset, 1;
@@ -2543,17 +2533,6 @@ IE reduced_neighbor_report (EID_RNR_IE)
 		bssid[6];
 		bss_params, 1;
 		psd_20mhz, 1;
-	}
-	tbtt_info_10 (tbtt_info_len IS 10)
-	{
-		tbtt_offset, 1;
-		bssid[6];
-		{
-		     mld_id:                    8;
-		     link_id:                   4;
-		     bss_param_change_cnt:      8;
-		     reserved:                  12;
-		}
 	}
 	tbtt_info_11 (tbtt_info_len IS 11)
 	{
@@ -3273,10 +3252,14 @@ IE he_6ghz_band_cap (EID_EXTN_ID_ELEMENT) OUI (0x3B)
 IE eht_cap (EID_EXTN_ID_ELEMENT) OUI (0x6C)
 {
     {
-	nsep_pri_access: 1;
+	epcs_pri_access: 1;
 	eht_om_ctl: 1;
-	triggered_txop_sharing: 1;
-	reserved: 13;
+	triggered_txop_sharing_mode1: 1;
+	triggered_txop_sharing_mode2: 1;
+	restricted_twt: 1;
+	scs_traffic_desc: 1;
+	max_mpdu_len: 2;
+	reserved: 8;
     }
     {
 	reserved2: 1;
@@ -3321,12 +3304,48 @@ IE eht_cap (EID_EXTN_ID_ELEMENT) OUI (0x6C)
 	mu_bformer_le_80mhz: 1;
 	mu_bformer_160mhz: 1;
 	mu_bformer_320mhz: 1;
-	reserved3: 1;
+	tb_sounding_feedback_rl: 1;
     }
-    eht_mcs_map_20[0..4];
-    eht_mcs_map_le_80[0..3];
-    eht_mcs_map_160[0..3];
-    eht_mcs_map_320[3][0..1] COUNTIS support_320mhz_6ghz;
+    {
+	rx_1k_qam_in_wider_bw_dl_ofdma: 1;
+	rx_4k_qam_in_wider_bw_dl_ofdma: 1;
+	reserved3: 6;
+    }
+    {
+	bw_20_rx_max_nss_for_mcs_0_to_7: 4;
+	bw_20_tx_max_nss_for_mcs_0_to_7: 4;
+	bw_20_rx_max_nss_for_mcs_8_and_9: 4;
+	bw_20_tx_max_nss_for_mcs_8_and_9: 4;
+	bw_20_rx_max_nss_for_mcs_10_and_11: 4;
+	bw_20_tx_max_nss_for_mcs_10_and_11: 4;
+	bw_20_rx_max_nss_for_mcs_12_and_13: 4;
+	bw_20_tx_max_nss_for_mcs_12_and_13: 4;
+
+    }
+    {
+	bw_le_80_rx_max_nss_for_mcs_0_to_9: 4;
+	bw_le_80_tx_max_nss_for_mcs_0_to_9: 4;
+	bw_le_80_rx_max_nss_for_mcs_10_and_11: 4;
+	bw_le_80_tx_max_nss_for_mcs_10_and_11: 4;
+	bw_le_80_rx_max_nss_for_mcs_12_and_13: 4;
+	bw_le_80_tx_max_nss_for_mcs_12_and_13: 4;
+	bw_160_rx_max_nss_for_mcs_0_to_9: 4;
+	bw_160_tx_max_nss_for_mcs_0_to_9: 4;
+    }
+    {
+	bw_160_rx_max_nss_for_mcs_10_and_11: 4;
+	bw_160_tx_max_nss_for_mcs_10_and_11: 4;
+	bw_160_rx_max_nss_for_mcs_12_and_13: 4;
+	bw_160_tx_max_nss_for_mcs_12_and_13: 4;
+	bw_320_rx_max_nss_for_mcs_0_to_9: 4;
+	bw_320_tx_max_nss_for_mcs_0_to_9: 4;
+	bw_320_rx_max_nss_for_mcs_10_and_11: 4;
+	bw_320_tx_max_nss_for_mcs_10_and_11: 4;
+    }
+    {
+	bw_320_rx_max_nss_for_mcs_12_and_13: 4;
+	bw_320_tx_max_nss_for_mcs_12_and_13: 4;
+    }
     OPTIONAL UNION ppet (DISCRIMINATOR ppet_present)
     {
         ppe_threshold (ppet_present IS 1)
@@ -3338,15 +3357,16 @@ IE eht_cap (EID_EXTN_ID_ELEMENT) OUI (0x6C)
 
 IE eht_op (EID_EXTN_ID_ELEMENT) OUI (0x6A)
 {
-    basic_mcs_nss_set[2];
-    primary_channel, 1;
     {
         width: 3;
 	reserved: 5;
     }
-    chan_freq_seg0, 1;
-    chan_freq_seg1, 1;
-    minimum_rate, 1;
+    ccfs, 2;
+    {
+        disable_sub_chan_bitmap_present: 1;
+        reserved2: 7;
+    }
+    disable_sub_chan_bitmap[2][0..1] COUNTIS disable_sub_chan_bitmap_present;
 }
 
 IE mu_edca_param_set (EID_EXTN_ID_ELEMENT) OUI (0x26)
@@ -3764,21 +3784,15 @@ IE mlo_ie (EID_EXTN_ID_ELEMENT) OUI (0x6B)
     {
         type: 3;
         reserved: 1;
-        mld_mac_addr_present: 1;
         link_id_info_present: 1;
         bss_param_change_cnt_present: 1;
         medium_sync_delay_info_present: 1;
         eml_capab_present: 1;
         mld_capab_present: 1;
-        reserved_1: 6;
+        reserved_1: 7;
     }
-    OPTIONAL UNION mld_mac_addr (DISCRIMINATOR mld_mac_addr_present)
-    {
-        info (mld_mac_addr_present IS 1)
-        {
-            mld_mac_addr[6];
-        }
-    };
+    common_info_length, 1;
+    mld_mac_addr[6];
     OPTIONAL UNION link_id_info (DISCRIMINATOR link_id_info_present)
     {
         info (link_id_info_present IS 1)
@@ -3813,11 +3827,12 @@ IE mlo_ie (EID_EXTN_ID_ELEMENT) OUI (0x6B)
         {
             {
                 emlsr_support: 1;
-                emlsr_delay: 3;
+                emlsr_padding_delay: 3;
+                emlsr_transition_delay: 3;
                 emlmr_support: 1;
                 emlmr_delay: 3;
                 transition_timeout: 4;
-                reserved: 4;
+                reserved: 1;
             }
             {
                 emlmr_rx_nss: 4;
@@ -3834,7 +3849,8 @@ IE mlo_ie (EID_EXTN_ID_ELEMENT) OUI (0x6B)
                 srs_support: 1;
                 tid_link_map_supported: 2;
                 str_freq_separation: 5;
-                reserved: 4;
+                aar_support: 1;
+                reserved: 3;
             }
         }
     };

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2012, 2014-2016, 2018-2019, 2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -29,6 +30,7 @@
 #include "qdf_mc_timer.h"
 #include "cds_api.h"
 #include "sir_types.h"
+#include "qdf_util.h"
 
 #define LL_ACCESS_LOCK          true
 #define LL_ACCESS_NOLOCK        false
@@ -55,11 +57,10 @@ typedef struct tagDblLinkList {
  * To get the address of an object of (type) base on the (address)
  * of one of its (field)
  */
-#define GET_BASE_ADDR(address, type, field) ((type *)( \
-			(uint8_t *)(address) - \
-			(uint8_t *)(&((type *)0)->field)))
+#define GET_BASE_ADDR(address, type, field) \
+	(qdf_container_of(address, type, field))
 /* To get the offset of (field) inside structure (type) */
-#define GET_FIELD_OFFSET(type, field)  ((uintptr_t)(&(((type *)0)->field)))
+#define GET_FIELD_OFFSET(type, field)  (qdf_offsetof(type, field))
 #define GET_ROUND_UP(_Field, _Boundary) \
 	(((_Field) + ((_Boundary) - 1))  & ~((_Boundary) - 1))
 #define csrIsListEmpty(pHead) ((pHead)->next == (pHead))

@@ -1387,7 +1387,7 @@ void populate_dot11f_mlo_rnr(struct mac_context *mac_ctx,
 			     tDot11fIEreduced_neighbor_report *dot11f);
 
 /**
- * populate_dot11f_rnr_tbtt_info_10() - populate rnr with tbtt_info length 10
+ * populate_dot11f_rnr_tbtt_info_16() - populate rnr with tbtt_info length 16
  * @mac_ctx: pointer to mac_context
  * @pe_session: pe session
  * @rnr_session: session to populate in rnr ie
@@ -1395,7 +1395,7 @@ void populate_dot11f_mlo_rnr(struct mac_context *mac_ctx,
  *
  * Return: void
  */
-void populate_dot11f_rnr_tbtt_info_10(struct mac_context *mac_ctx,
+void populate_dot11f_rnr_tbtt_info_16(struct mac_context *mac_ctx,
 				      struct pe_session *pe_session,
 				      struct pe_session *rnr_session,
 				      tDot11fIEreduced_neighbor_report *dot11f);
@@ -1425,7 +1425,7 @@ static inline void populate_dot11f_mlo_rnr(
 {
 }
 
-static inline void populate_dot11f_rnr_tbtt_info_10(
+static inline void populate_dot11f_rnr_tbtt_info_16(
 			struct mac_context *mac_ctx,
 			struct pe_session *pe_session,
 			struct pe_session *rnr_session,
@@ -1458,6 +1458,39 @@ QDF_STATUS populate_dot11f_eht_caps(struct mac_context *mac_ctx,
 QDF_STATUS populate_dot11f_eht_operation(struct mac_context *mac_ctx,
 					 struct pe_session *session,
 					 tDot11fIEeht_op *eht_op);
+
+/**
+ * lim_ieee80211_pack_ehtcap() - Pack EHT capabilities IE
+ * @ie: output pointer for eht capabilities IE
+ * @dot11f_eht_cap: dot11f EHT capabilities IE structure
+ * @dot11f_he_cap: dot11f HE capabilities IE structure
+ * @is_band_2g: Flag to indicate whether operating band is 2g or not
+ *
+ * This API is used to enacode EHT capabilities IE which is of variable in
+ * length depending on the HE capabilities IE content.
+ *
+ * Return: Void
+ */
+void lim_ieee80211_pack_ehtcap(uint8_t *ie, tDot11fIEeht_cap dot11f_eht_cap,
+			       tDot11fIEhe_cap dot11f_he_cap, bool is_band_2g);
+
+/**
+ * lim_strip_and_decode_eht_cap() - API to decode EHT capabilities IE
+ * @ie: source ie address
+ * @ie_len: source ie length
+ * @dot11f_eht_cap: output pointer to dot11f EHT capabilities IE structure
+ * @dot11f_he_cap: dot11f HE capabilities IE structure
+ * @freq: frequency
+ *
+ * This API is used to strip and decode EHT caps IE which is of varaible in
+ * in length depending on the HE capabilities IE content.
+ * Return: QDF_STATUS
+ */
+QDF_STATUS lim_strip_and_decode_eht_cap(uint8_t *ie, uint16_t ie_len,
+					tDot11fIEeht_cap *dot11f_eht_cap,
+					tDot11fIEhe_cap dot11f_he_cap,
+					uint16_t freq);
+
 #else
 static inline QDF_STATUS
 populate_dot11f_eht_caps(struct mac_context *mac_ctx,
@@ -1470,6 +1503,22 @@ static inline QDF_STATUS
 populate_dot11f_eht_operation(struct mac_context *mac_ctx,
 			      struct pe_session *session,
 			      tDot11fIEeht_op *eht_op)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline void lim_ieee80211_pack_ehtcap(uint8_t *ie,
+					     tDot11fIEeht_cap dot11f_eht_cap,
+					     tDot11fIEhe_cap dot11f_he_cap,
+					     bool is_band_2g)
+{
+}
+
+static inline
+QDF_STATUS lim_strip_and_decode_eht_cap(uint8_t *ie, uint16_t ie_len,
+					tDot11fIEeht_cap *dot11f_eht_cap,
+					tDot11fIEhe_cap dot11f_he_cap,
+					uint16_t freq)
 {
 	return QDF_STATUS_SUCCESS;
 }

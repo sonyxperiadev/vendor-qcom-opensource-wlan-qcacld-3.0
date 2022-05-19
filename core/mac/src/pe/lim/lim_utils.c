@@ -7977,15 +7977,16 @@ QDF_STATUS lim_populate_he_mcs_set(struct mac_context *mac_ctx,
 #endif
 
 #ifdef WLAN_FEATURE_11BE_MLO
-void lim_update_sta_mlo_info(tpAddStaParams add_sta_params,
+void lim_update_sta_mlo_info(struct pe_session *session,
+			     tpAddStaParams add_sta_params,
 			     tpDphHashNode sta_ds)
 {
-	if (add_sta_params->eht_capable) {
+	if (lim_is_mlo_conn(session, sta_ds)) {
 		WLAN_ADDR_COPY(add_sta_params->mld_mac_addr, sta_ds->mld_addr);
 		add_sta_params->is_assoc_peer = lim_is_mlo_recv_assoc(sta_ds);
 	}
-	pe_debug("eht_capable: %d mld mac " QDF_MAC_ADDR_FMT " assoc peer %d",
-		 add_sta_params->eht_capable,
+	pe_debug("is mlo connection: %d mld mac " QDF_MAC_ADDR_FMT " assoc peer %d",
+		 lim_is_mlo_conn(session, sta_ds),
 		 QDF_MAC_ADDR_REF(add_sta_params->mld_mac_addr),
 		 add_sta_params->is_assoc_peer);
 }
@@ -8012,8 +8013,6 @@ void lim_set_mlo_caps(struct mac_context *mac, struct pe_session *session,
 
 		mlo_ie_info->type = dot11_cap.type;
 		mlo_ie_info->reserved = dot11_cap.reserved;
-		mlo_ie_info->mld_mac_addr_present =
-				dot11_cap.mld_mac_addr_present;
 		mlo_ie_info->link_id_info_present =
 				dot11_cap.link_id_info_present;
 		mlo_ie_info->bss_param_change_cnt_present =
@@ -8023,8 +8022,9 @@ void lim_set_mlo_caps(struct mac_context *mac, struct pe_session *session,
 		mlo_ie_info->eml_capab_present = dot11_cap.eml_capab_present;
 		mlo_ie_info->mld_capab_present = dot11_cap.mld_capab_present;
 		mlo_ie_info->reserved_1 = dot11_cap.reserved_1;
-		qdf_mem_copy(&mlo_ie_info->mld_mac_addr.info.mld_mac_addr,
-			     &dot11_cap.mld_mac_addr.info.mld_mac_addr,
+		mlo_ie_info->common_info_length = dot11_cap.common_info_length;
+		qdf_mem_copy(&mlo_ie_info->mld_mac_addr,
+			     &dot11_cap.mld_mac_addr,
 			     QDF_MAC_ADDR_SIZE);
 		ie_start[1] += QDF_MAC_ADDR_SIZE;
 	}
@@ -8441,6 +8441,7 @@ void lim_set_eht_caps(struct mac_context *mac, struct pe_session *session,
 	tDot11fIEeht_cap dot11_cap;
 	tDot11fIEhe_cap dot11_he_cap;
 	struct wlan_eht_cap_info *eht_cap;
+	bool is_band_2g = WLAN_REG_IS_24GHZ_CH_FREQ(session->curr_op_freq);
 
 	populate_dot11f_eht_caps(mac, session, &dot11_cap);
 	populate_dot11f_he_caps(mac, session, &dot11_he_cap);
@@ -8454,10 +8455,18 @@ void lim_set_eht_caps(struct mac_context *mac, struct pe_session *session,
 		/* convert from unpacked to packed structure */
 		eht_cap = (struct wlan_eht_cap_info *)&ie[2 + EHT_CAP_OUI_SIZE];
 
-		eht_cap->nsep_pri_access = dot11_cap.nsep_pri_access;
+		eht_cap->epcs_pri_access = dot11_cap.epcs_pri_access;
 		eht_cap->eht_om_ctl = dot11_cap.eht_om_ctl;
-		eht_cap->triggered_txop_sharing =
-			dot11_cap.triggered_txop_sharing;
+		eht_cap->triggered_txop_sharing_mode1 =
+			dot11_cap.triggered_txop_sharing_mode1;
+		eht_cap->triggered_txop_sharing_mode2 =
+			dot11_cap.triggered_txop_sharing_mode2;
+		eht_cap->restricted_twt =
+			dot11_cap.restricted_twt;
+		eht_cap->scs_traffic_desc =
+			dot11_cap.scs_traffic_desc;
+		eht_cap->max_mpdu_len =
+			dot11_cap.max_mpdu_len;
 		eht_cap->support_320mhz_6ghz = dot11_cap.support_320mhz_6ghz;
 		eht_cap->ru_242tone_wt_20mhz = dot11_cap.ru_242tone_wt_20mhz;
 		eht_cap->ndp_4x_eht_ltf_3dot2_us_gi =
@@ -8517,32 +8526,85 @@ void lim_set_eht_caps(struct mac_context *mac, struct pe_session *session,
 			dot11_cap.mu_bformer_le_80mhz;
 		eht_cap->mu_bformer_160mhz = dot11_cap.mu_bformer_160mhz;
 		eht_cap->mu_bformer_320mhz = dot11_cap.mu_bformer_320mhz;
+		eht_cap->tb_sounding_feedback_rl =
+			dot11_cap.tb_sounding_feedback_rl;
+		eht_cap->rx_1k_qam_in_wider_bw_dl_ofdma =
+			dot11_cap.rx_1k_qam_in_wider_bw_dl_ofdma;
+		eht_cap->rx_4k_qam_in_wider_bw_dl_ofdma =
+			dot11_cap.rx_4k_qam_in_wider_bw_dl_ofdma;
 
-		if (!dot11_he_cap.chan_width_0 ||
-		    (!dot11_he_cap.chan_width_1 &&
-		     !dot11_he_cap.chan_width_2 &&
-		     !dot11_he_cap.chan_width_3)) {
-			qdf_mem_copy(eht_cap->eht_mcs_map_20,
-				     dot11_cap.eht_mcs_map_20,
-				     EHT_CAP_20M_MCS_MAP_LEN);
+		if ((is_band_2g && !dot11_he_cap.chan_width_0) ||
+			(!is_band_2g && !dot11_he_cap.chan_width_1 &&
+			 !dot11_he_cap.chan_width_2 &&
+			 !dot11_he_cap.chan_width_3)) {
+			eht_cap->bw_20_rx_max_nss_for_mcs_0_to_7 =
+				dot11_cap.bw_20_rx_max_nss_for_mcs_0_to_7;
+			eht_cap->bw_20_tx_max_nss_for_mcs_0_to_7 =
+				dot11_cap.bw_20_tx_max_nss_for_mcs_0_to_7;
+			eht_cap->bw_20_rx_max_nss_for_mcs_8_and_9 =
+				dot11_cap.bw_20_rx_max_nss_for_mcs_8_and_9;
+			eht_cap->bw_20_tx_max_nss_for_mcs_8_and_9 =
+				dot11_cap.bw_20_tx_max_nss_for_mcs_8_and_9;
+			eht_cap->bw_20_rx_max_nss_for_mcs_10_and_11 =
+				dot11_cap.bw_20_rx_max_nss_for_mcs_10_and_11;
+			eht_cap->bw_20_tx_max_nss_for_mcs_10_and_11 =
+				dot11_cap.bw_20_tx_max_nss_for_mcs_10_and_11;
+			eht_cap->bw_20_rx_max_nss_for_mcs_12_and_13 =
+				dot11_cap.bw_20_rx_max_nss_for_mcs_12_and_13;
+			eht_cap->bw_20_tx_max_nss_for_mcs_12_and_13 =
+				dot11_cap.bw_20_tx_max_nss_for_mcs_12_and_13;
 			ie_start[1] += EHT_CAP_20M_MCS_MAP_LEN;
 		}
-		if (dot11_he_cap.chan_width_0 || dot11_he_cap.chan_width_1) {
-			qdf_mem_copy(eht_cap->eht_mcs_map_le_80,
-				     dot11_cap.eht_mcs_map_le_80,
-				     EHT_CAP_80M_MCS_MAP_LEN);
+
+		if ((is_band_2g && dot11_he_cap.chan_width_0) ||
+		    (!is_band_2g && dot11_he_cap.chan_width_1)) {
+			eht_cap->bw_le_80_rx_max_nss_for_mcs_0_to_9 =
+				dot11_cap.bw_le_80_rx_max_nss_for_mcs_0_to_9;
+			eht_cap->bw_le_80_tx_max_nss_for_mcs_0_to_9 =
+				dot11_cap.bw_le_80_tx_max_nss_for_mcs_0_to_9;
+			eht_cap->bw_le_80_rx_max_nss_for_mcs_10_and_11 =
+				dot11_cap.bw_le_80_rx_max_nss_for_mcs_10_and_11;
+			eht_cap->bw_le_80_tx_max_nss_for_mcs_10_and_11 =
+				dot11_cap.bw_le_80_tx_max_nss_for_mcs_10_and_11;
+			eht_cap->bw_le_80_rx_max_nss_for_mcs_12_and_13 =
+				dot11_cap.bw_le_80_rx_max_nss_for_mcs_12_and_13;
+			eht_cap->bw_le_80_tx_max_nss_for_mcs_12_and_13 =
+				dot11_cap.bw_le_80_tx_max_nss_for_mcs_12_and_13;
 			ie_start[1] += EHT_CAP_80M_MCS_MAP_LEN;
 		}
-		if (dot11_he_cap.chan_width_2) {
-			qdf_mem_copy(eht_cap->eht_mcs_map_160,
-				     dot11_cap.eht_mcs_map_160,
-				     EHT_CAP_160M_MCS_MAP_LEN);
+
+		if ((dot11_he_cap.chan_width_6 | dot11_he_cap.chan_width_5 |
+		     dot11_he_cap.chan_width_4 | dot11_he_cap.chan_width_3 |
+		     dot11_he_cap.chan_width_2 | dot11_he_cap.chan_width_1 |
+		     dot11_he_cap.chan_width_0) == 1) {
+			eht_cap->bw_160_rx_max_nss_for_mcs_0_to_9 =
+				dot11_cap.bw_160_rx_max_nss_for_mcs_0_to_9;
+			eht_cap->bw_160_tx_max_nss_for_mcs_0_to_9 =
+				dot11_cap.bw_160_tx_max_nss_for_mcs_0_to_9;
+			eht_cap->bw_160_rx_max_nss_for_mcs_10_and_11 =
+				dot11_cap.bw_160_rx_max_nss_for_mcs_10_and_11;
+			eht_cap->bw_160_tx_max_nss_for_mcs_10_and_11 =
+				dot11_cap.bw_160_tx_max_nss_for_mcs_10_and_11;
+			eht_cap->bw_160_rx_max_nss_for_mcs_12_and_13 =
+				dot11_cap.bw_160_rx_max_nss_for_mcs_12_and_13;
+			eht_cap->bw_160_tx_max_nss_for_mcs_12_and_13 =
+				dot11_cap.bw_160_tx_max_nss_for_mcs_12_and_13;
 			ie_start[1] += EHT_CAP_160M_MCS_MAP_LEN;
 		}
+
 		if (eht_cap->support_320mhz_6ghz) {
-			qdf_mem_copy(eht_cap->eht_mcs_map_320,
-				     dot11_cap.eht_mcs_map_320,
-				     EHT_CAP_320M_MCS_MAP_LEN);
+			eht_cap->bw_320_rx_max_nss_for_mcs_0_to_9 =
+				dot11_cap.bw_320_rx_max_nss_for_mcs_0_to_9;
+			eht_cap->bw_320_tx_max_nss_for_mcs_0_to_9 =
+				dot11_cap.bw_320_tx_max_nss_for_mcs_0_to_9;
+			eht_cap->bw_320_rx_max_nss_for_mcs_10_and_11 =
+				dot11_cap.bw_320_rx_max_nss_for_mcs_10_and_11;
+			eht_cap->bw_320_tx_max_nss_for_mcs_10_and_11 =
+				dot11_cap.bw_320_tx_max_nss_for_mcs_10_and_11;
+			eht_cap->bw_320_rx_max_nss_for_mcs_12_and_13 =
+				dot11_cap.bw_320_rx_max_nss_for_mcs_12_and_13;
+			eht_cap->bw_320_tx_max_nss_for_mcs_12_and_13 =
+				dot11_cap.bw_320_tx_max_nss_for_mcs_12_and_13;
 			ie_start[1] += EHT_CAP_320M_MCS_MAP_LEN;
 		}
 	}
@@ -8569,7 +8631,13 @@ QDF_STATUS lim_send_eht_caps_ie(struct mac_context *mac_ctx,
 	eht_caps[1] = DOT11F_IE_EHT_CAP_MIN_LEN + 1;
 
 	qdf_mem_copy(&eht_caps[2], EHT_CAP_OUI_TYPE, EHT_CAP_OUI_SIZE);
-	lim_set_eht_caps(mac_ctx, session, eht_caps, eht_cap_total_len);
+
+	if (!session)
+		session = pe_find_session_by_vdev_id(mac_ctx, vdev_id);
+	if (session)
+		lim_set_eht_caps(mac_ctx, session, eht_caps, eht_cap_total_len);
+	else
+		pe_err("session not found for given vdev_id %d", vdev_id);
 
 	status_2g = lim_send_ie(mac_ctx, vdev_id, DOT11F_EID_EHT_CAP,
 				CDS_BAND_2GHZ, &eht_caps[2],
@@ -9867,6 +9935,26 @@ QDF_STATUS lim_set_ch_phy_mode(struct wlan_objmgr_vdev *vdev, uint8_t dot11mode)
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef WLAN_FEATURE_11BE
+/**
+ * lim_update_ap_puncture() - set puncture_bitmap for ap session
+ * @session: session
+ * @ch_params: pointer to ch_params
+ *
+ * Return: void
+ */
+static void lim_update_ap_puncture(struct pe_session *session,
+				   struct ch_params *ch_params)
+{
+	if (ch_params->reg_punc_bitmap) {
+		*(uint16_t *)session->eht_op.disable_sub_chan_bitmap =
+					ch_params->reg_punc_bitmap;
+		session->eht_op.disable_sub_chan_bitmap_present = true;
+		pe_debug("vdev %d, puncture %d", session->vdev_id,
+			 ch_params->reg_punc_bitmap);
+	}
+}
+
 /**
  * lim_update_des_chan_puncture() - set puncture_bitmap of des_chan
  * @des_chan: pointer to wlan_channel
@@ -9874,13 +9962,17 @@ QDF_STATUS lim_set_ch_phy_mode(struct wlan_objmgr_vdev *vdev, uint8_t dot11mode)
  *
  * Return: void
  */
-#ifdef WLAN_FEATURE_11BE
 static void lim_update_des_chan_puncture(struct wlan_channel *des_chan,
 					 struct ch_params *ch_params)
 {
 	des_chan->puncture_bitmap = ch_params->reg_punc_bitmap;
 }
 #else
+static void lim_update_ap_puncture(struct pe_session *session,
+				   struct ch_params *ch_params)
+{
+}
+
 static void lim_update_des_chan_puncture(struct wlan_channel *des_chan,
 					 struct ch_params *ch_params)
 {
@@ -9951,6 +10043,8 @@ QDF_STATUS lim_pre_vdev_start(struct mac_context *mac,
 	des_chan->ch_freq_seg2 = ch_params.center_freq_seg1;
 	des_chan->ch_ieee = wlan_reg_freq_to_chan(mac->pdev, des_chan->ch_freq);
 	lim_update_des_chan_puncture(des_chan, &ch_params);
+	if (LIM_IS_AP_ROLE(session))
+		lim_update_ap_puncture(session, &ch_params);
 	session->ch_width = ch_params.ch_width;
 	session->ch_center_freq_seg0 = ch_params.center_freq_seg0;
 	session->ch_center_freq_seg1 = ch_params.center_freq_seg1;
@@ -9988,4 +10082,72 @@ QDF_STATUS lim_pre_vdev_start(struct mac_context *mac,
 				session->ssId.length);
 
 	return lim_set_ch_phy_mode(mlme_obj->vdev, session->dot11mode);
+}
+
+uint8_t lim_get_he_max_mcs_idx(enum phy_ch_width ch_width,
+			       tDot11fIEhe_cap *he_cap)
+{
+	uint16_t hecap_rxmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_80_80 + 1];
+	uint16_t hecap_txmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_80_80 + 1];
+
+	qdf_mem_zero(hecap_rxmcsnssmap, sizeof(hecap_rxmcsnssmap));
+	qdf_mem_zero(hecap_txmcsnssmap, sizeof(hecap_txmcsnssmap));
+
+	qdf_mem_copy(&hecap_rxmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_80],
+		     &he_cap->rx_he_mcs_map_lt_80,
+		     sizeof(u_int16_t));
+	qdf_mem_copy(&hecap_txmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_80],
+		     &he_cap->tx_he_mcs_map_lt_80,
+		     sizeof(u_int16_t));
+	if (he_cap->chan_width_2) {
+		qdf_mem_copy(&hecap_rxmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_160],
+			     &he_cap->rx_he_mcs_map_160,
+			     sizeof(u_int16_t));
+		qdf_mem_copy(&hecap_txmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_160],
+			     &he_cap->tx_he_mcs_map_160,
+			     sizeof(u_int16_t));
+	}
+	if (he_cap->chan_width_3) {
+		qdf_mem_copy(&hecap_rxmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_80_80],
+			     &he_cap->rx_he_mcs_map_80_80,
+			     sizeof(u_int16_t));
+		qdf_mem_copy(&hecap_txmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_80_80],
+			     &he_cap->tx_he_mcs_map_80_80,
+			     sizeof(u_int16_t));
+	}
+
+	return mlme_get_max_he_mcs_idx(ch_width, hecap_rxmcsnssmap,
+				       hecap_txmcsnssmap);
+}
+
+uint8_t lim_get_vht_max_mcs_idx(tDot11fIEVHTCaps *vht_cap)
+{
+	return mlme_get_max_vht_mcs_idx(vht_cap->rxMCSMap & 0xff,
+					vht_cap->txMCSMap & 0xff);
+}
+
+uint8_t lim_get_ht_max_mcs_idx(tDot11fIEHTCaps *ht_cap)
+{
+	uint8_t i, maxidx = INVALID_MCS_NSS_INDEX;
+
+	for (i = 0; i < 8; i++) {
+		if (ht_cap->supportedMCSSet[0] & (1 << i))
+			maxidx = i;
+	}
+
+	return maxidx;
+}
+
+uint8_t lim_get_max_rate_idx(tSirMacRateSet *rateset)
+{
+	uint8_t maxidx;
+	int i;
+
+	maxidx = rateset->rate[0] & 0x7f;
+	for (i = 1; i < rateset->numRates; i++) {
+		if ((rateset->rate[i] & 0x7f) > maxidx)
+			maxidx = rateset->rate[i] & 0x7f;
+	}
+
+	return maxidx;
 }

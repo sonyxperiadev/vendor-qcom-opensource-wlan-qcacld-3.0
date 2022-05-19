@@ -2242,12 +2242,31 @@ wlan_mlme_set_rf_test_mode_enabled(struct wlan_objmgr_psoc *psoc, bool value);
 QDF_STATUS
 wlan_mlme_is_relaxed_6ghz_conn_policy_enabled(struct wlan_objmgr_psoc *psoc,
 					      bool *value);
+
+/**
+ * wlan_mlme_set_relaxed_6ghz_conn_policy_enabled() - Set the 6ghz relaxed
+ *                                                    connection policy flag
+ * @psoc: psoc context
+ * @value: True/False
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_mlme_set_relaxed_6ghz_conn_policy(struct wlan_objmgr_psoc *psoc,
+				       bool value);
 #else
 static inline QDF_STATUS
 wlan_mlme_is_relaxed_6ghz_conn_policy_enabled(struct wlan_objmgr_psoc *psoc,
 					      bool *value)
 {
 	*value = false;
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+wlan_mlme_set_relaxed_6ghz_conn_policy(struct wlan_objmgr_psoc *psoc,
+				       bool value)
+{
 	return QDF_STATUS_SUCCESS;
 }
 #endif
@@ -3320,6 +3339,27 @@ wlan_mlme_is_data_stall_recovery_fw_supported(struct wlan_objmgr_psoc *psoc);
 QDF_STATUS mlme_cfg_get_eht_caps(struct wlan_objmgr_psoc *psoc,
 				 tDot11fIEeht_cap *eht_cap);
 
+#ifdef WLAN_FEATURE_11BE_MLO
+/**
+ * wlan_mlme_is_sta_single_mlo_conn() - Is single mlo connection for sta
+ *                                      set or not
+ * @psoc: pointer to psoc object
+ *
+ * Return: True if single mlo connection for sta is set
+ */
+bool wlan_mlme_is_sta_single_mlo_conn(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * wlan_mlme_set_sta_single_mlo_conn() - Set single mlo connection for sta
+ * @psoc: pointer to psoc object
+ * @value: value to set
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS wlan_mlme_set_sta_single_mlo_conn(struct wlan_objmgr_psoc *psoc,
+					     bool value);
+#endif
+
 /**
  * wlan_mlme_set_ba_2k_jump_iot_ap() - Set a flag if ba 2k jump IOT AP is found
  * @vdev: vdev pointer
@@ -3501,4 +3541,46 @@ wlan_mlme_get_user_mcc_duty_cycle_percentage(struct wlan_objmgr_psoc *psoc)
 	return 0;
 }
 #endif /* WLAN_FEATURE_MCC_QUOTA */
+
+/**
+ * mlme_get_max_he_mcs_idx() -  get max mcs index from he cap information
+ * @mcs_ch_width: channel width
+ * @hecap_rxmcsnssmap: rx mcs map from he cap
+ * @hecap_txmcsnssmap: tx mcs map from he cap
+ *
+ * Return: the maximum MCS supported
+ */
+uint8_t mlme_get_max_he_mcs_idx(enum phy_ch_width mcs_ch_width,
+				u_int16_t *hecap_rxmcsnssmap,
+				u_int16_t *hecap_txmcsnssmap);
+
+/**
+ * mlme_get_max_vht_mcs_idx() -  get max mcs index from vht cap information
+ * @rx_vht_mcs_map: rx mcs map from vht cap
+ * @tx_vht_mcs_map: tx mcs map from vht cap
+ *
+ * Return: the maximum MCS supported
+ */
+uint8_t mlme_get_max_vht_mcs_idx(u_int16_t rx_vht_mcs_map,
+				 u_int16_t tx_vht_mcs_map);
+
+#ifdef WLAN_FEATURE_SON
+/**
+ * mlme_set_vdev_max_mcs_idx() - Save max mcs index of vdev
+ * @vdev: pointer to vdev object
+ * @max_mcs_idx: max_mcs_idx to save
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS mlme_save_vdev_max_mcs_idx(struct wlan_objmgr_vdev *vdev,
+				      uint8_t max_mcs_idx);
+
+/**
+ * mlme_get_vdev_max_mcs_idx() - Get max mcs index of vdev
+ * @vdev: pointer to vdev object
+ *
+ * Return max mcs index of vdev
+ */
+uint8_t mlme_get_vdev_max_mcs_idx(struct wlan_objmgr_vdev *vdev);
+#endif /* WLAN_FEATURE_SON */
 #endif /* _WLAN_MLME_API_H_ */

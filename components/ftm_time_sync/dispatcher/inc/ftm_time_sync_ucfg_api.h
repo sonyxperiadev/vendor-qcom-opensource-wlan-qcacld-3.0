@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -105,7 +106,7 @@ void ucfg_ftm_time_sync_update_bss_state(struct wlan_objmgr_vdev *vdev,
  * @buf: buffer in which the values to be written
  *
  * This function prints the offset values derived after ftm time sync
- * between the qtime of STA(slave) and connected SAP(master).
+ * between the qtime of STA(target) and connected SAP(initiator).
  *
  * Return: number of bytes written in buffer
  */

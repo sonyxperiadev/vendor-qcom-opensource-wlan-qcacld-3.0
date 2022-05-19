@@ -34,6 +34,7 @@
 #include <wlan_hdd_includes.h>
 #include <wlan_hdd_sap_cond_chan_switch.h>
 
+#ifdef PRE_CAC_SUPPORT
 /* default pre cac channel bandwidth */
 #define DEFAULT_PRE_CAC_BANDWIDTH CH_WIDTH_80MHZ
 
@@ -217,6 +218,7 @@ static int wlan_set_def_pre_cac_chan(struct hdd_context *hdd_ctx,
 
 	return 0;
 }
+
 /**
  * __wlan_hdd_request_pre_cac() - Start pre CAC in the driver
  * @hdd_ctx: the HDD context to operate against
@@ -545,6 +547,7 @@ destroy_sync:
 
 	return errno;
 }
+#endif
 
 const struct nla_policy conditional_chan_switch_policy[
 		QCA_WLAN_VENDOR_ATTR_SAP_CONDITIONAL_CHAN_SWITCH_MAX + 1] = {

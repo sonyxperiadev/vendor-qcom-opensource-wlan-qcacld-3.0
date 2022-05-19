@@ -48,6 +48,8 @@
 #include "wlan_connectivity_logging.h"
 #include <lim_mlo.h>
 #include "parser_api.h"
+#include "wlan_twt_cfg_ext_api.h"
+#include "wlan_action_oui_main.h"
 
 /**
  * lim_update_stads_htcap() - Updates station Descriptor HT capability
@@ -771,6 +773,43 @@ lim_update_mcs_rate_set(struct wlan_objmgr_vdev *vdev, tDot11fIEHTCaps *ht_cap)
 	mlme_set_mcs_rate(vdev, dst_rate, len);
 }
 
+#ifdef WLAN_FEATURE_11BE
+/**
+ * lim_update_sta_vdev_punc() - Update puncture set according to assoc resp
+ * @psoc: Pointer to psoc object
+ * @vdev_id: vdev id
+ * @assoc_resp: pointer to parsed associate response
+ *
+ * Return: None.
+ */
+static void
+lim_update_sta_vdev_punc(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
+			 tpSirAssocRsp assoc_resp)
+{
+	struct wlan_objmgr_vdev *vdev;
+	struct wlan_channel *des_chan;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_LEGACY_MAC_ID);
+	if (!vdev) {
+		pe_err("vdev not found for id: %d", vdev_id);
+		return;
+	}
+
+	des_chan = wlan_vdev_mlme_get_des_chan(vdev);
+	des_chan->puncture_bitmap =
+		*(uint16_t *)assoc_resp->eht_op.disable_sub_chan_bitmap;
+	pe_debug("sta vdev %d puncture %d", vdev_id, des_chan->puncture_bitmap);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
+}
+#else
+static void
+lim_update_sta_vdev_punc(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
+			 tpSirAssocRsp assoc_resp)
+{
+}
+#endif
+
 /**
  * hdd_cm_update_rate_set() - Update rate set according to assoc resp
  * @psoc: Pointer to psoc object
@@ -841,7 +880,10 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 	int8_t rssi;
 	QDF_STATUS status;
 	enum ani_akm_type auth_type;
-	bool sha384_akm;
+	bool sha384_akm, twt_support_in_11n = false;
+	struct s_ext_cap *ext_cap;
+	bool bad_ap;
+	struct action_oui_search_attr attr = {0};
 
 	assoc_cnf.resultCode = eSIR_SME_SUCCESS;
 	/* Update PE session Id */
@@ -878,8 +920,6 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 			GET_LIM_SYSTEM_ROLE(session_entry),
 			session_entry->limMlmState, rssi,
 			QDF_MAC_ADDR_REF(hdr->sa));
-	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-			   (uint8_t *)hdr, frame_len + SIR_MAC_HDR_LEN_3A);
 
 	beacon = qdf_mem_malloc(sizeof(tSchBeaconStruct));
 	if (!beacon)
@@ -959,6 +999,19 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 			frame_len, subtype);
 		qdf_mem_free(beacon);
 		return;
+	}
+
+	if (lim_is_session_eht_capable(session_entry)) {
+		status = lim_strip_and_decode_eht_cap(
+					body + WLAN_ASSOC_RSP_IES_OFFSET,
+					frame_len - WLAN_ASSOC_RSP_IES_OFFSET,
+					&assoc_rsp->eht_cap,
+					assoc_rsp->he_cap,
+					session_entry->curr_op_freq);
+		if (status != QDF_STATUS_SUCCESS) {
+			pe_err("Failed to extract eht cap");
+			return;
+		}
 	}
 
 	if (!assoc_rsp->suppRatesPresent) {
@@ -1110,12 +1163,25 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 		lim_update_obss_scanparams(session_entry,
 				&assoc_rsp->obss_scanparams);
 
-	if (lim_is_session_he_capable(session_entry))
+	if (lim_is_session_he_capable(session_entry)) {
 		lim_set_twt_peer_capabilities(
 				mac_ctx,
 				(struct qdf_mac_addr *)current_bssid,
 				&assoc_rsp->he_cap,
 				&assoc_rsp->he_op);
+
+	} else {
+		wlan_twt_cfg_get_support_in_11n(mac_ctx->psoc,
+						&twt_support_in_11n);
+		if (twt_support_in_11n && session_entry->htCapability &&
+		    assoc_rsp->HTCaps.present && assoc_rsp->ExtCap.present) {
+			ext_cap = (struct s_ext_cap *)assoc_rsp->ExtCap.bytes;
+			lim_set_twt_ext_capabilities(
+				mac_ctx,
+				(struct qdf_mac_addr *)current_bssid,
+				ext_cap);
+		}
+	}
 
 	lim_diag_event_report(mac_ctx, WLAN_PE_DIAG_ROAM_ASSOC_COMP_EVENT,
 			      session_entry,
@@ -1278,6 +1344,8 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 				   session_entry->nss);
 	lim_update_vdev_rate_set(mac_ctx->psoc, session_entry->smeSessionId,
 				 assoc_rsp);
+	lim_update_sta_vdev_punc(mac_ctx->psoc, session_entry->smeSessionId,
+				 assoc_rsp);
 
 	/*
 	 * Extract the AP capabilities from the beacon that
@@ -1292,8 +1360,25 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 	lim_update_assoc_sta_datas(mac_ctx, sta_ds, assoc_rsp,
 				   session_entry, beacon);
 
+	/*
+	 * One special AP sets MU EDCA timer as 255 wrongly in both beacon and
+	 * assoc rsp, lead to 2 sec SU upload data stall periodically.
+	 * To fix it, reset MU EDCA timer to 1 and config to F/W for such AP.
+	 */
 	if (lim_is_session_he_capable(session_entry)) {
+		attr.ie_data = ie;
+		attr.ie_length = ie_len;
+		bad_ap = wlan_action_oui_search(mac_ctx->psoc,
+						&attr,
+						ACTION_OUI_DISABLE_MU_EDCA);
 		session_entry->mu_edca_present = assoc_rsp->mu_edca_present;
+		if (session_entry->mu_edca_present && bad_ap) {
+			pe_debug("IoT AP with bad mu edca timer, reset to 1");
+			assoc_rsp->mu_edca.acbe.mu_edca_timer = 1;
+			assoc_rsp->mu_edca.acbk.mu_edca_timer = 1;
+			assoc_rsp->mu_edca.acvi.mu_edca_timer = 1;
+			assoc_rsp->mu_edca.acvo.mu_edca_timer = 1;
+		}
 		if (session_entry->mu_edca_present) {
 			pe_debug("Save MU EDCA params to session");
 			session_entry->ap_mu_edca_params[QCA_WLAN_AC_BE] =

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -101,10 +102,8 @@ void lim_ft_cleanup_pre_auth_info(struct mac_context *mac,
 		if (pReAssocSessionEntry->valid &&
 		    pReAssocSessionEntry->limSmeState ==
 		    eLIM_SME_WT_REASSOC_STATE) {
-			QDF_TRACE(QDF_MODULE_ID_PE,
-				  QDF_TRACE_LEVEL_DEBUG,
-				  FL("Deleting Preauth session(%d)"),
-				  pReAssocSessionEntry->peSessionId);
+			pe_debug("Deleting Preauth session(%d)",
+				 pReAssocSessionEntry->peSessionId);
 			pe_delete_session(mac, pReAssocSessionEntry);
 		}
 	}
@@ -684,16 +683,15 @@ QDF_STATUS lim_send_preauth_scan_offload(struct mac_context *mac_ctx,
 {
 	struct scan_start_request *req;
 	struct wlan_objmgr_vdev *vdev;
-	uint8_t session_id;
+	uint8_t vdev_id;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 
 	if (!session_entry) {
-		QDF_TRACE(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_ERROR,
-			  FL("Session entry is NULL"));
+		pe_err("Session entry is NULL");
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	session_id = session_entry->smeSessionId;
+	vdev_id = session_entry->smeSessionId;
 
 	req = qdf_mem_malloc(sizeof(*req));
 	if (!req)
@@ -702,11 +700,10 @@ QDF_STATUS lim_send_preauth_scan_offload(struct mac_context *mac_ctx,
 	qdf_mem_zero(req, sizeof(*req));
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_pdev(mac_ctx->pdev,
-						    session_id,
+						    vdev_id,
 						    WLAN_LEGACY_MAC_ID);
 	if (!vdev) {
-		QDF_TRACE(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_ERROR,
-			  FL("vdev object is NULL"));
+		pe_err("vdev_id %d: vdev is NULL", vdev_id);
 		qdf_mem_free(req);
 		return QDF_STATUS_E_FAILURE;
 	}
@@ -721,12 +718,11 @@ QDF_STATUS lim_send_preauth_scan_offload(struct mac_context *mac_ctx,
 	if (!req->scan_req.scan_id) {
 		wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
 		qdf_mem_free(req);
-		QDF_TRACE(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_ERROR,
-			  FL("Invalid scan ID"));
+		pe_err("Invalid scan ID");
 		return QDF_STATUS_E_FAILURE;
 	}
 	ft_preauth_req->scan_id = req->scan_req.scan_id;
-	req->scan_req.vdev_id = session_id;
+	req->scan_req.vdev_id = vdev_id;
 	req->scan_req.scan_req_id = mac_ctx->lim.req_id | PREAUTH_REQUESTOR_ID;
 	req->scan_req.scan_priority = SCAN_PRIORITY_VERY_HIGH;
 	req->scan_req.scan_f_passive = true;
@@ -741,8 +737,7 @@ QDF_STATUS lim_send_preauth_scan_offload(struct mac_context *mac_ctx,
 	status = ucfg_scan_start(req);
 	if (status != QDF_STATUS_SUCCESS)
 		/* Don't free req here, ucfg_scan_start will do free */
-		QDF_TRACE(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_INFO_HIGH,
-			  FL("Issue scan req failed"));
+		pe_info("Issue scan req failed");
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
 	return status;
 }

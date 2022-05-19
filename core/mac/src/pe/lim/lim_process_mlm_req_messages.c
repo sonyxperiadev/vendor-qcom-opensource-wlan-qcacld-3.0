@@ -351,28 +351,19 @@ end:
 		lim_send_start_bss_confirm(mac_ctx, &mlm_start_cnf);
 }
 
-void lim_send_peer_create_resp(struct mac_context *mac, uint8_t vdev_id,
-			       QDF_STATUS qdf_status, uint8_t *peer_mac)
-{
-	struct wlan_objmgr_vdev *vdev;
 #ifdef WLAN_FEATURE_11BE_MLO
-	struct wlan_objmgr_peer *link_peer = NULL;
+static void
+lim_send_peer_create_resp_mlo(struct wlan_objmgr_vdev *vdev,
+			      struct mac_context *mac,
+			      uint8_t *peer_mac,
+			      QDF_STATUS status)
+{
 	uint8_t link_id;
 	struct mlo_partner_info partner_info;
-#endif
-	QDF_STATUS status;
+	struct wlan_objmgr_peer *link_peer = NULL;
 
-	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac->psoc,
-						    vdev_id,
-						    WLAN_LEGACY_MAC_ID);
-	if (!vdev)
-		return;
-	status = wlan_cm_bss_peer_create_rsp(vdev, qdf_status,
-					     (struct qdf_mac_addr *)peer_mac);
-
-#ifdef WLAN_FEATURE_11BE_MLO
 	if (!wlan_vdev_mlme_is_mlo_vdev(vdev))
-		goto end;
+		return;
 
 	link_id = vdev->vdev_mlme.mlo_link_id;
 	/* currently only 2 link MLO supported */
@@ -390,7 +381,7 @@ void lim_send_peer_create_resp(struct mac_context *mac, uint8_t vdev_id,
 							WLAN_LEGACY_MAC_ID);
 		if (!link_peer) {
 			pe_err("Link peer is NULL");
-			goto end;
+			return;
 		}
 
 		status = wlan_mlo_peer_create(vdev, link_peer,
@@ -401,8 +392,32 @@ void lim_send_peer_create_resp(struct mac_context *mac, uint8_t vdev_id,
 
 		wlan_objmgr_peer_release_ref(link_peer, WLAN_LEGACY_MAC_ID);
 	}
-end:
-#endif
+}
+#else /* WLAN_FEATURE_11BE_MLO */
+static inline void
+lim_send_peer_create_resp_mlo(struct wlan_objmgr_vdev *vdev,
+			      struct mac_context *mac,
+			      uint8_t *peer_mac,
+			      QDF_STATUS status)
+{
+}
+#endif /* WLAN_FEATURE_11BE_MLO */
+
+void lim_send_peer_create_resp(struct mac_context *mac, uint8_t vdev_id,
+			       QDF_STATUS qdf_status, uint8_t *peer_mac)
+{
+	struct wlan_objmgr_vdev *vdev;
+	QDF_STATUS status;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac->psoc,
+						    vdev_id,
+						    WLAN_LEGACY_MAC_ID);
+	if (!vdev)
+		return;
+	status = wlan_cm_bss_peer_create_rsp(vdev, qdf_status,
+					     (struct qdf_mac_addr *)peer_mac);
+	lim_send_peer_create_resp_mlo(vdev, mac, peer_mac, status);
+
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
 }
 
@@ -1688,8 +1703,7 @@ static void lim_handle_sae_auth_timeout(struct mac_context *mac_ctx,
 	}
 
 	if (!sae_retry->sae_auth_max_retry) {
-		if (MLME_IS_ROAMING_IN_PROG(mac_ctx->psoc,
-					    session_entry->vdev_id)) {
+		if (!wlan_cm_is_vdev_connecting(session_entry->vdev)) {
 			mac_hdr = (tpSirMacMgmtHdr)sae_retry->sae_auth.ptr;
 			lim_send_pre_auth_failure(session_entry->vdev_id,
 						  mac_hdr->bssId);

@@ -2276,7 +2276,6 @@ QDF_STATUS wma_tx_packet(void *wma_context, void *tx_frame, uint16_t frmLen,
 			 wma_tx_dwnld_comp_callback tx_frm_download_comp_cb,
 			 void *pData,
 			 wma_tx_ota_comp_callback tx_frm_ota_comp_cb,
-			 struct mgmt_frame_data *ota_comp_data,
 			 uint8_t tx_flag, uint8_t vdev_id, bool tdls_flag,
 			 uint16_t channel_freq, enum rateid rid,
 			 int8_t peer_rssi)
@@ -2609,12 +2608,6 @@ QDF_STATUS wma_tx_packet(void *wma_context, void *tx_frame, uint16_t frmLen,
 				GENERIC_NODOWNLD_NOACK_COMP_INDEX;
 		}
 
-		if (ota_comp_data) {
-			wma_handle->is_mgmt_data_valid = true;
-			wma_handle->mgmt_data = *ota_comp_data;
-		} else {
-			wma_handle->is_mgmt_data_valid = false;
-		}
 	}
 
 	/*
@@ -2658,14 +2651,29 @@ QDF_STATUS wma_tx_packet(void *wma_context, void *tx_frame, uint16_t frmLen,
 		chanfreq = 0;
 	}
 
-	if (mac->mlme_cfg->gen.debug_packet_log & 0x1) {
-		if ((pFc->type == SIR_MAC_MGMT_FRAME) &&
+	if (pFc->type == SIR_MAC_MGMT_FRAME) {
+		if ((mac->mlme_cfg->gen.debug_packet_log &
+		    DEBUG_PKTLOG_TYPE_MGMT) &&
 		    (pFc->subType != SIR_MAC_MGMT_PROBE_REQ) &&
-		    (pFc->subType != SIR_MAC_MGMT_PROBE_RSP)) {
+		    (pFc->subType != SIR_MAC_MGMT_PROBE_RSP) &&
+		    (pFc->subType != SIR_MAC_MGMT_ACTION)) {
 			wma_debug("TX MGMT - Type %hu, SubType %hu seq_num[%d]",
-				 pFc->type, pFc->subType,
+				  pFc->type, pFc->subType,
+				  ((mHdr->seqControl.seqNumHi << 4) |
+				  mHdr->seqControl.seqNumLo));
+			qdf_trace_hex_dump(QDF_MODULE_ID_WMA,
+					   QDF_TRACE_LEVEL_DEBUG, pData,
+					   frmLen);
+		} else if ((mac->mlme_cfg->gen.debug_packet_log &
+			   DEBUG_PKTLOG_TYPE_ACTION) &&
+			   (pFc->subType == SIR_MAC_MGMT_ACTION)) {
+			wma_debug("TX MGMT - Type %hu, SubType %hu seq_num[%d]",
+				  pFc->type, pFc->subType,
 				 ((mHdr->seqControl.seqNumHi << 4) |
 				 mHdr->seqControl.seqNumLo));
+			qdf_trace_hex_dump(QDF_MODULE_ID_WMA,
+					   QDF_TRACE_LEVEL_DEBUG, pData,
+					   frmLen);
 		}
 	}
 

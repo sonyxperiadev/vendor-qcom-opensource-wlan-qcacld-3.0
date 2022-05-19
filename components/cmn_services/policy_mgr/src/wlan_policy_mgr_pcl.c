@@ -1056,7 +1056,8 @@ static enum policy_mgr_pcl_type policy_mgr_get_pcl_4_port(
 	}
 
 	/* SAP and P2P Go have same result in 4th port pcl table */
-	if (mode == PM_SAP_MODE || mode == PM_P2P_GO_MODE) {
+	if (mode == PM_SAP_MODE || mode == PM_P2P_GO_MODE ||
+	    mode == PM_P2P_CLIENT_MODE) {
 		mode = PM_SAP_MODE;
 	}
 
@@ -1074,7 +1075,7 @@ static enum policy_mgr_pcl_type policy_mgr_get_pcl_4_port(
 	}
 	policy_mgr_debug("Index for 4th port pcl table: %d", fourth_index);
 
-	pcl = fourth_connection_pcl_dbs_table[fourth_index][mode][pref];
+	pcl = fourth_connection_pcl_dbs_sbs_table[fourth_index][mode][pref];
 
 	return pcl;
 }
@@ -2065,6 +2066,8 @@ enum policy_mgr_three_connection_mode
 				psoc, PM_SAP_MODE, &list_sap[count_sap]);
 	count_sap += policy_mgr_mode_specific_connection_count(
 				psoc, PM_P2P_GO_MODE, &list_sap[count_sap]);
+	count_sap += policy_mgr_mode_specific_connection_count(
+				psoc, PM_P2P_CLIENT_MODE, &list_sap[count_sap]);
 	count_sta = policy_mgr_mode_specific_connection_count(
 				psoc, PM_STA_MODE, list_sta);
 	count_ndi = policy_mgr_mode_specific_connection_count(
@@ -2122,28 +2125,28 @@ enum policy_mgr_three_connection_mode
 			pm_conc_connection_list[list_sap[0]].freq) &&
 		     WLAN_REG_IS_5GHZ_CH_FREQ(
 			pm_conc_connection_list[list_sta[1]].freq)) {
-			index = PM_STA_SAP_SCC_24_STA_5_DBS;
+			index = PM_STA_SAP_24_STA_5_DBS;
 		} else if (WLAN_REG_IS_24GHZ_CH_FREQ(
 			pm_conc_connection_list[list_sta[1]].freq) &&
 		     WLAN_REG_IS_24GHZ_CH_FREQ(
 			pm_conc_connection_list[list_sap[0]].freq) &&
 		     WLAN_REG_IS_5GHZ_CH_FREQ(
 			pm_conc_connection_list[list_sta[0]].freq)) {
-			index = PM_STA_SAP_SCC_24_STA_5_DBS;
+			index = PM_STA_SAP_24_STA_5_DBS;
 		} else if (WLAN_REG_IS_24GHZ_CH_FREQ(
 			pm_conc_connection_list[list_sta[0]].freq) &&
 		     WLAN_REG_IS_5GHZ_CH_FREQ(
 			pm_conc_connection_list[list_sap[0]].freq) &&
 		     WLAN_REG_IS_5GHZ_CH_FREQ(
 			pm_conc_connection_list[list_sta[1]].freq)) {
-			index = PM_STA_SAP_SCC_5_STA_24_DBS;
+			index = PM_STA_SAP_5_STA_24_DBS;
 		} else if (WLAN_REG_IS_24GHZ_CH_FREQ(
 			pm_conc_connection_list[list_sta[1]].freq) &&
 		     WLAN_REG_IS_5GHZ_CH_FREQ(
 			pm_conc_connection_list[list_sap[0]].freq) &&
 		     WLAN_REG_IS_5GHZ_CH_FREQ(
 			pm_conc_connection_list[list_sta[0]].freq)) {
-			index = PM_STA_SAP_SCC_5_STA_24_DBS;
+			index = PM_STA_SAP_5_STA_24_DBS;
 		} else {
 			index =  PM_MAX_THREE_CONNECTION_MODE;
 		}
@@ -2906,8 +2909,11 @@ bool policy_mgr_is_3rd_conn_on_same_band_allowed(struct wlan_objmgr_psoc *psoc,
 	case PM_SCC_CH_5G:
 	case PM_24G_SCC_CH:
 	case PM_5G_SCC_CH:
+	case PM_SCC_ON_5_CH_5G:
 	case PM_SCC_ON_5_SCC_ON_24_24G:
 	case PM_SCC_ON_5_SCC_ON_24_5G:
+	case PM_SCC_ON_5_5G_24G:
+	case PM_SCC_ON_5_5G_SCC_ON_24G:
 	case PM_SCC_ON_24_SCC_ON_5_24G:
 	case PM_SCC_ON_24_SCC_ON_5_5G:
 	case PM_SCC_ON_5_SCC_ON_24:
@@ -2925,6 +2931,9 @@ bool policy_mgr_is_3rd_conn_on_same_band_allowed(struct wlan_objmgr_psoc *psoc,
 	case PM_24G_MCC_CH:
 	case PM_5G_MCC_CH:
 	case PM_24G_SBS_CH_MCC_CH:
+	case PM_SBS_CH_2G:
+	case PM_CH_5G_LOW:
+	case PM_CH_5G_HIGH:
 		ret = true;
 		break;
 	default:

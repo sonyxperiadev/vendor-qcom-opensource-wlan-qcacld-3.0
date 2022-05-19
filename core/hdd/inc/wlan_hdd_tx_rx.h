@@ -635,4 +635,21 @@ void hdd_pkt_add_timestamp(struct hdd_adapter *adapter,
 }
 #endif
 
+static inline
+void hdd_debug_pkt_dump(struct sk_buff *skb, int size,
+			uint16_t *dump_level)
+{
+	if (qdf_unlikely(qdf_nbuf_is_ipv4_eapol_pkt(skb)))
+		*dump_level &= DEBUG_PKTLOG_TYPE_EAPOL;
+	else if (qdf_unlikely(qdf_nbuf_is_ipv4_arp_pkt(skb)))
+		*dump_level &= DEBUG_PKTLOG_TYPE_ARP;
+	else if (qdf_unlikely(qdf_nbuf_is_ipv4_dhcp_pkt(skb)))
+		*dump_level &= DEBUG_PKTLOG_TYPE_DHCP;
+	else
+		return;
+
+	if (*dump_level)
+		qdf_trace_hex_dump(QDF_MODULE_ID_HDD, QDF_TRACE_LEVEL_DEBUG,
+				   qdf_nbuf_data(skb), size);
+}
 #endif /* end #if !defined(WLAN_HDD_TX_RX_H) */

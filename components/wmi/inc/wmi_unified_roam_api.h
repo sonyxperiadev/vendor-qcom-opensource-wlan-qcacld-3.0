@@ -141,6 +141,22 @@ QDF_STATUS wmi_unified_plm_start_cmd(wmi_unified_t wmi_handle,
 				     const struct plm_req_params *plm);
 #endif /* FEATURE_WLAN_ESE */
 
+#if defined(WLAN_FEATURE_HOST_ROAM) || defined(WLAN_FEATURE_ROAM_OFFLOAD)
+/**
+ * wmi_extract_roam_event  - Extract roam event
+ * @wmi_handle: WMI handle
+ * @event: Event data received from firmware
+ * @data_len: Event data length received from firmware
+ * @roam_event: Extract the event and fill in roam_event
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wmi_extract_roam_event(wmi_unified_t wmi_handle, uint8_t *event,
+		       uint32_t data_len,
+		       struct roam_offload_roam_event *roam_event);
+#endif /* WLAN_FEATURE_HOST_ROAM || WLAN_FEATURE_ROAM_OFFLOAD */
+
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 /* wmi_unified_set_ric_req_cmd() - set ric request element
  * @wmi_handle: wmi handle
@@ -270,20 +286,6 @@ QDF_STATUS
 wmi_extract_roam_sync_frame_event(wmi_unified_t wmi_handle, void *event,
 				  uint32_t len,
 				  struct roam_synch_frame_ind *frame_ptr);
-
-/**
- * wmi_extract_roam_event  - Extract roam event
- * @wmi_handle: WMI handle
- * @event: Event data received from firmware
- * @data_len: Event data length received from firmware
- * @roam_event: Extract the event and fill in roam_event
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS
-wmi_extract_roam_event(wmi_unified_t wmi_handle, uint8_t *event,
-		       uint32_t data_len,
-		       struct roam_offload_roam_event *roam_event);
 
 /**
  * wmi_extract_btm_denylist_event - Extract btm denylist event

@@ -1427,9 +1427,6 @@ QDF_STATUS wlansap_set_channel_change_with_csa(struct sap_context *sap_ctx,
 		       mac->psoc, sap_ctx->sessionId, POLICY_MGR_BAND_5),
 		       sap_get_csa_reason_str(sap_ctx->csa_reason),
 		       sap_ctx->csa_reason, strict, sap_ctx->sessionId);
-	if (sap_ctx->chan_freq == target_chan_freq &&
-	    sap_ctx->ch_params.ch_width == target_bw)
-		return QDF_STATUS_E_FAULT;
 
 	state = wlan_reg_get_channel_state_for_freq(mac->pdev,
 						    target_chan_freq);
@@ -1455,6 +1452,12 @@ QDF_STATUS wlansap_set_channel_change_with_csa(struct sap_context *sap_ctx,
 
 	wlan_reg_set_channel_params_for_freq(mac->pdev, target_chan_freq, 0,
 					     &tmp_ch_params);
+	if (sap_ctx->chan_freq == target_chan_freq &&
+	    sap_ctx->ch_params.ch_width == tmp_ch_params.ch_width) {
+		sap_nofl_debug("target freq and bw %d not changed",
+			       tmp_ch_params.ch_width);
+		return QDF_STATUS_E_FAULT;
+	}
 	is_dfs = wlan_mlme_check_chan_param_has_dfs(
 			mac->pdev, &tmp_ch_params,
 			target_chan_freq);
@@ -1613,7 +1616,7 @@ QDF_STATUS wlan_sap_update_next_channel(struct sap_context *sap_ctx,
 	return QDF_STATUS_SUCCESS;
 }
 
-#ifdef FEATURE_SAP_COND_CHAN_SWITCH
+#if defined(FEATURE_SAP_COND_CHAN_SWITCH) && defined(PRE_CAC_SUPPORT)
 QDF_STATUS wlan_sap_set_pre_cac_status(struct sap_context *sap_ctx,
 				       bool status)
 {
@@ -1642,6 +1645,7 @@ wlan_sap_set_chan_freq_before_pre_cac(struct sap_context *sap_ctx,
 }
 #endif /* FEATURE_SAP_COND_CHAN_SWITCH */
 
+#ifdef PRE_CAC_SUPPORT
 QDF_STATUS wlan_sap_set_pre_cac_complete_status(struct sap_context *sap_ctx,
 						bool status)
 {
@@ -1722,6 +1726,7 @@ QDF_STATUS wlan_sap_get_pre_cac_vdev_id(mac_handle_t handle, uint8_t *vdev_id)
 	}
 	return QDF_STATUS_E_FAILURE;
 }
+#endif
 
 void wlansap_get_sec_channel(uint8_t sec_ch_offset,
 			     uint32_t op_chan_freq,
@@ -3253,8 +3258,15 @@ qdf_freq_t wlansap_get_chan_band_restrict(struct sap_context *sap_ctx,
 		return 0;
 	}
 	sap_band = wlan_reg_freq_to_band(sap_ctx->chan_freq);
-	sap_debug("SAP/Go current band: %d, pdev band capability: %d",
-		  sap_band, band);
+
+	sap_debug("SAP/Go current band: %d, pdev band capability: %d, cur freq %d (is valid %d), prev freq %d (is valid %d)",
+		  sap_band, band, sap_ctx->chan_freq,
+		  wlan_reg_is_enable_in_secondary_list_for_freq(mac->pdev,
+							sap_ctx->chan_freq),
+		  sap_ctx->chan_freq_before_switch_band,
+		  wlan_reg_is_enable_in_secondary_list_for_freq(mac->pdev,
+					sap_ctx->chan_freq_before_switch_band));
+
 	if (sap_band == REG_BAND_5G && band == BIT(REG_BAND_2G)) {
 		sap_ctx->chan_freq_before_switch_band = sap_ctx->chan_freq;
 		sap_ctx->chan_width_before_switch_band =
@@ -3271,6 +3283,7 @@ qdf_freq_t wlansap_get_chan_band_restrict(struct sap_context *sap_ctx,
 			sap_debug("set 40M when switch SAP to 2G");
 			restart_ch_width = CH_WIDTH_40MHZ;
 		}
+		*csa_reason = CSA_REASON_BAND_RESTRICTED;
 	} else if (sap_band == REG_BAND_2G && (band & BIT(REG_BAND_5G)) &&
 		   sap_ctx->chan_freq_before_switch_band &&
 		   wlan_reg_is_enable_in_secondary_list_for_freq(mac->pdev,
@@ -3532,6 +3545,12 @@ void wlansap_set_acs_ch_freq(struct sap_context *sap_context,
 #endif
 
 #ifdef WLAN_FEATURE_11BE
+bool sap_phymode_is_eht(eCsrPhyMode phymode)
+{
+	return CSR_IS_DOT11_PHY_MODE_11BE(phymode) ||
+	       CSR_IS_DOT11_PHY_MODE_11BE_ONLY(phymode);
+}
+
 bool sap_acs_is_puncture_applicable(struct sap_acs_cfg *acs_cfg)
 {
 	bool is_eht_bw_80 = false;

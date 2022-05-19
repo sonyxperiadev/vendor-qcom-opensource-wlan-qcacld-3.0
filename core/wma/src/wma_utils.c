@@ -2597,7 +2597,9 @@ wma_send_ll_stats_get_cmd(tp_wma_handle wma_handle,
 	if (!(cfg_get(wma_handle->psoc, CFG_CLUB_LL_STA_AND_GET_STATION) &&
 	      wmi_service_enabled(wma_handle->wmi_handle,
 				  wmi_service_get_station_in_ll_stats_req) &&
-	      wma_handle->interfaces[cmd->vdev_id].type == WMI_VDEV_TYPE_STA))
+	      (wma_handle->interfaces[cmd->vdev_id].type ==
+							WMI_VDEV_TYPE_STA) &&
+	      cm_is_vdevid_connected(wma_handle->pdev, cmd->vdev_id)))
 		return wmi_unified_process_ll_stats_get_cmd(
 						wma_handle->wmi_handle, cmd);
 
@@ -4058,7 +4060,7 @@ QDF_STATUS wma_set_vc_mode_config(void *wma_handle,
 {
 	int32_t ret;
 	tp_wma_handle wma = (tp_wma_handle)wma_handle;
-	struct pdev_params pdevparam;
+	struct pdev_params pdevparam = {};
 
 	pdevparam.param_id = WMI_PDEV_UPDATE_WDCVS_ALGO;
 	pdevparam.param_value = vc_bitmap;
@@ -4851,6 +4853,49 @@ int wma_cold_boot_cal_event_handler(void *wma_ctx, uint8_t *event_buff,
 
 	return 0;
 }
+
+#ifdef MULTI_CLIENT_LL_SUPPORT
+int wma_latency_level_event_handler(void *wma_ctx, uint8_t *event_buff,
+				    uint32_t len)
+{
+	WMI_VDEV_LATENCY_LEVEL_EVENTID_param_tlvs *param_buf;
+	struct mac_context *pmac =
+		(struct mac_context *)cds_get_context(QDF_MODULE_ID_PE);
+	wmi_vdev_latency_event_fixed_param *event;
+	struct latency_level_data event_data;
+
+	if (!pmac) {
+		wma_err("NULL mac handle");
+		return -EINVAL;
+	}
+
+	if (!pmac->sme.latency_level_event_handler_cb) {
+		wma_err("latency level data handler cb is not registered");
+		return -EINVAL;
+	}
+
+	param_buf = (WMI_VDEV_LATENCY_LEVEL_EVENTID_param_tlvs *)event_buff;
+	if (!param_buf) {
+		wma_err("Invalid latency level data Event");
+		return -EINVAL;
+	}
+
+	event = param_buf->fixed_param;
+	if (!event) {
+		wma_err("Invalid fixed param in latency data Event");
+		return -EINVAL;
+	}
+
+	event_data.vdev_id = event->vdev_id;
+	event_data.latency_level = event->latency_level;
+	wma_debug("[MULTI_CLIENT]received event latency level :%d, vdev_id:%d",
+		  event->latency_level, event->vdev_id);
+	pmac->sme.latency_level_event_handler_cb(&event_data,
+						     event->vdev_id);
+
+	return 0;
+}
+#endif
 
 #ifdef FEATURE_OEM_DATA
 int wma_oem_event_handler(void *wma_ctx, uint8_t *event_buff, uint32_t len)

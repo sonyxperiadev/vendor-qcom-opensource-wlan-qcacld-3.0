@@ -67,6 +67,93 @@ target_if_cm_roam_register_rx_ops(struct wlan_cm_roam_rx_ops *rx_ops)
 	rx_ops->roam_candidate_frame_event = cm_roam_candidate_event_handler;
 }
 
+int target_if_cm_roam_event(ol_scn_t scn, uint8_t *event, uint32_t len)
+{
+	QDF_STATUS qdf_status;
+	struct wmi_unified *wmi_handle;
+	struct roam_offload_roam_event *roam_event = NULL;
+	struct wlan_objmgr_psoc *psoc;
+	struct wlan_cm_roam_rx_ops *roam_rx_ops;
+
+	psoc = target_if_get_psoc_from_scn_hdl(scn);
+	if (!psoc) {
+		target_if_err("psoc is null");
+		return -EINVAL;
+	}
+
+	wmi_handle = get_wmi_unified_hdl_from_psoc(psoc);
+	if (!wmi_handle) {
+		target_if_err("wmi_handle is null");
+		return -EINVAL;
+	}
+
+	roam_event = qdf_mem_malloc(sizeof(*roam_event));
+	if (!roam_event)
+		return -ENOMEM;
+
+	qdf_status = wmi_extract_roam_event(wmi_handle, event, len, roam_event);
+	if (QDF_IS_STATUS_ERROR(qdf_status)) {
+		target_if_err("parsing of event failed, %d", qdf_status);
+		qdf_status = QDF_STATUS_E_INVAL;
+		goto done;
+	}
+
+	roam_event->psoc = psoc;
+
+	/**
+	 * Stop the timer upon RSO stop status success. The timer shall continue
+	 * to run upon HO_FAIL status and would be stopped upon HO_FAILED event
+	 */
+	if (roam_event->reason == ROAM_REASON_RSO_STATUS ||
+	    roam_event->reason == ROAM_REASON_HO_FAILED)
+		target_if_stop_rso_stop_timer(roam_event);
+
+	roam_rx_ops = target_if_cm_get_roam_rx_ops(psoc);
+	if (!roam_rx_ops || !roam_rx_ops->roam_event_rx) {
+		target_if_err("No valid roam rx ops");
+		qdf_status = QDF_STATUS_E_INVAL;
+		goto done;
+	}
+
+	/**
+	 * This can be called from IRQ context for WOW events such as
+	 * WOW_REASON_LOW_RSSI and WOW_REASON_HO_FAIL. There is no issue
+	 * currently, as these events are posted to schedular thread from
+	 * cm_roam_event_handler, to access umac which use mutex.
+	 * If any new ROAM event is added in IRQ context in future, avoid taking
+	 * mutex. If mutex/sleep is needed, post a message to scheduler thread.
+	 */
+	qdf_status = roam_rx_ops->roam_event_rx(roam_event);
+
+done:
+	qdf_mem_free(roam_event);
+	return qdf_status_to_os_return(qdf_status);
+}
+
+QDF_STATUS
+target_if_roam_register_common_events(struct wlan_objmgr_psoc *psoc)
+{
+	QDF_STATUS ret;
+	wmi_unified_t handle = get_wmi_unified_hdl_from_psoc(psoc);
+
+	if (!handle) {
+		target_if_err("handle is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	/* Register for LFR2/3 commmon roam event */
+	ret = wmi_unified_register_event_handler(handle, wmi_roam_event_id,
+						 target_if_cm_roam_event,
+						 WMI_RX_SERIALIZER_CTX);
+	if (QDF_IS_STATUS_ERROR(ret)) {
+		target_if_err("wmi event registration failed, ret: %d", ret);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
 static void
 target_if_free_roam_synch_frame_ind(struct roam_synch_frame_ind *frame_ind)
 {
@@ -204,69 +291,6 @@ err:
 	if (sync_ind)
 		qdf_mem_free(sync_ind);
 	return status;
-}
-
-int target_if_cm_roam_event(ol_scn_t scn, uint8_t *event, uint32_t len)
-{
-	QDF_STATUS qdf_status;
-	struct wmi_unified *wmi_handle;
-	struct roam_offload_roam_event *roam_event = NULL;
-	struct wlan_objmgr_psoc *psoc;
-	struct wlan_cm_roam_rx_ops *roam_rx_ops;
-
-	psoc = target_if_get_psoc_from_scn_hdl(scn);
-	if (!psoc) {
-		target_if_err("psoc is null");
-		return -EINVAL;
-	}
-
-	wmi_handle = get_wmi_unified_hdl_from_psoc(psoc);
-	if (!wmi_handle) {
-		target_if_err("wmi_handle is null");
-		return -EINVAL;
-	}
-
-	roam_event = qdf_mem_malloc(sizeof(*roam_event));
-	if (!roam_event)
-		return -ENOMEM;
-
-	qdf_status = wmi_extract_roam_event(wmi_handle, event, len, roam_event);
-	if (QDF_IS_STATUS_ERROR(qdf_status)) {
-		target_if_err("parsing of event failed, %d", qdf_status);
-		qdf_status = QDF_STATUS_E_INVAL;
-		goto done;
-	}
-
-	roam_event->psoc = psoc;
-
-	/**
-	 * Stop the timer upon RSO stop status success. The timer shall continue
-	 * to run upon HO_FAIL status and would be stopped upon HO_FAILED event
-	 */
-	if (roam_event->reason == ROAM_REASON_RSO_STATUS ||
-	    roam_event->reason == ROAM_REASON_HO_FAILED)
-		target_if_stop_rso_stop_timer(roam_event);
-
-	roam_rx_ops = target_if_cm_get_roam_rx_ops(psoc);
-	if (!roam_rx_ops || !roam_rx_ops->roam_event_rx) {
-		target_if_err("No valid roam rx ops");
-		qdf_status = QDF_STATUS_E_INVAL;
-		goto done;
-	}
-
-	/**
-	 * This can be called from IRQ context for WOW events such as
-	 * WOW_REASON_LOW_RSSI and WOW_REASON_HO_FAIL. There is no issue
-	 * currently, as these events are posted to schedular thread from
-	 * cm_roam_event_handler, to access umac which use mutex.
-	 * If any new ROAM event is added in IRQ context in future, avoid taking
-	 * mutex. If mutex/sleep is needed, post a message to scheduler thread.
-	 */
-	qdf_status = roam_rx_ops->roam_event_rx(roam_event);
-
-done:
-	qdf_mem_free(roam_event);
-	return qdf_status_to_os_return(qdf_status);
 }
 
 static int
@@ -630,13 +654,6 @@ target_if_roam_offload_register_events(struct wlan_objmgr_psoc *psoc)
 		target_if_err("wmi event registration failed, ret: %d", ret);
 		return QDF_STATUS_E_FAILURE;
 	}
-	ret = wmi_unified_register_event_handler(handle, wmi_roam_event_id,
-						 target_if_cm_roam_event,
-						 WMI_RX_SERIALIZER_CTX);
-	if (QDF_IS_STATUS_ERROR(ret)) {
-		target_if_err("wmi event registration failed, ret: %d", ret);
-		return QDF_STATUS_E_FAILURE;
-	}
 
 	ret = wmi_unified_register_event_handler(handle,
 					wmi_roam_denylist_event_id,
@@ -709,3 +726,4 @@ target_if_roam_offload_register_events(struct wlan_objmgr_psoc *psoc)
 
 	return QDF_STATUS_SUCCESS;
 }
+#endif /* WLAN_FEATURE_ROAM_OFFLOAD */

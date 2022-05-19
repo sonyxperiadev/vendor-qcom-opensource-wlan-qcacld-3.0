@@ -1177,7 +1177,7 @@ QDF_STATUS sap_channel_sel(struct sap_context *sap_context)
 	struct mac_context *mac_ctx;
 	struct scan_start_request *req;
 	struct wlan_objmgr_vdev *vdev = NULL;
-	uint8_t i;
+	uint8_t i, j;
 	uint32_t *freq_list = NULL;
 	uint8_t num_of_channels = 0;
 	mac_handle_t mac_handle;
@@ -1269,10 +1269,13 @@ QDF_STATUS sap_channel_sel(struct sap_context *sap_context)
 		req->scan_req.scan_req_id = sap_context->req_id;
 		req->scan_req.scan_priority = SCAN_PRIORITY_HIGH;
 		req->scan_req.scan_f_bcast_probe = true;
-
-		req->scan_req.chan_list.num_chan = num_of_channels;
-		for (i = 0; i < num_of_channels; i++)
-			req->scan_req.chan_list.chan[i].freq = freq_list[i];
+		for (i = 0, j = 0; i < num_of_channels; i++) {
+			if (wlan_reg_is_6ghz_chan_freq(freq_list[i]) &&
+			    !wlan_reg_is_6ghz_psc_chan_freq(freq_list[i]))
+				continue;
+			req->scan_req.chan_list.chan[j++].freq = freq_list[i];
+		}
+		req->scan_req.chan_list.num_chan = j;
 		sap_context->freq_list = freq_list;
 		sap_context->num_of_channel = num_of_channels;
 		/* Set requestType to Full scan */
@@ -2068,6 +2071,24 @@ QDF_STATUS sap_populate_peer_assoc_info(struct mac_context *mac_ctx,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static void
+sap_reassoc_mld_copy(struct csr_roam_info *csr_roaminfo,
+		     tSap_StationAssocReassocCompleteEvent *reassoc_complete)
+{
+	qdf_copy_macaddr(&reassoc_complete->sta_mld,
+			 &csr_roaminfo->peer_mld);
+	sap_debug("reassoc_complete->staMld: " QDF_MAC_ADDR_FMT,
+		  QDF_MAC_ADDR_REF(reassoc_complete->sta_mld.bytes));
+}
+#else /* WLAN_FEATURE_11BE_MLO */
+static inline void
+sap_reassoc_mld_copy(struct csr_roam_info *csr_roaminfo,
+		     tSap_StationAssocReassocCompleteEvent *reassoc_complete)
+{
+}
+#endif /* WLAN_FEATURE_11BE_MLO */
+
 /**
  * sap_signal_hdd_event() - send event notification
  * @sap_ctx: Sap Context
@@ -2167,7 +2188,7 @@ QDF_STATUS sap_signal_hdd_event(struct sap_context *sap_ctx,
 		bss_complete->status = (eSapStatus) context;
 		bss_complete->staId = sap_ctx->sap_sta_id;
 
-		sap_info("(eSAP_START_BSS_EVENT): staId = %d",
+		sap_debug("(eSAP_START_BSS_EVENT): staId = %d",
 			  bss_complete->staId);
 
 		bss_complete->operating_chan_freq = sap_ctx->chan_freq;
@@ -2250,12 +2271,7 @@ QDF_STATUS sap_signal_hdd_event(struct sap_context *sap_ctx,
 
 		qdf_copy_macaddr(&reassoc_complete->staMac,
 				 &csr_roaminfo->peerMac);
-#ifdef WLAN_FEATURE_11BE_MLO
-		qdf_copy_macaddr(&reassoc_complete->sta_mld,
-				 &csr_roaminfo->peer_mld);
-		sap_debug("reassoc_complete->staMld: " QDF_MAC_ADDR_FMT,
-			  QDF_MAC_ADDR_REF(reassoc_complete->sta_mld.bytes));
-#endif
+		sap_reassoc_mld_copy(csr_roaminfo, reassoc_complete);
 		reassoc_complete->staId = csr_roaminfo->staId;
 		reassoc_complete->status_code = csr_roaminfo->status_code;
 
@@ -2287,6 +2303,8 @@ QDF_STATUS sap_signal_hdd_event(struct sap_context *sap_ctx,
 		reassoc_complete->max_supp_idx = csr_roaminfo->max_supp_idx;
 		reassoc_complete->max_ext_idx = csr_roaminfo->max_ext_idx;
 		reassoc_complete->max_mcs_idx = csr_roaminfo->max_mcs_idx;
+		reassoc_complete->max_real_mcs_idx =
+						csr_roaminfo->max_real_mcs_idx;
 		reassoc_complete->rx_mcs_map = csr_roaminfo->rx_mcs_map;
 		reassoc_complete->tx_mcs_map = csr_roaminfo->tx_mcs_map;
 		reassoc_complete->ecsa_capable = csr_roaminfo->ecsa_capable;
@@ -2633,6 +2651,7 @@ static QDF_STATUS sap_cac_start_notify(mac_handle_t mac_handle)
 	return qdf_status;
 }
 
+#ifdef PRE_CAC_SUPPORT
 /**
  * wlansap_update_pre_cac_end() - Update pre cac end to upper layer
  * @sap_context: SAP context
@@ -2664,17 +2683,8 @@ static QDF_STATUS wlansap_update_pre_cac_end(struct sap_context *sap_context,
 	return QDF_STATUS_SUCCESS;
 }
 
-/**
- * sap_cac_end_notify() - Notify CAC end to HDD
- * @mac_handle: Opaque handle to the global MAC context
- *
- * Function will be called to notify eSAP_DFS_CAC_END event to HDD
- *
- * Return: QDF_STATUS_SUCCESS if the notification was sent, otherwise
- *         an appropriate QDF_STATUS error
- */
-static QDF_STATUS sap_cac_end_notify(mac_handle_t mac_handle,
-				     struct csr_roam_info *roamInfo)
+QDF_STATUS sap_cac_end_notify(mac_handle_t mac_handle,
+			      struct csr_roam_info *roamInfo)
 {
 	uint8_t intf;
 	struct mac_context *mac = MAC_CONTEXT(mac_handle);
@@ -2768,6 +2778,7 @@ static QDF_STATUS sap_cac_end_notify(mac_handle_t mac_handle,
 	mac->sap.SapDfsInfo.cac_state = eSAP_DFS_SKIP_CAC;
 	return qdf_status;
 }
+#endif
 
 /**
  * sap_validate_dfs_nol() - Validate SAP channel with NOL list
@@ -2804,7 +2815,7 @@ static QDF_STATUS sap_validate_dfs_nol(struct sap_context *sap_ctx,
 	 * has leakage to the channels in NOL
 	 */
 
-	if (wlan_vdev_mlme_is_mlo_ap(sap_ctx->vdev)) {
+	if (sap_phymode_is_eht(sap_ctx->phyMode)) {
 		ch_state =
 			wlan_reg_get_channel_state_from_secondary_list_for_freq(
 						mac_ctx->pdev, sap_freq);

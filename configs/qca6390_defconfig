@@ -267,7 +267,6 @@ CONFIG_MCC_TO_SCC_SWITCH := y
 ifeq ($(CONFIG_SLUB_DEBUG), y)
 	# Enable Obj Mgr Degug services if slub build
 	CONFIG_WLAN_OBJMGR_DEBUG:= y
-	CONFIG_MPC_UT_FRAMEWORK := y
 	CONFIG_LOCK_STATS_ON:= y
 endif
 

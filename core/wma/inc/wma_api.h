@@ -855,17 +855,4 @@ void wma_cleanup_vdev(struct wlan_objmgr_vdev *vdev);
  * Return: None
  */
 void wma_set_wakeup_logs_to_console(bool value);
-
-#ifdef MPC_UT_FRAMEWORK
-/**
- * wma_enable_dbs_service_ut() - enable dbs wmi service for unit testing.
- *
- * Sets DBS capability is also set in the service bit map.
- *
- * Return: None
- */
-void wma_enable_dbs_service_ut(void);
-#else
-static inline void wma_enable_dbs_service_ut(void) {}
-#endif
 #endif /* WMA_API_H */

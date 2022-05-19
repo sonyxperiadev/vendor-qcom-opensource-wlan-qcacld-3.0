@@ -40,6 +40,8 @@ void wma_register_twt_events(tp_wma_handle wma_handle)
 
 void wma_set_twt_peer_caps(tpAddStaParams params, struct peer_assoc_params *cmd)
 {
+	cmd->twt_requester = params->twt_requestor;
+	cmd->twt_responder = params->twt_responder;
 }
 
 void wma_update_twt_tgt_cap(tp_wma_handle wh, struct wma_tgt_cfg *tgt_cfg)

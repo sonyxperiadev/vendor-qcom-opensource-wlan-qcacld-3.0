@@ -479,9 +479,7 @@ static void csr_set_cfg_valid_channel_list(struct mac_context *mac,
 	QDF_STATUS status;
 	uint8_t i;
 
-	QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
-		  "%s: dump valid channel list(NumChannels(%d))",
-		  __func__, NumChannels);
+	sme_debug("dump valid channel list(NumChannels(%d))", NumChannels);
 	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
 			   pchan_freq_list, NumChannels);
 	for (i = 0; i < NumChannels; i++) {
@@ -490,8 +488,7 @@ static void csr_set_cfg_valid_channel_list(struct mac_context *mac,
 
 	mac->mlme_cfg->reg.valid_channel_list_num = NumChannels;
 
-	QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
-		  "Scan offload is enabled, update default chan list");
+	sme_debug("Scan offload is enabled, update default chan list");
 	/*
 	 * disable fcc constraint since new country code
 	 * is being set
@@ -499,8 +496,7 @@ static void csr_set_cfg_valid_channel_list(struct mac_context *mac,
 	mac->scan.fcc_constraint = false;
 	status = csr_update_channel_list(mac);
 	if (QDF_STATUS_SUCCESS != status) {
-		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
-			  "failed to update the supported channel list");
+		sme_err("failed to update the supported channel list");
 	}
 }
 
@@ -956,8 +952,7 @@ QDF_STATUS csr_scan_get_result_for_bssid(struct mac_context *mac_ctx,
 	tCsrScanResultInfo *scan_result;
 
 	if (!mac_ctx) {
-		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
-				FL("mac_ctx is NULL"));
+		sme_err("mac_ctx is NULL");
 		return QDF_STATUS_E_FAILURE;
 	}
 

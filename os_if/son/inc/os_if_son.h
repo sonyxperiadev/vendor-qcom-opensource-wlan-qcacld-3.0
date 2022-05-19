@@ -69,6 +69,7 @@
  * @os_if_get_node_info: Gets the datarate info for node
  * @os_if_get_peer_capability: Gets peer capability
  * @os_if_get_peer_max_mcs_idx: Gets peer max MCS index
+ * @os_if_get_sta_stats: Get sta stats
  */
 struct son_callbacks {
 	uint32_t (*os_if_is_acs_in_progress)(struct wlan_objmgr_vdev *vdev);
@@ -136,6 +137,9 @@ struct son_callbacks {
 						wlan_peer_cap *cap);
 	uint32_t (*os_if_get_peer_max_mcs_idx)(struct wlan_objmgr_vdev *vdev,
 					       struct wlan_objmgr_peer *peer);
+	int (*os_if_get_sta_stats)(struct wlan_objmgr_vdev *vdev,
+				   uint8_t *mac_addr,
+				   struct ieee80211_nodestats *stats);
 };
 
 /**
@@ -777,4 +781,15 @@ QDF_STATUS os_if_son_get_node_datarate_info(struct wlan_objmgr_vdev *vdev,
  */
 uint32_t os_if_son_get_peer_max_mcs_idx(struct wlan_objmgr_vdev *vdev,
 					struct wlan_objmgr_peer *peer);
+
+/**
+ * os_if_son_get_sta_stats() - get connected sta rssi and estimated data rate
+ * @vdev: pointer to vdev
+ * @mac_addr: connected sta mac addr
+ * @stats: pointer to ieee80211_nodestats
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+int os_if_son_get_sta_stats(struct wlan_objmgr_vdev *vdev, uint8_t *mac_addr,
+			    struct ieee80211_nodestats *stats);
 #endif

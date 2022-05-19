@@ -351,4 +351,53 @@ QDF_STATUS hdd_softap_ind_l2_update(struct hdd_adapter *adapter,
 	return QDF_STATUS_SUCCESS;
 }
 #endif
+#ifndef QCA_LL_LEGACY_TX_FLOW_CONTROL
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(3, 19, 0))
+/**
+ * hdd_skb_orphan() - skb_unshare a cloned packed else skb_orphan
+ * @adapter: pointer to HDD adapter
+ * @skb: pointer to skb data packet
+ *
+ * Return: pointer to skb structure
+ */
+static inline struct sk_buff *hdd_skb_orphan(struct hdd_adapter *adapter,
+					     struct sk_buff *skb)
+{
+	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+
+	hdd_skb_fill_gso_size(adapter->dev, skb);
+
+	if (skb_cloned(skb)) {
+		++adapter->hdd_stats.tx_rx_stats.
+			per_cpu[qdf_get_smp_processor_id()].tx_orphaned;
+		skb_orphan(skb);
+		return skb;
+	}
+
+	if (unlikely(hdd_ctx->config->tx_orphan_enable)) {
+		/*
+		 * For UDP packets we want to orphan the packet to allow the app
+		 * to send more packets. The flow would ultimately be controlled
+		 * by the limited number of tx descriptors for the vdev.
+		 */
+		++adapter->hdd_stats.tx_rx_stats.
+			per_cpu[qdf_get_smp_processor_id()].tx_orphaned;
+		skb_orphan(skb);
+	}
+
+	return skb;
+}
+#else
+static inline struct sk_buff *hdd_skb_orphan(struct hdd_adapter *adapter,
+					     struct sk_buff *skb)
+{
+	struct sk_buff *nskb;
+
+	hdd_skb_fill_gso_size(adapter->dev, skb);
+	nskb = skb_unshare(skb, GFP_ATOMIC);
+
+	return nskb;
+}
+#endif
+#endif /* QCA_LL_LEGACY_TX_FLOW_CONTROL */
 #endif /* end #if !defined(WLAN_HDD_SOFTAP_TX_RX_H) */
