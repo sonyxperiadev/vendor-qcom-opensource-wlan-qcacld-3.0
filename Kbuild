@@ -431,6 +431,10 @@ ifeq ($(CONFIG_DP_PKT_ADD_TIMESTAMP), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_add_timestamp.o
 endif
 
+ifeq ($(CONFIG_DP_TRAFFIC_END_INDICATION), y)
+HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_dp_traffic_end_indication.o
+endif
+
 ifeq ($(CONFIG_QCACLD_FEATURE_FW_STATE), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_fw_state.o
 endif
@@ -3142,6 +3146,7 @@ cppflags-y +=	-DANI_OS_TYPE_ANDROID=6 \
 		-Werror\
 		-D__linux__
 
+cppflags-$(CONFIG_DP_TRAFFIC_END_INDICATION) += -DDP_TRAFFIC_END_INDICATION
 cppflags-$(CONFIG_THERMAL_STATS_SUPPORT) += -DTHERMAL_STATS_SUPPORT
 cppflags-$(CONFIG_PTT_SOCK_SVC_ENABLE) += -DPTT_SOCK_SVC_ENABLE
 cppflags-$(CONFIG_FEATURE_WLAN_WAPI) += -DFEATURE_WLAN_WAPI

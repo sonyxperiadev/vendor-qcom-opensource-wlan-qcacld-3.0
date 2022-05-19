@@ -1025,6 +1025,7 @@ struct wlm_multi_client_info_table {
  * @mon_adapter: hdd_adapter of monitor mode.
  * @set_mac_addr_req_ctx: Set MAC address command request context
  * @delta_qtime: delta between host qtime and monotonic time
+ * @traffic_end_ind_en: traffic end indication feature enable/disable
  */
 struct hdd_adapter {
 	/* Magic cookie for adapter sanity verification.  Note that this
@@ -1305,6 +1306,9 @@ struct hdd_adapter {
 	void *set_mac_addr_req_ctx;
 #endif
 	int64_t delta_qtime;
+#ifdef DP_TRAFFIC_END_INDICATION
+	bool traffic_end_ind_en;
+#endif
 };
 
 #define WLAN_HDD_GET_STATION_CTX_PTR(adapter) (&(adapter)->session.station)

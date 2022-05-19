@@ -86,6 +86,7 @@
 #include <wlan_hdd_sysfs_get_freq_for_pwr.h>
 #include <wlan_hdd_sysfs_dp_tx_delay_stats.h>
 #include <wlan_hdd_sysfs_wifi_features.h>
+#include <wlan_hdd_sysfs_dp_traffic_end_indication.h>
 
 #define MAX_PSOC_ID_SIZE 10
 
@@ -845,11 +846,13 @@ hdd_sysfs_create_sap_adapter_root_obj(struct hdd_adapter *adapter)
 	hdd_sysfs_dl_modes_create(adapter);
 	hdd_sysfs_11be_rate_create(adapter);
 	hdd_sysfs_dp_tx_delay_stats_create(adapter);
+	hdd_sysfs_dp_traffic_end_indication_create(adapter);
 }
 
 static void
 hdd_sysfs_destroy_sap_adapter_root_obj(struct hdd_adapter *adapter)
 {
+	hdd_sysfs_dp_traffic_end_indication_destroy(adapter);
 	hdd_sysfs_dp_tx_delay_stats_destroy(adapter);
 	hdd_sysfs_11be_rate_destroy(adapter);
 	hdd_sysfs_dl_modes_destroy(adapter);
