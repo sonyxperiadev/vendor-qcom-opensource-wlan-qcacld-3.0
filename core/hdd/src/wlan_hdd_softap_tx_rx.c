@@ -581,44 +581,42 @@ void hdd_softap_get_tx_resource(struct hdd_adapter *adapter,
 static QDF_STATUS hdd_softap_validate_peer_state(struct hdd_adapter *adapter,
 						 struct sk_buff *skb)
 {
-	struct qdf_mac_addr *dest_mac_addr, *mac_addr;
-	static struct qdf_mac_addr bcast_mac_addr = QDF_MAC_ADDR_BCAST_INIT;
+	struct qdf_mac_addr *dest_mac_addr;
+	struct qdf_mac_addr mac_addr;
+	enum ol_txrx_peer_state peer_state;
+	void *soc;
 
 	dest_mac_addr = (struct qdf_mac_addr *)skb->data;
 
-	if (QDF_NBUF_CB_GET_IS_MCAST(skb))
-		mac_addr = &bcast_mac_addr;
-	else
-		mac_addr = dest_mac_addr;
+	if (QDF_NBUF_CB_GET_IS_BCAST(skb) || QDF_NBUF_CB_GET_IS_MCAST(skb))
+		return QDF_STATUS_SUCCESS;
 
-	if (!QDF_NBUF_CB_GET_IS_BCAST(skb) && !QDF_NBUF_CB_GET_IS_MCAST(skb)) {
-		/* for a unicast frame */
-		enum ol_txrx_peer_state peer_state;
-		void *soc = cds_get_context(QDF_MODULE_ID_SOC);
+	/* for a unicast frame */
+	qdf_copy_macaddr(&mac_addr, dest_mac_addr);
+	soc = cds_get_context(QDF_MODULE_ID_SOC);
+	QDF_BUG(soc);
+	hdd_wds_replace_peer_mac(soc, adapter, mac_addr.bytes);
+	peer_state = cdp_peer_state_get(soc, adapter->vdev_id,
+					mac_addr.bytes);
 
-		QDF_BUG(soc);
-		hdd_wds_replace_peer_mac(soc, adapter, mac_addr->bytes);
-		peer_state = cdp_peer_state_get(soc, adapter->vdev_id,
-						mac_addr->bytes);
+	if (peer_state == OL_TXRX_PEER_STATE_INVALID) {
+		hdd_sapd_debug_rl("Failed to find right station");
+		return QDF_STATUS_E_FAILURE;
+	}
 
-		if (peer_state == OL_TXRX_PEER_STATE_INVALID) {
-			hdd_sapd_debug_rl("Failed to find right station");
+	if (peer_state != OL_TXRX_PEER_STATE_CONN &&
+	    peer_state != OL_TXRX_PEER_STATE_AUTH) {
+		hdd_sapd_debug_rl("Station not connected yet");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (peer_state == OL_TXRX_PEER_STATE_CONN) {
+		if (ntohs(skb->protocol) != HDD_ETHERTYPE_802_1_X) {
+			hdd_sapd_debug_rl("NON-EAPOL packet in non-Authenticated state");
 			return QDF_STATUS_E_FAILURE;
-		}
-
-		if (peer_state != OL_TXRX_PEER_STATE_CONN &&
-		    peer_state != OL_TXRX_PEER_STATE_AUTH) {
-			hdd_sapd_debug_rl("Station not connected yet");
-			return QDF_STATUS_E_FAILURE;
-		}
-
-		if (peer_state == OL_TXRX_PEER_STATE_CONN) {
-			if (ntohs(skb->protocol) != HDD_ETHERTYPE_802_1_X) {
-				hdd_sapd_debug_rl("NON-EAPOL packet in non-Authenticated state");
-				return QDF_STATUS_E_FAILURE;
-			}
 		}
 	}
+
 	return QDF_STATUS_SUCCESS;
 }
 
