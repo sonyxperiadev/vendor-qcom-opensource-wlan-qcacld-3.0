@@ -1258,6 +1258,8 @@ wlansap_get_csa_chanwidth_from_phymode(struct sap_context *sap_context,
 			ch_width = QDF_MIN(ch_width, tgt_ch_params->ch_width);
 	}
 	ch_params.ch_width = ch_width;
+	if (sap_phymode_is_eht(sap_context->phyMode))
+		wlan_reg_set_create_punc_bitmap(&ch_params, true);
 	wlan_reg_set_channel_params_for_freq(mac->pdev, chan_freq, 0,
 					     &ch_params);
 	ch_width = ch_params.ch_width;
@@ -1382,6 +1384,8 @@ wlansap_set_chan_params_for_csa(struct mac_context *mac,
 			QDF_MIN(mac->sap.SapDfsInfo.new_ch_params.ch_width,
 				target_bw);
 	}
+	if (sap_phymode_is_eht(sap_ctx->phyMode))
+		wlan_reg_set_create_punc_bitmap(&sap_ctx->ch_params, true);
 	wlan_reg_set_channel_params_for_freq(
 		mac->pdev, target_chan_freq, 0,
 		&mac->sap.SapDfsInfo.new_ch_params);
@@ -1450,6 +1454,8 @@ QDF_STATUS wlansap_set_channel_change_with_csa(struct sap_context *sap_ctx,
 			       tmp_ch_params.ch_width);
 	}
 
+	if (sap_phymode_is_eht(sap_ctx->phyMode))
+		wlan_reg_set_create_punc_bitmap(&tmp_ch_params, true);
 	wlan_reg_set_channel_params_for_freq(mac->pdev, target_chan_freq, 0,
 					     &tmp_ch_params);
 	if (sap_ctx->chan_freq == target_chan_freq &&
@@ -1896,6 +1902,8 @@ QDF_STATUS wlansap_channel_change_request(struct sap_context *sap_ctx,
 	 * which will result in channel width changing dynamically.
 	 */
 	ch_params = &mac_ctx->sap.SapDfsInfo.new_ch_params;
+	if (sap_phymode_is_eht(sap_ctx->phyMode))
+		wlan_reg_set_create_punc_bitmap(ch_params, true);
 	wlan_reg_set_channel_params_for_freq(mac_ctx->pdev, target_chan_freq,
 			0, ch_params);
 	sap_ctx->ch_params = *ch_params;
@@ -1974,6 +1982,9 @@ QDF_STATUS wlansap_dfs_send_csa_ie_request(struct sap_context *sap_ctx)
 
 	mac->sap.SapDfsInfo.new_ch_params.ch_width =
 				mac->sap.SapDfsInfo.new_chanWidth;
+	if (sap_phymode_is_eht(sap_ctx->phyMode))
+		wlan_reg_set_create_punc_bitmap(
+			&mac->sap.SapDfsInfo.new_ch_params, true);
 	wlan_reg_set_channel_params_for_freq(mac->pdev,
 			mac->sap.SapDfsInfo.target_chan_freq,
 			0, &mac->sap.SapDfsInfo.new_ch_params);

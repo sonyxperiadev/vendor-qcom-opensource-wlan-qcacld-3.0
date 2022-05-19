@@ -2270,6 +2270,9 @@ hdd_update_reg_chan_info(struct hdd_adapter *adapter,
 			wlan_hdd_find_opclass(mac_handle, chan, bw_offset);
 
 		if (WLAN_REG_IS_5GHZ_CH_FREQ(freq_list[i])) {
+			if (sap_phymode_is_eht(sap_config->SapHw_mode))
+				wlan_reg_set_create_punc_bitmap(&ch_params,
+								true);
 			ch_params.ch_width = sap_config->acs_cfg.ch_width;
 			wlan_reg_set_channel_params_for_freq(hdd_ctx->pdev,
 							     icv->freq,
@@ -13759,6 +13762,9 @@ __wlan_hdd_cfg80211_sap_configuration_set(struct wiphy *wiphy,
 					ap_ctx->sap_config.ch_width_orig;
 		ap_ctx->bss_stop_reason = BSS_STOP_DUE_TO_VENDOR_CONFIG_CHAN;
 
+		if (sap_phymode_is_eht(ap_ctx->sap_config.SapHw_mode))
+			wlan_reg_set_create_punc_bitmap(
+				&ap_ctx->sap_config.ch_params, true);
 		wlan_reg_set_channel_params_for_freq(
 				hdd_ctx->pdev, chan_freq,
 				ap_ctx->sap_config.sec_ch_freq,

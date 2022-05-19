@@ -252,6 +252,8 @@ static qdf_freq_t sap_random_channel_sel(struct sap_context *sap_ctx)
 	    sap_ctx->chan_freq != sap_ctx->candidate_freq &&
 	    !utils_dfs_is_freq_in_nol(pdev, sap_ctx->candidate_freq)) {
 		chan_freq = sap_ctx->candidate_freq;
+		if (sap_phymode_is_eht(sap_ctx->phyMode))
+			wlan_reg_set_create_punc_bitmap(ch_params, true);
 		wlan_reg_set_channel_params_for_freq(pdev, chan_freq, 0,
 						     ch_params);
 		sap_debug("random chan select candidate freq=%d", chan_freq);
@@ -2850,6 +2852,9 @@ static QDF_STATUS sap_validate_dfs_nol(struct sap_context *sap_ctx,
 			  sap_ctx->chan_freq, chan_freq);
 
 		sap_ctx->chan_freq = chan_freq;
+		if (sap_phymode_is_eht(sap_ctx->phyMode))
+			wlan_reg_set_create_punc_bitmap(&sap_ctx->ch_params,
+							true);
 		wlan_reg_set_channel_params_for_freq(mac_ctx->pdev,
 						     sap_ctx->chan_freq,
 						     sap_ctx->sec_ch_freq,
@@ -2960,6 +2965,9 @@ static QDF_STATUS sap_goto_starting(struct sap_context *sap_ctx,
 		     wlan_reg_is_dfs_for_freq(mac_ctx->pdev,
 					      con_ch_freq)) {
 			sap_ctx->chan_freq = con_ch_freq;
+			if (sap_phymode_is_eht(sap_ctx->phyMode))
+				wlan_reg_set_create_punc_bitmap(
+					&sap_ctx->ch_params, true);
 			wlan_reg_set_channel_params_for_freq(
 						    mac_ctx->pdev,
 						    con_ch_freq, 0,
@@ -3153,6 +3161,9 @@ static QDF_STATUS sap_fsm_handle_radar_during_cac(struct sap_context *sap_ctx,
 	uint8_t intf;
 
 	if (mac_ctx->sap.SapDfsInfo.target_chan_freq) {
+		if (sap_phymode_is_eht(sap_ctx->phyMode))
+			wlan_reg_set_create_punc_bitmap(&sap_ctx->ch_params,
+							true);
 		wlan_reg_set_channel_params_for_freq(mac_ctx->pdev,
 				    mac_ctx->sap.SapDfsInfo.target_chan_freq, 0,
 				    &sap_ctx->ch_params);
