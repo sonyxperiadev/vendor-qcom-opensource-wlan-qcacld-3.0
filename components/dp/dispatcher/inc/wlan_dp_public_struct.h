@@ -720,4 +720,16 @@ struct wlan_dp_user_config {
 	uint32_t arp_connectivity_map;
 };
 
+/**
+ * struct dp_traffic_end_indication - Trafic end indication
+ * @enabled: Feature enabled/disabled config
+ * @def_dscp: Default DSCP value in regular packets in traffic
+ * @spl_dscp: Special DSCP value to be used by packet to mark
+ *            end of data stream
+ */
+struct dp_traffic_end_indication {
+	bool enabled;
+	uint8_t def_dscp;
+	uint8_t spl_dscp;
+};
 #endif /* end  of _WLAN_DP_PUBLIC_STRUCT_H_ */

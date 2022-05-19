@@ -286,6 +286,7 @@ struct link_monitoring {
  * @conn_info: STA connection information
  * @bss_state: AP BSS state
  * @qdf_sta_eap_frm_done_event: EAP frame event management
+ * @traffic_end_ind: store traffic end indication info
  */
 struct wlan_dp_intf {
 	struct wlan_dp_psoc_context *dp_ctx;
@@ -346,6 +347,7 @@ struct wlan_dp_intf {
 
 	enum bss_intf_state bss_state;
 	qdf_event_t qdf_sta_eap_frm_done_event;
+	struct dp_traffic_end_indication traffic_end_ind;
 };
 
 /**
