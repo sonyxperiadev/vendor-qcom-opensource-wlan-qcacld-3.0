@@ -7126,16 +7126,24 @@ enum EHT_PER_BW_TXRX_MCS_NSS_MAP_IDX {
 				      EHTCAP_PHY_SUBFME_IDX, \
 				      EHTCAP_PHY_SUBFME_BITS, value)
 
-#define EHTCAP_PHY_BFMESSLT80MHZ_GET_FROM_IE(__eht_cap_phy) \
+#define EHTCAP_PHY_BFMESSLT80MHZ_GET_FROM_IE_BYTE0(__eht_cap_phy) \
 			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX0], \
 				      EHTCAP_PHY_BFMESSLT80MHZ_IDX, \
-				      EHTCAP_PHY_BFMESSLT80MHZ_BITS)
-#define EHTCAP_PHY_BFMESSLT80MHZ_SET_TO_IE(__eht_cap_phy, __value) \
+				      1)
+#define EHTCAP_PHY_BFMESSLT80MHZ_SET_TO_IE_BYTE0(__eht_cap_phy, __value) \
 			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX0], \
 				      EHTCAP_PHY_BFMESSLT80MHZ_IDX, \
-				      EHTCAP_PHY_BFMESSLT80MHZ_BITS, __value)
+				      1, __value)
 
 /* byte 1 */
+#define EHTCAP_PHY_BFMESSLT80MHZ_GET_FROM_IE_BYTE1(__eht_cap_phy) \
+			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX1], \
+				      8, \
+				      2)
+#define EHTCAP_PHY_BFMESSLT80MHZ_SET_TO_IE_BYTE1(__eht_cap_phy, __value) \
+			ehtcap_ie_set(&__eht_cap_phy[EHTCAP_PHYBYTE_IDX1], \
+				      8, \
+				      2, __value)
 #define EHTCAP_PHY_BFMESS160MHZ_GET_FROM_IE(__eht_cap_phy) \
 			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX1], \
 				      EHTCAP_PHY_BFMESS160MHZ_IDX, \
@@ -7527,9 +7535,12 @@ QDF_STATUS lim_ieee80211_unpack_ehtcap(const uint8_t *eht_cap_ie,
 	      EHTCAP_PHY_SUBFME_GET_FROM_IE(ehtcap->eht_phy_cap.phy_cap_bytes);
 
 	dot11f_eht_cap->bfee_ss_le_80mhz =
-			EHTCAP_PHY_BFMESSLT80MHZ_GET_FROM_IE(
+			EHTCAP_PHY_BFMESSLT80MHZ_GET_FROM_IE_BYTE0(
 					ehtcap->eht_phy_cap.phy_cap_bytes);
 
+	dot11f_eht_cap->bfee_ss_le_80mhz |=
+			(EHTCAP_PHY_BFMESSLT80MHZ_GET_FROM_IE_BYTE1(
+				ehtcap->eht_phy_cap.phy_cap_bytes) << 1);
 	dot11f_eht_cap->bfee_ss_160mhz =
 			EHTCAP_PHY_BFMESS160MHZ_GET_FROM_IE(
 					ehtcap->eht_phy_cap.phy_cap_bytes);
@@ -7933,9 +7944,13 @@ void lim_ieee80211_pack_ehtcap(uint8_t *ie, tDot11fIEeht_cap dot11f_eht_cap,
 	EHTCAP_PHY_SUBFME_SET_TO_IE(ehtcap->eht_phy_cap.phy_cap_bytes, val);
 
 	val = dot11f_eht_cap.bfee_ss_le_80mhz;
-	EHTCAP_PHY_BFMESSLT80MHZ_SET_TO_IE(
-				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
+	EHTCAP_PHY_BFMESSLT80MHZ_SET_TO_IE_BYTE0(
+				     ehtcap->eht_phy_cap.phy_cap_bytes,
+				     val & 1);
 
+	EHTCAP_PHY_BFMESSLT80MHZ_SET_TO_IE_BYTE1(
+				     ehtcap->eht_phy_cap.phy_cap_bytes,
+				     (val >> 1));
 	val = dot11f_eht_cap.bfee_ss_160mhz;
 	EHTCAP_PHY_BFMESS160MHZ_SET_TO_IE(
 				     ehtcap->eht_phy_cap.phy_cap_bytes, val);
