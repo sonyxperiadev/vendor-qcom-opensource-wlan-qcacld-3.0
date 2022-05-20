@@ -1045,7 +1045,7 @@ QDF_STATUS mlme_update_tgt_eht_caps_in_cfg(struct wlan_objmgr_psoc *psoc,
 #endif
 
 #ifdef WLAN_FEATURE_11BE_MLO
-bool wlan_mlme_is_sta_single_mlo_conn(struct wlan_objmgr_psoc *psoc)
+uint8_t wlan_mlme_get_sta_mlo_conn_max_num(struct wlan_objmgr_psoc *psoc)
 {
 	struct wlan_mlme_psoc_ext_obj *mlme_obj;
 
@@ -1053,11 +1053,11 @@ bool wlan_mlme_is_sta_single_mlo_conn(struct wlan_objmgr_psoc *psoc)
 	if (!mlme_obj)
 		return false;
 
-	return mlme_obj->cfg.sta.single_link_mlo_conn;
+	return mlme_obj->cfg.sta.mlo_support_link_num;
 }
 
-QDF_STATUS wlan_mlme_set_sta_single_mlo_conn(struct wlan_objmgr_psoc *psoc,
-					     bool value)
+QDF_STATUS wlan_mlme_set_sta_mlo_conn_max_num(struct wlan_objmgr_psoc *psoc,
+					      bool value)
 {
 	struct wlan_mlme_psoc_ext_obj *mlme_obj;
 
@@ -1065,7 +1065,32 @@ QDF_STATUS wlan_mlme_set_sta_single_mlo_conn(struct wlan_objmgr_psoc *psoc,
 	if (!mlme_obj)
 		return QDF_STATUS_E_FAILURE;
 
-	mlme_obj->cfg.sta.single_link_mlo_conn = value;
+	mlme_obj->cfg.sta.mlo_support_link_num = value;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+uint8_t wlan_mlme_get_sta_mlo_conn_band_bmp(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return false;
+
+	return mlme_obj->cfg.sta.mlo_support_link_band;
+}
+
+QDF_STATUS wlan_mlme_set_sta_mlo_conn_band_bmp(struct wlan_objmgr_psoc *psoc,
+					       bool value)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_FAILURE;
+
+	mlme_obj->cfg.sta.mlo_support_link_band = value;
 
 	return QDF_STATUS_SUCCESS;
 }

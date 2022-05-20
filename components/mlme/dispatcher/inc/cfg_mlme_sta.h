@@ -539,12 +539,12 @@
 #ifdef WLAN_FEATURE_11BE_MLO
 /*
  * <cfg>
- * single_link_mlo_conn - Set single link mlo connection for sta
- * @Min: 0
- * @Max: 1
- * @Default: 0
+ * mlo_support_link_num - Set number of link mlo connection supports for sta
+ * @Min: 1
+ * @Max: 3
+ * @Default: 2
  *
- * This cfg is used to enable single link mlo connection
+ * This cfg is used to configure the number of link mlo connection supports
  *
  * Related: None
  *
@@ -554,14 +554,49 @@
  *
  * </cfg>
  */
-#define CFG_SINGLE_LINK_MLO_CONN CFG_BOOL( \
-			"single_link_mlo_conn", \
-			0, \
-			"Enable single link mlo connection")
+#define CFG_MLO_SUPPORT_LINK_NUM CFG_UINT( \
+			"mlo_support_link_num", \
+			1, \
+			3, \
+			2, \
+			CFG_VALUE_OR_DEFAULT, \
+			"supported mlo link number")
 
-#define CFG_SINGLE_LINK_MLO_CONN_CFG CFG(CFG_SINGLE_LINK_MLO_CONN)
+#define CFG_MLO_SUPPORT_LINK_NUM_CFG CFG(CFG_MLO_SUPPORT_LINK_NUM)
+
+/*
+ * <cfg>
+ * mlo_support_link_band - Set band bitmap of mlo connection supports for sta
+ * @Min: 1
+ * @Max: 7
+ * @Default: 7
+ *
+ * This cfg is used to configure the band bitmap of mlo connection supports
+ *
+ * Related: None
+ *
+ * Supported Feature: STA
+ *
+ * Usage: Internal
+ *
+ * bits 0: REG_BAND_2G
+ * bits 1: REG_BAND_5G
+ * bits 2: REG_BAND_6G
+ *
+ * </cfg>
+ */
+#define CFG_MLO_SUPPORT_LINK_BAND CFG_UINT( \
+			"mlo_support_link_band", \
+			1, \
+			7, \
+			7, \
+			CFG_VALUE_OR_DEFAULT, \
+			"supported mlo link band")
+
+#define CFG_MLO_SUPPORT_LINK_BAND_CFG CFG(CFG_MLO_SUPPORT_LINK_BAND)
 #else
-#define CFG_SINGLE_LINK_MLO_CONN_CFG
+#define CFG_MLO_SUPPORT_LINK_NUM_CFG
+#define CFG_MLO_SUPPORT_LINK_BAND_CFG
 #endif
 
 #define CFG_STA_ALL \
@@ -584,7 +619,8 @@
 	CFG(CFG_WT_CNF_TIMEOUT) \
 	CFG(CFG_CURRENT_RSSI) \
 	CFG(CFG_TX_POWER_CTRL) \
-	CFG_SINGLE_LINK_MLO_CONN_CFG \
-	CFG(CFG_MAX_LI_MODULATED_DTIM_MS)
+	CFG(CFG_MAX_LI_MODULATED_DTIM_MS) \
+	CFG_MLO_SUPPORT_LINK_NUM_CFG \
+	CFG_MLO_SUPPORT_LINK_BAND_CFG
 
 #endif /* CFG_MLME_STA_H__ */

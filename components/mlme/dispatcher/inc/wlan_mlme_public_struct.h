@@ -1642,8 +1642,9 @@ enum station_prefer_bw {
  * @allow_tpc_from_ap:              Support for AP power constraint
  * @usr_disabled_roaming:           User config for roaming disable
  * @usr_scan_probe_unicast_ra:      User config unicast probe req in scan
- * @single_link_mlo_conn:           Single link mlo connection is configured
  * @max_li_modulated_dtim_time_ms: Max modulated DTIM time in ms.
+ * @mlo_support_link_num:           max number of links that sta mlo supports
+ * @mlo_support_link_band:          band bitmap that sta mlo supports
  */
 struct wlan_mlme_sta_cfg {
 	uint32_t sta_keep_alive_period;
@@ -1670,10 +1671,11 @@ struct wlan_mlme_sta_cfg {
 #ifdef FEATURE_WLAN_DIAG_SUPPORT_CSR
 	host_event_wlan_status_payload_type event_payload;
 #endif
-#ifdef WLAN_FEATURE_11BE_MLO
-	bool single_link_mlo_conn;
-#endif
 	uint16_t max_li_modulated_dtim_time_ms;
+#ifdef WLAN_FEATURE_11BE_MLO
+	uint8_t mlo_support_link_num;
+	uint8_t mlo_support_link_band;
+#endif
 };
 
 /**

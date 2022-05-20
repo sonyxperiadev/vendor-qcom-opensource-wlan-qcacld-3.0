@@ -1654,8 +1654,10 @@ mlme_init_product_details_cfg(struct wlan_mlme_product_details_cfg
 static void mlme_init_sta_mlo_cfg(struct wlan_objmgr_psoc *psoc,
 				  struct wlan_mlme_sta_cfg *sta)
 {
-	sta->single_link_mlo_conn =
-		cfg_default(CFG_SINGLE_LINK_MLO_CONN);
+	sta->mlo_support_link_num =
+		cfg_default(CFG_MLO_SUPPORT_LINK_NUM);
+	sta->mlo_support_link_band =
+		cfg_default(CFG_MLO_SUPPORT_LINK_BAND);
 }
 #else
 static void mlme_init_sta_mlo_cfg(struct wlan_objmgr_psoc *psoc,

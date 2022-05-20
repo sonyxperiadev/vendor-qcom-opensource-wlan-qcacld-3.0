@@ -3370,23 +3370,44 @@ QDF_STATUS mlme_cfg_get_eht_caps(struct wlan_objmgr_psoc *psoc,
 
 #ifdef WLAN_FEATURE_11BE_MLO
 /**
- * wlan_mlme_is_sta_single_mlo_conn() - Is single mlo connection for sta
- *                                      set or not
+ * wlan_mlme_get_sta_mlo_conn_max_num() - get max number of links that sta mlo
+ *                                        connection can support
  * @psoc: pointer to psoc object
  *
- * Return: True if single mlo connection for sta is set
+ * Return: max number of links that sta mlo connection can support
  */
-bool wlan_mlme_is_sta_single_mlo_conn(struct wlan_objmgr_psoc *psoc);
+uint8_t wlan_mlme_get_sta_mlo_conn_max_num(struct wlan_objmgr_psoc *psoc);
 
 /**
- * wlan_mlme_set_sta_single_mlo_conn() - Set single mlo connection for sta
+ * wlan_mlme_set_sta_mlo_conn_max_num() - set max number of links that sta mlo
+ *                                        connection can support
  * @psoc: pointer to psoc object
  * @value: value to set
  *
  * Return: QDF Status
  */
-QDF_STATUS wlan_mlme_set_sta_single_mlo_conn(struct wlan_objmgr_psoc *psoc,
-					     bool value);
+QDF_STATUS wlan_mlme_set_sta_mlo_conn_max_num(struct wlan_objmgr_psoc *psoc,
+					      bool value);
+
+/**
+ * wlan_mlme_get_sta_mlo_conn_band_bmp() - get band bitmap that sta mlo
+ *                                         connection can support
+ * @psoc: pointer to psoc object
+ *
+ * Return: band bitmap that sta mlo connection can support
+ */
+uint8_t wlan_mlme_get_sta_mlo_conn_band_bmp(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * wlan_mlme_set_sta_mlo_conn_band_bmp() - set band bitmap that sta mlo
+ *                                         connection can support
+ * @psoc: pointer to psoc object
+ * @value: value to set
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS wlan_mlme_set_sta_mlo_conn_band_bmp(struct wlan_objmgr_psoc *psoc,
+					       bool value);
 #endif
 
 /**
