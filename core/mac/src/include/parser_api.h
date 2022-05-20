@@ -1267,6 +1267,19 @@ void update_fils_data(struct sir_fils_indication *fils_ind,
 #ifdef WLAN_FEATURE_11AX
 QDF_STATUS populate_dot11f_he_caps(struct mac_context *, struct pe_session *,
 				   tDot11fIEhe_cap *);
+
+/**
+ * populate_dot11f_he_caps_by_band() - pouldate HE Capability IE by band
+ * @mac_ctx: Global MAC context
+ * @is_2g: is 2G band
+ * @eht_cap: pointer to HE capability IE
+ *
+ * Populate the HE capability IE based on band.
+ */
+QDF_STATUS
+populate_dot11f_he_caps_by_band(struct mac_context *mac_ctx,
+				bool is_2g,
+				tDot11fIEhe_cap *he_cap);
 QDF_STATUS populate_dot11f_he_operation(struct mac_context *, struct pe_session *,
 					tDot11fIEhe_op *);
 /**
@@ -1297,6 +1310,14 @@ static inline QDF_STATUS populate_dot11f_he_bss_color_change(
 #else
 static inline QDF_STATUS populate_dot11f_he_caps(struct mac_context *mac_ctx,
 			struct pe_session *session, tDot11fIEhe_cap *he_cap)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+populate_dot11f_he_caps_by_band(struct mac_context *mac_ctx,
+				bool is_2g,
+				tDot11fIEhe_cap *he_cap)
 {
 	return QDF_STATUS_SUCCESS;
 }
@@ -1448,6 +1469,19 @@ QDF_STATUS populate_dot11f_eht_caps(struct mac_context *mac_ctx,
 				    tDot11fIEeht_cap *eht_cap);
 
 /**
+ * populate_dot11f_eht_caps_by_band() - pouldate EHT Capability IE by band
+ * @mac_ctx: Global MAC context
+ * @is_2g: is 2G band
+ * @eht_cap: pointer to EHT capability IE
+ *
+ * Populate the EHT capability IE based on band.
+ */
+QDF_STATUS
+populate_dot11f_eht_caps_by_band(struct mac_context *mac_ctx,
+				 bool is_2g,
+				 tDot11fIEeht_cap *eht_cap);
+
+/**
  * populate_dot11f_eht_operation() - pouldate EHT Operation IE
  * @mac_ctx: Global MAC context
  * @session: PE session
@@ -1495,6 +1529,14 @@ QDF_STATUS lim_strip_and_decode_eht_cap(uint8_t *ie, uint16_t ie_len,
 static inline QDF_STATUS
 populate_dot11f_eht_caps(struct mac_context *mac_ctx,
 			 struct pe_session *session, tDot11fIEeht_cap *eht_cap)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+populate_dot11f_eht_caps_by_band(struct mac_context *mac_ctx,
+				 bool is_2g,
+				 tDot11fIEeht_cap *eht_cap)
 {
 	return QDF_STATUS_SUCCESS;
 }

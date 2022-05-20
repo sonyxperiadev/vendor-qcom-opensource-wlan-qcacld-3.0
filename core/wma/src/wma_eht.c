@@ -261,15 +261,12 @@ void wma_update_target_ext_eht_cap(struct target_psoc_info *tgt_hdl,
 		return;
 	}
 
-	supported_bands = host_cap->supported_bands;
 	for (i = 0; i < total_mac_phy_cnt; i++) {
+		supported_bands = host_cap[i].supported_bands;
 		qdf_mem_zero(&eht_cap_mac, sizeof(tDot11fIEeht_cap));
 		mac_phy_caps2 = &mac_phy_cap[i];
 		if (supported_bands & WLAN_2G_CAPABILITY) {
 			wma_convert_eht_cap(&eht_cap_mac,
-					    mac_phy_caps2->eht_cap_info_2G,
-					    mac_phy_caps2->eht_cap_phy_info_2G);
-			wma_convert_eht_cap(eht_cap_2g,
 					    mac_phy_caps2->eht_cap_info_2G,
 					    mac_phy_caps2->eht_cap_phy_info_2G);
 				/* TODO: PPET */
@@ -279,14 +276,14 @@ void wma_update_target_ext_eht_cap(struct target_psoc_info *tgt_hdl,
 			/* WMI_EHT_SUPP_MCS_LE_80MHZ */
 			mcs_supp = &mac_phy_caps2->eht_supp_mcs_ext_2G[1];
 			wma_update_eht_le_80mhz_mcs(mcs_supp, &eht_cap_mac);
+
+			qdf_mem_copy(eht_cap_2g, &eht_cap_mac,
+				     sizeof(tDot11fIEeht_cap));
 		}
 
 		if (supported_bands & WLAN_5G_CAPABILITY) {
 			qdf_mem_zero(&eht_cap_mac, sizeof(tDot11fIEeht_cap));
 			wma_convert_eht_cap(&eht_cap_mac,
-					    mac_phy_caps2->eht_cap_info_5G,
-					    mac_phy_caps2->eht_cap_phy_info_5G);
-			wma_convert_eht_cap(eht_cap_5g,
 					    mac_phy_caps2->eht_cap_info_5G,
 					    mac_phy_caps2->eht_cap_phy_info_5G);
 
@@ -298,11 +295,14 @@ void wma_update_target_ext_eht_cap(struct target_psoc_info *tgt_hdl,
 			wma_update_eht_le_80mhz_mcs(mcs_supp, &eht_cap_mac);
 
 			/* WMI_EHT_SUPP_MCS_160MHZ */
-			mcs_supp = &mac_phy_caps2->eht_supp_mcs_ext_5G[1];
+			mcs_supp = &mac_phy_caps2->eht_supp_mcs_ext_5G[2];
 			wma_update_eht_160mhz_mcs(mcs_supp, &eht_cap_mac);
 			/* WMI_EHT_SUPP_MCS_320MHZ */
-			mcs_supp = &mac_phy_caps2->eht_supp_mcs_ext_5G[2];
+			mcs_supp = &mac_phy_caps2->eht_supp_mcs_ext_5G[3];
 			wma_update_eht_320mhz_mcs(mcs_supp, &eht_cap_mac);
+
+			qdf_mem_copy(eht_cap_5g, &eht_cap_mac,
+				     sizeof(tDot11fIEeht_cap));
 		}
 	}
 	qdf_mem_copy(eht_cap, &eht_cap_mac, sizeof(tDot11fIEeht_cap));

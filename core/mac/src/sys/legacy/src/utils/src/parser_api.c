@@ -6773,6 +6773,19 @@ QDF_STATUS populate_dot11f_he_caps(struct mac_context *mac_ctx, struct pe_sessio
 	return QDF_STATUS_SUCCESS;
 }
 
+QDF_STATUS
+populate_dot11f_he_caps_by_band(struct mac_context *mac_ctx,
+				bool is_2g,
+				tDot11fIEhe_cap *he_cap)
+{
+	if (is_2g)
+		qdf_mem_copy(he_cap, &mac_ctx->he_cap_2g, sizeof(*he_cap));
+	else
+		qdf_mem_copy(he_cap, &mac_ctx->he_cap_5g, sizeof(*he_cap));
+
+	return QDF_STATUS_SUCCESS;
+}
+
 /**
  * populate_dot11f_he_operation() - pouldate HE Operation IE
  * @mac_ctx: Global MAC context
@@ -8236,6 +8249,23 @@ QDF_STATUS populate_dot11f_eht_caps(struct mac_context *mac_ctx,
 
 	/** TODO: String items needs attention. **/
 	qdf_mem_copy(eht_cap, &session->eht_config, sizeof(*eht_cap));
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+populate_dot11f_eht_caps_by_band(struct mac_context *mac_ctx,
+				 bool is_2g,
+				 tDot11fIEeht_cap *eht_cap)
+{
+	if (is_2g)
+		qdf_mem_copy(eht_cap,
+			     &mac_ctx->eht_cap_2g,
+			     sizeof(tDot11fIEeht_cap));
+	else
+		qdf_mem_copy(eht_cap,
+			     &mac_ctx->eht_cap_5g,
+			     sizeof(tDot11fIEeht_cap));
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -10088,6 +10118,7 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 	tDot11fIEeht_cap eht_caps;
 	tDot11fIESuppRates supp_rates;
 	tDot11fIEExtSuppRates ext_supp_rates;
+	bool is_2g;
 
 	if (!frm)
 		return QDF_STATUS_E_NULL_VALUE;
@@ -10244,7 +10275,8 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 		}
 		chan_freq = wlan_reg_chan_opclass_to_freq(chan, op_class,
 							  false);
-		if (WLAN_REG_IS_24GHZ_CH_FREQ(chan_freq)) {
+		is_2g = WLAN_REG_IS_24GHZ_CH_FREQ(chan_freq);
+		if (is_2g) {
 			wlan_populate_basic_rates(&b_rates, false, true);
 			wlan_populate_basic_rates(&e_rates, true, false);
 		} else {
@@ -10330,7 +10362,7 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 						DOT11F_EID_VHTCAPS;
 		}
 
-		populate_dot11f_he_caps(mac_ctx, NULL, &he_caps);
+		populate_dot11f_he_caps_by_band(mac_ctx, is_2g, &he_caps);
 		if ((he_caps.present && frm->he_cap.present &&
 		     qdf_mem_cmp(&he_caps, &frm->he_cap, sizeof(he_caps))) ||
 		     (he_caps.present && !frm->he_cap.present)) {
@@ -10364,8 +10396,7 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 			non_inher_ext_ie_lists[non_inher_ext_len++] =
 						WLAN_EXTN_ELEMID_HE_6G_CAP;
 		}
-
-		populate_dot11f_eht_caps(mac_ctx, NULL, &eht_caps);
+		populate_dot11f_eht_caps_by_band(mac_ctx, is_2g, &eht_caps);
 		if ((eht_caps.present && frm->eht_cap.present &&
 		     qdf_mem_cmp(&eht_caps, &frm->eht_cap, sizeof(eht_caps))) ||
 		     (eht_caps.present && !frm->eht_cap.present)) {
