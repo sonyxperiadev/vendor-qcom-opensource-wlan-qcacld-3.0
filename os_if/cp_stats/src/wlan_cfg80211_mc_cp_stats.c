@@ -1370,6 +1370,40 @@ station_adv_stats_cb_fail:
 	osif_request_put(request);
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static QDF_STATUS
+wlan_cfg80211_get_mlstats_vdev_params(struct wlan_objmgr_vdev *vdev,
+				      struct request_info *info)
+{
+	struct wlan_objmgr_psoc *psoc;
+	bool is_mlo_vdev;
+	QDF_STATUS status;
+
+	psoc = wlan_vdev_get_psoc(vdev);
+	if (!psoc)
+		return QDF_STATUS_E_INVAL;
+
+	is_mlo_vdev = wlan_vdev_mlme_get_is_mlo_vdev(psoc, info->vdev_id);
+	if (is_mlo_vdev) {
+		status = mlo_get_mlstats_vdev_params(psoc, &info->ml_vdev_info,
+						     info->vdev_id);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			osif_err("unable to get vdev params for mlo stats");
+			return status;
+		}
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+#else
+static QDF_STATUS
+wlan_cfg80211_get_mlstats_vdev_params(struct wlan_objmgr_vdev *vdev,
+				      struct request_info *info)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 struct stats_event *
 wlan_cfg80211_mc_cp_stats_get_peer_stats(struct wlan_objmgr_vdev *vdev,
 					 const uint8_t *mac_addr,
@@ -1448,6 +1482,13 @@ wlan_cfg80211_mc_cp_stats_get_peer_stats(struct wlan_objmgr_vdev *vdev,
 	priv = osif_request_priv(request);
 	info.cookie = cookie;
 	info.u.get_station_stats_cb = get_station_adv_stats_cb;
+
+	status = wlan_cfg80211_get_mlstats_vdev_params(vdev, &info);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		*errno = qdf_status_to_os_return(status);
+		goto get_peer_stats_fail;
+	}
+
 	status = ucfg_mc_cp_stats_send_stats_request(vdev, TYPE_STATION_STATS,
 						     &info);
 	if (QDF_IS_STATUS_ERROR(status)) {
