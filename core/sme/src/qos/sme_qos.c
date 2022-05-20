@@ -3773,6 +3773,7 @@ static QDF_STATUS sme_qos_del_ts_req(struct mac_context *mac,
 	struct sme_qos_acinfo *pACInfo;
 	tSirDeltsReq *pMsg;
 	struct sme_qos_wmmtspecinfo *pTspecInfo;
+	struct mac_ts_info tsinfo;
 
 #ifdef FEATURE_WLAN_DIAG_SUPPORT
 	WLAN_HOST_DIAG_EVENT_DEF(qos, host_event_wlan_qos_payload_type);
@@ -3832,6 +3833,8 @@ static QDF_STATUS sme_qos_del_ts_req(struct mac_context *mac,
 		  pTspecInfo->ts_info.up, pTspecInfo->ts_info.tid);
 	qdf_mem_zero(&pACInfo->curr_QoSInfo[tspec_mask - 1],
 		     sizeof(struct sme_qos_wmmtspecinfo));
+	qdf_mem_copy(&tsinfo, &pMsg->req.tspec.tsinfo,
+		     sizeof(struct mac_ts_info));
 
 	if (!QDF_IS_STATUS_SUCCESS(umac_send_mb_message_to_mac(pMsg))) {
 		sme_err("DELTS req to PE failed");
@@ -3845,8 +3848,7 @@ static QDF_STATUS sme_qos_del_ts_req(struct mac_context *mac,
 	WLAN_HOST_DIAG_EVENT_REPORT(&qos, EVENT_WLAN_QOS);
 #endif
 
-	sme_set_tspec_uapsd_mask_per_session(mac, &pMsg->req.tspec.tsinfo,
-					     sessionId);
+	sme_set_tspec_uapsd_mask_per_session(mac, &tsinfo, sessionId);
 
 	return QDF_STATUS_SUCCESS;
 }
