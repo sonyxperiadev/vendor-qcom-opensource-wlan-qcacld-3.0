@@ -366,10 +366,12 @@ enum RX_OFFLOAD {
  * struct dp_direct_link_context - Datapath Direct Link context
  * @dp_ctx: pointer to DP psoc priv context
  * @lpass_ep_id: LPASS data msg service endpoint id
+ * @direct_link_refill_ring_hdl: Direct Link refill ring handle
  */
 struct dp_direct_link_context {
 	struct wlan_dp_psoc_context *dp_ctx;
 	HTC_ENDPOINT_ID lpass_ep_id;
+	struct dp_srng *direct_link_refill_ring_hdl;
 };
 #endif
 

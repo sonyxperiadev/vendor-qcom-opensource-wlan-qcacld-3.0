@@ -34,6 +34,10 @@
 #include "target_if_dp_comp.h"
 #include "wlan_dp_txrx.h"
 
+#ifdef FEATURE_DIRECT_LINK
+#include "dp_internal.h"
+#endif
+
 /* Global DP context */
 static struct wlan_dp_psoc_context *gp_dp_ctx;
 
@@ -1608,6 +1612,56 @@ dp_lpass_connect_htc_service(struct dp_direct_link_context *dp_direct_link_ctx)
 	return status;
 }
 
+/**
+ * dp_direct_link_refill_ring_init() - Initialize refill ring that would be used
+ *  for Direct Link DP
+ * @direct_link_ctx: DP Direct Link context
+ *
+ * Return: QDF status
+ */
+static QDF_STATUS
+dp_direct_link_refill_ring_init(struct dp_direct_link_context *direct_link_ctx)
+{
+	struct cdp_soc_t *soc = cds_get_context(QDF_MODULE_ID_SOC);
+	uint8_t pdev_id;
+
+	if (!soc)
+		return QDF_STATUS_E_FAILURE;
+
+	pdev_id = wlan_objmgr_pdev_get_pdev_id(direct_link_ctx->dp_ctx->pdev);
+
+	direct_link_ctx->direct_link_refill_ring_hdl =
+				dp_setup_direct_link_refill_ring(soc,
+								 pdev_id);
+	if (!direct_link_ctx->direct_link_refill_ring_hdl) {
+		dp_err("Refill ring init for Direct Link failed");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * dp_direct_link_refill_ring_deinit() - De-initialize refill ring that would be
+ *  used for Direct Link DP
+ * @direct_link_ctx: DP Direct Link context
+ *
+ * Return: None
+ */
+static void
+dp_direct_link_refill_ring_deinit(struct dp_direct_link_context *dlink_ctx)
+{
+	struct cdp_soc_t *soc = cds_get_context(QDF_MODULE_ID_SOC);
+	uint8_t pdev_id;
+
+	if (!soc)
+		return;
+
+	pdev_id = wlan_objmgr_pdev_get_pdev_id(dlink_ctx->dp_ctx->pdev);
+	dp_destroy_direct_link_refill_ring(soc, pdev_id);
+	dlink_ctx->direct_link_refill_ring_hdl = NULL;
+}
+
 QDF_STATUS dp_direct_link_init(struct wlan_dp_psoc_context *dp_ctx)
 {
 	struct dp_direct_link_context *dp_direct_link_ctx;
@@ -1621,6 +1675,8 @@ QDF_STATUS dp_direct_link_init(struct wlan_dp_psoc_context *dp_ctx)
 		return QDF_STATUS_E_NOMEM;
 	}
 
+	dp_direct_link_ctx->dp_ctx = dp_ctx;
+
 	status = dp_lpass_connect_htc_service(dp_direct_link_ctx);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		dp_err("Failed to connect to LPASS data msg service");
@@ -1628,14 +1684,24 @@ QDF_STATUS dp_direct_link_init(struct wlan_dp_psoc_context *dp_ctx)
 		return status;
 	}
 
+	status = dp_direct_link_refill_ring_init(dp_direct_link_ctx);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		qdf_mem_free(dp_direct_link_ctx);
+		return status;
+	}
+
 	dp_ctx->dp_direct_link_ctx = dp_direct_link_ctx;
-	dp_direct_link_ctx->dp_ctx = dp_ctx;
 
 	return status;
 }
 
 void dp_direct_link_deinit(struct wlan_dp_psoc_context *dp_ctx)
 {
+	if (dp_ctx->dp_direct_link_ctx)
+		return;
+
+	dp_direct_link_refill_ring_deinit(dp_ctx->dp_direct_link_ctx);
+
 	qdf_mem_free(dp_ctx->dp_direct_link_ctx);
 	dp_ctx->dp_direct_link_ctx = NULL;
 }
