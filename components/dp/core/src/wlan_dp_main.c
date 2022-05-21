@@ -1541,9 +1541,77 @@ bool dp_is_data_stall_event_enabled(uint32_t evt)
 }
 
 #ifdef FEATURE_DIRECT_LINK
+/**
+ * dp_lpass_h2t_tx_complete() - Copy completion handler for LPASS data
+ * message service
+ * @ctx: DP Direct Link context
+ * @pkt: htc packet
+ *
+ * Return: None
+ */
+static void dp_lpass_h2t_tx_complete(void *ctx, HTC_PACKET *pkt)
+{
+	dp_info("Unexpected lpass tx complete trigger");
+	qdf_assert(0);
+}
+
+/**
+ * dp_lpass_t2h_msg_handler() - target to host message handler for LPASS data
+ * message service
+ * @ctx: DP Direct Link context
+ * @pkt: htc packet
+ *
+ * Return: None
+ */
+static void dp_lpass_t2h_msg_handler(void *ctx, HTC_PACKET *pkt)
+{
+	dp_info("Unexpected receive msg trigger for lpass service");
+	qdf_assert(0);
+}
+
+/**
+ * dp_lpass_connect_htc_service() - Connect lpass data message htc service
+ * @dp_direct_link_ctx: DP Direct Link context
+ *
+ * Return: QDF status
+ */
+static QDF_STATUS
+dp_lpass_connect_htc_service(struct dp_direct_link_context *dp_direct_link_ctx)
+{
+	struct htc_service_connect_req connect = {0};
+	struct htc_service_connect_resp response = {0};
+	HTC_HANDLE htc_handle = cds_get_context(QDF_MODULE_ID_HTC);
+	QDF_STATUS status;
+
+	if (!htc_handle)
+		return QDF_STATUS_E_FAILURE;
+
+	connect.EpCallbacks.pContext = dp_direct_link_ctx;
+	connect.EpCallbacks.EpTxComplete = dp_lpass_h2t_tx_complete;
+	connect.EpCallbacks.EpRecv = dp_lpass_t2h_msg_handler;
+
+	/* disable flow control for LPASS data message service */
+	connect.ConnectionFlags |= HTC_CONNECT_FLAGS_DISABLE_CREDIT_FLOW_CTRL;
+	connect.service_id = LPASS_DATA_MSG_SVC;
+
+	status = htc_connect_service(htc_handle, &connect, &response);
+
+	if (status != QDF_STATUS_SUCCESS) {
+		dp_err("LPASS_DATA_MSG connect service failed");
+		return status;
+	}
+
+	dp_direct_link_ctx->lpass_ep_id = response.Endpoint;
+
+	dp_err("LPASS_DATA_MSG connect service successful");
+
+	return status;
+}
+
 QDF_STATUS dp_direct_link_init(struct wlan_dp_psoc_context *dp_ctx)
 {
 	struct dp_direct_link_context *dp_direct_link_ctx;
+	QDF_STATUS status;
 
 	/* ToDo: Check for FW direct_link capability */
 
@@ -1553,10 +1621,17 @@ QDF_STATUS dp_direct_link_init(struct wlan_dp_psoc_context *dp_ctx)
 		return QDF_STATUS_E_NOMEM;
 	}
 
+	status = dp_lpass_connect_htc_service(dp_direct_link_ctx);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		dp_err("Failed to connect to LPASS data msg service");
+		qdf_mem_free(dp_direct_link_ctx);
+		return status;
+	}
+
 	dp_ctx->dp_direct_link_ctx = dp_direct_link_ctx;
 	dp_direct_link_ctx->dp_ctx = dp_ctx;
 
-	return QDF_STATUS_SUCCESS;
+	return status;
 }
 
 void dp_direct_link_deinit(struct wlan_dp_psoc_context *dp_ctx)
