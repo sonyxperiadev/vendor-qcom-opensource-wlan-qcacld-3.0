@@ -7747,18 +7747,17 @@ struct hdd_adapter *hdd_open_adapter(struct hdd_context *hdd_ctx,
 #endif
 		if (params->only_wdev_register) {
 			hdd_register_wdev(sta_adapter, adapter, params);
-			break;
-		}
-
-		status = hdd_register_interface(adapter, rtnl_held, params);
-		if (QDF_STATUS_SUCCESS != status)
-			goto err_free_netdev;
-
-		/* Stop the Interface TX queue. */
-		hdd_debug("Disabling queues");
-		wlan_hdd_netif_queue_control(adapter,
+		} else {
+			status = hdd_register_interface(adapter, rtnl_held,
+							params);
+			if (QDF_STATUS_SUCCESS != status)
+				goto err_free_netdev;
+			/* Stop the Interface TX queue. */
+			hdd_debug("Disabling queues");
+			wlan_hdd_netif_queue_control(adapter,
 					WLAN_STOP_ALL_NETIF_QUEUE_N_CARRIER,
 					WLAN_CONTROL_PATH);
+		}
 
 		hdd_nud_init_tracking(adapter);
 		hdd_mic_init_work(adapter);
