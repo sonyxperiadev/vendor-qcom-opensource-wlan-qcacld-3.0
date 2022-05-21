@@ -1594,18 +1594,22 @@ static void dp_pld_request_bus_bandwidth(struct wlan_dp_psoc_context *dp_ctx,
 			is_tx_pm_qos_high,
 			qdf_cpumask_pr_args(&pm_qos_cpu_mask_tx));
 
-		dp_ctx->txrx_hist[index].next_tx_level = next_tx_level;
-		dp_ctx->txrx_hist[index].next_rx_level = next_rx_level;
-		dp_ctx->txrx_hist[index].is_rx_pm_qos_high =
-							is_rx_pm_qos_high;
-		dp_ctx->txrx_hist[index].is_tx_pm_qos_high =
-							is_tx_pm_qos_high;
-		dp_ctx->txrx_hist[index].next_vote_level = next_vote_level;
-		dp_ctx->txrx_hist[index].interval_rx = rx_packets;
-		dp_ctx->txrx_hist[index].interval_tx = tx_packets;
-		dp_ctx->txrx_hist[index].qtime = qdf_get_log_timestamp();
-		dp_ctx->txrx_hist_idx++;
-		dp_ctx->txrx_hist_idx &= NUM_TX_RX_HISTOGRAM_MASK;
+		if (dp_ctx->txrx_hist) {
+			dp_ctx->txrx_hist[index].next_tx_level = next_tx_level;
+			dp_ctx->txrx_hist[index].next_rx_level = next_rx_level;
+			dp_ctx->txrx_hist[index].is_rx_pm_qos_high =
+				is_rx_pm_qos_high;
+			dp_ctx->txrx_hist[index].is_tx_pm_qos_high =
+				is_tx_pm_qos_high;
+			dp_ctx->txrx_hist[index].next_vote_level =
+				next_vote_level;
+			dp_ctx->txrx_hist[index].interval_rx = rx_packets;
+			dp_ctx->txrx_hist[index].interval_tx = tx_packets;
+			dp_ctx->txrx_hist[index].qtime =
+				qdf_get_log_timestamp();
+			dp_ctx->txrx_hist_idx++;
+			dp_ctx->txrx_hist_idx &= NUM_TX_RX_HISTOGRAM_MASK;
+		}
 	}
 
 	/* Roaming is a high priority job but gets processed in scheduler
