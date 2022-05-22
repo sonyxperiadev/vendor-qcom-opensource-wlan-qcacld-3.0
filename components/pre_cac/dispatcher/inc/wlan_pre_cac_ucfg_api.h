@@ -170,6 +170,22 @@ qdf_freq_t ucfg_pre_cac_get_freq(struct wlan_objmgr_vdev *vdev);
  */
 void ucfg_pre_cac_complete_set(struct wlan_objmgr_vdev *vdev,
 			       bool status);
+
+/**
+ * ucfg_pre_cac_stop() - Stop pre cac
+ * @psoc: psoc object manager
+ *
+ * Return: None
+ */
+void ucfg_pre_cac_stop(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_pre_cac_clean_up() - Cleanup pre cac
+ * @psoc: psoc object manager
+ *
+ * Return: None
+ */
+void ucfg_pre_cac_clean_up(struct wlan_objmgr_psoc *psoc);
 #else
 static inline
 QDF_STATUS ucfg_pre_cac_init(void)
@@ -228,6 +244,16 @@ ucfg_pre_cac_get_freq(struct wlan_objmgr_vdev *vdev)
 static inline void
 ucfg_pre_cac_complete_set(struct wlan_objmgr_vdev *vdev,
 			  bool status)
+{
+}
+
+static inline void
+ucfg_pre_cac_stop(struct wlan_objmgr_psoc *psoc)
+{
+}
+
+static inline void
+ucfg_pre_cac_clean_up(struct wlan_objmgr_psoc *psoc)
 {
 }
 #endif /* PRE_CAC_SUPPORT */

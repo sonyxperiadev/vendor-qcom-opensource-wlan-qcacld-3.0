@@ -321,4 +321,20 @@ qdf_freq_t pre_cac_get_freq(struct wlan_objmgr_vdev *vdev);
  * Return: None
  */
 void pre_cac_handle_radar_ind(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * pre_cac_stop() - Stop pre cac
+ * @psoc: psoc object manager
+ *
+ * Return: None
+ */
+void pre_cac_stop(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * pre_cac_clean_up() - Cleanup pre cac
+ * @psoc: psoc object manager
+ *
+ * Return: None
+ */
+void pre_cac_clean_up(struct wlan_objmgr_psoc *psoc);
 #endif /* end of _WLAN_PRE_CAC_MAIN_H_ */

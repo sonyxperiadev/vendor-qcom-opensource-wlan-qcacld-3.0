@@ -51,6 +51,11 @@ static inline void wlan_hdd_sap_pre_cac_success(void *data)
  */
 void wlan_hdd_sap_pre_cac_failure(void *data);
 
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 /**
  * hdd_clean_up_pre_cac_interface() - Clean up the pre cac interface
  * @hdd_ctx: HDD context
@@ -60,6 +65,7 @@ void wlan_hdd_sap_pre_cac_failure(void *data);
  * Return: None
  */
 void hdd_clean_up_pre_cac_interface(struct hdd_context *hdd_ctx);
+#endif
 
 /**
  * wlan_hdd_request_pre_cac() - Start pre CAC in the driver
@@ -140,10 +146,16 @@ static inline void wlan_hdd_sap_pre_cac_failure(void *data)
 {
 }
 
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 static inline void
 hdd_clean_up_pre_cac_interface(struct hdd_context *hdd_ctx)
 {
 }
+#endif
 
 static inline int
 wlan_hdd_request_pre_cac(struct hdd_context *hdd_ctx, uint32_t chan_freq)

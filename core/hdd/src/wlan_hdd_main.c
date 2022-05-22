@@ -8342,9 +8342,8 @@ QDF_STATUS hdd_stop_adapter_ext(struct hdd_context *hdd_ctx,
 			 * don't flush pre-cac destroy if we are destroying
 			 * pre-cac adapter
 			 */
-			if (!ucfg_pre_cac_is_active(hdd_ctx->psoc) &&
-			    hdd_ctx->sap_pre_cac_work.fn)
-				cds_flush_work(&hdd_ctx->sap_pre_cac_work);
+			if (!ucfg_pre_cac_is_active(hdd_ctx->psoc))
+				ucfg_pre_cac_stop(hdd_ctx->psoc);
 
 			hdd_close_pre_cac_adapter(hdd_ctx);
 		} else {
@@ -8531,8 +8530,16 @@ QDF_STATUS hdd_stop_all_adapters(struct hdd_context *hdd_ctx)
 
 	hdd_enter();
 
+/*
+ * The code under this macro will be removed
+ * once pre_cac componentization is done
+ */
+#ifndef PRE_CAC_COMP
 	if (hdd_ctx->sap_pre_cac_work.fn)
 		cds_flush_work(&hdd_ctx->sap_pre_cac_work);
+#else
+	ucfg_pre_cac_stop(hdd_ctx->psoc);
+#endif
 
 	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter,
 					   NET_DEV_HOLD_STOP_ALL_ADAPTERS) {

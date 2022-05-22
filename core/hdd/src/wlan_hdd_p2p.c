@@ -952,12 +952,14 @@ int __wlan_hdd_del_virtual_intf(struct wiphy *wiphy, struct wireless_dev *wdev)
 #ifndef PRE_CAC_COMP
 	if (adapter->device_mode == QDF_SAP_MODE &&
 	    wlan_sap_is_pre_cac_active(hdd_ctx->mac_handle)) {
+		hdd_clean_up_interface(hdd_ctx, adapter);
+		hdd_clean_up_pre_cac_interface(hdd_ctx);
 #else
 	if (adapter->device_mode == QDF_SAP_MODE &&
 	    ucfg_pre_cac_is_active(hdd_ctx->psoc)) {
-#endif
 		hdd_clean_up_interface(hdd_ctx, adapter);
-		hdd_clean_up_pre_cac_interface(hdd_ctx);
+		ucfg_pre_cac_clean_up(hdd_ctx->psoc);
+#endif
 	} else if (wlan_hdd_is_session_type_monitor(
 					adapter->device_mode) &&
 		   ucfg_pkt_capture_get_mode(hdd_ctx->psoc) !=

@@ -273,13 +273,13 @@ void hdd_close_pre_cac_adapter(struct hdd_context *hdd_ctx)
 	osif_vdev_sync_destroy(vdev_sync);
 }
 
-void hdd_clean_up_pre_cac_interface(struct hdd_context *hdd_ctx)
-{
 /*
  * Code under PRE_CAC_COMP will be cleaned up
  * once pre cac component is done
  */
 #ifndef PRE_CAC_COMP
+void hdd_clean_up_pre_cac_interface(struct hdd_context *hdd_ctx)
+{
 	uint8_t vdev_id;
 	QDF_STATUS status;
 	struct hdd_adapter *precac_adapter;
@@ -300,8 +300,8 @@ void hdd_clean_up_pre_cac_interface(struct hdd_context *hdd_ctx)
 			wlan_hdd_sap_pre_cac_failure,
 			(void *)precac_adapter);
 	qdf_sched_work(0, &hdd_ctx->sap_pre_cac_work);
-#endif
 }
+#endif
 
 /*
  * Code under PRE_CAC_COMP will be cleaned up

@@ -27,6 +27,16 @@ void ucfg_pre_cac_complete_set(struct wlan_objmgr_vdev *vdev,
 	pre_cac_complete_set(vdev, status);
 }
 
+void ucfg_pre_cac_clean_up(struct wlan_objmgr_psoc *psoc)
+{
+	pre_cac_clean_up(psoc);
+}
+
+void ucfg_pre_cac_stop(struct wlan_objmgr_psoc *psoc)
+{
+	pre_cac_stop(psoc);
+}
+
 void ucfg_pre_cac_set_freq(struct wlan_objmgr_vdev *vdev,
 			   qdf_freq_t freq)
 {

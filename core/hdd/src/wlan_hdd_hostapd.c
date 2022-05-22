@@ -6635,7 +6635,7 @@ static int __wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy,
 		hdd_clean_up_pre_cac_interface(hdd_ctx);
 #else
 	if (ucfg_pre_cac_is_active(hdd_ctx->psoc))
-		hdd_clean_up_pre_cac_interface(hdd_ctx);
+		ucfg_pre_cac_clean_up(hdd_ctx->psoc);
 #endif
 
 	if (status != QDF_STATUS_SUCCESS) {

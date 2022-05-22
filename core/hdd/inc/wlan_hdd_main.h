@@ -2243,7 +2243,13 @@ struct hdd_context {
 
 	/* the radio index assigned by cnss_logger */
 	int radio_index;
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 	qdf_work_t sap_pre_cac_work;
+#endif
 	bool hbw_requested;
 	bool pm_qos_request;
 	enum RX_OFFLOAD ol_enable;

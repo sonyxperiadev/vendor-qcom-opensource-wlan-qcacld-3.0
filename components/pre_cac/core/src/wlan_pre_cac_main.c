@@ -28,6 +28,17 @@
 
 struct pre_cac_ops *glbl_pre_cac_ops;
 
+void pre_cac_stop(struct wlan_objmgr_psoc *psoc)
+{
+	struct pre_cac_psoc_priv *psoc_priv = pre_cac_psoc_get_priv(psoc);
+
+	if (!psoc_priv)
+		return;
+
+	if (psoc_priv->pre_cac_work.fn)
+		qdf_cancel_work(&psoc_priv->pre_cac_work);
+}
+
 void pre_cac_set_freq(struct wlan_objmgr_vdev *vdev,
 		      qdf_freq_t freq)
 {
@@ -163,7 +174,36 @@ static void pre_cac_handle_failure(void *data)
 {
 	struct wlan_objmgr_vdev *vdev = (struct wlan_objmgr_vdev *)data;
 
-	pre_cac_complete(vdev, false);
+	pre_cac_complete(vdev, QDF_STATUS_E_FAILURE);
+}
+
+void pre_cac_clean_up(struct wlan_objmgr_psoc *psoc)
+{
+	struct pre_cac_psoc_priv *psoc_priv = pre_cac_psoc_get_priv(psoc);
+	struct wlan_objmgr_vdev *vdev;
+	uint8_t vdev_id;
+
+	if (!psoc_priv) {
+		pre_cac_err("invalid psoc");
+		return;
+	}
+
+	if (!pre_cac_is_active(psoc))
+		return;
+
+	pre_cac_get_vdev_id(psoc, &vdev_id);
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_PRE_CAC_ID);
+	if (!vdev) {
+		pre_cac_err("Invalid vdev");
+		return;
+	}
+
+	qdf_create_work(0, &psoc_priv->pre_cac_work,
+			pre_cac_handle_failure,
+			vdev);
+	qdf_sched_work(0, &psoc_priv->pre_cac_work);
 }
 
 void pre_cac_handle_radar_ind(struct wlan_objmgr_vdev *vdev)
@@ -226,6 +266,8 @@ int pre_cac_validate_and_get_freq(struct wlan_objmgr_pdev *pdev,
 	uint32_t weight_len = 0;
 	QDF_STATUS status;
 	uint32_t i;
+
+	pre_cac_stop(psoc);
 
 	if (pre_cac_is_active(psoc)) {
 		pre_cac_err("pre cac is already in progress");
