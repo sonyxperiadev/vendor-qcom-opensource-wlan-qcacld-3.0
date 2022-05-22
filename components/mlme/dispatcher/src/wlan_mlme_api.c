@@ -5519,6 +5519,19 @@ wlan_mlme_update_ratemask_params(struct wlan_objmgr_vdev *vdev,
 	return QDF_STATUS_SUCCESS;
 }
 
+bool wlan_mlme_is_channel_valid(struct wlan_objmgr_psoc *psoc,
+				uint32_t chan_freq)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return false;
+
+	return wlan_roam_is_channel_valid(&mlme_obj->cfg.reg,
+					  chan_freq);
+}
+
 #ifdef WLAN_FEATURE_MCC_QUOTA
 #define WLAN_MCC_MIN_QUOTA 10 /* in %age */
 #define WLAN_MCC_MAX_QUOTA 90 /* in %age */

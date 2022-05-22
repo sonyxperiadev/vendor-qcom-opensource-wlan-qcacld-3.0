@@ -8313,16 +8313,35 @@ QDF_STATUS hdd_stop_adapter_ext(struct hdd_context *hdd_ctx,
 			 * pre-cac adapter
 			 */
 			sap_ctx = WLAN_HDD_GET_SAP_CTX_PTR(adapter);
+
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 			if (!wlan_sap_is_pre_cac_context(sap_ctx) &&
 			    (hdd_ctx->sap_pre_cac_work.fn))
 				cds_flush_work(&hdd_ctx->sap_pre_cac_work);
-
+#else
+			if (!ucfg_pre_cac_is_active(hdd_ctx->psoc) &&
+			    hdd_ctx->sap_pre_cac_work.fn)
+				cds_flush_work(&hdd_ctx->sap_pre_cac_work);
+#endif
 			hdd_close_pre_cac_adapter(hdd_ctx);
 
 		} else {
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 			if (wlan_sap_set_pre_cac_status(
 				   WLAN_HDD_GET_SAP_CTX_PTR(adapter), false))
 				hdd_err("Failed to set is_pre_cac_on to false");
+#else
+			if (ucfg_pre_cac_set_status(adapter->vdev, false))
+				hdd_err("Failed to set is_pre_cac_on to false");
+#endif
 		}
 
 		/* fallthrough */

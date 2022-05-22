@@ -52,6 +52,7 @@
 #include "wlan_reg_services_api.h"
 #include <wlan_scan_api.h>
 #include <wlan_scan_utils_api.h>
+#include "wlan_pre_cac_api.h"
 
 /* IF MGR API header file */
 #include "wlan_if_mgr_ucfg_api.h"
@@ -1123,12 +1124,21 @@ QDF_STATUS wlansap_roam_callback(void *ctx,
 				  sap_ctx->chan_freq);
 			goto EXIT;
 		}
-
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 		if (sap_ctx->is_pre_cac_on) {
 			wlan_sap_pre_cac_radar_ind(sap_ctx, mac_ctx);
 			break;
 		}
-
+#else
+		if (wlan_pre_cac_get_status(mac_ctx->psoc)) {
+			wlan_sap_pre_cac_radar_ind(sap_ctx, mac_ctx);
+			break;
+		}
+#endif
 		sap_debug("sapdfs: Indicate eSAP_DFS_RADAR_DETECT to HDD");
 		sap_signal_hdd_event(sap_ctx, NULL, eSAP_DFS_RADAR_DETECT,
 				     (void *) eSAP_STATUS_SUCCESS);

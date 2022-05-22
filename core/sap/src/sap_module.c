@@ -1660,6 +1660,11 @@ QDF_STATUS wlan_sap_update_next_channel(struct sap_context *sap_ctx,
 }
 
 #if defined(FEATURE_SAP_COND_CHAN_SWITCH) && defined(PRE_CAC_SUPPORT)
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 QDF_STATUS wlan_sap_set_pre_cac_status(struct sap_context *sap_ctx,
 				       bool status)
 {
@@ -1673,6 +1678,7 @@ QDF_STATUS wlan_sap_set_pre_cac_status(struct sap_context *sap_ctx,
 
 	return QDF_STATUS_SUCCESS;
 }
+#endif
 
 QDF_STATUS
 wlan_sap_set_chan_freq_before_pre_cac(struct sap_context *sap_ctx,
@@ -1705,6 +1711,11 @@ QDF_STATUS wlan_sap_set_pre_cac_complete_status(struct sap_context *sap_ctx,
 	return QDF_STATUS_SUCCESS;
 }
 
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 bool wlan_sap_is_pre_cac_context(struct sap_context *context)
 {
 	return context && context->is_pre_cac_on;
@@ -1769,7 +1780,8 @@ QDF_STATUS wlan_sap_get_pre_cac_vdev_id(mac_handle_t handle, uint8_t *vdev_id)
 	}
 	return QDF_STATUS_E_FAILURE;
 }
-#endif
+#endif /* PRE_CAC_COMP */
+#endif /* PRE_CAC_SUPPORT */
 
 void wlansap_get_sec_channel(uint8_t sec_ch_offset,
 			     uint32_t op_chan_freq,

@@ -21,4 +21,35 @@
 #ifndef _WLAN_PRE_CAC_API_H_
 #define _WLAN_PRE_CAC_API_H_
 
+#ifdef PRE_CAC_SUPPORT
+/**
+ * wlan_pre_cac_get_status(): status of pre_cac
+ * @psoc: psoc object manager
+ *
+ * Return: status of pre_cac
+ */
+bool wlan_pre_cac_get_status(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * wlan_pre_cac_set_status() - Set pre cac status
+ * @vdev: vdev object manager
+ * @status: status of pre_cac
+ *
+ * Sets pre_cac status
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS wlan_pre_cac_set_status(struct wlan_objmgr_vdev *vdev, bool status);
+#else
+static inline bool wlan_pre_cac_get_status(struct wlan_objmgr_psoc *psoc)
+{
+	return false;
+}
+
+static inline QDF_STATUS
+wlan_pre_cac_set_status(struct wlan_objmgr_vdev *vdev, bool status)
+{
+	return false;
+}
+#endif /* PRE_CAC_SUPPORT */
 #endif /* _WLAN_PRE_CAC_API_H_ */

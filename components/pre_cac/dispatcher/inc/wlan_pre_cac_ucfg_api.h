@@ -25,6 +25,7 @@
 #include <qdf_status.h>
 #include <qdf_types.h>
 #include "wlan_pre_cac_public_struct.h"
+#include "wlan_objmgr_psoc_obj.h"
 
 #ifdef PRE_CAC_SUPPORT
 /**
@@ -54,6 +55,57 @@ void ucfg_pre_cac_deinit(void);
  * Return: None
  */
 void ucfg_pre_cac_set_osif_cb(struct pre_cac_ops *pre_cac_ops);
+
+/**
+ * ucfg_pre_cac_is_active(): status of pre_cac
+ * @psoc: psoc object manager
+ *
+ * Return: status of pre_cac
+ */
+bool ucfg_pre_cac_is_active(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_pre_cac_validate_and_get_freq() - Validate and get pre cac frequency
+ * @pdev: pdev object manager
+ * @chan_freq: Channel frequency requested by userspace
+ * @pre_cac_chan_freq: Pointer to the pre CAC channel frequency storage
+ *
+ * Validates the channel provided by userspace. If user provided channel 0,
+ * a valid outdoor channel must be selected from the regulatory channel.
+ *
+ * Return: Zero on success and non zero value on error
+ */
+int ucfg_pre_cac_validate_and_get_freq(struct wlan_objmgr_pdev *pdev,
+				       uint32_t chan_freq,
+				       uint32_t *pre_cac_chan_freq);
+
+#if defined(FEATURE_SAP_COND_CHAN_SWITCH)
+/**
+ * ucfg_pre_cac_set_status() - Set pre cac status
+ * @vdev: vdev object manager
+ * @status: status of pre_cac
+ *
+ * Sets pre_cac status
+ *
+ * Return: Zero on success and non zero value on error
+ */
+QDF_STATUS ucfg_pre_cac_set_status(struct wlan_objmgr_vdev *vdev, bool status);
+#else
+static inline QDF_STATUS
+ucfg_pre_cac_set_status(struct wlan_objmgr_vdev *vdev, bool status)
+{
+}
+#endif
+
+/**
+ * ucfg_pre_cac_get_vdev_id() - Get pre cac vdev id
+ * @psoc: psoc object manager
+ * @vdev_id: pre cac vdev id
+ *
+ * Return: None
+ */
+void ucfg_pre_cac_get_vdev_id(struct wlan_objmgr_psoc *psoc,
+			      uint8_t *vdev_id);
 #else
 static inline
 QDF_STATUS ucfg_pre_cac_init(void)
@@ -70,6 +122,31 @@ static inline void
 ucfg_pre_cac_set_osif_cb(struct pre_cac_ops *pre_cac_ops)
 {
 }
+
+static inline bool
+ucfg_pre_cac_is_active(struct wlan_objmgr_psoc *psoc)
+{
+	return false;
+}
+
+static inline int
+ucfg_pre_cac_validate_and_get_freq(struct wlan_objmgr_pdev *pdev,
+				   uint32_t chan_freq,
+				   uint32_t *pre_cac_chan_freq)
+{
+	return 0;
+}
+
+static inline QDF_STATUS
+ucfg_pre_cac_set_status(struct wlan_objmgr_vdev *vdev, bool status)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline void
+ucfg_pre_cac_get_vdev_id(struct wlan_objmgr_psoc *psoc,
+			 uint8_t *vdev_id)
+{
+}
 #endif /* PRE_CAC_SUPPORT */
 #endif /* _WLAN_PRE_CAC_UCFG_API_H_ */
-

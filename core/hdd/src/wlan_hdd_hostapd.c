@@ -111,6 +111,7 @@
 #include "wlan_hdd_wds.h"
 #include "wlan_hdd_pre_cac.h"
 #include "wlan_osif_features.h"
+#include "wlan_pre_cac_ucfg_api.h"
 
 #define ACS_SCAN_EXPIRY_TIMEOUT_S 4
 
@@ -6625,8 +6626,17 @@ static int __wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy,
 	mutex_unlock(&hdd_ctx->sap_lock);
 
 	mac_handle = hdd_ctx->mac_handle;
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 	if (wlan_sap_is_pre_cac_active(mac_handle))
 		hdd_clean_up_pre_cac_interface(hdd_ctx);
+#else
+	if (ucfg_pre_cac_is_active(hdd_ctx->psoc))
+		hdd_clean_up_pre_cac_interface(hdd_ctx);
+#endif
 
 	if (status != QDF_STATUS_SUCCESS) {
 		hdd_err("Stopping the BSS");

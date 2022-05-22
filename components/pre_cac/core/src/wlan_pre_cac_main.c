@@ -22,8 +22,137 @@
 
 #include "wlan_pre_cac_main.h"
 #include "wlan_objmgr_global_obj.h"
+#include "wlan_policy_mgr_api.h"
+#include "wlan_reg_services_api.h"
+#include "wlan_mlme_api.h"
 
 struct pre_cac_ops *glbl_pre_cac_ops;
+
+static void pre_cac_get_vdev_id_handler(struct wlan_objmgr_psoc *psoc,
+					void *obj, void *args)
+{
+	struct wlan_objmgr_vdev *vdev = (struct wlan_objmgr_vdev *)obj;
+	struct pre_cac_vdev_priv *vdev_priv;
+	uint8_t *vdev_id = (uint8_t *)args;
+
+	vdev_priv = pre_cac_vdev_get_priv(vdev);
+	if (!vdev_priv)
+		return;
+
+	if (vdev_priv->is_pre_cac_on)
+		*vdev_id = vdev->vdev_objmgr.vdev_id;
+}
+
+void pre_cac_get_vdev_id(struct wlan_objmgr_psoc *psoc,
+			 uint8_t *vdev_id)
+{
+	wlan_objmgr_iterate_obj_list(psoc, WLAN_VDEV_OP,
+				     pre_cac_get_vdev_id_handler,
+				     vdev_id, true, WLAN_PRE_CAC_ID);
+}
+
+int pre_cac_validate_and_get_freq(struct wlan_objmgr_pdev *pdev,
+				  uint32_t chan_freq,
+				  uint32_t *pre_cac_chan_freq)
+{
+	struct wlan_objmgr_psoc *psoc = wlan_pdev_get_psoc(pdev);
+	uint32_t len = CFG_VALID_CHANNEL_LIST_LEN;
+	uint8_t pcl_weights[NUM_CHANNELS] = {0};
+	uint32_t freq_list[NUM_CHANNELS] = {0};
+	uint32_t weight_len = 0;
+	QDF_STATUS status;
+	uint32_t i;
+
+	if (pre_cac_is_active(psoc)) {
+		pre_cac_err("pre cac is already in progress");
+		return -EINVAL;
+	}
+
+	if (!chan_freq) {
+		/* Channel is not obtained from PCL because PCL may not have
+		 * the entire channel list. For example: if SAP is up on
+		 * channel 6 and PCL is queried for the next SAP interface,
+		 * if SCC is preferred, the PCL will contain only the channel
+		 * 6. But, we are in need of a DFS channel. So, going with the
+		 * first channel from the valid channel list.
+		 */
+		status = policy_mgr_get_valid_chans(psoc,
+						    freq_list, &len);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			pre_cac_err("Failed to get channel list");
+			return -EINVAL;
+		}
+
+		policy_mgr_update_with_safe_channel_list(psoc,
+							 freq_list, &len,
+							 pcl_weights,
+							 weight_len);
+		for (i = 0; i < len; i++) {
+			if (wlan_reg_is_dfs_for_freq(pdev,
+						     freq_list[i])) {
+				*pre_cac_chan_freq = freq_list[i];
+				break;
+			}
+		}
+
+		if (*pre_cac_chan_freq == 0) {
+			pre_cac_err("unable to find outdoor channel");
+			return -EINVAL;
+		}
+	} else {
+		/* Only when driver selects a channel, check is done for
+		 * unnsafe and NOL channels. When user provides a fixed channel
+		 * the user is expected to take care of this.
+		 */
+		if (!wlan_mlme_is_channel_valid(psoc, chan_freq) ||
+		    !wlan_reg_is_dfs_for_freq(pdev, chan_freq)) {
+			pre_cac_err("Invalid channel for pre cac:%d",
+				    chan_freq);
+			return -EINVAL;
+		}
+		*pre_cac_chan_freq = chan_freq;
+	}
+
+	pre_cac_debug("selected pre cac channel:%d", *pre_cac_chan_freq);
+	return 0;
+}
+
+QDF_STATUS pre_cac_set_status(struct wlan_objmgr_vdev *vdev, bool status)
+{
+	struct pre_cac_vdev_priv *vdev_priv;
+
+	vdev_priv = pre_cac_vdev_get_priv(vdev);
+	if (!vdev_priv)
+		return QDF_STATUS_E_INVAL;
+
+	vdev_priv->is_pre_cac_on = status;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+static void pre_cac_is_active_vdev_handler(struct wlan_objmgr_psoc *psoc,
+					   void *obj, void *args)
+{
+	struct wlan_objmgr_vdev *vdev = (struct wlan_objmgr_vdev *)obj;
+	struct pre_cac_vdev_priv *vdev_priv;
+	bool *is_pre_cac_on = (bool *)args;
+
+	vdev_priv = pre_cac_vdev_get_priv(vdev);
+	if (!vdev_priv)
+		return;
+
+	*is_pre_cac_on = vdev_priv->is_pre_cac_on;
+}
+
+bool pre_cac_is_active(struct wlan_objmgr_psoc *psoc)
+{
+	bool is_pre_cac_on = false;
+
+	wlan_objmgr_iterate_obj_list(psoc, WLAN_VDEV_OP,
+				     pre_cac_is_active_vdev_handler,
+				     &is_pre_cac_on, true, WLAN_PRE_CAC_ID);
+	return is_pre_cac_on;
+}
 
 struct pre_cac_vdev_priv *
 pre_cac_vdev_get_priv_fl(struct wlan_objmgr_vdev *vdev,

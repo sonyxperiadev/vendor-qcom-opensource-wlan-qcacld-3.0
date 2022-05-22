@@ -20,6 +20,7 @@
 #include "wlan_hdd_pre_cac.h"
 #include <qdf_types.h>
 #include "osif_pre_cac.h"
+#include "wlan_pre_cac_ucfg_api.h"
 
 void hdd_send_conditional_chan_switch_status(struct hdd_context *hdd_ctx,
 					     struct wireless_dev *wdev,
@@ -220,6 +221,11 @@ void hdd_close_pre_cac_adapter(struct hdd_context *hdd_ctx)
 
 void hdd_clean_up_pre_cac_interface(struct hdd_context *hdd_ctx)
 {
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 	uint8_t vdev_id;
 	QDF_STATUS status;
 	struct hdd_adapter *precac_adapter;
@@ -240,28 +246,7 @@ void hdd_clean_up_pre_cac_interface(struct hdd_context *hdd_ctx)
 			wlan_hdd_sap_pre_cac_failure,
 			(void *)precac_adapter);
 	qdf_sched_work(0, &hdd_ctx->sap_pre_cac_work);
-}
-
-/**
- * wlan_hdd_set_pre_cac_status() - Set the pre cac status
- * @pre_cac_adapter: AP adapter used for pre cac
- * @status: Status (true or false)
- *
- * Sets the status of pre cac i.e., whether the pre cac is active or not
- *
- * Return: Zero on success, non-zero on failure
- */
-static int wlan_hdd_set_pre_cac_status(struct hdd_adapter *pre_cac_adapter,
-				       bool status)
-{
-	QDF_STATUS ret;
-
-	ret = wlan_sap_set_pre_cac_status(
-		WLAN_HDD_GET_SAP_CTX_PTR(pre_cac_adapter), status);
-	if (QDF_IS_STATUS_ERROR(ret))
-		return -EINVAL;
-
-	return 0;
+#endif
 }
 
 /**
@@ -290,6 +275,73 @@ wlan_hdd_set_chan_freq_before_pre_cac(struct hdd_adapter *ap_adapter,
 	return 0;
 }
 
+static int wlan_set_def_pre_cac_chan(struct hdd_context *hdd_ctx,
+				     uint32_t pre_cac_ch_freq,
+				     struct cfg80211_chan_def *chandef,
+				     enum nl80211_channel_type *chantype,
+				     enum phy_ch_width *ch_width)
+{
+	enum nl80211_channel_type channel_type;
+	struct ieee80211_channel *ieee_chan;
+	struct ch_params ch_params = {0};
+
+	ieee_chan = ieee80211_get_channel(hdd_ctx->wiphy,
+					  pre_cac_ch_freq);
+	if (!ieee_chan) {
+		hdd_err("channel converion failed %d", pre_cac_ch_freq);
+		return -EINVAL;
+	}
+	ch_params.ch_width = *ch_width;
+	wlan_reg_set_channel_params_for_freq(hdd_ctx->pdev,
+					     pre_cac_ch_freq, 0,
+					     &ch_params);
+	switch (ch_params.sec_ch_offset) {
+	case HIGH_PRIMARY_CH:
+		channel_type = NL80211_CHAN_HT40MINUS;
+		break;
+	case LOW_PRIMARY_CH:
+		channel_type = NL80211_CHAN_HT40PLUS;
+		break;
+	default:
+		channel_type = NL80211_CHAN_HT20;
+		break;
+	}
+	cfg80211_chandef_create(chandef, ieee_chan, channel_type);
+	switch (ch_params.ch_width) {
+	case CH_WIDTH_80MHZ:
+		chandef->width = NL80211_CHAN_WIDTH_80;
+		break;
+	case CH_WIDTH_80P80MHZ:
+		chandef->width = NL80211_CHAN_WIDTH_80P80;
+		if (ch_params.mhz_freq_seg1)
+			chandef->center_freq2 = ch_params.mhz_freq_seg1;
+		break;
+	case CH_WIDTH_160MHZ:
+		chandef->width = NL80211_CHAN_WIDTH_160;
+		break;
+	default:
+		break;
+	}
+	if (ch_params.ch_width == CH_WIDTH_80MHZ ||
+	    ch_params.ch_width == CH_WIDTH_80P80MHZ ||
+	    ch_params.ch_width == CH_WIDTH_160MHZ) {
+		if (ch_params.mhz_freq_seg0)
+			chandef->center_freq1 = ch_params.mhz_freq_seg0;
+	}
+	*chantype = channel_type;
+	*ch_width = ch_params.ch_width;
+	hdd_debug("pre cac ch def: chan:%d width:%d freq1:%d freq2:%d",
+		  chandef->chan->center_freq, chandef->width,
+		  chandef->center_freq1, chandef->center_freq2);
+
+	return 0;
+}
+
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 /**
  * wlan_hdd_validate_and_get_pre_cac_ch() - Validate and get pre cac channel
  * @hdd_ctx: HDD context
@@ -361,67 +413,28 @@ static int wlan_hdd_validate_and_get_pre_cac_ch(struct hdd_context *hdd_ctx,
 	return 0;
 }
 
-static int wlan_set_def_pre_cac_chan(struct hdd_context *hdd_ctx,
-				     uint32_t pre_cac_ch_freq,
-				     struct cfg80211_chan_def *chandef,
-				     enum nl80211_channel_type *chantype,
-				     enum phy_ch_width *ch_width)
+/**
+ * wlan_hdd_set_pre_cac_status() - Set the pre cac status
+ * @pre_cac_adapter: AP adapter used for pre cac
+ * @status: Status (true or false)
+ *
+ * Sets the status of pre cac i.e., whether the pre cac is active or not
+ *
+ * Return: Zero on success, non-zero on failure
+ */
+static int wlan_hdd_set_pre_cac_status(struct hdd_adapter *pre_cac_adapter,
+				       bool status)
 {
-	enum nl80211_channel_type channel_type;
-	struct ieee80211_channel *ieee_chan;
-	struct ch_params ch_params = {0};
+	QDF_STATUS ret;
 
-	ieee_chan = ieee80211_get_channel(hdd_ctx->wiphy,
-					  pre_cac_ch_freq);
-	if (!ieee_chan) {
-		hdd_err("channel converion failed %d", pre_cac_ch_freq);
+	ret = wlan_sap_set_pre_cac_status(
+		WLAN_HDD_GET_SAP_CTX_PTR(pre_cac_adapter), status);
+	if (QDF_IS_STATUS_ERROR(ret))
 		return -EINVAL;
-	}
-	ch_params.ch_width = *ch_width;
-	wlan_reg_set_channel_params_for_freq(hdd_ctx->pdev,
-					     pre_cac_ch_freq, 0,
-					     &ch_params);
-	switch (ch_params.sec_ch_offset) {
-	case HIGH_PRIMARY_CH:
-		channel_type = NL80211_CHAN_HT40MINUS;
-		break;
-	case LOW_PRIMARY_CH:
-		channel_type = NL80211_CHAN_HT40PLUS;
-		break;
-	default:
-		channel_type = NL80211_CHAN_HT20;
-		break;
-	}
-	cfg80211_chandef_create(chandef, ieee_chan, channel_type);
-	switch (ch_params.ch_width) {
-	case CH_WIDTH_80MHZ:
-		chandef->width = NL80211_CHAN_WIDTH_80;
-		break;
-	case CH_WIDTH_80P80MHZ:
-		chandef->width = NL80211_CHAN_WIDTH_80P80;
-		if (ch_params.mhz_freq_seg1)
-			chandef->center_freq2 = ch_params.mhz_freq_seg1;
-		break;
-	case CH_WIDTH_160MHZ:
-		chandef->width = NL80211_CHAN_WIDTH_160;
-		break;
-	default:
-		break;
-	}
-	if (ch_params.ch_width == CH_WIDTH_80MHZ ||
-	    ch_params.ch_width == CH_WIDTH_80P80MHZ ||
-	    ch_params.ch_width == CH_WIDTH_160MHZ) {
-		if (ch_params.mhz_freq_seg0)
-			chandef->center_freq1 = ch_params.mhz_freq_seg0;
-	}
-	*chantype = channel_type;
-	*ch_width = ch_params.ch_width;
-	hdd_debug("pre cac ch def: chan:%d width:%d freq1:%d freq2:%d",
-		  chandef->chan->center_freq, chandef->width,
-		  chandef->center_freq1, chandef->center_freq2);
 
 	return 0;
 }
+#endif
 
 /**
  * __wlan_hdd_request_pre_cac() - Start pre CAC in the driver
@@ -449,7 +462,13 @@ static int __wlan_hdd_request_pre_cac(struct hdd_context *hdd_ctx,
 	struct cfg80211_chan_def chandef;
 	enum nl80211_channel_type channel_type;
 	mac_handle_t mac_handle;
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 	bool val;
+#endif
 	enum phy_ch_width cac_ch_width;
 	struct hdd_adapter_create_param params = {0};
 	qdf_freq_t freq;
@@ -461,6 +480,11 @@ static int __wlan_hdd_request_pre_cac(struct hdd_context *hdd_ctx,
 
 	pre_cac_adapter = hdd_get_adapter_by_iface_name(hdd_ctx,
 							SAP_PRE_CAC_IFNAME);
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 	if (pre_cac_adapter) {
 		/* Flush existing pre_cac work */
 		if (hdd_ctx->sap_pre_cac_work.fn)
@@ -471,6 +495,13 @@ static int __wlan_hdd_request_pre_cac(struct hdd_context *hdd_ctx,
 			return -EINVAL;
 		}
 	}
+#else
+	if (!pre_cac_adapter &&
+	    (policy_mgr_get_connection_count(hdd_ctx->psoc) > 1)) {
+		hdd_err("pre cac not allowed in concurrency");
+		return -EINVAL;
+	}
+#endif
 
 	ap_adapter = hdd_get_adapter(hdd_ctx, QDF_SAP_MODE);
 	if (!ap_adapter) {
@@ -484,11 +515,17 @@ static int __wlan_hdd_request_pre_cac(struct hdd_context *hdd_ctx,
 	}
 
 	mac_handle = hdd_ctx->mac_handle;
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 	val = wlan_sap_is_pre_cac_active(mac_handle);
 	if (val) {
 		hdd_err("pre cac is already in progress");
 		return -EINVAL;
 	}
+#endif
 
 	hdd_ap_ctx = WLAN_HDD_GET_AP_CTX_PTR(ap_adapter);
 	if (!hdd_ap_ctx) {
@@ -511,8 +548,17 @@ static int __wlan_hdd_request_pre_cac(struct hdd_context *hdd_ctx,
 
 	hdd_debug("channel: %d", chan_freq);
 
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 	ret = wlan_hdd_validate_and_get_pre_cac_ch(
 		hdd_ctx, ap_adapter, chan_freq, &pre_cac_chan_freq);
+#else
+	ret = ucfg_pre_cac_validate_and_get_freq(hdd_ctx->pdev, chan_freq,
+						 &pre_cac_chan_freq);
+#endif
 	if (ret != 0) {
 		hdd_err("can't validate pre-cac channel");
 		goto release_intf_addr_and_return_failure;
@@ -654,7 +700,15 @@ static int __wlan_hdd_request_pre_cac(struct hdd_context *hdd_ctx,
 	 * anywhere, since after the pre cac success/failure, the pre cac
 	 * adapter itself would be removed.
 	 */
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 	ret = wlan_hdd_set_pre_cac_status(pre_cac_adapter, true);
+#else
+	ret = ucfg_pre_cac_set_status(pre_cac_adapter->vdev, true);
+#endif
 	if (ret != 0) {
 		hdd_err("failed to set pre cac status");
 		goto stop_close_pre_cac_adapter;

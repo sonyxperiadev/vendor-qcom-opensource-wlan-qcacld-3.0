@@ -17,3 +17,16 @@
 /**
  * DOC: Public API implementation of pre cac called from SAP module
  */
+
+#include "../../core/src/wlan_pre_cac_main.h"
+#include "wlan_pre_cac_api.h"
+
+bool wlan_pre_cac_get_status(struct wlan_objmgr_psoc *psoc)
+{
+	return pre_cac_is_active(psoc);
+}
+
+QDF_STATUS wlan_pre_cac_set_status(struct wlan_objmgr_vdev *vdev, bool status)
+{
+	return pre_cac_set_status(vdev, status);
+}

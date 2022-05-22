@@ -3508,6 +3508,19 @@ QDF_STATUS
 wlan_mlme_update_ratemask_params(struct wlan_objmgr_vdev *vdev,
 				 uint8_t num_ratemask,
 				 struct config_ratemask_params *rate_params);
+
+/**
+ * wlan_mlme_is_channel_valid() - validate channel frequency
+ * @psoc: psoc object manager
+ * @chan_freq: channel frequency
+ *
+ * This function validates channel frequency present in valid channel
+ * list or not.
+ *
+ * Return: true or false
+ */
+bool wlan_mlme_is_channel_valid(struct wlan_objmgr_psoc *psoc,
+				uint32_t chan_freq);
 #ifdef WLAN_FEATURE_MCC_QUOTA
 /**
  * wlan_mlme_set_user_mcc_quota() - set the user mcc quota in mlme

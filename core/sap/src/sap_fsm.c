@@ -60,6 +60,7 @@
 #include "cfg_ucfg_api.h"
 #include "wlan_mlme_vdev_mgr_interface.h"
 #include "wlan_vdev_mgr_utils_api.h"
+#include "wlan_pre_cac_api.h"
 
 /*----------------------------------------------------------------------------
  * Preprocessor Definitions and Constants
@@ -1475,7 +1476,15 @@ QDF_STATUS sap_set_session_param(mac_handle_t mac_handle,
 	int i;
 
 	sapctx->sessionId = session_id;
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 	sapctx->is_pre_cac_on = false;
+#else
+	wlan_pre_cac_set_status(sapctx->vdev, false);
+#endif
 	sapctx->pre_cac_complete = false;
 	sapctx->freq_before_pre_cac = 0;
 
@@ -2762,7 +2771,15 @@ QDF_STATUS sap_cac_end_notify(mac_handle_t mac_handle,
 			 * temporary interface created for pre cac and switch
 			 * the original SAP to the pre CAC channel.
 			 */
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 			if (sap_context->is_pre_cac_on) {
+#else
+			if (wlan_pre_cac_get_status(mac->psoc)) {
+#endif
 				qdf_status = wlansap_update_pre_cac_end(
 						sap_context, mac, intf);
 				if (QDF_IS_STATUS_ERROR(qdf_status))

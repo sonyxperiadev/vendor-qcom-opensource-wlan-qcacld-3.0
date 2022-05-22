@@ -181,4 +181,48 @@ void pre_cac_deinit(void);
  * Return: None
  */
 void pre_cac_set_osif_cb(struct pre_cac_ops *osif_pre_cac_ops);
+
+/**
+ * pre_cac_is_active(): status of pre_cac
+ * @psoc: psoc pointer
+ *
+ * Return: status of pre_cac
+ */
+bool pre_cac_is_active(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * pre_cac_validate_and_get_freq() - Validate and get pre cac frequency
+ * @pdev: pdev object manager
+ * @chan_freq: Channel frequency requested by userspace
+ * @pre_cac_chan_freq: Pointer to the pre CAC channel frequency storage
+ *
+ * Validates the channel provided by userspace. If user provided channel 0,
+ * a valid outdoor channel must be selected from the regulatory channel.
+ *
+ * Return: Zero on success and non zero value on error
+ */
+int pre_cac_validate_and_get_freq(struct wlan_objmgr_pdev *pdev,
+				  uint32_t chan_freq,
+				  uint32_t *pre_cac_chan_freq);
+
+/**
+ * pre_cac_set_status() - Set pre cac status
+ * @vdev: vdev object manager
+ * @status: status of pre_cac
+ *
+ * Sets pre_cac status
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS pre_cac_set_status(struct wlan_objmgr_vdev *vdev, bool status);
+
+/**
+ * pre_cac_get_vdev_id() - Get pre cac vdev id
+ * @psoc: psoc object manager
+ * @vdev_id: pointer to the pre cac vdev id
+ *
+ * Return: None
+ */
+void pre_cac_get_vdev_id(struct wlan_objmgr_psoc *psoc,
+			 uint8_t *vdev_id);
 #endif /* end of _WLAN_PRE_CAC_MAIN_H_ */

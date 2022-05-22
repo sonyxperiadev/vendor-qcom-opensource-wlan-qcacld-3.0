@@ -217,7 +217,13 @@ struct sap_context {
 	eSapHddEvent sap_state;
 	eSapStatus sap_status;
 	uint32_t roc_ind_scan_id;
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 	bool is_pre_cac_on;
+#endif
 	bool pre_cac_complete;
 	bool vendor_acs_dfs_lte_enabled;
 	uint8_t dfs_vendor_channel;
