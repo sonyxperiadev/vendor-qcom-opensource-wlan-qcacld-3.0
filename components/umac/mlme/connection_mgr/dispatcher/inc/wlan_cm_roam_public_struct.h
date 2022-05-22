@@ -278,6 +278,7 @@ struct rso_cfg_params {
 	int8_t rssi_thresh_offset_5g;
 	uint32_t min_chan_scan_time;
 	uint32_t max_chan_scan_time;
+	uint32_t passive_max_chan_time;
 	uint16_t neighbor_results_refresh_period;
 	uint16_t empty_scan_refresh_period;
 	uint8_t opportunistic_threshold_diff;
@@ -1160,6 +1161,18 @@ struct roam_disable_cfg {
 	uint8_t vdev_id;
 	uint8_t cfg;
 };
+
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+/**
+ * struct vendor_handoff_cfg - vendor handoff command params
+ * @vdev_id: vdev for which host sends vendor handoff command
+ * @param_id:  parameter id
+ */
+struct vendor_handoff_cfg {
+	uint32_t vdev_id;
+	uint32_t param_id;
+};
+#endif
 
 /**
  * struct wlan_roam_disconnect_params - Emergency deauth/disconnect roam params
@@ -2280,6 +2293,7 @@ struct roam_pmkid_req_event {
  * @send_roam_abort: send roam abort
  * @send_roam_disable_config: send roam disable config
  * @send_roam_rt_stats_config: Send roam events vendor command param value to FW
+ * @send_roam_vendor_handoff_config: send vendor handoff config command to FW
  */
 struct wlan_cm_roam_tx_ops {
 	QDF_STATUS (*send_vdev_set_pcl_cmd)(struct wlan_objmgr_vdev *vdev,
@@ -2311,6 +2325,11 @@ struct wlan_cm_roam_tx_ops {
 	QDF_STATUS (*send_roam_rt_stats_config)(struct wlan_objmgr_vdev *vdev,
 						uint8_t vdev_id, uint8_t value);
 #endif
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+	QDF_STATUS (*send_roam_vendor_handoff_config)(
+					struct wlan_objmgr_vdev *vdev,
+					uint8_t vdev_id, uint32_t param_id);
+#endif
 };
 
 /**
@@ -2329,14 +2348,31 @@ enum roam_scan_freq_scheme {
 	ROAM_SCAN_FREQ_SCHEME_NONE = 3,
 };
 
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+/**
+ * struct wlan_cm_vendor_handoff_param - vendor handoff configuration
+ * structure
+ * @vendor_handoff_context_cb: vendor handoff context
+ * @req_in_progress: to check whether vendor handoff reqest in progress or not
+ */
+struct wlan_cm_vendor_handoff_param {
+	void *vendor_handoff_context;
+	bool req_in_progress;
+};
+#endif
+
 /**
  * struct wlan_cm_roam  - Connection manager roam configs, state and roam
  * data related structure
  * @pcl_vdev_cmd_active:  Flag to check if vdev level pcl command needs to be
  * sent or PDEV level PCL command needs to be sent
+ * @vendor_handoff_param: vendor handoff params
  */
 struct wlan_cm_roam {
 	bool pcl_vdev_cmd_active;
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+	struct wlan_cm_vendor_handoff_param vendor_handoff_param;
+#endif
 };
 
 /**
@@ -2535,6 +2571,7 @@ struct roam_scan_candidate_frame {
  * @roam_auth_offload_event: Rx ops function pointer for auth offload event
  * @roam_pmkid_request_event_rx: Rx ops function pointer for roam pmkid event
  * @roam_candidate_frame_event : Rx ops function pointer for roam frame event
+ * @roam_vendor_handoff_event: Rx ops function pointer for vendor handoff event
  */
 struct wlan_cm_roam_rx_ops {
 	QDF_STATUS (*roam_sync_event)(struct wlan_objmgr_psoc *psoc,
@@ -2560,5 +2597,10 @@ struct wlan_cm_roam_rx_ops {
 	QDF_STATUS
 	(*roam_candidate_frame_event)(struct wlan_objmgr_psoc *psoc,
 				      struct roam_scan_candidate_frame *frame);
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+	void
+	(*roam_vendor_handoff_event)(struct wlan_objmgr_psoc *psoc,
+				     struct roam_vendor_handoff_params *data);
+#endif
 };
 #endif

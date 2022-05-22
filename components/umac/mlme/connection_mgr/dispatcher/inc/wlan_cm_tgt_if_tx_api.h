@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -63,6 +63,20 @@ wlan_cm_tgt_send_roam_rt_stats_config(struct wlan_objmgr_psoc *psoc,
 	return QDF_STATUS_E_FAILURE;
 }
 #endif /* WLAN_FEATURE_ROAM_OFFLOAD */
+
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+/**
+ * wlan_cm_tgt_send_roam_vendor_handoff_config()  - Send vendor handoff config
+ * command to firmware
+ * @psoc: PSOC pointer
+ * @req: vendor handoff command params
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_cm_tgt_send_roam_vendor_handoff_config(struct wlan_objmgr_psoc *psoc,
+					    struct vendor_handoff_cfg *req);
+#endif
 
 #if defined(WLAN_FEATURE_HOST_ROAM) || defined(WLAN_FEATURE_ROAM_OFFLOAD)
 

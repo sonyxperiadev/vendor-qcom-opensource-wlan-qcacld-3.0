@@ -172,6 +172,50 @@ target_if_cm_roam_rt_stats_config(struct wlan_objmgr_vdev *vdev,
 	return status;
 }
 
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+/**
+ * target_if_cm_roam_vendor_handoff_config() - Send vendor handoff config
+ * command to fw
+ * @vdev: vdev object
+ * @vdev_id: vdev id
+ * @param_id: param id
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+target_if_cm_roam_vendor_handoff_config(struct wlan_objmgr_vdev *vdev,
+					uint8_t vdev_id, uint32_t param_id)
+{
+	wmi_unified_t wmi_handle;
+
+	wmi_handle = target_if_cm_roam_get_wmi_handle_from_vdev(vdev);
+	if (!wmi_handle)
+		return QDF_STATUS_E_FAILURE;
+
+	return wmi_unified_roam_vendor_handoff_req_cmd(wmi_handle,
+						       vdev_id, param_id);
+}
+
+/**
+ * target_if_cm_roam_register_vendor_handoff_ops() - Register tx ops to send
+ * vendor handoff config command to fw
+ * @tx_ops: structure of tx function pointers for roaming related commands
+ *
+ * Return: none
+ */
+static void target_if_cm_roam_register_vendor_handoff_ops(
+					struct wlan_cm_roam_tx_ops *tx_ops)
+{
+	tx_ops->send_roam_vendor_handoff_config =
+				target_if_cm_roam_vendor_handoff_config;
+}
+#else
+static inline void target_if_cm_roam_register_vendor_handoff_ops(
+					struct wlan_cm_roam_tx_ops *tx_ops)
+{
+}
+#endif
+
 static void
 target_if_cm_roam_register_lfr3_ops(struct wlan_cm_roam_tx_ops *tx_ops)
 {
@@ -179,6 +223,7 @@ target_if_cm_roam_register_lfr3_ops(struct wlan_cm_roam_tx_ops *tx_ops)
 	tx_ops->send_roam_invoke_cmd = target_if_cm_roam_send_roam_invoke_cmd;
 	tx_ops->send_roam_sync_complete_cmd = target_if_cm_roam_send_roam_sync_complete;
 	tx_ops->send_roam_rt_stats_config = target_if_cm_roam_rt_stats_config;
+	target_if_cm_roam_register_vendor_handoff_ops(tx_ops);
 }
 #else
 static inline void

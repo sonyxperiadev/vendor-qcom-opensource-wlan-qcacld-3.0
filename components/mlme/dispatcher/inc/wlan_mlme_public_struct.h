@@ -1957,6 +1957,7 @@ struct wlan_mlme_lfr_cfg {
 	uint32_t roam_rescan_rssi_diff;
 	uint16_t neighbor_scan_min_chan_time;
 	uint16_t neighbor_scan_max_chan_time;
+	uint32_t passive_max_channel_time;
 	uint32_t neighbor_scan_results_refresh_period;
 	uint32_t empty_scan_refresh_period;
 	uint8_t roam_bmiss_first_bcnt;

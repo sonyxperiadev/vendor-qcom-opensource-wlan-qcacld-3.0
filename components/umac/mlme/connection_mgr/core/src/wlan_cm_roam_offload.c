@@ -725,6 +725,173 @@ cm_roam_send_rt_stats_config(struct wlan_objmgr_psoc *psoc,
 	return status;
 }
 
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+/**
+ * cm_roam_is_vendor_handoff_control_enable() - check whether vendor handoff
+ * control feature is enable or not in driver
+ * @psoc: psoc pointer
+ *
+ * Return: true if feature supports
+ */
+static bool
+cm_roam_is_vendor_handoff_control_enable(struct wlan_objmgr_psoc *psoc)
+{
+	bool ini_flag, handoff_control_support;
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+
+	if (!mlme_obj)
+		return false;
+
+	ini_flag = mlme_obj->cfg.connection_roaming_ini_flag;
+
+	handoff_control_support =
+	      wlan_mlme_get_vendor_handoff_control_caps(psoc);
+
+	mlme_debug("ini flag:%d, fw caps:%d", ini_flag,
+		   handoff_control_support);
+
+	if (ini_flag && handoff_control_support)
+		return true;
+
+	return false;
+}
+
+QDF_STATUS
+cm_roam_send_vendor_handoff_param_req(struct wlan_objmgr_psoc *psoc,
+				      uint8_t vdev_id,
+				      uint32_t param_id,
+				      void *vendor_handoff_context)
+{
+	struct vendor_handoff_cfg *req;
+	QDF_STATUS status;
+	struct mlme_legacy_priv *mlme_priv;
+	struct wlan_objmgr_vdev *vdev;
+
+	if (!cm_roam_is_vendor_handoff_control_enable(psoc)) {
+		mlme_debug("vendor handoff control feature is not enabled");
+		return QDF_STATUS_E_NOSUPPORT;
+	}
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_MLME_CM_ID);
+	if (!vdev) {
+		mlme_err("get vdev failed");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		status = QDF_STATUS_E_FAILURE;
+		goto error;
+	}
+
+	if (mlme_priv->cm_roam.vendor_handoff_param.req_in_progress) {
+		mlme_debug("vendor handoff request is already in progress");
+		status = QDF_STATUS_E_FAILURE;
+		goto error;
+	} else {
+		mlme_debug("Set vendor handoff req in progress context");
+		mlme_priv->cm_roam.vendor_handoff_param.req_in_progress = true;
+		mlme_priv->cm_roam.vendor_handoff_param.vendor_handoff_context =
+							vendor_handoff_context;
+	}
+
+	req = qdf_mem_malloc(sizeof(*req));
+	if (!req) {
+		status = QDF_STATUS_E_NOMEM;
+		goto error;
+	}
+
+	req->vdev_id = vdev_id;
+	req->param_id = param_id;
+
+	status = wlan_cm_tgt_send_roam_vendor_handoff_config(psoc, req);
+	if (QDF_IS_STATUS_ERROR(status))
+		mlme_debug("fail to send roam rt stats config");
+
+	qdf_mem_free(req);
+
+error:
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_CM_ID);
+	return status;
+}
+
+QDF_STATUS cm_roam_update_vendor_handoff_config(struct wlan_objmgr_psoc *psoc,
+				     struct roam_vendor_handoff_params *list)
+{
+	struct wlan_objmgr_vdev *vdev;
+	struct rso_config *rso_cfg;
+	struct rso_cfg_params *cfg_params;
+	uint8_t vdev_id;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	uint32_t param_id, param_value, i;
+
+	vdev_id = list->vdev_id;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_MLME_SB_ID);
+	if (!vdev) {
+		mlme_err("vdev object is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	rso_cfg = wlan_cm_get_rso_config(vdev);
+	if (!rso_cfg) {
+		status = QDF_STATUS_E_FAILURE;
+		goto error;
+	}
+
+	cfg_params = &rso_cfg->cfg_param;
+
+	mlme_debug("received vendor handoff event from FW with num_entries %d",
+		   list->num_entries);
+
+	for (i = 0; i < list->num_entries; i++) {
+		param_id = list->param_info[i].param_id;
+		param_value = list->param_info[i].param_value;
+		mlme_debug("param id:%d, param value:%d", param_id,
+			   param_value);
+		switch (param_id) {
+		case ROAM_VENDOR_CONTROL_PARAM_TRIGGER:
+			cfg_params->neighbor_lookup_threshold =
+							abs(param_value);
+			break;
+		case ROAM_VENDOR_CONTROL_PARAM_DELTA:
+			cfg_params->roam_rssi_diff = param_value;
+			break;
+		case ROAM_VENDOR_CONTROL_PARAM_FULL_SCANPERIOD:
+			cfg_params->full_roam_scan_period = param_value;
+			break;
+		case ROAM_VENDOR_CONTROL_PARAM_PARTIAL_SCANPERIOD:
+			cfg_params->empty_scan_refresh_period =
+							param_value * 1000;
+			break;
+		case ROAM_VENDOR_CONTROL_PARAM_ACTIVE_CH_DWELLTIME:
+			cfg_params->max_chan_scan_time = param_value;
+			break;
+		case ROAM_VENDOR_CONTROL_PARAM_PASSIVE_CH_DWELLTIME:
+			cfg_params->passive_max_chan_time = param_value;
+			break;
+		case ROAM_VENDOR_CONTROL_PARAM_HOME_CH_TIME:
+			cfg_params->neighbor_scan_period = param_value;
+			break;
+		case ROAM_VENDOR_CONTROL_PARAM_AWAY_TIME:
+			cfg_params->roam_scan_home_away_time = param_value;
+			break;
+		default:
+			mlme_debug("Invalid param id");
+			status = QDF_STATUS_E_FAILURE;
+			goto error;
+		}
+	}
+error:
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_SB_ID);
+	return status;
+}
+
+#endif
 #else
 static inline void
 cm_roam_reason_vsie(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
@@ -1007,12 +1174,15 @@ cm_roam_scan_offload_rssi_thresh(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 
 	lfr_cfg = &mlme_obj->cfg.lfr;
 
-	if (rso_config->alert_rssi_threshold)
+	if (rso_config->alert_rssi_threshold) {
 		params->rssi_thresh = rso_config->alert_rssi_threshold;
-	else
+	} else {
+		mlme_debug("lookup_threshold:%d",
+			   rso_cfg->cfg_param.neighbor_lookup_threshold);
 		params->rssi_thresh =
 			(int8_t)rso_cfg->cfg_param.neighbor_lookup_threshold *
 			(-1);
+	}
 
 	params->vdev_id = vdev_id;
 	params->rssi_thresh_diff =
@@ -1108,6 +1278,8 @@ cm_roam_scan_offload_scan_period(uint8_t vdev_id,
 			cfg_params->roam_scan_period_after_inactivity;
 	params->full_scan_period =
 			cfg_params->full_roam_scan_period;
+	mlme_debug("full_scan_period:%d, empty_scan_refresh_period:%d",
+		   params->full_scan_period, params->empty_scan_refresh_period);
 }
 
 static void
@@ -1579,6 +1751,7 @@ cm_roam_scan_offload_ap_profile(struct wlan_objmgr_psoc *psoc,
 	cm_update_crypto_params(vdev, profile);
 
 	profile->rssi_threshold = rso_cfg->cfg_param.roam_rssi_diff;
+	mlme_debug("profile->rssi_threshold:%d", profile->rssi_threshold);
 	profile->bg_rssi_threshold = rso_cfg->cfg_param.bg_rssi_threshold;
 	/*
 	 * rssi_diff which is updated via framework is equivalent to the
@@ -2256,8 +2429,8 @@ cm_roam_scan_offload_fill_scan_params(struct wlan_objmgr_psoc *psoc,
 	cfg_params = &rso_cfg->cfg_param;
 
 	/* Parameters updated after association is complete */
-	wlan_scan_cfg_get_passive_dwelltime(psoc,
-					    &scan_params->dwell_time_passive);
+	scan_params->dwell_time_passive = cfg_params->passive_max_chan_time;
+
 	wlan_scan_cfg_get_min_dwelltime_6g(psoc,
 					   &scan_params->min_dwell_time_6ghz);
 	/*
@@ -2268,6 +2441,7 @@ cm_roam_scan_offload_fill_scan_params(struct wlan_objmgr_psoc *psoc,
 	scan_params->dwell_time_active = cfg_params->max_chan_scan_time;
 
 	roam_scan_home_away_time = cfg_params->roam_scan_home_away_time;
+
 	if (roam_scan_home_away_time <
 	    (scan_params->dwell_time_active +
 	     (2 * ROAM_SCAN_CHANNEL_SWITCH_TIME))) {
@@ -2355,6 +2529,11 @@ cm_roam_scan_offload_fill_scan_params(struct wlan_objmgr_psoc *psoc,
 		mlme_obj->cfg.lfr.adaptive_roamscan_dwell_mode;
 
 	cm_fill_6ghz_dwell_times(psoc, scan_params);
+
+	mlme_debug("dwell time passive:%d, active:%d, home_away_time:%d, burst_duration:%d, max_rest_time:%d",
+		   scan_params->dwell_time_passive,
+		   scan_params->dwell_time_active, roam_scan_home_away_time,
+		   scan_params->burst_duration, scan_params->max_rest_time);
 }
 
 void wlan_cm_append_assoc_ies(struct wlan_roam_scan_offload_params *rso_mode_cfg,
@@ -4722,6 +4901,8 @@ cm_restore_default_roaming_params(struct wlan_mlme_psoc_ext_obj *mlme_obj,
 
 	cfg_params->max_chan_scan_time =
 			mlme_obj->cfg.lfr.neighbor_scan_max_chan_time;
+	cfg_params->passive_max_chan_time =
+			mlme_obj->cfg.lfr.passive_max_channel_time;
 	cfg_params->roam_scan_home_away_time =
 			mlme_obj->cfg.lfr.roam_scan_home_away_time;
 	cfg_params->roam_scan_n_probes =

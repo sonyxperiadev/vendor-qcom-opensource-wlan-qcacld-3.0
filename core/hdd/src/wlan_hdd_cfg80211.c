@@ -5363,8 +5363,15 @@ hdd_set_roam_with_control_config(struct hdd_context *hdd_ctx,
 	struct wlan_cm_roam_vendor_btm_params param = {0};
 	bool is_wtc_param_updated = false;
 	uint32_t band_mask;
+	struct hdd_adapter *adapter;
+	uint8_t roam_control_enable = false;
 
 	hdd_enter();
+
+	adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
+	if (hdd_validate_adapter(adapter))
+		return QDF_STATUS_E_FAILURE;
+
 	/* The command must carry PARAM_ROAM_CONTROL_CONFIG */
 	if (!tb[PARAM_ROAM_CONTROL_CONFIG]) {
 		hdd_err("Attribute CONTROL_CONFIG is not present");
@@ -5399,14 +5406,26 @@ hdd_set_roam_with_control_config(struct hdd_context *hdd_ctx,
 
 	attr = tb2[QCA_ATTR_ROAM_CONTROL_ENABLE];
 	if (attr) {
+		roam_control_enable = nla_get_u8(attr);
+		if (roam_control_enable) {
+			status =
+				hdd_cm_get_handoff_param(hdd_ctx->psoc, adapter,
+						adapter->vdev_id,
+						ROAM_VENDOR_CONTROL_PARAM_ALL);
+			if (QDF_IS_STATUS_ERROR(status)) {
+				hdd_err("failed to get vendor handoff params");
+				return qdf_status_to_os_return(status);
+			}
+		}
+
+		hdd_debug("Parse and send roam control to FW: %s",
+			  roam_control_enable ? "Enable" : "Disable");
+
 		status = sme_set_roam_config_enable(hdd_ctx->mac_handle,
 						    vdev_id,
-						    nla_get_u8(attr));
+						    roam_control_enable);
 		if (QDF_IS_STATUS_ERROR(status))
 			hdd_err("failed to enable/disable roam control config");
-
-		hdd_debug("Parse and send roam control %s:",
-			  nla_get_u8(attr) ? "Enable" : "Disable");
 
 		attr = tb2[QCA_ATTR_ROAM_CONTROL_SCAN_PERIOD];
 		if (attr) {

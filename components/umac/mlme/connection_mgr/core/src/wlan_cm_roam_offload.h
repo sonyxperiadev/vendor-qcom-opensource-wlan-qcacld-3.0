@@ -315,6 +315,35 @@ QDF_STATUS
 cm_roam_send_disable_config(struct wlan_objmgr_psoc *psoc,
 			    uint8_t vdev_id, uint8_t cfg);
 
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+/**
+ * cm_roam_send_vendor_handoff_param_req() - send vendor handoff param cmd
+ * @psoc: psoc pointer
+ * @vdev_id: vdev id
+ * @param_value: roam stats param value
+ * @vendor_handoff_context: vendor handoff context request
+ *
+ * This function is used to send vendor handoff param cmd
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+cm_roam_send_vendor_handoff_param_req(struct wlan_objmgr_psoc *psoc,
+				      uint8_t vdev_id,
+				      uint32_t param_value,
+				      void *vendor_handoff_context);
+/**
+ * cm_roam_update_vendor_handoff_config() - update vendor handoff param to
+ * rso config structure
+ * @psoc: psoc pointer
+ * @list: vendor handoff parameters to be updated
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS cm_roam_update_vendor_handoff_config(struct wlan_objmgr_psoc *psoc,
+				     struct roam_vendor_handoff_params *list);
+#endif
+
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 /**
  * cm_roam_send_rt_stats_config() - Send roam event stats cfg value to FW
