@@ -2263,6 +2263,11 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 		qdf_sched_work(0, &hdd_ctx->sap_pre_cac_work);
 		hdd_son_deliver_cac_status_event(adapter, true);
 		break;
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 	case eSAP_DFS_PRE_CAC_END:
 		hdd_debug("pre cac end notification received:%d",
 			adapter->vdev_id);
@@ -2278,6 +2283,7 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 				(void *)adapter);
 		qdf_sched_work(0, &hdd_ctx->sap_pre_cac_work);
 		break;
+#endif /* PRE_CAC_COMP */
 #endif
 	case eSAP_DFS_NO_AVAILABLE_CHANNEL:
 		wlan_hdd_send_svc_nlink_msg

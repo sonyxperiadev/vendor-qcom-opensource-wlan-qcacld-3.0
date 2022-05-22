@@ -223,12 +223,12 @@ struct sap_context {
  */
 #ifndef PRE_CAC_COMP
 	bool is_pre_cac_on;
-#endif
 	bool pre_cac_complete;
+	qdf_freq_t freq_before_pre_cac;
+#endif
 	bool vendor_acs_dfs_lte_enabled;
 	uint8_t dfs_vendor_channel;
 	uint8_t dfs_vendor_chan_bw;
-	qdf_freq_t freq_before_pre_cac;
 	uint16_t beacon_tx_rate;
 	enum sap_acs_dfs_mode dfs_mode;
 	wlan_scan_requester req_id;

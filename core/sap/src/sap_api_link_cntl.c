@@ -474,7 +474,15 @@ wlansap_roam_process_ch_change_success(struct mac_context *mac_ctx,
 
 	sap_ctx->chan_freq = target_chan_freq;
 	/* check if currently selected channel is a DFS channel */
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 	if (is_ch_dfs && sap_ctx->pre_cac_complete) {
+#else
+	if (is_ch_dfs && wlan_pre_cac_complete_get(sap_ctx->vdev)) {
+#endif
 		/* Start beaconing on the new pre cac channel */
 		wlansap_start_beacon_req(sap_ctx);
 		sap_ctx->fsm_state = SAP_STARTING;
@@ -551,7 +559,15 @@ wlansap_roam_process_dfs_chansw_update(mac_handle_t mac_handle,
 		 * with no CSA IE will be sent to firmware.
 		 */
 		dfs_beacon_start_req = true;
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 		sap_ctx->pre_cac_complete = false;
+#else
+		wlan_pre_cac_complete_set(sap_ctx->vdev, false);
+#endif
 		*ret_status = sme_roam_start_beacon_req(mac_handle,
 							sap_ctx->bssid,
 							dfs_beacon_start_req);

@@ -57,6 +57,7 @@
 #include "wlan_mlme_ucfg_api.h"
 #include "wlan_mlme_vdev_mgr_interface.h"
 #include "pld_common.h"
+#include "wlan_pre_cac_api.h"
 
 #define SAP_DEBUG
 static struct sap_context *gp_sap_ctx[SAP_MAX_NUM_SESSION];
@@ -1659,12 +1660,12 @@ QDF_STATUS wlan_sap_update_next_channel(struct sap_context *sap_ctx,
 	return QDF_STATUS_SUCCESS;
 }
 
-#if defined(FEATURE_SAP_COND_CHAN_SWITCH) && defined(PRE_CAC_SUPPORT)
 /*
  * Code under PRE_CAC_COMP will be cleaned up
  * once pre cac component is done
  */
 #ifndef PRE_CAC_COMP
+#if defined(FEATURE_SAP_COND_CHAN_SWITCH) && defined(PRE_CAC_SUPPORT)
 QDF_STATUS wlan_sap_set_pre_cac_status(struct sap_context *sap_ctx,
 				       bool status)
 {
@@ -1678,7 +1679,6 @@ QDF_STATUS wlan_sap_set_pre_cac_status(struct sap_context *sap_ctx,
 
 	return QDF_STATUS_SUCCESS;
 }
-#endif
 
 QDF_STATUS
 wlan_sap_set_chan_freq_before_pre_cac(struct sap_context *sap_ctx,
@@ -1693,8 +1693,14 @@ wlan_sap_set_chan_freq_before_pre_cac(struct sap_context *sap_ctx,
 	return QDF_STATUS_SUCCESS;
 }
 #endif /* FEATURE_SAP_COND_CHAN_SWITCH */
+#endif /* PRE_CAC_COMP */
 
 #ifdef PRE_CAC_SUPPORT
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 QDF_STATUS wlan_sap_set_pre_cac_complete_status(struct sap_context *sap_ctx,
 						bool status)
 {
@@ -1704,18 +1710,12 @@ QDF_STATUS wlan_sap_set_pre_cac_complete_status(struct sap_context *sap_ctx,
 	}
 
 	sap_ctx->pre_cac_complete = status;
-
 	sap_debug("pre cac complete status:%d session:%d",
 		  status, sap_ctx->sessionId);
 
 	return QDF_STATUS_SUCCESS;
 }
 
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
 bool wlan_sap_is_pre_cac_context(struct sap_context *context)
 {
 	return context && context->is_pre_cac_on;
@@ -2003,7 +2003,15 @@ QDF_STATUS wlansap_start_beacon_req(struct sap_context *sap_ctx)
 	if (mac->sap.SapDfsInfo.sap_radar_found_status == false) {
 		/* CAC Wait done without any Radar Detection */
 		dfs_cac_wait_status = true;
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 		sap_ctx->pre_cac_complete = false;
+#else
+		wlan_pre_cac_complete_set(sap_ctx->vdev, false);
+#endif
 		status = sme_roam_start_beacon_req(MAC_HANDLE(mac),
 						   sap_ctx->bssid,
 						   dfs_cac_wait_status);

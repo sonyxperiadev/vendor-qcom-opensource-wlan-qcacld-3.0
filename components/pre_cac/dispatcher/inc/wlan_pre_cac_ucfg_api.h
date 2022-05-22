@@ -106,6 +106,70 @@ ucfg_pre_cac_set_status(struct wlan_objmgr_vdev *vdev, bool status)
  */
 void ucfg_pre_cac_get_vdev_id(struct wlan_objmgr_psoc *psoc,
 			      uint8_t *vdev_id);
+
+/**
+ * ucfg_pre_cac_adapter_set() - Set pre cac adapter flag
+ * @vdev: vdev object manager
+ * @status: status
+ *
+ * Return: None
+ */
+void ucfg_pre_cac_adapter_set(struct wlan_objmgr_vdev *vdev,
+			      bool status);
+
+/**
+ * ucfg_pre_cac_adapter_is_active() - Get pre cac adapter status
+ * @vdev: vdev object manager
+ *
+ * Return: pre cac complete status
+ */
+bool ucfg_pre_cac_adapter_is_active(struct wlan_objmgr_vdev *vdev);
+
+#if defined(FEATURE_SAP_COND_CHAN_SWITCH)
+/**
+ * pre_cac_set_freq_before_pre_cac() - Set frequency before pre cac
+ * @vdev: vdev object manager
+ * @freq: frequency
+ *
+ * Return: None
+ */
+void ucfg_pre_cac_set_freq_before_pre_cac(struct wlan_objmgr_vdev *vdev,
+					  qdf_freq_t freq);
+#else
+static inline void
+ucfg_pre_cac_set_freq_before_pre_cac(struct wlan_objmgr_vdev *vdev,
+				     qdf_freq_t freq)
+{
+}
+#endif
+
+/**
+ * ucfg_pre_cac_set_freq() - Set pre cac frequency
+ * @vdev: vdev object manager
+ * @freq: pre cac frequency
+ *
+ * Return: None
+ */
+void ucfg_pre_cac_set_freq(struct wlan_objmgr_vdev *vdev,
+			   qdf_freq_t freq);
+
+/**
+ * ucfg_pre_cac_get_freq() - Get pre cac frequency
+ * @vdev: vdev object manager
+ *
+ * Return: pre cac frequency
+ */
+qdf_freq_t ucfg_pre_cac_get_freq(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_pre_cac_complete_set() - Set pre cac complete status
+ * @vdev: vdev object manager
+ * @status: status
+ *
+ * Return: None
+ */
+void ucfg_pre_cac_complete_set(struct wlan_objmgr_vdev *vdev,
+			       bool status);
 #else
 static inline
 QDF_STATUS ucfg_pre_cac_init(void)
@@ -146,6 +210,24 @@ ucfg_pre_cac_set_status(struct wlan_objmgr_vdev *vdev, bool status)
 static inline void
 ucfg_pre_cac_get_vdev_id(struct wlan_objmgr_psoc *psoc,
 			 uint8_t *vdev_id)
+{
+}
+
+static inline void
+ucfg_pre_cac_set_freq(struct wlan_objmgr_vdev *vdev,
+		      qdf_freq_t freq)
+{
+}
+
+static inline qdf_freq_t
+ucfg_pre_cac_get_freq(struct wlan_objmgr_vdev *vdev)
+{
+	return 0;
+}
+
+static inline void
+ucfg_pre_cac_complete_set(struct wlan_objmgr_vdev *vdev,
+			  bool status)
 {
 }
 #endif /* PRE_CAC_SUPPORT */

@@ -28,6 +28,150 @@
 
 struct pre_cac_ops *glbl_pre_cac_ops;
 
+void pre_cac_set_freq(struct wlan_objmgr_vdev *vdev,
+		      qdf_freq_t freq)
+{
+	struct pre_cac_vdev_priv *vdev_priv;
+
+	vdev_priv = pre_cac_vdev_get_priv(vdev);
+	if (!vdev_priv)
+		return;
+
+	vdev_priv->pre_cac_freq = freq;
+}
+
+qdf_freq_t pre_cac_get_freq(struct wlan_objmgr_vdev *vdev)
+{
+	struct pre_cac_vdev_priv *vdev_priv;
+
+	vdev_priv = pre_cac_vdev_get_priv(vdev);
+	if (!vdev_priv)
+		return 0;
+
+	return vdev_priv->pre_cac_freq;
+}
+
+void pre_cac_set_freq_before_pre_cac(struct wlan_objmgr_vdev *vdev,
+				     qdf_freq_t freq)
+{
+	struct pre_cac_vdev_priv *vdev_priv;
+
+	vdev_priv = pre_cac_vdev_get_priv(vdev);
+	if (!vdev_priv)
+		return;
+
+	vdev_priv->freq_before_pre_cac = freq;
+}
+
+qdf_freq_t pre_cac_get_freq_before_pre_cac(struct wlan_objmgr_vdev *vdev)
+{
+	struct pre_cac_vdev_priv *vdev_priv;
+
+	vdev_priv = pre_cac_vdev_get_priv(vdev);
+	if (!vdev_priv)
+		return 0;
+
+	return vdev_priv->freq_before_pre_cac;
+}
+
+void pre_cac_adapter_set(struct wlan_objmgr_vdev *vdev,
+			 bool status)
+{
+	struct pre_cac_vdev_priv *vdev_priv;
+
+	if (!vdev) {
+		pre_cac_debug("vdev is NULL");
+		return;
+	}
+
+	vdev_priv = pre_cac_vdev_get_priv(vdev);
+	if (!vdev_priv)
+		return;
+
+	vdev_priv->is_pre_cac_adapter = status;
+}
+
+bool pre_cac_adapter_is_active(struct wlan_objmgr_vdev *vdev)
+{
+	struct pre_cac_vdev_priv *vdev_priv;
+
+	if (!vdev) {
+		pre_cac_debug("vdev is NULL");
+		return false;
+	}
+
+	vdev_priv = pre_cac_vdev_get_priv(vdev);
+	if (!vdev_priv)
+		return false;
+
+	return vdev_priv->is_pre_cac_adapter;
+}
+
+void pre_cac_complete_set(struct wlan_objmgr_vdev *vdev,
+			  bool status)
+{
+	struct pre_cac_vdev_priv *vdev_priv;
+
+	if (!vdev) {
+		pre_cac_debug("vdev is NULL");
+		return;
+	}
+
+	vdev_priv = pre_cac_vdev_get_priv(vdev);
+	if (!vdev_priv)
+		return;
+
+	vdev_priv->pre_cac_complete = status;
+}
+
+bool pre_cac_complete_get(struct wlan_objmgr_vdev *vdev)
+{
+	struct pre_cac_vdev_priv *vdev_priv;
+
+	vdev_priv = pre_cac_vdev_get_priv(vdev);
+	if (!vdev_priv)
+		return false;
+
+	return vdev_priv->pre_cac_complete;
+}
+
+static void pre_cac_complete(struct wlan_objmgr_vdev *vdev,
+			     QDF_STATUS status)
+{
+	if (glbl_pre_cac_ops &&
+	    glbl_pre_cac_ops->pre_cac_complete_cb)
+		glbl_pre_cac_ops->pre_cac_complete_cb(vdev, status);
+}
+
+static void pre_cac_handle_success(void *data)
+{
+	struct wlan_objmgr_vdev *vdev = (struct wlan_objmgr_vdev *)data;
+
+	pre_cac_complete(vdev, QDF_STATUS_SUCCESS);
+}
+
+static void pre_cac_conditional_csa_ind(struct wlan_objmgr_psoc *psoc,
+					uint8_t vdev_id, bool status)
+{
+	if (glbl_pre_cac_ops &&
+	    glbl_pre_cac_ops->pre_cac_conditional_csa_ind_cb)
+		glbl_pre_cac_ops->pre_cac_conditional_csa_ind_cb(psoc,
+							vdev_id, status);
+}
+
+void pre_cac_handle_cac_end(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_objmgr_psoc *psoc = wlan_vdev_get_psoc(vdev);
+	struct pre_cac_psoc_priv *psoc_priv = pre_cac_psoc_get_priv(psoc);
+
+	pre_cac_conditional_csa_ind(psoc, vdev->vdev_objmgr.vdev_id, true);
+
+	qdf_create_work(0, &psoc_priv->pre_cac_work,
+			pre_cac_handle_success,
+			vdev);
+	qdf_sched_work(0, &psoc_priv->pre_cac_work);
+}
+
 static void pre_cac_get_vdev_id_handler(struct wlan_objmgr_psoc *psoc,
 					void *obj, void *args)
 {

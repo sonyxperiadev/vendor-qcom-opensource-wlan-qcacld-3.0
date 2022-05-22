@@ -7901,7 +7901,15 @@ struct hdd_adapter *hdd_open_adapter(struct hdd_context *hdd_ctx,
 
 	hdd_periodic_sta_stats_init(adapter);
 
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 	adapter->is_pre_cac_adapter = false;
+#else
+	ucfg_pre_cac_adapter_set(adapter->vdev, false);
+#endif
 
 	return adapter;
 
@@ -8307,6 +8315,11 @@ QDF_STATUS hdd_stop_adapter_ext(struct hdd_context *hdd_ctx,
 
 		ucfg_ipa_flush(hdd_ctx->pdev);
 
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 		if (!adapter->is_pre_cac_adapter) {
 			/**
 			 * don't flush pre-cac destroy if we are destroying
@@ -8314,36 +8327,31 @@ QDF_STATUS hdd_stop_adapter_ext(struct hdd_context *hdd_ctx,
 			 */
 			sap_ctx = WLAN_HDD_GET_SAP_CTX_PTR(adapter);
 
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
 			if (!wlan_sap_is_pre_cac_context(sap_ctx) &&
 			    (hdd_ctx->sap_pre_cac_work.fn))
 				cds_flush_work(&hdd_ctx->sap_pre_cac_work);
-#else
-			if (!ucfg_pre_cac_is_active(hdd_ctx->psoc) &&
-			    hdd_ctx->sap_pre_cac_work.fn)
-				cds_flush_work(&hdd_ctx->sap_pre_cac_work);
-#endif
 			hdd_close_pre_cac_adapter(hdd_ctx);
-
 		} else {
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
 			if (wlan_sap_set_pre_cac_status(
 				   WLAN_HDD_GET_SAP_CTX_PTR(adapter), false))
 				hdd_err("Failed to set is_pre_cac_on to false");
+		}
 #else
+		if (!ucfg_pre_cac_adapter_is_active(adapter->vdev)) {
+			/**
+			 * don't flush pre-cac destroy if we are destroying
+			 * pre-cac adapter
+			 */
+			if (!ucfg_pre_cac_is_active(hdd_ctx->psoc) &&
+			    hdd_ctx->sap_pre_cac_work.fn)
+				cds_flush_work(&hdd_ctx->sap_pre_cac_work);
+
+			hdd_close_pre_cac_adapter(hdd_ctx);
+		} else {
 			if (ucfg_pre_cac_set_status(adapter->vdev, false))
 				hdd_err("Failed to set is_pre_cac_on to false");
-#endif
 		}
-
+#endif
 		/* fallthrough */
 
 	case QDF_P2P_GO_MODE:

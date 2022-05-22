@@ -17,11 +17,42 @@
 #ifndef _OSIF_PRE_CAC_H_
 #define _OSIF_PRE_CAC_H_
 
+#include "wlan_objmgr_vdev_obj.h"
+
 #ifdef PRE_CAC_SUPPORT
+
+/**
+ * typedef osif_conditional_csa_ind_legacy_cb - CSA indication callback
+ *
+ * This callback is to send conditional channel switch status
+ *
+ * Context: Any context.
+ * Return: QDF_STATUS
+ */
+typedef void
+	(*osif_conditional_csa_ind_legacy_cb)(struct wlan_objmgr_vdev *vdev,
+					      bool completed);
+
+/**
+ * typedef osif_pre_cac_complete_legacy_cb - pre cac complete callback
+ *
+ * This callback is used to indicate the pre cac complete status
+ *
+ * Context: Any context.
+ * Return: None
+ */
+typedef void
+	(*osif_pre_cac_complete_status_legacy_cb)(struct wlan_objmgr_vdev *vdev,
+						  QDF_STATUS status);
+
 /**
  * osif_pre_cac_ops: pre cac legacy callbacks
+ * @conditional_csa_ind_legacy_cb: Callback for CSA indication
+ * @pre_cac_complete_legacy_cb: Callback for pre cac complete status
  */
 struct osif_pre_cac_legacy_ops {
+	osif_conditional_csa_ind_legacy_cb conditional_csa_ind_legacy_cb;
+	osif_pre_cac_complete_status_legacy_cb pre_cac_complete_legacy_cb;
 };
 
 /**

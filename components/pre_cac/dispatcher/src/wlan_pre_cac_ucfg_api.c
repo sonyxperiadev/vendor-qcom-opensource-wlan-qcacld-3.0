@@ -21,6 +21,40 @@
 #include "../../core/src/wlan_pre_cac_main.h"
 #include "wlan_pre_cac_ucfg_api.h"
 
+void ucfg_pre_cac_complete_set(struct wlan_objmgr_vdev *vdev,
+			       bool status)
+{
+	pre_cac_complete_set(vdev, status);
+}
+
+void ucfg_pre_cac_set_freq(struct wlan_objmgr_vdev *vdev,
+			   qdf_freq_t freq)
+{
+	pre_cac_set_freq(vdev, freq);
+}
+
+qdf_freq_t ucfg_pre_cac_get_freq(struct wlan_objmgr_vdev *vdev)
+{
+	return pre_cac_get_freq(vdev);
+}
+
+void ucfg_pre_cac_set_freq_before_pre_cac(struct wlan_objmgr_vdev *vdev,
+					  qdf_freq_t freq)
+{
+	return pre_cac_set_freq_before_pre_cac(vdev, freq);
+}
+
+void ucfg_pre_cac_adapter_set(struct wlan_objmgr_vdev *vdev,
+			      bool status)
+{
+	pre_cac_adapter_set(vdev, status);
+}
+
+bool ucfg_pre_cac_adapter_is_active(struct wlan_objmgr_vdev *vdev)
+{
+	return pre_cac_adapter_is_active(vdev);
+}
+
 void ucfg_pre_cac_get_vdev_id(struct wlan_objmgr_psoc *psoc,
 			      uint8_t *vdev_id)
 {
@@ -35,10 +69,12 @@ int ucfg_pre_cac_validate_and_get_freq(struct wlan_objmgr_pdev *pdev,
 					     pre_cac_chan_freq);
 }
 
+#if defined(FEATURE_SAP_COND_CHAN_SWITCH)
 QDF_STATUS ucfg_pre_cac_set_status(struct wlan_objmgr_vdev *vdev, bool status)
 {
 	return pre_cac_set_status(vdev, status);
 }
+#endif
 
 bool ucfg_pre_cac_is_active(struct wlan_objmgr_psoc *psoc)
 {

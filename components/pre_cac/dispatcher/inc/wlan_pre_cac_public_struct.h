@@ -17,10 +17,19 @@
 #ifndef _WLAN_PRE_CAC_PUBLIC_STRUCT_H_
 #define _WLAN_PRE_CAC_PUBLIC_STRUCT_H_
 
+#include "wlan_objmgr_psoc_obj.h"
+
 /**
  * pre_cac_ops: pre cac osif callbacks
+ * @pre_cac_send_conditional_freq_switch_status: send conditional frequency
+ *                                               switch status
+ * @pre_cac_complete_cb: Pre cac complete callback
  */
 struct pre_cac_ops {
+	void (*pre_cac_conditional_csa_ind_cb)(
+			struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
+			bool status);
+	void (*pre_cac_complete_cb)(struct wlan_objmgr_vdev *vdev,
+				    QDF_STATUS status);
 };
-
 #endif /* _WLAN_PRE_CAC_PUBLIC_STRUCT_H_ */

@@ -1522,12 +1522,6 @@ struct hdd_adapter {
 	/* debugfs entry */
 	struct dentry *debugfs_phy;
 	/*
-	 * The pre cac channel frequency is saved here and will be used when
-         * the SAP's channel needs to be moved from the existing 2.4GHz channel.
-	 */
-	uint32_t pre_cac_freq;
-
-	/*
 	 * Indicate if HO fails during disconnect so that
 	 * disconnect is not initiated by HDD as its already
 	 * initiated by CSR
@@ -1601,8 +1595,19 @@ struct hdd_adapter {
 	qdf_work_t netdev_features_update_work;
 	enum hdd_work_status netdev_features_update_work_status;
 	qdf_atomic_t net_dev_hold_ref_count[NET_DEV_HOLD_ID_MAX];
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 	/* Flag to indicate whether it is a pre cac adapter or not */
 	bool is_pre_cac_adapter;
+	/*
+	 * The pre cac channel frequency is saved here and will be used when
+	 * the SAP's channel needs to be moved from the existing 2.4GHz channel.
+	 */
+	uint32_t pre_cac_freq;
+#endif
 	bool delete_in_progress;
 	bool is_virtual_iface;
 #ifdef WLAN_FEATURE_BIG_DATA_STATS

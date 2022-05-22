@@ -161,7 +161,13 @@ typedef enum {
 	eSAP_DFS_CAC_START,
 	eSAP_DFS_CAC_INTERRUPTED,
 	eSAP_DFS_CAC_END,
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 	eSAP_DFS_PRE_CAC_END,
+#endif
 	eSAP_DFS_RADAR_DETECT,
 	eSAP_DFS_RADAR_DETECT_DURING_PRE_CAC,
 	/* No ch available after DFS RADAR detect */
@@ -855,12 +861,12 @@ QDF_STATUS wlan_sap_update_next_channel(struct sap_context *sap_ctx,
 					uint8_t channel,
 					enum phy_ch_width chan_bw);
 
-#if defined(FEATURE_SAP_COND_CHAN_SWITCH) && defined(PRE_CAC_SUPPORT)
 /*
  * Code under PRE_CAC_COMP will be cleaned up
  * once pre cac component is done
  */
 #ifndef PRE_CAC_COMP
+#if defined(FEATURE_SAP_COND_CHAN_SWITCH) && defined(PRE_CAC_SUPPORT)
 /**
  * wlan_sap_set_pre_cac_status() - Set the pre cac status
  * @sap_ctx: SAP context
@@ -872,7 +878,6 @@ QDF_STATUS wlan_sap_update_next_channel(struct sap_context *sap_ctx,
  */
 QDF_STATUS wlan_sap_set_pre_cac_status(struct sap_context *sap_ctx,
 				       bool status);
-#endif
 
 /**
  * wlan_sap_set_chan_freq_before_pre_cac() - Save the channel before pre cac
@@ -887,17 +892,11 @@ QDF_STATUS
 wlan_sap_set_chan_freq_before_pre_cac(struct sap_context *sap_ctx,
 				      qdf_freq_t freq_before_pre_cac);
 #else
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
 static inline QDF_STATUS
 wlan_sap_set_pre_cac_status(struct sap_context *sap_ctx, bool status)
 {
 	return QDF_STATUS_SUCCESS;
 }
-#endif
 
 static inline QDF_STATUS
 wlan_sap_set_chan_freq_before_pre_cac(struct sap_context *sap_ctx,
@@ -905,9 +904,15 @@ wlan_sap_set_chan_freq_before_pre_cac(struct sap_context *sap_ctx,
 {
 	return QDF_STATUS_SUCCESS;
 }
-#endif
+#endif /* FEATURE_SAP_COND_CHAN_SWITCH and PRE_CAC_SUPPORT */
+#endif /* PRE_CAC_COMP */
 
 #ifdef PRE_CAC_SUPPORT
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 /**
  * wlan_sap_set_pre_cac_complete_status() - Sets pre cac complete status
  * @sap_ctx: SAP context
@@ -920,11 +925,6 @@ wlan_sap_set_chan_freq_before_pre_cac(struct sap_context *sap_ctx,
 QDF_STATUS wlan_sap_set_pre_cac_complete_status(struct sap_context *sap_ctx,
 						bool status);
 
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
 /**
  * wlan_sap_is_pre_cac_context() - checks if @context is for a pre-cac adapter
  * @context: the SAP context to check
@@ -935,8 +935,13 @@ bool wlan_sap_is_pre_cac_context(struct sap_context *context);
 
 bool wlan_sap_is_pre_cac_active(mac_handle_t handle);
 QDF_STATUS wlan_sap_get_pre_cac_vdev_id(mac_handle_t handle, uint8_t *vdev_id);
-#endif /* PRE_CAC_COMP */
+#endif
 #else
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 static inline QDF_STATUS
 wlan_sap_set_pre_cac_complete_status(struct sap_context *sap_ctx,
 				     bool status)
@@ -944,11 +949,6 @@ wlan_sap_set_pre_cac_complete_status(struct sap_context *sap_ctx,
 	return QDF_STATUS_SUCCESS;
 }
 
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
 static inline bool
 wlan_sap_is_pre_cac_context(struct sap_context *context)
 {
@@ -959,8 +959,8 @@ static inline bool wlan_sap_is_pre_cac_active(mac_handle_t handle)
 {
 	return false;
 }
-#endif
-#endif
+#endif /* PRE_CAC_COMP */
+#endif /* PRE_CAC_SUPPORT */
 
 #ifdef FEATURE_WLAN_MCC_TO_SCC_SWITCH
 /**

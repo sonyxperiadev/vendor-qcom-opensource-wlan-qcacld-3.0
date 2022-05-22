@@ -23,6 +23,11 @@
 /* default pre cac channel bandwidth */
 #define DEFAULT_PRE_CAC_BANDWIDTH CH_WIDTH_80MHZ
 
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 /**
  * wlan_hdd_sap_pre_cac_success() - Process the pre cac success
  * @data: AP adapter
@@ -30,6 +35,12 @@
  * Return: None
  */
 void wlan_hdd_sap_pre_cac_success(void *data);
+#else
+static inline void wlan_hdd_sap_pre_cac_success(void *data)
+{
+}
+#endif /* PRE_CAC_COMP */
+
 /**
  * wlan_hdd_sap_pre_cac_failure() - Process the pre cac failure
  * @data: AP adapter
@@ -88,6 +99,11 @@ void hdd_send_conditional_chan_switch_status(struct hdd_context *hdd_ctx,
  */
 void hdd_close_pre_cac_adapter(struct hdd_context *hdd_ctx);
 
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifdef PRE_CAC_COMP
 /**
  * hdd_pre_cac_register_cb() - Sets legacy callbacks to osif
  *
@@ -105,6 +121,16 @@ QDF_STATUS hdd_pre_cac_register_cb(void);
  * Return: QDF_STATUS
  */
 void hdd_pre_cac_unregister_cb(void);
+#else
+static inline QDF_STATUS hdd_pre_cac_register_cb(void)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline void hdd_pre_cac_unregister_cb(void)
+{
+}
+#endif /* PRE_CAC_COMP */
 #else
 static inline void wlan_hdd_sap_pre_cac_success(void *data)
 {

@@ -30,3 +30,31 @@ QDF_STATUS wlan_pre_cac_set_status(struct wlan_objmgr_vdev *vdev, bool status)
 {
 	return pre_cac_set_status(vdev, status);
 }
+
+void wlan_pre_cac_set_freq_before_pre_cac(struct wlan_objmgr_vdev *vdev,
+					  qdf_freq_t freq)
+{
+	pre_cac_set_freq_before_pre_cac(vdev, freq);
+}
+
+qdf_freq_t wlan_pre_cac_get_freq_before_pre_cac(struct wlan_objmgr_vdev *vdev)
+{
+	return pre_cac_get_freq_before_pre_cac(vdev);
+}
+
+void wlan_pre_cac_complete_set(struct wlan_objmgr_vdev *vdev,
+			       bool status)
+{
+	pre_cac_complete_set(vdev, status);
+}
+
+bool wlan_pre_cac_complete_get(struct wlan_objmgr_vdev *vdev)
+{
+	return pre_cac_complete_get(vdev);
+}
+
+void wlan_pre_cac_handle_cac_end(struct wlan_objmgr_vdev *vdev)
+{
+	pre_cac_handle_cac_end(vdev);
+}
+

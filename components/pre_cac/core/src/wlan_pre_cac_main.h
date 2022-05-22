@@ -61,9 +61,17 @@
 /**
  * struct pre_cac_vdev_priv - Private object to be stored in vdev
  * @is_pre_cac_on: status of pre_cac
+ * @pre_cac_complete: pre cac complete status
+ * @is_pre_cac_adapter: pre cac adapter status
+ * @freq_before_pre_cac: frequency before pre cac
+ * @pre_cac_freq: pre cac frequency
  */
 struct pre_cac_vdev_priv {
 	bool is_pre_cac_on;
+	bool pre_cac_complete;
+	bool is_pre_cac_adapter;
+	qdf_freq_t freq_before_pre_cac;
+	qdf_freq_t pre_cac_freq;
 };
 
 /**
@@ -225,4 +233,84 @@ QDF_STATUS pre_cac_set_status(struct wlan_objmgr_vdev *vdev, bool status);
  */
 void pre_cac_get_vdev_id(struct wlan_objmgr_psoc *psoc,
 			 uint8_t *vdev_id);
+
+/**
+ * pre_cac_handle_cac_end() - Handle pre cac end
+ * @vdev: vdev object manager
+ *
+ * Return: None
+ */
+void pre_cac_handle_cac_end(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * pre_cac_complete_set() - Set pre cac complete status
+ * @vdev: vdev object manager
+ * @status: status
+ *
+ * Return: None
+ */
+void pre_cac_complete_set(struct wlan_objmgr_vdev *vdev,
+			  bool status);
+
+/**
+ * pre_cac_complete_get() - Get pre cac complete status
+ * @vdev: vdev object manager
+ *
+ * Return: pre cac complete status
+ */
+bool pre_cac_complete_get(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * pre_cac_adapter_set() - Set pre cac adapter flag
+ * @vdev: vdev object manager
+ * @status: status
+ *
+ * Return: None
+ */
+void pre_cac_adapter_set(struct wlan_objmgr_vdev *vdev,
+			 bool status);
+
+/**
+ * pre_cac_adapter_is_active() - Get pre cac adapter status
+ * @vdev: vdev object manager
+ *
+ * Return: pre cac adapter status
+ */
+bool pre_cac_adapter_is_active(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * pre_cac_set_freq_before_pre_cac() - Set frequency before pre cac
+ * @vdev: vdev object manager
+ * @freq: frequency before pre cac
+ *
+ * Return: None
+ */
+void pre_cac_set_freq_before_pre_cac(struct wlan_objmgr_vdev *vdev,
+				     qdf_freq_t freq);
+
+/**
+ * pre_cac_get_freq_before_pre_cac() - Get frequency before pre cac
+ * @vdev: vdev object manager
+ *
+ * Return: frequency before pre cac
+ */
+qdf_freq_t pre_cac_get_freq_before_pre_cac(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * pre_cac_set_freq() - Set pre cac frequency
+ * @vdev: vdev object manager
+ * @freq: pre cac frequency
+ *
+ * Return: None
+ */
+void pre_cac_set_freq(struct wlan_objmgr_vdev *vdev,
+		      qdf_freq_t freq);
+
+/**
+ * pre_cac_get_freq() - Get pre cac frequency
+ * @vdev: vdev object manager
+ *
+ * Return: pre cac frequency
+ */
+qdf_freq_t pre_cac_get_freq(struct wlan_objmgr_vdev *vdev);
 #endif /* end of _WLAN_PRE_CAC_MAIN_H_ */
