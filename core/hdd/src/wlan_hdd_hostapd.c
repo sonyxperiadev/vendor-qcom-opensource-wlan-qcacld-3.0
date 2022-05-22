@@ -5331,7 +5331,8 @@ hdd_handle_acs_2g_preferred_sap_conc(struct wlan_objmgr_psoc *psoc,
 	go_new_ch_freq =
 		policy_mgr_get_alternate_channel_for_sap(psoc,
 							 go_vdev_id,
-							 go_ch_freq);
+							 go_ch_freq,
+							 REG_BAND_UNKNOWN);
 	if (!go_new_ch_freq || WLAN_REG_IS_24GHZ_CH_FREQ(go_new_ch_freq)) {
 		hdd_err("no available 5G channel");
 		return;
