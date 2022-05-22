@@ -1013,6 +1013,11 @@ static bool sap_is_csa_restart_state(struct wlan_objmgr_psoc *psoc,
 }
 
 #ifdef PRE_CAC_SUPPORT
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 static void wlan_sap_pre_cac_radar_ind(struct sap_context *sap_ctx,
 				       struct mac_context *mac_ctx)
 {
@@ -1029,6 +1034,22 @@ static void wlan_sap_pre_cac_radar_ind(struct sap_context *sap_ctx,
 			     eSAP_DFS_RADAR_DETECT_DURING_PRE_CAC,
 			     (void *)eSAP_STATUS_SUCCESS);
 }
+#else
+static void wlan_sap_pre_cac_radar_ind(struct sap_context *sap_ctx,
+				       struct mac_context *mac_ctx)
+{
+	qdf_mc_timer_t *dfs_timer = &mac_ctx->sap.SapDfsInfo.sap_dfs_cac_timer;
+
+	sap_debug("sapdfs: Radar detect on pre cac:%d", sap_ctx->sessionId);
+	if (!sap_ctx->dfs_cac_offload) {
+		qdf_mc_timer_stop(dfs_timer);
+		qdf_mc_timer_destroy(dfs_timer);
+	}
+
+	mac_ctx->sap.SapDfsInfo.is_dfs_cac_timer_running = false;
+	wlan_pre_cac_handle_radar_ind(sap_ctx->vdev);
+}
+#endif /* PRE_CAC_COMP */
 #else
 static inline void
 wlan_sap_pre_cac_radar_ind(struct sap_context *sap_ctx,

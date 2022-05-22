@@ -85,6 +85,14 @@ void wlan_pre_cac_set_freq_before_pre_cac(struct wlan_objmgr_vdev *vdev,
  */
 qdf_freq_t
 wlan_pre_cac_get_freq_before_pre_cac(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * wlan_pre_cac_handle_radar_ind() - Handle pre cac radar indication
+ * @vdev: vdev object manager
+ *
+ * Return: None
+ */
+void wlan_pre_cac_handle_radar_ind(struct wlan_objmgr_vdev *vdev);
 #else
 static inline bool wlan_pre_cac_get_status(struct wlan_objmgr_psoc *psoc)
 {

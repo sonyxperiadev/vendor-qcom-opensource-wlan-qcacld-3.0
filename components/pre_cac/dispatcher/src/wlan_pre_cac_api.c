@@ -53,6 +53,11 @@ bool wlan_pre_cac_complete_get(struct wlan_objmgr_vdev *vdev)
 	return pre_cac_complete_get(vdev);
 }
 
+void wlan_pre_cac_handle_radar_ind(struct wlan_objmgr_vdev *vdev)
+{
+	pre_cac_handle_radar_ind(vdev);
+}
+
 void wlan_pre_cac_handle_cac_end(struct wlan_objmgr_vdev *vdev)
 {
 	pre_cac_handle_cac_end(vdev);

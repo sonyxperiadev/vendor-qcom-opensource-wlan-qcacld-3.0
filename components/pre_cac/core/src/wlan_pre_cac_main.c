@@ -159,6 +159,26 @@ static void pre_cac_conditional_csa_ind(struct wlan_objmgr_psoc *psoc,
 							vdev_id, status);
 }
 
+static void pre_cac_handle_failure(void *data)
+{
+	struct wlan_objmgr_vdev *vdev = (struct wlan_objmgr_vdev *)data;
+
+	pre_cac_complete(vdev, false);
+}
+
+void pre_cac_handle_radar_ind(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_objmgr_psoc *psoc = wlan_vdev_get_psoc(vdev);
+	struct pre_cac_psoc_priv *psoc_priv = pre_cac_psoc_get_priv(psoc);
+
+	pre_cac_conditional_csa_ind(psoc, vdev->vdev_objmgr.vdev_id, false);
+
+	qdf_create_work(0, &psoc_priv->pre_cac_work,
+			pre_cac_handle_failure,
+			vdev);
+	qdf_sched_work(0, &psoc_priv->pre_cac_work);
+}
+
 void pre_cac_handle_cac_end(struct wlan_objmgr_vdev *vdev)
 {
 	struct wlan_objmgr_psoc *psoc = wlan_vdev_get_psoc(vdev);

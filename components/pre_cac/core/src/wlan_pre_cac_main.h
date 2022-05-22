@@ -313,4 +313,12 @@ void pre_cac_set_freq(struct wlan_objmgr_vdev *vdev,
  * Return: pre cac frequency
  */
 qdf_freq_t pre_cac_get_freq(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * pre_cac_handle_radar_ind() - Handle pre cac radar indication
+ * @vdev: vdev object manager
+ *
+ * Return: None
+ */
+void pre_cac_handle_radar_ind(struct wlan_objmgr_vdev *vdev);
 #endif /* end of _WLAN_PRE_CAC_MAIN_H_ */

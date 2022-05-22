@@ -22,6 +22,7 @@
 #include "osif_pre_cac.h"
 #include "wlan_pre_cac_ucfg_api.h"
 #include "wlan_ipa_ucfg_api.h"
+#include "wlan_hdd_son.h"
 
 void hdd_send_conditional_chan_switch_status(struct hdd_context *hdd_ctx,
 					     struct wireless_dev *wdev,
@@ -92,7 +93,15 @@ static int wlan_hdd_set_pre_cac_complete_status(struct hdd_adapter *ap_adapter,
  *
  * Return: None
  */
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 static void __wlan_hdd_sap_pre_cac_failure(struct hdd_adapter *adapter)
+#else
+static void wlan_hdd_pre_cac_failure(struct hdd_adapter *adapter)
+#endif
 {
 	struct hdd_context *hdd_ctx;
 
@@ -107,6 +116,11 @@ static void __wlan_hdd_sap_pre_cac_failure(struct hdd_adapter *adapter)
 	hdd_exit();
 }
 
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 /**
  * wlan_hdd_sap_pre_cac_failure() - Process the pre cac failure
  * @data: AP adapter
@@ -130,11 +144,6 @@ void wlan_hdd_sap_pre_cac_failure(void *data)
 	osif_vdev_sync_trans_stop(vdev_sync);
 }
 
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
 /**
  * __wlan_hdd_sap_pre_cac_success() - Process the pre cac result
  * @adapter: AP adapter
@@ -879,23 +888,25 @@ wlan_hdd_pre_cac_conditional_freq_switch_ind(struct wlan_objmgr_vdev *vdev,
 					     bool completed)
 {
 	struct wlan_objmgr_psoc *psoc = wlan_vdev_get_psoc(vdev);
+	uint8_t vdev_id = vdev->vdev_objmgr.vdev_id;
 	struct hdd_adapter *adapter;
 	struct hdd_ap_ctx *ap_ctx;
 
+	adapter = wlan_hdd_get_adapter_from_vdev(psoc, vdev_id);
+	if (!adapter) {
+		hdd_err("Invalid adapter");
+		return;
+	}
+
 	if (completed) {
-		uint8_t vdev_id = vdev->vdev_objmgr.vdev_id;
-
-		adapter = wlan_hdd_get_adapter_from_vdev(psoc, vdev_id);
-		if (!adapter) {
-			hdd_err("Invalid adapter");
-			return;
-		}
-
 		ap_ctx = WLAN_HDD_GET_AP_CTX_PTR(adapter);
 		ap_ctx->dfs_cac_block_tx = false;
 		ucfg_ipa_set_dfs_cac_tx(adapter->hdd_ctx->pdev,
 					ap_ctx->dfs_cac_block_tx);
 		adapter->hdd_ctx->dev_dfs_cac_status = DFS_CAC_ALREADY_DONE;
+	} else {
+		adapter->hdd_ctx->dev_dfs_cac_status = DFS_CAC_NEVER_DONE;
+		hdd_son_deliver_cac_status_event(adapter, true);
 	}
 }
 
@@ -913,7 +924,10 @@ wlan_hdd_pre_cac_complete(struct wlan_objmgr_vdev *vdev,
 		return;
 	}
 
-	wlan_hdd_pre_cac_success(adapter);
+	if (QDF_IS_STATUS_SUCCESS(status))
+		wlan_hdd_pre_cac_success(adapter);
+	else
+		wlan_hdd_pre_cac_failure(adapter);
 }
 
 struct osif_pre_cac_legacy_ops pre_cac_legacy_ops = {
