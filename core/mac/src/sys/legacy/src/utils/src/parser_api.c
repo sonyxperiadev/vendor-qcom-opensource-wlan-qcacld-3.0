@@ -10302,7 +10302,8 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 						DOT11F_EID_SUPPRATES;
 		}
 
-		populate_dot11f_ht_caps(mac_ctx, NULL, &ht_caps);
+		if (!WLAN_REG_IS_6GHZ_CHAN_FREQ(chan_freq))
+			populate_dot11f_ht_caps(mac_ctx, NULL, &ht_caps);
 		if ((ht_caps.present && frm->HTCaps.present &&
 		     qdf_mem_cmp(&ht_caps, &frm->HTCaps, sizeof(ht_caps))) ||
 		     (ht_caps.present && !frm->HTCaps.present)) {
@@ -10348,7 +10349,8 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 			non_inher_ie_lists[non_inher_len++] = DOT11F_EID_EXTCAP;
 		}
 
-		populate_dot11f_vht_caps(mac_ctx, NULL, &vht_caps);
+		if (!WLAN_REG_IS_6GHZ_CHAN_FREQ(chan_freq))
+			populate_dot11f_vht_caps(mac_ctx, NULL, &vht_caps);
 		if ((vht_caps.present && frm->VHTCaps.present &&
 		     qdf_mem_cmp(&vht_caps, &frm->VHTCaps, sizeof(vht_caps))) ||
 		     (vht_caps.present && !frm->VHTCaps.present)) {
