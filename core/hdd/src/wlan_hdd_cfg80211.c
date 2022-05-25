@@ -24158,14 +24158,16 @@ static int wlan_hdd_cfg80211_set_bitrate_mask(struct wiphy *wiphy,
 }
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
-static void wlan_hdd_select_queue(struct net_device *dev, struct sk_buff *skb)
+static uint16_t wlan_hdd_select_queue(struct net_device *dev,
+				      struct sk_buff *skb)
 {
-	hdd_select_queue(dev, skb, NULL);
+	return hdd_select_queue(dev, skb, NULL);
 }
 #else
-static void wlan_hdd_select_queue(struct net_device *dev, struct sk_buff *skb)
+static uint16_t wlan_hdd_select_queue(struct net_device *dev,
+				      struct sk_buff *skb)
 {
-	hdd_select_queue(dev, skb, NULL, NULL);
+	return hdd_select_queue(dev, skb, NULL, NULL);
 }
 #endif
 
@@ -24203,7 +24205,7 @@ static int __wlan_hdd_cfg80211_tx_control_port(struct wiphy *wiphy,
 	skb_reset_mac_header(nbuf);
 
 	netif_tx_lock(dev);
-	wlan_hdd_select_queue(dev, nbuf);
+	skb_set_queue_mapping(nbuf, wlan_hdd_select_queue(dev, nbuf));
 	dev->netdev_ops->ndo_start_xmit(nbuf, dev);
 	netif_tx_unlock(dev);
 
