@@ -49,6 +49,7 @@
 /* 120 seconds, for WPS */
 #define WAIT_FOR_WPS_KEY_TIMEOUT_PERIOD (120 * QDF_MC_TIMER_TO_SEC_UNIT)
 
+#define MLME_PEER_SET_KEY_WAKELOCK_TIMEOUT WAKELOCK_DURATION_RECOMMENDED
 /* QCN IE definitions */
 #define QCN_IE_HDR_LEN     6
 
@@ -156,6 +157,9 @@ struct sae_auth_retry {
  * @allow_kickout: True if the peer can be kicked out. Peer can't be kicked
  *                 out if it is being steered
  * @nss: Peer NSS
+ * @peer_set_key_wakelock: wakelock to protect peer set key op with firmware
+ * @peer_set_key_runtime_wakelock: runtime pm wakelock for set key
+ * @is_key_wakelock_set: flag to check if key wakelock is pending to release
  */
 struct peer_mlme_priv_obj {
 	uint8_t last_pn_valid;
@@ -171,6 +175,9 @@ struct peer_mlme_priv_obj {
 	bool allow_kickout;
 #endif
 	uint8_t nss;
+	qdf_wake_lock_t peer_set_key_wakelock;
+	qdf_runtime_lock_t peer_set_key_runtime_wakelock;
+	bool is_key_wakelock_set;
 };
 
 /**
@@ -1143,4 +1150,30 @@ wlan_mlo_sta_mlo_concurency_set_link(struct wlan_objmgr_vdev *vdev,
 QDF_STATUS wlan_mlme_get_mac_vdev_id(struct wlan_objmgr_pdev *pdev,
 				     uint8_t vdev_id,
 				     struct qdf_mac_addr *self_mac);
+
+/**
+ * wlan_acquire_peer_key_wakelock -api to get key wakelock
+ * @pdev: pdev
+ * @mac_addr: peer mac addr
+ *
+ * This function acquires wakelock and prevent runtime pm during key
+ * installation
+ *
+ * Return: None
+ */
+void wlan_acquire_peer_key_wakelock(struct wlan_objmgr_pdev *pdev,
+				    uint8_t *mac_addr);
+
+/**
+ * wlan_release_peer_key_wakelock -api to release key wakelock
+ * @pdev: pdev
+ * @mac_addr: peer mac addr
+ *
+ * This function releases wakelock and allow runtime pm after key
+ * installation
+ *
+ * Return: None
+ */
+void wlan_release_peer_key_wakelock(struct wlan_objmgr_pdev *pdev,
+				    uint8_t *mac_addr);
 #endif

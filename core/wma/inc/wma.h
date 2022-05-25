@@ -687,8 +687,6 @@ struct wma_invalid_peer_params {
  * @ns_offload_req: cached ns offload request
  * @rcpi_req: rcpi request
  * @in_bmps: Whether bmps for this interface has been enabled
- * @vdev_set_key_wakelock: wakelock to protect vdev set key op with firmware
- * @vdev_set_key_runtime_wakelock: runtime pm wakelock for set key
  * @ch_freq: channel frequency
  * @roam_scan_stats_req: cached roam scan stats request
  * @wma_invalid_peer_params: structure storing invalid peer params
@@ -735,8 +733,6 @@ struct wma_txrx_node {
 	bool in_bmps;
 	struct beacon_filter_param beacon_filter;
 	bool beacon_filter_enabled;
-	qdf_wake_lock_t vdev_set_key_wakelock;
-	qdf_runtime_lock_t vdev_set_key_runtime_wakelock;
 	struct roam_synch_frame_ind roam_synch_frame_ind;
 	bool is_waiting_for_key;
 	uint32_t ch_freq;
