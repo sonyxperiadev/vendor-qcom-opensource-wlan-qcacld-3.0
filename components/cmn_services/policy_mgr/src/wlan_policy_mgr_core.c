@@ -1093,6 +1093,7 @@ void policy_mgr_update_hw_mode_conn_info(struct wlan_objmgr_psoc *psoc,
 	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
 
 	policy_mgr_dump_connection_status_info(psoc);
+	policy_mgr_dump_current_concurrency(psoc);
 }
 
 void policy_mgr_pdev_set_hw_mode_cb(uint32_t status,

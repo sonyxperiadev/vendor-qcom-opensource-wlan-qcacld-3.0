@@ -3137,7 +3137,8 @@ void policy_mgr_move_vdev_from_disabled_to_connection_tbl(
 
 	status = policy_mgr_delete_from_disabled_links(pm_ctx, vdev_id);
 	if (QDF_IS_STATUS_ERROR(status)) {
-		policy_mgr_err("Disabled link not found for vdev %d", vdev_id);
+		policy_mgr_debug("Disabled link not found for vdev %d",
+				 vdev_id);
 		return;
 	}
 
@@ -3168,8 +3169,8 @@ policy_mgr_add_to_disabled_links(struct policy_mgr_psoc_priv_obj *pm_ctx,
 	if (i < MAX_NUMBER_OF_DISABLE_LINK) {
 		pm_disabled_ml_links[i].freq = freq;
 		qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
-		policy_mgr_info("Disabled link already present vdev_id %d, update freq %d",
-				vdev_id, freq);
+		policy_mgr_debug("Disabled link already present vdev %d, pm_mode %d, update freq %d",
+				 vdev_id, pm_mode, freq);
 
 		return QDF_STATUS_E_EXISTS;
 	}
@@ -3181,6 +3182,8 @@ policy_mgr_add_to_disabled_links(struct policy_mgr_psoc_priv_obj *pm_ctx,
 			pm_disabled_ml_links[i].mode = pm_mode;
 			pm_disabled_ml_links[i].in_use = true;
 			pm_disabled_ml_links[i].freq = freq;
+			policy_mgr_debug("Disabled link added vdev id: %d freq: %d pm_mode %d",
+					 vdev_id, freq, pm_mode);
 			break;
 		}
 	}
@@ -3201,6 +3204,7 @@ void policy_mgr_move_vdev_from_connection_to_disabled_tbl(
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
 	qdf_freq_t freq;
 	enum QDF_OPMODE mode;
+	QDF_STATUS status;
 
 	pm_ctx = policy_mgr_get_context(psoc);
 	if (!pm_ctx) {
@@ -3219,10 +3223,20 @@ void policy_mgr_move_vdev_from_connection_to_disabled_tbl(
 		return;
 	}
 	freq = wlan_get_operation_chan_freq_vdev_id(pm_ctx->pdev, vdev_id);
-	/* Remove entry if present in pm_conc_connection_list */
-	policy_mgr_decr_session_set_pcl(psoc, mode, vdev_id);
+	status = policy_mgr_check_conn_with_mode_and_vdev_id(psoc, PM_STA_MODE,
+							     vdev_id);
+	/*
+	 * Remove entry if present in pm_conc_connection_list, if not just add
+	 * it in disabled table.
+	 */
+	if (QDF_IS_STATUS_SUCCESS(status))
+		policy_mgr_decr_session_set_pcl(psoc, mode, vdev_id);
+	else
+		policy_mgr_debug("Connection tbl dont have vdev %d in STA mode, Add it in disabled tbl",
+				 vdev_id);
 
 	policy_mgr_add_to_disabled_links(pm_ctx, freq, mode, vdev_id);
+	policy_mgr_dump_current_concurrency(psoc);
 }
 
 bool
@@ -3567,6 +3581,7 @@ QDF_STATUS policy_mgr_decr_active_session(struct wlan_objmgr_psoc *psoc,
 		 * it can be present in pm_disabled_ml_links.
 		 */
 		policy_mgr_delete_from_disabled_links(pm_ctx, session_id);
+		policy_mgr_dump_current_concurrency(psoc);
 		return qdf_status;
 	}
 
@@ -5070,12 +5085,8 @@ policy_mgr_handle_sap_cli_go_ml_sta_up_csa(struct wlan_objmgr_psoc *psoc,
 	policy_mgr_debug("vdev %d: num_ml_sta %d disabled %d num_p2p_sap %d",
 			 vdev_id, num_ml_sta, num_disabled_ml_sta, num_p2p_sap);
 	if (num_ml_sta < 2 || num_ml_sta > MAX_NUMBER_OF_CONC_CONNECTIONS ||
-	    num_p2p_sap > MAX_NUMBER_OF_CONC_CONNECTIONS) {
-		policy_mgr_err("vdev %d: invalid num_ml_sta %d disabled %d num_p2p_sap %d",
-			       vdev_id, num_ml_sta, num_disabled_ml_sta,
-			       num_p2p_sap);
+	    num_p2p_sap > MAX_NUMBER_OF_CONC_CONNECTIONS)
 		return;
-	}
 
 	num_affected_link = policy_mgr_get_affected_links_for_go_sap_cli(psoc,
 						num_ml_sta, ml_sta_vdev_lst,
@@ -5123,7 +5134,7 @@ policy_mgr_handle_ml_sta_links_on_vdev_up_csa(struct wlan_objmgr_psoc *psoc,
 	struct wlan_objmgr_vdev *vdev;
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
-							    WLAN_POLICY_MGR_ID);
+						    WLAN_POLICY_MGR_ID);
 	if (!vdev) {
 		policy_mgr_err("vdev %d: invalid vdev", vdev_id);
 		return;
@@ -5176,12 +5187,8 @@ void policy_mgr_re_enable_ml_sta_on_p2p_sap_down(struct wlan_objmgr_psoc *psoc,
 			 vdev_id, num_ml_sta, num_disabled_ml_sta, num_p2p_sap);
 
 	if (num_ml_sta < 2 || num_ml_sta > MAX_NUMBER_OF_CONC_CONNECTIONS ||
-	    num_p2p_sap > MAX_NUMBER_OF_CONC_CONNECTIONS) {
-		policy_mgr_err("vdev %d: invalid num_ml_sta %d disabled %d num_p2p_sap %d",
-			       vdev_id, num_ml_sta, num_disabled_ml_sta,
-			       num_p2p_sap);
+	    num_p2p_sap > MAX_NUMBER_OF_CONC_CONNECTIONS)
 		return;
-	}
 
 	/* If link can not be allowed to enable then skip checking further. */
 	if (!policy_mgr_sta_ml_link_enable_allowed(psoc, num_disabled_ml_sta,
@@ -5220,7 +5227,7 @@ void policy_mgr_handle_ml_sta_links_on_vdev_down(struct wlan_objmgr_psoc *psoc,
 	struct wlan_objmgr_vdev *vdev;
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
-							    WLAN_POLICY_MGR_ID);
+						    WLAN_POLICY_MGR_ID);
 	if (!vdev) {
 		policy_mgr_err("vdev %d: invalid vdev", vdev_id);
 		return;
@@ -6373,7 +6380,6 @@ void policy_mgr_dump_connection_status_info(struct wlan_objmgr_psoc *psoc)
 				 pm_conc_connection_list[i].ch_flagext);
 	}
 	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
-	policy_mgr_dump_disabled_ml_links(pm_ctx);
 
 	policy_mgr_dump_freq_range(pm_ctx);
 	policy_mgr_validate_conn_info(psoc);

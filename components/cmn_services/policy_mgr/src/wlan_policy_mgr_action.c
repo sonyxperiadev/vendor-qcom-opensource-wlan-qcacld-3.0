@@ -403,7 +403,9 @@ QDF_STATUS policy_mgr_update_connection_info(struct wlan_objmgr_psoc *psoc,
 			policy_mgr_get_bw(conn_table_entry.chan_width),
 			conn_table_entry.mac_id, chain_mask,
 			nss, vdev_id, true, true, conn_table_entry.ch_flagext);
+	policy_mgr_dump_current_concurrency(psoc);
 	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+
 	/* do we need to change the HW mode */
 	policy_mgr_check_n_start_opportunistic_timer(psoc);
 	policy_mgr_handle_ml_sta_links_on_vdev_up_csa(psoc,
