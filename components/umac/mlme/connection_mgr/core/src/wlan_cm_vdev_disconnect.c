@@ -436,8 +436,9 @@ wlan_cm_mlo_update_disconnecting_vdev_id(struct wlan_objmgr_psoc *psoc,
 	}
 
 	for (i = 0; i < num_links; i++) {
-		if (wlan_vdev_mlme_is_mlo_vdev(vdev_list[i]) &&
-		    wlan_cm_is_vdev_disconnecting(vdev_list[i])) {
+		if (wlan_vdev_mlme_is_mlo_link_vdev(vdev_list[i]) &&
+		    wlan_cm_get_active_req_type(vdev_list[i]) ==
+							CM_DISCONNECT_ACTIVE) {
 			/*
 			 * This is expected to match only once as per current
 			 * design.
@@ -448,7 +449,7 @@ wlan_cm_mlo_update_disconnecting_vdev_id(struct wlan_objmgr_psoc *psoc,
 	}
 
 release_mlo_ref:
-	for (i = 0; i < QDF_ARRAY_SIZE(vdev_list); i++)
+	for (i = 0; i < num_links; i++)
 		mlo_release_vdev_ref(vdev_list[i]);
 
 done:
