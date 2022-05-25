@@ -7186,8 +7186,9 @@ int wlan_hdd_get_link_speed(struct hdd_adapter *adapter, uint32_t *link_speed)
 	if (ret)
 		return ret;
 
-	/* Linkspeed is allowed only for P2P mode */
-	if (adapter->device_mode != QDF_P2P_CLIENT_MODE) {
+	/* Linkspeed is allowed for CLIENT/STA mode */
+	if (adapter->device_mode != QDF_P2P_CLIENT_MODE &&
+	    adapter->device_mode != QDF_STA_MODE) {
 		hdd_err("Link Speed is not allowed in Device mode %s(%d)",
 			qdf_opmode_str(adapter->device_mode),
 			adapter->device_mode);
