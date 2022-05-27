@@ -7647,11 +7647,14 @@ bool policy_mgr_is_restart_sap_required(struct wlan_objmgr_psoc *psoc,
 		if (connection[i].freq != freq &&
 		    policy_mgr_are_2_freq_on_same_mac(psoc, freq,
 						      connection[i].freq)) {
+			policy_mgr_debug("SAP:%d and STA:%d on same mac. Restart SAP ",
+					 freq, connection[i].freq);
 			restart_required = true;
 			break;
 		}
 		if (connection[i].freq == freq &&
 		    !sta_sap_scc_on_dfs_chan && sap_on_dfs) {
+			policy_mgr_debug("Move SAP out of DFS ch:%d", freq);
 			restart_required = true;
 			break;
 		}
@@ -7659,6 +7662,7 @@ bool policy_mgr_is_restart_sap_required(struct wlan_objmgr_psoc *psoc,
 		if (connection[i].freq == freq &&
 		    !sta_sap_scc_allowed_on_indoor_ch &&
 		    wlan_reg_is_freq_indoor(pm_ctx->pdev, connection[i].freq)) {
+			policy_mgr_debug("Move SAP out of indoor ch:%d", freq);
 			restart_required = true;
 			break;
 		}
@@ -7681,6 +7685,9 @@ bool policy_mgr_is_restart_sap_required(struct wlan_objmgr_psoc *psoc,
 		    !wlan_reg_is_dfs_for_freq(pm_ctx->pdev,
 					      connection[i].freq) &&
 		    WLAN_REG_IS_5GHZ_CH_FREQ(pm_ctx->user_config_sap_ch_freq)) {
+			policy_mgr_debug("Move SAP from:%d to STA ch:%d  (sap start freq:%d)",
+					 freq, connection[i].freq,
+					 pm_ctx->user_config_sap_ch_freq);
 			restart_required = true;
 
 			if (wlan_reg_is_freq_indoor(pm_ctx->pdev,
@@ -7708,6 +7715,7 @@ bool policy_mgr_is_restart_sap_required(struct wlan_objmgr_psoc *psoc,
 			restart_required = true;
 		}
 	}
+
 	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
 
 	return restart_required;
