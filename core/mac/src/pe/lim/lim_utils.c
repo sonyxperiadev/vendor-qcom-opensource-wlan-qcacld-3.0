@@ -8601,7 +8601,11 @@ void lim_set_eht_caps(struct mac_context *mac, struct pe_session *session,
 	tDot11fIEeht_cap dot11_cap;
 	tDot11fIEhe_cap dot11_he_cap;
 	struct wlan_eht_cap_info *eht_cap;
-	bool is_band_2g = WLAN_REG_IS_24GHZ_CH_FREQ(session->curr_op_freq);
+	bool is_band_2g = false;
+
+	/* If session = NULL, set 5G capabilities from mlme_cfg. */
+	if (session)
+		is_band_2g = WLAN_REG_IS_24GHZ_CH_FREQ(session->curr_op_freq);
 
 	populate_dot11f_eht_caps(mac, session, &dot11_cap);
 	populate_dot11f_he_caps(mac, session, &dot11_he_cap);
@@ -8792,12 +8796,8 @@ QDF_STATUS lim_send_eht_caps_ie(struct mac_context *mac_ctx,
 
 	qdf_mem_copy(&eht_caps[2], EHT_CAP_OUI_TYPE, EHT_CAP_OUI_SIZE);
 
-	if (!session)
-		session = pe_find_session_by_vdev_id(mac_ctx, vdev_id);
-	if (session)
-		lim_set_eht_caps(mac_ctx, session, eht_caps, eht_cap_total_len);
-	else
-		pe_err("session not found for given vdev_id %d", vdev_id);
+	session = pe_find_session_by_vdev_id(mac_ctx, vdev_id);
+	lim_set_eht_caps(mac_ctx, session, eht_caps, eht_cap_total_len);
 
 	status_2g = lim_send_ie(mac_ctx, vdev_id, DOT11F_EID_EHT_CAP,
 				CDS_BAND_2GHZ, &eht_caps[2],
