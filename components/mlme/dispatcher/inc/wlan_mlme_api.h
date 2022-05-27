@@ -981,6 +981,16 @@ QDF_STATUS mlme_update_tgt_he_caps_in_cfg(struct wlan_objmgr_psoc *psoc,
  */
 QDF_STATUS mlme_update_tgt_eht_caps_in_cfg(struct wlan_objmgr_psoc *psoc,
 					  struct wma_tgt_cfg *cfg);
+
+/**
+ * wlan_mlme_convert_eht_op_bw_to_phy_ch_width() - convert channel width in eht
+ *                                                 operation IE to phy_ch_width
+ * @channel_width: channel width in eht operation IE
+ *
+ * Return: phy_ch_width
+ */
+enum phy_ch_width wlan_mlme_convert_eht_op_bw_to_phy_ch_width(
+						uint8_t channel_width);
 #endif
 
 /**

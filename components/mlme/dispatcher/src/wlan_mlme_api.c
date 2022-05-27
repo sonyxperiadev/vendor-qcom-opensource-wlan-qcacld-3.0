@@ -1042,6 +1042,23 @@ QDF_STATUS mlme_update_tgt_eht_caps_in_cfg(struct wlan_objmgr_psoc *psoc,
 	}
 	return QDF_STATUS_SUCCESS;
 }
+
+enum phy_ch_width wlan_mlme_convert_eht_op_bw_to_phy_ch_width(
+						uint8_t channel_width)
+{
+	enum phy_ch_width phy_bw = CH_WIDTH_20MHZ;
+
+	if (channel_width == WLAN_EHT_CHWIDTH_320)
+		phy_bw = CH_WIDTH_320MHZ;
+	else if (channel_width == WLAN_EHT_CHWIDTH_160)
+		phy_bw = CH_WIDTH_160MHZ;
+	else if (channel_width == WLAN_EHT_CHWIDTH_80)
+		phy_bw = CH_WIDTH_80MHZ;
+	else if (channel_width == WLAN_EHT_CHWIDTH_40)
+		phy_bw = CH_WIDTH_40MHZ;
+
+	return phy_bw;
+}
 #endif
 
 #ifdef WLAN_FEATURE_11BE_MLO
