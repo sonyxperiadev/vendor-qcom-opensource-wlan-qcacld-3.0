@@ -24261,9 +24261,9 @@ static int __wlan_hdd_cfg80211_tx_control_port(struct wiphy *wiphy,
 	nbuf->protocol = htons(ETH_P_PAE);
 	skb_reset_network_header(nbuf);
 	skb_reset_mac_header(nbuf);
+	skb_set_queue_mapping(nbuf, wlan_hdd_select_queue(dev, nbuf));
 
 	netif_tx_lock(dev);
-	skb_set_queue_mapping(nbuf, wlan_hdd_select_queue(dev, nbuf));
 	dev->netdev_ops->ndo_start_xmit(nbuf, dev);
 	netif_tx_unlock(dev);
 
