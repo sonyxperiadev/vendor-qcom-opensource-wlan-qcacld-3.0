@@ -396,7 +396,6 @@ bool wlan_cm_roam_is_pcl_per_vdev_active(struct wlan_objmgr_psoc *psoc,
  * @freq: Frequency in the given frequency list for the STA that is about to
  * connect
  * @connected_sta_freq: 1st connected sta freq
- * @opmode: Operational mode
  *
  * Make sure to validate the STA+STA condition before calling this
  *
@@ -405,18 +404,12 @@ bool wlan_cm_roam_is_pcl_per_vdev_active(struct wlan_objmgr_psoc *psoc,
  */
 static bool
 wlan_cm_dual_sta_is_freq_allowed(struct wlan_objmgr_psoc *psoc,
-				 uint32_t freq, qdf_freq_t connected_sta_freq,
-				 enum QDF_OPMODE opmode)
+				 qdf_freq_t freq, qdf_freq_t connected_sta_freq)
 {
-	enum reg_wifi_band band;
-
-	if (opmode != QDF_STA_MODE || !connected_sta_freq)
+	if (!connected_sta_freq)
 		return true;
 
-	band = wlan_reg_freq_to_band(connected_sta_freq);
-	/* Reject if both are 2.4Ghz or both are not 2.4Ghz (5Ghz or 6Ghz) */
-	if ((band == REG_BAND_2G && WLAN_REG_IS_24GHZ_CH_FREQ(freq)) ||
-	    (band != REG_BAND_2G && !WLAN_REG_IS_24GHZ_CH_FREQ(freq)))
+	if (policy_mgr_are_2_freq_on_same_mac(psoc, freq, connected_sta_freq))
 		return false;
 
 	return true;
@@ -515,8 +508,7 @@ wlan_cm_dual_sta_roam_update_connect_channels(struct wlan_objmgr_psoc *psoc,
 	for (i = 0; i < num_channels; i++) {
 		is_ch_allowed =
 			wlan_cm_dual_sta_is_freq_allowed(psoc, channel_list[i],
-							 op_ch_freq_list[0],
-							 QDF_STA_MODE);
+							 op_ch_freq_list[0]);
 		if (!is_ch_allowed)
 			continue;
 
