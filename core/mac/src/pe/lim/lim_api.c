@@ -2783,11 +2783,8 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 		return status;
 	}
 
-	if (roam_sync_ind_ptr->auth_status ==
-	    ROAM_AUTH_STATUS_AUTHENTICATED) {
-		ft_session_ptr->is_key_installed = true;
+	if (roam_sync_ind_ptr->auth_status == ROAM_AUTH_STATUS_AUTHENTICATED)
 		curr_sta_ds->is_key_installed = true;
-	}
 
 	reassoc_resp = (uint8_t *)roam_sync_ind_ptr +
 			roam_sync_ind_ptr->reassocRespOffset;

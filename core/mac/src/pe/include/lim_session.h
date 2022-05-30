@@ -703,7 +703,6 @@ struct pe_session {
 	bool isNonRoamReassoc;
 	qdf_mc_timer_t pmf_retry_timer;
 	struct comeback_timer_info pmf_retry_timer_info;
-	uint8_t  is_key_installed;
 	/* timer for resetting protection fileds at regular intervals */
 	qdf_mc_timer_t protection_fields_reset_timer;
 	/* timer to decrement CSA/ECSA count */
