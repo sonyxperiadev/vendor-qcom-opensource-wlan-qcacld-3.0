@@ -502,6 +502,9 @@ struct sme_context {
 			(const struct oem_data *oem_event_data,
 			 uint8_t vdev_id);
 	uint8_t oem_data_vdev_id;
+	/* async oem event callback */
+	void (*oem_data_async_event_handler_cb)
+			(const struct oem_data *oem_event_data);
 #endif
 
 #ifdef MULTI_CLIENT_LL_SUPPORT

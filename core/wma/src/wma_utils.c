@@ -5014,11 +5014,6 @@ int wma_oem_event_handler(void *wma_ctx, uint8_t *event_buff, uint32_t len)
 		return -EINVAL;
 	}
 
-	if (!pmac->sme.oem_data_event_handler_cb) {
-		wma_err("oem data handler cb is not registered");
-		return -EINVAL;
-	}
-
 	param_buf =
 		   (WMI_OEM_DATA_EVENTID_param_tlvs *)event_buff;
 	if (!param_buf) {
@@ -5040,8 +5035,12 @@ int wma_oem_event_handler(void *wma_ctx, uint8_t *event_buff, uint32_t len)
 
 	oem_event_data.data_len = event->data_len;
 	oem_event_data.data = param_buf->data;
-	pmac->sme.oem_data_event_handler_cb(&oem_event_data,
-					    pmac->sme.oem_data_vdev_id);
+
+	if (pmac->sme.oem_data_event_handler_cb)
+		pmac->sme.oem_data_event_handler_cb(&oem_event_data,
+						    pmac->sme.oem_data_vdev_id);
+	else if (pmac->sme.oem_data_async_event_handler_cb)
+		pmac->sme.oem_data_async_event_handler_cb(&oem_event_data);
 
 	return QDF_STATUS_SUCCESS;
 }

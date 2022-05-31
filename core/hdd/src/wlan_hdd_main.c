@@ -166,6 +166,8 @@
 #include "pld_common.h"
 #include "wlan_hdd_pre_cac.h"
 
+#include "sme_api.h"
+
 #ifdef CNSS_GENL
 #ifdef CONFIG_CNSS_OUT_OF_TREE
 #include "cnss_nl.h"
@@ -15226,6 +15228,8 @@ static int hdd_features_init(struct hdd_context *hdd_ctx)
 	hdd_thermal_stats_cmd_init(hdd_ctx);
 	sme_set_cal_failure_event_cb(hdd_ctx->mac_handle,
 				     hdd_cal_fail_send_event);
+	sme_async_oem_event_init(hdd_ctx->mac_handle,
+				 hdd_oem_event_async_cb);
 
 	hdd_exit();
 	return 0;
@@ -15241,6 +15245,7 @@ static int hdd_features_init(struct hdd_context *hdd_ctx)
  */
 static void hdd_features_deinit(struct hdd_context *hdd_ctx)
 {
+	sme_async_oem_event_deinit(hdd_ctx->mac_handle);
 	wlan_hdd_gpio_wakeup_deinit(hdd_ctx);
 	wlan_hdd_twt_deinit(hdd_ctx);
 	wlan_hdd_deinit_chan_info(hdd_ctx);

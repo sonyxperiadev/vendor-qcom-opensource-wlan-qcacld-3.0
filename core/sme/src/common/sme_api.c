@@ -3965,6 +3965,58 @@ QDF_STATUS sme_oem_data_cmd(mac_handle_t mac_handle,
 	SME_EXIT();
 	return status;
 }
+
+void sme_oem_event_deinit(mac_handle_t mac_handle)
+{
+	QDF_STATUS status;
+	struct mac_context *mac = MAC_CONTEXT(mac_handle);
+
+	SME_ENTER();
+
+	status = sme_acquire_global_lock(&mac->sme);
+	if (QDF_IS_STATUS_SUCCESS(status)) {
+		mac->sme.oem_data_event_handler_cb = NULL;
+		mac->sme.oem_data_vdev_id = WMA_INVALID_VDEV_ID;
+		sme_release_global_lock(&mac->sme);
+	}
+
+	SME_EXIT();
+}
+
+void sme_async_oem_event_init(mac_handle_t mac_handle,
+			      void (*oem_data_async_event_handler_cb)
+			      (const struct oem_data *oem_event_data))
+{
+	QDF_STATUS status;
+	struct mac_context *mac = MAC_CONTEXT(mac_handle);
+
+	SME_ENTER();
+
+	status = sme_acquire_global_lock(&mac->sme);
+	if (QDF_IS_STATUS_SUCCESS(status)) {
+		mac->sme.oem_data_async_event_handler_cb =
+		oem_data_async_event_handler_cb;
+		sme_release_global_lock(&mac->sme);
+	}
+
+	SME_EXIT();
+}
+
+void sme_async_oem_event_deinit(mac_handle_t mac_handle)
+{
+	QDF_STATUS status;
+	struct mac_context *mac = MAC_CONTEXT(mac_handle);
+
+	SME_ENTER();
+
+	status = sme_acquire_global_lock(&mac->sme);
+	if (QDF_IS_STATUS_SUCCESS(status)) {
+		mac->sme.oem_data_async_event_handler_cb = NULL;
+		sme_release_global_lock(&mac->sme);
+	}
+
+	SME_EXIT();
+}
 #endif
 
 #define STA_NSS_CHAINS_SHIFT               0

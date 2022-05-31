@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -285,6 +286,14 @@ extern const struct nla_policy
 
 #ifdef FEATURE_OEM_DATA
 /**
+ * hdd_oem_event_async_cb() - callback for oem data async event
+ * @oem_event_data: oem data received in the event from the FW
+ *
+ * Return: None
+ */
+void hdd_oem_event_async_cb(const struct oem_data *oem_event_data);
+
+/**
  * hdd_oem_event_handler_cb() - callback for oem data event
  * @oem_event_data: oem data received in the event from the FW
  * @vdev_id: vdev id
@@ -298,6 +307,9 @@ static inline void hdd_oem_event_handler_cb(void *oem_event_data,
 					    uint8_t vdev_id)
 {
 }
-#endif
 
+static inline void hdd_oem_event_async_cb(void *oem_event_data)
+{
+}
+#endif
 #endif /* __WLAN_HDD_OEM_DATA_H__ */

@@ -1133,6 +1133,41 @@ oem_data_attr_policy[QCA_WLAN_VENDOR_ATTR_OEM_DATA_PARAMS_MAX + 1] = {
 	[QCA_WLAN_VENDOR_ATTR_OEM_DATA_RESPONSE_EXPECTED] = {.type = NLA_FLAG},
 };
 
+void hdd_oem_event_async_cb(const struct oem_data *oem_event_data)
+{
+	struct sk_buff *vendor_event;
+	uint32_t len;
+	int ret;
+	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
+
+	hdd_enter();
+
+	ret = wlan_hdd_validate_context(hdd_ctx);
+	if (ret)
+		return;
+
+	len = nla_total_size(oem_event_data->data_len) + NLMSG_HDRLEN;
+	vendor_event = cfg80211_vendor_event_alloc(
+				hdd_ctx->wiphy, NULL, len,
+				QCA_NL80211_VENDOR_SUBCMD_OEM_DATA_INDEX,
+				GFP_KERNEL);
+
+	if (!vendor_event) {
+		hdd_err("cfg80211_vendor_event_alloc failed");
+		return;
+	}
+
+	ret = nla_put(vendor_event, QCA_WLAN_VENDOR_ATTR_OEM_DATA_CMD_DATA,
+		      oem_event_data->data_len, oem_event_data->data);
+	if (ret) {
+		hdd_err("OEM event put fails status %d", ret);
+		kfree_skb(vendor_event);
+		return;
+	}
+	cfg80211_vendor_event(vendor_event, GFP_KERNEL);
+	hdd_exit();
+}
+
 void hdd_oem_event_handler_cb(const struct oem_data *oem_event_data,
 			      uint8_t vdev_id)
 {
@@ -1199,6 +1234,7 @@ void hdd_oem_event_handler_cb(const struct oem_data *oem_event_data,
 		}
 		cfg80211_vendor_event(vendor_event, GFP_KERNEL);
 	}
+	sme_oem_event_deinit(hdd_ctx->mac_handle);
 
 	hdd_exit();
 }
