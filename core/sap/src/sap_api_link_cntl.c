@@ -450,7 +450,10 @@ wlansap_roam_process_ch_change_success(struct mac_context *mac_ctx,
 	}
 
 	if (sap_ctx->ch_params.ch_width == CH_WIDTH_160MHZ) {
-		is_ch_dfs = true;
+		if (wlan_reg_get_bonded_channel_state_for_freq(
+		    mac_ctx->pdev, target_chan_freq,
+		    sap_ctx->ch_params.ch_width, 0) == CHANNEL_STATE_DFS)
+			is_ch_dfs = true;
 	} else if (sap_ctx->ch_params.ch_width == CH_WIDTH_80P80MHZ) {
 		if (wlan_reg_get_channel_state_for_freq(
 						mac_ctx->pdev,

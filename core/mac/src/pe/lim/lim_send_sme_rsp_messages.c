@@ -2224,7 +2224,10 @@ lim_send_sme_ap_channel_switch_resp(struct mac_context *mac,
 				BIT(band));
 
 	if (ch_width == CH_WIDTH_160MHZ) {
-		is_ch_dfs = true;
+		if (wlan_reg_get_bonded_channel_state_for_freq(
+		    mac->pdev, pe_session->curr_op_freq,
+		    ch_width, 0) == CHANNEL_STATE_DFS)
+			is_ch_dfs = true;
 	} else if (ch_width == CH_WIDTH_80P80MHZ) {
 		if (wlan_reg_get_channel_state_for_freq(
 						mac->pdev,

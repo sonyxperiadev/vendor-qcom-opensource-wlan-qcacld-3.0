@@ -505,7 +505,10 @@ is_wlansap_cac_required_for_chan(struct mac_context *mac_ctx,
 	uint8_t sta_cnt, i;
 
 	if (ch_params->ch_width == CH_WIDTH_160MHZ) {
-		is_ch_dfs = true;
+		if (wlan_reg_get_bonded_channel_state_for_freq(
+		    mac_ctx->pdev, chan_freq,
+		    ch_params->ch_width, 0) == CHANNEL_STATE_DFS)
+			is_ch_dfs = true;
 	} else if (ch_params->ch_width == CH_WIDTH_80P80MHZ) {
 		if (wlan_reg_get_channel_state_for_freq(
 						mac_ctx->pdev,

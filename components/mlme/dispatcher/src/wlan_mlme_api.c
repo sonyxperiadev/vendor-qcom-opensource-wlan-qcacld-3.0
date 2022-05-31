@@ -5008,7 +5008,10 @@ wlan_mlme_check_chan_param_has_dfs(struct wlan_objmgr_pdev *pdev,
 	bool is_dfs = false;
 
 	if (ch_params->ch_width == CH_WIDTH_160MHZ) {
-		is_dfs = true;
+		if (wlan_reg_get_bonded_channel_state_for_freq(
+		    pdev, chan_freq, ch_params->ch_width, 0) ==
+				CHANNEL_STATE_DFS)
+			is_dfs = true;
 	} else if (ch_params->ch_width == CH_WIDTH_80P80MHZ) {
 		if (wlan_reg_get_channel_state_for_freq(
 			pdev,
