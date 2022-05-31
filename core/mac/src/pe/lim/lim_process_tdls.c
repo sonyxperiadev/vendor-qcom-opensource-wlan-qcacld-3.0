@@ -350,6 +350,10 @@ static void populate_dot11f_tdls_ext_capability(struct mac_context *mac,
 	}
 	p_ext_cap->tdls_support = TDLS_SUPPORT;
 	p_ext_cap->tdls_prohibited = TDLS_PROHIBITED;
+	/*
+	 * For supporting wider bandwidth set tdls_wider_bw set as 1
+	 */
+	p_ext_cap->tdls_wider_bw = 1;
 
 	extCapability->present = 1;
 	extCapability->num_bytes = lim_compute_ext_cap_ie_length(extCapability);
@@ -696,16 +700,16 @@ static void populate_dot11f_tdls_ht_vht_cap(struct mac_context *mac,
 
 	vht_cap_info = &mac->mlme_cfg->vht_caps.vht_cap_info;
 
-	if (wlan_reg_is_5ghz_ch_freq(pe_session->curr_op_freq))
-		nss = mac->vdev_type_nss_5g.tdls;
-	else
+	if (wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq))
 		nss = mac->vdev_type_nss_2g.tdls;
+	else
+		nss = mac->vdev_type_nss_5g.tdls;
 
 	nss = QDF_MIN(nss, mac->user_configured_nss);
 	if (IS_DOT11_MODE_HT(selfDot11Mode) &&
 	    !lim_is_he_6ghz_band(pe_session)) {
 		/* Include HT Capability IE */
-		populate_dot11f_ht_caps(mac, pe_session, htCap);
+		populate_dot11f_ht_caps(mac, NULL, htCap);
 		val_len = SIZE_OF_SUPPORTED_MCS_SET;
 		wlan_mlme_get_cfg_str(&htCap->supportedMCSSet[0],
 				      &mac->mlme_cfg->rates.supported_mcs_set,
@@ -742,7 +746,7 @@ static void populate_dot11f_tdls_ht_vht_cap(struct mac_context *mac,
 		if (IS_DOT11_MODE_VHT(selfDot11Mode) &&
 		    IS_FEATURE_SUPPORTED_BY_FW(DOT11AC)) {
 			/* Include VHT Capability IE */
-			populate_dot11f_vht_caps(mac, pe_session, vhtCap);
+			populate_dot11f_vht_caps(mac, NULL, vhtCap);
 
 			/*
 			 * Set to 0 if the TDLS STA does not support either 160
@@ -752,8 +756,14 @@ static void populate_dot11f_tdls_ht_vht_cap(struct mac_context *mac,
 			 * 80+80 MHz.
 			 * The value 3 is reserved
 			 */
-			vhtCap->supportedChannelWidthSet = 0;
-
+			if (wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq))
+			{
+				vhtCap->supportedChannelWidthSet = 0;
+			} else if (wlan_reg_is_dfs_for_freq(mac->pdev,
+						pe_session->curr_op_freq)) {
+				if (pe_session->ch_width <= CH_WIDTH_80MHZ)
+					vhtCap->supportedChannelWidthSet = 0;
+			}
 			vhtCap->suBeamformeeCap = 0;
 			vhtCap->suBeamFormerCap = 0;
 			vhtCap->muBeamformeeCap = 0;
@@ -849,23 +859,28 @@ static void lim_tdls_set_he_chan_width(struct mac_context *mac,
 				       struct pe_session *session,
 				       bool wideband_sta)
 {
+	tDot11fIEhe_cap *ap_he_cap = &session->he_config;
+
 	if (lim_is_session_he_capable(session)) {
-		if (!wideband_sta ||
-		    wlan_reg_is_dfs_for_freq(mac->pdev,
-					     session->curr_op_freq)) {
-			heCap->chan_width_0 = session->he_config.chan_width_0 &
-					      heCap->chan_width_0;
-			heCap->chan_width_1 = session->he_config.chan_width_1 &
-					      heCap->chan_width_1;
-			heCap->chan_width_2 = session->he_config.chan_width_2 &
+		if (wlan_reg_is_5ghz_ch_freq(session->curr_op_freq)) {
+			if (!wideband_sta ||
+			    wlan_reg_is_dfs_for_freq(mac->pdev,
+						     session->curr_op_freq)) {
+				heCap->chan_width_0 = ap_he_cap->chan_width_0 &
+						      heCap->chan_width_0;
+				heCap->chan_width_1 = ap_he_cap->chan_width_1 &
+						      heCap->chan_width_1;
+			}
+			/* Restrict BW till 80 Mhz for 5ghz */
+			heCap->chan_width_2 = ap_he_cap->chan_width_2 &
 					      heCap->chan_width_2;
-			heCap->chan_width_3 = session->he_config.chan_width_3 &
+			heCap->chan_width_3 = ap_he_cap->chan_width_3 &
 					      heCap->chan_width_3;
-			heCap->chan_width_4 = session->he_config.chan_width_4 &
+			heCap->chan_width_4 = ap_he_cap->chan_width_4 &
 					      heCap->chan_width_4;
-			heCap->chan_width_5 = session->he_config.chan_width_5 &
+			heCap->chan_width_5 = ap_he_cap->chan_width_5 &
 					      heCap->chan_width_5;
-			heCap->chan_width_6 = session->he_config.chan_width_6 &
+			heCap->chan_width_6 = ap_he_cap->chan_width_6 &
 					      heCap->chan_width_6;
 		}
 	} else {
