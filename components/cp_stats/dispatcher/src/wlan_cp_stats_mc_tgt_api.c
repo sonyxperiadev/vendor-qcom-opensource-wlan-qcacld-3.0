@@ -1103,15 +1103,19 @@ static void
 tgt_mc_cp_stats_prepare_n_send_raw_station_stats(struct wlan_objmgr_psoc *psoc,
 						 struct request_info *last_req)
 {
-	bool is_mlo_vdev;
 	uint8_t i;
 
-	is_mlo_vdev = wlan_vdev_mlme_get_is_mlo_vdev(psoc, last_req->vdev_id);
-	if (!is_mlo_vdev)
-		return tgt_mc_cp_stats_send_raw_station_stats(psoc, last_req);
+	if (!last_req->ml_vdev_info.ml_vdev_count) {
+		cp_stats_nofl_debug("Invoking get_station_cb for vdev_id[%d]",
+				    last_req->vdev_id);
+		tgt_mc_cp_stats_send_raw_station_stats(psoc, last_req);
+		return;
+	}
 
 	for (i = 0; i < last_req->ml_vdev_info.ml_vdev_count; i++) {
 		last_req->vdev_id = last_req->ml_vdev_info.ml_vdev_id[i];
+		cp_stats_nofl_debug("Invoking get_station_cb for vdev_id[%d]",
+				    last_req->vdev_id);
 		tgt_mc_cp_stats_send_raw_station_stats(psoc, last_req);
 	}
 }
