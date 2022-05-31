@@ -348,7 +348,7 @@ ucfg_mlme_set_vdev_traffic_low_latency(struct wlan_objmgr_psoc *psoc,
 
 	mlme_legacy_debug("low_latency flag 0x%x set %d on vdev %d",
 			  mlme_priv->vdev_traffic_type, set, vdev_id);
-	param.param_id = wmi_vdev_param_set_traffic_config;
+	param.param_id = WMI_VDEV_PARAM_VDEV_TRAFFIC_CONFIG;
 	param.vdev_id = vdev_id;
 	param.param_value = mlme_priv->vdev_traffic_type;
 	status = tgt_vdev_mgr_set_param_send(vdev_mlme, &param);
@@ -396,7 +396,7 @@ ucfg_mlme_set_vdev_traffic_high_throughput(struct wlan_objmgr_psoc *psoc,
 
 	mlme_legacy_debug("high_throughput flag 0x%x set %d on vdev %d",
 			  mlme_priv->vdev_traffic_type, set, vdev_id);
-	param.param_id = wmi_vdev_param_set_traffic_config;
+	param.param_id = WMI_VDEV_PARAM_VDEV_TRAFFIC_CONFIG;
 	param.vdev_id = vdev_id;
 	param.param_value = mlme_priv->vdev_traffic_type;
 	status = tgt_vdev_mgr_set_param_send(vdev_mlme, &param);
