@@ -68,6 +68,7 @@
 #include <lim_mlo.h>
 #include <wlan_vdev_mgr_utils_api.h>
 #include "cfg_ucfg_api.h"
+#include "wlan_twt_cfg_ext_api.h"
 
 /* SME REQ processing function templates */
 static bool __lim_process_sme_sys_ready_ind(struct mac_context *, uint32_t *);
@@ -2647,6 +2648,9 @@ lim_fill_dot11_mode(struct mac_context *mac_ctx, struct pe_session *session,
 #ifdef WLAN_FEATURE_11AX
 static bool lim_enable_twt(struct mac_context *mac_ctx, tDot11fBeaconIEs *ie)
 {
+	struct s_ext_cap *ext_cap;
+	bool twt_support_in_11n = false;
+
 	if (mac_ctx->mlme_cfg->he_caps.dot11_he_cap.twt_request && ie &&
 	    (ie->qcn_ie.present || ie->he_cap.twt_responder)) {
 		pe_debug("TWT is supported, hence disable UAPSD; twt req supp: %d,twt respon supp: %d, QCN_IE: %d",
@@ -2655,6 +2659,18 @@ static bool lim_enable_twt(struct mac_context *mac_ctx, tDot11fBeaconIEs *ie)
 			  ie->qcn_ie.present);
 		return true;
 	}
+
+	wlan_twt_cfg_get_support_in_11n(mac_ctx->psoc,
+					&twt_support_in_11n);
+	ext_cap = (struct s_ext_cap *)ie->ExtCap.bytes;
+	if (twt_support_in_11n && ie->ExtCap.present &&
+	    ext_cap->twt_responder_support) {
+		pe_debug("TWT is supported for 11n, twt_support_in_11n %d, ext_cap %d, twt_responder support %d",
+			 twt_support_in_11n, ie->ExtCap.present,
+			 ext_cap->twt_responder_support);
+		return true;
+	}
+
 	return false;
 }
 #else
