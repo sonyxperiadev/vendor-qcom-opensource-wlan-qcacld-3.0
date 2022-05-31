@@ -844,24 +844,30 @@ static void lim_populate_tdls_setup_6g_cap(struct mac_context *mac,
 }
 #endif
 
-static void lim_tdls_set_he_chan_width(tDot11fIEhe_cap *heCap,
-				       struct pe_session *session)
+static void lim_tdls_set_he_chan_width(struct mac_context *mac,
+				       tDot11fIEhe_cap *heCap,
+				       struct pe_session *session,
+				       bool wideband_sta)
 {
 	if (lim_is_session_he_capable(session)) {
-		heCap->chan_width_0 = session->he_config.chan_width_0 &
-				      heCap->chan_width_0;
-		heCap->chan_width_1 = session->he_config.chan_width_1 &
-				      heCap->chan_width_1;
-		heCap->chan_width_2 = session->he_config.chan_width_2 &
-				      heCap->chan_width_2;
-		heCap->chan_width_3 = session->he_config.chan_width_3 &
-				      heCap->chan_width_3;
-		heCap->chan_width_4 = session->he_config.chan_width_4 &
-				      heCap->chan_width_4;
-		heCap->chan_width_5 = session->he_config.chan_width_5 &
-				      heCap->chan_width_5;
-		heCap->chan_width_6 = session->he_config.chan_width_6 &
-				      heCap->chan_width_6;
+		if (!wideband_sta ||
+		    wlan_reg_is_dfs_for_freq(mac->pdev,
+					     session->curr_op_freq)) {
+			heCap->chan_width_0 = session->he_config.chan_width_0 &
+					      heCap->chan_width_0;
+			heCap->chan_width_1 = session->he_config.chan_width_1 &
+					      heCap->chan_width_1;
+			heCap->chan_width_2 = session->he_config.chan_width_2 &
+					      heCap->chan_width_2;
+			heCap->chan_width_3 = session->he_config.chan_width_3 &
+					      heCap->chan_width_3;
+			heCap->chan_width_4 = session->he_config.chan_width_4 &
+					      heCap->chan_width_4;
+			heCap->chan_width_5 = session->he_config.chan_width_5 &
+					      heCap->chan_width_5;
+			heCap->chan_width_6 = session->he_config.chan_width_6 &
+					      heCap->chan_width_6;
+		}
 	} else {
 		if (session->ch_width == CH_WIDTH_20MHZ) {
 			heCap->chan_width_0 = 0;
@@ -913,7 +919,7 @@ static void populate_dot11f_set_tdls_he_cap(struct mac_context *mac,
 {
 	if (IS_DOT11_MODE_HE(selfDot11Mode)) {
 		populate_dot11f_he_caps(mac, NULL, heCap);
-		lim_tdls_set_he_chan_width(heCap, session);
+		lim_tdls_set_he_chan_width(mac, heCap, session, true);
 		lim_tdls_populate_ppe_caps(mac, session, heCap);
 		lim_log_he_cap(mac, heCap);
 		lim_populate_tdls_setup_6g_cap(mac, hecap_6g, session);
@@ -1144,10 +1150,30 @@ static void lim_tdls_check_and_force_he_ldpc_cap(struct pe_session *pe_session,
 		lim_check_and_force_he_ldpc_cap(pe_session, &sta->he_config);
 }
 
+static enum phy_ch_width lim_tdls_get_he_ch_width(struct pe_session *pe_session,
+						  tDot11fIEhe_cap *he_cap)
+{
+	enum phy_ch_width ch_width = CH_WIDTH_20MHZ;
+
+	if (wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq) &&
+	    he_cap->chan_width_0)
+		return CH_WIDTH_40MHZ;
+
+	if (he_cap->chan_width_3)
+		ch_width = CH_WIDTH_80P80MHZ;
+	else if (he_cap->chan_width_2)
+		ch_width = CH_WIDTH_160MHZ;
+	else if (he_cap->chan_width_1)
+		ch_width = CH_WIDTH_80MHZ;
+
+	return ch_width;
+}
+
 static void lim_tdls_update_node_he_caps(struct mac_context *mac,
 					 struct tdls_add_sta_req *add_sta_req,
 					 tDphHashNode *sta,
-					 struct pe_session *pe_session)
+					 struct pe_session *pe_session,
+					 bool wide_band_peer)
 {
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 
@@ -1158,14 +1184,13 @@ static void lim_tdls_update_node_he_caps(struct mac_context *mac,
 	if (status != QDF_STATUS_SUCCESS)
 		return;
 
-	if (sta->he_config.present)
-		sta->mlmStaContext.he_capable = 1;
+	if (!sta->he_config.present)
+		return;
 
-	if (sta->he_config.present)
-		lim_tdls_set_he_chan_width(&sta->he_config, pe_session);
-
+	sta->mlmStaContext.he_capable = 1;
+	lim_tdls_set_he_chan_width(mac, &sta->he_config, pe_session,
+				   wide_band_peer);
 	lim_log_he_cap(mac, &sta->he_config);
-
 	if (lim_is_he_6ghz_band(pe_session)) {
 		lim_tdls_populate_dot11f_6hgz_he_caps(mac, add_sta_req,
 						      &sta->he_6g_band_cap);
@@ -1176,6 +1201,9 @@ static void lim_tdls_update_node_he_caps(struct mac_context *mac,
 		 */
 		lim_update_stads_he_6ghz_op(pe_session, sta);
 	}
+	sta->ch_width = lim_tdls_get_he_ch_width(pe_session,
+						 &sta->he_config);
+	pe_debug("sta->ch_width %d", sta->ch_width);
 }
 
 #else
@@ -1217,7 +1245,8 @@ static void lim_tdls_populate_he_matching_rate_set(struct mac_context *mac_ctx,
 static void lim_tdls_update_node_he_caps(struct mac_context *mac,
 					 struct tdls_add_sta_req *add_sta_req,
 					 tDphHashNode *sta,
-					 struct pe_session *pe_session)
+					 struct pe_session *pe_session,
+					 bool wide_band_peer)
 {
 }
 
@@ -1549,6 +1578,18 @@ wma_tx_frame_with_tx_complete_send(struct mac_context *mac, void *pPacket,
 					  RATEID_DEFAULT, 0);
 }
 #endif
+
+static
+bool lim_is_wide_band_set(uint8_t *ext_capability)
+{
+	struct s_ext_cap *p_ext_cap = (struct s_ext_cap *)ext_capability;
+
+	if (!p_ext_cap)
+		return false;
+
+	pe_debug("p_ext_cap->tdls_wider_bw %d", p_ext_cap->tdls_wider_bw);
+	return p_ext_cap->tdls_wider_bw;
+}
 
 /*
  * TDLS setup Request frame on AP link
@@ -2884,6 +2925,7 @@ static void lim_tdls_update_hash_node_info(struct mac_context *mac,
 	tDot11fIEVHTCaps *pVhtCaps_txbf = NULL;
 	tDot11fIEVHTCaps vhtCap;
 	uint8_t cbMode, selfDot11Mode;
+	bool wide_band_peer = false;
 
 	if (add_sta_req->tdls_oper == TDLS_OPER_ADD) {
 		populate_dot11f_ht_caps(mac, pe_session, &htCap);
@@ -2892,6 +2934,8 @@ static void lim_tdls_update_hash_node_info(struct mac_context *mac,
 						 add_sta_req, &htCap);
 		sta->rmfEnabled = add_sta_req->is_pmf;
 	}
+
+	wide_band_peer = lim_is_wide_band_set(add_sta_req->extn_capability);
 	htCaps = &htCap;
 	if (htCaps->present) {
 		sta->mlmStaContext.htCapability = 1;
@@ -2903,16 +2947,26 @@ static void lim_tdls_update_hash_node_info(struct mac_context *mac,
 		 * channel width of STA-AP link. So take this setting from the
 		 * pe_session.
 		 */
+		/*
+		 * Since, now wideband is supported, bw should be restricted
+		 * only in case of dfs channel
+		 */
 		pe_debug("supportedChannelWidthSet: 0x%x htSupportedChannelWidthSet: 0x%x",
 				htCaps->supportedChannelWidthSet,
 				pe_session->htSupportedChannelWidthSet);
-		sta->htSupportedChannelWidthSet =
+		if (!wide_band_peer ||
+		    wlan_reg_is_dfs_for_freq(mac->pdev,
+					     pe_session->curr_op_freq))
+			sta->htSupportedChannelWidthSet =
 				(htCaps->supportedChannelWidthSet <
 				 pe_session->htSupportedChannelWidthSet) ?
 				htCaps->supportedChannelWidthSet :
 				pe_session->htSupportedChannelWidthSet;
+		else
+			sta->htSupportedChannelWidthSet =
+				htCaps->supportedChannelWidthSet;
 		pe_debug("sta->htSupportedChannelWidthSet: 0x%x",
-				sta->htSupportedChannelWidthSet);
+			 sta->htSupportedChannelWidthSet);
 
 		sta->ch_width = sta->htSupportedChannelWidthSet;
 		sta->htMIMOPSState = htCaps->mimoPowerSave;
@@ -2939,15 +2993,18 @@ static void lim_tdls_update_hash_node_info(struct mac_context *mac,
 		 * 11.21.1 General: The channel width of the TDLS direct
 		 * link on the base channel shall not exceed the channel
 		 * width of the BSS to which the TDLS peer STAs are
-		 * associated.
+		 * associated, if the base channel is dfs channel
 		 */
-		if (pe_session->ch_width)
-			sta->vhtSupportedChannelWidthSet =
-					pe_session->ch_width - 1;
-		else
-			sta->vhtSupportedChannelWidthSet =
-					pe_session->ch_width;
-
+		if (!wide_band_peer ||
+		    wlan_reg_is_dfs_for_freq(mac->pdev,
+					     pe_session->curr_op_freq)) {
+			if (pe_session->ch_width)
+				sta->vhtSupportedChannelWidthSet =
+						pe_session->ch_width - 1;
+			else
+				sta->vhtSupportedChannelWidthSet =
+						pe_session->ch_width;
+		}
 		pe_debug("vhtSupportedChannelWidthSet: %hu htSupportedChannelWidthSet: %hu",
 			sta->vhtSupportedChannelWidthSet,
 			sta->htSupportedChannelWidthSet);
@@ -2968,7 +3025,8 @@ static void lim_tdls_update_hash_node_info(struct mac_context *mac,
 
 	selfDot11Mode = mac->mlme_cfg->dot11_mode.dot11_mode;
 	if (IS_DOT11_MODE_HE(selfDot11Mode))
-		lim_tdls_update_node_he_caps(mac, add_sta_req, sta, pe_session);
+		lim_tdls_update_node_he_caps(mac, add_sta_req, sta, pe_session,
+					     wide_band_peer);
 	else
 		pe_debug("Not populating he cap as SelfDot11Mode not HE %d",
 			 selfDot11Mode);
