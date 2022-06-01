@@ -404,6 +404,8 @@ static void wma_set_default_tgt_config(tp_wma_handle wma_handle,
 
 	wma_set_ipa_disable_config(tgt_cfg);
 	wma_set_peer_map_unmap_v2_config(wma_handle->psoc, tgt_cfg);
+
+	tgt_cfg->notify_frame_support = DP_MARK_NOTIFY_FRAME_SUPPORT;
 }
 
 /**
