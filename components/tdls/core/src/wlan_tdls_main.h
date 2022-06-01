@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -192,6 +193,8 @@ struct tdls_set_state_info {
  * @tdls_osif_init_cb: Callback to initialize the tdls private
  * @tdls_osif_deinit_cb: Callback to deinitialize the tdls private
  * @fw_tdls_11ax_capablity: bool for tdls 11ax fw capability
+ * @bss_sta_power: bss sta power
+ * @@bss_sta_power_type: bss sta power type
  */
 struct tdls_soc_priv_obj {
 	struct wlan_objmgr_psoc *soc;
@@ -242,6 +245,8 @@ struct tdls_soc_priv_obj {
 	tdls_vdev_deinit_cb tdls_osif_deinit_cb;
 #ifdef WLAN_FEATURE_11AX
 	bool fw_tdls_11ax_capability;
+	uint8_t bss_sta_power;
+	uint8_t bss_sta_power_type;
 #endif
 };
 
@@ -656,6 +661,17 @@ void tdls_send_update_to_fw(struct tdls_vdev_priv_obj *tdls_vdev_obj,
  * Return: None
  */
 void tdls_notify_increment_session(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * tdls_is_6g_freq_allowed() - check is tdls 6ghz allowed or not
+ * @vdev: vdev object
+ * @freq: 6g freq
+ *
+ * Function determines the whether TDLS on 6ghz is allowed in the system
+ *
+ * Return: true or false
+ */
+bool tdls_is_6g_freq_allowed(struct wlan_objmgr_vdev *vdev, qdf_freq_t freq);
 
 /**
  * tdls_check_is_tdls_allowed() - check is tdls allowed or not

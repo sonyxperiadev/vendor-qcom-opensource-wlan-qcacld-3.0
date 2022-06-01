@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1335,7 +1336,7 @@ void tdls_disable_offchan_and_teardown_links(
 		 */
 		tdls_reset_peer(tdls_vdev, curr_peer->peer_mac.bytes);
 
-		tdls_decrement_peer_count(tdls_soc);
+		tdls_decrement_peer_count(vdev, tdls_soc);
 		tdls_soc->tdls_conn_info[staidx].valid_entry = false;
 		tdls_soc->tdls_conn_info[staidx].session_id = 255;
 		tdls_soc->tdls_conn_info[staidx].index =

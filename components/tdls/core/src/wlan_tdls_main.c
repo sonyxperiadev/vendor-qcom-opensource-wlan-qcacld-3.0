@@ -528,7 +528,7 @@ static QDF_STATUS tdls_process_reset_all_peers(struct wlan_objmgr_vdev *vdev)
 
 		tdls_reset_peer(tdls_vdev, curr_peer->peer_mac.bytes);
 
-		tdls_decrement_peer_count(tdls_soc);
+		tdls_decrement_peer_count(vdev, tdls_soc);
 		tdls_soc->tdls_conn_info[staidx].valid_entry = false;
 		tdls_soc->tdls_conn_info[staidx].session_id = 255;
 		tdls_soc->tdls_conn_info[staidx].index =
@@ -845,7 +845,7 @@ QDF_STATUS tdls_update_fw_tdls_state(struct tdls_soc_priv_obj *tdls_soc_obj,
 }
 
 #ifdef WLAN_FEATURE_11AX
-static bool tdls_is_6g_freq_allowed(struct wlan_objmgr_vdev *vdev,
+bool tdls_is_6g_freq_allowed(struct wlan_objmgr_vdev *vdev,
 				    qdf_freq_t freq)
 {
 	struct wlan_objmgr_pdev *pdev = wlan_vdev_get_pdev(vdev);
@@ -855,8 +855,7 @@ static bool tdls_is_6g_freq_allowed(struct wlan_objmgr_vdev *vdev,
 	uint8_t chn_idx, num_chan = 0;
 	uint8_t band_mask = BIT(REG_BAND_6G);
 
-	/* No power check is required for non 6 Ghz channel */
-
+	/* Return if freq is not 6 Ghz freq */
 	if (!wlan_reg_is_6ghz_chan_freq(freq))
 		goto error;
 
@@ -889,7 +888,7 @@ error:
 	return is_allowed;
 }
 #else
-static bool tdls_is_6g_freq_allowed(struct wlan_objmgr_vdev *vdev,
+bool tdls_is_6g_freq_allowed(struct wlan_objmgr_vdev *vdev,
 				    qdf_freq_t freq)
 {
 	return false;
