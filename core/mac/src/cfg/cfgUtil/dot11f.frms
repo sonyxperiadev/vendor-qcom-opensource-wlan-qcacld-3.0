@@ -3359,15 +3359,17 @@ IE eht_cap (EID_EXTN_ID_ELEMENT) OUI (0x6C)
 IE eht_op (EID_EXTN_ID_ELEMENT) OUI (0x6A)
 {
     {
-        width: 3;
-	reserved: 5;
+        eht_op_information_present: 1;
+	disabled_sub_chan_bitmap_present: 1;
+	reserved: 6;
     }
-    ccfs, 2;
     {
-        disable_sub_chan_bitmap_present: 1;
-        reserved2: 7;
+        channel_width: 3;
+	reserved_1: 5;
     }
-    disable_sub_chan_bitmap[2][0..1] COUNTIS disable_sub_chan_bitmap_present;
+    ccfs0, 1;
+    ccfs1, 1;
+    disabled_sub_chan_bitmap[2][0..1] COUNTIS disabled_sub_chan_bitmap_present;
 }
 
 IE mu_edca_param_set (EID_EXTN_ID_ELEMENT) OUI (0x26)
