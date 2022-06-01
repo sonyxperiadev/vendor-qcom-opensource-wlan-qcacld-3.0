@@ -1378,9 +1378,6 @@ struct hdd_adapter {
 	/* completion variable for Linkup Event */
 	struct completion linkup_event_var;
 
-	/* Completion variable for action frame */
-	struct completion tx_action_cnf_event;
-
 	struct completion sta_authorized_event;
 
 	/* Track whether the linkup handling is needed  */
