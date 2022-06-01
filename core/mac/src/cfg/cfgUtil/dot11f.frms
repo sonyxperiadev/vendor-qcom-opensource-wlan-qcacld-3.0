@@ -3260,7 +3260,8 @@ IE eht_cap (EID_EXTN_ID_ELEMENT) OUI (0x6C)
 	restricted_twt: 1;
 	scs_traffic_desc: 1;
 	max_mpdu_len: 2;
-	reserved: 8;
+	max_a_mpdu_len_exponent_ext: 1;
+	reserved: 7;
     }
     {
 	reserved2: 1;
