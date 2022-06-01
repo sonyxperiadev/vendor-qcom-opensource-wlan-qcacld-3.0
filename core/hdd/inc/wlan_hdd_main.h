@@ -1378,8 +1378,6 @@ struct hdd_adapter {
 	/* completion variable for Linkup Event */
 	struct completion linkup_event_var;
 
-	/* completion variable for off channel  remain on channel Event */
-	struct completion offchannel_tx_event;
 	/* Completion variable for action frame */
 	struct completion tx_action_cnf_event;
 
