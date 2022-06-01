@@ -1462,10 +1462,6 @@ struct hdd_adapter {
 	uint8_t psb_changed;
 	/* UAPSD psb value configured through framework */
 	uint8_t configured_psb;
-	/* Use delayed work for Sec AP ACS as Pri AP Startup need to complete
-	 * since CSR (PMAC Struct) Config is same for both AP
-	 */
-	struct delayed_work acs_pending_work;
 
 	struct work_struct scan_block_work;
 	qdf_list_t blocked_scan_request_q;
