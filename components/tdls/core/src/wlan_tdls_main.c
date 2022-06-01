@@ -32,7 +32,8 @@
 #include "wlan_policy_mgr_public_struct.h"
 #include "wlan_policy_mgr_api.h"
 #include "wlan_scan_ucfg_api.h"
-
+#include "wlan_tdls_ucfg_api.h"
+#include "wlan_cm_roam_api.h"
 
 /* Global tdls soc pvt object
  * this is useful for some functions which does not receive either vdev or psoc
@@ -843,11 +844,64 @@ QDF_STATUS tdls_update_fw_tdls_state(struct tdls_soc_priv_obj *tdls_soc_obj,
 	return status;
 }
 
+#ifdef WLAN_FEATURE_11AX
+static bool tdls_is_6g_freq_allowed(struct wlan_objmgr_vdev *vdev,
+				    qdf_freq_t freq)
+{
+	struct wlan_objmgr_pdev *pdev = wlan_vdev_get_pdev(vdev);
+	struct regulatory_channel chan[NUM_CHANNELS] = {0};
+	bool is_allowed = false;
+	uint8_t country_code[REG_ALPHA2_LEN + 1];
+	uint8_t chn_idx, num_chan = 0;
+	uint8_t band_mask = BIT(REG_BAND_6G);
+
+	/* No power check is required for non 6 Ghz channel */
+
+	if (!wlan_reg_is_6ghz_chan_freq(freq))
+		goto error;
+
+	if (!pdev)
+		goto error;
+
+	wlan_cm_get_country_code(pdev, wlan_vdev_get_id(vdev), country_code);
+	if (!wlan_reg_ctry_support_vlp(country_code))
+		goto error;
+
+	num_chan = wlan_reg_get_band_channel_list_for_pwrmode(pdev,
+							      band_mask,
+							      chan,
+							      REG_CLI_DEF_VLP);
+	tdls_debug("Country IE:%c%c freq %d num_chan %d", country_code[0],
+			   country_code[1], freq, num_chan);
+	if (!num_chan)
+		goto error;
+
+	for (chn_idx = 0; chn_idx < num_chan; chn_idx++) {
+		if (chan[chn_idx].center_freq == freq) {
+			tdls_debug("TDLS 6ghz freq: %d supports VLP power",
+				   chan[chn_idx].center_freq);
+			is_allowed = true;
+			break;
+		}
+	}
+
+error:
+	return is_allowed;
+}
+#else
+static bool tdls_is_6g_freq_allowed(struct wlan_objmgr_vdev *vdev,
+				    qdf_freq_t freq)
+{
+	return false;
+}
+#endif
+
 bool tdls_check_is_tdls_allowed(struct wlan_objmgr_vdev *vdev)
 {
 	struct tdls_vdev_priv_obj *tdls_vdev_obj;
 	struct tdls_soc_priv_obj *tdls_soc_obj;
 	bool state = false;
+	qdf_freq_t ch_freq;
 
 	if (QDF_STATUS_SUCCESS != wlan_objmgr_vdev_try_get_ref(vdev,
 							       WLAN_TDLS_NB_ID))
@@ -868,6 +922,11 @@ bool tdls_check_is_tdls_allowed(struct wlan_objmgr_vdev *vdev)
 	/* print session information */
 	wlan_objmgr_vdev_release_ref(vdev,
 				     WLAN_TDLS_NB_ID);
+
+	ch_freq = wlan_get_operation_chan_freq(vdev);
+	if (wlan_reg_is_6ghz_chan_freq(ch_freq))
+		state &= tdls_is_6g_freq_allowed(vdev, ch_freq);
+
 	return state;
 }
 
