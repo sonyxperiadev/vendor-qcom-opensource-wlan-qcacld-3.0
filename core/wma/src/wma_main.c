@@ -4734,15 +4734,34 @@ wma_get_tdls_ax_support(struct wmi_unified *wmi_handle,
 						wmi_handle,
 						wmi_service_tdls_ax_support);
 }
+
+static inline void
+wma_get_tdls_6g_support(struct wmi_unified *wmi_handle,
+			struct wma_tgt_services *cfg)
+{
+	cfg->en_tdls_6g_support = wmi_service_enabled(
+						wmi_handle,
+						wmi_service_tdls_6g_support);
+}
 #else
 static inline void
 wma_get_tdls_ax_support(struct wmi_unified *wmi_handle,
+			struct wma_tgt_services *cfg)
+{}
+
+static inline void
+wma_get_tdls_6g_support(struct wmi_unified *wmi_handle,
 			struct wma_tgt_services *cfg)
 {}
 #endif
 #else
 static inline void
 wma_get_tdls_ax_support(struct wmi_unified *wmi_handle,
+			struct wma_tgt_services *cfg)
+{}
+
+static inline void
+wma_get_tdls_6g_support(struct wmi_unified *wmi_handle,
 			struct wma_tgt_services *cfg)
 {}
 #endif
@@ -4906,6 +4925,7 @@ static inline void wma_update_target_services(struct wmi_unified *wmi_handle,
 
 	wma_get_igmp_offload_enable(wmi_handle, cfg);
 	wma_get_tdls_ax_support(wmi_handle, cfg);
+	wma_get_tdls_6g_support(wmi_handle, cfg);
 
 	wma_get_dynamic_vdev_macaddr_support(wmi_handle, cfg);
 }

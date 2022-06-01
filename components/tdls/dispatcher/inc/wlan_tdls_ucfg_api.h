@@ -88,6 +88,17 @@ void ucfg_tdls_update_fw_11ax_capability(struct wlan_objmgr_psoc *psoc,
 					 bool is_fw_tdls_11ax_capable);
 
 /**
+ * ucfg_tdls_update_fw_6g_support() - Update FW TDLS 6g capability in TLDS
+ *                                    Component
+ * @psoc: psoc object
+ * @is_fw_tdls_6g_capable: set to true if firmware supports TDLS on 6G band
+ *
+ * Return: void
+ */
+void ucfg_update_fw_tdls_6g_capability(struct wlan_objmgr_psoc *psoc,
+				       bool is_fw_tdls_6g_capable);
+
+/**
  * ucfg_tdls_is_fw_11ax_supported() - Get FW TDLS 11ax capability from TLDS
  *                                    component.
  * @psoc: psoc object
@@ -95,6 +106,15 @@ void ucfg_tdls_update_fw_11ax_capability(struct wlan_objmgr_psoc *psoc,
  * Return: true if fw supports tdls 11ax
  */
 bool ucfg_tdls_is_fw_11ax_capable(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_tdls_is_fw_6g_capable() - Get FW TDLS 6g capability from TLDS
+ *                                component.
+ * @psoc: psoc object
+ *
+ * Return: true if fw supports tdls on 6ghz band
+ */
+bool ucfg_tdls_is_fw_6g_capable(struct wlan_objmgr_psoc *psoc);
 
 #else
 static inline
@@ -105,6 +125,18 @@ void ucfg_tdls_update_fw_11ax_capability(struct wlan_objmgr_psoc *psoc,
 
 static inline
 bool  ucfg_tdls_is_fw_11ax_capable(struct wlan_objmgr_psoc *psoc)
+{
+return false;
+}
+
+static inline
+void ucfg_update_fw_tdls_6g_capability(struct wlan_objmgr_psoc *psoc,
+				       bool is_fw_tdls_6g_capable)
+{
+}
+
+static inline
+bool  ucfg_tdls_is_fw_6g_capable(struct wlan_objmgr_psoc *psoc)
 {
 return false;
 }

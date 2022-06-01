@@ -193,6 +193,7 @@ struct tdls_set_state_info {
  * @tdls_osif_init_cb: Callback to initialize the tdls private
  * @tdls_osif_deinit_cb: Callback to deinitialize the tdls private
  * @fw_tdls_11ax_capablity: bool for tdls 11ax fw capability
+ * @fw_tdls_6g_capability: bool for tdls 6g fw capability
  * @bss_sta_power: bss sta power
  * @@bss_sta_power_type: bss sta power type
  */
@@ -245,6 +246,7 @@ struct tdls_soc_priv_obj {
 	tdls_vdev_deinit_cb tdls_osif_deinit_cb;
 #ifdef WLAN_FEATURE_11AX
 	bool fw_tdls_11ax_capability;
+	bool fw_tdls_6g_capability;
 	uint8_t bss_sta_power;
 	uint8_t bss_sta_power_type;
 #endif

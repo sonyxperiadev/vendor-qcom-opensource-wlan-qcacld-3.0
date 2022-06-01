@@ -1837,16 +1837,31 @@ static void hdd_update_fw_tdls_11ax_capability(struct hdd_context *hdd_ctx,
 	ucfg_tdls_update_fw_11ax_capability(hdd_ctx->psoc,
 					    cfg->en_tdls_11ax_support);
 }
+
+static void hdd_update_fw_tdls_6g_capability(struct hdd_context *hdd_ctx,
+					     struct wma_tgt_services *cfg)
+{
+	ucfg_update_fw_tdls_6g_capability(hdd_ctx->psoc,
+					  cfg->en_tdls_6g_support);
+}
 #else
 static inline
 void hdd_update_fw_tdls_11ax_capability(struct hdd_context *hdd_ctx,
 					struct wma_tgt_services *cfg)
+{}
+static inline
+void hdd_update_fw_tdls_6g_capability(struct hdd_context *hdd_ctx,
+				      struct wma_tgt_services *cfg)
 {}
 #endif
 #else
 static inline
 void hdd_update_fw_tdls_11ax_capability(struct hdd_context *hdd_ctx,
 					struct wma_tgt_services *cfg)
+{}
+static inline
+void hdd_update_fw_tdls_6g_capability(struct hdd_context *hdd_ctx,
+				      struct wma_tgt_services *cfg)
 {}
 #endif
 
@@ -1956,6 +1971,7 @@ static void hdd_update_tgt_services(struct hdd_context *hdd_ctx,
 					CFG_THERMAL_MITIGATION_ENABLE);
 	hdd_update_fw_tdls_11ax_capability(hdd_ctx, cfg);
 	hdd_set_dynamic_macaddr_update_capability(hdd_ctx, cfg);
+	hdd_update_fw_tdls_6g_capability(hdd_ctx, cfg);
 }
 
 /**

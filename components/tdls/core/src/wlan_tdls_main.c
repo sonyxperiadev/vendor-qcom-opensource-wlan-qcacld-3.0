@@ -34,6 +34,7 @@
 #include "wlan_scan_ucfg_api.h"
 #include "wlan_tdls_ucfg_api.h"
 #include "wlan_cm_roam_api.h"
+#include "wlan_cfg80211_tdls.h"
 
 /* Global tdls soc pvt object
  * this is useful for some functions which does not receive either vdev or psoc
@@ -846,7 +847,7 @@ QDF_STATUS tdls_update_fw_tdls_state(struct tdls_soc_priv_obj *tdls_soc_obj,
 
 #ifdef WLAN_FEATURE_11AX
 bool tdls_is_6g_freq_allowed(struct wlan_objmgr_vdev *vdev,
-				    qdf_freq_t freq)
+			     qdf_freq_t freq)
 {
 	struct wlan_objmgr_pdev *pdev = wlan_vdev_get_pdev(vdev);
 	struct regulatory_channel chan[NUM_CHANNELS] = {0};
@@ -857,6 +858,9 @@ bool tdls_is_6g_freq_allowed(struct wlan_objmgr_vdev *vdev,
 
 	/* Return if freq is not 6 Ghz freq */
 	if (!wlan_reg_is_6ghz_chan_freq(freq))
+		goto error;
+
+	if (!wlan_cfg80211_tdls_is_fw_6ghz_capable(vdev))
 		goto error;
 
 	if (!pdev)
