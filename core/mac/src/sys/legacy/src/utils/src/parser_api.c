@@ -10448,8 +10448,8 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 			       QDF_MAC_ADDR_REF(link_info->link_addr.bytes));
 			continue;
 		}
-		chan_freq = wlan_reg_chan_opclass_to_freq(chan, op_class,
-							  false);
+		chan_freq = wlan_reg_chan_opclass_to_freq_auto(chan, op_class,
+							       false);
 		is_2g = WLAN_REG_IS_24GHZ_CH_FREQ(chan_freq);
 		if (is_2g) {
 			wlan_populate_basic_rates(&b_rates, false, true);
