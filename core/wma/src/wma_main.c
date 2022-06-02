@@ -4063,9 +4063,32 @@ static int wma_pdev_hw_mode_transition_evt_handler(void *handle,
 	wma_process_pdev_hw_mode_trans_ind(wma, wmi_event, vdev_mac_entry,
 		hw_mode_trans_ind);
 	wma_process_mac_freq_mapping(hw_mode_trans_ind, param_buf);
-	/* Pass the message to PE */
-	wma_send_msg(wma, SIR_HAL_PDEV_HW_MODE_TRANS_IND,
-		     (void *) hw_mode_trans_ind, 0);
+
+	if (policy_mgr_is_hwmode_offload_enabled(wma->psoc)) {
+		policy_mgr_hw_mode_transition_cb(
+			hw_mode_trans_ind->old_hw_mode_index,
+			hw_mode_trans_ind->new_hw_mode_index,
+			hw_mode_trans_ind->num_vdev_mac_entries,
+			hw_mode_trans_ind->vdev_mac_map,
+			hw_mode_trans_ind->num_freq_map,
+			hw_mode_trans_ind->mac_freq_map,
+			wma->psoc);
+		qdf_mem_free(hw_mode_trans_ind);
+	} else {
+		struct scheduler_msg sme_msg = {0};
+		QDF_STATUS status;
+
+		wma_debug("post eWNI_SME_HW_MODE_TRANS_IND");
+		sme_msg.type = eWNI_SME_HW_MODE_TRANS_IND;
+		sme_msg.bodyptr = hw_mode_trans_ind;
+		sme_msg.flush_callback = wma_discard_fw_event;
+
+		status = scheduler_post_message(QDF_MODULE_ID_WMA,
+						QDF_MODULE_ID_SME,
+						QDF_MODULE_ID_SME, &sme_msg);
+		if (QDF_IS_STATUS_ERROR(status))
+			qdf_mem_free(hw_mode_trans_ind);
+	}
 
 	return QDF_STATUS_SUCCESS;
 }
