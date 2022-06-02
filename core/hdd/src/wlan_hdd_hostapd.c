@@ -2992,6 +2992,7 @@ static int hdd_softap_unpack_ie(mac_handle_t mac_handle,
 	uint16_t rsn_ie_len, i;
 	tDot11fIERSN dot11_rsn_ie = {0};
 	tDot11fIEWPA dot11_wpa_ie = {0};
+	tDot11fIEWAPI dot11_wapi_ie = {0};
 
 	if (!mac_handle) {
 		hdd_err("NULL mac Handle");
@@ -3081,6 +3082,47 @@ static int hdd_softap_unpack_ie(mac_handle_t mac_handle,
 		*mc_encrypt_type =
 			hdd_translate_wpa_to_csr_encryption_type(dot11_wpa_ie.
 								 multicast_cipher);
+		*mfp_capable = false;
+		*mfp_required = false;
+	} else if (gen_ie[0] == DOT11F_EID_WAPI) {
+		/* Validity checks */
+		if ((gen_ie_len < DOT11F_IE_WAPI_MIN_LEN) ||
+		    (gen_ie_len > DOT11F_IE_WAPI_MAX_LEN))
+			return QDF_STATUS_E_FAILURE;
+
+		/* Skip past the EID byte and length byte */
+		rsn_ie = gen_ie + 2;
+		rsn_ie_len = gen_ie_len - 2;
+		/* Unpack the WAPI IE */
+		memset(&dot11_wapi_ie, 0, sizeof(tDot11fIEWPA));
+		ret = dot11f_unpack_ie_wapi(MAC_CONTEXT(mac_handle),
+					    rsn_ie, rsn_ie_len,
+					    &dot11_wapi_ie, false);
+		if (DOT11F_FAILED(ret)) {
+			hdd_err("unpack failed, 0x%x", ret);
+			return -EINVAL;
+		}
+		/* Copy out the encryption and authentication types */
+		hdd_debug("WAPI unicast cipher suite count: %d akm count: %d",
+			  dot11_wapi_ie.unicast_cipher_suite_count,
+			  dot11_wapi_ie.akm_suite_count);
+		/*
+		 * Translate akms in akm suite
+		 */
+		for (i = 0; i < dot11_wapi_ie.akm_suite_count; i++)
+			akm_list->authType[i] =
+				hdd_translate_wapi_to_csr_auth_type(
+						dot11_wapi_ie.akm_suites[i]);
+
+		akm_list->numEntries = dot11_wapi_ie.akm_suite_count;
+		/* dot11_wapi_ie.akm_suite_count */
+		*encrypt_type =
+			hdd_translate_wapi_to_csr_encryption_type(
+				dot11_wapi_ie.unicast_cipher_suites[0]);
+		/* dot11_wapi_ie.unicast_cipher_count */
+		*mc_encrypt_type =
+			hdd_translate_wapi_to_csr_encryption_type(
+				dot11_wapi_ie.multicast_cipher_suite);
 		*mfp_capable = false;
 		*mfp_required = false;
 	} else {
@@ -5995,13 +6037,20 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 	memset(&config->RSNWPAReqIE[0], 0, sizeof(config->RSNWPAReqIE));
 	ie = wlan_get_ie_ptr_from_eid(WLAN_EID_RSN, beacon->tail,
 				      beacon->tail_len);
+	/* the RSN and WAPI are not coexisting, so we can check the
+	 * WAPI IE if the RSN IE is not set.
+	 */
+	if (!ie)
+		ie = wlan_get_ie_ptr_from_eid(DOT11F_EID_WAPI, beacon->tail,
+					      beacon->tail_len);
+
 	if (ie && ie[1]) {
 		config->RSNWPAReqIELength = ie[1] + 2;
 		if (config->RSNWPAReqIELength < sizeof(config->RSNWPAReqIE))
 			memcpy(&config->RSNWPAReqIE[0], ie,
 			       config->RSNWPAReqIELength);
 		else
-			hdd_err("RSNWPA IE MAX Length exceeded; length =%d",
+			hdd_err("RSN/WPA/WAPI IE MAX Length exceeded; length =%d",
 			       config->RSNWPAReqIELength);
 		/* The actual processing may eventually be more extensive than
 		 * this. Right now, just consume any PMKIDs that are sent in
