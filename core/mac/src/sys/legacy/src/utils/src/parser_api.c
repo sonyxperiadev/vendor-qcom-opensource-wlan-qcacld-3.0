@@ -10315,7 +10315,15 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 	mlo_ie->bss_param_change_cnt_present = 0;
 	mlo_ie->medium_sync_delay_info_present = 0;
 	mlo_ie->eml_capab_present = 0;
-	mlo_ie->mld_capab_present = 0;
+	mlo_ie->mld_capab_present = 1;
+
+	if (mlo_ie->mld_capab_present) {
+		mlo_ie->mld_capabilities.info.max_simultaneous_link_num = 1;
+		mlo_ie->mld_capabilities.info.srs_support = 0;
+		mlo_ie->mld_capabilities.info.tid_link_map_supported = 0;
+		mlo_ie->mld_capabilities.info.str_freq_separation = 0;
+		mlo_ie->mld_capabilities.info.aar_support = 0;
+	}
 
 	/* find out number of links from bcn or prb rsp */
 	total_sta_prof = 1;
