@@ -429,7 +429,6 @@ wlan_cm_dual_sta_roam_update_connect_channels(struct wlan_objmgr_psoc *psoc,
 	char *chan_buff;
 	uint32_t len = 0;
 	uint32_t sta_count;
-	bool mlo_sta_present, sbs_mlo_sta_present = false;
 	qdf_freq_t op_ch_freq_list[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
 	uint8_t vdev_id_list[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
 
@@ -467,25 +466,23 @@ wlan_cm_dual_sta_roam_update_connect_channels(struct wlan_objmgr_psoc *psoc,
 	if (dual_sta_policy->primary_vdev_id != WLAN_UMAC_VDEV_ID_MAX)
 		return;
 
-	mlo_sta_present = policy_mgr_is_mlo_sta_present(psoc);
-	/* check for SBS mlo if MLO sta is present and sta cnt > 1 */
-	if (mlo_sta_present && sta_count > 1)
-		sbs_mlo_sta_present =
-			policy_mgr_is_mlo_in_mode_sbs(psoc, PM_STA_MODE,
-						      NULL, NULL);
-
-	mlme_debug("mlo_sta_present %d sbs_mlo_sta_present %d",
-		   mlo_sta_present, sbs_mlo_sta_present);
-
 	/*
-	 * For ML STA (non-SBS) scenario, allow further STA connections to
-	 * all available bands/channels irrespective of existing STA
-	 * connection band.
-	 * But if ML STA is SBS (both link 5Ghz), allow only 2.4Ghz STA
-	 * connection
+	 * If an ML STA exists with more than one link, allow further STA
+	 * connection to all available bands/channels irrespective of existing
+	 * STA connection/link band. Link that is causing MCC with the second
+	 * STA can be disabled post connection.
+	 * TODO: Check if disabling the MCC link is allowed or not. TID to
+	 * link mapping restricts disabling the link.
+	 *
+	 * If only one ML link is present, allow the second STA only on other
+	 * mac than this link mac. If second STA is allowed on the same mac
+	 * also, it may result in MCC and the link can't be disabled
+	 * post connection as only one link is present.
 	 */
-	if (mlo_sta_present && !sbs_mlo_sta_present)
+	if (policy_mgr_is_mlo_sta_present(psoc) && sta_count > 1) {
+		mlme_debug("Multi link mlo sta present");
 		return;
+	}
 
 	/*
 	 * Get Reg domain valid channels and update to the scan filter
