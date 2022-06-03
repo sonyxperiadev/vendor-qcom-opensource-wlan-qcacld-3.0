@@ -319,8 +319,8 @@ out:
 }
 
 void policy_mgr_decr_session_set_pcl(struct wlan_objmgr_psoc *psoc,
-						enum QDF_OPMODE mode,
-						uint8_t session_id)
+				     enum QDF_OPMODE mode,
+				     uint8_t session_id)
 {
 	QDF_STATUS qdf_status;
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
@@ -391,7 +391,7 @@ void policy_mgr_decr_session_set_pcl(struct wlan_objmgr_psoc *psoc,
 		return;
 
 	policy_mgr_check_n_start_opportunistic_timer(psoc);
-	policy_mgr_handle_ml_sta_links_on_vdev_down(psoc, mode, vdev_id);
+	policy_mgr_handle_ml_sta_links_on_vdev_down(psoc, mode, session_id);
 }
 
 /**
