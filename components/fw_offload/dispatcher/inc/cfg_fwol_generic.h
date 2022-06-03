@@ -619,6 +619,45 @@
 #define __CFG_SET_TSF_PTP_OPT
 #endif
 
+#if defined(WLAN_FEATURE_TSF_ACCURACY)
+/* <ini>
+ * g_tsf_accuracy_configs: Enable TSF Accuracy Feature config parameters
+ * @Min: N/A
+ * @Max: N/A
+ * @Default: N/A
+ *
+ * This ini is to configure TSF Accuracy parameters.
+ * The list of mandate CFG_TSF_ACCURACY_CONFIG_LEN elements of type integer are
+ * specified with (,) delimiter.
+ * Param1: Enable/Disable TSF Accuracy Feature.
+ * Param2: GPIO to toggle on TSF sync done
+ * Param3: GPIO to raise pulse on specified period(TSF time domain)
+ * Param4: Periodicity of TSF pulse in milli seconds
+ * For example:
+ * g_tsf_accuracy_configs=1,430,431,100
+ *
+ * Related: None
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_TSF_ACCURACY_CONFIG_LEN 4
+#define CFG_TSF_ACCURACY_CONFIG_STR_LEN 128
+#define CFG_TSF_ACCURACY_CONFIGS_DEF "0, -1, -1, 0"
+#define CFG_TSF_ACCURACY_CONFIGS CFG_INI_STRING( \
+		"g_tsf_accuracy_configs", \
+		0, \
+		CFG_TSF_ACCURACY_CONFIG_STR_LEN, \
+		CFG_TSF_ACCURACY_CONFIGS_DEF, \
+		"Configure TSF Accuracy parameters")
+
+#define __CFG_TSF_ACCURACY_CONFIGS \
+		CFG(CFG_TSF_ACCURACY_CONFIGS)
+#else
+#define __CFG_TSF_ACCURACY_CONFIGS
+#endif
+
 #ifdef DHCP_SERVER_OFFLOAD
 /* <ini>
  * gDHCPServerOffloadEnable
@@ -911,6 +950,7 @@
 	__CFG_SET_TSF_IRQ_HOST_GPIO_PIN \
 	__CFG_SET_TSF_SYNC_HOST_GPIO_PIN \
 	__CFG_SET_TSF_PTP_OPT \
+	__CFG_TSF_ACCURACY_CONFIGS \
 	__CFG_IS_SAE_ENABLED \
 	CFG(CFG_ENABLE_GCMP) \
 	CFG(CFG_TX_SCH_DELAY) \

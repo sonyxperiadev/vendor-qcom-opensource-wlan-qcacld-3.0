@@ -456,6 +456,18 @@ QDF_STATUS ucfg_fwol_get_dhcp_max_num_clients(struct wlan_objmgr_psoc *psoc,
 QDF_STATUS ucfg_fwol_get_tsf_sync_enable(struct wlan_objmgr_psoc *psoc,
 					 bool *tsf_sync_enable);
 
+#ifdef WLAN_FEATURE_TSF_ACCURACY
+/**
+ * ucfg_fwol_get_tsf_accuracy_configs() - Get TSF accuracy configs
+ * @psoc: pointer to the psoc object
+ * @config: Pointer to hold TSF Accuracy Feature configs
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS ucfg_fwol_get_tsf_accuracy_configs(struct wlan_objmgr_psoc *psoc,
+					      struct wlan_fwol_tsf_accuracy_configs **config);
+#endif
+
 /**
  * ucfg_fwol_get_tsf_ptp_options() - Get TSF Plus feature options
  * @psoc: pointer to the psoc object

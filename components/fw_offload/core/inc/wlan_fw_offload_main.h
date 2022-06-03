@@ -192,6 +192,25 @@ struct wlan_fwol_neighbor_report_cfg {
 	uint32_t max_req_cap;
 };
 
+#ifdef WLAN_FEATURE_TSF_ACCURACY
+/**
+ * struct wlan_fwol_tsf_accuracy_configs - TSF Accuracy feature config params
+ * @enable: Flag to Enable/Disable TSF Accuracy Feature
+ * @sync_gpio: GPIO to indicate TSF sync is done. The GPIO pin is toggled at
+ *             every TSF sync done.
+ * @periodic_pulse_gpio: GPIO to indicate TSF time completes a cycle of given
+ *                       interval. The GPIO pin gets pulse of 1msec for every
+ *                       TSF cycle complete.
+ * @pulse_interval_ms: Periodicy of TSF pulse in milli seconds.
+ */
+struct wlan_fwol_tsf_accuracy_configs {
+	bool enable;
+	uint32_t sync_gpio;
+	uint32_t periodic_pulse_gpio;
+	uint32_t pulse_interval_ms;
+};
+#endif
+
 /**
  * struct wlan_fwol_cfg - fwol config items
  * @coex_config: coex config items
@@ -222,6 +241,7 @@ struct wlan_fwol_neighbor_report_cfg {
  * @tsf_sync_host_gpio_pin: TSF Sync GPIO Pin config
  * @tsf_ptp_options: TSF Plus feature options config
  * @tsf_sync_enable: TSF sync feature enable/disable
+ * @tsf_accuracy_configs: TSF Accuracy feature config parameters
  * @sae_enable: SAE feature enable config
  * @gcmp_enable: GCMP feature enable config
  * @enable_tx_sch_delay: Enable TX SCH delay value config
@@ -266,6 +286,9 @@ struct wlan_fwol_cfg {
 #ifdef WLAN_FEATURE_TSF_PLUS
 	uint32_t tsf_ptp_options;
 	bool tsf_sync_enable;
+#ifdef WLAN_FEATURE_TSF_ACCURACY
+	struct wlan_fwol_tsf_accuracy_configs tsf_accuracy_configs;
+#endif
 #ifdef WLAN_FEATURE_TSF_PLUS_EXT_GPIO_IRQ
 	uint32_t tsf_irq_host_gpio_pin;
 #endif
