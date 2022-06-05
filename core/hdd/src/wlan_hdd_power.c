@@ -2500,10 +2500,8 @@ static int __wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
 	}
 
 	if (suspend_mode == PMO_SUSPEND_SHUTDOWN) {
-		if (hdd_ctx->shutdown_in_suspend)
-			return -EAGAIN;
-
 		hdd_info_rl("Shutdown WLAN in Suspend");
+		hdd_ctx->shutdown_in_suspend = true;
 		hdd_shutdown_wlan_in_suspend(hdd_ctx);
 		/* shutdown must be excute in active, so return -EAGAIN
 		 * to PM to exit and try again
