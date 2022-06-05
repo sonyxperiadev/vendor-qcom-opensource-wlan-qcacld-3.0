@@ -2261,18 +2261,6 @@ hdd_sched_scan_results(struct wiphy *wiphy, uint64_t reqid)
 }
 #endif
 
-#ifdef FEATURE_WLAN_FULL_POWER_DOWN_SUPPORT
-bool wlan_hdd_is_full_power_down_enable(struct hdd_context *hdd_ctx)
-{
-	if (ucfg_pmo_get_suspend_mode(hdd_ctx->psoc) == PMO_FULL_POWER_DOWN) {
-		hdd_info_rl("Wlan full power down is enabled while suspend");
-		return true;
-	}
-
-	return false;
-}
-#endif
-
 /**
  * __wlan_hdd_cfg80211_resume_wlan() - cfg80211 resume callback
  * @wiphy: Pointer to wiphy
@@ -2309,12 +2297,6 @@ static int __wlan_hdd_cfg80211_resume_wlan(struct wiphy *wiphy)
 	if (ucfg_pmo_get_suspend_mode(hdd_ctx->psoc) == PMO_SUSPEND_NONE) {
 		hdd_info_rl("Suspend is not supported");
 		return -EINVAL;
-	}
-
-	if (wlan_hdd_is_full_power_down_enable(hdd_ctx)) {
-		hdd_debug("Driver has been re-initialized; Skipping resume");
-		exit_code = 0;
-		goto exit_with_code;
 	}
 
 	if (hdd_ctx->driver_status != DRIVER_MODULES_ENABLED) {
@@ -2495,11 +2477,6 @@ static int __wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
 	if (ucfg_pmo_get_suspend_mode(hdd_ctx->psoc) == PMO_SUSPEND_NONE) {
 		hdd_info_rl("Suspend is not supported");
 		return -EINVAL;
-	}
-
-	if (wlan_hdd_is_full_power_down_enable(hdd_ctx)) {
-		hdd_debug("Driver will be shutdown; Skipping suspend");
-		return 0;
 	}
 
 	if (hdd_ctx->driver_status != DRIVER_MODULES_ENABLED) {

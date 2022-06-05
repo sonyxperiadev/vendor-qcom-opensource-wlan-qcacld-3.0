@@ -5423,23 +5423,6 @@ hdd_is_dynamic_set_mac_addr_allowed(struct hdd_adapter *adapter)
 
 #endif /* WLAN_FEATURE_DYNAMIC_MAC_ADDR_UPDATE */
 
-#ifdef FEATURE_WLAN_FULL_POWER_DOWN_SUPPORT
-/**
- * hdd_set_suspend_mode: set the suspend_mode state to pld based on the
- *                       configuration option from INI file
- * @hdd_ctx: HDD context
- *
- * Return: 0 for success
- *         Non zero failure code for errors
- */
-int hdd_set_suspend_mode(struct hdd_context *hdd_ctx);
-#else
-static inline int hdd_set_suspend_mode(struct hdd_context *hdd_ctx)
-{
-	return 0;
-}
-#endif
-
 #define HDD_DATA_STALL_ENABLE      BIT(0)
 #define HDD_HOST_STA_TX_TIMEOUT    BIT(16)
 #define HDD_HOST_SAP_TX_TIMEOUT    BIT(17)
