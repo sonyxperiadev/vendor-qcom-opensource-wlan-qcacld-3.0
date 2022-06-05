@@ -2469,7 +2469,6 @@ static int __wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
 	int rc;
 	wlan_net_dev_ref_dbgid dbgid = NET_DEV_HOLD_CFG80211_SUSPEND_WLAN;
 	struct hdd_hostapd_state *hapd_state;
-	enum pmo_suspend_mode suspend_mode;
 	struct csr_del_sta_params params = {
 		.peerMacAddr = QDF_MAC_ADDR_BCAST_INIT,
 		.reason_code = REASON_DEAUTH_NETWORK_LEAVING,
@@ -2493,20 +2492,14 @@ static int __wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
 			return rc;
 	}
 
-	suspend_mode = ucfg_pmo_get_suspend_mode(hdd_ctx->psoc);
-	if (suspend_mode == PMO_SUSPEND_NONE) {
+	if (ucfg_pmo_get_suspend_mode(hdd_ctx->psoc) == PMO_SUSPEND_NONE) {
 		hdd_info_rl("Suspend is not supported");
 		return -EINVAL;
 	}
 
-	if (suspend_mode == PMO_SUSPEND_SHUTDOWN) {
-		hdd_info_rl("Shutdown WLAN in Suspend");
-		hdd_ctx->shutdown_in_suspend = true;
-		hdd_shutdown_wlan_in_suspend(hdd_ctx);
-		/* shutdown must be excute in active, so return -EAGAIN
-		 * to PM to exit and try again
-		 */
-		return -EAGAIN;
+	if (wlan_hdd_is_full_power_down_enable(hdd_ctx)) {
+		hdd_debug("Driver will be shutdown; Skipping suspend");
+		return 0;
 	}
 
 	if (hdd_ctx->driver_status != DRIVER_MODULES_ENABLED) {
@@ -2737,8 +2730,7 @@ static int _wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
 
 	/* If Wifi is off, return success for system suspend */
 	if (hdd_ctx->driver_status != DRIVER_MODULES_ENABLED) {
-		hdd_info("Driver Modules not Enabled");
-		hdd_ctx->shutdown_in_suspend = false;
+		hdd_debug("Driver Modules not Enabled ");
 		return 0;
 	}
 
@@ -2787,8 +2779,7 @@ int wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
 	 * the deadlock as idle shutdown waits for the dsc ops
 	 * to complete.
 	 */
-	if (!hdd_ctx->shutdown_in_suspend)
-		hdd_psoc_idle_timer_stop(hdd_ctx);
+	hdd_psoc_idle_timer_stop(hdd_ctx);
 
 	errno = osif_psoc_sync_op_start(wiphy_dev(wiphy), &psoc_sync);
 	if (errno)

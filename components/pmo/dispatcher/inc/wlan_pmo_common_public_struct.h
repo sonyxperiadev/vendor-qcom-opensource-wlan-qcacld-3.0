@@ -175,13 +175,13 @@ enum powersave_mode {
  * @PMO_SUSPEND_NONE: Does not support suspend
  * @PMO_SUSPEND_LEGENCY: Legency PDEV suspend mode
  * @PMO_SUSPEND_WOW: WoW suspend mode
- * @PMO_SUSPEND_SHUTDOWN: Shutdown suspend mode. Shutdown while suspend
+ * @PMO_FULL_POWER_DOWN: Full power down while suspend
  */
 enum pmo_suspend_mode {
 	PMO_SUSPEND_NONE = 0,
 	PMO_SUSPEND_LEGENCY,
 	PMO_SUSPEND_WOW,
-	PMO_SUSPEND_SHUTDOWN
+	PMO_FULL_POWER_DOWN
 };
 
 #define PMO_TARGET_SUSPEND_TIMEOUT   (4000)
