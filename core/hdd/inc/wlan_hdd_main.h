@@ -1490,8 +1490,6 @@ struct hdd_adapter {
 	unsigned int tx_flow_hi_watermark_offset;
 #endif /* QCA_LL_LEGACY_TX_FLOW_CONTROL */
 
-	bool offloads_configured;
-
 	/* DSCP to UP QoS Mapping */
 	enum sme_qos_wmmuptype dscp_to_up_map[WLAN_MAX_DSCP + 1];
 
