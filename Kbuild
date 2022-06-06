@@ -4410,7 +4410,7 @@ cppflags-y += -DHW_TX_DELAY_STATS_ENABLE
 endif
 
 #Flags to enable/disable Dynamic WLAN interface control feature
-cppflags-$(CONFIG_WLAN_DYNAMIC_IFACE_CTRL) += -DFEATURE_WLAN_DYNAMIC_IFACE_CTRL
+cppflags-$(CONFIG_CNSS_HW_SECURE_DISABLE) += -DFEATURE_CNSS_HW_SECURE_DISABLE
 
 KBUILD_CPPFLAGS += $(cppflags-y)
 

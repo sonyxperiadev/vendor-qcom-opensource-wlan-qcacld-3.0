@@ -1992,7 +1992,7 @@ struct hdd_rtpm_tput_policy_context {
 };
 #endif
 
-#ifdef FEATURE_WLAN_DYNAMIC_IFACE_CTRL
+#ifdef FEATURE_CNSS_HW_SECURE_DISABLE
 /**
  * hdd_get_wlan_driver_status() - get status of soft driver unload
  *

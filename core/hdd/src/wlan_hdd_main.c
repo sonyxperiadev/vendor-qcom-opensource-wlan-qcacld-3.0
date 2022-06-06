@@ -17762,7 +17762,7 @@ static int hdd_validate_wlan_string(const char __user *user_buf)
 	return -EINVAL;
 }
 
-#ifdef FEATURE_WLAN_DYNAMIC_IFACE_CTRL
+#ifdef FEATURE_CNSS_HW_SECURE_DISABLE
 #define WIFI_DISABLE_SLEEP (10)
 #define WIFI_DISABLE_MAX_RETRY_ATTEMPTS (10)
 static bool g_soft_unload;
@@ -17774,6 +17774,12 @@ bool hdd_get_wlan_driver_status(void)
 
 static int hdd_wlan_soft_driver_load(void)
 {
+	if (!cds_is_driver_loaded()) {
+		pr_info("Enabling CNSS WLAN HW\n");
+		cnss_wlan_hw_enable();
+		return 0;
+	}
+
 	if (!g_soft_unload) {
 		pr_info("Enabling WiFi\n");
 		return -EINVAL;
