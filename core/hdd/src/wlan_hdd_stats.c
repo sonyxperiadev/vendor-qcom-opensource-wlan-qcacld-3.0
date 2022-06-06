@@ -819,6 +819,17 @@ static bool put_wifi_iface_stats(struct wifi_interface_stats *if_stat,
 		nla_nest_end(vendor_event, wmm_stats);
 	}
 	nla_nest_end(vendor_event, wmm_info);
+
+	if (nla_put_u32(vendor_event,
+			QCA_WLAN_VENDOR_ATTR_LL_STATS_TIM_BEACON,
+			if_stat->powersave_stats.tot_tim_bcn) ||
+	    nla_put_u32(vendor_event,
+			QCA_WLAN_VENDOR_ATTR_LL_STATS_TIM_BEACON_ERR,
+			if_stat->powersave_stats.tot_err_tim_bcn)) {
+		hdd_err("QCA_WLAN_VENDOR_ATTR put powersave_stat fail");
+		return false;
+	}
+
 	return true;
 }
 

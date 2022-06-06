@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -46,6 +47,7 @@ void hdd_debugfs_process_iface_stats(struct hdd_adapter *adapter,
 	wmi_iface_link_stats *link_stats;
 	wmi_wmm_ac_stats *ac_stats;
 	wmi_iface_offload_stats *offload_stats;
+	wmi_iface_powersave_stats *powersave_stats;
 	uint64_t average_tsf_offset;
 	int i;
 	ssize_t len = 0;
@@ -146,6 +148,14 @@ void hdd_debugfs_process_iface_stats(struct hdd_adapter *adapter,
 				offload_stats->drp_count,
 				offload_stats->fwd_count);
 	}
+
+	powersave_stats = &iface_stat->powersave_stats;
+	buffer += len;
+	ll_stats.len += len;
+	len = scnprintf(buffer, DEBUGFS_LLSTATS_BUF_SIZE - ll_stats.len,
+			"\ntot_tim_bcn: %u tot_err_tim_bcn: %u",
+			powersave_stats->tot_tim_bcn,
+			powersave_stats->tot_err_tim_bcn);
 
 	ll_stats.len += len;
 	mutex_unlock(&llstats_mutex);
