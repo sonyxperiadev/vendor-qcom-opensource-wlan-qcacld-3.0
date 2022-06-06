@@ -8807,6 +8807,28 @@ bool hdd_is_interface_up(struct hdd_adapter *adapter)
 }
 
 #ifdef FEATURE_MONITOR_MODE_SUPPORT
+#ifdef WLAN_FEATURE_11BE
+static inline bool wlan_hdd_is_mon_channel_bw_valid(enum phy_ch_width ch_width)
+{
+	if (ch_width > CH_WIDTH_320MHZ ||
+	    (!cds_is_sub_20_mhz_enabled() && (ch_width == CH_WIDTH_5MHZ ||
+					      ch_width == CH_WIDTH_10MHZ)))
+		return false;
+
+	return true;
+}
+#else
+static inline bool wlan_hdd_is_mon_channel_bw_valid(enum phy_ch_width ch_width)
+{
+	if (ch_width > CH_WIDTH_10MHZ ||
+	    (!cds_is_sub_20_mhz_enabled() && (ch_width == CH_WIDTH_5MHZ ||
+					      ch_width == CH_WIDTH_10MHZ)))
+		return false;
+
+	return true;
+}
+#endif
+
 int wlan_hdd_set_mon_chan(struct hdd_adapter *adapter, qdf_freq_t freq,
 			  uint32_t bandwidth)
 {
@@ -8835,8 +8857,7 @@ int wlan_hdd_set_mon_chan(struct hdd_adapter *adapter, qdf_freq_t freq,
 	/* Verify the BW before accepting this request */
 	ch_width = bandwidth;
 
-	if (ch_width > CH_WIDTH_10MHZ ||
-	   (!cds_is_sub_20_mhz_enabled() && ch_width > CH_WIDTH_160MHZ)) {
+	if (!wlan_hdd_is_mon_channel_bw_valid(ch_width)) {
 		hdd_err("invalid BW received %d", ch_width);
 		return -EINVAL;
 	}
