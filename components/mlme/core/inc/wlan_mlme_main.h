@@ -401,6 +401,15 @@ struct wait_for_key_timer {
 };
 
 /**
+ * struct mlme_ap_config - VDEV MLME legacy private SAP
+ * related configurations
+ * @user_config_sap_ch_freq : Frequency from userspace to start SAP
+ */
+struct mlme_ap_config {
+	qdf_freq_t user_config_sap_ch_freq;
+};
+
+/**
  * struct mlme_legacy_priv - VDEV MLME legacy priv object
  * @chan_switch_in_progress: flag to indicate that channel switch is in progress
  * @hidden_ssid_restart_in_progress: flag to indicate hidden ssid restart is
@@ -444,6 +453,7 @@ struct wait_for_key_timer {
  * @max_mcs_index: Max supported mcs index of vdev
  * @vdev_traffic_type: to set if vdev is LOW_LATENCY or HIGH_TPUT
  * @country_ie_for_all_band: take all band channel info in country ie
+ * @mlme_ap: SAP related vdev private configurations
  */
 struct mlme_legacy_priv {
 	bool chan_switch_in_progress;
@@ -493,6 +503,7 @@ struct mlme_legacy_priv {
 #endif
 	uint8_t vdev_traffic_type;
 	bool country_ie_for_all_band;
+	struct mlme_ap_config mlme_ap;
 };
 
 /**
@@ -1154,4 +1165,26 @@ void wlan_acquire_peer_key_wakelock(struct wlan_objmgr_pdev *pdev,
  */
 void wlan_release_peer_key_wakelock(struct wlan_objmgr_pdev *pdev,
 				    uint8_t *mac_addr);
+
+/**
+ * wlan_get_sap_user_config_freq() - Get the user configured frequency
+ *
+ * @vdev: pointer to vdev
+ *
+ * Return: User configured sap frequency.
+ */
+qdf_freq_t
+wlan_get_sap_user_config_freq(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * wlan_set_sap_user_config_freq() - Set the user configured frequency
+ *
+ * @vdev: pointer to vdev
+ * @freq: user configured SAP frequency
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_set_sap_user_config_freq(struct wlan_objmgr_vdev *vdev,
+			      qdf_freq_t freq);
 #endif

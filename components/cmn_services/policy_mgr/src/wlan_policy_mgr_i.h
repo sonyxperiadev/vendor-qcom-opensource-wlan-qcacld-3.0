@@ -349,7 +349,6 @@ struct policy_mgr_cfg {
  *                               & FW HW mode
  * @channel_switch_complete_evt: qdf event for channel switch completion check
  * @mode_change_cb: Mode change callback
- * @user_config_sap_ch_freq: SAP channel freq configured by user application
  * @cfg: Policy manager config data
  * @dynamic_mcc_adaptive_sched: disable/enable mcc adaptive scheduler feature
  * @dynamic_dfs_master_disabled: current state of dynamic dfs master
@@ -391,7 +390,6 @@ struct policy_mgr_psoc_priv_obj {
 	qdf_event_t opportunistic_update_done_evt;
 	qdf_event_t channel_switch_complete_evt;
 	send_mode_change_event_cb mode_change_cb;
-	uint32_t user_config_sap_ch_freq;
 	struct policy_mgr_cfg cfg;
 	uint32_t valid_ch_freq_list[NUM_CHANNELS];
 	uint32_t valid_ch_freq_list_count;
@@ -889,4 +887,17 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
  */
 bool policy_mgr_2_freq_same_mac_in_sbs(struct policy_mgr_psoc_priv_obj *pm_ctx,
 				       qdf_freq_t freq_1, qdf_freq_t freq_2);
+
+/**
+ * policy_mgr_get_connection_for_vdev_id() - provides the
+ * particular connection with the requested vdev id
+ * @vdev_id: vdev id of the connection
+ *
+ * This function provides the specific connection with the
+ * requested vdev id
+ *
+ * Return: index in the connection table
+ */
+uint32_t policy_mgr_get_connection_for_vdev_id(struct wlan_objmgr_psoc *psoc,
+					       uint32_t vdev_id);
 #endif
