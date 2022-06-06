@@ -1524,12 +1524,6 @@ struct hdd_adapter {
 	ol_txrx_tx_fp tx_fn;
 	/* debugfs entry */
 	struct dentry *debugfs_phy;
-	/*
-	 * Indicate if HO fails during disconnect so that
-	 * disconnect is not initiated by HDD as its already
-	 * initiated by CSR
-	 */
-	bool roam_ho_fail;
 	struct lfr_firmware_status lfr_fw_status;
 	bool con_status;
 	bool dad;
