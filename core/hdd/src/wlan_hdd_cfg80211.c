@@ -18598,7 +18598,7 @@ static void wlan_hdd_update_eapol_over_nl80211_flags(struct wiphy *wiphy)
 static void
 wlan_hdd_update_max_connect_akm(struct wiphy *wiphy)
 {
-	wiphy->max_num_akms_connect = WLAN_CM_MAX_CONNECT_AKMS;
+	wiphy->max_num_akm_suites = WLAN_CM_MAX_CONNECT_AKMS;
 }
 #else
 static void
