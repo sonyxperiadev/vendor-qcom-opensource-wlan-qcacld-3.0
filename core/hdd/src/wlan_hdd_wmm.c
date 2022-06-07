@@ -1992,7 +1992,7 @@ void hdd_wmm_classify_pkt(struct hdd_adapter *adapter,
 {
 	hdd_wmm_classify_critical_pkt(adapter, skb, user_pri, is_critical);
 
-	if (!is_critical) {
+	if (false == *is_critical) {
 		hdd_wmm_get_user_priority_from_ip_tos(adapter, skb, user_pri);
 		hdd_check_and_upgrade_udp_qos(adapter, skb, user_pri);
 	}
