@@ -297,9 +297,11 @@ struct pld_shadow_reg_v2_cfg {
 	u32 addr;
 };
 
+#ifdef CONFIG_SHADOW_V3
 struct pld_shadow_reg_v3_cfg {
 	u32 addr;
 };
+#endif
 
 /**
  * struct pld_rri_over_ddr_cfg_s - rri_over_ddr configuration
@@ -341,8 +343,10 @@ struct pld_wlan_enable_cfg {
 	struct pld_shadow_reg_v2_cfg *shadow_reg_v2_cfg;
 	bool rri_over_ddr_cfg_valid;
 	struct pld_rri_over_ddr_cfg rri_over_ddr_cfg;
+#ifdef CONFIG_SHADOW_V3
 	u32 num_shadow_reg_v3_cfg;
 	struct pld_shadow_reg_v3_cfg *shadow_reg_v3_cfg;
+#endif
 };
 
 /**
