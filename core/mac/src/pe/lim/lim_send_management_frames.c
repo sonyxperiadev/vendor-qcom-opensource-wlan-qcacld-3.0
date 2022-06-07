@@ -155,11 +155,20 @@ lim_populate_ml_probe_req(struct mac_context *mac,
 	struct wlan_ml_probe_req *ml_prb_req = NULL;
 	uint8_t *ml_probe = NULL;
 	uint8_t link = 0;
+	uint16_t stacontrol = 0;
+	struct mlo_partner_info partner_info;
 
 	if (!session || !session->vdev || !session->vdev->mlo_dev_ctx) {
 		pe_err("Null value");
 		return QDF_STATUS_E_NULL_VALUE;
 	}
+
+	/* if num partner links is > 0
+	 * means complete profiles were sent by AP
+	 */
+	if (session->lim_join_req->partner_info.num_partner_links)
+		return QDF_STATUS_SUCCESS;
+
 	ml_prb_req = qdf_mem_malloc(sizeof(struct wlan_ml_probe_req));
 	if (!ml_prb_req)
 		return QDF_STATUS_E_NULL_VALUE;
@@ -193,13 +202,28 @@ lim_populate_ml_probe_req(struct mac_context *mac,
 	ml_prb_req->mld_id = 0;
 	ml_probe_len++;
 
+	stacontrol = htole16(stacontrol);
+	partner_info = session->lim_join_req->partner_info;
+
 	for (link = 0;
-	     link < session->lim_join_req->partner_info.num_partner_links;
+	     link < partner_info.num_partner_links;
 	     link++) {
 		ml_prb_req->sta_profile[link].sub_elem_id = 0;
-		ml_probe_len++;
-		ml_prb_req->sta_profile[link].per_sta_len = 0;
-		ml_probe_len++;
+		ml_prb_req->sta_profile[link].per_sta_len =
+			WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_SIZE + 2;
+		ml_probe_len += 2;
+
+		QDF_SET_BITS(stacontrol,
+			     WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_LINKID_IDX,
+			     WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_LINKID_BITS,
+			     partner_info.partner_link_info[link].link_id);
+
+		QDF_SET_BITS(stacontrol,
+			     WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_CMPLTPROF_IDX,
+			     WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_CMPLTPROF_BITS,
+			     1);
+		ml_prb_req->sta_profile[link].sta_control = stacontrol;
+		ml_probe_len += WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_SIZE;
 	}
 	ml_prb_req->ml_ie_ff.elem_len = ml_probe_len;
 	*ml_probe_req_len = ml_probe_len;
