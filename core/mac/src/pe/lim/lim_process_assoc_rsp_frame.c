@@ -1252,7 +1252,7 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 		wlan_connectivity_mgmt_event((struct wlan_frame_hdr *)hdr,
 					     session_entry->vdev_id,
 					     assoc_rsp->status_code, 0, rssi,
-					     0, 0, 0,
+					     0, 0, 0, assoc_rsp->aid,
 					     WLAN_ASSOC_RSP);
 
 	ap_nss = lim_get_nss_supported_by_ap(&assoc_rsp->VHTCaps,

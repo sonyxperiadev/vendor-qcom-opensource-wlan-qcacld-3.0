@@ -5427,6 +5427,8 @@ void cm_roam_scan_info_event(struct wlan_objmgr_psoc *psoc,
 			log_record->roam_scan.scan_freq[i] = scan->chan_freq[i];
 	}
 
+	log_record->roam_scan.is_btcoex_active = scan->is_btcoex_active;
+
 out:
 	wlan_connectivity_log_enqueue(log_record);
 	qdf_mem_free(log_record);
@@ -5848,9 +5850,9 @@ cm_roam_get_tag(enum mgmt_subtype subtype, bool is_tx)
 	case MGMT_SUBTYPE_ASSOC_RESP:
 		return WLAN_ASSOC_RSP;
 	case MGMT_SUBTYPE_REASSOC_REQ:
-		return WLAN_ASSOC_REQ;
+		return WLAN_REASSOC_REQ;
 	case MGMT_SUBTYPE_REASSOC_RESP:
-		return WLAN_ASSOC_RSP;
+		return WLAN_REASSOC_RSP;
 	case MGMT_SUBTYPE_DISASSOC:
 		if (is_tx)
 			return WLAN_DISASSOC_TX;
@@ -6104,6 +6106,7 @@ cm_roam_mgmt_frame_event(struct roam_frame_info *frame_data,
 	log_record->pkt_info.rssi = (-1) * frame_data->rssi;
 	log_record->pkt_info.tx_status = frame_data->tx_status;
 	log_record->pkt_info.frame_status_code = frame_data->status_code;
+	log_record->pkt_info.assoc_id = frame_data->assoc_id;
 
 	if (scan_data->present) {
 		for (i = 0; i < scan_data->num_ap; i++) {

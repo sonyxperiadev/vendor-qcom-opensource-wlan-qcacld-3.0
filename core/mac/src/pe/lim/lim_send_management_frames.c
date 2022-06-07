@@ -2249,7 +2249,7 @@ static void wlan_send_tx_complete_event(struct mac_context *mac, qdf_nbuf_t buf,
 			wlan_connectivity_mgmt_event(
 					mac_hdr, params->vdev_id, status,
 					qdf_tx_complete, mac->lim.bss_rssi,
-					algo, type, seq, WLAN_AUTH_REQ);
+					algo, type, seq, 0, WLAN_AUTH_REQ);
 			return;
 		}
 
@@ -2259,7 +2259,7 @@ static void wlan_send_tx_complete_event(struct mac_context *mac, qdf_nbuf_t buf,
 		wlan_connectivity_mgmt_event(
 					mac_hdr, params->vdev_id, reason_code,
 					qdf_tx_complete, mac->lim.bss_rssi,
-					0, 0, 0, tag);
+					0, 0, 0, 0, tag);
 	}
 }
 
@@ -4185,7 +4185,7 @@ lim_send_disassoc_mgmt_frame(struct mac_context *mac,
 		wlan_connectivity_mgmt_event((struct wlan_frame_hdr *)pMacHdr,
 					     pe_session->vdev_id, nReason,
 					     QDF_TX_RX_STATUS_OK,
-					     mac->lim.bss_rssi, 0, 0, 0,
+					     mac->lim.bss_rssi, 0, 0, 0, 0,
 					     WLAN_DISASSOC_TX);
 
 		/* Queue Disassociation frame in high priority WQ */
@@ -4431,7 +4431,7 @@ lim_send_deauth_mgmt_frame(struct mac_context *mac,
 		wlan_connectivity_mgmt_event((struct wlan_frame_hdr *)pMacHdr,
 					     pe_session->vdev_id, nReason,
 					     QDF_TX_RX_STATUS_OK,
-					     mac->lim.bss_rssi, 0, 0, 0,
+					     mac->lim.bss_rssi, 0, 0, 0, 0,
 					     WLAN_DEAUTH_TX);
 
 		/* Queue Disassociation frame in high priority WQ */
