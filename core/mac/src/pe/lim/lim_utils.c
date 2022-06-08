@@ -53,6 +53,7 @@
 #include "wlan_policy_mgr_api.h"
 #include "wlan_mlme_public_struct.h"
 #include "wlan_mlme_ucfg_api.h"
+#include "wma_pasn_peer_api.h"
 #ifdef WLAN_FEATURE_11AX_BSS_COLOR
 #include "wma_he.h"
 #endif
@@ -569,6 +570,27 @@ void lim_deactivate_timers_for_vdev(struct mac_context *mac_ctx,
 		return;
 	}
 }
+
+#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
+QDF_STATUS
+lim_process_pasn_delete_all_peers(struct mac_context *mac,
+				  struct pasn_peer_delete_msg *msg)
+{
+	struct wlan_objmgr_vdev *vdev;
+	tp_wma_handle wma = cds_get_context(QDF_MODULE_ID_WMA);
+	QDF_STATUS status;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac->psoc, msg->vdev_id,
+						    WLAN_WIFI_POS_CORE_ID);
+	status = wma_delete_all_pasn_peers(wma, vdev);
+	if (QDF_IS_STATUS_ERROR(status))
+		pe_err("Failed to delete all PASN peers");
+
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_WIFI_POS_CORE_ID);
+
+	return status;
+}
+#endif
 
 /**
  * lim_cleanup_mlm() - This function is called to cleanup

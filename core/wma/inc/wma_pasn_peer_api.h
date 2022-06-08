@@ -77,6 +77,12 @@ wma_pasn_handle_peer_create_conf(tp_wma_handle wma,
  */
 QDF_STATUS
 wma_delete_all_pasn_peers(tp_wma_handle wma, struct wlan_objmgr_vdev *vdev);
+
+QDF_STATUS
+wma_resume_vdev_delete(tp_wma_handle wma, uint8_t vdev_id);
+
+QDF_STATUS
+wma_pasn_peer_delete_all_complete(struct wlan_objmgr_vdev *vdev);
 #else
 static inline QDF_STATUS
 wma_pasn_peer_create(struct wlan_objmgr_psoc *psoc,
@@ -104,6 +110,12 @@ wma_pasn_handle_peer_create_conf(tp_wma_handle wma,
 
 static inline QDF_STATUS
 wma_delete_all_pasn_peers(tp_wma_handle wma, struct wlan_objmgr_vdev *vdev)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+wma_resume_vdev_delete(tp_wma_handle wma, uint8_t vdev_id)
 {
 	return QDF_STATUS_SUCCESS;
 }

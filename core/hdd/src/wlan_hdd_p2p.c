@@ -1052,8 +1052,10 @@ __hdd_indicate_mgmt_frame_to_user(struct hdd_adapter *adapter,
 	uint8_t type = 0;
 	uint8_t sub_type = 0;
 	struct hdd_context *hdd_ctx;
-	uint8_t *dest_addr;
+	uint8_t *dest_addr = NULL;
+	uint16_t auth_algo;
 	enum nl80211_rxmgmt_flags nl80211_flag = 0;
+	bool is_pasn_auth_frame = false;
 
 	hdd_debug("Frame Type = %d Frame Length = %d freq = %d",
 		  frame_type, frm_len, rx_freq);
@@ -1076,10 +1078,19 @@ __hdd_indicate_mgmt_frame_to_user(struct hdd_adapter *adapter,
 
 	type = WLAN_HDD_GET_TYPE_FRM_FC(pb_frames[0]);
 	sub_type = WLAN_HDD_GET_SUBTYPE_FRM_FC(pb_frames[0]);
+	if (type == SIR_MAC_MGMT_FRAME &&
+	    sub_type == SIR_MAC_MGMT_AUTH &&
+	    frm_len > (sizeof(struct wlan_frame_hdr) +
+		       WLAN_AUTH_FRAME_MIN_LEN)) {
+		auth_algo = *(uint16_t *)(pb_frames +
+					  sizeof(struct wlan_frame_hdr));
+		if (auth_algo == eSIR_AUTH_TYPE_PASN)
+			is_pasn_auth_frame = true;
+	}
 
 	/* Get adapter from Destination mac address of the frame */
-	if ((type == SIR_MAC_MGMT_FRAME) &&
-	    (sub_type != SIR_MAC_MGMT_PROBE_REQ) &&
+	if (type == SIR_MAC_MGMT_FRAME &&
+	    sub_type != SIR_MAC_MGMT_PROBE_REQ && !is_pasn_auth_frame &&
 	    !qdf_is_macaddr_broadcast(
 	     (struct qdf_mac_addr *)&pb_frames[WLAN_HDD_80211_FRM_DA_OFFSET])) {
 		dest_addr = &pb_frames[WLAN_HDD_80211_FRM_DA_OFFSET];
@@ -1135,7 +1146,7 @@ __hdd_indicate_mgmt_frame_to_user(struct hdd_adapter *adapter,
 
 	/* Indicate Frame Over Normal Interface */
 	hdd_debug("Indicate Frame over NL80211 sessionid : %d, idx :%d",
-		   adapter->vdev_id, adapter->dev->ifindex);
+		  adapter->vdev_id, adapter->dev->ifindex);
 
 	wlan_hdd_cfg80211_convert_rxmgmt_flags(rx_flags, &nl80211_flag);
 

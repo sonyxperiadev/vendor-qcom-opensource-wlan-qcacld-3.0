@@ -56,6 +56,7 @@
 #include "ol_txrx.h"
 #include "wifi_pos_api.h"
 #include "net/cfg80211.h"
+#include "wifi_pos_pasn_api.h"
 #include <wlan_spectral_utils_api.h>
 #include "wlan_mlme_public_struct.h"
 #include "wlan_mlme_main.h"
@@ -80,7 +81,7 @@
 #include <wlan_mlo_mgr_sta.h>
 #include <wlan_mlo_mgr_main.h>
 #include "wlan_policy_mgr_ucfg.h"
-#include "wma_pasn_peer_api.h"
+#include "wlan_wifi_pos_interface.h"
 
 static QDF_STATUS init_sme_cmd_list(struct mac_context *mac);
 
@@ -774,6 +775,12 @@ static inline void sme_unregister_power_debug_stats_cb(struct mac_context *mac)
 }
 #endif
 
+static void
+sme_register_vdev_delete_callback(struct mac_context *mac)
+{
+	mac->sme.sme_vdev_del_cb = sme_vdev_delete;
+}
+
 /* Global APIs */
 
 /**
@@ -831,6 +838,7 @@ QDF_STATUS sme_open(mac_handle_t mac_handle)
 	sme_trace_init(mac);
 	sme_register_debug_callback();
 	sme_register_power_debug_stats_cb(mac);
+	sme_register_vdev_delete_callback(mac);
 
 	return status;
 }
@@ -4777,19 +4785,22 @@ QDF_STATUS sme_vdev_delete(mac_handle_t mac_handle,
 {
 	QDF_STATUS status;
 	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-	tp_wma_handle wma = cds_get_context(QDF_MODULE_ID_WMA);
 	uint8_t *self_peer_macaddr, vdev_id = wlan_vdev_get_id(vdev);
 	struct scheduler_msg self_peer_delete_msg = {0};
 	struct del_vdev_params *del_self_peer;
+	bool is_pasn_peer_delete_all_required;
 
 	MTRACE(qdf_trace(QDF_MODULE_ID_SME,
 			 TRACE_CODE_SME_RX_HDD_CLOSE_SESSION, vdev_id, 0));
 
-	status = sme_acquire_global_lock(&mac->sme);
+	is_pasn_peer_delete_all_required =
+		wlan_wifi_pos_pasn_peer_delete_all(mac->psoc, vdev_id);
+	if (is_pasn_peer_delete_all_required) {
+		sme_info("Resume vdev delete after pasn peers deletion");
+		return QDF_STATUS_SUCCESS;
+	}
 
-	if (vdev->vdev_mlme.vdev_opmode == QDF_STA_MODE ||
-	    vdev->vdev_mlme.vdev_opmode == QDF_SAP_MODE)
-		wma_delete_all_pasn_peers(wma, vdev);
+	status = sme_acquire_global_lock(&mac->sme);
 
 	if (QDF_IS_STATUS_SUCCESS(status)) {
 		status = csr_prepare_vdev_delete(mac, vdev_id, false);

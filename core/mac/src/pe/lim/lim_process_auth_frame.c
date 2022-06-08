@@ -507,7 +507,27 @@ static inline void  lim_process_sae_auth_frame(struct mac_context *mac_ctx,
 {}
 #endif
 
-#ifdef WLAN_FEATURE_RTT_11AZ_SUPPORT
+#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
+static uint8_t
+lim_get_pasn_peer_vdev_id(struct mac_context *mac, uint8_t *bssid)
+{
+	struct wlan_objmgr_peer *peer;
+	uint8_t vdev_id;
+
+	peer = wlan_objmgr_get_peer_by_mac(mac->psoc, bssid,
+					   WLAN_MGMT_RX_ID);
+	if (!peer) {
+		pe_err("PASN peer doesn't exist for bssid: " QDF_MAC_ADDR_FMT,
+		       QDF_MAC_ADDR_REF(bssid));
+		return WLAN_UMAC_VDEV_ID_MAX;
+	}
+
+	vdev_id = wlan_vdev_get_id(wlan_peer_get_vdev(peer));
+	wlan_objmgr_peer_release_ref(peer, WLAN_MGMT_RX_ID);
+
+	return vdev_id;
+}
+
 /**
  * lim_process_pasn_auth_frame()- Process PASN authentication frame
  * @mac_ctx: MAC context
@@ -530,6 +550,7 @@ lim_process_pasn_auth_frame(struct mac_context *mac_ctx,
 	body_ptr = WMA_GET_RX_MPDU_DATA(rx_pkt_info);
 	frame_len = WMA_GET_RX_PAYLOAD_LEN(rx_pkt_info);
 
+	pe_debug("vdev_id:%d", vdev_id);
 	lim_send_sme_mgmt_frame_ind(mac_ctx, mac_hdr->fc.subType,
 				    (uint8_t *)mac_hdr,
 				    frame_len + sizeof(tSirMacMgmtHdr),
@@ -546,6 +567,12 @@ lim_process_pasn_auth_frame(struct mac_context *mac_ctx,
 			    uint8_t *rx_pkt_info)
 {
 	return QDF_STATUS_SUCCESS;
+}
+
+static inline uint8_t
+lim_get_pasn_peer_vdev_id(struct mac_context *mac, uint8_t *bssid)
+{
+	return WLAN_UMAC_VDEV_ID_MAX;
 }
 #endif
 
@@ -1831,6 +1858,7 @@ QDF_STATUS lim_process_auth_frame_no_session(struct mac_context *mac,
 	tpSirMacMgmtHdr mac_hdr;
 	struct pe_session *pe_session = NULL;
 	uint8_t *pBody;
+	uint8_t vdev_id;
 	uint16_t frameLen, curr_seq_num, auth_alg = 0;
 	tSirMacAuthFrameBody *rx_auth_frame;
 	QDF_STATUS ret_status = QDF_STATUS_E_FAILURE;
@@ -1860,8 +1888,13 @@ QDF_STATUS lim_process_auth_frame_no_session(struct mac_context *mac,
 	if (sae_auth_frame)
 		return QDF_STATUS_SUCCESS;
 
-	if (auth_alg == eSIR_AUTH_TYPE_PASN)
-		return lim_process_pasn_auth_frame(mac, 0, pBd);
+	if (auth_alg == eSIR_AUTH_TYPE_PASN) {
+		vdev_id = lim_get_pasn_peer_vdev_id(mac, mac_hdr->bssId);
+		if (vdev_id == WLAN_UMAC_VDEV_ID_MAX)
+			return QDF_STATUS_E_FAILURE;
+
+		return lim_process_pasn_auth_frame(mac, vdev_id, pBd);
+	}
 
 	/* Auth frame has come on a new BSS, however, we need to find the session
 	 * from where the auth-req was sent to the new AP

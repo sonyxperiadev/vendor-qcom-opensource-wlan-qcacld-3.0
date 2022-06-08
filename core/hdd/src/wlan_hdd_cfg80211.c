@@ -132,7 +132,6 @@
 #include "cfg_ucfg_api.h"
 
 #include "wlan_crypto_def_i.h"
-#include "wifi_pos_ucfg_i.h"
 #include "wlan_crypto_global_api.h"
 #include "wlan_nl_to_crypto_params.h"
 #include "wlan_crypto_global_def.h"
@@ -168,6 +167,7 @@
 #include "wlan_if_mgr_ucfg_api.h"
 #include "wlan_if_mgr_public_struct.h"
 #include "wlan_wfa_ucfg_api.h"
+#include "wifi_pos_ucfg_i.h"
 #include <osif_cm_util.h>
 #include <osif_cm_req.h>
 #include "wlan_hdd_bootup_marker.h"
@@ -185,6 +185,7 @@
 #include "wlan_hdd_peer_txq_flush.h"
 #include "wlan_cfg80211_wifi_pos.h"
 #include "wlan_osif_features.h"
+#include "wlan_hdd_wifi_pos_pasn.h"
 
 #define g_mode_rates_size (12)
 #define a_mode_rates_size (8)
@@ -1792,6 +1793,7 @@ static const struct nl80211_vendor_cmd_info wlan_hdd_cfg80211_vendor_events[] = 
 		.vendor_id = QCA_NL80211_VENDOR_ID,
 		.subcmd = QCA_NL80211_VENDOR_SUBCMD_DRIVER_READY,
 	},
+	FEATURE_WIFI_POS_11AZ_AUTH_EVENTS
 };
 
 /**
@@ -18387,6 +18389,8 @@ const struct wiphy_vendor_command hdd_wiphy_vendor_commands[] = {
 			      QCA_WLAN_VENDOR_ATTR_ROAM_EVENTS_MAX)
 	},
 #endif
+	FEATURE_WIFI_POS_11AZ_AUTH_COMMANDS
+	FEATURE_WIFI_POS_SET_SECURE_RANGING_CONTEXT_COMMANDS
 	FEATURE_MCC_QUOTA_VENDOR_COMMANDS
 	FEATURE_PEER_FLUSH_VENDOR_COMMANDS
 	{
@@ -20390,129 +20394,6 @@ static int wlan_hdd_add_key_sta(struct wlan_objmgr_pdev *pdev,
 	return errno;
 }
 
-#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
-static int wlan_cfg80211_set_pasn_key(struct wlan_objmgr_psoc *psoc,
-				      struct wlan_objmgr_vdev *vdev,
-				      struct key_params *params,
-				      const u8 *mac_addr,
-				      const u8 *src_addr,
-				      enum wlan_crypto_key_type key_type,
-				      int key_index)
-{
-	struct wlan_crypto_key *crypto_key;
-	struct wlan_objmgr_peer *peer;
-	struct wlan_pasn_auth_status *pasn_status;
-	enum wlan_crypto_cipher_type cipher;
-	int cipher_len, ret = 0;
-	bool is_ltf_keyseed_required;
-	QDF_STATUS status;
-
-	if (!params) {
-		osif_err("Key params is NULL");
-		return -EINVAL;
-	}
-
-	crypto_key = qdf_mem_malloc(sizeof(*crypto_key));
-	if (!crypto_key)
-		return -ENOMEM;
-
-	cipher_len = osif_nl_to_crypto_cipher_len(params->cipher);
-	if (cipher_len < 0 || params->key_len < cipher_len) {
-		osif_err("cipher length %d less than reqd len %d",
-			 params->key_len, cipher_len);
-		qdf_mem_free(crypto_key);
-		return -EINVAL;
-	}
-
-	cipher = osif_nl_to_crypto_cipher_type(params->cipher);
-	if (!IS_WEP_CIPHER(cipher) &&
-	    key_type == WLAN_CRYPTO_KEY_TYPE_UNICAST && !mac_addr) {
-		osif_err("mac_addr is NULL for pairwise Key");
-		qdf_mem_free(crypto_key);
-		return -EINVAL;
-	}
-
-	status = wlan_crypto_validate_key_params(cipher, key_index,
-						 params->key_len,
-						 params->seq_len);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		osif_err("Invalid key params");
-		qdf_mem_free(crypto_key);
-		return -EINVAL;
-	}
-
-	wlan_cfg80211_translate_key(vdev, key_index, key_type, mac_addr,
-				    params, crypto_key);
-
-	hdd_debug("Set PASN unicast key");
-	status = ucfg_crypto_set_key_req(vdev, crypto_key, key_type);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		osif_err("PASN set_key failed");
-		qdf_mem_free(crypto_key);
-		return -EFAULT;
-	}
-
-	qdf_mem_free(crypto_key);
-
-	peer = wlan_objmgr_get_peer_by_mac(psoc, (uint8_t *)mac_addr,
-					   WLAN_WIFI_POS_CORE_ID);
-	if (!peer) {
-		osif_err("PASN peer is not found");
-		return -EFAULT;
-	}
-
-	/*
-	 * If LTF key seed is not required for the peer, then update
-	 * the source mac address for that peer by sending PASN auth
-	 * status command.
-	 * If LTF keyseed is required, then PASN Auth status command
-	 * will be sent after LTF keyseed command.
-	 */
-	is_ltf_keyseed_required =
-			ucfg_wifi_pos_is_ltf_keyseed_required_for_peer(peer);
-	wlan_objmgr_peer_release_ref(peer, WLAN_WIFI_POS_CORE_ID);
-	if (is_ltf_keyseed_required)
-		return 0;
-
-	pasn_status = qdf_mem_malloc(sizeof(*pasn_status));
-	if (!pasn_status)
-		return -ENOMEM;
-
-	pasn_status->vdev_id = vdev->vdev_objmgr.vdev_id;
-	pasn_status->num_peers = 1;
-
-	if (mac_addr)
-		qdf_mem_copy(pasn_status->auth_status[0].peer_mac.bytes,
-			     mac_addr, QDF_MAC_ADDR_SIZE);
-
-	if (src_addr)
-		qdf_mem_copy(pasn_status->auth_status[0].self_mac.bytes,
-			     src_addr, QDF_MAC_ADDR_SIZE);
-
-	status = wifi_pos_send_pasn_auth_status(psoc, pasn_status);
-	if (QDF_IS_STATUS_ERROR(status))
-		osif_err("Send PASN auth status failed");
-
-	ret = qdf_status_to_os_return(status);
-
-	qdf_mem_free(pasn_status);
-
-	return ret;
-}
-#else
-static inline
-int wlan_cfg80211_set_pasn_key(struct wlan_objmgr_psoc *psoc,
-			       struct wlan_objmgr_vdev *vdev,
-			       struct key_params *params,
-			       const u8 *mac_addr,
-			       const u8 *src_addr,
-			       enum wlan_crypto_key_type key_type,
-			       int key_index)
-{
-	return 0;
-}
-#endif
-
 static int __wlan_hdd_cfg80211_add_key(struct wiphy *wiphy,
 				       struct net_device *ndev,
 				       u8 key_index, bool pairwise,
@@ -20523,8 +20404,7 @@ static int __wlan_hdd_cfg80211_add_key(struct wiphy *wiphy,
 	mac_handle_t mac_handle;
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(ndev);
 	struct wlan_objmgr_vdev *vdev;
-	struct wlan_objmgr_peer *peer;
-	bool ft_mode = false, is_peer_type_pasn;
+	bool ft_mode = false;
 	enum wlan_crypto_cipher_type cipher;
 	int errno;
 	int32_t cipher_cap, ucast_cipher = 0;
@@ -20574,24 +20454,6 @@ static int __wlan_hdd_cfg80211_add_key(struct wiphy *wiphy,
 		if (mac_addr)
 			qdf_mem_copy(mac_address.bytes, mac_addr,
 				     QDF_MAC_ADDR_SIZE);
-	}
-
-	peer = wlan_objmgr_get_peer_by_mac(hdd_ctx->psoc, mac_address.bytes,
-					   WLAN_OSIF_ID);
-	is_peer_type_pasn = peer &&
-			    (wlan_peer_get_peer_type(peer) ==
-			     WLAN_PEER_RTT_PASN);
-	wlan_objmgr_peer_release_ref(peer, WLAN_OSIF_ID);
-
-	if (is_peer_type_pasn) {
-		errno = wlan_cfg80211_set_pasn_key(
-				hdd_ctx->psoc,
-				vdev, params, mac_addr, NULL,
-				(pairwise ?
-				 WLAN_CRYPTO_KEY_TYPE_UNICAST : WLAN_CRYPTO_KEY_TYPE_GROUP),
-				 key_index);
-
-		return errno;
 	}
 
 	errno = wlan_cfg80211_store_key(vdev, key_index,
@@ -24043,194 +23905,6 @@ wlan_hdd_cfg80211_external_auth(struct wiphy *wiphy,
 }
 #endif
 
-#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
-static int
-__wlan_hdd_cfg80211_send_pasn_auth_status(struct wiphy *wiphy,
-					  struct net_device *dev,
-					  struct cfg80211_pasn_params *params)
-{
-	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
-	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
-	struct wlan_pasn_auth_status *data;
-	QDF_STATUS status = QDF_STATUS_SUCCESS;
-	int ret, i;
-
-	if (hdd_get_conparam() == QDF_GLOBAL_FTM_MODE) {
-		hdd_err("Command not allowed in FTM mode");
-		return -EPERM;
-	}
-
-	if (wlan_hdd_validate_vdev_id(adapter->vdev_id))
-		return -EINVAL;
-
-	ret = wlan_hdd_validate_context(hdd_ctx);
-	if (ret)
-		return ret;
-
-	data = qdf_mem_malloc(sizeof(*data));
-	if (!data)
-		return -ENOMEM;
-
-	data->vdev_id = adapter->vdev_id;
-	data->num_peers = params->num_pasn_peers;
-	if (!data->num_peers) {
-		hdd_err("No peers");
-		qdf_mem_free(data);
-		return -EINVAL;
-	}
-
-	if (data->num_peers > WLAN_MAX_11AZ_PEERS)
-		data->num_peers = WLAN_MAX_11AZ_PEERS;
-
-	for (i = 0; i < data->num_peers; i++) {
-		data->auth_status[i].status = params->peer[i].status;
-		if (params->peer[i].peer_addr)
-			qdf_mem_copy(data->auth_status[i].peer_mac.bytes,
-				     params->peer[i].peer_addr,
-				     QDF_MAC_ADDR_SIZE);
-
-		if (params->peer[i].src_addr)
-			qdf_mem_copy(data->auth_status[i].self_mac.bytes,
-				     params->peer[i].src_addr,
-				     QDF_MAC_ADDR_SIZE);
-	}
-
-	status = wifi_pos_send_pasn_auth_status(hdd_ctx->psoc, data);
-	if (QDF_IS_STATUS_ERROR(status))
-		hdd_err("Send pasn auth status failed");
-
-	qdf_mem_free(data);
-	ret = qdf_status_to_os_return(status);
-
-	return ret;
-}
-
-static int
-__wlan_hdd_cfg80211_set_ltf_keyseed(struct wiphy *wiphy, struct net_device *dev,
-				    struct cfg80211_ltf_keyseed_conf *conf)
-{
-	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
-	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
-	struct wlan_crypto_ltf_keyseed_data *data;
-	struct wlan_pasn_auth_status *pasn_auth_status;
-	QDF_STATUS status = QDF_STATUS_SUCCESS;
-	int ret;
-
-	if (hdd_get_conparam() == QDF_GLOBAL_FTM_MODE) {
-		hdd_err("Command not allowed in FTM mode");
-		return -EPERM;
-	}
-
-	if (wlan_hdd_validate_vdev_id(adapter->vdev_id))
-		return -EINVAL;
-
-	ret = wlan_hdd_validate_context(hdd_ctx);
-	if (ret)
-		return ret;
-
-	if (!conf->bssid) {
-		hdd_err("Null BSSID");
-		return -EINVAL;
-	}
-
-	data = qdf_mem_malloc(sizeof(*data));
-	if (!data)
-		return -ENOMEM;
-
-	data->vdev_id = adapter->vdev_id;
-	qdf_mem_copy(data->peer_mac_addr.bytes, conf->bssid, QDF_MAC_ADDR_SIZE);
-
-	if (conf->src_addr)
-		qdf_mem_copy(data->src_mac_addr.bytes, conf->src_addr,
-			     QDF_MAC_ADDR_SIZE);
-
-	data->key_seed_len = conf->ltf_keyseed_len;
-	if (!data->key_seed_len ||
-	    data->key_seed_len < WLAN_MIN_SECURE_LTF_KEYSEED_LEN) {
-		hdd_err("Invalid key seed length:%d", conf->ltf_keyseed_len);
-		ret = -EINVAL;
-		goto err;
-	}
-
-	qdf_mem_copy(data->key_seed, conf->ltf_keyseed,
-		     data->key_seed_len);
-
-	status = wlan_crypto_set_ltf_keyseed(hdd_ctx->psoc, data);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		hdd_err("Set LTF Keyseed failed");
-		ret = qdf_status_to_os_return(status);
-		goto err;
-	}
-
-	/*
-	 * Send PASN Auth status followed by SET LTF keyseed command to
-	 * set the peer as authorized at firmware and firmware will start
-	 * ranging after this.
-	 */
-	pasn_auth_status = qdf_mem_malloc(sizeof(*pasn_auth_status));
-	if (!pasn_auth_status) {
-		ret = -ENOMEM;
-		goto err;
-	}
-
-	pasn_auth_status->vdev_id = adapter->vdev_id;
-	pasn_auth_status->num_peers = 1;
-	qdf_mem_copy(pasn_auth_status->auth_status[0].peer_mac.bytes,
-		     conf->bssid, QDF_MAC_ADDR_SIZE);
-	qdf_mem_copy(pasn_auth_status->auth_status[0].self_mac.bytes,
-		     conf->src_addr, QDF_MAC_ADDR_SIZE);
-
-	status = wifi_pos_send_pasn_auth_status(hdd_ctx->psoc,
-						pasn_auth_status);
-	qdf_mem_free(pasn_auth_status);
-	if (QDF_IS_STATUS_ERROR(status))
-		hdd_err("Send PASN auth status failed");
-
-	ret = qdf_status_to_os_return(status);
-err:
-	qdf_mem_free(data);
-
-	return ret;
-}
-
-static int
-wlan_hdd_cfg80211_set_ltf_keyseed(struct wiphy *wiphy, struct net_device *dev,
-				  struct cfg80211_ltf_keyseed_conf *conf)
-{
-	int errno;
-	struct osif_vdev_sync *vdev_sync;
-
-	errno = osif_vdev_sync_op_start(dev, &vdev_sync);
-	if (errno)
-		return errno;
-
-	errno = __wlan_hdd_cfg80211_set_ltf_keyseed(wiphy, dev, conf);
-
-	osif_vdev_sync_op_stop(vdev_sync);
-
-	return errno;
-}
-
-static int
-wlan_hdd_cfg80211_send_pasn_auth_status(struct wiphy *wiphy,
-					struct net_device *dev,
-					struct cfg80211_pasn_params *params)
-{
-	int errno;
-	struct osif_vdev_sync *vdev_sync;
-
-	errno = osif_vdev_sync_op_start(dev, &vdev_sync);
-	if (errno)
-		return errno;
-
-	errno = __wlan_hdd_cfg80211_send_pasn_auth_status(wiphy, dev, params);
-
-	osif_vdev_sync_op_stop(vdev_sync);
-
-	return errno;
-}
-#endif
-
 #if defined(WLAN_FEATURE_NAN) && \
 	   (KERNEL_VERSION(4, 9, 0) <= LINUX_VERSION_CODE)
 static int
@@ -25209,10 +24883,6 @@ static struct cfg80211_ops wlan_hdd_cfg80211_ops = {
 		(defined(CFG80211_EXTERNAL_AUTH_SUPPORT) || \
 		LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0))
 	.external_auth = wlan_hdd_cfg80211_external_auth,
-#endif
-#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
-	.set_ltf_keyseed = wlan_hdd_cfg80211_set_ltf_keyseed,
-	.pasn_auth = wlan_hdd_cfg80211_send_pasn_auth_status,
 #endif
 #if defined(WLAN_FEATURE_NAN) && \
 	   (KERNEL_VERSION(4, 9, 0) <= LINUX_VERSION_CODE)

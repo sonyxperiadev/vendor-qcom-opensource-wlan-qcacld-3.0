@@ -2046,6 +2046,11 @@ static void lim_process_messages(struct mac_context *mac_ctx,
 	case CM_ABORT_CONN_TIMER:
 		lim_deactivate_timers_for_vdev(mac_ctx, msg->bodyval);
 		break;
+	case WIFI_POS_PASN_PEER_DELETE_ALL:
+		lim_process_pasn_delete_all_peers(mac_ctx, msg->bodyptr);
+		qdf_mem_free(msg->bodyptr);
+		msg->bodyptr = NULL;
+		break;
 	default:
 		qdf_mem_free((void *)msg->bodyptr);
 		msg->bodyptr = NULL;

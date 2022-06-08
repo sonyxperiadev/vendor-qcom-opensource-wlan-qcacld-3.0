@@ -535,6 +535,12 @@ ifeq ($(CONFIG_WLAN_FEATURE_PEER_TXQ_FLUSH_CONF), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_peer_txq_flush.o
 endif
 
+ifeq ($(CONFIG_WIFI_POS_CONVERGED), y)
+ifeq ($(CONFIG_WIFI_POS_PASN), y)
+HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_wifi_pos_pasn.o
+endif
+endif
+
 $(call add-wlan-objs,hdd,$(HDD_OBJS))
 
 ###### OSIF_SYNC ########
