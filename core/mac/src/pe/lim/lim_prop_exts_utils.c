@@ -422,12 +422,16 @@ void lim_objmgr_update_emlsr_caps(struct wlan_objmgr_psoc *psoc,
 
 	ap_emlsr_cap =
 		assoc_rsp->mlo_ie.mlo_ie.eml_capabilities_info.emlsr_support;
-	if (!ap_emlsr_cap)
+	if (!ap_emlsr_cap) {
 		pe_debug("eMLSR cap not present in assoc rsp");
-
-	wlan_vdev_obj_lock(vdev);
-	wlan_vdev_mlme_set_emlsr_caps(vdev, ap_emlsr_cap);
-	wlan_vdev_obj_unlock(vdev);
+		wlan_vdev_obj_lock(vdev);
+		wlan_vdev_mlme_cap_clear(vdev, WLAN_VDEV_C_EMLSR_CAP);
+		wlan_vdev_obj_unlock(vdev);
+	} else {
+		wlan_vdev_obj_lock(vdev);
+		wlan_vdev_mlme_cap_set(vdev, WLAN_VDEV_C_EMLSR_CAP);
+		wlan_vdev_obj_unlock(vdev);
+	}
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
 }
 #endif

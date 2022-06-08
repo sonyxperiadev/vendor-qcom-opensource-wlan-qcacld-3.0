@@ -4812,7 +4812,7 @@ bool policy_mgr_is_mlo_in_mode_emlsr(struct wlan_objmgr_psoc *psoc,
 			mlo_idx++;
 		}
 		/* Check if existing vdev is eMLSR STA */
-		if (wlan_vdev_mlme_get_emlsr_caps(temp_vdev))
+		if (wlan_vdev_mlme_cap_get(temp_vdev, WLAN_VDEV_C_EMLSR_CAP))
 			emlsr_connection = true;
 
 		wlan_objmgr_vdev_release_ref(temp_vdev, WLAN_POLICY_MGR_ID);

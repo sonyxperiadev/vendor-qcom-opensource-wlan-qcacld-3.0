@@ -8875,7 +8875,7 @@ void lim_intersect_ap_emlsr_caps(struct pe_session *session,
 		return;
 	}
 
-	if (wlan_vdev_mlme_get_emlsr_caps(session->vdev)) {
+	if (wlan_vdev_mlme_cap_get(session->vdev, WLAN_VDEV_C_EMLSR_CAP)) {
 		add_bss->staContext.emlsr_support = true;
 		add_bss->staContext.link_id =
 		    assoc_rsp->mlo_ie.mlo_ie.link_id;
