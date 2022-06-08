@@ -677,8 +677,7 @@ hdd_mic_init_work(struct hdd_adapter *adapter)
 void hdd_start_complete(int ret)
 {
 	wlan_start_ret_val = ret;
-
-	complete(&wlan_start_comp);
+	complete_all(&wlan_start_comp);
 }
 
 /**
@@ -17955,20 +17954,21 @@ static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 	bool is_wait_for_ready = false;
 	bool is_wlan_force_disabled;
 
+	hdd_enter();
 
 	id = hdd_validate_wlan_string(user_buf);
 
 	switch (id) {
 	case WLAN_OFF_STR:
-		pr_info("Wifi turning off from UI\n");
+		hdd_info("Wifi turning off from UI\n");
 		hdd_inform_wifi_off();
 		goto exit;
 	case WLAN_ON_STR:
-		pr_info("Wifi Turning On from UI\n");
+		hdd_info("Wifi Turning On from UI\n");
 		break;
 	case WLAN_WAIT_FOR_READY_STR:
 		is_wait_for_ready = true;
-		pr_info("Wifi wait for ready from UI\n");
+		hdd_info("Wifi wait for ready from UI\n");
 		break;
 	case WLAN_ENABLE_STR:
 		hdd_nofl_debug("Received WiFi enable from framework\n");
@@ -18010,7 +18010,6 @@ static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 
 	if (is_wait_for_ready)
 		return count;
-
 	/*
 	 * Flush idle shutdown work for cases to synchronize the wifi on
 	 * during the idle shutdown.
@@ -18043,6 +18042,7 @@ static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 		hdd_ctx->is_wlan_disabled = false;
 	}
 exit:
+	hdd_exit();
 	return count;
 }
 
