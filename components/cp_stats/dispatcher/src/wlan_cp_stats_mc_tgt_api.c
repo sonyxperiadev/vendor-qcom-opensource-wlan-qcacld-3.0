@@ -966,6 +966,9 @@ static void tgt_mc_cp_stats_extract_vdev_chain_rssi_stats(
 
 	for (i = 0; i < ev->num_chain_rssi_stats; i++) {
 		vdev_id = last_req.vdev_id;
+		if (vdev_id != ev->vdev_chain_rssi[i].vdev_id)
+			continue;
+
 		update_ml_vdev_id_from_stats_event(psoc, ev,
 						   &last_req, &vdev_id);
 		vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
