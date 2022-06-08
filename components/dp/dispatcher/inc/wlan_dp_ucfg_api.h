@@ -256,19 +256,16 @@ bool ucfg_dp_is_ol_enabled(struct wlan_objmgr_psoc *psoc);
 /**
  * ucfg_dp_rx_handle_concurrency() - Handle concurrency setting in DP
  * @psoc: PSOC mapped to DP context
- * @is_wifi3_0_target: true if it is wifi3.0 target
- * @is_concurrency: Is concurrency enabled/disabled
+ * @disable: true/false to disable/enable the Rx offload
  *
  * Return: None
  */
 void ucfg_dp_rx_handle_concurrency(struct wlan_objmgr_psoc *psoc,
-				   bool is_wifi3_0_target,
-				   bool is_concurrency);
+				   bool disable);
 #else
 static inline
 void ucfg_dp_rx_handle_concurrency(struct wlan_objmgr_psoc *psoc,
-				   bool is_wifi3_0_target,
-				   bool is_concurrency) { }
+				   bool disable) { }
 #endif
 
 /**
@@ -1124,13 +1121,13 @@ void ucfg_dp_set_rx_aggregation_val(struct wlan_objmgr_psoc *psoc,
 				    uint32_t value);
 
 /**
- * ucfg_dp_set_force_gro_enable() - Set force gro enable
+ * ucfg_dp_set_tc_based_dyn_gro() - Set tc based dynamic gro
  * @psoc: psoc handle
  * @value : value to be set
  *
  * Return: None
  */
-void ucfg_dp_set_force_gro_enable(struct wlan_objmgr_psoc *psoc, bool value);
+void ucfg_dp_set_tc_based_dyn_gro(struct wlan_objmgr_psoc *psoc, bool value);
 
 /**
  * ucfg_dp_runtime_disable_rx_thread() - Disable rx thread
@@ -1149,4 +1146,13 @@ void ucfg_dp_runtime_disable_rx_thread(struct wlan_objmgr_vdev *vdev,
  * Return: true if NAPI enabled
  */
 bool ucfg_dp_get_napi_enabled(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_dp_set_tc_ingress_prio() - Set tc ingress priority
+ * @psoc: psoc handle mapped to DP context
+ * @value: value to be set
+ *
+ * Return: None
+ */
+void ucfg_dp_set_tc_ingress_prio(struct wlan_objmgr_psoc *psoc, uint32_t value);
 #endif /* _WLAN_DP_UCFG_API_H_ */

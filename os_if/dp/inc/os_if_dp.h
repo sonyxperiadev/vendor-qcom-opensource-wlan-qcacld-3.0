@@ -26,6 +26,20 @@
 #include "wlan_dp_public_struct.h"
 #include <wlan_cfg80211.h>
 
+#ifdef WLAN_FEATURE_DYNAMIC_RX_AGGREGATION
+/**
+ * enum qdisc_filter_status - QDISC filter status
+ * @QDISC_FILTER_RTNL_LOCK_FAIL: rtnl lock acquire failed
+ * @QDISC_FILTER_PRIO_MATCH: qdisc filter with priority match
+ * @QDISC_FILTER_PRIO_MISMATCH: no filter match with configured priority
+ */
+enum qdisc_filter_status {
+	QDISC_FILTER_RTNL_LOCK_FAIL,
+	QDISC_FILTER_PRIO_MATCH,
+	QDISC_FILTER_PRIO_MISMATCH,
+};
+#endif
+
 /**
  * osif_dp_classify_pkt() - classify packet
  * @skb - sk buff

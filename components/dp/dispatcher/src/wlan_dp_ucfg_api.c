@@ -91,6 +91,7 @@ ucfg_dp_create_intf(struct wlan_objmgr_psoc *psoc,
 	dp_nud_init_tracking(dp_intf);
 	dp_mic_init_work(dp_intf);
 	qdf_atomic_init(&dp_ctx->num_latency_critical_clients);
+	qdf_atomic_init(&dp_intf->gro_disallowed);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -678,8 +679,7 @@ bool ucfg_dp_is_ol_enabled(struct wlan_objmgr_psoc *psoc)
 
 #ifdef RECEIVE_OFFLOAD
 void ucfg_dp_rx_handle_concurrency(struct wlan_objmgr_psoc *psoc,
-				   bool is_wifi3_0_target,
-				   bool is_concurrency)
+				   bool disable)
 {
 	struct wlan_dp_psoc_context *dp_ctx;
 
@@ -689,23 +689,7 @@ void ucfg_dp_rx_handle_concurrency(struct wlan_objmgr_psoc *psoc,
 		return;
 	}
 
-	if (is_wifi3_0_target) {
-		/*
-		 * Donot disable rx offload on concurrency for lithium and
-		 * beryllium based targets
-		 */
-		if (is_concurrency)
-			qdf_atomic_set(&dp_ctx->rx_skip_qdisc_chk_conc, 1);
-		else
-			qdf_atomic_set(&dp_ctx->rx_skip_qdisc_chk_conc, 0);
-
-		return;
-	}
-
-	if (!dp_ctx->ol_enable)
-		return;
-
-	if (is_concurrency) {
+	if (disable) {
 		if (DP_BUS_BW_CFG(dp_ctx->dp_cfg.enable_tcp_delack)) {
 			struct wlan_rx_tp_data rx_tp_data;
 
@@ -2048,7 +2032,7 @@ void ucfg_dp_set_rx_aggregation_val(struct wlan_objmgr_psoc *psoc,
 	qdf_atomic_set(&dp_ctx->dp_agg_param.rx_aggregation, !!value);
 }
 
-void ucfg_dp_set_force_gro_enable(struct wlan_objmgr_psoc *psoc, bool value)
+void ucfg_dp_set_tc_based_dyn_gro(struct wlan_objmgr_psoc *psoc, bool value)
 {
 	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
 
@@ -2056,7 +2040,7 @@ void ucfg_dp_set_force_gro_enable(struct wlan_objmgr_psoc *psoc, bool value)
 		dp_err("DP ctx is NULL");
 		return;
 	}
-	dp_ctx->dp_agg_param.force_gro_enable = value;
+	dp_ctx->dp_agg_param.tc_based_dyn_gro = value;
 }
 
 void ucfg_dp_runtime_disable_rx_thread(struct wlan_objmgr_vdev *vdev,
@@ -2080,4 +2064,15 @@ bool ucfg_dp_get_napi_enabled(struct wlan_objmgr_psoc *psoc)
 		return 0;
 	}
 	return dp_ctx->napi_enable;
+}
+
+void ucfg_dp_set_tc_ingress_prio(struct wlan_objmgr_psoc *psoc, uint32_t value)
+{
+	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
+
+	if (!dp_ctx) {
+		dp_err("DP ctx is NULL");
+		return;
+	}
+	dp_ctx->dp_agg_param.tc_ingress_prio = value;
 }

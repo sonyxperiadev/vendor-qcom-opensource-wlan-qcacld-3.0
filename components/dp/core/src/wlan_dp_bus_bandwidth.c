@@ -1650,6 +1650,48 @@ static void dp_pld_request_bus_bandwidth(struct wlan_dp_psoc_context *dp_ctx,
 	}
 }
 
+#ifdef WLAN_FEATURE_DYNAMIC_RX_AGGREGATION
+/**
+ * dp_rx_check_qdisc_for_intf() - Check if any ingress qdisc is configured
+ *  for given adapter
+ * @dp_intf: pointer to DP interface context
+ *
+ * The function checks if ingress qdisc is registered for a given
+ * net device.
+ *
+ * Return: None
+ */
+static void
+dp_rx_check_qdisc_for_intf(struct wlan_dp_intf *dp_intf)
+{
+	struct wlan_dp_psoc_callbacks *dp_ops;
+	QDF_STATUS status;
+
+	dp_ops = &dp_intf->dp_ctx->dp_ops;
+	status = dp_ops->dp_rx_check_qdisc_configured(dp_intf->dev,
+				 dp_intf->dp_ctx->dp_agg_param.tc_ingress_prio);
+	if (QDF_IS_STATUS_SUCCESS(status)) {
+		if (qdf_likely(qdf_atomic_read(&dp_intf->gro_disallowed)))
+			return;
+
+		dp_debug("ingress qdisc/filter configured disable GRO");
+		qdf_atomic_set(&dp_intf->gro_disallowed, 1);
+
+		return;
+	} else if (status == QDF_STATUS_E_NOSUPPORT) {
+		if (qdf_unlikely(qdf_atomic_read(&dp_intf->gro_disallowed))) {
+			dp_debug("ingress qdisc/filter removed enable GRO");
+			qdf_atomic_set(&dp_intf->gro_disallowed, 0);
+		}
+	}
+}
+#else
+static void
+dp_rx_check_qdisc_for_intf(struct wlan_dp_intf *dp_intf)
+{
+}
+#endif
+
 /**
  * __dp_bus_bw_work_handler() - Bus bandwidth work handler
  * @dp_ctx: handle to DP context
@@ -1708,6 +1750,9 @@ static void __dp_bus_bw_work_handler(struct wlan_dp_psoc_context *dp_ctx)
 			dp_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 			continue;
 		}
+
+		if (dp_ctx->dp_agg_param.tc_based_dyn_gro)
+			dp_rx_check_qdisc_for_intf(dp_intf);
 
 		tx_packets += DP_BW_GET_DIFF(
 			QDF_NET_DEV_STATS_TX_PKTS(&dp_intf->stats),

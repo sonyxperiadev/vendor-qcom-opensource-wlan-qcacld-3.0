@@ -299,36 +299,94 @@ static void osif_dp_qdf_lro_flush(void *data)
 #endif
 
 #ifdef WLAN_FEATURE_DYNAMIC_RX_AGGREGATION
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+static enum qdisc_filter_status
+__osif_check_for_prio_filter_in_clsact_qdisc(struct tcf_block *block,
+					     uint32_t prio)
+{
+	struct tcf_chain *chain;
+	struct tcf_proto *tp;
+	struct tcf_proto *tp_next;
+	enum qdisc_filter_status ret = QDISC_FILTER_PRIO_MISMATCH;
+
+	if (!rtnl_trylock())
+		return QDISC_FILTER_RTNL_LOCK_FAIL;
+
+	mutex_lock(&block->lock);
+	list_for_each_entry(chain, &block->chain_list, list) {
+		mutex_lock(&chain->filter_chain_lock);
+		tp = tcf_chain_dereference(chain->filter_chain, chain);
+		while (tp) {
+			tp_next = rcu_dereference_protected(tp->next, 1);
+			if (tp->prio == (prio << 16)) {
+				ret = QDISC_FILTER_PRIO_MATCH;
+				break;
+			}
+			tp = tp_next;
+		}
+		mutex_unlock(&chain->filter_chain_lock);
+
+		if (ret == QDISC_FILTER_PRIO_MATCH)
+			break;
+	}
+	mutex_unlock(&block->lock);
+	rtnl_unlock();
+
+	return ret;
+}
+#else
+static enum qdisc_filter_status
+__osif_check_for_prio_filter_in_clsact_qdisc(struct tcf_block *block,
+					     uint32_t prio)
+{
+	struct tcf_chain *chain;
+	struct tcf_proto *tp;
+	enum qdisc_filter_status ret = QDISC_FILTER_PRIO_MISMATCH;
+
+	if (!rtnl_trylock())
+		return QDISC_FILTER_RTNL_LOCK_FAIL;
+
+	list_for_each_entry(chain, &block->chain_list, list) {
+		for (tp = rtnl_dereference(chain->filter_chain); tp;
+		     tp = rtnl_dereference(tp->next)) {
+			if (tp->prio == (prio << 16))
+				ret = QDISC_FILTER_PRIO_MATCH;
+		}
+	}
+	rtnl_unlock();
+
+	return ret;
+}
+#endif
+
 /**
- * osif_dp_is_chain_list_non_empty_for_clsact_qdisc() - Check if chain_list in
- *  ingress block is non-empty for a clsact qdisc.
+ * osif_check_for_prio_filter_in_clsact_qdisc() - Check if priority 3 filter
+ *  is configured in the ingress clsact qdisc
  * @qdisc: pointer to clsact qdisc
  *
- * Return: true if chain_list is not empty else false
+ * Return: qdisc filter status
  */
-static bool
-osif_dp_is_chain_list_non_empty_for_clsact_qdisc(struct Qdisc *qdisc)
+static enum qdisc_filter_status
+osif_check_for_prio_filter_in_clsact_qdisc(struct Qdisc *qdisc, uint32_t prio)
 {
 	const struct Qdisc_class_ops *cops;
 	struct tcf_block *ingress_block;
 
 	cops = qdisc->ops->cl_ops;
 	if (qdf_unlikely(!cops || !cops->tcf_block))
-		return false;
+		return QDISC_FILTER_PRIO_MISMATCH;
 
 	ingress_block = cops->tcf_block(qdisc, TC_H_MIN_INGRESS, NULL);
 	if (qdf_unlikely(!ingress_block))
-		return false;
+		return QDISC_FILTER_PRIO_MISMATCH;
 
-	if (list_empty(&ingress_block->chain_list))
-		return false;
-	else
-		return true;
+	return __osif_check_for_prio_filter_in_clsact_qdisc(ingress_block,
+							    prio);
 }
 
 /**
- * osif_dp_rx_check_qdisc_for_configured() - Check if any ingress qdisc configured
- *  for given adapter
+ * osif_dp_rx_check_qdisc_for_configured() - Check if any ingress qdisc
+ * configured for given adapter
  * @dp_intf: pointer to DP interface context
  * @rx_ctx_id: Rx context id
  *
@@ -338,11 +396,13 @@ osif_dp_is_chain_list_non_empty_for_clsact_qdisc(struct Qdisc *qdisc)
  * Return: None
  */
 static QDF_STATUS
-osif_dp_rx_check_qdisc_configured(qdf_netdev_t ndev, uint8_t rx_ctx_id)
+osif_dp_rx_check_qdisc_configured(qdf_netdev_t ndev, uint32_t prio)
 {
 	struct netdev_queue *ingress_q;
 	struct Qdisc *ingress_qdisc;
 	struct net_device *dev = (struct net_device *)ndev;
+	bool disable_gro = false;
+	enum qdisc_filter_status status;
 
 	if (!dev->ingress_queue)
 		goto reset_wl;
@@ -357,14 +417,27 @@ osif_dp_rx_check_qdisc_configured(qdf_netdev_t ndev, uint8_t rx_ctx_id)
 	if (qdf_unlikely(!ingress_qdisc))
 		goto reset;
 
-	if (!(qdf_str_eq(ingress_qdisc->ops->id, "ingress") ||
-	      (qdf_str_eq(ingress_qdisc->ops->id, "clsact") &&
-	       osif_dp_is_chain_list_non_empty_for_clsact_qdisc(ingress_qdisc))))
-		goto reset;
+	if (qdf_str_eq(ingress_qdisc->ops->id, "ingress")) {
+		disable_gro = true;
+	} else if (qdf_str_eq(ingress_qdisc->ops->id, "clsact")) {
+		status = osif_check_for_prio_filter_in_clsact_qdisc(
+								  ingress_qdisc,
+								  prio);
 
-	rcu_read_unlock();
+		if (status == QDISC_FILTER_RTNL_LOCK_FAIL) {
+			rcu_read_unlock();
+			return QDF_STATUS_E_AGAIN;
+		} else if (status == QDISC_FILTER_PRIO_MISMATCH) {
+			goto reset;
+		}
 
-	return 0;
+		disable_gro = true;
+	}
+
+	if (disable_gro) {
+		rcu_read_unlock();
+		return QDF_STATUS_SUCCESS;
+	}
 
 reset:
 	rcu_read_unlock();
@@ -375,7 +448,7 @@ reset_wl:
 
 #else
 static QDF_STATUS
-osif_dp_rx_check_qdisc_configured(qdf_netdev_t ndev, uint8_t rx_ctx_id)
+osif_dp_rx_check_qdisc_configured(qdf_netdev_t ndev, uint32_t prio)
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }
