@@ -4554,7 +4554,7 @@ static QDF_STATUS sme_qos_process_handoff_assoc_req_ev(struct mac_context *mac,
 				sme_debug("SME_QOS_CSR_HANDOFF_ASSOC_REQ received in SME_QOS_HANDOFF state with FT in progress");
 				break;
 			}
-			/* fallthrough */
+			fallthrough;
 		case SME_QOS_CLOSED:
 		case SME_QOS_INIT:
 		default:
@@ -6324,7 +6324,7 @@ sme_qos_reassoc_success_ev_fnp(struct mac_context *mac_ctx,
 		break;
 	case SME_QOS_REASON_RELEASE:
 		ac_info->num_flows[SME_QOS_TSPEC_INDEX_0]--;
-	/* fall through */
+		fallthrough;
 	case SME_QOS_REASON_MODIFY:
 		delete_entry = true;
 		break;
@@ -6354,7 +6354,7 @@ sme_qos_reassoc_success_ev_fnp(struct mac_context *mac_ctx,
 		break;
 	case SME_QOS_REASON_REQ_SUCCESS:
 		hdd_status = SME_QOS_STATUS_SETUP_MODIFIED_IND;
-	/* fall through */
+		fallthrough;
 	default:
 		delete_entry = false;
 		break;
@@ -6428,9 +6428,9 @@ static QDF_STATUS sme_qos_add_ts_failure_fnp(struct mac_context *mac, tListElem
 		break;
 	case SME_QOS_REASON_MODIFY:
 		flow_info->reason = SME_QOS_REASON_REQ_SUCCESS;
-		/* fallthrough */
+		fallthrough;
 	case SME_QOS_REASON_REQ_SUCCESS:
-		/* fallthrough */
+		fallthrough;
 	default:
 		inform_hdd = false;
 		break;
@@ -6605,7 +6605,7 @@ static QDF_STATUS sme_qos_add_ts_success_fnp(struct mac_context *mac_ctx,
 	case SME_QOS_REASON_REQ_SUCCESS:
 		hdd_status = SME_QOS_STATUS_SETUP_MODIFIED_IND;
 		inform_hdd = true;
-	/* fallthrough */
+		fallthrough;
 	default:
 		delete_entry = false;
 		break;
