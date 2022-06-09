@@ -197,7 +197,7 @@ uint32_t wlan_son_get_chan_flag(struct wlan_objmgr_pdev *pdev,
 			flags |= QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_VHT80_80;
 		}
 		bandwidth = CH_WIDTH_160MHZ;
-	/* FALLTHROUGH */
+		fallthrough;
 	case CH_WIDTH_160MHZ:
 		if (wlan_reg_get_5g_bonded_channel_state_for_freq(pdev, freq,
 								  bandwidth) !=
@@ -213,7 +213,7 @@ uint32_t wlan_son_get_chan_flag(struct wlan_objmgr_pdev *pdev,
 			flags |= QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_VHT160;
 		}
 		bandwidth = CH_WIDTH_80MHZ;
-	/* FALLTHROUGH */
+		fallthrough;
 	case CH_WIDTH_80MHZ:
 		if (wlan_reg_get_5g_bonded_channel_state_for_freq(pdev, freq,
 								  bandwidth) !=
@@ -230,7 +230,7 @@ uint32_t wlan_son_get_chan_flag(struct wlan_objmgr_pdev *pdev,
 			flags |= QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_VHT80;
 		}
 		bandwidth = CH_WIDTH_40MHZ;
-	/* FALLTHROUGH */
+		fallthrough;
 	case CH_WIDTH_40MHZ:
 		ch_width40_ch_params.ch_width = bandwidth;
 		wlan_reg_set_channel_params_for_freq(pdev, freq, 0,
@@ -268,14 +268,14 @@ uint32_t wlan_son_get_chan_flag(struct wlan_objmgr_pdev *pdev,
 			}
 		}
 		bandwidth = CH_WIDTH_20MHZ;
-	/* FALLTHROUGH */
+		fallthrough;
 	case CH_WIDTH_20MHZ:
 		flags |= QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_HT20;
 		flags |= QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_VHT20;
 		if (is_he_enabled)
 			flags |= QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_HE20;
 		bandwidth = CH_WIDTH_10MHZ;
-	/* FALLTHROUGH */
+		fallthrough;
 	case CH_WIDTH_10MHZ:
 		if (wlan_reg_get_bonded_channel_state_for_freq(pdev, freq,
 							       bandwidth,
@@ -284,7 +284,7 @@ uint32_t wlan_son_get_chan_flag(struct wlan_objmgr_pdev *pdev,
 		     sub_20_channel_width == WLAN_SUB_20_CH_WIDTH_10)
 			flags |= QCA_WLAN_VENDOR_CHANNEL_PROP_FLAG_HALF;
 		bandwidth = CH_WIDTH_5MHZ;
-	/* FALLTHROUGH */
+		fallthrough;
 	case CH_WIDTH_5MHZ:
 		if (wlan_reg_get_bonded_channel_state_for_freq(pdev, freq,
 							       bandwidth,
