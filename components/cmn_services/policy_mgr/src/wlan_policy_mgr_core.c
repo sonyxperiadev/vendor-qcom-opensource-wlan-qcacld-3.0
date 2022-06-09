@@ -868,9 +868,9 @@ void policy_mgr_restore_deleted_conn_info(struct wlan_objmgr_psoc *psoc,
 
 	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
 	conn_index = policy_mgr_get_connection_count(psoc);
-	if (MAX_NUMBER_OF_CONC_CONNECTIONS - num_cxn_del <= conn_index) {
+	if (conn_index + num_cxn_del > MAX_NUMBER_OF_CONC_CONNECTIONS) {
 		qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
-		policy_mgr_err("Failed to restore the deleted information %d/%d/%d",
+		policy_mgr_err("Failed to restore the deleted information %d/%d, as it exceed max %d",
 			       conn_index, num_cxn_del,
 			       MAX_NUMBER_OF_CONC_CONNECTIONS);
 		return;
