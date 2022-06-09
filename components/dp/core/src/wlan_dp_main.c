@@ -313,16 +313,16 @@ void dp_trace_init(struct wlan_objmgr_psoc *psoc)
 	switch (num_entries) {
 	case 4:
 		proto_bitmap = config_params[3];
-		/* fallthrough */
+		fallthrough;
 	case 3:
 		verbosity = config_params[2];
-		/* fallthrough */
+		fallthrough;
 	case 2:
 		thresh = config_params[1];
-		/* fallthrough */
+		fallthrough;
 	case 1:
 		live_mode = config_params[0];
-		/* fallthrough */
+		fallthrough;
 	default:
 		dp_debug("live_mode %u thresh %u time_limit %u verbosity %u bitmap 0x%x",
 			 live_mode, thresh, thresh_time_limit,

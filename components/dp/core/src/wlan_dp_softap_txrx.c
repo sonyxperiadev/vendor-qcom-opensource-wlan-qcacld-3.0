@@ -330,7 +330,7 @@ int dp_softap_inspect_dhcp_packet(struct wlan_dp_intf *dp_intf,
 						sta_info->sta_mac.bytes,
 						true);
 			sta_info->dhcp_nego_status = DHCP_NEGO_IN_PROGRESS;
-			/* fallthrough */
+			fallthrough;
 		case QDF_PROTO_DHCP_DECLINE:
 			if (dir == QDF_RX)
 				sta_info->dhcp_phase = DHCP_PHASE_REQUEST;
