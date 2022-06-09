@@ -977,6 +977,7 @@ void wlan_cfg80211_tdls_event_callback(void *user_data,
 	case TDLS_EVENT_ANTENNA_SWITCH:
 		tdls_priv->tdls_antenna_switch_status = ind->status;
 		complete(&tdls_priv->tdls_antenna_switch_comp);
+		break;
 	default:
 		break;
 	}
