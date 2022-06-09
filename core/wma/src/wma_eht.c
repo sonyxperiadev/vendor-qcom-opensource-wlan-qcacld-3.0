@@ -851,7 +851,7 @@ void wma_populate_peer_eht_cap(struct peer_assoc_params *peer,
 			     12, 4, rates->bw_320_rx_max_nss_for_mcs_12_and_13);
 		QDF_SET_BITS(peer->peer_eht_tx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX2],
 			     12, 4, rates->bw_320_tx_max_nss_for_mcs_12_and_13);
-		/* fall through */
+		fallthrough;
 	case CH_WIDTH_160MHZ:
 		peer->peer_eht_mcs_count++;
 		QDF_SET_BITS(peer->peer_eht_rx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX1],
@@ -870,7 +870,7 @@ void wma_populate_peer_eht_cap(struct peer_assoc_params *peer,
 			     12, 4, rates->bw_160_rx_max_nss_for_mcs_12_and_13);
 		QDF_SET_BITS(peer->peer_eht_tx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX1],
 			     12, 4, rates->bw_160_tx_max_nss_for_mcs_12_and_13);
-		/* fall through */
+		fallthrough;
 	case CH_WIDTH_80MHZ:
 	case CH_WIDTH_40MHZ:
 		peer->peer_eht_mcs_count++;
@@ -909,7 +909,7 @@ void wma_populate_peer_eht_cap(struct peer_assoc_params *peer,
 			     12, 4, rates->bw_20_rx_max_nss_for_mcs_12_and_13);
 		QDF_SET_BITS(peer->peer_eht_tx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX0],
 			     12, 4, rates->bw_20_tx_max_nss_for_mcs_12_and_13);
-		/* fall through */
+		break;
 	default:
 		break;
 	}
