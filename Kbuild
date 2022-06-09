@@ -1017,6 +1017,7 @@ cppflags-$(CONFIG_WLAN_HANG_EVENT) += -DWLAN_HANG_EVENT
 
 #Flag to enable pre_cac
 cppflags-$(CONFIG_FEATURE_WLAN_PRE_CAC)  += -DPRE_CAC_SUPPORT
+cppflags-$(CONFIG_FEATURE_WLAN_PRE_CAC)  += -DPRE_CAC_COMP
 
 ############ WBUFF ############
 WBUFF_OS_DIR :=	wbuff
