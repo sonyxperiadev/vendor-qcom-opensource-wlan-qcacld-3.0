@@ -5837,7 +5837,7 @@ uint8_t mlme_get_max_he_mcs_idx(enum phy_ch_width mcs_ch_width,
 			if (max_mcs < 0x03)
 				max_mcs = 7 + 2 * max_mcs;
 		}
-		/* fallthrough */
+		fallthrough;
 	case CH_WIDTH_160MHZ:
 		if (hecap_rxmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_160] &&
 		    hecap_txmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_160]) {
@@ -5847,7 +5847,7 @@ uint8_t mlme_get_max_he_mcs_idx(enum phy_ch_width mcs_ch_width,
 			if (max_mcs < 0x03)
 				max_mcs = 7 + 2 * max_mcs;
 		}
-		/* fallthrough */
+		fallthrough;
 	default:
 		if (hecap_rxmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_80] &&
 		    hecap_txmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_80]) {
