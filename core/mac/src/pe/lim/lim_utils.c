@@ -8201,10 +8201,10 @@ QDF_STATUS lim_populate_eht_mcs_set(struct mac_context *mac_ctx,
 	switch (session_entry->ch_width) {
 	case CH_WIDTH_320MHZ:
 		lim_populate_eht_320_mcs_set(mac_ctx, rates, peer_eht_caps);
-			/* fall through */
+		fallthrough;
 	case CH_WIDTH_160MHZ:
 		lim_populate_eht_160_mcs_set(mac_ctx, rates, peer_eht_caps);
-			/*fall through */
+		fallthrough;
 	case CH_WIDTH_80MHZ:
 	case CH_WIDTH_40MHZ:
 		lim_populate_eht_le80_mcs_set(mac_ctx, rates, peer_eht_caps);

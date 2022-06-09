@@ -975,7 +975,7 @@ void lim_process_rx_scan_handler(struct wlan_objmgr_vdev *vdev,
 	case SIR_SCAN_EVENT_COMPLETED:
 		pe_debug("No.of beacons and probe response received per scan %d",
 			 mac_ctx->lim.beacon_probe_rsp_cnt_per_scan);
-	/* Fall through */
+		fallthrough;
 	case SIR_SCAN_EVENT_FOREIGN_CHANNEL:
 	case SIR_SCAN_EVENT_START_FAILED:
 		if ((mac_ctx->lim.req_id | PREAUTH_REQUESTOR_ID) ==
