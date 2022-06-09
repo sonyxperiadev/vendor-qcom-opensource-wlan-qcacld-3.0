@@ -443,7 +443,7 @@ static bool if_mgr_validate_sta_bcn_intrvl(struct wlan_objmgr_vdev *vdev,
 			bss_arg->status = QDF_STATUS_SUCCESS;
 			return true;
 		case ALLOW_MCC_GO_DIFF_BI_WORKAROUND:
-			/* fall through */
+			fallthrough;
 		case ALLOW_MCC_GO_DIFF_BI_NO_DISCONNECT:
 			policy_mgr_get_conc_rule1(psoc, &conc_rule1);
 			policy_mgr_get_conc_rule2(psoc, &conc_rule2);
