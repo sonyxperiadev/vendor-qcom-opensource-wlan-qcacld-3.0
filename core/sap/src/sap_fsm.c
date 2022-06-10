@@ -4250,8 +4250,8 @@ static QDF_STATUS sap_get_freq_list(struct sap_context *sap_ctx,
 			continue;
 		}
 #ifdef FEATURE_WLAN_AP_AP_ACS_OPTIMIZE
-		if ((sap_ctx->acs_cfg->skip_scan_status ==
-			eSAP_DO_PAR_ACS_SCAN)) {
+		if (sap_ctx->acs_cfg->skip_scan_status ==
+			eSAP_DO_PAR_ACS_SCAN) {
 			uint32_t ch_freq;
 
 			ch_freq = WLAN_REG_CH_TO_FREQ(loop_count);
