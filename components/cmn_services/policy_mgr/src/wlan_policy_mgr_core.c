@@ -42,7 +42,7 @@
 #include "wlan_cm_ucfg_api.h"
 #include "target_if.h"
 
-#define POLICY_MGR_MAX_CON_STRING_LEN   100
+#define POLICY_MGR_MAX_CON_STRING_LEN   180
 #define LOWER_END_FREQ_5GHZ 4900
 
 static const uint16_t sap_mand_5g_freq_list[] = {5745, 5765, 5785, 5805};
@@ -1202,8 +1202,11 @@ static uint32_t policy_mgr_dump_current_concurrency_one_connection(
 {
 	uint32_t count = 0;
 	enum policy_mgr_con_mode mode;
+	char buf[9] = {0};
 
 	mode = pm_conc_connection_list[0].mode;
+	qdf_scnprintf(buf, sizeof(buf), "(vdev %d)",
+		      pm_conc_connection_list[0].vdev_id);
 
 	switch (mode) {
 	case PM_STA_MODE:
@@ -1232,6 +1235,7 @@ static uint32_t policy_mgr_dump_current_concurrency_one_connection(
 		policy_mgr_err("unexpected mode %d", mode);
 		break;
 	}
+	count += strlcat(cc_mode, buf, length);
 
 	return count;
 }
@@ -1251,8 +1255,11 @@ static uint32_t policy_mgr_dump_current_concurrency_two_connection(
 {
 	uint32_t count = 0;
 	enum policy_mgr_con_mode mode;
+	char buf[9] = {0};
 
 	mode = pm_conc_connection_list[1].mode;
+	qdf_scnprintf(buf, sizeof(buf), "(vdev %d)",
+		      pm_conc_connection_list[1].vdev_id);
 
 	switch (mode) {
 	case PM_STA_MODE:
@@ -1294,6 +1301,7 @@ static uint32_t policy_mgr_dump_current_concurrency_two_connection(
 		policy_mgr_err("unexpected mode %d", mode);
 		break;
 	}
+	count += strlcat(cc_mode, buf, length);
 
 	return count;
 }
@@ -1313,8 +1321,11 @@ static uint32_t policy_mgr_dump_current_concurrency_three_connection(
 {
 	uint32_t count = 0;
 	enum policy_mgr_con_mode mode;
+	char buf[9] = {0};
 
 	mode = pm_conc_connection_list[2].mode;
+	qdf_scnprintf(buf, sizeof(buf), "(vdev %d)",
+		      pm_conc_connection_list[2].vdev_id);
 
 	switch (mode) {
 	case PM_STA_MODE:
@@ -1357,68 +1368,120 @@ static uint32_t policy_mgr_dump_current_concurrency_three_connection(
 		policy_mgr_err("unexpected mode %d", mode);
 		break;
 	}
+	count += strlcat(cc_mode, buf, length);
 
 	return count;
 }
+
+#ifdef FEATURE_FOURTH_CONNECTION
+static void
+policy_mgr_dump_dual_mac_4th_connection(struct policy_mgr_psoc_priv_obj *pm_ctx,
+					char *cc_mode, uint32_t length,
+					char *buf, uint32_t buf_len)
+{
+	if (!pm_conc_connection_list[3].in_use)
+		return;
+
+	if (policy_mgr_are_2_freq_on_same_mac(pm_ctx->psoc,
+					      pm_conc_connection_list[3].freq,
+					      pm_conc_connection_list[0].freq)
+					     ) {
+		qdf_mem_zero(buf, buf_len);
+		qdf_scnprintf(buf, buf_len, ": vdev %d & %d %s on mac %d",
+			      pm_conc_connection_list[3].vdev_id,
+			      pm_conc_connection_list[0].vdev_id,
+			      pm_conc_connection_list[3].freq ==
+			      pm_conc_connection_list[0].freq ? "SCC" : "MCC",
+			      pm_conc_connection_list[3].mac);
+		strlcat(cc_mode, buf, length);
+	}
+
+	if (policy_mgr_are_2_freq_on_same_mac(pm_ctx->psoc,
+					      pm_conc_connection_list[3].freq,
+					      pm_conc_connection_list[1].freq)
+					     ) {
+		qdf_mem_zero(buf, buf_len);
+		qdf_scnprintf(buf, buf_len, ": vdev %d & %d %s on mac %d",
+			      pm_conc_connection_list[3].vdev_id,
+			      pm_conc_connection_list[1].vdev_id,
+			      pm_conc_connection_list[3].freq ==
+			      pm_conc_connection_list[1].freq ? "SCC" : "MCC",
+			      pm_conc_connection_list[3].mac);
+		strlcat(cc_mode, buf, length);
+	}
+
+	if (policy_mgr_are_2_freq_on_same_mac(pm_ctx->psoc,
+					      pm_conc_connection_list[3].freq,
+					      pm_conc_connection_list[2].freq)
+					     ) {
+		qdf_mem_zero(buf, buf_len);
+		qdf_scnprintf(buf, buf_len, ": vdev %d & %d %s on mac %d",
+			      pm_conc_connection_list[3].vdev_id,
+			      pm_conc_connection_list[2].vdev_id,
+			      pm_conc_connection_list[3].freq ==
+			      pm_conc_connection_list[2].freq ? "SCC" : "MCC",
+			      pm_conc_connection_list[3].mac);
+		strlcat(cc_mode, buf, length);
+	}
+}
+#else
+static inline void
+policy_mgr_dump_dual_mac_4th_connection(struct policy_mgr_psoc_priv_obj *pm_ctx,
+					char *cc_mode, uint32_t length,
+					char *buf, uint32_t buf_len) {}
+
+#endif
 
 static void
 policy_mgr_dump_dual_mac_concurrency(struct policy_mgr_psoc_priv_obj *pm_ctx,
 				     char *cc_mode, uint32_t length)
 {
-	uint8_t mac = 0;
-	char buf[4] = {0};
+	char buf[26] = {0};
 
 	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
 	if (policy_mgr_are_2_freq_on_same_mac(pm_ctx->psoc,
 					      pm_conc_connection_list[0].freq,
 					      pm_conc_connection_list[1].freq)
 					     ) {
-		if (pm_conc_connection_list[0].freq ==
-			pm_conc_connection_list[1].freq)
-			strlcat(cc_mode,
-				" with SCC for 1st two connections on mac ",
-				length);
-		else
-			strlcat(cc_mode,
-				" with MCC for 1st two connections on mac ",
-				length);
-		mac = pm_conc_connection_list[0].mac;
+		qdf_scnprintf(buf, sizeof(buf), ": vdev %d & %d %s on mac %d",
+			      pm_conc_connection_list[0].vdev_id,
+			      pm_conc_connection_list[1].vdev_id,
+			      pm_conc_connection_list[0].freq ==
+			      pm_conc_connection_list[1].freq ? "SCC" : "MCC",
+			      pm_conc_connection_list[0].mac);
+		strlcat(cc_mode, buf, length);
 	}
 
 	if (policy_mgr_are_2_freq_on_same_mac(pm_ctx->psoc,
 					      pm_conc_connection_list[0].freq,
 					      pm_conc_connection_list[2].freq)
 					     ) {
-		if (pm_conc_connection_list[0].freq ==
-			pm_conc_connection_list[2].freq)
-			strlcat(cc_mode,
-				" with SCC for 1st & 3rd connections on mac ",
-				length);
-		else
-			strlcat(cc_mode,
-				" with MCC for 1st & 3rd connections on mac ",
-				length);
-		mac = pm_conc_connection_list[0].mac;
+		qdf_mem_zero(buf, sizeof(buf));
+		qdf_scnprintf(buf, sizeof(buf), ": vdev %d & %d %s on mac %d",
+			      pm_conc_connection_list[0].vdev_id,
+			      pm_conc_connection_list[2].vdev_id,
+			      pm_conc_connection_list[0].freq ==
+			      pm_conc_connection_list[2].freq ? "SCC" : "MCC",
+			      pm_conc_connection_list[0].mac);
+		strlcat(cc_mode, buf, length);
 	}
 
 	if (policy_mgr_are_2_freq_on_same_mac(pm_ctx->psoc,
 					      pm_conc_connection_list[1].freq,
 					      pm_conc_connection_list[2].freq)
 					     ) {
-		if (pm_conc_connection_list[1].freq ==
-			pm_conc_connection_list[2].freq)
-			strlcat(cc_mode,
-				" with SCC for 2nd & 3rd connections on mac ",
-				length);
-		else
-			strlcat(cc_mode,
-				" with MCC for 2nd & 3rd connections on mac ",
-				length);
-		mac = pm_conc_connection_list[1].mac;
+		qdf_mem_zero(buf, sizeof(buf));
+		qdf_scnprintf(buf, sizeof(buf), ": vdev %d & %d %s on mac %d",
+			      pm_conc_connection_list[1].vdev_id,
+			      pm_conc_connection_list[2].vdev_id,
+			      pm_conc_connection_list[1].freq ==
+			      pm_conc_connection_list[2].freq ? "SCC" : "MCC",
+			      pm_conc_connection_list[1].mac);
+		strlcat(cc_mode, buf, length);
 	}
+	policy_mgr_dump_dual_mac_4th_connection(pm_ctx, cc_mode, length, buf,
+						sizeof(buf));
 	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
-	snprintf(buf, sizeof(buf), "%d ", mac);
-	strlcat(cc_mode, buf, length);
 }
 
 /**
@@ -1493,6 +1556,109 @@ policy_mgr_dump_disabled_ml_links(struct policy_mgr_psoc_priv_obj *pm_ctx)
 }
 #endif
 
+#ifdef FEATURE_FOURTH_CONNECTION
+/**
+ * policy_mgr_dump_current_concurrency_4_connection() - To dump the
+ * current concurrency info with 4 connections
+ * @cc_mode: connection string
+ * @length: Maximum size of the string
+ *
+ * This routine is called to dump the concurrency info
+ *
+ * Return: length of the string
+ */
+static uint32_t policy_mgr_dump_current_concurrency_4_connection(
+		char *cc_mode, uint32_t length)
+{
+	uint32_t count = 0;
+	enum policy_mgr_con_mode mode;
+	char buf[9] = {0};
+
+	mode = pm_conc_connection_list[3].mode;
+	qdf_scnprintf(buf, sizeof(buf), "(vdev %d)",
+		      pm_conc_connection_list[3].vdev_id);
+
+	switch (mode) {
+	case PM_STA_MODE:
+		count = policy_mgr_dump_current_concurrency_three_connection(
+				cc_mode, length);
+		count += strlcat(cc_mode, "+STA",
+					length);
+		break;
+	case PM_SAP_MODE:
+		count = policy_mgr_dump_current_concurrency_three_connection(
+				cc_mode, length);
+		count += strlcat(cc_mode, "+SAP",
+					length);
+		break;
+	case PM_P2P_CLIENT_MODE:
+		count = policy_mgr_dump_current_concurrency_three_connection(
+				cc_mode, length);
+		count += strlcat(cc_mode, "+P2P CLI",
+					length);
+		break;
+	case PM_P2P_GO_MODE:
+		count = policy_mgr_dump_current_concurrency_three_connection(
+				cc_mode, length);
+		count += strlcat(cc_mode, "+P2P GO",
+					length);
+		break;
+	case PM_NAN_DISC_MODE:
+		count = policy_mgr_dump_current_concurrency_three_connection(
+				cc_mode, length);
+		count += strlcat(cc_mode, "+NAN Disc",
+					length);
+		break;
+	case PM_NDI_MODE:
+		count = policy_mgr_dump_current_concurrency_three_connection(
+				cc_mode, length);
+		count += strlcat(cc_mode, "+NDI",
+					length);
+		break;
+	default:
+		policy_mgr_err("unexpected mode %d", mode);
+		break;
+	}
+	count += strlcat(cc_mode, buf, length);
+
+	return count;
+}
+
+static bool
+policy_mgr_handle_dump_4th_connection(struct policy_mgr_psoc_priv_obj *pm_ctx,
+				      uint32_t num_connections,
+				      char *cc_mode, uint32_t len)
+{
+	uint32_t count = 0;
+
+	if (num_connections != 4)
+		return false;
+
+	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
+
+	count = policy_mgr_dump_current_concurrency_4_connection(cc_mode, len);
+
+	if (policy_mgr_is_current_hwmode_dbs(pm_ctx->psoc))
+		policy_mgr_dump_dbs_concurrency(pm_ctx->psoc, cc_mode, len);
+	else if (policy_mgr_is_current_hwmode_sbs(pm_ctx->psoc))
+		policy_mgr_dump_sbs_concurrency(pm_ctx->psoc, cc_mode, len);
+	else
+		strlcat(cc_mode, " MCC", len);
+
+	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+
+	return true;
+}
+#else
+static inline bool
+policy_mgr_handle_dump_4th_connection(struct policy_mgr_psoc_priv_obj *pm_ctx,
+				      uint32_t num_connections,
+				      char *cc_mode, uint32_t len)
+{
+	return false;
+}
+#endif
+
 /**
  * policy_mgr_dump_current_concurrency() - To dump the current
  * concurrency combination
@@ -1504,9 +1670,10 @@ policy_mgr_dump_disabled_ml_links(struct policy_mgr_psoc_priv_obj *pm_ctx)
 void policy_mgr_dump_current_concurrency(struct wlan_objmgr_psoc *psoc)
 {
 	uint32_t num_connections = 0;
-	char cc_mode[POLICY_MGR_MAX_CON_STRING_LEN] = {0};
+	char *cc_mode;
 	uint32_t count = 0;
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	uint32_t len = POLICY_MGR_MAX_CON_STRING_LEN;
 
 	pm_ctx = policy_mgr_get_context(psoc);
 	if (!pm_ctx) {
@@ -1515,64 +1682,80 @@ void policy_mgr_dump_current_concurrency(struct wlan_objmgr_psoc *psoc)
 	}
 
 	num_connections = policy_mgr_get_connection_count(psoc);
+	if (!num_connections)
+		return;
+
+	cc_mode = qdf_mem_malloc(len);
+	if (!cc_mode)
+		return;
 
 	switch (num_connections) {
 	case 1:
 		policy_mgr_dump_current_concurrency_one_connection(cc_mode,
-					sizeof(cc_mode));
+								   len);
 		policy_mgr_debug("%s Standalone", cc_mode);
 		break;
 	case 2:
 		count = policy_mgr_dump_current_concurrency_two_connection(
-			cc_mode, sizeof(cc_mode));
+			cc_mode, len);
 		qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
 		if (pm_conc_connection_list[0].freq ==
 			pm_conc_connection_list[1].freq) {
-			strlcat(cc_mode, " SCC", sizeof(cc_mode));
+			strlcat(cc_mode, " SCC", len);
 		} else if (policy_mgr_is_current_hwmode_dbs(psoc)) {
-			strlcat(cc_mode, " DBS", sizeof(cc_mode));
+			strlcat(cc_mode, " DBS", len);
 		} else if (policy_mgr_is_current_hwmode_sbs(psoc)) {
-			strlcat(cc_mode, " SBS", sizeof(cc_mode));
+			strlcat(cc_mode, " SBS", len);
 		} else {
-			strlcat(cc_mode, " MCC", sizeof(cc_mode));
+			strlcat(cc_mode, " MCC", len);
 		}
 		qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
 		policy_mgr_debug("%s", cc_mode);
 		break;
 	case 3:
 		count = policy_mgr_dump_current_concurrency_three_connection(
-			cc_mode, sizeof(cc_mode));
+			cc_mode, len);
 		qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
 		if (pm_conc_connection_list[0].freq ==
 		    pm_conc_connection_list[1].freq &&
 		    pm_conc_connection_list[0].freq ==
 		    pm_conc_connection_list[2].freq){
 			qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
-			strlcat(cc_mode, " SCC", sizeof(cc_mode));
+			strlcat(cc_mode, " SCC", len);
 		} else if (policy_mgr_are_3_freq_on_same_mac(psoc,
 				pm_conc_connection_list[0].freq,
 				pm_conc_connection_list[1].freq,
 				pm_conc_connection_list[2].freq)) {
 			qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
-			strlcat(cc_mode, " MCC on single MAC", sizeof(cc_mode));
+			strlcat(cc_mode, " MCC on single MAC", len);
 		} else {
 			qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
 			if (policy_mgr_is_current_hwmode_dbs(psoc))
 				policy_mgr_dump_dbs_concurrency(psoc, cc_mode,
-							sizeof(cc_mode));
+								len);
 			else if (policy_mgr_is_current_hwmode_sbs(psoc))
 				policy_mgr_dump_sbs_concurrency(psoc, cc_mode,
-							sizeof(cc_mode));
+								len);
 			else
-				strlcat(cc_mode, " MCC", sizeof(cc_mode));
+				strlcat(cc_mode, " MCC", len);
 		}
 		policy_mgr_debug("%s", cc_mode);
 		break;
+	case 4:
+		if (policy_mgr_handle_dump_4th_connection(pm_ctx,
+							  num_connections,
+							  cc_mode, len)) {
+			policy_mgr_debug("%s", cc_mode);
+			break;
+		}
+		/* fallthrough */
 	default:
 		policy_mgr_debug("unexpected num_connections value %d",
 				 num_connections);
 		break;
 	}
+	qdf_mem_free(cc_mode);
+
 	policy_mgr_dump_disabled_ml_links(pm_ctx);
 
 	return;
