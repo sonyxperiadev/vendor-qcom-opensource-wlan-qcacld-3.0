@@ -162,8 +162,6 @@ struct medium_sync_delay {
  * @emlmr_delay: EMLSR delay
  * @transition_timeout: transition timeout
  * @reserved: reserve
- * @emlmr_rx_nss: EMLMR RX NSS
- * @emlmr_tx_nss: EMLMR TX NSS
  */
 struct eml_capabilities {
 	uint16_t emlsr_support:1;
@@ -173,8 +171,6 @@ struct eml_capabilities {
 	uint16_t emlmr_delay:3;
 	uint16_t transition_timeout:4;
 	uint16_t reserved:1;
-	uint8_t emlmr_rx_nss:4;
-	uint8_t emlmr_tx_nss:4;
 };
 
 /**
