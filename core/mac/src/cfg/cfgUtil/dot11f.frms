@@ -3778,87 +3778,9 @@ IE non_inheritance (EID_EXTN_ID_ELEMENT) OUI (0x38)
     data[0..255];
 }
 
-IE sta_profile (0)
-{
-    data[0..255];
-}
-
 IE mlo_ie (EID_EXTN_ID_ELEMENT) OUI (0x6B)
 {
-    {
-        type: 3;
-        reserved: 1;
-        link_id_info_present: 1;
-        bss_param_change_cnt_present: 1;
-        medium_sync_delay_info_present: 1;
-        eml_capab_present: 1;
-        mld_capab_present: 1;
-        reserved_1: 7;
-    }
-    common_info_length, 1;
-    mld_mac_addr[6];
-    OPTIONAL UNION link_id_info (DISCRIMINATOR link_id_info_present)
-    {
-        info (link_id_info_present IS 1)
-        {
-            {
-                link_id:  4;
-                reserved: 4;
-            }
-        }
-    };
-    OPTIONAL UNION bss_param_change_cnt (DISCRIMINATOR bss_param_change_cnt_present)
-    {
-        info (bss_param_change_cnt_present IS 1)
-        {
-            bss_param_change_count, 1;
-        }
-    };
-    OPTIONAL UNION medium_sync_delay_info (DISCRIMINATOR medium_sync_delay_info_present)
-    {
-        info (medium_sync_delay_info_present IS 1)
-        {
-            {
-                medium_sync_duration: 8;
-                medium_sync_ofdm_ed_thresh: 4;
-                medium_sync_max_txop_num: 4;
-            }
-        }
-    };
-    OPTIONAL UNION eml_capabilities (DISCRIMINATOR eml_capab_present)
-    {
-        info (eml_capab_present IS 1)
-        {
-            {
-                emlsr_support: 1;
-                emlsr_padding_delay: 3;
-                emlsr_transition_delay: 3;
-                emlmr_support: 1;
-                emlmr_delay: 3;
-                transition_timeout: 4;
-                reserved: 1;
-            }
-            {
-                emlmr_rx_nss: 4;
-                emlmr_tx_nss: 4;
-            }
-        }
-    };
-    OPTIONAL UNION mld_capabilities (DISCRIMINATOR mld_capab_present)
-    {
-        info (mld_capab_present IS 1)
-        {
-            {
-                max_simultaneous_link_num: 4;
-                srs_support: 1;
-                tid_link_map_supported: 2;
-                str_freq_separation: 5;
-                aar_support: 1;
-                reserved: 3;
-            }
-        }
-    };
-    OPTIE sta_profile[2];
+    data[9..255];
 }
 
 /////////////////////////////////////////////////////////////////////////////
