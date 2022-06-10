@@ -205,6 +205,12 @@ static void wma_convert_eht_cap(tDot11fIEeht_cap *eht_cap, uint32_t *mac_cap,
 	eht_cap->restricted_twt = WMI_EHTCAP_MAC_RESTRICTTWT_GET(mac_cap);
 	eht_cap->scs_traffic_desc = WMI_EHTCAP_MAC_SCSTRAFFICDESC_GET(mac_cap);
 	eht_cap->max_mpdu_len = WMI_EHTCAP_MAC_MAXMPDULEN_GET(mac_cap);
+	eht_cap->max_a_mpdu_len_exponent_ext =
+			WMI_EHTCAP_MAC_MAXAMPDULEN_EXP_GET(mac_cap);
+	eht_cap->eht_trs_support =
+			WMI_EHTCAP_MAC_TRS_SUPPORT_GET(mac_cap);
+	eht_cap->txop_return_support_txop_share_m2 =
+			WMI_EHTCAP_MAC_TXOP_RETURN_SUPP_IN_SHARINGMODE2_GET(mac_cap);
 
 	/* EHT PHY capabilities */
 	eht_cap->support_320mhz_6ghz = WMI_EHTCAP_PHY_320MHZIN6GHZ_GET(phy_cap);
