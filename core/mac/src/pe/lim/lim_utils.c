@@ -7996,13 +7996,10 @@ void lim_set_mlo_caps(struct mac_context *mac, struct pe_session *session,
 		      uint8_t *ie_start, uint32_t num_bytes)
 {
 	const uint8_t *ie = NULL;
-	tDot11fIEmlo_ie dot11_cap;
+	struct wlan_mlo_ie dot11_cap;
 	struct wlan_mlo_ie_info *mlo_ie_info;
 
 	populate_dot11f_mlo_caps(mac, session, &dot11_cap);
-
-	if (!dot11_cap.present)
-		return;
 
 	ie = wlan_get_ext_ie_ptr_from_ext_id(MLO_IE_OUI_TYPE,
 					     MLO_IE_OUI_SIZE,
@@ -8869,7 +8866,7 @@ void lim_update_stads_eht_bw_320mhz(struct pe_session *session,
 void lim_update_stads_emlsr_caps(struct mac_context *mac_ctx,
 				 tpDphHashNode sta_ds, tpSirAssocRsp assoc_rsp)
 {
-	if (!assoc_rsp->mlo_ie.mlo_ie.eml_capabilities.info.emlsr_support) {
+	if (!assoc_rsp->mlo_ie.mlo_ie.eml_capabilities_info.emlsr_support) {
 		pe_debug("eMLSR cap not present in assoc rsp");
 		sta_ds->mlmStaContext.emlsr_capable = false;
 		return;
@@ -8883,12 +8880,12 @@ void lim_intersect_ap_emlsr_caps(struct pe_session *session,
 				 tpSirAssocRsp assoc_rsp)
 {
 	if (session->is_emlsr_capable && assoc_rsp &&
-	    assoc_rsp->mlo_ie.mlo_ie.eml_capabilities.info.emlsr_support) {
+	    assoc_rsp->mlo_ie.mlo_ie.eml_capabilities_info.emlsr_support) {
 		add_bss->staContext.emlsr_support = true;
 		add_bss->staContext.link_id =
-		    assoc_rsp->mlo_ie.mlo_ie.link_id_info.info.link_id;
+		    assoc_rsp->mlo_ie.mlo_ie.link_id;
 		add_bss->staContext.emlsr_trans_timeout =
-		    assoc_rsp->mlo_ie.mlo_ie.eml_capabilities.info.transition_timeout;
+		    assoc_rsp->mlo_ie.mlo_ie.eml_capabilities_info.transition_timeout;
 	} else {
 		add_bss->staContext.emlsr_support = false;
 	}

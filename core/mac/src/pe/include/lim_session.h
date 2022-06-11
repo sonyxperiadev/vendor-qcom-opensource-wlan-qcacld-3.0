@@ -126,6 +126,120 @@ struct obss_detection_cfg {
 #define ADAPTIVE_11R_OUI_DATA     "\x00\x00\x00\x01"
 
 #ifdef WLAN_FEATURE_11BE_MLO
+#define WLAN_STA_PROFILE_MAX_LEN 514
+#define WLAN_MLO_IE_COM_MAX_LEN 257
+
+/**
+ * wlan_mlo_sta_profile - Per STA profile structure
+ * @num_data: the length of data
+ * @data: the Per STA profile subelement data. Subelement ID + LEN + others,
+ * if num_data more than 257, it includes the frag IE for tx; it does not
+ * include the frag IE since it has been skipped when store the IE.
+ */
+struct wlan_mlo_sta_profile {
+	uint16_t num_data;
+	uint8_t data[WLAN_STA_PROFILE_MAX_LEN];
+};
+
+/**
+ * medium_sync_delay - medium sync delay info
+ * @medium_sync_duration: medium sync duration
+ * @medium_sync_ofdm_ed_thresh: medium sync OFDM ED threshold
+ * @medium_sync_max_txop_num: medium sync max txop num
+ */
+struct medium_sync_delay {
+	uint16_t medium_sync_duration:8;
+	uint16_t medium_sync_ofdm_ed_thresh:4;
+	uint16_t medium_sync_max_txop_num:4;
+};
+
+/**
+ * eml_capabilities - EML capability info
+ * @emlsr_support: EMLSR support
+ * @emlsr_padding_delay: EMLSR padding delay
+ * @emlsr_transition_delay: EMLSR transition delay
+ * @emlmr_support: EMLSR support
+ * @emlmr_delay: EMLSR delay
+ * @transition_timeout: transition timeout
+ * @reserved: reserve
+ * @emlmr_rx_nss: EMLMR RX NSS
+ * @emlmr_tx_nss: EMLMR TX NSS
+ */
+struct eml_capabilities {
+	uint16_t emlsr_support:1;
+	uint16_t emlsr_padding_delay:3;
+	uint16_t emlsr_transition_delay:3;
+	uint16_t emlmr_support:1;
+	uint16_t emlmr_delay:3;
+	uint16_t transition_timeout:4;
+	uint16_t reserved:1;
+	uint8_t emlmr_rx_nss:4;
+	uint8_t emlmr_tx_nss:4;
+};
+
+/**
+ * mld_capabilities - MLD capability info
+ * @max_simultaneous_link_num: MAX simultaneous link num
+ * @srs_support: SRS support
+ * @tid_link_map_supported: TID link map support
+ * @str_freq_separation: STR freq separation
+ * @aar_support: AAR support
+ * @reserved: reserve
+ */
+struct mld_capabilities {
+	uint16_t max_simultaneous_link_num:4;
+	uint16_t srs_support:1;
+	uint16_t tid_link_map_supported:2;
+	uint16_t str_freq_separation:5;
+	uint16_t aar_support:1;
+	uint16_t reserved:3;
+};
+
+/**
+ * wlan_mlo_ie - wlan ML IE info
+ * @type: the variant of the ML IE
+ * @reserved: reserved
+ * @link_id_info_present: the present flag of link id info
+ * @bss_param_change_cnt_present: the present flag of bss prarm change cnt
+ * @medium_sync_delay_info_present: the present flag of medium sync delay info
+ * @eml_capab_present: the present flag of EML capability
+ * @mld_capab_present: the present flag of MLD capability
+ * @reserved_1: reserved
+ * @common_info_length: common info length
+ * @mld_mac_addr: MLD mac address
+ * @link_id: link id
+ * @bss_param_change_count: bss param change count
+ * @medium_sync_delay_info: structure of medium_sync_delay
+ * @eml_capabilities_info: structure of eml_capabilities
+ * @mld_capabilities_info: structure of mld_capabilities
+ * @num_sta_profile: the number of sta profile
+ * @sta_profile: structure of wlan_mlo_sta_profile
+ * @num_data: the length of data
+ * @data: the ML IE data, includes element ID + length + extension element ID +
+ * multi-link control and common info.
+ */
+struct wlan_mlo_ie {
+	uint16_t type:3;
+	uint16_t reserved:1;
+	uint16_t link_id_info_present:1;
+	uint16_t bss_param_change_cnt_present:1;
+	uint16_t medium_sync_delay_info_present:1;
+	uint16_t eml_capab_present:1;
+	uint16_t mld_capab_present:1;
+	uint16_t reserved_1:7;
+	uint8_t common_info_length;
+	uint8_t mld_mac_addr[6];
+	uint8_t link_id;
+	uint8_t bss_param_change_count;
+	struct medium_sync_delay medium_sync_delay_info;
+	struct eml_capabilities eml_capabilities_info;
+	struct mld_capabilities mld_capabilities_info;
+	uint16_t num_sta_profile;
+	struct wlan_mlo_sta_profile sta_profile[WLAN_MLO_MAX_VDEVS];
+	uint16_t num_data;
+	uint8_t data[WLAN_MLO_IE_COM_MAX_LEN];
+};
+
 /**
  * struct mlo_link_ie - IE per link to populate mlo ie
  * @link_ds: DS IE
@@ -693,6 +807,8 @@ struct pe_session {
 #ifdef WLAN_FEATURE_11BE_MLO
 	struct mlo_link_ie_info mlo_link_info;
 	struct mlo_partner_info ml_partner_info;
+	uint16_t mlo_ie_total_len;
+	struct wlan_mlo_ie mlo_ie;
 	bool is_emlsr_capable;
 #endif
 #endif /* WLAN_FEATURE_11BE */

@@ -746,6 +746,7 @@ lim_send_probe_rsp_mgmt_frame(struct mac_context *mac_ctx,
 	bool is_vht_enabled = false;
 	tDot11fIEExtCap extracted_ext_cap = {0};
 	bool extracted_ext_cap_flag = false;
+	uint16_t mlo_ie_len = 0;
 
 	/* We don't answer requests in this case*/
 	if (ANI_DRIVER_TYPE(mac_ctx) == QDF_DRIVER_TYPE_MFG)
@@ -882,8 +883,7 @@ lim_send_probe_rsp_mgmt_frame(struct mac_context *mac_ctx,
 	}
 
 	if (wlan_vdev_mlme_is_mlo_ap(pe_session->vdev)) {
-		populate_dot11f_bcn_mlo_ie(mac_ctx, pe_session,
-					   &frm->mlo_ie);
+		mlo_ie_len = lim_send_bcn_frame_mlo(mac_ctx, pe_session);
 		populate_dot11f_mlo_rnr(mac_ctx, pe_session,
 					&frm->reduced_neighbor_report);
 	}
@@ -997,7 +997,7 @@ lim_send_probe_rsp_mgmt_frame(struct mac_context *mac_ctx,
 			status);
 	}
 
-	bytes += payload + sizeof(tSirMacMgmtHdr);
+	bytes += payload + sizeof(tSirMacMgmtHdr) + mlo_ie_len;
 
 	qdf_status = cds_packet_alloc((uint16_t) bytes, (void **)&frame,
 				      (void **)&packet);
@@ -1028,6 +1028,16 @@ lim_send_probe_rsp_mgmt_frame(struct mac_context *mac_ctx,
 			goto err_ret;
 	} else if (DOT11F_WARNED(status)) {
 		pe_warn("Probe Response pack warning (0x%08x)", status);
+	}
+
+	if (mlo_ie_len) {
+		qdf_status = lim_fill_complete_mlo_ie(pe_session, mlo_ie_len,
+				    frame + sizeof(tSirMacMgmtHdr) + payload);
+		if (QDF_IS_STATUS_ERROR(qdf_status)) {
+			pe_debug("assemble ml ie error");
+			mlo_ie_len = 0;
+		}
+		payload += mlo_ie_len;
 	}
 
 	pe_debug("Sending Probe Response frame to");
@@ -1586,6 +1596,7 @@ lim_send_assoc_rsp_mgmt_frame(struct mac_context *mac_ctx,
 	uint8_t *eht_cap_ie = NULL, eht_cap_ie_len = 0;
 	bool is_band_2g;
 	uint16_t ie_buf_size;
+	uint16_t mlo_ie_len = 0;
 
 	if (!pe_session) {
 		pe_err("pe_session is NULL");
@@ -1840,8 +1851,9 @@ lim_send_assoc_rsp_mgmt_frame(struct mac_context *mac_ctx,
 	    lim_is_session_eht_capable(pe_session) &&
 	    wlan_vdev_mlme_is_mlo_ap(pe_session->vdev)) {
 		pe_debug("Populate mlo IEs");
-		populate_dot11f_assoc_rsp_mlo_ie(mac_ctx, pe_session,
-						 sta, &frm);
+		mlo_ie_len = lim_send_assoc_rsp_mgmt_frame_mlo(mac_ctx,
+							       pe_session,
+							       sta, &frm);
 	}
 
 	/* Allocate a buffer for this frame: */
@@ -1855,7 +1867,7 @@ lim_send_assoc_rsp_mgmt_frame(struct mac_context *mac_ctx,
 			status);
 	}
 
-	bytes += sizeof(tSirMacMgmtHdr) + payload;
+	bytes += sizeof(tSirMacMgmtHdr) + payload + mlo_ie_len;
 
 	if (sta)
 		bytes += sta->mlmStaContext.owe_ie_len;
@@ -1966,15 +1978,29 @@ lim_send_assoc_rsp_mgmt_frame(struct mac_context *mac_ctx,
 		bytes = bytes + payload;
 	}
 
-	if (addn_ie_len && addn_ie_len <= WNI_CFG_ASSOC_RSP_ADDNIE_DATA_LEN)
+	if (addn_ie_len && addn_ie_len <= WNI_CFG_ASSOC_RSP_ADDNIE_DATA_LEN) {
 		qdf_mem_copy(frame + sizeof(tSirMacMgmtHdr) + payload,
 			     &add_ie[0], addn_ie_len);
+		payload += addn_ie_len;
+	}
 
-	if (sta && sta->mlmStaContext.owe_ie_len)
-		qdf_mem_copy(frame + sizeof(tSirMacMgmtHdr) + payload
-			     + addn_ie_len,
+	if (sta && sta->mlmStaContext.owe_ie_len) {
+		qdf_mem_copy(frame + sizeof(tSirMacMgmtHdr) + payload,
 			     sta->mlmStaContext.owe_ie,
 			     sta->mlmStaContext.owe_ie_len);
+		payload += sta->mlmStaContext.owe_ie_len;
+	}
+
+	if (sta && mlo_ie_len) {
+		qdf_status = lim_fill_complete_mlo_ie(pe_session, mlo_ie_len,
+				      frame + sizeof(tSirMacMgmtHdr) + payload);
+		if (QDF_IS_STATUS_ERROR(qdf_status)) {
+			pe_debug("assemble ml ie error");
+			mlo_ie_len = 0;
+		}
+		payload += mlo_ie_len;
+	}
+
 	pe_nofl_debug("Assoc rsp TX: vdev %d subtype %d to "QDF_MAC_ADDR_FMT" seq num %d status %d aid %d addn_ie_len %d ht %d vht %d vendor vht %d he %d eht %d",
 		      pe_session->vdev_id, subtype,
 		      QDF_MAC_ADDR_REF(mac_hdr->da),
@@ -2371,25 +2397,6 @@ QDF_STATUS lim_fill_adaptive_11r_ie(struct pe_session *pe_session,
 }
 #endif
 
-#ifdef WLAN_FEATURE_11BE_MLO
-static void
-lim_send_assoc_req_mgmt_frame_mlo(struct mac_context *mac_ctx,
-				  struct pe_session *pe_session,
-				  tDot11fAssocRequest *frm)
-{
-	if ((wlan_vdev_mlme_get_opmode(pe_session->vdev) == QDF_STA_MODE) &&
-	    wlan_vdev_mlme_is_mlo_vdev(pe_session->vdev))
-		populate_dot11f_assoc_req_mlo_ie(mac_ctx, pe_session, frm);
-}
-#else /* WLAN_FEATURE_11BE_MLO */
-static inline void
-lim_send_assoc_req_mgmt_frame_mlo(struct mac_context *mac_ctx,
-				  struct pe_session *pe_session,
-				  tDot11fAssocRequest *frm)
-{
-}
-#endif /* WLAN_FEATURE_11BE_MLO */
-
 /**
  * lim_send_assoc_req_mgmt_frame() - Send association request
  * @mac_ctx: Handle to MAC context
@@ -2440,6 +2447,7 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 	int8_t peer_rssi = 0;
 	bool is_band_2g;
 	uint16_t ie_buf_size;
+	uint16_t mlo_ie_len;
 
 	if (!pe_session) {
 		pe_err("pe_session is NULL");
@@ -2671,7 +2679,9 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 
 	if (lim_is_session_eht_capable(pe_session))
 		populate_dot11f_eht_caps(mac_ctx, pe_session, &frm->eht_cap);
-	lim_send_assoc_req_mgmt_frame_mlo(mac_ctx, pe_session, frm);
+
+	mlo_ie_len =
+		 lim_send_assoc_req_mgmt_frame_mlo(mac_ctx, pe_session, frm);
 
 	if (pe_session->is11Rconnection) {
 		struct bss_description *bssdescr;
@@ -2899,7 +2909,8 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 
 	bytes = payload + sizeof(tSirMacMgmtHdr) + aes_block_size_len +
 		rsnx_ie_len + mbo_ie_len + adaptive_11r_ie_len +
-		mscs_ext_ie_len + vendor_ie_len;
+		mscs_ext_ie_len + vendor_ie_len + mlo_ie_len;
+
 
 	qdf_status = cds_packet_alloc((uint16_t) bytes, (void **)&frame,
 				(void **)&packet);
@@ -3006,6 +3017,16 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 	qdf_mem_copy(frame + sizeof(tSirMacMgmtHdr) + payload,
 		     adaptive_11r_ie, adaptive_11r_ie_len);
 	payload = payload + adaptive_11r_ie_len;
+
+	if (mlo_ie_len) {
+		qdf_status = lim_fill_complete_mlo_ie(pe_session, mlo_ie_len,
+				      frame + sizeof(tSirMacMgmtHdr) + payload);
+		if (QDF_IS_STATUS_ERROR(qdf_status)) {
+			pe_debug("assemble ml ie error");
+			mlo_ie_len = 0;
+		}
+		payload = payload + mlo_ie_len;
+	}
 
 	if (pe_session->assoc_req) {
 		qdf_mem_free(pe_session->assoc_req);
@@ -3254,18 +3275,23 @@ static uint32_t lim_populate_auth_mlo_ie(struct mac_context *mac_ctx,
 					 tSirMacAddr peer_addr,
 					 uint8_t *mlo_ie_buf)
 {
-	tDot11fIEmlo_ie mlo_ie;
+	struct wlan_mlo_ie *mlo_ie;
 	uint32_t mlo_ie_len = 0;
 	struct tLimPreAuthNode *auth_node;
+	QDF_STATUS status;
 
+	mlo_ie = &session->mlo_ie;
 	if (wlan_vdev_mlme_is_mlo_vdev(session->vdev)) {
-		qdf_mem_zero(&mlo_ie, sizeof(tDot11fIEmlo_ie));
+		qdf_mem_zero(mlo_ie, sizeof(*mlo_ie));
 
 		pe_debug("Auth TX sys role: %d", GET_LIM_SYSTEM_ROLE(session));
 		if (LIM_IS_STA_ROLE(session)) {
-			populate_dot11f_auth_mlo_ie(mac_ctx, session, &mlo_ie);
-			dot11f_pack_ie_mlo_ie(mac_ctx, &mlo_ie, mlo_ie_buf,
-					      DOT11F_EID_MLO_IE, &mlo_ie_len);
+			populate_dot11f_auth_mlo_ie(mac_ctx, session, mlo_ie);
+			mlo_ie_len = lim_caculate_mlo_ie_length(mlo_ie);
+			status = lim_fill_complete_mlo_ie(session, mlo_ie_len,
+							  mlo_ie_buf);
+			if (QDF_IS_STATUS_ERROR(status))
+				mlo_ie_len = 0;
 		} else if (LIM_IS_AP_ROLE(session)) {
 			auth_node = lim_search_pre_auth_list(mac_ctx, peer_addr);
 			if (!auth_node) {
@@ -3280,10 +3306,13 @@ static uint32_t lim_populate_auth_mlo_ie(struct mac_context *mac_ctx,
 			 */
 			if (auth_node && auth_node->is_mlo_ie_present) {
 				populate_dot11f_auth_mlo_ie(mac_ctx, session,
-							    &mlo_ie);
-				dot11f_pack_ie_mlo_ie(
-					mac_ctx, &mlo_ie, mlo_ie_buf,
-					DOT11F_EID_MLO_IE, &mlo_ie_len);
+							    mlo_ie);
+				mlo_ie_len = lim_caculate_mlo_ie_length(mlo_ie);
+				status = lim_fill_complete_mlo_ie(session,
+								  mlo_ie_len,
+								  mlo_ie_buf);
+				if (QDF_IS_STATUS_ERROR(status))
+					mlo_ie_len = 0;
 			}
 		}
 	}

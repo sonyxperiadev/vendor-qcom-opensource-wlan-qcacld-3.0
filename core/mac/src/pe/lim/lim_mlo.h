@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -228,8 +229,100 @@ QDF_STATUS lim_mlo_assoc_ind_upper_layer(struct mac_context *mac,
 					 struct mlo_partner_info *mlo_info);
 void lim_mlo_save_mlo_info(tpDphHashNode sta_ds,
 			   struct mlo_partner_info *mlo_info);
-#else
 
+/**
+ * lim_add_frag_ie_for_sta_profile() - add frag IE if STA prof len more than 255
+ * @data: sta profile ie data
+ * @len: the length of the data
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS lim_add_frag_ie_for_sta_profile(uint8_t *data, uint16_t *len);
+
+/**
+ * lim_fill_complete_mlo_ie() - fill mlo ie to target buffer
+ * @session: pointer to pe_session
+ * @total_len: the total bytes to fill target buffer
+ * @target: the buffer to fill data
+ *
+ * It also will insert the frag IE WLAN_ELEMID_FRAGMENT if the ML IE's length
+ * more than 255 bytes.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS lim_fill_complete_mlo_ie(struct pe_session *session,
+				    uint16_t total_len, uint8_t *target);
+
+/**
+ * lim_caculate_mlo_ie_length() - calculate the ML IE length
+ * @mlo_ie: the pointer to wlan_mlo_ie
+ *
+ * It tries to add the len of frag IE WLAN_ELEMID_FRAGMENT if the ML IE
+ * length more than 255 bytes.
+ *
+ * Return: QDF_STATUS
+ */
+uint16_t lim_caculate_mlo_ie_length(struct wlan_mlo_ie *mlo_ie);
+
+/**
+ * lim_send_assoc_req_mgmt_frame_mlo() - Prepare ML IE for assoc req frame
+ * @mac_ctx: pointer to mac_context
+ * @session: pointer to pe_session
+ * @frm: pointer to tDot11fAssocRequest
+ *
+ * Return: the actual ML IE length
+ */
+uint16_t
+lim_send_assoc_req_mgmt_frame_mlo(struct mac_context *mac_ctx,
+				  struct pe_session *session,
+				  tDot11fAssocRequest *frm);
+
+/**
+ * lim_send_assoc_rsq_mgmt_frame_mlo() - Prepare ML IE for assoc rsq frame
+ * @mac_ctx: pointer to mac_context
+ * @session: pointer to pe_session
+ * @sta: pointer to tpDphHashNode
+ * @frm: pointer to tDot11fAssocRequest
+ *
+ * Return: the actual ML IE length
+ */
+uint16_t
+lim_send_assoc_rsp_mgmt_frame_mlo(struct mac_context *mac_ctx,
+				  struct pe_session *session,
+				  tpDphHashNode sta,
+				  tDot11fAssocResponse *frm);
+
+/**
+ * lim_send_bcn_frame_mlo() - Prepare ML IE for beacon frame
+ * @mac_ctx: pointer to mac_context
+ * @session: pointer to pe_session
+ *
+ * Return: the actual ML IE length
+ */
+uint16_t
+lim_send_bcn_frame_mlo(struct mac_context *mac_ctx, struct pe_session *session);
+
+/**
+ * lim_get_frame_mlo_ie_len() - get ML IE length
+ * @session: pointer to pe_session
+ *
+ * Return: the actual ML IE length
+ */
+uint16_t lim_get_frame_mlo_ie_len(struct pe_session *session);
+
+/**
+ * lim_store_mlo_ie_raw_info() - store the ML IE raw info
+ * @ie: pointer the ML IE
+ * @sta_prof_ie: pointer to the first per STA prof
+ * @total_len: the length of ML IE
+ * @mlo_ie: the pointer to wlan_mlo_ie
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS lim_store_mlo_ie_raw_info(uint8_t *ie, uint8_t *sta_prof_ie,
+				     uint32_t total_len,
+				     struct wlan_mlo_ie *mlo_ie);
+#else
 static inline void lim_mlo_notify_peer_disconn(struct pe_session *pe_session,
 					       tpDphHashNode sta_ds)
 {
@@ -297,6 +390,48 @@ static inline QDF_STATUS lim_mlo_assoc_ind_upper_layer(
 static inline void lim_mlo_save_mlo_info(tpDphHashNode sta_ds,
 					 struct mlo_partner_info *mlo_info)
 {
+}
+
+static inline
+QDF_STATUS lim_add_frag_ie_for_sta_profile(uint8_t *data, uint16_t *len)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+QDF_STATUS lim_fill_complete_mlo_ie(struct pe_session *session,
+				    uint16_t total_len, uint8_t *target)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline uint16_t
+lim_send_assoc_req_mgmt_frame_mlo(struct mac_context *mac_ctx,
+				  struct pe_session *session,
+				  tDot11fAssocRequest *frm)
+{
+	return 0;
+}
+
+static inline uint16_t
+lim_send_assoc_rsp_mgmt_frame_mlo(struct mac_context *mac_ctx,
+				  struct pe_session *session,
+				  tpDphHashNode sta,
+				  tDot11fAssocResponse *frm)
+{
+	return 0;
+}
+
+static inline uint16_t
+lim_send_bcn_frame_mlo(struct mac_context *mac_ctx, struct pe_session *session)
+{
+	return 0;
+}
+
+static inline
+uint16_t lim_get_frame_mlo_ie_len(struct pe_session *session)
+{
+	return 0;
 }
 #endif
 #endif

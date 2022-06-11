@@ -42,6 +42,7 @@
 
 #include "parser_api.h"
 #include "wlan_utility.h"
+#include "lim_mlo.h"
 
 /* Offset of Channel Switch count field in CSA/ECSA IE */
 #define SCH_CSA_SWITCH_COUNT_OFFSET 2
@@ -502,6 +503,7 @@ sch_set_fixed_beacon_fields(struct mac_context *mac_ctx, struct pe_session *sess
 	uint8_t *eht_cap_ie = NULL, eht_cap_ie_len = 0;
 	bool is_band_2g;
 	uint16_t ie_buf_size;
+	uint16_t mlo_ie_len = 0;
 
 	bcn_1 = qdf_mem_malloc(sizeof(tDot11fBeacon1));
 	if (!bcn_1)
@@ -519,7 +521,6 @@ sch_set_fixed_beacon_fields(struct mac_context *mac_ctx, struct pe_session *sess
 		qdf_mem_free(bcn_2);
 		return QDF_STATUS_E_NOMEM;
 	}
-
 	/*
 	 * First set the fixed fields:
 	 * set the TFP headers, set the mac header
@@ -807,8 +808,7 @@ sch_set_fixed_beacon_fields(struct mac_context *mac_ctx, struct pe_session *sess
 	if (LIM_IS_AP_ROLE(session)) {
 		if (wlan_vdev_mlme_is_mlo_ap(session->vdev)) {
 			lim_update_link_info(mac_ctx, session, bcn_1, bcn_2);
-			populate_dot11f_bcn_mlo_ie(mac_ctx, session,
-						   &bcn_2->mlo_ie);
+			mlo_ie_len = lim_send_bcn_frame_mlo(mac_ctx, session);
 			populate_dot11f_mlo_rnr(
 				mac_ctx, session,
 				&bcn_2->reduced_neighbor_report);
@@ -968,6 +968,16 @@ sch_set_fixed_beacon_fields(struct mac_context *mac_ctx, struct pe_session *sess
 
 		qdf_mem_free(eht_cap_ie);
 		n_bytes = ie_buf_size + eht_cap_ie_len;
+	}
+
+	if (mlo_ie_len) {
+		status = lim_fill_complete_mlo_ie(session, mlo_ie_len,
+					 session->pSchBeaconFrameEnd + n_bytes);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			pe_debug("assemble ml ie error");
+			mlo_ie_len = 0;
+		}
+		n_bytes += mlo_ie_len;
 	}
 
 	/* Fill the CSA/ECSA count offsets if the IEs are present */

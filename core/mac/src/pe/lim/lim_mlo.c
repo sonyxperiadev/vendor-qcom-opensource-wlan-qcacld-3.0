@@ -864,3 +864,297 @@ void lim_mlo_save_mlo_info(tpDphHashNode sta_ds,
 	qdf_mem_copy(&sta_ds->mlo_info, mlo_info, sizeof(sta_ds->mlo_info));
 }
 
+QDF_STATUS lim_fill_complete_mlo_ie(struct pe_session *session,
+				    uint16_t total_len, uint8_t *target)
+{
+	struct wlan_mlo_sta_profile *sta_prof;
+	uint16_t mlo_ie_total_len;
+	uint8_t *buf, *pbuf;
+	uint16_t i;
+	uint16_t consumed = 0;
+	uint16_t index = 0;
+	struct wlan_mlo_ie *mlo_ie;
+
+	if (!session)
+		return QDF_STATUS_E_INVAL;
+
+	mlo_ie = &session->mlo_ie;
+	if (total_len > WLAN_MAX_IE_LEN + MIN_IE_LEN)
+		mlo_ie->data[TAG_LEN_POS] = WLAN_MAX_IE_LEN;
+	else
+		mlo_ie->data[TAG_LEN_POS] = total_len - MIN_IE_LEN;
+
+	buf = qdf_mem_malloc(total_len);
+	if (!buf)
+		return QDF_STATUS_E_NOMEM;
+
+	pbuf = buf;
+	qdf_mem_copy(pbuf, mlo_ie->data, mlo_ie->num_data);
+	pbuf += mlo_ie->num_data;
+
+	for (i = 0; i < mlo_ie->num_sta_profile; i++) {
+		sta_prof = &mlo_ie->sta_profile[i];
+		qdf_mem_copy(pbuf, sta_prof->data, sta_prof->num_data);
+		pbuf += sta_prof->num_data;
+	}
+
+	target[consumed++] = buf[index++];
+	target[consumed++] = buf[index++];
+	mlo_ie_total_len = pbuf - buf - MIN_IE_LEN;
+
+	for (i = 0; i < mlo_ie_total_len; i++) {
+		if (i && i % WLAN_MAX_IE_LEN == 0) {
+			/* add flagmentation IE and length */
+			target[consumed++] = WLAN_ELEMID_FRAGMENT;
+			if ((mlo_ie_total_len - i) > WLAN_MAX_IE_LEN)
+				target[consumed++] = WLAN_MAX_IE_LEN;
+			else
+				target[consumed++] = mlo_ie_total_len - i;
+		}
+		target[consumed++] = buf[index++];
+	}
+	qdf_mem_free(buf);
+	pe_debug("pack mlo ie %d bytes, expected to copy %d bytes",
+		 consumed, total_len);
+	qdf_trace_hex_dump(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
+			   target, consumed);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+uint16_t lim_caculate_mlo_ie_length(struct wlan_mlo_ie *mlo_ie)
+{
+	struct wlan_mlo_sta_profile *sta_prof;
+	uint16_t total_len;
+	uint16_t i, tmp;
+
+	total_len = mlo_ie->num_data;
+	for (i = 0; i < mlo_ie->num_sta_profile; i++) {
+		sta_prof = &mlo_ie->sta_profile[i];
+		total_len += sta_prof->num_data;
+	}
+
+	if (total_len > WLAN_MAX_IE_LEN + MIN_IE_LEN) {
+		/* ML IE max length  WLAN_MAX_IE_LEN + MIN_IE_LEN */
+		tmp = total_len - (WLAN_MAX_IE_LEN + MIN_IE_LEN);
+		while (tmp > WLAN_MAX_IE_LEN) {
+			/* add one flagmentation IE */
+			total_len += MIN_IE_LEN;
+			tmp -= WLAN_MAX_IE_LEN;
+		}
+		/* add one flagmentation IE */
+		total_len += MIN_IE_LEN;
+	}
+	return total_len;
+}
+
+QDF_STATUS lim_store_mlo_ie_raw_info(uint8_t *ie, uint8_t *sta_prof_ie,
+				     uint32_t total_len,
+				     struct wlan_mlo_ie *mlo_ie)
+{
+	uint8_t i, frag_num = 0, sta_index;
+	/* ml_ie_len = total_len - 2 * frag_num, does not include
+	 * WLAN_ELEMID_FRAGMENT IE and LEN
+	 */
+	uint32_t ml_ie_len;
+	uint32_t index, copied;
+	uint8_t *pfrm;
+	uint8_t *buf;
+	struct wlan_mlo_sta_profile *sta_prof;
+	uint8_t *sta_data;
+	/* Per STA profile frag or not */
+	bool frag = FALSE;
+
+	if (!ie)
+		return QDF_STATUS_E_INVAL;
+
+	qdf_mem_zero(mlo_ie, sizeof(*mlo_ie));
+
+	/* assume element ID + LEN + extension element ID + multi-link control +
+	 * common info length always less than WLAN_MAX_IE_LEN
+	 */
+	mlo_ie->num_data = sta_prof_ie - ie;
+	if (mlo_ie->num_data > WLAN_MLO_IE_COM_MAX_LEN) {
+		mlo_ie->num_data = 0;
+		return QDF_STATUS_E_INVAL;
+	}
+	qdf_mem_copy(mlo_ie->data, ie, mlo_ie->num_data);
+
+	/* Count how many frag IE */
+	pfrm = ie;
+	ml_ie_len = pfrm[TAG_LEN_POS] + MIN_IE_LEN;
+	while (ml_ie_len < total_len) {
+		frag_num++;
+		pfrm += MIN_IE_LEN + pfrm[TAG_LEN_POS];
+		ml_ie_len += pfrm[TAG_LEN_POS] + MIN_IE_LEN;
+	}
+	ml_ie_len = total_len - frag_num * MIN_IE_LEN;
+
+	buf = qdf_mem_malloc(total_len);
+	if (!buf)
+		return QDF_STATUS_E_NOMEM;
+
+	/* Copy the raw info and skip frag IE */
+	index = 0;
+	copied = 0;
+	buf[index++] = ie[copied++];
+	buf[index++] = ie[copied++];
+	for (i = 0; i < ml_ie_len - MIN_IE_LEN; i++) {
+		/* skip the frag IE */
+		if (i && i % WLAN_MAX_IE_LEN == 0)
+			copied += MIN_IE_LEN;
+		buf[index++] = ie[copied++];
+	}
+
+	/* copy sta profile from buf, it has copied the common info */
+	index = 0;
+	sta_index = 0;
+	copied = mlo_ie->num_data;
+	pfrm = buf + copied;
+	while (copied < ml_ie_len && sta_index < WLAN_MLO_MAX_VDEVS &&
+	       pfrm[ID_POS] == WLAN_ML_BV_LINFO_SUBELEMID_PERSTAPROFILE) {
+		sta_prof = &mlo_ie->sta_profile[sta_index++];
+		sta_data = sta_prof->data;
+
+		sta_data[index++] = buf[copied++];
+		sta_data[index++] = buf[copied++];
+		do {
+			if (index + pfrm[TAG_LEN_POS] >
+						WLAN_STA_PROFILE_MAX_LEN) {
+				qdf_mem_free(buf);
+				pe_debug("no enough buf to store sta prof");
+				return QDF_STATUS_E_INVAL;
+			}
+
+			for (i = 0; i < pfrm[TAG_LEN_POS]; i++)
+				sta_data[index++] = buf[copied++];
+			sta_prof->num_data = index;
+
+			if (copied < ml_ie_len &&
+			    pfrm[TAG_LEN_POS] == WLAN_MAX_IE_LEN &&
+			    pfrm[WLAN_MAX_IE_LEN + MIN_IE_LEN] ==
+					WLAN_ML_BV_LINFO_SUBELEMID_FRAGMENT) {
+				frag = TRUE;
+				/* skip sta profile frag IE */
+				copied += MIN_IE_LEN;
+			} else {
+				frag = FALSE;
+			}
+			pfrm += pfrm[TAG_LEN_POS] + MIN_IE_LEN;
+		} while (frag);
+	}
+
+	mlo_ie->num_sta_profile = sta_index;
+	qdf_mem_free(buf);
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS lim_add_frag_ie_for_sta_profile(uint8_t *data, uint16_t *len)
+{
+	uint16_t total_len;
+	uint16_t tmp, i;
+	uint8_t *buf;
+	uint16_t consumed = 0;
+	uint16_t index = 0;
+
+	total_len = *len;
+	buf = qdf_mem_malloc(total_len);
+	if (!buf)
+		return QDF_STATUS_E_NOMEM;
+
+	qdf_mem_copy(buf, data, total_len);
+
+	if (total_len > WLAN_MAX_IE_LEN + MIN_IE_LEN) {
+		/* ML IE max length  WLAN_MAX_IE_LEN + MIN_IE_LEN */
+		tmp = total_len - (WLAN_MAX_IE_LEN + MIN_IE_LEN);
+		while (tmp > WLAN_MAX_IE_LEN) {
+			/* add one flagmentation IE */
+			total_len += MIN_IE_LEN;
+			tmp -= WLAN_MAX_IE_LEN;
+		}
+		/* add one flagmentation IE */
+		total_len += MIN_IE_LEN;
+	}
+
+	data[consumed++] = buf[index++];
+	data[consumed++] = buf[index++];
+	for (i = 0; i < (*len - MIN_IE_LEN); i++) {
+		data[consumed++] = buf[index++];
+		if (i && i % WLAN_MAX_IE_LEN == 0) {
+			data[consumed++] = WLAN_ML_BV_LINFO_SUBELEMID_FRAGMENT;
+			if ((*len - MIN_IE_LEN - i) > WLAN_MAX_IE_LEN)
+				data[consumed++] = WLAN_MAX_IE_LEN;
+			else
+				data[consumed++] = *len - MIN_IE_LEN - i;
+		}
+	}
+
+	*len = total_len;
+	qdf_mem_free(buf);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+uint16_t
+lim_send_assoc_req_mgmt_frame_mlo(struct mac_context *mac_ctx,
+				  struct pe_session *session,
+				  tDot11fAssocRequest *frm)
+{
+	QDF_STATUS status;
+
+	session->mlo_ie_total_len = 0;
+	qdf_mem_zero(&session->mlo_ie, sizeof(session->mlo_ie));
+	if ((wlan_vdev_mlme_get_opmode(session->vdev) == QDF_STA_MODE) &&
+	    wlan_vdev_mlme_is_mlo_vdev(session->vdev)) {
+		status =
+			populate_dot11f_assoc_req_mlo_ie(mac_ctx, session, frm);
+		if (QDF_IS_STATUS_SUCCESS(status))
+			session->mlo_ie_total_len =
+				lim_caculate_mlo_ie_length(&session->mlo_ie);
+	}
+
+	return session->mlo_ie_total_len;
+}
+
+uint16_t
+lim_send_assoc_rsp_mgmt_frame_mlo(struct mac_context *mac_ctx,
+				  struct pe_session *session,
+				  tpDphHashNode sta,
+				  tDot11fAssocResponse *frm)
+{
+	QDF_STATUS status;
+
+	session->mlo_ie_total_len = 0;
+	qdf_mem_zero(&session->mlo_ie, sizeof(session->mlo_ie));
+	status = populate_dot11f_assoc_rsp_mlo_ie(mac_ctx, session, sta, frm);
+	if (QDF_IS_STATUS_SUCCESS(status))
+		session->mlo_ie_total_len =
+				lim_caculate_mlo_ie_length(&session->mlo_ie);
+
+	return session->mlo_ie_total_len;
+}
+
+uint16_t
+lim_send_bcn_frame_mlo(struct mac_context *mac_ctx,
+		       struct pe_session *session)
+{
+	QDF_STATUS status;
+
+	session->mlo_ie_total_len = 0;
+	qdf_mem_zero(&session->mlo_ie, sizeof(session->mlo_ie));
+	status = populate_dot11f_bcn_mlo_ie(mac_ctx, session);
+	if (QDF_IS_STATUS_SUCCESS(status))
+		session->mlo_ie_total_len =
+				lim_caculate_mlo_ie_length(&session->mlo_ie);
+
+	return session->mlo_ie_total_len;
+}
+
+uint16_t
+lim_get_frame_mlo_ie_len(struct pe_session *session)
+{
+	if (session)
+		return session->mlo_ie_total_len;
+	else
+		return 0;
+}

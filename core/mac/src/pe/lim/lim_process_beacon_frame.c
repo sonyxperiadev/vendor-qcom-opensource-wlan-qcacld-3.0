@@ -89,8 +89,9 @@ void lim_process_beacon_mlo(struct mac_context *mac_ctx,
 		per_sta_pro_len =
 			bcn_ptr->mlo_ie.mlo_ie.sta_profile[i].num_data;
 		stacontrol = *(uint16_t *)per_sta_pro;
-		sta_pro = per_sta_pro + 2; /* sta control */
-		sta_pro_len = per_sta_pro_len - 2;
+		/* IE ID + LEN + STA control */
+		sta_pro = per_sta_pro + MIN_IE_LEN + 2;
+		sta_pro_len = per_sta_pro_len - MIN_IE_LEN - 2;
 		link_id = QDF_GET_BITS(
 			    stacontrol,
 			    WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_LINKID_IDX,

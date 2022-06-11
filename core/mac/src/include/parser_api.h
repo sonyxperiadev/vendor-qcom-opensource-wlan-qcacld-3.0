@@ -198,10 +198,12 @@ enum operating_extension_identifier {
 	OP_CLASS_ID_201,
 };
 
-typedef struct sSirMultiLink_IE {
+#ifdef WLAN_FEATURE_11BE_MLO
+struct sir_multi_link_ie {
 	uint8_t num_of_mlo_ie;
-	tDot11fIEmlo_ie mlo_ie;
-} tSirMultiLink_IE, *tpSirMultiLink_IE;
+	struct wlan_mlo_ie mlo_ie;
+};
+#endif
 
 /* Structure common to Beacons & Probe Responses */
 typedef struct sSirProbeRespBeacon {
@@ -303,7 +305,9 @@ typedef struct sSirProbeRespBeacon {
 	uint8_t num_transmit_power_env;
 	tDot11fIEtransmit_power_env transmit_power_env[MAX_TPE_IES];
 	uint8_t ap_power_type;
-	tSirMultiLink_IE mlo_ie;
+#ifdef WLAN_FEATURE_11BE_MLO
+	struct sir_multi_link_ie mlo_ie;
+#endif
 	tDot11fIEWMMParams wmm_params;
 } tSirProbeRespBeacon, *tpSirProbeRespBeacon;
 
@@ -498,7 +502,9 @@ typedef struct sSirAssocRsp {
 	uint16_t hlp_data_len;
 	uint8_t hlp_data[FILS_MAX_HLP_DATA_LEN];
 #endif
-	tSirMultiLink_IE mlo_ie;
+#ifdef WLAN_FEATURE_11BE_MLO
+	struct sir_multi_link_ie mlo_ie;
+#endif
 } tSirAssocRsp, *tpSirAssocRsp;
 
 #ifdef FEATURE_WLAN_ESE
@@ -686,44 +692,14 @@ sir_convert_qos_map_configure_frame2_struct(struct mac_context *mac,
 
 #ifdef WLAN_FEATURE_11BE_MLO
 QDF_STATUS
-populate_dot11f_probe_req_mlo_ie(struct mac_context *mac_ctx,
-				 struct pe_session *session,
-				 tDot11fIEmlo_ie *mlo_ie);
-
-QDF_STATUS
 sir_convert_mlo_probe_rsp_frame2_struct(uint8_t *ml_ie,
 					uint32_t ml_ie_total_len,
-					tpSirMultiLink_IE mlo_ie_ptr);
+					struct sir_multi_link_ie *mlo_ie_ptr);
 
 QDF_STATUS
 populate_dot11f_mlo_caps(struct mac_context *mac_ctx,
 			 struct pe_session *session,
-			 tDot11fIEmlo_ie *mlo_ie);
-
-#else
-static inline QDF_STATUS
-populate_dot11f_probe_req_mlo_ie(struct mac_context *mac_ctx,
-				 struct pe_session *session,
-				 tDot11fIEmlo_ie *mlo_ie)
-{
-	return QDF_STATUS_E_NOSUPPORT;
-}
-
-static inline QDF_STATUS
-sir_convert_mlo_probe_rsp_frame2_struct(uint8_t *ml_ie,
-					uint32_t ml_ie_total_len,
-					tpSirMultiLink_IE mlo_ie_ptr)
-{
-	return QDF_STATUS_E_NOSUPPORT;
-}
-
-static inline QDF_STATUS
-populate_dot11f_mlo_caps(struct mac_context *mac_ctx,
-			 struct pe_session *session,
-			 tDot11fIEmlo_ie *mlo_ie)
-{
-	return QDF_STATUS_E_NOSUPPORT;
-}
+			 struct wlan_mlo_ie *mlo_ie);
 #endif
 
 #ifdef ANI_SUPPORT_11H
@@ -1390,7 +1366,8 @@ QDF_STATUS populate_dot11f_twt_extended_caps(struct mac_context *mac_ctx,
  * populate_dot11f_assoc_rsp_mlo_ie() - populate mlo ie for assoc response
  * @mac_ctx: Global MAC context
  * @session: PE session
- * @frm: assoc response frame
+ * @sta: Pointer to tpDphHashNode
+ * @frm: Assoc response frame
  *
  * Return: QDF_STATUS_SUCCESS of no error
  */
@@ -1403,13 +1380,11 @@ QDF_STATUS populate_dot11f_assoc_rsp_mlo_ie(struct mac_context *mac_ctx,
  * populate_dot11f_bcn_mlo_ie() - populate mlo ie for beacon
  * @mac_ctx: Global MAC context
  * @session: PE session
- * @mlo_ie: MLO IE
  *
  * Return: QDF_STATUS_SUCCESS of no error
  */
 QDF_STATUS populate_dot11f_bcn_mlo_ie(struct mac_context *mac_ctx,
-				      struct pe_session *session,
-				      tDot11fIEmlo_ie *mlo_ie);
+				      struct pe_session *session);
 
 /**
  * populate_dot11f_mlo_rnr() - populate rnr for mlo
@@ -1438,23 +1413,6 @@ void populate_dot11f_rnr_tbtt_info_16(struct mac_context *mac_ctx,
 				      tDot11fIEreduced_neighbor_report *dot11f);
 
 #else
-static inline QDF_STATUS
-populate_dot11f_assoc_rsp_mlo_ie(struct mac_context *mac_ctx,
-				 struct pe_session *session,
-				 tpDphHashNode sta,
-				 tDot11fAssocResponse *frm)
-{
-	return QDF_STATUS_SUCCESS;
-}
-
-static inline QDF_STATUS
-populate_dot11f_bcn_mlo_ie(struct mac_context *mac_ctx,
-			   struct pe_session *session,
-			   tDot11fIEmlo_ie *mlo_ie)
-{
-	return QDF_STATUS_SUCCESS;
-}
-
 static inline void populate_dot11f_mlo_rnr(
 				struct mac_context *mac_ctx,
 				struct pe_session *pe_session,
@@ -1652,38 +1610,21 @@ QDF_STATUS lim_strip_and_decode_eht_op(uint8_t *ie, uint16_t ie_len,
  */
 QDF_STATUS populate_dot11f_auth_mlo_ie(struct mac_context *mac_ctx,
 				       struct pe_session *pe_session,
-				       tDot11fIEmlo_ie *mlo_ie);
+				       struct wlan_mlo_ie *mlo_ie);
 
 /**
- * populate_dot11f_assoc_req_mlo_ie() - populate MLO Operation IE
- in assoc req
+ * populate_dot11f_assoc_req_mlo_ie() - populate MLO Operation IE in assoc req
  * @mac_ctx: Global MAC context
  * @session: PE session
- * @frm: pointer to Assoc Req IE
+ * @frm: Pointer to Assoc Req IE
  *
  * Populate the mlo IE in assoc req based on the session.
  */
 QDF_STATUS
 populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
-				 struct pe_session *pe_session,
+				 struct pe_session *session,
 				 tDot11fAssocRequest *frm);
 
-#else
-static inline
-QDF_STATUS populate_dot11f_auth_mlo_ie(struct mac_context *mac_ctx,
-				       struct pe_session *pe_session,
-				       tDot11fIEmlo_ie *mlo_ie)
-{
-	return QDF_STATUS_E_NOSUPPORT;
-}
-
-static inline QDF_STATUS
-populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
-					     struct pe_session *pe_session,
-					     tDot11fAssocRequest *frm)
-{
-	return QDF_STATUS_E_NOSUPPORT;
-}
 #endif
 
 /**
