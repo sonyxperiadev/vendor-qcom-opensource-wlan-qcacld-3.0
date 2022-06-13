@@ -8018,7 +8018,8 @@ void lim_set_mlo_caps(struct mac_context *mac, struct pe_session *session,
 		mlo_ie_info->medium_sync_delay_info_present =
 				dot11_cap.medium_sync_delay_info_present;
 		mlo_ie_info->eml_capab_present = dot11_cap.eml_capab_present;
-		mlo_ie_info->mld_capab_present = dot11_cap.mld_capab_present;
+		mlo_ie_info->mld_capab_and_op_present = dot11_cap.mld_capab_and_op_present;
+		mlo_ie_info->mld_id_present = dot11_cap.mld_id_present;
 		mlo_ie_info->reserved_1 = dot11_cap.reserved_1;
 		mlo_ie_info->common_info_length = dot11_cap.common_info_length;
 		qdf_mem_copy(&mlo_ie_info->mld_mac_addr,

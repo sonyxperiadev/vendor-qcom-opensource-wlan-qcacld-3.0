@@ -174,7 +174,7 @@ struct eml_capabilities {
 };
 
 /**
- * mld_capabilities - MLD capability info
+ * mld_capab_and_op - MLD capability and operations info
  * @max_simultaneous_link_num: MAX simultaneous link num
  * @srs_support: SRS support
  * @tid_link_map_supported: TID link map support
@@ -182,7 +182,7 @@ struct eml_capabilities {
  * @aar_support: AAR support
  * @reserved: reserve
  */
-struct mld_capabilities {
+struct mld_capab_and_op {
 	uint16_t max_simultaneous_link_num:4;
 	uint16_t srs_support:1;
 	uint16_t tid_link_map_supported:2;
@@ -199,7 +199,8 @@ struct mld_capabilities {
  * @bss_param_change_cnt_present: the present flag of bss prarm change cnt
  * @medium_sync_delay_info_present: the present flag of medium sync delay info
  * @eml_capab_present: the present flag of EML capability
- * @mld_capab_present: the present flag of MLD capability
+ * @mld_capab_and_op_present: the present flag of MLD capability and operation
+ * @mld_id_present: the present flag of MLD ID
  * @reserved_1: reserved
  * @common_info_length: common info length
  * @mld_mac_addr: MLD mac address
@@ -207,7 +208,8 @@ struct mld_capabilities {
  * @bss_param_change_count: bss param change count
  * @medium_sync_delay_info: structure of medium_sync_delay
  * @eml_capabilities_info: structure of eml_capabilities
- * @mld_capabilities_info: structure of mld_capabilities
+ * @mld_capab_and_op_info: structure of mld_capabilities and operations
+ * @mld_id_info: MLD ID
  * @num_sta_profile: the number of sta profile
  * @sta_profile: structure of wlan_mlo_sta_profile
  * @num_data: the length of data
@@ -221,15 +223,17 @@ struct wlan_mlo_ie {
 	uint16_t bss_param_change_cnt_present:1;
 	uint16_t medium_sync_delay_info_present:1;
 	uint16_t eml_capab_present:1;
-	uint16_t mld_capab_present:1;
-	uint16_t reserved_1:7;
+	uint16_t mld_capab_and_op_present: 1;
+	uint16_t mld_id_present: 1;
+	uint16_t reserved_1:6;
 	uint8_t common_info_length;
 	uint8_t mld_mac_addr[6];
 	uint8_t link_id;
 	uint8_t bss_param_change_count;
 	struct medium_sync_delay medium_sync_delay_info;
 	struct eml_capabilities eml_capabilities_info;
-	struct mld_capabilities mld_capabilities_info;
+	struct mld_capab_and_op mld_capab_and_op_info;
+	uint8_t mld_id_info;
 	uint16_t num_sta_profile;
 	struct wlan_mlo_sta_profile sta_profile[WLAN_MLO_MAX_VDEVS];
 	uint16_t num_data;
@@ -305,7 +309,8 @@ struct mlo_link_ie_info {
  * @mld_mac_addr: MLD MAC address
  * @common_info_length: Common Info Length
  * @reserved_1: reserved bits
- * @mld_capab_present: MLD capability present
+ * @mld_id_present: MLD ID present
+ * @mld_capab_and_op_present: MLD capability and operations present
  * @eml_capab_present: EML capability present
  * @medium_sync_delay_info_present: Medium sync delay information present
  * @bss_param_change_cnt_present: BSS parameter change count present
@@ -317,8 +322,9 @@ struct wlan_mlo_ie_info {
 #ifndef ANI_LITTLE_BIT_ENDIAN
 	uint8_t mld_mac_addr[6];
 	uint8_t common_info_length;
-	uint16_t reserved_1:7;
-	uint16_t mld_capab_present:1;
+	uint16_t reserved_1:6;
+	uint16_t mld_id_present:1;
+	uint16_t mld_capab_and_op_present:1;
 	uint16_t eml_capab_present:1;
 	uint16_t medium_sync_delay_info_present:1;
 	uint16_t bss_param_change_cnt_present:1;
@@ -332,8 +338,9 @@ struct wlan_mlo_ie_info {
 	uint16_t bss_param_change_cnt_present:1;
 	uint16_t medium_sync_delay_info_present:1;
 	uint16_t eml_capab_present:1;
-	uint16_t mld_capab_present:1;
-	uint16_t reserved_1:7;
+	uint16_t mld_capab_and_op_present:1;
+	uint16_t mld_id_present:1;
+	uint16_t reserved_1:6;
 	uint8_t common_info_length;
 	uint8_t mld_mac_addr[6];
 #endif

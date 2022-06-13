@@ -9021,7 +9021,8 @@ QDF_STATUS populate_dot11f_assoc_rsp_mlo_ie(struct mac_context *mac_ctx,
 			session->mlo_link_info.link_ie.bss_param_change_cnt;
 	common_info_len += WLAN_ML_BSSPARAMCHNGCNT_SIZE;
 
-	mlo_ie->mld_capab_present = 0;
+	mlo_ie->mld_capab_and_op_present = 0;
+	mlo_ie->mld_id_present = 0;
 
 	mlo_ie->common_info_length = common_info_len;
 
@@ -9580,7 +9581,7 @@ QDF_STATUS populate_dot11f_assoc_rsp_mlo_ie(struct mac_context *mac_ctx,
 		num_sta_pro++;
 	}
 	mlo_ie->num_sta_profile = num_sta_pro;
-	mlo_ie->mld_capabilities_info.max_simultaneous_link_num = num_sta_pro;
+	mlo_ie->mld_capab_and_op_info.max_simultaneous_link_num = num_sta_pro;
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -9640,11 +9641,12 @@ QDF_STATUS populate_dot11f_bcn_mlo_ie(struct mac_context *mac_ctx,
 			session->mlo_link_info.link_ie.bss_param_change_cnt;
 	tmp_offset += 1; /* bss parameters change count */
 	common_info_length += WLAN_ML_BSSPARAMCHNGCNT_SIZE;
-	mlo_ie->mld_capab_present = 0;
+	mlo_ie->mld_capab_and_op_present = 0;
+	mlo_ie->mld_id_present = 0;
 	sch_info->num_links = 0;
 
 	lim_get_mlo_vdev_list(session, &vdev_count, wlan_vdev_list);
-	mlo_ie->mld_capabilities_info.max_simultaneous_link_num =
+	mlo_ie->mld_capab_and_op_info.max_simultaneous_link_num =
 							vdev_count - 1;
 
 	mlo_ie->common_info_length = common_info_length;
@@ -9923,8 +9925,9 @@ populate_dot11f_mlo_caps(struct mac_context *mac_ctx,
 		mlo_ie->eml_capabilities_info.emlsr_support = 0;
 	}
 
-	mlo_ie->mld_capab_present = 1;
-	common_info_len += WLAN_ML_BV_CINFO_MLDCAP_SIZE;
+	mlo_ie->mld_capab_and_op_present = 1;
+	common_info_len += WLAN_ML_BV_CINFO_MLDCAPANDOP_SIZE;
+	mlo_ie->mld_id_present = 0;
 	mlo_ie->reserved = 0;
 	mlo_ie->reserved_1 = 0;
 	mlo_ie->common_info_length = common_info_len;
@@ -10888,7 +10891,8 @@ QDF_STATUS populate_dot11f_auth_mlo_ie(struct mac_context *mac_ctx,
 	mlo_ie->bss_param_change_cnt_present = 0;
 	mlo_ie->medium_sync_delay_info_present = 0;
 	mlo_ie->eml_capab_present = 0;
-	mlo_ie->mld_capab_present = 0;
+	mlo_ie->mld_capab_and_op_present = 0;
+	mlo_ie->mld_id_present = 0;
 
 	p_ml_ie = mlo_ie->data;
 	len_remaining = sizeof(mlo_ie->data);
@@ -10982,16 +10986,17 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 	mlo_ie->bss_param_change_cnt_present = 0;
 	mlo_ie->medium_sync_delay_info_present = 0;
 	mlo_ie->eml_capab_present = 0;
-	mlo_ie->mld_capab_present = 1;
+	mlo_ie->mld_capab_and_op_present = 1;
+	mlo_ie->mld_id_present = 0;
 
-	if (mlo_ie->mld_capab_present) {
-		presence_bitmap |= WLAN_ML_BV_CTRL_PBM_MLDCAP_P;
-		mlo_ie->common_info_length += WLAN_ML_BV_CINFO_MLDCAP_SIZE;
-		mlo_ie->mld_capabilities_info.max_simultaneous_link_num = 1;
-		mlo_ie->mld_capabilities_info.srs_support = 0;
-		mlo_ie->mld_capabilities_info.tid_link_map_supported = 0;
-		mlo_ie->mld_capabilities_info.str_freq_separation = 0;
-		mlo_ie->mld_capabilities_info.aar_support = 0;
+	if (mlo_ie->mld_capab_and_op_present) {
+		presence_bitmap |= WLAN_ML_BV_CTRL_PBM_MLDCAPANDOP_P;
+		mlo_ie->common_info_length += WLAN_ML_BV_CINFO_MLDCAPANDOP_SIZE;
+		mlo_ie->mld_capab_and_op_info.max_simultaneous_link_num = 1;
+		mlo_ie->mld_capab_and_op_info.srs_support = 0;
+		mlo_ie->mld_capab_and_op_info.tid_link_map_supported = 0;
+		mlo_ie->mld_capab_and_op_info.str_freq_separation = 0;
+		mlo_ie->mld_capab_and_op_info.aar_support = 0;
 	}
 
 	/*
@@ -11044,13 +11049,13 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 		len_remaining -= WLAN_ML_BV_CINFO_EMLCAP_SIZE;
 	}
 
-	if (mlo_ie->mld_capab_present) {
+	if (mlo_ie->mld_capab_and_op_present) {
 		QDF_SET_BITS(*(uint16_t *)p_ml_ie,
-		     WLAN_ML_BV_CINFO_MLDCAP_MAXSIMULLINKS_IDX,
-		     WLAN_ML_BV_CINFO_MLDCAP_MAXSIMULLINKS_BITS,
-		     mlo_ie->mld_capabilities_info.max_simultaneous_link_num);
-		p_ml_ie += WLAN_ML_BV_CINFO_MLDCAP_SIZE;
-		len_remaining -= WLAN_ML_BV_CINFO_MLDCAP_SIZE;
+		     WLAN_ML_BV_CINFO_MLDCAPANDOP_MAXSIMULLINKS_IDX,
+		     WLAN_ML_BV_CINFO_MLDCAPANDOP_MAXSIMULLINKS_BITS,
+		     mlo_ie->mld_capab_and_op_info.max_simultaneous_link_num);
+		p_ml_ie += WLAN_ML_BV_CINFO_MLDCAPANDOP_SIZE;
+		len_remaining -= WLAN_ML_BV_CINFO_MLDCAPANDOP_SIZE;
 	}
 
 	mlo_ie->num_data = p_ml_ie - mlo_ie->data;
