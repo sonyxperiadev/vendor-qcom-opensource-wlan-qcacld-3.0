@@ -3300,10 +3300,10 @@ policy_mgr_ml_link_vdev_need_to_be_disabled(struct wlan_objmgr_psoc *psoc,
 	 * For non-assoc link vdev set link as disabled if concurency is
 	 * not allowed
 	 */
-	return !policy_mgr_allow_concurrency(psoc, PM_STA_MODE,
-					     wlan_get_operation_chan_freq(vdev),
-					     HW_MODE_20_MHZ,
-					     conc_ext_flags.value);
+	return !policy_mgr_is_concurrency_allowed(psoc, PM_STA_MODE,
+					wlan_get_operation_chan_freq(vdev),
+					HW_MODE_20_MHZ,
+					conc_ext_flags.value);
 }
 
 static void
@@ -4129,7 +4129,7 @@ static bool policy_mgr_is_concurrency_allowed_4_port(
 					struct policy_mgr_pcl_list pcl)
 {
 	uint32_t i;
-	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	struct policy_mgr_psoc_priv_obj *pm_ctx = NULL;
 	uint8_t sap_cnt, go_cnt;
 
 	/* new STA may just have ssid, no channel until bssid assigned */
@@ -4148,11 +4148,11 @@ static bool policy_mgr_is_concurrency_allowed_4_port(
 			return false;
 		}
 
-		if (policy_mgr_get_mcc_to_scc_switch_mode(psoc) !=
-		    QDF_MCC_TO_SCC_SWITCH_FORCE_WITHOUT_DISCONNECTION) {
+		if (!policy_mgr_is_force_scc(psoc)) {
 			policy_mgr_err("couldn't start 4th port for bad force scc cfg");
 			return false;
 		}
+
 		if (!policy_mgr_is_dbs_enable(psoc) ||
 		    !pm_ctx->cfg.sta_sap_scc_on_dfs_chnl  ||
 		    !pm_ctx->cfg.sta_sap_scc_on_lte_coex_chnl) {
@@ -4160,7 +4160,6 @@ static bool policy_mgr_is_concurrency_allowed_4_port(
 				"Couldn't start 4th port for bad cfg of dual mac, dfs scc, lte coex scc");
 			return false;
 		}
-
 		for (i = 0; i < pcl.pcl_len; i++)
 			if (ch_freq == pcl.pcl_list[i])
 				return true;
@@ -5085,9 +5084,9 @@ policy_mgr_sta_ml_link_enable_allowed(struct wlan_objmgr_psoc *psoc,
 	conc_ext_flags.value = policy_mgr_get_conc_ext_flags(vdev, false);
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
 
-	return policy_mgr_allow_concurrency(psoc, PM_STA_MODE,
-					    disabled_link_freq, HW_MODE_20_MHZ,
-					    conc_ext_flags.value);
+	return policy_mgr_is_concurrency_allowed(psoc, PM_STA_MODE,
+					disabled_link_freq, HW_MODE_20_MHZ,
+					conc_ext_flags.value);
 }
 
 /*

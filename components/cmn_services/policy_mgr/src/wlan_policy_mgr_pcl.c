@@ -2400,6 +2400,183 @@ policy_mgr_get_index_for_ml_sta_sap(
 						sta_freq_list, ml_sta_idx);
 }
 
+/**
+ * policy_mgr_get_index_for_3_given_freq_dbs() - Find the index for next
+ * connection for given 3 freq in DBS mode
+ * @pm_ctx: policy manager context
+ * @index: Index to return for next connection
+ * @freq1: freq of interface 1
+ * @freq2: freq of interface 2
+ * @freq3: freq of interface 3
+ *
+ * This function finds the index for next connection for 3 freq in DBS mode.
+ *
+ * Return: none
+ */
+static void
+policy_mgr_get_index_for_3_given_freq_dbs(
+	struct policy_mgr_psoc_priv_obj *pm_ctx,
+	enum policy_mgr_three_connection_mode *index,
+	qdf_freq_t freq1, qdf_freq_t freq2, qdf_freq_t freq3)
+{
+	/* If all freq are on same band */
+	if ((WLAN_REG_IS_24GHZ_CH_FREQ(freq1) ==
+	     WLAN_REG_IS_24GHZ_CH_FREQ(freq2) &&
+	    (WLAN_REG_IS_24GHZ_CH_FREQ(freq2) ==
+	     WLAN_REG_IS_24GHZ_CH_FREQ(freq3)))) {
+		policy_mgr_err("Invalid mode for all freq %d, %d and %d on same band",
+			       freq1, freq2, freq3);
+		return;
+	}
+
+	/*
+	 * If freq1 and freq2 are on same band and freq3 is on differet band and
+	 * is not sharing mac with any SAP. STA on same band is handled above,
+	 * so both SAP on same band mean STA cannot be on same band. This can
+	 * happen if SBS is not enabled.
+	 */
+	if (WLAN_REG_IS_24GHZ_CH_FREQ(freq1) ==
+	    WLAN_REG_IS_24GHZ_CH_FREQ(freq2)) {
+		if (WLAN_REG_IS_24GHZ_CH_FREQ(freq3))
+			/*
+			 * As all 3 cannot be on same band, so if freq3 is
+			 * 2.4 GHZ mean both freq1 and freq2 are on 5 / 6 GHZ
+			 */
+			*index = PM_5_SCC_MCC_PLUS_24_DBS;
+		else
+			/*
+			 * As all 3 cannot be on same band, so if freq3 is
+			 * 5 / 6 GHZ, mean both freq1 and freq2 are on 2.4 GHZ.
+			 */
+			*index = PM_24_SCC_MCC_PLUS_5_DBS;
+		return;
+	}
+
+	/*
+	 * if freq1 and freq 2 are on different band (2 GHZ + 5 GHZ/6 GHZ DBS),
+	 * check with which freq the freq3 will share mac, and return index as
+	 * per it.
+	 */
+	if (WLAN_REG_IS_24GHZ_CH_FREQ(freq3))
+		*index = PM_24_SCC_MCC_PLUS_5_DBS;
+	else
+		*index = PM_5_SCC_MCC_PLUS_24_DBS;
+}
+
+/**
+ * policy_mgr_get_index_for_3_given_freq_sbs() - Find the index for next
+ * connection for 3 given freq, in case current HW mode is SBS
+ * @pm_ctx: policy manager context
+ * @index: Index to return for next connection
+ * @freq1: freq of interface 1
+ * @freq2: freq of interface 2
+ * @freq3: freq of interface 3
+ *
+ * This function finds the index for next
+ * connection for 3 given freq, in case current HW mode is SBS
+ *
+ * Return: none
+ */
+static void policy_mgr_get_index_for_3_given_freq_sbs(
+	struct policy_mgr_psoc_priv_obj *pm_ctx,
+	enum policy_mgr_three_connection_mode *index,
+	qdf_freq_t freq1, qdf_freq_t freq2, qdf_freq_t freq3)
+{
+	qdf_freq_t sbs_cut_off_freq;
+	qdf_freq_t shared_5_ghz_freq = 0;
+
+	/*
+	 * Sanity check: At least 2 of the given freq needs to be creating SBS
+	 * separation for HW mode to be in SBS, if not it shouldn't have
+	 * entered this API.
+	 */
+	if (!policy_mgr_are_sbs_chan(pm_ctx->psoc, freq1, freq2) &&
+	    !policy_mgr_are_sbs_chan(pm_ctx->psoc, freq2, freq3) &&
+	    !policy_mgr_are_sbs_chan(pm_ctx->psoc, freq3, freq1)) {
+		policy_mgr_err("freq1 %d, freq2 %d and freq3 %d, none of the 2 connections/3 vdevs are leading to SBS",
+			       freq1, freq2, freq3);
+		return;
+	}
+
+	sbs_cut_off_freq =  policy_mgr_get_sbs_cut_off_freq(pm_ctx->psoc);
+	if (!sbs_cut_off_freq) {
+		policy_mgr_err("Invalid cutoff freq");
+		return;
+	}
+	/*
+	 * if freq1 on freq2 same mac, get the 5 / 6 GHZ freq from it check
+	 * and determine shared mac.
+	 */
+	if (policy_mgr_2_freq_same_mac_in_sbs(pm_ctx, freq1, freq2)) {
+		/*
+		 * If freq1 is 2.4 GHZ that mean freq2 is 5 / 6 GHZ.
+		 * so take desision using freq2.
+		 */
+		if (WLAN_REG_IS_24GHZ_CH_FREQ(freq1))
+			shared_5_ghz_freq = freq2;
+		else
+			/* freq1 5 / 6 GHZ, use freq1 */
+			shared_5_ghz_freq = freq1;
+	} else if (policy_mgr_2_freq_same_mac_in_sbs(pm_ctx, freq2, freq3)) {
+		/*
+		 * If freq2 is 2.4 GHZ that mean freq3 is 5 / 6 GHZ.
+		 * so take desision using freq3.
+		 */
+		if (WLAN_REG_IS_24GHZ_CH_FREQ(freq2))
+			shared_5_ghz_freq = freq3;
+		else
+			/* freq2 5 / 6 GHZ, use freq1 */
+			shared_5_ghz_freq = freq2;
+	} else if (policy_mgr_2_freq_same_mac_in_sbs(pm_ctx, freq3, freq1)) {
+		/*
+		 * If freq1 is 2.4 GHZ that mean freq3 is 5 / 6 GHZ.
+		 * so take desision using freq3.
+		 */
+		if (WLAN_REG_IS_24GHZ_CH_FREQ(freq1))
+			shared_5_ghz_freq = freq3;
+		else
+			/* freq1 5 / 6 GHZ, use freq1 */
+			shared_5_ghz_freq = freq1;
+	}
+
+	if (!shared_5_ghz_freq ||
+	    WLAN_REG_IS_24GHZ_CH_FREQ(shared_5_ghz_freq)) {
+		policy_mgr_err("shared_5_ghz_freq %d is not 5 / 6 GHZ",
+			       shared_5_ghz_freq);
+		return;
+	}
+
+	/* If shared 5 / 6 GHZ freq is low 5 GHZ, then return high 5 GHZ freq */
+	if (shared_5_ghz_freq < sbs_cut_off_freq)
+		*index = PM_MCC_SCC_5G_LOW_PLUS_5_HIGH_SBS;
+	else
+		*index = PM_MCC_SCC_5G_HIGH_PLUS_5_LOW_SBS;
+}
+
+static void
+policy_mgr_get_index_for_ml_sta_sap_sap(
+			struct policy_mgr_psoc_priv_obj *pm_ctx,
+			enum policy_mgr_three_connection_mode *index,
+			qdf_freq_t ml_sta_freq, qdf_freq_t sap_freq_1,
+			qdf_freq_t sap_freq_2)
+{
+	/*
+	 * P2P GO/P2P CLI are treated as SAP to optimize as pcl
+	 * table is same for all three.
+	 */
+	policy_mgr_debug("channel: ML sta0: %d, SAP0: %d, SAP1: %d",
+			 ml_sta_freq, sap_freq_1, sap_freq_2);
+	if (policy_mgr_is_current_hwmode_sbs(pm_ctx->psoc))
+		/* if current mode is SBS */
+		return policy_mgr_get_index_for_3_given_freq_sbs(pm_ctx, index,
+							ml_sta_freq, sap_freq_1,
+							sap_freq_2);
+
+	/* current HW mode is DBS */
+	policy_mgr_get_index_for_3_given_freq_dbs(pm_ctx, index, ml_sta_freq,
+						  sap_freq_1, sap_freq_2);
+}
+
 #else /* WLAN_FEATURE_11BE_MLO */
 
 static inline void
@@ -2409,6 +2586,12 @@ policy_mgr_get_index_for_ml_sta_sap(
 			qdf_freq_t sap_freq, qdf_freq_t *sta_freq_list,
 			uint8_t *ml_sta_idx) {}
 
+static inline void
+policy_mgr_get_index_for_ml_sta_sap_sap(
+			struct policy_mgr_psoc_priv_obj *pm_ctx,
+			enum policy_mgr_three_connection_mode *index,
+			qdf_freq_t ml_sta_freq, qdf_freq_t sap_freq_1,
+			qdf_freq_t sap_freq_2) {}
 #endif /* WLAN_FEATURE_11BE_MLO */
 
 enum policy_mgr_three_connection_mode
@@ -2465,7 +2648,13 @@ enum policy_mgr_three_connection_mode
 			 count_sap, count_sta, count_ndi, count_nan_disc,
 			 num_ml_sta);
 
-	if (count_sap == 2 && count_sta == 1) {
+	if (count_sap == 2 && num_ml_sta == 1) {
+		policy_mgr_get_index_for_ml_sta_sap_sap(
+				pm_ctx, &index,
+				freq_list[ml_sta_idx[0]],
+				pm_conc_connection_list[list_sap[0]].freq,
+				pm_conc_connection_list[list_sap[1]].freq);
+	} else if (count_sap == 2 && count_sta == 1 && !num_ml_sta) {
 		policy_mgr_debug(
 			"channel: sap0: %d, sap1: %d, sta0: %d",
 			pm_conc_connection_list[list_sap[0]].freq,
