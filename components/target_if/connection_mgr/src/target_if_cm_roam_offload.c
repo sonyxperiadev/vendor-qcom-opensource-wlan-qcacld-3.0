@@ -286,6 +286,42 @@ target_if_cm_roam_scan_bmiss_cnt(wmi_unified_t wmi_handle,
 	return status;
 }
 
+/**
+ * target_if_cm_roam_scan_bmiss_timeout() - set conbmiss timeout to fw
+ * @wmi_handle: wmi handle
+ * @req: bmiss timeout parameters
+ *
+ * Set bmiss timeout to fw.
+ *
+ * Return: QDF status
+ */
+static QDF_STATUS
+target_if_cm_roam_scan_bmiss_timeout(wmi_unified_t wmi_handle,
+				     struct wlan_roam_bmiss_timeout *req)
+{
+	QDF_STATUS status;
+	uint32_t vdev_id;
+	uint8_t bmiss_timeout_onwakeup;
+	uint8_t bmiss_timeout_onsleep;
+
+	vdev_id = req->vdev_id;
+	bmiss_timeout_onwakeup = req->bmiss_timeout_onwakeup;
+	bmiss_timeout_onsleep = req->bmiss_timeout_onsleep;
+
+	target_if_debug("vdev_id %d bmiss_timeout_onwakeup: %dsec, bmiss_timeout_onsleep: %dsec", vdev_id,
+			bmiss_timeout_onwakeup, bmiss_timeout_onsleep);
+
+	status = target_if_vdev_set_param(wmi_handle, vdev_id,
+					  WMI_VDEV_PARAM_FINAL_BMISS_TIME_SEC,
+					  bmiss_timeout_onwakeup);
+
+	status = target_if_vdev_set_param(wmi_handle, vdev_id,
+					  WMI_VDEV_PARAM_FINAL_BMISS_TIME_WOW_SEC,
+					  bmiss_timeout_onsleep);
+
+	return status;
+}
+
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 /* target_if_cm_roam_reason_vsie(): set vdev param
  * WMI_VDEV_PARAM_ENABLE_DISABLE_ROAM_REASON_VSIE
@@ -986,6 +1022,12 @@ target_if_cm_roam_send_start(struct wlan_objmgr_vdev *vdev,
 		target_if_err("vdev set bmiss bcnt param failed");
 		goto end;
 	}
+	status = target_if_cm_roam_scan_bmiss_timeout(wmi_handle,
+						      &req->bmiss_timeout);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		target_if_err("vdev set bmiss timeout param failed");
+		goto end;
+	}
 
 	target_if_cm_roam_reason_vsie(wmi_handle, &req->reason_vsie_enable);
 
@@ -1378,6 +1420,13 @@ target_if_cm_roam_send_update_config(struct wlan_objmgr_vdev *vdev,
 						  &req->beacon_miss_cnt);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		target_if_err("vdev set bmiss bcnt param failed");
+		goto end;
+	}
+
+	status = target_if_cm_roam_scan_bmiss_timeout(wmi_handle,
+						      &req->bmiss_timeout);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		target_if_err("vdev set bmiss timeout param failed");
 		goto end;
 	}
 

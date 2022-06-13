@@ -1872,6 +1872,10 @@ struct fw_scan_channels {
  * @sae_single_pmk_feature_enabled: Contains value of ini
  * sae_single_pmk_feature_enabled
  * @rso_user_config: RSO user config
+ * @beaconloss_timeout_onwakeup: time in sec to configure FW BMISS event
+ * during wakeup.
+ * @beaconloss_timeout_onsleep: time in sec to configure FW BMISS event
+ * during sleep.
  */
 struct wlan_mlme_lfr_cfg {
 	bool mawc_roam_enabled;
@@ -1991,6 +1995,8 @@ struct wlan_mlme_lfr_cfg {
 #endif
 	struct rso_config_params rso_user_config;
 	bool enable_ft_over_ds;
+	uint8_t beaconloss_timeout_onwakeup;
+	uint8_t beaconloss_timeout_onsleep;
 };
 
 /**

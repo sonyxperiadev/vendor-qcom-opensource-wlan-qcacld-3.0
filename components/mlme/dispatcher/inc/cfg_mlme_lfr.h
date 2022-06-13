@@ -1698,6 +1698,59 @@
 
 /*
  * <ini>
+ * BeaconLoss_TimeoutOnWakeUp - Consecutive Beaconloss timeout on wakeup to
+ * trigger timeout
+ * @Min: 0
+ * @Max: 20
+ * @Default: 6
+ *
+ * This ini is used to control the beacon miss timeout when the system is awake.
+ * On the timeout, BMISS event will be triggered by FW.
+ * The units of this timeout is in seconds.
+ *
+ * Related: None
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_LFR_BEACONLOSS_TIMEOUT_ON_WAKEUP CFG_INI_UINT( \
+	"ConBeaconLoss_TimeoutOnWakeUp", \
+	0, \
+	20, \
+	6, \
+	CFG_VALUE_OR_DEFAULT, \
+	"ConBeaconloss timeout on wakeup")
+
+/*
+ * <ini>
+ * BeaconLoss_TimeoutOnSleep - Consecutive Beaconloss timeout on sleep to
+ * trigger timeout
+ * @Min: 0
+ * @Max: 20
+ * @Default: 10
+ *
+ * This ini is used to control the beacon miss timeout
+ * when the system is in sleep.
+ * On the timeout, BMISS event will be triggered by FW.
+ * The units of this timeout is in seconds.
+ *
+ * Related: None
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_LFR_BEACONLOSS_TIMEOUT_ON_SLEEP CFG_INI_UINT( \
+	"ConBeaconLoss_TimeoutOnSleep", \
+	0, \
+	20, \
+	10, \
+	CFG_VALUE_OR_DEFAULT, \
+	"ConBeaconloss timeout on sleep")
+
+/*
+ * <ini>
  * gAllowDFSChannelRoam - Allow dfs channel in roam
  * @Min: 0
  * @Max: 2
@@ -3105,6 +3158,8 @@
 	LFR_ESE_ALL \
 	LFR_SUBNET_DETECTION_ALL \
 	SAE_SINGLE_PMK_ALL \
-	ROAM_REASON_VSIE_ALL
+	ROAM_REASON_VSIE_ALL \
+	CFG(CFG_LFR_BEACONLOSS_TIMEOUT_ON_WAKEUP) \
+	CFG(CFG_LFR_BEACONLOSS_TIMEOUT_ON_SLEEP)
 
 #endif /* CFG_MLME_LFR_H__ */

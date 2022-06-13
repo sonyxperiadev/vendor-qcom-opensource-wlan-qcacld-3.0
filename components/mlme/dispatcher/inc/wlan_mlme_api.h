@@ -3121,6 +3121,28 @@ wlan_mlme_get_roam_bmiss_first_bcnt(struct wlan_objmgr_psoc *psoc,
 				    uint8_t *val);
 
 /**
+ * wlan_mlme_get_bmiss_timeout_on_wakeup() - Get bmiss timeout
+ * @psoc: pointer to psoc object
+ * @val:  Pointer to the value which will be filled for the caller
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+wlan_mlme_get_bmiss_timeout_on_wakeup(struct wlan_objmgr_psoc *psoc,
+				      uint8_t *val);
+
+/**
+ * wlan_mlme_get_bmiss_timeout_on_sleep() - Get roam conbmiss timeout
+ * @psoc: pointer to psoc object
+ * @val:  Pointer to the value which will be filled for the caller
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+wlan_mlme_get_bmiss_timeout_on_sleep(struct wlan_objmgr_psoc *psoc,
+				     uint8_t *val);
+
+/**
  * wlan_mlme_adaptive_11r_enabled() - check if adaptive 11r feature is enaled
  * or not
  * @psoc: pointer to psoc object

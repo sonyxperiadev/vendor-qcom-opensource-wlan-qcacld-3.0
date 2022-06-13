@@ -1603,6 +1603,18 @@ struct wlan_roam_beacon_miss_cnt {
 };
 
 /**
+ * struct wlan_roam_bmiss_timeout - roam beacon miss timeout
+ * @vdev_id: vdev id
+ * @bmiss_timeout_onwakeup : timeout on wakeup in seconds
+ * @bmiss_timeout_onsleep : timeout on sleep in seconds
+ */
+struct wlan_roam_bmiss_timeout {
+	uint32_t vdev_id;
+	uint8_t bmiss_timeout_onwakeup;
+	uint8_t bmiss_timeout_onsleep;
+};
+
+/**
  * struct wlan_roam_reason_vsie_enable - roam reason vsie enable parameters
  * @vdev_id: vdev id
  * @enable_roam_reason_vsie: enable/disable inclusion of roam Reason
@@ -1696,6 +1708,7 @@ enum roam_rt_stats_params {
  * roam start config
  * @rssi_params: roam scan rssi threshold parameters
  * @beacon_miss_cnt: roam beacon miss count parameters
+ * @bmiss_timeout: roam consecutive beaconloss timeout parameters
  * @reason_vsie_enable: roam reason vsie enable parameters
  * @roam_triggers: roam triggers parameters
  * @scan_period_params: roam scan period parameters
@@ -1714,6 +1727,7 @@ enum roam_rt_stats_params {
 struct wlan_roam_start_config {
 	struct wlan_roam_offload_scan_rssi_params rssi_params;
 	struct wlan_roam_beacon_miss_cnt beacon_miss_cnt;
+	struct wlan_roam_bmiss_timeout bmiss_timeout;
 	struct wlan_roam_reason_vsie_enable reason_vsie_enable;
 	struct wlan_roam_triggers roam_triggers;
 	struct wlan_roam_scan_period_params scan_period_params;
@@ -1767,6 +1781,7 @@ struct wlan_roam_stop_config {
  * struct wlan_roam_update_config - structure containing parameters for
  * roam update config
  * @beacon_miss_cnt: roam beacon miss count parameters
+ * @bmiss_timeout: roam scan bmiss timeout parameters
  * @scan_filter_params: roam scan filter parameters
  * @scan_period_params: roam scan period parameters
  * @rssi_change_params: roam scan rssi change parameters
@@ -1781,6 +1796,7 @@ struct wlan_roam_stop_config {
  */
 struct wlan_roam_update_config {
 	struct wlan_roam_beacon_miss_cnt beacon_miss_cnt;
+	struct wlan_roam_bmiss_timeout bmiss_timeout;
 	struct wlan_roam_scan_filter_params scan_filter_params;
 	struct wlan_roam_scan_period_params scan_period_params;
 	struct wlan_roam_rssi_change_params rssi_change_params;

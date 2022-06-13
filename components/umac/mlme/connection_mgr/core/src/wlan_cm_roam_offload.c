@@ -88,6 +88,31 @@ cm_roam_scan_bmiss_cnt(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 	params->roam_bmiss_final_bcnt = beacon_miss_count;
 }
 
+/**
+ * cm_roam_scan_bmiss_timeout() - set connection bmiss timeout
+ * @psoc: psoc pointer
+ * @vdev_id: vdev id
+ * @params: roam bmiss timeout  parameters
+ *
+ * This function is used to set roam conbmiss timeout parameters
+ *
+ * Return: None
+ */
+static void
+cm_roam_scan_bmiss_timeout(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
+			   struct wlan_roam_bmiss_timeout *params)
+{
+	uint8_t bmiss_timeout;
+
+	params->vdev_id = vdev_id;
+
+	wlan_mlme_get_bmiss_timeout_on_wakeup(psoc, &bmiss_timeout);
+	params->bmiss_timeout_onwakeup = bmiss_timeout;
+
+	wlan_mlme_get_bmiss_timeout_on_sleep(psoc, &bmiss_timeout);
+	params->bmiss_timeout_onsleep = bmiss_timeout;
+}
+
 QDF_STATUS
 cm_roam_fill_rssi_change_params(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 				struct wlan_roam_rssi_change_params *params)
@@ -2787,6 +2812,7 @@ cm_roam_start_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 	cm_roam_set_roam_reason_better_ap(psoc, vdev_id, false);
 	/* fill from mlme directly */
 	cm_roam_scan_bmiss_cnt(psoc, vdev_id, &start_req->beacon_miss_cnt);
+	cm_roam_scan_bmiss_timeout(psoc, vdev_id, &start_req->bmiss_timeout);
 	cm_roam_reason_vsie(psoc, vdev_id, &start_req->reason_vsie_enable);
 	cm_roam_triggers(psoc, vdev_id, &start_req->roam_triggers);
 	cm_roam_fill_rssi_change_params(psoc, vdev_id,
@@ -2873,6 +2899,7 @@ cm_roam_update_config_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 
 	/* fill from mlme directly */
 	cm_roam_scan_bmiss_cnt(psoc, vdev_id, &update_req->beacon_miss_cnt);
+	cm_roam_scan_bmiss_timeout(psoc, vdev_id, &update_req->bmiss_timeout);
 	cm_roam_fill_rssi_change_params(psoc, vdev_id,
 					&update_req->rssi_change_params);
 	if (MLME_IS_ROAM_STATE_RSO_ENABLED(psoc, vdev_id)) {
