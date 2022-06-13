@@ -1107,6 +1107,18 @@ QDF_STATUS wlan_mlme_set_primary_interface(struct wlan_objmgr_psoc *psoc,
 QDF_STATUS wlan_mlme_set_default_primary_iface(struct wlan_objmgr_psoc *psoc);
 
 /**
+ * wlan_mlme_is_primary_interface_configured() - Check if primary iface is set
+ * @psoc: pointer to psoc object
+ *
+ * Check if primary iface is configured from userspace through vendor command.
+ * Return true if it's configured. If it's not configured, default value would
+ * be 0xFF and return false then.
+ *
+ * Return: True or False
+ */
+bool wlan_mlme_is_primary_interface_configured(struct wlan_objmgr_psoc *psoc);
+
+/**
  * wlan_mlme_get_mcc_duty_cycle_percentage() - Get primary STA iface duty
  * cycle percentage
  * @psoc: pointer to psoc object

@@ -2651,6 +2651,15 @@ QDF_STATUS wlan_mlme_set_primary_interface(struct wlan_objmgr_psoc *psoc,
 	return QDF_STATUS_SUCCESS;
 }
 
+bool wlan_mlme_is_primary_interface_configured(struct wlan_objmgr_psoc *psoc)
+{
+	uint8_t dual_sta_config = 0xFF;
+
+	wlan_mlme_get_dual_sta_policy(psoc, &dual_sta_config);
+	return (dual_sta_config ==
+		QCA_WLAN_CONCURRENT_STA_POLICY_PREFER_PRIMARY);
+}
+
 int wlan_mlme_get_mcc_duty_cycle_percentage(struct wlan_objmgr_pdev *pdev)
 {
 	struct wlan_objmgr_psoc *psoc = NULL;

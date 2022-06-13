@@ -3644,7 +3644,6 @@ cm_roam_switch_to_init(struct wlan_objmgr_pdev *pdev,
 	struct wlan_mlme_psoc_ext_obj *mlme_obj;
 	struct dual_sta_policy *dual_sta_policy;
 	struct wlan_objmgr_vdev *vdev;
-	bool is_vdev_primary = false;
 
 	if (!psoc)
 		return QDF_STATUS_E_FAILURE;
@@ -3679,6 +3678,23 @@ cm_roam_switch_to_init(struct wlan_objmgr_pdev *pdev,
 			mlme_info("STA + STA concurrency is in DBS");
 			break;
 		}
+
+		/*
+		 * set_primary_vdev usecase is to use that
+		 * interface(e.g. wlan0) over the other
+		 * interface(i.e. wlan1) for data transfer. Non-primary
+		 * vdev use case is to check the quality of that link
+		 * and decide if data can be switched to it and make it
+		 * primary.
+		 * Enabling roaming on non-primary vdev also in this
+		 * context would always helps to find better AP.
+		 */
+		if (wlan_mlme_is_primary_interface_configured(psoc) &&
+		    (reason != REASON_SUPPLICANT_INIT_ROAMING)) {
+			mlme_info("STA + STA concurrency with a primary iface, have roaming enabled on both interfaces");
+			break;
+		}
+
 		/*
 		 * Disable roaming on the enabled sta if supplicant wants to
 		 * enable roaming on this vdev id
@@ -3694,19 +3710,14 @@ cm_roam_switch_to_init(struct wlan_objmgr_pdev *pdev,
 			 * vdev id if it is not an explicit enable from
 			 * supplicant.
 			 */
-			mlme_debug("Interface vdev_id: %d, roaming enabled on vdev_id: %d, primary vdev_id:%d, reason:%d",
+			mlme_debug("Interface vdev_id: %d, roaming enabled on vdev_id: %d, reason:%d",
 				   vdev_id, temp_vdev_id,
-				   dual_sta_policy->primary_vdev_id, reason);
+				   reason);
 
-			if (vdev_id == dual_sta_policy->primary_vdev_id)
-				is_vdev_primary = true;
-
-			if (is_vdev_primary ||
-			    reason == REASON_SUPPLICANT_INIT_ROAMING) {
+			if (reason == REASON_SUPPLICANT_INIT_ROAMING) {
 				cm_roam_state_change(pdev, temp_vdev_id,
 						     WLAN_ROAM_DEINIT,
-						     is_vdev_primary ?
-					     REASON_ROAM_SET_PRIMARY : reason,
+						     reason,
 						     NULL, false);
 			} else {
 				mlme_info("CM_RSO: Roam module already initialized on vdev:[%d]",
