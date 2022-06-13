@@ -648,7 +648,6 @@ void policy_mgr_update_conc_list(struct wlan_objmgr_psoc *psoc,
 	if (pm_ctx->mode_change_cb && update_conn)
 		pm_ctx->mode_change_cb();
 
-	policy_mgr_dump_connection_status_info(psoc);
 	if (pm_ctx->cdp_cbacks.cdp_update_mac_id)
 		pm_ctx->cdp_cbacks.cdp_update_mac_id(psoc, vdev_id, mac);
 
@@ -1093,7 +1092,6 @@ void policy_mgr_update_hw_mode_conn_info(struct wlan_objmgr_psoc *psoc,
 	}
 	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
 
-	policy_mgr_dump_connection_status_info(psoc);
 	policy_mgr_dump_current_concurrency(psoc);
 }
 
@@ -1552,7 +1550,8 @@ policy_mgr_dump_disabled_ml_links(struct policy_mgr_psoc_priv_obj *pm_ctx)
 		}
 	}
 	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
-	policy_mgr_debug("Disabled links(%d): %s", count, buf);
+	if (count)
+		policy_mgr_debug("Disabled links(%d): %s", count, buf);
 }
 #endif
 
@@ -1689,6 +1688,7 @@ void policy_mgr_dump_current_concurrency(struct wlan_objmgr_psoc *psoc)
 	if (!cc_mode)
 		return;
 
+	policy_mgr_dump_connection_status_info(psoc);
 	switch (num_connections) {
 	case 1:
 		policy_mgr_dump_current_concurrency_one_connection(cc_mode,

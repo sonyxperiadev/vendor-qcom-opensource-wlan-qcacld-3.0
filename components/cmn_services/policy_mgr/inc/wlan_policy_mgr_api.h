@@ -1027,19 +1027,6 @@ void policy_mgr_move_vdev_from_connection_to_disabled_tbl(
 bool
 policy_mgr_ml_link_vdev_need_to_be_disabled(struct wlan_objmgr_psoc *psoc,
 					    struct wlan_objmgr_vdev *vdev);
-
-/**
- * policy_mgr_handle_link_enable_disable_resp() - enable/disable a ml link
- * @vdev: vdev
- * @arg: req structure
- * evt: response event
- *
- * Return: None
- */
-void
-policy_mgr_handle_link_enable_disable_resp(struct wlan_objmgr_vdev *vdev,
-					  void *arg,
-					  struct mlo_link_set_active_resp *evt);
 #else
 static inline bool
 policy_mgr_is_ml_vdev_id(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
@@ -4301,6 +4288,21 @@ policy_mgr_handle_ml_sta_links_on_vdev_up_csa(struct wlan_objmgr_psoc *psoc,
 					      uint8_t vdev_id);
 
 /*
+ * policy_mgr_handle_ml_sta_link_on_traffic_type_change() - Handle
+ * enable/disable link on vdev traffic type change on SAP/P2P vdev
+ * @psoc: objmgr psoc
+ * @vdev: vdev on which traffic type change
+ *
+ * Context: Should be called only from north bound context and never from
+ * schedular thread as it has wait for completed.
+ *
+ * Return: void
+ */
+void policy_mgr_handle_ml_sta_link_on_traffic_type_change(
+						struct wlan_objmgr_psoc *psoc,
+						struct wlan_objmgr_vdev *vdev);
+
+/*
  * policy_mgr_handle_ml_sta_links_on_vdev_down() - Handle enable
  * link on any vdev down
  * @psoc: objmgr psoc
@@ -4344,6 +4346,13 @@ static inline void
 policy_mgr_handle_ml_sta_links_on_vdev_up_csa(struct wlan_objmgr_psoc *psoc,
 					      enum QDF_OPMODE mode,
 					      uint8_t vdev_id)
+{
+}
+
+static inline void
+policy_mgr_handle_ml_sta_link_on_traffic_type_change(
+						struct wlan_objmgr_psoc *psoc,
+						struct wlan_objmgr_vdev *vdev)
 {
 }
 

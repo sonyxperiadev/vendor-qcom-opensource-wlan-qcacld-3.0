@@ -3331,7 +3331,36 @@ policy_mgr_enable_disable_link_from_vdev_bitmask(struct wlan_objmgr_psoc *psoc,
 	}
 }
 
-void
+static void
+policy_mgr_set_link_in_progress(struct policy_mgr_psoc_priv_obj *pm_ctx,
+				bool value)
+{
+	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
+	pm_ctx->set_link_in_progress = value;
+	/* if set link has started reset the event, else complete the event */
+	if (pm_ctx->set_link_in_progress)
+		qdf_event_reset(&pm_ctx->set_link_update_done_evt);
+	else
+		qdf_event_set(&pm_ctx->set_link_update_done_evt);
+	policy_mgr_debug("set_link_in_progress %d",
+			 pm_ctx->set_link_in_progress);
+	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+}
+
+static bool
+policy_mgr_get_link_in_progress(struct policy_mgr_psoc_priv_obj *pm_ctx)
+{
+	bool value;
+
+	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
+	value = pm_ctx->set_link_in_progress;
+	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+
+	policy_mgr_debug("set_link_in_progress %d", value);
+	return value;
+}
+
+static void
 policy_mgr_handle_link_enable_disable_resp(struct wlan_objmgr_vdev *vdev,
 					  void *arg,
 					  struct mlo_link_set_active_resp *resp)
@@ -3339,23 +3368,31 @@ policy_mgr_handle_link_enable_disable_resp(struct wlan_objmgr_vdev *vdev,
 	struct mlo_link_set_active_req *req = arg;
 	uint8_t i;
 	struct wlan_objmgr_psoc *psoc;
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
 
 	psoc = wlan_vdev_get_psoc(vdev);
 	if (!psoc) {
 		policy_mgr_err("Psoc is Null");
 		return;
 	}
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return;
+	}
+
+	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
 	if (!req || !resp) {
 		policy_mgr_err("arguments or event empty for vdev %d",
 			       wlan_vdev_get_id(vdev));
-		return;
+		goto complete_evnt;
 	}
 
 	if (resp->status) {
 		policy_mgr_err("Set link status %d, for mode %d reason %d vdev bitmask 0x%x",
 			       resp->status, req->param.force_mode,
 			       req->param.reason, req->param.vdev_bitmap[0]);
-		return;
+		goto complete_evnt;
 	}
 
 	policy_mgr_debug("Req mode %d reason %d, bitmask[0] = 0x%x, resp: active %d inactive %d, active[0] 0x%x inactive[0] 0x%x",
@@ -3408,6 +3445,10 @@ policy_mgr_handle_link_enable_disable_resp(struct wlan_objmgr_vdev *vdev,
 			       req->param.force_mode);
 		break;
 	}
+
+complete_evnt:
+	policy_mgr_set_link_in_progress(pm_ctx, false);
+	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
 }
 
 #else
@@ -4274,6 +4315,106 @@ static bool policy_mgr_is_6g_channel_allowed(
 }
 
 #ifdef WLAN_FEATURE_11BE_MLO
+static void
+policy_mgr_fill_ml_active_link_vdev_bitmap(struct mlo_link_set_active_req *req,
+					   uint8_t *mlo_vdev_lst,
+					   uint32_t num_mlo_vdev)
+{
+	uint32_t entry_idx, entry_offset, vdev_idx;
+	uint8_t vdev_id;
+
+	for (vdev_idx = 0; vdev_idx < num_mlo_vdev; vdev_idx++) {
+		vdev_id = mlo_vdev_lst[vdev_idx];
+		entry_idx = vdev_id / 32;
+		entry_offset = vdev_id % 32;
+		if (entry_idx >= MLO_LINK_NUM_SZ) {
+			policy_mgr_err("Invalid entry_idx %d num_mlo_vdev %d vdev %d",
+				       entry_idx, num_mlo_vdev, vdev_id);
+			continue;
+		}
+		req->param.vdev_bitmap[entry_idx] |= (1 << entry_offset);
+		/* update entry number if entry index changed */
+		if (req->param.num_vdev_bitmap < entry_idx + 1)
+			req->param.num_vdev_bitmap = entry_idx + 1;
+	}
+
+	policy_mgr_debug("num_vdev_bitmap %d vdev_bitmap[0] = 0x%x, vdev_bitmap[1] = 0x%x",
+			 req->param.num_vdev_bitmap, req->param.vdev_bitmap[0],
+			 req->param.vdev_bitmap[1]);
+}
+
+/**
+ * policy_mgr_mlo_sta_set_link() - Set links for MLO STA
+ *
+ * @vdev: vdev object
+ * @reason: Reason for which link is forced
+ * @mode: Force reason
+ * @num_mlo_vdev: number of mlo vdev
+ * @mlo_vdev_lst: MLO STA vdev list
+
+ * Interface manager Set links for MLO STA
+ *
+ * Return: void
+ */
+static void
+policy_mgr_mlo_sta_set_link(struct wlan_objmgr_vdev *vdev,
+			    enum mlo_link_force_reason reason,
+			    enum mlo_link_force_mode mode,
+			    uint8_t num_mlo_vdev, uint8_t *mlo_vdev_lst)
+{
+	struct mlo_link_set_active_req *req;
+	QDF_STATUS status;
+	struct wlan_objmgr_psoc *psoc;
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+
+	psoc = wlan_vdev_get_psoc(vdev);
+	if (!psoc) {
+		policy_mgr_err("Psoc is Null");
+		return;
+	}
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return;
+	}
+
+	req = qdf_mem_malloc(sizeof(*req));
+	if (!req)
+		return;
+
+	policy_mgr_set_link_in_progress(pm_ctx, true);
+
+	policy_mgr_debug("vdev %d: mode %d num_mlo_vdev %d reason %d",
+			 wlan_vdev_get_id(vdev), mode, num_mlo_vdev, reason);
+
+	req->ctx.vdev = vdev;
+	req->param.reason = reason;
+	req->param.force_mode = mode;
+	req->ctx.set_mlo_link_cb = policy_mgr_handle_link_enable_disable_resp;
+	req->ctx.cb_arg = req;
+
+	/* set MLO vdev bit mask for all case */
+	policy_mgr_fill_ml_active_link_vdev_bitmap(req, mlo_vdev_lst,
+						   num_mlo_vdev);
+
+	/* fill num of links for MLO_LINK_FORCE_MODE_ACTIVE_NUM */
+	if (mode == MLO_LINK_FORCE_MODE_ACTIVE_NUM) {
+		req->param.force_mode = MLO_LINK_FORCE_MODE_ACTIVE_NUM;
+		req->param.num_link_entry = 1;
+		req->param.link_num[0].num_of_link = num_mlo_vdev - 1;
+	}
+
+	status = mlo_ser_set_link_req(req);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		policy_mgr_err("vdev %d: Failed to set link mode %d num_mlo_vdev %d reason %d",
+			       wlan_vdev_get_id(vdev), mode, num_mlo_vdev,
+			       reason);
+		qdf_mem_free(req);
+		policy_mgr_set_link_in_progress(pm_ctx, false);
+	}
+}
+
 uint32_t
 policy_mgr_get_conc_ext_flags(struct wlan_objmgr_vdev *vdev, bool force_mlo)
 {
@@ -4775,10 +4916,8 @@ policy_mgr_ml_sta_concurency_on_connect(struct wlan_objmgr_psoc *psoc,
 		}
 	}
 
-	wlan_mlo_sta_mlo_concurency_set_link(vdev,
-					     MLO_LINK_FORCE_REASON_CONNECT,
-					     mode, affected_links,
-					     ml_vdev_lst);
+	policy_mgr_mlo_sta_set_link(vdev, MLO_LINK_FORCE_REASON_CONNECT,
+				    mode, affected_links, ml_vdev_lst);
 }
 
 static void
@@ -4808,10 +4947,9 @@ policy_mgr_ml_sta_concurency_on_disconnect(struct wlan_objmgr_vdev *vdev,
 		i++;
 	}
 
-	wlan_mlo_sta_mlo_concurency_set_link(vdev,
-					     MLO_LINK_FORCE_REASON_DISCONNECT,
-					     MLO_LINK_FORCE_MODE_NO_FORCE,
-					     num_ml, ml_vdev_list);
+	policy_mgr_mlo_sta_set_link(vdev, MLO_LINK_FORCE_REASON_DISCONNECT,
+				    MLO_LINK_FORCE_MODE_NO_FORCE,
+				    num_ml, ml_vdev_list);
 }
 
 /**
@@ -5146,10 +5284,9 @@ policy_mgr_handle_sap_cli_go_ml_sta_up_csa(struct wlan_objmgr_psoc *psoc,
 		return;
 	}
 
-	wlan_mlo_sta_mlo_concurency_set_link(vdev,
-					     MLO_LINK_FORCE_REASON_CONNECT,
-					     MLO_LINK_FORCE_MODE_ACTIVE_NUM,
-					     num_ml_sta, ml_sta_vdev_lst);
+	policy_mgr_mlo_sta_set_link(vdev, MLO_LINK_FORCE_REASON_CONNECT,
+				    MLO_LINK_FORCE_MODE_ACTIVE_NUM,
+				    num_ml_sta, ml_sta_vdev_lst);
 
 	return;
 enable_link:
@@ -5161,10 +5298,10 @@ enable_link:
 	if (policy_mgr_sta_ml_link_enable_allowed(psoc, num_disabled_ml_sta,
 						  num_ml_sta, ml_freq_lst,
 						  ml_sta_vdev_lst))
-		wlan_mlo_sta_mlo_concurency_set_link(vdev,
-					MLO_LINK_FORCE_REASON_DISCONNECT,
-					MLO_LINK_FORCE_MODE_NO_FORCE,
-					num_ml_sta, ml_sta_vdev_lst);
+		policy_mgr_mlo_sta_set_link(vdev,
+					    MLO_LINK_FORCE_REASON_DISCONNECT,
+					    MLO_LINK_FORCE_MODE_NO_FORCE,
+					    num_ml_sta, ml_sta_vdev_lst);
 }
 
 void
@@ -5188,6 +5325,50 @@ policy_mgr_handle_ml_sta_links_on_vdev_up_csa(struct wlan_objmgr_psoc *psoc,
 		policy_mgr_handle_ml_sta_link_concurrency(psoc, vdev, true);
 
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
+}
+
+#define SET_LINK_TIMEOUT 6000
+static void
+policy_mgr_wait_for_set_link_update(struct policy_mgr_psoc_priv_obj *pm_ctx)
+{
+	QDF_STATUS status;
+
+	if (!policy_mgr_get_link_in_progress(pm_ctx))
+		return;
+
+	status =
+		qdf_wait_for_event_completion(&pm_ctx->set_link_update_done_evt,
+					      SET_LINK_TIMEOUT);
+
+	if (QDF_IS_STATUS_ERROR(status)) {
+		policy_mgr_set_link_in_progress(pm_ctx, false);
+		policy_mgr_err("wait for set_link_in_progress failed");
+		return;
+	}
+}
+
+void policy_mgr_handle_ml_sta_link_on_traffic_type_change(
+						struct wlan_objmgr_psoc *psoc,
+						struct wlan_objmgr_vdev *vdev)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return;
+	}
+
+	/* Check if any set link is already progress and thus wait */
+	policy_mgr_wait_for_set_link_update(pm_ctx);
+
+	policy_mgr_handle_sap_cli_go_ml_sta_up_csa(psoc, vdev);
+
+	/*
+	 * Check if traffic type change lead to set link is progress and
+	 * thus wait for it to complete.
+	 */
+	policy_mgr_wait_for_set_link_update(pm_ctx);
 }
 
 /*
@@ -5255,10 +5436,10 @@ void policy_mgr_re_enable_ml_sta_on_p2p_sap_down(struct wlan_objmgr_psoc *psoc,
 		policy_mgr_debug("vdev %d: Affected link present, dont reanabe ML link",
 				 vdev_id);
 	else
-		wlan_mlo_sta_mlo_concurency_set_link(vdev,
-					MLO_LINK_FORCE_REASON_DISCONNECT,
-					MLO_LINK_FORCE_MODE_NO_FORCE,
-					num_ml_sta, ml_sta_vdev_lst);
+		policy_mgr_mlo_sta_set_link(vdev,
+					    MLO_LINK_FORCE_REASON_DISCONNECT,
+					    MLO_LINK_FORCE_MODE_NO_FORCE,
+					    num_ml_sta, ml_sta_vdev_lst);
 }
 
 void policy_mgr_handle_ml_sta_links_on_vdev_down(struct wlan_objmgr_psoc *psoc,

@@ -429,8 +429,51 @@ static inline void policy_mgr_memzero_disabled_ml_list(void)
 {
 	qdf_mem_zero(pm_disabled_ml_links, sizeof(pm_disabled_ml_links));
 }
+
+static QDF_STATUS
+policy_mgr_init_ml_link_update(struct policy_mgr_psoc_priv_obj *pm_ctx)
+{
+	QDF_STATUS qdf_status;
+
+	pm_ctx->set_link_in_progress = false;
+	qdf_status = qdf_event_create(&pm_ctx->set_link_update_done_evt);
+	if (QDF_IS_STATUS_ERROR(qdf_status)) {
+		policy_mgr_err("init event failed for for set_link_update_done_evt");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+static QDF_STATUS
+policy_mgr_deinit_ml_link_update(struct policy_mgr_psoc_priv_obj *pm_ctx)
+{
+	QDF_STATUS qdf_status;
+
+	pm_ctx->set_link_in_progress = false;
+	qdf_status = qdf_event_destroy(&pm_ctx->set_link_update_done_evt);
+	if (QDF_IS_STATUS_ERROR(qdf_status)) {
+		policy_mgr_err("deinit event failed for set_link_update_done_evt");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
 #else
 static inline void policy_mgr_memzero_disabled_ml_list(void) {}
+
+static inline QDF_STATUS
+policy_mgr_init_ml_link_update(struct policy_mgr_psoc_priv_obj *pm_ctx)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+policy_mgr_deinit_ml_link_update(struct policy_mgr_psoc_priv_obj *pm_ctx)
+{
+	return QDF_STATUS_SUCCESS;
+}
 #endif
 
 QDF_STATUS policy_mgr_psoc_enable(struct wlan_objmgr_psoc *psoc)
@@ -460,6 +503,10 @@ QDF_STATUS policy_mgr_psoc_enable(struct wlan_objmgr_psoc *psoc)
 		policy_mgr_err("Failed to init DBS opportunistic timer");
 		return status;
 	}
+
+	status = policy_mgr_init_ml_link_update(pm_ctx);
+	if (QDF_IS_STATUS_ERROR(status))
+		return status;
 
 	/* init connection_update_done_evt */
 	status = policy_mgr_init_connection_update(pm_ctx);
@@ -611,6 +658,11 @@ QDF_STATUS policy_mgr_psoc_disable(struct wlan_objmgr_psoc *psoc)
 	if (!QDF_IS_STATUS_SUCCESS(qdf_event_destroy
 		(&pm_ctx->channel_switch_complete_evt))) {
 		policy_mgr_err("Failed to destroy channel_switch_complete evt");
+		status = QDF_STATUS_E_FAILURE;
+		QDF_ASSERT(0);
+	}
+
+	if (QDF_IS_STATUS_ERROR(policy_mgr_deinit_ml_link_update(pm_ctx))) {
 		status = QDF_STATUS_E_FAILURE;
 		QDF_ASSERT(0);
 	}
