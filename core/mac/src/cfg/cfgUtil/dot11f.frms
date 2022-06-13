@@ -2563,11 +2563,12 @@ IE reduced_neighbor_report (EID_RNR_IE)
 		short_ssid, 4;
 		bss_params, 1;
 		psd_20mhz, 1;
+		mld_id, 1;
 		{
-		     mld_id:                    8;
 		     link_id:                   4;
 		     bss_param_change_cnt:      8;
-		     reserved:                  12;
+		     all_updates_included:      1;
+		     reserved:                  3;
 		}
 	}
     };
