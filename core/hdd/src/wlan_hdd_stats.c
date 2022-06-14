@@ -1715,6 +1715,7 @@ void wlan_hdd_cfg80211_link_layer_stats_callback(hdd_handle_t hdd_handle,
 		adapter = hdd_get_adapter_by_vdev(hdd_ctx, results->ifaceId);
 		if (!adapter) {
 			hdd_err("invalid vdev %d", results->ifaceId);
+			osif_request_put(request);
 			return;
 		}
 
