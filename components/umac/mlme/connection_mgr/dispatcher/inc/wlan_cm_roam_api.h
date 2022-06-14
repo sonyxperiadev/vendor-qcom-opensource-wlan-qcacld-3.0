@@ -1558,4 +1558,6 @@ bool wlan_cm_same_band_sta_allowed(struct wlan_objmgr_psoc *psoc);
  * Return: qdf_status
  */
 QDF_STATUS cm_cleanup_mlo_link(struct wlan_objmgr_vdev *vdev);
+
+bool wlan_is_roaming_enabled(struct wlan_objmgr_pdev *pdev, uint8_t vdev_id);
 #endif  /* WLAN_CM_ROAM_API_H__ */
