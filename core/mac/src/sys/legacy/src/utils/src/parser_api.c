@@ -7172,8 +7172,8 @@ const uint8_t *lim_get_ext_ie_ptr_from_ext_id(const uint8_t *ie,
 }
 
 /* EHT Opeartion */
-/* 1 byte ext id, 1 byte eht op params*/
-#define EHTOP_FIXED_LEN         2
+/* 1 byte ext id, 1 byte eht op params, 4 bytes basic EHT MCS and NSS set*/
+#define EHTOP_FIXED_LEN         6
 
 #define EHTOP_PARAMS_INFOP_IDX  0
 #define EHTOP_PARAMS_INFOP_BITS 1
@@ -7211,6 +7211,35 @@ const uint8_t *lim_get_ext_ie_ptr_from_ext_id(const uint8_t *ie,
 			ehtop_ie_set(&__eht_op_params, \
 				     EHTOP_PARAMS_DISABLEDSUBCHANBITMAPP_IDX, \
 				     EHTOP_PARAMS_DISABLEDSUBCHANBITMAPP_BITS, \
+				     __value)
+
+#define EHTOP_PARAMS_EHT_DEF_PE_DURATION_GET_FROM_IE(__eht_op_params) \
+			ehtop_ie_get(__eht_op_params, \
+				     EHTOP_DEFAULT_PE_DURATION_IDX, \
+				     EHTOP_DEFAULT_PE_DURATION_BITS)
+#define EHTOP_PARAMS_EHT_DEF_PE_DURATION_SET_TO_IE(__eht_op_params, __value) \
+			ehtop_ie_set(&__eht_op_params, \
+				     EHTOP_DEFAULT_PE_DURATION_IDX, \
+				     EHTOP_DEFAULT_PE_DURATION_BITS, __value)
+
+#define EHTOP_PARAMS_GROUP_ADDR_BU_IND_LIMIT_GET_FROM_IE(__eht_op_params) \
+			ehtop_ie_get(__eht_op_params, \
+				     EHTOP_GRP_ADDRESSED_BU_IND_LIMIT_IDX, \
+				     EHTOP_GRP_ADDRESSED_BU_IND_LIMIT_BITS)
+#define EHTOP_PARAMS_GROUP_ADDR_BU_IND_LIMIT_SET_TO_IE(__eht_op_params, __value) \
+			ehtop_ie_set(&__eht_op_params, \
+				     EHTOP_GRP_ADDRESSED_BU_IND_LIMIT_IDX, \
+				     EHTOP_GRP_ADDRESSED_BU_IND_LIMIT_BITS, \
+				     __value)
+
+#define EHTOP_PARAMS_GROUP_ADDR_BU_IND_EXPONENT_GET_FROM_IE(__eht_op_params) \
+			ehtop_ie_get(__eht_op_params, \
+				     EHTOP_GRP_ADDRESSED_BU_IND_EXPONENT_IDX, \
+				     EHTOP_GRP_ADDRESSED_BU_IND_EXPONENT_BITS)
+#define EHTOP_PARAMS_GROUP_ADDR_BU_IND_EXPONENT_SET_TO_IE(__eht_op_params, __value) \
+			ehtop_ie_set(&__eht_op_params, \
+				     EHTOP_GRP_ADDRESSED_BU_IND_EXPONENT_IDX, \
+				     EHTOP_GRP_ADDRESSED_BU_IND_EXPONENT_BITS, \
 				     __value)
 
 #define EHTOP_INFO_CHANWIDTH_GET_FROM_IE(__eht_op_control) \
@@ -7815,6 +7844,51 @@ QDF_STATUS lim_ieee80211_unpack_ehtop(const uint8_t *eht_op_ie,
 	dot11f_eht_op->disabled_sub_chan_bitmap_present =
 		EHTOP_PARAMS_DISABLEDSUBCHANBITMAPP_GET_FROM_IE(
 							ehtop->ehtop_param);
+
+	dot11f_eht_op->eht_default_pe_duration =
+		EHTOP_PARAMS_EHT_DEF_PE_DURATION_GET_FROM_IE(
+							ehtop->ehtop_param);
+
+	dot11f_eht_op->group_addr_bu_indication_limit =
+		EHTOP_PARAMS_GROUP_ADDR_BU_IND_LIMIT_GET_FROM_IE(
+							ehtop->ehtop_param);
+
+	dot11f_eht_op->group_addr_bu_indication_exponent =
+		EHTOP_PARAMS_GROUP_ADDR_BU_IND_EXPONENT_GET_FROM_IE(
+							ehtop->ehtop_param);
+
+	dot11f_eht_op->basic_rx_max_nss_for_mcs_0_to_7 =
+		ehtop_ie_get(ehtop->basic_mcs_nss_set.max_nss_mcs_0_7,
+			     EHTOP_RX_MCS_NSS_MAP_IDX,
+			     EHTOP_RX_MCS_NSS_MAP_BITS);
+	dot11f_eht_op->basic_tx_max_nss_for_mcs_0_to_7 =
+		ehtop_ie_get(ehtop->basic_mcs_nss_set.max_nss_mcs_0_7,
+			     EHTOP_TX_MCS_NSS_MAP_IDX,
+			     EHTOP_TX_MCS_NSS_MAP_BITS);
+	dot11f_eht_op->basic_rx_max_nss_for_mcs_8_and_9 =
+		ehtop_ie_get(ehtop->basic_mcs_nss_set.max_nss_mcs_8_9,
+			     EHTOP_RX_MCS_NSS_MAP_IDX,
+			     EHTOP_RX_MCS_NSS_MAP_BITS);
+	dot11f_eht_op->basic_tx_max_nss_for_mcs_8_and_9 =
+		ehtop_ie_get(ehtop->basic_mcs_nss_set.max_nss_mcs_8_9,
+			     EHTOP_TX_MCS_NSS_MAP_IDX,
+			     EHTOP_TX_MCS_NSS_MAP_BITS);
+	dot11f_eht_op->basic_rx_max_nss_for_mcs_10_and_11 =
+		ehtop_ie_get(ehtop->basic_mcs_nss_set.max_nss_mcs_10_11,
+			     EHTOP_RX_MCS_NSS_MAP_IDX,
+			     EHTOP_RX_MCS_NSS_MAP_BITS);
+	dot11f_eht_op->basic_tx_max_nss_for_mcs_10_and_11 =
+		ehtop_ie_get(ehtop->basic_mcs_nss_set.max_nss_mcs_10_11,
+			     EHTOP_TX_MCS_NSS_MAP_IDX,
+			     EHTOP_TX_MCS_NSS_MAP_BITS);
+	dot11f_eht_op->basic_rx_max_nss_for_mcs_12_and_13 =
+		ehtop_ie_get(ehtop->basic_mcs_nss_set.max_nss_mcs_12_13,
+			     EHTOP_RX_MCS_NSS_MAP_IDX,
+			     EHTOP_RX_MCS_NSS_MAP_BITS);
+	dot11f_eht_op->basic_tx_max_nss_for_mcs_12_and_13 =
+		ehtop_ie_get(ehtop->basic_mcs_nss_set.max_nss_mcs_12_13,
+			     EHTOP_TX_MCS_NSS_MAP_IDX,
+			     EHTOP_TX_MCS_NSS_MAP_BITS);
 
 	if (dot11f_eht_op->eht_op_information_present) {
 		dot11f_eht_op->channel_width =
@@ -8727,6 +8801,52 @@ void lim_ieee80211_pack_ehtop(uint8_t *ie, tDot11fIEeht_op dot11f_eht_op,
 		val = dot11f_eht_op.eht_op_information_present;
 		EHTOP_PARAMS_INFOP_SET_TO_IE(ehtop->ehtop_param, val);
 	}
+
+	val = dot11f_eht_op.eht_default_pe_duration;
+	EHTOP_PARAMS_EHT_DEF_PE_DURATION_SET_TO_IE(ehtop->ehtop_param, val);
+
+	val = dot11f_eht_op.group_addr_bu_indication_limit;
+	EHTOP_PARAMS_GROUP_ADDR_BU_IND_LIMIT_SET_TO_IE(ehtop->ehtop_param, val);
+
+	val = dot11f_eht_op.group_addr_bu_indication_exponent;
+	EHTOP_PARAMS_GROUP_ADDR_BU_IND_EXPONENT_SET_TO_IE(ehtop->ehtop_param,
+							  val);
+
+	val = dot11f_eht_op.basic_rx_max_nss_for_mcs_0_to_7;
+	ehtop_ie_set(&ehtop->basic_mcs_nss_set.max_nss_mcs_0_7,
+		     EHTOP_RX_MCS_NSS_MAP_IDX,
+		     EHTOP_RX_MCS_NSS_MAP_BITS, val);
+	val = dot11f_eht_op.basic_tx_max_nss_for_mcs_0_to_7;
+	ehtop_ie_set(&ehtop->basic_mcs_nss_set.max_nss_mcs_0_7,
+		     EHTOP_TX_MCS_NSS_MAP_IDX,
+		     EHTOP_TX_MCS_NSS_MAP_BITS, val);
+
+	val = dot11f_eht_op.basic_rx_max_nss_for_mcs_8_and_9;
+	ehtop_ie_set(&ehtop->basic_mcs_nss_set.max_nss_mcs_8_9,
+		     EHTOP_RX_MCS_NSS_MAP_IDX,
+		     EHTOP_RX_MCS_NSS_MAP_BITS, val);
+	val = dot11f_eht_op.basic_tx_max_nss_for_mcs_8_and_9;
+	ehtop_ie_set(&ehtop->basic_mcs_nss_set.max_nss_mcs_8_9,
+		     EHTOP_TX_MCS_NSS_MAP_IDX,
+		     EHTOP_TX_MCS_NSS_MAP_BITS, val);
+
+	val = dot11f_eht_op.basic_rx_max_nss_for_mcs_10_and_11;
+	ehtop_ie_set(&ehtop->basic_mcs_nss_set.max_nss_mcs_10_11,
+		     EHTOP_RX_MCS_NSS_MAP_IDX,
+		     EHTOP_RX_MCS_NSS_MAP_BITS, val);
+	val = dot11f_eht_op.basic_tx_max_nss_for_mcs_10_and_11;
+	ehtop_ie_set(&ehtop->basic_mcs_nss_set.max_nss_mcs_10_11,
+		     EHTOP_TX_MCS_NSS_MAP_IDX,
+		     EHTOP_TX_MCS_NSS_MAP_BITS, val);
+
+	val = dot11f_eht_op.basic_rx_max_nss_for_mcs_12_and_13;
+	ehtop_ie_set(&ehtop->basic_mcs_nss_set.max_nss_mcs_12_13,
+		     EHTOP_RX_MCS_NSS_MAP_IDX,
+		     EHTOP_RX_MCS_NSS_MAP_BITS, val);
+	val = dot11f_eht_op.basic_tx_max_nss_for_mcs_12_and_13;
+	ehtop_ie_set(&ehtop->basic_mcs_nss_set.max_nss_mcs_12_13,
+		     EHTOP_TX_MCS_NSS_MAP_IDX,
+		     EHTOP_TX_MCS_NSS_MAP_BITS, val);
 
 	if (EHTOP_PARAMS_INFOP_GET_FROM_IE(ehtop->ehtop_param)) {
 		val = dot11f_eht_op.channel_width;
