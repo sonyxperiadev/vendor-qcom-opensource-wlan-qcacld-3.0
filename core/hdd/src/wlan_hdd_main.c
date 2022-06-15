@@ -17836,7 +17836,7 @@ static int hdd_wlan_soft_driver_load(void)
 {
 	if (!cds_is_driver_loaded()) {
 		pr_info("Enabling CNSS WLAN HW\n");
-		cnss_wlan_hw_enable();
+		pld_wlan_hw_enable();
 		return 0;
 	}
 
