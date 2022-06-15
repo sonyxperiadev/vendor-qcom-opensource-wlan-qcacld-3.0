@@ -1085,7 +1085,7 @@ cm_get_ml_partner_info(struct scan_cache_entry *scan_entry,
 	if (!scan_entry->ml_info.num_links)
 		return QDF_STATUS_E_FAILURE;
 
-	psoc = wlan_objmgr_get_psoc_by_id(0, WLAN_SCAN_ID);
+	psoc = wlan_objmgr_get_psoc_by_id(0, WLAN_MLME_CM_ID);
 	if (!psoc) {
 		mlme_debug("psoc is NULL");
 		return QDF_STATUS_E_INVAL;
@@ -1119,7 +1119,7 @@ cm_get_ml_partner_info(struct scan_cache_entry *scan_entry,
 	partner_info->num_partner_links = j;
 	mlme_debug("partner link num: %d", j);
 
-	wlan_objmgr_psoc_release_ref(psoc, WLAN_SCAN_ID);
+	wlan_objmgr_psoc_release_ref(psoc, WLAN_MLME_CM_ID);
 
 	return QDF_STATUS_SUCCESS;
 }
