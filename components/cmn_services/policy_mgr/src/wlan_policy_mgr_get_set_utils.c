@@ -4351,7 +4351,7 @@ policy_mgr_fill_ml_active_link_vdev_bitmap(struct mlo_link_set_active_req *req,
 /**
  * policy_mgr_mlo_sta_set_link() - Set links for MLO STA
  *
- * @vdev: vdev object
+ * @psoc: psoc object
  * @reason: Reason for which link is forced
  * @mode: Force reason
  * @num_mlo_vdev: number of mlo vdev
@@ -4362,19 +4362,18 @@ policy_mgr_fill_ml_active_link_vdev_bitmap(struct mlo_link_set_active_req *req,
  * Return: void
  */
 static void
-policy_mgr_mlo_sta_set_link(struct wlan_objmgr_vdev *vdev,
+policy_mgr_mlo_sta_set_link(struct wlan_objmgr_psoc *psoc,
 			    enum mlo_link_force_reason reason,
 			    enum mlo_link_force_mode mode,
 			    uint8_t num_mlo_vdev, uint8_t *mlo_vdev_lst)
 {
 	struct mlo_link_set_active_req *req;
 	QDF_STATUS status;
-	struct wlan_objmgr_psoc *psoc;
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	struct wlan_objmgr_vdev *vdev;
 
-	psoc = wlan_vdev_get_psoc(vdev);
-	if (!psoc) {
-		policy_mgr_err("Psoc is Null");
+	if (!num_mlo_vdev) {
+		policy_mgr_err("invalid 0 num_mlo_vdev");
 		return;
 	}
 
@@ -4387,6 +4386,18 @@ policy_mgr_mlo_sta_set_link(struct wlan_objmgr_vdev *vdev,
 	req = qdf_mem_malloc(sizeof(*req));
 	if (!req)
 		return;
+
+	/*
+	 * Use one of the ML vdev as, if called from disconnect the caller vdev
+	 * may get deleted, and thus flush serialization command.
+	 */
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, mlo_vdev_lst[0],
+						    WLAN_POLICY_MGR_ID);
+	if (!vdev) {
+		policy_mgr_err("vdev %d: invalid vdev", mlo_vdev_lst[0]);
+		qdf_mem_free(req);
+		return;
+	}
 
 	policy_mgr_set_link_in_progress(pm_ctx, true);
 
@@ -4418,6 +4429,7 @@ policy_mgr_mlo_sta_set_link(struct wlan_objmgr_vdev *vdev,
 		qdf_mem_free(req);
 		policy_mgr_set_link_in_progress(pm_ctx, false);
 	}
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
 }
 
 uint32_t
@@ -4891,7 +4903,7 @@ policy_mgr_ml_sta_concurency_on_connect(struct wlan_objmgr_psoc *psoc,
 		}
 	}
 
-	policy_mgr_mlo_sta_set_link(vdev, MLO_LINK_FORCE_REASON_CONNECT,
+	policy_mgr_mlo_sta_set_link(psoc, MLO_LINK_FORCE_REASON_CONNECT,
 				    mode, affected_links, ml_vdev_lst);
 }
 
@@ -5327,7 +5339,7 @@ policy_mgr_handle_sap_cli_go_ml_sta_up_csa(struct wlan_objmgr_psoc *psoc,
 		return;
 	}
 
-	policy_mgr_mlo_sta_set_link(vdev, MLO_LINK_FORCE_REASON_CONNECT,
+	policy_mgr_mlo_sta_set_link(psoc, MLO_LINK_FORCE_REASON_CONNECT,
 				    MLO_LINK_FORCE_MODE_ACTIVE_NUM,
 				    num_ml_sta, ml_sta_vdev_lst);
 
@@ -5341,7 +5353,7 @@ enable_link:
 	if (policy_mgr_sta_ml_link_enable_allowed(psoc, num_disabled_ml_sta,
 						  num_ml_sta, ml_freq_lst,
 						  ml_sta_vdev_lst))
-		policy_mgr_mlo_sta_set_link(vdev,
+		policy_mgr_mlo_sta_set_link(psoc,
 					    MLO_LINK_FORCE_REASON_DISCONNECT,
 					    MLO_LINK_FORCE_MODE_NO_FORCE,
 					    num_ml_sta, ml_sta_vdev_lst);
@@ -5466,7 +5478,7 @@ policy_mgr_handle_ml_sta_link_enable_on_sta_down(struct wlan_objmgr_psoc *psoc,
 		goto done;
 	}
 
-	policy_mgr_mlo_sta_set_link(vdev,
+	policy_mgr_mlo_sta_set_link(psoc,
 				    MLO_LINK_FORCE_REASON_DISCONNECT,
 				    MLO_LINK_FORCE_MODE_NO_FORCE,
 				    num_ml_sta, ml_sta_vdev_lst);
@@ -5545,7 +5557,7 @@ policy_mgr_re_enable_ml_sta_on_p2p_sap_sta_down(struct wlan_objmgr_psoc *psoc,
 		policy_mgr_debug("vdev %d: Affected link present, dont reanabe ML link",
 				 vdev_id);
 	else
-		policy_mgr_mlo_sta_set_link(vdev,
+		policy_mgr_mlo_sta_set_link(psoc,
 					    MLO_LINK_FORCE_REASON_DISCONNECT,
 					    MLO_LINK_FORCE_MODE_NO_FORCE,
 					    num_ml_sta, ml_sta_vdev_lst);
