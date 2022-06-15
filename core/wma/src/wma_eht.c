@@ -490,6 +490,10 @@ void wma_print_eht_cap(tDot11fIEeht_cap *eht_cap)
 		       eht_cap->max_mpdu_len);
 	wma_nofl_debug("\tMaximum A-MPDU Length Exponent Extension: 0x%01x",
 		       eht_cap->max_a_mpdu_len_exponent_ext);
+	wma_nofl_debug("\tEHT TRS SUPPORT: 0x%01x",
+		       eht_cap->eht_trs_support);
+	wma_nofl_debug("\tTXOP Return Support in TXOP Sharing Mode 2: 0x%01x",
+		       eht_cap->txop_return_support_txop_share_m2);
 
 	/* EHT PHY Capabilities */
 	wma_nofl_debug("\t320 MHz In 6 GHz: 0x%01x",

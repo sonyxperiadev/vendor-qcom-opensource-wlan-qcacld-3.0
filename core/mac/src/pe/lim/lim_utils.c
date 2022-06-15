@@ -8630,6 +8630,9 @@ void lim_set_eht_caps(struct mac_context *mac, struct pe_session *session,
 			dot11_cap.max_mpdu_len;
 		eht_cap->max_a_mpdu_len_exponent_ext =
 			dot11_cap.max_a_mpdu_len_exponent_ext;
+		eht_cap->eht_trs_support = dot11_cap.eht_trs_support;
+		eht_cap->txop_return_support_txop_share_m2 =
+			dot11_cap.txop_return_support_txop_share_m2;
 		eht_cap->support_320mhz_6ghz = dot11_cap.support_320mhz_6ghz;
 		eht_cap->ru_242tone_wt_20mhz = dot11_cap.ru_242tone_wt_20mhz;
 		eht_cap->ndp_4x_eht_ltf_3dot2_us_gi =

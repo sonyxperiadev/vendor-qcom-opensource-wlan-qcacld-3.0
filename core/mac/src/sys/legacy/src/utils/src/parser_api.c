@@ -7416,6 +7416,24 @@ enum EHT_PER_BW_TXRX_MCS_NSS_MAP_IDX {
 				      EHTCAP_MAC_MAX_A_MPDU_LEN_IDX, \
 				      EHTCAP_MAC_MAX_A_MPDU_LEN_BITS, value)
 
+#define EHTCAP_MAC_EHT_TRS_SUPPORT_GET_FROM_IE(__eht_cap_mac) \
+			ehtcap_ie_get(__eht_cap_mac[EHTCAP_MACBYTE_IDX0], \
+				      EHTCAP_MAC_TRS_SUPPORT_IDX, \
+				      EHTCAP_MAC_TRS_SUPPORT_BITS)
+#define EHTCAP_MAC_EHT_TRS_SUPPORT_SET_TO_IE(__eht_cap_mac, value) \
+			ehtcap_ie_set(&__eht_cap_mac[EHTCAP_MACBYTE_IDX0], \
+				      EHTCAP_MAC_TRS_SUPPORT_IDX, \
+				      EHTCAP_MAC_TRS_SUPPORT_BITS, value)
+
+#define EHTCAP_MAC_TXOP_RETURN_SUPPORT_SHARE_M2_GET_FROM_IE(__eht_cap_mac) \
+			ehtcap_ie_get(__eht_cap_mac[EHTCAP_MACBYTE_IDX0], \
+				      EHTCAP_MAC_TXOP_RET_SUPPP_IN_SHARING_MODE2_IDX, \
+				      EHTCAP_MAC_TXOP_RET_SUPPP_IN_SHARING_MODE2_BITS)
+#define EHTCAP_MAC_TXOP_RETURN_SUPPORT_SHARE_M2_SET_FROM_IE(__eht_cap_mac, value) \
+			ehtcap_ie_set(&__eht_cap_mac[EHTCAP_MACBYTE_IDX0], \
+				      EHTCAP_MAC_TXOP_RET_SUPPP_IN_SHARING_MODE2_IDX, \
+				      EHTCAP_MAC_TXOP_RET_SUPPP_IN_SHARING_MODE2_BITS, \
+				      value)
 /* byte 0 */
 #define EHTCAP_PHY_320MHZIN6GHZ_GET_FROM_IE(__eht_cap_phy) \
 			ehtcap_ie_get(__eht_cap_phy[EHTCAP_PHYBYTE_IDX0], \
@@ -7954,6 +7972,13 @@ QDF_STATUS lim_ieee80211_unpack_ehtcap(const uint8_t *eht_cap_ie,
 		  EHTCAP_MAC_MAX_A_MPDU_LEN_EXPONENT_EXT_GET_FROM_IE(
 				ehtcap->eht_mac_cap);
 
+	dot11f_eht_cap->eht_trs_support =
+		EHTCAP_MAC_EHT_TRS_SUPPORT_GET_FROM_IE(ehtcap->eht_mac_cap);
+
+	dot11f_eht_cap->txop_return_support_txop_share_m2 =
+		EHTCAP_MAC_TXOP_RETURN_SUPPORT_SHARE_M2_GET_FROM_IE(
+				ehtcap->eht_mac_cap);
+
 	dot11f_eht_cap->support_320mhz_6ghz =
 			EHTCAP_PHY_320MHZIN6GHZ_GET_FROM_IE(
 				ehtcap->eht_phy_cap.phy_cap_bytes);
@@ -8368,6 +8393,13 @@ void lim_ieee80211_pack_ehtcap(uint8_t *ie, tDot11fIEeht_cap dot11f_eht_cap,
 	val = dot11f_eht_cap.max_a_mpdu_len_exponent_ext;
 	EHTCAP_MAC_MAX_A_MPDU_LEN_EXPONENT_EXT_SET_TO_IE(ehtcap->eht_mac_cap,
 							 val);
+
+	val = dot11f_eht_cap.eht_trs_support;
+	EHTCAP_MAC_EHT_TRS_SUPPORT_SET_TO_IE(ehtcap->eht_mac_cap, val);
+
+	val = dot11f_eht_cap.txop_return_support_txop_share_m2;
+	EHTCAP_MAC_TXOP_RETURN_SUPPORT_SHARE_M2_SET_FROM_IE(ehtcap->eht_mac_cap,
+							    val);
 
 	chwidth_320 = dot11f_eht_cap.support_320mhz_6ghz;
 	EHTCAP_PHY_320MHZIN6GHZ_SET_TO_IE(ehtcap->eht_phy_cap.phy_cap_bytes,
