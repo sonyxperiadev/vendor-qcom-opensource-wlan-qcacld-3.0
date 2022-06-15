@@ -2140,17 +2140,8 @@ static uint16_t __hdd_wmm_select_queue(struct net_device *dev,
 	return hdd_get_tx_queue_for_ac(adapter, skb, index);
 }
 
-/**
- * hdd_wmm_select_queue() - Function which will classify the packet
- *       according to linux qdisc expectation.
- *
- * @dev: [in] pointer to net_device structure
- * @skb: [in] pointer to os packet
- *
- * Return: Qdisc queue index
- */
-static uint16_t hdd_wmm_select_queue(struct net_device *dev,
-				     struct sk_buff *skb)
+uint16_t hdd_wmm_select_queue(struct net_device *dev,
+			      struct sk_buff *skb)
 {
 	uint16_t q_index;
 

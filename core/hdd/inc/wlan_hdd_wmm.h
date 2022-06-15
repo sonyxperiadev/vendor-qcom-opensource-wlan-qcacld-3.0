@@ -280,6 +280,18 @@ uint16_t hdd_select_queue(struct net_device *dev, struct sk_buff *skb);
 #endif
 
 /**
+ * hdd_wmm_select_queue() - Function which will classify the packet
+ *       according to linux qdisc expectation.
+ *
+ * @dev: [in] pointer to net_device structure
+ * @skb: [in] pointer to os packet
+ *
+ * Return: Qdisc queue index
+ */
+uint16_t hdd_wmm_select_queue(struct net_device *dev,
+			      struct sk_buff *skb);
+
+/**
  * hdd_wmm_acquire_access_required() - Function which will determine
  * acquire admittance for a WMM AC is required or not based on psb configuration
  * done in framework
