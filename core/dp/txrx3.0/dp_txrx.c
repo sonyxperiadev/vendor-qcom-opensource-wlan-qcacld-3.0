@@ -778,7 +778,7 @@ deinit:
 	return QDF_STATUS_E_FAILURE;
 }
 
-void *dp_prealloc_get_context_memory(uint32_t ctxt_type)
+void *dp_prealloc_get_context_memory(uint32_t ctxt_type, size_t ctxt_size)
 {
 	int i;
 	struct dp_prealloc_context *cp;
@@ -787,7 +787,7 @@ void *dp_prealloc_get_context_memory(uint32_t ctxt_type)
 		cp = &g_dp_context_allocs[i];
 
 		if ((ctxt_type == cp->ctxt_type) && !cp->in_use &&
-		    cp->addr) {
+		    cp->addr && ctxt_size <= cp->size) {
 			cp->in_use = true;
 			return cp->addr;
 		}
