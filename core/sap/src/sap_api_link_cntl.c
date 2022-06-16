@@ -247,9 +247,14 @@ wlansap_calculate_chan_from_scan_result(mac_handle_t mac_handle,
 
 	filter = qdf_mem_malloc(sizeof(*filter));
 
-	if (filter)
-		filter->age_threshold = qdf_get_time_of_the_day_ms() -
+	if (filter) {
+		if (sap_ctx->partial_acs_scan)
+			filter->age_threshold =
+					sap_ctx->acs_cfg->last_scan_ageout_time;
+		else
+			filter->age_threshold = qdf_get_time_of_the_day_ms() -
 						sap_ctx->acs_req_timestamp;
+	}
 
 	list = wlan_scan_get_result(mac_ctx->pdev, filter);
 
