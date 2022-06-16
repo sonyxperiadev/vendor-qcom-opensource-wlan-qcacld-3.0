@@ -493,7 +493,8 @@ cm_handle_mlo_rso_state_change(struct wlan_objmgr_pdev *pdev,
 
 #endif
 
-#if defined(WLAN_FEATURE_CONNECTIVITY_LOGGING) && \
+#if (defined(WLAN_FEATURE_CONNECTIVITY_LOGGING) || \
+	defined(CONNECTIVITY_DIAG_EVENT)) && \
 	defined(WLAN_FEATURE_ROAM_OFFLOAD)
 /**
  * cm_roam_mgmt_frame_event() - Roam management frame event
