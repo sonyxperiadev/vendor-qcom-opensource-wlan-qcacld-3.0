@@ -1233,7 +1233,7 @@ void csr_set_global_cfgs(struct mac_context *mac)
 }
 
 #if defined(WLAN_LOGGING_SOCK_SVC_ENABLE) && \
-	defined(FEATURE_PKTLOG) && !defined(REMOVE_PKT_LOG)
+	defined(CONNECTIVITY_PKTLOG)
 /**
  * csr_packetdump_timer_handler() - packet dump timer
  * handler
