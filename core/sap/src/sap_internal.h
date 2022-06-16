@@ -242,6 +242,7 @@ struct sap_context {
 	uint32_t restriction_mask;
 #endif
 	bool require_h2e;
+	bool partial_acs_scan;
 };
 
 /*----------------------------------------------------------------------------
