@@ -459,6 +459,7 @@ struct sap_acs_cfg {
 	bool       is_eht_enabled;
 	uint16_t   acs_puncture_bitmap;
 #endif
+	uint32_t   last_scan_ageout_time;
 };
 
 /*
