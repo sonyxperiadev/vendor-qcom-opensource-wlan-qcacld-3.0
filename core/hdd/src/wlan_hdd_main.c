@@ -10882,6 +10882,7 @@ static void hdd_pld_request_bus_bandwidth(struct hdd_context *hdd_ctx,
 	bool is_rx_pm_qos_high;
 	bool is_tx_pm_qos_high;
 	enum tput_level tput_level;
+	bool is_tput_level_high;
 	struct bbm_params param = {0};
 	bool legacy_client = false;
 	void *hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
@@ -11051,6 +11052,9 @@ static void hdd_pld_request_bus_bandwidth(struct hdd_context *hdd_ctx,
 		if (!hdd_ctx->pm_qos_request)
 			hdd_pm_qos_update_request(hdd_ctx,
 						  &pm_qos_cpu_mask);
+		is_tput_level_high =
+			tput_level >= TPUT_LEVEL_HIGH ? true : false;
+		cdp_set_bus_vote_lvl_high(soc, is_tput_level_high);
 	}
 
 	if (vote_level_change || tx_level_change || rx_level_change) {
@@ -17279,6 +17283,7 @@ static void __hdd_bus_bw_compute_timer_stop(struct hdd_context *hdd_ctx)
 {
 	struct bbm_params param = {0};
 	bool is_any_adapter_conn = hdd_is_any_adapter_connected(hdd_ctx);
+	ol_txrx_soc_handle soc = cds_get_context(QDF_MODULE_ID_SOC);
 
 	if (hdd_get_conparam() == QDF_GLOBAL_FTM_MODE)
 		return;
@@ -17296,6 +17301,8 @@ static void __hdd_bus_bw_compute_timer_stop(struct hdd_context *hdd_ctx)
 				      OL_TXRX_PDEV_ID);
 	cdp_pdev_reset_bundle_require_flag(cds_get_context(QDF_MODULE_ID_SOC),
 					   OL_TXRX_PDEV_ID);
+
+	cdp_set_bus_vote_lvl_high(soc, false);
 	hdd_ctx->bw_vote_time = 0;
 
 exit:

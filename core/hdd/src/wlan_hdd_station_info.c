@@ -2237,6 +2237,8 @@ static int hdd_get_station_info_ex(struct hdd_context *hdd_ctx,
 	if (wlan_hdd_get_station_stats(adapter))
 		hdd_err_rl("wlan_hdd_get_station_stats fail");
 
+	wlan_hdd_get_peer_rx_rate_stats(adapter);
+
 	if (big_data_stats_req) {
 		if (wlan_hdd_get_big_data_station_stats(adapter)) {
 			hdd_err_rl("wlan_hdd_get_big_data_station_stats fail");

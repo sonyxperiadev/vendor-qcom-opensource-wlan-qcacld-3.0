@@ -5997,6 +5997,8 @@ static int wlan_hdd_get_sta_stats(struct wiphy *wiphy,
 
 	wlan_hdd_get_station_stats(adapter);
 
+	wlan_hdd_get_peer_rx_rate_stats(adapter);
+
 	adapter->rssi = adapter->hdd_stats.summary_stat.rssi;
 	snr = adapter->hdd_stats.summary_stat.snr;
 
@@ -7236,6 +7238,44 @@ int wlan_hdd_get_link_speed(struct hdd_adapter *adapter, uint32_t *link_speed)
 	}
 	return 0;
 }
+
+#ifdef FEATURE_RX_LINKSPEED_ROAM_TRIGGER
+void wlan_hdd_get_peer_rx_rate_stats(struct hdd_adapter *adapter)
+{
+	struct cdp_peer_stats *peer_stats;
+	QDF_STATUS status;
+	ol_txrx_soc_handle soc;
+	uint8_t *peer_mac_addr;
+
+	soc = cds_get_context(QDF_MODULE_ID_SOC);
+
+	/*
+	 *  If througput is high, do not get rx rate
+	 *  info to avoid the performance penalty
+	 */
+	if (cdp_get_bus_lvl_high(soc) == true)
+		return;
+
+	peer_stats = qdf_mem_malloc(sizeof(*peer_stats));
+	if (!peer_stats)
+		return;
+
+	peer_mac_addr = adapter->session.station.conn_info.bssid.bytes;
+
+	status = cdp_host_get_peer_stats(soc,
+					 adapter->vdev_id,
+					 peer_mac_addr,
+					 peer_stats);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		qdf_mem_free(peer_stats);
+		osif_err("cdp_host_get_peer_stats failed. error: %d", status);
+		return;
+	}
+
+	adapter->hdd_stats.class_a_stat.rx_rate = peer_stats->rx.last_rx_rate;
+	qdf_mem_free(peer_stats);
+}
+#endif
 
 int wlan_hdd_get_station_stats(struct hdd_adapter *adapter)
 {

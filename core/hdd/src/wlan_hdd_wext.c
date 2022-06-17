@@ -7723,7 +7723,11 @@ static int iw_set_packet_filter_params(struct net_device *dev,
 
 static int hdd_get_wlan_stats(struct hdd_adapter *adapter)
 {
-	return wlan_hdd_get_station_stats(adapter);
+	int stats = wlan_hdd_get_station_stats(adapter);
+
+	wlan_hdd_get_peer_rx_rate_stats(adapter);
+
+	return stats;
 }
 
 static int __iw_get_statistics(struct net_device *dev,

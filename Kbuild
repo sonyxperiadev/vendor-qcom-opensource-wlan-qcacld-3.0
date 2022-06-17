@@ -2129,7 +2129,8 @@ DP_INC := -I$(WLAN_COMMON_INC)/dp/inc \
 	-I$(WLAN_COMMON_INC)/dp/wifi3.0 \
 	-I$(WLAN_COMMON_INC)/target_if/dp/inc \
 	-I$(WLAN_COMMON_INC)/dp/wifi3.0/monitor \
-	-I$(WLAN_COMMON_INC)/dp/wifi3.0/monitor/1.0
+	-I$(WLAN_COMMON_INC)/dp/wifi3.0/monitor/1.0 \
+	-I$(WLAN_COMMON_INC)/dp/cmn_dp_api
 
 DP_SRC := $(WLAN_COMMON_ROOT)/dp/wifi3.0
 DP_OBJS := $(DP_SRC)/dp_main.o \
@@ -2155,6 +2156,8 @@ DP_OBJS += $(DP_SRC)/monitor/dp_mon.o \
 		$(DP_SRC)/monitor/1.0/dp_mon_filter_1.0.o \
 		$(DP_SRC)/monitor/1.0/dp_mon_1.0.o
 endif
+
+DP_OBJS += $(DP_SRC)/../cmn_dp_api/dp_ratetable.o
 
 ifeq ($(CONFIG_BERYLLIUM), y)
 DP_OBJS += $(DP_SRC)/be/dp_be.o
@@ -4372,6 +4375,11 @@ cppflags-y += -DCONFIG_CHAN_FREQ_API
 
 #Flag to enable/disable MCC specific feature regarding unallowed phymodes
 cppflags-y += -DCHECK_REG_PHYMODE
+
+cppflags-$(CONFIG_FEATURE_RX_LINKSPEED_ROAM_TRIGGER) += -DFEATURE_RX_LINKSPEED_ROAM_TRIGGER
+#DP_RATETABLE_SUPPORT is enabled when CONFIG_FEATURE_RX_LINKSPEED_ROAM_TRIGGER is enabled
+cppflags-$(CONFIG_FEATURE_RX_LINKSPEED_ROAM_TRIGGER) += -DDP_RATETABLE_SUPPORT
+ccflags-y += -DALL_POSSIBLE_RATES_SUPPORTED=1
 
 cppflags-$(CONFIG_BAND_6GHZ) += -DCONFIG_BAND_6GHZ
 cppflags-$(CONFIG_6G_SCAN_CHAN_SORT_ALGO) += -DFEATURE_6G_SCAN_CHAN_SORT_ALGO
