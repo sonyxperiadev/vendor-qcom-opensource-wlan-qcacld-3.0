@@ -1018,8 +1018,6 @@ QDF_STATUS sme_get_roam_scan_home_away_time(mac_handle_t mac_handle,
 					    uint16_t *roam_scan_home_away_time);
 QDF_STATUS sme_update_wes_mode(mac_handle_t mac_handle, bool isWESModeEnabled,
 		uint8_t sessionId);
-QDF_STATUS sme_set_roam_scan_control(mac_handle_t mac_handle, uint8_t sessionId,
-		bool roamScanControl);
 
 QDF_STATUS sme_update_is_fast_roam_ini_feature_enabled(mac_handle_t mac_handle,
 		uint8_t sessionId,
@@ -1228,7 +1226,6 @@ QDF_STATUS sme_get_roam_scan_channel_list(mac_handle_t mac_handle,
 
 bool sme_get_is_ese_feature_enabled(mac_handle_t mac_handle);
 bool sme_get_wes_mode(mac_handle_t mac_handle);
-bool sme_get_roam_scan_control(mac_handle_t mac_handle);
 bool sme_get_is_lfr_feature_enabled(mac_handle_t mac_handle);
 bool sme_get_is_ft_feature_enabled(mac_handle_t mac_handle);
 bool sme_is_feature_supported_by_fw(enum cap_bitmap feature);

@@ -591,7 +591,6 @@ struct rso_roam_policy_params {
  * @drop_factor_5g: Penalty factor
  * @max_raise_rssi_5g: Maximum amount of Boost that can added
  * @is_fils_roaming_supported: fils roaming supported
- * @roam_scan_control: roam scan control
  * @policy_params: roam policy params
  * @neighbor_report_offload: neighbor report offload params
  */
@@ -611,7 +610,6 @@ struct rso_config_params {
 	int max_raise_rssi_5g;
 	uint8_t cat_rssi_offset;
 	bool is_fils_roaming_supported;
-	bool roam_scan_control;
 	struct rso_roam_policy_params policy_params;
 	struct cm_roam_neighbor_report_offload_params neighbor_report_offload;
 };

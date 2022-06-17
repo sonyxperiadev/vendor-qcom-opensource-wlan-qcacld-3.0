@@ -4741,7 +4741,6 @@ QDF_STATUS cm_roam_control_restore_default_config(struct wlan_objmgr_pdev *pdev,
 		goto out;
 	}
 	cfg_params = &rso_cfg->cfg_param;
-	mlme_obj->cfg.lfr.rso_user_config.roam_scan_control = false;
 
 	chan_info = &cfg_params->pref_chan_info;
 	cm_flush_roam_channel_list(chan_info);
