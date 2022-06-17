@@ -465,6 +465,7 @@ void wma_update_target_ext_eht_cap(struct target_psoc_info *tgt_hdl,
 	qdf_mem_copy(eht_cap, &eht_cap_mac, sizeof(tDot11fIEeht_cap));
 
 	wma_update_eht_cap_support_for_320mhz(tgt_hdl, eht_cap);
+	wma_update_eht_cap_support_for_320mhz(tgt_hdl, eht_cap_5g);
 
 	wma_print_eht_cap(eht_cap);
 }
