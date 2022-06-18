@@ -922,10 +922,11 @@ CONFIG_WAPI_BIG_ENDIAN := n
 endif
 
 #Enable WDI Event support
-ifeq ($(CONFIG_REMOVE_PKT_LOG), y)
-CONFIG_WDI_EVENT_ENABLE := n
-else
 CONFIG_WDI_EVENT_ENABLE := y
+ifeq ($(CONFIG_REMOVE_PKT_LOG), y)
+ifeq ($(CONFIG_WLAN_ENH_CFR_ENABLE), n)
+CONFIG_WDI_EVENT_ENABLE := n
+endif
 endif
 
 #Enable the type_specific_data in the ath_pktlog_arg
