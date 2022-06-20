@@ -47,10 +47,13 @@ struct hdd_adapter_create_param {
 #define hdd_adapter_is_ml_adapter(x)   ((x)->mlo_adapter_info.is_ml_adapter)
 #define hdd_adapter_is_associated_with_ml_adapter(x) \
 			   ((x)->mlo_adapter_info.associate_with_ml_adapter)
+#define hdd_adapter_get_mlo_adapter_from_link(x) \
+			   ((x)->mlo_adapter_info.ml_adapter)
 #else
 #define hdd_adapter_is_link_adapter(x) (0)
 #define hdd_adapter_is_ml_adapter(x)   (0)
 #define hdd_adapter_is_associated_with_ml_adapter(x) (0)
+#define hdd_adapter_get_mlo_adapter_from_link(x) (NULL)
 #endif
 
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(CFG80211_11BE_BASIC)

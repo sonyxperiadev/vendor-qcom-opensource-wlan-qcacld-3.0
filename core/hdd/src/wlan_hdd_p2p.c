@@ -1060,6 +1060,7 @@ __hdd_indicate_mgmt_frame_to_user(struct hdd_adapter *adapter,
 	uint16_t auth_algo;
 	enum nl80211_rxmgmt_flags nl80211_flag = 0;
 	bool is_pasn_auth_frame = false;
+	struct hdd_adapter *assoc_adapter;
 
 	hdd_debug("Frame Type = %d Frame Length = %d freq = %d",
 		  frame_type, frm_len, rx_freq);
@@ -1148,23 +1149,35 @@ __hdd_indicate_mgmt_frame_to_user(struct hdd_adapter *adapter,
 					      adapter->dscp_to_up_map,
 					      adapter->vdev_id);
 
+	assoc_adapter = adapter;
+
+	if (wlan_vdev_mlme_is_mlo_vdev(adapter->vdev) &&
+	    !hdd_adapter_is_ml_adapter(adapter)) {
+		hdd_debug("adapter is not ml adapter move to ml adapter");
+		assoc_adapter = hdd_adapter_get_mlo_adapter_from_link(adapter);
+		if (!assoc_adapter) {
+			hdd_err("Assoc adapter is NULL");
+			return;
+		}
+	}
+
 	/* Indicate Frame Over Normal Interface */
 	hdd_debug("Indicate Frame over NL80211 sessionid : %d, idx :%d",
-		  adapter->vdev_id, adapter->dev->ifindex);
+		   assoc_adapter->vdev_id, assoc_adapter->dev->ifindex);
 
 	wlan_hdd_cfg80211_convert_rxmgmt_flags(rx_flags, &nl80211_flag);
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0))
-	cfg80211_rx_mgmt(adapter->dev->ieee80211_ptr,
+	cfg80211_rx_mgmt(assoc_adapter->dev->ieee80211_ptr,
 			 rx_freq, rx_rssi * 100, pb_frames,
 			 frm_len, NL80211_RXMGMT_FLAG_ANSWERED | nl80211_flag);
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 12, 0))
-	cfg80211_rx_mgmt(adapter->dev->ieee80211_ptr,
+	cfg80211_rx_mgmt(assoc_adapter->dev->ieee80211_ptr,
 			 rx_freq, rx_rssi * 100, pb_frames,
 			 frm_len, NL80211_RXMGMT_FLAG_ANSWERED,
 			 GFP_ATOMIC);
 #else
-	cfg80211_rx_mgmt(adapter->dev->ieee80211_ptr, rx_freq,
+	cfg80211_rx_mgmt(assoc_adapter->dev->ieee80211_ptr, rx_freq,
 			 rx_rssi * 100,
 			 pb_frames, frm_len, GFP_ATOMIC);
 #endif /* LINUX_VERSION_CODE */

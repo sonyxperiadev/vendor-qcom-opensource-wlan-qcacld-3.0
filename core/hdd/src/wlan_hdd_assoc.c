@@ -216,6 +216,24 @@ static const int beacon_filter_table[] = {
 #if defined(WLAN_FEATURE_SAE) && \
 		(defined(CFG80211_EXTERNAL_AUTH_SUPPORT) || \
 		LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0))
+#if defined (CFG80211_SAE_AUTH_TA_ADDR_SUPPORT)
+static inline
+void wlan_hdd_sae_copy_ta_addr(struct cfg80211_external_auth_params *params,
+			       struct hdd_adapter *adapter)
+{
+	if (wlan_vdev_mlme_is_mlo_vdev(adapter->vdev)) {
+		qdf_mem_copy(params->tx_addr,
+			     wlan_vdev_mlme_get_linkaddr(adapter->vdev),
+			     QDF_MAC_ADDR_SIZE);
+	}
+}
+#else
+static inline
+void wlan_hdd_sae_copy_ta_addr(struct cfg80211_external_auth_params *params,
+			       struct hdd_adapter *adapter)
+{
+}
+#endif
 /**
  * wlan_hdd_sae_callback() - Sends SAE info to supplicant
  * @adapter: pointer adapter context
@@ -251,10 +269,12 @@ static void wlan_hdd_sae_callback(struct hdd_adapter *adapter,
 	params.action = NL80211_EXTERNAL_AUTH_START;
 	qdf_mem_copy(params.bssid, sae_info->peer_mac_addr.bytes,
 		     QDF_MAC_ADDR_SIZE);
+
+	wlan_hdd_sae_copy_ta_addr(&params, adapter);
+
 	qdf_mem_copy(params.ssid.ssid, sae_info->ssid.ssId,
 		     sae_info->ssid.length);
 	params.ssid.ssid_len = sae_info->ssid.length;
-
 	cfg80211_external_auth_request(adapter->dev, &params, flags);
 	hdd_debug("SAE: sent cmd");
 }
