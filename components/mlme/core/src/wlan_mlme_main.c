@@ -1890,6 +1890,8 @@ mlme_init_bss_load_trigger_params(struct wlan_objmgr_psoc *psoc,
 		bss_load_trig->sample_time = cfg_get(psoc,
 						     CFG_BSS_LOAD_SAMPLE_TIME);
 
+	bss_load_trig->rssi_threshold_6ghz =
+			cfg_get(psoc, CFG_BSS_LOAD_TRIG_6G_RSSI_THRES);
 	bss_load_trig->rssi_threshold_5ghz =
 			cfg_get(psoc, CFG_BSS_LOAD_TRIG_5G_RSSI_THRES);
 	bss_load_trig->rssi_threshold_24ghz =

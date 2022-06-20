@@ -863,6 +863,9 @@ target_if_cm_roam_bss_load_config(wmi_unified_t wmi_handle,
 	db2dbm_enabled = wmi_service_enabled(wmi_handle,
 					     wmi_service_hw_db2dbm_support);
 	if (!db2dbm_enabled) {
+		req->rssi_threshold_6ghz -= NOISE_FLOOR_DBM_DEFAULT;
+		req->rssi_threshold_6ghz &= 0x000000ff;
+
 		req->rssi_threshold_5ghz -= NOISE_FLOOR_DBM_DEFAULT;
 		req->rssi_threshold_5ghz &= 0x000000ff;
 

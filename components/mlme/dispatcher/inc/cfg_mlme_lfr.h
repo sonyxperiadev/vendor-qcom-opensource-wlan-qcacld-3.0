@@ -2096,6 +2096,35 @@
 
 /*
  * <ini>
+ * bss_load_trigger_6g_rssi_threshold/RoamCU_6GRSSIRange -
+ * Current AP minimum RSSI in dBm below
+ * which roaming can be triggered if BSS load exceeds bss_load_threshold.
+ * @Min: -120
+ * @Max: 0
+ * @Default: -70
+ *
+ * If connected AP is in 6Ghz, then consider bss load roam triggered only if
+ * load % > bss_load_threshold && connected AP rssi is worse than
+ * bss_load_trigger_6g_rssi_threshold
+ *
+ * Related: "bss_load_threshold"
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+#define CFG_BSS_LOAD_TRIG_6G_RSSI_THRES CFG_INI_INT( \
+	"bss_load_trigger_6g_rssi_threshold RoamCU_6GRSSIRange", \
+	-120, \
+	0, \
+	-70, \
+	CFG_VALUE_OR_DEFAULT, \
+	"Minimum RSSI of current AP in 6GHz band for BSS load roam trigger")
+
+/*
+ * <ini>
  * bss_load_trigger_5g_rssi_threshold/RoamCU_5GRSSIRange -
  * Current AP minimum RSSI in dBm below
  * which roaming can be triggered if BSS load exceeds bss_load_threshold.
@@ -3150,6 +3179,7 @@
 	CFG(CFG_ROAM_INACTIVE_COUNT) \
 	CFG(CFG_POST_INACTIVITY_ROAM_SCAN_PERIOD) \
 	CFG(CFG_ROAM_SCAN_INACTIVE_TIMER) \
+	CFG(CFG_BSS_LOAD_TRIG_6G_RSSI_THRES) \
 	CFG(CFG_BSS_LOAD_TRIG_5G_RSSI_THRES) \
 	CFG(CFG_BSS_LOAD_TRIG_2G_RSSI_THRES) \
 	CFG(CFG_LFR_FULL_ROAM_SCAN_REFRESH_PERIOD) \

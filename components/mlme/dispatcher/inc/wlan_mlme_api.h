@@ -3258,6 +3258,18 @@ wlan_mlme_get_bss_load_sample_time(struct wlan_objmgr_psoc *psoc,
 				   uint32_t *val);
 
 /**
+ * wlan_mlme_get_bss_load_rssi_threshold_6ghz() - Get bss load RSSI
+ * threshold on 6G
+ * @psoc: pointer to psoc object
+ * @val:  Pointer to the value which will be filled for the caller
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+wlan_mlme_get_bss_load_rssi_threshold_6ghz(struct wlan_objmgr_psoc *psoc,
+					   int32_t *val);
+
+/**
  * wlan_mlme_get_bss_load_rssi_threshold_5ghz() - Get bss load RSSI
  * threshold on 5G
  * @psoc: pointer to psoc object
