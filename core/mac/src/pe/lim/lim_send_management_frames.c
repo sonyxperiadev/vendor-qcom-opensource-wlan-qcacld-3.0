@@ -223,7 +223,7 @@ lim_populate_ml_probe_req(struct mac_context *mac,
 	ml_prb_req->ml_ie_ff.elem_len = ml_probe_len;
 	*ml_probe_req_len = ml_probe_len;
 
-	pe_nofl_debug("Send ML probe req %d", ml_probe_len);
+	pe_nofl_debug("Send ML probe req %zu", ml_probe_len);
 	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
 			   ml_probe, ml_probe_len);
 
