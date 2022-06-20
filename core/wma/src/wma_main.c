@@ -4717,8 +4717,25 @@ wma_get_igmp_offload_enable(struct wmi_unified *wmi_handle,
 {}
 #endif
 
-#ifdef WLAN_FEATURE_11AX
 #ifdef FEATURE_WLAN_TDLS
+/**
+ * wma_get_tdls_wideband_support() - update tgt service with service tdls
+ *                                   wideband support
+ * @wmi_handle: Unified wmi handle
+ * @cfg: target services
+ *
+ * Return: none
+ */
+static inline void
+wma_get_tdls_wideband_support(struct wmi_unified *wmi_handle,
+			      struct wma_tgt_services *cfg)
+{
+	cfg->en_tdls_wideband_support = wmi_service_enabled(
+					     wmi_handle,
+					     wmi_service_tdls_wideband_support);
+}
+
+#ifdef WLAN_FEATURE_11AX
 /**
  * wma_get_tdls_ax_support() - update tgt service with service tdls ax support
  * @wmi_handle: Unified wmi handle
@@ -4743,6 +4760,7 @@ wma_get_tdls_6g_support(struct wmi_unified *wmi_handle,
 						wmi_handle,
 						wmi_service_tdls_6g_support);
 }
+
 #else
 static inline void
 wma_get_tdls_ax_support(struct wmi_unified *wmi_handle,
@@ -4753,6 +4771,7 @@ static inline void
 wma_get_tdls_6g_support(struct wmi_unified *wmi_handle,
 			struct wma_tgt_services *cfg)
 {}
+
 #endif
 #else
 static inline void
@@ -4763,6 +4782,11 @@ wma_get_tdls_ax_support(struct wmi_unified *wmi_handle,
 static inline void
 wma_get_tdls_6g_support(struct wmi_unified *wmi_handle,
 			struct wma_tgt_services *cfg)
+{}
+
+static inline void
+wma_get_tdls_wideband_support(struct wmi_unified *wmi_handle,
+			      struct wma_tgt_services *cfg)
 {}
 #endif
 
@@ -4926,7 +4950,7 @@ static inline void wma_update_target_services(struct wmi_unified *wmi_handle,
 	wma_get_igmp_offload_enable(wmi_handle, cfg);
 	wma_get_tdls_ax_support(wmi_handle, cfg);
 	wma_get_tdls_6g_support(wmi_handle, cfg);
-
+	wma_get_tdls_wideband_support(wmi_handle, cfg);
 	wma_get_dynamic_vdev_macaddr_support(wmi_handle, cfg);
 }
 

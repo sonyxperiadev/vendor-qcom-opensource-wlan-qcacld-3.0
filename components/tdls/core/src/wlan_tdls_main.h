@@ -196,6 +196,7 @@ struct tdls_set_state_info {
  * @fw_tdls_6g_capability: bool for tdls 6g fw capability
  * @bss_sta_power: bss sta power
  * @@bss_sta_power_type: bss sta power type
+ * @fw_tdls_wideband_capability: bool for tdls wideband fw capability
  */
 struct tdls_soc_priv_obj {
 	struct wlan_objmgr_psoc *soc;
@@ -250,6 +251,7 @@ struct tdls_soc_priv_obj {
 	uint8_t bss_sta_power;
 	uint8_t bss_sta_power_type;
 #endif
+	bool fw_tdls_wideband_capability;
 };
 
 /**

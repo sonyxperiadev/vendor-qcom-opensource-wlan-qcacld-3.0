@@ -1829,6 +1829,13 @@ hdd_intersect_igmp_offload_setting(struct wlan_objmgr_psoc *psoc,
 #endif
 
 #ifdef FEATURE_WLAN_TDLS
+static void hdd_update_fw_tdls_wideband_capability(struct hdd_context *hdd_ctx,
+						   struct wma_tgt_services *cfg)
+{
+	ucfg_tdls_update_fw_wideband_capability(hdd_ctx->psoc,
+						cfg->en_tdls_wideband_support);
+}
+
 #ifdef WLAN_FEATURE_11AX
 static void hdd_update_fw_tdls_11ax_capability(struct hdd_context *hdd_ctx,
 					       struct wma_tgt_services *cfg)
@@ -1843,6 +1850,7 @@ static void hdd_update_fw_tdls_6g_capability(struct hdd_context *hdd_ctx,
 	ucfg_update_fw_tdls_6g_capability(hdd_ctx->psoc,
 					  cfg->en_tdls_6g_support);
 }
+
 #else
 static inline
 void hdd_update_fw_tdls_11ax_capability(struct hdd_context *hdd_ctx,
@@ -1858,9 +1866,15 @@ static inline
 void hdd_update_fw_tdls_11ax_capability(struct hdd_context *hdd_ctx,
 					struct wma_tgt_services *cfg)
 {}
+
 static inline
 void hdd_update_fw_tdls_6g_capability(struct hdd_context *hdd_ctx,
 				      struct wma_tgt_services *cfg)
+{}
+
+static inline
+void hdd_update_fw_tdls_wideband_capability(struct hdd_context *hdd_ctx,
+					    struct wma_tgt_services *cfg)
 {}
 #endif
 
@@ -1971,6 +1985,7 @@ static void hdd_update_tgt_services(struct hdd_context *hdd_ctx,
 	hdd_update_fw_tdls_11ax_capability(hdd_ctx, cfg);
 	hdd_set_dynamic_macaddr_update_capability(hdd_ctx, cfg);
 	hdd_update_fw_tdls_6g_capability(hdd_ctx, cfg);
+	hdd_update_fw_tdls_wideband_capability(hdd_ctx, cfg);
 }
 
 /**

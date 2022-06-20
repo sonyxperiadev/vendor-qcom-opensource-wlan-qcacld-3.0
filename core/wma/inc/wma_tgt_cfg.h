@@ -38,6 +38,7 @@
  * @en_tdls_offchan: enable tdls offchan
  * @en_tdls_uapsd_buf_sta: enable sta tdls uapsd buf
  * @en_tdls_uapsd_sleep_sta: enable sta tdls uapsd sleep
+ * @en_tdls_wideband_support: Get TDLS wideband support
  * @en_tdls_11ax_support: Get TDLS ax support
  * @en_tdls_6g_support: Get TDLS 6g fw capability
  * @en_roam_offload: enable roam offload
@@ -74,6 +75,7 @@ struct wma_tgt_services {
 	bool en_tdls_offchan;
 	bool en_tdls_uapsd_buf_sta;
 	bool en_tdls_uapsd_sleep_sta;
+	bool en_tdls_wideband_support;
 #ifdef WLAN_FEATURE_11AX
 	bool en_tdls_11ax_support;
 	bool en_tdls_6g_support;

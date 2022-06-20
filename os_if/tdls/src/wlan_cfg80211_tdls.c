@@ -743,6 +743,16 @@ error_get_tdls_peers:
 	return len;
 }
 
+bool wlan_cfg80211_tdls_is_fw_wideband_capable(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_objmgr_psoc *psoc = wlan_vdev_get_psoc(vdev);
+
+	if (!psoc)
+		return false;
+
+	return ucfg_tdls_is_fw_wideband_capable(psoc);
+}
+
 #ifdef WLAN_FEATURE_11AX
 bool wlan_cfg80211_tdls_is_fw_6ghz_capable(struct wlan_objmgr_vdev *vdev)
 {

@@ -164,6 +164,15 @@ int wlan_cfg80211_tdls_oper(struct wlan_objmgr_vdev *vdev,
 int wlan_cfg80211_tdls_get_all_peers(struct wlan_objmgr_vdev *vdev,
 				char *buf, int buflen);
 
+/**
+ * wlan_cfg80211_tdls_is_fw_wideband_capable() - Check whether fw supports
+ *                                                wideband
+ * @vdev:     Pointer to vdev
+ *
+ * Return: true if fw supports 6ghz tdls connection
+ */
+bool wlan_cfg80211_tdls_is_fw_wideband_capable(struct wlan_objmgr_vdev *vdev);
+
 #ifdef WLAN_FEATURE_11AX
 /**
  * hdd_tdls_is_fw_6ghz_capable() - Check whether fw supports 6ghz band tdls

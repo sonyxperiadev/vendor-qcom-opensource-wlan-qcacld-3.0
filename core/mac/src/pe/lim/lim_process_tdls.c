@@ -73,6 +73,8 @@
 #include "wlan_mlme_public_struct.h"
 #include "wlan_mlme_api.h"
 #include "wlan_tdls_public_structs.h"
+#include "wlan_cfg80211_tdls.h"
+
 
 /* define NO_PAD_TDLS_MIN_8023_SIZE to NOT padding: See CR#447630
    There was IOT issue with cisco 1252 open mode, where it pads
@@ -353,7 +355,8 @@ static void populate_dot11f_tdls_ext_capability(struct mac_context *mac,
 	/*
 	 * For supporting wider bandwidth set tdls_wider_bw set as 1
 	 */
-	p_ext_cap->tdls_wider_bw = 1;
+	if (wlan_cfg80211_tdls_is_fw_wideband_capable(pe_session->vdev))
+		p_ext_cap->tdls_wider_bw = 1;
 
 	extCapability->present = 1;
 	extCapability->num_bytes = lim_compute_ext_cap_ie_length(extCapability);
@@ -934,7 +937,8 @@ static void populate_dot11f_set_tdls_he_cap(struct mac_context *mac,
 {
 	if (IS_DOT11_MODE_HE(selfDot11Mode)) {
 		populate_dot11f_he_caps(mac, NULL, heCap);
-		lim_tdls_set_he_chan_width(mac, heCap, session, true);
+		lim_tdls_set_he_chan_width(mac, heCap, session,
+		      wlan_cfg80211_tdls_is_fw_wideband_capable(session->vdev));
 		lim_tdls_populate_ppe_caps(mac, session, heCap);
 		lim_log_he_cap(mac, heCap);
 		lim_populate_tdls_setup_6g_cap(mac, hecap_6g, session);
@@ -2991,7 +2995,8 @@ static void lim_tdls_update_hash_node_info(struct mac_context *mac,
 		sta->rmfEnabled = add_sta_req->is_pmf;
 	}
 
-	wide_band_peer = lim_is_wide_band_set(add_sta_req->extn_capability);
+	wide_band_peer = lim_is_wide_band_set(add_sta_req->extn_capability) &&
+		    wlan_cfg80211_tdls_is_fw_wideband_capable(pe_session->vdev);
 	htCaps = &htCap;
 	if (htCaps->present) {
 		sta->mlmStaContext.htCapability = 1;
