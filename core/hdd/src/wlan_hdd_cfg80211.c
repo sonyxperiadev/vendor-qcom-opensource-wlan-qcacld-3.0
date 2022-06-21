@@ -589,6 +589,10 @@ static const struct ieee80211_txrx_stypes
 		      BIT(SIR_MAC_MGMT_DEAUTH) |
 		      BIT(SIR_MAC_MGMT_ACTION),
 	},
+	[NL80211_IFTYPE_NAN] = {
+		.tx = 0xffff,
+		.rx = BIT(SIR_MAC_MGMT_AUTH),
+	},
 };
 
 /* Interface limits and combinations registered by the driver */
