@@ -906,18 +906,18 @@ enum policy_mgr_two_connection_mode {
  * enum policy_mgr_three_connection_mode - Combination of first three
  * connections type, concurrency state, band used.
  *
- * @PM_STA_SAP_SCC_24_SAP_5_DBS: STA & SAP connection on 2.4 Ghz SCC, another
- * SAP on 5 G
- * @PM_STA_SAP_24_STA_5_DBS: STA & SAP connection on 2.4 Ghz SCC/MCC, another
- * STA on 5G
- * @PM_24_SCC_MCC_PLUS_5_DBS: ANY 2 link on 2.4 GHZ mac and one link on 5 GHZ
- * doing DBS
- * @PM_5_SCC_MCC_PLUS_24_DBS: ANY 2 link on 5 GHZ mac and one link on 2.4 GHZ
- * doing DBS
- * @PM_STA_SAP_SCC_5_SAP_24_DBS: STA & SAP connection on 5 Ghz SCC, another
- * SAP on 2.4 G
- * @PM_STA_SAP_5_STA_24_DBS: STA & SAP connection on 5 Ghz SCC/MCC, another
- * STA on 2.4 G
+ * @PM_STA_SAP_SCC_24_SAP_5_DBS: STA & SAP connection on 2.4 GHZ, another
+ * SAP on 5 GHZ
+ * @PM_STA_SAP_SCC_5_SAP_24_DBS: STA & SAP connection on 5 GHZ,
+ * another SAP on 2.4 GHZ
+ * @PM_24_SCC_MCC_PLUS_5_DBS: ANY 2 link on 2.4 GHZ SCC/MCC mac and one link on
+ * 5 GHZ doing DBS
+ * @PM_STA_SAP_24_STA_5_DBS: STA & SAP connection on 2.4 GHZ SCC/MCC,
+ * another STA on 5 GHZ
+ * @PM_5_SCC_MCC_PLUS_24_DBS: ANY 2 link on 5 GHZ SCC/MCC mac and one link on
+ * 2.4 GHZ doing DBS
+ * @PM_STA_SAP_5_STA_24_DBS: STA & SAP connection on 5 GHZ SCC/MCC,
+ * STA on 2.4 GHZ
  * @PM_STA_STA_5_SAP_24_DBS: STA & STA connection on 5 GHZ SCC/MCC,
  * SAP on 2.4 GHZ
  * @PM_NAN_DISC_SAP_SCC_24_NDI_5_DBS: NAN_DISC & SAP connection on 2.4 Ghz SCC,
@@ -984,10 +984,10 @@ enum policy_mgr_two_connection_mode {
  */
 enum policy_mgr_three_connection_mode {
 	PM_STA_SAP_SCC_24_SAP_5_DBS,
-	PM_STA_SAP_24_STA_5_DBS,
+	PM_STA_SAP_SCC_5_SAP_24_DBS,
 	PM_24_SCC_MCC_PLUS_5_DBS,
+	PM_STA_SAP_24_STA_5_DBS = PM_24_SCC_MCC_PLUS_5_DBS,
 	PM_5_SCC_MCC_PLUS_24_DBS,
-	PM_STA_SAP_SCC_5_SAP_24_DBS = PM_5_SCC_MCC_PLUS_24_DBS,
 	PM_STA_SAP_5_STA_24_DBS = PM_5_SCC_MCC_PLUS_24_DBS,
 	PM_STA_STA_5_SAP_24_DBS = PM_5_SCC_MCC_PLUS_24_DBS,
 	PM_NAN_DISC_SAP_SCC_24_NDI_5_DBS,
