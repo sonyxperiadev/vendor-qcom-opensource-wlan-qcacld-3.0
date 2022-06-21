@@ -3775,4 +3775,9 @@ void wlan_mlme_get_safe_mode_enable(struct wlan_objmgr_psoc *psoc,
  * Return: 6g_power_type
  */
 uint32_t wlan_mlme_get_6g_ap_power_type(struct wlan_objmgr_vdev *vdev);
+
+QDF_STATUS wlan_connect_hw_mode_change_resp(struct wlan_objmgr_pdev *pdev,
+					    uint8_t vdev_id,
+					    wlan_cm_id cm_id,
+					    QDF_STATUS status);
 #endif /* _WLAN_MLME_API_H_ */
