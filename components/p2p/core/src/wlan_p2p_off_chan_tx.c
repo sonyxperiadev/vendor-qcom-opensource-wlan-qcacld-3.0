@@ -2816,7 +2816,8 @@ p2p_is_vdev_support_rand_mac(struct wlan_objmgr_vdev *vdev)
 	mode = wlan_vdev_mlme_get_opmode(vdev);
 	if (mode == QDF_STA_MODE ||
 	    mode == QDF_P2P_CLIENT_MODE ||
-	    mode == QDF_P2P_DEVICE_MODE)
+	    mode == QDF_P2P_DEVICE_MODE ||
+	    mode == QDF_NAN_DISC_MODE)
 		return true;
 	return false;
 }
