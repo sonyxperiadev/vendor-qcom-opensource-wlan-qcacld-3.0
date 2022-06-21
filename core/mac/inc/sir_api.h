@@ -992,6 +992,7 @@ struct join_req {
 #ifdef WLAN_FEATURE_11BE_MLO
 	struct mlo_partner_info partner_info;
 	uint8_t assoc_link_id;
+	bool is_ml_probe_req_sent;
 #endif
 	/* Warning:::::::::::: Do not add any new param in this struct */
 	/* Pls make this as last variable in struct */

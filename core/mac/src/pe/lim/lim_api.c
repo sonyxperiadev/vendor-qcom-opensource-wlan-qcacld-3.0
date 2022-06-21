@@ -3519,6 +3519,7 @@ lim_add_bcn_probe(struct wlan_objmgr_vdev *vdev, uint8_t *bcn_probe,
 QDF_STATUS
 lim_gen_link_specific_probe_rsp(struct mac_context *mac_ctx,
 				struct pe_session *session_entry,
+				tpSirProbeRespBeacon rcvd_probe_resp,
 				uint8_t *probe_rsp,
 				uint32_t probe_rsp_len,
 				int32_t rssi)
@@ -3531,6 +3532,10 @@ lim_gen_link_specific_probe_rsp(struct mac_context *mac_ctx,
 	uint8_t chan;
 	uint8_t op_class;
 	uint16_t chan_freq;
+
+	if (!rcvd_probe_resp->mlo_ie.mlo_ie_present ||
+	    !session_entry->lim_join_req->is_ml_probe_req_sent)
+		return QDF_STATUS_SUCCESS;
 
 	link_probe_rsp.ptr = qdf_mem_malloc(probe_rsp_len);
 	if (!link_probe_rsp.ptr)

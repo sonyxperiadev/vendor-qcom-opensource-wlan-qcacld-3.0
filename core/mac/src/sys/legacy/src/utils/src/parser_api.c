@@ -9794,6 +9794,7 @@ sir_convert_mlo_probe_rsp_frame2_struct(uint8_t *ml_ie,
 	mlo_ie_ptr->mlo_ie.bss_param_change_cnt_present =
 						bss_param_change_cnt_found;
 	mlo_ie_ptr->mlo_ie.bss_param_change_count = bss_param_change_cnt;
+	mlo_ie_ptr->mlo_ie_present = true;
 
 	return QDF_STATUS_SUCCESS;
 }

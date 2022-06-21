@@ -227,6 +227,8 @@ lim_populate_ml_probe_req(struct mac_context *mac,
 	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
 			   ml_probe, ml_probe_len);
 
+	session->lim_join_req->is_ml_probe_req_sent = true;
+
 	return QDF_STATUS_SUCCESS;
 }
 #else
