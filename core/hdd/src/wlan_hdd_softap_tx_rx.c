@@ -1335,6 +1335,7 @@ QDF_STATUS hdd_softap_register_sta(struct hdd_adapter *adapter,
 	bool wmm_enabled = false;
 	enum qca_wlan_802_11_mode dot11mode = QCA_WLAN_802_11_MODE_INVALID;
 	bool is_macaddr_broadcast = false;
+	enum phy_ch_width ch_width;
 
 	if (event) {
 		wmm_enabled = event->wmmEnabled;
@@ -1400,6 +1401,9 @@ QDF_STATUS hdd_softap_register_sta(struct hdd_adapter *adapter,
 		adapter->tx_fn = txrx_ops.tx.tx;
 	}
 
+	ch_width = ucfg_mlme_get_peer_ch_width(adapter->hdd_ctx->psoc,
+					       txrx_desc.peer_addr.bytes);
+	txrx_desc.bw = hdd_convert_ch_width_to_cdp_peer_bw(ch_width);
 	qdf_status = cdp_peer_register(soc, OL_TXRX_PDEV_ID, &txrx_desc);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		hdd_debug("cdp_peer_register() failed to register.  Status = %d [0x%08X]",

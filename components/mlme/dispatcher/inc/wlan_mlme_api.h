@@ -3792,4 +3792,23 @@ QDF_STATUS wlan_connect_hw_mode_change_resp(struct wlan_objmgr_pdev *pdev,
 					    uint8_t vdev_id,
 					    wlan_cm_id cm_id,
 					    QDF_STATUS status);
+
+/**
+ * wlan_mlme_get_ch_width_from_phymode() - Convert phymode to ch_width
+ * @phy_mode: Phy mode
+ *
+ * Return: enum phy_ch_width
+ */
+enum phy_ch_width
+wlan_mlme_get_ch_width_from_phymode(enum wlan_phymode phy_mode);
+
+/**
+ * wlan_mlme_get_peer_ch_width() - get ch_width of the given peer
+ * @psoc: psoc context
+ * @mac: peer mac
+ *
+ * Return: enum phy_ch_width
+ */
+enum phy_ch_width
+wlan_mlme_get_peer_ch_width(struct wlan_objmgr_psoc *psoc, uint8_t *mac);
 #endif /* _WLAN_MLME_API_H_ */

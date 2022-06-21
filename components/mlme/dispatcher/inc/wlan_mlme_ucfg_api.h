@@ -4711,4 +4711,39 @@ ucfg_mlme_get_connection_roaming_ini_present(struct wlan_objmgr_psoc *psoc,
 	return QDF_STATUS_E_NOSUPPORT;
 }
 #endif /* CONNECTION_ROAMING_CFG */
+
+/**
+ * ucfg_mlme_get_ch_width_from_phymode() - Convert phymode to ch_width
+ * @phy_mode: phy mode
+ *
+ * Return: enum phy_ch_width
+ */
+static inline enum phy_ch_width
+ucfg_mlme_get_ch_width_from_phymode(enum wlan_phymode phy_mode)
+{
+	return wlan_mlme_get_ch_width_from_phymode(phy_mode);
+}
+
+/**
+ * ucfg_mlme_get_peer_ch_width() - get ch_width of the given peer
+ * @psoc: pointer to psoc object
+ * @mac: peer mac
+ *
+ * Return: enum phy_ch_width
+ */
+static inline enum phy_ch_width
+ucfg_mlme_get_peer_ch_width(struct wlan_objmgr_psoc *psoc, uint8_t *mac)
+{
+	return wlan_mlme_get_peer_ch_width(psoc, mac);
+}
+
+/**
+ * ucfg_mlme_get_vdev_phy_mode() - Get phymode of a vdev
+ * @psoc: pointer to psoc object
+ * @vdev_id: vdev id
+ *
+ * Return: enum wlan_phymode
+ */
+enum wlan_phymode
+ucfg_mlme_get_vdev_phy_mode(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id);
 #endif /* _WLAN_MLME_UCFG_API_H_ */

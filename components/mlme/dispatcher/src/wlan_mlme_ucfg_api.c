@@ -1873,3 +1873,31 @@ ucfg_mlme_get_connection_roaming_ini_present(struct wlan_objmgr_psoc *psoc,
 	return QDF_STATUS_SUCCESS;
 }
 #endif
+
+enum wlan_phymode
+ucfg_mlme_get_vdev_phy_mode(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
+{
+	struct wlan_objmgr_vdev *vdev;
+	struct vdev_mlme_obj *mlme_obj;
+	enum wlan_phymode phymode;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_MLME_OBJMGR_ID);
+	if (!vdev) {
+		mlme_err("get vdev failed for vdev_id: %d", vdev_id);
+		return WLAN_PHYMODE_AUTO;
+	}
+
+	mlme_obj = wlan_vdev_mlme_get_cmpt_obj(vdev);
+	if (!mlme_obj) {
+		mlme_err("failed to get mlme_obj vdev_id: %d", vdev_id);
+		phymode = WLAN_PHYMODE_AUTO;
+		goto done;
+	}
+	phymode = mlme_obj->mgmt.generic.phy_mode;
+
+done:
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
+
+	return phymode;
+}
