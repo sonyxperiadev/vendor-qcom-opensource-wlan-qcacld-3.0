@@ -3245,9 +3245,6 @@ qdf_freq_t wlan_get_operation_chan_freq(struct wlan_objmgr_vdev *vdev)
 	if (!vdev)
 		return chan_freq;
 
-	if (wlan_vdev_mlme_is_active(vdev) != QDF_STATUS_SUCCESS)
-		return chan_freq;
-
 	chan = wlan_vdev_get_active_channel(vdev);
 	if (chan)
 		chan_freq = chan->ch_freq;
