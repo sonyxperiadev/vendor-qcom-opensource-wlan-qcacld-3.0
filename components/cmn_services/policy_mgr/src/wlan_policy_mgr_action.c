@@ -2560,7 +2560,9 @@ policy_mgr_valid_sap_conc_channel_check(struct wlan_objmgr_psoc *psoc,
 				     ch_freq);
 	} else if (con_mode == PM_P2P_GO_MODE &&
 		   wlan_reg_is_passive_or_disable_for_freq(pm_ctx->pdev,
-							   ch_freq)) {
+							   ch_freq) &&
+		   !(policy_mgr_is_go_scc_strict(psoc) &&
+		     (!is_sta_sap_scc || sta_sap_scc_on_dfs_chan))) {
 		find_alternate = true;
 		policymgr_nofl_debug("Go not capable on dfs/disabled con ch_freq %d",
 				     ch_freq);
