@@ -211,6 +211,36 @@ static bool hdd_is_target_ready(void *data)
 }
 
 /**
+ * hdd_send_driver_ready_to_user() - API to indicate driver ready
+ * to userspace.
+ */
+static void hdd_send_driver_ready_to_user(void)
+{
+	struct sk_buff *nl_event;
+	struct hdd_context *hdd_ctx;
+	int flags = cds_get_gfp_flags();
+
+	hdd_enter();
+
+	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
+	if (!hdd_ctx) {
+		hdd_err("HDD Context is NULL");
+		return;
+	}
+
+	nl_event = cfg80211_vendor_event_alloc(
+			hdd_ctx->wiphy, NULL, 0,
+			QCA_NL80211_VENDOR_SUBCMD_DRIVER_READY_INDEX,
+			flags);
+	if (!nl_event) {
+		hdd_err("cfg80211_vendor_event_alloc failed");
+		return;
+	}
+
+	cfg80211_vendor_event(nl_event, flags);
+}
+
+/**
  * hdd_hif_init_driver_state_callbacks() - API to initialize HIF callbacks
  * @data: Private Data
  * @cbk: HIF Driver State callbacks
@@ -750,6 +780,7 @@ static int __hdd_soc_recovery_reinit(struct device *dev,
 	}
 
 	hdd_soc_load_unlock(dev);
+	hdd_send_driver_ready_to_user();
 
 	return 0;
 

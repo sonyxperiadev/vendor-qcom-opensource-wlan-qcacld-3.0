@@ -1756,6 +1756,10 @@ static const struct nl80211_vendor_cmd_info wlan_hdd_cfg80211_vendor_events[] = 
 	},
 #endif
 	FEATURE_MCC_QUOTA_VENDOR_EVENTS
+	[QCA_NL80211_VENDOR_SUBCMD_DRIVER_READY_INDEX] = {
+		.vendor_id = QCA_NL80211_VENDOR_ID,
+		.subcmd = QCA_NL80211_VENDOR_SUBCMD_DRIVER_READY,
+	},
 };
 
 /**
