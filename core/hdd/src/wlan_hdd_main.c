@@ -17835,13 +17835,13 @@ bool hdd_get_wlan_driver_status(void)
 static int hdd_wlan_soft_driver_load(void)
 {
 	if (!cds_is_driver_loaded()) {
-		pr_info("Enabling CNSS WLAN HW\n");
+		hdd_debug("\nEnabling CNSS WLAN HW");
 		pld_wlan_hw_enable();
 		return 0;
 	}
 
 	if (!g_soft_unload) {
-		pr_info("Enabling WiFi\n");
+		hdd_debug_rl("Enabling WiFi\n");
 		return -EINVAL;
 	}
 
@@ -17856,7 +17856,7 @@ static void hdd_wlan_soft_driver_unload(void)
 		hdd_debug_rl("WiFi is already disabled");
 		return;
 	}
-	pr_info("Initiating soft driver unload\n");
+	hdd_debug("Initiating soft driver unload\n");
 	g_soft_unload = true;
 	hdd_driver_unload();
 }
@@ -17925,7 +17925,7 @@ static int hdd_disable_wifi(struct hdd_context *hdd_ctx)
 {
 	return 0;
 }
-#endif /* FEATURE_WLAN_DYNAMIC_IFACE_CTRL */
+#endif /* FEATURE_CNSS_HW_SECURE_DISABLE */
 
 static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 						const char __user *user_buf,
@@ -17954,16 +17954,23 @@ static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 		pr_info("Wifi wait for ready from UI\n");
 		break;
 	case WLAN_ENABLE_STR:
+		hdd_nofl_debug("Received WiFi enable from framework\n");
 		if (!hdd_wlan_soft_driver_load())
 			goto exit;
+		pr_info("Enabling WiFi\n");
 		break;
 	case WLAN_DISABLE_STR:
+		hdd_nofl_debug("Received WiFi disable from framework\n");
+		if (!cds_is_driver_loaded())
+			goto exit;
+
 		is_wlan_force_disabled = hdd_get_wlan_driver_status();
 		if (is_wlan_force_disabled)
 			goto exit;
 		pr_info("Disabling WiFi\n");
 		break;
 	case WLAN_FORCE_DISABLE_STR:
+		hdd_nofl_debug("Received Force WiFi disable from framework\n");
 		hdd_wlan_soft_driver_unload();
 		goto exit;
 	default:
@@ -17978,7 +17985,7 @@ static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 		rc = wait_for_completion_timeout(&wlan_start_comp,
 				msecs_to_jiffies(HDD_WLAN_START_WAIT_TIME));
 		if (!rc) {
-			pr_err("Timed-out!!");
+			hdd_err("Driver Loading Timed-out!!");
 			ret = -EINVAL;
 			return ret;
 		}
