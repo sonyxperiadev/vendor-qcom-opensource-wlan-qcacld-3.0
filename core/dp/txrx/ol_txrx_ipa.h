@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -259,7 +260,8 @@ QDF_STATUS ol_txrx_ipa_setup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 			     uint32_t *tx_pipe_handle, uint32_t *rx_pipe_handle,
 			     bool is_smmu_enabled,
 			     qdf_ipa_sys_connect_params_t *sys_in,
-			     bool over_gsi);
+			     bool over_gsi,
+			     qdf_ipa_wdi_hdl_t hdl);
 #else /* CONFIG_IPA_WDI_UNIFIED_API */
 /**
  * ol_txrx_ipa_setup() - Setup and connect IPA pipes
@@ -281,16 +283,20 @@ QDF_STATUS ol_txrx_ipa_setup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 			     void *ipa_wdi_meter_notifier_cb,
 			     uint32_t ipa_desc_size, void *ipa_priv,
 			     bool is_rm_enabled, uint32_t *tx_pipe_handle,
-			     uint32_t *rx_pipe_handle);
+			     uint32_t *rx_pipe_handle,
+			     qdf_ipa_wdi_hdl_t hdl);
 #endif /* CONFIG_IPA_WDI_UNIFIED_API */
 QDF_STATUS ol_txrx_ipa_cleanup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 			       uint32_t tx_pipe_handle,
-			       uint32_t rx_pipe_handle);
+			       uint32_t rx_pipe_handle,
+			       qdf_ipa_wdi_hdl_t hdl);
 QDF_STATUS ol_txrx_ipa_setup_iface(char *ifname, uint8_t *mac_addr,
 		qdf_ipa_client_type_t prod_client,
 		qdf_ipa_client_type_t cons_client,
-		uint8_t session_id, bool is_ipv6_enabled);
-QDF_STATUS ol_txrx_ipa_cleanup_iface(char *ifname, bool is_ipv6_enabled);
+		uint8_t session_id, bool is_ipv6_enabled,
+		qdf_ipa_wdi_hdl_t hdl);
+QDF_STATUS ol_txrx_ipa_cleanup_iface(char *ifname, bool is_ipv6_enabled,
+				     qdf_ipa_wdi_hdl_t hdl);
 
 /**
  * ol_txrx_ipa_enable_pipes() - Enable and resume traffic on Tx/Rx pipes
@@ -299,7 +305,8 @@ QDF_STATUS ol_txrx_ipa_cleanup_iface(char *ifname, bool is_ipv6_enabled);
  *
  * Return: QDF_STATUS
  */
-QDF_STATUS ol_txrx_ipa_enable_pipes(struct cdp_soc_t *soc_hdl, uint8_t pdev_id);
+QDF_STATUS ol_txrx_ipa_enable_pipes(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+				    qdf_ipa_wdi_hdl_t hdl);
 
 /**
  * ol_txrx_ipa_disable_pipes() – Suspend traffic and disable Tx/Rx pipes
@@ -309,9 +316,11 @@ QDF_STATUS ol_txrx_ipa_enable_pipes(struct cdp_soc_t *soc_hdl, uint8_t pdev_id);
  * Return: QDF_STATUS
  */
 QDF_STATUS ol_txrx_ipa_disable_pipes(struct cdp_soc_t *soc_hdl,
-				     uint8_t pdev_id);
+				     uint8_t pdev_id,
+				     qdf_ipa_wdi_hdl_t hdl);
 QDF_STATUS ol_txrx_ipa_set_perf_level(int client,
-		uint32_t max_supported_bw_mbps);
+				      uint32_t max_supported_bw_mbps,
+				      qdf_ipa_wdi_hdl_t hdl);
 #ifdef FEATURE_METERING
 /**
  * ol_txrx_ipa_uc_get_share_stats() - get Tx/Rx byte stats from FW
