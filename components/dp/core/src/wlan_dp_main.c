@@ -20,6 +20,7 @@
   *
   *
   */
+
 #include "wlan_dp_main.h"
 #include "wlan_dp_public_struct.h"
 #include "cfg_ucfg_api.h"
@@ -648,11 +649,11 @@ __dp_process_mic_error(struct wlan_dp_intf *dp_intf)
 	if ((dp_intf->device_mode == QDF_STA_MODE ||
 	     dp_intf->device_mode == QDF_P2P_CLIENT_MODE) &&
 	    ucfg_cm_is_vdev_active(vdev))
-		ops->osif_dp_process_sta_mic_error(dp_intf->mic_work.info,
+		ops->osif_dp_process_mic_error(dp_intf->mic_work.info,
 						   vdev);
 	else if (dp_intf->device_mode == QDF_SAP_MODE ||
 		 dp_intf->device_mode == QDF_P2P_GO_MODE)
-		ops->osif_dp_process_sap_mic_error(dp_intf->mic_work.info,
+		ops->osif_dp_process_mic_error(dp_intf->mic_work.info,
 						   vdev);
 	else
 		dp_err("Invalid interface type:%d", dp_intf->device_mode);
