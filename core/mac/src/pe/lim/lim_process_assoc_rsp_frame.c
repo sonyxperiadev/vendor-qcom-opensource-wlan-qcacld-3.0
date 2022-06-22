@@ -1407,8 +1407,15 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 	if (QDF_IS_STATUS_ERROR(lim_update_sta_vdev_punc(
 					mac_ctx->psoc,
 					session_entry->smeSessionId,
-					assoc_rsp)))
+					assoc_rsp))) {
+		assoc_cnf.resultCode = eSIR_SME_INVALID_ASSOC_RSP_RXED;
+		assoc_cnf.protStatusCode = STATUS_UNSPECIFIED_FAILURE;
+		/* Send advisory Disassociation frame to AP */
+		lim_send_disassoc_mgmt_frame(mac_ctx,
+					     REASON_UNSPEC_FAILURE,
+					     hdr->sa, session_entry, false);
 		goto assocReject;
+	}
 
 	/*
 	 * Extract the AP capabilities from the beacon that
