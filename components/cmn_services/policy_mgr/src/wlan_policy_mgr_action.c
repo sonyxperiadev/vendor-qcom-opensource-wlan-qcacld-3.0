@@ -2524,10 +2524,17 @@ policy_mgr_valid_sap_conc_channel_check(struct wlan_objmgr_psoc *psoc,
 	/*
 	 * If interference is 0, it could be STA/SAP SCC,
 	 * check further if SAP can start on STA home channel or
-	 * select other band channel if not .
+	 * select other band channel if not.
 	 */
-	if (!ch_freq)
+	if (!ch_freq) {
+		if (!policy_mgr_any_other_vdev_on_same_mac_as_freq(psoc,
+								   sap_ch_freq,
+								   sap_vdev_id))
+			return QDF_STATUS_SUCCESS;
+
 		ch_freq = sap_ch_freq;
+	}
+
 	if (!ch_freq)
 		return QDF_STATUS_SUCCESS;
 

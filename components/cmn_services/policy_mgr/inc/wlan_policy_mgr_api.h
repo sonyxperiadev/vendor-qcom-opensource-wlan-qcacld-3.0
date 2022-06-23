@@ -4497,4 +4497,18 @@ bool policy_mgr_is_sta_chan_valid_for_connect_and_roam(
  */
 bool policy_mgr_is_ap_ap_mcc_allow(struct wlan_objmgr_psoc *psoc,
 				   struct wlan_objmgr_vdev *vdev);
+
+/**
+ * policy_mgr_any_other_vdev_on_same_mac_as_freq() - Function to check
+ * whether more than one vdev are present on same mac or not
+ * @psoc: PSOC object
+ * @freq: Channel frequency
+ * @vdev_id: Vdev id
+ *
+ * Return: True if more than one vdev are present on same mac
+ *
+ */
+bool policy_mgr_any_other_vdev_on_same_mac_as_freq(
+				struct wlan_objmgr_psoc *psoc,
+				uint32_t freq, uint8_t vdev_id);
 #endif /* __WLAN_POLICY_MGR_API_H */
