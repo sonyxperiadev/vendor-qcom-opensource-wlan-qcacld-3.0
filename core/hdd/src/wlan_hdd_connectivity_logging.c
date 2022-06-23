@@ -838,6 +838,7 @@ connectivity_attr_table[QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_MAX + 1]
 	},
 };
 
+#ifdef WLAN_FEATURE_CONNECTIVITY_LOGGING
 static enum qca_roam_reason
 wlan_hdd_convert_roam_reason(enum roam_trigger_reason roam_reason)
 {
@@ -1294,7 +1295,84 @@ void wlan_hdd_start_connectivity_logging(struct hdd_context *hdd_ctx)
 			wlan_hdd_send_connectivity_log_to_user;
 	wlan_connectivity_logging_start(hdd_ctx->psoc, &hdd_cb, hdd_ctx);
 }
+#endif
 
+#ifdef CONNECTIVITY_DIAG_EVENT
+void wlan_hdd_connectivity_event_connecting(struct hdd_context *hdd_ctx,
+					    struct cfg80211_connect_params *req,
+					    uint8_t vdev_id)
+{
+	WLAN_HOST_DIAG_EVENT_DEF(wlan_diag_event, struct wlan_diag_connect);
+
+	qdf_mem_zero(&wlan_diag_event, sizeof(struct wlan_diag_connect));
+
+	wlan_diag_event.diag_cmn.timestamp_us = qdf_get_time_of_the_day_us();
+	wlan_diag_event.diag_cmn.ktime_us = qdf_ktime_to_us(qdf_ktime_get());
+	wlan_diag_event.diag_cmn.vdev_id = vdev_id;
+	wlan_diag_event.subtype = WLAN_CONN_DIAG_CONNECTING_EVENT;
+
+	wlan_diag_event.version = DIAG_CONN_VERSION;
+	wlan_diag_event.ssid_len = req->ssid_len;
+	if (req->ssid_len > WLAN_SSID_MAX_LEN)
+		wlan_diag_event.ssid_len = WLAN_SSID_MAX_LEN;
+	qdf_mem_copy(wlan_diag_event.ssid, req->ssid,
+		     wlan_diag_event.ssid_len);
+
+	if (req->bssid)
+		qdf_mem_copy(wlan_diag_event.diag_cmn.bssid, req->bssid,
+			     QDF_MAC_ADDR_SIZE);
+	else if (req->bssid_hint)
+		qdf_mem_copy(wlan_diag_event.bssid_hint, req->bssid_hint,
+			     QDF_MAC_ADDR_SIZE);
+
+	if (req->channel)
+		wlan_diag_event.freq = req->channel->center_freq;
+
+	if (req->channel_hint)
+		wlan_diag_event.freq_hint = req->channel_hint->center_freq;
+
+	wlan_diag_event.pairwise_cipher = req->crypto.ciphers_pairwise[0];
+	wlan_diag_event.grp_cipher = req->crypto.cipher_group;
+	wlan_diag_event.akm = req->crypto.akm_suites[0];
+	wlan_diag_event.auth_algo = req->auth_type;
+	if (hdd_ctx->bt_profile_con)
+		wlan_diag_event.bt_coex = true;
+
+	WLAN_HOST_DIAG_EVENT_REPORT(&wlan_diag_event, EVENT_WLAN_CONN);
+}
+
+void
+wlan_hdd_connectivity_fail_event(struct wlan_objmgr_vdev *vdev,
+				 struct wlan_cm_connect_resp *rsp)
+{
+	uint8_t op_mode;
+
+	WLAN_HOST_DIAG_EVENT_DEF(wlan_diag_event, struct wlan_diag_connect);
+
+	if (!rsp->reason)
+		return;
+
+	qdf_mem_zero(&wlan_diag_event, sizeof(struct wlan_diag_connect));
+
+	wlan_diag_event.diag_cmn.vdev_id = wlan_vdev_get_id(vdev);
+	op_mode = wlan_vdev_mlme_get_opmode(vdev);
+	if (op_mode != QDF_STA_MODE)
+		return;
+
+	wlan_diag_event.diag_cmn.timestamp_us = qdf_get_time_of_the_day_us();
+	wlan_diag_event.diag_cmn.ktime_us = qdf_ktime_to_us(qdf_ktime_get());
+	wlan_diag_event.subtype = WLAN_CONN_DIAG_CONNECT_FAIL_EVENT;
+	qdf_mem_copy(wlan_diag_event.diag_cmn.bssid, rsp->bssid.bytes,
+		     QDF_MAC_ADDR_SIZE);
+
+	wlan_diag_event.version = DIAG_CONN_VERSION;
+	wlan_diag_event.freq = rsp->freq;
+	wlan_diag_event.reason = rsp->reason;
+
+	WLAN_HOST_DIAG_EVENT_REPORT(&wlan_diag_event, EVENT_WLAN_CONN);
+}
+
+#else
 void wlan_hdd_connectivity_event_connecting(struct hdd_context *hdd_ctx,
 					    struct cfg80211_connect_params *req,
 					    uint8_t vdev_id)
@@ -1375,3 +1453,4 @@ wlan_hdd_connectivity_fail_event(struct wlan_objmgr_vdev *vdev,
 	wlan_connectivity_log_enqueue(log);
 	qdf_mem_free(log);
 }
+#endif
