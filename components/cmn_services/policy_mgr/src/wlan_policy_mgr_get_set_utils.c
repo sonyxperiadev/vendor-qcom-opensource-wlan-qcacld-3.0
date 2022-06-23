@@ -1423,6 +1423,77 @@ policy_mgr_2_freq_same_mac_in_freq_range(
 	return false;
 }
 
+bool policy_mgr_can_2ghz_share_low_high_5ghz_sbs(
+			struct policy_mgr_psoc_priv_obj *pm_ctx)
+{
+	if (pm_ctx->hw_mode.sbs_lower_band_end_freq)
+		return true;
+
+	return false;
+}
+
+bool
+policy_mgr_sbs_24_shared_with_high_5(struct policy_mgr_psoc_priv_obj *pm_ctx)
+{
+	qdf_freq_t sbs_cut_off_freq;
+	struct policy_mgr_freq_range freq_range;
+	uint8_t i = 0;
+
+	if (policy_mgr_can_2ghz_share_low_high_5ghz_sbs(pm_ctx))
+		return true;
+
+	sbs_cut_off_freq = policy_mgr_get_sbs_cut_off_freq(pm_ctx->psoc);
+	if (!sbs_cut_off_freq) {
+		policy_mgr_err("Invalid cut off freq");
+		return false;
+	}
+
+	for (i = 0; i < MAX_MAC; i++) {
+		freq_range = pm_ctx->hw_mode.freq_range_caps[MODE_SBS][i];
+		/*
+		 * if 5 GHZ start freq of this mac is greater than cutoff
+		 * return true
+		 */
+		if (freq_range.low_2ghz_freq && freq_range.low_5ghz_freq) {
+			if  (sbs_cut_off_freq < freq_range.low_5ghz_freq)
+				return true;
+		}
+	}
+
+	return false;
+}
+
+bool
+policy_mgr_sbs_24_shared_with_low_5(struct policy_mgr_psoc_priv_obj *pm_ctx)
+{
+	qdf_freq_t sbs_cut_off_freq;
+	struct policy_mgr_freq_range freq_range;
+	uint8_t i = 0;
+
+	if (policy_mgr_can_2ghz_share_low_high_5ghz_sbs(pm_ctx))
+		return true;
+
+	sbs_cut_off_freq = policy_mgr_get_sbs_cut_off_freq(pm_ctx->psoc);
+	if (!sbs_cut_off_freq) {
+		policy_mgr_err("Invalid cut off freq");
+		return false;
+	}
+
+	for (i = 0; i < MAX_MAC; i++) {
+		freq_range = pm_ctx->hw_mode.freq_range_caps[MODE_SBS][i];
+		if (freq_range.low_2ghz_freq && freq_range.high_5ghz_freq) {
+			/*
+			 * if 5 GHZ end freq of this mac is less than cutoff
+			 * return true
+			 */
+			if  (sbs_cut_off_freq > freq_range.high_5ghz_freq)
+				return true;
+		}
+	}
+
+	return false;
+}
+
 bool
 policy_mgr_2_freq_same_mac_in_sbs(struct policy_mgr_psoc_priv_obj *pm_ctx,
 				  qdf_freq_t freq_1, qdf_freq_t freq_2)
@@ -1435,7 +1506,7 @@ policy_mgr_2_freq_same_mac_in_sbs(struct policy_mgr_psoc_priv_obj *pm_ctx,
 	if (!policy_mgr_is_hw_sbs_capable(pm_ctx->psoc))
 		return true;
 
-	if (pm_ctx->hw_mode.sbs_lower_band_end_freq) {
+	if (policy_mgr_can_2ghz_share_low_high_5ghz_sbs(pm_ctx)) {
 		sbs_uppr_share =
 			pm_ctx->hw_mode.freq_range_caps[MODE_SBS_UPPER_SHARE];
 		sbs_low_share =

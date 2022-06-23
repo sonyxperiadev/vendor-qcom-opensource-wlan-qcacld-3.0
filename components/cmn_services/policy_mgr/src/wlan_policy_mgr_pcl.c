@@ -2242,6 +2242,8 @@ static void policy_mgr_get_index_for_ml_sta_sap_sbs(
 	qdf_freq_t *sta_freq_list, uint8_t *ml_sta_idx)
 {
 	qdf_freq_t sbs_cut_off_freq;
+	bool can_2ghz_share_low_high_5ghz =
+			policy_mgr_can_2ghz_share_low_high_5ghz_sbs(pm_ctx);
 
 	/*
 	 * Sanity check: At least one of the 3 combo (ML STA OR SAP + one of
@@ -2268,6 +2270,17 @@ static void policy_mgr_get_index_for_ml_sta_sap_sbs(
 	}
 
 	if (WLAN_REG_IS_24GHZ_CH_FREQ(sap_freq)) {
+		/*
+		 * If dynamic SBS is enabled (2.4 GHZ can share mac with HIGH
+		 * 5GHZ as well as LOW 5 GHZ, but one at a time) and SAP is
+		 * 2.4 GHZ, this mean that the new SAP can come up on 5 GHZ LOW
+		 * or HIGH and HW mode will move the 2.4 GHZ SAP to the other
+		 * mac dynamically.
+		 */
+		if (can_2ghz_share_low_high_5ghz) {
+			*index = PM_SAP_24_STA_5_STA_5_LOW_N_HIGH_SHARE_SBS;
+			return;
+		}
 		/*
 		 * if SAP is 2.4 GHZ that means both ML STA needs to
 		 * be with 5 GHZ + 5 GHZ/6 GHZ SBS separation. If not, it would
@@ -2304,6 +2317,17 @@ static void policy_mgr_get_index_for_ml_sta_sap_sbs(
 	/* SAP freq is 5 GHZ or 6 GHZ and one ML sta is on 2.4 GHZ */
 	if (WLAN_REG_IS_24GHZ_CH_FREQ(sta_freq_list[ml_sta_idx[0]]) ||
 	    WLAN_REG_IS_24GHZ_CH_FREQ(sta_freq_list[ml_sta_idx[1]])) {
+		/*
+		 * If dynamic SBS is enabled (2.4 GHZ can share mac with HIGH
+		 * 5GHZ as well as LOW 5 GHZ, but one at a time) and one STA
+		 * link is 2.4 GHZ, this mean that the new SAP can come up on
+		 * 5 GHZ LOW or HIGH and HW mode will move the 2.4 GHZ link to
+		 * the other mac dynamically.
+		 */
+		if (can_2ghz_share_low_high_5ghz) {
+			*index = PM_STA_24_SAP_5_STA_5_LOW_N_HIGH_SHARE_SBS;
+			return;
+		}
 		/*
 		 * If (2 GHZ + 5 GHZ/6 GHZ) ML is MCC i.e Both sta links are on
 		 * same mac and SAP is on separate mac. This can happen if SBS
@@ -2501,6 +2525,21 @@ static void policy_mgr_get_index_for_3_given_freq_sbs(
 	sbs_cut_off_freq =  policy_mgr_get_sbs_cut_off_freq(pm_ctx->psoc);
 	if (!sbs_cut_off_freq) {
 		policy_mgr_err("Invalid cutoff freq");
+		return;
+	}
+
+	/*
+	 * If dynamic SBS is enabled (2.4 GHZ can share mac with HIGH
+	 * 5GHZ as well as LOW 5 GHZ, but one at a time) and one of the
+	 * freq is 2.4 GHZ, this mean that the new interface can come up on
+	 * 5 GHZ LOW or HIGH and HW mode will move the 2.4 GHZ link to
+	 * the other mac dynamically.
+	 */
+	if (policy_mgr_can_2ghz_share_low_high_5ghz_sbs(pm_ctx) &&
+	    (WLAN_REG_IS_24GHZ_CH_FREQ(freq1) ||
+	     WLAN_REG_IS_24GHZ_CH_FREQ(freq2) ||
+	     WLAN_REG_IS_24GHZ_CH_FREQ(freq3))) {
+		*index = PM_24_5_PLUS_5_LOW_N_HIGH_SHARE_SBS;
 		return;
 	}
 	/*

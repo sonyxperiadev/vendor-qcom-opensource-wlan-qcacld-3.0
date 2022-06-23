@@ -874,6 +874,38 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 				       uint32_t ext_flags);
 
 /**
+ * policy_mgr_can_2ghz_share_low_high_5ghz_sbs() - if SBS mode is dynamic where
+ * 2.4 GHZ can be shared by any of high 5 GHZ or low 5GHZ at a time.
+ * @pm_ctx: policy mgr psoc priv object
+ *
+ * Return: true is sbs is dynamic else false.
+ */
+bool policy_mgr_can_2ghz_share_low_high_5ghz_sbs(
+				struct policy_mgr_psoc_priv_obj *pm_ctx);
+
+/**
+ * policy_mgr_sbs_24_shared_with_high_5() - if 2.4 GHZ
+ * can be shared by high 5 GHZ
+ *
+ * @pm_ctx: policy mgr psoc priv object
+ *
+ * Return: true if 2.4 GHz is shared by high 5 GHZ
+ */
+bool
+policy_mgr_sbs_24_shared_with_high_5(struct policy_mgr_psoc_priv_obj *pm_ctx);
+
+/**
+ * policy_mgr_sbs_24_shared_with_low_5() - if 2.4 GHZ
+ * can be shared by low 5 GHZ
+ *
+ * @pm_ctx: policy mgr psoc priv object
+ *
+ * Return: true if 2.4 GHz is shared by low 5 GHZ
+ */
+bool
+policy_mgr_sbs_24_shared_with_low_5(struct policy_mgr_psoc_priv_obj *pm_ctx);
+
+/**
  * policy_mgr_2_freq_same_mac_in_sbs() - to check provided frequencies are
  * in sbs freq range or not
  *

@@ -389,10 +389,10 @@ enum policy_mgr_mac_use {
  *      SBS channels & rest of the 5G channels
  * @PM_24G_SBS_CH_MCC_CH: 2.4 Ghz channels, SBS channels & MCC channels
  * @PM_SBS_CH_2G: SBS channels & 2.4 Ghz channels
- * @PM_SCC_ON_5G_LOW_5G_LOW: 5G low SCC channel followed by
- * 5G frequencies < sbs cut off freq
- * @PM_SCC_ON_5G_HIGH_5G_HIGH: 5G high SCC channel followed by
- * frequencies > sbs cut off freq
+ * @PM_SCC_ON_5G_LOW_5G_LOW_PLUS_SHARED_2G: 5 GHz low SCC channel followed by
+ * 5 GHz low frequencies, add 2.4 GHz if its shared with 5 GHz low
+ * @PM_SCC_ON_5G_HIGH_5G_HIGH_PLUS_SHARED_2G: 5GHZ high SCC channel followed by
+ * 5 GHz high frequencies, add 2.4 GHZ if its shared with 5GHz high
  *
  * @PM_MAX_PCL_TYPE: Max place holder
  *
@@ -434,8 +434,8 @@ enum policy_mgr_pcl_type {
 	PM_SBS_CH_SCC_CH_5G_24G,
 	PM_SCC_CH_MCC_CH_SBS_CH_24G,
 	PM_SBS_CH_2G,
-	PM_SCC_ON_5G_LOW_5G_LOW,
-	PM_SCC_ON_5G_HIGH_5G_HIGH,
+	PM_SCC_ON_5G_LOW_5G_LOW_PLUS_SHARED_2G,
+	PM_SCC_ON_5G_HIGH_5G_HIGH_PLUS_SHARED_2G,
 
 	PM_MAX_PCL_TYPE
 };
@@ -980,6 +980,15 @@ enum policy_mgr_two_connection_mode {
  * 2.4 GHZ MCC on mac0 and second STA on high 5 GHZ on mac1 doing SBS
  * @PM_STA_STA_5_LOW_MCC_SAP_5_HIGH_SBS : First STA on high 5 GHZ & Second STA
  * on high 5 GHZ MCC on mac0 and SAP on low 5 GHZ on mac1 doing SBS
+ * @PM_24_5_MCC_SCC_PLUS_5_SBS: The 2.4 GHZ vdev creating MCC/SCC with low 5 GHZ
+ * or high 5 GHZ (dynamic SBS) on mac 0 and one vdev on high 5 GHZ or low 5 GHZ
+ * freq respectively on mac 1 doing SBS
+ * @PM_SAP_24_STA_5_STA_5_LOW_N_HIGH_SHARE_SBS: The 2.4 GHZ SAP creating MCC/SCC
+ * with STA of low 5 GHZ or high 5 GHZ (dynamic SBS) on mac 0 and one STA on
+ * high 5 GHZ or low 5 GHZ freq respectively on mac 1 doing SBS
+ * @PM_STA_24_SAP_5_STA_5_LOW_N_HIGH_SHARE_SBS: The 2.4 GHZ STA creating MCC/SCC
+ * with SAP of low 5 GHZ or high 5 GHZ (dynamic SBS) on mac 0 and one STA on
+ * high 5 GHZ or low 5 GHZ freq respectively on mac 1 doing SBS
  *
  */
 enum policy_mgr_three_connection_mode {
@@ -1036,6 +1045,11 @@ enum policy_mgr_three_connection_mode {
 		PM_MCC_SCC_5G_LOW_PLUS_5_HIGH_SBS,
 	PM_STA_STA_5_LOW_MCC_SAP_5_HIGH_SBS =
 		PM_MCC_SCC_5G_LOW_PLUS_5_HIGH_SBS,
+	PM_24_5_PLUS_5_LOW_N_HIGH_SHARE_SBS,
+	PM_SAP_24_STA_5_STA_5_LOW_N_HIGH_SHARE_SBS =
+			PM_24_5_PLUS_5_LOW_N_HIGH_SHARE_SBS,
+	PM_STA_24_SAP_5_STA_5_LOW_N_HIGH_SHARE_SBS =
+			PM_24_5_PLUS_5_LOW_N_HIGH_SHARE_SBS,
 
 	PM_MAX_THREE_CONNECTION_MODE,
 };

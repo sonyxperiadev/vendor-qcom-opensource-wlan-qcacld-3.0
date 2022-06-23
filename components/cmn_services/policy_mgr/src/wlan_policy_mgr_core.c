@@ -3114,6 +3114,27 @@ policy_mgr_add_24g_to_pcl(uint32_t *pcl_freqs, uint8_t *pcl_weights,
 			 chlist_24g_len, num_to_add, *index);
 }
 
+static bool
+policy_mgr_2ghz_connection_present(struct policy_mgr_psoc_priv_obj *pm_ctx)
+{
+	bool is_2ghz_present = false;
+	uint32_t conn_index;
+
+	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
+	for (conn_index = 0; conn_index < MAX_NUMBER_OF_CONC_CONNECTIONS;
+		conn_index++) {
+		if (pm_conc_connection_list[conn_index].in_use &&
+		    (WLAN_REG_IS_24GHZ_CH_FREQ(
+				pm_conc_connection_list[conn_index].freq))) {
+			is_2ghz_present = true;
+			break;
+		}
+	}
+	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+
+	return is_2ghz_present;
+}
+
 /**
  * policy_mgr_get_channel_list() - provides the channel list
  * suggestion for new connection
@@ -3728,7 +3749,7 @@ QDF_STATUS policy_mgr_get_channel_list(struct wlan_objmgr_psoc *psoc,
 				  false, false);
 		status = QDF_STATUS_SUCCESS;
 		break;
-	case PM_SCC_ON_5G_LOW_5G_LOW:
+	case PM_SCC_ON_5G_LOW_5G_LOW_PLUS_SHARED_2G:
 		add_sbs_chlist_to_pcl(psoc,  pcl_channels,
 				      pcl_weights, pcl_sz,
 				      len, skip_dfs_channel,
@@ -3736,8 +3757,20 @@ QDF_STATUS policy_mgr_get_channel_list(struct wlan_objmgr_psoc *psoc,
 				      channel_list_5, chan_index_5,
 				      channel_list_6, chan_index_6,
 				      POLICY_MGR_PCL_ORDER_SCC_5G_LOW_5G_LOW);
+		/*
+		 * If no 2.4 GHZ connetcion is present and If 2.4 GHZ is shared
+		 * with 5 GHz low freq then 2.4 GHz can be added as well
+		 */
+		if (!policy_mgr_2ghz_connection_present(pm_ctx) &&
+		    policy_mgr_sbs_24_shared_with_low_5(pm_ctx))
+			add_chlist_to_pcl(pm_ctx->pdev,
+					  pcl_channels, pcl_weights, pcl_sz,
+					  len, WEIGHT_OF_GROUP3_PCL_CHANNELS,
+					  channel_list_24, chan_index_24,
+					  false, false);
+		status = QDF_STATUS_SUCCESS;
 		break;
-	case PM_SCC_ON_5G_HIGH_5G_HIGH:
+	case PM_SCC_ON_5G_HIGH_5G_HIGH_PLUS_SHARED_2G:
 		add_sbs_chlist_to_pcl(psoc,  pcl_channels,
 				      pcl_weights, pcl_sz,
 				      len, skip_dfs_channel,
@@ -3745,6 +3778,18 @@ QDF_STATUS policy_mgr_get_channel_list(struct wlan_objmgr_psoc *psoc,
 				      channel_list_5, chan_index_5,
 				      channel_list_6, chan_index_6,
 				      POLICY_MGR_PCL_ORDER_SCC_5G_HIGH_5G_HIGH);
+		/*
+		 * If no 2.4 GHZ connetcion is present and if 2.4 GHZ is shared
+		 * with 5 GHz High freq then 2.4 GHz can be added as well
+		 */
+		if (!policy_mgr_2ghz_connection_present(pm_ctx) &&
+		    policy_mgr_sbs_24_shared_with_high_5(pm_ctx))
+			add_chlist_to_pcl(pm_ctx->pdev,
+					  pcl_channels, pcl_weights, pcl_sz,
+					  len, WEIGHT_OF_GROUP3_PCL_CHANNELS,
+					  channel_list_24, chan_index_24,
+					  false, false);
+		status = QDF_STATUS_SUCCESS;
 		break;
 	default:
 		policy_mgr_err("unknown pcl value %d", pcl);
