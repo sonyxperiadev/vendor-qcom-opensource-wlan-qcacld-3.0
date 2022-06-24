@@ -20,7 +20,35 @@
 
 #include "wma.h"
 
+enum EHT_TXRX_MCS_NSS_IDX {
+	EHTCAP_TXRX_MCS_NSS_IDX0,
+	EHTCAP_TXRX_MCS_NSS_IDX1,
+	EHTCAP_TXRX_MCS_NSS_IDX2,
+	EHTCAP_TXRX_MCS_NSS_IDXMAX,
+};
+
 #if defined(WLAN_FEATURE_11BE)
+#define MAX_EHT_DCM_INDEX 2
+#define MAX_EHT_MCS_IDX 14
+/* valid only for mcs-15 */
+#define IS_EHT_ MCS_HAS_DCM_RATE(val)  ((val) == 15)
+/**
+ * struct index_eht_data_rate_type - eht data rate type
+ * @beacon_rate_index: Beacon rate index
+ * @supported_eht20_rate: eht20 rate
+ * @supported_eht40_rate: eht40 rate
+ * @supported_eht80_rate: eht80 rate
+ * @supported_eht160_rate: eht160 rate
+ */
+struct index_eht_data_rate_type {
+	uint8_t beacon_rate_index;
+	uint16_t supported_eht20_rate[MAX_EHT_DCM_INDEX][3];
+	uint16_t supported_eht40_rate[MAX_EHT_DCM_INDEX][3];
+	uint16_t supported_eht80_rate[MAX_EHT_DCM_INDEX][3];
+	uint16_t supported_eht160_rate[MAX_EHT_DCM_INDEX][3];
+	uint16_t supported_eht320_rate[MAX_EHT_DCM_INDEX][3];
+};
+
 /*
  * wma_eht_update_tgt_services() - update tgt cfg to indicate 11be support
  * @wmi_handle: pointer to WMI handle
@@ -169,6 +197,57 @@ void wma_set_eht_txbf_cfg(struct mac_context *mac, uint8_t vdev_id);
  */
 void wma_set_eht_txbf_params(uint8_t vdev_id, bool su_bfer,
 			     bool su_bfee, bool mu_bfer);
+
+/**
+ * wma_get_eht_rate_flags() - Return the EHT rate flags corresponding to the BW
+ * @ch_width: BW for which rate flags is required
+ *
+ * Return: Rate flags corresponding to ch_width
+ */
+enum tx_rate_info wma_get_eht_rate_flags(enum phy_ch_width ch_width);
+
+/**
+ * wma_match_eht_rate() - get eht rate matching with nss
+ * @raw_rate: raw rate from fw
+ * @rate_flags: rate flags
+ * @nss: nss
+ * @dcm: dcm
+ * @guard_interval: guard interval
+ * @mcs_rate_flag: mcs rate flags
+ * @p_index: index for matched rate
+ *
+ *  Return: return match rate if found, else 0
+ */
+uint16_t wma_match_eht_rate(uint16_t raw_rate,
+			    enum tx_rate_info rate_flags,
+			    uint8_t *nss, uint8_t *dcm,
+			    enum txrate_gi *guard_interval,
+			    enum tx_rate_info *mcs_rate_flag,
+			    uint8_t *p_index);
+
+/**
+ * wma_set_bss_rate_flags_eht() - set rate flags based on BSS capability
+ * @rate_flags: rate_flags pointer
+ * @add_bss: add_bss params
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS wma_set_bss_rate_flags_eht(enum tx_rate_info *rate_flags,
+				      struct bss_params *add_bss);
+
+/**
+ * wma_get_bss_eht_capable() - whether bss is eht capable or not
+ * @add_bss: add_bss params
+ *
+ * Return: true if eht capable is present
+ */
+bool wma_get_bss_eht_capable(struct bss_params *add_bss);
+
+static
+inline bool wma_is_eht_phymode_supported(enum wlan_phymode bss_phymode)
+{
+	return IS_WLAN_PHYMODE_EHT(bss_phymode);
+}
 #else
 static inline void wma_eht_update_tgt_services(struct wmi_unified *wmi_handle,
 					       struct wma_tgt_services *cfg)
@@ -234,6 +313,41 @@ static inline
 void wma_set_eht_txbf_params(uint8_t vdev_id, bool su_bfer,
 			     bool su_bfee, bool mu_bfer)
 {
+}
+
+static inline
+QDF_STATUS wma_set_bss_rate_flags_eht(enum tx_rate_info *rate_flags,
+				      struct bss_params *add_bss)
+{
+	return QDF_STATUS_E_INVAL;
+}
+
+static inline
+enum tx_rate_info wma_get_eht_rate_flags(enum phy_ch_width ch_width)
+{
+	return TX_RATE_EHT20;
+}
+
+static inline
+uint16_t wma_match_eht_rate(uint16_t raw_rate,
+			    enum tx_rate_info rate_flags,
+			    uint8_t *nss, uint8_t *dcm,
+			    enum txrate_gi *guard_interval,
+			    enum tx_rate_info *mcs_rate_flag,
+			    uint8_t *p_index)
+{
+		return 0;
+}
+
+static inline
+bool wma_get_bss_eht_capable(struct bss_params *add_bss)
+{
+	return false;
+}
+
+static inline bool wma_is_eht_phymode_supported(enum wlan_phymode bss_phymode)
+{
+	return false;
 }
 #endif
 #endif

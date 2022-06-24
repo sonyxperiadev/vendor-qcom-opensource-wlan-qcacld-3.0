@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -50,6 +51,7 @@ enum cfg_sub_20_channel_width {
  * @max_station: Max station supported
  * @max_bssid: Max Bssid Supported
  * @sta_maxlimod_dtim: station max listen interval
+ * @sta_maxlimod_dtim_ms: station max listen interval ms
  * @driver_type: Enumeration of Driver Type whether FTM or Mission mode
  * currently rest of bits are not used
  * Indicates whether support is enabled or not
@@ -80,6 +82,7 @@ struct cds_config_info {
 	uint16_t max_station;
 	uint16_t max_bssid;
 	uint8_t sta_maxlimod_dtim;
+	uint16_t sta_maxlimod_dtim_ms;
 	enum qdf_driver_type driver_type;
 	uint8_t ap_maxoffload_peers;
 	uint8_t ap_maxoffload_reorderbuffs;

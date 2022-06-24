@@ -136,19 +136,14 @@ void dp_nud_reset_tracking(struct wlan_dp_intf *dp_intf)
  */
 static void dp_nud_stats_info(struct wlan_dp_intf *dp_intf)
 {
-	struct wlan_objmgr_vdev *vdev = dp_intf->vdev;
+	struct wlan_objmgr_vdev *vdev;
 	struct dp_nud_tx_rx_stats *tx_rx_stats =
 		&dp_intf->nud_tracking.tx_rx_stats;
 	struct wlan_dp_psoc_callbacks *cb = &dp_intf->dp_ctx->dp_ops;
 	uint32_t pause_map;
 
+	vdev = dp_objmgr_get_vdev_by_user(dp_intf, WLAN_DP_ID);
 	if (!vdev) {
-		dp_err("vdev is NULL");
-		return;
-	}
-
-	if (dp_comp_vdev_get_ref(vdev)) {
-		dp_err("vdev ref get error");
 		return;
 	}
 
@@ -162,12 +157,12 @@ static void dp_nud_stats_info(struct wlan_dp_intf *dp_intf)
 	dp_info("NUD Gateway Rx  : %d",
 		qdf_atomic_read(&tx_rx_stats->gw_rx_packets));
 
-	cb->os_if_dp_nud_stats_info(dp_intf->vdev);
+	cb->os_if_dp_nud_stats_info(vdev);
 
 	pause_map = cb->dp_get_pause_map(cb->callback_ctx,
 					 dp_intf->intf_id);
 	dp_info("Current pause_map value %x", pause_map);
-	dp_comp_vdev_put_ref(vdev);
+	dp_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 }
 
 /**
@@ -338,6 +333,7 @@ static void dp_nud_filter_netevent(struct qdf_mac_addr *netdev_addr,
 	int status;
 	struct wlan_dp_intf *dp_intf;
 	struct wlan_dp_psoc_context *dp_ctx;
+	struct wlan_objmgr_vdev *vdev;
 
 	dp_ctx = dp_get_context();
 	if (!dp_ctx)
@@ -363,10 +359,16 @@ static void dp_nud_filter_netevent(struct qdf_mac_addr *netdev_addr,
 	if (dp_intf->device_mode != QDF_STA_MODE)
 		return;
 
-	if (!ucfg_cm_is_vdev_active(dp_intf->vdev)) {
+	vdev = dp_objmgr_get_vdev_by_user(dp_intf, WLAN_DP_ID);
+	if (!vdev)
+		return;
+
+	if (!ucfg_cm_is_vdev_active(vdev)) {
+		dp_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 		dp_info("Not in Connected State");
 		return;
 	}
+	dp_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 
 	if (!qdf_is_macaddr_equal(&dp_intf->nud_tracking.gw_mac_addr,
 				  gw_mac_addr))

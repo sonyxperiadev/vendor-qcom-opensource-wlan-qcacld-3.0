@@ -27,7 +27,7 @@
 #include <wlan_objmgr_pdev_obj.h>
 #include <wlan_objmgr_vdev_obj.h>
 #include <wlan_objmgr_peer_obj.h>
-#include <wlan_scan_ucfg_api.h>
+#include <wlan_scan_api.h>
 #include "wlan_p2p_public_struct.h"
 #include "wlan_p2p_ucfg_api.h"
 #include "wlan_p2p_tgt_api.h"
@@ -847,7 +847,7 @@ QDF_STATUS p2p_psoc_start(struct wlan_objmgr_psoc *soc,
 	tgt_p2p_register_macaddr_rx_filter_evt_handler(soc, true);
 	tgt_p2p_register_mcc_quota_ev_handler(soc, true);
 	/* register scan request id */
-	p2p_soc_obj->scan_req_id = ucfg_scan_register_requester(
+	p2p_soc_obj->scan_req_id = wlan_scan_register_requester(
 		soc, P2P_MODULE_NAME, tgt_p2p_scan_event_cb,
 		p2p_soc_obj);
 
@@ -892,7 +892,7 @@ QDF_STATUS p2p_psoc_stop(struct wlan_objmgr_psoc *soc)
 	p2p_cleanup_roc_sync(p2p_soc_obj, NULL);
 
 	/* unrgister scan request id*/
-	ucfg_scan_unregister_requester(soc, p2p_soc_obj->scan_req_id);
+	wlan_scan_unregister_requester(soc, p2p_soc_obj->scan_req_id);
 
 	tgt_p2p_register_mcc_quota_ev_handler(soc, false);
 	/* unregister p2p lo stop and noa event */

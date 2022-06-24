@@ -121,6 +121,7 @@ static void lim_extract_he_op(struct pe_session *session,
 		return;
 	if (!session->he_op.oper_info_6g_present) {
 		pe_debug("6GHz op not present in 6G beacon");
+		session->ap_power_type = REG_VERY_LOW_POWER_AP;
 		return;
 	}
 	session->ch_width = session->he_op.oper_info_6g.info.ch_width;
@@ -340,6 +341,58 @@ void lim_update_he_mcs_12_13_map(struct wlan_objmgr_psoc *psoc,
 static void lim_extract_eht_op(struct pe_session *session,
 			       tSirProbeRespBeacon *beacon_struct)
 {
+	uint32_t max_eht_bw;
+
+	if (!session->eht_capable)
+		return;
+
+	if (!beacon_struct->eht_op.present) {
+		pe_debug("EHT OP not present in beacon");
+		return;
+	}
+
+	if (!beacon_struct->eht_op.eht_op_information_present) {
+		pe_debug("EHT Operation Information Present not set");
+		return;
+	}
+
+	qdf_mem_copy(&session->eht_op, &beacon_struct->eht_op,
+		     sizeof(session->eht_op));
+
+	max_eht_bw = wma_get_eht_ch_width();
+
+	if (session->eht_op.channel_width == WLAN_EHT_CHWIDTH_320) {
+		if (max_eht_bw == WNI_CFG_EHT_CHANNEL_WIDTH_320MHZ) {
+			session->ch_width = CH_WIDTH_320MHZ;
+		} else if (max_eht_bw == WNI_CFG_VHT_CHANNEL_WIDTH_160MHZ) {
+			session->ch_width = CH_WIDTH_160MHZ;
+		} else {
+			session->ch_width = CH_WIDTH_80MHZ;
+			session->ch_center_freq_seg1 = 0;
+		}
+	} else if (session->eht_op.channel_width == WLAN_EHT_CHWIDTH_160) {
+		if (max_eht_bw >= WNI_CFG_VHT_CHANNEL_WIDTH_160MHZ) {
+			session->ch_width = CH_WIDTH_160MHZ;
+		} else {
+			session->ch_width = CH_WIDTH_80MHZ;
+			session->ch_center_freq_seg1 = 0;
+		}
+	} else if (session->eht_op.channel_width == WLAN_EHT_CHWIDTH_80) {
+		session->ch_width = CH_WIDTH_80MHZ;
+		session->ch_center_freq_seg1 = 0;
+	} else if (session->eht_op.channel_width == WLAN_EHT_CHWIDTH_40) {
+		session->ch_width = CH_WIDTH_40MHZ;
+		session->ch_center_freq_seg1 = 0;
+	} else {
+		session->ch_width = CH_WIDTH_20MHZ;
+		session->ch_center_freq_seg1 = 0;
+	}
+
+	session->ch_center_freq_seg0 = session->eht_op.ccfs0;
+	session->ch_center_freq_seg1 = session->eht_op.ccfs1;
+
+	pe_debug("session ch_width %d ccfs0 %d ccfs1 %d", session->ch_width,
+		 session->ch_center_freq_seg0, session->ch_center_freq_seg1);
 }
 
 void lim_update_eht_bw_cap_mcs(struct pe_session *session,

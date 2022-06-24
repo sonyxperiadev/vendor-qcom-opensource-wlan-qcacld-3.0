@@ -1823,6 +1823,8 @@ static bool lim_update_sta_ds(struct mac_context *mac_ctx, tSirMacAddr sa,
 	}
 	lim_update_stads_he_6ghz_op(session, sta_ds);
 	lim_update_sta_ds_op_classes(assoc_req, sta_ds);
+	lim_update_stads_eht_bw_320mhz(session, sta_ds);
+
 	/* Add STA context at MAC HW (BMU, RHP & TFP) */
 	sta_ds->qosMode = false;
 	sta_ds->lleEnabled = false;
@@ -2997,6 +2999,52 @@ lim_convert_channel_width_enum(enum phy_ch_width ch_width)
 	return eHT_CHANNEL_WIDTH_20MHZ;
 }
 
+/**
+ * lim_convert_rate_flags_enum() - map between channel width and rate flag enums
+ * @rate_flags: the current rate flags
+ * @ch_width: channel width of enum type phy_ch_width
+ *
+ * Return: updated rate flags per ch width
+ */
+static uint32_t lim_convert_rate_flags_enum(uint32_t rate_flags,
+					    enum phy_ch_width ch_width)
+{
+	if (rate_flags & (TX_RATE_VHT160 |
+			  TX_RATE_VHT80 |
+			  TX_RATE_VHT40 |
+			  TX_RATE_VHT20)) {
+		switch (ch_width) {
+		case CH_WIDTH_20MHZ:
+			rate_flags |= TX_RATE_VHT20;
+			break;
+		case CH_WIDTH_40MHZ:
+			rate_flags |= TX_RATE_VHT40;
+			break;
+		case CH_WIDTH_80MHZ:
+			rate_flags |= TX_RATE_VHT80;
+			break;
+		case CH_WIDTH_160MHZ:
+		case CH_WIDTH_80P80MHZ:
+			rate_flags |= TX_RATE_VHT160;
+			break;
+		default:
+			break;
+		}
+	} else {
+		switch (ch_width) {
+		case CH_WIDTH_20MHZ:
+			rate_flags |= TX_RATE_HT20;
+			break;
+		case CH_WIDTH_40MHZ:
+			rate_flags |= TX_RATE_HT40;
+			break;
+		default:
+			break;
+		}
+	}
+	return rate_flags;
+}
+
 static void lim_fill_assoc_ind_he_bw_info(tpLimMlmAssocInd assoc_ind,
 					  tpDphHashNode sta_ds,
 					  struct pe_session *session_entry)
@@ -3005,6 +3053,9 @@ static void lim_fill_assoc_ind_he_bw_info(tpLimMlmAssocInd assoc_ind,
 	    lim_is_session_he_capable(session_entry)) {
 		assoc_ind->ch_width =
 			lim_convert_channel_width_enum(sta_ds->ch_width);
+		assoc_ind->chan_info.rate_flags =
+		    lim_convert_rate_flags_enum(assoc_ind->chan_info.rate_flags,
+						sta_ds->ch_width);
 	}
 }
 

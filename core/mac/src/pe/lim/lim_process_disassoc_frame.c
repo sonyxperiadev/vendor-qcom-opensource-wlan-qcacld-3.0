@@ -113,8 +113,8 @@ lim_process_disassoc_frame(struct mac_context *mac, uint8_t *pRxPacketInfo,
 		return;
 	}
 	/* PMF: If this session is a PMF session, then ensure that this frame was protected */
-	if (pe_session->limRmfEnabled
-	    && (WMA_GET_RX_DPU_FEEDBACK(pRxPacketInfo) &
+	if (is_mgmt_protected(pe_session->vdev_id, (const uint8_t *)pHdr->sa) &&
+	    (WMA_GET_RX_DPU_FEEDBACK(pRxPacketInfo) &
 		DPU_FEEDBACK_UNPROTECTED_ERROR)) {
 		pe_err("received an unprotected disassoc from AP");
 		/*

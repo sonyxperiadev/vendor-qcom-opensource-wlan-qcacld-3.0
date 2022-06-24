@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -204,6 +205,7 @@ static ssize_t hdd_driver_memdump_read(struct file *file, char __user *buf,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
 static const struct proc_ops driver_dump_fops = {
 	.proc_read = hdd_driver_memdump_read,
+	.proc_lseek = default_llseek,
 };
 #else
 static const struct file_operations driver_dump_fops = {

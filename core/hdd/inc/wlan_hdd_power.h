@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012, 2014-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -618,25 +619,6 @@ static inline void wlan_hdd_rx_thread_resume(struct hdd_context *hdd_ctx) {}
 static inline int wlan_hdd_rx_thread_suspend(struct hdd_context *hdd_ctx)
 {
 	return 0;
-}
-#endif
-
-#ifdef FEATURE_WLAN_FULL_POWER_DOWN_SUPPORT
-/**
- * wlan_hdd_is_full_power_down_enable()- Check wlan full power down
- * @hdd_ctx: HDD context
- *
- * check whether the wlan full power down is enabled or not.
- *
- * Return: true if wlan full power enabled else false
- */
-bool
-wlan_hdd_is_full_power_down_enable(struct hdd_context *hdd_ctx);
-#else
-static inline bool
-wlan_hdd_is_full_power_down_enable(struct hdd_context *hdd_ctx)
-{
-	return false;
 }
 #endif
 

@@ -91,6 +91,8 @@ struct wlan_dp_psoc_cfg {
 	uint32_t periodic_stats_timer_duration;
 #endif /* WLAN_FEATURE_PERIODIC_STA_STATS */
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
+	/* bandwidth threshold for super high bandwidth */
+	uint32_t bus_bw_super_high_threshold;
 	/* bandwidth threshold for ultra high bandwidth */
 	uint32_t bus_bw_ultra_high_threshold;
 	/* bandwidth threshold for very high bandwidth */
@@ -284,6 +286,7 @@ struct wlan_dp_intf {
 	qdf_list_node_t node;
 
 	struct wlan_objmgr_vdev *vdev;
+	qdf_spinlock_t vdev_lock;
 	qdf_netdev_t dev;
 	/**Device TX/RX statistics*/
 	struct dp_stats dp_stats;

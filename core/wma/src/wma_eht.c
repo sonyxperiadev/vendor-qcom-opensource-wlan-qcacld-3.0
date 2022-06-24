@@ -28,6 +28,157 @@
 #include "wma_internal.h"
 
 #if defined(WLAN_FEATURE_11BE)
+/* MCS Based EHT rate table */
+/* MCS parameters with Nss = 1*/
+static const struct index_eht_data_rate_type eht_mcs_nss1[] = {
+/* MCS,  {dcm0:0.8/1.6/3.2}, {dcm1:0.8/1.6/3.2} */
+	{0,  {{86,   81,   73}, {0} }, /* EHT20 */
+	     {{172,  163,  146}, {0} }, /* EHT40 */
+	     {{360,  340,  306}, {0} }, /* EHT80 */
+	     {{721,  681,  613}, {0} }, /* EHT160 */
+	     {{1441,  1361,  1225}, {0}}} , /* EHT320 */
+	{1,  {{172,  163,  146 }, {0} },
+	     {{344,  325,  293 }, {0} },
+	     {{721,  681,  613 }, {0} },
+	     {{1441, 1361, 1225}, {0} },
+	     {{2882, 2722, 2450}, {0} } } ,
+	{2,  {{258,  244,  219 }, {0} },
+	     {{516,  488,  439 }, {0} },
+	     {{1081, 1021, 919 }, {0} },
+	     {{2162, 2042, 1838}, {0} },
+	     {{4324, 4083, 3675}, {0} } } ,
+	{3,  {{344,  325,  293 }, {0} },
+	     {{688,  650,  585 }, {0} },
+	     {{1441, 1361, 1225}, {0} },
+	     {{2882, 2722, 2450}, {0} },
+	     {{5765, 5444, 4900}, {0} } } ,
+	{4,  {{516,  488,  439 }, {0} },
+	     {{1032, 975,  878 }, {0} },
+	     {{2162, 2042, 1838}, {0} },
+	     {{4324, 4083, 3675}, {0} },
+	     {{8647, 8167, 7350}, {0} } } ,
+	{5,  {{688,  650,  585 }, {0} },
+	     {{1376, 1300, 1170}, {0} },
+	     {{2882, 2722, 2450}, {0} },
+	     {{5765, 5444, 4900}, {0} },
+	     {{11529, 10889, 9800}, {0}}} ,
+	{6,  {{774,  731,  658 }, {0} },
+	     {{1549, 1463, 1316}, {0} },
+	     {{3243, 3063, 2756}, {0} },
+	     {{6485, 6125, 5513}, {0} },
+	     {{12971, 12250, 11025}, {0} } } ,
+	{7,  {{860,  813,  731 }, {0} },
+	     {{1721, 1625, 1463}, {0} },
+	     {{3603, 3403, 3063}, {0} },
+	     {{7206, 6806, 6125}, {0} },
+	     {{14412, 13611, 12250}, {0} } } ,
+	{8,  {{1032, 975,  878 }, {0} },
+	     {{2065, 1950, 1755}, {0} },
+	     {{4324, 4083, 3675}, {0} },
+	     {{8647, 8167, 7350}, {0} },
+	     {{17294, 16333, 14700}, {0} }} ,
+	{9,  {{1147, 1083, 975 }, {0} },
+	     {{2294, 2167, 1950}, {0} },
+	     {{4804, 4537, 4083}, {0} },
+	     {{9608, 9074, 8167}, {0} },
+	     {{19216, 18148, 16333}, {0} } } ,
+	{10, {{1290, 1219, 1097}, {0} },
+	     {{2581, 2438, 2194}, {0} },
+	     {{5404, 5104, 4594}, {0} },
+	     {{10809, 10208, 9188}, {0} },
+	     {{21618, 20417, 18375}, {0} } } ,
+	{11, {{1434, 1354, 1219}, {0} },
+	     {{2868, 2708, 2438}, {0} },
+	     {{6004, 5671, 5104}, {0} },
+	     {{12010, 11342, 10208}, {0} },
+	     {{24020, 22685, 20417}, {0} }} ,
+	{12, {{1549, 1463, 1316}, {0} },
+	     {{3097, 2925, 2633}, {0} },
+	     {{6485, 6125, 5513}, {0} },
+	     {{12971, 12250, 11025}, {0} },
+	     {{25941, 24500, 22050}, {0} }} ,
+	{13, {{1721, 1625, 1463}, {0} },
+	     {{3441, 3250, 2925}, {0} },
+	     {{7206, 6806, 6125}, {0} },
+	     {{14412, 13611, 12250}, {0}},
+	     {{28824, 27222, 24500}, {0}}} ,
+};
+
+/*MCS parameters with Nss = 2*/
+static const struct index_eht_data_rate_type eht_mcs_nss2[] = {
+/* MCS,  {dcm0:0.8/1.6/3.2}, {dcm1:0.8/1.6/3.2} */
+	{0,  {{172,   163,   146 }, {0} }, /* EHT20 */
+	     {{344,   325,   293 }, {0} }, /* EHT40 */
+	     {{721,   681,   613 }, {0} }, /* EHT80 */
+	     {{1442, 1362, 1225},   {0} }, /* EHT160 */
+	     {{2882, 2722, 2450},   {0} } } , /* EHT320 */
+	{1,  {{344,   325,   293 }, {0} },
+	     {{688,   650,   585 }, {0} },
+	     {{1441,  1361,  1225}, {0} },
+	     {{2882, 2722, 2450},   {0}},
+	     {{5764, 5444, 4900},   {0} }} ,
+	{2,  {{516,   488,   439 }, {0} },
+	     {{1032,  975,   878 }, {0} },
+	     {{2162,  2042,  1838}, {0} },
+	     {{4324, 4084, 3676}, {0} },
+	     {{8648, 8166, 7350}, {0} } } ,
+	{3,  {{688,   650,   585 }, {0} },
+	     {{1376,  1300,  1170}, {0} },
+	     {{2882,  2722,  2450}, {0} },
+	     {{5764, 5444, 4900}, {0} },
+	     {{11530, 10888, 9800}, {0}} } ,
+	{4,  {{1032,  975,   878 }, {0} },
+	     {{2065,  1950,  1755}, {0} },
+	     {{4324,  4083,  3675}, {0} },
+	     {{8648, 8166, 7350}, {0} },
+	     {{17294, 16334, 14700}, {0}}},
+	{5,  {{1376,  1300,  1170}, {0} },
+	     {{2753,  2600,  2340}, {0} },
+	     {{5765,  5444,  4900}, {0} },
+	     {{11530, 10888, 9800}, {0} },
+	     {{23058, 21778, 19600}, {0} }} ,
+	{6,  {{1549,  1463,  1316}, {0} },
+	     {{3097,  2925,  2633}, {0} },
+	     {{6485,  6125,  5513}, {0} },
+	     {{12977, 12250, 11026}, {0} },
+	     {{25942, 24500, 22050}, {0} }} ,
+	{7,  {{1721,  1625,  1463}, {0} },
+	     {{3441,  3250,  2925}, {0} },
+	     {{7206,  6806,  6125}, {0} },
+	     {{14412, 13612, 12250}, {0} },
+	     {{28824, 27222, 24500}, {0} }} ,
+	{8,  {{2065,  1950,  1755}, {0} },
+	     {{4129,  3900,  3510}, {0} },
+	     {{8647,  8167,  7350}, {0} },
+	     {{17294, 16334, 14700}, {0} },
+	     {{34588, 32666, 29400}, {0} }} ,
+	{9,  {{2294,  2167,  1950}, {0} },
+	     {{4588,  4333,  3900}, {0} },
+	     {{9607,  9074,  8166}, {0} },
+	     {{19216, 18148, 16334}, {0} },
+	     {{38432, 36296, 32666}, {0} }} ,
+	{10, {{2581,  2438,  2194}, {0} },
+	     {{5162,  4875,  4388}, {0} },
+	     {{10809, 10208, 9188}, {0} },
+	     {{21618, 20416, 18376}, {0} },
+	     {{43236, 40834, 36750}, {0} }} ,
+	{11, {{2868,  2708,  2438}, {0} },
+	     {{5735,  5417,  4875}, {0} },
+	     {{12010, 11343, 10208}, {0} },
+	     {{24020, 22686, 20416}, {0} },
+	     {{48040, 45370, 40834}, {0} }} ,
+	{12, {{3097,  2925,  2633}, {0} },
+	     {{6194,  5850,  5265}, {0} },
+	     {{12971, 12250, 11025}, {0} },
+	     {{25942, 24500, 22050}, {0} },
+	     {{51882, 49000, 44100}, {0} }} ,
+	{13, {{3441,  3250,  2925}, {0} },
+	     {{6882,  6500,  5850}, {0} },
+	     {{14412, 13611, 12250}, {0} },
+	     {{28824, 27222, 24500}, {0} },
+	     {{57648, 54444, 49000}, {0} }}
+};
+
 /**
  * wma_convert_eht_cap() - convert EHT capabilities into dot11f structure
  * @eht_cap: pointer to dot11f structure
@@ -155,6 +306,75 @@ wma_update_eht_cap_support_for_320mhz(struct target_psoc_info *tgt_hdl,
 	wma_debug("Support for 320MHz 0x%01x", eht_cap->support_320mhz_6ghz);
 }
 
+static void
+wma_update_eht_20mhz_only_mcs(uint32_t *mcs_2g_20, tDot11fIEeht_cap *eht_cap)
+{
+	eht_cap->bw_20_rx_max_nss_for_mcs_0_to_7 |= QDF_GET_BITS(*mcs_2g_20, 0, 4);
+	eht_cap->bw_20_tx_max_nss_for_mcs_0_to_7 |= QDF_GET_BITS(*mcs_2g_20, 4, 4);
+	eht_cap->bw_20_rx_max_nss_for_mcs_8_and_9 |= QDF_GET_BITS(*mcs_2g_20, 8, 4);
+	eht_cap->bw_20_tx_max_nss_for_mcs_8_and_9 |=
+						QDF_GET_BITS(*mcs_2g_20, 12, 4);
+	eht_cap->bw_20_rx_max_nss_for_mcs_10_and_11 |=
+						QDF_GET_BITS(*mcs_2g_20, 16, 4);
+	eht_cap->bw_20_tx_max_nss_for_mcs_10_and_11 |=
+						QDF_GET_BITS(*mcs_2g_20, 20, 4);
+	eht_cap->bw_20_rx_max_nss_for_mcs_12_and_13 |=
+						QDF_GET_BITS(*mcs_2g_20, 24, 4);
+	eht_cap->bw_20_tx_max_nss_for_mcs_12_and_13 |=
+						QDF_GET_BITS(*mcs_2g_20, 28, 4);
+}
+
+static void
+wma_update_eht_le_80mhz_mcs(uint32_t *mcs_le_80, tDot11fIEeht_cap *eht_cap)
+{
+	eht_cap->bw_le_80_rx_max_nss_for_mcs_0_to_9 |=
+						QDF_GET_BITS(*mcs_le_80, 0, 4);
+	eht_cap->bw_le_80_tx_max_nss_for_mcs_0_to_9 |=
+						QDF_GET_BITS(*mcs_le_80, 4, 4);
+	eht_cap->bw_le_80_rx_max_nss_for_mcs_10_and_11 |=
+						QDF_GET_BITS(*mcs_le_80, 8, 4);
+	eht_cap->bw_le_80_tx_max_nss_for_mcs_10_and_11 |=
+						QDF_GET_BITS(*mcs_le_80, 12, 4);
+	eht_cap->bw_le_80_rx_max_nss_for_mcs_12_and_13 |=
+						QDF_GET_BITS(*mcs_le_80, 16, 4);
+	eht_cap->bw_le_80_tx_max_nss_for_mcs_12_and_13 |=
+						QDF_GET_BITS(*mcs_le_80, 20, 4);
+}
+
+static void
+wma_update_eht_160mhz_mcs(uint32_t *mcs_160mhz, tDot11fIEeht_cap *eht_cap)
+{
+	eht_cap->bw_160_rx_max_nss_for_mcs_0_to_9 |=
+						QDF_GET_BITS(*mcs_160mhz, 0, 4);
+	eht_cap->bw_160_tx_max_nss_for_mcs_0_to_9 |=
+						QDF_GET_BITS(*mcs_160mhz, 4, 4);
+	eht_cap->bw_160_rx_max_nss_for_mcs_10_and_11 |=
+						QDF_GET_BITS(*mcs_160mhz, 8, 4);
+	eht_cap->bw_160_tx_max_nss_for_mcs_10_and_11 |=
+					       QDF_GET_BITS(*mcs_160mhz, 12, 4);
+	eht_cap->bw_160_rx_max_nss_for_mcs_12_and_13 |=
+					       QDF_GET_BITS(*mcs_160mhz, 16, 4);
+	eht_cap->bw_160_tx_max_nss_for_mcs_12_and_13 |=
+					       QDF_GET_BITS(*mcs_160mhz, 20, 4);
+}
+
+static void
+wma_update_eht_320mhz_mcs(uint32_t *mcs_320mhz, tDot11fIEeht_cap *eht_cap)
+{
+	eht_cap->bw_320_rx_max_nss_for_mcs_0_to_9 |=
+						QDF_GET_BITS(*mcs_320mhz, 0, 4);
+	eht_cap->bw_320_tx_max_nss_for_mcs_0_to_9 |=
+						QDF_GET_BITS(*mcs_320mhz, 4, 4);
+	eht_cap->bw_320_rx_max_nss_for_mcs_10_and_11 |=
+						QDF_GET_BITS(*mcs_320mhz, 8, 4);
+	eht_cap->bw_320_tx_max_nss_for_mcs_10_and_11 |=
+					       QDF_GET_BITS(*mcs_320mhz, 12, 4);
+	eht_cap->bw_320_rx_max_nss_for_mcs_12_and_13 |=
+					       QDF_GET_BITS(*mcs_320mhz, 16, 4);
+	eht_cap->bw_320_tx_max_nss_for_mcs_12_and_13 |=
+					       QDF_GET_BITS(*mcs_320mhz, 20, 4);
+}
+
 void wma_update_target_ext_eht_cap(struct target_psoc_info *tgt_hdl,
 				   struct wma_tgt_cfg *tgt_cfg)
 {
@@ -163,9 +383,10 @@ void wma_update_target_ext_eht_cap(struct target_psoc_info *tgt_hdl,
 	tDot11fIEeht_cap *eht_cap_5g = &tgt_cfg->eht_cap_5g;
 	int i, num_hw_modes, total_mac_phy_cnt;
 	tDot11fIEeht_cap eht_cap_mac;
-	struct wlan_psoc_host_mac_phy_caps_ext2 *mac_cap, *mac_phy_cap;
+	struct wlan_psoc_host_mac_phy_caps_ext2 *mac_phy_cap, *mac_phy_caps2;
 	struct wlan_psoc_host_mac_phy_caps *host_cap;
 	uint32_t supported_bands;
+	uint32_t *mcs_supp;
 
 	qdf_mem_zero(eht_cap_2g, sizeof(tDot11fIEeht_cap));
 	qdf_mem_zero(eht_cap_5g, sizeof(tDot11fIEeht_cap));
@@ -191,27 +412,48 @@ void wma_update_target_ext_eht_cap(struct target_psoc_info *tgt_hdl,
 		return;
 	}
 
-	supported_bands = host_cap->supported_bands;
 	for (i = 0; i < total_mac_phy_cnt; i++) {
+		supported_bands = host_cap[i].supported_bands;
 		qdf_mem_zero(&eht_cap_mac, sizeof(tDot11fIEeht_cap));
-		mac_cap = &mac_phy_cap[i];
+		mac_phy_caps2 = &mac_phy_cap[i];
 		if (supported_bands & WLAN_2G_CAPABILITY) {
 			wma_convert_eht_cap(&eht_cap_mac,
-					    mac_cap->eht_cap_info_2G,
-					    mac_cap->eht_cap_phy_info_2G);
-			wma_convert_eht_cap(eht_cap_2g,
-					    mac_cap->eht_cap_info_2G,
-					    mac_cap->eht_cap_phy_info_2G);
+					    mac_phy_caps2->eht_cap_info_2G,
+					    mac_phy_caps2->eht_cap_phy_info_2G);
+				/* TODO: PPET */
+			/* WMI_EHT_SUPP_MCS_20MHZ_ONLY */
+			mcs_supp = &mac_phy_caps2->eht_supp_mcs_ext_2G[0];
+			wma_update_eht_20mhz_only_mcs(mcs_supp, &eht_cap_mac);
+			/* WMI_EHT_SUPP_MCS_LE_80MHZ */
+			mcs_supp = &mac_phy_caps2->eht_supp_mcs_ext_2G[1];
+			wma_update_eht_le_80mhz_mcs(mcs_supp, &eht_cap_mac);
+
+			qdf_mem_copy(eht_cap_2g, &eht_cap_mac,
+				     sizeof(tDot11fIEeht_cap));
 		}
 
 		if (supported_bands & WLAN_5G_CAPABILITY) {
 			qdf_mem_zero(&eht_cap_mac, sizeof(tDot11fIEeht_cap));
 			wma_convert_eht_cap(&eht_cap_mac,
-					    mac_cap->eht_cap_info_5G,
-					    mac_cap->eht_cap_phy_info_5G);
-			wma_convert_eht_cap(eht_cap_5g,
-					    mac_cap->eht_cap_info_5G,
-					    mac_cap->eht_cap_phy_info_5G);
+					    mac_phy_caps2->eht_cap_info_5G,
+					    mac_phy_caps2->eht_cap_phy_info_5G);
+
+			/* WMI_EHT_SUPP_MCS_20MHZ_ONLY */
+			mcs_supp = &mac_phy_caps2->eht_supp_mcs_ext_5G[0];
+			wma_update_eht_20mhz_only_mcs(mcs_supp, &eht_cap_mac);
+			/* WMI_EHT_SUPP_MCS_LE_80MHZ */
+			mcs_supp = &mac_phy_caps2->eht_supp_mcs_ext_5G[1];
+			wma_update_eht_le_80mhz_mcs(mcs_supp, &eht_cap_mac);
+
+			/* WMI_EHT_SUPP_MCS_160MHZ */
+			mcs_supp = &mac_phy_caps2->eht_supp_mcs_ext_5G[2];
+			wma_update_eht_160mhz_mcs(mcs_supp, &eht_cap_mac);
+			/* WMI_EHT_SUPP_MCS_320MHZ */
+			mcs_supp = &mac_phy_caps2->eht_supp_mcs_ext_5G[3];
+			wma_update_eht_320mhz_mcs(mcs_supp, &eht_cap_mac);
+
+			qdf_mem_copy(eht_cap_5g, &eht_cap_mac,
+				     sizeof(tDot11fIEeht_cap));
 		}
 	}
 	qdf_mem_copy(eht_cap, &eht_cap_mac, sizeof(tDot11fIEeht_cap));
@@ -246,6 +488,8 @@ void wma_print_eht_cap(tDot11fIEeht_cap *eht_cap)
 		       eht_cap->scs_traffic_desc);
 	wma_nofl_debug("\tMaximum MPDU Length: 0x%01x",
 		       eht_cap->max_mpdu_len);
+	wma_nofl_debug("\tMaximum A-MPDU Length Exponent Extension: 0x%01x",
+		       eht_cap->max_a_mpdu_len_exponent_ext);
 
 	/* EHT PHY Capabilities */
 	wma_nofl_debug("\t320 MHz In 6 GHz: 0x%01x",
@@ -327,6 +571,58 @@ void wma_print_eht_cap(tDot11fIEeht_cap *eht_cap)
 		       eht_cap->rx_1k_qam_in_wider_bw_dl_ofdma);
 	wma_nofl_debug("\tRx 4096-QAM in wider bandwidth DL OFDMA support: 0x%01x",
 		       eht_cap->rx_4k_qam_in_wider_bw_dl_ofdma);
+	wma_nofl_debug("\t EHT MCS 20 rx 0-7 0x%x",
+		       eht_cap->bw_20_rx_max_nss_for_mcs_0_to_7);
+	wma_nofl_debug("\t EHT MCS 20 tx 0-7 0x%x",
+		       eht_cap->bw_20_tx_max_nss_for_mcs_0_to_7);
+	wma_nofl_debug("\t EHT MCS 20 rx 8-9 0x%x",
+		       eht_cap->bw_20_rx_max_nss_for_mcs_8_and_9);
+	wma_nofl_debug("\t EHT MCS 20 tx 8-9 0x%x",
+		       eht_cap->bw_20_tx_max_nss_for_mcs_8_and_9);
+	wma_nofl_debug("\t EHT MCS 20 rx 10-11 0x%x",
+		       eht_cap->bw_20_rx_max_nss_for_mcs_10_and_11);
+	wma_nofl_debug("\t EHT MCS 20 tx 10-11 0x%x",
+		       eht_cap->bw_20_tx_max_nss_for_mcs_10_and_11);
+	wma_nofl_debug("\t EHT MCS 20 rx 12-13 0x%x",
+		       eht_cap->bw_20_rx_max_nss_for_mcs_12_and_13);
+	wma_nofl_debug("\t EHT MCS 20 tx 12-13 0x%x",
+		       eht_cap->bw_20_tx_max_nss_for_mcs_12_and_13);
+	wma_nofl_debug("\t EHT MCS 80 rx 0-9 0x%x",
+		       eht_cap->bw_le_80_rx_max_nss_for_mcs_0_to_9);
+	wma_nofl_debug("\t EHT MCS 80 tx 0-9 0x%x",
+		       eht_cap->bw_le_80_tx_max_nss_for_mcs_0_to_9);
+	wma_nofl_debug("\t EHT MCS 80 rx 10-11 0x%x",
+		       eht_cap->bw_le_80_rx_max_nss_for_mcs_10_and_11);
+	wma_nofl_debug("\t EHT MCS 80 tx 10-11 0x%x",
+		       eht_cap->bw_le_80_tx_max_nss_for_mcs_10_and_11);
+	wma_nofl_debug("\t EHT MCS 80 rx 12-13 0x%x",
+		       eht_cap->bw_le_80_rx_max_nss_for_mcs_12_and_13);
+	wma_nofl_debug("\t EHT MCS 80 tx 12-13 0x%x",
+		       eht_cap->bw_le_80_tx_max_nss_for_mcs_12_and_13);
+	wma_nofl_debug("\t EHT MCS 160 rx 0-9 0x%x",
+		       eht_cap->bw_160_rx_max_nss_for_mcs_0_to_9);
+	wma_nofl_debug("\t EHT MCS 160 tx 0-9 0x%x",
+		       eht_cap->bw_160_tx_max_nss_for_mcs_0_to_9);
+	wma_nofl_debug("\t EHT MCS 160 rx 10-11 0x%x",
+		       eht_cap->bw_160_rx_max_nss_for_mcs_10_and_11);
+	wma_nofl_debug("\t EHT MCS 160 tx 10-11 0x%x",
+		       eht_cap->bw_160_tx_max_nss_for_mcs_10_and_11);
+	wma_nofl_debug("\t EHT MCS 160 rx 12-13 0x%x",
+		       eht_cap->bw_160_rx_max_nss_for_mcs_12_and_13);
+	wma_nofl_debug("\t EHT MCS 160 rx 12-13 0x%x",
+		       eht_cap->bw_160_tx_max_nss_for_mcs_12_and_13);
+	wma_nofl_debug("\t EHT MCS 320 rx 0-9 0x%x",
+		       eht_cap->bw_320_rx_max_nss_for_mcs_0_to_9);
+	wma_nofl_debug("\t EHT MCS 320 tx 0-9 0x%x",
+		       eht_cap->bw_320_tx_max_nss_for_mcs_0_to_9);
+	wma_nofl_debug("\t EHT MCS 320 rx 10-11 0x%x",
+		       eht_cap->bw_320_rx_max_nss_for_mcs_10_and_11);
+	wma_nofl_debug("\t EHT MCS 320 tx 10-11 0x%x",
+		       eht_cap->bw_320_tx_max_nss_for_mcs_10_and_11);
+	wma_nofl_debug("\t EHT MCS 320 rx 12-13 0x%x",
+		       eht_cap->bw_320_rx_max_nss_for_mcs_12_and_13);
+	wma_nofl_debug("\t EHT MCS 320 tx 12-13 0x%x",
+		       eht_cap->bw_320_tx_max_nss_for_mcs_12_and_13);
 }
 
 void wma_print_eht_phy_cap(uint32_t *phy_cap)
@@ -448,6 +744,7 @@ void wma_populate_peer_eht_cap(struct peer_assoc_params *peer,
 	tDot11fIEeht_cap *eht_cap = &params->eht_config;
 	uint32_t *phy_cap = peer->peer_eht_cap_phyinfo;
 	uint32_t *mac_cap = peer->peer_eht_cap_macinfo;
+	struct supported_rates *rates;
 
 	if (!params->eht_capable)
 		return;
@@ -525,12 +822,97 @@ void wma_populate_peer_eht_cap(struct peer_assoc_params *peer,
 	WMI_EHTCAP_PHY_RX4096QAMWIDERBWDLOFDMA_SET(phy_cap,
 				eht_cap->rx_4k_qam_in_wider_bw_dl_ofdma);
 
-	qdf_mem_copy(peer->peer_eht_rx_mcs_set, peer->peer_he_rx_mcs_set,
-		     sizeof(peer->peer_he_rx_mcs_set));
-	qdf_mem_copy(peer->peer_eht_tx_mcs_set, peer->peer_he_tx_mcs_set,
-		     sizeof(peer->peer_he_tx_mcs_set));
+	peer->peer_eht_mcs_count = 0;
+	rates = &params->supportedRates;
 
-	peer->peer_eht_mcs_count = peer->peer_he_mcs_count;
+	/*
+	 * Convert eht mcs to firmware understandable format
+	 * BITS 0:3 indicates support for mcs 0 to 7
+	 * BITS 4:7 indicates support for mcs 8 and 9
+	 * BITS 8:11 indicates support for mcs 10 and 11
+	 * BITS 12:15 indicates support for mcs 12 and 13
+	 */
+	switch (params->ch_width) {
+	case CH_WIDTH_320MHZ:
+		peer->peer_eht_mcs_count++;
+		QDF_SET_BITS(peer->peer_eht_rx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX2],
+			     0, 4, rates->bw_320_rx_max_nss_for_mcs_0_to_9);
+		QDF_SET_BITS(peer->peer_eht_tx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX2],
+			     0, 4, rates->bw_320_tx_max_nss_for_mcs_0_to_9);
+		QDF_SET_BITS(peer->peer_eht_rx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX2],
+			     4, 4, rates->bw_320_rx_max_nss_for_mcs_0_to_9);
+		QDF_SET_BITS(peer->peer_eht_tx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX2],
+			     4, 4, rates->bw_320_tx_max_nss_for_mcs_0_to_9);
+		QDF_SET_BITS(peer->peer_eht_rx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX2],
+			     8, 4, rates->bw_320_rx_max_nss_for_mcs_10_and_11);
+		QDF_SET_BITS(peer->peer_eht_tx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX2],
+			     8, 4, rates->bw_320_tx_max_nss_for_mcs_10_and_11);
+		QDF_SET_BITS(peer->peer_eht_rx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX2],
+			     12, 4, rates->bw_320_rx_max_nss_for_mcs_12_and_13);
+		QDF_SET_BITS(peer->peer_eht_tx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX2],
+			     12, 4, rates->bw_320_tx_max_nss_for_mcs_12_and_13);
+		/* fall through */
+	case CH_WIDTH_160MHZ:
+		peer->peer_eht_mcs_count++;
+		QDF_SET_BITS(peer->peer_eht_rx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX1],
+			     0, 4, rates->bw_160_rx_max_nss_for_mcs_0_to_9);
+		QDF_SET_BITS(peer->peer_eht_tx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX1],
+			     0, 4, rates->bw_160_tx_max_nss_for_mcs_0_to_9);
+		QDF_SET_BITS(peer->peer_eht_rx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX1],
+			     4, 4, rates->bw_160_rx_max_nss_for_mcs_0_to_9);
+		QDF_SET_BITS(peer->peer_eht_tx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX1],
+			     4, 4, rates->bw_160_tx_max_nss_for_mcs_0_to_9);
+		QDF_SET_BITS(peer->peer_eht_rx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX1],
+			     8, 4, rates->bw_160_rx_max_nss_for_mcs_10_and_11);
+		QDF_SET_BITS(peer->peer_eht_tx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX1],
+			     8, 4, rates->bw_160_rx_max_nss_for_mcs_10_and_11);
+		QDF_SET_BITS(peer->peer_eht_rx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX1],
+			     12, 4, rates->bw_160_rx_max_nss_for_mcs_12_and_13);
+		QDF_SET_BITS(peer->peer_eht_tx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX1],
+			     12, 4, rates->bw_160_tx_max_nss_for_mcs_12_and_13);
+		/* fall through */
+	case CH_WIDTH_80MHZ:
+	case CH_WIDTH_40MHZ:
+		peer->peer_eht_mcs_count++;
+		QDF_SET_BITS(peer->peer_eht_rx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX0],
+			     0, 4, rates->bw_le_80_rx_max_nss_for_mcs_0_to_9);
+		QDF_SET_BITS(peer->peer_eht_tx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX0],
+			     0, 4, rates->bw_le_80_tx_max_nss_for_mcs_0_to_9);
+		QDF_SET_BITS(peer->peer_eht_rx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX0],
+			     4, 4, rates->bw_le_80_rx_max_nss_for_mcs_0_to_9);
+		QDF_SET_BITS(peer->peer_eht_tx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX0],
+			     4, 4, rates->bw_le_80_tx_max_nss_for_mcs_0_to_9);
+		QDF_SET_BITS(peer->peer_eht_rx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX0],
+			     8, 4, rates->bw_le_80_rx_max_nss_for_mcs_10_and_11);
+		QDF_SET_BITS(peer->peer_eht_tx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX0],
+			     8, 4, rates->bw_le_80_tx_max_nss_for_mcs_10_and_11);
+		QDF_SET_BITS(peer->peer_eht_rx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX0],
+			     12, 4, rates->bw_le_80_rx_max_nss_for_mcs_12_and_13);
+		QDF_SET_BITS(peer->peer_eht_tx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX0],
+			     12, 4, rates->bw_le_80_rx_max_nss_for_mcs_12_and_13);
+		break;
+	case CH_WIDTH_20MHZ:
+		peer->peer_eht_mcs_count++;
+		QDF_SET_BITS(peer->peer_eht_rx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX0],
+			     0, 4, rates->bw_20_rx_max_nss_for_mcs_0_to_7);
+		QDF_SET_BITS(peer->peer_eht_tx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX0],
+			     0, 4, rates->bw_20_tx_max_nss_for_mcs_0_to_7);
+		QDF_SET_BITS(peer->peer_eht_rx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX0],
+			     4, 4, rates->bw_20_rx_max_nss_for_mcs_8_and_9);
+		QDF_SET_BITS(peer->peer_eht_tx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX0],
+			     4, 4, rates->bw_20_tx_max_nss_for_mcs_8_and_9);
+		QDF_SET_BITS(peer->peer_eht_rx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX0],
+			     8, 4, rates->bw_20_rx_max_nss_for_mcs_10_and_11);
+		QDF_SET_BITS(peer->peer_eht_tx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX0],
+			     8, 4, rates->bw_20_tx_max_nss_for_mcs_10_and_11);
+		QDF_SET_BITS(peer->peer_eht_rx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX0],
+			     12, 4, rates->bw_20_rx_max_nss_for_mcs_12_and_13);
+		QDF_SET_BITS(peer->peer_eht_tx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX0],
+			     12, 4, rates->bw_20_tx_max_nss_for_mcs_12_and_13);
+		/* fall through */
+	default:
+		break;
+	}
 
 	wma_print_eht_cap(eht_cap);
 	wma_debug("Peer EHT Capabilities:");
@@ -605,5 +987,147 @@ void wma_set_eht_txbf_params(uint8_t vdev_id, bool su_bfer,
 
 	if (QDF_IS_STATUS_ERROR(status))
 		wma_err("failed to set EHTMU_MODE(status = %d)", status);
+}
+
+QDF_STATUS wma_set_bss_rate_flags_eht(enum tx_rate_info *rate_flags,
+				      struct bss_params *add_bss)
+{
+	if (!add_bss->eht_capable)
+		return QDF_STATUS_E_NOSUPPORT;
+
+	*rate_flags |= wma_get_eht_rate_flags(add_bss->ch_width);
+
+	wma_debug("ehe_capable %d rate_flags 0x%x", add_bss->eht_capable,
+		  *rate_flags);
+	return QDF_STATUS_SUCCESS;
+}
+
+bool wma_get_bss_eht_capable(struct bss_params *add_bss)
+{
+	return add_bss->eht_capable;
+}
+
+enum tx_rate_info wma_get_eht_rate_flags(enum phy_ch_width ch_width)
+{
+	enum tx_rate_info rate_flags = 0;
+
+	if (ch_width == CH_WIDTH_320MHZ)
+		rate_flags |= TX_RATE_EHT320 | TX_RATE_EHT160 |
+				TX_RATE_EHT80 | TX_RATE_EHT40 | TX_RATE_EHT20;
+	else if (ch_width == CH_WIDTH_160MHZ || ch_width == CH_WIDTH_80P80MHZ)
+		rate_flags |= TX_RATE_EHT160 | TX_RATE_EHT80 | TX_RATE_EHT40 |
+				TX_RATE_EHT20;
+	else if (ch_width == CH_WIDTH_80MHZ)
+		rate_flags |= TX_RATE_EHT80 | TX_RATE_EHT40 | TX_RATE_EHT20;
+	else if (ch_width)
+		rate_flags |= TX_RATE_EHT40 | TX_RATE_EHT20;
+	else
+		rate_flags |= TX_RATE_EHT20;
+
+	return rate_flags;
+}
+
+uint16_t wma_match_eht_rate(uint16_t raw_rate,
+			    enum tx_rate_info rate_flags,
+			    uint8_t *nss, uint8_t *dcm,
+			    enum txrate_gi *guard_interval,
+			    enum tx_rate_info *mcs_rate_flag,
+			    uint8_t *p_index)
+{
+	uint8_t index;
+	uint8_t dcm_index_max = 1;
+	uint8_t dcm_index;
+	uint16_t match_rate = 0;
+	const uint16_t *nss1_rate;
+	const uint16_t *nss2_rate;
+
+	*p_index = 0;
+	if (!(rate_flags & (TX_RATE_EHT320 | TX_RATE_EHT160 | TX_RATE_EHT80 |
+	      TX_RATE_EHT40 | TX_RATE_EHT20)))
+		return 0;
+
+	for (index = 0; index < MAX_EHT_MCS_IDX; index++) {
+		dcm_index_max = IS_MCS_HAS_DCM_RATE(index) ? 2 : 1;
+		for (dcm_index = 0; dcm_index < dcm_index_max; dcm_index++) {
+			if (rate_flags & TX_RATE_EHT320) {
+				nss1_rate = &eht_mcs_nss1[index].supported_eht320_rate[dcm_index][0];
+				nss2_rate = &eht_mcs_nss2[index].supported_eht320_rate[dcm_index][0];
+				match_rate = wma_mcs_rate_match(raw_rate, 1,
+								nss1_rate,
+								nss2_rate,
+								nss,
+								guard_interval);
+				if (match_rate)
+					goto rate_found;
+			}
+			if (rate_flags & TX_RATE_EHT160) {
+				nss1_rate = &eht_mcs_nss1[index].supported_eht160_rate[dcm_index][0];
+				nss2_rate = &eht_mcs_nss2[index].supported_eht160_rate[dcm_index][0];
+				match_rate = wma_mcs_rate_match(raw_rate, 1,
+								nss1_rate,
+								nss2_rate,
+								nss,
+								guard_interval);
+				if (match_rate)
+					goto rate_found;
+			}
+
+			if (rate_flags & (TX_RATE_EHT80 | TX_RATE_EHT160)) {
+				nss1_rate = &eht_mcs_nss1[index].supported_eht80_rate[dcm_index][0];
+				nss2_rate = &eht_mcs_nss2[index].supported_eht80_rate[dcm_index][0];
+				/* check for he80 nss1/2 rate set */
+				match_rate = wma_mcs_rate_match(raw_rate, 1,
+								nss1_rate,
+								nss2_rate,
+								nss,
+								guard_interval);
+				if (match_rate) {
+					*mcs_rate_flag &= ~TX_RATE_EHT160;
+					goto rate_found;
+				}
+			}
+
+			if (rate_flags & (TX_RATE_EHT40 | TX_RATE_EHT80 |
+					  TX_RATE_EHT160)) {
+				nss1_rate = &eht_mcs_nss1[index].supported_eht40_rate[dcm_index][0];
+				nss2_rate = &eht_mcs_nss2[index].supported_eht40_rate[dcm_index][0];
+				match_rate = wma_mcs_rate_match(raw_rate, 1,
+								nss1_rate,
+								nss2_rate,
+								nss,
+								guard_interval);
+
+				if (match_rate) {
+					*mcs_rate_flag &= ~(TX_RATE_EHT80 |
+							    TX_RATE_EHT160);
+					goto rate_found;
+				}
+			}
+
+			if (rate_flags & (TX_RATE_EHT80 | TX_RATE_EHT40 |
+				TX_RATE_HE20 | TX_RATE_HE160)) {
+				nss1_rate = &eht_mcs_nss1[index].supported_eht20_rate[dcm_index][0];
+				nss2_rate = &eht_mcs_nss2[index].supported_eht20_rate[dcm_index][0];
+				match_rate = wma_mcs_rate_match(raw_rate, 1,
+								nss1_rate,
+								nss2_rate,
+								nss,
+								guard_interval);
+
+				if (match_rate) {
+					*mcs_rate_flag &= TX_RATE_EHT20;
+					goto rate_found;
+				}
+			}
+		}
+	}
+
+rate_found:
+	if (match_rate) {
+		if (dcm_index == 1)
+			*dcm = 1;
+		*p_index = index;
+	}
+	return match_rate;
 }
 #endif

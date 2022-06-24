@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -34,7 +35,6 @@ struct pld_context {
 	struct list_head dev_list;
 	uint32_t pld_driver_state;
 	uint8_t mode;
-	enum pld_suspend_mode suspend_mode;
 };
 
 struct pld_context *pld_get_global_context(void);

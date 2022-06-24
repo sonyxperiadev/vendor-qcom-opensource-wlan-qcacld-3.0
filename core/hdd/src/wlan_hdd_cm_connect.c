@@ -52,6 +52,7 @@
 #include "wlan_hdd_hostapd.h"
 #include <wlan_twt_ucfg_ext_api.h>
 #include <osif_twt_internal.h>
+#include "wlan_osif_features.h"
 
 bool hdd_cm_is_vdev_associated(struct hdd_adapter *adapter)
 {
@@ -1261,6 +1262,9 @@ hdd_cm_connect_success_pre_user_update(struct wlan_objmgr_vdev *vdev,
 		if (is_roam)
 			is_auth_required =
 				hdd_cm_is_roam_auth_required(sta_ctx, rsp);
+		if (is_auth_required)
+			wlan_acquire_peer_key_wakelock(hdd_ctx->pdev,
+						       rsp->bssid.bytes);
 		hdd_roam_register_sta(adapter, &rsp->bssid, is_auth_required);
 	} else {
 		/* for host roam/LFR2 */

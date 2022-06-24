@@ -2055,10 +2055,6 @@ extract_roam_frame_info_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 
 		dst_buf->is_rsp = WMI_GET_BITS(src_data->frame_info,
 					       WLAN_FRAME_INFO_RESP_OFFSET, 1);
-		dst_buf->is_rsp &=
-			(dst_buf->type != WMI_ROAM_FRAME_INFO_FRAME_TYPE_EXT &&
-			 dst_buf->subtype == MGMT_SUBTYPE_AUTH);
-
 		dst_buf->seq_num = WMI_GET_BITS(src_data->frame_info,
 						WLAN_FRAME_INFO_SEQ_NUM_OFFSET,
 						16);
@@ -2259,6 +2255,7 @@ wmi_fill_roam_sync_buffer(struct wlan_objmgr_vdev *vdev,
 			  WMI_ROAM_SYNCH_EVENTID_param_tlvs *param_buf)
 {
 	wmi_roam_synch_event_fixed_param *synch_event;
+	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
 	wmi_channel *chan = NULL;
 	wmi_key_material *key;
 	wmi_key_material_ext *key_ft;
@@ -2283,6 +2280,9 @@ wmi_fill_roam_sync_buffer(struct wlan_objmgr_vdev *vdev,
 		  roam_sync_ind->rssi,
 		  roam_sync_ind->isBeacon);
 
+	cdp_update_roaming_peer_in_vdev(soc, synch_event->vdev_id,
+					roam_sync_ind->bssid.bytes,
+					synch_event->auth_status);
 	/*
 	 * If lengths of bcn_probe_rsp, reassoc_req and reassoc_rsp are zero in
 	 * synch_event driver would have received bcn_probe_rsp, reassoc_req

@@ -34,6 +34,7 @@
 #include "wni_api.h"
 #include "wlan_mlme_vdev_mgr_interface.h"
 #include "wlan_cm_api.h"
+#include "wlan_scan_api.h"
 
 static void if_mgr_enable_roaming_on_vdev(struct wlan_objmgr_pdev *pdev,
 					  void *object, void *arg)
@@ -767,6 +768,20 @@ QDF_STATUS if_mgr_validate_candidate(struct wlan_objmgr_vdev *vdev,
 		return QDF_STATUS_E_FAILURE;
 
 	/*
+	 * Do not allow STA to connect on 6Ghz or indoor channel for non dbs
+	 * hardware if SAP and skip_6g_and_indoor_freq_scan ini are present
+	 */
+	if (op_mode == QDF_STA_MODE &&
+	    !policy_mgr_is_sta_chan_valid_for_connect_and_roam(pdev,
+							       chan_freq)) {
+		ifmgr_debug("STA connection not allowed on bssid: "QDF_MAC_ADDR_FMT" with freq: %d (6Ghz or indoor(%d)), as not valid for connection",
+			    QDF_MAC_ADDR_REF(candidate_info->peer_addr.bytes),
+			    chan_freq,
+			    wlan_reg_is_freq_indoor(pdev, chan_freq));
+		return QDF_STATUS_E_INVAL;
+	}
+
+	/*
 	 * Ignore the BSS if any other vdev is already connected to it.
 	 */
 	qdf_copy_macaddr(&bssid_arg.peer_addr,
@@ -793,9 +808,14 @@ QDF_STATUS if_mgr_validate_candidate(struct wlan_objmgr_vdev *vdev,
 
 	/* If concurrency is not allowed select next bss */
 	conc_ext_flags = if_mgr_get_conc_ext_flags(vdev, candidate_info);
-	if (!policy_mgr_is_concurrency_allowed(psoc, mode, chan_freq,
-					       HW_MODE_20_MHZ,
-					       conc_ext_flags)) {
+	/*
+	 * Apply concurrency check only for non ML and ML assoc links only
+	 * For non-assoc ML link if concurrency check fails its will be forced
+	 * disabled in peer assoc.
+	 */
+	if (!wlan_vdev_mlme_is_mlo_link_vdev(vdev) &&
+	    !policy_mgr_is_concurrency_allowed(psoc, mode, chan_freq,
+					  HW_MODE_20_MHZ, conc_ext_flags)) {
 		ifmgr_info("Concurrency not allowed for this channel freq %d bssid "QDF_MAC_ADDR_FMT", selecting next",
 			   chan_freq,
 			   QDF_MAC_ADDR_REF(bssid_arg.peer_addr.bytes));

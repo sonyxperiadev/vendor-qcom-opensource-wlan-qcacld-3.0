@@ -83,6 +83,15 @@ void lim_send_reassoc_req_with_ft_ies_mgmt_frame(struct mac_context *mac_ctx,
 	bool vht_enabled = false;
 	tpSirMacMgmtHdr mac_hdr;
 	struct mlme_legacy_priv *mlme_priv;
+	int ret;
+	tDot11fIEExtCap extr_ext_cap;
+	QDF_STATUS sir_status;
+	bool extr_ext_flag = true;
+	uint32_t ie_offset = 0;
+	tDot11fIEExtCap bcn_ext_cap;
+	uint8_t *bcn_ie = NULL;
+	uint32_t bcn_ie_len = 0;
+	uint8_t *p_ext_cap = NULL;
 
 	if (!pe_session)
 		return;
@@ -107,6 +116,28 @@ void lim_send_reassoc_req_with_ft_ies_mgmt_frame(struct mac_context *mac_ctx,
 
 	qdf_mem_zero((uint8_t *) frm, sizeof(*frm));
 
+	if (add_ie_len && pe_session->is_ext_caps_present) {
+		qdf_mem_zero((uint8_t *)&extr_ext_cap,
+			     sizeof(tDot11fIEExtCap));
+		sir_status = lim_strip_extcap_update_struct(
+				mac_ctx, add_ie, &add_ie_len, &extr_ext_cap);
+		if (QDF_STATUS_SUCCESS != sir_status) {
+			extr_ext_flag = false;
+			pe_debug("Unable to Stripoff ExtCap IE from Assoc Req");
+		} else {
+			struct s_ext_cap *p_ext_cap = (struct s_ext_cap *)
+							extr_ext_cap.bytes;
+
+			if (p_ext_cap->interworking_service)
+				p_ext_cap->qos_map = 1;
+			extr_ext_cap.num_bytes =
+				lim_compute_ext_cap_ie_length(&extr_ext_cap);
+			extr_ext_flag = (extr_ext_cap.num_bytes > 0);
+		}
+	} else {
+		pe_debug("No addn IE or peer doesn't support addnIE for Assoc Req");
+		extr_ext_flag = false;
+	}
 	caps = mlm_reassoc_req->capabilityInfo;
 #if defined(FEATURE_WLAN_WAPI)
 	/*
@@ -321,6 +352,59 @@ void lim_send_reassoc_req_with_ft_ies_mgmt_frame(struct mac_context *mac_ctx,
 		populate_dot11f_he_6ghz_cap(mac_ctx, pe_session,
 					    &frm->he_6ghz_band_cap);
 	}
+	/*
+	 * Extcap IE now support variable length, merge Extcap IE from addn_ie
+	 * may change the frame size. Therefore, MUST merge ExtCap IE before
+	 * dot11f get packed payload size.
+	 */
+	if (extr_ext_flag)
+		lim_merge_extcap_struct(&frm->ExtCap, &extr_ext_cap, true);
+
+	/* Clear the bits in EXTCAP IE if AP not advertise it in beacon */
+	if (frm->ExtCap.present && pe_session->is_ext_caps_present) {
+		ie_offset = DOT11F_FF_TIMESTAMP_LEN +
+				DOT11F_FF_BEACONINTERVAL_LEN +
+				DOT11F_FF_CAPABILITIES_LEN;
+
+		qdf_mem_zero((uint8_t *)&bcn_ext_cap, sizeof(tDot11fIEExtCap));
+		if (pe_session->beacon && (pe_session->bcnLen >
+		    (ie_offset + sizeof(struct wlan_frame_hdr)))) {
+			bcn_ie = pe_session->beacon + ie_offset +
+						sizeof(struct wlan_frame_hdr);
+			bcn_ie_len = pe_session->bcnLen - ie_offset -
+						sizeof(struct wlan_frame_hdr);
+			p_ext_cap = (uint8_t *)wlan_get_ie_ptr_from_eid(
+							DOT11F_EID_EXTCAP,
+							bcn_ie, bcn_ie_len);
+			lim_update_extcap_struct(mac_ctx, p_ext_cap,
+						 &bcn_ext_cap);
+			lim_merge_extcap_struct(&frm->ExtCap, &bcn_ext_cap,
+						false);
+		}
+		/*
+		 * TWT extended capabilities should be populated after the
+		 * intersection of beacon caps and self caps is done because
+		 * the bits for TWT are unique to STA and AP and cannot be
+		 * intersected.
+		 */
+		populate_dot11f_twt_extended_caps(mac_ctx, pe_session,
+						  &frm->ExtCap);
+	}
+
+	/*
+	 * Do unpack to populate the add_ie buffer to frm structure
+	 * before packing the frm structure. In this way, the IE ordering
+	 * which the latest 802.11 spec mandates is maintained.
+	 */
+	if (add_ie_len) {
+		ret = dot11f_unpack_re_assoc_request(mac_ctx, add_ie,
+						     add_ie_len,
+						     frm, true);
+		if (DOT11F_FAILED(ret)) {
+			pe_err("unpack failed, ret: 0x%x", ret);
+			goto end;
+		}
+	}
 
 	if (lim_is_session_eht_capable(pe_session)) {
 		pe_debug("Populate EHT IEs");
@@ -337,7 +421,7 @@ void lim_send_reassoc_req_with_ft_ies_mgmt_frame(struct mac_context *mac_ctx,
 		pe_warn("Warnings in size calculation (0x%08x)", status);
 	}
 
-	bytes = payload + sizeof(tSirMacMgmtHdr) + add_ie_len;
+	bytes = payload + sizeof(tSirMacMgmtHdr);
 
 	pe_debug("FT IE Reassoc Req %d",
 		 mlme_priv->connect_info.ft_info.reassoc_ie_len);
@@ -378,12 +462,6 @@ void lim_send_reassoc_req_with_ft_ies_mgmt_frame(struct mac_context *mac_ctx,
 
 	pe_debug("*** Sending Re-Assoc Request length: %d %d to",
 		       bytes, payload);
-
-	if (add_ie_len) {
-		qdf_mem_copy(frame + sizeof(tSirMacMgmtHdr) + payload,
-			     add_ie, add_ie_len);
-		payload += add_ie_len;
-	}
 
 	if (pe_session->is11Rconnection &&
 	    mlme_priv->connect_info.ft_info.reassoc_ie_len) {
@@ -544,6 +622,15 @@ void lim_send_reassoc_req_mgmt_frame(struct mac_context *mac,
 	uint8_t smeSessionId = 0;
 	bool isVHTEnabled = false;
 	tpSirMacMgmtHdr pMacHdr;
+	int ret;
+	tDot11fIEExtCap extr_ext_cap;
+	QDF_STATUS sir_status;
+	bool extr_ext_flag = true;
+	uint32_t ie_offset = 0;
+	tDot11fIEExtCap bcn_ext_cap;
+	uint8_t *bcn_ie = NULL;
+	uint32_t bcn_ie_len = 0;
+	uint8_t *p_ext_cap = NULL;
 
 	if (!pe_session)
 		return;
@@ -559,6 +646,29 @@ void lim_send_reassoc_req_mgmt_frame(struct mac_context *mac,
 	pAddIE = pe_session->pLimReAssocReq->addIEAssoc.addIEdata;
 
 	qdf_mem_zero((uint8_t *) frm, sizeof(*frm));
+
+	if (nAddIELen && pe_session->is_ext_caps_present) {
+		qdf_mem_zero((uint8_t *)&extr_ext_cap,
+			     sizeof(tDot11fIEExtCap));
+		sir_status = lim_strip_extcap_update_struct(
+					mac, pAddIE, &nAddIELen, &extr_ext_cap);
+		if (QDF_STATUS_SUCCESS != sir_status) {
+			extr_ext_flag = false;
+			pe_debug("Unable to Stripoff ExtCap IE from Assoc Req");
+		} else {
+			struct s_ext_cap *p_ext_cap = (struct s_ext_cap *)
+							extr_ext_cap.bytes;
+
+			if (p_ext_cap->interworking_service)
+				p_ext_cap->qos_map = 1;
+			extr_ext_cap.num_bytes =
+				lim_compute_ext_cap_ie_length(&extr_ext_cap);
+			extr_ext_flag = (extr_ext_cap.num_bytes > 0);
+		}
+	} else {
+		pe_debug("No addn IE or peer doesn't support addnIE for Assoc Req");
+		extr_ext_flag = false;
+	}
 
 	caps = pMlmReassocReq->capabilityInfo;
 #if defined(FEATURE_WLAN_WAPI)
@@ -689,6 +799,58 @@ void lim_send_reassoc_req_mgmt_frame(struct mac_context *mac,
 		pe_debug("Populate EHT IEs");
 		populate_dot11f_eht_caps(mac, pe_session, &frm->eht_cap);
 	}
+	/*
+	 * Extcap IE now support variable length, merge Extcap IE from addn_ie
+	 * may change the frame size. Therefore, MUST merge ExtCap IE before
+	 * dot11f get packed payload size.
+	 */
+	if (extr_ext_flag)
+		lim_merge_extcap_struct(&frm->ExtCap, &extr_ext_cap, true);
+
+	/* Clear the bits in EXTCAP IE if AP not advertise it in beacon */
+	if (frm->ExtCap.present && pe_session->is_ext_caps_present) {
+		ie_offset = DOT11F_FF_TIMESTAMP_LEN +
+				DOT11F_FF_BEACONINTERVAL_LEN +
+				DOT11F_FF_CAPABILITIES_LEN;
+
+		qdf_mem_zero((uint8_t *)&bcn_ext_cap, sizeof(tDot11fIEExtCap));
+		if (pe_session->beacon && (pe_session->bcnLen >
+		    (ie_offset + sizeof(struct wlan_frame_hdr)))) {
+			bcn_ie = pe_session->beacon + ie_offset +
+						sizeof(struct wlan_frame_hdr);
+			bcn_ie_len = pe_session->bcnLen - ie_offset -
+						sizeof(struct wlan_frame_hdr);
+			p_ext_cap = (uint8_t *)wlan_get_ie_ptr_from_eid(
+							DOT11F_EID_EXTCAP,
+							bcn_ie, bcn_ie_len);
+			lim_update_extcap_struct(mac, p_ext_cap,
+						 &bcn_ext_cap);
+			lim_merge_extcap_struct(&frm->ExtCap, &bcn_ext_cap,
+						false);
+		}
+		/*
+		 * TWT extended capabilities should be populated after the
+		 * intersection of beacon caps and self caps is done because
+		 * the bits for TWT are unique to STA and AP and cannot be
+		 * intersected.
+		 */
+		populate_dot11f_twt_extended_caps(mac, pe_session,
+						  &frm->ExtCap);
+	}
+
+	/*
+	 * Do unpack to populate the add_ie buffer to frm structure
+	 * before packing the frm structure. In this way, the IE ordering
+	 * which the latest 802.11 spec mandates is maintained.
+	 */
+	if (nAddIELen) {
+		ret = dot11f_unpack_re_assoc_request(mac, pAddIE, nAddIELen,
+						     frm, true);
+		if (DOT11F_FAILED(ret)) {
+			pe_err("unpack failed, ret: 0x%x", ret);
+			goto end;
+		}
+	}
 
 	nStatus =
 		dot11f_get_packed_re_assoc_request_size(mac, frm, &nPayload);
@@ -700,7 +862,7 @@ void lim_send_reassoc_req_mgmt_frame(struct mac_context *mac,
 		pe_err("warning for size:ReAssoc Req: (0x%08x)", nStatus);
 	}
 
-	nBytes = nPayload + sizeof(tSirMacMgmtHdr) + nAddIELen;
+	nBytes = nPayload + sizeof(tSirMacMgmtHdr);
 
 	qdf_status = cds_packet_alloc((uint16_t) nBytes, (void **)&pFrame,
 				      (void **)&pPacket);
@@ -740,12 +902,6 @@ void lim_send_reassoc_req_mgmt_frame(struct mac_context *mac,
 		qdf_mem_free(pe_session->assoc_req);
 		pe_session->assoc_req = NULL;
 		pe_session->assocReqLen = 0;
-	}
-
-	if (nAddIELen) {
-		qdf_mem_copy(pFrame + sizeof(tSirMacMgmtHdr) + nPayload,
-			     pAddIE, nAddIELen);
-		nPayload += nAddIELen;
 	}
 
 	pe_session->assoc_req = qdf_mem_malloc(nPayload);

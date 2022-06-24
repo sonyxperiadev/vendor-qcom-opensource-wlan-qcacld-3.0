@@ -179,7 +179,9 @@
 #include "os_if_pkt_capture.h"
 #include "wlan_hdd_son.h"
 #include "wlan_hdd_mcc_quota.h"
+#include "wlan_hdd_peer_txq_flush.h"
 #include "wlan_cfg80211_wifi_pos.h"
+#include "wlan_osif_features.h"
 
 #define g_mode_rates_size (12)
 #define a_mode_rates_size (8)
@@ -2269,6 +2271,9 @@ hdd_update_reg_chan_info(struct hdd_adapter *adapter,
 			wlan_hdd_find_opclass(mac_handle, chan, bw_offset);
 
 		if (WLAN_REG_IS_5GHZ_CH_FREQ(freq_list[i])) {
+			if (sap_phymode_is_eht(sap_config->SapHw_mode))
+				wlan_reg_set_create_punc_bitmap(&ch_params,
+								true);
 			ch_params.ch_width = sap_config->acs_cfg.ch_width;
 			wlan_reg_set_channel_params_for_freq(hdd_ctx->pdev,
 							     icv->freq,
@@ -2982,6 +2987,38 @@ void wlan_hdd_trim_acs_channel_list(uint32_t *pcl, uint8_t pcl_count,
 	*org_ch_list_count = ch_list_count;
 }
 
+/* wlan_hdd_dump_freq_list() - Dump the ACS master frequency list
+ *
+ * @freq_list: Frequency list
+ * @num_freq: num of frequencies in list
+ *
+ * Dump the ACS master frequency list.
+ */
+static inline
+void wlan_hdd_dump_freq_list(uint32_t *freq_list, uint8_t num_freq)
+{
+	uint32_t buf_len = 0;
+	uint32_t i = 0, j = 0;
+	uint8_t *master_chlist;
+
+	if (num_freq >= NUM_CHANNELS)
+		return;
+
+	buf_len = NUM_CHANNELS * 4;
+	master_chlist = qdf_mem_malloc(buf_len);
+
+	if (!master_chlist)
+		return;
+
+	for (i = 0; i < num_freq && j < buf_len; i++) {
+		j += qdf_scnprintf(master_chlist + j, buf_len - j,
+				   "%d ", freq_list[i]);
+	}
+
+	hdd_debug("Master channel list: %s", master_chlist);
+	qdf_mem_free(master_chlist);
+}
+
 void wlan_hdd_handle_zero_acs_list(struct hdd_context *hdd_ctx,
 				   uint32_t *acs_freq_list,
 				   uint8_t *acs_ch_list_count,
@@ -3010,12 +3047,22 @@ void wlan_hdd_handle_zero_acs_list(struct hdd_context *hdd_ctx,
 	if (!sta_count && !force_sap_allowed)
 		return;
 
+	wlan_hdd_dump_freq_list(org_freq_list, org_ch_list_count);
+
 	for (i = 0; i < org_ch_list_count; i++) {
-		if (!wlan_reg_is_dfs_for_freq(hdd_ctx->pdev,
-					      org_freq_list[i])) {
-			acs_chan_default = org_freq_list[i];
-			break;
-		}
+		if (wlan_reg_is_dfs_for_freq(hdd_ctx->pdev,
+					     org_freq_list[i]))
+			continue;
+
+		if (wlan_reg_is_6ghz_chan_freq(org_freq_list[i]) &&
+		    !wlan_reg_is_6ghz_psc_chan_freq(org_freq_list[i]))
+			continue;
+
+		if (!policy_mgr_is_safe_channel(hdd_ctx->psoc,
+						org_freq_list[i]))
+			continue;
+		acs_chan_default = org_freq_list[i];
+		break;
 	}
 	if (!acs_chan_default)
 		acs_chan_default = org_freq_list[0];
@@ -3155,6 +3202,59 @@ static void wlan_hdd_acs_set_eht_enabled(struct sap_config *sap_config,
 {
 }
 #endif /* WLAN_FEATURE_11BE */
+
+static uint16_t wlan_hdd_update_bw_from_mlme(struct hdd_context *hdd_ctx,
+					     struct sap_config *sap_config)
+{
+	uint16_t ch_width, temp_ch_width = 0;
+	QDF_STATUS status;
+	uint8_t hw_mode = HW_MODE_DBS;
+	struct wma_caps_per_phy caps_per_phy = {0};
+
+	ch_width = sap_config->acs_cfg.ch_width;
+
+	if (ch_width > CH_WIDTH_80P80MHZ)
+		return ch_width;
+
+	/* 2.4ghz is already handled for acs */
+	if (sap_config->acs_cfg.end_ch_freq <=
+	    WLAN_REG_CH_TO_FREQ(CHAN_ENUM_2484))
+		return ch_width;
+
+	if (!policy_mgr_is_dbs_enable(hdd_ctx->psoc))
+		hw_mode = HW_MODE_DBS_NONE;
+
+	status = wma_get_caps_for_phyidx_hwmode(&caps_per_phy, hw_mode,
+						CDS_BAND_5GHZ);
+	if (!QDF_IS_STATUS_SUCCESS(status))
+		return ch_width;
+
+	switch (ch_width) {
+	case CH_WIDTH_80P80MHZ:
+		if (!(caps_per_phy.vht_5g & WMI_VHT_CAP_CH_WIDTH_80P80_160MHZ))
+		{
+			if (caps_per_phy.vht_5g & WMI_VHT_CAP_CH_WIDTH_160MHZ)
+				temp_ch_width = CH_WIDTH_160MHZ;
+			else
+				temp_ch_width = CH_WIDTH_80MHZ;
+		}
+		break;
+	case CH_WIDTH_160MHZ:
+		if (!((caps_per_phy.vht_5g & WMI_VHT_CAP_CH_WIDTH_80P80_160MHZ)
+		      || (caps_per_phy.vht_5g & WMI_VHT_CAP_CH_WIDTH_160MHZ)))
+				temp_ch_width = CH_WIDTH_80MHZ;
+		break;
+	default:
+		break;
+	}
+
+	if (!temp_ch_width)
+		return ch_width;
+
+	hdd_debug("ch_width updated from %d to %d vht_5g: %x", ch_width,
+		  temp_ch_width, caps_per_phy.vht_5g);
+	return temp_ch_width;
+}
 
 /**
  * __wlan_hdd_cfg80211_do_acs(): CFG80211 handler function for DO_ACS Vendor CMD
@@ -3383,6 +3483,8 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 		goto out;
 	}
 
+	hdd_handle_acs_2g_preferred_sap_conc(hdd_ctx->psoc, adapter,
+					     sap_config);
 	hdd_avoid_acs_channels(hdd_ctx, sap_config);
 
 	pm_mode =
@@ -3493,6 +3595,9 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 			  sap_config->acs_cfg.ch_width,
 			  channel_bonding_mode_2g);
 	}
+
+	sap_config->acs_cfg.ch_width = wlan_hdd_update_bw_from_mlme(hdd_ctx,
+								    sap_config);
 
 	hdd_nofl_debug("ACS Config country %s ch_width %d hw_mode %d ACS_BW: %d HT: %d VHT: %d EHT: %d START_CH: %d END_CH: %d band %d",
 		       hdd_ctx->reg.alpha2, ch_width,
@@ -5203,7 +5308,8 @@ hdd_send_roam_scan_period_to_sme(struct hdd_context *hdd_ctx,
 	QDF_STATUS status;
 	uint16_t roam_scan_period_current, roam_scan_period_global;
 
-	if (!ucfg_mlme_validate_scan_period(roam_scan_period * 1000))
+	if (!ucfg_mlme_validate_scan_period(hdd_ctx->psoc,
+					    roam_scan_period * 1000))
 		return QDF_STATUS_E_INVAL;
 
 	hdd_debug("Received Command to Set roam scan period (Empty Scan refresh period) = %d",
@@ -6194,6 +6300,11 @@ __wlan_hdd_cfg80211_set_ratemask_config(struct wiphy *wiphy,
 	struct wlan_objmgr_vdev *vdev;
 	int ret;
 
+	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
+		hdd_err("Command not allowed in FTM mode");
+		return -EPERM;
+	}
+
 	ret = wlan_hdd_validate_context(hdd_ctx);
 	if (ret)
 		return ret;
@@ -6330,11 +6441,14 @@ static bool wlan_hdd_check_dfs_channel_for_adapter(struct hdd_context *hdd_ctx,
 			 *  with SAP on DFS, there cannot be conurrency on
 			 *  single radio. But then we can have multiple
 			 *  radios !!
+			 *
+			 *  Indoor channels are also marked DFS, therefore
+			 *  check if the channel has REGULATORY_CHAN_RADAR
+			 *  channel flag to identify if the channel is DFS
 			 */
-			if (CHANNEL_STATE_DFS ==
-			    wlan_reg_get_channel_state_from_secondary_list_for_freq(
-				hdd_ctx->pdev,
-				ap_ctx->operating_chan_freq)) {
+			if (wlan_reg_is_dfs_for_freq(
+						hdd_ctx->pdev,
+						ap_ctx->operating_chan_freq)) {
 				hdd_err("SAP running on DFS channel");
 				hdd_adapter_dev_put_debug(adapter, dbgid);
 				if (next_adapter)
@@ -6350,13 +6464,16 @@ static bool wlan_hdd_check_dfs_channel_for_adapter(struct hdd_context *hdd_ctx,
 				WLAN_HDD_GET_STATION_CTX_PTR(adapter);
 			/*
 			 *  if STA is already connected on DFS channel,
-			 *  do not disable scan on dfs channels
+			 *  do not disable scan on dfs channels.
+			 *
+			 *  Indoor channels are also marked DFS, therefore
+			 *  check if the channel has REGULATORY_CHAN_RADAR
+			 *  channel flag to identify if the channel is DFS
 			 */
 			if (hdd_cm_is_vdev_associated(adapter) &&
-			    (CHANNEL_STATE_DFS ==
-			     wlan_reg_get_channel_state_for_freq(
-				hdd_ctx->pdev,
-				sta_ctx->conn_info.chan_freq))) {
+			    wlan_reg_is_dfs_for_freq(
+				    hdd_ctx->pdev,
+				    sta_ctx->conn_info.chan_freq)) {
 				hdd_err("client connected on DFS channel");
 				hdd_adapter_dev_put_debug(adapter, dbgid);
 				if (next_adapter)
@@ -6456,6 +6573,11 @@ static int __wlan_hdd_cfg80211_disable_dfs_chan_scan(struct wiphy *wiphy,
 	uint32_t no_dfs_flag = 0;
 	bool enable_dfs_scan = true;
 	hdd_enter_dev(dev);
+
+	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
+		hdd_err("Command not allowed in FTM mode");
+		return -EPERM;
+	}
 
 	ret_val = wlan_hdd_validate_context(hdd_ctx);
 	if (ret_val)
@@ -9063,7 +9185,7 @@ QDF_STATUS wlan_hdd_set_wlm_latency_level(struct hdd_adapter *adapter,
 
 	ret = osif_request_wait_for_response(request);
 	if (ret) {
-		hdd_err("Timedout while retrieving oem get data");
+		hdd_err("SME timed out while retrieving latency level");
 		status = qdf_status_from_os_return(ret);
 		goto err;
 	}
@@ -9074,8 +9196,7 @@ QDF_STATUS wlan_hdd_set_wlm_latency_level(struct hdd_adapter *adapter,
 		goto err;
 	}
 
-	hdd_debug("[MULTI_CLIENT] latency received from FW:%d",
-		  priv->latency_level);
+	hdd_debug("latency level received from FW:%d", priv->latency_level);
 	adapter->latency_level = priv->latency_level;
 err:
 	if (request)
@@ -10742,6 +10863,7 @@ static int hdd_test_config_6ghz_security_test_mode(struct hdd_context *hdd_ctx,
 
 	cfg_val = nla_get_u8(attr);
 	hdd_debug("safe mode setting %d", cfg_val);
+	wlan_mlme_set_safe_mode_enable(hdd_ctx->psoc, cfg_val);
 	if (cfg_val) {
 		wlan_cm_set_check_6ghz_security(hdd_ctx->psoc, false);
 		wlan_cm_set_6ghz_key_mgmt_mask(hdd_ctx->psoc,
@@ -12417,6 +12539,11 @@ __wlan_hdd_cfg80211_set_ns_offload(struct wiphy *wiphy,
 
 	hdd_enter_dev(wdev->netdev);
 
+	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
+		hdd_err("Command not allowed in FTM mode");
+		return -EPERM;
+	}
+
 	status = wlan_hdd_validate_context(hdd_ctx);
 	if (0 != status)
 		return status;
@@ -12602,6 +12729,11 @@ static int __wlan_hdd_cfg80211_get_preferred_freq_list(struct wiphy *wiphy,
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(ndev);
 
 	hdd_enter_dev(wdev->netdev);
+
+	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
+		hdd_err("Command not allowed in FTM mode");
+		return -EPERM;
+	}
 
 	ret = wlan_hdd_validate_context(hdd_ctx);
 	if (ret)
@@ -12798,6 +12930,11 @@ static int __wlan_hdd_cfg80211_set_probable_oper_channel(struct wiphy *wiphy,
 	uint32_t ch_freq, conc_ext_flags;
 
 	hdd_enter_dev(ndev);
+
+	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
+		hdd_err("Command not allowed in FTM mode");
+		return -EPERM;
+	}
 
 	ret = wlan_hdd_validate_context(hdd_ctx);
 	if (ret)
@@ -13443,6 +13580,11 @@ static int __wlan_hdd_cfg80211_dual_sta_policy(struct wiphy *wiphy,
 	uint8_t dual_sta_config =
 		QCA_WLAN_CONCURRENT_STA_POLICY_UNBIASED;
 
+	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
+		hdd_err("Command not allowed in FTM mode");
+		return -EPERM;
+	}
+
 	if (wlan_hdd_validate_context(hdd_ctx)) {
 		hdd_err("Invalid hdd context");
 		return -EINVAL;
@@ -13713,6 +13855,9 @@ __wlan_hdd_cfg80211_sap_configuration_set(struct wiphy *wiphy,
 					ap_ctx->sap_config.ch_width_orig;
 		ap_ctx->bss_stop_reason = BSS_STOP_DUE_TO_VENDOR_CONFIG_CHAN;
 
+		if (sap_phymode_is_eht(ap_ctx->sap_config.SapHw_mode))
+			wlan_reg_set_create_punc_bitmap(
+				&ap_ctx->sap_config.ch_params, true);
 		wlan_reg_set_channel_params_for_freq(
 				hdd_ctx->pdev, chan_freq,
 				ap_ctx->sap_config.sec_ch_freq,
@@ -13983,6 +14128,11 @@ static int __wlan_hdd_cfg80211_setband(struct wiphy *wiphy,
 	uint32_t reg_wifi_band_bitmap = 0, band_val, band_mask;
 
 	hdd_enter();
+
+	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
+		hdd_err("Command not allowed in FTM mode");
+		return -EPERM;
+	}
 
 	ret = wlan_hdd_validate_context(hdd_ctx);
 	if (ret)
@@ -14661,6 +14811,11 @@ static int __wlan_hdd_cfg80211_getband(struct wiphy *wiphy,
 	uint32_t reg_wifi_band_bitmap, vendor_band_mask;
 
 	hdd_enter();
+
+	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
+		hdd_err("Command not allowed in FTM mode");
+		return -EPERM;
+	}
 
 	ret = wlan_hdd_validate_context(hdd_ctx);
 	if (ret)
@@ -16524,6 +16679,11 @@ static int __wlan_hdd_cfg80211_get_usable_channel(struct wiphy *wiphy,
 	uint32_t count = 0;
 	QDF_STATUS status;
 
+	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
+		hdd_err("Command not allowed in FTM mode");
+		return -EPERM;
+	}
+
 	ret = wlan_hdd_validate_context(hdd_ctx);
 	if (0 != ret)
 		return ret;
@@ -16646,6 +16806,11 @@ static int __wlan_hdd_cfg80211_set_roam_events(struct wiphy *wiphy,
 	int ret;
 	uint8_t config, state, param = 0;
 
+	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
+		hdd_err("Command not allowed in FTM mode");
+		return -EPERM;
+	}
+
 	ret = wlan_hdd_validate_context(hdd_ctx);
 	if (ret != 0) {
 		hdd_err("Invalid hdd_ctx");
@@ -16767,6 +16932,11 @@ static int __wlan_hdd_cfg80211_get_chain_rssi(struct wiphy *wiphy,
 	int retval;
 
 	hdd_enter();
+
+	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
+		hdd_err("Command not allowed in FTM mode");
+		return -EPERM;
+	}
 
 	retval = wlan_hdd_validate_context(hdd_ctx);
 	if (0 != retval)
@@ -17964,6 +18134,7 @@ const struct wiphy_vendor_command hdd_wiphy_vendor_commands[] = {
 	},
 #endif
 	FEATURE_MCC_QUOTA_VENDOR_COMMANDS
+	FEATURE_PEER_FLUSH_VENDOR_COMMANDS
 };
 
 struct hdd_context *hdd_cfg80211_wiphy_alloc(void)
@@ -18427,7 +18598,7 @@ static void wlan_hdd_update_eapol_over_nl80211_flags(struct wiphy *wiphy)
 static void
 wlan_hdd_update_max_connect_akm(struct wiphy *wiphy)
 {
-	wiphy->max_num_akms_connect = WLAN_CM_MAX_CONNECT_AKMS;
+	wiphy->max_num_akm_suites = WLAN_CM_MAX_CONNECT_AKMS;
 }
 #else
 static void
@@ -18547,15 +18718,11 @@ int wlan_hdd_cfg80211_init(struct device *dev,
 	wiphy->signal_type = CFG80211_SIGNAL_TYPE_MBM;
 	wiphy->max_remain_on_channel_duration = MAX_REMAIN_ON_CHANNEL_DURATION;
 
-	if (cds_get_conparam() != QDF_GLOBAL_FTM_MODE) {
-		wiphy->n_vendor_commands =
-				ARRAY_SIZE(hdd_wiphy_vendor_commands);
-		wiphy->vendor_commands = hdd_wiphy_vendor_commands;
+	wiphy->n_vendor_commands = ARRAY_SIZE(hdd_wiphy_vendor_commands);
+	wiphy->vendor_commands = hdd_wiphy_vendor_commands;
 
-		wiphy->vendor_events = wlan_hdd_cfg80211_vendor_events;
-		wiphy->n_vendor_events =
-				ARRAY_SIZE(wlan_hdd_cfg80211_vendor_events);
-	}
+	wiphy->vendor_events = wlan_hdd_cfg80211_vendor_events;
+	wiphy->n_vendor_events = ARRAY_SIZE(wlan_hdd_cfg80211_vendor_events);
 
 #ifdef QCA_HT_2040_COEX
 	wiphy->features |= NL80211_FEATURE_AP_MODE_CHAN_WIDTH_CHANGE;
@@ -18779,12 +18946,15 @@ static void wlan_hdd_update_lfr_wiphy(struct hdd_context *hdd_ctx)
 	bool fast_transition_enabled;
 	bool lfr_enabled;
 	bool ese_enabled;
+	bool roam_offload;
 
 	ucfg_mlme_is_fast_transition_enabled(hdd_ctx->psoc,
 					     &fast_transition_enabled);
 	ucfg_mlme_is_lfr_enabled(hdd_ctx->psoc, &lfr_enabled);
 	ucfg_mlme_is_ese_enabled(hdd_ctx->psoc, &ese_enabled);
-	if (fast_transition_enabled || lfr_enabled || ese_enabled)
+	ucfg_mlme_get_roaming_offload(hdd_ctx->psoc, &roam_offload);
+	if (fast_transition_enabled || lfr_enabled || ese_enabled ||
+	    roam_offload)
 		hdd_ctx->wiphy->flags |= WIPHY_FLAG_SUPPORTS_FW_ROAM;
 }
 #else
@@ -18792,11 +18962,13 @@ static void wlan_hdd_update_lfr_wiphy(struct hdd_context *hdd_ctx)
 {
 	bool fast_transition_enabled;
 	bool lfr_enabled;
+	bool roam_offload;
 
 	ucfg_mlme_is_fast_transition_enabled(hdd_ctx->psoc,
 					     &fast_transition_enabled);
 	ucfg_mlme_is_lfr_enabled(hdd_ctx->psoc, &lfr_enabled);
-	if (fast_transition_enabled || lfr_enabled)
+	ucfg_mlme_get_roaming_offload(hdd_ctx->psoc, &roam_offload);
+	if (fast_transition_enabled || lfr_enabled || roam_offload)
 		hdd_ctx->wiphy->flags |= WIPHY_FLAG_SUPPORTS_FW_ROAM;
 }
 #endif
@@ -23549,6 +23721,12 @@ void wlan_hdd_deinit_chan_info(struct hdd_context *hdd_ctx)
 		qdf_mem_free(chan);
 }
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0)) || defined(CFG80211_11BE_BASIC)
+#define SET_RATE_INFO_BW_320 RATE_INFO_BW_320
+#else
+#define SET_RATE_INFO_BW_320 RATE_INFO_BW_160
+#endif
+
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 0, 0)) || defined(WITH_BACKPORTS)
 static enum rate_info_bw hdd_map_hdd_bw_to_os(enum hdd_rate_info_bw hdd_bw)
 {
@@ -23565,6 +23743,8 @@ static enum rate_info_bw hdd_map_hdd_bw_to_os(enum hdd_rate_info_bw hdd_bw)
 		return RATE_INFO_BW_80;
 	case HDD_RATE_BW_160:
 		return RATE_INFO_BW_160;
+	case HDD_RATE_BW_320:
+		return SET_RATE_INFO_BW_320;
 	}
 
 	hdd_err("Unhandled HDD_RATE_BW: %d", hdd_bw);
@@ -24103,14 +24283,16 @@ static int wlan_hdd_cfg80211_set_bitrate_mask(struct wiphy *wiphy,
 }
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
-static void wlan_hdd_select_queue(struct net_device *dev, struct sk_buff *skb)
+static uint16_t wlan_hdd_select_queue(struct net_device *dev,
+				      struct sk_buff *skb)
 {
-	hdd_select_queue(dev, skb, NULL);
+	return hdd_select_queue(dev, skb, NULL);
 }
 #else
-static void wlan_hdd_select_queue(struct net_device *dev, struct sk_buff *skb)
+static uint16_t wlan_hdd_select_queue(struct net_device *dev,
+				      struct sk_buff *skb)
 {
-	hdd_select_queue(dev, skb, NULL, NULL);
+	return hdd_select_queue(dev, skb, NULL, NULL);
 }
 #endif
 
@@ -24146,9 +24328,9 @@ static int __wlan_hdd_cfg80211_tx_control_port(struct wiphy *wiphy,
 	nbuf->protocol = htons(ETH_P_PAE);
 	skb_reset_network_header(nbuf);
 	skb_reset_mac_header(nbuf);
+	skb_set_queue_mapping(nbuf, wlan_hdd_select_queue(dev, nbuf));
 
 	netif_tx_lock(dev);
-	wlan_hdd_select_queue(dev, nbuf);
 	dev->netdev_ops->ndo_start_xmit(nbuf, dev);
 	netif_tx_unlock(dev);
 

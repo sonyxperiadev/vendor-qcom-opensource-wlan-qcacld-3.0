@@ -260,6 +260,7 @@ struct hdd_config {
 #endif
 	bool get_roam_chan_from_fw;
 	uint32_t fisa_enable;
+	bool enable_fisa_lru_deletion;
 
 #ifdef WLAN_FEATURE_PERIODIC_STA_STATS
 	/* Periodicity of logging */

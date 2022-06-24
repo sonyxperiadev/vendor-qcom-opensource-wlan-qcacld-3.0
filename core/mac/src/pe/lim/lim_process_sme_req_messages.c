@@ -68,6 +68,7 @@
 #include <lim_mlo.h>
 #include <wlan_vdev_mgr_utils_api.h>
 #include "cfg_ucfg_api.h"
+#include "wlan_twt_cfg_ext_api.h"
 
 /* SME REQ processing function templates */
 static bool __lim_process_sme_sys_ready_ind(struct mac_context *, uint32_t *);
@@ -2647,6 +2648,9 @@ lim_fill_dot11_mode(struct mac_context *mac_ctx, struct pe_session *session,
 #ifdef WLAN_FEATURE_11AX
 static bool lim_enable_twt(struct mac_context *mac_ctx, tDot11fBeaconIEs *ie)
 {
+	struct s_ext_cap *ext_cap;
+	bool twt_support_in_11n = false;
+
 	if (mac_ctx->mlme_cfg->he_caps.dot11_he_cap.twt_request && ie &&
 	    (ie->qcn_ie.present || ie->he_cap.twt_responder)) {
 		pe_debug("TWT is supported, hence disable UAPSD; twt req supp: %d,twt respon supp: %d, QCN_IE: %d",
@@ -2655,6 +2659,18 @@ static bool lim_enable_twt(struct mac_context *mac_ctx, tDot11fBeaconIEs *ie)
 			  ie->qcn_ie.present);
 		return true;
 	}
+
+	wlan_twt_cfg_get_support_in_11n(mac_ctx->psoc,
+					&twt_support_in_11n);
+	ext_cap = (struct s_ext_cap *)ie->ExtCap.bytes;
+	if (twt_support_in_11n && ie->ExtCap.present &&
+	    ext_cap->twt_responder_support) {
+		pe_debug("TWT is supported for 11n, twt_support_in_11n %d, ext_cap %d, twt_responder support %d",
+			 twt_support_in_11n, ie->ExtCap.present,
+			 ext_cap->twt_responder_support);
+		return true;
+	}
+
 	return false;
 }
 #else
@@ -5175,6 +5191,15 @@ void lim_process_tpe_ie_from_beacon(struct mac_context *mac,
 		pe_debug("warnings (0x%08x, %d bytes):", status, buf_len);
 	}
 
+	status = lim_strip_and_decode_eht_op(buf, buf_len, &bcn_ie->eht_op,
+					     bcn_ie->VHTOperation,
+					     bcn_ie->he_op,
+					     bcn_ie->HTInfo);
+	if (status != QDF_STATUS_SUCCESS) {
+		pe_err("Failed to extract eht op");
+		return;
+	}
+
 	status = lim_strip_and_decode_eht_cap(buf, buf_len, &bcn_ie->eht_cap,
 					      bcn_ie->he_cap,
 					      session->curr_op_freq);
@@ -5275,6 +5300,8 @@ void lim_calculate_tpc(struct mac_context *mac,
 	struct vdev_mlme_obj *mlme_obj;
 	uint8_t tpe_power;
 	bool skip_tpe = false;
+	bool rf_test_mode = false;
+	bool safe_mode_enable = false;
 
 	mlme_obj = wlan_vdev_mlme_get_cmpt_obj(session->vdev);
 	if (!mlme_obj) {
@@ -5304,13 +5331,25 @@ void lim_calculate_tpc(struct mac_context *mac,
 		/* Power mode calculation for 6G*/
 		ap_power_type_6g = session->ap_power_type;
 		if (LIM_IS_STA_ROLE(session)) {
-			if (!session->lim_join_req) {
-				if (!ctry_code_match)
-					ap_power_type_6g = ap_pwr_type;
+			wlan_mlme_get_safe_mode_enable(mac->psoc,
+						       &safe_mode_enable);
+			wlan_mlme_is_rf_test_mode_enabled(mac->psoc,
+							  &rf_test_mode);
+			/*
+			 * set LPI power if safe mode is enabled OR RF test
+			 * mode is enabled.
+			 */
+			if (rf_test_mode || safe_mode_enable) {
+				ap_power_type_6g = REG_INDOOR_AP;
 			} else {
-				if (!session->same_ctry_code)
-					ap_power_type_6g =
+				if (!session->lim_join_req) {
+					if (!ctry_code_match)
+						ap_power_type_6g = ap_pwr_type;
+				} else {
+					if (!session->same_ctry_code)
+						ap_power_type_6g =
 						session->ap_power_type_6g;
+				}
 			}
 		}
 	}

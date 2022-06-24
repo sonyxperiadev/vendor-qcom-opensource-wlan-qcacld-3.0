@@ -37,11 +37,15 @@ static QDF_STATUS policy_mgr_init_cfg(struct wlan_objmgr_psoc *psoc)
 	cfg->mcc_to_scc_switch = cfg_get(psoc, CFG_MCC_TO_SCC_SWITCH);
 	cfg->sys_pref = cfg_get(psoc, CFG_CONC_SYS_PREF);
 
-	if (wlan_is_mlo_sta_nan_ndi_allowed(psoc))
+	if (wlan_is_mlo_sta_nan_ndi_allowed(psoc)) {
 		cfg->max_conc_cxns = cfg_get(psoc, CFG_MAX_CONC_CXNS) + 1;
-	else
+		 policy_mgr_err("max_conc_cxns %d nan", cfg->max_conc_cxns);
+	} else {
 		cfg->max_conc_cxns = cfg_get(psoc, CFG_MAX_CONC_CXNS);
-
+		policy_mgr_err("max_conc_cxns %d non-nan", cfg->max_conc_cxns);
+	}
+	cfg->max_conc_cxns = QDF_MIN(cfg->max_conc_cxns,
+				     MAX_NUMBER_OF_CONC_CONNECTIONS);
 	cfg->conc_rule1 = cfg_get(psoc, CFG_ENABLE_CONC_RULE1);
 	cfg->conc_rule2 = cfg_get(psoc, CFG_ENABLE_CONC_RULE2);
 	cfg->pcl_band_priority = cfg_get(psoc, CFG_PCL_BAND_PRIORITY);
@@ -63,6 +67,10 @@ static QDF_STATUS policy_mgr_init_cfg(struct wlan_objmgr_psoc *psoc)
 	cfg->sta_sap_scc_on_dfs_chnl =
 		cfg_get(psoc, CFG_STA_SAP_SCC_ON_DFS_CHAN);
 
+	/*
+	 * Override concurrency sta+sap indoor flag to true if global indoor
+	 * flag is true
+	 */
 	cfg->sta_sap_scc_on_indoor_channel =
 		cfg_get(psoc, CFG_STA_SAP_SCC_ON_INDOOR_CHAN);
 	if (cfg_get(psoc, CFG_INDOOR_CHANNEL_SUPPORT))
@@ -219,6 +227,17 @@ QDF_STATUS ucfg_policy_mgr_get_force_1x1(struct wlan_objmgr_psoc *psoc,
 	return policy_mgr_get_force_1x1(psoc, force_1x1);
 }
 
+uint32_t ucfg_policy_mgr_get_max_conc_cxns(struct wlan_objmgr_psoc *psoc)
+{
+	return policy_mgr_get_max_conc_cxns(psoc);
+}
+
+QDF_STATUS ucfg_policy_mgr_set_max_conc_cxns(struct wlan_objmgr_psoc *psoc,
+					     uint32_t max_conc_cxns)
+{
+	return policy_mgr_set_max_conc_cxns(psoc, max_conc_cxns);
+}
+
 QDF_STATUS
 ucfg_policy_mgr_get_sta_sap_scc_on_dfs_chnl(struct wlan_objmgr_psoc *psoc,
 					    uint8_t *sta_sap_scc_on_dfs_chnl)
@@ -261,4 +280,11 @@ ucfg_policy_mgr_get_indoor_chnl_marking(struct wlan_objmgr_psoc *psoc,
 					uint8_t *indoor_chnl_marking)
 {
 	return policy_mgr_get_indoor_chnl_marking(psoc, indoor_chnl_marking);
+}
+
+bool
+ucfg_policy_mgr_get_sta_sap_scc_on_indoor_chnl(struct wlan_objmgr_psoc *psoc)
+{
+	return policy_mgr_get_sta_sap_scc_allowed_on_indoor_chnl(psoc) ?
+								true : false;
 }

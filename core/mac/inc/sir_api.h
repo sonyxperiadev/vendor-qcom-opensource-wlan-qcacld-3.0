@@ -487,6 +487,50 @@ const char *lim_bss_type_to_string(const uint16_t bss_type);
  *              number of spacial streams
  * @he_tx_mcs: Indicates the Maximum MCS(HE) that can be transmitted for each
  *              number of spacial streams
+ * @bw_20_rx_max_nss_for_mcs_0_to_7: Indicates MAX RX NSS for MCS from 0 to 7
+ * @bw_20_tx_max_nss_for_mcs_0_to_7: Indicates MAX TX NSS for MCS from 0 to 7
+ * @bw_20_rx_max_nss_for_mcs_8_and_9: Indicates MAX RX NSS for MCS from 8 9
+ * @bw_20_tx_max_nss_for_mcs_8_and_9: Indicates MAX TX NSS for MCS from 8 9
+ * @bw_20_rx_max_nss_for_mcs_10_and_11:Indicates MAX RX NSS for MCS from 10 11
+ * @bw_20_tx_max_nss_for_mcs_10_and_11: Indicates MAX TX NSS for MCS from 10 11
+ * @bw_20_rx_max_nss_for_mcs_12_and_13: Indicates MAX RX NSS for MCS from 12 13
+ * @bw_20_tx_max_nss_for_mcs_12_and_13: Indicates MAX TX NSS for MCS from 12 13
+ * @bw_le_80_rx_max_nss_for_mcs_0_to_7: Indicates MAX RX NSS for MCS from 0 to 7
+ * @bw_le_80_tx_max_nss_for_mcs_0_to_7: Indicates MAX TX NSS for MCS from 0 to 7
+ * @bw_le_80_rx_max_nss_for_mcs_8_and_9: Indicates MAX RX NSS for MCS from 8 9
+ * @bw_le_80_tx_max_nss_for_mcs_8_and_9: Indicates MAX TX NSS for MCS from 8 9
+ * @bw_le_80_rx_max_nss_for_mcs_10_and_11:Indicates MAX RX NSS for MCS from
+ *                                        10 11
+ * @bw_le_80_tx_max_nss_for_mcs_10_and_11: Indicates MAX TX NSS for MCS from
+ *                                         10 11
+ * @bw_le_80_rx_max_nss_for_mcs_12_and_13: Indicates MAX RX NSS for MCS from
+ *                                         12 13
+ * @bw_le_80_tx_max_nss_for_mcs_12_and_13: Indicates MAX TX NSS for MCS from
+ *                                         12 13
+ * @bw_160_rx_max_nss_for_mcs_0_to_7: Indicates MAX RX NSS for MCS from 0 to 7
+ * @bw_160_tx_max_nss_for_mcs_0_to_7: Indicates MAX TX NSS for MCS from 0 to 7
+ * @bw_160_rx_max_nss_for_mcs_8_and_9: Indicates MAX RX NSS for MCS from 8 9
+ * @bw_160_tx_max_nss_for_mcs_8_and_9: Indicates MAX TX NSS for MCS from 8 9
+ * @bw_160_rx_max_nss_for_mcs_10_and_11:Indicates MAX RX NSS for MCS from
+ *                                        10 11
+ * @bw_160_tx_max_nss_for_mcs_10_and_11: Indicates MAX TX NSS for MCS from
+ *                                         10 11
+ * @bw_160_rx_max_nss_for_mcs_12_and_13: Indicates MAX RX NSS for MCS from
+ *                                         12 13
+ * @bw_160_tx_max_nss_for_mcs_12_and_13: Indicates MAX TX NSS for MCS from
+ *                                         12 13
+ * @bw_320_rx_max_nss_for_mcs_0_to_7: Indicates MAX RX NSS for MCS from 0 to 7
+ * @bw_320_tx_max_nss_for_mcs_0_to_7: Indicates MAX TX NSS for MCS from 0 to 7
+ * @bw_320_rx_max_nss_for_mcs_8_and_9: Indicates MAX RX NSS for MCS from 8 9
+ * @bw_320_tx_max_nss_for_mcs_8_and_9: Indicates MAX TX NSS for MCS from 8 9
+ * @bw_320_rx_max_nss_for_mcs_10_and_11:Indicates MAX RX NSS for MCS from
+ *                                        10 11
+ * @bw_320_tx_max_nss_for_mcs_10_and_11: Indicates MAX TX NSS for MCS from
+ *                                         10 11
+ * @bw_320_rx_max_nss_for_mcs_12_and_13: Indicates MAX RX NSS for MCS from
+ *                                         12 13
+ * @bw_320_tx_max_nss_for_mcs_12_and_13: Indicates MAX TX NSS for MCS from
+ *                                         12 13
  */
 struct supported_rates {
 	uint16_t llbRates[SIR_NUM_11B_RATES];
@@ -504,6 +548,34 @@ struct supported_rates {
 	uint16_t tx_he_mcs_map_160;
 	uint16_t rx_he_mcs_map_80_80;
 	uint16_t tx_he_mcs_map_80_80;
+#endif
+#ifdef WLAN_FEATURE_11BE
+	uint32_t bw_20_rx_max_nss_for_mcs_0_to_7:4;
+	uint32_t bw_20_tx_max_nss_for_mcs_0_to_7:4;
+	uint32_t bw_20_rx_max_nss_for_mcs_8_and_9:4;
+	uint32_t bw_20_tx_max_nss_for_mcs_8_and_9:4;
+	uint32_t bw_20_rx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_20_tx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_20_rx_max_nss_for_mcs_12_and_13:4;
+	uint32_t bw_20_tx_max_nss_for_mcs_12_and_13:4;
+	uint32_t bw_le_80_rx_max_nss_for_mcs_0_to_9:4;
+	uint32_t bw_le_80_tx_max_nss_for_mcs_0_to_9:4;
+	uint32_t bw_le_80_rx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_le_80_tx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_le_80_rx_max_nss_for_mcs_12_and_13:4;
+	uint32_t bw_le_80_tx_max_nss_for_mcs_12_and_13:4;
+	uint32_t bw_160_rx_max_nss_for_mcs_0_to_9:4;
+	uint32_t bw_160_tx_max_nss_for_mcs_0_to_9:4;
+	uint32_t bw_160_rx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_160_tx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_160_rx_max_nss_for_mcs_12_and_13:4;
+	uint32_t bw_160_tx_max_nss_for_mcs_12_and_13:4;
+	uint32_t bw_320_rx_max_nss_for_mcs_0_to_9:4;
+	uint32_t bw_320_tx_max_nss_for_mcs_0_to_9:4;
+	uint32_t bw_320_rx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_320_tx_max_nss_for_mcs_10_and_11:4;
+	uint8_t bw_320_rx_max_nss_for_mcs_12_and_13:4;
+	uint8_t bw_320_tx_max_nss_for_mcs_12_and_13:4;
 #endif
 };
 
@@ -2844,6 +2916,8 @@ typedef struct {
 	uint32_t reqId;
 	uint8_t staId;
 	uint32_t paramIdMask;
+	bool is_mlo_req;
+	uint32_t mlo_vdev_id_bitmap;
 } tSirLLStatsGetReq, *tpSirLLStatsGetReq;
 
 typedef struct {
@@ -3069,6 +3143,7 @@ struct wifi_peer_info {
  * @ac_stats: per-Access Category statistics
  * @num_offload_stats: @offload_stats record count
  * @offload_stats: per-offload statistics
+ * @vdev_id: vdev id
  *
  * Statistics corresponding to 2nd most LSB in wifi statistics bitmap
  * for getting statistics
@@ -3083,6 +3158,7 @@ struct wifi_interface_stats {
 	wmi_wmm_ac_stats ac_stats[WIFI_AC_MAX];
 	uint32_t num_offload_stats;
 	wmi_iface_offload_stats offload_stats[WMI_OFFLOAD_STATS_TYPE_MAX];
+	uint8_t vdev_id;
 };
 
 /**

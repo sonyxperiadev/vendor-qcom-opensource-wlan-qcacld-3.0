@@ -464,28 +464,6 @@ static QDF_STATUS ap_mlme_vdev_up_send(struct vdev_mlme_obj *vdev_mlme,
 	return lim_ap_mlme_vdev_up_send(vdev_mlme, data_len, data);
 }
 
-#ifdef WLAN_FEATURE_11BE_MLO
-static inline void
-wlan_handle_sap_mlo_sta_concurrency(struct wlan_objmgr_vdev *vdev,
-				    bool is_ap_up)
-{
-	struct wlan_objmgr_psoc *psoc = wlan_vdev_get_psoc(vdev);
-
-	if (!psoc) {
-		mlme_legacy_debug("psoc Null");
-		return;
-	}
-
-	policy_mgr_handle_sap_mlo_sta_concurrency(psoc, vdev, is_ap_up);
-}
-#else
-static inline void
-wlan_handle_sap_mlo_sta_concurrency(struct wlan_objmgr_vdev *vdev,
-				    bool is_ap_up)
-{
-}
-#endif
-
 /**
  * ap_mlme_vdev_notify_up_complete() - callback to notify up completion
  * @vdev_mlme: vdev mlme object
@@ -506,8 +484,6 @@ ap_mlme_vdev_notify_up_complete(struct vdev_mlme_obj *vdev_mlme,
 	}
 
 	pe_debug("Vdev %d is up", wlan_vdev_get_id(vdev_mlme->vdev));
-	if (wlan_vdev_mlme_get_opmode(vdev_mlme->vdev) == QDF_SAP_MODE)
-		wlan_handle_sap_mlo_sta_concurrency(vdev_mlme->vdev, true);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -608,8 +584,7 @@ static QDF_STATUS vdevmgr_notify_down_complete(struct vdev_mlme_obj *vdev_mlme,
 {
 	mlme_legacy_debug("vdev id = %d ",
 			  vdev_mlme->vdev->vdev_objmgr.vdev_id);
-	if (wlan_vdev_mlme_get_opmode(vdev_mlme->vdev) == QDF_SAP_MODE)
-		wlan_handle_sap_mlo_sta_concurrency(vdev_mlme->vdev, false);
+
 	return wma_mlme_vdev_notify_down_complete(vdev_mlme, data_len, data);
 }
 
@@ -1051,6 +1026,23 @@ bool mlme_is_notify_co_located_ap_update_rnr(struct wlan_objmgr_vdev *vdev)
 	}
 
 	return mlme_priv->notify_co_located_ap_upt_rnr;
+}
+
+bool wlan_is_vdev_traffic_ll_ht(struct wlan_objmgr_vdev *vdev)
+{
+	struct mlme_legacy_priv *mlme_priv;
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_legacy_err("vdev legacy private object is NULL");
+		return false;
+	}
+
+	if (mlme_priv->vdev_traffic_type & PM_VDEV_TRAFFIC_LOW_LATENCY ||
+	    mlme_priv->vdev_traffic_type & PM_VDEV_TRAFFIC_HIGH_TPUT)
+		return true;
+
+	return false;
 }
 
 enum vdev_assoc_type  mlme_get_assoc_type(struct wlan_objmgr_vdev *vdev)

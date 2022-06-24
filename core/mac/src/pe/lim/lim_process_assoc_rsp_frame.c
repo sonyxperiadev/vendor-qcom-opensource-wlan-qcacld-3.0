@@ -145,6 +145,7 @@ void lim_update_assoc_sta_datas(struct mac_context *mac_ctx,
 	tDot11fIEhe_cap *he_cap = NULL;
 	tDot11fIEeht_cap *eht_cap = NULL;
 	struct bss_description *bss_desc = NULL;
+	tDot11fIEVHTOperation *vht_oper = NULL;
 
 	lim_get_phy_mode(mac_ctx, &phy_mode, session_entry);
 	sta_ds->staType = STA_ENTRY_SELF;
@@ -161,14 +162,18 @@ void lim_update_assoc_sta_datas(struct mac_context *mac_ctx,
 		lim_update_stads_htcap(mac_ctx, sta_ds, assoc_rsp,
 				       session_entry);
 
-	if (assoc_rsp->VHTCaps.present)
+	if (assoc_rsp->VHTCaps.present) {
 		vht_caps = &assoc_rsp->VHTCaps;
-	else if (assoc_rsp->vendor_vht_ie.VHTCaps.present)
+		vht_oper = &assoc_rsp->VHTOperation;
+	} else if (assoc_rsp->vendor_vht_ie.VHTCaps.present) {
 		vht_caps = &assoc_rsp->vendor_vht_ie.VHTCaps;
+		vht_oper = &assoc_rsp->vendor_vht_ie.VHTOperation;
+	}
 
 	if (session_entry->vhtCapability && (vht_caps && vht_caps->present)) {
 		sta_ds->mlmStaContext.vhtCapability =
 			vht_caps->present;
+
 		/*
 		 * If 11ac is supported and if the peer is
 		 * sending VHT capabilities,
@@ -177,12 +182,14 @@ void lim_update_assoc_sta_datas(struct mac_context *mac_ctx,
 		 */
 		sta_ds->htMaxRxAMpduFactor = vht_caps->maxAMPDULenExp;
 		if (session_entry->htSupportedChannelWidthSet) {
-			if (assoc_rsp->VHTOperation.present)
+			if (vht_oper && vht_oper->present)
 				sta_ds->vhtSupportedChannelWidthSet =
-					assoc_rsp->VHTOperation.chanWidth;
+				     lim_get_vht_ch_width(vht_caps,
+							  vht_oper,
+							  &assoc_rsp->HTInfo);
 			else
 				sta_ds->vhtSupportedChannelWidthSet =
-					eHT_CHANNEL_WIDTH_40MHZ;
+					   WNI_CFG_VHT_CHANNEL_WIDTH_20_40MHZ;
 		}
 		sta_ds->vht_mcs_10_11_supp = 0;
 		if (mac_ctx->mlme_cfg->vht_caps.vht_cap_info.
@@ -199,6 +206,8 @@ void lim_update_assoc_sta_datas(struct mac_context *mac_ctx,
 
 	lim_update_stads_eht_caps(mac_ctx, sta_ds, assoc_rsp,
 				  session_entry, beacon);
+
+	lim_update_stads_emlsr_caps(mac_ctx, sta_ds, assoc_rsp);
 
 	if (lim_is_sta_he_capable(sta_ds))
 		he_cap = &assoc_rsp->he_cap;
@@ -299,6 +308,14 @@ void lim_update_assoc_sta_datas(struct mac_context *mac_ctx,
 	}
 	if (session_entry->limRmfEnabled)
 		sta_ds->rmfEnabled = 1;
+
+	if (session_entry->vhtCapability && assoc_rsp->oper_mode_ntf.present) {
+		/**
+		 * OMN IE is present in the Assoc response, but the channel
+		 * width/Rx NSS update will happen through the peer_assoc cmd.
+		 */
+		pe_debug("OMN IE is present in the assoc rsp, update NSS/Ch width");
+	}
 }
 
 /**
@@ -782,31 +799,64 @@ lim_update_mcs_rate_set(struct wlan_objmgr_vdev *vdev, tDot11fIEHTCaps *ht_cap)
  *
  * Return: None.
  */
-static void
+static QDF_STATUS
 lim_update_sta_vdev_punc(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 			 tpSirAssocRsp assoc_resp)
 {
 	struct wlan_objmgr_vdev *vdev;
 	struct wlan_channel *des_chan;
+	enum phy_ch_width ori_bw;
+	uint16_t ori_puncture_bitmap;
+	uint16_t primary_puncture_bitmap = 0;
 
+	if (!assoc_resp->eht_op.disabled_sub_chan_bitmap_present)
+		return QDF_STATUS_SUCCESS;
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
 						    WLAN_LEGACY_MAC_ID);
 	if (!vdev) {
 		pe_err("vdev not found for id: %d", vdev_id);
-		return;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	des_chan = wlan_vdev_mlme_get_des_chan(vdev);
-	des_chan->puncture_bitmap =
-		*(uint16_t *)assoc_resp->eht_op.disable_sub_chan_bitmap;
-	pe_debug("sta vdev %d puncture %d", vdev_id, des_chan->puncture_bitmap);
+	ori_puncture_bitmap =
+		*(uint16_t *)assoc_resp->eht_op.disabled_sub_chan_bitmap;
+
+	ori_bw = wlan_mlme_convert_eht_op_bw_to_phy_ch_width(
+					assoc_resp->eht_op.channel_width);
+	wlan_reg_extract_puncture_by_bw(ori_bw, ori_puncture_bitmap,
+					des_chan->ch_freq,
+					assoc_resp->eht_op.ccfs1,
+					CH_WIDTH_20MHZ,
+					&primary_puncture_bitmap);
+	if (primary_puncture_bitmap) {
+		pe_err("sta vdev %d freq %d assoc rsp bw %d puncture 0x%x primary chan is punctured",
+		       vdev_id, des_chan->ch_freq, ori_bw, ori_puncture_bitmap);
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
+		return QDF_STATUS_E_FAILURE;
+	}
+	if (des_chan->ch_width == ori_bw)
+		des_chan->puncture_bitmap = ori_puncture_bitmap;
+	else
+		wlan_reg_extract_puncture_by_bw(ori_bw, ori_puncture_bitmap,
+						des_chan->ch_freq,
+						assoc_resp->eht_op.ccfs1,
+						des_chan->ch_width,
+						&des_chan->puncture_bitmap);
+	pe_debug("sta vdev %d freq %d assoc rsp bw %d puncture 0x%x center frequency %d intersect bw %d puncture 0x%x",
+		 vdev_id, des_chan->ch_freq, ori_bw, ori_puncture_bitmap,
+		 assoc_resp->eht_op.ccfs1, des_chan->ch_width,
+		 des_chan->puncture_bitmap);
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
+
+	return QDF_STATUS_SUCCESS;
 }
 #else
-static void
+static QDF_STATUS
 lim_update_sta_vdev_punc(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 			 tpSirAssocRsp assoc_resp)
 {
+	return QDF_STATUS_SUCCESS;
 }
 #endif
 
@@ -1002,6 +1052,19 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 	}
 
 	if (lim_is_session_eht_capable(session_entry)) {
+		status = lim_strip_and_decode_eht_op(
+					body + WLAN_ASSOC_RSP_IES_OFFSET,
+					frame_len - WLAN_ASSOC_RSP_IES_OFFSET,
+					&assoc_rsp->eht_op,
+					assoc_rsp->VHTOperation,
+					assoc_rsp->he_op,
+					assoc_rsp->HTInfo);
+
+		if (status != QDF_STATUS_SUCCESS) {
+			pe_err("Failed to extract eht op");
+			return;
+		}
+
 		status = lim_strip_and_decode_eht_cap(
 					body + WLAN_ASSOC_RSP_IES_OFFSET,
 					frame_len - WLAN_ASSOC_RSP_IES_OFFSET,
@@ -1040,9 +1103,6 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 			session_entry->assocRspLen = frame_len;
 		}
 	}
-	dot11f_parse_assoc_rsp_mlo_partner_info(session_entry,
-						session_entry->assocRsp,
-						frame_len);
 
 	lim_update_ric_data(mac_ctx, session_entry, assoc_rsp);
 
@@ -1344,8 +1404,11 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 				   session_entry->nss);
 	lim_update_vdev_rate_set(mac_ctx->psoc, session_entry->smeSessionId,
 				 assoc_rsp);
-	lim_update_sta_vdev_punc(mac_ctx->psoc, session_entry->smeSessionId,
-				 assoc_rsp);
+	if (QDF_IS_STATUS_ERROR(lim_update_sta_vdev_punc(
+					mac_ctx->psoc,
+					session_entry->smeSessionId,
+					assoc_rsp)))
+		goto assocReject;
 
 	/*
 	 * Extract the AP capabilities from the beacon that

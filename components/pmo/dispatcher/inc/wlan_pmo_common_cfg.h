@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -340,14 +340,13 @@
  * <ini>
  * gSuspendMode - Suspend mode configuration
  * @Min: 0
- * @Max: 3
+ * @Max: 2
  * @Default: 2
  *
  * This ini is used to set suspend mode. Configurations are as follows:
  * 0 - Does not support suspend.
  * 1 - Legency suspend mode, PDEV suspend.
  * 2 - WOW suspend mode.
- * 3 - Full power down while suspend.
  *
  * Related: None
  *
@@ -358,7 +357,7 @@
  * </ini>
  */
 #define CFG_PMO_SUSPEND_MODE CFG_INI_UINT("gSuspendMode", \
-					  0, 3, 2, \
+					  0, 2, 2, \
 					  CFG_VALUE_OR_DEFAULT, \
 					  "Suspend mode")
 
@@ -478,7 +477,7 @@
  * platform system suspend for SAP with one or more clients connected
  * @Min: 0
  * @Max: 1
- * @Default: 0
+ * @Default: 1
  *
  * This ini is used to PCIe bus suspend as part of platform system suspend for
  * SAP with one or more clients connected
@@ -498,7 +497,7 @@
  */
 #define CFG_ENABLE_BUS_SUSPEND_IN_SAP_MODE CFG_INI_BOOL( \
 		"enable_bus_suspend_in_sap_mode", \
-		0, \
+		1, \
 		"This ini is used to enable bus suspend in SAP mode")
 
 /*
@@ -507,7 +506,7 @@
  * platform system suspend for P2PGO with one or more clients connected
  * @Min: 0
  * @Max: 1
- * @Default: 0
+ * @Default: 1
  *
  * This ini is used to PCIe bus suspend as part of platform system suspend for
  * P2PGO with one or more clients connected
@@ -527,7 +526,7 @@
  */
 #define CFG_ENABLE_BUS_SUSPEND_IN_GO_MODE CFG_INI_BOOL( \
 		"enable_bus_suspend_in_go_mode", \
-		0, \
+		1, \
 		"This ini is used to enable bus suspend in P2PGO mode")
 
 /*

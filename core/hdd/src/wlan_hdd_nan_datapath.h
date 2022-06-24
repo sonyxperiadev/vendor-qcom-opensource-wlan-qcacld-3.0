@@ -84,16 +84,6 @@ void hdd_cleanup_ndi(struct hdd_context *hdd_ctx,
  */
 int hdd_ndi_start(const char *iface_name, uint16_t transaction_id);
 
-/**
- * hdd_add_ndi_intf(): Add NDI interface
- * @hdd_ctx: Hdd context
- * @name: NDI interface name
- *
- * Return: wireless dev
- */
-struct wireless_dev *hdd_add_ndi_intf(struct hdd_context *hdd_ctx,
-				      const char *name);
-
 enum nan_datapath_state;
 struct nan_datapath_inf_create_rsp;
 
@@ -170,6 +160,24 @@ void hdd_ndp_peer_departed_handler(uint8_t vdev_id, uint16_t sta_id,
 				   struct qdf_mac_addr *peer_mac_addr,
 				   bool last_peer);
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0))
+/**
+ * hdd_ndi_set_mode(): set the adapter mode to NDI
+ * @iface_name: NDI interface name
+ *
+ * The adapter mode is STA while creating virtual interface.
+ * mode is set to NDI while creating NDI.
+ *
+ * Return: 0 upon success
+ */
+int hdd_ndi_set_mode(const char *iface_name);
+#else
+static inline int hdd_ndi_set_mode(const char *iface_name)
+{
+	return 0;
+}
+#endif /* LINUX_VERSION_CODE  */
+
 #else
 #define WLAN_HDD_IS_NDI(adapter)	(false)
 #define WLAN_HDD_IS_NDI_CONNECTED(adapter) (false)
@@ -207,10 +215,9 @@ static inline int hdd_ndi_start(const char *iface_name, uint16_t transaction_id)
 	return 0;
 }
 
-static inline struct wireless_dev *hdd_add_ndi_intf(struct hdd_context *hdd_ctx,
-						    const char *name)
+static inline int hdd_ndi_set_mode(const char *iface_name)
 {
-	return NULL;
+	return 0;
 }
 
 enum nan_datapath_state;

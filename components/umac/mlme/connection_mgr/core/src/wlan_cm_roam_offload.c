@@ -3644,7 +3644,6 @@ cm_roam_switch_to_init(struct wlan_objmgr_pdev *pdev,
 	struct wlan_mlme_psoc_ext_obj *mlme_obj;
 	struct dual_sta_policy *dual_sta_policy;
 	struct wlan_objmgr_vdev *vdev;
-	bool is_vdev_primary = false;
 
 	if (!psoc)
 		return QDF_STATUS_E_FAILURE;
@@ -3679,6 +3678,23 @@ cm_roam_switch_to_init(struct wlan_objmgr_pdev *pdev,
 			mlme_info("STA + STA concurrency is in DBS");
 			break;
 		}
+
+		/*
+		 * set_primary_vdev usecase is to use that
+		 * interface(e.g. wlan0) over the other
+		 * interface(i.e. wlan1) for data transfer. Non-primary
+		 * vdev use case is to check the quality of that link
+		 * and decide if data can be switched to it and make it
+		 * primary.
+		 * Enabling roaming on non-primary vdev also in this
+		 * context would always helps to find better AP.
+		 */
+		if (wlan_mlme_is_primary_interface_configured(psoc) &&
+		    (reason != REASON_SUPPLICANT_INIT_ROAMING)) {
+			mlme_info("STA + STA concurrency with a primary iface, have roaming enabled on both interfaces");
+			break;
+		}
+
 		/*
 		 * Disable roaming on the enabled sta if supplicant wants to
 		 * enable roaming on this vdev id
@@ -3694,19 +3710,14 @@ cm_roam_switch_to_init(struct wlan_objmgr_pdev *pdev,
 			 * vdev id if it is not an explicit enable from
 			 * supplicant.
 			 */
-			mlme_debug("Interface vdev_id: %d, roaming enabled on vdev_id: %d, primary vdev_id:%d, reason:%d",
+			mlme_debug("Interface vdev_id: %d, roaming enabled on vdev_id: %d, reason:%d",
 				   vdev_id, temp_vdev_id,
-				   dual_sta_policy->primary_vdev_id, reason);
+				   reason);
 
-			if (vdev_id == dual_sta_policy->primary_vdev_id)
-				is_vdev_primary = true;
-
-			if (is_vdev_primary ||
-			    reason == REASON_SUPPLICANT_INIT_ROAMING) {
+			if (reason == REASON_SUPPLICANT_INIT_ROAMING) {
 				cm_roam_state_change(pdev, temp_vdev_id,
 						     WLAN_ROAM_DEINIT,
-						     is_vdev_primary ?
-					     REASON_ROAM_SET_PRIMARY : reason,
+						     reason,
 						     NULL, false);
 			} else {
 				mlme_info("CM_RSO: Roam module already initialized on vdev:[%d]",
@@ -4218,17 +4229,28 @@ cm_handle_mlo_rso_state_change(struct wlan_objmgr_pdev *pdev,
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	struct wlan_objmgr_vdev *vdev;
 	struct wlan_objmgr_vdev *assoc_vdev = NULL;
+	struct wlan_objmgr_psoc *psoc = wlan_pdev_get_psoc(pdev);
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_pdev(pdev, *vdev_id,
 						    WLAN_MLME_NB_ID);
 	if (!vdev)
 		return QDF_STATUS_E_FAILURE;
 
-	if (wlan_vdev_mlme_get_is_mlo_vdev(wlan_pdev_get_psoc(pdev),
-					   *vdev_id)) {
-		if ((reason == REASON_DISCONNECTED ||
-		     reason == REASON_DRIVER_DISABLED) &&
-		    (cm_is_vdev_disconnecting(vdev))) {
+	if (wlan_vdev_mlme_get_is_mlo_vdev(psoc, *vdev_id) &&
+	    (reason == REASON_DISCONNECTED ||
+	     reason == REASON_DRIVER_DISABLED) &&
+	    cm_is_vdev_disconnecting(vdev)) {
+		/*
+		 * Processing disconnect on assoc vdev but roaming is still
+		 * enabled. It's either due to single ML usecase or failed to
+		 * connect to second link.
+		 */
+		if (!wlan_vdev_mlme_get_is_mlo_link(psoc, *vdev_id) &&
+		    wlan_is_roaming_enabled(pdev, *vdev_id)) {
+			mlme_debug("MLO ROAM: Process RSO stop on assoc vdev : %d",
+				   *vdev_id);
+			*is_rso_skip = false;
+		} else {
 			mlme_debug("MLO ROAM: skip RSO cmd on assoc vdev %d",
 				   *vdev_id);
 			*is_rso_skip = true;
@@ -5354,9 +5376,9 @@ void cm_roam_scan_info_event(struct wlan_objmgr_psoc *psoc,
 		if (!vdev)
 			goto out;
 
-		band_mask = policy_mgr_get_connected_vdev_band_mask(vdev);
+		band_mask =
+		policy_mgr_get_connected_roaming_vdev_band_mask(psoc, vdev_id);
 		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
-
 		for (i = 0; i < num_chan; i++) {
 			if (!wlan_is_valid_frequency(chan_freq[i],
 						     band_capability,
@@ -5528,13 +5550,12 @@ void cm_roam_result_info_event(struct wlan_objmgr_psoc *psoc,
 		if (i >= MAX_ROAM_CANDIDATE_AP)
 			break;
 
-		if (scan_data->ap[i].type == WLAN_ROAM_SCAN_ROAMED_AP &&
-		    log_record->roam_result.is_roam_successful) {
+		if (res->status == 0 &&
+		    scan_data->ap[i].type == WLAN_ROAM_SCAN_ROAMED_AP) {
 			log_record->bssid = scan_data->ap[i].bssid;
 			break;
 		} else if (scan_data->ap[i].type ==
-			   WLAN_ROAM_SCAN_CURRENT_AP &&
-			   !log_record->roam_result.is_roam_successful) {
+			   WLAN_ROAM_SCAN_CURRENT_AP) {
 			log_record->bssid = scan_data->ap[i].bssid;
 			bssid = scan_data->ap[i].bssid;
 			break;

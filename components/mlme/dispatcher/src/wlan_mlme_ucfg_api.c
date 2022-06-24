@@ -29,6 +29,8 @@
 #include "wlan_mlme_vdev_mgr_interface.h"
 #include <include/wlan_pdev_mlme.h>
 #include "wlan_pdev_mlme_api.h"
+#include "wlan_vdev_mgr_tgt_if_tx_api.h"
+#include "wlan_policy_mgr_public_struct.h"
 
 QDF_STATUS ucfg_mlme_global_init(void)
 {
@@ -306,6 +308,104 @@ ucfg_mlme_set_fine_time_meas_cap(struct wlan_objmgr_psoc *psoc,
 	mlme_obj->cfg.wifi_pos_cfg.fine_time_meas_cap = fine_time_meas_cap;
 
 	return QDF_STATUS_SUCCESS;
+}
+
+static QDF_STATUS
+ucfg_mlme_set_vdev_traffic_type(struct wlan_objmgr_psoc *psoc,
+				struct wlan_objmgr_vdev *vdev, bool set,
+				uint8_t bit_mask)
+{
+	struct mlme_legacy_priv *mlme_priv;
+	struct vdev_mlme_obj *vdev_mlme;
+	struct vdev_set_params param = {0};
+	enum QDF_OPMODE mode;
+	QDF_STATUS status;
+	uint8_t vdev_id = wlan_vdev_get_id(vdev);
+	uint8_t prev_traffic_type;
+
+	mode = wlan_vdev_mlme_get_opmode(vdev);
+	if (mode != QDF_SAP_MODE && mode != QDF_P2P_CLIENT_MODE &&
+	    mode != QDF_P2P_GO_MODE) {
+		mlme_legacy_debug("vdev %d: not supported for opmode %d",
+				  vdev_id, mode);
+		return QDF_STATUS_E_NOSUPPORT;
+	}
+
+	vdev_mlme = wlan_vdev_mlme_get_cmpt_obj(vdev);
+	if (!vdev_mlme) {
+		mlme_legacy_err("vdev %d: bit_mask 0x%x, set %d, vdev mlme is null",
+				vdev_id, bit_mask, set);
+		return QDF_STATUS_E_FAILURE;
+	}
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_legacy_err("vdev %d: bit_mask 0x%x, set %d, vmlme_priv is null",
+				vdev_id, bit_mask, set);
+		return QDF_STATUS_E_FAILURE;
+	}
+	prev_traffic_type = mlme_priv->vdev_traffic_type;
+	if (set)
+		mlme_priv->vdev_traffic_type |= bit_mask;
+	else
+		mlme_priv->vdev_traffic_type &= ~bit_mask;
+
+	if (prev_traffic_type == mlme_priv->vdev_traffic_type) {
+		mlme_legacy_debug("vdev %d: No change in value 0x%x, set %d mask 0x%x",
+				  vdev_id, mlme_priv->vdev_traffic_type, set,
+				  bit_mask);
+		return QDF_STATUS_SUCCESS;
+	}
+	mlme_legacy_debug("vdev %d: vdev_traffic_type 0x%x (set %d with bit_mask 0x%x)",
+			  vdev_id, mlme_priv->vdev_traffic_type, set, bit_mask);
+	param.param_id = WMI_VDEV_PARAM_VDEV_TRAFFIC_CONFIG;
+	param.vdev_id = vdev_id;
+	param.param_value = mlme_priv->vdev_traffic_type;
+	status = tgt_vdev_mgr_set_param_send(vdev_mlme, &param);
+	policy_mgr_handle_ml_sta_link_on_traffic_type_change(psoc, vdev);
+
+	return status;
+}
+
+QDF_STATUS
+ucfg_mlme_set_vdev_traffic_low_latency(struct wlan_objmgr_psoc *psoc,
+				       uint8_t vdev_id, bool set)
+{
+	struct wlan_objmgr_vdev *vdev;
+	QDF_STATUS status;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_MLME_OBJMGR_ID);
+	if (!vdev) {
+		mlme_legacy_err("vdev %d: vdev not found",
+				vdev_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+	status = ucfg_mlme_set_vdev_traffic_type(psoc, vdev, set,
+						 PM_VDEV_TRAFFIC_LOW_LATENCY);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
+
+	return status;
+}
+
+QDF_STATUS
+ucfg_mlme_set_vdev_traffic_high_throughput(struct wlan_objmgr_psoc *psoc,
+					   uint8_t vdev_id, bool set)
+{
+	struct wlan_objmgr_vdev *vdev;
+	QDF_STATUS status;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_MLME_OBJMGR_ID);
+	if (!vdev) {
+		mlme_legacy_err("vdev %d: vdev not found",
+				vdev_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+	status = ucfg_mlme_set_vdev_traffic_type(psoc, vdev, set,
+						 PM_VDEV_TRAFFIC_HIGH_TPUT);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
+
+	return status;
 }
 
 QDF_STATUS
@@ -1682,16 +1782,24 @@ bool ucfg_mlme_validate_full_roam_scan_period(uint32_t full_roam_scan_period)
 	return is_valid;
 }
 
-bool ucfg_mlme_validate_scan_period(uint32_t roam_scan_period)
+bool ucfg_mlme_validate_scan_period(struct wlan_objmgr_psoc *psoc,
+				    uint32_t roam_scan_period)
 {
-	bool is_valid = true;
+	bool is_valid = true, val = false;
 
 	if (!cfg_in_range(CFG_LFR_EMPTY_SCAN_REFRESH_PERIOD,
 			  roam_scan_period)) {
-		mlme_legacy_err("Roam scan period value %d msec is out of range (Min: %d msec Max: %d msec)",
-				roam_scan_period,
-				cfg_min(CFG_LFR_EMPTY_SCAN_REFRESH_PERIOD),
-				cfg_max(CFG_LFR_EMPTY_SCAN_REFRESH_PERIOD));
+		ucfg_mlme_get_connection_roaming_ini_present(psoc, &val);
+		if (val)
+			mlme_legacy_err("Roam scan period value %d msec is out of range (Min: %d msec Max: %d msec)",
+					roam_scan_period,
+					cfg_min(CFG_ROAM_SCAN_FIRST_TIMER) * 1000,
+					cfg_max(CFG_ROAM_SCAN_FIRST_TIMER) * 1000);
+		else
+			mlme_legacy_err("Roam scan period value %d msec is out of range (Min: %d msec Max: %d msec)",
+					roam_scan_period,
+					cfg_min(CFG_LFR_EMPTY_SCAN_REFRESH_PERIOD),
+					cfg_max(CFG_LFR_EMPTY_SCAN_REFRESH_PERIOD));
 		is_valid = false;
 	}
 

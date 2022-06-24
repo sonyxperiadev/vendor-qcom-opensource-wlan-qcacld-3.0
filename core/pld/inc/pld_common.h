@@ -297,6 +297,12 @@ struct pld_shadow_reg_v2_cfg {
 	u32 addr;
 };
 
+#ifdef CONFIG_SHADOW_V3
+struct pld_shadow_reg_v3_cfg {
+	u32 addr;
+};
+#endif
+
 /**
  * struct pld_rri_over_ddr_cfg_s - rri_over_ddr configuration
  * @base_addr_low: lower 32bit
@@ -337,6 +343,10 @@ struct pld_wlan_enable_cfg {
 	struct pld_shadow_reg_v2_cfg *shadow_reg_v2_cfg;
 	bool rri_over_ddr_cfg_valid;
 	struct pld_rri_over_ddr_cfg rri_over_ddr_cfg;
+#ifdef CONFIG_SHADOW_V3
+	u32 num_shadow_reg_v3_cfg;
+	struct pld_shadow_reg_v3_cfg *shadow_reg_v3_cfg;
+#endif
 };
 
 /**
@@ -357,16 +367,6 @@ enum pld_driver_mode {
 	PLD_OFF,
 	PLD_COLDBOOT_CALIBRATION = 7,
 	PLD_FTM_COLDBOOT_CALIBRATION = 10
-};
-
-/**
- * enum pld_suspend_mode - WLAN suspend mode
- * @PLD_SUSPEND: suspend
- * @PLD_FULL_POWER_DOWN: full power down while suspend
- */
-enum pld_suspend_mode {
-	PLD_SUSPEND,
-	PLD_FULL_POWER_DOWN,
 };
 
 /**
@@ -561,33 +561,6 @@ void pld_deinit(void);
  *         Non zero failure code for errors
  */
 int pld_set_mode(u8 mode);
-
-#ifdef FEATURE_WLAN_FULL_POWER_DOWN_SUPPORT
-/**
- * pld_set_suspend_mode() - set suspend mode in PLD module
- * @mode: pld suspend mode
- *
- * Return: 0 for success
- *         Non zero failure code for errors
- */
-int pld_set_suspend_mode(enum pld_suspend_mode mode);
-/**
- * pld_is_full_power_down_enable() - check full power down is enabled or not
- *
- * Return: true if full power down is enabled else false
- */
-bool pld_is_full_power_down_enable(void);
-#else
-static inline int pld_set_suspend_mode(enum pld_suspend_mode mode)
-{
-	return 0;
-}
-
-static inline bool pld_is_full_power_down_enable(void)
-{
-	return false;
-}
-#endif
 
 int pld_register_driver(struct pld_driver_ops *ops);
 void pld_unregister_driver(void);

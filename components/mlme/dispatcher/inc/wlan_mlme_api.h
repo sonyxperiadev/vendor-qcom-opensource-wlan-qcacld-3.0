@@ -261,6 +261,23 @@ QDF_STATUS wlan_mlme_set_ht_mpdu_density(struct wlan_objmgr_psoc *psoc,
 QDF_STATUS wlan_mlme_get_band_capability(struct wlan_objmgr_psoc *psoc,
 					 uint32_t *band_capability);
 
+#ifdef MULTI_CLIENT_LL_SUPPORT
+/**
+ * wlan_mlme_get_wlm_multi_client_ll_caps() - Get the wlm multi client latency
+ * level capability flag
+ * @psoc: pointer to psoc object
+ *
+ * Return: True is multi client ll cap present
+ */
+bool wlan_mlme_get_wlm_multi_client_ll_caps(struct wlan_objmgr_psoc *psoc);
+#else
+static inline bool
+wlan_mlme_get_wlm_multi_client_ll_caps(struct wlan_objmgr_psoc *psoc)
+{
+	return false;
+}
+#endif
+
 /**
  * wlan_mlme_set_band_capability() - Set the Band capability config
  * @psoc: pointer to psoc object
@@ -964,6 +981,16 @@ QDF_STATUS mlme_update_tgt_he_caps_in_cfg(struct wlan_objmgr_psoc *psoc,
  */
 QDF_STATUS mlme_update_tgt_eht_caps_in_cfg(struct wlan_objmgr_psoc *psoc,
 					  struct wma_tgt_cfg *cfg);
+
+/**
+ * wlan_mlme_convert_eht_op_bw_to_phy_ch_width() - convert channel width in eht
+ *                                                 operation IE to phy_ch_width
+ * @channel_width: channel width in eht operation IE
+ *
+ * Return: phy_ch_width
+ */
+enum phy_ch_width wlan_mlme_convert_eht_op_bw_to_phy_ch_width(
+						uint8_t channel_width);
 #endif
 
 /**
@@ -1078,6 +1105,18 @@ QDF_STATUS wlan_mlme_set_primary_interface(struct wlan_objmgr_psoc *psoc,
  * Return: QDF Status
  */
 QDF_STATUS wlan_mlme_set_default_primary_iface(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * wlan_mlme_is_primary_interface_configured() - Check if primary iface is set
+ * @psoc: pointer to psoc object
+ *
+ * Check if primary iface is configured from userspace through vendor command.
+ * Return true if it's configured. If it's not configured, default value would
+ * be 0xFF and return false then.
+ *
+ * Return: True or False
+ */
+bool wlan_mlme_is_primary_interface_configured(struct wlan_objmgr_psoc *psoc);
 
 /**
  * wlan_mlme_get_mcc_duty_cycle_percentage() - Get primary STA iface duty
@@ -2285,6 +2324,18 @@ wlan_mlme_get_sta_miracast_mcc_rest_time(struct wlan_objmgr_psoc *psoc,
 					 uint32_t *value);
 
 /**
+ * wlan_mlme_get_max_modulated_dtim_ms() - get the max modulated dtim in ms
+ * restart
+ * @psoc: pointer to psoc object
+ * @value: Value that needs to be set from the caller
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+wlan_mlme_get_max_modulated_dtim_ms(struct wlan_objmgr_psoc *psoc,
+				    uint16_t *value);
+
+/**
  * wlan_mlme_get_scan_probe_unicast_ra() - Get scan probe unicast RA cfg
  * @psoc: pointer to psoc object
  * @value: value which needs to filled by API
@@ -3341,23 +3392,44 @@ QDF_STATUS mlme_cfg_get_eht_caps(struct wlan_objmgr_psoc *psoc,
 
 #ifdef WLAN_FEATURE_11BE_MLO
 /**
- * wlan_mlme_is_sta_single_mlo_conn() - Is single mlo connection for sta
- *                                      set or not
+ * wlan_mlme_get_sta_mlo_conn_max_num() - get max number of links that sta mlo
+ *                                        connection can support
  * @psoc: pointer to psoc object
  *
- * Return: True if single mlo connection for sta is set
+ * Return: max number of links that sta mlo connection can support
  */
-bool wlan_mlme_is_sta_single_mlo_conn(struct wlan_objmgr_psoc *psoc);
+uint8_t wlan_mlme_get_sta_mlo_conn_max_num(struct wlan_objmgr_psoc *psoc);
 
 /**
- * wlan_mlme_set_sta_single_mlo_conn() - Set single mlo connection for sta
+ * wlan_mlme_set_sta_mlo_conn_max_num() - set max number of links that sta mlo
+ *                                        connection can support
  * @psoc: pointer to psoc object
  * @value: value to set
  *
  * Return: QDF Status
  */
-QDF_STATUS wlan_mlme_set_sta_single_mlo_conn(struct wlan_objmgr_psoc *psoc,
-					     bool value);
+QDF_STATUS wlan_mlme_set_sta_mlo_conn_max_num(struct wlan_objmgr_psoc *psoc,
+					      bool value);
+
+/**
+ * wlan_mlme_get_sta_mlo_conn_band_bmp() - get band bitmap that sta mlo
+ *                                         connection can support
+ * @psoc: pointer to psoc object
+ *
+ * Return: band bitmap that sta mlo connection can support
+ */
+uint8_t wlan_mlme_get_sta_mlo_conn_band_bmp(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * wlan_mlme_set_sta_mlo_conn_band_bmp() - set band bitmap that sta mlo
+ *                                         connection can support
+ * @psoc: pointer to psoc object
+ * @value: value to set
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS wlan_mlme_set_sta_mlo_conn_band_bmp(struct wlan_objmgr_psoc *psoc,
+					       bool value);
 #endif
 
 /**
@@ -3491,6 +3563,19 @@ QDF_STATUS
 wlan_mlme_update_ratemask_params(struct wlan_objmgr_vdev *vdev,
 				 uint8_t num_ratemask,
 				 struct config_ratemask_params *rate_params);
+
+/**
+ * wlan_mlme_is_channel_valid() - validate channel frequency
+ * @psoc: psoc object manager
+ * @chan_freq: channel frequency
+ *
+ * This function validates channel frequency present in valid channel
+ * list or not.
+ *
+ * Return: true or false
+ */
+bool wlan_mlme_is_channel_valid(struct wlan_objmgr_psoc *psoc,
+				uint32_t chan_freq);
 #ifdef WLAN_FEATURE_MCC_QUOTA
 /**
  * wlan_mlme_set_user_mcc_quota() - set the user mcc quota in mlme
@@ -3583,4 +3668,37 @@ QDF_STATUS mlme_save_vdev_max_mcs_idx(struct wlan_objmgr_vdev *vdev,
  */
 uint8_t mlme_get_vdev_max_mcs_idx(struct wlan_objmgr_vdev *vdev);
 #endif /* WLAN_FEATURE_SON */
+/**
+ * wlan_mlme_set_safe_mode_enable() - set safe_mode_enable flag
+ * based on value set by user space.
+ *
+ * @psoc: psoc context
+ * @safe_mode_enable: safe mode enabled or not
+ *
+ * Return: none
+ */
+void wlan_mlme_set_safe_mode_enable(struct wlan_objmgr_psoc *psoc,
+				    bool safe_mode_enable);
+
+/**
+ * wlan_mlme_get_safe_mode_enable() - get safe_mode_enable set by user
+ * space
+ *
+ * @psoc: psoc context
+ * @safe_mode_enable: safe mode enabled or not
+ *
+ * Return: none
+ */
+void wlan_mlme_get_safe_mode_enable(struct wlan_objmgr_psoc *psoc,
+				    bool *safe_mode_enable);
+
+/**
+ * wlan_mlme_get_6g_ap_power_type() - get the power type of the
+ * vdev operating on 6GHz.
+ *
+ * @vdev: vdev context
+ *
+ * Return: 6g_power_type
+ */
+uint32_t wlan_mlme_get_6g_ap_power_type(struct wlan_objmgr_vdev *vdev);
 #endif /* _WLAN_MLME_API_H_ */

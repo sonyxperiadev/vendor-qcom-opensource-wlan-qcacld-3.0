@@ -64,6 +64,9 @@ ifeq ($(CONFIG_CNSS_QCA6490), y)
 	CONFIG_TX_MULTI_TCL := y
 	CONFIG_OFDM_SCRAMBLER_SEED := y
 	CONFIG_WLAN_FEATURE_MARK_FIRST_WAKEUP_PACKET := y
+	ifeq ($(CONFIG_ARCH_LAHAINA), y)
+		CONFIG_WLAN_TSF_UPLINK_DELAY := y
+	endif
 endif
 
 ifeq ($(CONFIG_CNSS_QCA6750), y)
@@ -130,6 +133,7 @@ ifeq (y,$(findstring y,$(CONFIG_CNSS_KIWI) $(CONFIG_CNSS_KIWI_V2)))
 	CONFIG_TX_MULTI_TCL := y
 	CONFIG_OFDM_SCRAMBLER_SEED := y
 	CONFIG_WLAN_RX_MON_PARSE_CMN_USER_INFO := y
+	CONFIG_WLAN_FEATURE_WMI_DIAG_OVER_CE7 := y
 endif
 
 ifeq (y,$(findstring y,$(CONFIG_LITHIUM) $(CONFIG_BERYLLIUM)))
@@ -564,11 +568,6 @@ endif
 endif
 endif
 
-#CE4 completion on HTT HTC packet instead of misc list free
-ifeq ($(CONFIG_CNSS_QCA6490), y)
-	ENABLE_CE4_COMP_DISABLE_HTT_HTC_MISC_LIST = y
-endif
-
 #Whether have QMI support
 CONFIG_QMI_SUPPORT := y
 
@@ -610,6 +609,20 @@ endif
 
 endif #CONFIG_HELIUMPLUS
 
+ifeq ($(CONFIG_LITHIUM), y)
+#
+# Enable Shadow V2 for all lithium platform
+#
+CONFIG_SHADOW_V2 := y
+endif
+
+ifeq ($(CONFIG_BERYLLIUM), y)
+#
+# Enable Shadow V3 for all Beryllium platform
+#
+CONFIG_SHADOW_V3 := y
+endif
+
 ifeq (y,$(filter y,$(CONFIG_LITHIUM) $(CONFIG_BERYLLIUM)))
 CONFIG_RX_DEFRAG_DO_NOT_REINJECT := y
 CONFIG_MARK_ICMP_REQ_TO_FW := y
@@ -625,10 +638,6 @@ ifeq ($(CONFIG_CNSS_QCA6390), y)
 	CONFIG_SHADOW_WRITE_DELAY := y
 endif
 endif
-#
-# Enable Shadow V2 for all lithium platform
-#
-CONFIG_SHADOW_V2 := y
 
 ifeq ($(CONFIG_CNSS_QCA6290), y)
 	CONFIG_QCA6290_HEADERS_DEF := y
@@ -861,23 +870,6 @@ ifeq ($(CONFIG_HELIUMPLUS), y)
 CONFIG_PKTLOG_LEGACY := y
 endif
 
-#Customize DSCP_to-UP map based on RFC8325
-ifeq ($(CONFIG_HELIUMPLUS), y)
-CONFIG_WLAN_CUSTOM_DSCP_UP_MAP := y
-CONFIG_WLAN_SEND_DSCP_UP_MAP_TO_FW := y
-endif
-ifeq (y,$(filter y,$(CONFIG_LITHIUM) $(CONFIG_BERYLLIUM)))
-CONFIG_WLAN_CUSTOM_DSCP_UP_MAP := y
-endif
-
-ifeq ($(CONFIG_ARCH_BENGAL), y)
-CONFIG_SMMU_S1_UNMAP := y
-endif
-
-ifeq ($(CONFIG_ICNSS2_HELIUM), y)
-CONFIG_SMMU_S1_UNMAP := y
-endif
-
 ifeq ($(CONFIG_ROME_IF), sdio)
 CONFIG_PKTLOG_LEGACY := y
 endif
@@ -897,6 +889,24 @@ endif
 
 ifeq (y,$(filter y,$(CONFIG_LITHIUM) $(CONFIG_BERYLLIUM)))
 CONFIG_PKTLOG_LEGACY := n
+endif
+
+#Customize DSCP_to-UP map based on RFC8325
+ifeq ($(CONFIG_HELIUMPLUS), y)
+CONFIG_WLAN_CUSTOM_DSCP_UP_MAP := y
+CONFIG_WLAN_SEND_DSCP_UP_MAP_TO_FW := y
+endif
+
+ifeq (y,$(filter y,$(CONFIG_LITHIUM) $(CONFIG_BERYLLIUM)))
+CONFIG_WLAN_CUSTOM_DSCP_UP_MAP := y
+endif
+
+ifeq ($(CONFIG_ARCH_BENGAL), y)
+CONFIG_SMMU_S1_UNMAP := y
+endif
+
+ifeq ($(CONFIG_ICNSS2_HELIUM), y)
+CONFIG_SMMU_S1_UNMAP := y
 endif
 
 ifeq (y,$(filter y,$(CONFIG_LITHIUM) $(CONFIG_BERYLLIUM)))
@@ -1306,6 +1316,7 @@ ifeq (y,$(filter y,$(CONFIG_LITHIUM) $(CONFIG_BERYLLIUM)))
 	CONFIG_WLAN_SKIP_BAR_UPDATE := y
 	CONFIG_TX_MULTIQ_PER_AC := y
 	CONFIG_WLAN_TRACEPOINTS := y
+	ENABLE_CE4_COMP_DISABLE_HTT_HTC_MISC_LIST := y
 endif
 
 #Flag to enable hdd memory dump feature
@@ -1440,6 +1451,7 @@ ifeq ($(CONFIG_CNSS_QCA6490), y)
 ifeq ($(CONFIG_ARCH_LAHAINA), y)
 CONFIG_WLAN_FEATURE_PKT_CAPTURE := y
 CONFIG_WLAN_FEATURE_PKT_CAPTURE_V2 := y
+CONFIG_DP_RX_UDP_OVER_PEER_ROAM := y
 endif
 endif
 

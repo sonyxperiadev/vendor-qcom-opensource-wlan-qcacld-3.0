@@ -1022,7 +1022,9 @@ void wma_update_rate_flags_after_vdev_restart(tp_wma_handle wma,
 	des_chan = wlan_vdev_mlme_get_des_chan(iface->vdev);
 	bss_phymode = des_chan->ch_phymode;
 
-	if (IS_WLAN_PHYMODE_HE(bss_phymode)) {
+	if (wma_is_eht_phymode_supported(bss_phymode)) {
+		rate_flags = wma_get_eht_rate_flags(des_chan->ch_width);
+	} else if (IS_WLAN_PHYMODE_HE(bss_phymode)) {
 		rate_flags = wma_get_he_rate_flags(des_chan->ch_width);
 	} else if (IS_WLAN_PHYMODE_VHT(bss_phymode)) {
 		rate_flags = wma_get_vht_rate_flags(des_chan->ch_width);
@@ -1690,6 +1692,7 @@ peer_detach:
 			cdp_peer_delete(soc, vdev_id, peer_addr, bitmap);
 	}
 
+	wlan_release_peer_key_wakelock(wma->pdev, peer_mac);
 	wma_remove_objmgr_peer(wma, wma->interfaces[vdev_id].vdev, peer_mac);
 
 	wma->interfaces[vdev_id].peer_count--;
@@ -2707,7 +2710,7 @@ static QDF_STATUS wma_set_vdev_latency_level_param(tp_wma_handle wma_handle,
 			mac->mlme_cfg->wlm_config.multi_client_ll_support;
 	multi_client_ll_caps =
 			wlan_mlme_get_wlm_multi_client_ll_caps(mac->psoc);
-	wma_debug("[MULTI_CLIENT] INI support: %d, fw capability:%d",
+	wma_debug("INI support: %d, fw capability:%d",
 		  multi_client_ll_ini_support, multi_client_ll_caps);
 	/*
 	 * Multi-Client arbiter functionality is enabled only if both INI is
@@ -4989,6 +4992,7 @@ static void wma_add_sta_req_sta_mode(tp_wma_handle wma, tpAddStaParams params)
 				wmi_service_listen_interval_offload_support)) {
 		struct wlan_objmgr_vdev *vdev;
 		uint32_t moddtim;
+		bool is_connection_roaming_cfg_set = 0;
 
 		wma_debug("listen interval offload enabled, setting params");
 		status = wma_vdev_set_param(wma->wmi_handle,
@@ -4999,6 +5003,21 @@ static void wma_add_sta_req_sta_mode(tp_wma_handle wma, tpAddStaParams params)
 			wma_err("can't set MAX_LI for session: %d",
 				params->smesessionId);
 		}
+
+		ucfg_mlme_get_connection_roaming_ini_present(
+						wma->psoc,
+						&is_connection_roaming_cfg_set);
+		if (is_connection_roaming_cfg_set) {
+			status = wma_vdev_set_param(
+					wma->wmi_handle,
+					params->smesessionId,
+					WMI_VDEV_PARAM_MAX_LI_OF_MODDTIM_MS,
+					wma->sta_max_li_mod_dtim_ms);
+			if (status != QDF_STATUS_SUCCESS)
+				wma_err("can't set MAX_LI_MS for session: %d",
+					params->smesessionId);
+		}
+
 		status = wma_vdev_set_param(wma->wmi_handle,
 					    params->smesessionId,
 					    WMI_VDEV_PARAM_DYNDTIM_CNT,
@@ -5357,6 +5376,7 @@ void wma_add_sta(tp_wma_handle wma, tpAddStaParams add_sta)
 	uint8_t oper_mode = BSS_OPERATIONAL_MODE_STA;
 	void *htc_handle;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	uint8_t vdev_id = add_sta->smesessionId;
 
 	htc_handle = lmac_get_htc_hdl(wma->psoc);
 	if (!htc_handle) {
@@ -5364,13 +5384,13 @@ void wma_add_sta(tp_wma_handle wma, tpAddStaParams add_sta)
 		return;
 	}
 
-	wma_debug("Vdev %d BSSID "QDF_MAC_ADDR_FMT, add_sta->smesessionId,
+	wma_debug("Vdev %d BSSID "QDF_MAC_ADDR_FMT, vdev_id,
 		  QDF_MAC_ADDR_REF(add_sta->bssId));
 
-	if (wma_is_vdev_in_ap_mode(wma, add_sta->smesessionId))
+	if (wma_is_vdev_in_ap_mode(wma, vdev_id))
 		oper_mode = BSS_OPERATIONAL_MODE_AP;
 
-	if (WMA_IS_VDEV_IN_NDI_MODE(wma->interfaces, add_sta->smesessionId))
+	if (WMA_IS_VDEV_IN_NDI_MODE(wma->interfaces, vdev_id))
 		oper_mode = BSS_OPERATIONAL_MODE_NDI;
 	switch (oper_mode) {
 	case BSS_OPERATIONAL_MODE_STA:
@@ -5381,12 +5401,17 @@ void wma_add_sta(tp_wma_handle wma, tpAddStaParams add_sta)
 		wma_add_sta_req_ap_mode(wma, add_sta);
 		break;
 	case BSS_OPERATIONAL_MODE_NDI:
-		status = wma_add_sta_ndi_mode(wma, add_sta);
+		wma_add_sta_ndi_mode(wma, add_sta);
 		break;
 	}
 
+	/*
+	 * not use add_sta after this to avoid use after free
+	 * as it maybe freed.
+	 */
+
 	/* handle wow for sap with 1 or more peer in same way */
-	if (wma_is_vdev_in_sap_mode(wma, add_sta->smesessionId)) {
+	if (wma_is_vdev_in_sap_mode(wma, vdev_id)) {
 		bool is_bus_suspend_allowed_in_sap_mode =
 			(wlan_pmo_get_sap_mode_bus_suspend(wma->psoc) &&
 				wmi_service_enabled(wma->wmi_handle,
@@ -5404,7 +5429,7 @@ void wma_add_sta(tp_wma_handle wma, tpAddStaParams add_sta)
 	}
 
 	/* handle wow for p2pgo with 1 or more peer in same way */
-	if (wma_is_vdev_in_go_mode(wma, add_sta->smesessionId)) {
+	if (wma_is_vdev_in_go_mode(wma, vdev_id)) {
 		bool is_bus_suspend_allowed_in_go_mode =
 			(wlan_pmo_get_go_mode_bus_suspend(wma->psoc) &&
 				wmi_service_enabled(wma->wmi_handle,

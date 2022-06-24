@@ -161,7 +161,13 @@ typedef enum {
 	eSAP_DFS_CAC_START,
 	eSAP_DFS_CAC_INTERRUPTED,
 	eSAP_DFS_CAC_END,
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 	eSAP_DFS_PRE_CAC_END,
+#endif
 	eSAP_DFS_RADAR_DETECT,
 	eSAP_DFS_RADAR_DETECT_DURING_PRE_CAC,
 	/* No ch available after DFS RADAR detect */
@@ -855,6 +861,11 @@ QDF_STATUS wlan_sap_update_next_channel(struct sap_context *sap_ctx,
 					uint8_t channel,
 					enum phy_ch_width chan_bw);
 
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 #if defined(FEATURE_SAP_COND_CHAN_SWITCH) && defined(PRE_CAC_SUPPORT)
 /**
  * wlan_sap_set_pre_cac_status() - Set the pre cac status
@@ -893,9 +904,15 @@ wlan_sap_set_chan_freq_before_pre_cac(struct sap_context *sap_ctx,
 {
 	return QDF_STATUS_SUCCESS;
 }
-#endif
+#endif /* FEATURE_SAP_COND_CHAN_SWITCH and PRE_CAC_SUPPORT */
+#endif /* PRE_CAC_COMP */
 
 #ifdef PRE_CAC_SUPPORT
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 /**
  * wlan_sap_set_pre_cac_complete_status() - Sets pre cac complete status
  * @sap_ctx: SAP context
@@ -918,7 +935,13 @@ bool wlan_sap_is_pre_cac_context(struct sap_context *context);
 
 bool wlan_sap_is_pre_cac_active(mac_handle_t handle);
 QDF_STATUS wlan_sap_get_pre_cac_vdev_id(mac_handle_t handle, uint8_t *vdev_id);
+#endif
 #else
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 static inline QDF_STATUS
 wlan_sap_set_pre_cac_complete_status(struct sap_context *sap_ctx,
 				     bool status)
@@ -936,7 +959,8 @@ static inline bool wlan_sap_is_pre_cac_active(mac_handle_t handle)
 {
 	return false;
 }
-#endif
+#endif /* PRE_CAC_COMP */
+#endif /* PRE_CAC_SUPPORT */
 
 #ifdef FEATURE_WLAN_MCC_TO_SCC_SWITCH
 /**
@@ -1353,6 +1377,24 @@ void wlansap_extend_to_acs_range(mac_handle_t mac_handle,
 				 uint32_t *bandStartChannel,
 				 uint32_t *bandEndChannel);
 
+#ifdef WLAN_FEATURE_SON
+/**
+ * wlansap_son_update_sap_config_phymode() - update sap config according to
+ *                                           phy_mode. This API is for son,
+ *                                           There is no band switching when
+ *                                           son phy mode is changed.
+ * @sap_ctx:  Pointer to Sap Context
+ * @sap_config:  Pointer to sap config
+ * @phy_mode: pointer to phy mode
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlansap_son_update_sap_config_phymode(struct wlan_objmgr_vdev *vdev,
+				      struct sap_config *config,
+				      enum qca_wlan_vendor_phy_mode phy_mode);
+#endif
+
 /**
  * wlansap_set_dfs_nol() - Set dfs nol
  * @sap_ctx: SAP context
@@ -1611,6 +1653,27 @@ uint32_t wlansap_get_safe_channel_from_pcl_for_sap(struct sap_context *sap_ctx);
  */
 qdf_freq_t wlansap_get_chan_band_restrict(struct sap_context *sap_ctx,
 					  enum sap_csa_reason_code *csa_reason);
+
+/**
+ * wlansap_override_csa_strict_for_sap() - check user CSA strict or not
+ * @mac: mac ctx
+ * @sap_ctx: sap context
+ * @target_chan_freq: target channel frequency in MHz
+ * @strict: CSA strict flag
+ *
+ * If force SCC enabled, user trigger SAP CSA and target channel
+ * doesn't cause MCC with existing STA/CLI, then override strict flag to
+ * true, so that driver can skip the overlap interference check and
+ * allow the CSA go through. This is to allow SAP/GO force SCC in
+ * same band.
+ *
+ * Return: true if CSA is strict, otherwise false
+ */
+bool
+wlansap_override_csa_strict_for_sap(mac_handle_t mac_handle,
+				    struct sap_context *sap_ctx,
+				    uint32_t target_chan_freq,
+				    bool strict);
 
 #ifdef FEATURE_RADAR_HISTORY
 /**

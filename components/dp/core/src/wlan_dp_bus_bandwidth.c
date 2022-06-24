@@ -70,6 +70,10 @@ static bus_bw_table_type bus_bw_table_default = {
 				       BUS_BW_LEVEL_2, BUS_BW_LEVEL_3,
 				       BUS_BW_LEVEL_4, BUS_BW_LEVEL_6,
 				       BUS_BW_LEVEL_7, BUS_BW_LEVEL_8},
+	[QCA_WLAN_802_11_MODE_11BE] = {BUS_BW_LEVEL_NONE, BUS_BW_LEVEL_1,
+				       BUS_BW_LEVEL_2, BUS_BW_LEVEL_3,
+				       BUS_BW_LEVEL_4, BUS_BW_LEVEL_6,
+				       BUS_BW_LEVEL_7, BUS_BW_LEVEL_8},
 };
 
 /**
@@ -101,7 +105,11 @@ static bus_bw_table_type bus_bw_table_low_latency = {
 	[QCA_WLAN_802_11_MODE_11AX] = {BUS_BW_LEVEL_NONE, BUS_BW_LEVEL_8,
 				       BUS_BW_LEVEL_8, BUS_BW_LEVEL_8,
 				       BUS_BW_LEVEL_8, BUS_BW_LEVEL_8,
-				       BUS_BW_LEVEL_8, BUS_BW_LEVEL_8}
+				       BUS_BW_LEVEL_8, BUS_BW_LEVEL_8},
+	[QCA_WLAN_802_11_MODE_11BE] = {BUS_BW_LEVEL_NONE, BUS_BW_LEVEL_8,
+				       BUS_BW_LEVEL_8, BUS_BW_LEVEL_8,
+				       BUS_BW_LEVEL_8, BUS_BW_LEVEL_8,
+				       BUS_BW_LEVEL_8, BUS_BW_LEVEL_8},
 };
 
 /**
@@ -159,6 +167,11 @@ bbm_get_bus_bw_level_vote(struct wlan_dp_intf *dp_intf,
 	struct wlan_dp_psoc_callbacks *cb_obj = &dp_ctx->dp_ops;
 	hdd_cb_handle ctx = cb_obj->callback_ctx;
 
+	if (tput_level >= TPUT_LEVEL_MAX) {
+		dp_err("invalid tput level %d", tput_level);
+		return  BUS_BW_LEVEL_NONE;
+	}
+
 	switch (dp_intf->device_mode) {
 	case QDF_STA_MODE:
 	case QDF_P2P_CLIENT_MODE:
@@ -168,7 +181,8 @@ bbm_get_bus_bw_level_vote(struct wlan_dp_intf *dp_intf,
 			break;
 
 		if (dot11_mode >= QCA_WLAN_802_11_MODE_INVALID) {
-			dp_err("invalid STA/P2P-CLI dot11 mode");
+			dp_err("invalid STA/P2P-CLI dot11 modei %d",
+			       dot11_mode);
 			break;
 		}
 
@@ -1420,6 +1434,7 @@ static void dp_pld_request_bus_bandwidth(struct wlan_dp_psoc_context *dp_ctx,
 	qdf_cpu_mask pm_qos_cpu_mask_tx, pm_qos_cpu_mask_rx, pm_qos_cpu_mask;
 	bool is_rx_pm_qos_high;
 	bool is_tx_pm_qos_high;
+	bool pmqos_on_low_tput = false;
 	enum tput_level tput_level;
 	struct bbm_params param = {0};
 	bool legacy_client = false;
@@ -1435,6 +1450,9 @@ static void dp_pld_request_bus_bandwidth(struct wlan_dp_psoc_context *dp_ctx,
 	if (dp_ctx->high_bus_bw_request) {
 		next_vote_level = PLD_BUS_WIDTH_VERY_HIGH;
 		tput_level = TPUT_LEVEL_VERY_HIGH;
+	} else if (total_pkts > dp_ctx->dp_cfg.bus_bw_super_high_threshold) {
+		next_vote_level = PLD_BUS_WIDTH_MAX;
+		tput_level = TPUT_LEVEL_SUPER_HIGH;
 	} else if (total_pkts > dp_ctx->dp_cfg.bus_bw_ultra_high_threshold) {
 		next_vote_level = PLD_BUS_WIDTH_ULTRA_HIGH;
 		tput_level = TPUT_LEVEL_ULTRA_HIGH;
@@ -1462,7 +1480,8 @@ static void dp_pld_request_bus_bandwidth(struct wlan_dp_psoc_context *dp_ctx,
 	 */
 	if (!ucfg_ipa_is_fw_wdi_activated(dp_ctx->pdev) &&
 	    policy_mgr_is_current_hwmode_dbs(dp_ctx->psoc) &&
-	    (total_pkts > dp_ctx->dp_cfg.bus_bw_dbs_threshold)) {
+	    (total_pkts > dp_ctx->dp_cfg.bus_bw_dbs_threshold) &&
+	    (tput_level < TPUT_LEVEL_SUPER_HIGH)) {
 		next_vote_level = PLD_BUS_WIDTH_ULTRA_HIGH;
 		tput_level = TPUT_LEVEL_ULTRA_HIGH;
 	}
@@ -1565,6 +1584,13 @@ static void dp_pld_request_bus_bandwidth(struct wlan_dp_psoc_context *dp_ctx,
 			is_rx_pm_qos_high = false;
 			is_tx_pm_qos_high = false;
 			qdf_cpumask_clear(&pm_qos_cpu_mask);
+			if (next_vote_level == PLD_BUS_WIDTH_LOW &&
+			    rx_packets > tx_packets &&
+			    !legacy_client) {
+				pmqos_on_low_tput = true;
+				dp_pm_qos_update_cpu_mask(&pm_qos_cpu_mask,
+							  false);
+			}
 		} else {
 			qdf_cpumask_clear(&pm_qos_cpu_mask);
 			qdf_cpumask_or(&pm_qos_cpu_mask,
@@ -1580,7 +1606,7 @@ static void dp_pld_request_bus_bandwidth(struct wlan_dp_psoc_context *dp_ctx,
 	}
 
 	if (vote_level_change || tx_level_change || rx_level_change) {
-		dp_info("tx:%llu[%llu(off)+%llu(no-off)] rx:%llu[%llu(off)+%llu(no-off)] next_level(vote %u rx %u tx %u rtpm %d) pm_qos(rx:%u,%*pb tx:%u,%*pb)",
+		dp_info("tx:%llu[%llu(off)+%llu(no-off)] rx:%llu[%llu(off)+%llu(no-off)] next_level(vote %u rx %u tx %u rtpm %d) pm_qos(rx:%u,%*pb tx:%u,%*pb on_low_tput:%u)",
 			tx_packets,
 			dp_ctx->prev_tx_offload_pkts,
 			dp_ctx->prev_no_tx_offload_pkts,
@@ -1592,20 +1618,25 @@ static void dp_pld_request_bus_bandwidth(struct wlan_dp_psoc_context *dp_ctx,
 			is_rx_pm_qos_high,
 			qdf_cpumask_pr_args(&pm_qos_cpu_mask_rx),
 			is_tx_pm_qos_high,
-			qdf_cpumask_pr_args(&pm_qos_cpu_mask_tx));
+			qdf_cpumask_pr_args(&pm_qos_cpu_mask_tx),
+			pmqos_on_low_tput);
 
-		dp_ctx->txrx_hist[index].next_tx_level = next_tx_level;
-		dp_ctx->txrx_hist[index].next_rx_level = next_rx_level;
-		dp_ctx->txrx_hist[index].is_rx_pm_qos_high =
-							is_rx_pm_qos_high;
-		dp_ctx->txrx_hist[index].is_tx_pm_qos_high =
-							is_tx_pm_qos_high;
-		dp_ctx->txrx_hist[index].next_vote_level = next_vote_level;
-		dp_ctx->txrx_hist[index].interval_rx = rx_packets;
-		dp_ctx->txrx_hist[index].interval_tx = tx_packets;
-		dp_ctx->txrx_hist[index].qtime = qdf_get_log_timestamp();
-		dp_ctx->txrx_hist_idx++;
-		dp_ctx->txrx_hist_idx &= NUM_TX_RX_HISTOGRAM_MASK;
+		if (dp_ctx->txrx_hist) {
+			dp_ctx->txrx_hist[index].next_tx_level = next_tx_level;
+			dp_ctx->txrx_hist[index].next_rx_level = next_rx_level;
+			dp_ctx->txrx_hist[index].is_rx_pm_qos_high =
+				is_rx_pm_qos_high;
+			dp_ctx->txrx_hist[index].is_tx_pm_qos_high =
+				is_tx_pm_qos_high;
+			dp_ctx->txrx_hist[index].next_vote_level =
+				next_vote_level;
+			dp_ctx->txrx_hist[index].interval_rx = rx_packets;
+			dp_ctx->txrx_hist[index].interval_tx = tx_packets;
+			dp_ctx->txrx_hist[index].qtime =
+				qdf_get_log_timestamp();
+			dp_ctx->txrx_hist_idx++;
+			dp_ctx->txrx_hist_idx &= NUM_TX_RX_HISTOGRAM_MASK;
+		}
 	}
 
 	/* Roaming is a high priority job but gets processed in scheduler
@@ -1659,17 +1690,14 @@ static void __dp_bus_bw_work_handler(struct wlan_dp_psoc_context *dp_ctx)
 	dp_ctx->bw_vote_time = curr_time_us;
 
 	dp_for_each_intf_held_safe(dp_ctx, dp_intf, dp_intf_next) {
-		if (is_dp_intf_valid(dp_intf))
-			continue;
-
-		vdev = dp_intf->vdev;
-		if (dp_comp_vdev_get_ref(vdev))
+		vdev = dp_objmgr_get_vdev_by_user(dp_intf, WLAN_DP_ID);
+		if (!vdev)
 			continue;
 
 		if ((dp_intf->device_mode == QDF_STA_MODE ||
 		     dp_intf->device_mode == QDF_P2P_CLIENT_MODE) &&
 		    !ucfg_cm_is_vdev_active(vdev)) {
-			dp_comp_vdev_put_ref(vdev);
+			dp_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 			continue;
 		}
 
@@ -1677,7 +1705,7 @@ static void __dp_bus_bw_work_handler(struct wlan_dp_psoc_context *dp_ctx)
 		     dp_intf->device_mode == QDF_P2P_GO_MODE) &&
 		     !dp_ctx->dp_ops.dp_is_ap_active(ctx,
 						     dp_intf->intf_id)) {
-			dp_comp_vdev_put_ref(vdev);
+			dp_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 			continue;
 		}
 
@@ -1743,7 +1771,7 @@ static void __dp_bus_bw_work_handler(struct wlan_dp_psoc_context *dp_ctx)
 			QDF_NET_DEV_STATS_TX_BYTES(&dp_intf->stats);
 		qdf_spin_unlock_bh(&dp_ctx->bus_bw_lock);
 		connected = true;
-		dp_comp_vdev_put_ref(vdev);
+		dp_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 	}
 
 	if (!connected) {

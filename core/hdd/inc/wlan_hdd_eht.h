@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -24,6 +25,7 @@
 
 #if !defined(WLAN_HDD_EHT_H)
 #define WLAN_HDD_EHT_H
+#include "wlan_osif_features.h"
 
 struct hdd_context;
 struct wma_tgt_cfg;
@@ -114,6 +116,20 @@ void hdd_sysfs_11be_rate_create(struct hdd_adapter *adapter);
  * Return: None
  */
 void hdd_sysfs_11be_rate_destroy(struct hdd_adapter *adapter);
+
+/**
+ * wlan_hdd_fill_os_eht_rateflags() - Fill EHT related rate_info
+ * @os_rate: rate info for os
+ * @rate_flags: rate flags
+ * @dcm: dcm from rate
+ * @guard_interval: guard interval from rate
+ *
+ * Return: none
+ */
+void wlan_hdd_fill_os_eht_rateflags(struct rate_info *os_rate,
+				    enum tx_rate_info rate_flags,
+				    uint8_t dcm,
+				    enum txrate_gi guard_interval);
 #else
 static inline
 void hdd_update_tgt_eht_cap(struct hdd_context *hdd_ctx,
@@ -147,6 +163,14 @@ static inline void hdd_sysfs_11be_rate_destroy(struct hdd_adapter *adapter)
 
 static inline void wlan_hdd_get_mlo_link_id(struct hdd_beacon_data *beacon,
 					    uint8_t *link_id, uint8_t *num_link)
+{
+}
+
+static inline
+void wlan_hdd_fill_os_eht_rateflags(struct rate_info *os_rate,
+				    enum tx_rate_info rate_flags,
+				    uint8_t dcm,
+				    enum txrate_gi guard_interval)
 {
 }
 #endif

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -299,6 +299,7 @@ QDF_STATUS dp_rx_fst_attach(struct dp_soc *soc, struct dp_pdev *pdev)
 	dp_err("FST setup params FT size %d, hash_mask 0x%x, skid_length %d",
 	       fst->max_entries, fst->hash_mask, fst->max_skid_length);
 
+	/* Allocate the software flowtable */
 	fst->base = (uint8_t *)dp_context_alloc_mem(soc, DP_FISA_RX_FT_TYPE,
 				DP_RX_GET_SW_FT_ENTRY_SIZE * fst->max_entries);
 
@@ -319,7 +320,8 @@ QDF_STATUS dp_rx_fst_attach(struct dp_soc *soc, struct dp_pdev *pdev)
 					    soc->osdev,
 					    &fst->hal_rx_fst_base_paddr,
 					    fst->max_entries,
-					    fst->max_skid_length, hash_key);
+					    fst->max_skid_length, hash_key,
+					    soc->fst_cmem_base);
 
 	if (qdf_unlikely(!fst->hal_rx_fst)) {
 		QDF_TRACE(QDF_MODULE_ID_ANY, QDF_TRACE_LEVEL_ERROR,
@@ -345,6 +347,8 @@ QDF_STATUS dp_rx_fst_attach(struct dp_soc *soc, struct dp_pdev *pdev)
 	fst->soc_hdl = soc;
 	soc->rx_fst = fst;
 	soc->fisa_enable = true;
+	soc->fisa_lru_del_enable = wlan_cfg_is_rx_fisa_lru_del_enabled(cfg);
+
 	qdf_atomic_init(&soc->skip_fisa_param.skip_fisa);
 
 	QDF_TRACE(QDF_MODULE_ID_ANY, QDF_TRACE_LEVEL_ERROR,
@@ -355,7 +359,8 @@ QDF_STATUS dp_rx_fst_attach(struct dp_soc *soc, struct dp_pdev *pdev)
 
 timer_init_fail:
 	qdf_spinlock_destroy(&fst->dp_rx_fst_lock);
-	hal_rx_fst_detach(soc->hal_soc, fst->hal_rx_fst, soc->osdev);
+	hal_rx_fst_detach(soc->hal_soc, fst->hal_rx_fst, soc->osdev,
+			  soc->fst_cmem_base);
 free_hist:
 	dp_rx_sw_ft_hist_deinit((struct dp_fisa_rx_sw_ft *)fst->base,
 				fst->max_entries);
@@ -377,15 +382,19 @@ static void dp_rx_fst_check_cmem_support(struct dp_soc *soc)
 	struct dp_rx_fst *fst = soc->rx_fst;
 	QDF_STATUS status;
 
-	/* FW doesn't support CMEM FSE, keep it in DDR */
-	if (!soc->fst_in_cmem)
+	/**
+	 * FW doesn't support CMEM FSE, keep it in DDR
+	 * soc->fst_cmem_base is non-NULL then CMEM support is already present
+	 */
+	if (!soc->fst_in_cmem && (soc->fst_cmem_base == 0))
 		return;
 
 	status = dp_rx_fst_cmem_init(fst);
 	if (status != QDF_STATUS_SUCCESS)
 		return;
 
-	hal_rx_fst_detach(soc->hal_soc, fst->hal_rx_fst, soc->osdev);
+	hal_rx_fst_detach(soc->hal_soc, fst->hal_rx_fst, soc->osdev,
+			  soc->fst_cmem_base);
 	fst->hal_rx_fst = NULL;
 	fst->hal_rx_fst_base_paddr = 0;
 	fst->flow_deletion_supported = true;
@@ -414,17 +423,33 @@ QDF_STATUS dp_rx_flow_send_fst_fw_setup(struct dp_soc *soc,
 	fisa_hw_fst_setup_cmd.pdev_id = 0;
 	fisa_hw_fst_setup_cmd.max_entries = fst->max_entries;
 	fisa_hw_fst_setup_cmd.max_search = fst->max_skid_length;
-	fisa_hw_fst_setup_cmd.base_addr_lo = fst->hal_rx_fst_base_paddr &
-							0xffffffff;
-	fisa_hw_fst_setup_cmd.base_addr_hi = (fst->hal_rx_fst_base_paddr >> 32);
+	if (soc->fst_cmem_base) {
+		fisa_hw_fst_setup_cmd.base_addr_lo =
+			soc->fst_cmem_base & 0xffffffff;
+		/* Higher order bits are mostly 0, Always use 0x10 */
+		fisa_hw_fst_setup_cmd.base_addr_hi =
+			(soc->fst_cmem_base >> 32) | 0x10;
+		dp_info("cmem base address 0x%llx\n", soc->fst_cmem_base);
+	} else {
+		fisa_hw_fst_setup_cmd.base_addr_lo =
+			fst->hal_rx_fst_base_paddr & 0xffffffff;
+		fisa_hw_fst_setup_cmd.base_addr_hi =
+			(fst->hal_rx_fst_base_paddr >> 32);
+	}
+
 	fisa_hw_fst_setup_cmd.ip_da_sa_prefix =	HTT_RX_IPV4_COMPATIBLE_IPV6;
 	fisa_hw_fst_setup_cmd.hash_key_len = HAL_FST_HASH_KEY_SIZE_BYTES;
 	fisa_hw_fst_setup_cmd.hash_key = wlan_cfg_rx_fst_get_hash_key(cfg);
 
-	status  = dp_htt_rx_flow_fst_setup(pdev, &fisa_hw_fst_setup_cmd);
+	status = dp_htt_rx_flow_fst_setup(pdev, &fisa_hw_fst_setup_cmd);
 
-	if (!fst->fst_in_cmem)
+	if (!fst->fst_in_cmem || soc->fst_cmem_base) {
+		/**
+		 * Return from here if fst_cmem is not enabled or cmem address
+		 * is known at init time
+		 */
 		return status;
+	}
 
 	status = qdf_wait_single_event(&fst->cmem_resp_event,
 				       DP_RX_FST_CMEM_RESP_TIMEOUT);
@@ -453,7 +478,7 @@ void dp_rx_fst_detach(struct dp_soc *soc, struct dp_pdev *pdev)
 			dp_rx_fst_cmem_deinit(dp_fst);
 		else
 			hal_rx_fst_detach(soc->hal_soc, dp_fst->hal_rx_fst,
-					  soc->osdev);
+					  soc->osdev, soc->fst_cmem_base);
 
 		dp_rx_sw_ft_hist_deinit((struct dp_fisa_rx_sw_ft *)dp_fst->base,
 					dp_fst->max_entries);
@@ -484,7 +509,9 @@ void dp_rx_fst_update_cmem_params(struct dp_soc *soc, uint16_t num_entries,
 	fst->hash_mask = fst->max_entries - 1;
 	fst->cmem_ba = cmem_ba_lo;
 
-	qdf_event_set(&fst->cmem_resp_event);
+	/* Address is not NULL then address is already known during init */
+	if (soc->fst_cmem_base == 0)
+		qdf_event_set(&fst->cmem_resp_event);
 }
 
 void dp_rx_fst_update_pm_suspend_status(struct dp_soc *soc, bool suspended)

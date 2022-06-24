@@ -3678,6 +3678,22 @@ ucfg_mlme_get_sta_miracast_mcc_rest_time(struct wlan_objmgr_psoc *psoc,
 }
 
 /**
+ * ucfg_mlme_get_max_modulated_dtim_ms() - get sap max modulated dtim
+ * @psoc: pointer to psoc object
+ * @value: Value that needs to be set from the caller
+ *
+ * Inline UCFG API to be used by HDD/OSIF callers
+ *
+ * Return: QDF Status
+ */
+static inline QDF_STATUS
+ucfg_mlme_get_max_modulated_dtim_ms(struct wlan_objmgr_psoc *psoc,
+				    uint16_t *value)
+{
+	return wlan_mlme_get_max_modulated_dtim_ms(psoc, value);
+}
+
+/**
  * ucfg_mlme_get_sap_mcc_chnl_avoid() - Check if SAP MCC needs to be avoided
  *
  * @psoc: pointer to psoc object
@@ -4291,11 +4307,13 @@ bool ucfg_mlme_validate_full_roam_scan_period(uint32_t full_roam_scan_period);
 
 /**
  * ucfg_mlme_validate_scan_period() - Validate if scan period is in valid range
- * @value: Scan period in msec
+ * @psoc: Pointer to soc
+ * @roam_scan_period: Scan period in msec
  *
  * Return: True if roam_scan_period is in expected range, false otherwise.
  */
-bool ucfg_mlme_validate_scan_period(uint32_t roam_scan_period);
+bool ucfg_mlme_validate_scan_period(struct wlan_objmgr_psoc *psoc,
+				    uint32_t roam_scan_period);
 /**
  * ucfg_mlme_get_ignore_fw_reg_offload_ind() - Get the
  * ignore_fw_reg_offload_ind ini
@@ -4358,6 +4376,32 @@ ucfg_mlme_set_roam_reason_vsie_status(struct wlan_objmgr_psoc *psoc,
 }
 
 #endif
+
+/**
+ * ucfg_mlme_set_vdev_traffic_low_latency()  - Set/clear vdev low latency
+ * config
+ * @psoc: pointer to psoc object
+ * @vdev_id: Vdev id
+ * @set: Flag to indicate set or clear
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+ucfg_mlme_set_vdev_traffic_low_latency(struct wlan_objmgr_psoc *psoc,
+				       uint8_t vdev_id, bool set);
+
+/**
+ * ucfg_mlme_set_vdev_traffic_high_throughput()  - Set/clear vdev high
+ * throughput config
+ * @psoc: pointer to psoc object
+ * @vdev_id: Vdev id
+ * @set: Flag to indicate set or clear
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+ucfg_mlme_set_vdev_traffic_high_throughput(struct wlan_objmgr_psoc *psoc,
+					   uint8_t vdev_id, bool set);
 
 /**
  * ucfg_mlme_set_user_ps()  - Set the PS user config

@@ -323,6 +323,9 @@ wlan_twt_cfg_get_support_in_11n_mode(struct wlan_objmgr_psoc *psoc,
 				     bool *val)
 {
 	struct twt_psoc_priv_obj *twt_psoc_obj;
+	psoc_twt_ext_cfg_params_t *twt_cfg;
+	struct twt_tgt_caps *tgt_caps;
+	bool enable_twt;
 
 	twt_psoc_obj = wlan_twt_psoc_get_comp_private_obj(psoc);
 	if (!twt_psoc_obj) {
@@ -331,6 +334,12 @@ wlan_twt_cfg_get_support_in_11n_mode(struct wlan_objmgr_psoc *psoc,
 	}
 
 	*val = twt_psoc_obj->cfg_params.is_twt_enabled_in_11n;
+	twt_cfg = &twt_psoc_obj->cfg_params;
+	tgt_caps = &twt_psoc_obj->twt_caps;
+	enable_twt = twt_cfg->enable_twt;
+
+	*val = QDF_MIN(tgt_caps->twt_requestor,
+		       (enable_twt && twt_cfg->twt_requestor && *val));
 
 	return QDF_STATUS_SUCCESS;
 }

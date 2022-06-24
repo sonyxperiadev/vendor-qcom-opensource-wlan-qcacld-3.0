@@ -377,7 +377,7 @@ QDF_STATUS lim_start(struct mac_context *mac)
 	}
 
 	mac->lim.req_id =
-		ucfg_scan_register_requester(mac->psoc,
+		wlan_scan_register_requester(mac->psoc,
 					     "LIM",
 					     lim_process_rx_scan_handler,
 					     mac);
@@ -526,7 +526,7 @@ void lim_cleanup(struct mac_context *mac)
 
 	lim_ft_cleanup_all_ft_sessions(mac);
 
-	ucfg_scan_unregister_requester(mac->psoc, mac->lim.req_id);
+	wlan_scan_unregister_requester(mac->psoc, mac->lim.req_id);
 } /*** end lim_cleanup() ***/
 
 #ifdef WLAN_FEATURE_MEMDUMP_ENABLE
@@ -634,18 +634,8 @@ static void pe_shutdown_notifier_cb(void *ctx)
 	}
 }
 
-/**
- * is_mgmt_protected - check RMF enabled for the peer
- * @vdev_id: vdev id
- * @peer_mac_addr: peer mac address
- *
- * The function check the mgmt frame protection enabled or not
- * for station mode and AP mode
- *
- * Return: true, if the connection is RMF enabled.
- */
-static bool is_mgmt_protected(uint32_t vdev_id,
-				  const uint8_t *peer_mac_addr)
+bool is_mgmt_protected(uint32_t vdev_id,
+		       const uint8_t *peer_mac_addr)
 {
 	uint16_t aid;
 	tpDphHashNode sta_ds;
@@ -3469,5 +3459,134 @@ lim_mlo_roam_delete_link_peer(struct pe_session *pe_session,
 	wlan_mlo_link_peer_delete(peer);
 
 	wlan_objmgr_peer_release_ref(peer, WLAN_LEGACY_MAC_ID);
+}
+#endif
+
+#ifdef WLAN_FEATURE_11BE_MLO
+static void
+lim_add_bcn_probe(struct wlan_objmgr_vdev *vdev, uint8_t *bcn_probe,
+		  uint32_t len, qdf_freq_t freq, int32_t rssi)
+{
+	qdf_nbuf_t buf;
+	struct wlan_objmgr_pdev *pdev;
+	uint8_t *data, i, vdev_id;
+	struct mgmt_rx_event_params rx_param = {0};
+	struct wlan_frame_hdr *hdr;
+	enum mgmt_frame_type frm_type = MGMT_BEACON;
+
+	vdev_id = wlan_vdev_get_id(vdev);
+	if (!bcn_probe || !len || (len < sizeof(*hdr))) {
+		pe_err("bcn_probe is null or invalid len %d",
+		       len);
+		return;
+	}
+
+	pdev = wlan_vdev_get_pdev(vdev);
+	if (!pdev) {
+		pe_err("Failed to find pdev");
+		return;
+	}
+
+	hdr = (struct wlan_frame_hdr *)bcn_probe;
+	if ((hdr->i_fc[0] & QDF_IEEE80211_FC0_SUBTYPE_MASK) ==
+	    MGMT_SUBTYPE_PROBE_RESP)
+		frm_type = MGMT_PROBE_RESP;
+
+	rx_param.pdev_id = wlan_objmgr_pdev_get_pdev_id(pdev);
+	rx_param.chan_freq = freq;
+	rx_param.rssi = rssi;
+
+	/* Set all per chain rssi as invalid */
+	for (i = 0; i < WLAN_MGMT_TXRX_HOST_MAX_ANTENNA; i++)
+		rx_param.rssi_ctl[i] = WLAN_INVALID_PER_CHAIN_RSSI;
+
+	buf = qdf_nbuf_alloc(NULL, qdf_roundup(len, 4), 0, 4, false);
+	if (!buf)
+		return;
+
+	qdf_nbuf_put_tail(buf, len);
+	qdf_nbuf_set_protocol(buf, ETH_P_CONTROL);
+
+	data = qdf_nbuf_data(buf);
+	qdf_mem_copy(data, bcn_probe, len);
+
+	pe_debug("MLO: add prb rsp to scan db");
+	/* buf will be freed by scan module in error or success case */
+	wlan_scan_process_bcn_probe_rx_sync(wlan_pdev_get_psoc(pdev), buf,
+					    &rx_param, frm_type);
+}
+
+QDF_STATUS
+lim_gen_link_specific_probe_rsp(struct mac_context *mac_ctx,
+				struct pe_session *session_entry,
+				uint8_t *probe_rsp,
+				uint32_t probe_rsp_len,
+				int32_t rssi)
+{
+	struct element_info link_probe_rsp;
+	struct qdf_mac_addr sta_link_addr;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	struct mlo_link_info *link_info = NULL;
+	struct mlo_partner_info *partner_info;
+	uint8_t chan;
+	uint8_t op_class;
+	uint16_t chan_freq;
+
+	link_probe_rsp.ptr = qdf_mem_malloc(probe_rsp_len);
+	if (!link_probe_rsp.ptr)
+		return QDF_STATUS_E_NOMEM;
+
+	qdf_mem_copy(&sta_link_addr, session_entry->self_mac_addr,
+		     QDF_MAC_ADDR_SIZE);
+
+	link_probe_rsp.len = probe_rsp_len;
+	status = util_gen_link_probe_rsp(probe_rsp,
+					 probe_rsp_len,
+					 sta_link_addr,
+					 link_probe_rsp.ptr,
+					 probe_rsp_len,
+					 (qdf_size_t *)&link_probe_rsp.len);
+
+	if (QDF_IS_STATUS_ERROR(status)) {
+		pe_err("MLO: Link probe response generation failed %d", status);
+		status = QDF_STATUS_E_FAILURE;
+		goto end;
+	}
+
+	partner_info = &session_entry->lim_join_req->partner_info;
+	if (!partner_info->num_partner_links) {
+		pe_err("Partner link info not available");
+		status = QDF_STATUS_E_FAILURE;
+		goto end;
+	}
+
+	/* Currently only 2 link mlo is supported */
+	link_info = &partner_info->partner_link_info[0];
+	wlan_get_chan_by_bssid_from_rnr(session_entry->vdev,
+					session_entry->cm_id,
+					&link_info->link_addr,
+					&chan, &op_class);
+	if (!chan)
+		wlan_get_chan_by_link_id_from_rnr(session_entry->vdev,
+						  session_entry->cm_id,
+						  link_info->link_id,
+						  &chan, &op_class);
+	if (!chan) {
+		pe_err("Invalid link id %d link mac: " QDF_MAC_ADDR_FMT,
+		       link_info->link_id,
+		       QDF_MAC_ADDR_REF(link_info->link_addr.bytes));
+		status = QDF_STATUS_E_FAILURE;
+		goto end;
+	}
+	chan_freq = wlan_reg_chan_opclass_to_freq(chan, op_class,
+						  true);
+
+	lim_add_bcn_probe(session_entry->vdev, probe_rsp, probe_rsp_len,
+			  chan_freq, rssi);
+
+end:
+	qdf_mem_free(link_probe_rsp.ptr);
+	link_probe_rsp.len = 0;
+	return status;
 }
 #endif

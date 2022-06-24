@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -261,6 +262,10 @@ typedef struct {
 #ifdef WLAN_FEATURE_11BE_MLO
 	uint8_t mld_mac_addr[QDF_MAC_ADDR_SIZE];
 	bool is_assoc_peer;
+	bool emlsr_support;
+	uint8_t link_id;
+	uint16_t emlsr_trans_timeout;
+
 #endif
 } tAddStaParams, *tpAddStaParams;
 

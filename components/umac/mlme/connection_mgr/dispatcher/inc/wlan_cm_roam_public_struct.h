@@ -1577,8 +1577,8 @@ struct wlan_roam_offload_scan_rssi_params {
 	int max_drop_rssi_5g;
 	uint32_t good_rssi_threshold;
 	bool early_stop_scan_enable;
-	uint32_t roam_earlystop_thres_min;
-	uint32_t roam_earlystop_thres_max;
+	int32_t roam_earlystop_thres_min;
+	int32_t roam_earlystop_thres_max;
 	int dense_rssi_thresh_offset;
 	int dense_min_aps_cnt;
 	int initial_dense_status;
@@ -2398,6 +2398,9 @@ struct cm_hw_mode_trans_ind {
 	uint32_t num_freq_map;
 	struct policy_mgr_pdev_mac_freq_map mac_freq_map[MAX_FREQ_RANGE_NUM];
 };
+
+/* If link is disabled, during roam sync */
+#define CM_ROAM_LINK_FLAG_DISABLE    0x1
 
 /*
  * struct ml_setup_link_param - MLO setup link param

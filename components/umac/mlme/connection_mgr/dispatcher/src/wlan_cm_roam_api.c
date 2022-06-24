@@ -396,7 +396,6 @@ bool wlan_cm_roam_is_pcl_per_vdev_active(struct wlan_objmgr_psoc *psoc,
  * @freq: Frequency in the given frequency list for the STA that is about to
  * connect
  * @connected_sta_freq: 1st connected sta freq
- * @opmode: Operational mode
  *
  * Make sure to validate the STA+STA condition before calling this
  *
@@ -405,18 +404,12 @@ bool wlan_cm_roam_is_pcl_per_vdev_active(struct wlan_objmgr_psoc *psoc,
  */
 static bool
 wlan_cm_dual_sta_is_freq_allowed(struct wlan_objmgr_psoc *psoc,
-				 uint32_t freq, qdf_freq_t connected_sta_freq,
-				 enum QDF_OPMODE opmode)
+				 qdf_freq_t freq, qdf_freq_t connected_sta_freq)
 {
-	enum reg_wifi_band band;
-
-	if (opmode != QDF_STA_MODE || !connected_sta_freq)
+	if (!connected_sta_freq)
 		return true;
 
-	band = wlan_reg_freq_to_band(connected_sta_freq);
-	/* Reject if both are 2.4Ghz or both are not 2.4Ghz (5Ghz or 6Ghz) */
-	if ((band == REG_BAND_2G && WLAN_REG_IS_24GHZ_CH_FREQ(freq)) ||
-	    (band != REG_BAND_2G && !WLAN_REG_IS_24GHZ_CH_FREQ(freq)))
+	if (policy_mgr_are_2_freq_on_same_mac(psoc, freq, connected_sta_freq))
 		return false;
 
 	return true;
@@ -436,7 +429,6 @@ wlan_cm_dual_sta_roam_update_connect_channels(struct wlan_objmgr_psoc *psoc,
 	char *chan_buff;
 	uint32_t len = 0;
 	uint32_t sta_count;
-	bool mlo_sta_present, sbs_mlo_sta_present = false;
 	qdf_freq_t op_ch_freq_list[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
 	uint8_t vdev_id_list[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
 
@@ -474,25 +466,23 @@ wlan_cm_dual_sta_roam_update_connect_channels(struct wlan_objmgr_psoc *psoc,
 	if (dual_sta_policy->primary_vdev_id != WLAN_UMAC_VDEV_ID_MAX)
 		return;
 
-	mlo_sta_present = policy_mgr_is_mlo_sta_present(psoc);
-	/* check for SBS mlo if MLO sta is present and sta cnt > 1 */
-	if (mlo_sta_present && sta_count > 1)
-		sbs_mlo_sta_present =
-			policy_mgr_is_mlo_in_mode_sbs(psoc, PM_STA_MODE,
-						      NULL, NULL);
-
-	mlme_debug("mlo_sta_present %d sbs_mlo_sta_present %d",
-		   mlo_sta_present, sbs_mlo_sta_present);
-
 	/*
-	 * For ML STA (non-SBS) scenario, allow further STA connections to
-	 * all available bands/channels irrespective of existing STA
-	 * connection band.
-	 * But if ML STA is SBS (both link 5Ghz), allow only 2.4Ghz STA
-	 * connection
+	 * If an ML STA exists with more than one link, allow further STA
+	 * connection to all available bands/channels irrespective of existing
+	 * STA connection/link band. Link that is causing MCC with the second
+	 * STA can be disabled post connection.
+	 * TODO: Check if disabling the MCC link is allowed or not. TID to
+	 * link mapping restricts disabling the link.
+	 *
+	 * If only one ML link is present, allow the second STA only on other
+	 * mac than this link mac. If second STA is allowed on the same mac
+	 * also, it may result in MCC and the link can't be disabled
+	 * post connection as only one link is present.
 	 */
-	if (mlo_sta_present && !sbs_mlo_sta_present)
+	if (policy_mgr_is_mlo_sta_present(psoc) && sta_count > 1) {
+		mlme_debug("Multi link mlo sta present");
 		return;
+	}
 
 	/*
 	 * Get Reg domain valid channels and update to the scan filter
@@ -515,8 +505,7 @@ wlan_cm_dual_sta_roam_update_connect_channels(struct wlan_objmgr_psoc *psoc,
 	for (i = 0; i < num_channels; i++) {
 		is_ch_allowed =
 			wlan_cm_dual_sta_is_freq_allowed(psoc, channel_list[i],
-							 op_ch_freq_list[0],
-							 QDF_STA_MODE);
+							 op_ch_freq_list[0]);
 		if (!is_ch_allowed)
 			continue;
 
@@ -3315,12 +3304,20 @@ bool wlan_cm_is_roam_sync_in_progress(struct wlan_objmgr_psoc *psoc,
 {
 	struct wlan_objmgr_vdev *vdev;
 	bool ret;
+	enum QDF_OPMODE opmode;
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
 						    WLAN_MLME_CM_ID);
 
 	if (!vdev)
 		return false;
+
+	opmode = wlan_vdev_mlme_get_opmode(vdev);
+
+	if (opmode != QDF_STA_MODE) {
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_CM_ID);
+		return false;
+	}
 
 	ret = cm_is_vdev_roam_sync_inprogress(vdev);
 
@@ -3391,4 +3388,18 @@ cm_cleanup_mlo_link(struct wlan_objmgr_vdev *vdev)
 		mlme_debug("Failed to post disconnect for link vdev");
 
 	return status;
+}
+
+bool wlan_is_roaming_enabled(struct wlan_objmgr_pdev *pdev, uint8_t vdev_id)
+{
+	struct wlan_objmgr_psoc *psoc = wlan_pdev_get_psoc(pdev);
+	enum roam_offload_state cur_state;
+
+	cur_state = mlme_get_roam_state(psoc, vdev_id);
+	if (cur_state == WLAN_ROAM_RSO_ENABLED ||
+	    cur_state == WLAN_ROAMING_IN_PROG ||
+	    cur_state == WLAN_ROAM_SYNCH_IN_PROG)
+		return true;
+
+	return false;
 }

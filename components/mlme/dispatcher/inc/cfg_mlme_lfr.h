@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1620,6 +1621,32 @@
 	CFG_VALUE_OR_DEFAULT, \
 	"Empty scan refresh period")
 
+ /*
+  * <ini>
+  * RoamScan_FirstTimer - Set empty scan refresh period
+  * @Min: 0
+  * @Max: 20
+  * @Default: 10
+  *
+  * This ini is used by firmware to set scan period in secs
+  * following empty scan results.
+  *
+  * Related: None
+  *
+  * Supported Feature: LFR Scan
+  *
+  * Usage: External
+  *
+  * </ini>
+  */
+#define CFG_ROAM_SCAN_FIRST_TIMER CFG_INI_UINT( \
+	"RoamScan_FirstTimer", \
+	0, \
+	20, \
+	10, \
+	CFG_VALUE_OR_DEFAULT, \
+	"Empty scan refresh period")
+
 /*
  * <ini>
  * gRoamBmissFirstBcnt - Beacon miss count to trigger 1st bmiss event
@@ -2353,6 +2380,34 @@
 
 /*
  * <ini>
+ * RoamIdle_InactiveTime - Time duration in seconds for which the
+ * connection is idle.
+ * @Min: 0
+ * @Max: 20
+ * @Default: 10
+ *
+ * This ini is used to configure the time in seconds for which the connection
+ * candidate is idle and after which idle roam scan can be triggered if
+ * other criteria of ini "enable_idle_roam" is met.
+ *
+ * Related: enable_idle_roam
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+#define CFG_ROAM_IDLE_INACTIVE_TIME CFG_INI_UINT( \
+	"RoamIdle_InactiveTime", \
+	0, \
+	20, \
+	10, \
+	CFG_VALUE_OR_DEFAULT, \
+	"Configure RSSI delta to start idle roam")
+
+/*
+ * <ini>
  * idle_data_packet_count/RoamIdle_InactivePacketCount - No of tx/rx packets
  * above which the connection is not idle.
  * @Min: 0
@@ -2550,6 +2605,7 @@
 	CFG(CFG_LFR_ENABLE_IDLE_ROAM) \
 	CFG(CFG_LFR_IDLE_ROAM_RSSI_DELTA) \
 	CFG(CFG_LFR_IDLE_ROAM_INACTIVE_TIME) \
+	CFG(CFG_ROAM_IDLE_INACTIVE_TIME) \
 	CFG(CFG_LFR_IDLE_ROAM_PACKET_COUNT) \
 	CFG(CFG_LFR_IDLE_ROAM_MIN_RSSI) \
 	CFG(CFG_LFR_IDLE_ROAM_BAND) \
@@ -2771,6 +2827,43 @@
 	CFG_VALUE_OR_DEFAULT, \
 	"Device inactivity monitoring time")
 
+ /*
+  * <ini>
+  * RoamScan_SecondTimer - Device inactivity monitoring time in
+  * seconds for which the device is considered to be inactive with data
+  * packets count is less than configured RoamScan_InactiveCount.
+  *
+  * @Min: 60
+  * @Max: 300
+  * @Default: 120
+  *
+  * The below three ini values are used to control the roam scan after the
+  * firmware gets empty roam scan results during periodic roam scans.
+  * 1. RoamScan_SecondTimer
+  * 2. RoamScan_InactiveCount
+  * 3. RoamScan_InactiveTimer
+  * The first two ini "RoamScan_SecondTimer" and "RoamScan_InactiveCount"
+  * is frames the criteria to detect if the DUT is inactive. If the device is
+  * identified to be inactive based on the above two ini, then the value,
+  * "RoamScan_InactiveTimer" will be used as periodic roam scan
+  * duration.
+  *
+  * Related: RoamScan_InactiveCount
+  *
+  * Supported Feature: Roaming
+  *
+  * Usage: External
+  *
+  * </ini>
+  */
+#define CFG_ROAM_SCAN_SECOND_TIMER CFG_INI_UINT( \
+	"RoamScan_SecondTimer", \
+	60, \
+	300, \
+	120, \
+	CFG_VALUE_OR_DEFAULT, \
+	"Device inactivity monitoring time")
+
 /*
  * <ini>
  * roam_inactive_data_count/RoamScan_InactiveCount - Maximum allowed data
@@ -2920,6 +3013,7 @@
 	CFG(CFG_LFR_NEIGHBOR_SCAN_MAX_CHAN_TIME) \
 	CFG(CFG_LFR_NEIGHBOR_SCAN_RESULTS_REFRESH_PERIOD) \
 	CFG(CFG_LFR_EMPTY_SCAN_REFRESH_PERIOD) \
+	CFG(CFG_ROAM_SCAN_FIRST_TIMER) \
 	CFG(CFG_LFR_ROAM_BMISS_FIRST_BCNT) \
 	CFG(CFG_LFR_ROAM_BMISS_FINAL_BCNT) \
 	CFG(CFG_LFR_ROAMING_DFS_CHANNEL) \
@@ -2942,6 +3036,7 @@
 	CFG(CFG_LFR_ROAM_FORCE_RSSI_TRIGGER) \
 	CFG(CFG_ROAM_SCAN_SCAN_POLICY) \
 	CFG(CFG_ROAM_SCAN_INACTIVITY_TIME) \
+	CFG(CFG_ROAM_SCAN_SECOND_TIMER) \
 	CFG(CFG_FT_IM_ROAMING) \
 	CFG(CFG_ROAM_INACTIVE_COUNT) \
 	CFG(CFG_POST_INACTIVITY_ROAM_SCAN_PERIOD) \

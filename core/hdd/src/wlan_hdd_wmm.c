@@ -1992,7 +1992,7 @@ void hdd_wmm_classify_pkt(struct hdd_adapter *adapter,
 {
 	hdd_wmm_classify_critical_pkt(adapter, skb, user_pri, is_critical);
 
-	if (!is_critical) {
+	if (false == *is_critical) {
 		hdd_wmm_get_user_priority_from_ip_tos(adapter, skb, user_pri);
 		hdd_check_and_upgrade_udp_qos(adapter, skb, user_pri);
 	}
@@ -2911,6 +2911,11 @@ static int __wlan_hdd_cfg80211_config_tspec(struct wiphy *wiphy,
 	int ret;
 
 	hdd_enter_dev(wdev->netdev);
+
+	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
+		hdd_err("Command not allowed in FTM mode");
+		return -EPERM;
+	}
 
 	ret = wlan_hdd_validate_context(hdd_ctx);
 	if (ret != 0)

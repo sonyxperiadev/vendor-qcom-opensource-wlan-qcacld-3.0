@@ -53,13 +53,14 @@
 #include <linux/netdevice.h>
 #include <net/cfg80211.h>
 #include <qca_vendor.h>
-#include <wlan_scan_ucfg_api.h>
+#include <wlan_scan_api.h>
 #include "wlan_reg_services_api.h"
 #include "wlan_mlme_ucfg_api.h"
 #include "wlan_policy_mgr_ucfg.h"
 #include "cfg_ucfg_api.h"
 #include "wlan_mlme_vdev_mgr_interface.h"
 #include "wlan_vdev_mgr_utils_api.h"
+#include "wlan_pre_cac_api.h"
 
 /*----------------------------------------------------------------------------
  * Preprocessor Definitions and Constants
@@ -154,7 +155,13 @@ static uint8_t *sap_hdd_event_to_string(eSapHddEvent event)
 	CASE_RETURN_STRING(eSAP_DFS_CAC_START);
 	CASE_RETURN_STRING(eSAP_DFS_CAC_INTERRUPTED);
 	CASE_RETURN_STRING(eSAP_DFS_CAC_END);
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 	CASE_RETURN_STRING(eSAP_DFS_PRE_CAC_END);
+#endif
 	CASE_RETURN_STRING(eSAP_DFS_RADAR_DETECT);
 	CASE_RETURN_STRING(eSAP_DFS_RADAR_DETECT_DURING_PRE_CAC);
 	CASE_RETURN_STRING(eSAP_DFS_NO_AVAILABLE_CHANNEL);
@@ -252,6 +259,8 @@ static qdf_freq_t sap_random_channel_sel(struct sap_context *sap_ctx)
 	    sap_ctx->chan_freq != sap_ctx->candidate_freq &&
 	    !utils_dfs_is_freq_in_nol(pdev, sap_ctx->candidate_freq)) {
 		chan_freq = sap_ctx->candidate_freq;
+		if (sap_phymode_is_eht(sap_ctx->phyMode))
+			wlan_reg_set_create_punc_bitmap(ch_params, true);
 		wlan_reg_set_channel_params_for_freq(pdev, chan_freq, 0,
 						     ch_params);
 		sap_debug("random chan select candidate freq=%d", chan_freq);
@@ -496,7 +505,10 @@ is_wlansap_cac_required_for_chan(struct mac_context *mac_ctx,
 	uint8_t sta_cnt, i;
 
 	if (ch_params->ch_width == CH_WIDTH_160MHZ) {
-		is_ch_dfs = true;
+		if (wlan_reg_get_bonded_channel_state_for_freq(
+		    mac_ctx->pdev, chan_freq,
+		    ch_params->ch_width, 0) == CHANNEL_STATE_DFS)
+			is_ch_dfs = true;
 	} else if (ch_params->ch_width == CH_WIDTH_80P80MHZ) {
 		if (wlan_reg_get_channel_state_for_freq(
 						mac_ctx->pdev,
@@ -508,21 +520,42 @@ is_wlansap_cac_required_for_chan(struct mac_context *mac_ctx,
 				CHANNEL_STATE_DFS)
 			is_ch_dfs = true;
 	} else {
-		if (wlan_reg_get_channel_state_for_freq(
-						mac_ctx->pdev,
-						chan_freq) ==
-		    CHANNEL_STATE_DFS)
+		/* Indoor channels are also marked DFS, therefore
+		 * check if the channel has REGULATORY_CHAN_RADAR
+		 * channel flag to identify if the channel is DFS
+		 */
+		if (wlan_reg_is_dfs_for_freq(mac_ctx->pdev, chan_freq))
 			is_ch_dfs = true;
 	}
 	if (WLAN_REG_IS_6GHZ_CHAN_FREQ(chan_freq))
 		is_ch_dfs = false;
 
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 	sap_debug("vdev id %d chan %d is_ch_dfs %d pre_cac_complete %d ignore_cac %d cac_state %d",
 		  sap_ctx->sessionId, chan_freq, is_ch_dfs,
 		  sap_ctx->pre_cac_complete, mac_ctx->sap.SapDfsInfo.ignore_cac,
 		  mac_ctx->sap.SapDfsInfo.cac_state);
+#else
+	sap_debug("vdev id %d chan %d is_ch_dfs %d pre_cac_complete %d ignore_cac %d cac_state %d",
+		  sap_ctx->sessionId, chan_freq, is_ch_dfs,
+		  wlan_pre_cac_complete_get(sap_ctx->vdev),
+		  mac_ctx->sap.SapDfsInfo.ignore_cac,
+		  mac_ctx->sap.SapDfsInfo.cac_state);
+#endif
 
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 	if (!is_ch_dfs || sap_ctx->pre_cac_complete ||
+#else
+	if (!is_ch_dfs || wlan_pre_cac_complete_get(sap_ctx->vdev) ||
+#endif
 	    mac_ctx->sap.SapDfsInfo.ignore_cac ||
 	    mac_ctx->sap.SapDfsInfo.cac_state == eSAP_DFS_SKIP_CAC)
 		cac_required = false;
@@ -888,6 +921,42 @@ static bool is_mcc_preferred(struct sap_context *sap_context,
 	return false;
 }
 
+/**
+ * sap_process_force_scc_with_go_start - Check GO force SCC or not
+ * psoc: psoc object
+ * sap_context: sap_context
+ *
+ * This function checks the current SAP MCC or not with the GO's home channel.
+ * If it is, skip the GO's force SCC. The SAP will do force SCC after
+ * GO's started.
+ *
+ * Return: true if skip GO's force SCC
+ */
+static bool
+sap_process_force_scc_with_go_start(struct wlan_objmgr_psoc *psoc,
+				    struct sap_context *sap_context)
+{
+	uint8_t existing_vdev_id = WLAN_UMAC_VDEV_ID_MAX;
+	enum policy_mgr_con_mode existing_vdev_mode = PM_MAX_NUM_OF_MODE;
+	uint32_t con_freq;
+	enum phy_ch_width ch_width;
+
+	existing_vdev_id =
+		policy_mgr_fetch_existing_con_info(psoc,
+						   sap_context->sessionId,
+						   sap_context->chan_freq,
+						   &existing_vdev_mode,
+						   &con_freq, &ch_width);
+	if (existing_vdev_id < WLAN_UMAC_VDEV_ID_MAX &&
+	    existing_vdev_mode == PM_SAP_MODE) {
+		sap_debug("concurrent sap vdev: %d on freq %d, skip GO force scc",
+			  existing_vdev_id, con_freq);
+		return true;
+	}
+
+	return false;
+}
+
 #ifdef WLAN_FEATURE_P2P_P2P_STA
 /**
  * sap_set_forcescc_required - set force scc flag for provided p2p go vdev
@@ -1044,6 +1113,11 @@ sap_validate_chan(struct sap_context *sap_context,
 		*/
 		go_force_scc = policy_mgr_go_scc_enforced(mac_ctx->psoc);
 		sap_debug("go force scc enabled %d", go_force_scc);
+
+		if (sap_process_force_scc_with_go_start(mac_ctx->psoc,
+							sap_context))
+			goto validation_done;
+
 		if (go_force_scc) {
 			is_go_scc_strict =
 				policy_mgr_is_go_scc_strict(mac_ctx->psoc);
@@ -1261,8 +1335,8 @@ QDF_STATUS sap_channel_sel(struct sap_context *sap_context)
 		}
 
 		/* Initiate a SCAN request */
-		ucfg_scan_init_default_params(vdev, req);
-		scan_id = ucfg_scan_get_scan_id(mac_ctx->psoc);
+		wlan_scan_init_default_params(vdev, req);
+		scan_id = wlan_scan_get_scan_id(mac_ctx->psoc);
 		req->scan_req.scan_id = scan_id;
 		req->scan_req.vdev_id = vdev_id;
 		req->scan_req.scan_f_passive = false;
@@ -1281,7 +1355,7 @@ QDF_STATUS sap_channel_sel(struct sap_context *sap_context)
 		/* Set requestType to Full scan */
 
 		sap_context->acs_req_timestamp = qdf_get_time_of_the_day_ms();
-		qdf_ret_status = ucfg_scan_start(req);
+		qdf_ret_status = wlan_scan_start(req);
 		if (qdf_ret_status != QDF_STATUS_SUCCESS) {
 			sap_err("scan request  fail %d!!!", qdf_ret_status);
 			sap_info("SAP Configuring default ch, Ch_freq=%d",
@@ -1431,9 +1505,19 @@ QDF_STATUS sap_set_session_param(mac_handle_t mac_handle,
 	int i;
 
 	sapctx->sessionId = session_id;
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 	sapctx->is_pre_cac_on = false;
 	sapctx->pre_cac_complete = false;
 	sapctx->freq_before_pre_cac = 0;
+#else
+	wlan_pre_cac_set_status(sapctx->vdev, false);
+	wlan_pre_cac_complete_set(sapctx->vdev, false);
+	wlan_pre_cac_set_freq_before_pre_cac(sapctx->vdev, 0);
+#endif
 
 	/* When SSR, SAP will restart, clear the old context,sessionId */
 	for (i = 0; i < SAP_MAX_NUM_SESSION; i++) {
@@ -2202,7 +2286,13 @@ QDF_STATUS sap_signal_hdd_event(struct sap_context *sap_ctx,
 	case eSAP_DFS_CAC_START:
 	case eSAP_DFS_CAC_INTERRUPTED:
 	case eSAP_DFS_CAC_END:
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 	case eSAP_DFS_PRE_CAC_END:
+#endif
 	case eSAP_DFS_RADAR_DETECT:
 	case eSAP_DFS_RADAR_DETECT_DURING_PRE_CAC:
 	case eSAP_DFS_NO_AVAILABLE_CHANNEL:
@@ -2652,6 +2742,11 @@ static QDF_STATUS sap_cac_start_notify(mac_handle_t mac_handle)
 }
 
 #ifdef PRE_CAC_SUPPORT
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 /**
  * wlansap_update_pre_cac_end() - Update pre cac end to upper layer
  * @sap_context: SAP context
@@ -2682,6 +2777,29 @@ static QDF_STATUS wlansap_update_pre_cac_end(struct sap_context *sap_context,
 
 	return QDF_STATUS_SUCCESS;
 }
+#else
+/**
+ * wlansap_pre_cac_end_notify() - Update pre cac end to upper layer
+ * @sap_context: SAP context
+ * @mac: Global MAC structure
+ * @intf: Interface number
+ *
+ * Notifies pre cac end to upper layer
+ *
+ * Return: None
+ */
+static void wlansap_pre_cac_end_notify(struct sap_context *sap_context,
+				       struct mac_context *mac,
+				       uint8_t intf)
+{
+	sap_context->isCacEndNotified = true;
+	mac->sap.SapDfsInfo.sap_radar_found_status = false;
+	sap_context->fsm_state = SAP_STARTED;
+
+	sap_warn("pre cac end notify on %d: move to state SAP_STARTED", intf);
+	wlan_pre_cac_handle_cac_end(sap_context->vdev);
+}
+#endif /* PRE_CAC_COMP */
 
 QDF_STATUS sap_cac_end_notify(mac_handle_t mac_handle,
 			      struct csr_roam_info *roamInfo)
@@ -2718,6 +2836,11 @@ QDF_STATUS sap_cac_end_notify(mac_handle_t mac_handle,
 			 * temporary interface created for pre cac and switch
 			 * the original SAP to the pre CAC channel.
 			 */
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 			if (sap_context->is_pre_cac_on) {
 				qdf_status = wlansap_update_pre_cac_end(
 						sap_context, mac, intf);
@@ -2728,6 +2851,16 @@ QDF_STATUS sap_cac_end_notify(mac_handle_t mac_handle,
 				 */
 				break;
 			}
+#else
+			if (wlan_pre_cac_get_status(mac->psoc)) {
+				wlansap_pre_cac_end_notify(sap_context,
+							   mac, intf);
+				/* pre CAC is not allowed with any concurrency.
+				 * So, we can break from here.
+				 */
+				break;
+			}
+#endif
 
 			qdf_status = sap_signal_hdd_event(sap_context, NULL,
 							  eSAP_DFS_CAC_END,
@@ -2849,6 +2982,9 @@ static QDF_STATUS sap_validate_dfs_nol(struct sap_context *sap_ctx,
 			  sap_ctx->chan_freq, chan_freq);
 
 		sap_ctx->chan_freq = chan_freq;
+		if (sap_phymode_is_eht(sap_ctx->phyMode))
+			wlan_reg_set_create_punc_bitmap(&sap_ctx->ch_params,
+							true);
 		wlan_reg_set_channel_params_for_freq(mac_ctx->pdev,
 						     sap_ctx->chan_freq,
 						     sap_ctx->sec_ch_freq,
@@ -2959,6 +3095,9 @@ static QDF_STATUS sap_goto_starting(struct sap_context *sap_ctx,
 		     wlan_reg_is_dfs_for_freq(mac_ctx->pdev,
 					      con_ch_freq)) {
 			sap_ctx->chan_freq = con_ch_freq;
+			if (sap_phymode_is_eht(sap_ctx->phyMode))
+				wlan_reg_set_create_punc_bitmap(
+					&sap_ctx->ch_params, true);
 			wlan_reg_set_channel_params_for_freq(
 						    mac_ctx->pdev,
 						    con_ch_freq, 0,
@@ -3152,6 +3291,9 @@ static QDF_STATUS sap_fsm_handle_radar_during_cac(struct sap_context *sap_ctx,
 	uint8_t intf;
 
 	if (mac_ctx->sap.SapDfsInfo.target_chan_freq) {
+		if (sap_phymode_is_eht(sap_ctx->phyMode))
+			wlan_reg_set_create_punc_bitmap(&sap_ctx->ch_params,
+							true);
 		wlan_reg_set_channel_params_for_freq(mac_ctx->pdev,
 				    mac_ctx->sap.SapDfsInfo.target_chan_freq, 0,
 				    &sap_ctx->ch_params);
@@ -3387,10 +3529,12 @@ static QDF_STATUS sap_fsm_state_starting(struct sap_context *sap_ctx,
 					CHANNEL_STATE_DFS)
 				is_dfs = true;
 		} else {
-			if (wlan_reg_get_channel_state_for_freq(
-							mac_ctx->pdev,
-							sap_chan_freq) ==
-			    CHANNEL_STATE_DFS)
+			/* Indoor channels are also marked DFS, therefore
+			 * check if the channel has REGULATORY_CHAN_RADAR
+			 * channel flag to identify if the channel is DFS
+			 */
+			if (wlan_reg_is_dfs_for_freq(mac_ctx->pdev,
+						     sap_chan_freq))
 				is_dfs = true;
 		}
 		if (WLAN_REG_IS_6GHZ_CHAN_FREQ(sap_ctx->chan_freq))
@@ -3402,7 +3546,15 @@ static QDF_STATUS sap_fsm_state_starting(struct sap_context *sap_ctx,
 			if ((false == sap_dfs_info->ignore_cac) &&
 			    (eSAP_DFS_DO_NOT_SKIP_CAC ==
 			    sap_dfs_info->cac_state) &&
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 			    !sap_ctx->pre_cac_complete &&
+#else
+			    !wlan_pre_cac_complete_get(sap_ctx->vdev) &&
+#endif
 			    policy_mgr_get_dfs_master_dynamic_enabled(
 					mac_ctx->psoc,
 					sap_ctx->sessionId)) {
@@ -4191,11 +4343,24 @@ qdf_freq_t sap_indicate_radar(struct sap_context *sap_ctx)
 	/* set the Radar Found flag in SapDfsInfo */
 	mac->sap.SapDfsInfo.sap_radar_found_status = true;
 
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 	if (sap_ctx->freq_before_pre_cac) {
 		sap_info("sapdfs: set chan freq before pre cac %d as target chan",
 			 sap_ctx->freq_before_pre_cac);
 		return sap_ctx->freq_before_pre_cac;
 	}
+#else
+	chan_freq = wlan_pre_cac_get_freq_before_pre_cac(sap_ctx->vdev);
+	if (chan_freq) {
+		sap_info("sapdfs: set chan freq before pre cac %d as target chan",
+			 chan_freq);
+		return chan_freq;
+	}
+#endif
 
 	if (sap_ctx->vendor_acs_dfs_lte_enabled && (QDF_STATUS_SUCCESS ==
 	    sap_signal_hdd_event(sap_ctx, NULL, eSAP_DFS_NEXT_CHANNEL_REQ,

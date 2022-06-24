@@ -54,6 +54,7 @@
  * WMI macros, then these macros' BIT definitions are also need to be
  * changed.
  */
+#define POLICY_MGR_HW_MODE_EMLSR_MODE_BITPOS       (32)
 #define POLICY_MGR_HW_MODE_MAC0_TX_STREAMS_BITPOS  (28)
 #define POLICY_MGR_HW_MODE_MAC0_RX_STREAMS_BITPOS  (24)
 #define POLICY_MGR_HW_MODE_MAC1_TX_STREAMS_BITPOS  (20)
@@ -66,6 +67,8 @@
 #define POLICY_MGR_HW_MODE_MAC0_BAND_BITPOS        (3)
 #define POLICY_MGR_HW_MODE_ID_BITPOS               (0)
 
+#define POLICY_MGR_HW_MODE_EMLSR_MODE_MASK         \
+	(0x1 << POLICY_MGR_HW_MODE_EMLSR_MODE_BITPOS)
 #define POLICY_MGR_HW_MODE_MAC0_TX_STREAMS_MASK    \
 	(0xf << POLICY_MGR_HW_MODE_MAC0_TX_STREAMS_BITPOS)
 #define POLICY_MGR_HW_MODE_MAC0_RX_STREAMS_MASK    \
@@ -89,6 +92,9 @@
 #define POLICY_MGR_HW_MODE_ID_MASK           \
 			(0x7 << POLICY_MGR_HW_MODE_ID_BITPOS)
 
+#define POLICY_MGR_HW_MODE_EMLSR_MODE_SET(hw_mode, tmp, value) \
+	QDF_SET_BITS64(hw_mode, tmp, POLICY_MGR_HW_MODE_EMLSR_MODE_BITPOS,\
+	1, value)
 #define POLICY_MGR_HW_MODE_MAC0_TX_STREAMS_SET(hw_mode, value) \
 	WMI_SET_BITS(hw_mode, POLICY_MGR_HW_MODE_MAC0_TX_STREAMS_BITPOS,\
 	4, value)
@@ -123,6 +129,9 @@
 	WMI_SET_BITS(hw_mode, POLICY_MGR_HW_MODE_ID_BITPOS,\
 	3, value)
 
+#define POLICY_MGR_HW_MODE_EMLSR_MODE_GET(hw_mode)                     \
+		QDF_GET_BITS64(hw_mode, POLICY_MGR_HW_MODE_EMLSR_MODE_BITPOS,\
+		1)
 #define POLICY_MGR_HW_MODE_MAC0_TX_STREAMS_GET(hw_mode)                \
 		(((hw_mode) & POLICY_MGR_HW_MODE_MAC0_TX_STREAMS_MASK) >>    \
 		POLICY_MGR_HW_MODE_MAC0_TX_STREAMS_BITPOS)
@@ -192,6 +201,11 @@
 
 extern struct policy_mgr_conc_connection_info
 	pm_conc_connection_list[MAX_NUMBER_OF_CONC_CONNECTIONS];
+
+#ifdef WLAN_FEATURE_11BE_MLO
+extern struct policy_mgr_disabled_ml_link_info
+	pm_disabled_ml_links[MAX_NUMBER_OF_DISABLE_LINK];
+#endif
 
 extern const enum policy_mgr_pcl_type
 	first_connection_pcl_table[PM_MAX_NUM_OF_MODE]
@@ -339,6 +353,8 @@ struct policy_mgr_cfg {
  * @cfg: Policy manager config data
  * @dynamic_mcc_adaptive_sched: disable/enable mcc adaptive scheduler feature
  * @dynamic_dfs_master_disabled: current state of dynamic dfs master
+ * @set_link_in_progress: To track if set link is in progress
+ * @set_link_update_done_evt: qdf event to synchronize set link
  */
 struct policy_mgr_psoc_priv_obj {
 	struct wlan_objmgr_psoc *psoc;
@@ -355,7 +371,6 @@ struct policy_mgr_psoc_priv_obj {
 	struct policy_mgr_conc_cbacks conc_cbacks;
 	uint32_t sap_mandatory_channels[NUM_CHANNELS];
 	uint32_t sap_mandatory_channels_len;
-	bool do_sap_unsafe_ch_check;
 	qdf_freq_t last_disconn_sta_freq;
 	uint32_t concurrency_mode;
 	uint8_t no_of_open_sessions[QDF_MAX_NO_OF_MODE];
@@ -382,6 +397,10 @@ struct policy_mgr_psoc_priv_obj {
 	uint32_t valid_ch_freq_list_count;
 	bool dynamic_mcc_adaptive_sched;
 	bool dynamic_dfs_master_disabled;
+#ifdef WLAN_FEATURE_11BE_MLO
+	bool set_link_in_progress;
+	qdf_event_t set_link_update_done_evt;
+#endif
 };
 
 /**
@@ -580,6 +599,15 @@ void policy_mgr_pdev_set_hw_mode_cb(uint32_t status,
 				enum policy_mgr_conn_update_reason reason,
 				uint32_t session_id, void *context,
 				uint32_t request_id);
+
+#ifdef WLAN_FEATURE_11BE_MLO
+void
+policy_mgr_dump_disabled_ml_links(struct policy_mgr_psoc_priv_obj *pm_ctx);
+#else
+static inline void
+policy_mgr_dump_disabled_ml_links(struct policy_mgr_psoc_priv_obj *pm_ctx) {}
+#endif
+
 void policy_mgr_dump_current_concurrency(struct wlan_objmgr_psoc *psoc);
 
 /**
@@ -846,4 +874,19 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 				       uint32_t ch_freq,
 				       enum hw_mode_bandwidth bw,
 				       uint32_t ext_flags);
+
+/**
+ * policy_mgr_2_freq_same_mac_in_sbs() - to check provided frequencies are
+ * in sbs freq range or not
+ *
+ * @pm_ctx: policy mgr psoc priv object
+ * @freq_1: first frequency
+ * @freq_2: second frequency
+ *
+ * This API is used to check provided frequencies are in sbs freq range or not
+ *
+ * Return: true/false.
+ */
+bool policy_mgr_2_freq_same_mac_in_sbs(struct policy_mgr_psoc_priv_obj *pm_ctx,
+				       qdf_freq_t freq_1, qdf_freq_t freq_2);
 #endif

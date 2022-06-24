@@ -244,9 +244,11 @@ void lim_process_mlm_start_cnf(struct mac_context *mac, uint32_t *msg_buf)
 					CHANNEL_STATE_DFS))
 				send_bcon_ind = true;
 		} else {
-			if (wlan_reg_get_channel_state_for_freq(mac->pdev,
-								chan_freq)
-					!= CHANNEL_STATE_DFS)
+			/* Indoor channels are also marked DFS, therefore
+			 * check if the channel has REGULATORY_CHAN_RADAR
+			 * channel flag to identify if the channel is DFS
+			 */
+			if (!wlan_reg_is_dfs_for_freq(mac->pdev, chan_freq))
 				send_bcon_ind = true;
 		}
 		if (WLAN_REG_IS_6GHZ_CHAN_FREQ(pe_session->curr_op_freq))
@@ -592,7 +594,7 @@ void lim_process_mlm_auth_cnf(struct mac_context *mac_ctx, uint32_t *msg)
 			    auth_cnf->resultCode != eSIR_SME_DEAUTH_WHILE_JOIN) {
 				pe_debug("Send deauth for SAE auth failure");
 				lim_send_deauth_mgmt_frame(mac_ctx,
-						       auth_cnf->protStatusCode,
+						       REASON_TIMEDOUT,
 						       auth_cnf->peerMacAddr,
 						       session_entry, false);
 			}

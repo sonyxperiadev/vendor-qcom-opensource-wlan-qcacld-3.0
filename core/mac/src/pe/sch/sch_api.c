@@ -46,10 +46,7 @@
 #include "lim_utils.h"
 
 #include "wma_types.h"
-
-#ifdef WLAN_FEATURE_11BE_MLO
 #include "lim_mlo.h"
-#endif
 
 #include <target_if_vdev_mgr_tx_ops.h>
 #include <wlan_cmn_ieee80211.h>
@@ -718,6 +715,7 @@ uint32_t lim_send_probe_rsp_template_to_hal(struct mac_context *mac,
 	tDot11fProbeResponse *prb_rsp_frm;
 	QDF_STATUS status;
 	uint16_t addn_ielen = 0;
+	uint16_t mlo_ie_len;
 
 	/* Check if probe response IE is present or not */
 	addnIEPresent = (pe_session->add_ie_params.probeRespDataLen != 0);
@@ -793,7 +791,8 @@ uint32_t lim_send_probe_rsp_template_to_hal(struct mac_context *mac,
 			nStatus);
 	}
 
-	nBytes += nPayload + sizeof(tSirMacMgmtHdr);
+	mlo_ie_len = lim_get_frame_mlo_ie_len(pe_session);
+	nBytes += nPayload + sizeof(tSirMacMgmtHdr) + mlo_ie_len;
 
 	if (addnIEPresent) {
 		if ((nBytes + addn_ielen) <= SIR_MAX_PROBE_RESP_SIZE)
@@ -837,6 +836,17 @@ uint32_t lim_send_probe_rsp_template_to_hal(struct mac_context *mac,
 	} else if (DOT11F_WARNED(nStatus)) {
 		pe_warn("There were warnings while packing a P"
 			"robe Response (0x%08x)", nStatus);
+	}
+
+	if (mlo_ie_len) {
+		status = lim_fill_complete_mlo_ie(pe_session, mlo_ie_len,
+					 pFrame2Hal + sizeof(tSirMacMgmtHdr) +
+					      nPayload);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			pe_debug("assemble ml ie error");
+			mlo_ie_len = 0;
+		}
+		nPayload += mlo_ie_len;
 	}
 
 	if (addnIEPresent) {

@@ -50,8 +50,9 @@
 #include <wlan_objmgr_vdev_obj.h>
 #include <wlan_objmgr_pdev_obj.h>
 #include "wlan_reg_services_api.h"
-#include <wlan_scan_ucfg_api.h>
+#include <wlan_scan_api.h>
 #include <wlan_scan_utils_api.h>
+#include "wlan_pre_cac_api.h"
 
 /* IF MGR API header file */
 #include "wlan_if_mgr_ucfg_api.h"
@@ -248,7 +249,7 @@ wlansap_calculate_chan_from_scan_result(mac_handle_t mac_handle,
 		filter->age_threshold = qdf_get_time_of_the_day_ms() -
 						sap_ctx->acs_req_timestamp;
 
-	list = ucfg_scan_get_result(mac_ctx->pdev, filter);
+	list = wlan_scan_get_result(mac_ctx->pdev, filter);
 
 	if (filter)
 		qdf_mem_free(filter);
@@ -259,7 +260,7 @@ wlansap_calculate_chan_from_scan_result(mac_handle_t mac_handle,
 	wlansap_send_acs_success_event(sap_ctx, scan_id);
 
 	oper_channel = sap_select_channel(mac_handle, sap_ctx, list);
-	ucfg_scan_purge_results(list);
+	wlan_scan_purge_results(list);
 
 	return oper_channel;
 }
@@ -449,7 +450,10 @@ wlansap_roam_process_ch_change_success(struct mac_context *mac_ctx,
 	}
 
 	if (sap_ctx->ch_params.ch_width == CH_WIDTH_160MHZ) {
-		is_ch_dfs = true;
+		if (wlan_reg_get_bonded_channel_state_for_freq(
+		    mac_ctx->pdev, target_chan_freq,
+		    sap_ctx->ch_params.ch_width, 0) == CHANNEL_STATE_DFS)
+			is_ch_dfs = true;
 	} else if (sap_ctx->ch_params.ch_width == CH_WIDTH_80P80MHZ) {
 		if (wlan_reg_get_channel_state_for_freq(
 						mac_ctx->pdev,
@@ -461,10 +465,11 @@ wlansap_roam_process_ch_change_success(struct mac_context *mac_ctx,
 				CHANNEL_STATE_DFS)
 			is_ch_dfs = true;
 	} else {
-		if (wlan_reg_get_channel_state_for_freq(
-						mac_ctx->pdev,
-						target_chan_freq) ==
-		    CHANNEL_STATE_DFS)
+		/* Indoor channels are also marked DFS, therefore
+		 * check if the channel has REGULATORY_CHAN_RADAR
+		 * channel flag to identify if the channel is DFS
+		 */
+		if (wlan_reg_is_dfs_for_freq(mac_ctx->pdev, target_chan_freq))
 			is_ch_dfs = true;
 	}
 	if (WLAN_REG_IS_6GHZ_CHAN_FREQ(sap_ctx->chan_freq))
@@ -472,7 +477,15 @@ wlansap_roam_process_ch_change_success(struct mac_context *mac_ctx,
 
 	sap_ctx->chan_freq = target_chan_freq;
 	/* check if currently selected channel is a DFS channel */
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 	if (is_ch_dfs && sap_ctx->pre_cac_complete) {
+#else
+	if (is_ch_dfs && wlan_pre_cac_complete_get(sap_ctx->vdev)) {
+#endif
 		/* Start beaconing on the new pre cac channel */
 		wlansap_start_beacon_req(sap_ctx);
 		sap_ctx->fsm_state = SAP_STARTING;
@@ -549,7 +562,15 @@ wlansap_roam_process_dfs_chansw_update(mac_handle_t mac_handle,
 		 * with no CSA IE will be sent to firmware.
 		 */
 		dfs_beacon_start_req = true;
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 		sap_ctx->pre_cac_complete = false;
+#else
+		wlan_pre_cac_complete_set(sap_ctx->vdev, false);
+#endif
 		*ret_status = sme_roam_start_beacon_req(mac_handle,
 							sap_ctx->bssid,
 							dfs_beacon_start_req);
@@ -580,10 +601,14 @@ wlansap_roam_process_dfs_chansw_update(mac_handle_t mac_handle,
 	 * should continue to operate in the same mode as it is operating
 	 * currently. For e.g. 20/40/80 MHz operation
 	 */
-	if (mac_ctx->sap.SapDfsInfo.target_chan_freq)
+	if (mac_ctx->sap.SapDfsInfo.target_chan_freq) {
+		if (sap_phymode_is_eht(sap_ctx->phyMode))
+			wlan_reg_set_create_punc_bitmap(&sap_ctx->ch_params,
+							true);
 		wlan_reg_set_channel_params_for_freq(mac_ctx->pdev,
 				mac_ctx->sap.SapDfsInfo.target_chan_freq,
 				0, &sap_ctx->ch_params);
+	}
 
 	/*
 	 * Fetch the number of SAP interfaces. If the number of sap Interface
@@ -991,6 +1016,11 @@ static bool sap_is_csa_restart_state(struct wlan_objmgr_psoc *psoc,
 }
 
 #ifdef PRE_CAC_SUPPORT
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 static void wlan_sap_pre_cac_radar_ind(struct sap_context *sap_ctx,
 				       struct mac_context *mac_ctx)
 {
@@ -1007,6 +1037,22 @@ static void wlan_sap_pre_cac_radar_ind(struct sap_context *sap_ctx,
 			     eSAP_DFS_RADAR_DETECT_DURING_PRE_CAC,
 			     (void *)eSAP_STATUS_SUCCESS);
 }
+#else
+static void wlan_sap_pre_cac_radar_ind(struct sap_context *sap_ctx,
+				       struct mac_context *mac_ctx)
+{
+	qdf_mc_timer_t *dfs_timer = &mac_ctx->sap.SapDfsInfo.sap_dfs_cac_timer;
+
+	sap_debug("sapdfs: Radar detect on pre cac:%d", sap_ctx->sessionId);
+	if (!sap_ctx->dfs_cac_offload) {
+		qdf_mc_timer_stop(dfs_timer);
+		qdf_mc_timer_destroy(dfs_timer);
+	}
+
+	mac_ctx->sap.SapDfsInfo.is_dfs_cac_timer_running = false;
+	wlan_pre_cac_handle_radar_ind(sap_ctx->vdev);
+}
+#endif /* PRE_CAC_COMP */
 #else
 static inline void
 wlan_sap_pre_cac_radar_ind(struct sap_context *sap_ctx,
@@ -1118,12 +1164,21 @@ QDF_STATUS wlansap_roam_callback(void *ctx,
 				  sap_ctx->chan_freq);
 			goto EXIT;
 		}
-
+/*
+ * Code under PRE_CAC_COMP will be cleaned up
+ * once pre cac component is done
+ */
+#ifndef PRE_CAC_COMP
 		if (sap_ctx->is_pre_cac_on) {
 			wlan_sap_pre_cac_radar_ind(sap_ctx, mac_ctx);
 			break;
 		}
-
+#else
+		if (wlan_pre_cac_get_status(mac_ctx->psoc)) {
+			wlan_sap_pre_cac_radar_ind(sap_ctx, mac_ctx);
+			break;
+		}
+#endif
 		sap_debug("sapdfs: Indicate eSAP_DFS_RADAR_DETECT to HDD");
 		sap_signal_hdd_event(sap_ctx, NULL, eSAP_DFS_RADAR_DETECT,
 				     (void *) eSAP_STATUS_SUCCESS);

@@ -49,6 +49,7 @@
 /* 120 seconds, for WPS */
 #define WAIT_FOR_WPS_KEY_TIMEOUT_PERIOD (120 * QDF_MC_TIMER_TO_SEC_UNIT)
 
+#define MLME_PEER_SET_KEY_WAKELOCK_TIMEOUT WAKELOCK_DURATION_RECOMMENDED
 /* QCN IE definitions */
 #define QCN_IE_HDR_LEN     6
 
@@ -61,7 +62,6 @@
 #define QCN_IE_ATTR_ID_VERSION 1
 #define QCN_IE_ATTR_ID_VHT_MCS11 2
 #define QCN_IE_ATTR_ID_ALL 0xFF
-
 
 #define mlme_legacy_fatal(params...) QDF_TRACE_FATAL(QDF_MODULE_ID_MLME, params)
 #define mlme_legacy_err(params...) QDF_TRACE_ERROR(QDF_MODULE_ID_MLME, params)
@@ -157,6 +157,9 @@ struct sae_auth_retry {
  * @allow_kickout: True if the peer can be kicked out. Peer can't be kicked
  *                 out if it is being steered
  * @nss: Peer NSS
+ * @peer_set_key_wakelock: wakelock to protect peer set key op with firmware
+ * @peer_set_key_runtime_wakelock: runtime pm wakelock for set key
+ * @is_key_wakelock_set: flag to check if key wakelock is pending to release
  */
 struct peer_mlme_priv_obj {
 	uint8_t last_pn_valid;
@@ -172,6 +175,9 @@ struct peer_mlme_priv_obj {
 	bool allow_kickout;
 #endif
 	uint8_t nss;
+	qdf_wake_lock_t peer_set_key_wakelock;
+	qdf_runtime_lock_t peer_set_key_runtime_wakelock;
+	bool is_key_wakelock_set;
 };
 
 /**
@@ -436,6 +442,8 @@ struct wait_for_key_timer {
  * @is_usr_ps_enabled: Is Power save enabled
  * @notify_co_located_ap_upt_rnr: Notify co located AP to update RNR or not
  * @max_mcs_index: Max supported mcs index of vdev
+ * @vdev_traffic_type: to set if vdev is LOW_LATENCY or HIGH_TPUT
+ * @country_ie_for_all_band: take all band channel info in country ie
  */
 struct mlme_legacy_priv {
 	bool chan_switch_in_progress;
@@ -483,6 +491,8 @@ struct mlme_legacy_priv {
 #ifdef WLAN_FEATURE_SON
 	uint8_t max_mcs_index;
 #endif
+	uint8_t vdev_traffic_type;
+	bool country_ie_for_all_band;
 };
 
 /**
@@ -1026,15 +1036,6 @@ QDF_STATUS mlme_get_cfg_wlm_level(struct wlan_objmgr_psoc *psoc,
 
 #ifdef MULTI_CLIENT_LL_SUPPORT
 /**
- * wlan_mlme_get_wlm_multi_client_ll_caps() - Get the wlm multi client latency
- * level capability flag
- * @psoc: pointer to psoc object
- *
- * Return: True is multi client ll cap present
- */
-bool wlan_mlme_get_wlm_multi_client_ll_caps(struct wlan_objmgr_psoc *psoc);
-
-/**
  * mlme_get_cfg_multi_client_ll_ini_support() - Get the ini value of wlm multi
  * client latency level feature
  * @psoc: pointer to psoc object
@@ -1046,12 +1047,6 @@ QDF_STATUS
 mlme_get_cfg_multi_client_ll_ini_support(struct wlan_objmgr_psoc *psoc,
 					 bool *multi_client_ll_support);
 #else
-static inline bool
-wlan_mlme_get_wlm_multi_client_ll_caps(struct wlan_objmgr_psoc *psoc)
-{
-	return false;
-}
-
 static inline QDF_STATUS
 mlme_get_cfg_multi_client_ll_ini_support(struct wlan_objmgr_psoc *psoc,
 					 bool *multi_client_ll_support)
@@ -1119,28 +1114,6 @@ void mlme_reinit_control_config_lfr_params(struct wlan_objmgr_psoc *psoc,
 					   struct wlan_mlme_lfr_cfg *lfr);
 
 /**
- * wlan_mlme_mlo_sta_mlo_concurency_set_link() - Set links for MLO STA
- *
- * @vdev: vdev object
- * @reason: Reason for which link is forced
- * @mode: Force reason
- * @num_mlo_vdev: number of mlo vdev
- * @mlo_vdev_lst: MLO STA vdev list
-
- * Interface manager Set links for MLO STA
- *
- * Return: void
- */
-#ifdef WLAN_FEATURE_11BE_MLO
-void
-wlan_mlo_sta_mlo_concurency_set_link(struct wlan_objmgr_vdev *vdev,
-				     enum mlo_link_force_reason reason,
-				     enum mlo_link_force_mode mode,
-				     uint8_t num_mlo_vdev,
-				     uint8_t *mlo_vdev_lst);
-#endif
-
-/**
  * wlan_mlme_get_mac_vdev_id() - get vdev self mac address using vdev id
  * @pdev: pdev
  * @vdev_id: vdev_id
@@ -1155,4 +1128,30 @@ wlan_mlo_sta_mlo_concurency_set_link(struct wlan_objmgr_vdev *vdev,
 QDF_STATUS wlan_mlme_get_mac_vdev_id(struct wlan_objmgr_pdev *pdev,
 				     uint8_t vdev_id,
 				     struct qdf_mac_addr *self_mac);
+
+/**
+ * wlan_acquire_peer_key_wakelock -api to get key wakelock
+ * @pdev: pdev
+ * @mac_addr: peer mac addr
+ *
+ * This function acquires wakelock and prevent runtime pm during key
+ * installation
+ *
+ * Return: None
+ */
+void wlan_acquire_peer_key_wakelock(struct wlan_objmgr_pdev *pdev,
+				    uint8_t *mac_addr);
+
+/**
+ * wlan_release_peer_key_wakelock -api to release key wakelock
+ * @pdev: pdev
+ * @mac_addr: peer mac addr
+ *
+ * This function releases wakelock and allow runtime pm after key
+ * installation
+ *
+ * Return: None
+ */
+void wlan_release_peer_key_wakelock(struct wlan_objmgr_pdev *pdev,
+				    uint8_t *mac_addr);
 #endif

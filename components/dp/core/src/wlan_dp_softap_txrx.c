@@ -801,7 +801,7 @@ QDF_STATUS dp_softap_rx_packet_cbk(void *intf_ctx, qdf_nbuf_t rx_buf)
 
 		dp_softap_tsf_timestamp_rx(dp_ctx, nbuf);
 
-		if (is_eapol && SEND_EAPOL_OVER_NL) {
+		if (is_eapol && dp_ctx->dp_ops.dp_send_rx_pkt_over_nl) {
 			if (dp_ctx->dp_ops.dp_send_rx_pkt_over_nl(dp_intf->dev,
 					(u8 *)&dp_intf->conn_info.peer_macaddr,
 								  nbuf, false))

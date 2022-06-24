@@ -2478,8 +2478,9 @@ int __iw_get_softap_linkspeed(struct net_device *dev,
 
 	hdd_debug("wrqu->data.length(%d)", wrqu->data.length);
 
-	/* Linkspeed is allowed only for P2P mode */
-	if (adapter->device_mode != QDF_P2P_GO_MODE) {
+	/* Linkspeed is allowed for GO/SAP mode */
+	if (adapter->device_mode != QDF_P2P_GO_MODE &&
+	    adapter->device_mode != QDF_SAP_MODE) {
 		hdd_err("Link Speed is not allowed in Device mode %s(%d)",
 			qdf_opmode_str(adapter->device_mode),
 			adapter->device_mode);

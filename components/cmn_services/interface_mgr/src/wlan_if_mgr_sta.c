@@ -112,6 +112,7 @@ QDF_STATUS if_mgr_connect_complete(struct wlan_objmgr_vdev *vdev,
 	struct wlan_objmgr_psoc *psoc;
 	struct wlan_objmgr_pdev *pdev;
 	QDF_STATUS status = event_data->status;
+	uint8_t vdev_id;
 
 	pdev = wlan_vdev_get_pdev(vdev);
 	if (!pdev)
@@ -121,6 +122,7 @@ QDF_STATUS if_mgr_connect_complete(struct wlan_objmgr_vdev *vdev,
 	if (!psoc)
 		return QDF_STATUS_E_FAILURE;
 
+	vdev_id = wlan_vdev_get_id(vdev);
 	if (QDF_IS_STATUS_SUCCESS(status)) {
 		/*
 		 * Due to audio share glitch with P2P clients caused by roam
@@ -134,9 +136,9 @@ QDF_STATUS if_mgr_connect_complete(struct wlan_objmgr_vdev *vdev,
 			ifmgr_debug("p2p client active, keep roam disabled");
 		} else {
 			ifmgr_debug("set pcl when connection on vdev id:%d",
-				     vdev->vdev_objmgr.vdev_id);
-			policy_mgr_set_pcl_for_connected_vdev(psoc,
-					      vdev->vdev_objmgr.vdev_id, false);
+				     vdev_id);
+			policy_mgr_set_pcl_for_connected_vdev(psoc, vdev_id,
+							      false);
 			/*
 			 * Enable roaming on other STA iface except this one.
 			 * Firmware doesn't support connection on one STA iface
@@ -144,9 +146,6 @@ QDF_STATUS if_mgr_connect_complete(struct wlan_objmgr_vdev *vdev,
 			 */
 			if_mgr_enable_roaming(pdev, vdev, RSO_CONNECT_START);
 		}
-		if (wlan_vdev_mlme_get_opmode(vdev) == QDF_STA_MODE)
-			policy_mgr_handle_ml_sta_link_concurrency(psoc, vdev,
-								  true);
 	} else {
 		/* notify connect failure on final failure */
 		ucfg_tdls_notify_connect_failure(psoc);
@@ -215,9 +214,6 @@ QDF_STATUS if_mgr_disconnect_complete(struct wlan_objmgr_vdev *vdev,
 		ifmgr_err("Failed to enable roaming on connected sta");
 		return status;
 	}
-
-	if (wlan_vdev_mlme_get_opmode(vdev) == QDF_STA_MODE)
-		policy_mgr_handle_ml_sta_link_concurrency(psoc, vdev, false);
 
 	return QDF_STATUS_SUCCESS;
 }

@@ -623,8 +623,8 @@ struct wlan_dp_psoc_callbacks {
 
 	bool (*dp_is_gratuitous_arp_unsolicited_na)(qdf_nbuf_t nbuf);
 
-	QDF_STATUS (*dp_send_rx_pkt_over_nl)(qdf_netdev_t dev, uint8_t *addr,
-					     qdf_nbuf_t nbuf, bool unecrypted);
+	bool (*dp_send_rx_pkt_over_nl)(qdf_netdev_t dev, uint8_t *addr,
+				       qdf_nbuf_t nbuf, bool unecrypted);
 	bool
 	(*wlan_dp_sta_get_dot11mode)(hdd_cb_handle context, uint8_t vdev_id,
 				     enum qca_wlan_802_11_mode *dot11_mode);

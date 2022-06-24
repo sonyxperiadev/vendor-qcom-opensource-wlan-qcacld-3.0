@@ -455,65 +455,6 @@ scan_ie_send_fail:
 }
 
 /**
- * lim_process_hw_mode_trans_ind() - Process set HW mode transition indication
- * @mac: Global MAC pointer
- * @body: Set HW mode response in cm_hw_mode_trans_ind format
- *
- * Process the set HW mode transition indication and post the message
- * to SME to invoke the HDD callback
- * command list
- *
- * Return: None
- */
-static void lim_process_hw_mode_trans_ind(struct mac_context *mac, void *body)
-{
-	struct cm_hw_mode_trans_ind *ind, *param;
-	uint32_t len, i;
-	struct scheduler_msg msg = {0};
-
-	ind = (struct cm_hw_mode_trans_ind *)body;
-	if (!ind) {
-		pe_err("Set HW mode trans ind param is NULL");
-		return;
-	}
-
-	len = sizeof(*param);
-
-	param = qdf_mem_malloc(len);
-	if (!param)
-		return;
-
-	param->old_hw_mode_index = ind->old_hw_mode_index;
-	param->new_hw_mode_index = ind->new_hw_mode_index;
-	param->num_vdev_mac_entries = ind->num_vdev_mac_entries;
-
-	for (i = 0; i < ind->num_vdev_mac_entries; i++) {
-		param->vdev_mac_map[i].vdev_id =
-			ind->vdev_mac_map[i].vdev_id;
-		param->vdev_mac_map[i].mac_id =
-			ind->vdev_mac_map[i].mac_id;
-	}
-
-	param->num_freq_map = ind->num_freq_map;
-	for (i = 0; i < param->num_freq_map; i++) {
-		param->mac_freq_map[i].mac_id =
-			ind->mac_freq_map[i].mac_id;
-		param->mac_freq_map[i].start_freq =
-			ind->mac_freq_map[i].start_freq;
-		param->mac_freq_map[i].end_freq =
-			ind->mac_freq_map[i].end_freq;
-	}
-	/* TODO: Update this HW mode info in any UMAC params, if needed */
-
-	msg.type = eWNI_SME_HW_MODE_TRANS_IND;
-	msg.bodyptr = param;
-	msg.bodyval = 0;
-	pe_err("Send eWNI_SME_HW_MODE_TRANS_IND to SME");
-	lim_sys_process_mmh_msg_api(mac, &msg);
-	return;
-}
-
-/**
  * def_msg_decision() - Should a message be deferred?
  * @mac_ctx: The global MAC context
  * @lim_msg: The message to check for potential deferral
@@ -2023,11 +1964,6 @@ static void lim_process_messages(struct mac_context *mac_ctx,
 #endif
 	case SIR_HAL_PDEV_SET_HW_MODE_RESP:
 		lim_process_set_hw_mode_resp(mac_ctx, msg->bodyptr);
-		qdf_mem_free((void *)msg->bodyptr);
-		msg->bodyptr = NULL;
-		break;
-	case SIR_HAL_PDEV_HW_MODE_TRANS_IND:
-		lim_process_hw_mode_trans_ind(mac_ctx, msg->bodyptr);
 		qdf_mem_free((void *)msg->bodyptr);
 		msg->bodyptr = NULL;
 		break;

@@ -641,7 +641,11 @@ static struct pci_device_id pld_pcie_id_table[] = {
 #elif defined(QCA_WIFI_QCA6490)
 	{ 0x17cb, 0x1103, PCI_ANY_ID, PCI_ANY_ID },
 #elif defined(QCA_WIFI_KIWI)
+#if defined(QCA_WIFI_MANGO)
+	{ 0x17cb, 0x110A, PCI_ANY_ID, PCI_ANY_ID },
+#else
 	{ 0x17cb, 0x1107, PCI_ANY_ID, PCI_ANY_ID },
+#endif
 #elif defined(QCN7605_SUPPORT)
 	{ 0x17cb, 0x1102, PCI_ANY_ID, PCI_ANY_ID },
 #else
@@ -665,35 +669,6 @@ struct cnss_wlan_runtime_ops runtime_pm_ops = {
 	.runtime_suspend = pld_pcie_runtime_suspend,
 	.runtime_resume = pld_pcie_runtime_resume,
 };
-#endif
-
-#ifdef FEATURE_WLAN_FULL_POWER_DOWN_SUPPORT
-static enum cnss_suspend_mode pld_pcie_suspend_mode = CNSS_SUSPEND_LEGACY;
-
-int pld_pcie_set_suspend_mode(enum pld_suspend_mode mode)
-{
-	struct pld_context *pld_ctx =  pld_get_global_context();
-	enum cnss_suspend_mode suspend_mode;
-
-	if (!pld_ctx)
-		return -ENOMEM;
-
-	switch (pld_ctx->suspend_mode) {
-	case PLD_SUSPEND:
-		suspend_mode = CNSS_SUSPEND_LEGACY;
-		break;
-	case PLD_FULL_POWER_DOWN:
-		suspend_mode = CNSS_SUSPEND_POWER_DOWN;
-		break;
-	default:
-		suspend_mode = CNSS_SUSPEND_LEGACY;
-		break;
-	}
-
-	pld_pcie_suspend_mode = suspend_mode;
-
-	return 0;
-}
 #endif
 
 struct cnss_wlan_driver pld_pcie_ops = {
@@ -722,9 +697,6 @@ struct cnss_wlan_driver pld_pcie_ops = {
 #endif
 #ifdef FEATURE_GET_DRIVER_MODE
 	.get_driver_mode  = pld_pcie_get_mode,
-#endif
-#ifdef FEATURE_WLAN_FULL_POWER_DOWN_SUPPORT
-	.suspend_mode = &pld_pcie_suspend_mode,
 #endif
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0))
 	.chip_version = CHIP_VERSION,
@@ -800,6 +772,22 @@ int pld_pcie_get_ce_id(struct device *dev, int irq)
 }
 
 #ifdef CONFIG_PLD_PCIE_CNSS
+#ifdef CONFIG_SHADOW_V3
+static inline void
+pld_pcie_populate_shadow_v3_cfg(struct cnss_wlan_enable_cfg *cfg,
+				struct pld_wlan_enable_cfg *config)
+{
+	cfg->num_shadow_reg_v3_cfg = config->num_shadow_reg_v3_cfg;
+	cfg->shadow_reg_v3_cfg = (struct cnss_shadow_reg_v3_cfg *)
+				 config->shadow_reg_v3_cfg;
+}
+#else
+static inline void
+pld_pcie_populate_shadow_v3_cfg(struct cnss_wlan_enable_cfg *cfg,
+				struct pld_wlan_enable_cfg *config)
+{
+}
+#endif
 /**
  * pld_pcie_wlan_enable() - Enable WLAN
  * @dev: device
@@ -838,6 +826,8 @@ int pld_pcie_wlan_enable(struct device *dev, struct pld_wlan_enable_cfg *config,
 		cfg.rri_over_ddr_cfg.base_addr_high =
 			 config->rri_over_ddr_cfg.base_addr_high;
 	}
+
+	pld_pcie_populate_shadow_v3_cfg(&cfg, config);
 
 	switch (mode) {
 	case PLD_FTM:

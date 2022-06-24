@@ -789,6 +789,7 @@ static void dp_fisa_rx_fst_update(struct dp_rx_fst *fisa_hdl,
 	struct cdp_rx_flow_tuple_info *rx_flow_tuple_info;
 	uint32_t skid_count = 0, max_skid_length;
 	struct dp_fisa_rx_sw_ft *sw_ft_entry;
+	struct wlan_cfg_dp_soc_ctxt *cfg_ctx = fisa_hdl->soc_hdl->wlan_cfg_ctx;
 	bool is_fst_updated = false;
 	uint32_t hashed_flow_idx;
 	uint32_t flow_hash;
@@ -865,7 +866,8 @@ static void dp_fisa_rx_fst_update(struct dp_rx_fst *fisa_hdl,
 	 * Remove LRU flow from HW FT
 	 * Remove LRU flow from SW FT
 	 */
-	if (skid_count > max_skid_length) {
+	if ((skid_count > max_skid_length) &&
+	    wlan_cfg_is_rx_fisa_lru_del_enabled(cfg_ctx)) {
 		dp_fisa_debug("Max skid length reached flow cannot be added, evict exiting flow");
 		dp_fisa_rx_delete_flow(fisa_hdl, elem, lru_ft_entry_idx);
 		is_fst_updated = true;
