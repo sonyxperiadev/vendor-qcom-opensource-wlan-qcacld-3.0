@@ -620,6 +620,9 @@ ifeq ($(CONFIG_LITHIUM), y)
 # Enable Shadow V2 for all lithium platform
 #
 CONFIG_SHADOW_V2 := y
+
+# Enable sw_cookie sanity WAR for all Lithium platforms
+CONFIG_DP_WAR_VALIDATE_RX_ERR_MSDU_COOKIE := y
 endif
 
 ifeq ($(CONFIG_BERYLLIUM), y)
