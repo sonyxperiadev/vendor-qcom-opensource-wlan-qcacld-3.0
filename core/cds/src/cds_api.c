@@ -2900,8 +2900,9 @@ QDF_STATUS cds_smmu_mem_map_setup(qdf_device_t osdev, bool ipa_present)
 	domain = pld_smmu_get_domain(osdev->dev);
 	if (domain) {
 		int attr = 0;
-		int errno = iommu_domain_get_attr(domain,
-						  DOMAIN_ATTR_S1_BYPASS, &attr);
+		int errno = qdf_iommu_domain_get_attr(domain,
+						      QDF_DOMAIN_ATTR_S1_BYPASS,
+						      &attr);
 
 		wlan_smmu_enabled = !errno && !attr;
 	} else {
@@ -2947,8 +2948,9 @@ QDF_STATUS cds_smmu_mem_map_setup(qdf_device_t osdev, bool ipa_present)
 	mapping = pld_smmu_get_mapping(osdev->dev);
 	if (mapping) {
 		int attr = 0;
-		int errno = iommu_domain_get_attr(mapping->domain,
-						  DOMAIN_ATTR_S1_BYPASS, &attr);
+		int errno = qdf_iommu_domain_get_attr(mapping->domain,
+						      QDF_DOMAIN_ATTR_S1_BYPASS,
+						      &attr);
 
 		wlan_smmu_enabled = !errno && !attr;
 	} else {
