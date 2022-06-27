@@ -1219,4 +1219,4 @@ void os_if_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 
 	ucfg_dp_register_hdd_callbacks(psoc, cb_obj);
 	os_if_dp_register_event_handler(psoc);
-
+}
