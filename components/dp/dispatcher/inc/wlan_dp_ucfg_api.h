@@ -1155,4 +1155,21 @@ bool ucfg_dp_get_napi_enabled(struct wlan_objmgr_psoc *psoc);
  * Return: None
  */
 void ucfg_dp_set_tc_ingress_prio(struct wlan_objmgr_psoc *psoc, uint32_t value);
+
+/**
+ * ucfg_dp_nud_fail_data_stall_evt_enabled() - Check if NUD failuire data stall
+ * detection is enabled
+ *
+ * Return: True if the data stall event is enabled
+ */
+bool ucfg_dp_nud_fail_data_stall_evt_enabled(void);
+
+/**
+ * ucfg_dp_fw_data_stall_evt_enabled() - Check if Fw data stall
+ * detection is enabled
+ *
+ * Return: data stall event mask
+ */
+uint32_t ucfg_dp_fw_data_stall_evt_enabled(void);
+
 #endif /* _WLAN_DP_UCFG_API_H_ */

@@ -1508,3 +1508,13 @@ __dp_objmgr_put_vdev_by_user(struct wlan_objmgr_vdev *vdev,
 }
 #endif /* WLAN_OBJMGR_REF_ID_TRACE */
 
+bool dp_is_data_stall_event_enabled(uint32_t evt)
+{
+	uint32_t bitmap = cdp_cfg_get(cds_get_context(QDF_MODULE_ID_SOC),
+				      cfg_dp_enable_data_stall);
+
+	if (bitmap & DP_DATA_STALL_ENABLE || bitmap & evt)
+		return true;
+
+	return false;
+}

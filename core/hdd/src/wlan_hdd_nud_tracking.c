@@ -102,7 +102,7 @@ static void __hdd_nud_failure_work(struct hdd_adapter *adapter)
 		return;
 	}
 
-	if (soc && hdd_is_data_stall_event_enabled(HDD_HOST_NUD_FAILURE)) {
+	if (soc && ucfg_dp_nud_fail_data_stall_evt_enabled()) {
 		hdd_dp_err("Data stall due to NUD failure");
 		cdp_post_data_stall_event
 			(soc,

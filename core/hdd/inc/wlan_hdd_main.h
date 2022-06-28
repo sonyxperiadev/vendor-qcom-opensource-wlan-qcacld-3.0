@@ -4699,20 +4699,4 @@ hdd_is_dynamic_set_mac_addr_allowed(struct hdd_adapter *adapter)
 }
 
 #endif /* WLAN_FEATURE_DYNAMIC_MAC_ADDR_UPDATE */
-
-#define HDD_DATA_STALL_ENABLE      BIT(0)
-#define HDD_HOST_STA_TX_TIMEOUT    BIT(16)
-#define HDD_HOST_SAP_TX_TIMEOUT    BIT(17)
-#define HDD_HOST_NUD_FAILURE       BIT(18)
-#define HDD_TIMEOUT_WLM_MODE       BIT(31)
-#define FW_DATA_STALL_EVT_MASK     0x8000FFFF
-
-/**
- * hdd_is_data_stall_event_enabled() - Check if data stall detection is enabled
- * @evt: Data stall event to be checked
- *
- * Return: True if the data stall event is enabled
- */
-bool hdd_is_data_stall_event_enabled(uint32_t evt);
-
 #endif /* end #if !defined(WLAN_HDD_MAIN_H) */

@@ -2076,3 +2076,14 @@ void ucfg_dp_set_tc_ingress_prio(struct wlan_objmgr_psoc *psoc, uint32_t value)
 	}
 	dp_ctx->dp_agg_param.tc_ingress_prio = value;
 }
+
+bool ucfg_dp_nud_fail_data_stall_evt_enabled(void)
+{
+	return dp_is_data_stall_event_enabled(DP_HOST_NUD_FAILURE);
+}
+
+uint32_t ucfg_dp_fw_data_stall_evt_enabled(void)
+{
+	return cdp_cfg_get(cds_get_context(QDF_MODULE_ID_SOC),
+			   cfg_dp_enable_data_stall) & FW_DATA_STALL_EVT_MASK;
+}
