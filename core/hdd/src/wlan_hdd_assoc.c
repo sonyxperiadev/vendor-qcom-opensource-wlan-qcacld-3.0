@@ -2420,10 +2420,8 @@ hdd_convert_ch_width_to_cdp_peer_bw(enum phy_ch_width ch_width)
 		return CDP_5_MHZ;
 	case CH_WIDTH_10MHZ:
 		return CDP_10_MHZ;
-#ifdef WLAN_FEATURE_11BE
 	case CH_WIDTH_320MHZ:
 		return CDP_320_MHZ;
-#endif
 	default:
 		return CDP_BW_INVALID;
 	}

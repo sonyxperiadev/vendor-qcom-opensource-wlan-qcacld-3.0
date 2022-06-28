@@ -6013,36 +6013,14 @@ QDF_STATUS wlan_connect_hw_mode_change_resp(struct wlan_objmgr_pdev *pdev,
 						  status);
 }
 
-#ifdef WLAN_FEATURE_11BE
-static inline bool
-wlan_mlme_is_phymode_320_mhz(enum wlan_phymode phy_mode,
-			     enum phy_ch_width *ch_width)
-{
-	if (IS_WLAN_PHYMODE_320MHZ(phy_mode)) {
-		*ch_width = CH_WIDTH_320MHZ;
-		return true;
-	}
-
-	return false;
-}
-#else
-static inline bool
-wlan_mlme_is_phymode_320_mhz(enum wlan_phymode phy_mode,
-			     enum phy_ch_width *ch_width)
-{
-	return false;
-}
-#endif
-
 enum phy_ch_width
 wlan_mlme_get_ch_width_from_phymode(enum wlan_phymode phy_mode)
 {
-	enum phy_ch_width ch_width = CH_WIDTH_20MHZ;
+	enum phy_ch_width ch_width;
 
-	if (wlan_mlme_is_phymode_320_mhz(phy_mode, &ch_width))
-		goto done;
-
-	if (IS_WLAN_PHYMODE_160MHZ(phy_mode))
+	if (IS_WLAN_PHYMODE_320MHZ(phy_mode))
+		ch_width = CH_WIDTH_320MHZ;
+	else if (IS_WLAN_PHYMODE_160MHZ(phy_mode))
 		ch_width = CH_WIDTH_160MHZ;
 	else if (IS_WLAN_PHYMODE_80MHZ(phy_mode))
 		ch_width = CH_WIDTH_80MHZ;
@@ -6051,7 +6029,6 @@ wlan_mlme_get_ch_width_from_phymode(enum wlan_phymode phy_mode)
 	else
 		ch_width = CH_WIDTH_20MHZ;
 
-done:
 	mlme_legacy_debug("phymode: %d, ch_width: %d ", phy_mode, ch_width);
 
 	return ch_width;

@@ -116,10 +116,8 @@ wma_map_phy_ch_bw_to_wmi_channel_width(enum phy_ch_width ch_width)
 		return WMI_HOST_CHAN_WIDTH_5;
 	case CH_WIDTH_10MHZ:
 		return WMI_HOST_CHAN_WIDTH_10;
-#if defined(WLAN_FEATURE_11BE)
 	case CH_WIDTH_320MHZ:
 		return WMI_HOST_CHAN_WIDTH_320;
-#endif
 	default:
 		return WMI_HOST_CHAN_WIDTH_20;
 	}

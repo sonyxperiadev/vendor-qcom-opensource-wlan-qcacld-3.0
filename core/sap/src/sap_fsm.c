@@ -1617,7 +1617,6 @@ static inline uint16_t he_mcs_12_13_support(void)
 }
 #endif
 
-#ifdef WLAN_FEATURE_11BE
 static bool is_mcs13_ch_width(enum phy_ch_width ch_width)
 {
 	if ((ch_width == CH_WIDTH_320MHZ) ||
@@ -1627,16 +1626,6 @@ static bool is_mcs13_ch_width(enum phy_ch_width ch_width)
 
 	return false;
 }
-#else
-static bool is_mcs13_ch_width(enum phy_ch_width ch_width)
-{
-	if ((ch_width == CH_WIDTH_160MHZ) ||
-	    (ch_width == CH_WIDTH_80P80MHZ))
-		return true;
-
-	return false;
-}
-#endif
 
 /**
  * sap_update_mcs_rate() - Update SAP MCS rate
