@@ -1504,6 +1504,33 @@ QDF_STATUS lim_send_he_caps_ie(struct mac_context *mac_ctx,
 			       uint8_t vdev_id);
 
 /**
+ * lim_populate_he_mcs_per_bw() - pouldate HE mcs set per BW (le 80, 160, 80+80)
+ * @mac_ctx: Global MAC context
+ * @self_rx: self rx mcs set
+ * @self_tx: self tx mcs set
+ * @peer_rx: peer rx mcs set
+ * @peer_tx: peer tx mcs set
+ * @nss: nss
+ * @cfg_rx_param: rx wni param to read
+ * @cfg_tx_param: tx wni param to read
+ *
+ * MCS values are interpreted as in IEEE 11ax-D1.4 spec onwards
+ * +-----------------------------------------------------+
+ * |  SS8  |  SS7  |  SS6  | SS5 | SS4 | SS3 | SS2 | SS1 |
+ * +-----------------------------------------------------+
+ * | 15-14 | 13-12 | 11-10 | 9-8 | 7-6 | 5-4 | 3-2 | 1-0 |
+ * +-----------------------------------------------------+
+ *
+ * Return: status of operation
+ */
+QDF_STATUS lim_populate_he_mcs_per_bw(struct mac_context *mac_ctx,
+				      uint16_t *supp_rx_mcs,
+				      uint16_t *supp_tx_mcs,
+				      uint16_t peer_rx, uint16_t peer_tx,
+				      uint8_t nss, uint16_t rx_mcs,
+				      uint16_t tx_mcs);
+
+/**
  * lim_populate_he_mcs_set() - function to populate HE mcs rate set
  * @mac_ctx: pointer to global mac structure
  * @rates: pointer to supported rate set

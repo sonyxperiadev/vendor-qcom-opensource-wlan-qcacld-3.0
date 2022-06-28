@@ -1013,6 +1013,44 @@ static void lim_tdls_fill_setup_cnf_he_op(struct mac_context *mac,
 						&tdls_setup_cnf->he_op);
 }
 
+static void lim_tdls_populate_he_wideband_mcs(struct mac_context *mac_ctx,
+					      tpDphHashNode stads,
+					      uint8_t nss)
+{
+	struct supported_rates *rates = &stads->supportedRates;
+	tDot11fIEhe_cap *peer_he_caps = &stads->he_config;
+
+	if (stads->ch_width == CH_WIDTH_160MHZ) {
+		lim_populate_he_mcs_per_bw(
+			mac_ctx, &rates->rx_he_mcs_map_160,
+			&rates->tx_he_mcs_map_160,
+			*((uint16_t *)peer_he_caps->rx_he_mcs_map_160),
+			*((uint16_t *)peer_he_caps->tx_he_mcs_map_160),
+			nss,
+			*((uint16_t *)mac_ctx->mlme_cfg->he_caps.dot11_he_cap.
+				rx_he_mcs_map_160),
+			*((uint16_t *)mac_ctx->mlme_cfg->he_caps.dot11_he_cap.
+					tx_he_mcs_map_160));
+	} else {
+		rates->tx_he_mcs_map_160 = HE_MCS_ALL_DISABLED;
+		rates->rx_he_mcs_map_160 = HE_MCS_ALL_DISABLED;
+	}
+	if (stads->ch_width == CH_WIDTH_80P80MHZ) {
+		lim_populate_he_mcs_per_bw(
+			mac_ctx, &rates->rx_he_mcs_map_80_80,
+			&rates->tx_he_mcs_map_80_80,
+			*((uint16_t *)peer_he_caps->rx_he_mcs_map_80_80),
+			*((uint16_t *)peer_he_caps->tx_he_mcs_map_80_80), nss,
+			*((uint16_t *)mac_ctx->mlme_cfg->he_caps.dot11_he_cap.
+					rx_he_mcs_map_80_80),
+			*((uint16_t *)mac_ctx->mlme_cfg->he_caps.dot11_he_cap.
+					tx_he_mcs_map_80_80));
+	} else {
+		rates->tx_he_mcs_map_80_80 = HE_MCS_ALL_DISABLED;
+		rates->rx_he_mcs_map_80_80 = HE_MCS_ALL_DISABLED;
+	}
+}
+
 static void lim_tdls_populate_he_matching_rate_set(struct mac_context *mac_ctx,
 						   tpDphHashNode stads,
 						   uint8_t nss,
@@ -1020,6 +1058,9 @@ static void lim_tdls_populate_he_matching_rate_set(struct mac_context *mac_ctx,
 {
 	lim_populate_he_mcs_set(mac_ctx, &stads->supportedRates,
 				&stads->he_config, session, nss);
+	/*mcs rates for less than 80 mhz bw */
+	if (stads->ch_width > session->ch_width)
+		lim_tdls_populate_he_wideband_mcs(mac_ctx, stads, nss);
 }
 
 static QDF_STATUS

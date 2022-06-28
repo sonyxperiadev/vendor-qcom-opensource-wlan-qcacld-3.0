@@ -7840,10 +7840,12 @@ QDF_STATUS lim_send_he_caps_ie(struct mac_context *mac_ctx,
  *
  * Return: status of operation
  */
-static QDF_STATUS lim_populate_he_mcs_per_bw(struct mac_context *mac_ctx,
-				uint16_t *supp_rx_mcs, uint16_t *supp_tx_mcs,
-				uint16_t peer_rx, uint16_t peer_tx, uint8_t nss,
-				uint16_t rx_mcs, uint16_t tx_mcs)
+QDF_STATUS lim_populate_he_mcs_per_bw(struct mac_context *mac_ctx,
+				      uint16_t *supp_rx_mcs,
+				      uint16_t *supp_tx_mcs,
+				      uint16_t peer_rx, uint16_t peer_tx,
+				      uint8_t nss, uint16_t rx_mcs,
+				      uint16_t tx_mcs)
 {
 
 	pe_debug("peer rates: rx_mcs - 0x%04x tx_mcs - 0x%04x",
