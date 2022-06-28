@@ -726,14 +726,7 @@ cm_roam_send_rt_stats_config(struct wlan_objmgr_psoc *psoc,
 }
 
 #ifdef WLAN_VENDOR_HANDOFF_CONTROL
-/**
- * cm_roam_is_vendor_handoff_control_enable() - check whether vendor handoff
- * control feature is enable or not in driver
- * @psoc: psoc pointer
- *
- * Return: true if feature supports
- */
-static bool
+bool
 cm_roam_is_vendor_handoff_control_enable(struct wlan_objmgr_psoc *psoc)
 {
 	bool ini_flag, handoff_control_support;
@@ -768,11 +761,6 @@ cm_roam_send_vendor_handoff_param_req(struct wlan_objmgr_psoc *psoc,
 	QDF_STATUS status;
 	struct mlme_legacy_priv *mlme_priv;
 	struct wlan_objmgr_vdev *vdev;
-
-	if (!cm_roam_is_vendor_handoff_control_enable(psoc)) {
-		mlme_debug("vendor handoff control feature is not enabled");
-		return QDF_STATUS_E_NOSUPPORT;
-	}
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
 						    WLAN_MLME_CM_ID);

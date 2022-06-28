@@ -332,6 +332,17 @@ cm_roam_send_vendor_handoff_param_req(struct wlan_objmgr_psoc *psoc,
 				      uint8_t vdev_id,
 				      uint32_t param_value,
 				      void *vendor_handoff_context);
+
+/**
+ * cm_roam_is_vendor_handoff_control_enable() - check whether vendor handoff
+ * control feature is enable or not in driver
+ * @psoc: psoc pointer
+ *
+ * Return: true if feature supports
+ */
+bool
+cm_roam_is_vendor_handoff_control_enable(struct wlan_objmgr_psoc *psoc);
+
 /**
  * cm_roam_update_vendor_handoff_config() - update vendor handoff param to
  * rso config structure

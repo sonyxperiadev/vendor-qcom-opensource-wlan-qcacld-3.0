@@ -5407,7 +5407,9 @@ hdd_set_roam_with_control_config(struct hdd_context *hdd_ctx,
 	attr = tb2[QCA_ATTR_ROAM_CONTROL_ENABLE];
 	if (attr) {
 		roam_control_enable = nla_get_u8(attr);
-		if (roam_control_enable) {
+		if (roam_control_enable &&
+		    ucfg_cm_roam_is_vendor_handoff_control_enable(
+			hdd_ctx->psoc)) {
 			status =
 				hdd_cm_get_handoff_param(hdd_ctx->psoc, adapter,
 						adapter->vdev_id,

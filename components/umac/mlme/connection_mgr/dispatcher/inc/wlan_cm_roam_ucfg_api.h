@@ -351,6 +351,22 @@ QDF_STATUS
 ucfg_cm_roam_send_vendor_handoff_param_req(struct wlan_objmgr_psoc *psoc,
 					   uint8_t vdev_id, uint32_t param_id,
 					   void *vendor_handoff_context);
+
+/**
+ * ucfg_cm_roam_is_vendor_handoff_control_enable() - check whether vendor
+ * handoff control feature is enable or not in driver
+ * @psoc: psoc pointer
+ *
+ * Return: true if feature supports
+ */
+bool
+ucfg_cm_roam_is_vendor_handoff_control_enable(struct wlan_objmgr_psoc *psoc);
+#else
+static inline bool
+ucfg_cm_roam_is_vendor_handoff_control_enable(struct wlan_objmgr_psoc *psoc)
+{
+	return false;
+}
 #endif
 
 #endif /* _WLAN_CM_ROAM_UCFG_API_H_ */

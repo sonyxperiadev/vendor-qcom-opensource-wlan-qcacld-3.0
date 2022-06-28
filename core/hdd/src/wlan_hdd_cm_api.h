@@ -115,7 +115,7 @@ hdd_cm_get_handoff_param(struct wlan_objmgr_psoc *psoc,
 			 struct hdd_adapter *hdd_adapter,
 			 uint8_t vdev_id, uint32_t param_value)
 {
-	return QDF_STATUS_E_FAILURE;
+	return QDF_STATUS_SUCCESS;
 }
 #endif
 
