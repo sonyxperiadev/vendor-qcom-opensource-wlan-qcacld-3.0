@@ -46,39 +46,6 @@ static uint16_t tdls_get_connected_peer(struct tdls_soc_priv_obj *soc_obj)
 }
 
 #ifdef WLAN_FEATURE_11AX
-static uint32_t tdls_get_6g_pwr(struct wlan_objmgr_vdev *vdev,
-				qdf_freq_t freq,
-				enum supported_6g_pwr_types pwr_typ)
-{
-	struct wlan_objmgr_pdev *pdev = wlan_vdev_get_pdev(vdev);
-	struct regulatory_channel chan[NUM_CHANNELS] = {0};
-	uint8_t chn_idx, num_chan;
-	uint8_t band_mask = BIT(REG_BAND_6G);
-
-	if (!pdev)
-		return 0;
-
-	/* No power check is required for non 6 Ghz channel */
-	if (!wlan_reg_is_6ghz_chan_freq(freq))
-		return 0;
-
-	num_chan = wlan_reg_get_band_channel_list_for_pwrmode(pdev,
-							      band_mask,
-							      chan,
-							      REG_CLI_DEF_VLP);
-
-	for (chn_idx = 0; chn_idx < num_chan; chn_idx++) {
-		if (chan[chn_idx].center_freq == freq) {
-			tdls_debug("VLP power for channel %d is %d",
-				   chan[chn_idx].center_freq,
-				   chan[chn_idx].tx_power);
-			return chan[chn_idx].tx_power;
-		}
-	}
-
-	return 0;
-}
-
 static
 uint8_t tdls_get_mlme_ch_power(struct vdev_mlme_obj *mlme_obj, qdf_freq_t freq)
 {
@@ -107,8 +74,8 @@ void tdls_set_mlme_ch_power(struct wlan_objmgr_vdev *vdev,
 	struct reg_tpc_power_info *reg_power_info = &mlme_obj->reg_tpc_obj;
 
 	if (REG_VERY_LOW_POWER_AP == reg_power_info->power_type_6g)
-		tx_power = tdls_get_6g_pwr(vdev, freq,
-					   REG_CLI_DEF_VLP);
+		tx_power = tdls_get_6g_pwr_for_power_type(vdev, freq,
+							  REG_CLI_DEF_VLP);
 	else
 		tx_power = tdls_soc_obj->bss_sta_power;
 
@@ -1987,6 +1954,7 @@ QDF_STATUS tdls_process_setup_peer(struct tdls_oper_request *req)
 	struct tdls_soc_priv_obj *soc_obj;
 	struct wlan_objmgr_vdev *vdev;
 	QDF_STATUS status;
+	uint8_t reg_bw_offset;
 
 	tdls_debug("Configure external TDLS peer " QDF_MAC_ADDR_FMT,
 		   QDF_MAC_ADDR_REF(req->peer_addr));
@@ -2011,7 +1979,14 @@ QDF_STATUS tdls_process_setup_peer(struct tdls_oper_request *req)
 	}
 
 	peer_req.chan = soc_obj->tdls_configs.tdls_pre_off_chan_num;
+	if (!peer_req.op_class)
+		peer_req.op_class = tdls_get_opclass_from_bandwidth(
+				soc_obj, peer_req.chan,
+				soc_obj->tdls_configs.tdls_pre_off_chan_bw,
+				&reg_bw_offset);
 
+	tdls_debug("peer chan %d peer opclass %d", peer_req.chan,
+		   peer_req.op_class);
 	status = tdls_config_force_peer(&peer_req);
 error:
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_TDLS_NB_ID);

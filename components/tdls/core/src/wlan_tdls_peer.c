@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -146,6 +147,33 @@ uint8_t tdls_find_opclass(struct wlan_objmgr_psoc *psoc, uint8_t channel,
 						     bw_offset);
 }
 
+static void tdls_fill_pref_off_chan_num(struct tdls_vdev_priv_obj *vdev_obj,
+					struct tdls_soc_priv_obj *soc_obj,
+					struct tdls_peer *peer)
+{
+	struct wlan_objmgr_pdev *pdev = wlan_vdev_get_pdev(vdev_obj->vdev);
+
+	/*
+	 * Fill preffered offchannel number here and prefferd bw here.
+	 * Bw and channel number can be used to later calculate Op_class
+	 * which will be used to identify the channels
+	 */
+	peer->pref_off_chan_width = soc_obj->tdls_configs.tdls_pre_off_chan_bw;
+
+	if (soc_obj->tdls_configs.tdls_pre_off_chan_freq_6g &&
+	    tdls_is_6g_freq_allowed(vdev_obj->vdev,
+			     soc_obj->tdls_configs.tdls_pre_off_chan_freq_6g)) {
+		peer->pref_off_chan_num =
+			wlan_reg_freq_to_chan(pdev,
+			       soc_obj->tdls_configs.tdls_pre_off_chan_freq_6g);
+	} else {
+		peer->pref_off_chan_num =
+				soc_obj->tdls_configs.tdls_pre_off_chan_num;
+		if (CHECK_BIT(peer->pref_off_chan_width, BW_160_OFFSET_BIT))
+			peer->pref_off_chan_width &= ~(1 << BW_160_OFFSET_BIT);
+	}
+}
+
 /**
  * tdls_add_peer() - add TDLS peer in TDLS vdev object
  * @vdev_obj: TDLS vdev object
@@ -180,8 +208,7 @@ static struct tdls_peer *tdls_add_peer(struct tdls_vdev_priv_obj *vdev_obj,
 	qdf_mem_copy(&peer->peer_mac, macaddr, sizeof(peer->peer_mac));
 	peer->vdev_priv = vdev_obj;
 
-	peer->pref_off_chan_num =
-		soc_obj->tdls_configs.tdls_pre_off_chan_num;
+	tdls_fill_pref_off_chan_num(vdev_obj, soc_obj, peer);
 	peer->op_class_for_pref_off_chan =
 		tdls_get_opclass_from_bandwidth(
 				soc_obj, peer->pref_off_chan_num,
@@ -479,6 +506,7 @@ void tdls_extract_peer_state_param(struct tdls_peer_update_state *peer_param,
 	uint8_t chan_id;
 	uint32_t cur_band;
 	qdf_freq_t ch_freq;
+	uint32_t tx_power = 0;
 
 	vdev_obj = peer->vdev_priv;
 	soc_obj = wlan_vdev_get_tdls_soc_obj(vdev_obj->vdev);
@@ -501,10 +529,11 @@ void tdls_extract_peer_state_param(struct tdls_peer_update_state *peer_param,
 	peer_param->peer_cap.peer_off_chan_support =
 		peer->off_channel_capable;
 	peer_param->peer_cap.peer_curr_operclass = 0;
-	peer_param->peer_cap.self_curr_operclass = 0;
+	peer_param->peer_cap.self_curr_operclass =
+			peer->op_class_for_pref_off_chan;
 	peer_param->peer_cap.pref_off_channum = peer->pref_off_chan_num;
 	peer_param->peer_cap.pref_off_chan_bandwidth =
-		soc_obj->tdls_configs.tdls_pre_off_chan_bw;
+						peer->pref_off_chan_width;
 	peer_param->peer_cap.opclass_for_prefoffchan =
 		peer->op_class_for_pref_off_chan;
 
@@ -539,8 +568,17 @@ void tdls_extract_peer_state_param(struct tdls_peer_update_state *peer_param,
 		    CHANNEL_STATE_DFS != ch_state &&
 		    !wlan_reg_is_dsrc_freq(ch_freq)) {
 			peer_param->peer_cap.peer_chan[num].chan_id = chan_id;
-			peer_param->peer_cap.peer_chan[num].pwr =
-				wlan_reg_get_channel_reg_power_for_freq(pdev, ch_freq);
+			if (!wlan_reg_is_6ghz_chan_freq(ch_freq)) {
+				tx_power =
+				wlan_reg_get_channel_reg_power_for_freq(pdev,
+								       ch_freq);
+			} else {
+				tx_power =
+				tdls_get_6g_pwr_for_power_type(vdev_obj->vdev,
+							       ch_freq,
+							       REG_CLI_DEF_VLP);
+			}
+			peer_param->peer_cap.peer_chan[num].pwr = tx_power;
 			peer_param->peer_cap.peer_chan[num].dfs_set = false;
 			peer_param->peer_cap.peer_chanlen++;
 			num++;
@@ -860,7 +898,7 @@ QDF_STATUS tdls_reset_peer(struct tdls_vdev_priv_obj *vdev_obj,
 
 	if (!curr_peer->is_forced_peer) {
 		config = &soc_obj->tdls_configs;
-		curr_peer->pref_off_chan_num = config->tdls_pre_off_chan_num;
+		tdls_fill_pref_off_chan_num(vdev_obj, soc_obj, curr_peer);
 		curr_peer->op_class_for_pref_off_chan =
 			tdls_get_opclass_from_bandwidth(
 				soc_obj, curr_peer->pref_off_chan_num,

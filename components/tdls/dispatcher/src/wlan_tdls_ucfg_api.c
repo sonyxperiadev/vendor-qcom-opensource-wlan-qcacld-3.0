@@ -202,6 +202,8 @@ static QDF_STATUS tdls_object_init_params(
 			cfg_get(psoc, CFG_TDLS_PUAPSD_PEER_TRAFFIC_RSP_TIMEOUT);
 	tdls_soc_obj->tdls_configs.tdls_pre_off_chan_num =
 			cfg_get(psoc, CFG_TDLS_PREFERRED_OFF_CHANNEL_NUM);
+	tdls_soc_obj->tdls_configs.tdls_pre_off_chan_freq_6g =
+			cfg_get(psoc, CFG_TDLS_PREFERRED_OFF_CHANNEL_FREQ_6G);
 	tdls_soc_obj->tdls_configs.tdls_pre_off_chan_bw =
 			cfg_get(psoc, CFG_TDLS_PREFERRED_OFF_CHANNEL_BW);
 	tdls_soc_obj->tdls_configs.tdls_peer_kickout_threshold =

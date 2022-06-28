@@ -213,10 +213,10 @@ static void populate_dot11f_tdls_offchannel_params(
 						     mac->mlme_cfg->reg.valid_channel_freq_list[i]);
 	}
 
-	if (wlan_reg_is_5ghz_ch_freq(pe_session->curr_op_freq))
-		band = BAND_5G;
-	else
+	if (wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq))
 		band = BAND_2G;
+	else
+		band = BAND_5G;
 
 	nss_5g = QDF_MIN(mac->vdev_type_nss_5g.tdls,
 			 mac->user_configured_nss);

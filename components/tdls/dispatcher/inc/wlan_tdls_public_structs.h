@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -467,6 +468,7 @@ enum tdls_feature_bit {
  * @tdls_uapsd_ptr_timeout: tdls peer response timeout
  * @tdls_feature_flags: tdls feature flags
  * @tdls_pre_off_chan_num: tdls off channel number
+ * @tdls_pre_off_chan_freq_6g: tdls pref off channel freq for 6g band
  * @tdls_pre_off_chan_bw: tdls off channel bandwidth
  * @tdls_peer_kickout_threshold: sta kickout threshold for tdls peer
  * @tdls_discovery_wake_timeout: tdls discovery wake timeout
@@ -499,6 +501,7 @@ struct tdls_user_config {
 	uint32_t tdls_uapsd_ptr_timeout;
 	uint32_t tdls_feature_flags;
 	uint32_t tdls_pre_off_chan_num;
+	uint32_t tdls_pre_off_chan_freq_6g;
 	uint32_t tdls_pre_off_chan_bw;
 	uint32_t tdls_peer_kickout_threshold;
 	uint32_t tdls_discovery_wake_timeout;

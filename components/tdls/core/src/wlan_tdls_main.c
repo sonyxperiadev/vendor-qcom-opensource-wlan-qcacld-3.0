@@ -846,6 +846,39 @@ QDF_STATUS tdls_update_fw_tdls_state(struct tdls_soc_priv_obj *tdls_soc_obj,
 }
 
 #ifdef WLAN_FEATURE_11AX
+uint32_t tdls_get_6g_pwr_for_power_type(struct wlan_objmgr_vdev *vdev,
+					qdf_freq_t freq,
+					enum supported_6g_pwr_types pwr_typ)
+{
+	struct wlan_objmgr_pdev *pdev = wlan_vdev_get_pdev(vdev);
+	struct regulatory_channel chan[NUM_CHANNELS] = {0};
+	uint8_t chn_idx, num_chan;
+	uint8_t band_mask = BIT(REG_BAND_6G);
+
+	if (!pdev)
+		return 0;
+
+	/* No power check is required for non 6 Ghz channel */
+	if (!wlan_reg_is_6ghz_chan_freq(freq))
+		return 0;
+
+	num_chan = wlan_reg_get_band_channel_list_for_pwrmode(pdev,
+							      band_mask,
+							      chan,
+							      REG_CLI_DEF_VLP);
+
+	for (chn_idx = 0; chn_idx < num_chan; chn_idx++) {
+		if (chan[chn_idx].center_freq == freq) {
+			tdls_debug("VLP power for channel %d is %d",
+				   chan[chn_idx].center_freq,
+				   chan[chn_idx].tx_power);
+			return chan[chn_idx].tx_power;
+		}
+	}
+
+	return 0;
+}
+
 bool tdls_is_6g_freq_allowed(struct wlan_objmgr_vdev *vdev,
 			     qdf_freq_t freq)
 {
@@ -896,6 +929,13 @@ bool tdls_is_6g_freq_allowed(struct wlan_objmgr_vdev *vdev,
 				    qdf_freq_t freq)
 {
 	return false;
+}
+
+uint32_t tdls_get_6g_pwr_for_power_type(struct wlan_objmgr_vdev *vdev,
+					qdf_freq_t freq,
+					enum supported_6g_pwr_types pwr_typ)
+{
+	return 0;
 }
 #endif
 
@@ -1923,7 +1963,11 @@ uint8_t tdls_get_opclass_from_bandwidth(struct tdls_soc_priv_obj *soc_obj,
 {
 	uint8_t opclass;
 
-	if (bw_offset & (1 << BW_80_OFFSET_BIT)) {
+	if (bw_offset &  (1 << BW_160_OFFSET_BIT)) {
+		opclass = tdls_find_opclass(soc_obj->soc,
+					    channel, BWALL);
+		*reg_bw_offset = BWALL;
+	} else if (bw_offset & (1 << BW_80_OFFSET_BIT)) {
 		opclass = tdls_find_opclass(soc_obj->soc,
 					    channel, BW80);
 		*reg_bw_offset = BW80;

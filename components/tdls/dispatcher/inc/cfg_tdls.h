@@ -463,17 +463,46 @@
 
 /*
  * <ini>
+ * tdls_pref_off_chan_num_6g - Preferred TDLS 6g channel freq when off-channel
+ * support is enabled.
+ * @Min: 0
+ * @Max: 7115
+ * @Default: 5975
+ *
+ * This ini is used to configure preferred TDLS 6G channel number when
+ * off-channel support is enabled. If this is set to 0, 6Ghz offchannel is
+ * disabled.
+ *
+ * Related: gEnableTDLSSupport, gEnableTDLSOffChannel.
+ *
+ * Supported Feature: TDLS
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+#define CFG_TDLS_PREFERRED_OFF_CHANNEL_FREQ_6G CFG_INI_UINT( \
+	"tdls_pref_off_chan_freq_6g", \
+	0, \
+	7115, \
+	5975, \
+	CFG_VALUE_OR_DEFAULT, \
+	"Preferred TDLS channel frequency for 6ghz channels")
+
+/*
+ * <ini>
  * gTDLSPrefOffChanBandwidth - Preferred TDLS channel bandwidth when
  * off-channel support is enabled.
- * @Min: 0x01
- * @Max: 0x0F
- * @Default: 0x07
+ * @Min: 1
+ * @Max: 15
+ * @Default: 15
  *
  * This ini is used to configure preferred TDLS channel bandwidth when
  * off-channel support is enabled.
  * 0x1: 20 MHz	0x2: 40 MHz	0x4: 80 MHz	0x8: 160 MHz
  * When more than one bits are set then firmware starts from the highest and
- * selects one based on capability of peer.
+ * selects one based on capability of peer. So, that means if 0xF is set that
+ * means fw will try intersect with 160 MHz BW and the peer supported BW.
  *
  * Related: gEnableTDLSSupport, gEnableTDLSOffChannel.
  *
@@ -487,7 +516,7 @@
 	"gTDLSPrefOffChanBandwidth", \
 	1, \
 	15, \
-	7, \
+	15, \
 	CFG_VALUE_OR_DEFAULT, \
 	"Preferred TDLS channel bandwidth")
 
@@ -734,6 +763,7 @@
 	CFG(CFG_TDLS_RSSI_TEARDOWN_THRESHOLD) \
 	CFG(CFG_TDLS_RSSI_DELTA) \
 	CFG(CFG_TDLS_PREFERRED_OFF_CHANNEL_NUM) \
+	CFG(CFG_TDLS_PREFERRED_OFF_CHANNEL_FREQ_6G) \
 	CFG(CFG_TDLS_PREFERRED_OFF_CHANNEL_BW) \
 	CFG(CFG_TDLS_PUAPSD_PEER_TRAFFIC_IND_WINDOW) \
 	CFG(CFG_TDLS_PUAPSD_PEER_TRAFFIC_RSP_TIMEOUT) \
