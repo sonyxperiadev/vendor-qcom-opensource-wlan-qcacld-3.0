@@ -477,15 +477,7 @@ wlansap_roam_process_ch_change_success(struct mac_context *mac_ctx,
 
 	sap_ctx->chan_freq = target_chan_freq;
 	/* check if currently selected channel is a DFS channel */
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
-	if (is_ch_dfs && sap_ctx->pre_cac_complete) {
-#else
 	if (is_ch_dfs && wlan_pre_cac_complete_get(sap_ctx->vdev)) {
-#endif
 		/* Start beaconing on the new pre cac channel */
 		wlansap_start_beacon_req(sap_ctx);
 		sap_ctx->fsm_state = SAP_STARTING;
@@ -562,15 +554,7 @@ wlansap_roam_process_dfs_chansw_update(mac_handle_t mac_handle,
 		 * with no CSA IE will be sent to firmware.
 		 */
 		dfs_beacon_start_req = true;
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
-		sap_ctx->pre_cac_complete = false;
-#else
 		wlan_pre_cac_complete_set(sap_ctx->vdev, false);
-#endif
 		*ret_status = sme_roam_start_beacon_req(mac_handle,
 							sap_ctx->bssid,
 							dfs_beacon_start_req);
@@ -1016,28 +1000,6 @@ static bool sap_is_csa_restart_state(struct wlan_objmgr_psoc *psoc,
 }
 
 #ifdef PRE_CAC_SUPPORT
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
-static void wlan_sap_pre_cac_radar_ind(struct sap_context *sap_ctx,
-				       struct mac_context *mac_ctx)
-{
-	qdf_mc_timer_t *dfs_timer = &mac_ctx->sap.SapDfsInfo.sap_dfs_cac_timer;
-
-	sap_debug("sapdfs: Radar detect on pre cac:%d", sap_ctx->sessionId);
-	if (!sap_ctx->dfs_cac_offload) {
-		qdf_mc_timer_stop(dfs_timer);
-		qdf_mc_timer_destroy(dfs_timer);
-	}
-
-	mac_ctx->sap.SapDfsInfo.is_dfs_cac_timer_running = false;
-	sap_signal_hdd_event(sap_ctx, NULL,
-			     eSAP_DFS_RADAR_DETECT_DURING_PRE_CAC,
-			     (void *)eSAP_STATUS_SUCCESS);
-}
-#else
 static void wlan_sap_pre_cac_radar_ind(struct sap_context *sap_ctx,
 				       struct mac_context *mac_ctx)
 {
@@ -1052,7 +1014,6 @@ static void wlan_sap_pre_cac_radar_ind(struct sap_context *sap_ctx,
 	mac_ctx->sap.SapDfsInfo.is_dfs_cac_timer_running = false;
 	wlan_pre_cac_handle_radar_ind(sap_ctx->vdev);
 }
-#endif /* PRE_CAC_COMP */
 #else
 static inline void
 wlan_sap_pre_cac_radar_ind(struct sap_context *sap_ctx,
@@ -1164,21 +1125,12 @@ QDF_STATUS wlansap_roam_callback(void *ctx,
 				  sap_ctx->chan_freq);
 			goto EXIT;
 		}
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
-		if (sap_ctx->is_pre_cac_on) {
-			wlan_sap_pre_cac_radar_ind(sap_ctx, mac_ctx);
-			break;
-		}
-#else
+
 		if (wlan_pre_cac_get_status(mac_ctx->psoc)) {
 			wlan_sap_pre_cac_radar_ind(sap_ctx, mac_ctx);
 			break;
 		}
-#endif
+
 		sap_debug("sapdfs: Indicate eSAP_DFS_RADAR_DETECT to HDD");
 		sap_signal_hdd_event(sap_ctx, NULL, eSAP_DFS_RADAR_DETECT,
 				     (void *) eSAP_STATUS_SUCCESS);

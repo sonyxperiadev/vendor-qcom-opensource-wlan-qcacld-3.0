@@ -2246,39 +2246,7 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 		hdd_son_deliver_cac_status_event(adapter, true);
 		break;
 	}
-/*
- * The code under this macro will be removed
- * once pre_cac componentization is done
- */
-#if defined(PRE_CAC_SUPPORT) && !defined(PRE_CAC_COMP)
-	case eSAP_DFS_RADAR_DETECT_DURING_PRE_CAC:
-		hdd_debug("notification for radar detect during pre cac:%d",
-			adapter->vdev_id);
-		hdd_send_conditional_chan_switch_status(hdd_ctx,
-			&adapter->wdev, false);
-		hdd_ctx->dev_dfs_cac_status = DFS_CAC_NEVER_DONE;
-		qdf_create_work(0, &hdd_ctx->sap_pre_cac_work,
-				wlan_hdd_sap_pre_cac_failure,
-				(void *)adapter);
-		qdf_sched_work(0, &hdd_ctx->sap_pre_cac_work);
-		hdd_son_deliver_cac_status_event(adapter, true);
-		break;
-	case eSAP_DFS_PRE_CAC_END:
-		hdd_debug("pre cac end notification received:%d",
-			adapter->vdev_id);
-		hdd_send_conditional_chan_switch_status(hdd_ctx,
-			&adapter->wdev, true);
-		ap_ctx->dfs_cac_block_tx = false;
-		ucfg_ipa_set_dfs_cac_tx(hdd_ctx->pdev,
-					ap_ctx->dfs_cac_block_tx);
-		hdd_ctx->dev_dfs_cac_status = DFS_CAC_ALREADY_DONE;
 
-		qdf_create_work(0, &hdd_ctx->sap_pre_cac_work,
-				wlan_hdd_sap_pre_cac_success,
-				(void *)adapter);
-		qdf_sched_work(0, &hdd_ctx->sap_pre_cac_work);
-		break;
-#endif /* PRE_CAC_SUPPORT and PRE_CAC_COMP */
 	case eSAP_DFS_NO_AVAILABLE_CHANNEL:
 		wlan_hdd_send_svc_nlink_msg
 			(hdd_ctx->radio_index,
@@ -6678,17 +6646,9 @@ static int __wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy,
 	mutex_unlock(&hdd_ctx->sap_lock);
 
 	mac_handle = hdd_ctx->mac_handle;
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
-	if (wlan_sap_is_pre_cac_active(mac_handle))
-		hdd_clean_up_pre_cac_interface(hdd_ctx);
-#else
+
 	if (ucfg_pre_cac_is_active(hdd_ctx->psoc))
 		ucfg_pre_cac_clean_up(hdd_ctx->psoc);
-#endif
 
 	if (status != QDF_STATUS_SUCCESS) {
 		hdd_err("Stopping the BSS");

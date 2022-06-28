@@ -24,67 +24,6 @@
 #include "wlan_ipa_ucfg_api.h"
 #include "wlan_hdd_son.h"
 
-void hdd_send_conditional_chan_switch_status(struct hdd_context *hdd_ctx,
-					     struct wireless_dev *wdev,
-					     bool status)
-{
-	struct sk_buff *event;
-
-	hdd_enter_dev(wdev->netdev);
-
-	if (!hdd_ctx) {
-		hdd_err("Invalid HDD context pointer");
-		return;
-	}
-
-	event = cfg80211_vendor_event_alloc(hdd_ctx->wiphy,
-		  wdev, sizeof(uint32_t) + NLMSG_HDRLEN,
-		  QCA_NL80211_VENDOR_SUBCMD_SAP_CONDITIONAL_CHAN_SWITCH_INDEX,
-		  GFP_KERNEL);
-	if (!event) {
-		hdd_err("cfg80211_vendor_event_alloc failed");
-		return;
-	}
-
-	if (nla_put_u32(event,
-			QCA_WLAN_VENDOR_ATTR_SAP_CONDITIONAL_CHAN_SWITCH_STATUS,
-			status)) {
-		hdd_err("nla put failed");
-		kfree_skb(event);
-		return;
-	}
-
-	cfg80211_vendor_event(event, GFP_KERNEL);
-}
-
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
-/**
- * wlan_hdd_set_pre_cac_complete_status() - Set pre cac complete status
- * @ap_adapter: AP adapter
- * @status: Status which can be true or false
- *
- * Sets the status of pre cac i.e., whether it is complete or not
- *
- * Return: Zero on success, non-zero on failure
- */
-static int wlan_hdd_set_pre_cac_complete_status(struct hdd_adapter *ap_adapter,
-						bool status)
-{
-	QDF_STATUS ret;
-
-	ret = wlan_sap_set_pre_cac_complete_status(
-			WLAN_HDD_GET_SAP_CTX_PTR(ap_adapter), status);
-	if (QDF_IS_STATUS_ERROR(ret))
-		return -EINVAL;
-
-	return 0;
-}
-#endif
-
 /**
  * __wlan_hdd_sap_pre_cac_failure() - Process the pre cac failure
  * @adapter: AP adapter
@@ -93,15 +32,7 @@ static int wlan_hdd_set_pre_cac_complete_status(struct hdd_adapter *ap_adapter,
  *
  * Return: None
  */
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
-static void __wlan_hdd_sap_pre_cac_failure(struct hdd_adapter *adapter)
-#else
 static void wlan_hdd_pre_cac_failure(struct hdd_adapter *adapter)
-#endif
 {
 	struct hdd_context *hdd_ctx;
 
@@ -116,34 +47,6 @@ static void wlan_hdd_pre_cac_failure(struct hdd_adapter *adapter)
 	hdd_exit();
 }
 
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
-/**
- * wlan_hdd_sap_pre_cac_failure() - Process the pre cac failure
- * @data: AP adapter
- *
- * Deletes the pre cac adapter
- *
- * Return: None
- */
-void wlan_hdd_sap_pre_cac_failure(void *data)
-{
-	struct hdd_adapter *adapter = data;
-	struct osif_vdev_sync *vdev_sync;
-	int errno;
-
-	errno = osif_vdev_sync_trans_start_wait(adapter->dev, &vdev_sync);
-	if (errno)
-		return;
-
-	__wlan_hdd_sap_pre_cac_failure(data);
-
-	osif_vdev_sync_trans_stop(vdev_sync);
-}
-
 /**
  * __wlan_hdd_sap_pre_cac_success() - Process the pre cac result
  * @adapter: AP adapter
@@ -153,10 +56,7 @@ void wlan_hdd_sap_pre_cac_failure(void *data)
  *
  * Return: None
  */
-static void __wlan_hdd_sap_pre_cac_success(struct hdd_adapter *adapter)
-#else
 static void wlan_hdd_pre_cac_success(struct hdd_adapter *adapter)
-#endif
 {
 	struct hdd_adapter *ap_adapter;
 	int i;
@@ -183,28 +83,7 @@ static void wlan_hdd_pre_cac_success(struct hdd_adapter *adapter)
 		hdd_err("failed to get SAP adapter, no restart on pre CAC channel");
 		return;
 	}
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
-	/*
-	 * Setting of the pre cac complete status will ensure that on channel
-	 * switch to the pre CAC DFS channel, there is no CAC again.
-	 */
-	wlan_hdd_set_pre_cac_complete_status(ap_adapter, true);
 
-	wlan_hdd_set_sap_csa_reason(hdd_ctx->psoc, ap_adapter->vdev_id,
-				    CSA_REASON_PRE_CAC_SUCCESS);
-	chan_freq = ap_adapter->pre_cac_freq;
-	i = hdd_softap_set_channel_change(ap_adapter->dev,
-					  chan_freq,
-					  pre_cac_ch_width, false);
-	if (i) {
-		hdd_err("failed to change channel");
-		wlan_hdd_set_pre_cac_complete_status(ap_adapter, false);
-	}
-#else
 	/*
 	 * Setting of the pre cac complete status will ensure that on channel
 	 * switch to the pre CAC DFS channel, there is no CAC again.
@@ -221,31 +100,9 @@ static void wlan_hdd_pre_cac_success(struct hdd_adapter *adapter)
 		hdd_err("failed to change channel");
 		ucfg_pre_cac_complete_set(ap_adapter->vdev, false);
 	}
-#endif
 
 	hdd_exit();
 }
-
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
-void wlan_hdd_sap_pre_cac_success(void *data)
-{
-	struct hdd_adapter *adapter = data;
-	struct osif_vdev_sync *vdev_sync;
-	int errno;
-
-	errno = osif_vdev_sync_trans_start_wait(adapter->dev, &vdev_sync);
-	if (errno)
-		return;
-
-	__wlan_hdd_sap_pre_cac_success(adapter);
-
-	osif_vdev_sync_trans_stop(vdev_sync);
-}
-#endif /* PRE_CAC_COMP */
 
 void hdd_close_pre_cac_adapter(struct hdd_context *hdd_ctx)
 {
@@ -272,68 +129,6 @@ void hdd_close_pre_cac_adapter(struct hdd_context *hdd_ctx)
 	osif_vdev_sync_trans_stop(vdev_sync);
 	osif_vdev_sync_destroy(vdev_sync);
 }
-
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
-void hdd_clean_up_pre_cac_interface(struct hdd_context *hdd_ctx)
-{
-	uint8_t vdev_id;
-	QDF_STATUS status;
-	struct hdd_adapter *precac_adapter;
-
-	status = wlan_sap_get_pre_cac_vdev_id(hdd_ctx->mac_handle, &vdev_id);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		hdd_err("failed to get pre cac vdev id");
-		return;
-	}
-
-	precac_adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
-	if (!precac_adapter) {
-		hdd_err("invalid pre cac adapter");
-		return;
-	}
-
-	qdf_create_work(0, &hdd_ctx->sap_pre_cac_work,
-			wlan_hdd_sap_pre_cac_failure,
-			(void *)precac_adapter);
-	qdf_sched_work(0, &hdd_ctx->sap_pre_cac_work);
-}
-#endif
-
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
-/**
- * wlan_hdd_set_chan_freq_before_pre_cac() - Save the channel before pre cac
- * @ap_adapter: AP adapter
- * @freq_before_pre_cac: Channel
- *
- * Saves the channel frequency which the AP was beaconing on before moving to
- * the pre cac channel. If radar is detected on the pre cac channel, this saved
- * channel will be used for AP operations.
- *
- * Return: Zero on success, non-zero on failure
- */
-static int
-wlan_hdd_set_chan_freq_before_pre_cac(struct hdd_adapter *ap_adapter,
-				      qdf_freq_t freq_before_pre_cac)
-{
-	QDF_STATUS ret;
-	struct sap_context *sap_ctx = WLAN_HDD_GET_SAP_CTX_PTR(ap_adapter);
-
-	ret = wlan_sap_set_chan_freq_before_pre_cac(sap_ctx,
-						    freq_before_pre_cac);
-	if (QDF_IS_STATUS_ERROR(ret))
-		return -EINVAL;
-
-	return 0;
-}
-#endif
 
 static int wlan_set_def_pre_cac_chan(struct hdd_context *hdd_ctx,
 				     uint32_t pre_cac_ch_freq,
@@ -397,105 +192,6 @@ static int wlan_set_def_pre_cac_chan(struct hdd_context *hdd_ctx,
 	return 0;
 }
 
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
-/**
- * wlan_hdd_validate_and_get_pre_cac_ch() - Validate and get pre cac channel
- * @hdd_ctx: HDD context
- * @ap_adapter: AP adapter
- * @chan_freq: Channel frequency requested by userspace
- * @pre_cac_chan_freq: Pointer to the pre CAC channel frequency storage
- *
- * Validates the channel provided by userspace. If user provided channel 0,
- * a valid outdoor channel must be selected from the regulatory channel.
- *
- * Return: Zero on success and non zero value on error
- */
-static int wlan_hdd_validate_and_get_pre_cac_ch(struct hdd_context *hdd_ctx,
-						struct hdd_adapter *ap_adapter,
-						uint32_t chan_freq,
-						uint32_t *pre_cac_chan_freq)
-{
-	uint32_t i;
-	QDF_STATUS status;
-	uint32_t weight_len = 0;
-	uint32_t len = CFG_VALID_CHANNEL_LIST_LEN;
-	uint32_t freq_list[NUM_CHANNELS] = {0};
-	uint8_t pcl_weights[NUM_CHANNELS] = {0};
-	mac_handle_t mac_handle;
-
-	if (!chan_freq) {
-		/* Channel is not obtained from PCL because PCL may not have
-		 * the entire channel list. For example: if SAP is up on
-		 * channel 6 and PCL is queried for the next SAP interface,
-		 * if SCC is preferred, the PCL will contain only the channel
-		 * 6. But, we are in need of a DFS channel. So, going with the
-		 * first channel from the valid channel list.
-		 */
-		status = policy_mgr_get_valid_chans(hdd_ctx->psoc,
-						    freq_list, &len);
-		if (QDF_IS_STATUS_ERROR(status)) {
-			hdd_err("Failed to get channel list");
-			return -EINVAL;
-		}
-		policy_mgr_update_with_safe_channel_list(hdd_ctx->psoc,
-							 freq_list, &len,
-							 pcl_weights,
-							 weight_len);
-		for (i = 0; i < len; i++) {
-			if (wlan_reg_is_dfs_for_freq(hdd_ctx->pdev,
-						     freq_list[i])) {
-				*pre_cac_chan_freq = freq_list[i];
-				break;
-			}
-		}
-		if (*pre_cac_chan_freq == 0) {
-			hdd_err("unable to find outdoor channel");
-			return -EINVAL;
-		}
-	} else {
-		/* Only when driver selects a channel, check is done for
-		 * unnsafe and NOL channels. When user provides a fixed channel
-		 * the user is expected to take care of this.
-		 */
-		mac_handle = hdd_ctx->mac_handle;
-		if (!sme_is_channel_valid(mac_handle, chan_freq) ||
-		    !wlan_reg_is_dfs_for_freq(hdd_ctx->pdev, chan_freq)) {
-			hdd_err("Invalid channel for pre cac:%d", chan_freq);
-			return -EINVAL;
-		}
-		*pre_cac_chan_freq = chan_freq;
-	}
-	hdd_debug("selected pre cac channel:%d", *pre_cac_chan_freq);
-	return 0;
-}
-
-/**
- * wlan_hdd_set_pre_cac_status() - Set the pre cac status
- * @pre_cac_adapter: AP adapter used for pre cac
- * @status: Status (true or false)
- *
- * Sets the status of pre cac i.e., whether the pre cac is active or not
- *
- * Return: Zero on success, non-zero on failure
- */
-static int wlan_hdd_set_pre_cac_status(struct hdd_adapter *pre_cac_adapter,
-				       bool status)
-{
-	QDF_STATUS ret;
-
-	ret = wlan_sap_set_pre_cac_status(
-		WLAN_HDD_GET_SAP_CTX_PTR(pre_cac_adapter), status);
-	if (QDF_IS_STATUS_ERROR(ret))
-		return -EINVAL;
-
-	return 0;
-}
-#endif
-
 /**
  * __wlan_hdd_request_pre_cac() - Start pre CAC in the driver
  * @hdd_ctx: the HDD context to operate against
@@ -522,14 +218,6 @@ static int __wlan_hdd_request_pre_cac(struct hdd_context *hdd_ctx,
 	struct cfg80211_chan_def chandef;
 	enum nl80211_channel_type channel_type;
 	mac_handle_t mac_handle;
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
-	bool val;
-	qdf_freq_t freq;
-#endif
 	enum phy_ch_width cac_ch_width;
 	struct hdd_adapter_create_param params = {0};
 
@@ -540,28 +228,11 @@ static int __wlan_hdd_request_pre_cac(struct hdd_context *hdd_ctx,
 
 	pre_cac_adapter = hdd_get_adapter_by_iface_name(hdd_ctx,
 							SAP_PRE_CAC_IFNAME);
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
-	if (pre_cac_adapter) {
-		/* Flush existing pre_cac work */
-		if (hdd_ctx->sap_pre_cac_work.fn)
-			cds_flush_work(&hdd_ctx->sap_pre_cac_work);
-	} else {
-		if (policy_mgr_get_connection_count(hdd_ctx->psoc) > 1) {
-			hdd_err("pre cac not allowed in concurrency");
-			return -EINVAL;
-		}
-	}
-#else
 	if (!pre_cac_adapter &&
 	    (policy_mgr_get_connection_count(hdd_ctx->psoc) > 1)) {
 		hdd_err("pre cac not allowed in concurrency");
 		return -EINVAL;
 	}
-#endif
 
 	ap_adapter = hdd_get_adapter(hdd_ctx, QDF_SAP_MODE);
 	if (!ap_adapter) {
@@ -575,17 +246,6 @@ static int __wlan_hdd_request_pre_cac(struct hdd_context *hdd_ctx,
 	}
 
 	mac_handle = hdd_ctx->mac_handle;
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
-	val = wlan_sap_is_pre_cac_active(mac_handle);
-	if (val) {
-		hdd_err("pre cac is already in progress");
-		return -EINVAL;
-	}
-#endif
 
 	hdd_ap_ctx = WLAN_HDD_GET_AP_CTX_PTR(ap_adapter);
 	if (!hdd_ap_ctx) {
@@ -608,17 +268,8 @@ static int __wlan_hdd_request_pre_cac(struct hdd_context *hdd_ctx,
 
 	hdd_debug("channel: %d", chan_freq);
 
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
-	ret = wlan_hdd_validate_and_get_pre_cac_ch(
-		hdd_ctx, ap_adapter, chan_freq, &pre_cac_chan_freq);
-#else
 	ret = ucfg_pre_cac_validate_and_get_freq(hdd_ctx->pdev, chan_freq,
 						 &pre_cac_chan_freq);
-#endif
 	if (ret != 0) {
 		hdd_err("can't validate pre-cac channel");
 		goto release_intf_addr_and_return_failure;
@@ -760,28 +411,6 @@ static int __wlan_hdd_request_pre_cac(struct hdd_context *hdd_ctx,
 	 * anywhere, since after the pre cac success/failure, the pre cac
 	 * adapter itself would be removed.
 	 */
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
-	ret = wlan_hdd_set_pre_cac_status(pre_cac_adapter, true);
-	if (ret != 0) {
-		hdd_err("failed to set pre cac status");
-		goto stop_close_pre_cac_adapter;
-	}
-
-	freq = hdd_ap_ctx->operating_chan_freq;
-	ret = wlan_hdd_set_chan_freq_before_pre_cac(ap_adapter,
-						    freq);
-	if (ret != 0) {
-		hdd_err("failed to set channel before pre cac");
-		goto stop_close_pre_cac_adapter;
-	}
-
-	ap_adapter->pre_cac_freq = pre_cac_chan_freq;
-	pre_cac_adapter->is_pre_cac_adapter = true;
-#else
 	ret = ucfg_pre_cac_set_status(pre_cac_adapter->vdev, true);
 	if (ret != 0) {
 		hdd_err("failed to set pre cac status");
@@ -792,7 +421,6 @@ static int __wlan_hdd_request_pre_cac(struct hdd_context *hdd_ctx,
 					     hdd_ap_ctx->operating_chan_freq);
 	ucfg_pre_cac_set_freq(ap_adapter->vdev, pre_cac_chan_freq);
 	ucfg_pre_cac_adapter_set(pre_cac_adapter->vdev, true);
-#endif
 	*out_adapter = pre_cac_adapter;
 
 	return 0;
@@ -878,11 +506,6 @@ destroy_sync:
 	return errno;
 }
 
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifdef PRE_CAC_COMP
 static void
 wlan_hdd_pre_cac_conditional_freq_switch_ind(struct wlan_objmgr_vdev *vdev,
 					     bool completed)
@@ -947,4 +570,3 @@ void hdd_pre_cac_unregister_cb(void)
 {
 	osif_pre_cac_reset_legacy_cb();
 }
-#endif /* PRE_CAC_COMP */
