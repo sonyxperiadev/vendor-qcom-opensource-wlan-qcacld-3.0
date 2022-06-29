@@ -319,7 +319,7 @@ struct tdls_peer_mlme_info {
  * @supported_oper_classes: supported operation classes
  * @is_forced_peer: is forced peer
  * @op_class_for_pref_off_chan: op class for preferred off channel
- * @pref_off_chan_num: preferred off channel number
+ * @pref_off_chan_freq: preferred off channel frequency
  * @pref_off_chan_width: preferred off channel width
  * @peer_idle_timer: time to check idle traffic in tdls peers
  * @is_peer_idle_timer_initialised: Flag to check idle timer init
@@ -351,7 +351,7 @@ struct tdls_peer {
 	uint8_t supported_oper_classes[WLAN_MAX_SUPP_OPER_CLASSES];
 	bool is_forced_peer;
 	uint8_t op_class_for_pref_off_chan;
-	uint8_t pref_off_chan_num;
+	qdf_freq_t pref_off_chan_freq;
 	uint8_t pref_off_chan_width;
 	qdf_mc_timer_t peer_idle_timer;
 	bool is_peer_idle_timer_initialised;
@@ -803,8 +803,8 @@ QDF_STATUS tdls_delete_all_peers_indication(struct wlan_objmgr_psoc *psoc,
 /**
  * tdls_get_opclass_from_bandwidth() - Return opclass for corresponding BW and
  * channel.
- * @soc_obj: tdls soc object.
- * @channel: Channel number.
+ * @vdev: Pointer to vdev
+ * @freq: Channel frequency.
  * @bw_offset: Bandwidth offset.
  * @reg_bw_offset: enum offset_t type bandwidth
  *
@@ -812,7 +812,7 @@ QDF_STATUS tdls_delete_all_peers_indication(struct wlan_objmgr_psoc *psoc,
  *
  * Return: opclass
  */
-uint8_t tdls_get_opclass_from_bandwidth(struct tdls_soc_priv_obj *soc_obj,
-					uint8_t channel, uint8_t bw_offset,
+uint8_t tdls_get_opclass_from_bandwidth(struct wlan_objmgr_vdev *vdev,
+					qdf_freq_t freq, uint8_t bw_offset,
 					uint8_t *reg_bw_offset);
 #endif

@@ -27,6 +27,7 @@
 #include "wlan_tdls_peer.h"
 #include "wlan_tdls_ct.h"
 #include "wlan_tdls_cmds_process.h"
+#include "wlan_reg_services_api.h"
 
 bool tdls_is_vdev_authenticated(struct wlan_objmgr_vdev *vdev)
 {
@@ -1053,7 +1054,7 @@ int tdls_set_tdls_offchannelmode(struct wlan_objmgr_vdev *vdev,
 	struct tdls_vdev_priv_obj *tdls_vdev;
 	struct tdls_soc_priv_obj *tdls_soc;
 	uint32_t tdls_feature_flags;
-
+	struct wlan_objmgr_pdev *pdev = wlan_vdev_get_pdev(vdev);
 
 	status = tdls_get_vdev_objects(vdev, &tdls_vdev, &tdls_soc);
 
@@ -1120,13 +1121,14 @@ int tdls_set_tdls_offchannelmode(struct wlan_objmgr_vdev *vdev,
 					    chan_switch_params.oper_class);
 			}
 		} else if (conn_peer->off_channel_capable &&
-			   conn_peer->pref_off_chan_num) {
+			   conn_peer->pref_off_chan_freq) {
 			chan_switch_params.tdls_off_ch =
-				conn_peer->pref_off_chan_num;
+				wlan_reg_freq_to_chan(pdev,
+						 conn_peer->pref_off_chan_freq);
 			chan_switch_params.oper_class =
 				tdls_get_opclass_from_bandwidth(
-				tdls_soc, conn_peer->pref_off_chan_num,
-				tdls_soc->tdls_configs.tdls_pre_off_chan_bw,
+				vdev, conn_peer->pref_off_chan_freq,
+				conn_peer->pref_off_chan_width,
 				&chan_switch_params.tdls_off_ch_bw_offset);
 		} else {
 			tdls_err("TDLS off-channel parameters are not set yet!!!");
@@ -1177,8 +1179,10 @@ int tdls_set_tdls_offchannelmode(struct wlan_objmgr_vdev *vdev,
 			tdls_err("No TDLS Connected Peer");
 			return -EPERM;
 		}
-		conn_peer->pref_off_chan_num =
-			chan_switch_params.tdls_off_ch;
+		conn_peer->pref_off_chan_freq = wlan_reg_chan_opclass_to_freq(
+						 chan_switch_params.tdls_off_ch,
+						 chan_switch_params.oper_class,
+						 false);
 		conn_peer->op_class_for_pref_off_chan =
 			chan_switch_params.oper_class;
 	}

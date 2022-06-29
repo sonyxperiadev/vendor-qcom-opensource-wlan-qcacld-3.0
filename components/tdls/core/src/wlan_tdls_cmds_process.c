@@ -1918,16 +1918,16 @@ static QDF_STATUS tdls_config_force_peer(
 	}
 
 	soc_obj->tdls_external_peer_count++;
-	chan_freq = wlan_reg_legacy_chan_to_freq(pdev, req->chan);
+	chan_freq = req->ch_freq;
 
 	/* Validate if off channel is DFS channel */
 	if (wlan_reg_is_dfs_for_freq(pdev, chan_freq)) {
-		tdls_err("Resetting TDLS off-channel from %d to %d",
-			 req->chan, WLAN_TDLS_PREFERRED_OFF_CHANNEL_NUM_DEF);
-		req->chan = WLAN_TDLS_PREFERRED_OFF_CHANNEL_NUM_DEF;
+		tdls_err("Resetting TDLS off-channel freq from %d to %d",
+			 req->ch_freq, WLAN_TDLS_PREFERRED_OFF_CHANNEL_FRQ_DEF);
+		req->ch_freq = WLAN_TDLS_PREFERRED_OFF_CHANNEL_FRQ_DEF;
 	}
-	tdls_set_extctrl_param(peer, req->chan, req->max_latency, req->op_class,
-			       req->min_bandwidth);
+	tdls_set_extctrl_param(peer, req->ch_freq, req->max_latency,
+			       req->op_class, req->min_bandwidth);
 
 	tdls_set_callback(peer, req->callback);
 
@@ -1954,7 +1954,10 @@ QDF_STATUS tdls_process_setup_peer(struct tdls_oper_request *req)
 	struct tdls_soc_priv_obj *soc_obj;
 	struct wlan_objmgr_vdev *vdev;
 	QDF_STATUS status;
-	uint8_t reg_bw_offset;
+	uint8_t reg_bw_offset = 0;
+	qdf_freq_t pref_freq;
+	uint32_t pref_width;
+	struct wlan_objmgr_pdev *pdev;
 
 	tdls_debug("Configure external TDLS peer " QDF_MAC_ADDR_FMT,
 		   QDF_MAC_ADDR_REF(req->peer_addr));
@@ -1978,15 +1981,27 @@ QDF_STATUS tdls_process_setup_peer(struct tdls_oper_request *req)
 		goto error;
 	}
 
-	peer_req.chan = soc_obj->tdls_configs.tdls_pre_off_chan_num;
-	if (!peer_req.op_class)
-		peer_req.op_class = tdls_get_opclass_from_bandwidth(
-				soc_obj, peer_req.chan,
-				soc_obj->tdls_configs.tdls_pre_off_chan_bw,
-				&reg_bw_offset);
+	pref_freq = tdls_get_offchan_freq(vdev, soc_obj);
+	pdev = wlan_vdev_get_pdev(vdev);
+	if (!pdev) {
+		tdls_err("NULL pdev object");
+		status = QDF_STATUS_E_INVAL;
+		goto error;
+	}
 
-	tdls_debug("peer chan %d peer opclass %d", peer_req.chan,
-		   peer_req.op_class);
+	peer_req.ch_freq = pref_freq;
+	pref_width = tdls_get_offchan_bw(soc_obj, pref_freq);
+
+	if (!peer_req.op_class)
+		peer_req.op_class = tdls_get_opclass_from_bandwidth(vdev,
+								pref_freq,
+								pref_width,
+								&reg_bw_offset);
+
+	tdls_debug("peer chan %d peer opclass %d reg_bw_offset %d",
+		   peer_req.ch_freq,
+		   peer_req.op_class,
+		   reg_bw_offset);
 	status = tdls_config_force_peer(&peer_req);
 error:
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_TDLS_NB_ID);

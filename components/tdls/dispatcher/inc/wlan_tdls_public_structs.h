@@ -50,6 +50,8 @@
 #define WLAN_TDLS_PREFERRED_OFF_CHANNEL_NUM_MIN      1
 #define WLAN_TDLS_PREFERRED_OFF_CHANNEL_NUM_MAX      165
 #define WLAN_TDLS_PREFERRED_OFF_CHANNEL_NUM_DEF      36
+#define WLAN_TDLS_PREFERRED_OFF_CHANNEL_FRQ_DEF     5180
+
 
 #define AC_PRIORITY_NUM                 4
 
@@ -847,6 +849,7 @@ struct tdls_oper_request {
  * @vdev: vdev object
  * @peer_addr: MAC address of the TDLS peer
  * @chan: channel
+ * @ch_freq: ch_freq
  * @max_latency: maximum latency
  * @op_class: operation class
  * @min_bandwidth: minimal bandwidth
@@ -856,6 +859,7 @@ struct tdls_oper_config_force_peer_request {
 	struct wlan_objmgr_vdev *vdev;
 	uint8_t peer_addr[QDF_MAC_ADDR_SIZE];
 	uint32_t chan;
+	qdf_freq_t ch_freq;
 	uint32_t max_latency;
 	uint32_t op_class;
 	uint32_t min_bandwidth;
