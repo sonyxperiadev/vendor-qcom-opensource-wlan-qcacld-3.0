@@ -550,7 +550,6 @@ void tdls_extract_peer_state_param(struct tdls_peer_update_state *peer_param,
 	struct tdls_soc_priv_obj *soc_obj;
 	enum channel_state ch_state;
 	struct wlan_objmgr_pdev *pdev;
-	uint8_t chan_id;
 	uint32_t cur_band;
 	qdf_freq_t ch_freq;
 	uint32_t tx_power = 0;
@@ -615,14 +614,13 @@ void tdls_extract_peer_state_param(struct tdls_peer_update_state *peer_param,
 
 	num = 0;
 	for (i = 0; i < peer->supported_channels_len; i++) {
-		chan_id = peer->supported_channels[i];
-		ch_freq = wlan_reg_legacy_chan_to_freq(pdev, chan_id);
+		ch_freq = peer->supported_chan_freq[i];
 		ch_state = wlan_reg_get_channel_state_for_freq(pdev, ch_freq);
 
 		if (CHANNEL_STATE_INVALID != ch_state &&
 		    CHANNEL_STATE_DFS != ch_state &&
 		    !wlan_reg_is_dsrc_freq(ch_freq)) {
-			peer_param->peer_cap.peer_chan[num].chan_id = chan_id;
+			peer_param->peer_cap.peer_chan[num].ch_freq = ch_freq;
 			if (!wlan_reg_is_6ghz_chan_freq(ch_freq)) {
 				tx_power =
 				wlan_reg_get_channel_reg_power_for_freq(pdev,
@@ -858,9 +856,9 @@ void tdls_set_peer_caps(struct tdls_vdev_priv_obj *vdev_obj,
 	curr_peer->buf_sta_capable = is_buffer_sta;
 	curr_peer->off_channel_capable = is_off_channel_supported;
 
-	qdf_mem_copy(curr_peer->supported_channels,
-		     req_info->supported_channels,
-		     req_info->supported_channels_len);
+	qdf_mem_copy(curr_peer->supported_chan_freq,
+		     req_info->supported_chan_freq,
+		     sizeof(qdf_freq_t) * req_info->supported_channels_len);
 
 	curr_peer->supported_channels_len = req_info->supported_channels_len;
 

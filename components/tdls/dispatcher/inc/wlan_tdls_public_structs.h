@@ -822,7 +822,7 @@ struct tdls_update_peer_params {
 	uint8_t uapsd_queues;
 	uint8_t max_sp;
 	uint8_t supported_channels_len;
-	uint8_t supported_channels[WLAN_MAC_MAX_SUPP_CHANNELS];
+	qdf_freq_t supported_chan_freq[WLAN_MAC_MAX_SUPP_CHANNELS];
 	uint8_t supported_oper_classes_len;
 	uint8_t supported_oper_classes[WLAN_MAX_SUPP_OPER_CLASSES];
 	bool is_qos_wmm_sta;
@@ -908,14 +908,14 @@ struct tdls_info {
 
 /**
  * struct tdls_ch_params - channel parameters
- * @chan_id: ID of the channel
+ * @ch_freq: Channel frequency
  * @pwr: power level
  * @dfs_set: is dfs supported or not
  * @half_rate: is the channel operating at 10MHz
  * @quarter_rate: is the channel operating at 5MHz
  */
 struct tdls_ch_params {
-	uint8_t chan_id;
+	qdf_freq_t ch_freq;
 	uint8_t pwr;
 	bool dfs_set;
 	bool half_rate;

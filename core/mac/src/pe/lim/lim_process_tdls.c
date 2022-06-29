@@ -189,6 +189,18 @@ void lim_init_tdls_data(struct mac_context *mac, struct pe_session *pe_session)
 	return;
 }
 
+static bool
+is_duplicate_chan(uint8_t *arr, uint8_t index, uint8_t ch_id)
+{
+	int i;
+
+	for (i = 0; i < index; i++) {
+		if (arr[i] == ch_id)
+			return true;
+	}
+	return false;
+}
+
 static void populate_dot11f_tdls_offchannel_params(
 				struct mac_context *mac,
 				struct pe_session *pe_session,
@@ -210,11 +222,6 @@ static void populate_dot11f_tdls_offchannel_params(
 
 	numChans = mac->mlme_cfg->reg.valid_channel_list_num;
 
-	for (i = 0; i < mac->mlme_cfg->reg.valid_channel_list_num; i++) {
-		validChan[i] = wlan_reg_freq_to_chan(mac->pdev,
-						     mac->mlme_cfg->reg.valid_channel_freq_list[i]);
-	}
-
 	if (wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq))
 		band = BAND_2G;
 	else
@@ -226,8 +233,15 @@ static void populate_dot11f_tdls_offchannel_params(
 			 mac->user_configured_nss);
 
 	/* validating the channel list for DFS and 2G channels */
-	for (i = 0U; i < numChans; i++) {
-		ch_freq = wlan_reg_legacy_chan_to_freq(mac->pdev, validChan[i]);
+	for (i = 0; i < numChans; i++) {
+		ch_freq = mac->mlme_cfg->reg.valid_channel_freq_list[i];
+
+		validChan[i] = wlan_reg_freq_to_chan(mac->pdev,
+						     mac->mlme_cfg->reg.valid_channel_freq_list[i]);
+
+		if (is_duplicate_chan(validChan, i, validChan[i]))
+			continue;
+
 		if ((band == BAND_5G) &&
 		    (NSS_2x2_MODE == nss_5g) &&
 		    (NSS_1x1_MODE == nss_2g) &&
@@ -243,8 +257,15 @@ static void populate_dot11f_tdls_offchannel_params(
 			}
 		}
 
+		if (wlan_reg_is_6ghz_chan_freq(ch_freq) &&
+		    !wlan_reg_is_6ghz_psc_chan_freq(ch_freq)) {
+			pe_debug("skipping non-psc channel %d", ch_freq);
+			continue;
+		}
+
 		if (valid_count >= ARRAY_SIZE(suppChannels->bands))
 			break;
+
 		suppChannels->bands[valid_count][0] = validChan[i];
 		suppChannels->bands[valid_count][1] = 1;
 		valid_count++;
@@ -277,11 +298,6 @@ static void populate_dot11f_tdls_offchannel_params(
 		wlan_reg_freq_to_chan(mac->pdev, pe_session->curr_op_freq),
 		chanOffset);
 
-	pe_debug("countryCodeCurrent: %s, curr_op_freq: %d, htSecondaryChannelOffset: %d, chanOffset: %d op class: %d",
-		 mac->scan.countryCodeCurrent,
-		 pe_session->curr_op_freq,
-		 pe_session->htSecondaryChannelOffset,
-		 chanOffset, op_class);
 	suppOperClasses->present = 1;
 	suppOperClasses->classes[0] = op_class;
 
@@ -289,6 +305,12 @@ static void populate_dot11f_tdls_offchannel_params(
 
 	for (i = 0; i < numClasses; i++)
 		suppOperClasses->classes[i + 1] = classes[i];
+
+	pe_debug("countryCodeCurrent: %s, curr_op_freq: %d, htSecondaryChannelOffset: %d, chanOffset: %d op class: %d num_supportd_chan %d num_supportd_opclass %d",
+		 mac->scan.countryCodeCurrent,
+		 pe_session->curr_op_freq,
+		 pe_session->htSecondaryChannelOffset,
+		 chanOffset, op_class, valid_count, numClasses);
 
 	/* add one for present operating class, added in the beginning */
 	suppOperClasses->num_classes = numClasses + 1;
