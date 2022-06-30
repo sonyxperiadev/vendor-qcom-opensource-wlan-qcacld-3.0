@@ -2764,6 +2764,7 @@ lim_process_switch_channel_join_mlo(struct pe_session *session_entry,
 	if (assoc_rsp.len) {
 		struct element_info link_assoc_rsp;
 		tLimMlmJoinCnf mlm_join_cnf;
+		tLimMlmAssocCnf assoc_cnf;
 
 		mlm_join_cnf.resultCode = eSIR_SME_SUCCESS;
 		mlm_join_cnf.protStatusCode = STATUS_SUCCESS;
@@ -2798,6 +2799,17 @@ lim_process_switch_channel_join_mlo(struct pe_session *session_entry,
 						    link_assoc_rsp.len,
 						    LIM_ASSOC,
 						    session_entry);
+			qdf_mem_free(link_assoc_rsp.ptr);
+		} else {
+			pe_debug("MLO: link vdev assoc rsp generation failed");
+			assoc_cnf.resultCode = eSIR_SME_INVALID_PARAMETERS;
+			assoc_cnf.protStatusCode = STATUS_UNSPECIFIED_FAILURE;
+			/* Update PE sessionId */
+			assoc_cnf.sessionId = session_entry->peSessionId;
+			lim_post_sme_message(mac_ctx, LIM_MLM_ASSOC_CNF,
+					(uint32_t *)&assoc_cnf);
+
+			session_entry->limMlmState = eLIM_MLM_IDLE_STATE;
 			qdf_mem_free(link_assoc_rsp.ptr);
 		}
 	}
