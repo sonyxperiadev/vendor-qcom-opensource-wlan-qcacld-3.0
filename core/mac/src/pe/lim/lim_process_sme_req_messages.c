@@ -3659,6 +3659,30 @@ static inline void lim_update_pmksa_to_profile(struct wlan_objmgr_vdev *vdev,
 }
 #endif
 
+static inline void
+lim_strip_rsnx_ie(struct mac_context *mac_ctx,
+		  struct cm_vdev_join_req *req)
+{
+	/*
+	 * Userspace may send RSNXE also in connect request irrespective
+	 * of the connecting AP capabilities to allow the driver to chose
+	 * best candidate based on score. But the chosen candidate may
+	 * not support the RSNXE feature and may not advertise RSNXE
+	 * in beacon/probe response. Station is not supposed to include
+	 * the RSNX IE in assoc request in such cases as legacy APs
+	 * may misbahave due to the new IE. It's observed that few
+	 * legacy APs which don't support the RSNXE reject the
+	 * connection at EAPOL stage. So, strip the IE if AP doesn't
+	 * support/advertise the RSNXE to avoid sending the RSNXE to
+	 * legacy APs.
+	 */
+	if (!util_scan_entry_rsnxe(req->entry))
+		lim_strip_ie(mac_ctx, req->assoc_ie.ptr,
+			     (uint16_t *)&req->assoc_ie.len,
+			     WLAN_ELEMID_RSNXE, ONE_BYTE,
+			     NULL, 0, NULL, WLAN_MAX_IE_LEN);
+}
+
 static QDF_STATUS
 lim_fill_rsn_ie(struct mac_context *mac_ctx, struct pe_session *session,
 		struct cm_vdev_join_req *req)
@@ -3739,6 +3763,8 @@ lim_fill_rsn_ie(struct mac_context *mac_ctx, struct pe_session *session,
 				    pmksa_peer->pmk, pmksa_peer->pmk_len);
 		lim_update_pmksa_to_profile(session->vdev, pmksa_peer);
 	}
+
+	lim_strip_rsnx_ie(mac_ctx, req);
 
 	return QDF_STATUS_SUCCESS;
 }
