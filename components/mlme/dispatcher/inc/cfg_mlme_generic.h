@@ -31,6 +31,8 @@
  * enum monitor_mode_concurrency - Monitor mode concurrency
  * @MONITOR_MODE_CONC_NO_SUPPORT: No concurrency supported with monitor mode
  * @MONITOR_MODE_CONC_STA_SCAN_MON: STA + monitor mode concurrency is supported
+ * @MONITOR_MODE_CONC_AFTER_LAST: last value in enum
+ * @MONITOR_MODE_CONC_MAX: max value supported
  */
 enum monitor_mode_concurrency {
 	MONITOR_MODE_CONC_NO_SUPPORT,
@@ -43,7 +45,8 @@ enum monitor_mode_concurrency {
  * enum wds_mode_type: wds mode
  * @WLAN_WDS_MODE_DISABLED: WDS is disabled
  * @WLAN_WDS_MODE_REPEATER: WDS repeater mode
- *
+ * @WLAN_WDS_MODE_LAST: last value in enum
+ * @WLAN_WDS_MODE_MAX: max value supported
  * This is used for 'type' values in wds_mode
  */
 enum wlan_wds_mode {
@@ -69,6 +72,28 @@ enum debug_packet_log_type {
 	DEBUG_PKTLOG_TYPE_DHCP   = 0x4,
 	DEBUG_PKTLOG_TYPE_ACTION = 0x8,
 	DEBUG_PKTLOG_TYPE_ARP    = 0x10,
+};
+
+/**
+ * enum t2lm_negotiation_support: t2lm negotiation supported
+ * @T2LM_NEGOTIATION_DISABLED: T2LM is disabled
+ * @T2LM_NEGOTIATION_ALL_TIDS_TO_SUBSET_OF_LINKS: supports the mapping
+ * of all TIDs to the same link set both DL and UL.
+ * @T2LM_NEGOTIATION_RESERVED:
+ * this mapping value is reserved.
+ * @T2LM_NEGOTIATION_DISJOINT_MAPPING: supports the mapping of
+ * each TID to the same or different link set.
+ * @T2LM_NEGOTIATION_LAST: last value in enum
+ * @T2LM_NEGOTIATION_MAX: max value supported
+ */
+enum t2lm_negotiation_support {
+	T2LM_NEGOTIATION_DISABLED = 0,
+	T2LM_NEGOTIATION_ALL_TIDS_TO_SUBSET_OF_LINKS = 1,
+	T2LM_NEGOTIATION_RESERVED = 2,
+	T2LM_NEGOTIATION_DISJOINT_MAPPING  = 3,
+	T2LM_NEGOTIATION_LAST,
+	/* keep this last */
+	T2LM_NEGOTIATION_MAX = T2LM_NEGOTIATION_LAST - 1,
 };
 
 /*
@@ -1058,6 +1083,36 @@ enum debug_packet_log_type {
 #define CFG_SR_ENABLE_MODES_ALL
 #endif
 
+#ifdef WLAN_FEATURE_11BE_MLO
+/*
+ * t2lm_negotiation_support - T2LM negotiation support by STA
+ * @Min: 0
+ * @Max: 3
+ * @Default: 1
+ *
+ * This cfg is used to define t2lm negotiation supported value by STA
+ * If 0 - t2lm negotiation is not supported
+ * If 1 - supports the mapping of all TIDs to the same link set both DL and UL.
+ * If 2 - reserved
+ * If 3 - supports the mapping of each TID to the same or different link set.
+ *
+ * Related: None
+ *
+ * Supported Feature: STA
+ */
+#define CFG_T2LM_NEGOTIATION_SUPPORT CFG_UINT( \
+					"t2lm_negotiation_supported", \
+					T2LM_NEGOTIATION_DISABLED, \
+					T2LM_NEGOTIATION_DISJOINT_MAPPING, \
+					T2LM_NEGOTIATION_ALL_TIDS_TO_SUBSET_OF_LINKS, \
+					CFG_VALUE_OR_DEFAULT, \
+					"T2LM negotiation supported value")
+
+#define CFG_T2LM_NEGOTIATION_SUPPORTED CFG(CFG_T2LM_NEGOTIATION_SUPPORT)
+#else
+#define CFG_T2LM_NEGOTIATION_SUPPORTED
+#endif
+
 #define CFG_GENERIC_ALL \
 	CFG(CFG_ENABLE_DEBUG_PACKET_LOG) \
 	CFG(CFG_PMF_SA_QUERY_MAX_RETRIES) \
@@ -1098,5 +1153,6 @@ enum debug_packet_log_type {
 	CFG(CFG_MGMT_FRAME_HW_TX_RETRY_COUNT) \
 	CFG_RELAX_6GHZ_CONN_POLICY \
 	CFG_EMLSR_MODE_ENABLED \
-	CFG_SR_ENABLE_MODES_ALL
+	CFG_SR_ENABLE_MODES_ALL \
+	CFG_T2LM_NEGOTIATION_SUPPORTED
 #endif /* __CFG_MLME_GENERIC_H */

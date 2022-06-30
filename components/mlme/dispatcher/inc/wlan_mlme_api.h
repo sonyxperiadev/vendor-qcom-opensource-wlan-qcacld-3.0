@@ -2519,6 +2519,28 @@ wlan_mlme_set_eml_params(struct wlan_objmgr_psoc *psoc,
 void
 wlan_mlme_get_eml_params(struct wlan_objmgr_psoc *psoc,
 			 struct wlan_mlo_eml_cap *cap);
+
+/**
+ * wlan_mlme_get_t2lm_negotiation_supported() - Get the T2LM
+ * negotiation supported value
+ * @psoc: psoc context
+ *
+ * Return: t2lm negotiation supported value
+ */
+enum t2lm_negotiation_support
+wlan_mlme_get_t2lm_negotiation_supported(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * wlan_mlme_set_t2lm_negotiation_supported() - Set the T2LM
+ * negotiation supported value
+ * @psoc: psoc context
+ * @value: t2lm negotiation supported value
+ *
+ * Return: qdf status
+ */
+QDF_STATUS
+wlan_mlme_set_t2lm_negotiation_supported(struct wlan_objmgr_psoc *psoc,
+					 uint8_t value);
 #else
 static inline QDF_STATUS
 wlan_mlme_get_emlsr_mode_enabled(struct wlan_objmgr_psoc *psoc, bool *value)
@@ -2543,6 +2565,19 @@ static inline void
 wlan_mlme_get_eml_params(struct wlan_objmgr_psoc *psoc,
 			 struct wlan_mlo_eml_cap *cap)
 {
+}
+
+static inline enum t2lm_negotiation_support
+wlan_mlme_get_t2lm_negotiation_supported(struct wlan_objmgr_psoc *psoc)
+{
+	return T2LM_NEGOTIATION_DISABLED;
+}
+
+static inline QDF_STATUS
+wlan_mlme_set_t2lm_negotiation_supported(struct wlan_objmgr_psoc *psoc,
+					 uint8_t value)
+{
+	return QDF_STATUS_E_NOSUPPORT;
 }
 #endif
 

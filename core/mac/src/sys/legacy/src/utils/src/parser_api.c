@@ -10016,9 +10016,11 @@ populate_dot11f_mlo_caps(struct mac_context *mac_ctx,
 		mlo_ie->eml_capab_present = 0;
 	}
 
-	mlo_ie->mld_capab_and_op_present = 1;
 	common_info_len += WLAN_ML_BV_CINFO_MLDCAPANDOP_SIZE;
 	mlo_ie->mld_id_present = 0;
+	mlo_ie->mld_capab_and_op_present = 1;
+	mlo_ie->mld_capab_and_op_info.tid_link_map_supported =
+		wlan_mlme_get_t2lm_negotiation_supported(mac_ctx->psoc);
 	mlo_ie->reserved = 0;
 	mlo_ie->reserved_1 = 0;
 	mlo_ie->common_info_length = common_info_len;
@@ -11096,7 +11098,8 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 		pe_debug("max_simultaneous_link_num %d",
 			 mlo_ie->mld_capab_and_op_info.max_simultaneous_link_num);
 		mlo_ie->mld_capab_and_op_info.srs_support = 0;
-		mlo_ie->mld_capab_and_op_info.tid_link_map_supported = 0;
+		mlo_ie->mld_capab_and_op_info.tid_link_map_supported =
+			wlan_mlme_get_t2lm_negotiation_supported(mac_ctx->psoc);
 		mlo_ie->mld_capab_and_op_info.str_freq_separation = 0;
 		mlo_ie->mld_capab_and_op_info.aar_support = 0;
 	}
@@ -11188,6 +11191,10 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 		     WLAN_ML_BV_CINFO_MLDCAPANDOP_MAXSIMULLINKS_IDX,
 		     WLAN_ML_BV_CINFO_MLDCAPANDOP_MAXSIMULLINKS_BITS,
 		     mlo_ie->mld_capab_and_op_info.max_simultaneous_link_num);
+		QDF_SET_BITS(*(uint16_t *)p_ml_ie,
+		     WLAN_ML_BV_CINFO_MLDCAPANDOP_TIDTOLINKMAPNEGSUPPORT_IDX,
+		     WLAN_ML_BV_CINFO_MLDCAPANDOP_TIDTOLINKMAPNEGSUPPORT_BITS,
+		     mlo_ie->mld_capab_and_op_info.tid_link_map_supported);
 		p_ml_ie += WLAN_ML_BV_CINFO_MLDCAPANDOP_SIZE;
 		len_remaining -= WLAN_ML_BV_CINFO_MLDCAPANDOP_SIZE;
 	}

@@ -3409,6 +3409,38 @@ wlan_mlme_get_eml_params(struct wlan_objmgr_psoc *psoc,
 	cap->emlsr_trans_delay = mlme_obj->cfg.eml_cap.emlsr_trans_delay;
 	cap->emlmr_supp = mlme_obj->cfg.eml_cap.emlmr_supp;
 }
+
+enum t2lm_negotiation_support
+wlan_mlme_get_t2lm_negotiation_supported(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return T2LM_NEGOTIATION_DISABLED;
+
+	return mlme_obj->cfg.gen.t2lm_negotiation_support;
+}
+
+QDF_STATUS
+wlan_mlme_set_t2lm_negotiation_supported(struct wlan_objmgr_psoc *psoc,
+					 uint8_t value)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_FAILURE;
+
+	if (value > T2LM_NEGOTIATION_MAX) {
+		mlme_err("Invalid value %d", value);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	mlme_obj->cfg.gen.t2lm_negotiation_support = value;
+
+	return QDF_STATUS_SUCCESS;
+}
 #endif
 
 QDF_STATUS
