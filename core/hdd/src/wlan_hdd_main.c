@@ -6619,6 +6619,7 @@ void hdd_cleanup_conn_info(struct hdd_adapter *adapter)
 {
 	struct hdd_station_ctx *hdd_sta_ctx =
 					WLAN_HDD_GET_STATION_CTX_PTR(adapter);
+	struct element_info *bcn_ie;
 
 	if (!hdd_sta_ctx)
 		return;
@@ -6626,6 +6627,13 @@ void hdd_cleanup_conn_info(struct hdd_adapter *adapter)
 	if (hdd_sta_ctx->cache_conn_info.he_operation) {
 		qdf_mem_free(hdd_sta_ctx->cache_conn_info.he_operation);
 		hdd_sta_ctx->cache_conn_info.he_operation = NULL;
+	}
+	bcn_ie = &hdd_sta_ctx->conn_info.prev_ap_bcn_ie;
+
+	if (bcn_ie->ptr) {
+		qdf_mem_free(bcn_ie->ptr);
+		bcn_ie->ptr = NULL;
+		bcn_ie->len = 0;
 	}
 }
 
