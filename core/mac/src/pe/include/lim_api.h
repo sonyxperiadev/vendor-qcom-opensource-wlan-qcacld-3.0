@@ -588,6 +588,13 @@ lim_gen_link_specific_probe_rsp(struct mac_context *mac_ctx,
 				uint8_t *probe_rsp,
 				uint32_t probe_rsp_len,
 				int32_t rssi);
+/**
+ * lim_check_for_ml_probe_req() - check if ml probe req is sent
+ * @session: pe session
+ *
+ * Return qdf status
+ */
+QDF_STATUS lim_check_for_ml_probe_req(struct pe_session *session);
 #else
 static inline QDF_STATUS
 lim_gen_link_specific_probe_rsp(struct mac_context *mac_ctx,
@@ -596,6 +603,12 @@ lim_gen_link_specific_probe_rsp(struct mac_context *mac_ctx,
 				uint8_t *probe_rsp,
 				uint32_t probe_rsp_len,
 				int32_t rssi)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+lim_check_for_ml_probe_req(struct pe_session *session)
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }

@@ -223,6 +223,9 @@ lim_process_beacon_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 		return;
 	}
 
+	if (QDF_IS_STATUS_SUCCESS(lim_check_for_ml_probe_req(session)))
+		goto end;
+
 	lim_process_beacon_mlo(mac_ctx, session, bcn_ptr);
 
 	/*
@@ -279,6 +282,7 @@ lim_process_beacon_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 		lim_check_and_announce_join_success(mac_ctx, bcn_ptr,
 				mac_hdr, session);
 	}
+end:
 	qdf_mem_free(bcn_ptr);
 	return;
 }
