@@ -4407,6 +4407,7 @@ __wlan_hdd_cfg80211_get_features(struct wiphy *wiphy,
 					QCA_WLAN_VENDOR_FEATURE_THERMAL_CONFIG);
 
 	wlan_hdd_set_ndi_feature(feature_flags);
+	wlan_wifi_pos_cfg80211_set_features(hdd_ctx->psoc, feature_flags);
 
 	skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy, sizeof(feature_flags) +
 			NLMSG_HDRLEN);
