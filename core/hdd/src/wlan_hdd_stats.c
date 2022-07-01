@@ -2012,8 +2012,15 @@ static void cache_station_stats_cb(struct stats_event *ev, void *cookie)
 {
 	struct hdd_adapter *adapter = cookie, *next_adapter = NULL;
 	struct hdd_context *hdd_ctx = adapter->hdd_ctx;
-	uint8_t vdev_id = ev->vdev_summary_stats->vdev_id;
+	uint8_t vdev_id;
 	wlan_net_dev_ref_dbgid dbgid = NET_DEV_HOLD_DISPLAY_TXRX_STATS;
+
+	if (!ev->vdev_summary_stats || !ev->vdev_chain_rssi) {
+		hdd_debug("Invalid stats");
+		return;
+	}
+
+	vdev_id = ev->vdev_summary_stats->vdev_id;
 
 	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter,
 					   dbgid) {
