@@ -326,7 +326,7 @@ wlan_connectivity_mgmt_event(struct wlan_frame_hdr *mac_hdr,
 		     QDF_MAC_ADDR_SIZE);
 
 	wlan_diag_event.version = DIAG_MGMT_VERSION;
-	wlan_diag_event.tx_status = tx_status;
+	wlan_diag_event.tx_status = wlan_get_diag_tx_status(tx_status);
 	wlan_diag_event.rssi = peer_rssi;
 	wlan_diag_event.sn =
 		(le16toh(*(uint16_t *)mac_hdr->i_seq) >> WLAN_SEQ_SEQ_SHIFT);
