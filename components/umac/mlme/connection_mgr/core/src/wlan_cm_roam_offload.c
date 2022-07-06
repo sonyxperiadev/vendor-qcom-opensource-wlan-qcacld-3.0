@@ -5740,8 +5740,8 @@ void cm_roam_result_info_event(struct wlan_objmgr_psoc *psoc,
 			       struct wmi_roam_scan_data *scan_data,
 			       uint8_t vdev_id)
 {
-	struct qdf_mac_addr bssid = {0};
 	uint8_t i;
+	struct qdf_mac_addr bssid = {0};
 	bool ap_found_in_roam_scan = false, bmiss_skip_full_scan = false;
 	bool roam_abort = (res->fail_reason == ROAM_FAIL_REASON_SYNC ||
 			   res->fail_reason == ROAM_FAIL_REASON_DISCONNECT ||
@@ -5789,21 +5789,20 @@ void cm_roam_result_info_event(struct wlan_objmgr_psoc *psoc,
 	for (i = 0; i < scan_data->num_ap; i++) {
 		if (i >= MAX_ROAM_CANDIDATE_AP)
 			break;
-
-		if (res->status == 0 &&
-		    scan_data->ap[i].type == WLAN_ROAM_SCAN_ROAMED_AP) {
-			qdf_mem_copy(wlan_diag_event.diag_cmn.bssid,
-				     scan_data->ap[i].bssid.bytes,
-				     QDF_MAC_ADDR_SIZE);
-			break;
-		} else if (scan_data->ap[i].type ==
-			   WLAN_ROAM_SCAN_CURRENT_AP) {
+		if (scan_data->ap[i].type ==
+		    WLAN_ROAM_SCAN_CURRENT_AP) {
 			qdf_mem_copy(wlan_diag_event.diag_cmn.bssid,
 				     scan_data->ap[i].bssid.bytes,
 				     QDF_MAC_ADDR_SIZE);
 			bssid = scan_data->ap[i].bssid;
 			break;
 		}
+	}
+
+	if (!qdf_is_macaddr_zero(&res->fail_bssid)) {
+		qdf_mem_copy(wlan_diag_event.diag_cmn.bssid,
+			     res->fail_bssid.bytes,
+			     QDF_MAC_ADDR_SIZE);
 	}
 
 	WLAN_HOST_DIAG_EVENT_REPORT(&wlan_diag_event, EVENT_WLAN_ROAM_RESULT);
@@ -6027,8 +6026,8 @@ void cm_roam_result_info_event(struct wlan_objmgr_psoc *psoc,
 			       struct wmi_roam_scan_data *scan_data,
 			       uint8_t vdev_id)
 {
-	struct wlan_log_record *log_record = NULL;
 	struct qdf_mac_addr bssid = {0};
+	struct wlan_log_record *log_record = NULL;
 	uint8_t i;
 	bool ap_found_in_roam_scan = false, bmiss_skip_full_scan = false;
 	bool roam_abort = (res->fail_reason == ROAM_FAIL_REASON_SYNC ||
@@ -6080,17 +6079,16 @@ void cm_roam_result_info_event(struct wlan_objmgr_psoc *psoc,
 		if (i >= MAX_ROAM_CANDIDATE_AP)
 			break;
 
-		if (res->status == 0 &&
-		    scan_data->ap[i].type == WLAN_ROAM_SCAN_ROAMED_AP) {
-			log_record->bssid = scan_data->ap[i].bssid;
-			break;
-		} else if (scan_data->ap[i].type ==
-			   WLAN_ROAM_SCAN_CURRENT_AP) {
+		if (scan_data->ap[i].type ==
+		    WLAN_ROAM_SCAN_CURRENT_AP) {
 			log_record->bssid = scan_data->ap[i].bssid;
 			bssid = scan_data->ap[i].bssid;
 			break;
 		}
 	}
+
+	if (!qdf_is_macaddr_zero(&res->fail_bssid))
+		log_record->bssid = res->fail_bssid;
 
 	wlan_connectivity_log_enqueue(log_record);
 	qdf_mem_zero(log_record, sizeof(*log_record));
