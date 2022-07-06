@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -25,6 +26,7 @@
 #include <wlan_objmgr_vdev_obj.h>
 #include <wlan_objmgr_psoc_obj.h>
 #include "qca_vendor.h"
+#include "wlan_coex_public_structs.h"
 
 #define WLAN_COEX_BTC_CHAIN_MODE_SHARED QCA_BTC_CHAIN_SHARED
 #define WLAN_COEX_BTC_CHAIN_MODE_SEPARATED QCA_BTC_CHAIN_SEPARATED
@@ -115,6 +117,29 @@ static inline QDF_STATUS
 ucfg_coex_send_btc_chain_mode(struct wlan_objmgr_vdev *vdev, uint8_t mode)
 {
 	return QDF_STATUS_SUCCESS;
+}
+#endif
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+/**
+ * ucfg_coex_send_dbam_config() - API to send dbam config to target if
+ * @vdev: pointer to vdev object
+ * @param: DBAM config mode params
+ * @clbk: dbam config response callback
+ * @context: request manager context
+ *
+ * Return: QDF_STATUS_SUCCESS on success
+ */
+QDF_STATUS
+ucfg_coex_send_dbam_config(struct wlan_objmgr_vdev *vdev,
+			   struct coex_dbam_config_params *param,
+			   void (*clbk)(void *ctx,
+			   enum coex_dbam_comp_status *rsp),
+			   void *context);
+#else
+static inline QDF_STATUS
+ucfg_coex_send_dbam_config(void)
+{
+	return QDF_STATUS_E_NOSUPPORT;
 }
 #endif
 #endif

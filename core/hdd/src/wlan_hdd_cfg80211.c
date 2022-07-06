@@ -101,7 +101,6 @@
 #include <cdp_txrx_cmn.h>
 #include <cdp_txrx_misc.h>
 #include <cdp_txrx_ctrl.h>
-#include <qca_vendor.h>
 #include "wlan_pmo_ucfg_api.h"
 #include "os_if_wifi_pos.h"
 #include "wlan_utility.h"
@@ -186,6 +185,8 @@
 #include "wlan_cfg80211_wifi_pos.h"
 #include "wlan_osif_features.h"
 #include "wlan_hdd_wifi_pos_pasn.h"
+#include "wlan_coex_ucfg_api.h"
+#include "wlan_coex_public_structs.h"
 
 #define g_mode_rates_size (12)
 #define a_mode_rates_size (8)
@@ -7522,6 +7523,7 @@ const struct nla_policy wlan_hdd_wifi_config_policy[
 							.type = NLA_U8 },
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_FT_OVER_DS] = {.type = NLA_U8 },
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_ARP_NS_OFFLOAD] = {.type = NLA_U8 },
+	[QCA_WLAN_VENDOR_ATTR_CONFIG_DBAM] = {.type = NLA_U8 },
 };
 
 static const struct nla_policy
@@ -9884,6 +9886,159 @@ static int hdd_set_arp_ns_offload(struct hdd_adapter *adapter,
 #undef DYNAMIC_ARP_NS_DISABLE
 #endif
 
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+
+static int
+hdd_convert_qca_dbam_config_mode(enum qca_dbam_config qca_dbam,
+				 enum coex_dbam_config_mode *coex_dbam)
+{
+	switch (qca_dbam) {
+	case QCA_DBAM_DISABLE:
+		*coex_dbam = COEX_DBAM_DISABLE;
+		break;
+	case QCA_DBAM_ENABLE:
+		*coex_dbam = COEX_DBAM_ENABLE;
+		break;
+	case QCA_DBAM_FORCE_ENABLE:
+		*coex_dbam = COEX_DBAM_FORCE_ENABLE;
+		break;
+	default:
+		hdd_err("Invalid dbam config mode %d", qca_dbam);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int
+hdd_convert_dbam_comp_status(enum coex_dbam_comp_status dbam_resp)
+{
+	switch (dbam_resp) {
+	case COEX_DBAM_COMP_SUCCESS:
+		return 0;
+	case COEX_DBAM_COMP_NOT_SUPPORT:
+		return -ENOTSUPP;
+	case COEX_DBAM_COMP_FAIL:
+		return -EINVAL;
+	default:
+		hdd_err("Invalid dbam config resp received from FW");
+		break;
+	}
+
+	return -EINVAL;
+}
+
+/**
+ * hdd_dbam_config_resp_cb() - DBAM config response callback
+ * @context: request manager context
+ * @fw_resp: pointer to dbam config fw response
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+static void
+hdd_dbam_config_resp_cb(void *context,
+			enum coex_dbam_comp_status *resp)
+{
+	struct osif_request *request;
+	struct coex_dbam_config_resp *priv;
+
+	request = osif_request_get(context);
+	if (!request) {
+		osif_err("Obsolete request");
+		return;
+	}
+
+	priv = osif_request_priv(request);
+	priv->dbam_resp = *resp;
+
+	osif_request_complete(request);
+	osif_request_put(request);
+}
+
+/**
+ * hdd_set_dbam_config() - enable/disable DBAM config
+ * @adapter: hdd adapter
+ * @attr: pointer to nla attr
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+static int hdd_set_dbam_config(struct hdd_adapter *adapter,
+			       const struct nlattr *attr)
+{
+	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	struct wlan_objmgr_vdev *vdev;
+	int errno;
+	QDF_STATUS status;
+	enum qca_dbam_config dbam_config;
+	enum coex_dbam_config_mode dbam_mode;
+	enum coex_dbam_comp_status dbam_resp;
+	struct coex_dbam_config_params dbam_params = {0};
+	void *cookie;
+	struct osif_request *request;
+	struct coex_dbam_config_resp *priv;
+	static const struct osif_request_params params = {
+		.priv_size = sizeof(*priv),
+		.timeout_ms = WLAN_SET_DBAM_CONFIG_TIMEOUT,
+	};
+
+	errno = wlan_hdd_validate_context(hdd_ctx);
+	if (errno)
+		return -EINVAL;
+
+	if (hdd_ctx->num_rf_chains < 2) {
+		hdd_debug("Num of chains [%u] < 2, DBAM config is not allowed",
+			  hdd_ctx->num_rf_chains);
+		return -EINVAL;
+	}
+
+	dbam_config = nla_get_u8(attr);
+	errno = hdd_convert_qca_dbam_config_mode(dbam_config, &dbam_mode);
+	if (errno)
+		return errno;
+
+	request = osif_request_alloc(&params);
+	if (!request) {
+		osif_err("Request allocation failure");
+		return -ENOMEM;
+	}
+	cookie = osif_request_cookie(request);
+
+	dbam_params.vdev_id = adapter->vdev_id;
+	dbam_params.dbam_mode = dbam_mode;
+
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_ID);
+	if (!vdev) {
+		hdd_err("vdev is NULL");
+		errno = -EINVAL;
+		goto err;
+	}
+
+	status = ucfg_coex_send_dbam_config(vdev, &dbam_params,
+					    hdd_dbam_config_resp_cb, cookie);
+
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_ID);
+
+	if (!QDF_IS_STATUS_SUCCESS(status)) {
+		hdd_err("Unable to set dbam config to [%u]", dbam_mode);
+		errno = qdf_status_to_os_return(status);
+		goto err;
+	}
+
+	errno = osif_request_wait_for_response(request);
+	if (errno) {
+		osif_err("DBAM config operation timed out");
+		goto err;
+	}
+
+	priv = osif_request_priv(request);
+	dbam_resp = priv->dbam_resp;
+	errno = hdd_convert_dbam_comp_status(dbam_resp);
+err:
+	osif_request_put(request);
+	return errno;
+}
+#endif
+
 /**
  * typedef independent_setter_fn - independent attribute handler
  * @adapter: The adapter being configured
@@ -10001,6 +10156,10 @@ static const struct independent_setters independent_setters[] = {
 #ifdef FEATURE_WLAN_DYNAMIC_ARP_NS_OFFLOAD
 	{QCA_WLAN_VENDOR_ATTR_CONFIG_ARP_NS_OFFLOAD,
 	 hdd_set_arp_ns_offload},
+#endif
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+	{QCA_WLAN_VENDOR_ATTR_CONFIG_DBAM,
+	 hdd_set_dbam_config},
 #endif
 };
 
@@ -21504,7 +21663,7 @@ QDF_STATUS hdd_softap_deauth_current_sta(struct hdd_adapter *adapter,
 	qdf_status = hdd_softap_sta_deauth(adapter, param);
 
 	if (QDF_IS_STATUS_SUCCESS(qdf_status)) {
-		if(qdf_is_macaddr_broadcast(&sta_info->sta_mac)) {
+		if (qdf_is_macaddr_broadcast(&sta_info->sta_mac)) {
 			hdd_for_each_sta_ref_safe(
 					adapter->sta_info_list,
 					sta_info, tmp,

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -60,4 +61,28 @@ wlan_coex_psoc_open(struct wlan_objmgr_psoc *psoc);
  */
 QDF_STATUS
 wlan_coex_psoc_close(struct wlan_objmgr_psoc *psoc);
+
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+/**
+ * wlan_dbam_psoc_enable() - API to enable coex dbam psoc component
+ * @psoc: pointer to psoc
+ *
+ * This API is invoked from dispatcher psoc enable.
+ * This API will register dbam WMI event handlers.
+ *
+ * Return: QDF_STATUS_SUCCESS on success, QDF_STATUS_E_** on error
+ */
+QDF_STATUS wlan_dbam_psoc_enable(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * wlan_dbam_psoc_disable() - API to disable coex dbam psoc component
+ * @psoc: pointer to psoc
+ *
+ * This API is invoked from dispatcher psoc disable.
+ * This API will unregister dbam WMI event handlers.
+ *
+ * Return: QDF_STATUS_SUCCESS on success, QDF_STATUS_E_** on error
+ */
+QDF_STATUS wlan_dbam_psoc_disable(struct wlan_objmgr_psoc *psoc);
+#endif /* WLAN_FEATURE_DBAM_CONFIG */
 #endif

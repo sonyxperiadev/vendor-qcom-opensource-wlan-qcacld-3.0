@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -158,3 +159,63 @@ wlan_coex_psoc_get_btc_chain_mode(struct wlan_objmgr_psoc *psoc, uint8_t *val)
 	*val = coex_obj->btc_chain_mode;
 	return QDF_STATUS_SUCCESS;
 }
+
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+QDF_STATUS wlan_dbam_config_send(struct wlan_objmgr_vdev *vdev,
+				 struct coex_dbam_config_params *param)
+{
+	QDF_STATUS status;
+
+	status = tgt_send_dbam_config(vdev, param);
+	if (QDF_IS_STATUS_ERROR(status))
+		coex_err("failed to send dbam config");
+
+	return status;
+}
+
+QDF_STATUS wlan_dbam_attach(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_lmac_if_dbam_tx_ops *dbam_tx_ops;
+
+	if (!psoc) {
+		coex_err("psoc is Null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	dbam_tx_ops = wlan_psoc_get_dbam_tx_ops(psoc);
+	if (!dbam_tx_ops) {
+		coex_err("dbam_tx_ops is Null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!dbam_tx_ops->dbam_event_attach) {
+		coex_err("dbam_event_attach function is Null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	return dbam_tx_ops->dbam_event_attach(psoc);
+}
+
+QDF_STATUS wlan_dbam_detach(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_lmac_if_dbam_tx_ops *dbam_tx_ops;
+
+	if (!psoc) {
+		coex_err("psoc is Null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	dbam_tx_ops = wlan_psoc_get_dbam_tx_ops(psoc);
+	if (!dbam_tx_ops) {
+		coex_err("dbam_tx_ops is Null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!dbam_tx_ops->dbam_event_detach) {
+		coex_err("dbam_event_detach function is Null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	return dbam_tx_ops->dbam_event_detach(psoc);
+}
+#endif

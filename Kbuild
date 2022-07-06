@@ -4497,6 +4497,11 @@ endif
 #Flags to enable/disable Dynamic WLAN interface control feature
 cppflags-$(CONFIG_CNSS_HW_SECURE_DISABLE) += -DFEATURE_CNSS_HW_SECURE_DISABLE
 
+#DBAM feature needs COEX feature to be enabled
+ifeq ($(CONFIG_FEATURE_COEX), y)
+cppflags-$(CONFIG_WLAN_FEATURE_COEX_DBAM) += -DWLAN_FEATURE_DBAM_CONFIG
+endif
+
 KBUILD_CPPFLAGS += $(cppflags-y)
 
 # Currently, for versions of gcc which support it, the kernel Makefile
