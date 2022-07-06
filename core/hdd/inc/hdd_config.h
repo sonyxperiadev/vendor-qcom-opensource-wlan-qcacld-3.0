@@ -37,12 +37,12 @@
 
 /**
  * enum hdd_wext_control - knob for wireless extensions
- * @hdd_wext_disabled - interface is completely disabled. An access
+ * @hdd_wext_disabled: interface is completely disabled. An access
  *      control error log will be generated for each attempted use.
- * @hdd_wext_deprecated - interface is available but should not be
+ * @hdd_wext_deprecated: interface is available but should not be
  *      used. An access control warning log will be generated for each
  *      use.
- * @hdd_wext_enabled - interface is available without restriction. No
+ * @hdd_wext_enabled: interface is available without restriction. No
  *      access control logs will be generated.
  *
  * enum hdd_wext_control is used to enable coarse grained control on

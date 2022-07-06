@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -54,7 +55,7 @@ struct wlan_hdd_debugfs_buffer_info {
 
 /**
  * struct hdd_roam_scan_stats_debugfs_priv - private data for request mgr
- * @res: pointer to roam scan stats response
+ * @roam_scan_stats_res: pointer to roam scan stats response
  */
 struct hdd_roam_scan_stats_debugfs_priv {
 	struct wmi_roam_scan_stats_res *roam_scan_stats_res;
@@ -89,6 +90,8 @@ wlan_hdd_current_time_info_debugfs(uint8_t *buf, ssize_t buf_avail_len);
 /**
  * wlan_hdd_debugfs_update_filters_info() - API to get offload info
  * into user buffer
+ * @hdd_ctx: Pointer to hdd context
+ * @adapter: pointer to the adapter targeted by the debugfs operation
  * @buf: output buffer to hold offload info
  * @buf_avail_len: available buffer length
  *
@@ -102,6 +105,8 @@ wlan_hdd_debugfs_update_filters_info(struct hdd_context *hdd_ctx,
 /**
  * wlan_hdd_debugfs_update_roam_stats() - API to get roam scan stats info
  * into user buffer
+ * @hdd_ctx: Pointer to hdd context
+ * @adapter: pointer to the adapter targeted by the debugfs operation
  * @buf: output buffer to hold roam scan stats info
  * @buf_avail_len: available buffer length
  *
@@ -113,47 +118,21 @@ wlan_hdd_debugfs_update_roam_stats(struct hdd_context *hdd_ctx,
 				   uint8_t *buf, ssize_t buf_avail_len);
 
 #else
-/**
- * wlan_hdd_debugfs_csr_init() - Create wifi diagnostic debugfs files
- * @adapter: pointer to adapter for which debugfs files are to be created
- *
- * Return: None
- */
+
 static inline void wlan_hdd_debugfs_csr_init(struct hdd_adapter *adapter)
 {
 }
 
-/**
- * wlan_hdd_debugfs_csr_deinit() - Remove wifi diagnostic debugfs files
- * @adapter: pointer to adapter for which debugfs files are to be removed
- *
- * Return: None
- */
 static inline void wlan_hdd_debugfs_csr_deinit(struct hdd_adapter *adapter)
 {
 }
 
-/**
- * wlan_hdd_current_time_info_debugfs() - API to get time into user buffer
- * @buf: output buffer to hold current time when queried
- * @buf_avail_len: available buffer length
- *
- * Return: No.of bytes copied
- */
 static inline ssize_t
 wlan_hdd_current_time_info_debugfs(uint8_t *buf, ssize_t buf_avail_len)
 {
 	return 0;
 }
 
-/**
- * wlan_hdd_debugfs_update_filters_info() - API to get offload info
- * into user buffer
- * @buf: output buffer to hold offload info
- * @buf_avail_len: available buffer length
- *
- * Return: No.of bytes copied
- */
 static inline ssize_t
 wlan_hdd_debugfs_update_filters_info(struct hdd_context *hdd_ctx,
 				     struct hdd_adapter *adapter,
@@ -162,14 +141,6 @@ wlan_hdd_debugfs_update_filters_info(struct hdd_context *hdd_ctx,
 	return 0;
 }
 
-/**
- * wlan_hdd_debugfs_update_roam_stats() - API to get roam scan stats info
- * into user buffer
- * @buf: output buffer to hold roam scan stats info
- * @buf_avail_len: available buffer length
- *
- * Return: No.of bytes copied
- */
 static inline ssize_t
 wlan_hdd_debugfs_update_roam_stats(struct hdd_context *hdd_ctx,
 				   struct hdd_adapter *adapter,

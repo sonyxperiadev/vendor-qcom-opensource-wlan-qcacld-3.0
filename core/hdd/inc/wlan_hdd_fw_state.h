@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -28,7 +29,7 @@
 #ifdef FEATURE_FW_STATE
 #include <net/cfg80211.h>
 /**
- * wlan_hdd_cfg80211_get_fw_status() - get fw state
+ * wlan_hdd_cfg80211_get_fw_state() - get fw state
  * @wiphy: wiphy pointer
  * @wdev: pointer to struct wireless_dev
  * @data: pointer to incoming NL vendor data

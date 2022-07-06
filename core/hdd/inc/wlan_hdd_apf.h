@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -95,7 +96,7 @@ void hdd_apf_context_destroy(struct hdd_adapter *adapter);
 /**
  * hdd_get_apf_capabilities_cb() - Callback function to get APF capabilities
  * @hdd_context: pointer to the hdd context
- * @apf_get_offload: struct for get offload
+ * @data: pointer to the data received
  *
  * This function receives the response/data from the lower layer and
  * checks to see if the thread is still waiting then post the results to

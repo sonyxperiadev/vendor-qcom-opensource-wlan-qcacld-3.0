@@ -18,7 +18,7 @@
  */
 
 /**
- * DOC : wlan_hdd_twt.h
+ * DOC: wlan_hdd_twt.h
  *
  * WLAN Host Device Driver file for TWT (Target Wake Time) support.
  *
@@ -58,6 +58,7 @@ wlan_hdd_wifi_twt_config_policy[QCA_WLAN_VENDOR_ATTR_CONFIG_TWT_MAX + 1];
  * @TWT_RESPONDER_INDV: Individual TWT responder role
  * @TWT_RESPONDER_BCAST: Broadcast TWT responder role
  * @TWT_ROLE_ALL: All TWT roles
+ * @TWT_ROLE_MAX: Place holder for max mode
  */
 enum twt_role {
 	TWT_REQUESTOR,
@@ -105,14 +106,14 @@ enum twt_status {
 
 /**
  * struct twt_conc_arg: TWT concurrency args
- * @ hdd_ctx: pointer to hdd context
+ * @hdd_ctx: pointer to hdd context
  */
 struct twt_conc_arg {
 	struct hdd_context *hdd_ctx;
 };
 
 /**
- * twt_ack_info_priv - twt ack private info
+ * struct twt_ack_info_priv - twt ack private info
  * @vdev_id: vdev id
  * @peer_macaddr: peer mac address
  * @dialog_id: dialog id
@@ -292,7 +293,9 @@ void hdd_twt_concurrency_update_on_mcc(struct wlan_objmgr_pdev *pdev,
 /**
  * hdd_twt_concurrency_update_on_dbs() - Send TWT enable command to fw if DBS
  * exists in two vdevs
- * @hdd_ctx: hdd context pointer
+ * @pdev: pdev pointer
+ * @object: object pointer
+ * @arg: argument pointer
  *
  * Return: None
  */

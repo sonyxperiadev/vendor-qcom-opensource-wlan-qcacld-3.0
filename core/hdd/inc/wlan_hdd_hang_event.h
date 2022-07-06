@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -31,7 +32,6 @@ QDF_STATUS wlan_hdd_hang_event_notifier_register(struct hdd_context *hdd_ctx);
 /**
  * wlan_hdd_hang_event_notifier_unregister() - HDD hang event notifier
  * unregister
- * @hdd_ctx: HDD context
  *
  * This function unregisters hdd layer notifier for the hang event notifier
  * chain.

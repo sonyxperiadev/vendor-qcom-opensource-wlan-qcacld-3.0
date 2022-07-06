@@ -21,7 +21,6 @@
 #define HDD_CONFIG_H__
 
 /**
- *
  * DOC: wlan_hdd_config.h
  *
  * WLAN Adapter Configuration functions
@@ -210,7 +209,7 @@ struct hdd_config {
 /**
  * hdd_to_csr_wmm_mode() - Utility function to convert HDD to CSR WMM mode
  *
- * @uint8_t mode - hdd WMM user mode
+ * @mode: hdd WMM user mode
  *
  * Return: CSR WMM mode
  */
@@ -310,7 +309,7 @@ QDF_STATUS hdd_get_rx_nss(struct hdd_adapter *adapter, uint8_t *rx_nss);
 
 /**
  * hdd_dfs_indicate_radar() - Block tx as radar found on the channel
- * @hdd_ctxt: HDD context pointer
+ * @hdd_ctx: HDD context pointer
  *
  * This function is invoked in atomic context when a radar
  * is found on the SAP current operating channel and Data Tx
@@ -348,7 +347,7 @@ void hdd_override_all_ps(struct hdd_context *hdd_ctx);
 /**
  * hdd_vendor_mode_to_phymode() - Get eCsrPhyMode according to vendor phy mode
  * @vendor_phy_mode: vendor phy mode
- * @crs_phy_mode: phy mode of eCsrPhyMode
+ * @csr_phy_mode: phy mode of eCsrPhyMode
  *
  * Return: 0 on success, negative errno value on error
  */
