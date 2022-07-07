@@ -8937,27 +8937,58 @@ void lim_update_stads_eht_bw_320mhz(struct pe_session *session,
 #endif
 
 #ifdef WLAN_FEATURE_11BE_MLO
-void lim_intersect_ap_emlsr_caps(struct pe_session *session,
+void lim_intersect_ap_emlsr_caps(struct mac_context *mac_ctx,
+				 struct pe_session *session,
 				 struct bss_params *add_bss,
 				 tpSirAssocRsp assoc_rsp)
 {
-	struct vdev_mlme_obj *mlme_obj;
+	struct wlan_mlo_peer_context *mlo_peer_ctx;
+	struct wlan_objmgr_peer *peer;
 
-	mlme_obj = wlan_vdev_mlme_get_cmpt_obj(session->vdev);
-	if (!mlme_obj) {
-		pe_err("vdev component object is NULL");
+	peer = wlan_objmgr_get_peer_by_mac(mac_ctx->psoc, add_bss->bssId,
+					   WLAN_LEGACY_MAC_ID);
+	if (!peer) {
+		pe_err("peer is null");
 		return;
 	}
 
-	if (wlan_vdev_mlme_cap_get(session->vdev, WLAN_VDEV_C_EMLSR_CAP)) {
-		add_bss->staContext.emlsr_support = true;
-		add_bss->staContext.link_id =
-		    assoc_rsp->mlo_ie.mlo_ie.link_id;
-		add_bss->staContext.emlsr_trans_timeout =
-		    assoc_rsp->mlo_ie.mlo_ie.eml_capabilities_info.transition_timeout;
-	} else {
-		add_bss->staContext.emlsr_support = false;
+	mlo_peer_ctx = peer->mlo_peer_ctx;
+	if (!mlo_peer_ctx) {
+		pe_err("mlo peer ctx is null");
+		wlan_objmgr_peer_release_ref(peer, WLAN_LEGACY_MAC_ID);
+		return;
 	}
+
+	if (!wlan_vdev_mlme_cap_get(session->vdev, WLAN_VDEV_C_EMLSR_CAP)) {
+		add_bss->staContext.emlsr_support = false;
+		wlan_objmgr_peer_release_ref(peer, WLAN_LEGACY_MAC_ID);
+		return;
+	}
+
+	if (wlan_vdev_mlme_is_mlo_link_vdev(session->vdev)) {
+		add_bss->staContext.emlsr_support =
+				mlo_peer_ctx->eml_caps.emlsr_support;
+		add_bss->staContext.emlsr_trans_timeout =
+				mlo_peer_ctx->eml_caps.transition_timeout;
+		add_bss->staContext.link_id =
+				wlan_vdev_get_link_id(session->vdev);
+	} else {
+		add_bss->staContext.emlsr_support = true;
+		add_bss->staContext.emlsr_trans_timeout =
+			assoc_rsp->mlo_ie.mlo_ie.eml_capabilities_info.transition_timeout;
+		add_bss->staContext.link_id =
+				assoc_rsp->mlo_ie.mlo_ie.link_id;
+
+		mlo_peer_ctx->eml_caps.emlsr_support =
+				add_bss->staContext.emlsr_support;
+		mlo_peer_ctx->eml_caps.transition_timeout =
+				add_bss->staContext.emlsr_trans_timeout;
+	}
+
+	wlan_objmgr_peer_release_ref(peer, WLAN_LEGACY_MAC_ID);
+	pe_debug("emlsr support: %d, link id: %d, transition timeout:%d",
+		 add_bss->staContext.emlsr_support, add_bss->staContext.link_id,
+		 add_bss->staContext.emlsr_trans_timeout);
 }
 #endif
 

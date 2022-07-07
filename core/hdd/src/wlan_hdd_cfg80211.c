@@ -11132,8 +11132,8 @@ static int hdd_test_config_emlsr_mode(struct hdd_context *hdd_ctx,
 
 	cfg_val = nla_get_u8(attr);
 	hdd_info("11be op mode setting %d", cfg_val);
-	if (cfg_val) {
-		hdd_debug("eMLSR mode is enabled");
+	if (cfg_val && policy_mgr_is_hw_emlsr_capable(hdd_ctx->psoc)) {
+		hdd_debug("HW supports eMLSR mode, set caps");
 		ucfg_mlme_set_emlsr_mode_enabled(hdd_ctx->psoc, cfg_val);
 	} else {
 		hdd_debug("Default mode: MLMR, no action required");

@@ -2225,19 +2225,21 @@ lim_update_stads_eht_bw_320mhz(struct pe_session *session,
 #ifdef WLAN_FEATURE_11BE_MLO
 /**
  * lim_intersect_ap_emlsr_caps() - Intersect AP and self STA EHT capabilities
+ * @mac_ctx: Global MAC context
  * @session: pointer to PE session
  * @add_bss: pointer to ADD BSS params
- * @beacon: pointer to beacon
  * @assoc_rsp: pointer to assoc response
  *
  * Return: None
  */
-void lim_intersect_ap_emlsr_caps(struct pe_session *session,
+void lim_intersect_ap_emlsr_caps(struct mac_context *mac_ctx,
+				 struct pe_session *session,
 				 struct bss_params *add_bss,
 				 tpSirAssocRsp assoc_rsp);
 #else
 static inline void
-lim_intersect_ap_emlsr_caps(struct pe_session *session,
+lim_intersect_ap_emlsr_caps(struct mac_context *mac_ctx,
+			    struct pe_session *session,
 			    struct bss_params *add_bss,
 			    tpSirAssocRsp assoc_rsp)
 {

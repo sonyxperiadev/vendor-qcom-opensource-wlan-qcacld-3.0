@@ -9916,7 +9916,6 @@ populate_dot11f_mlo_caps(struct mac_context *mac_ctx,
 {
 	uint8_t *mld_addr;
 	uint8_t common_info_len = 0;
-	bool emlsr_cap, emlsr_enabled, emlsr_allowed = false;
 
 	mlo_ie->type = 0;
 	/* Common Info Length */
@@ -9930,26 +9929,13 @@ populate_dot11f_mlo_caps(struct mac_context *mac_ctx,
 	mlo_ie->bss_param_change_cnt_present = 0;
 	mlo_ie->medium_sync_delay_info_present = 0;
 
-	/* Check if HW supports eMLSR mode */
-	emlsr_cap = policy_mgr_is_hw_emlsr_capable(mac_ctx->psoc);
-
-	/* Check if vendor command chooses eMLSR mode */
-	wlan_mlme_get_emlsr_mode_enabled(mac_ctx->psoc, &emlsr_enabled);
-
-	emlsr_allowed = emlsr_cap && emlsr_enabled;
-
-	if (emlsr_allowed) {
-		wlan_vdev_obj_lock(session->vdev);
-		wlan_vdev_mlme_cap_set(session->vdev, WLAN_VDEV_C_EMLSR_CAP);
-		wlan_vdev_obj_unlock(session->vdev);
+	if (wlan_vdev_mlme_cap_get(session->vdev, WLAN_VDEV_C_EMLSR_CAP)) {
 		mlo_ie->eml_capab_present = 1;
+		mlo_ie->eml_capabilities_info.emlmr_support = 0;
 		mlo_ie->eml_capabilities_info.emlsr_support = 1;
+		common_info_len += WLAN_ML_BV_CINFO_EMLCAP_SIZE;
 	} else {
-		wlan_vdev_obj_lock(session->vdev);
-		wlan_vdev_mlme_cap_clear(session->vdev, WLAN_VDEV_C_EMLSR_CAP);
-		wlan_vdev_obj_unlock(session->vdev);
 		mlo_ie->eml_capab_present = 0;
-		mlo_ie->eml_capabilities_info.emlsr_support = 0;
 	}
 
 	mlo_ie->mld_capab_and_op_present = 1;

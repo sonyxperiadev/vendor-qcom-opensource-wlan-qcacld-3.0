@@ -3712,6 +3712,7 @@ QDF_STATUS lim_sta_send_add_bss(struct mac_context *mac, tpSirAssocRsp pAssocRsp
 			QDF_MAC_ADDR_FMT,
 			QDF_MAC_ADDR_REF(
 				pAddBssParams->staContext.staMac));
+			qdf_mem_free(pAddBssParams);
 			return QDF_STATUS_E_FAILURE;
 	}
 
@@ -3893,7 +3894,7 @@ QDF_STATUS lim_sta_send_add_bss(struct mac_context *mac, tpSirAssocRsp pAssocRsp
 		}
 	}
 
-	lim_intersect_ap_emlsr_caps(pe_session, pAddBssParams, pAssocRsp);
+	lim_intersect_ap_emlsr_caps(mac, pe_session, pAddBssParams, pAssocRsp);
 
 	pAddBssParams->staContext.smesessionId =
 		pe_session->smeSessionId;

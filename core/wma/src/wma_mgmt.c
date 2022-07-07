@@ -1385,10 +1385,6 @@ static void wma_set_mlo_capability(tp_wma_handle wma,
 			req->mlo_params.emlsr_trans_timeout =
 					params->emlsr_trans_timeout;
 		}
-		wma_debug("eMLSR support:%d, link_id:%d, transition timeout:%d",
-			  req->mlo_params.emlsr_support,
-			  req->mlo_params.ieee_link_id,
-			  req->mlo_params.emlsr_trans_timeout);
 	} else {
 		wma_debug("Peer MLO context is NULL");
 		req->mlo_params.mlo_enabled = false;

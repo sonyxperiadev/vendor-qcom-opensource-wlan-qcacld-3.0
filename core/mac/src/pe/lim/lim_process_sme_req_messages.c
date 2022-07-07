@@ -3882,9 +3882,42 @@ static void lim_fill_ml_info(struct cm_vdev_join_req *req,
 	}
 	pe_join_req->assoc_link_id = req->assoc_link_id;
 }
+
+static void lim_set_emlsr_caps(struct mac_context *mac_ctx,
+			       struct pe_session *session)
+{
+	bool emlsr_cap, emlsr_allowed, emlsr_enabled = false;
+
+	/* Check if HW supports eMLSR mode */
+	emlsr_cap = policy_mgr_is_hw_emlsr_capable(mac_ctx->psoc);
+	if (!emlsr_cap)
+		return;
+
+	/* Check if vendor command chooses eMLSR mode */
+	wlan_mlme_get_emlsr_mode_enabled(mac_ctx->psoc, &emlsr_enabled);
+
+	emlsr_allowed = emlsr_cap && emlsr_enabled;
+
+	if (emlsr_allowed) {
+		wlan_vdev_obj_lock(session->vdev);
+		wlan_vdev_mlme_cap_set(session->vdev, WLAN_VDEV_C_EMLSR_CAP);
+		wlan_vdev_obj_unlock(session->vdev);
+	} else {
+		wlan_vdev_obj_lock(session->vdev);
+		wlan_vdev_mlme_cap_clear(session->vdev, WLAN_VDEV_C_EMLSR_CAP);
+		wlan_vdev_obj_unlock(session->vdev);
+	}
+
+	pe_debug("eMLSR vdev cap: %d", emlsr_allowed);
+}
 #else
 static void lim_fill_ml_info(struct cm_vdev_join_req *req,
 			     struct join_req *pe_join_req)
+{
+}
+
+static void lim_set_emlsr_caps(struct mac_context *mac_ctx,
+			       struct pe_session *session)
 {
 }
 #endif
@@ -4084,6 +4117,8 @@ lim_cm_handle_join_req(struct cm_vdev_join_req *req)
 		 pe_session->wps_registration,
 		 pe_session->isOSENConnection,
 		 lim_is_fils_connection(pe_session));
+
+	lim_set_emlsr_caps(mac_ctx, pe_session);
 
 	status = lim_send_connect_req_to_mlm(pe_session);
 	if (QDF_IS_STATUS_ERROR(status)) {

@@ -1527,7 +1527,8 @@ QDF_STATUS policy_mgr_update_hw_mode_list(struct wlan_objmgr_psoc *psoc,
 				sbs_mode = HW_MODE_SBS;
 		}
 		/* eMLSR mode */
-		if (hw_config_type == WMI_HW_MODE_EMLSR) {
+		if (WMI_BECAP_PHY_GET_HW_MODE_CFG(hw_config_type) ==
+				WMI_HW_MODE_EMLSR) {
 			tmp = &info->mac_phy_cap[j++];
 			policy_mgr_get_hw_mode_params(tmp, &mac1_ss_bw_info);
 			policy_mgr_update_mac_freq_info(psoc, pm_ctx,
