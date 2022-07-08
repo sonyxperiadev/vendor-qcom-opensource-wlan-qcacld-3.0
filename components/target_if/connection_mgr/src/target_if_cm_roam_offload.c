@@ -31,6 +31,7 @@
 #include <target_if_vdev_mgr_rx_ops.h>
 #include <target_if_vdev_mgr_tx_ops.h>
 #include "target_if_cm_roam_event.h"
+#include <target_if_psoc_wake_lock.h>
 
 static struct wmi_unified
 *target_if_cm_roam_get_wmi_handle_from_vdev(struct wlan_objmgr_vdev *vdev)
@@ -109,13 +110,24 @@ static QDF_STATUS
 target_if_cm_roam_send_roam_sync_complete(struct wlan_objmgr_vdev *vdev)
 {
 	wmi_unified_t wmi_handle;
+	QDF_STATUS status;
+	struct wlan_objmgr_psoc *psoc;
+
+	psoc = wlan_vdev_get_psoc(vdev);
+	if (!psoc) {
+		target_if_err("psoc handle is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
 
 	wmi_handle = target_if_cm_roam_get_wmi_handle_from_vdev(vdev);
 	if (!wmi_handle)
 		return QDF_STATUS_E_FAILURE;
 
-	return wmi_unified_roam_synch_complete_cmd(wmi_handle,
-						   wlan_vdev_get_id(vdev));
+	status = wmi_unified_roam_synch_complete_cmd(wmi_handle,
+						     wlan_vdev_get_id(vdev));
+	target_if_allow_pm_after_roam_sync(psoc);
+
+	return status;
 }
 
 /**
