@@ -17928,6 +17928,7 @@ static int hdd_disable_wifi(struct hdd_context *hdd_ctx)
 		return -EINVAL;
 	}
 	hdd_ctx->is_wlan_disabled = true;
+	hdd_debug_rl("WiFi is disabled");
 
 	return 0;
 }
@@ -17992,6 +17993,9 @@ static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 		break;
 	case WLAN_FORCE_DISABLE_STR:
 		hdd_nofl_debug("Received Force WiFi disable from framework\n");
+		if (!cds_is_driver_loaded())
+			goto exit;
+
 		hdd_wlan_soft_driver_unload();
 		goto exit;
 	default:
