@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -145,7 +146,8 @@ __wlan_hdd_cfg80211_set_mdns_offload(struct wiphy *wiphy,
 
 	if (!tb[MDNS_ENABLE]) {
 		os_if_fwol_disable_mdns_offload(hdd_ctx->psoc);
-		return -EINVAL;
+		hdd_debug_rl("MDNS offload is disabled");
+		return 0;
 	}
 
 	is_mdns_enable = nla_get_flag(tb[MDNS_ENABLE]);
