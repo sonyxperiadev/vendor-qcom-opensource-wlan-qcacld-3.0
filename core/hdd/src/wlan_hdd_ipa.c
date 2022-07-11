@@ -456,6 +456,9 @@ void hdd_ipa_send_nbuf_to_network(qdf_nbuf_t nbuf, qdf_netdev_t dev)
 	unsigned int cpu_index;
 	uint32_t enabled;
 	struct hdd_tx_rx_stats *stats;
+	struct hdd_station_ctx *sta_ctx;
+	bool is_eapol;
+	u8 *ta_addr = NULL;
 
 	if (hdd_validate_adapter(adapter)) {
 		kfree_skb(nbuf);
@@ -475,6 +478,8 @@ void hdd_ipa_send_nbuf_to_network(qdf_nbuf_t nbuf, qdf_netdev_t dev)
 		/* Send DHCP Indication to FW */
 		hdd_softap_inspect_dhcp_packet(adapter, nbuf, QDF_RX);
 	}
+
+	is_eapol = qdf_nbuf_is_ipv4_eapol_pkt(nbuf);
 
 	qdf_dp_trace_set_track(nbuf, QDF_RX);
 
@@ -514,7 +519,30 @@ void hdd_ipa_send_nbuf_to_network(qdf_nbuf_t nbuf, qdf_netdev_t dev)
 	++adapter->stats.rx_packets;
 	adapter->stats.rx_bytes += nbuf->len;
 
-	result = hdd_ipa_aggregated_rx_ind(nbuf);
+	if (is_eapol && SEND_EAPOL_OVER_NL) {
+		if (adapter->device_mode == QDF_SAP_MODE) {
+			ta_addr = adapter->mac_addr.bytes;
+		} else if (adapter->device_mode == QDF_STA_MODE) {
+			sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
+			ta_addr = (u8 *)&sta_ctx->conn_info.peer_macaddr;
+		}
+
+		if (ta_addr) {
+			if (wlan_hdd_cfg80211_rx_control_port(adapter->dev,
+							      ta_addr, nbuf,
+							      false))
+				result = NET_RX_SUCCESS;
+			else
+				result = NET_RX_DROP;
+		} else {
+			result = NET_RX_DROP;
+		}
+
+		dev_kfree_skb(nbuf);
+	} else {
+		result = hdd_ipa_aggregated_rx_ind(nbuf);
+	}
+
 	if (result == NET_RX_SUCCESS)
 		++stats->per_cpu[cpu_index].rx_delivered;
 	else
