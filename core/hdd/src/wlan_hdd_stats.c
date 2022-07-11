@@ -6259,6 +6259,14 @@ static int __wlan_hdd_cfg80211_get_station(struct wiphy *wiphy,
 
 	if (wlan_hdd_validate_vdev_id(adapter->vdev_id))
 		return -EINVAL;
+	if (!mac) {
+		hdd_err("Received NULL mac address");
+		return -EINVAL;
+	}
+	if (qdf_is_macaddr_zero((struct qdf_mac_addr *)mac)) {
+		hdd_err("MAC is all zero");
+		return -EINVAL;
+	}
 
 	if (adapter->device_mode == QDF_SAP_MODE ||
 	    adapter->device_mode == QDF_P2P_GO_MODE) {
