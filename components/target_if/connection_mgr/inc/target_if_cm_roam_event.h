@@ -211,4 +211,27 @@ target_if_roam_frame_event_handler(ol_scn_t scn, uint8_t *event,
 	return 0;
 }
 #endif /* WLAN_FEATURE_ROAM_OFFLOAD */
+
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+/**
+ * target_if_get_roam_vendor_control_param_event_handler - event handler for
+ * vendor control params event
+ * @scn: target handle
+ * @event: event buffer
+ * @len: event buffer length
+ *
+ * Return: int for success or error code
+ */
+int target_if_get_roam_vendor_control_param_event_handler(ol_scn_t scn,
+							  uint8_t *event,
+							  uint32_t len);
+#else
+static inline int
+target_if_get_roam_vendor_control_param_event_handler(ol_scn_t scn,
+						      uint8_t *event,
+						      uint32_t len)
+{
+	return 0;
+}
+#endif
 #endif

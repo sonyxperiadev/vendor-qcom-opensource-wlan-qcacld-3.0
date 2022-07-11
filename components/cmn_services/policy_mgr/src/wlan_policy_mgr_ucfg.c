@@ -239,6 +239,16 @@ QDF_STATUS ucfg_policy_mgr_set_max_conc_cxns(struct wlan_objmgr_psoc *psoc,
 }
 
 QDF_STATUS
+ucfg_policy_mgr_get_radio_combinations(struct wlan_objmgr_psoc *psoc,
+				       struct radio_combination *comb,
+				       uint32_t comb_max,
+				       uint32_t *comb_num)
+{
+	return policy_mgr_get_radio_combinations(psoc, comb,
+						 comb_max, comb_num);
+}
+
+QDF_STATUS
 ucfg_policy_mgr_get_sta_sap_scc_on_dfs_chnl(struct wlan_objmgr_psoc *psoc,
 					    uint8_t *sta_sap_scc_on_dfs_chnl)
 {

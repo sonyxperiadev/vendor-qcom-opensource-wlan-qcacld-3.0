@@ -1420,6 +1420,8 @@ QDF_STATUS wlan_cm_rso_config_init(struct wlan_objmgr_vdev *vdev,
 	cfg_params = &rso_cfg->cfg_param;
 	cfg_params->max_chan_scan_time =
 		mlme_obj->cfg.lfr.neighbor_scan_max_chan_time;
+	cfg_params->passive_max_chan_time =
+		mlme_obj->cfg.lfr.passive_max_channel_time;
 	cfg_params->min_chan_scan_time =
 		mlme_obj->cfg.lfr.neighbor_scan_min_chan_time;
 	cfg_params->neighbor_lookup_threshold =
@@ -2416,6 +2418,49 @@ cm_roam_pmkid_request_handler(struct roam_pmkid_req_event *data)
 }
 #endif
 
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+void
+cm_roam_vendor_handoff_event_handler(struct wlan_objmgr_psoc *psoc,
+				     struct roam_vendor_handoff_params *data)
+{
+	struct wlan_objmgr_vdev *vdev;
+	struct mlme_legacy_priv *mlme_priv;
+	void *vendor_handoff_context;
+	QDF_STATUS status;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, data->vdev_id,
+						    WLAN_MLME_OBJMGR_ID);
+	if (!vdev) {
+		mlme_err("vdev object is NULL for vdev %d", data->vdev_id);
+		return;
+	}
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv)
+		return;
+
+	vendor_handoff_context =
+		mlme_priv->cm_roam.vendor_handoff_param.vendor_handoff_context;
+
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
+
+	status = mlme_cm_osif_get_vendor_handoff_params(psoc,
+							vendor_handoff_context);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		mlme_debug("Failed to free vendor handoff request");
+		return;
+	}
+
+	mlme_debug("Reset vendor handoff req in progress context");
+	mlme_priv->cm_roam.vendor_handoff_param.req_in_progress = false;
+	mlme_priv->cm_roam.vendor_handoff_param.vendor_handoff_context = NULL;
+
+	status = cm_roam_update_vendor_handoff_config(psoc, data);
+	if (QDF_IS_STATUS_ERROR(status))
+		mlme_debug("Failed to update params in rso_config struct");
+}
+#endif
+
 QDF_STATUS
 cm_roam_event_handler(struct roam_offload_roam_event *roam_event)
 {
@@ -2445,7 +2490,7 @@ cm_roam_event_handler(struct roam_offload_roam_event *roam_event)
 		if (roam_event->rso_timer_stopped)
 			wlan_cm_rso_stop_continue_disconnect(roam_event->psoc,
 						roam_event->vdev_id, true);
-		/* fallthrough */
+		fallthrough;
 	case ROAM_REASON_INVALID:
 		cm_handle_roam_offload_events(roam_event);
 		break;

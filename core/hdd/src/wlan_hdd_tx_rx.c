@@ -3876,27 +3876,6 @@ void hdd_dp_cfg_update(struct wlan_objmgr_psoc *psoc,
 	hdd_dp_nud_tracking_cfg_update(config, psoc);
 }
 
-bool wlan_hdd_rx_rpm_mark_last_busy(struct hdd_context *hdd_ctx,
-				    void *hif_ctx)
-{
-	uint64_t duration_us, dp_rx_busy_us, current_us;
-	uint32_t rpm_delay_ms;
-
-	if (!hif_pm_runtime_is_dp_rx_busy(hif_ctx))
-		return false;
-
-	dp_rx_busy_us = hif_pm_runtime_get_dp_rx_busy_mark(hif_ctx);
-	current_us = qdf_get_log_timestamp_usecs();
-	duration_us = (unsigned long)((ULONG_MAX - dp_rx_busy_us) +
-				      current_us + 1);
-	rpm_delay_ms = ucfg_pmo_get_runtime_pm_delay(hdd_ctx->psoc);
-
-	if (duration_us < (rpm_delay_ms * 1000))
-		return true;
-	else
-		return false;
-}
-
 void hdd_sta_notify_tx_comp_cb(qdf_nbuf_t skb, void *ctx, uint16_t flag)
 {
 	struct hdd_adapter *adapter = ctx;

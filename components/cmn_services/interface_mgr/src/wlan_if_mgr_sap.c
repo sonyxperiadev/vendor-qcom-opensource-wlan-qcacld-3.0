@@ -28,6 +28,7 @@
 #include "wlan_p2p_cfg_api.h"
 #include "wlan_tdls_api.h"
 #include "wlan_p2p_api.h"
+#include "wlan_mlme_vdev_mgr_interface.h"
 
 QDF_STATUS if_mgr_ap_start_bss(struct wlan_objmgr_vdev *vdev,
 			       struct if_mgr_event_data *event_data)
@@ -44,6 +45,10 @@ QDF_STATUS if_mgr_ap_start_bss(struct wlan_objmgr_vdev *vdev,
 		return QDF_STATUS_E_FAILURE;
 
 	wlan_tdls_teardown_links_sync(psoc);
+
+	if (wlan_vdev_mlme_get_opmode(vdev) == QDF_SAP_MODE ||
+	    wlan_vdev_mlme_get_opmode(vdev) == QDF_P2P_GO_MODE)
+		wlan_handle_emlsr_sta_concurrency(vdev, true, false);
 
 	if (policy_mgr_is_hw_mode_change_in_progress(psoc)) {
 		if (!QDF_IS_STATUS_SUCCESS(
@@ -119,6 +124,9 @@ if_mgr_ap_stop_bss_complete(struct wlan_objmgr_vdev *vdev,
 	if (!psoc)
 		return QDF_STATUS_E_FAILURE;
 
+	if (wlan_vdev_mlme_get_opmode(vdev) == QDF_SAP_MODE ||
+	    wlan_vdev_mlme_get_opmode(vdev) == QDF_P2P_GO_MODE)
+		wlan_handle_emlsr_sta_concurrency(vdev, false, false);
 	/*
 	 * Due to audio share glitch with P2P GO caused by
 	 * roam scan on concurrent interface, disable

@@ -230,6 +230,18 @@ ucfg_pre_cac_get_vdev_id(struct wlan_objmgr_psoc *psoc,
 }
 
 static inline void
+ucfg_pre_cac_adapter_set(struct wlan_objmgr_vdev *vdev,
+			 bool status)
+{
+}
+
+static inline bool
+ucfg_pre_cac_adapter_is_active(struct wlan_objmgr_vdev *vdev)
+{
+	return false;
+}
+
+static inline void
 ucfg_pre_cac_set_freq(struct wlan_objmgr_vdev *vdev,
 		      qdf_freq_t freq)
 {

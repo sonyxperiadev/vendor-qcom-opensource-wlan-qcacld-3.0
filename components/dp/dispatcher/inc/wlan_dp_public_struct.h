@@ -582,8 +582,7 @@ union wlan_tp_data {
  * @dp_napi_apply_throughput_policy:Callback to apply NAPI throughput policy
  * @wlan_dp_display_tx_multiq_stats: Callback to display Tx Mulit queue stats
  * @wlan_dp_display_netif_queue_history: Callback to display Netif queue history
- * @osif_dp_process_sta_mic_error: osif callback to process STA MIC error
- * @osif_dp_process_sap_mic_error: osif callback to process SAP MIC error
+ * @osif_dp_process_mic_error: osif callback to process MIC error
  * @dp_is_link_adapter: Callback API to check if adapter is link adapter
  * @os_if_dp_nud_stats_info: osif callback to print nud stats info
  * @dp_get_pause_map: Callback API to get pause map count
@@ -662,10 +661,8 @@ struct wlan_dp_psoc_callbacks {
 						uint8_t vdev_id);
 	void (*wlan_dp_display_netif_queue_history)(hdd_cb_handle context,
 				enum qdf_stats_verbosity_level verb_lvl);
-	void (*osif_dp_process_sta_mic_error)(struct dp_mic_error_info *info,
-					      struct wlan_objmgr_vdev *vdev);
-	void (*osif_dp_process_sap_mic_error)(struct dp_mic_error_info *info,
-					      struct wlan_objmgr_vdev *vdev);
+	void (*osif_dp_process_mic_error)(struct dp_mic_error_info *info,
+					  struct wlan_objmgr_vdev *vdev);
 	bool (*dp_is_link_adapter)(hdd_cb_handle context, uint8_t vdev_id);
 	void (*os_if_dp_nud_stats_info)(struct wlan_objmgr_vdev *vdev);
 	uint32_t (*dp_get_pause_map)(hdd_cb_handle context, uint8_t vdev_id);

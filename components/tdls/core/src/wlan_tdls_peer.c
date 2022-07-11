@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -146,6 +147,79 @@ uint8_t tdls_find_opclass(struct wlan_objmgr_psoc *psoc, uint8_t channel,
 						     bw_offset);
 }
 
+#ifdef WLAN_FEATURE_11AX
+qdf_freq_t tdls_get_offchan_freq(struct wlan_objmgr_vdev *vdev,
+				 struct tdls_soc_priv_obj *soc_obj)
+{
+	struct wlan_objmgr_pdev *pdev = wlan_vdev_get_pdev(vdev);
+	qdf_freq_t pref_freq, pref_6g_freq;
+	uint8_t pref_non6g_ch;
+
+	if (!pdev) {
+		tdls_err("pdev is NULL");
+		return 0;
+	}
+
+	pref_6g_freq = soc_obj->tdls_configs.tdls_pre_off_chan_freq_6g;
+	pref_non6g_ch = soc_obj->tdls_configs.tdls_pre_off_chan_num;
+
+	/*
+	 * Fill preffered offchannel frequency here. If TDLS on 6 GHz is
+	 * allowed then fill pref 6 GHz frequency
+	 * Otherwise, fill 5 GHz preferred frequency
+	 */
+	if (pref_6g_freq && tdls_is_6g_freq_allowed(vdev, pref_6g_freq))
+		pref_freq = pref_6g_freq;
+	else
+		pref_freq = wlan_reg_legacy_chan_to_freq(pdev, pref_non6g_ch);
+
+	return pref_freq;
+}
+
+#else
+qdf_freq_t tdls_get_offchan_freq(struct wlan_objmgr_vdev *vdev,
+				 struct tdls_soc_priv_obj *soc_obj)
+{
+	struct wlan_objmgr_pdev *pdev = wlan_vdev_get_pdev(vdev);
+	uint32_t pref_leg_chan = soc_obj->tdls_configs.tdls_pre_off_chan_num;
+
+	if (!pdev) {
+		tdls_err("pdev is NULL");
+		return 0;
+	}
+
+	return wlan_reg_legacy_chan_to_freq(pdev, pref_leg_chan);
+}
+#endif
+
+uint32_t tdls_get_offchan_bw(struct tdls_soc_priv_obj *soc_obj,
+			     qdf_freq_t off_chan_freq)
+{
+	uint32_t pre_off_chan_bw;
+
+	if (wlan_reg_is_5ghz_ch_freq(off_chan_freq) &&
+	    CHECK_BIT(soc_obj->tdls_configs.tdls_pre_off_chan_bw,
+		      BW_160_OFFSET_BIT))
+		pre_off_chan_bw = soc_obj->tdls_configs.tdls_pre_off_chan_bw &
+						~(1 << BW_160_OFFSET_BIT);
+	else
+		pre_off_chan_bw = soc_obj->tdls_configs.tdls_pre_off_chan_bw;
+
+	return pre_off_chan_bw;
+}
+
+static void tdls_fill_pref_off_chan_info(struct tdls_vdev_priv_obj *vdev_obj,
+					 struct tdls_soc_priv_obj *soc_obj,
+					 struct tdls_peer *peer)
+{
+	peer->pref_off_chan_freq = tdls_get_offchan_freq(vdev_obj->vdev,
+							 soc_obj);
+	peer->pref_off_chan_width = tdls_get_offchan_bw(soc_obj,
+						      peer->pref_off_chan_freq);
+	tdls_debug("Pref off channel freq %d chan width %d",
+		   peer->pref_off_chan_freq, peer->pref_off_chan_width);
+}
+
 /**
  * tdls_add_peer() - add TDLS peer in TDLS vdev object
  * @vdev_obj: TDLS vdev object
@@ -180,12 +254,11 @@ static struct tdls_peer *tdls_add_peer(struct tdls_vdev_priv_obj *vdev_obj,
 	qdf_mem_copy(&peer->peer_mac, macaddr, sizeof(peer->peer_mac));
 	peer->vdev_priv = vdev_obj;
 
-	peer->pref_off_chan_num =
-		soc_obj->tdls_configs.tdls_pre_off_chan_num;
+	tdls_fill_pref_off_chan_info(vdev_obj, soc_obj, peer);
 	peer->op_class_for_pref_off_chan =
 		tdls_get_opclass_from_bandwidth(
-				soc_obj, peer->pref_off_chan_num,
-				soc_obj->tdls_configs.tdls_pre_off_chan_bw,
+				vdev_obj->vdev, peer->pref_off_chan_freq,
+				peer->pref_off_chan_width,
 				&reg_bw_offset);
 
 	peer->valid_entry = false;
@@ -409,7 +482,8 @@ static void tdls_determine_channel_opclass(struct tdls_soc_priv_obj *soc_obj,
 						 &vdev_id));
 		*opclass = 0;
 	} else {
-		*channel = peer->pref_off_chan_num;
+		*channel = wlan_reg_freq_to_chan(pdev,
+						 peer->pref_off_chan_freq);
 		*opclass = peer->op_class_for_pref_off_chan;
 	}
 	tdls_debug("channel:%d opclass:%d", *channel, *opclass);
@@ -479,6 +553,7 @@ void tdls_extract_peer_state_param(struct tdls_peer_update_state *peer_param,
 	uint8_t chan_id;
 	uint32_t cur_band;
 	qdf_freq_t ch_freq;
+	uint32_t tx_power = 0;
 
 	vdev_obj = peer->vdev_priv;
 	soc_obj = wlan_vdev_get_tdls_soc_obj(vdev_obj->vdev);
@@ -501,12 +576,15 @@ void tdls_extract_peer_state_param(struct tdls_peer_update_state *peer_param,
 	peer_param->peer_cap.peer_off_chan_support =
 		peer->off_channel_capable;
 	peer_param->peer_cap.peer_curr_operclass = 0;
-	peer_param->peer_cap.self_curr_operclass = 0;
-	peer_param->peer_cap.pref_off_channum = peer->pref_off_chan_num;
+	peer_param->peer_cap.self_curr_operclass =
+			peer->op_class_for_pref_off_chan;
+	peer_param->peer_cap.pref_off_channum = wlan_reg_freq_to_chan(pdev,
+						      peer->pref_off_chan_freq);
 	peer_param->peer_cap.pref_off_chan_bandwidth =
-		soc_obj->tdls_configs.tdls_pre_off_chan_bw;
+						peer->pref_off_chan_width;
 	peer_param->peer_cap.opclass_for_prefoffchan =
 		peer->op_class_for_pref_off_chan;
+	peer_param->peer_cap.pref_offchan_freq = peer->pref_off_chan_freq;
 
 	if (QDF_STATUS_SUCCESS != ucfg_reg_get_band(pdev, &cur_band)) {
 		tdls_err("not able get the current frequency band");
@@ -517,16 +595,22 @@ void tdls_extract_peer_state_param(struct tdls_peer_update_state *peer_param,
 		tdls_err("sending the offchannel value as 0 as only 2g is supported");
 		peer_param->peer_cap.pref_off_channum = 0;
 		peer_param->peer_cap.opclass_for_prefoffchan = 0;
+		peer_param->peer_cap.pref_offchan_freq = 0;
 	}
 
-	ch_freq = wlan_reg_legacy_chan_to_freq(pdev,
-				peer_param->peer_cap.pref_off_channum);
+	ch_freq = peer->pref_off_chan_freq;
 	if (wlan_reg_is_dfs_for_freq(pdev, ch_freq)) {
+		/*
+		 * If pref_off_chan_freq is DFS frequency, that means it is 5Ghz
+		 * case. So, reset to default 5 GHz frequency
+		 */
 		tdls_err("Resetting TDLS off-channel from %d to %d",
 			 peer_param->peer_cap.pref_off_channum,
 			 WLAN_TDLS_PREFERRED_OFF_CHANNEL_NUM_DEF);
 		peer_param->peer_cap.pref_off_channum =
 			WLAN_TDLS_PREFERRED_OFF_CHANNEL_NUM_DEF;
+		peer_param->peer_cap.pref_offchan_freq =
+			WLAN_TDLS_PREFERRED_OFF_CHANNEL_FRQ_DEF;
 	}
 
 	num = 0;
@@ -539,8 +623,17 @@ void tdls_extract_peer_state_param(struct tdls_peer_update_state *peer_param,
 		    CHANNEL_STATE_DFS != ch_state &&
 		    !wlan_reg_is_dsrc_freq(ch_freq)) {
 			peer_param->peer_cap.peer_chan[num].chan_id = chan_id;
-			peer_param->peer_cap.peer_chan[num].pwr =
-				wlan_reg_get_channel_reg_power_for_freq(pdev, ch_freq);
+			if (!wlan_reg_is_6ghz_chan_freq(ch_freq)) {
+				tx_power =
+				wlan_reg_get_channel_reg_power_for_freq(pdev,
+								       ch_freq);
+			} else {
+				tx_power =
+				tdls_get_6g_pwr_for_power_type(vdev_obj->vdev,
+							       ch_freq,
+							       REG_CLI_DEF_VLP);
+			}
+			peer_param->peer_cap.peer_chan[num].pwr = tx_power;
 			peer_param->peer_cap.peer_chan[num].dfs_set = false;
 			peer_param->peer_cap.peer_chanlen++;
 			num++;
@@ -824,7 +917,7 @@ QDF_STATUS tdls_set_callback(struct tdls_peer *peer,
 	return QDF_STATUS_SUCCESS;
 }
 
-QDF_STATUS tdls_set_extctrl_param(struct tdls_peer *peer, uint32_t chan,
+QDF_STATUS tdls_set_extctrl_param(struct tdls_peer *peer, qdf_freq_t ch_freq,
 				  uint32_t max_latency, uint32_t op_class,
 				  uint32_t min_bandwidth)
 {
@@ -833,7 +926,7 @@ QDF_STATUS tdls_set_extctrl_param(struct tdls_peer *peer, uint32_t chan,
 		return QDF_STATUS_E_FAILURE;
 	}
 	peer->op_class_for_pref_off_chan = (uint8_t)op_class;
-	peer->pref_off_chan_num = (uint8_t)chan;
+	peer->pref_off_chan_freq = ch_freq;
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -860,11 +953,11 @@ QDF_STATUS tdls_reset_peer(struct tdls_vdev_priv_obj *vdev_obj,
 
 	if (!curr_peer->is_forced_peer) {
 		config = &soc_obj->tdls_configs;
-		curr_peer->pref_off_chan_num = config->tdls_pre_off_chan_num;
+		tdls_fill_pref_off_chan_info(vdev_obj, soc_obj, curr_peer);
 		curr_peer->op_class_for_pref_off_chan =
 			tdls_get_opclass_from_bandwidth(
-				soc_obj, curr_peer->pref_off_chan_num,
-				soc_obj->tdls_configs.tdls_pre_off_chan_bw,
+				vdev_obj->vdev, curr_peer->pref_off_chan_freq,
+				curr_peer->pref_off_chan_width,
 				&reg_bw_offset);
 	}
 

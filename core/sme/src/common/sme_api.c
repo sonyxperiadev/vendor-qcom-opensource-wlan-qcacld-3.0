@@ -236,8 +236,9 @@ static QDF_STATUS sme_process_set_hw_mode_resp(struct mac_context *mac, uint8_t 
 		    param->status == SET_HW_MODE_STATUS_ALREADY)
 			status = QDF_STATUS_SUCCESS;
 
-		wlan_cm_hw_mode_change_resp(mac->pdev, session_id, request_id,
-					    status);
+		wlan_cm_handle_hw_mode_change_resp(mac->pdev, session_id,
+						   request_id,
+						   status);
 	}
 
 end:
@@ -6220,83 +6221,6 @@ QDF_STATUS sme_update_wes_mode(mac_handle_t mac_handle, bool isWESModeEnabled,
 }
 
 /*
- * sme_set_roam_scan_control() -
- * Set roam scan control
- *	    This function is called to set roam scan control
- *	    if roam scan control is set to 0, roaming scan cache is cleared
- *	    any value other than 0 is treated as invalid value
- * mac_handle: Opaque handle to the global MAC context
- * sessionId - Session Identifier
- * Return QDF_STATUS_SUCCESS - SME update config successfully.
- *	    Other status means SME failure to update
- */
-QDF_STATUS sme_set_roam_scan_control(mac_handle_t mac_handle, uint8_t sessionId,
-				     bool roamScanControl)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-	QDF_STATUS status = QDF_STATUS_SUCCESS;
-	struct rso_chan_info *specific_channel_info;
-	struct wlan_objmgr_vdev *vdev;
-	struct rso_config *rso_cfg;
-	struct rso_cfg_params *cfg_params;
-
-	MTRACE(qdf_trace(QDF_MODULE_ID_SME,
-			 TRACE_CODE_SME_RX_HDD_SET_SCANCTRL, NO_SESSION, 0));
-
-	if (sessionId >= WLAN_MAX_VDEVS) {
-		sme_err("Invalid vdev %d", sessionId);
-		return QDF_STATUS_E_INVAL;
-	}
-
-	status = sme_acquire_global_lock(&mac->sme);
-	if (QDF_IS_STATUS_ERROR(status))
-		return status;
-	vdev = wlan_objmgr_get_vdev_by_id_from_pdev(mac->pdev, sessionId,
-						    WLAN_LEGACY_SME_ID);
-	if (!vdev) {
-		sme_err("vdev object is NULL for vdev %d", sessionId);
-		sme_release_global_lock(&mac->sme);
-		return QDF_STATUS_E_INVAL;
-	}
-	rso_cfg = wlan_cm_get_rso_config(vdev);
-	if (!rso_cfg) {
-		wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
-		sme_release_global_lock(&mac->sme);
-		return QDF_STATUS_E_INVAL;
-	}
-	cfg_params = &rso_cfg->cfg_param;
-	sme_debug("LFR runtime successfully set roam scan control to %d - old value is %d",
-		  roamScanControl,
-		  mac->mlme_cfg->lfr.rso_user_config.roam_scan_control);
-	if (!roamScanControl) {
-		/**
-		 * Clear the specific channel info cache when roamScanControl
-		 * is set to 0. If any preffered channel list is configured,
-		 * that will be sent to firmware for further roam scans.
-		 */
-		sme_debug("LFR runtime successfully cleared roam scan cache");
-		specific_channel_info = &cfg_params->specific_chan_info;
-		wlan_cm_flush_roam_channel_list(specific_channel_info);
-		if (mac->mlme_cfg->lfr.roam_scan_offload_enabled) {
-		/** Clear the static channel in FW by REASON_FLUSH_CHANNEL_LIST
-		 *  and then append channel list with dynamic channels in the FW
-		 *  using REASON_CHANNEL_LIST_CHANGED.
-		 */
-			wlan_roam_update_cfg(mac->psoc, sessionId,
-					    REASON_FLUSH_CHANNEL_LIST);
-
-			wlan_roam_update_cfg(mac->psoc, sessionId,
-					    REASON_CHANNEL_LIST_CHANGED);
-		}
-	}
-	mac->mlme_cfg->lfr.rso_user_config.roam_scan_control = roamScanControl;
-	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
-	sme_release_global_lock(&mac->sme);
-
-	return status;
-}
-
-/*
  * sme_update_is_fast_roam_ini_feature_enabled() - enable/disable LFR
  *	support at runtime
  * It is used at in the REG_DYNAMIC_VARIABLE macro definition of
@@ -7241,20 +7165,6 @@ bool sme_get_wes_mode(mac_handle_t mac_handle)
 }
 
 /*
- * sme_get_roam_scan_control() - get scan control
- *  This is a synchronous call
- *
- * mac_handle - The handle returned by mac_open.
- * Return bool - Enabled(1)/Disabled(0)
- */
-bool sme_get_roam_scan_control(mac_handle_t mac_handle)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-
-	return mac->mlme_cfg->lfr.rso_user_config.roam_scan_control;
-}
-
-/*
  * sme_get_is_lfr_feature_enabled() - get LFR feature enabled or not
  *  This is a synchronuous call
  * mac_handle - The handle returned by mac_open.
@@ -7590,7 +7500,7 @@ void sme_get_command_q_status(mac_handle_t mac_handle)
  * @timestamp_offset: return for the offset of the timestamp field
  * @time_value_offset: return for the time_value field in the TA IE
  *
- * Return: the length of the buffer.
+ * Return: the length of the buffer on success and error code on failure.
  */
 int sme_ocb_gen_timing_advert_frame(mac_handle_t mac_handle,
 				    tSirMacAddr self_addr, uint8_t **buf,

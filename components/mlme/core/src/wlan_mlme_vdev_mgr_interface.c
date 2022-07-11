@@ -464,6 +464,22 @@ static QDF_STATUS ap_mlme_vdev_up_send(struct vdev_mlme_obj *vdev_mlme,
 	return lim_ap_mlme_vdev_up_send(vdev_mlme, data_len, data);
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+void wlan_handle_emlsr_sta_concurrency(struct wlan_objmgr_vdev *vdev,
+				       bool ap_coming_up, bool sta_coming_up)
+{
+	struct wlan_objmgr_psoc *psoc = wlan_vdev_get_psoc(vdev);
+
+	if (!psoc) {
+		mlme_legacy_debug("psoc Null");
+		return;
+	}
+
+	policy_mgr_handle_emlsr_sta_concurrency(psoc, vdev, ap_coming_up,
+						sta_coming_up);
+}
+#endif
+
 /**
  * ap_mlme_vdev_notify_up_complete() - callback to notify up completion
  * @vdev_mlme: vdev mlme object

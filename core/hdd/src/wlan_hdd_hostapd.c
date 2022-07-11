@@ -1004,7 +1004,7 @@ QDF_STATUS hdd_chan_change_notify(struct hdd_adapter *adapter,
 	hdd_debug("notify: chan:%d width:%d freq1:%d freq2:%d",
 		  chandef.chan->center_freq, chandef.width,
 		  chandef.center_freq1, chandef.center_freq2);
-	cfg80211_ch_switch_notify(dev, &chandef);
+	wlan_cfg80211_ch_switch_notify(dev, &chandef, 0);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -2246,39 +2246,7 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 		hdd_son_deliver_cac_status_event(adapter, true);
 		break;
 	}
-/*
- * The code under this macro will be removed
- * once pre_cac componentization is done
- */
-#if defined(PRE_CAC_SUPPORT) && !defined(PRE_CAC_COMP)
-	case eSAP_DFS_RADAR_DETECT_DURING_PRE_CAC:
-		hdd_debug("notification for radar detect during pre cac:%d",
-			adapter->vdev_id);
-		hdd_send_conditional_chan_switch_status(hdd_ctx,
-			&adapter->wdev, false);
-		hdd_ctx->dev_dfs_cac_status = DFS_CAC_NEVER_DONE;
-		qdf_create_work(0, &hdd_ctx->sap_pre_cac_work,
-				wlan_hdd_sap_pre_cac_failure,
-				(void *)adapter);
-		qdf_sched_work(0, &hdd_ctx->sap_pre_cac_work);
-		hdd_son_deliver_cac_status_event(adapter, true);
-		break;
-	case eSAP_DFS_PRE_CAC_END:
-		hdd_debug("pre cac end notification received:%d",
-			adapter->vdev_id);
-		hdd_send_conditional_chan_switch_status(hdd_ctx,
-			&adapter->wdev, true);
-		ap_ctx->dfs_cac_block_tx = false;
-		ucfg_ipa_set_dfs_cac_tx(hdd_ctx->pdev,
-					ap_ctx->dfs_cac_block_tx);
-		hdd_ctx->dev_dfs_cac_status = DFS_CAC_ALREADY_DONE;
 
-		qdf_create_work(0, &hdd_ctx->sap_pre_cac_work,
-				wlan_hdd_sap_pre_cac_success,
-				(void *)adapter);
-		qdf_sched_work(0, &hdd_ctx->sap_pre_cac_work);
-		break;
-#endif /* PRE_CAC_SUPPORT and PRE_CAC_COMP */
 	case eSAP_DFS_NO_AVAILABLE_CHANNEL:
 		wlan_hdd_send_svc_nlink_msg
 			(hdd_ctx->radio_index,
@@ -5790,6 +5758,7 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 	enum reg_phymode reg_phy_mode, updated_phy_mode;
 	struct sap_context *sap_ctx;
 	struct wlan_objmgr_vdev *vdev;
+	uint32_t user_config_freq = 0;
 
 	hdd_enter();
 
@@ -5858,6 +5827,8 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 		goto free;
 	}
 
+	user_config_freq = config->chan_freq;
+
 	if (QDF_STATUS_SUCCESS !=
 	    ucfg_policy_mgr_get_indoor_chnl_marking(hdd_ctx->psoc,
 						    &indoor_chnl_marking))
@@ -5914,8 +5885,6 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 		config->acs_dfs_mode = wlan_hdd_get_dfs_mode(mode);
 	}
 
-	policy_mgr_update_user_config_sap_chan(hdd_ctx->psoc,
-					       config->chan_freq);
 	ucfg_policy_mgr_get_mcc_scc_switch(hdd_ctx->psoc, &mcc_to_scc_switch);
 
 	if (adapter->device_mode == QDF_SAP_MODE ||
@@ -6460,6 +6429,7 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 
 		hdd_green_ap_start_state_mc(hdd_ctx, adapter->device_mode,
 					    true);
+		wlan_set_sap_user_config_freq(vdev, user_config_freq);
 	}
 
 	wlan_hdd_dhcp_offload_enable(hdd_ctx, adapter);
@@ -6655,6 +6625,7 @@ static int __wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy,
 		hdd_green_ap_start_state_mc(hdd_ctx, adapter->device_mode,
 					    false);
 		wlan_twt_concurrency_update(hdd_ctx);
+		wlan_set_sap_user_config_freq(adapter->vdev, 0);
 		status = ucfg_if_mgr_deliver_event(adapter->vdev,
 				WLAN_IF_MGR_EV_AP_STOP_BSS_COMPLETE,
 				NULL);
@@ -6675,17 +6646,9 @@ static int __wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy,
 	mutex_unlock(&hdd_ctx->sap_lock);
 
 	mac_handle = hdd_ctx->mac_handle;
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
-	if (wlan_sap_is_pre_cac_active(mac_handle))
-		hdd_clean_up_pre_cac_interface(hdd_ctx);
-#else
+
 	if (ucfg_pre_cac_is_active(hdd_ctx->psoc))
 		ucfg_pre_cac_clean_up(hdd_ctx->psoc);
-#endif
 
 	if (status != QDF_STATUS_SUCCESS) {
 		hdd_err("Stopping the BSS");
@@ -6732,15 +6695,12 @@ exit:
 	return 0;
 }
 
-/**
- * wlan_hdd_cfg80211_stop_ap() - stop sap
- * @wiphy: Pointer to wiphy
- * @dev: Pointer to netdev
- *
- * Return: zero for success non-zero for failure
- */
-int wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy,
-				struct net_device *dev)
+#ifdef CFG80211_SINGLE_NETDEV_MULTI_LINK_SUPPORT
+int wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy, struct net_device *dev,
+			      unsigned int link_id)
+#else
+int wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy, struct net_device *dev)
+#endif
 {
 	int errno;
 	struct osif_vdev_sync *vdev_sync;
@@ -7123,6 +7083,31 @@ wlan_hdd_update_twt_responder(struct hdd_context *hdd_ctx,
 {}
 #endif
 
+#ifdef CFG80211_SINGLE_NETDEV_MULTI_LINK_SUPPORT
+static inline uint32_t
+wlan_util_get_centre_freq(struct wireless_dev *wdev, unsigned int link_id)
+{
+	return wdev->links[link_id].ap.chandef.chan->center_freq;
+}
+
+static inline struct cfg80211_chan_def
+wlan_util_get_chan_def(struct wireless_dev *wdev, unsigned int link_id)
+{
+	return wdev->links[link_id].ap.chandef;
+}
+#else
+static inline struct cfg80211_chan_def
+wlan_util_get_chan_def(struct wireless_dev *wdev, unsigned int link_id)
+{
+	return wdev->chandef;
+}
+
+static inline uint32_t
+wlan_util_get_centre_freq(struct wireless_dev *wdev, unsigned int link_id)
+{
+	return wdev->chandef.chan->center_freq;
+}
+#endif
 /**
  * __wlan_hdd_cfg80211_start_ap() - start soft ap mode
  * @wiphy: Pointer to wiphy structure
@@ -7449,9 +7434,9 @@ static int __wlan_hdd_cfg80211_start_ap(struct wiphy *wiphy,
 			goto err_start_bss;
 		}
 
-		if (wdev->chandef.chan->center_freq !=
+		if (wlan_util_get_centre_freq(wdev, 0) !=
 				params->chandef.chan->center_freq)
-			params->chandef = wdev->chandef;
+			params->chandef = wlan_util_get_chan_def(wdev, 0);
 		/*
 		 * If Do_Not_Break_Stream enabled send avoid channel list
 		 * to application.

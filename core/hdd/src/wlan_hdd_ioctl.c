@@ -4264,47 +4264,6 @@ exit:
 	return ret;
 }
 
-static int drv_cmd_set_roam_scan_control(struct hdd_adapter *adapter,
-					 struct hdd_context *hdd_ctx,
-					 uint8_t *command,
-					 uint8_t command_len,
-					 struct hdd_priv_data *priv_data)
-{
-	int ret = 0;
-	uint8_t *value = command;
-	uint8_t roam_scan_control = 0;
-
-	/* Move pointer to ahead of SETROAMSCANCONTROL<delimiter> */
-	value = value + command_len + 1;
-
-	/* Convert the value from ascii to integer */
-	ret = kstrtou8(value, 10, &roam_scan_control);
-	if (ret < 0) {
-		/*
-		 * If the input value is greater than max value of datatype,
-		 * then also kstrtou8 fails
-		 */
-		hdd_err("kstrtou8 failed");
-		ret = -EINVAL;
-		goto exit;
-	}
-
-	hdd_debug("Received Command to Set roam scan control = %d",
-		  roam_scan_control);
-
-	if (0 != roam_scan_control) {
-		ret = 0; /* return success but ignore param value "true" */
-		goto exit;
-	}
-
-	sme_set_roam_scan_control(hdd_ctx->mac_handle,
-				  adapter->vdev_id,
-				  roam_scan_control);
-
-exit:
-	return ret;
-}
-
 static int drv_cmd_set_okc_mode(struct hdd_adapter *adapter,
 				struct hdd_context *hdd_ctx,
 				uint8_t *command,
@@ -4378,28 +4337,6 @@ static int drv_cmd_set_okc_mode(struct hdd_adapter *adapter,
 		hdd_err("set pmkid modes failed");
 	}
 exit:
-	return ret;
-}
-
-static int drv_cmd_get_roam_scan_control(struct hdd_adapter *adapter,
-					 struct hdd_context *hdd_ctx,
-					 uint8_t *command,
-					 uint8_t command_len,
-					 struct hdd_priv_data *priv_data)
-{
-	int ret = 0;
-	bool roam_scan_control = sme_get_roam_scan_control(hdd_ctx->mac_handle);
-	char extra[32];
-	uint8_t len = 0;
-
-	len = scnprintf(extra, sizeof(extra), "%s %d",
-			command, roam_scan_control);
-	len = QDF_MIN(priv_data->total_len, len + 1);
-	if (copy_to_user(priv_data->buf, &extra, len)) {
-		hdd_err("failed to copy data to user buffer");
-		ret = -EFAULT;
-	}
-
 	return ret;
 }
 
@@ -6895,9 +6832,7 @@ static const struct hdd_drv_cmd hdd_drv_cmds[] = {
 	{"SETFASTROAM",               drv_cmd_set_fast_roam, true},
 	{"SETFASTTRANSITION",         drv_cmd_set_fast_transition, true},
 	{"FASTREASSOC",               drv_cmd_fast_reassoc, true},
-	{"SETROAMSCANCONTROL",        drv_cmd_set_roam_scan_control, true},
 	{"SETOKCMODE",                drv_cmd_set_okc_mode, true},
-	{"GETROAMSCANCONTROL",        drv_cmd_get_roam_scan_control, false},
 	{"BTCOEXMODE",                drv_cmd_bt_coex_mode, true},
 	{"SCAN-ACTIVE",               drv_cmd_scan_active, false},
 	{"SCAN-PASSIVE",              drv_cmd_scan_passive, false},

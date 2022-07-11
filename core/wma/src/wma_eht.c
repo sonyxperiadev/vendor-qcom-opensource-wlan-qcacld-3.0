@@ -205,6 +205,12 @@ static void wma_convert_eht_cap(tDot11fIEeht_cap *eht_cap, uint32_t *mac_cap,
 	eht_cap->restricted_twt = WMI_EHTCAP_MAC_RESTRICTTWT_GET(mac_cap);
 	eht_cap->scs_traffic_desc = WMI_EHTCAP_MAC_SCSTRAFFICDESC_GET(mac_cap);
 	eht_cap->max_mpdu_len = WMI_EHTCAP_MAC_MAXMPDULEN_GET(mac_cap);
+	eht_cap->max_a_mpdu_len_exponent_ext =
+			WMI_EHTCAP_MAC_MAXAMPDULEN_EXP_GET(mac_cap);
+	eht_cap->eht_trs_support =
+			WMI_EHTCAP_MAC_TRS_SUPPORT_GET(mac_cap);
+	eht_cap->txop_return_support_txop_share_m2 =
+			WMI_EHTCAP_MAC_TXOP_RETURN_SUPP_IN_SHARINGMODE2_GET(mac_cap);
 
 	/* EHT PHY capabilities */
 	eht_cap->support_320mhz_6ghz = WMI_EHTCAP_PHY_320MHZIN6GHZ_GET(phy_cap);
@@ -459,6 +465,7 @@ void wma_update_target_ext_eht_cap(struct target_psoc_info *tgt_hdl,
 	qdf_mem_copy(eht_cap, &eht_cap_mac, sizeof(tDot11fIEeht_cap));
 
 	wma_update_eht_cap_support_for_320mhz(tgt_hdl, eht_cap);
+	wma_update_eht_cap_support_for_320mhz(tgt_hdl, eht_cap_5g);
 
 	wma_print_eht_cap(eht_cap);
 }
@@ -490,6 +497,10 @@ void wma_print_eht_cap(tDot11fIEeht_cap *eht_cap)
 		       eht_cap->max_mpdu_len);
 	wma_nofl_debug("\tMaximum A-MPDU Length Exponent Extension: 0x%01x",
 		       eht_cap->max_a_mpdu_len_exponent_ext);
+	wma_nofl_debug("\tEHT TRS SUPPORT: 0x%01x",
+		       eht_cap->eht_trs_support);
+	wma_nofl_debug("\tTXOP Return Support in TXOP Sharing Mode 2: 0x%01x",
+		       eht_cap->txop_return_support_txop_share_m2);
 
 	/* EHT PHY Capabilities */
 	wma_nofl_debug("\t320 MHz In 6 GHz: 0x%01x",
@@ -851,7 +862,7 @@ void wma_populate_peer_eht_cap(struct peer_assoc_params *peer,
 			     12, 4, rates->bw_320_rx_max_nss_for_mcs_12_and_13);
 		QDF_SET_BITS(peer->peer_eht_tx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX2],
 			     12, 4, rates->bw_320_tx_max_nss_for_mcs_12_and_13);
-		/* fall through */
+		fallthrough;
 	case CH_WIDTH_160MHZ:
 		peer->peer_eht_mcs_count++;
 		QDF_SET_BITS(peer->peer_eht_rx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX1],
@@ -870,7 +881,7 @@ void wma_populate_peer_eht_cap(struct peer_assoc_params *peer,
 			     12, 4, rates->bw_160_rx_max_nss_for_mcs_12_and_13);
 		QDF_SET_BITS(peer->peer_eht_tx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX1],
 			     12, 4, rates->bw_160_tx_max_nss_for_mcs_12_and_13);
-		/* fall through */
+		fallthrough;
 	case CH_WIDTH_80MHZ:
 	case CH_WIDTH_40MHZ:
 		peer->peer_eht_mcs_count++;
@@ -909,7 +920,7 @@ void wma_populate_peer_eht_cap(struct peer_assoc_params *peer,
 			     12, 4, rates->bw_20_rx_max_nss_for_mcs_12_and_13);
 		QDF_SET_BITS(peer->peer_eht_tx_mcs_set[EHTCAP_TXRX_MCS_NSS_IDX0],
 			     12, 4, rates->bw_20_tx_max_nss_for_mcs_12_and_13);
-		/* fall through */
+		break;
 	default:
 		break;
 	}

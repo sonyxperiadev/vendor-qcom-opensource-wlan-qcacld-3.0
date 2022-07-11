@@ -110,6 +110,7 @@ lim_process_probe_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_Packet_info
 	uint8_t qos_enabled = false;
 	uint8_t wme_enabled = false;
 	uint32_t chan_freq = 0;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
 
 	if (!session_entry) {
 		pe_err("session_entry is NULL");
@@ -155,9 +156,11 @@ lim_process_probe_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_Packet_info
 		return;
 	}
 
-	lim_gen_link_specific_probe_rsp(mac_ctx, session_entry, body,
-					frame_len,
-					mac_ctx->lim.bss_rssi);
+	status = lim_gen_link_specific_probe_rsp(mac_ctx, session_entry,
+						 probe_rsp,
+						 body,
+						 frame_len,
+						 mac_ctx->lim.bss_rssi);
 
 	if (session_entry->limMlmState ==
 			eLIM_MLM_WT_JOIN_BEACON_STATE) {

@@ -1085,7 +1085,7 @@ cm_get_ml_partner_info(struct scan_cache_entry *scan_entry,
 	if (!scan_entry->ml_info.num_links)
 		return QDF_STATUS_E_FAILURE;
 
-	psoc = wlan_objmgr_get_psoc_by_id(0, WLAN_SCAN_ID);
+	psoc = wlan_objmgr_get_psoc_by_id(0, WLAN_MLME_CM_ID);
 	if (!psoc) {
 		mlme_debug("psoc is NULL");
 		return QDF_STATUS_E_INVAL;
@@ -1119,7 +1119,7 @@ cm_get_ml_partner_info(struct scan_cache_entry *scan_entry,
 	partner_info->num_partner_links = j;
 	mlme_debug("partner link num: %d", j);
 
-	wlan_objmgr_psoc_release_ref(psoc, WLAN_SCAN_ID);
+	wlan_objmgr_psoc_release_ref(psoc, WLAN_MLME_CM_ID);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -1622,4 +1622,54 @@ bool cm_is_vdevid_active(struct wlan_objmgr_pdev *pdev, uint8_t vdev_id)
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_CM_ID);
 
 	return active;
+}
+
+static
+QDF_STATUS cm_handle_hw_mode_change_resp_cb(struct scheduler_msg *msg)
+{
+	struct cm_vdev_hw_mode_rsp *rsp;
+
+	if (!msg || !msg->bodyptr)
+		return QDF_STATUS_E_FAILURE;
+
+	rsp = msg->bodyptr;
+	wlan_cm_hw_mode_change_resp(rsp->pdev, rsp->vdev_id, rsp->cm_id,
+				    rsp->status);
+
+	qdf_mem_free(rsp);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+wlan_cm_handle_hw_mode_change_resp(struct wlan_objmgr_pdev *pdev,
+				   uint8_t vdev_id,
+				   wlan_cm_id cm_id, QDF_STATUS status)
+{
+	struct cm_vdev_hw_mode_rsp *rsp;
+	struct scheduler_msg rsp_msg = {0};
+	QDF_STATUS qdf_status;
+
+	rsp = qdf_mem_malloc(sizeof(*rsp));
+	if (!rsp)
+		return QDF_STATUS_E_FAILURE;
+
+	rsp->pdev = pdev;
+	rsp->vdev_id = vdev_id;
+	rsp->cm_id = cm_id;
+	rsp->status = status;
+
+	rsp_msg.bodyptr = rsp;
+	rsp_msg.callback = cm_handle_hw_mode_change_resp_cb;
+
+	qdf_status = scheduler_post_message(QDF_MODULE_ID_MLME,
+					    QDF_MODULE_ID_TARGET_IF,
+					    QDF_MODULE_ID_TARGET_IF, &rsp_msg);
+	if (QDF_IS_STATUS_ERROR(qdf_status)) {
+		mlme_err(CM_PREFIX_FMT "Failed to post HW mode change rsp",
+			 CM_PREFIX_REF(vdev_id, cm_id));
+		qdf_mem_free(rsp);
+	}
+
+	return qdf_status;
 }

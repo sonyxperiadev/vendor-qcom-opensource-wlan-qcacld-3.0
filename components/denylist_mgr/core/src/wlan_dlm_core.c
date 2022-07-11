@@ -758,7 +758,6 @@ dlm_find_reject_type_string(enum dlm_reject_ap_type reject_ap_type)
 	CASE_RETURN_STRING(DRIVER_DENYLIST_TYPE);
 	CASE_RETURN_STRING(DRIVER_RSSI_REJECT_TYPE);
 	CASE_RETURN_STRING(DRIVER_MONITOR_TYPE);
-	/* fallthrough */
 	default:
 		return "REJECT_REASON_UNKNOWN";
 	}

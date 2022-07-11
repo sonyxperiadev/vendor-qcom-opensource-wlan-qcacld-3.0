@@ -263,7 +263,8 @@ wlan_cfg80211_tdls_extract_6ghz_params(struct tdls_update_peer_params *req_info,
 
 static void
 wlan_cfg80211_tdls_extract_he_params(struct tdls_update_peer_params *req_info,
-				     struct station_parameters *params)
+				     struct station_parameters *params,
+				     bool tdls_6g_support)
 {
 	if (params->he_capa_len < MIN_TDLS_HE_CAP_LEN) {
 		osif_debug("he_capa_len %d less than MIN_TDLS_HE_CAP_LEN",
@@ -283,7 +284,8 @@ wlan_cfg80211_tdls_extract_he_params(struct tdls_update_peer_params *req_info,
 	qdf_mem_copy(&req_info->he_cap, params->he_capa,
 		     req_info->he_cap_len);
 
-	wlan_cfg80211_tdls_extract_6ghz_params(req_info, params);
+	if (tdls_6g_support)
+		wlan_cfg80211_tdls_extract_6ghz_params(req_info, params);
 
 	return;
 }
@@ -291,7 +293,8 @@ wlan_cfg80211_tdls_extract_he_params(struct tdls_update_peer_params *req_info,
 #else
 static void
 wlan_cfg80211_tdls_extract_he_params(struct tdls_update_peer_params *req_info,
-				     struct station_parameters *params)
+				     struct station_parameters *params,
+				     bool tdls_6g_support)
 {
 }
 #endif
@@ -299,7 +302,7 @@ wlan_cfg80211_tdls_extract_he_params(struct tdls_update_peer_params *req_info,
 static void
 wlan_cfg80211_tdls_extract_params(struct tdls_update_peer_params *req_info,
 				  struct station_parameters *params,
-				  bool tdls_11ax_support)
+				  bool tdls_11ax_support, bool tdls_6g_support)
 {
 	int i;
 
@@ -380,7 +383,8 @@ wlan_cfg80211_tdls_extract_params(struct tdls_update_peer_params *req_info,
 		req_info->is_pmf = 1;
 	}
 	if (tdls_11ax_support)
-		wlan_cfg80211_tdls_extract_he_params(req_info, params);
+		wlan_cfg80211_tdls_extract_he_params(req_info, params,
+						     tdls_6g_support);
 	else
 		osif_debug("tdls ax disabled");
 }
@@ -396,6 +400,7 @@ int wlan_cfg80211_tdls_update_peer(struct wlan_objmgr_vdev *vdev,
 	unsigned long rc;
 	struct wlan_objmgr_psoc *psoc;
 	bool tdls_11ax_support = false;
+	bool tdls_6g_support = false;
 
 	status = wlan_cfg80211_tdls_validate_mac_addr(mac);
 
@@ -416,7 +421,9 @@ int wlan_cfg80211_tdls_update_peer(struct wlan_objmgr_vdev *vdev,
 	}
 
 	tdls_11ax_support = ucfg_tdls_is_fw_11ax_capable(psoc);
-	wlan_cfg80211_tdls_extract_params(req_info, params, tdls_11ax_support);
+	tdls_6g_support = ucfg_tdls_is_fw_6g_capable(psoc);
+	wlan_cfg80211_tdls_extract_params(req_info, params, tdls_11ax_support,
+					  tdls_6g_support);
 
 	osif_priv = wlan_vdev_get_ospriv(vdev);
 	if (!osif_priv || !osif_priv->osif_tdls) {
@@ -736,6 +743,28 @@ error_get_tdls_peers:
 	return len;
 }
 
+bool wlan_cfg80211_tdls_is_fw_wideband_capable(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_objmgr_psoc *psoc = wlan_vdev_get_psoc(vdev);
+
+	if (!psoc)
+		return false;
+
+	return ucfg_tdls_is_fw_wideband_capable(psoc);
+}
+
+#ifdef WLAN_FEATURE_11AX
+bool wlan_cfg80211_tdls_is_fw_6ghz_capable(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_objmgr_psoc *psoc = wlan_vdev_get_psoc(vdev);
+
+	if (!psoc)
+		return false;
+
+	return ucfg_tdls_is_fw_6g_capable(psoc);
+}
+#endif
+
 int wlan_cfg80211_tdls_mgmt(struct wlan_objmgr_vdev *vdev,
 			    const uint8_t *peer_mac,
 			    uint8_t action_code, uint8_t dialog_token,
@@ -977,6 +1006,7 @@ void wlan_cfg80211_tdls_event_callback(void *user_data,
 	case TDLS_EVENT_ANTENNA_SWITCH:
 		tdls_priv->tdls_antenna_switch_status = ind->status;
 		complete(&tdls_priv->tdls_antenna_switch_comp);
+		break;
 	default:
 		break;
 	}

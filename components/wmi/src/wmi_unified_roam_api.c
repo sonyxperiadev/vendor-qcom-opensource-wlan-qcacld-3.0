@@ -133,6 +133,30 @@ QDF_STATUS wmi_unified_roam_synch_complete_cmd(wmi_unified_t wmi_handle,
 	return QDF_STATUS_E_FAILURE;
 }
 
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+QDF_STATUS
+wmi_unified_roam_vendor_handoff_req_cmd(wmi_unified_t wmi_handle,
+					uint8_t vdev_id, uint32_t param_id)
+{
+	if (wmi_handle->ops->send_process_roam_vendor_handoff_req_cmd)
+	      return wmi_handle->ops->send_process_roam_vendor_handoff_req_cmd(
+				wmi_handle, vdev_id, param_id);
+
+	return QDF_STATUS_E_FAILURE;
+}
+
+QDF_STATUS
+wmi_extract_roam_vendor_control_param_event(wmi_unified_t wmi_handle,
+				uint8_t *event, uint32_t len,
+				struct roam_vendor_handoff_params **data)
+{
+	if (wmi_handle->ops->extract_roam_vendor_control_param_event)
+		return wmi_handle->ops->extract_roam_vendor_control_param_event(
+					wmi_handle, event, len, data);
+	return QDF_STATUS_E_FAILURE;
+}
+#endif
+
 QDF_STATUS wmi_unified_roam_invoke_cmd(wmi_unified_t wmi_handle,
 				       struct roam_invoke_req *roaminvoke)
 {

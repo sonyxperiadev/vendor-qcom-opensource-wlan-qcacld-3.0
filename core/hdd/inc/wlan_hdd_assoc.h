@@ -569,6 +569,13 @@ hdd_translate_wapi_to_csr_encryption_type(uint8_t cipher_suite[4])
 }
 #endif
 
-
+/**
+ * hdd_convert_ch_width_to_cdp_peer_bw() - Convert ch_width to DP format
+ * @ch_width: ch_width
+ *
+ * Return: cdp_peer_bw enumeration
+ */
+enum cdp_peer_bw
+hdd_convert_ch_width_to_cdp_peer_bw(enum phy_ch_width ch_width);
 
 #endif

@@ -186,9 +186,11 @@ CONFIG_WLAN_OFFLOAD_PACKETS := y
 
 #enable TSF get feature
 CONFIG_WLAN_SYNC_TSF := y
-#Enable DSRC feature
 ifeq ($(CONFIG_QCA_WIFI_SDIO), y)
-CONFIG_WLAN_FEATURE_DSRC := y
+	#Enable DSRC feature
+	CONFIG_WLAN_FEATURE_DSRC := y
+else
+	CONFIG_WLAN_REG_AUTO := y
 endif
 
 ifneq ($(CONFIG_ROME_IF),usb)

@@ -31,6 +31,7 @@
 #include "wlan_utility.h"
 #include "wlan_policy_mgr_ucfg.h"
 #include "wlan_vdev_mgr_utils_api.h"
+#include <../../core/src/wlan_cm_vdev_api.h>
 
 /* quota in milliseconds */
 #define MCC_DUTY_CYCLE 70
@@ -241,6 +242,14 @@ QDF_STATUS wlan_mlme_set_band_capability(struct wlan_objmgr_psoc *psoc,
 
 	return QDF_STATUS_SUCCESS;
 }
+
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+bool wlan_mlme_get_vendor_handoff_control_caps(struct wlan_objmgr_psoc *psoc)
+{
+	return wlan_psoc_nif_fw_ext2_cap_get(psoc,
+					     WLAN_SOC_VENDOR_HANDOFF_CONTROL);
+}
+#endif
 
 QDF_STATUS wlan_mlme_set_dual_sta_policy(struct wlan_objmgr_psoc *psoc,
 					 uint8_t dual_sta_config)
@@ -3167,6 +3176,36 @@ wlan_mlme_set_relaxed_6ghz_conn_policy(struct wlan_objmgr_psoc *psoc,
 }
 #endif
 
+#ifdef WLAN_FEATURE_11BE_MLO
+QDF_STATUS
+wlan_mlme_get_emlsr_mode_enabled(struct wlan_objmgr_psoc *psoc, bool *value)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_FAILURE;
+
+	*value = mlme_obj->cfg.gen.enable_emlsr_mode;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+wlan_mlme_set_emlsr_mode_enabled(struct wlan_objmgr_psoc *psoc, bool value)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_FAILURE;
+
+	mlme_obj->cfg.gen.enable_emlsr_mode = value;
+
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 QDF_STATUS
 wlan_mlme_cfg_set_vht_chan_width(struct wlan_objmgr_psoc *psoc, uint8_t value)
 {
@@ -4839,6 +4878,40 @@ wlan_mlme_get_roam_bmiss_final_bcnt(struct wlan_objmgr_psoc *psoc,
 }
 
 QDF_STATUS
+wlan_mlme_get_bmiss_timeout_on_wakeup(struct wlan_objmgr_psoc *psoc,
+					      uint8_t *val)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj) {
+		*val = cfg_default(CFG_LFR_BEACONLOSS_TIMEOUT_ON_WAKEUP);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	*val = mlme_obj->cfg.lfr.beaconloss_timeout_onwakeup;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+wlan_mlme_get_bmiss_timeout_on_sleep(struct wlan_objmgr_psoc *psoc,
+				     uint8_t *val)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj) {
+		*val = cfg_default(CFG_LFR_BEACONLOSS_TIMEOUT_ON_SLEEP);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	*val = mlme_obj->cfg.lfr.beaconloss_timeout_onsleep;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
 wlan_mlme_get_roam_bmiss_first_bcnt(struct wlan_objmgr_psoc *psoc,
 				    uint8_t *val)
 {
@@ -5013,6 +5086,23 @@ wlan_mlme_get_bss_load_sample_time(struct wlan_objmgr_psoc *psoc,
 	}
 
 	*val = mlme_obj->cfg.lfr.bss_load_trig.sample_time;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+wlan_mlme_get_bss_load_rssi_threshold_6ghz(struct wlan_objmgr_psoc *psoc,
+					   int32_t *val)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj) {
+		*val = cfg_default(CFG_BSS_LOAD_TRIG_6G_RSSI_THRES);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	*val = mlme_obj->cfg.lfr.bss_load_trig.rssi_threshold_6ghz;
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -5747,7 +5837,7 @@ uint8_t mlme_get_max_he_mcs_idx(enum phy_ch_width mcs_ch_width,
 			if (max_mcs < 0x03)
 				max_mcs = 7 + 2 * max_mcs;
 		}
-		/* fallthrough */
+		fallthrough;
 	case CH_WIDTH_160MHZ:
 		if (hecap_rxmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_160] &&
 		    hecap_txmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_160]) {
@@ -5757,7 +5847,7 @@ uint8_t mlme_get_max_he_mcs_idx(enum phy_ch_width mcs_ch_width,
 			if (max_mcs < 0x03)
 				max_mcs = 7 + 2 * max_mcs;
 		}
-		/* fallthrough */
+		fallthrough;
 	default:
 		if (hecap_rxmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_80] &&
 		    hecap_txmcsnssmap[HECAP_TXRX_MCS_NSS_IDX_80]) {
@@ -5872,3 +5962,70 @@ uint32_t wlan_mlme_get_6g_ap_power_type(struct wlan_objmgr_vdev *vdev)
 	return mlme_obj->reg_tpc_obj.power_type_6g;
 }
 
+QDF_STATUS wlan_connect_hw_mode_change_resp(struct wlan_objmgr_pdev *pdev,
+					    uint8_t vdev_id,
+					    wlan_cm_id cm_id, QDF_STATUS status)
+{
+	return wlan_cm_handle_hw_mode_change_resp(pdev, vdev_id, cm_id,
+						  status);
+}
+
+#ifdef WLAN_FEATURE_11BE
+static inline bool
+wlan_mlme_is_phymode_320_mhz(enum wlan_phymode phy_mode,
+			     enum phy_ch_width *ch_width)
+{
+	if (IS_WLAN_PHYMODE_320MHZ(phy_mode)) {
+		*ch_width = CH_WIDTH_320MHZ;
+		return true;
+	}
+
+	return false;
+}
+#else
+static inline bool
+wlan_mlme_is_phymode_320_mhz(enum wlan_phymode phy_mode,
+			     enum phy_ch_width *ch_width)
+{
+	return false;
+}
+#endif
+
+enum phy_ch_width
+wlan_mlme_get_ch_width_from_phymode(enum wlan_phymode phy_mode)
+{
+	enum phy_ch_width ch_width = CH_WIDTH_20MHZ;
+
+	if (wlan_mlme_is_phymode_320_mhz(phy_mode, &ch_width))
+		goto done;
+
+	if (IS_WLAN_PHYMODE_160MHZ(phy_mode))
+		ch_width = CH_WIDTH_160MHZ;
+	else if (IS_WLAN_PHYMODE_80MHZ(phy_mode))
+		ch_width = CH_WIDTH_80MHZ;
+	else if (IS_WLAN_PHYMODE_40MHZ(phy_mode))
+		ch_width = CH_WIDTH_40MHZ;
+	else
+		ch_width = CH_WIDTH_20MHZ;
+
+done:
+	mlme_legacy_debug("phymode: %d, ch_width: %d ", phy_mode, ch_width);
+
+	return ch_width;
+}
+
+enum phy_ch_width
+wlan_mlme_get_peer_ch_width(struct wlan_objmgr_psoc *psoc, uint8_t *mac)
+{
+	enum wlan_phymode phy_mode;
+	QDF_STATUS status;
+
+	status = mlme_get_peer_phymode(psoc, mac, &phy_mode);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		mlme_legacy_err("failed to fetch phy_mode status: %d for mac: " QDF_MAC_ADDR_FMT,
+				status, QDF_MAC_ADDR_REF(mac));
+		return CH_WIDTH_20MHZ;
+	}
+
+	return wlan_mlme_get_ch_width_from_phymode(phy_mode);
+}

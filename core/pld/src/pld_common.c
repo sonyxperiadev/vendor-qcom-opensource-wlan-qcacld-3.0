@@ -512,6 +512,21 @@ int pld_wlan_disable(struct device *dev, enum pld_driver_mode mode)
 }
 
 /**
+ * pld_wlan_hw_enable() - Enable WLAN HW
+ *
+ * This function enables WLAN HW. If WLAN is secured disabled at boot all wlan
+ * boot time activities are deferred. This is used to run deferred activities
+ * after wlan is enabled.
+ *
+ * Return: 0 for success
+ *         Non zero failure code for errors
+ */
+int pld_wlan_hw_enable(void)
+{
+	return pld_pcie_wlan_hw_enable();
+}
+
+/**
  * pld_set_fw_log_mode() - Set FW debug log mode
  * @dev: device
  * @fw_log_mode: 0 for No log, 1 for WMI, 2 for DIAG

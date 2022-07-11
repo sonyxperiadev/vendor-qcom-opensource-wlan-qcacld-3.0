@@ -592,7 +592,7 @@ void pld_get_bus_reg_dump(struct device *dev, uint8_t *buf, uint32_t len);
 int pld_shadow_control(struct device *dev, bool enable);
 void pld_schedule_recovery_work(struct device *dev,
 				enum pld_recovery_reason reason);
-
+int pld_wlan_hw_enable(void);
 #ifdef FEATURE_WLAN_TIME_SYNC_FTM
 int pld_get_audio_wlan_timestamp(struct device *dev,
 				 enum pld_wlan_time_sync_trigger_type type,

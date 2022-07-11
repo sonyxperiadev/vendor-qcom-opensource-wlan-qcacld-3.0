@@ -202,6 +202,8 @@ static QDF_STATUS tdls_object_init_params(
 			cfg_get(psoc, CFG_TDLS_PUAPSD_PEER_TRAFFIC_RSP_TIMEOUT);
 	tdls_soc_obj->tdls_configs.tdls_pre_off_chan_num =
 			cfg_get(psoc, CFG_TDLS_PREFERRED_OFF_CHANNEL_NUM);
+	tdls_soc_obj->tdls_configs.tdls_pre_off_chan_freq_6g =
+			cfg_get(psoc, CFG_TDLS_PREFERRED_OFF_CHANNEL_FREQ_6G);
 	tdls_soc_obj->tdls_configs.tdls_pre_off_chan_bw =
 			cfg_get(psoc, CFG_TDLS_PREFERRED_OFF_CHANNEL_BW);
 	tdls_soc_obj->tdls_configs.tdls_peer_kickout_threshold =
@@ -318,6 +320,38 @@ QDF_STATUS ucfg_tdls_psoc_open(struct wlan_objmgr_psoc *psoc)
 	return status;
 }
 
+void ucfg_tdls_update_fw_wideband_capability(struct wlan_objmgr_psoc *psoc,
+					     bool is_fw_tdls_wideband_capable)
+{
+	struct tdls_soc_priv_obj *soc_obj;
+
+	soc_obj = wlan_objmgr_psoc_get_comp_private_obj(psoc,
+							WLAN_UMAC_COMP_TDLS);
+	if (!soc_obj) {
+		tdls_err("Failed to get tdls psoc component");
+		return;
+	}
+
+	soc_obj->fw_tdls_wideband_capability = is_fw_tdls_wideband_capable;
+}
+
+bool ucfg_tdls_is_fw_wideband_capable(struct wlan_objmgr_psoc *psoc)
+{
+	struct tdls_soc_priv_obj *soc_obj;
+
+	soc_obj = wlan_objmgr_psoc_get_comp_private_obj(psoc,
+							WLAN_UMAC_COMP_TDLS);
+	if (!soc_obj) {
+		tdls_err("Failed to get tdls psoc component");
+		return false;
+	}
+
+	tdls_debug("FW wideband capability %d",
+		   soc_obj->fw_tdls_wideband_capability);
+
+	return soc_obj->fw_tdls_wideband_capability;
+}
+
 #ifdef WLAN_FEATURE_11AX
 void ucfg_tdls_update_fw_11ax_capability(struct wlan_objmgr_psoc *psoc,
 					 bool is_fw_tdls_11ax_capable)
@@ -334,6 +368,21 @@ void ucfg_tdls_update_fw_11ax_capability(struct wlan_objmgr_psoc *psoc,
 	soc_obj->fw_tdls_11ax_capability = is_fw_tdls_11ax_capable;
 }
 
+void ucfg_update_fw_tdls_6g_capability(struct wlan_objmgr_psoc *psoc,
+				       bool is_fw_tdls_6g_capable)
+{
+	struct tdls_soc_priv_obj *soc_obj;
+
+	soc_obj = wlan_objmgr_psoc_get_comp_private_obj(psoc,
+							WLAN_UMAC_COMP_TDLS);
+	if (!soc_obj) {
+		tdls_err("Failed to get tdls psoc component");
+		return;
+	}
+
+	soc_obj->fw_tdls_6g_capability = is_fw_tdls_6g_capable;
+}
+
 bool  ucfg_tdls_is_fw_11ax_capable(struct wlan_objmgr_psoc *psoc)
 {
 	struct tdls_soc_priv_obj *soc_obj;
@@ -347,6 +396,21 @@ bool  ucfg_tdls_is_fw_11ax_capable(struct wlan_objmgr_psoc *psoc)
 	tdls_debug("FW 11AX capability %d", soc_obj->fw_tdls_11ax_capability);
 
 	return soc_obj->fw_tdls_11ax_capability;
+}
+
+bool  ucfg_tdls_is_fw_6g_capable(struct wlan_objmgr_psoc *psoc)
+{
+	struct tdls_soc_priv_obj *soc_obj;
+
+	soc_obj = wlan_objmgr_psoc_get_comp_private_obj(psoc,
+							WLAN_UMAC_COMP_TDLS);
+	if (!soc_obj) {
+		tdls_err("Failed to get tdls psoc component");
+		return false;
+	}
+	tdls_debug("FW 6g capability %d", soc_obj->fw_tdls_6g_capability);
+
+	return soc_obj->fw_tdls_6g_capability;
 }
 #endif
 

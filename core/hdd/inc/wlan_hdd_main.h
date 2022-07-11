@@ -1592,19 +1592,6 @@ struct hdd_adapter {
 	qdf_work_t netdev_features_update_work;
 	enum hdd_work_status netdev_features_update_work_status;
 	qdf_atomic_t net_dev_hold_ref_count[NET_DEV_HOLD_ID_MAX];
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
-	/* Flag to indicate whether it is a pre cac adapter or not */
-	bool is_pre_cac_adapter;
-	/*
-	 * The pre cac channel frequency is saved here and will be used when
-	 * the SAP's channel needs to be moved from the existing 2.4GHz channel.
-	 */
-	uint32_t pre_cac_freq;
-#endif
 	bool delete_in_progress;
 	bool is_virtual_iface;
 #ifdef WLAN_FEATURE_BIG_DATA_STATS
@@ -2237,13 +2224,6 @@ struct hdd_context {
 
 	/* the radio index assigned by cnss_logger */
 	int radio_index;
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
-	qdf_work_t sap_pre_cac_work;
-#endif
 	bool hbw_requested;
 	bool pm_qos_request;
 	enum RX_OFFLOAD ol_enable;
@@ -2253,6 +2233,7 @@ struct hdd_context {
 	/* Present state of driver cds modules */
 	enum driver_modules_status driver_status;
 	struct qdf_delayed_work psoc_idle_timeout_work;
+	struct notifier_block pm_notifier;
 	bool rps;
 	bool dynamic_rps;
 	bool enable_rxthread;

@@ -12,3 +12,6 @@ CONFIG_WLAN_FEATURE_LINK_LAYER_STATS := y
 
 # Enable Thermal throttle
 CONFIG_FW_THERMAL_THROTTLE := y
+
+# Enable AUTO specific regdoamin table
+CONFIG_WLAN_REG_AUTO := y

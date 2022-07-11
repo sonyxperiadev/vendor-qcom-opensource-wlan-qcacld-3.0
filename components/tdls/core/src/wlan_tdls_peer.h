@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -123,6 +124,32 @@ struct tdls_peer *tdls_is_progress(struct tdls_vdev_priv_obj *vdev_obj,
 				   const uint8_t *macaddr, uint8_t skip_self);
 
 /**
+ * tdls_get_offchan_freq() - Get preffered offchannel frequency
+ * @vdev: Pointer to vdev
+ * @soc_obj: TDLS SOC object
+ *
+ * This function gets preffered offchannel frequency.
+ *
+ * Return: Preferred offchannel frequency
+ */
+qdf_freq_t tdls_get_offchan_freq(struct wlan_objmgr_vdev *vdev,
+				 struct tdls_soc_priv_obj *soc_obj);
+
+/**
+ * tdls_get_offchan_freq() - Get preffered offchannel bandwidth on basis of
+ *                           frequency
+ * @soc_obj: TDLS SOC object
+ * @off_chan_freq: Offchannel frequency
+ *
+ *
+ * This function gets preffered offchannel bandwidth on basis of frequency.
+ *
+ * Return: Preferred offchannel bw
+ */
+uint32_t tdls_get_offchan_bw(struct tdls_soc_priv_obj *soc_obj,
+			     qdf_freq_t off_chan_freq);
+
+/**
  * tdls_extract_peer_state_param() - extract peer update params from TDL peer
  * @peer_param: output peer update params
  * @peer: TDLS peer
@@ -200,7 +227,7 @@ QDF_STATUS tdls_set_callback(struct tdls_peer *peer,
 /**
  * tdls_set_extctrl_param() - set external control parameter on TDLS peer
  * @peer: TDLS peer
- * @chan: channel
+ * @ch_freq: channel frequency
  * @max_latency: maximum latency
  * @op_class: operation class
  * @min_bandwidth: minimal bandwidth
@@ -209,7 +236,7 @@ QDF_STATUS tdls_set_callback(struct tdls_peer *peer,
  *
  * Return: QDF_STATUS_SUCCESS if success; other values if failed
  */
-QDF_STATUS tdls_set_extctrl_param(struct tdls_peer *peer, uint32_t chan,
+QDF_STATUS tdls_set_extctrl_param(struct tdls_peer *peer, qdf_freq_t ch_freq,
 				  uint32_t max_latency, uint32_t op_class,
 				  uint32_t min_bandwidth);
 

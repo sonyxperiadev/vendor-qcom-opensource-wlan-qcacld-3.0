@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -652,7 +653,8 @@ QDF_STATUS ol_txrx_ipa_setup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 			     bool is_rm_enabled, uint32_t *p_tx_pipe_handle,
 			     uint32_t *p_rx_pipe_handle, bool is_smmu_enabled,
 			     qdf_ipa_sys_connect_params_t *sys_in,
-			     bool over_gsi)
+			     bool over_gsi,
+			     qdf_ipa_wdi_hdl_t hdl)
 {
 	struct ol_txrx_soc_t *soc = cdp_soc_t_to_ol_txrx_soc_t(soc_hdl);
 	ol_txrx_pdev_handle pdev = ol_txrx_get_pdev_from_pdev_id(soc, pdev_id);
@@ -789,7 +791,8 @@ QDF_STATUS ol_txrx_ipa_setup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
  */
 QDF_STATUS ol_txrx_ipa_cleanup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 			       uint32_t tx_pipe_handle,
-			       uint32_t rx_pipe_handle)
+			       uint32_t rx_pipe_handle,
+			       qdf_ipa_wdi_hdl_t hdl)
 {
 	int ret;
 	struct ol_txrx_ipa_resources *ipa_res;
@@ -823,7 +826,7 @@ QDF_STATUS ol_txrx_ipa_cleanup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 
 	QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_DEBUG,
 		  "%s: Disconnect IPA pipe", __func__);
-	ret = qdf_ipa_wdi_disconn_pipes();
+	ret = qdf_ipa_wdi_disconn_pipes(hdl);
 	if (ret) {
 		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
 			  "ipa_wdi_disconn_pipes failed: ret=%d", ret);
@@ -847,7 +850,8 @@ QDF_STATUS ol_txrx_ipa_cleanup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 QDF_STATUS ol_txrx_ipa_setup_iface(char *ifname, uint8_t *mac_addr,
 				   qdf_ipa_client_type_t prod_client,
 				   qdf_ipa_client_type_t cons_client,
-				   uint8_t session_id, bool is_ipv6_enabled)
+				   uint8_t session_id, bool is_ipv6_enabled,
+				   qdf_ipa_wdi_hdl_t hdl)
 {
 	qdf_ipa_wdi_reg_intf_in_params_t in;
 	qdf_ipa_wdi_hdr_info_t hdr_info;
@@ -909,12 +913,13 @@ QDF_STATUS ol_txrx_ipa_setup_iface(char *ifname, uint8_t *mac_addr,
  *
  * Return: QDF_STATUS
  */
-QDF_STATUS ol_txrx_ipa_cleanup_iface(char *ifname, bool is_ipv6_enabled)
+QDF_STATUS ol_txrx_ipa_cleanup_iface(char *ifname, bool is_ipv6_enabled,
+				     qdf_ipa_wdi_hdl_t hdl)
 {
 	int ret;
 
 	/* unregister the interface with IPA */
-	ret = qdf_ipa_wdi_dereg_intf(ifname);
+	ret = qdf_ipa_wdi_dereg_intf(ifname, hdl);
 	if (ret) {
 		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_DEBUG,
 			  "%s: ipa_wdi_dereg_intf failed: devname=%s, ret=%d",
@@ -925,7 +930,8 @@ QDF_STATUS ol_txrx_ipa_cleanup_iface(char *ifname, bool is_ipv6_enabled)
 	return QDF_STATUS_SUCCESS;
 }
 
-QDF_STATUS ol_txrx_ipa_enable_pipes(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
+QDF_STATUS ol_txrx_ipa_enable_pipes(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+				    qdf_ipa_wdi_hdl_t hdl)
 {
 	struct ol_txrx_soc_t *soc = cdp_soc_t_to_ol_txrx_soc_t(soc_hdl);
 	ol_txrx_pdev_handle pdev = ol_txrx_get_pdev_from_pdev_id(soc, pdev_id);
@@ -947,7 +953,7 @@ QDF_STATUS ol_txrx_ipa_enable_pipes(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 	/* ACTIVATE TX PIPE */
 	QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_DEBUG,
 		  "%s: Enable IPA pipes", __func__);
-	ret = qdf_ipa_wdi_enable_pipes();
+	ret = qdf_ipa_wdi_enable_pipes(hdl);
 	if (ret) {
 		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
 			  "%s: ipa_wdi_enable_pipes failed: ret=%d",
@@ -965,7 +971,8 @@ QDF_STATUS ol_txrx_ipa_enable_pipes(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 	return QDF_STATUS_SUCCESS;
 }
 
-QDF_STATUS ol_txrx_ipa_disable_pipes(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
+QDF_STATUS ol_txrx_ipa_disable_pipes(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+				     qdf_ipa_wdi_hdl_t hdl)
 {
 	struct ol_txrx_soc_t *soc = cdp_soc_t_to_ol_txrx_soc_t(soc_hdl);
 	ol_txrx_pdev_handle pdev = ol_txrx_get_pdev_from_pdev_id(soc, pdev_id);
@@ -978,7 +985,7 @@ QDF_STATUS ol_txrx_ipa_disable_pipes(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 
 	QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_DEBUG,
 		  "%s: Disable IPA pipes", __func__);
-	ret = qdf_ipa_wdi_disable_pipes();
+	ret = qdf_ipa_wdi_disable_pipes(hdl);
 	if (ret) {
 		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
 			  "%s: ipa_wdi_disable_pipes failed: ret=%d",
@@ -1002,7 +1009,8 @@ QDF_STATUS ol_txrx_ipa_disable_pipes(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
  * Return: QDF_STATUS
  */
 QDF_STATUS ol_txrx_ipa_set_perf_level(int client,
-				      uint32_t max_supported_bw_mbps)
+				      uint32_t max_supported_bw_mbps,
+				      qdf_ipa_wdi_hdl_t hdl)
 {
 	qdf_ipa_wdi_perf_profile_t profile;
 	int result;
@@ -1010,7 +1018,7 @@ QDF_STATUS ol_txrx_ipa_set_perf_level(int client,
 	QDF_IPA_WDI_PERF_PROFILE_CLIENT(&profile) = client;
 	QDF_IPA_WDI_PERF_PROFILE_MAX_SUPPORTED_BW_MBPS(&profile) =
 		max_supported_bw_mbps;
-	result = qdf_ipa_wdi_set_perf_profile(&profile);
+	result = qdf_ipa_wdi_set_perf_profile(hdl, &profile);
 
 	if (result) {
 		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,

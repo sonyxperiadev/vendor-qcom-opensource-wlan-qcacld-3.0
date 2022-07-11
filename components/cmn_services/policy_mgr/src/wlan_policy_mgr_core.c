@@ -2161,18 +2161,8 @@ void pm_dbs_opportunistic_timer_handler(void *data)
 				reason, POLICY_MGR_DEF_REQ_ID);
 }
 
-/**
- * policy_mgr_get_connection_for_vdev_id() - provides the
- * perticular connection with the requested vdev id
- * @vdev_id: vdev id of the connection
- *
- * This function provides the specific connection with the
- * requested vdev id
- *
- * Return: index in the connection table
- */
-static uint32_t policy_mgr_get_connection_for_vdev_id(
-		struct wlan_objmgr_psoc *psoc, uint32_t vdev_id)
+uint32_t policy_mgr_get_connection_for_vdev_id(struct wlan_objmgr_psoc *psoc,
+					       uint32_t vdev_id)
 {
 	uint32_t conn_index = 0;
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
@@ -3124,6 +3114,27 @@ policy_mgr_add_24g_to_pcl(uint32_t *pcl_freqs, uint8_t *pcl_weights,
 			 chlist_24g_len, num_to_add, *index);
 }
 
+static bool
+policy_mgr_2ghz_connection_present(struct policy_mgr_psoc_priv_obj *pm_ctx)
+{
+	bool is_2ghz_present = false;
+	uint32_t conn_index;
+
+	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
+	for (conn_index = 0; conn_index < MAX_NUMBER_OF_CONC_CONNECTIONS;
+		conn_index++) {
+		if (pm_conc_connection_list[conn_index].in_use &&
+		    (WLAN_REG_IS_24GHZ_CH_FREQ(
+				pm_conc_connection_list[conn_index].freq))) {
+			is_2ghz_present = true;
+			break;
+		}
+	}
+	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+
+	return is_2ghz_present;
+}
+
 /**
  * policy_mgr_get_channel_list() - provides the channel list
  * suggestion for new connection
@@ -3738,7 +3749,7 @@ QDF_STATUS policy_mgr_get_channel_list(struct wlan_objmgr_psoc *psoc,
 				  false, false);
 		status = QDF_STATUS_SUCCESS;
 		break;
-	case PM_SCC_ON_5G_LOW_5G_LOW:
+	case PM_SCC_ON_5G_LOW_5G_LOW_PLUS_SHARED_2G:
 		add_sbs_chlist_to_pcl(psoc,  pcl_channels,
 				      pcl_weights, pcl_sz,
 				      len, skip_dfs_channel,
@@ -3746,8 +3757,20 @@ QDF_STATUS policy_mgr_get_channel_list(struct wlan_objmgr_psoc *psoc,
 				      channel_list_5, chan_index_5,
 				      channel_list_6, chan_index_6,
 				      POLICY_MGR_PCL_ORDER_SCC_5G_LOW_5G_LOW);
+		/*
+		 * If no 2.4 GHZ connetcion is present and If 2.4 GHZ is shared
+		 * with 5 GHz low freq then 2.4 GHz can be added as well
+		 */
+		if (!policy_mgr_2ghz_connection_present(pm_ctx) &&
+		    policy_mgr_sbs_24_shared_with_low_5(pm_ctx))
+			add_chlist_to_pcl(pm_ctx->pdev,
+					  pcl_channels, pcl_weights, pcl_sz,
+					  len, WEIGHT_OF_GROUP3_PCL_CHANNELS,
+					  channel_list_24, chan_index_24,
+					  false, false);
+		status = QDF_STATUS_SUCCESS;
 		break;
-	case PM_SCC_ON_5G_HIGH_5G_HIGH:
+	case PM_SCC_ON_5G_HIGH_5G_HIGH_PLUS_SHARED_2G:
 		add_sbs_chlist_to_pcl(psoc,  pcl_channels,
 				      pcl_weights, pcl_sz,
 				      len, skip_dfs_channel,
@@ -3755,6 +3778,18 @@ QDF_STATUS policy_mgr_get_channel_list(struct wlan_objmgr_psoc *psoc,
 				      channel_list_5, chan_index_5,
 				      channel_list_6, chan_index_6,
 				      POLICY_MGR_PCL_ORDER_SCC_5G_HIGH_5G_HIGH);
+		/*
+		 * If no 2.4 GHZ connetcion is present and if 2.4 GHZ is shared
+		 * with 5 GHz High freq then 2.4 GHz can be added as well
+		 */
+		if (!policy_mgr_2ghz_connection_present(pm_ctx) &&
+		    policy_mgr_sbs_24_shared_with_high_5(pm_ctx))
+			add_chlist_to_pcl(pm_ctx->pdev,
+					  pcl_channels, pcl_weights, pcl_sz,
+					  len, WEIGHT_OF_GROUP3_PCL_CHANNELS,
+					  channel_list_24, chan_index_24,
+					  false, false);
+		status = QDF_STATUS_SUCCESS;
 		break;
 	default:
 		policy_mgr_err("unknown pcl value %d", pcl);
@@ -4371,6 +4406,7 @@ void policy_mgr_check_scc_sbs_channel(struct wlan_objmgr_psoc *psoc,
 	bool sbs_mlo_present = false;
 	bool allow_6ghz = true, sta_sap_scc_on_indoor_channel_allowed;
 	uint8_t sta_count;
+	qdf_freq_t user_config_freq;
 
 	pm_ctx = policy_mgr_get_context(psoc);
 	if (!pm_ctx) {
@@ -4431,20 +4467,24 @@ void policy_mgr_check_scc_sbs_channel(struct wlan_objmgr_psoc *psoc,
 		     WLAN_REG_IS_24GHZ_CH_FREQ(sap_ch_freq)))) {
 			status = policy_mgr_get_sap_mandatory_channel(
 							psoc, sap_ch_freq,
-							intf_ch_freq);
+							intf_ch_freq, vdev_id);
 			if (QDF_IS_STATUS_SUCCESS(status))
 				return;
 
 			policy_mgr_err("No mandatory channels");
 		}
 
+		user_config_freq =
+			policy_mgr_get_user_config_sap_freq(psoc, vdev_id);
+
 		if (WLAN_REG_IS_24GHZ_CH_FREQ(sap_ch_freq) &&
-		    !WLAN_REG_IS_24GHZ_CH_FREQ(pm_ctx->user_config_sap_ch_freq) &&
+		    user_config_freq &&
+		    !WLAN_REG_IS_24GHZ_CH_FREQ(user_config_freq) &&
 		    (wlan_reg_get_channel_state_for_freq(pm_ctx->pdev,
 							 *intf_ch_freq) == CHANNEL_STATE_ENABLE)) {
 			status = policy_mgr_get_sap_mandatory_channel(
 							psoc, sap_ch_freq,
-							intf_ch_freq);
+							intf_ch_freq, vdev_id);
 			if (QDF_IS_STATUS_SUCCESS(status))
 				return;
 		}
@@ -4481,7 +4521,8 @@ void policy_mgr_check_scc_sbs_channel(struct wlan_objmgr_psoc *psoc,
 		/* Same band with Fav channel if STA is present */
 		status = policy_mgr_get_sap_mandatory_channel(psoc,
 							      sap_ch_freq,
-							      intf_ch_freq);
+							      intf_ch_freq,
+							      vdev_id);
 		if (QDF_IS_STATUS_SUCCESS(status))
 			return;
 
@@ -4618,9 +4659,9 @@ static void policy_mgr_nss_update_cb(struct wlan_objmgr_psoc *psoc,
 		    reason == POLICY_MGR_UPDATE_REASON_LFR2_ROAM) {
 			sme_debug("Continue connect/reassoc on vdev %d request_id %x reason %d",
 				  vdev_id, request_id, reason);
-			wlan_cm_hw_mode_change_resp(pm_ctx->pdev, vdev_id,
-						    request_id,
-						    QDF_STATUS_SUCCESS);
+			wlan_connect_hw_mode_change_resp(pm_ctx->pdev, vdev_id,
+							 request_id,
+							 QDF_STATUS_SUCCESS);
 		}
 		policy_mgr_debug("No action needed right now");
 		ret = policy_mgr_set_opportunistic_update(psoc);

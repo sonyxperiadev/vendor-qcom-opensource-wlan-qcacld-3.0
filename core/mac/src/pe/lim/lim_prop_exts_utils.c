@@ -406,6 +406,36 @@ static void lim_extract_eht_op(struct pe_session *session,
 }
 #endif
 
+#ifdef WLAN_FEATURE_11BE_MLO
+void lim_objmgr_update_emlsr_caps(struct wlan_objmgr_psoc *psoc,
+				  uint8_t vdev_id, tpSirAssocRsp assoc_rsp)
+{
+	struct wlan_objmgr_vdev *vdev;
+	bool ap_emlsr_cap = false;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_LEGACY_MAC_ID);
+	if (!vdev) {
+		pe_err("vdev not found for id: %d", vdev_id);
+		return;
+	}
+
+	ap_emlsr_cap =
+		assoc_rsp->mlo_ie.mlo_ie.eml_capabilities_info.emlsr_support;
+	if (!ap_emlsr_cap) {
+		pe_debug("eMLSR cap not present in assoc rsp");
+		wlan_vdev_obj_lock(vdev);
+		wlan_vdev_mlme_cap_clear(vdev, WLAN_VDEV_C_EMLSR_CAP);
+		wlan_vdev_obj_unlock(vdev);
+	} else {
+		wlan_vdev_obj_lock(vdev);
+		wlan_vdev_mlme_cap_set(vdev, WLAN_VDEV_C_EMLSR_CAP);
+		wlan_vdev_obj_unlock(vdev);
+	}
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
+}
+#endif
+
 void lim_objmgr_update_vdev_nss(struct wlan_objmgr_psoc *psoc,
 				uint8_t vdev_id, uint8_t nss)
 {

@@ -392,7 +392,7 @@ QDF_STATUS ucfg_cm_check_ft_status(struct wlan_objmgr_pdev *pdev,
 				   mlme_priv->connect_info.ft_info.ft_state);
 			break;
 		}
-		/* fallthrough */
+		fallthrough;
 	default:
 		mlme_debug("Unhandled state:%d",
 			   mlme_priv->connect_info.ft_info.ft_state);
@@ -486,4 +486,23 @@ ucfg_cm_roam_send_rt_stats_config(struct wlan_objmgr_pdev *pdev,
 
 	return cm_roam_send_rt_stats_config(psoc, vdev_id, param_value);
 }
+
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+QDF_STATUS
+ucfg_cm_roam_send_vendor_handoff_param_req(struct wlan_objmgr_psoc *psoc,
+					   uint8_t vdev_id,
+					   uint32_t param_id,
+					   void *vendor_handoff_context)
+{
+	return cm_roam_send_vendor_handoff_param_req(psoc, vdev_id, param_id,
+						     vendor_handoff_context);
+}
+
+bool
+ucfg_cm_roam_is_vendor_handoff_control_enable(struct wlan_objmgr_psoc *psoc)
+{
+	return cm_roam_is_vendor_handoff_control_enable(psoc);
+}
+
+#endif
 #endif /* WLAN_FEATURE_ROAM_OFFLOAD */

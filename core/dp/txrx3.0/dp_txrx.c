@@ -338,6 +338,10 @@ static struct dp_prealloc_context g_dp_context_allocs[] = {
 	{DP_FISA_RX_FT_TYPE, sizeof(struct dp_fisa_rx_sw_ft) * FISA_RX_FT_SIZE,
 	 false, true, NULL},
 #endif
+#ifdef WLAN_FEATURE_DP_MON_STATUS_RING_HISTORY
+	{DP_MON_STATUS_BUF_HIST_TYPE, sizeof(struct dp_mon_status_ring_history),
+	 false, false, NULL},
+#endif
 };
 
 static struct  dp_consistent_prealloc g_dp_consistent_allocs[] = {

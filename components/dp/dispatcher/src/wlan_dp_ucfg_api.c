@@ -1916,11 +1916,9 @@ void ucfg_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 		cb_obj->osif_dp_send_tcp_param_update_event;
 	dp_ctx->dp_ops.os_if_dp_nud_stats_info =
 		cb_obj->os_if_dp_nud_stats_info;
-	dp_ctx->dp_ops.osif_dp_process_sta_mic_error =
-		cb_obj->osif_dp_process_sta_mic_error;
-	dp_ctx->dp_ops.osif_dp_process_sap_mic_error =
-		cb_obj->osif_dp_process_sap_mic_error;
-}
+	dp_ctx->dp_ops.osif_dp_process_mic_error =
+		cb_obj->osif_dp_process_mic_error;
+	}
 
 void ucfg_dp_register_event_handler(struct wlan_objmgr_psoc *psoc,
 				    struct wlan_dp_psoc_nb_ops *cb_obj)

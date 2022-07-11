@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -29,7 +29,7 @@
 #include <wlan_connectivity_logging.h>
 #include "wlan_hdd_main.h"
 
-#ifdef WLAN_FEATURE_CONNECTIVITY_LOGGING
+#if defined(WLAN_FEATURE_CONNECTIVITY_LOGGING)
 
 #define FEATURE_CONNECTIVITY_LOGGING_EVENT                  \
 [QCA_NL80211_VENDOR_SUBCMD_DIAG_EVENT_INDEX] = {            \
@@ -66,6 +66,32 @@ void wlan_hdd_connectivity_event_connecting(struct hdd_context *hdd_ctx,
  */
 void wlan_hdd_connectivity_fail_event(struct wlan_objmgr_vdev *vdev,
 				      struct wlan_cm_connect_resp *rsp);
+#elif defined(CONNECTIVITY_DIAG_EVENT)
+/**
+ * wlan_hdd_connectivity_event_connecting() - Queue the connecting event to
+ * the logging queue
+ * @hdd_ctx: HDD context
+ * @req: Request
+ * @vdev_id: Vdev id
+ */
+void wlan_hdd_connectivity_event_connecting(struct hdd_context *hdd_ctx,
+					    struct cfg80211_connect_params *req,
+					    uint8_t vdev_id);
+
+/**
+ * wlan_hdd_connectivity_fail_event()- Connectivity queue logging event
+ * @vdev: VDEV object
+ * @rsp: Connection manager connect response
+ *
+ * Return: None
+ */
+void wlan_hdd_connectivity_fail_event(struct wlan_objmgr_vdev *vdev,
+				      struct wlan_cm_connect_resp *rsp);
+
+static inline
+void wlan_hdd_start_connectivity_logging(struct hdd_context *hdd_ctx)
+{}
+
 #else
 static inline
 void wlan_hdd_start_connectivity_logging(struct hdd_context *hdd_ctx)

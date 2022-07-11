@@ -337,6 +337,8 @@ struct policy_mgr_cfg {
  * @new_hw_mode_index: New HW mode from hw_mode table
  * @dual_mac_cfg: DBS configuration currenctly used by FW for
  *              scan & connections
+ * @radio_comb_num: radio combination number
+ * @radio_combinations: radio combination list
  * @hw_mode_change_in_progress: This is to track if HW mode
  *                            change is in progress
  * @enable_mcc_adaptive_scheduler: Enable MCC adaptive scheduler
@@ -349,7 +351,6 @@ struct policy_mgr_cfg {
  *                               & FW HW mode
  * @channel_switch_complete_evt: qdf event for channel switch completion check
  * @mode_change_cb: Mode change callback
- * @user_config_sap_ch_freq: SAP channel freq configured by user application
  * @cfg: Policy manager config data
  * @dynamic_mcc_adaptive_sched: disable/enable mcc adaptive scheduler feature
  * @dynamic_dfs_master_disabled: current state of dynamic dfs master
@@ -382,6 +383,8 @@ struct policy_mgr_psoc_priv_obj {
 	uint32_t old_hw_mode_index;
 	uint32_t new_hw_mode_index;
 	struct dual_mac_config dual_mac_cfg;
+	uint32_t radio_comb_num;
+	struct radio_combination radio_combinations[MAX_RADIO_COMBINATION];
 	uint32_t hw_mode_change_in_progress;
 	struct policy_mgr_user_cfg user_cfg;
 	uint32_t unsafe_channel_list[NUM_CHANNELS];
@@ -391,7 +394,6 @@ struct policy_mgr_psoc_priv_obj {
 	qdf_event_t opportunistic_update_done_evt;
 	qdf_event_t channel_switch_complete_evt;
 	send_mode_change_event_cb mode_change_cb;
-	uint32_t user_config_sap_ch_freq;
 	struct policy_mgr_cfg cfg;
 	uint32_t valid_ch_freq_list[NUM_CHANNELS];
 	uint32_t valid_ch_freq_list_count;
@@ -410,12 +412,14 @@ struct policy_mgr_psoc_priv_obj {
  * @mac_bw: Max bandwidth(wmi_channel_width enum type)
  * @mac_band_cap: supported Band bit map(WLAN_2G_CAPABILITY = 0x1,
  *                            WLAN_5G_CAPABILITY = 0x2)
+ * @support_6ghz_band: support 6 GHz band
  */
 struct policy_mgr_mac_ss_bw_info {
 	uint32_t mac_tx_stream;
 	uint32_t mac_rx_stream;
 	uint32_t mac_bw;
 	uint32_t mac_band_cap;
+	bool support_6ghz_band;
 };
 
 #ifdef WLAN_FEATURE_11BE_MLO
@@ -876,6 +880,38 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 				       uint32_t ext_flags);
 
 /**
+ * policy_mgr_can_2ghz_share_low_high_5ghz_sbs() - if SBS mode is dynamic where
+ * 2.4 GHZ can be shared by any of high 5 GHZ or low 5GHZ at a time.
+ * @pm_ctx: policy mgr psoc priv object
+ *
+ * Return: true is sbs is dynamic else false.
+ */
+bool policy_mgr_can_2ghz_share_low_high_5ghz_sbs(
+				struct policy_mgr_psoc_priv_obj *pm_ctx);
+
+/**
+ * policy_mgr_sbs_24_shared_with_high_5() - if 2.4 GHZ
+ * can be shared by high 5 GHZ
+ *
+ * @pm_ctx: policy mgr psoc priv object
+ *
+ * Return: true if 2.4 GHz is shared by high 5 GHZ
+ */
+bool
+policy_mgr_sbs_24_shared_with_high_5(struct policy_mgr_psoc_priv_obj *pm_ctx);
+
+/**
+ * policy_mgr_sbs_24_shared_with_low_5() - if 2.4 GHZ
+ * can be shared by low 5 GHZ
+ *
+ * @pm_ctx: policy mgr psoc priv object
+ *
+ * Return: true if 2.4 GHz is shared by low 5 GHZ
+ */
+bool
+policy_mgr_sbs_24_shared_with_low_5(struct policy_mgr_psoc_priv_obj *pm_ctx);
+
+/**
  * policy_mgr_2_freq_same_mac_in_sbs() - to check provided frequencies are
  * in sbs freq range or not
  *
@@ -889,4 +925,17 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
  */
 bool policy_mgr_2_freq_same_mac_in_sbs(struct policy_mgr_psoc_priv_obj *pm_ctx,
 				       qdf_freq_t freq_1, qdf_freq_t freq_2);
+
+/**
+ * policy_mgr_get_connection_for_vdev_id() - provides the
+ * particular connection with the requested vdev id
+ * @vdev_id: vdev id of the connection
+ *
+ * This function provides the specific connection with the
+ * requested vdev id
+ *
+ * Return: index in the connection table
+ */
+uint32_t policy_mgr_get_connection_for_vdev_id(struct wlan_objmgr_psoc *psoc,
+					       uint32_t vdev_id);
 #endif

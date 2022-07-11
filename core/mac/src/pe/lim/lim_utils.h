@@ -110,6 +110,11 @@
 #define MAX_WAIT_FOR_BCN_TX_COMPLETE 4000
 #define MAX_WAKELOCK_FOR_CSA         5000
 
+#ifdef WLAN_FEATURE_11BE
+#define MAX_NUM_PWR_LEVELS 16
+#else
+#define MAX_NUM_PWR_LEVELS 8
+#endif
 typedef union uPmfSaQueryTimerId {
 	struct {
 		uint8_t sessionId;
@@ -1476,11 +1481,12 @@ void lim_update_session_he_capable_chan_switch(struct mac_context *mac,
  * @session: pointer to PE session
  * @ie_start: pointer to start of IE buffer
  * @num_bytes: length of IE buffer
+ * @band: 2g or 5g band
  *
  * Return: None
  */
 void lim_set_he_caps(struct mac_context *mac, struct pe_session *session,
-		     uint8_t *ie_start, uint32_t num_bytes);
+		     uint8_t *ie_start, uint32_t num_bytes, uint8_t band);
 
 /**
  * lim_send_he_caps_ie() - gets HE capability and send to firmware via wma
@@ -1497,6 +1503,33 @@ QDF_STATUS lim_send_he_caps_ie(struct mac_context *mac_ctx,
 			       struct pe_session *session,
 			       enum QDF_OPMODE device_mode,
 			       uint8_t vdev_id);
+
+/**
+ * lim_populate_he_mcs_per_bw() - pouldate HE mcs set per BW (le 80, 160, 80+80)
+ * @mac_ctx: Global MAC context
+ * @self_rx: self rx mcs set
+ * @self_tx: self tx mcs set
+ * @peer_rx: peer rx mcs set
+ * @peer_tx: peer tx mcs set
+ * @nss: nss
+ * @cfg_rx_param: rx wni param to read
+ * @cfg_tx_param: tx wni param to read
+ *
+ * MCS values are interpreted as in IEEE 11ax-D1.4 spec onwards
+ * +-----------------------------------------------------+
+ * |  SS8  |  SS7  |  SS6  | SS5 | SS4 | SS3 | SS2 | SS1 |
+ * +-----------------------------------------------------+
+ * | 15-14 | 13-12 | 11-10 | 9-8 | 7-6 | 5-4 | 3-2 | 1-0 |
+ * +-----------------------------------------------------+
+ *
+ * Return: status of operation
+ */
+QDF_STATUS lim_populate_he_mcs_per_bw(struct mac_context *mac_ctx,
+				      uint16_t *supp_rx_mcs,
+				      uint16_t *supp_tx_mcs,
+				      uint16_t peer_rx, uint16_t peer_tx,
+				      uint8_t nss, uint16_t rx_mcs,
+				      uint16_t tx_mcs);
 
 /**
  * lim_populate_he_mcs_set() - function to populate HE mcs rate set
@@ -1680,7 +1713,8 @@ void lim_update_session_he_capable_chan_switch(struct mac_context *mac,
 }
 
 static inline void lim_set_he_caps(struct mac_context *mac, struct pe_session *session,
-				   uint8_t *ie_start, uint32_t num_bytes)
+				   uint8_t *ie_start, uint32_t num_bytes,
+				   uint8_t band)
 {
 }
 
@@ -1952,11 +1986,12 @@ void lim_log_eht_cap(struct mac_context *mac, tDot11fIEeht_cap *eht_cap);
  * @session: pointer to PE session
  * @ie_start: pointer to start of IE buffer
  * @num_bytes: length of IE buffer
+ * @band: 2g or 5g band
  *
  * Return: None
  */
 void lim_set_eht_caps(struct mac_context *mac, struct pe_session *session,
-		      uint8_t *ie_start, uint32_t num_bytes);
+		      uint8_t *ie_start, uint32_t num_bytes, uint8_t band);
 
 /**
  * lim_send_eht_caps_ie() - gets EHT capability and send to firmware via wma
@@ -2155,7 +2190,7 @@ lim_log_eht_cap(struct mac_context *mac, tDot11fIEeht_cap *eht_cap)
 
 static inline void
 lim_set_eht_caps(struct mac_context *mac, struct pe_session *session,
-		 uint8_t *ie_start, uint32_t num_bytes)
+		 uint8_t *ie_start, uint32_t num_bytes, uint8_t band)
 {
 }
 
@@ -2200,45 +2235,12 @@ lim_update_stads_eht_bw_320mhz(struct pe_session *session,
 void lim_intersect_ap_emlsr_caps(struct pe_session *session,
 				 struct bss_params *add_bss,
 				 tpSirAssocRsp assoc_rsp);
-
-/**
- * lim_update_stads_emlsr_caps() - Copy eMLSR capability into STA DPH hash table
- *                                 entry
- * @mac_ctx: pointer to mac context
- * @sta_ds: pointer to sta dph hash table entry
- * @assoc_rsp: pointer to assoc response
- *
- * Return: None
- */
-void lim_update_stads_emlsr_caps(struct mac_context *mac_ctx,
-				 tpDphHashNode sta_ds, tpSirAssocRsp assoc_rsp);
-
-/**
- * lim_is_mlo_in_emlsr_mode() - Check if MLO is in eMLSR mode.
- * @mac_ctx: pointer to mac context
- * @vdev_id: vdev ID
- *
- * Return: True if both STA and peer support eMLSR capability, else False
- */
-bool lim_is_mlo_in_emlsr_mode(struct mac_context *mac_ctx, uint8_t vdev_id);
 #else
 static inline void
 lim_intersect_ap_emlsr_caps(struct pe_session *session,
 			    struct bss_params *add_bss,
 			    tpSirAssocRsp assoc_rsp)
 {
-}
-
-static inline
-void lim_update_stads_emlsr_caps(struct mac_context *mac_ctx,
-				 tpDphHashNode sta_ds, tpSirAssocRsp assoc_rsp)
-{
-}
-
-static inline
-bool lim_is_mlo_in_emlsr_mode(struct mac_context *mac_ctx, uint8_t vdev_id)
-{
-	return false;
 }
 #endif /* WLAN_FEATURE_11BE_MLO */
 

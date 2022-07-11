@@ -201,6 +201,7 @@ enum operating_extension_identifier {
 #ifdef WLAN_FEATURE_11BE_MLO
 struct sir_multi_link_ie {
 	uint8_t num_of_mlo_ie;
+	bool mlo_ie_present;
 	struct wlan_mlo_ie mlo_ie;
 };
 #endif

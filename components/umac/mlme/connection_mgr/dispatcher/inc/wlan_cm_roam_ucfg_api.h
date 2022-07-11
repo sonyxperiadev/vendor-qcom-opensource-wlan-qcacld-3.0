@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -335,5 +335,38 @@ ucfg_cm_roam_send_rt_stats_config(struct wlan_objmgr_pdev *pdev,
 	return QDF_STATUS_SUCCESS;
 }
 #endif /* WLAN_FEATURE_ROAM_OFFLOAD */
+
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+/**
+ * ucfg_cm_roam_send_vendor_handoff_param_req() - send vendor handoff params
+ * command request to FW
+ * @pdev: Pointer to pdev
+ * @vdev_id: vdev id
+ * @param_id: Vendor Control Param ID from
+ * enum WMI_ROAM_GET_VENDOR_CONTROL_PARAM_ID
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+ucfg_cm_roam_send_vendor_handoff_param_req(struct wlan_objmgr_psoc *psoc,
+					   uint8_t vdev_id, uint32_t param_id,
+					   void *vendor_handoff_context);
+
+/**
+ * ucfg_cm_roam_is_vendor_handoff_control_enable() - check whether vendor
+ * handoff control feature is enable or not in driver
+ * @psoc: psoc pointer
+ *
+ * Return: true if feature supports
+ */
+bool
+ucfg_cm_roam_is_vendor_handoff_control_enable(struct wlan_objmgr_psoc *psoc);
+#else
+static inline bool
+ucfg_cm_roam_is_vendor_handoff_control_enable(struct wlan_objmgr_psoc *psoc)
+{
+	return false;
+}
+#endif
 
 #endif /* _WLAN_CM_ROAM_UCFG_API_H_ */

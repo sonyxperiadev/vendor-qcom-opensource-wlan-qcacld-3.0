@@ -37,6 +37,8 @@
  * @WLAN_AUTH_RESP: Authentication response frame
  * @WLAN_ASSOC_REQ: Association request frame
  * @WLAN_ASSOC_RESP: Association response frame
+ * @WLAN_REASSOC_REQ: Reassociation request frame
+ * @WLAN_REASSOC_RSP: Reassociation response frame
  * @WLAN_DEAUTH_RX: Deauthentication frame received
  * @WLAN_DEAUTH_TX: Deauthentication frame sent
  * @WLAN_DISASSOC_RX: Disassociation frame received
@@ -78,6 +80,8 @@ enum wlan_main_tag {
 	WLAN_AUTH_RESP,
 	WLAN_ASSOC_REQ,
 	WLAN_ASSOC_RSP,
+	WLAN_REASSOC_REQ,
+	WLAN_REASSOC_RSP,
 	WLAN_DEAUTH_RX,
 	WLAN_DEAUTH_TX,
 	WLAN_DISASSOC_RX,
@@ -115,6 +119,363 @@ enum wlan_main_tag {
 };
 
 /**
+ * enum qca_conn_diag_log_event_type  - Diag Event subtype used in logging
+ * @WLAN_CONN_DIAG_CONNECTING_EVENT: Connecting
+ * @WLAN_CONN_DIAG_CONNECT_FAIL_EVENT: Connection failure
+ * @WLAN_CONN_DIAG_AUTH_REQ_EVENT: Authentication request frame
+ * @WLAN_CONN_DIAG_AUTH_RESP_EVENT: Authentication response frame
+ * @WLAN_CONN_DIAG_ASSOC_REQ_EVENT: Association request frame
+ * @WLAN_CONN_DIAG_ASSOC_RESP_EVENT: Association response frame
+ * @WLAN_CONN_DIAG_REASSOC_REQ_EVENT: Reassociation request frame
+ * @WLAN_CONN_DIAG_REASSOC_RESP_EVENT: Reassociation response frame
+ * @WLAN_CONN_DIAG_DEAUTH_RX_EVENT: Deauthentication frame received
+ * @WLAN_CONN_DIAG_DEAUTH_TX_EVENT: Deauthentication frame sent
+ * @WLAN_CONN_DIAG_DISASSOC_RX_EVENT: Disassociation frame received
+ * @WLAN_CONN_DIAG_DISASSOC_TX_EVENT: Disassociation frame sent
+ * @WLAN_CONN_DIAG_BMISS_EVENT: Disconnection due to beacon miss
+ * @WLAN_CONN_DIAG_ROAM_SCAN_START_EVENT: ROAM scan start
+ * @WLAN_CONN_DIAG_ROAM_SCAN_DONE_EVENT: Roam scan done
+ * @WLAN_CONN_DIAG_ROAM_SCORE_CUR_AP_EVENT: Roam score current AP
+ * @WLAN_CONN_DIAG_ROAM_SCORE_CAND_AP_EVENT: Roam Score Candidate AP
+ * @WLAN_CONN_DIAG_ROAM_RESULT_EVENT: Roam Result
+ * @WLAN_CONN_DIAG_ROAM_CANCEL_EVENT: Roam Cancel
+ * @WLAN_CONN_DIAG_BTM_REQ_EVENT:  BTM request
+ * @WLAN_CONN_DIAG_BTM_QUERY_EVENT: BTM Query frame
+ * @WLAN_CONN_DIAG_BTM_RESP_EVENT: BTM response frame
+ * @WLAN_CONN_DIAG_BTM_REQ_CAND_EVENT: BTM request candidate info
+ * @WLAN_CONN_DIAG_BTM_WTC_EVENT: ROAM WTC trigger logs
+ * @WLAN_CONN_DIAG_DHCP_DISC_EVENT: DHCP discover frame
+ * @WLAN_CONN_DIAG_DHCP_OFFER_EVENT: DHCP offer frame
+ * @WLAN_CONN_DIAG_DHCP_REQUEST_EVENT: DHCP Request frame
+ * @WLAN_CONN_DIAG_DHCP_ACK_EVENT: DHCP ACK
+ * @WLAN_CONN_DIAG_DHCP_NACK_EVENT: DHCP NACK
+ * @WLAN_CONN_DIAG_EAPOL_M1_EVENT: EAPOL M1
+ * @WLAN_CONN_DIAG_EAPOL_M2_EVENT: EAPOL M2
+ * @WLAN_CONN_DIAG_EAPOL_M3_EVENT: EAPOL M3
+ * @WLAN_CONN_DIAG_EAPOL_M4_EVENT: EAPOL M4
+ * @WLAN_CONN_DIAG_GTK_M1_EVENT: GTK rekey M1 frame
+ * @WLAN_CONN_DIAG_GTK_M2_EVENT: GTK Rekey M2 frame
+ * @WLAN_CONN_DIAG_EAP_REQ_EVENT: EAP request frame
+ * @WLAN_CONN_DIAG_EAP_RESP_EVENT: EAP response frame
+ * @WLAN_CONN_DIAG_EAP_SUCC_EVENT: EAP success
+ * @WLAN_CONN_DIAG_EAP_FAIL_EVENT: EAP failure
+ * @WLAN_CONN_DIAG_CUSTOM_EVENT: Additional WLAN logs
+ * @WLAN_CONN_DIAG_MAX: MAX tag
+ */
+enum qca_conn_diag_log_event_type {
+	WLAN_CONN_DIAG_CONNECTING_EVENT = 0,
+	WLAN_CONN_DIAG_CONNECT_FAIL_EVENT,
+	WLAN_CONN_DIAG_AUTH_REQ_EVENT,
+	WLAN_CONN_DIAG_AUTH_RESP_EVENT,
+	WLAN_CONN_DIAG_ASSOC_REQ_EVENT,
+	WLAN_CONN_DIAG_ASSOC_RESP_EVENT,
+	WLAN_CONN_DIAG_REASSOC_REQ_EVENT,
+	WLAN_CONN_DIAG_REASSOC_RESP_EVENT,
+	WLAN_CONN_DIAG_DEAUTH_RX_EVENT,
+	WLAN_CONN_DIAG_DEAUTH_TX_EVENT,
+	WLAN_CONN_DIAG_DISASSOC_RX_EVENT,
+	WLAN_CONN_DIAG_DISASSOC_TX_EVENT,
+	WLAN_CONN_DIAG_BMISS_EVENT,
+	WLAN_CONN_DIAG_ROAM_SCAN_START_EVENT,
+	WLAN_CONN_DIAG_ROAM_SCAN_DONE_EVENT,
+	WLAN_CONN_DIAG_ROAM_SCORE_CUR_AP_EVENT,
+	WLAN_CONN_DIAG_ROAM_SCORE_CAND_AP_EVENT,
+	WLAN_CONN_DIAG_ROAM_RESULT_EVENT,
+	WLAN_CONN_DIAG_ROAM_CANCEL_EVENT,
+	WLAN_CONN_DIAG_BTM_REQ_EVENT,
+	WLAN_CONN_DIAG_BTM_QUERY_EVENT,
+	WLAN_CONN_DIAG_BTM_RESP_EVENT,
+	WLAN_CONN_DIAG_BTM_REQ_CAND_EVENT,
+	WLAN_CONN_DIAG_BTM_WTC_EVENT,
+	WLAN_CONN_DIAG_DHCP_DISC_EVENT,
+	WLAN_CONN_DIAG_DHCP_OFFER_EVENT,
+	WLAN_CONN_DIAG_DHCP_REQUEST_EVENT,
+	WLAN_CONN_DIAG_DHCP_ACK_EVENT,
+	WLAN_CONN_DIAG_DHCP_NACK_EVENT,
+	WLAN_CONN_DIAG_EAPOL_M1_EVENT,
+	WLAN_CONN_DIAG_EAPOL_M2_EVENT,
+	WLAN_CONN_DIAG_EAPOL_M3_EVENT,
+	WLAN_CONN_DIAG_EAPOL_M4_EVENT,
+	WLAN_CONN_DIAG_GTK_M1_EVENT,
+	WLAN_CONN_DIAG_GTK_M2_EVENT,
+	WLAN_CONN_DIAG_EAP_REQ_EVENT,
+	WLAN_CONN_DIAG_EAP_RESP_EVENT,
+	WLAN_CONN_DIAG_EAP_SUCC_EVENT,
+	WLAN_CONN_DIAG_EAP_FAIL_EVENT,
+	WLAN_CONN_DIAG_CUSTOM_EVENT,
+	WLAN_CONN_DIAG_MAX
+};
+
+/**
+ * struct wlan_connectivity_log_diag_cmn - Structure for diag event
+ * @bssid: bssid
+ * @vdev_id: Vdev id
+ * @timestamp_us: Timestamp(time of the day) in microseconds
+ * @fw_timestamp: FW timestamp in microseconds
+ * @ktimes_us: Kernel Timestamp in microseconds
+ */
+struct wlan_connectivity_log_diag_cmn {
+	uint8_t bssid[6];
+	uint16_t vdev_id;
+	uint64_t timestamp_us;
+	uint64_t fw_timestamp;
+	uint64_t ktime_us;
+} qdf_packed;
+
+#define DIAG_ROAM_CAND_VERSION 1
+
+/**
+ * struct wlan_diag_roam_candidate_info  - Roam candidate information for
+ * logging
+ * @diag_cmn: Common diag info
+ * @version: Structure Version
+ * @is_current_ap: Is the entry candidate AP or connected AP
+ * @reserved: Reserved
+ * @idx: Entry index
+ * @cu_load: Channel utilization load of the AP in percentage
+ * @subtype: diag event subtype defined in enum qca_conn_diag_log_event_type
+ * @total_score: Total candidate AP score
+ * @freq: Candidate AP channel frequency in MHz
+ * @rssi: Candidate AP RSSI in dBm
+ * @etp: Estimated throughput value of the AP in Kbps
+ */
+struct wlan_diag_roam_candidate_info {
+	struct wlan_connectivity_log_diag_cmn diag_cmn;
+	uint8_t version;
+	uint8_t is_current_ap:1;
+	uint8_t reserved:7;
+	uint16_t idx;
+	uint16_t cu_load;
+	uint16_t subtype;
+	uint32_t total_score;
+	uint32_t freq;
+	int32_t rssi;
+	uint32_t etp;
+} qdf_packed;
+
+#define DIAG_SCAN_DONE_VERSION 1
+
+/**
+ * struct wlan_diag_roam_scan_done - Roam scan related information
+ * @diag_cmn: Common diag info
+ * @version: Structure Version
+ * @btcoex_active: Is there active bluetooth connection
+ * @reserved: Reserved field
+ * @cand_ap_count: Roam candidate AP count
+ * @num_scanned_freq: Number of scanned frequencies
+ * @scan_freq: Array of scanned frequencies value in MHz
+ */
+struct wlan_diag_roam_scan_done {
+	struct wlan_connectivity_log_diag_cmn diag_cmn;
+	uint8_t version;
+	uint8_t btcoex_active:1;
+	uint8_t reserved:7;
+	uint16_t cand_ap_count;
+	uint16_t num_scanned_freq;
+	uint32_t scan_freq[WLAN_MAX_LOGGING_FREQ];
+} qdf_packed;
+
+#define DIAG_ROAM_RESULT_VERSION 1
+
+/**
+ * struct wlan_diag_roam_result_info  - Roam result data
+ * @diag_cmn: Common diag info
+ * @version: Structure Version
+ * @is_roam_successful: True if roamed successfully or false if roaming failed
+ * @reserved: Reserved
+ * @roam_fail_reason: Roam failure reason code defined in enum
+ * wlan_roam_failure_reason_code
+ */
+struct wlan_diag_roam_result {
+	struct wlan_connectivity_log_diag_cmn diag_cmn;
+	uint8_t version;
+	uint8_t is_roam_successful:1;
+	uint8_t reserved:7;
+	uint16_t roam_fail_reason;
+} qdf_packed;
+
+#define DIAG_ROAM_SCAN_START_VERSION 1
+
+/**
+ * struct wlan_diag_roam_scan_start - Structure to store roam scan trigger
+ * related data.
+ * @diag_cmn: Common diag info
+ * @version: Structure Version
+ * @is_full_scan: True if the scan is Full scan. False if the roam scan is
+ * partial channel map scan
+ * @reserved: Reserved
+ * @cu:  Current connected channel load in percentage
+ * @trigger_reason: Roam trigger reason defined by enum roam_trigger_reason
+ * @trigger_sub_reason: Roam scan trigger sub reason indicating if
+ * periodic/inactivity scan timer initiated roam. Defined by enum
+ * roam_trigger_sub_reason
+ * @rssi: Connected AP RSSI in dBm
+ * @rssi_thresh: Roam scan trigger threshold in dBm
+ */
+struct wlan_diag_roam_scan_start {
+	struct wlan_connectivity_log_diag_cmn diag_cmn;
+	uint8_t version;
+	uint8_t is_full_scan:1;
+	uint8_t reserved:7;
+	uint16_t cu;
+	uint32_t trigger_reason;
+	uint32_t trigger_sub_reason;
+	int32_t rssi;
+	int32_t rssi_thresh;
+} qdf_packed;
+
+#define DIAG_BTM_CAND_VERSION 1
+
+/**
+ * struct wlan_diag_btm_cand_info  - BTM candidate information
+ * @diag_cmn: Common diag info
+ * @version: Structure Version
+ * @pad: Padded field
+ * @idx: Candidate index
+ * @preference: Candidate preference
+ */
+struct wlan_diag_btm_cand_info {
+	struct wlan_connectivity_log_diag_cmn diag_cmn;
+	uint8_t version;
+	uint8_t pad;
+	uint16_t idx;
+	uint32_t preference;
+} qdf_packed;
+
+#define DIAG_BTM_VERSION 1
+
+/**
+ * struct wlan_diag_btm_info - BTM frame related logging data
+ * @diag_cmn: Common diag info
+ * @version: Structure Version
+ * @reason: Query Reason field. Contains one of the values defined in IEEE
+ * Std 802.11‐2020 Table 9-198—Transition and Transition Query reasons
+ * @mode: BTM Request Mode field
+ * @sub_reason: WTC sub reason code field in the BTM WTC vendor specific IE
+ * @cand_lst_cnt: Candidates list in the BTM frame
+ * @status: BSS Transition management status codes defined in
+ * 802.11‐2020 Table 9-428—BTM status code definitions
+ * @delay: BSS Termination Delay field
+ * @is_disassoc_imminent: Disassociation imminent bit
+ * @reserved: Reserved field
+ * @token: dialog token. Dialog Token is a nonzero value chosen by the STA
+ * @wtc_duration: WTC duration field in minutes
+ * while sending the BTM frame to identify the query/request/response
+ * transaction
+ * @subtype: Event Subtype
+ * @validity_timer: Validity interval in TBTT
+ * @disassoc_timer: Time after which the AP disassociates the STA, defined
+ * in TBTT.
+ */
+struct wlan_diag_btm_info {
+	struct wlan_connectivity_log_diag_cmn diag_cmn;
+	uint8_t version;
+	uint8_t reason;
+	uint8_t mode;
+	uint8_t sub_reason;
+	uint8_t cand_lst_cnt;
+	uint8_t status;
+	uint8_t delay;
+	uint8_t is_disassoc_imminent:1;
+	uint8_t reserved:7;
+	uint8_t token;
+	uint8_t subtype;
+	uint16_t wtc_duration;
+	uint32_t validity_timer;
+	uint32_t disassoc_tim;
+} qdf_packed;
+
+#define DIAG_MGMT_VERSION 1
+
+/**
+ * struct wlan_diag_packet_info - Data packets related info
+ * @diag_cmn: Common diag info
+ * @version: Structure Version
+ * @auth_algo: authentication algorithm number defined in IEEE Std 802.11‐2020
+ * @auth_frame_type: Authentication frame sub-type for SAE authentication
+ * defined in Section 9.4.1.1 Authentication Algorithm Number field in
+ * IEEE Std 802.11‐2020.
+ * @auth_seq_num: Authentication frame transaction sequence number
+ * @status: Frame status code as defined in IEEE Std
+ * 802.11‐2020 Table 9-50—Status codes.
+ * @tx_status: Frame TX status defined by enum qdf_dp_tx_rx_status
+ * @reason: reason code defined in Table 9-49 Reason codes field’ from the
+ * IEEE 802.11 standard document.
+ * @eap_len: EAP data length
+ * @eap_type: EAP type. Values defined by IANA at:
+ * https://www.iana.org/assignments/eap-numbers
+ * @is_retry_frame: Retry frame indicator
+ * @reserved: Reserved field
+ * @subtype: Diag event defined in  enum qca_conn_diag_log_event_type
+ * @assoc_id: Association ID
+ * @sn: Frame sequence number
+ * @rssi: Peer RSSI in dBm
+ */
+struct wlan_diag_packet_info {
+	struct wlan_connectivity_log_diag_cmn diag_cmn;
+	uint8_t version;
+	uint8_t auth_algo;
+	uint8_t auth_frame_type;
+	uint8_t auth_seq_num;
+	uint8_t status;
+	uint8_t tx_status;
+	uint8_t reason;
+	uint8_t eap_len;
+	uint8_t eap_type;
+	uint8_t is_retry_frame:1;
+	uint8_t reserved:7;
+	uint16_t subtype;
+	uint16_t assoc_id;
+	uint16_t sn;
+	int32_t rssi;
+} qdf_packed;
+
+#define DIAG_CONN_VERSION 1
+
+/**
+ * struct wlan_diag_connect - Connection related info
+ * @diag_cmn: Common diag info
+ * @version: Version number
+ * @auth_algo: Authentication algorithm number field as defined in
+ * IEEE 802.11 - 2020 standard section 9.4.1.1
+ * @bt_coex: Is there active bluetooth connection
+ * @reserved: Reserved field
+ * @ssid_len: Length of SSID
+ * @ssid: SSID
+ * @bssid_hint: BSSID hint provided in the connect request
+ * @reason: failure reason. Refer enum wlan_cm_connect_fail_reason
+ * @akm: Auth key management suite defined in IEEE Std 802.11‐2020
+ * Table 9-151—AKM suite selectors.
+ * @subtype: Event subtype defined in enum qca_conn_diag_log_event_type.
+ * @freq: Frequency in MHz
+ * @freq_hint: Frequency Hint in MHz
+ * @pairwise_cipher: Pairwise suite value as defined in IEEE 802.11 2020
+ * Table 12-10—Integrity and key wrap algorithms.
+ * @grp_cipher: Group cipher suite value as defined in
+ * Table 12-10—Integrity and key wrap algorithm in IEEE 802.11 2020.
+ * grp_mgmt: Group manangement cipher suite as defined in
+ * Table 12-10—Integrity and key wrap algorithms in IEEE 802.11 2020.
+ */
+struct wlan_diag_connect {
+	struct wlan_connectivity_log_diag_cmn diag_cmn;
+	uint8_t version;
+	uint8_t auth_algo;
+	uint8_t bt_coex:1;
+	uint8_t reserved:7;
+	uint8_t ssid_len;
+	char ssid[WLAN_SSID_MAX_LEN];
+	uint8_t bssid_hint[6];
+	uint16_t reason;
+	uint16_t akm;
+	uint16_t subtype;
+	uint32_t freq;
+	uint32_t freq_hint;
+	uint32_t pairwise_cipher;
+	uint32_t grp_cipher;
+	uint32_t grp_mgmt;
+} qdf_packed;
+
+/**
  * struct wlan_roam_candidate_info  - Roam candidate information for logging
  * @cand_bssid: BSSID of the candidate AP
  * @is_current_ap: Is the entry candidate AP or connected AP
@@ -140,14 +501,15 @@ struct wlan_roam_candidate_info {
  * struct wlan_roam_scan_info  - Roam scan related information
  * @cand_ap_count: Roam candidate AP count
  * @num_scanned_frequencies: Number of scanned frequencies
+ * @is_btcoex_active: Is bluetooth coex active
  * @scan_freq: Array of scanned frequencies value in MHz
  */
 struct wlan_roam_scan_info {
 	uint8_t cand_ap_count;
 	uint16_t num_scanned_freq;
+	bool is_btcoex_active;
 	qdf_freq_t scan_freq[NUM_CHANNELS];
 };
-
 /**
  * struct wlan_roam_result_info  - Roam result data
  * @roam_fail_reason: Roam failure reason code defined in enum
@@ -241,8 +603,10 @@ struct wlan_roam_btm_info {
  * values:
  * 1 - SAE commit frame
  * 2 - SAE confirm frame
+ * @assoc_id: Association ID received in association response frame as
+ * defined in IEEE Std 802.11-2020 Figure 9-91-AID field format.
  * @frame_status_code: Frame status code as defined in IEEE Std
- * 802.11‐2020 Table 9-50—Status codes.
+ * 802.11 2020 Table 9-50—Status codes.
  * @seq_num: Frame sequence number
  * @rssi: Peer RSSI in dBm
  * @is_retry_frame: is frame retried
@@ -254,6 +618,7 @@ struct wlan_packet_info {
 	uint8_t auth_algo;
 	uint8_t auth_seq_num;
 	uint8_t auth_type;
+	uint16_t assoc_id;
 	uint16_t frame_status_code;
 	uint16_t seq_num;
 	int32_t rssi;
@@ -400,7 +765,7 @@ struct wlan_connectivity_log_buf_data {
 #define logging_info(params...) QDF_TRACE_INFO(QDF_MODULE_ID_QDF, ## params)
 
 #if defined(WLAN_FEATURE_CONNECTIVITY_LOGGING) && \
-		defined(WLAN_FEATURE_ROAM_OFFLOAD)
+	defined(WLAN_FEATURE_ROAM_OFFLOAD)
 /**
  * wlan_print_cached_sae_auth_logs() - Enqueue SAE authentication frame logs
  * @bssid:  BSSID
@@ -449,7 +814,40 @@ void wlan_clear_sae_auth_logs_cache(uint8_t vdev_id)
 {}
 #endif
 
-#ifdef WLAN_FEATURE_CONNECTIVITY_LOGGING
+#if defined(CONNECTIVITY_DIAG_EVENT)
+/**
+ * wlan_connectivity_mgmt_event()  - Fill and enqueue a new record
+ * for management frame information.
+ * @mac_hdr: 802.11 management frame header
+ * @vdev_id: Vdev id
+ * @status_code: Frame status code as defined in IEEE 802.11 - 2020 standard
+ * section 9.4.1.9
+ * @tx_status: Frame TX status defined by enum qdf_dp_tx_rx_status
+ * @peer_rssi: Peer RSSI in dBm
+ * @auth_algo: Authentication algorithm number field as defined in IEEE 802.11 -
+ * 2020 standard section 9.4.1.1
+ * @auth_type: indicates SAE authentication frame type. Possible values are:
+ * 1 - SAE commit frame
+ * 2 - SAE confirm frame
+ * @auth_seq: Authentication frame transaction sequence number as defined in
+ * IEEE 802.11 - 2020 standard section 9.4.1.2
+ * @tag: Record type main tag
+ *
+ * Return: QDF_STATUS
+ */
+void
+wlan_connectivity_mgmt_event(struct wlan_frame_hdr *mac_hdr,
+			     uint8_t vdev_id, uint16_t status_code,
+			     enum qdf_dp_tx_rx_status tx_status,
+			     int8_t peer_rssi,
+			     uint8_t auth_algo, uint8_t auth_type,
+			     uint8_t auth_seq, uint16_t aid,
+			     enum wlan_main_tag tag);
+
+static inline void wlan_connectivity_logging_stop(void)
+{}
+
+#elif defined(WLAN_FEATURE_CONNECTIVITY_LOGGING)
 /**
  * wlan_connectivity_logging_start()  - Initialize the connectivity/roaming
  * logging buffer
@@ -512,7 +910,7 @@ wlan_connectivity_mgmt_event(struct wlan_frame_hdr *mac_hdr,
 			     enum qdf_dp_tx_rx_status tx_status,
 			     int8_t peer_rssi,
 			     uint8_t auth_algo, uint8_t auth_type,
-			     uint8_t auth_seq,
+			     uint8_t auth_seq, uint16_t aid,
 			     enum wlan_main_tag tag);
 #else
 static inline
@@ -541,7 +939,7 @@ wlan_connectivity_mgmt_event(struct wlan_frame_hdr *mac_hdr,
 			     enum qdf_dp_tx_rx_status tx_status,
 			     int8_t peer_rssi,
 			     uint8_t auth_algo, uint8_t auth_type,
-			     uint8_t auth_seq,
+			     uint8_t auth_seq, uint16_t aid,
 			     enum wlan_main_tag tag)
 {}
 #endif

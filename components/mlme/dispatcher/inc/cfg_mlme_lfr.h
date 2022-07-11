@@ -1698,6 +1698,59 @@
 
 /*
  * <ini>
+ * BeaconLoss_TimeoutOnWakeUp - Consecutive Beaconloss timeout on wakeup to
+ * trigger timeout
+ * @Min: 0
+ * @Max: 20
+ * @Default: 6
+ *
+ * This ini is used to control the beacon miss timeout when the system is awake.
+ * On the timeout, BMISS event will be triggered by FW.
+ * The units of this timeout is in seconds.
+ *
+ * Related: None
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_LFR_BEACONLOSS_TIMEOUT_ON_WAKEUP CFG_INI_UINT( \
+	"ConBeaconLoss_TimeoutOnWakeUp", \
+	0, \
+	20, \
+	6, \
+	CFG_VALUE_OR_DEFAULT, \
+	"ConBeaconloss timeout on wakeup")
+
+/*
+ * <ini>
+ * BeaconLoss_TimeoutOnSleep - Consecutive Beaconloss timeout on sleep to
+ * trigger timeout
+ * @Min: 0
+ * @Max: 20
+ * @Default: 10
+ *
+ * This ini is used to control the beacon miss timeout
+ * when the system is in sleep.
+ * On the timeout, BMISS event will be triggered by FW.
+ * The units of this timeout is in seconds.
+ *
+ * Related: None
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_LFR_BEACONLOSS_TIMEOUT_ON_SLEEP CFG_INI_UINT( \
+	"ConBeaconLoss_TimeoutOnSleep", \
+	0, \
+	20, \
+	10, \
+	CFG_VALUE_OR_DEFAULT, \
+	"ConBeaconloss timeout on sleep")
+
+/*
+ * <ini>
  * gAllowDFSChannelRoam - Allow dfs channel in roam
  * @Min: 0
  * @Max: 2
@@ -2016,6 +2069,59 @@
 			10000, \
 			CFG_VALUE_OR_DEFAULT, \
 			"bss load sampling time")
+
+/*
+ * <ini>
+ * RoamCU_MonitorTime - Time in seconds for which the bss load values
+ * obtained from the beacons is sampled.
+ * @Min: 0
+ * @Max: 20
+ * @Default: 10
+ *
+ * Related: None
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_ROAM_CU_MONITOR_TIME CFG_INI_UINT( \
+			"RoamCU_MonitorTime", \
+			0, \
+			20, \
+			10, \
+			CFG_VALUE_OR_DEFAULT, \
+			"bss load sampling time")
+
+/*
+ * <ini>
+ * bss_load_trigger_6g_rssi_threshold/RoamCU_6GRSSIRange -
+ * Current AP minimum RSSI in dBm below
+ * which roaming can be triggered if BSS load exceeds bss_load_threshold.
+ * @Min: -120
+ * @Max: 0
+ * @Default: -70
+ *
+ * If connected AP is in 6Ghz, then consider bss load roam triggered only if
+ * load % > bss_load_threshold && connected AP rssi is worse than
+ * bss_load_trigger_6g_rssi_threshold
+ *
+ * Related: "bss_load_threshold"
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+#define CFG_BSS_LOAD_TRIG_6G_RSSI_THRES CFG_INI_INT( \
+	"bss_load_trigger_6g_rssi_threshold RoamCU_6GRSSIRange", \
+	-120, \
+	0, \
+	-70, \
+	CFG_VALUE_OR_DEFAULT, \
+	"Minimum RSSI of current AP in 6GHz band for BSS load roam trigger")
 
 /*
  * <ini>
@@ -2924,6 +3030,37 @@
 	CFG_VALUE_OR_DEFAULT, \
 	"Roam scan period post inactivity")
 
+/*
+ * <ini>
+ * RoamScan_InactiveTimer - Roam scan duration in sec after device is
+ * out of inactivity state.
+ *
+ * @Min: 0
+ * @Max: 20
+ * @Default: 10
+ *
+ * If there is empty scan results during roam scan, firmware will move to
+ * roam scan inactive state if roam_scan_inactivity and
+ * roam_inactive_data_count criteria are met.
+ * This ini is used to configure the roam scan duration in sec once the
+ * inactivity is finished and roam scan can be started.
+ *
+ * Related: roam_scan_inactivity_time, roam_inactive_data_count
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_ROAM_SCAN_INACTIVE_TIMER CFG_INI_UINT( \
+	"RoamScan_InactiveTimer", \
+	0, \
+	20, \
+	10, \
+	CFG_VALUE_OR_DEFAULT, \
+	"Roam scan period post inactivity")
+
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 /*
  * <ini>
@@ -3029,6 +3166,7 @@
 	CFG(CFG_ENABLE_BSS_LOAD_TRIGGERED_ROAM) \
 	CFG(CFG_BSS_LOAD_THRESHOLD) \
 	CFG(CFG_BSS_LOAD_SAMPLE_TIME) \
+	CFG(CFG_ROAM_CU_MONITOR_TIME) \
 	CFG(CFG_LFR3_ROAM_HO_DELAY_FOR_RX) \
 	CFG(CFG_LFR_MIN_DELAY_BTW_ROAM_SCAN) \
 	CFG(CFG_LFR_ROAM_SCAN_TRIGGER_REASON_BITMASK) \
@@ -3040,6 +3178,8 @@
 	CFG(CFG_FT_IM_ROAMING) \
 	CFG(CFG_ROAM_INACTIVE_COUNT) \
 	CFG(CFG_POST_INACTIVITY_ROAM_SCAN_PERIOD) \
+	CFG(CFG_ROAM_SCAN_INACTIVE_TIMER) \
+	CFG(CFG_BSS_LOAD_TRIG_6G_RSSI_THRES) \
 	CFG(CFG_BSS_LOAD_TRIG_5G_RSSI_THRES) \
 	CFG(CFG_BSS_LOAD_TRIG_2G_RSSI_THRES) \
 	CFG(CFG_LFR_FULL_ROAM_SCAN_REFRESH_PERIOD) \
@@ -3048,6 +3188,8 @@
 	LFR_ESE_ALL \
 	LFR_SUBNET_DETECTION_ALL \
 	SAE_SINGLE_PMK_ALL \
-	ROAM_REASON_VSIE_ALL
+	ROAM_REASON_VSIE_ALL \
+	CFG(CFG_LFR_BEACONLOSS_TIMEOUT_ON_WAKEUP) \
+	CFG(CFG_LFR_BEACONLOSS_TIMEOUT_ON_SLEEP)
 
 #endif /* CFG_MLME_LFR_H__ */

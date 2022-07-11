@@ -3237,6 +3237,35 @@ IE he_op (EID_EXTN_ID_ELEMENT) OUI (0x24)
     };
 }
 
+IE spatial_reuse (EID_EXTN_ID_ELEMENT) OUI (0x27)
+{
+    {
+        psr_disallow: 1;
+        non_srg_pd_sr_disallow: 1;
+        non_srg_offset_present: 1;
+        srg_info_present: 1;
+        sr_value15_allow: 1;
+        reserved: 3;
+    }
+    OPTIONAL UNION non_srg_offset (DISCRIMINATOR non_srg_offset_present)
+    {
+        info (non_srg_offset_present IS 1)
+        {
+            non_srg_pd_max_offset, 1;
+        }
+    };
+    OPTIONAL UNION srg_info (DISCRIMINATOR srg_info_present)
+    {
+        info (srg_info_present IS 1)
+        {
+            srg_pd_min_offset, 1;
+            srg_pd_max_offset, 1;
+            srg_color[8];
+            srg_partial_bssid[8];
+        }
+    };
+}
+
 IE he_6ghz_band_cap (EID_EXTN_ID_ELEMENT) OUI (0x3B)
 {
     { // capabilities_information
@@ -3262,7 +3291,9 @@ IE eht_cap (EID_EXTN_ID_ELEMENT) OUI (0x6C)
 	scs_traffic_desc: 1;
 	max_mpdu_len: 2;
 	max_a_mpdu_len_exponent_ext: 1;
-	reserved: 7;
+	eht_trs_support: 1;
+	txop_return_support_txop_share_m2: 1;
+	reserved: 5;
     }
     {
 	reserved2: 1;
@@ -3363,10 +3394,23 @@ IE eht_op (EID_EXTN_ID_ELEMENT) OUI (0x6A)
     {
         eht_op_information_present: 1;
 	disabled_sub_chan_bitmap_present: 1;
-	reserved: 6;
+	eht_default_pe_duration: 1;
+	group_addr_bu_indication_limit: 1;
+	group_addr_bu_indication_exponent: 2;
+	reserved: 2;
     }
     {
-        channel_width: 3;
+	basic_rx_max_nss_for_mcs_0_to_7: 4;
+	basic_tx_max_nss_for_mcs_0_to_7: 4;
+	basic_rx_max_nss_for_mcs_8_and_9: 4;
+	basic_tx_max_nss_for_mcs_8_and_9: 4;
+	basic_rx_max_nss_for_mcs_10_and_11: 4;
+	basic_tx_max_nss_for_mcs_10_and_11: 4;
+	basic_rx_max_nss_for_mcs_12_and_13: 4;
+	basic_tx_max_nss_for_mcs_12_and_13: 4;
+    }
+    {
+	channel_width: 3;
 	reserved_1: 5;
     }
     ccfs0, 1;
@@ -3831,6 +3875,7 @@ FRAME Beacon                              // C.f. Sec. 7.2.3.1
     OPTIE  esp_information;
     OPTIE  he_cap;
     OPTIE  he_op;
+    OPTIE  spatial_reuse;
     OPTIE  bss_color_change;
     OPTIE  mu_edca_param_set;
     OPTIE  he_6ghz_band_cap;
@@ -3935,6 +3980,7 @@ FRAME Beacon2
     OPTIE  esp_information;
     OPTIE  he_cap;
     OPTIE  he_op;
+    OPTIE  spatial_reuse;
     OPTIE  bss_color_change;
     OPTIE  mu_edca_param_set;
     OPTIE  he_6ghz_band_cap;
@@ -4013,6 +4059,7 @@ FRAME BeaconIEs
     OPTIE  esp_information;
     OPTIE  he_cap;
     OPTIE  he_op;
+    OPTIE  spatial_reuse;
     OPTIE  bss_color_change;
     OPTIE  mu_edca_param_set;
     OPTIE  he_6ghz_band_cap;
@@ -4129,6 +4176,7 @@ FRAME AssocResponse                       // 7.2.3.5
     OPTIE  fils_hlp_container;
     OPTIE  he_cap;
     OPTIE  he_op;
+    OPTIE  spatial_reuse;
     OPTIE  bss_color_change;
     OPTIE  mu_edca_param_set;
     OPTIE  he_6ghz_band_cap;
@@ -4227,6 +4275,7 @@ FRAME ReAssocResponse                     // 7.2.3.7
     OPTIE  OperatingMode;
     OPTIE  he_cap;
     OPTIE  he_op;
+    OPTIE  spatial_reuse;
     OPTIE  bss_color_change;
     OPTIE  mu_edca_param_set;
     OPTIE  he_6ghz_band_cap;
@@ -4313,6 +4362,7 @@ FRAME ProbeResponse                       // 7.2.3.9
     OPTIE  esp_information;
     OPTIE  he_cap;
     OPTIE  he_op;
+    OPTIE  spatial_reuse;
     OPTIE  bss_color_change;
     OPTIE  mu_edca_param_set;
     OPTIE  he_6ghz_band_cap;

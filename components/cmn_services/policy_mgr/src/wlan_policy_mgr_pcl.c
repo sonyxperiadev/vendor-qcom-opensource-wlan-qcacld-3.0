@@ -2242,6 +2242,8 @@ static void policy_mgr_get_index_for_ml_sta_sap_sbs(
 	qdf_freq_t *sta_freq_list, uint8_t *ml_sta_idx)
 {
 	qdf_freq_t sbs_cut_off_freq;
+	bool can_2ghz_share_low_high_5ghz =
+			policy_mgr_can_2ghz_share_low_high_5ghz_sbs(pm_ctx);
 
 	/*
 	 * Sanity check: At least one of the 3 combo (ML STA OR SAP + one of
@@ -2268,6 +2270,17 @@ static void policy_mgr_get_index_for_ml_sta_sap_sbs(
 	}
 
 	if (WLAN_REG_IS_24GHZ_CH_FREQ(sap_freq)) {
+		/*
+		 * If dynamic SBS is enabled (2.4 GHZ can share mac with HIGH
+		 * 5GHZ as well as LOW 5 GHZ, but one at a time) and SAP is
+		 * 2.4 GHZ, this mean that the new SAP can come up on 5 GHZ LOW
+		 * or HIGH and HW mode will move the 2.4 GHZ SAP to the other
+		 * mac dynamically.
+		 */
+		if (can_2ghz_share_low_high_5ghz) {
+			*index = PM_SAP_24_STA_5_STA_5_LOW_N_HIGH_SHARE_SBS;
+			return;
+		}
 		/*
 		 * if SAP is 2.4 GHZ that means both ML STA needs to
 		 * be with 5 GHZ + 5 GHZ/6 GHZ SBS separation. If not, it would
@@ -2304,6 +2317,17 @@ static void policy_mgr_get_index_for_ml_sta_sap_sbs(
 	/* SAP freq is 5 GHZ or 6 GHZ and one ML sta is on 2.4 GHZ */
 	if (WLAN_REG_IS_24GHZ_CH_FREQ(sta_freq_list[ml_sta_idx[0]]) ||
 	    WLAN_REG_IS_24GHZ_CH_FREQ(sta_freq_list[ml_sta_idx[1]])) {
+		/*
+		 * If dynamic SBS is enabled (2.4 GHZ can share mac with HIGH
+		 * 5GHZ as well as LOW 5 GHZ, but one at a time) and one STA
+		 * link is 2.4 GHZ, this mean that the new SAP can come up on
+		 * 5 GHZ LOW or HIGH and HW mode will move the 2.4 GHZ link to
+		 * the other mac dynamically.
+		 */
+		if (can_2ghz_share_low_high_5ghz) {
+			*index = PM_STA_24_SAP_5_STA_5_LOW_N_HIGH_SHARE_SBS;
+			return;
+		}
 		/*
 		 * If (2 GHZ + 5 GHZ/6 GHZ) ML is MCC i.e Both sta links are on
 		 * same mac and SAP is on separate mac. This can happen if SBS
@@ -2501,6 +2525,21 @@ static void policy_mgr_get_index_for_3_given_freq_sbs(
 	sbs_cut_off_freq =  policy_mgr_get_sbs_cut_off_freq(pm_ctx->psoc);
 	if (!sbs_cut_off_freq) {
 		policy_mgr_err("Invalid cutoff freq");
+		return;
+	}
+
+	/*
+	 * If dynamic SBS is enabled (2.4 GHZ can share mac with HIGH
+	 * 5GHZ as well as LOW 5 GHZ, but one at a time) and one of the
+	 * freq is 2.4 GHZ, this mean that the new interface can come up on
+	 * 5 GHZ LOW or HIGH and HW mode will move the 2.4 GHZ link to
+	 * the other mac dynamically.
+	 */
+	if (policy_mgr_can_2ghz_share_low_high_5ghz_sbs(pm_ctx) &&
+	    (WLAN_REG_IS_24GHZ_CH_FREQ(freq1) ||
+	     WLAN_REG_IS_24GHZ_CH_FREQ(freq2) ||
+	     WLAN_REG_IS_24GHZ_CH_FREQ(freq3))) {
+		*index = PM_24_5_PLUS_5_LOW_N_HIGH_SHARE_SBS;
 		return;
 	}
 	/*
@@ -3184,13 +3223,15 @@ update_pcl:
 QDF_STATUS
 policy_mgr_get_sap_mandatory_channel(struct wlan_objmgr_psoc *psoc,
 				     uint32_t sap_ch_freq,
-				     uint32_t *intf_ch_freq)
+				     uint32_t *intf_ch_freq,
+				     uint8_t vdev_id)
 {
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
 	QDF_STATUS status;
 	struct policy_mgr_pcl_list pcl;
 	uint32_t i;
 	uint32_t sap_new_freq;
+	qdf_freq_t user_config_freq = 0;
 	bool sta_sap_scc_on_indoor_channel =
 		 policy_mgr_get_sta_sap_scc_allowed_on_indoor_chnl(psoc);
 
@@ -3276,6 +3317,8 @@ policy_mgr_get_sap_mandatory_channel(struct wlan_objmgr_psoc *psoc,
 	}
 
 	sap_new_freq = pcl.pcl_list[0];
+	user_config_freq = policy_mgr_get_user_config_sap_freq(psoc, vdev_id);
+
 	for (i = 0; i < pcl.pcl_len; i++) {
 		/* When sta_sap_scc_on_indoor_channel is enabled,
 		 * and if pcl contains SCC channel, then STA must
@@ -3290,7 +3333,7 @@ policy_mgr_get_sap_mandatory_channel(struct wlan_objmgr_psoc *psoc,
 			goto update_freq;
 		}
 
-		if (pcl.pcl_list[i] ==  pm_ctx->user_config_sap_ch_freq) {
+		if (user_config_freq && (pcl.pcl_list[i] == user_config_freq)) {
 			sap_new_freq = pcl.pcl_list[i];
 			policy_mgr_debug("Prefer starting SAP on user configured channel:%d",
 					 sap_ch_freq);
@@ -3493,15 +3536,16 @@ uint32_t policy_mgr_get_alternate_channel_for_sap(
 			/*
 			 * The API is expected to select the channel on the
 			 * other band which is not same as sap's home and
-			 * concurrent interference channel, so skip the sap
-			 * home channel in PCL.
+			 * concurrent interference channel(if present), so skip
+			 * the sap home channel in PCL.
 			 */
 			if (pcl_channels[i] == sap_ch_freq)
 				continue;
 			if (!is_6ghz_cap &&
 			    WLAN_REG_IS_6GHZ_CHAN_FREQ(pcl_channels[i]))
 				continue;
-			if (policy_mgr_are_2_freq_on_same_mac(psoc,
+			if (policy_mgr_get_connection_count(psoc) &&
+			    policy_mgr_are_2_freq_on_same_mac(psoc,
 							      sap_ch_freq,
 							      pcl_channels[i]))
 				continue;

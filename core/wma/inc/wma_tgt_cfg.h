@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -38,7 +38,9 @@
  * @en_tdls_offchan: enable tdls offchan
  * @en_tdls_uapsd_buf_sta: enable sta tdls uapsd buf
  * @en_tdls_uapsd_sleep_sta: enable sta tdls uapsd sleep
+ * @en_tdls_wideband_support: Get TDLS wideband support
  * @en_tdls_11ax_support: Get TDLS ax support
+ * @en_tdls_6g_support: Get TDLS 6g fw capability
  * @en_roam_offload: enable roam offload
  * @en_11ax: enable 11ax
  * @is_fw_mawc_capable: Motion Aided Wireless Connectivity feature
@@ -73,8 +75,10 @@ struct wma_tgt_services {
 	bool en_tdls_offchan;
 	bool en_tdls_uapsd_buf_sta;
 	bool en_tdls_uapsd_sleep_sta;
+	bool en_tdls_wideband_support;
 #ifdef WLAN_FEATURE_11AX
 	bool en_tdls_11ax_support;
+	bool en_tdls_6g_support;
 #endif
 #endif /* FEATURE_WLAN_TDLS */
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD

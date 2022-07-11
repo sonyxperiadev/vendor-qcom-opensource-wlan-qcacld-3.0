@@ -1358,6 +1358,7 @@ struct wlan_user_mcc_quota {
  * @tx_retry_multiplier: TX xretry extension parameter
  * @mgmt_hw_tx_retry_count: MGMT HW tx retry count for frames
  * @relaxed_6ghz_conn_policy: 6GHz relaxed connection policy
+ * @enable_emlsr_mode: 11BE eMLSR mode support
  * @safe_mode_enable: safe mode to bypass some strict 6 GHz checks for
  * connection, bypass strict power levels
  */
@@ -1409,6 +1410,9 @@ struct wlan_mlme_generic {
 	uint8_t mgmt_hw_tx_retry_count[CFG_FRAME_TYPE_MAX];
 #ifdef CONFIG_BAND_6GHZ
 	bool relaxed_6ghz_conn_policy;
+#endif
+#ifdef WLAN_FEATURE_11BE_MLO
+	bool enable_emlsr_mode;
 #endif
 #ifdef WLAN_FEATURE_MCC_QUOTA
 	struct wlan_user_mcc_quota user_mcc_quota;
@@ -1712,6 +1716,9 @@ enum roaming_dfs_channel_type {
  * @threshold: Bss load threshold value above which roaming should start
  * @sample_time: Time duration in milliseconds for which the bss load value
  * should be monitored
+ * @rssi_threshold_6ghz: RSSI threshold of the current connected AP below which
+ * roam should be triggered if bss load threshold exceeds the configured value.
+ * This value is applicable only when we are connected in 6GHz band.
  * @rssi_threshold_5ghz: RSSI threshold of the current connected AP below which
  * roam should be triggered if bss load threshold exceeds the configured value.
  * This value is applicable only when we are connected in 5GHz band.
@@ -1723,6 +1730,7 @@ struct bss_load_trigger {
 	bool enabled;
 	uint32_t threshold;
 	uint32_t sample_time;
+	uint32_t rssi_threshold_6ghz;
 	int32_t rssi_threshold_5ghz;
 	int32_t rssi_threshold_24ghz;
 };
@@ -1868,6 +1876,10 @@ struct fw_scan_channels {
  * @sae_single_pmk_feature_enabled: Contains value of ini
  * sae_single_pmk_feature_enabled
  * @rso_user_config: RSO user config
+ * @beaconloss_timeout_onwakeup: time in sec to configure FW BMISS event
+ * during wakeup.
+ * @beaconloss_timeout_onsleep: time in sec to configure FW BMISS event
+ * during sleep.
  */
 struct wlan_mlme_lfr_cfg {
 	bool mawc_roam_enabled;
@@ -1945,6 +1957,7 @@ struct wlan_mlme_lfr_cfg {
 	uint32_t roam_rescan_rssi_diff;
 	uint16_t neighbor_scan_min_chan_time;
 	uint16_t neighbor_scan_max_chan_time;
+	uint32_t passive_max_channel_time;
 	uint32_t neighbor_scan_results_refresh_period;
 	uint32_t empty_scan_refresh_period;
 	uint8_t roam_bmiss_first_bcnt;
@@ -1987,6 +2000,8 @@ struct wlan_mlme_lfr_cfg {
 #endif
 	struct rso_config_params rso_user_config;
 	bool enable_ft_over_ds;
+	uint8_t beaconloss_timeout_onwakeup;
+	uint8_t beaconloss_timeout_onsleep;
 };
 
 /**

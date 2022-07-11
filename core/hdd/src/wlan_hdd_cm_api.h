@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -83,6 +84,41 @@ QDF_STATUS hdd_cm_netif_queue_control(struct wlan_objmgr_vdev *vdev,
 QDF_STATUS hdd_cm_connect_complete(struct wlan_objmgr_vdev *vdev,
 				   struct wlan_cm_connect_resp *rsp,
 				   enum osif_cb_type type);
+
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+/**
+ * hdd_cm_get_vendor_handoff_params() - to get vendor handoff params from fw
+ * @psoc: Pointer to psoc object
+ * @event_data: Pointer to vendor handoff event rsp
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+hdd_cm_get_vendor_handoff_params(struct wlan_objmgr_psoc *psoc,
+				 void *vendor_handoff_context);
+
+/**
+ * hdd_cm_get_handoff_param() - send get vendor handoff param request to fw
+ * @pdev: pdev common object
+ * @hdd_adapter: adapter context
+ * @vdev_id: vdev id
+ * @param_id: Param ID from enum WMI_ROAM_GET_VENDOR_CONTROL_PARAM_ID
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS hdd_cm_get_handoff_param(struct wlan_objmgr_psoc *psoc,
+				    struct hdd_adapter *hdd_adapter,
+				    uint8_t vdev_id, uint32_t param_id);
+#else
+static inline QDF_STATUS
+hdd_cm_get_handoff_param(struct wlan_objmgr_psoc *psoc,
+			 struct hdd_adapter *hdd_adapter,
+			 uint8_t vdev_id, uint32_t param_value)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 /**
  * hdd_cm_napi_serialize_control() - NAPI serialize hdd cb
  * @action: serialize or de-serialize NAPI activities

@@ -1470,10 +1470,11 @@ static void sap_compute_spect_weight(tSapChSelSpectInfo *pSpectInfoParams,
 		pSpectCh->weight_copy = pSpectCh->weight;
 
 debug_info:
-		sap_debug_rl("freq = %d, weight = %d rssi = %d bss count = %d factor %d",
-			     pSpectCh->chan_freq, pSpectCh->weight,
-			     pSpectCh->rssiAgr, pSpectCh->bssCount,
-			     normalize_factor);
+		QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_TRACE,
+			  "%s: freq = %d, weight = %d rssi = %d bss count = %d factor %d",
+			  __func__, pSpectCh->chan_freq, pSpectCh->weight,
+			  pSpectCh->rssiAgr, pSpectCh->bssCount,
+			  normalize_factor);
 
 		pSpectCh++;
 	}
@@ -1680,9 +1681,10 @@ static void sap_sort_chl_weight_80_mhz(struct mac_context *mac_ctx,
 	pSpectInfo = pSpectInfoParams->pSpectCh;
 
 	for (j = 0; j < (pSpectInfoParams->numSpectChans); j++) {
-		sap_debug_rl("freq = %d weight = %d rssi = %d bss count = %d",
-			     pSpectInfo->chan_freq, pSpectInfo->weight,
-			     pSpectInfo->rssiAgr, pSpectInfo->bssCount);
+		QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_TRACE,
+			  "%s: freq = %d weight = %d rssi = %d bss count = %d",
+			  __func__, pSpectInfo->chan_freq, pSpectInfo->weight,
+			  pSpectInfo->rssiAgr, pSpectInfo->bssCount);
 
 		pSpectInfo++;
 	}
@@ -1849,9 +1851,10 @@ static void sap_sort_chl_weight_160_mhz(struct mac_context *mac_ctx,
 
 	pSpectInfo = pSpectInfoParams->pSpectCh;
 	for (j = 0; j < (pSpectInfoParams->numSpectChans); j++) {
-		sap_debug_rl("freq = %d weight = %d rssi = %d bss count = %d",
-			     pSpectInfo->chan_freq, pSpectInfo->weight,
-			     pSpectInfo->rssiAgr, pSpectInfo->bssCount);
+		QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_TRACE,
+			  "%s: freq = %d weight = %d rssi = %d bss count = %d",
+			  __func__, pSpectInfo->chan_freq, pSpectInfo->weight,
+			  pSpectInfo->rssiAgr, pSpectInfo->bssCount);
 
 		pSpectInfo++;
 	}
@@ -2088,9 +2091,10 @@ static void sap_sort_chl_weight_320_mhz(struct mac_context *mac_ctx,
 
 	pSpectInfo = pSpectInfoParams->pSpectCh;
 	for (j = 0; j < (pSpectInfoParams->numSpectChans); j++) {
-		sap_debug_rl("freq = %d weight = %d rssi = %d bss count = %d",
-			     pSpectInfo->chan_freq, pSpectInfo->weight,
-			     pSpectInfo->rssiAgr, pSpectInfo->bssCount);
+		QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_TRACE,
+			  "%s: freq = %d weight = %d rssi = %d bss count = %d",
+			  __func__, pSpectInfo->chan_freq, pSpectInfo->weight,
+			  pSpectInfo->rssiAgr, pSpectInfo->bssCount);
 
 		pSpectInfo++;
 	}
@@ -2282,8 +2286,9 @@ static void sap_sort_chl_weight_ht40_24_g(struct mac_context *mac_ctx,
 
 	pSpectInfo = pSpectInfoParams->pSpectCh;
 	for (j = 0; j < (pSpectInfoParams->numSpectChans); j++) {
-		sap_debug_rl("freq = %d weight = %d rssi = %d bss count = %d",
-			     pSpectInfo->chan_freq, pSpectInfo->weight,
+		QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_TRACE,
+			  "%s: freq = %d weight = %d rssi = %d bss count = %d",
+			  __func__, pSpectInfo->chan_freq, pSpectInfo->weight,
 			     pSpectInfo->rssiAgr, pSpectInfo->bssCount);
 
 		pSpectInfo++;
@@ -2390,9 +2395,10 @@ static void sap_sort_chl_weight_40_mhz(struct mac_context *mac_ctx,
 
 	pSpectInfo = pSpectInfoParams->pSpectCh;
 	for (j = 0; j < (pSpectInfoParams->numSpectChans); j++) {
-		sap_debug_rl("freq = %d weight = %d rssi = %d bss count = %d",
-			     pSpectInfo->chan_freq, pSpectInfo->weight,
-			     pSpectInfo->rssiAgr, pSpectInfo->bssCount);
+		QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_TRACE,
+			  "%s: freq = %d weight = %d rssi = %d bss count = %d",
+			  __func__, pSpectInfo->chan_freq, pSpectInfo->weight,
+			  pSpectInfo->rssiAgr, pSpectInfo->bssCount);
 
 		pSpectInfo++;
 	}
@@ -2466,9 +2472,10 @@ static void sap_sort_chl_weight_all(struct mac_context *mac_ctx,
 
 	pSpectCh = pSpectInfoParams->pSpectCh;
 	for (j = 0; j < (pSpectInfoParams->numSpectChans); j++) {
-		sap_debug_rl("Freq = %d weight = %d rssi aggr = %d bss count = %d",
-			     pSpectCh->chan_freq, pSpectCh->weight,
-			     pSpectCh->rssiAgr, pSpectCh->bssCount);
+		QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_TRACE,
+			  "%s: Freq = %d weight = %d rssi aggr = %d bss count = %d",
+			  __func__, pSpectCh->chan_freq, pSpectCh->weight,
+			  pSpectCh->rssiAgr, pSpectCh->bssCount);
 		pSpectCh++;
 	}
 

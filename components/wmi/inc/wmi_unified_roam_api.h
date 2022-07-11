@@ -100,6 +100,25 @@ QDF_STATUS
 wmi_unified_roam_mawc_params_cmd(wmi_unified_t wmi_handle,
 				 struct wlan_roam_mawc_params *params);
 
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+/**
+ * wmi_extract_roam_vendor_control_param_event() - extract vendor handoff param
+ * event coming from fw
+ * @wmi_handle: wmi handle
+ * @event: vendor handoff param event pointer
+ * @len: event len
+ * @data: vendor handoff related parameters
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+
+QDF_STATUS
+wmi_extract_roam_vendor_control_param_event(wmi_unified_t wmi_handle,
+				uint8_t *event, uint32_t len,
+				struct roam_vendor_handoff_params **data);
+
+#endif
+
 /**
  * wmi_unified_roam_scan_filter_cmd() - send roam scan allowlist,
  *                                      denylist and preferred list
@@ -218,6 +237,22 @@ QDF_STATUS wmi_unified_set_roam_triggers(wmi_unified_t wmi_handle,
 QDF_STATUS
 wmi_unified_send_disconnect_roam_params(wmi_unified_t wmi_handle,
 				struct wlan_roam_disconnect_params *req);
+
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+/**
+ * wmi_unified_roam_vendor_handoff_req_cmd() - Send vendor handoff request
+ * command to fw
+ * @wmi_handle:  wmi handle
+ * @vdev_id: vdev id
+ * @param_id: Vendor Control Param ID from enum
+ * WMI_ROAM_GET_VENDOR_CONTROL_PARAM_ID
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS wmi_unified_roam_vendor_handoff_req_cmd(wmi_unified_t wmi_handle,
+						   uint8_t vdev_id,
+						   uint32_t param_id);
+#endif
 
 /**
  * wmi_unified_send_idle_roam_params() - Send idle roam trigger params to fw

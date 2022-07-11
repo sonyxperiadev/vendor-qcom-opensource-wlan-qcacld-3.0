@@ -1660,129 +1660,6 @@ QDF_STATUS wlan_sap_update_next_channel(struct sap_context *sap_ctx,
 	return QDF_STATUS_SUCCESS;
 }
 
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
-#if defined(FEATURE_SAP_COND_CHAN_SWITCH) && defined(PRE_CAC_SUPPORT)
-QDF_STATUS wlan_sap_set_pre_cac_status(struct sap_context *sap_ctx,
-				       bool status)
-{
-	if (!sap_ctx) {
-		sap_err("Invalid SAP pointer");
-		return QDF_STATUS_E_FAULT;
-	}
-
-	sap_ctx->is_pre_cac_on = status;
-	sap_debug("is_pre_cac_on:%d", sap_ctx->is_pre_cac_on);
-
-	return QDF_STATUS_SUCCESS;
-}
-
-QDF_STATUS
-wlan_sap_set_chan_freq_before_pre_cac(struct sap_context *sap_ctx,
-				      qdf_freq_t freq_before_pre_cac)
-{
-	if (!sap_ctx) {
-		sap_err("Invalid SAP pointer");
-		return QDF_STATUS_E_FAULT;
-	}
-
-	sap_ctx->freq_before_pre_cac = freq_before_pre_cac;
-	return QDF_STATUS_SUCCESS;
-}
-#endif /* FEATURE_SAP_COND_CHAN_SWITCH */
-#endif /* PRE_CAC_COMP */
-
-#ifdef PRE_CAC_SUPPORT
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
-QDF_STATUS wlan_sap_set_pre_cac_complete_status(struct sap_context *sap_ctx,
-						bool status)
-{
-	if (!sap_ctx) {
-		sap_err("Invalid SAP pointer");
-		return QDF_STATUS_E_FAULT;
-	}
-
-	sap_ctx->pre_cac_complete = status;
-	sap_debug("pre cac complete status:%d session:%d",
-		  status, sap_ctx->sessionId);
-
-	return QDF_STATUS_SUCCESS;
-}
-
-bool wlan_sap_is_pre_cac_context(struct sap_context *context)
-{
-	return context && context->is_pre_cac_on;
-}
-
-/**
- * wlan_sap_is_pre_cac_active() - Checks if pre cac in in progress
- * @handle: Global MAC handle
- *
- * Checks if pre cac is in progress in any of the SAP contexts
- *
- * Return: True is pre cac is active, false otherwise
- */
-bool wlan_sap_is_pre_cac_active(mac_handle_t handle)
-{
-	struct mac_context *mac = NULL;
-	struct sap_ctx_list *ctx_list;
-	int i;
-
-	mac = MAC_CONTEXT(handle);
-	if (!mac) {
-		sap_err("Invalid mac context");
-		return false;
-	}
-
-	ctx_list = mac->sap.sapCtxList;
-	for (i = 0; i < SAP_MAX_NUM_SESSION; i++) {
-		if (wlan_sap_is_pre_cac_context(ctx_list[i].sap_context))
-			return true;
-	}
-
-	return false;
-}
-
-/**
- * wlan_sap_get_pre_cac_vdev_id() - Get vdev id of the pre cac interface
- * @handle: Global handle
- * @vdev_id: vdev id
- *
- * Fetches the vdev id of the pre cac interface
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS wlan_sap_get_pre_cac_vdev_id(mac_handle_t handle, uint8_t *vdev_id)
-{
-	struct mac_context *mac = NULL;
-	uint8_t i;
-
-	mac = MAC_CONTEXT(handle);
-	if (!mac) {
-		sap_err("Invalid mac context");
-		return QDF_STATUS_E_FAULT;
-	}
-
-	for (i = 0; i < SAP_MAX_NUM_SESSION; i++) {
-		struct sap_context *context =
-			mac->sap.sapCtxList[i].sap_context;
-		if (context && context->is_pre_cac_on) {
-			*vdev_id = i;
-			return QDF_STATUS_SUCCESS;
-		}
-	}
-	return QDF_STATUS_E_FAILURE;
-}
-#endif /* PRE_CAC_COMP */
-#endif /* PRE_CAC_SUPPORT */
-
 void wlansap_get_sec_channel(uint8_t sec_ch_offset,
 			     uint32_t op_chan_freq,
 			     uint32_t *sec_chan_freq)
@@ -2003,15 +1880,7 @@ QDF_STATUS wlansap_start_beacon_req(struct sap_context *sap_ctx)
 	if (mac->sap.SapDfsInfo.sap_radar_found_status == false) {
 		/* CAC Wait done without any Radar Detection */
 		dfs_cac_wait_status = true;
-/*
- * Code under PRE_CAC_COMP will be cleaned up
- * once pre cac component is done
- */
-#ifndef PRE_CAC_COMP
-		sap_ctx->pre_cac_complete = false;
-#else
 		wlan_pre_cac_complete_set(sap_ctx->vdev, false);
-#endif
 		status = sme_roam_start_beacon_req(MAC_HANDLE(mac),
 						   sap_ctx->bssid,
 						   dfs_cac_wait_status);
@@ -2326,7 +2195,7 @@ wlansap_reset_sap_config_add_ie(struct sap_config *config,
 		}
 		if (eUPDATE_IE_ALL != updateType)
 			break;
-		/* fallthrough */
+		fallthrough;
 	case eUPDATE_IE_ASSOC_RESP:
 		if (config->pAssocRespIEsBuffer) {
 			qdf_mem_free(config->pAssocRespIEsBuffer);
@@ -2335,7 +2204,7 @@ wlansap_reset_sap_config_add_ie(struct sap_config *config,
 		}
 		if (eUPDATE_IE_ALL != updateType)
 			break;
-		/* fallthrough */
+		fallthrough;
 	case eUPDATE_IE_PROBE_BCN:
 		if (config->pProbeRespBcnIEsBuffer) {
 			qdf_mem_free(config->pProbeRespBcnIEsBuffer);
@@ -2344,7 +2213,7 @@ wlansap_reset_sap_config_add_ie(struct sap_config *config,
 		}
 		if (eUPDATE_IE_ALL != updateType)
 			break;
-		/* fallthrough */
+		fallthrough;
 	default:
 		if (eUPDATE_IE_ALL != updateType)
 			sap_err("Invalid buffer type %d", updateType);

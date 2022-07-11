@@ -38,11 +38,147 @@
 #include "wlan_tdls_tgt_api.h"
 #include "wlan_policy_mgr_api.h"
 #include "nan_ucfg_api.h"
+#include "wlan_mlme_main.h"
 
 static uint16_t tdls_get_connected_peer(struct tdls_soc_priv_obj *soc_obj)
 {
 	return soc_obj->connected_peer_count;
 }
+
+#ifdef WLAN_FEATURE_11AX
+static
+uint8_t tdls_get_mlme_ch_power(struct vdev_mlme_obj *mlme_obj, qdf_freq_t freq)
+{
+	uint8_t num_power = mlme_obj->reg_tpc_obj.num_pwr_levels;
+	uint8_t idx;
+	struct reg_tpc_power_info *reg_power_info;
+
+	reg_power_info = &mlme_obj->reg_tpc_obj;
+	for (idx = 0; idx < num_power; idx++) {
+		if (freq == reg_power_info->chan_power_info[idx].chan_cfreq)
+			return reg_power_info->chan_power_info[idx].tx_power;
+	}
+
+	tdls_debug("channel %d not present in reg power info", freq);
+	return 0;
+}
+
+static
+void tdls_set_mlme_ch_power(struct wlan_objmgr_vdev *vdev,
+			    struct vdev_mlme_obj *mlme_obj,
+			    struct tdls_soc_priv_obj *tdls_soc_obj,
+			    qdf_freq_t freq)
+{
+	uint8_t num_power = mlme_obj->reg_tpc_obj.num_pwr_levels;
+	uint8_t idx, tx_power;
+	struct reg_tpc_power_info *reg_power_info = &mlme_obj->reg_tpc_obj;
+
+	if (REG_VERY_LOW_POWER_AP == reg_power_info->power_type_6g)
+		tx_power = tdls_get_6g_pwr_for_power_type(vdev, freq,
+							  REG_CLI_DEF_VLP);
+	else
+		tx_power = tdls_soc_obj->bss_sta_power;
+
+	for (idx = 0; idx < num_power; idx++) {
+		if (freq == reg_power_info->chan_power_info[idx].chan_cfreq) {
+			reg_power_info->chan_power_info[idx].tx_power =
+								tx_power;
+			return;
+		}
+	}
+
+	tdls_debug("channel %d not present in reg power info", freq);
+}
+
+static
+void tdls_update_6g_power(struct wlan_objmgr_vdev *vdev,
+			  struct tdls_soc_priv_obj *tdls_soc_obj,
+			  bool enable_link)
+{
+	struct wlan_lmac_if_reg_tx_ops *tx_ops;
+	struct vdev_mlme_obj *mlme_obj;
+	struct wlan_objmgr_psoc *psoc = wlan_vdev_get_psoc(vdev);
+	qdf_freq_t freq = wlan_get_operation_chan_freq(vdev);
+
+	if (!psoc) {
+		tdls_err("psoc is NULL");
+		return;
+	}
+
+	/*
+	 * Check whether the frequency is 6ghz and tdls connection on 6ghz freq
+	 * is allowed.
+	 */
+	if (!tdls_is_6g_freq_allowed(vdev, freq))
+		return;
+
+	/*
+	 * Since, 8 TDLS peers can be connected. If connected peer already
+	 * exist then no need to set the power again.
+	 * Similarily, for disconnection case, this function is called after
+	 * just after connected peer count is decreased. If connected peer
+	 * count exist after decrement of peer count that mean another peer
+	 * exist and then no need to reset the BSS power.
+	 * The power should only be set/reset when 1st peer gets connected or
+	 * last connected peer gets disconnected.
+	 */
+	if (tdls_soc_obj->connected_peer_count) {
+		tdls_debug("Number of connected peer %d",
+			 tdls_soc_obj->connected_peer_count);
+		return;
+	}
+
+	mlme_obj = wlan_vdev_mlme_get_cmpt_obj(vdev);
+	if (!mlme_obj) {
+		tdls_err("vdev component object is NULL");
+		return;
+	}
+
+	if (enable_link) {
+		tdls_soc_obj->bss_sta_power_type = REG_VERY_LOW_POWER_AP;
+		/*
+		 * No need to update power if BSS-STA link is already configured
+		 * as VLP
+		 */
+		if (tdls_soc_obj->bss_sta_power_type ==
+		    mlme_obj->reg_tpc_obj.power_type_6g)
+			return;
+
+		tdls_soc_obj->bss_sta_power_type =
+					mlme_obj->reg_tpc_obj.power_type_6g;
+		mlme_obj->reg_tpc_obj.power_type_6g = REG_VERY_LOW_POWER_AP;
+		tdls_soc_obj->bss_sta_power = tdls_get_mlme_ch_power(mlme_obj,
+								     freq);
+		tdls_debug("Updated power_type from %d to %d bss link power %d",
+			   tdls_soc_obj->bss_sta_power_type,
+			   mlme_obj->reg_tpc_obj.power_type_6g,
+			   tdls_soc_obj->bss_sta_power);
+	} else {
+		if (REG_VERY_LOW_POWER_AP == tdls_soc_obj->bss_sta_power_type)
+			return;
+
+		tdls_debug("Updated power_type_6g from %d to %d",
+			   mlme_obj->reg_tpc_obj.power_type_6g,
+			   tdls_soc_obj->bss_sta_power_type);
+		mlme_obj->reg_tpc_obj.power_type_6g =
+					tdls_soc_obj->bss_sta_power_type;
+	}
+	tdls_set_mlme_ch_power(vdev, mlme_obj, tdls_soc_obj, freq);
+
+	tx_ops = wlan_reg_get_tx_ops(psoc);
+	if (tx_ops->set_tpc_power)
+		tx_ops->set_tpc_power(psoc,
+				      wlan_vdev_get_id(vdev),
+				      &mlme_obj->reg_tpc_obj);
+}
+#else
+static
+void tdls_update_6g_power(struct wlan_objmgr_vdev *vdev,
+			  struct tdls_soc_priv_obj *tdls_soc_obj,
+			  bool enable_link)
+{
+}
+#endif
 
 /**
  * tdls_decrement_peer_count() - decrement connected TDLS peer counter
@@ -52,12 +188,15 @@ static uint16_t tdls_get_connected_peer(struct tdls_soc_priv_obj *soc_obj)
  *
  * Return: None.
  */
-void tdls_decrement_peer_count(struct tdls_soc_priv_obj *soc_obj)
+void tdls_decrement_peer_count(struct wlan_objmgr_vdev *vdev,
+			       struct tdls_soc_priv_obj *soc_obj)
 {
 	if (soc_obj->connected_peer_count)
 		soc_obj->connected_peer_count--;
 
 	tdls_debug("Connected peer count %d", soc_obj->connected_peer_count);
+
+	tdls_update_6g_power(vdev, soc_obj, false);
 }
 
 /**
@@ -1530,7 +1669,7 @@ QDF_STATUS tdls_process_del_peer_rsp(struct tdls_del_sta_rsp *rsp)
 			id = wlan_vdev_get_id(vdev);
 
 			if (TDLS_IS_LINK_CONNECTED(curr_peer))
-				tdls_decrement_peer_count(soc_obj);
+				tdls_decrement_peer_count(vdev, soc_obj);
 		}
 		tdls_reset_peer(vdev_obj, macaddr);
 		conn_rec[sta_idx].valid_entry = false;
@@ -1670,6 +1809,7 @@ QDF_STATUS tdls_process_enable_link(struct tdls_oper_request *req)
 		goto error;
 	}
 
+	tdls_update_6g_power(vdev, soc_obj, true);
 	tdls_increment_peer_count(soc_obj);
 	feature = soc_obj->tdls_configs.tdls_feature_flags;
 
@@ -1778,16 +1918,16 @@ static QDF_STATUS tdls_config_force_peer(
 	}
 
 	soc_obj->tdls_external_peer_count++;
-	chan_freq = wlan_reg_legacy_chan_to_freq(pdev, req->chan);
+	chan_freq = req->ch_freq;
 
 	/* Validate if off channel is DFS channel */
 	if (wlan_reg_is_dfs_for_freq(pdev, chan_freq)) {
-		tdls_err("Resetting TDLS off-channel from %d to %d",
-			 req->chan, WLAN_TDLS_PREFERRED_OFF_CHANNEL_NUM_DEF);
-		req->chan = WLAN_TDLS_PREFERRED_OFF_CHANNEL_NUM_DEF;
+		tdls_err("Resetting TDLS off-channel freq from %d to %d",
+			 req->ch_freq, WLAN_TDLS_PREFERRED_OFF_CHANNEL_FRQ_DEF);
+		req->ch_freq = WLAN_TDLS_PREFERRED_OFF_CHANNEL_FRQ_DEF;
 	}
-	tdls_set_extctrl_param(peer, req->chan, req->max_latency, req->op_class,
-			       req->min_bandwidth);
+	tdls_set_extctrl_param(peer, req->ch_freq, req->max_latency,
+			       req->op_class, req->min_bandwidth);
 
 	tdls_set_callback(peer, req->callback);
 
@@ -1814,6 +1954,10 @@ QDF_STATUS tdls_process_setup_peer(struct tdls_oper_request *req)
 	struct tdls_soc_priv_obj *soc_obj;
 	struct wlan_objmgr_vdev *vdev;
 	QDF_STATUS status;
+	uint8_t reg_bw_offset = 0;
+	qdf_freq_t pref_freq;
+	uint32_t pref_width;
+	struct wlan_objmgr_pdev *pdev;
 
 	tdls_debug("Configure external TDLS peer " QDF_MAC_ADDR_FMT,
 		   QDF_MAC_ADDR_REF(req->peer_addr));
@@ -1837,8 +1981,27 @@ QDF_STATUS tdls_process_setup_peer(struct tdls_oper_request *req)
 		goto error;
 	}
 
-	peer_req.chan = soc_obj->tdls_configs.tdls_pre_off_chan_num;
+	pref_freq = tdls_get_offchan_freq(vdev, soc_obj);
+	pdev = wlan_vdev_get_pdev(vdev);
+	if (!pdev) {
+		tdls_err("NULL pdev object");
+		status = QDF_STATUS_E_INVAL;
+		goto error;
+	}
 
+	peer_req.ch_freq = pref_freq;
+	pref_width = tdls_get_offchan_bw(soc_obj, pref_freq);
+
+	if (!peer_req.op_class)
+		peer_req.op_class = tdls_get_opclass_from_bandwidth(vdev,
+								pref_freq,
+								pref_width,
+								&reg_bw_offset);
+
+	tdls_debug("peer chan %d peer opclass %d reg_bw_offset %d",
+		   peer_req.ch_freq,
+		   peer_req.op_class,
+		   reg_bw_offset);
 	status = tdls_config_force_peer(&peer_req);
 error:
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_TDLS_NB_ID);

@@ -511,6 +511,26 @@ static void mlme_init_mgmt_hw_tx_retry_count_cfg(
 	}
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+/**
+ * mlme_init_emlsr_mode() - initialize emlsr mode enable flag
+ * @psoc: Pointer to PSOC
+ * @gen: pointer to generic CFG items
+ *
+ * Return: None
+ */
+static void mlme_init_emlsr_mode(struct wlan_objmgr_psoc *psoc,
+				 struct wlan_mlme_generic *gen)
+{
+	gen->enable_emlsr_mode = cfg_default(CFG_EMLSR_MODE_ENABLE);
+}
+#else
+static void mlme_init_emlsr_mode(struct wlan_objmgr_psoc *psoc,
+				 struct wlan_mlme_generic *gen)
+{
+}
+#endif
+
 static void mlme_init_generic_cfg(struct wlan_objmgr_psoc *psoc,
 				  struct wlan_mlme_generic *gen)
 {
@@ -576,6 +596,7 @@ static void mlme_init_generic_cfg(struct wlan_objmgr_psoc *psoc,
 	mlme_init_wds_config_cfg(psoc, gen);
 	mlme_init_mgmt_hw_tx_retry_count_cfg(psoc, gen);
 	mlme_init_relaxed_6ghz_conn_policy(psoc, gen);
+	mlme_init_emlsr_mode(psoc, gen);
 }
 
 static void mlme_init_edca_ani_cfg(struct wlan_objmgr_psoc *psoc,
@@ -1816,6 +1837,65 @@ static void mlme_init_roam_offload_cfg(struct wlan_objmgr_psoc *psoc,
 	qdf_mem_zero(&lfr->roam_rt_stats, sizeof(lfr->roam_rt_stats));
 }
 
+void
+wlan_mlme_defer_pmk_set_in_roaming(struct wlan_objmgr_psoc *psoc,
+				   uint8_t vdev_id, bool set_pmk_pending)
+{
+	struct wlan_objmgr_vdev *vdev;
+	struct mlme_legacy_priv *mlme_priv;
+
+	if (set_pmk_pending && !MLME_IS_ROAM_SYNCH_IN_PROGRESS(psoc, vdev_id))
+		return;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_MLME_OBJMGR_ID);
+
+	if (!vdev) {
+		mlme_err("get vdev failed");
+		return;
+	}
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+
+	if (!mlme_priv) {
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
+		mlme_legacy_err("vdev legacy private object is NULL");
+		return;
+	}
+
+	mlme_priv->mlme_roam.set_pmk_pending = set_pmk_pending;
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
+}
+
+bool
+wlan_mlme_is_pmk_set_deferred(struct wlan_objmgr_psoc *psoc,
+			      uint8_t vdev_id)
+{
+	struct wlan_objmgr_vdev *vdev;
+	struct mlme_legacy_priv *mlme_priv;
+	bool set_pmk_pending;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_MLME_OBJMGR_ID);
+
+	if (!vdev) {
+		mlme_err("get vdev failed");
+		return false;
+	}
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+
+	if (!mlme_priv) {
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
+		mlme_legacy_err("vdev legacy private object is NULL");
+		return false;
+	}
+
+	set_pmk_pending = mlme_priv->mlme_roam.set_pmk_pending;
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
+
+	return set_pmk_pending;
+}
 #else
 static void mlme_init_roam_offload_cfg(struct wlan_objmgr_psoc *psoc,
 				       struct wlan_mlme_lfr_cfg *lfr)
@@ -1855,10 +1935,22 @@ static void
 mlme_init_bss_load_trigger_params(struct wlan_objmgr_psoc *psoc,
 				  struct bss_load_trigger *bss_load_trig)
 {
+	bool val = false;
+
 	bss_load_trig->enabled =
 		cfg_get(psoc, CFG_ENABLE_BSS_LOAD_TRIGGERED_ROAM);
 	bss_load_trig->threshold = cfg_get(psoc, CFG_BSS_LOAD_THRESHOLD);
-	bss_load_trig->sample_time = cfg_get(psoc, CFG_BSS_LOAD_SAMPLE_TIME);
+
+	ucfg_mlme_get_connection_roaming_ini_present(psoc, &val);
+	if (val)
+		bss_load_trig->sample_time =
+				cfg_get(psoc, CFG_ROAM_CU_MONITOR_TIME) * 1000;
+	else
+		bss_load_trig->sample_time = cfg_get(psoc,
+						     CFG_BSS_LOAD_SAMPLE_TIME);
+
+	bss_load_trig->rssi_threshold_6ghz =
+			cfg_get(psoc, CFG_BSS_LOAD_TRIG_6G_RSSI_THRES);
 	bss_load_trig->rssi_threshold_5ghz =
 			cfg_get(psoc, CFG_BSS_LOAD_TRIG_5G_RSSI_THRES);
 	bss_load_trig->rssi_threshold_24ghz =
@@ -1991,6 +2083,8 @@ static void mlme_init_lfr_cfg(struct wlan_objmgr_psoc *psoc,
 		cfg_get(psoc, CFG_LFR_NEIGHBOR_SCAN_MIN_CHAN_TIME);
 	lfr->neighbor_scan_max_chan_time =
 		cfg_get(psoc, CFG_LFR_NEIGHBOR_SCAN_MAX_CHAN_TIME);
+	lfr->passive_max_channel_time =
+		cfg_get(psoc, CFG_PASSIVE_MAX_CHANNEL_TIME);
 	lfr->neighbor_scan_results_refresh_period =
 		cfg_get(psoc, CFG_LFR_NEIGHBOR_SCAN_RESULTS_REFRESH_PERIOD);
 
@@ -2053,8 +2147,15 @@ static void mlme_init_lfr_cfg(struct wlan_objmgr_psoc *psoc,
 
 	lfr->roam_inactive_data_packet_count =
 		cfg_get(psoc, CFG_ROAM_INACTIVE_COUNT);
-	lfr->roam_scan_period_after_inactivity =
-		cfg_get(psoc, CFG_POST_INACTIVITY_ROAM_SCAN_PERIOD);
+
+	if (val)
+		lfr->roam_scan_period_after_inactivity =
+			cfg_get(psoc, CFG_ROAM_SCAN_INACTIVE_TIMER) * 1000;
+
+	else
+		lfr->roam_scan_period_after_inactivity =
+			cfg_get(psoc, CFG_POST_INACTIVITY_ROAM_SCAN_PERIOD);
+
 	lfr->fw_akm_bitmap = 0;
 	lfr->enable_ft_im_roaming = cfg_get(psoc, CFG_FT_IM_ROAMING);
 	lfr->enable_ft_over_ds = !ENABLE_FT_OVER_DS;
@@ -2065,6 +2166,10 @@ static void mlme_init_lfr_cfg(struct wlan_objmgr_psoc *psoc,
 	mlme_init_adaptive_11r_cfg(psoc, lfr);
 	mlme_init_subnet_detection(psoc, lfr);
 	lfr->rso_user_config.cat_rssi_offset = DEFAULT_RSSI_DB_GAP;
+	lfr->beaconloss_timeout_onwakeup =
+		cfg_get(psoc, CFG_LFR_BEACONLOSS_TIMEOUT_ON_WAKEUP);
+	lfr->beaconloss_timeout_onsleep =
+		cfg_get(psoc, CFG_LFR_BEACONLOSS_TIMEOUT_ON_SLEEP);
 }
 
 static void mlme_init_power_cfg(struct wlan_objmgr_psoc *psoc,
@@ -3207,9 +3312,6 @@ qdf_freq_t wlan_get_operation_chan_freq(struct wlan_objmgr_vdev *vdev)
 	if (!vdev)
 		return chan_freq;
 
-	if (wlan_vdev_mlme_is_active(vdev) != QDF_STATUS_SUCCESS)
-		return chan_freq;
-
 	chan = wlan_vdev_get_active_channel(vdev);
 	if (chan)
 		chan_freq = chan->ch_freq;
@@ -3973,5 +4075,49 @@ QDF_STATUS wlan_mlme_get_mac_vdev_id(struct wlan_objmgr_pdev *pdev,
 		     wlan_vdev_mlme_get_macaddr(vdev), QDF_MAC_ADDR_SIZE);
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
 
+	return QDF_STATUS_SUCCESS;
+}
+
+qdf_freq_t
+wlan_get_sap_user_config_freq(struct wlan_objmgr_vdev *vdev)
+{
+	struct mlme_legacy_priv *mlme_priv;
+	enum QDF_OPMODE opmode = QDF_MAX_NO_OF_MODE;
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_legacy_err("vdev legacy private object is NULL");
+		return 0;
+	}
+
+	opmode = wlan_vdev_mlme_get_opmode(vdev);
+	if (opmode != QDF_SAP_MODE && opmode != QDF_P2P_GO_MODE) {
+		mlme_debug("Cannot get user config freq for mode %d", opmode);
+		return 0;
+	}
+
+	return mlme_priv->mlme_ap.user_config_sap_ch_freq;
+}
+
+QDF_STATUS
+wlan_set_sap_user_config_freq(struct wlan_objmgr_vdev *vdev,
+			      qdf_freq_t freq)
+{
+	struct mlme_legacy_priv *mlme_priv;
+	enum QDF_OPMODE opmode = QDF_MAX_NO_OF_MODE;
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_legacy_err("vdev legacy private object is NULL");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	opmode = wlan_vdev_mlme_get_opmode(vdev);
+	if (opmode != QDF_SAP_MODE && opmode != QDF_P2P_GO_MODE) {
+		mlme_debug("Cannot set user config freq for mode %d", opmode);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	mlme_priv->mlme_ap.user_config_sap_ch_freq = freq;
 	return QDF_STATUS_SUCCESS;
 }

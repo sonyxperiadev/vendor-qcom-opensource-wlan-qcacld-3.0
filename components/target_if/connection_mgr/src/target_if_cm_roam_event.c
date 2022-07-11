@@ -52,6 +52,21 @@ target_if_cm_get_roam_rx_ops(struct wlan_objmgr_psoc *psoc)
 	return rx_ops;
 }
 
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+static void target_if_cm_roam_register_vendor_handoff_rx_ops(
+					struct wlan_cm_roam_rx_ops *rx_ops)
+{
+	rx_ops->roam_vendor_handoff_event =
+					cm_roam_vendor_handoff_event_handler;
+}
+#else
+static inline void
+target_if_cm_roam_register_vendor_handoff_rx_ops(
+					struct wlan_cm_roam_rx_ops *rx_ops)
+{
+}
+#endif
+
 void
 target_if_cm_roam_register_rx_ops(struct wlan_cm_roam_rx_ops *rx_ops)
 {
@@ -65,6 +80,7 @@ target_if_cm_roam_register_rx_ops(struct wlan_cm_roam_rx_ops *rx_ops)
 	rx_ops->roam_auth_offload_event = cm_roam_auth_offload_event_handler;
 	rx_ops->roam_pmkid_request_event_rx = cm_roam_pmkid_request_handler;
 	rx_ops->roam_candidate_frame_event = cm_roam_candidate_event_handler;
+	target_if_cm_roam_register_vendor_handoff_rx_ops(rx_ops);
 }
 
 int target_if_cm_roam_event(ol_scn_t scn, uint8_t *event, uint32_t len)
@@ -624,6 +640,80 @@ target_if_roam_frame_event_handler(ol_scn_t scn, uint8_t *event,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+int target_if_get_roam_vendor_control_param_event_handler(ol_scn_t scn,
+							  uint8_t *event,
+							  uint32_t len)
+{
+	struct wlan_objmgr_psoc *psoc;
+	struct wmi_unified *wmi_handle;
+	struct roam_vendor_handoff_params *vendor_handoff_params = NULL;
+	struct wlan_cm_roam_rx_ops *roam_rx_ops;
+	QDF_STATUS qdf_status;
+	int ret = 0;
+
+	psoc = target_if_get_psoc_from_scn_hdl(scn);
+	if (!psoc) {
+		target_if_err("psoc is null");
+		ret = -EINVAL;
+	}
+
+	wmi_handle = get_wmi_unified_hdl_from_psoc(psoc);
+	if (!wmi_handle) {
+		target_if_err("wmi_handle is null");
+		ret = -EINVAL;
+	}
+
+	qdf_status = wmi_extract_roam_vendor_control_param_event(wmi_handle,
+							event, len,
+							&vendor_handoff_params);
+	if (QDF_IS_STATUS_ERROR(qdf_status)) {
+		target_if_err("parsing of event failed, %d", qdf_status);
+		ret = -EINVAL;
+		goto done;
+	}
+
+	roam_rx_ops = target_if_cm_get_roam_rx_ops(psoc);
+	if (!roam_rx_ops || !roam_rx_ops->roam_vendor_handoff_event) {
+		target_if_err("No valid roam rx ops");
+		ret = -EINVAL;
+		goto done;
+	}
+
+	roam_rx_ops->roam_vendor_handoff_event(psoc, vendor_handoff_params);
+
+done:
+	if (vendor_handoff_params)
+		qdf_mem_free(vendor_handoff_params);
+
+	return ret;
+}
+
+static QDF_STATUS
+target_if_register_roam_vendor_control_param_event(wmi_unified_t handle)
+{
+	QDF_STATUS ret;
+
+	ret = wmi_unified_register_event_handler(handle,
+			wmi_get_roam_vendor_control_param_event_id,
+			target_if_get_roam_vendor_control_param_event_handler,
+			WMI_RX_SERIALIZER_CTX);
+	if (QDF_IS_STATUS_ERROR(ret)) {
+		target_if_err("wmi event(%u) registration failed, ret: %d",
+			      wmi_get_roam_vendor_control_param_event_id, ret);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+#else
+static inline QDF_STATUS
+target_if_register_roam_vendor_control_param_event(wmi_unified_t handle)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 QDF_STATUS
 target_if_roam_offload_register_events(struct wlan_objmgr_psoc *psoc)
 {
@@ -713,6 +803,8 @@ target_if_roam_offload_register_events(struct wlan_objmgr_psoc *psoc)
 			      wmi_roam_stats_event_id, ret);
 		return QDF_STATUS_E_FAILURE;
 	}
+
+	target_if_register_roam_vendor_control_param_event(handle);
 
 	ret = wmi_unified_register_event_handler(handle,
 				wmi_roam_frame_event_id,

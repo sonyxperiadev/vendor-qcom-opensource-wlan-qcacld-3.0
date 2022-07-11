@@ -20,6 +20,7 @@
   *
   *
   */
+
 #include "wlan_dp_main.h"
 #include "wlan_dp_public_struct.h"
 #include "cfg_ucfg_api.h"
@@ -313,16 +314,16 @@ void dp_trace_init(struct wlan_objmgr_psoc *psoc)
 	switch (num_entries) {
 	case 4:
 		proto_bitmap = config_params[3];
-		/* fallthrough */
+		fallthrough;
 	case 3:
 		verbosity = config_params[2];
-		/* fallthrough */
+		fallthrough;
 	case 2:
 		thresh = config_params[1];
-		/* fallthrough */
+		fallthrough;
 	case 1:
 		live_mode = config_params[0];
-		/* fallthrough */
+		fallthrough;
 	default:
 		dp_debug("live_mode %u thresh %u time_limit %u verbosity %u bitmap 0x%x",
 			 live_mode, thresh, thresh_time_limit,
@@ -648,11 +649,11 @@ __dp_process_mic_error(struct wlan_dp_intf *dp_intf)
 	if ((dp_intf->device_mode == QDF_STA_MODE ||
 	     dp_intf->device_mode == QDF_P2P_CLIENT_MODE) &&
 	    ucfg_cm_is_vdev_active(vdev))
-		ops->osif_dp_process_sta_mic_error(dp_intf->mic_work.info,
+		ops->osif_dp_process_mic_error(dp_intf->mic_work.info,
 						   vdev);
 	else if (dp_intf->device_mode == QDF_SAP_MODE ||
 		 dp_intf->device_mode == QDF_P2P_GO_MODE)
-		ops->osif_dp_process_sap_mic_error(dp_intf->mic_work.info,
+		ops->osif_dp_process_mic_error(dp_intf->mic_work.info,
 						   vdev);
 	else
 		dp_err("Invalid interface type:%d", dp_intf->device_mode);

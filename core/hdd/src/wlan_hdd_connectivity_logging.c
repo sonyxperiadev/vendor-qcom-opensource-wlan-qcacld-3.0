@@ -52,6 +52,8 @@ hdd_connectivity_log_attr_table[WLAN_TAG_MAX] = {
 	[WLAN_AUTH_RESP] = QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_AUTH_RESP,
 	[WLAN_ASSOC_REQ] = QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_ASSOC_REQ,
 	[WLAN_ASSOC_RSP] = QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_ASSOC_RESP,
+	[WLAN_REASSOC_REQ] = QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_REASSOC_REQ,
+	[WLAN_REASSOC_RSP] = QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_REASSOC_RES,
 	[WLAN_DEAUTH_RX] = QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_DEAUTH_RX,
 	[WLAN_DEAUTH_TX] = QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_DEAUTH_TX,
 	[WLAN_DISASSOC_RX] = QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_DISASSOC_RX,
@@ -238,7 +240,55 @@ connectivity_attr_table[QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_MAX + 1]
 	 GET_ATTR_OFFSET(pkt_info.seq_num)},
 	{QCA_WLAN_VENDOR_ATTR_DIAG_STATUS_CODE, NLA_U8,  sizeof(uint8_t),
 	 GET_ATTR_OFFSET(pkt_info.frame_status_code)},
+	{QCA_WLAN_VENDOR_ATTR_DIAG_ASSOC_ID,   NLA_U16, sizeof(uint16_t),
+	 GET_ATTR_OFFSET(pkt_info.assoc_id)},
 	{WLAN_CONNECTIVITY_ATTR_END,   0, 0, 0},
+	},
+
+	[QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_REASSOC_REQ] = {
+	{QCA_WLAN_VENDOR_ATTR_DIAG_EVENT_TYPE,  NLA_U32,  sizeof(uint32_t),
+	 GET_ATTR_OFFSET(log_subtype)},
+	{QCA_WLAN_VENDOR_ATTR_DIAG_HOST_TIMESTAMP,   NLA_U64,  sizeof(uint64_t),
+	 GET_ATTR_OFFSET(timestamp_us)},
+	{QCA_WLAN_VENDOR_ATTR_DIAG_KERNEL_TIMESTAMP, NLA_U64, sizeof(uint64_t),
+	 GET_ATTR_OFFSET(ktime_us)},
+	{QCA_WLAN_VENDOR_ATTR_DIAG_IFINDEX,     NLA_U8,   sizeof(uint8_t),
+	 GET_ATTR_OFFSET(vdev_id)},
+	{QCA_WLAN_VENDOR_ATTR_DIAG_BSSID,       NLA_BINARY, QDF_MAC_ADDR_SIZE,
+	 GET_ATTR_OFFSET(bssid)},
+	{QCA_WLAN_VENDOR_ATTR_DIAG_RSSI,        NLA_S32,  sizeof(int32_t),
+	 GET_ATTR_OFFSET(pkt_info.rssi)},
+	{QCA_WLAN_VENDOR_ATTR_DIAG_SEQUENCE_NUMBER,   NLA_U16, sizeof(uint16_t),
+	 GET_ATTR_OFFSET(pkt_info.seq_num)},
+	{QCA_WLAN_VENDOR_ATTR_DIAG_FRAME_TX_STATUS,   NLA_U8, sizeof(uint8_t),
+	 GET_ATTR_OFFSET(pkt_info.tx_status)},
+	{QCA_WLAN_VENDOR_ATTR_DIAG_IS_RETRY_FRAME,    NLA_FLAG, sizeof(uint8_t),
+	 GET_ATTR_OFFSET(pkt_info.is_retry_frame)},
+	{QCA_WLAN_VENDOR_ATTR_DIAG_FIRMWARE_TIMESTAMP, NLA_U64,
+	 sizeof(uint64_t), GET_ATTR_OFFSET(fw_timestamp_us)},
+	{WLAN_CONNECTIVITY_ATTR_END, 0, 0, 0},
+	},
+
+	[QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_REASSOC_RES] = {
+	{QCA_WLAN_VENDOR_ATTR_DIAG_EVENT_TYPE,  NLA_U32,  sizeof(uint32_t),
+	 GET_ATTR_OFFSET(log_subtype)},
+	{QCA_WLAN_VENDOR_ATTR_DIAG_HOST_TIMESTAMP,   NLA_U64,  sizeof(uint64_t),
+	 GET_ATTR_OFFSET(timestamp_us)},
+	{QCA_WLAN_VENDOR_ATTR_DIAG_KERNEL_TIMESTAMP, NLA_U64, sizeof(uint64_t),
+	 GET_ATTR_OFFSET(ktime_us)},
+	{QCA_WLAN_VENDOR_ATTR_DIAG_IFINDEX,     NLA_U8,   sizeof(uint8_t),
+	 GET_ATTR_OFFSET(vdev_id)},
+	{QCA_WLAN_VENDOR_ATTR_DIAG_BSSID,       NLA_BINARY, QDF_MAC_ADDR_SIZE,
+	 GET_ATTR_OFFSET(bssid)},
+	{QCA_WLAN_VENDOR_ATTR_DIAG_SEQUENCE_NUMBER,   NLA_U16, sizeof(uint16_t),
+	 GET_ATTR_OFFSET(pkt_info.seq_num)},
+	{QCA_WLAN_VENDOR_ATTR_DIAG_STATUS_CODE, NLA_U8,  sizeof(uint8_t),
+	 GET_ATTR_OFFSET(pkt_info.frame_status_code)},
+	{QCA_WLAN_VENDOR_ATTR_DIAG_ASSOC_ID,   NLA_U16, sizeof(uint16_t),
+	 GET_ATTR_OFFSET(pkt_info.assoc_id)},
+	{QCA_WLAN_VENDOR_ATTR_DIAG_FIRMWARE_TIMESTAMP, NLA_U64,
+	 sizeof(uint64_t), GET_ATTR_OFFSET(fw_timestamp_us)},
+	{WLAN_CONNECTIVITY_ATTR_END, 0, 0, 0},
 	},
 
 	[QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_DEAUTH_RX] = {
@@ -380,6 +430,8 @@ connectivity_attr_table[QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_MAX + 1]
 	 sizeof(uint64_t), GET_ATTR_OFFSET(fw_timestamp_us)},
 	{QCA_WLAN_VENDOR_ATTR_DIAG_ROAM_FREQ_LIST, NLA_NESTED, sizeof(uint16_t),
 	 GET_ATTR_OFFSET(roam_scan.scan_freq)},
+	{QCA_WLAN_VENDOR_ATTR_DIAG_BT_COEX_ACTIVE,   NLA_FLAG, sizeof(uint8_t),
+	 GET_ATTR_OFFSET(roam_scan.is_btcoex_active)},
 	{WLAN_CONNECTIVITY_ATTR_END,   0, 0, 0},
 	},
 
@@ -786,6 +838,7 @@ connectivity_attr_table[QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_MAX + 1]
 	},
 };
 
+#ifdef WLAN_FEATURE_CONNECTIVITY_LOGGING
 static enum qca_roam_reason
 wlan_hdd_convert_roam_reason(enum roam_trigger_reason roam_reason)
 {
@@ -1242,7 +1295,84 @@ void wlan_hdd_start_connectivity_logging(struct hdd_context *hdd_ctx)
 			wlan_hdd_send_connectivity_log_to_user;
 	wlan_connectivity_logging_start(hdd_ctx->psoc, &hdd_cb, hdd_ctx);
 }
+#endif
 
+#ifdef CONNECTIVITY_DIAG_EVENT
+void wlan_hdd_connectivity_event_connecting(struct hdd_context *hdd_ctx,
+					    struct cfg80211_connect_params *req,
+					    uint8_t vdev_id)
+{
+	WLAN_HOST_DIAG_EVENT_DEF(wlan_diag_event, struct wlan_diag_connect);
+
+	qdf_mem_zero(&wlan_diag_event, sizeof(struct wlan_diag_connect));
+
+	wlan_diag_event.diag_cmn.timestamp_us = qdf_get_time_of_the_day_us();
+	wlan_diag_event.diag_cmn.ktime_us = qdf_ktime_to_us(qdf_ktime_get());
+	wlan_diag_event.diag_cmn.vdev_id = vdev_id;
+	wlan_diag_event.subtype = WLAN_CONN_DIAG_CONNECTING_EVENT;
+
+	wlan_diag_event.version = DIAG_CONN_VERSION;
+	wlan_diag_event.ssid_len = req->ssid_len;
+	if (req->ssid_len > WLAN_SSID_MAX_LEN)
+		wlan_diag_event.ssid_len = WLAN_SSID_MAX_LEN;
+	qdf_mem_copy(wlan_diag_event.ssid, req->ssid,
+		     wlan_diag_event.ssid_len);
+
+	if (req->bssid)
+		qdf_mem_copy(wlan_diag_event.diag_cmn.bssid, req->bssid,
+			     QDF_MAC_ADDR_SIZE);
+	else if (req->bssid_hint)
+		qdf_mem_copy(wlan_diag_event.bssid_hint, req->bssid_hint,
+			     QDF_MAC_ADDR_SIZE);
+
+	if (req->channel)
+		wlan_diag_event.freq = req->channel->center_freq;
+
+	if (req->channel_hint)
+		wlan_diag_event.freq_hint = req->channel_hint->center_freq;
+
+	wlan_diag_event.pairwise_cipher = req->crypto.ciphers_pairwise[0];
+	wlan_diag_event.grp_cipher = req->crypto.cipher_group;
+	wlan_diag_event.akm = req->crypto.akm_suites[0];
+	wlan_diag_event.auth_algo = req->auth_type;
+	if (hdd_ctx->bt_profile_con)
+		wlan_diag_event.bt_coex = true;
+
+	WLAN_HOST_DIAG_EVENT_REPORT(&wlan_diag_event, EVENT_WLAN_CONN);
+}
+
+void
+wlan_hdd_connectivity_fail_event(struct wlan_objmgr_vdev *vdev,
+				 struct wlan_cm_connect_resp *rsp)
+{
+	uint8_t op_mode;
+
+	WLAN_HOST_DIAG_EVENT_DEF(wlan_diag_event, struct wlan_diag_connect);
+
+	if (!rsp->reason)
+		return;
+
+	qdf_mem_zero(&wlan_diag_event, sizeof(struct wlan_diag_connect));
+
+	wlan_diag_event.diag_cmn.vdev_id = wlan_vdev_get_id(vdev);
+	op_mode = wlan_vdev_mlme_get_opmode(vdev);
+	if (op_mode != QDF_STA_MODE)
+		return;
+
+	wlan_diag_event.diag_cmn.timestamp_us = qdf_get_time_of_the_day_us();
+	wlan_diag_event.diag_cmn.ktime_us = qdf_ktime_to_us(qdf_ktime_get());
+	wlan_diag_event.subtype = WLAN_CONN_DIAG_CONNECT_FAIL_EVENT;
+	qdf_mem_copy(wlan_diag_event.diag_cmn.bssid, rsp->bssid.bytes,
+		     QDF_MAC_ADDR_SIZE);
+
+	wlan_diag_event.version = DIAG_CONN_VERSION;
+	wlan_diag_event.freq = rsp->freq;
+	wlan_diag_event.reason = rsp->reason;
+
+	WLAN_HOST_DIAG_EVENT_REPORT(&wlan_diag_event, EVENT_WLAN_CONN);
+}
+
+#else
 void wlan_hdd_connectivity_event_connecting(struct hdd_context *hdd_ctx,
 					    struct cfg80211_connect_params *req,
 					    uint8_t vdev_id)
@@ -1323,3 +1453,4 @@ wlan_hdd_connectivity_fail_event(struct wlan_objmgr_vdev *vdev,
 	wlan_connectivity_log_enqueue(log);
 	qdf_mem_free(log);
 }
+#endif

@@ -299,15 +299,15 @@ static int osif_dp_get_net_dev_from_vdev(struct wlan_objmgr_vdev *vdev,
 }
 
 /**
- * osif_dp_process_sta_mic_error() - Indicate STA mic error to supplicant
+ * osif_dp_process_mic_error() - Indicate mic error to supplicant
  * @info: MIC error information
  * @vdev: vdev handle
  *
  * Return: None
  */
 static void
-osif_dp_process_sta_mic_error(struct dp_mic_error_info *info,
-			      struct wlan_objmgr_vdev *vdev)
+osif_dp_process_mic_error(struct dp_mic_error_info *info,
+			  struct wlan_objmgr_vdev *vdev)
 {
 	struct net_device *dev;
 	struct osif_vdev_sync *vdev_sync;
@@ -332,39 +332,6 @@ osif_dp_process_sta_mic_error(struct dp_mic_error_info *info,
 				     GFP_KERNEL);
 }
 
-/**
- * osif_dp_process_sap_mic_error() - Indicate SAP mic error to supplicant
- * @info: MIC error information
- * @vdev: vdev handle
- *
- * Return: None
- */
-static void
-osif_dp_process_sap_mic_error(struct dp_mic_error_info *info,
-			      struct wlan_objmgr_vdev *vdev)
-{
-	struct net_device *dev;
-	int errno;
-	struct osif_vdev_sync *vdev_sync;
-
-	errno = osif_dp_get_net_dev_from_vdev(vdev, &dev);
-	if (errno) {
-		dp_err("failed to get netdev");
-		return;
-	}
-	if (osif_vdev_sync_op_start(dev, &vdev_sync))
-		return;
-
-	/* inform mic failure to nl80211 */
-	cfg80211_michael_mic_failure(dev,
-				     (uint8_t *)&info->ta_mac_addr,
-				     info->multicast ?
-				     NL80211_KEYTYPE_GROUP :
-				     NL80211_KEYTYPE_PAIRWISE,
-				     info->key_id,
-				     info->tsc,
-				     GFP_KERNEL);
-}
 
 /**
  * osif_dp_get_arp_stats_event_handler() - ARP get stats event handler
@@ -1247,8 +1214,7 @@ void os_if_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 	cb_obj->osif_dp_send_tcp_param_update_event =
 		osif_dp_send_tcp_param_update_event;
 	cb_obj->os_if_dp_nud_stats_info = os_if_dp_nud_stats_info;
-	cb_obj->osif_dp_process_sta_mic_error = osif_dp_process_sta_mic_error;
-	cb_obj->osif_dp_process_sap_mic_error = osif_dp_process_sap_mic_error;
+	cb_obj->osif_dp_process_mic_error = osif_dp_process_mic_error;
 	os_if_dp_register_txrx_callbacks(cb_obj);
 
 	ucfg_dp_register_hdd_callbacks(psoc, cb_obj);

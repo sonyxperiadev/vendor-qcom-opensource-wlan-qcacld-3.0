@@ -1467,6 +1467,19 @@ cm_roam_auth_offload_event_handler(struct auth_offload_event *auth_event);
 QDF_STATUS
 cm_roam_pmkid_request_handler(struct roam_pmkid_req_event *data);
 
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+/**
+ * cm_roam_vendor_handoff_event_handler() - vendor handoff event handler
+ * @psoc: psoc object
+ * @data: vendor handoff params
+ *
+ * Return: None
+ */
+void
+cm_roam_vendor_handoff_event_handler(struct wlan_objmgr_psoc *psoc,
+				     struct roam_vendor_handoff_params *data);
+#endif
+
 /**
  * cm_roam_update_vdev() - Update the STA and BSS
  * @sync_ind: Information needed for roam sync propagation

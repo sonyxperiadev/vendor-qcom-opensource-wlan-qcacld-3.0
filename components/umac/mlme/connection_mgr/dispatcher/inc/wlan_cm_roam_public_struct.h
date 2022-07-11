@@ -278,6 +278,7 @@ struct rso_cfg_params {
 	int8_t rssi_thresh_offset_5g;
 	uint32_t min_chan_scan_time;
 	uint32_t max_chan_scan_time;
+	uint32_t passive_max_chan_time;
 	uint16_t neighbor_results_refresh_period;
 	uint16_t empty_scan_refresh_period;
 	uint8_t opportunistic_threshold_diff;
@@ -591,7 +592,6 @@ struct rso_roam_policy_params {
  * @drop_factor_5g: Penalty factor
  * @max_raise_rssi_5g: Maximum amount of Boost that can added
  * @is_fils_roaming_supported: fils roaming supported
- * @roam_scan_control: roam scan control
  * @policy_params: roam policy params
  * @neighbor_report_offload: neighbor report offload params
  */
@@ -611,7 +611,6 @@ struct rso_config_params {
 	int max_raise_rssi_5g;
 	uint8_t cat_rssi_offset;
 	bool is_fils_roaming_supported;
-	bool roam_scan_control;
 	struct rso_roam_policy_params policy_params;
 	struct cm_roam_neighbor_report_offload_params neighbor_report_offload;
 };
@@ -1134,6 +1133,9 @@ struct wlan_roam_11k_offload_params {
  * @bss_load_threshold: BSS load threshold after which roam scan should trigger
  * @bss_load_sample_time: Time duration in milliseconds for which the bss load
  * trigger needs to be enabled
+ * @rssi_threshold_6ghz: RSSI threshold of the current connected AP below which
+ * roam should be triggered if bss load threshold exceeds the configured value.
+ * This value is applicable only when we are connected in 6GHz band.
  * @rssi_threshold_5ghz: RSSI threshold of the current connected AP below which
  * roam should be triggered if bss load threshold exceeds the configured value.
  * This value is applicable only when we are connected in 5GHz band.
@@ -1145,6 +1147,7 @@ struct wlan_roam_bss_load_config {
 	uint32_t vdev_id;
 	uint32_t bss_load_threshold;
 	uint32_t bss_load_sample_time;
+	int32_t rssi_threshold_6ghz;
 	int32_t rssi_threshold_5ghz;
 	int32_t rssi_threshold_24ghz;
 };
@@ -1158,6 +1161,18 @@ struct roam_disable_cfg {
 	uint8_t vdev_id;
 	uint8_t cfg;
 };
+
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+/**
+ * struct vendor_handoff_cfg - vendor handoff command params
+ * @vdev_id: vdev for which host sends vendor handoff command
+ * @param_id:  parameter id
+ */
+struct vendor_handoff_cfg {
+	uint32_t vdev_id;
+	uint32_t param_id;
+};
+#endif
 
 /**
  * struct wlan_roam_disconnect_params - Emergency deauth/disconnect roam params
@@ -1605,6 +1620,18 @@ struct wlan_roam_beacon_miss_cnt {
 };
 
 /**
+ * struct wlan_roam_bmiss_timeout - roam beacon miss timeout
+ * @vdev_id: vdev id
+ * @bmiss_timeout_onwakeup : timeout on wakeup in seconds
+ * @bmiss_timeout_onsleep : timeout on sleep in seconds
+ */
+struct wlan_roam_bmiss_timeout {
+	uint32_t vdev_id;
+	uint8_t bmiss_timeout_onwakeup;
+	uint8_t bmiss_timeout_onsleep;
+};
+
+/**
  * struct wlan_roam_reason_vsie_enable - roam reason vsie enable parameters
  * @vdev_id: vdev id
  * @enable_roam_reason_vsie: enable/disable inclusion of roam Reason
@@ -1698,6 +1725,7 @@ enum roam_rt_stats_params {
  * roam start config
  * @rssi_params: roam scan rssi threshold parameters
  * @beacon_miss_cnt: roam beacon miss count parameters
+ * @bmiss_timeout: roam consecutive beaconloss timeout parameters
  * @reason_vsie_enable: roam reason vsie enable parameters
  * @roam_triggers: roam triggers parameters
  * @scan_period_params: roam scan period parameters
@@ -1716,6 +1744,7 @@ enum roam_rt_stats_params {
 struct wlan_roam_start_config {
 	struct wlan_roam_offload_scan_rssi_params rssi_params;
 	struct wlan_roam_beacon_miss_cnt beacon_miss_cnt;
+	struct wlan_roam_bmiss_timeout bmiss_timeout;
 	struct wlan_roam_reason_vsie_enable reason_vsie_enable;
 	struct wlan_roam_triggers roam_triggers;
 	struct wlan_roam_scan_period_params scan_period_params;
@@ -1769,6 +1798,7 @@ struct wlan_roam_stop_config {
  * struct wlan_roam_update_config - structure containing parameters for
  * roam update config
  * @beacon_miss_cnt: roam beacon miss count parameters
+ * @bmiss_timeout: roam scan bmiss timeout parameters
  * @scan_filter_params: roam scan filter parameters
  * @scan_period_params: roam scan period parameters
  * @rssi_change_params: roam scan rssi change parameters
@@ -1783,6 +1813,7 @@ struct wlan_roam_stop_config {
  */
 struct wlan_roam_update_config {
 	struct wlan_roam_beacon_miss_cnt beacon_miss_cnt;
+	struct wlan_roam_bmiss_timeout bmiss_timeout;
 	struct wlan_roam_scan_filter_params scan_filter_params;
 	struct wlan_roam_scan_period_params scan_period_params;
 	struct wlan_roam_rssi_change_params rssi_change_params;
@@ -1924,6 +1955,8 @@ enum roam_rt_stats_type {
  * applicable only for tx frames
  * @rssi: Frame rssi
  * @retry_count: Frame retry count
+ * @assoc_id: Association id received in the association response/
+ * reassociation response frame
  */
 struct roam_frame_info {
 	bool present;
@@ -1938,6 +1971,7 @@ struct roam_frame_info {
 	uint16_t status_code;
 	int32_t rssi;
 	uint16_t retry_count;
+	uint16_t assoc_id;
 };
 
 /**
@@ -2259,6 +2293,7 @@ struct roam_pmkid_req_event {
  * @send_roam_abort: send roam abort
  * @send_roam_disable_config: send roam disable config
  * @send_roam_rt_stats_config: Send roam events vendor command param value to FW
+ * @send_roam_vendor_handoff_config: send vendor handoff config command to FW
  */
 struct wlan_cm_roam_tx_ops {
 	QDF_STATUS (*send_vdev_set_pcl_cmd)(struct wlan_objmgr_vdev *vdev,
@@ -2290,6 +2325,11 @@ struct wlan_cm_roam_tx_ops {
 	QDF_STATUS (*send_roam_rt_stats_config)(struct wlan_objmgr_vdev *vdev,
 						uint8_t vdev_id, uint8_t value);
 #endif
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+	QDF_STATUS (*send_roam_vendor_handoff_config)(
+					struct wlan_objmgr_vdev *vdev,
+					uint8_t vdev_id, uint32_t param_id);
+#endif
 };
 
 /**
@@ -2308,14 +2348,31 @@ enum roam_scan_freq_scheme {
 	ROAM_SCAN_FREQ_SCHEME_NONE = 3,
 };
 
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+/**
+ * struct wlan_cm_vendor_handoff_param - vendor handoff configuration
+ * structure
+ * @vendor_handoff_context_cb: vendor handoff context
+ * @req_in_progress: to check whether vendor handoff reqest in progress or not
+ */
+struct wlan_cm_vendor_handoff_param {
+	void *vendor_handoff_context;
+	bool req_in_progress;
+};
+#endif
+
 /**
  * struct wlan_cm_roam  - Connection manager roam configs, state and roam
  * data related structure
  * @pcl_vdev_cmd_active:  Flag to check if vdev level pcl command needs to be
  * sent or PDEV level PCL command needs to be sent
+ * @vendor_handoff_param: vendor handoff params
  */
 struct wlan_cm_roam {
 	bool pcl_vdev_cmd_active;
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+	struct wlan_cm_vendor_handoff_param vendor_handoff_param;
+#endif
 };
 
 /**
@@ -2514,6 +2571,7 @@ struct roam_scan_candidate_frame {
  * @roam_auth_offload_event: Rx ops function pointer for auth offload event
  * @roam_pmkid_request_event_rx: Rx ops function pointer for roam pmkid event
  * @roam_candidate_frame_event : Rx ops function pointer for roam frame event
+ * @roam_vendor_handoff_event: Rx ops function pointer for vendor handoff event
  */
 struct wlan_cm_roam_rx_ops {
 	QDF_STATUS (*roam_sync_event)(struct wlan_objmgr_psoc *psoc,
@@ -2539,5 +2597,10 @@ struct wlan_cm_roam_rx_ops {
 	QDF_STATUS
 	(*roam_candidate_frame_event)(struct wlan_objmgr_psoc *psoc,
 				      struct roam_scan_candidate_frame *frame);
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+	void
+	(*roam_vendor_handoff_event)(struct wlan_objmgr_psoc *psoc,
+				     struct roam_vendor_handoff_params *data);
+#endif
 };
 #endif

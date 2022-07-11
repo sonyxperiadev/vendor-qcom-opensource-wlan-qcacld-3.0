@@ -463,6 +463,13 @@ static void hdd_nud_filter_netevent(struct neighbour *neigh)
 		return;
 	}
 
+	if (!hdd_is_sta_authenticated(adapter)) {
+		hdd_debug("client " QDF_MAC_ADDR_FMT
+			  " is in the middle of WPS/EAPOL exchange.",
+			  QDF_MAC_ADDR_REF(adapter->mac_addr.bytes));
+		return;
+	}
+
 	if (!qdf_is_macaddr_equal(&adapter->nud_tracking.gw_mac_addr,
 				  (struct qdf_mac_addr *)&neigh->ha[0]))
 		return;

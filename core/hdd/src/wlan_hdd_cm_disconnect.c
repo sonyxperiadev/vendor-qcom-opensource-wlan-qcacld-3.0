@@ -218,7 +218,6 @@ QDF_STATUS wlan_hdd_cm_issue_disconnect(struct hdd_adapter *adapter,
 {
 	QDF_STATUS status;
 	struct wlan_objmgr_vdev *vdev;
-	void *hif_ctx;
 	struct hdd_station_ctx *sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
 
 	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_CM_ID);
@@ -231,12 +230,7 @@ QDF_STATUS wlan_hdd_cm_issue_disconnect(struct hdd_adapter *adapter,
 				     WLAN_STOP_ALL_NETIF_QUEUE_N_CARRIER,
 				     WLAN_CONTROL_PATH);
 
-	hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
-	if (hif_ctx)
-		/*
-		 * Trigger runtime sync resume before sending disconneciton
-		 */
-		hif_pm_runtime_sync_resume(hif_ctx, RTPM_ID_CONN_DISCONNECT);
+	qdf_rtpm_sync_resume();
 
 	wlan_rec_conn_info(adapter->vdev_id, DEBUG_CONN_DISCONNECT,
 			   sta_ctx->conn_info.bssid.bytes, 0, reason);
@@ -486,7 +480,7 @@ wlan_hdd_runtime_pm_wow_disconnect_handler(struct hdd_context *hdd_ctx)
 	hdd_debug("Runtime allowed : %d", hdd_ctx->runtime_pm_prevented);
 	qdf_spin_lock_irqsave(&hdd_ctx->pm_qos_lock);
 	if (hdd_ctx->runtime_pm_prevented) {
-		hif_pm_runtime_put(hif_ctx, RTPM_ID_QOS_NOTIFY);
+		qdf_rtpm_put(QDF_RTPM_PUT, QDF_RTPM_ID_PM_QOS_NOTIFY);
 		hdd_ctx->runtime_pm_prevented = false;
 	}
 	qdf_spin_unlock_irqrestore(&hdd_ctx->pm_qos_lock);

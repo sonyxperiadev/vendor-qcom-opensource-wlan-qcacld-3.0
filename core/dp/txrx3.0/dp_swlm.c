@@ -181,8 +181,7 @@ static void dp_swlm_tcl_flush_timer(void *arg)
 	if (hal_srng_try_access_start(soc->hal_soc, hal_ring_hdl) < 0)
 		goto fail;
 
-	if (hif_pm_runtime_get(soc->hif_handle, RTPM_ID_DW_TX_HW_ENQUEUE,
-			       true)) {
+	if (hif_rtpm_get(HIF_RTPM_GET_ASYNC, HIF_RTPM_ID_DP)) {
 		hal_srng_access_end_reap(soc->hal_soc, hal_ring_hdl);
 		hal_srng_set_event(hal_ring_hdl, HAL_SRNG_FLUSH_EVENT);
 		hal_srng_inc_flush_cnt(hal_ring_hdl);
@@ -191,7 +190,7 @@ static void dp_swlm_tcl_flush_timer(void *arg)
 
 	DP_STATS_INC(swlm, tcl[tcl->ring_id].timer_flush_success, 1);
 	hal_srng_access_end(soc->hal_soc, hal_ring_hdl);
-	hif_pm_runtime_put(soc->hif_handle, RTPM_ID_DW_TX_HW_ENQUEUE);
+	hif_rtpm_put(HIF_RTPM_PUT_ASYNC, HIF_RTPM_ID_DP);
 
 	return;
 

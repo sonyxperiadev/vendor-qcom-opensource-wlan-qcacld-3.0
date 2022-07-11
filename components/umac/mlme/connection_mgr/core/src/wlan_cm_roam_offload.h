@@ -29,7 +29,59 @@
 #include "qdf_str.h"
 #include "wlan_cm_roam_public_struct.h"
 
-#if defined(WLAN_FEATURE_CONNECTIVITY_LOGGING) && \
+#if defined(CONNECTIVITY_DIAG_EVENT) && \
+	defined(WLAN_FEATURE_ROAM_OFFLOAD)
+/**
+ * cm_roam_scan_info_event() - send scan info to userspace
+ * @psoc: psoc common object
+ * @scan: roam scan data
+ * @vdev_id: vdev id
+ *
+ * Return: None
+ */
+void cm_roam_scan_info_event(struct wlan_objmgr_psoc *psoc,
+			     struct wmi_roam_scan_data *scan, uint8_t vdev_id);
+
+/**
+ * cm_roam_trigger_info_event() - send trigger info to userspace
+ * @data: roam trigger data
+ * @scan_data: Roam scan data
+ * @vdev_id: vdev id
+ * @is_full_scan: is full scan or partial scan
+ *
+ * Return: None
+ */
+void cm_roam_trigger_info_event(struct wmi_roam_trigger_info *data,
+				struct wmi_roam_scan_data *scan_data,
+				uint8_t vdev_id, bool is_full_scan);
+
+/**
+ * cm_roam_candidate_info_event() - send trigger info to userspace
+ * @ap: roam candidate info
+ * @cand_ap_idx: Candidate AP index
+ *
+ * Return: void
+ */
+void cm_roam_candidate_info_event(struct wmi_roam_candidate_info *ap,
+				  uint8_t cand_ap_idx);
+
+/**
+ * cm_roam_result_info_event() - send scan results info to userspace
+ * @psoc: Pointer to PSOC object
+ * @trigger: Roam trigger data
+ * @res: roam result data
+ * @scan_data: Roam scan info
+ * @vdev_id: vdev id
+ *
+ * Return: void
+ */
+void cm_roam_result_info_event(struct wlan_objmgr_psoc *psoc,
+			       struct wmi_roam_trigger_info *trigger,
+			       struct wmi_roam_result *res,
+			       struct wmi_roam_scan_data *scan_data,
+			       uint8_t vdev_id);
+
+#elif defined(WLAN_FEATURE_CONNECTIVITY_LOGGING) && \
     defined(WLAN_FEATURE_ROAM_OFFLOAD)
 /**
  * cm_roam_scan_info_event() - send scan info to userspace
@@ -315,6 +367,46 @@ QDF_STATUS
 cm_roam_send_disable_config(struct wlan_objmgr_psoc *psoc,
 			    uint8_t vdev_id, uint8_t cfg);
 
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+/**
+ * cm_roam_send_vendor_handoff_param_req() - send vendor handoff param cmd
+ * @psoc: psoc pointer
+ * @vdev_id: vdev id
+ * @param_value: roam stats param value
+ * @vendor_handoff_context: vendor handoff context request
+ *
+ * This function is used to send vendor handoff param cmd
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+cm_roam_send_vendor_handoff_param_req(struct wlan_objmgr_psoc *psoc,
+				      uint8_t vdev_id,
+				      uint32_t param_value,
+				      void *vendor_handoff_context);
+
+/**
+ * cm_roam_is_vendor_handoff_control_enable() - check whether vendor handoff
+ * control feature is enable or not in driver
+ * @psoc: psoc pointer
+ *
+ * Return: true if feature supports
+ */
+bool
+cm_roam_is_vendor_handoff_control_enable(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * cm_roam_update_vendor_handoff_config() - update vendor handoff param to
+ * rso config structure
+ * @psoc: psoc pointer
+ * @list: vendor handoff parameters to be updated
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS cm_roam_update_vendor_handoff_config(struct wlan_objmgr_psoc *psoc,
+				     struct roam_vendor_handoff_params *list);
+#endif
+
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 /**
  * cm_roam_send_rt_stats_config() - Send roam event stats cfg value to FW
@@ -401,7 +493,8 @@ cm_handle_mlo_rso_state_change(struct wlan_objmgr_pdev *pdev,
 
 #endif
 
-#if defined(WLAN_FEATURE_CONNECTIVITY_LOGGING) && \
+#if (defined(WLAN_FEATURE_CONNECTIVITY_LOGGING) || \
+	defined(CONNECTIVITY_DIAG_EVENT)) && \
 	defined(WLAN_FEATURE_ROAM_OFFLOAD)
 /**
  * cm_roam_mgmt_frame_event() - Roam management frame event

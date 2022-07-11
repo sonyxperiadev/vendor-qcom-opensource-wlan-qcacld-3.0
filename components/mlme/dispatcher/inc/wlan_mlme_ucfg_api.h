@@ -292,6 +292,23 @@ QDF_STATUS ucfg_mlme_set_band_capability(struct wlan_objmgr_psoc *psoc,
 	return wlan_mlme_set_band_capability(psoc, band_capability);
 }
 
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+/**
+ * ucfg_mlme_get_vendor_handoff_control_caps() - Get vendor handoff control
+ * capability of FW
+ * @psoc: pointer to psoc object
+ *
+ * Return: true if vendor handoff feature supported
+ */
+bool ucfg_mlme_get_vendor_handoff_control_caps(struct wlan_objmgr_psoc *psoc);
+#else
+static inline
+bool ucfg_mlme_get_vendor_handoff_control_caps(struct wlan_objmgr_psoc *psoc)
+{
+	return false;
+}
+#endif
+
 /**
  * ucfg_mlme_set_dual_sta_policy() - Configures the Concurrent STA policy
  * value
@@ -2831,6 +2848,36 @@ ucfg_mlme_set_relaxed_6ghz_conn_policy(struct wlan_objmgr_psoc *psoc,
 }
 
 /**
+ * ucfg_mlme_get_emlsr_mode_enabled() - Get eMLSR mode flag
+ * @psoc: pointer to psoc object
+ * @value: Value that needs to be set from the caller
+ *
+ * Inline UCFG API to be used by HDD/OSIF callers
+ *
+ * Return: QDF Status
+ */
+static inline QDF_STATUS
+ucfg_mlme_get_emlsr_mode_enabled(struct wlan_objmgr_psoc *psoc, bool *value)
+{
+	return wlan_mlme_get_emlsr_mode_enabled(psoc, value);
+}
+
+/**
+ * ucfg_mlme_set_emlsr_mode_enabled() - Set eMLSR mode flag
+ * @psoc: pointer to psoc object
+ * @value: Value that needs to be set from the caller
+ *
+ * Inline UCFG API to be used by HDD/OSIF callers
+ *
+ * Return: QDF Status
+ */
+static inline QDF_STATUS
+ucfg_mlme_set_emlsr_mode_enabled(struct wlan_objmgr_psoc *psoc, bool value)
+{
+	return wlan_mlme_set_emlsr_mode_enabled(psoc, value);
+}
+
+/**
  * ucfg_mlme_get_opr_rate() - Get operational rate set
  * @psoc: pointer to vdev object
  * @buf: buffer to get rates set
@@ -4664,4 +4711,39 @@ ucfg_mlme_get_connection_roaming_ini_present(struct wlan_objmgr_psoc *psoc,
 	return QDF_STATUS_E_NOSUPPORT;
 }
 #endif /* CONNECTION_ROAMING_CFG */
+
+/**
+ * ucfg_mlme_get_ch_width_from_phymode() - Convert phymode to ch_width
+ * @phy_mode: phy mode
+ *
+ * Return: enum phy_ch_width
+ */
+static inline enum phy_ch_width
+ucfg_mlme_get_ch_width_from_phymode(enum wlan_phymode phy_mode)
+{
+	return wlan_mlme_get_ch_width_from_phymode(phy_mode);
+}
+
+/**
+ * ucfg_mlme_get_peer_ch_width() - get ch_width of the given peer
+ * @psoc: pointer to psoc object
+ * @mac: peer mac
+ *
+ * Return: enum phy_ch_width
+ */
+static inline enum phy_ch_width
+ucfg_mlme_get_peer_ch_width(struct wlan_objmgr_psoc *psoc, uint8_t *mac)
+{
+	return wlan_mlme_get_peer_ch_width(psoc, mac);
+}
+
+/**
+ * ucfg_mlme_get_vdev_phy_mode() - Get phymode of a vdev
+ * @psoc: pointer to psoc object
+ * @vdev_id: vdev id
+ *
+ * Return: enum wlan_phymode
+ */
+enum wlan_phymode
+ucfg_mlme_get_vdev_phy_mode(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id);
 #endif /* _WLAN_MLME_UCFG_API_H_ */

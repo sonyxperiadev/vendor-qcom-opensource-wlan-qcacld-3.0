@@ -447,7 +447,7 @@ static QDF_STATUS sme_rrm_send_scan_result(struct mac_context *mac_ctx,
 	tCsrScanResultInfo **scanresults_arr = NULL;
 	struct scan_result_list *result_list;
 	QDF_STATUS status;
-	uint8_t num_scan_results, counter = 0;
+	uint32_t num_scan_results, counter = 0;
 	tpRrmSMEContext rrm_ctx =
 		&mac_ctx->rrm.rrmSmeContext[measurement_index];
 	uint32_t session_id;

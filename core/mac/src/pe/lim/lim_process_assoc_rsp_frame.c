@@ -207,8 +207,6 @@ void lim_update_assoc_sta_datas(struct mac_context *mac_ctx,
 	lim_update_stads_eht_caps(mac_ctx, sta_ds, assoc_rsp,
 				  session_entry, beacon);
 
-	lim_update_stads_emlsr_caps(mac_ctx, sta_ds, assoc_rsp);
-
 	if (lim_is_sta_he_capable(sta_ds))
 		he_cap = &assoc_rsp->he_cap;
 
@@ -927,6 +925,7 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 	tLimMlmAssocCnf assoc_cnf;
 	tSchBeaconStruct *beacon;
 	uint8_t ap_nss;
+	uint16_t aid;
 	int8_t rssi;
 	QDF_STATUS status;
 	enum ani_akm_type auth_type;
@@ -1248,12 +1247,14 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 			      (assoc_rsp->status_code ? QDF_STATUS_E_FAILURE :
 			       QDF_STATUS_SUCCESS), assoc_rsp->status_code);
 
-	if (subtype != LIM_REASSOC)
+	if (subtype != LIM_REASSOC) {
+		aid = assoc_rsp->aid & 0x3FFF;
 		wlan_connectivity_mgmt_event((struct wlan_frame_hdr *)hdr,
 					     session_entry->vdev_id,
 					     assoc_rsp->status_code, 0, rssi,
-					     0, 0, 0,
+					     0, 0, 0, aid,
 					     WLAN_ASSOC_RSP);
+	}
 
 	ap_nss = lim_get_nss_supported_by_ap(&assoc_rsp->VHTCaps,
 					     &assoc_rsp->HTCaps,
@@ -1407,9 +1408,18 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 	if (QDF_IS_STATUS_ERROR(lim_update_sta_vdev_punc(
 					mac_ctx->psoc,
 					session_entry->smeSessionId,
-					assoc_rsp)))
+					assoc_rsp))) {
+		assoc_cnf.resultCode = eSIR_SME_INVALID_ASSOC_RSP_RXED;
+		assoc_cnf.protStatusCode = STATUS_UNSPECIFIED_FAILURE;
+		/* Send advisory Disassociation frame to AP */
+		lim_send_disassoc_mgmt_frame(mac_ctx,
+					     REASON_UNSPEC_FAILURE,
+					     hdr->sa, session_entry, false);
 		goto assocReject;
+	}
 
+	lim_objmgr_update_emlsr_caps(mac_ctx->psoc, session_entry->smeSessionId,
+				     assoc_rsp);
 	/*
 	 * Extract the AP capabilities from the beacon that
 	 * was received earlier
