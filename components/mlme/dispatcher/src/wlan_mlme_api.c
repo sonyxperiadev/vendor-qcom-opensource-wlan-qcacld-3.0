@@ -2017,7 +2017,8 @@ QDF_STATUS wlan_mlme_set_assoc_sta_limit(struct wlan_objmgr_psoc *psoc,
 	if (!mlme_obj)
 		return QDF_STATUS_E_FAILURE;
 
-	if (cfg_in_range(CFG_ASSOC_STA_LIMIT, value))
+	if (cfg_in_range(CFG_ASSOC_STA_LIMIT, value) &&
+	    (value <= mlme_obj->cfg.sap_cfg.sap_max_no_peers))
 		mlme_obj->cfg.sap_cfg.assoc_sta_limit = value;
 	else
 		return QDF_STATUS_E_FAILURE;

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -75,9 +76,6 @@
  */
 
 #define WNI_CFG_WPS_ENABLE_AP    1
-
-#define WNI_CFG_ASSOC_STA_LIMIT_STAMIN    1
-#define WNI_CFG_ASSOC_STA_LIMIT_STAMAX    32
 
 #define WNI_CFG_REMOVE_TIME_SYNC_CMD_STAMIN 0
 #define WNI_CFG_REMOVE_TIME_SYNC_CMD_STAMAX 1
