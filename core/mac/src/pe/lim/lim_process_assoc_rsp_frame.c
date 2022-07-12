@@ -806,6 +806,8 @@ lim_update_sta_vdev_punc(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 	enum phy_ch_width ori_bw;
 	uint16_t ori_puncture_bitmap;
 	uint16_t primary_puncture_bitmap = 0;
+	qdf_freq_t center_freq_320;
+	uint8_t band_mask;
 
 	if (!assoc_resp->eht_op.disabled_sub_chan_bitmap_present)
 		return QDF_STATUS_SUCCESS;
@@ -822,9 +824,24 @@ lim_update_sta_vdev_punc(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 
 	ori_bw = wlan_mlme_convert_eht_op_bw_to_phy_ch_width(
 					assoc_resp->eht_op.channel_width);
+
+	if (ori_bw == CH_WIDTH_320MHZ) {
+		if (WLAN_REG_IS_24GHZ_CH_FREQ(des_chan->ch_freq))
+			band_mask = BIT(REG_BAND_2G);
+		else if (WLAN_REG_IS_6GHZ_CHAN_FREQ(des_chan->ch_freq))
+			band_mask = BIT(REG_BAND_6G);
+		else
+			band_mask = BIT(REG_BAND_5G);
+		center_freq_320 = wlan_reg_chan_band_to_freq(
+						wlan_vdev_get_pdev(vdev),
+						assoc_resp->eht_op.ccfs1,
+						band_mask);
+	} else {
+		center_freq_320 = 0;
+	}
 	wlan_reg_extract_puncture_by_bw(ori_bw, ori_puncture_bitmap,
 					des_chan->ch_freq,
-					assoc_resp->eht_op.ccfs1,
+					center_freq_320,
 					CH_WIDTH_20MHZ,
 					&primary_puncture_bitmap);
 	if (primary_puncture_bitmap) {
@@ -838,12 +855,12 @@ lim_update_sta_vdev_punc(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 	else
 		wlan_reg_extract_puncture_by_bw(ori_bw, ori_puncture_bitmap,
 						des_chan->ch_freq,
-						assoc_resp->eht_op.ccfs1,
+						center_freq_320,
 						des_chan->ch_width,
 						&des_chan->puncture_bitmap);
-	pe_debug("sta vdev %d freq %d assoc rsp bw %d puncture 0x%x center frequency %d intersect bw %d puncture 0x%x",
+	pe_debug("sta vdev %d freq %d assoc rsp bw %d puncture 0x%x 320M center frequency %d intersect bw %d puncture 0x%x",
 		 vdev_id, des_chan->ch_freq, ori_bw, ori_puncture_bitmap,
-		 assoc_resp->eht_op.ccfs1, des_chan->ch_width,
+		 center_freq_320, des_chan->ch_width,
 		 des_chan->puncture_bitmap);
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
 
