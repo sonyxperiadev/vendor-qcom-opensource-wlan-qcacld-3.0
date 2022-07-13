@@ -2015,7 +2015,8 @@ static void cache_station_stats_cb(struct stats_event *ev, void *cookie)
 	uint8_t vdev_id;
 	wlan_net_dev_ref_dbgid dbgid = NET_DEV_HOLD_DISPLAY_TXRX_STATS;
 
-	if (!ev->vdev_summary_stats || !ev->vdev_chain_rssi) {
+	if (!ev->vdev_summary_stats || !ev->vdev_chain_rssi ||
+	    !ev->peer_adv_stats) {
 		hdd_debug("Invalid stats");
 		return;
 	}
