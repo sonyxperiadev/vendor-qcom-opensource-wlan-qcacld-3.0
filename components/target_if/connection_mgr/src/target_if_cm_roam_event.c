@@ -662,13 +662,13 @@ int target_if_get_roam_vendor_control_param_event_handler(ol_scn_t scn,
 	psoc = target_if_get_psoc_from_scn_hdl(scn);
 	if (!psoc) {
 		target_if_err("psoc is null");
-		ret = -EINVAL;
+		return -EINVAL;
 	}
 
 	wmi_handle = get_wmi_unified_hdl_from_psoc(psoc);
 	if (!wmi_handle) {
 		target_if_err("wmi_handle is null");
-		ret = -EINVAL;
+		return -EINVAL;
 	}
 
 	qdf_status = wmi_extract_roam_vendor_control_param_event(wmi_handle,
