@@ -181,6 +181,16 @@ void print_flow_tuple(struct cdp_rx_flow_tuple_info *flow_tuple, char *str,
 }
 
 static bool
+dp_rx_fisa_should_bypass(struct cdp_rx_flow_tuple_info *flow_tuple_info)
+{
+	if (flow_tuple_info->dest_port == DNS_SERVER_PORT ||
+	    flow_tuple_info->src_port == DNS_SERVER_PORT)
+		return true;
+
+	return false;
+}
+
+static bool
 dp_fisa_is_ipsec_connection(struct cdp_rx_flow_tuple_info *flow_tuple_info)
 {
 	if (flow_tuple_info->dest_port == IPSEC_PORT ||
@@ -242,6 +252,8 @@ get_flow_tuple_from_nbuf(struct dp_soc *soc,
 		flow_tuple_info->is_exception = 1;
 	else
 		flow_tuple_info->is_exception = 0;
+
+	flow_tuple_info->bypass_fisa = dp_rx_fisa_should_bypass(flow_tuple_info);
 
 	flow_tuple_info->l4_protocol = iph->protocol;
 	dp_fisa_debug("l4_protocol %d", flow_tuple_info->l4_protocol);
@@ -532,7 +544,17 @@ dp_rx_fisa_add_ft_entry(struct dp_vdev *vdev,
 	dp_fisa_debug("flow_hash 0x%x hashed_flow_idx 0x%x", flow_hash,
 		      hashed_flow_idx);
 	dp_fisa_debug("max_skid_length 0x%x", max_skid_length);
+
 	qdf_spin_lock_bh(&fisa_hdl->dp_rx_fst_lock);
+
+	if (!rx_flow_tuple_info.tuple_populated) {
+		get_flow_tuple_from_nbuf(fisa_hdl->soc_hdl,
+					 &rx_flow_tuple_info,
+					 nbuf, rx_tlv_hdr);
+		if (rx_flow_tuple_info.bypass_fisa)
+			return NULL;
+	}
+
 	do {
 		sw_ft_entry = &(((struct dp_fisa_rx_sw_ft *)
 					fisa_hdl->base)[hashed_flow_idx]);
@@ -542,10 +564,6 @@ dp_rx_fisa_add_ft_entry(struct dp_vdev *vdev,
 						      flow_hash, vdev,
 						      fisa_hdl->soc_hdl,
 						      hashed_flow_idx);
-			if (!rx_flow_tuple_info.tuple_populated)
-				get_flow_tuple_from_nbuf(fisa_hdl->soc_hdl,
-							 &rx_flow_tuple_info,
-							 nbuf, rx_tlv_hdr);
 
 			/* Add HW FT entry */
 			sw_ft_entry->hw_fse =
@@ -572,10 +590,6 @@ dp_rx_fisa_add_ft_entry(struct dp_vdev *vdev,
 			break;
 		}
 		/* else */
-		if (!rx_flow_tuple_info.tuple_populated)
-			get_flow_tuple_from_nbuf(fisa_hdl->soc_hdl,
-						 &rx_flow_tuple_info,
-						 nbuf, rx_tlv_hdr);
 
 		if (is_same_flow(&sw_ft_entry->rx_flow_tuple_info,
 				 &rx_flow_tuple_info)) {
@@ -1003,6 +1017,8 @@ dp_fisa_rx_queue_fst_update_work(struct dp_rx_fst *fisa_hdl, uint32_t flow_idx,
 
 	get_flow_tuple_from_nbuf(fisa_hdl->soc_hdl, &flow_tuple_info,
 				 nbuf, rx_tlv_hdr);
+	if (flow_tuple_info.bypass_fisa)
+		return NULL;
 
 	if (sw_ft_entry->is_populated && is_same_flow(
 			&sw_ft_entry->rx_flow_tuple_info, &flow_tuple_info))
