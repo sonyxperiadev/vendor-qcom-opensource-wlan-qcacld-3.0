@@ -173,7 +173,6 @@ lim_populate_ml_probe_req(struct mac_context *mac,
 	*ml_prb_req_ie = (uint8_t *)ml_prb_req;
 	/* Fill the Element ID IE Type (0xFF) */
 	ml_prb_req->ml_ie_ff.elem_id = WLAN_ELEMID_EXTN_ELEM;
-	ml_probe_len += sizeof(struct ie_header);
 	/* Fill the Multi link extn Element ID IE Type (0x6B) */
 	ml_prb_req->ml_ie_ff.elem_id_ext = WLAN_EXTN_ELEMID_MULTI_LINK;
 	ml_probe_len++;
@@ -221,11 +220,11 @@ lim_populate_ml_probe_req(struct mac_context *mac,
 		ml_probe_len += WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_SIZE;
 	}
 	ml_prb_req->ml_ie_ff.elem_len = ml_probe_len;
-	*ml_probe_req_len = ml_probe_len;
+	*ml_probe_req_len = ml_probe_len + MIN_IE_LEN;
 
 	pe_nofl_debug("Send ML probe req %zu", ml_probe_len);
 	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-			   ml_probe, ml_probe_len);
+			   ml_probe, ml_probe_len + MIN_IE_LEN);
 
 	session->lim_join_req->is_ml_probe_req_sent = true;
 
