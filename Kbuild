@@ -2103,10 +2103,6 @@ TXRX3.0_OBJS += $(TXRX3.0_DIR)/dp_fisa_rx.o
 TXRX3.0_OBJS += $(TXRX3.0_DIR)/dp_rx_fst.o
 endif
 
-ifeq ($(CONFIG_DP_SWLM), y)
-TXRX3.0_OBJS += $(TXRX3.0_DIR)/dp_swlm.o
-endif
-
 endif #LITHIUM
 
 $(call add-wlan-objs,txrx30,$(TXRX3.0_OBJS))
@@ -2536,6 +2532,10 @@ endif
 
 ifeq ($(CONFIG_WLAN_FEATURE_PERIODIC_STA_STATS), y)
 WLAN_DP_COMP_OBJS += $(DP_COMP_CORE_DIR)/wlan_dp_periodic_sta_stats.o
+endif
+
+ifeq ($(CONFIG_DP_SWLM), y)
+WLAN_DP_COMP_OBJS += $(DP_COMP_CORE_DIR)/wlan_dp_swlm.o
 endif
 
 $(call add-wlan-objs,dp_comp,$(WLAN_DP_COMP_OBJS))
