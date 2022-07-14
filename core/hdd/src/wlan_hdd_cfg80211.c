@@ -14283,6 +14283,10 @@ __wlan_hdd_cfg80211_get_radio_combination_matrix(struct wiphy *wiphy,
 			if (!comb[comb_idx].band_mask[radio_idx])
 				break;
 			radio = nla_nest_start(reply_skb, radio_idx);
+			if (!radio) {
+				ret = -ENOMEM;
+				goto err;
+			}
 			if (comb[comb_idx].band_mask[radio_idx] ==
 							BIT(REG_BAND_5G)) {
 				qca_band = QCA_SETBAND_5G;
