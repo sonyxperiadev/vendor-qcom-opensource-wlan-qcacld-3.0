@@ -4085,8 +4085,9 @@ sme_fill_nss_chain_params(struct mac_context *mac_ctx,
 			  enum nss_chains_band_info band,
 			  uint8_t rf_chains_supported)
 {
-	uint8_t nss_chain_shift, btc_chain_mode;
+	uint8_t nss_chain_shift;
 	uint8_t max_supported_nss;
+	enum coex_btc_chain_mode btc_chain_mode;
 	struct wlan_mlme_nss_chains *nss_chains_ini_cfg =
 					&mac_ctx->mlme_cfg->nss_chains_ini_cfg;
 	QDF_STATUS status;
@@ -4111,7 +4112,8 @@ sme_fill_nss_chain_params(struct mac_context *mac_ctx,
 	}
 
 	if (band == NSS_CHAINS_BAND_2GHZ &&
-	    btc_chain_mode == QCA_BTC_CHAIN_SEPARATED)
+	    (btc_chain_mode == WLAN_COEX_BTC_CHAIN_MODE_FDD ||
+	     btc_chain_mode == WLAN_COEX_BTC_CHAIN_MODE_HYBRID))
 		max_supported_nss = NSS_1x1_MODE;
 
 	/* If the fw doesn't support two chains, num rf chains can max be 1 */

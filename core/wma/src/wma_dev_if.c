@@ -3135,7 +3135,7 @@ QDF_STATUS wma_vdev_pre_start(uint8_t vdev_id, bool restart)
 	struct wlan_objmgr_vdev *vdev;
 	struct wlan_channel *des_chan;
 	QDF_STATUS status;
-	uint8_t btc_chain_mode;
+	enum coex_btc_chain_mode btc_chain_mode;
 	struct wlan_mlme_qos *qos_aggr;
 	uint8_t amsdu_val;
 

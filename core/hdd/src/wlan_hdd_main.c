@@ -6859,7 +6859,7 @@ static int hdd_send_coex_config_params(struct hdd_context *hdd_ctx,
 	struct coex_config_params coex_cfg_params = {0};
 	struct wlan_fwol_coex_config config = {0};
 	struct wlan_objmgr_psoc *psoc = hdd_ctx->psoc;
-	uint8_t btc_chain_mode;
+	enum coex_btc_chain_mode btc_chain_mode;
 	QDF_STATUS status;
 
 	if (!adapter) {
@@ -6908,16 +6908,12 @@ static int hdd_send_coex_config_params(struct hdd_context *hdd_ctx,
 		hdd_err("Failed to get btc chain mode");
 		btc_chain_mode = WLAN_COEX_BTC_CHAIN_MODE_UNSETTLED;
 	}
-	switch (btc_chain_mode) {
-	case WLAN_COEX_BTC_CHAIN_MODE_SHARED:
-		coex_cfg_params.config_arg1 = 0;
-		break;
-	case WLAN_COEX_BTC_CHAIN_MODE_SEPARATED:
-		coex_cfg_params.config_arg1 = 2;
-		break;
-	default:
+
+	if (btc_chain_mode <= WLAN_COEX_BTC_CHAIN_MODE_HYBRID)
+		coex_cfg_params.config_arg1 = btc_chain_mode;
+	else
 		coex_cfg_params.config_arg1 = config.btc_mode;
-	}
+
 	hdd_debug("Configured BTC mode is %d, BTC chain mode is 0x%x, set BTC mode to %d",
 		  config.btc_mode, btc_chain_mode,
 		  coex_cfg_params.config_arg1);

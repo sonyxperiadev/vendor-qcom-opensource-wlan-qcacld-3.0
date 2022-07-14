@@ -25,12 +25,23 @@
 #include "qdf_status.h"
 #include <wlan_objmgr_vdev_obj.h>
 #include <wlan_objmgr_psoc_obj.h>
-#include "qca_vendor.h"
 #include "wlan_coex_public_structs.h"
 
-#define WLAN_COEX_BTC_CHAIN_MODE_SHARED QCA_BTC_CHAIN_SHARED
-#define WLAN_COEX_BTC_CHAIN_MODE_SEPARATED QCA_BTC_CHAIN_SEPARATED
-#define WLAN_COEX_BTC_CHAIN_MODE_UNSETTLED 0xFF
+/**
+ * enum coex_btc_chain_mode - btc chain mode definitions
+ * @WLAN_COEX_BTC_CHAIN_MODE_SHARED: chains of BT and WLAN 2.4 GHz are shared.
+ * @WLAN_COEX_BTC_CHAIN_MODE_FDD: chains of BT and WLAN 2.4 GHz are
+ * separated, FDD mode.
+ * @WLAN_COEX_BTC_CHAIN_MODE_HYBRID: chains of BT and WLAN 2.4 GHz are
+ * separated, hybrid mode.
+ * @WLAN_COEX_BTC_CHAIN_MODE_UNSETTLED: chain mode is not set.
+ */
+enum coex_btc_chain_mode {
+	WLAN_COEX_BTC_CHAIN_MODE_SHARED = 0,
+	WLAN_COEX_BTC_CHAIN_MODE_FDD,
+	WLAN_COEX_BTC_CHAIN_MODE_HYBRID,
+	WLAN_COEX_BTC_CHAIN_MODE_UNSETTLED = 0xFF,
+};
 
 /**
  * enum coex_config_type - coex config type definitions
@@ -74,7 +85,8 @@ ucfg_coex_register_cfg_updated_handler(struct wlan_objmgr_psoc *psoc,
  * Return : status of operation
  */
 QDF_STATUS
-ucfg_coex_psoc_set_btc_chain_mode(struct wlan_objmgr_psoc *psoc, uint8_t val);
+ucfg_coex_psoc_set_btc_chain_mode(struct wlan_objmgr_psoc *psoc,
+				  enum coex_btc_chain_mode val);
 
 /**
  * ucfg_coex_psoc_get_btc_chain_mode() - API to get BT coex chain mode from psoc
@@ -84,7 +96,8 @@ ucfg_coex_psoc_set_btc_chain_mode(struct wlan_objmgr_psoc *psoc, uint8_t val);
  * Return : status of operation
  */
 QDF_STATUS
-ucfg_coex_psoc_get_btc_chain_mode(struct wlan_objmgr_psoc *psoc, uint8_t *val);
+ucfg_coex_psoc_get_btc_chain_mode(struct wlan_objmgr_psoc *psoc,
+				  enum coex_btc_chain_mode *val);
 
 /**
  * ucfg_coex_send_btc_chain_mode() - API to send BT coex config to target if
@@ -94,7 +107,8 @@ ucfg_coex_psoc_get_btc_chain_mode(struct wlan_objmgr_psoc *psoc, uint8_t *val);
  * Return: status of operation
  */
 QDF_STATUS
-ucfg_coex_send_btc_chain_mode(struct wlan_objmgr_vdev *vdev, uint8_t mode);
+ucfg_coex_send_btc_chain_mode(struct wlan_objmgr_vdev *vdev,
+			      enum coex_btc_chain_mode mode);
 #else
 static inline QDF_STATUS
 ucfg_coex_register_cfg_updated_handler(struct wlan_objmgr_psoc *psoc,
@@ -105,7 +119,8 @@ ucfg_coex_register_cfg_updated_handler(struct wlan_objmgr_psoc *psoc,
 }
 
 static inline QDF_STATUS
-ucfg_coex_psoc_get_btc_chain_mode(struct wlan_objmgr_psoc *psoc, uint8_t *val)
+ucfg_coex_psoc_get_btc_chain_mode(struct wlan_objmgr_psoc *psoc,
+				  enum coex_btc_chain_mode *val)
 {
 	if (val)
 		*val = WLAN_COEX_BTC_CHAIN_MODE_UNSETTLED;
@@ -114,7 +129,8 @@ ucfg_coex_psoc_get_btc_chain_mode(struct wlan_objmgr_psoc *psoc, uint8_t *val)
 }
 
 static inline QDF_STATUS
-ucfg_coex_send_btc_chain_mode(struct wlan_objmgr_vdev *vdev, uint8_t mode)
+ucfg_coex_send_btc_chain_mode(struct wlan_objmgr_vdev *vdev,
+			      enum coex_btc_chain_mode mode)
 {
 	return QDF_STATUS_SUCCESS;
 }
