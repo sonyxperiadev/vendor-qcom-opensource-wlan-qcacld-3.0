@@ -759,17 +759,11 @@ int hdd_ndi_set_mode(const char *iface_name)
 			return -EFAULT;
 		}
 		ndi_mac_addr = &random_ndi_mac.bytes[0];
+		hdd_update_dynamic_mac(hdd_ctx, &adapter->mac_addr,
+				       (struct qdf_mac_addr *)ndi_mac_addr);
+		qdf_mem_copy(&adapter->mac_addr, ndi_mac_addr, ETH_ALEN);
+		qdf_mem_copy(adapter->dev->dev_addr, ndi_mac_addr, ETH_ALEN);
 	}
-
-	if (!ndi_mac_addr) {
-		hdd_err("ndi mac address is null");
-		return -EINVAL;
-	}
-
-	hdd_update_dynamic_mac(hdd_ctx, &adapter->mac_addr,
-			       (struct qdf_mac_addr *)ndi_mac_addr);
-	qdf_mem_copy(&adapter->mac_addr, ndi_mac_addr, ETH_ALEN);
-	qdf_mem_copy(adapter->dev->dev_addr, ndi_mac_addr, ETH_ALEN);
 
 	adapter->device_mode = QDF_NDI_MODE;
 	hdd_debug("Created NDI with device mode:%d and iface_name:%s",
