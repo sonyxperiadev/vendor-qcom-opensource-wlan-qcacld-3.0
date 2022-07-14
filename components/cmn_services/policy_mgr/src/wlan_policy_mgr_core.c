@@ -2456,30 +2456,34 @@ get_sub_channels(struct wlan_objmgr_psoc *psoc,
 	}
 	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
 
-	*sbs_num = 0;
-	if (policy_mgr_is_hw_sbs_capable(psoc)) {
-		/*
-		 * scc_num is number of existing 5Ghz or 6Ghz connection freqs.
-		 * So check if they are all on same mac in SBS, to get SBS
-		 * freq list.
-		 *
-		 * For scc_num > 2, it will always be with freq across
-		 * both mac, as all 3 cannot be on same mac.
-		 *
-		 * For scc_num == 0, i.e no freq on 5/6Ghz there is no need to
-		 * check for SBS freq.
-		 *
-		 * So check only if scc_num == 1 or 2, with both freq
-		 * on same mac in SBS mode (non-SBS) in case of 2.
-		 */
-		if (*scc_num == 1 ||
-		    (*scc_num == 2 &&
-		     !policy_mgr_are_sbs_chan(psoc, scc_freqs[0],
-					      scc_freqs[1])))
-			get_sbs_chlist(psoc, sbs_freqs, sbs_num, scc_freqs[0],
-				       chlist1, chlist1_len,
-				       chlist2, chlist2_len);
-	}
+	/*
+	 * scc_num is number of existing 5Ghz or 6Ghz connection freqs.
+	 * So check if they are all on same mac in SBS, to get SBS
+	 * freq list.
+	 *
+	 * For scc_num > 2, it will always be with freq across
+	 * both mac, as all 3 cannot be on same mac.
+	 *
+	 * For scc_num == 0, i.e no freq on 5/6Ghz there is no need to
+	 * check for SBS freq.
+	 *
+	 * So check only if scc_num == 1 or 2, with both freq
+	 * on same mac in SBS mode (non-SBS) in case of 2.
+	 *
+	 * sbs_num contains the max number of freq element can be saved in
+	 * sbs_freqs array when this function is called.
+	 * It will contain actual freq element number in the array on return.
+	 * Clear it to 0 if no sbs freq is populated by get_sbs_chlist.
+	 */
+	if (policy_mgr_is_hw_sbs_capable(psoc) &&
+	    (*scc_num == 1 ||
+	     (*scc_num == 2 &&
+	      !policy_mgr_are_sbs_chan(psoc, scc_freqs[0],
+				       scc_freqs[1]))))
+		get_sbs_chlist(psoc, sbs_freqs, sbs_num, scc_freqs[0],
+			       chlist1, chlist1_len, chlist2, chlist2_len);
+	else
+		*sbs_num = 0;
 
 	get_rest_chlist(rest_freqs, rest_num, scc_freqs, *scc_num,
 			sbs_freqs, *sbs_num, chlist1, chlist1_len,
