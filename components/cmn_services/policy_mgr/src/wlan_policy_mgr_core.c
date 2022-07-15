@@ -4414,7 +4414,8 @@ void policy_mgr_check_scc_sbs_channel(struct wlan_objmgr_psoc *psoc,
 		sta_sap_scc_on_indoor_channel_allowed =
 			policy_mgr_get_sta_sap_scc_allowed_on_indoor_chnl(psoc);
 
-		if (sta_sap_scc_on_indoor_channel_allowed &&
+		if (sta_count &&
+		    sta_sap_scc_on_indoor_channel_allowed &&
 		    ((wlan_reg_is_freq_indoor(pm_ctx->pdev, sap_ch_freq) &&
 		    WLAN_REG_IS_24GHZ_CH_FREQ(*intf_ch_freq)) ||
 		    (wlan_reg_is_freq_indoor(pm_ctx->pdev, *intf_ch_freq) &&
