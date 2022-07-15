@@ -16061,7 +16061,6 @@ static int hdd_process_peer_chain_rssi_req(struct hdd_adapter *adapter,
 		if (stats)
 			wlan_cfg80211_mc_cp_stats_free_stats_event(stats);
 		hdd_err("Unable to get chain rssi from fw");
-		retval = qdf_status_to_os_return(retval);
 		return retval;
 	}
 
@@ -16730,8 +16729,7 @@ static int __wlan_hdd_cfg80211_get_chain_rssi(struct wiphy *wiphy,
 	qdf_copy_macaddr(&peer_macaddr,
 			 nla_data(tb[QCA_WLAN_VENDOR_ATTR_MAC_ADDR]));
 
-	hdd_process_peer_chain_rssi_req(adapter, &peer_macaddr);
-
+	retval = hdd_process_peer_chain_rssi_req(adapter, &peer_macaddr);
 	hdd_exit();
 	return retval;
 }
