@@ -7669,6 +7669,12 @@ QDF_STATUS csr_bss_start(struct mac_context *mac, uint32_t vdev_id,
 	struct start_bss_config *start_bss_cfg = NULL;
 	enum QDF_OPMODE persona;
 	enum wlan_serialization_status status;
+	struct csr_roam_session *session;
+	struct validate_bss_data candidate;
+
+	session = CSR_GET_SESSION(mac, vdev_id);
+	if (!session)
+		return QDF_STATUS_E_FAILURE;
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_pdev(mac->pdev, vdev_id,
 						    WLAN_LEGACY_MAC_ID);
@@ -7693,6 +7699,15 @@ QDF_STATUS csr_bss_start(struct mac_context *mac, uint32_t vdev_id,
 	qdf_mem_copy(start_bss_cfg, bss_config,
 		     sizeof(struct start_bss_config));
 	start_bss_cfg->cmd_id = csr_get_monotonous_number(mac);
+
+	session->bssParams.cb_mode = start_bss_cfg->sec_ch_offset;
+	session->bssParams.bcn_int = bss_config->beaconInterval;
+	candidate.beacon_interval = session->bssParams.bcn_int;
+	candidate.chan_freq = bss_config->oper_ch_freq;
+	if_mgr_is_beacon_interval_valid(mac->pdev, vdev_id,
+					&candidate);
+	bss_config->beaconInterval = candidate.beacon_interval;
+	session->bssParams.bcn_int = candidate.beacon_interval;
 
 	cmd.cmd_id = start_bss_cfg->cmd_id;
 	csr_set_sap_ser_params(&cmd, WLAN_SER_CMD_VDEV_START_BSS);
