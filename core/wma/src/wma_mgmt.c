@@ -1382,7 +1382,7 @@ static void wma_set_mlo_capability(tp_wma_handle wma,
 		req->mlo_params.emlsr_support = params->emlsr_support;
 		if (req->mlo_params.emlsr_support) {
 			req->mlo_params.ieee_link_id = params->link_id;
-			req->mlo_params.emlsr_trans_timeout =
+			req->mlo_params.trans_timeout_us =
 					params->emlsr_trans_timeout;
 		}
 	} else {

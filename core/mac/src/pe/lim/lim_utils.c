@@ -8967,9 +8967,9 @@ void lim_intersect_ap_emlsr_caps(struct mac_context *mac_ctx,
 
 	if (wlan_vdev_mlme_is_mlo_link_vdev(session->vdev)) {
 		add_bss->staContext.emlsr_support =
-				mlo_peer_ctx->eml_caps.emlsr_support;
+				mlo_peer_ctx->mlpeer_emlcap.emlsr_supp;
 		add_bss->staContext.emlsr_trans_timeout =
-				mlo_peer_ctx->eml_caps.transition_timeout;
+				mlo_peer_ctx->mlpeer_emlcap.trans_timeout;
 		add_bss->staContext.link_id =
 				wlan_vdev_get_link_id(session->vdev);
 	} else {
@@ -8979,9 +8979,9 @@ void lim_intersect_ap_emlsr_caps(struct mac_context *mac_ctx,
 		add_bss->staContext.link_id =
 				assoc_rsp->mlo_ie.mlo_ie.link_id;
 
-		mlo_peer_ctx->eml_caps.emlsr_support =
+		mlo_peer_ctx->mlpeer_emlcap.emlsr_supp =
 				add_bss->staContext.emlsr_support;
-		mlo_peer_ctx->eml_caps.transition_timeout =
+		mlo_peer_ctx->mlpeer_emlcap.trans_timeout =
 				add_bss->staContext.emlsr_trans_timeout;
 	}
 
