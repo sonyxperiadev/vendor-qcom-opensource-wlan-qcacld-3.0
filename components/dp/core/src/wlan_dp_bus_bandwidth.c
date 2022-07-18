@@ -1436,6 +1436,7 @@ static void dp_pld_request_bus_bandwidth(struct wlan_dp_psoc_context *dp_ctx,
 	bool is_tx_pm_qos_high;
 	bool pmqos_on_low_tput = false;
 	enum tput_level tput_level;
+	bool is_tput_level_high;
 	struct bbm_params param = {0};
 	bool legacy_client = false;
 	void *hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
@@ -1603,6 +1604,9 @@ static void dp_pld_request_bus_bandwidth(struct wlan_dp_psoc_context *dp_ctx,
 							  false);
 		}
 		dp_ops->dp_pm_qos_update_request(ctx, &pm_qos_cpu_mask);
+		is_tput_level_high =
+			tput_level >= TPUT_LEVEL_HIGH ? true : false;
+		cdp_set_bus_vote_lvl_high(soc, is_tput_level_high);
 	}
 
 	if (vote_level_change || tx_level_change || rx_level_change) {
@@ -1973,6 +1977,7 @@ static void __dp_bus_bw_compute_timer_stop(struct wlan_objmgr_psoc *psoc)
 {
 	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
 	hdd_cb_handle ctx = dp_ctx->dp_ops.callback_ctx;
+	ol_txrx_soc_handle soc = cds_get_context(QDF_MODULE_ID_SOC);
 
 	struct bbm_params param = {0};
 	bool is_any_adapter_conn =
@@ -1996,6 +2001,7 @@ static void __dp_bus_bw_compute_timer_stop(struct wlan_objmgr_psoc *psoc)
 	cdp_pdev_reset_bundle_require_flag(cds_get_context(QDF_MODULE_ID_SOC),
 					   OL_TXRX_PDEV_ID);
 
+	cdp_set_bus_vote_lvl_high(soc, false);
 	dp_ctx->bw_vote_time = 0;
 
 exit:
