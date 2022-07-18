@@ -2103,6 +2103,31 @@ void *pld_smmu_get_mapping(struct device *dev)
 }
 #endif
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0))
+struct kobject *pld_get_wifi_kobj(struct device *dev)
+{
+	enum pld_bus_type type = pld_get_bus_type(dev);
+	struct kobject *wifi_kobj = NULL;
+
+	switch (type) {
+	case PLD_BUS_TYPE_SNOC:
+	case PLD_BUS_TYPE_PCIE_FW_SIM:
+	case PLD_BUS_TYPE_IPCI_FW_SIM:
+	case PLD_BUS_TYPE_SNOC_FW_SIM:
+	case PLD_BUS_TYPE_IPCI:
+		break;
+	case PLD_BUS_TYPE_PCIE:
+		wifi_kobj = pld_pcie_get_wifi_kobj(dev);
+		break;
+	default:
+		pr_err("Invalid device type %d\n", type);
+		break;
+	}
+
+	return wifi_kobj;
+}
+#endif
+
 /**
  * pld_smmu_map() - Map SMMU
  * @dev: device
