@@ -190,6 +190,7 @@
 #include "wlan_dp_ucfg_api.h"
 #include "os_if_dp.h"
 #include "os_if_dp_lro.h"
+#include "wlan_mlo_mgr_sta.h"
 
 #define g_mode_rates_size (12)
 #define a_mode_rates_size (8)
@@ -18138,6 +18139,17 @@ static void wlan_hdd_cfg80211_set_wiphy_sae_feature(struct wiphy *wiphy)
 }
 #endif
 
+#if defined(CFG80211_SAE_AUTH_TA_ADDR_SUPPORT)
+static void wlan_hdd_cfg8011_sae_auth_tx_randoam_ta(struct wiphy *wiphy)
+{
+	wiphy_ext_feature_set(wiphy, NL80211_EXT_FEATURE_AUTH_TX_RANDOM_TA);
+}
+#else
+static void wlan_hdd_cfg8011_sae_auth_tx_randoam_ta(struct wiphy *wiphy)
+{
+}
+#endif
+
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0)) || \
 	defined(CFG80211_DFS_OFFLOAD_BACKPORT)
 static void wlan_hdd_cfg80211_set_dfs_offload_feature(struct wiphy *wiphy)
@@ -18539,6 +18551,7 @@ int wlan_hdd_cfg80211_init(struct device *dev,
 	wlan_hdd_update_max_connect_akm(wiphy);
 
 	wlan_hdd_cfg80211_action_frame_randomization_init(wiphy);
+	wlan_hdd_cfg8011_sae_auth_tx_randoam_ta(wiphy);
 
 	wlan_hdd_set_nan_supported_bands(wiphy);
 
@@ -19852,6 +19865,47 @@ static bool hdd_is_btk_enc_type(uint32_t cipher_type)
 }
 #endif
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static inline
+struct wlan_objmgr_vdev *wlan_key_get_link_vdev(struct hdd_adapter *adapter,
+						int link_id)
+{
+	if (!wlan_vdev_mlme_is_mlo_vdev(adapter->vdev))
+		return adapter->vdev;
+
+	if (wlan_vdev_get_link_id(adapter->vdev) == link_id)
+		return adapter->vdev;
+
+	return mlo_get_vdev_by_link_id(adapter->vdev, link_id);
+}
+
+static inline
+void wlan_key_put_link_vdev(struct wlan_objmgr_vdev *link_vdev)
+{
+	if (!wlan_vdev_mlme_is_mlo_vdev(link_vdev))
+		return;
+
+	mlo_release_vdev_ref(link_vdev);
+}
+#else
+static inline
+struct wlan_objmgr_vdev *wlan_key_get_link_vdev(struct hdd_adapter *adapter,
+						int link_id)
+{
+	return adapter->vdev;
+}
+
+static inline
+void wlan_key_put_link_vdev(struct wlan_objmgr_vdev *link_vdev)
+{
+}
+#endif
+
+/*
+ * FUNCTION: __wlan_hdd_cfg80211_get_key
+ * This function is used to get the key information
+ */
+
 static int wlan_hdd_add_key_sap(struct hdd_adapter *adapter,
 				bool pairwise, u8 key_index,
 				enum wlan_crypto_cipher_type cipher)
@@ -19924,67 +19978,48 @@ static int wlan_hdd_add_key_sta(struct wlan_objmgr_pdev *pdev,
 	return errno;
 }
 
-static int __wlan_hdd_cfg80211_add_key(struct wiphy *wiphy,
-				       struct net_device *ndev,
-				       u8 key_index, bool pairwise,
-				       const u8 *mac_addr,
-				       struct key_params *params)
+static int wlan_hdd_add_key_vdev(mac_handle_t mac_handle,
+				 struct wlan_objmgr_vdev *vdev,
+				 u8 key_index, bool pairwise,
+				 const u8 *mac_addr, struct key_params *params,
+				 int link_id, struct hdd_adapter *adapter)
 {
+	struct wlan_objmgr_peer *peer;
 	struct hdd_context *hdd_ctx;
-	mac_handle_t mac_handle;
-	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(ndev);
-	struct wlan_objmgr_vdev *vdev;
-	bool ft_mode = false;
-	enum wlan_crypto_cipher_type cipher;
-	int errno;
-	int32_t cipher_cap, ucast_cipher = 0;
 	struct qdf_mac_addr mac_address;
+	int32_t cipher_cap, ucast_cipher = 0;
+	int errno;
+	enum wlan_crypto_cipher_type cipher;
+	bool ft_mode = false;
 
-	hdd_enter();
-
-	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
-		hdd_err("Command not allowed in FTM mode");
-		return -EINVAL;
-	}
-
-	if (wlan_hdd_validate_vdev_id(adapter->vdev_id))
-		return -EINVAL;
-
-	qdf_mtrace(QDF_MODULE_ID_HDD, QDF_MODULE_ID_HDD,
-		   TRACE_CODE_HDD_CFG80211_ADD_KEY,
-		   adapter->vdev_id, params->key_len);
 
 	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
-	errno = wlan_hdd_validate_context(hdd_ctx);
-	if (errno)
-		return errno;
-
-	hdd_debug("converged Device_mode %s(%d) index %d, pairwise %d",
-		  qdf_opmode_str(adapter->device_mode),
-		  adapter->device_mode, key_index, pairwise);
-	mac_handle = hdd_ctx->mac_handle;
 
 	if (hdd_is_btk_enc_type(params->cipher))
-		return sme_add_key_btk(mac_handle, adapter->vdev_id,
+		return sme_add_key_btk(mac_handle, wlan_vdev_get_id(vdev),
 				       params->key, params->key_len);
 	if (hdd_is_krk_enc_type(params->cipher))
-		return sme_add_key_krk(mac_handle, adapter->vdev_id,
+		return sme_add_key_krk(mac_handle, wlan_vdev_get_id(vdev),
 				       params->key, params->key_len);
 
-	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_ID);
-	if (!vdev)
-		return -EINVAL;
 
-	if (!pairwise && ((adapter->device_mode == QDF_STA_MODE) ||
-	    (adapter->device_mode == QDF_P2P_CLIENT_MODE))) {
+	if (!pairwise && ((wlan_vdev_mlme_get_opmode(vdev) == QDF_STA_MODE) ||
+	   (wlan_vdev_mlme_get_opmode(vdev) == QDF_P2P_CLIENT_MODE))) {
+		peer = wlan_objmgr_vdev_try_get_bsspeer(vdev, WLAN_OSIF_ID);
+		if (!peer) {
+			hdd_err("Peer is null return");
+			return -EINVAL;
+		}
 		qdf_mem_copy(mac_address.bytes,
-			     adapter->session.station.conn_info.bssid.bytes,
-			     QDF_MAC_ADDR_SIZE);
+			     wlan_peer_get_macaddr(peer), QDF_MAC_ADDR_SIZE);
+		wlan_objmgr_peer_release_ref(peer, WLAN_OSIF_ID);
 	} else {
 		if (mac_addr)
-			qdf_mem_copy(mac_address.bytes, mac_addr,
+			qdf_mem_copy(mac_address.bytes,
+				     mac_addr,
 				     QDF_MAC_ADDR_SIZE);
 	}
+
 
 	errno = wlan_cfg80211_store_key(vdev, key_index,
 					(pairwise ?
@@ -19992,7 +20027,6 @@ static int __wlan_hdd_cfg80211_add_key(struct wiphy *wiphy,
 					WLAN_CRYPTO_KEY_TYPE_GROUP),
 					mac_address.bytes, params);
 	cipher_cap = wlan_crypto_get_param(vdev, WLAN_CRYPTO_PARAM_CIPHER_CAP);
-	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_ID);
 	if (errno)
 		return errno;
 	cipher = osif_nl_to_crypto_cipher_type(params->cipher);
@@ -20022,9 +20056,176 @@ static int __wlan_hdd_cfg80211_add_key(struct wiphy *wiphy,
 		break;
 	}
 	if (!errno && (adapter->device_mode != QDF_SAP_MODE))
-		wma_update_set_key(adapter->vdev_id, pairwise, key_index,
+		wma_update_set_key(wlan_vdev_get_id(vdev), pairwise, key_index,
 				   cipher);
+
 	hdd_exit();
+	return errno;
+}
+
+#if defined(WLAN_FEATURE_11BE_MLO) && \
+defined(CFG80211_SINGLE_NETDEV_MULTI_LINK_SUPPORT)
+static int wlan_hdd_add_key_all_mlo_vdev(mac_handle_t mac_handle,
+					 struct wlan_objmgr_vdev *vdev,
+					 u8 key_index, bool pairwise,
+					 const u8 *mac_addr,
+					 struct key_params *params, int link_id,
+					 struct hdd_adapter *adapter)
+{
+	struct hdd_adapter *link_adapter;
+	struct hdd_context *hdd_ctx;
+	struct wlan_objmgr_vdev *wlan_vdev_list[WLAN_UMAC_MLO_MAX_VDEVS];
+	int errno;
+	uint16_t link, vdev_count = 0;
+	uint8_t vdev_id;
+
+	/* if vdev mlme is mlo & pairwaise is set to true set same info for
+	 * both the links.
+	 */
+	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	mlo_sta_get_vdev_list(vdev, &vdev_count, wlan_vdev_list);
+	for (link = 0; link < vdev_count; link++) {
+		vdev_id = wlan_vdev_get_id(wlan_vdev_list[link]);
+
+		link_adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
+		if (!link_adapter)
+			continue;
+
+		errno = wlan_hdd_add_key_vdev(mac_handle,
+					      wlan_vdev_list[link],
+					      key_index, pairwise,
+					      mac_addr, params, link_id,
+					      link_adapter);
+		mlo_release_vdev_ref(wlan_vdev_list[link]);
+	}
+
+	return errno;
+}
+
+static int wlan_hdd_add_key_mlo_vdev(mac_handle_t mac_handle,
+				     struct wlan_objmgr_vdev *vdev,
+				     u8 key_index, bool pairwise,
+				     const u8 *mac_addr,
+				     struct key_params *params, int link_id,
+				     struct hdd_adapter *adapter)
+{
+	int errno = 0;
+	struct wlan_objmgr_vdev *link_vdev;
+	struct hdd_adapter *link_adapter = NULL;
+	struct hdd_context *hdd_ctx;
+
+	if (!wlan_vdev_mlme_is_mlo_vdev(vdev))
+		return errno;
+
+	if (pairwise && link_id == -1)
+		return wlan_hdd_add_key_all_mlo_vdev(mac_handle, vdev,
+						     key_index, pairwise,
+						     mac_addr, params,
+						     link_id, adapter);
+
+	if (wlan_vdev_get_link_id(adapter->vdev) == link_id) {
+		hdd_debug("add_key for same vdev: %d", adapter->vdev_id);
+		return wlan_hdd_add_key_vdev(mac_handle, vdev, key_index,
+					     pairwise, mac_addr, params,
+					     link_id, adapter);
+	}
+
+	link_vdev = wlan_key_get_link_vdev(adapter, link_id);
+	if (!link_vdev) {
+		hdd_err("couldn't get vdev for link_id :%d", link_id);
+		return -EINVAL;
+	}
+
+	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	link_adapter = hdd_get_adapter_by_vdev(hdd_ctx,
+					       wlan_vdev_get_id(link_vdev));
+	if (!link_adapter) {
+		hdd_err("couldn't set key for link_id:%d", link_id);
+		goto release_ref;
+	}
+
+	errno = wlan_hdd_add_key_vdev(mac_handle, link_vdev, key_index,
+				      pairwise, mac_addr, params,
+				      link_id, link_adapter);
+
+release_ref:
+	wlan_key_put_link_vdev(link_vdev);
+	return errno;
+}
+#elif defined(CFG80211_KEY_INSTALL_SUPPORT_ON_WDEV)
+static int wlan_hdd_add_key_mlo_vdev(mac_handle_t mac_handle,
+				     struct wlan_objmgr_vdev *vdev,
+				     u8 key_index, bool pairwise,
+				     const u8 *mac_addr,
+				     struct key_params *params, int link_id,
+				     struct hdd_adapter *adapter)
+{
+	return wlan_hdd_add_key_vdev(mac_handle, vdev, key_index,
+				     pairwise, mac_addr, params,
+				     link_id, adapter);
+}
+#else
+static int wlan_hdd_add_key_mlo_vdev(mac_handle_t mac_handle,
+				     struct wlan_objmgr_vdev *vdev,
+				     u8 key_index, bool pairwise,
+				     const u8 *mac_addr,
+				     struct key_params *params, int link_id,
+				     struct hdd_adapter *adapter)
+{
+	return 0;
+}
+#endif
+
+static int __wlan_hdd_cfg80211_add_key(struct wiphy *wiphy,
+				       struct net_device *ndev,
+				       u8 key_index, bool pairwise,
+				       const u8 *mac_addr,
+				       struct key_params *params, int link_id)
+{
+	struct hdd_context *hdd_ctx;
+	mac_handle_t mac_handle;
+	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(ndev);
+	struct wlan_objmgr_vdev *vdev;
+	int errno;
+
+	hdd_enter();
+
+	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
+		hdd_err("Command not allowed in FTM mode");
+		return -EINVAL;
+	}
+
+	if (wlan_hdd_validate_vdev_id(adapter->vdev_id))
+		return -EINVAL;
+
+	qdf_mtrace(QDF_MODULE_ID_HDD, QDF_MODULE_ID_HDD,
+		   TRACE_CODE_HDD_CFG80211_ADD_KEY,
+		   adapter->vdev_id, params->key_len);
+
+	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	errno = wlan_hdd_validate_context(hdd_ctx);
+	if (errno)
+		return errno;
+
+	hdd_debug("converged Device_mode %s(%d) index %d, pairwise %d link_id %d",
+		  qdf_opmode_str(adapter->device_mode),
+		  adapter->device_mode, key_index, pairwise, link_id);
+	mac_handle = hdd_ctx->mac_handle;
+
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_ID);
+	if (!vdev)
+		return -EINVAL;
+
+	if (!wlan_vdev_mlme_is_mlo_vdev(vdev))
+		errno = wlan_hdd_add_key_vdev(mac_handle, vdev, key_index,
+					      pairwise, mac_addr, params,
+					      link_id, adapter);
+	else
+		errno = wlan_hdd_add_key_mlo_vdev(mac_handle, vdev, key_index,
+						  pairwise, mac_addr, params,
+						  link_id, adapter);
+
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_ID);
 
 	return errno;
 }
@@ -20050,6 +20251,8 @@ static int wlan_hdd_cfg80211_add_key(struct wiphy *wiphy,
 	struct hdd_adapter *adapter = qdf_container_of(wdev,
 						   struct hdd_adapter,
 						   wdev);
+	/* Legacy purposes */
+	int link_id = -1;
 
 	if (!adapter || wlan_hdd_validate_vdev_id(adapter->vdev_id))
 		return errno;
@@ -20059,27 +20262,42 @@ static int wlan_hdd_cfg80211_add_key(struct wiphy *wiphy,
 		return errno;
 
 	errno = __wlan_hdd_cfg80211_add_key(wiphy, adapter->dev, key_index,
-					    pairwise, mac_addr, params);
+					    pairwise, mac_addr, params,
+					    link_id);
 
 	osif_vdev_sync_op_stop(vdev_sync);
 
 	return errno;
 }
-#else
-#ifdef CFG80211_SET_KEY_WITH_SRC_MAC
+#elif defined(CFG80211_SET_KEY_WITH_SRC_MAC)
 static int wlan_hdd_cfg80211_add_key(struct wiphy *wiphy,
 				     struct net_device *ndev,
 				     u8 key_index, bool pairwise,
 				     const u8 *src_addr,
 				     const u8 *mac_addr,
 				     struct key_params *params)
-#else
+{
+	int errno;
+	int link_id = -1;
+	struct osif_vdev_sync *vdev_sync;
+
+	errno = osif_vdev_sync_op_start(ndev, &vdev_sync);
+	if (errno)
+		return errno;
+
+	errno = __wlan_hdd_cfg80211_add_key(wiphy, ndev, key_index, pairwise,
+					    mac_addr, params, link_id);
+
+	osif_vdev_sync_op_stop(vdev_sync);
+
+	return errno;
+}
+#elif defined(CFG80211_SAE_AUTH_TA_ADDR_SUPPORT)
 static int wlan_hdd_cfg80211_add_key(struct wiphy *wiphy,
 				     struct net_device *ndev,
-				     u8 key_index, bool pairwise,
+				     int link_id, u8 key_index, bool pairwise,
 				     const u8 *mac_addr,
 				     struct key_params *params)
-#endif
 {
 	int errno;
 	struct osif_vdev_sync *vdev_sync;
@@ -20089,7 +20307,28 @@ static int wlan_hdd_cfg80211_add_key(struct wiphy *wiphy,
 		return errno;
 
 	errno = __wlan_hdd_cfg80211_add_key(wiphy, ndev, key_index, pairwise,
-					    mac_addr, params);
+					    mac_addr, params, link_id);
+
+	osif_vdev_sync_op_stop(vdev_sync);
+
+	return errno;
+}
+#else
+static int wlan_hdd_cfg80211_add_key(struct wiphy *wiphy,
+				     struct net_device *ndev,
+				     u8 key_index, bool pairwise,
+				     const u8 *mac_addr,
+				     struct key_params *params)
+{
+	int errno, link_id = -1;
+	struct osif_vdev_sync *vdev_sync;
+
+	errno = osif_vdev_sync_op_start(ndev, &vdev_sync);
+	if (errno)
+		return errno;
+
+	errno = __wlan_hdd_cfg80211_add_key(wiphy, ndev, key_index, pairwise,
+					    mac_addr, params, link_id);
 
 	osif_vdev_sync_op_stop(vdev_sync);
 
@@ -20097,12 +20336,9 @@ static int wlan_hdd_cfg80211_add_key(struct wiphy *wiphy,
 }
 #endif
 
-/*
- * FUNCTION: __wlan_hdd_cfg80211_get_key
- * This function is used to get the key information
- */
 static int __wlan_hdd_cfg80211_get_key(struct wiphy *wiphy,
 				       struct net_device *ndev,
+				       int link_id,
 				       u8 key_index, bool pairwise,
 				       const u8 *mac_addr, void *cookie,
 				       void (*callback)(void *cookie,
@@ -20113,6 +20349,7 @@ static int __wlan_hdd_cfg80211_get_key(struct wiphy *wiphy,
 	struct key_params params;
 	eCsrEncryptionType enc_type;
 	int32_t ucast_cipher = 0;
+	struct wlan_objmgr_vdev *link_vdev;
 
 	hdd_enter();
 
@@ -20134,8 +20371,15 @@ static int __wlan_hdd_cfg80211_get_key(struct wiphy *wiphy,
 		hdd_err("Invalid key index: %d", key_index);
 		return -EINVAL;
 	}
-	if (adapter->vdev)
-		ucast_cipher = wlan_crypto_get_param(adapter->vdev,
+
+	link_vdev = wlan_key_get_link_vdev(adapter, link_id);
+	if (!link_vdev) {
+		hdd_err("Invalid vdev for link_id :%d", link_id);
+		return -EINVAL;
+	}
+
+	if (link_vdev)
+		ucast_cipher = wlan_crypto_get_param(link_vdev,
 						WLAN_CRYPTO_PARAM_UCAST_CIPHER);
 
 	sme_fill_enc_type(&enc_type, ucast_cipher);
@@ -20175,7 +20419,7 @@ static int __wlan_hdd_cfg80211_get_key(struct wiphy *wiphy,
 
 	qdf_mtrace(QDF_MODULE_ID_HDD, QDF_MODULE_ID_HDD,
 		   TRACE_CODE_HDD_CFG80211_GET_KEY,
-		   adapter->vdev_id, params.cipher);
+		   wlan_vdev_get_id(link_vdev), params.cipher);
 
 	params.key_len = 0;
 	params.seq_len = 0;
@@ -20183,6 +20427,7 @@ static int __wlan_hdd_cfg80211_get_key(struct wiphy *wiphy,
 	params.key = NULL;
 	callback(cookie, &params);
 
+	wlan_key_put_link_vdev(link_vdev);
 	hdd_exit();
 	return 0;
 }
@@ -20201,6 +20446,7 @@ static int wlan_hdd_cfg80211_get_key(struct wiphy *wiphy,
 	struct hdd_adapter *adapter = qdf_container_of(wdev,
 						   struct hdd_adapter,
 						   wdev);
+	int link_id = -1;
 
 	if (!adapter || wlan_hdd_validate_vdev_id(adapter->vdev_id))
 		return errno;
@@ -20209,7 +20455,32 @@ static int wlan_hdd_cfg80211_get_key(struct wiphy *wiphy,
 	if (errno)
 		return errno;
 
-	errno = __wlan_hdd_cfg80211_get_key(wiphy, adapter->dev, key_index,
+	errno = __wlan_hdd_cfg80211_get_key(wiphy, adapter->dev, link_id,
+					    key_index,
+					    pairwise, mac_addr, cookie,
+					    callback);
+
+	osif_vdev_sync_op_stop(vdev_sync);
+
+	return errno;
+}
+#elif defined(CFG80211_SAE_AUTH_TA_ADDR_SUPPORT)
+static int wlan_hdd_cfg80211_get_key(struct wiphy *wiphy,
+				     struct net_device *ndev,
+				     int link_id, u8 key_index, bool pairwise,
+				     const u8 *mac_addr, void *cookie,
+				     void (*callback)(void *cookie,
+						      struct key_params *)
+				     )
+{
+	int errno;
+	struct osif_vdev_sync *vdev_sync;
+
+	errno = osif_vdev_sync_op_start(ndev, &vdev_sync);
+	if (errno)
+		return errno;
+
+	errno = __wlan_hdd_cfg80211_get_key(wiphy, ndev, link_id, key_index,
 					    pairwise, mac_addr, cookie,
 					    callback);
 
@@ -20227,14 +20498,16 @@ static int wlan_hdd_cfg80211_get_key(struct wiphy *wiphy,
 				     )
 {
 	int errno;
+	int link_id = -1;
 	struct osif_vdev_sync *vdev_sync;
 
 	errno = osif_vdev_sync_op_start(ndev, &vdev_sync);
 	if (errno)
 		return errno;
 
-	errno = __wlan_hdd_cfg80211_get_key(wiphy, ndev, key_index, pairwise,
-					    mac_addr, cookie, callback);
+	errno = __wlan_hdd_cfg80211_get_key(wiphy, ndev, link_id, key_index,
+					    pairwise, mac_addr, cookie,
+					    callback);
 
 	osif_vdev_sync_op_stop(vdev_sync);
 
@@ -20359,11 +20632,31 @@ static int wlan_hdd_cfg80211_del_key(struct wiphy *wiphy,
 
 	return errno;
 }
+#elif defined(CFG80211_SAE_AUTH_TA_ADDR_SUPPORT)
+static int wlan_hdd_cfg80211_del_key(struct wiphy *wiphy,
+				     struct net_device *dev,
+				     int link_id, u8 key_index,
+				     bool pairwise, const u8 *mac_addr)
+{
+	int errno;
+	struct osif_vdev_sync *vdev_sync;
+
+	errno = osif_vdev_sync_op_start(dev, &vdev_sync);
+	if (errno)
+		return errno;
+
+	errno = __wlan_hdd_cfg80211_del_key(wiphy, dev, key_index,
+					    pairwise, mac_addr);
+
+	osif_vdev_sync_op_stop(vdev_sync);
+
+	return errno;
+}
 #else
 static int wlan_hdd_cfg80211_del_key(struct wiphy *wiphy,
 				     struct net_device *dev,
-				     u8 key_index,
-				     bool pairwise, const u8 *mac_addr)
+				     u8 key_index, bool pairwise,
+				     const u8 *mac_addr)
 {
 	int errno;
 	struct osif_vdev_sync *vdev_sync;
@@ -20382,6 +20675,7 @@ static int wlan_hdd_cfg80211_del_key(struct wiphy *wiphy,
 #endif
 static int __wlan_hdd_cfg80211_set_default_key(struct wiphy *wiphy,
 					       struct net_device *ndev,
+					       int link_id,
 					       u8 key_index,
 					       bool unicast, bool multicast)
 {
@@ -20422,8 +20716,9 @@ static int __wlan_hdd_cfg80211_set_default_key(struct wiphy *wiphy,
 	if (0 != ret)
 		return ret;
 
-	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_ID);
-	if (!vdev)
+	vdev = wlan_key_get_link_vdev(adapter, link_id);
+	status = wlan_objmgr_vdev_try_get_ref(vdev, WLAN_OSIF_ID);
+	if (QDF_IS_STATUS_ERROR(status))
 		return -EINVAL;
 
 	crypto_key = wlan_crypto_get_key(vdev, key_index);
@@ -20465,7 +20760,8 @@ static int __wlan_hdd_cfg80211_set_default_key(struct wiphy *wiphy,
 	}
 
 out:
-	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_ID);
+	wlan_key_put_link_vdev(vdev);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_OSIF_ID);
 	return ret;
 }
 
@@ -20480,6 +20776,7 @@ static int wlan_hdd_cfg80211_set_default_key(struct wiphy *wiphy,
 	struct hdd_adapter *adapter = qdf_container_of(wdev,
 						   struct hdd_adapter,
 						   wdev);
+	int link_id = -1;
 
 	if (!adapter || wlan_hdd_validate_vdev_id(adapter->vdev_id))
 		return errno;
@@ -20489,6 +20786,27 @@ static int wlan_hdd_cfg80211_set_default_key(struct wiphy *wiphy,
 		return errno;
 
 	errno = __wlan_hdd_cfg80211_set_default_key(wiphy, adapter->dev,
+						    link_id, key_index,
+						    unicast, multicast);
+
+	osif_vdev_sync_op_stop(vdev_sync);
+
+	return errno;
+}
+#elif defined(CFG80211_SAE_AUTH_TA_ADDR_SUPPORT)
+static int wlan_hdd_cfg80211_set_default_key(struct wiphy *wiphy,
+					     struct net_device *ndev,
+					     int link_id, u8 key_index,
+					     bool unicast, bool multicast)
+{
+	int errno;
+	struct osif_vdev_sync *vdev_sync;
+
+	errno = osif_vdev_sync_op_start(ndev, &vdev_sync);
+	if (errno)
+		return errno;
+
+	errno = __wlan_hdd_cfg80211_set_default_key(wiphy, ndev, link_id,
 						    key_index, unicast,
 						    multicast);
 
@@ -20503,14 +20821,16 @@ static int wlan_hdd_cfg80211_set_default_key(struct wiphy *wiphy,
 					     bool unicast, bool multicast)
 {
 	int errno;
+	int link_id = -1;
 	struct osif_vdev_sync *vdev_sync;
 
 	errno = osif_vdev_sync_op_start(ndev, &vdev_sync);
 	if (errno)
 		return errno;
 
-	errno = __wlan_hdd_cfg80211_set_default_key(wiphy, ndev, key_index,
-						    unicast, multicast);
+	errno = __wlan_hdd_cfg80211_set_default_key(wiphy, ndev, link_id,
+						    key_index, unicast,
+						    multicast);
 
 	osif_vdev_sync_op_stop(vdev_sync);
 
@@ -20547,6 +20867,25 @@ static int wlan_hdd_cfg80211_set_default_beacon_key(struct wiphy *wiphy,
 		return errno;
 
 	errno = _wlan_hdd_cfg80211_set_default_beacon_key(wiphy, adapter->dev,
+							  key_index);
+
+	osif_vdev_sync_op_stop(vdev_sync);
+
+	return errno;
+}
+#elif defined(CFG80211_SAE_AUTH_TA_ADDR_SUPPORT)
+static int wlan_hdd_cfg80211_set_default_beacon_key(struct wiphy *wiphy,
+						    struct net_device *ndev,
+						    int link_id, u8 key_index)
+{
+	int errno;
+	struct osif_vdev_sync *vdev_sync;
+
+	errno = osif_vdev_sync_op_start(ndev, &vdev_sync);
+	if (errno)
+		return errno;
+
+	errno = _wlan_hdd_cfg80211_set_default_beacon_key(wiphy, ndev,
 							  key_index);
 
 	osif_vdev_sync_op_stop(vdev_sync);
@@ -20877,6 +21216,24 @@ static int wlan_hdd_set_default_mgmt_key(struct wiphy *wiphy,
 		return errno;
 
 	errno = __wlan_hdd_set_default_mgmt_key(wiphy, adapter->dev, key_index);
+
+	osif_vdev_sync_op_stop(vdev_sync);
+
+	return errno;
+}
+#elif defined(CFG80211_SAE_AUTH_TA_ADDR_SUPPORT)
+static int wlan_hdd_set_default_mgmt_key(struct wiphy *wiphy,
+					 struct net_device *netdev,
+					 int link_id, u8 key_index)
+{
+	int errno;
+	struct osif_vdev_sync *vdev_sync;
+
+	errno = osif_vdev_sync_op_start(netdev, &vdev_sync);
+	if (errno)
+		return errno;
+
+	errno = __wlan_hdd_set_default_mgmt_key(wiphy, netdev, key_index);
 
 	osif_vdev_sync_op_stop(vdev_sync);
 
