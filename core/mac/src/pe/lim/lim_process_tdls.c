@@ -891,14 +891,34 @@ static void lim_populate_tdls_setup_6g_cap(struct mac_context *mac,
 static void lim_fill_session_he_width(struct pe_session *session,
 				      tDot11fIEhe_cap *heCap)
 {
-	if (session->ch_width >= CH_WIDTH_40MHZ)
+	/*
+	 * For TDLS, the bw is filled using mlme_cfg so max supported bw
+	 * will be set, so here reset he bw as per session bw.
+	 */
+	if (session->ch_width == CH_WIDTH_20MHZ) {
+		goto bw_20;
+	} else if (session->ch_width == CH_WIDTH_40MHZ) {
 		heCap->chan_width_0 = 1;
-	if (session->ch_width >= CH_WIDTH_80MHZ)
+		goto bw_40;
+	} else if (session->ch_width == CH_WIDTH_80MHZ) {
 		heCap->chan_width_1 = 1;
-	if (session->ch_width >= CH_WIDTH_160MHZ)
+		goto bw_80;
+	} else if (session->ch_width == CH_WIDTH_160MHZ) {
 		heCap->chan_width_2 = 1;
-	if (session->ch_width >= CH_WIDTH_80P80MHZ)
+		goto bw_160;
+	} else if (session->ch_width == CH_WIDTH_80P80MHZ) {
 		heCap->chan_width_3 = 1;
+		return;
+	}
+
+bw_20:
+	heCap->chan_width_0 = 0;
+bw_40:
+	heCap->chan_width_1 = 0;
+bw_80:
+	heCap->chan_width_2 = 0;
+bw_160:
+	heCap->chan_width_3 = 0;
 }
 
 static void lim_tdls_set_he_chan_width(struct mac_context *mac,
@@ -906,12 +926,18 @@ static void lim_tdls_set_he_chan_width(struct mac_context *mac,
 				       struct pe_session *session,
 				       bool wideband_sta)
 {
-	if (!wideband_sta) {
+	if (!wideband_sta ||
+	    wlan_reg_is_24ghz_ch_freq(session->curr_op_freq)) {
 		lim_fill_session_he_width(session, heCap);
 		return;
 	}
 
 	if (wlan_reg_is_5ghz_ch_freq(session->curr_op_freq)) {
+		if (wlan_reg_is_dfs_for_freq(mac->pdev,
+					     session->curr_op_freq)) {
+			lim_fill_session_he_width(session, heCap);
+			return;
+		}
 	/*
 	 * Right now, no support for ch_width 160 Mhz or 80P80 Mhz in 5 Ghz
 	 * Also, restricting bw to 80 Mhz in case ap on 5 ghz is operating in
@@ -923,9 +949,6 @@ static void lim_tdls_set_he_chan_width(struct mac_context *mac,
 		heCap->chan_width_4 = 0;
 		heCap->chan_width_5 = 0;
 		heCap->chan_width_6 = 0;
-		if (wlan_reg_is_dfs_for_freq(mac->pdev,
-					     session->curr_op_freq))
-			lim_fill_session_he_width(session, heCap);
 	}
 }
 
