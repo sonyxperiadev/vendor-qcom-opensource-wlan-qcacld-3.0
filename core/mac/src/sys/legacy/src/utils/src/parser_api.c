@@ -1025,6 +1025,11 @@ populate_dot11f_ht_caps(struct mac_context *mac,
 				&ch_params);
 			if (ch_params.ch_width != CH_WIDTH_40MHZ)
 				pDot11f->supportedChannelWidthSet = 0;
+		} else if (LIM_IS_STA_ROLE(pe_session)) {
+			if (pe_session->ch_width == CH_WIDTH_20MHZ)
+				pDot11f->supportedChannelWidthSet = 0;
+			else
+				pDot11f->supportedChannelWidthSet = 1;
 		} else {
 			pDot11f->supportedChannelWidthSet =
 				pe_session->htSupportedChannelWidthSet;

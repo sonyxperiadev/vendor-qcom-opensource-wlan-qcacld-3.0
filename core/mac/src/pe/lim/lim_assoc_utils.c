@@ -3623,13 +3623,13 @@ QDF_STATUS lim_sta_send_add_bss(struct mac_context *mac, tpSirAssocRsp pAssocRsp
 		 * width has been taken into account for calculating
 		 * pe_session->ch_width
 		 */
-		if (chan_width_support &&
-		    ((pAssocRsp->HTCaps.present &&
-		      pAssocRsp->HTCaps.supportedChannelWidthSet) ||
-		     (pBeaconStruct->HTCaps.present &&
-		      pBeaconStruct->HTCaps.supportedChannelWidthSet) ||
-		     lim_is_eht_connection_op_info_present(pe_session,
-							   pAssocRsp))) {
+		if ((chan_width_support &&
+		     ((pAssocRsp->HTCaps.present &&
+		       pAssocRsp->HTCaps.supportedChannelWidthSet) ||
+		      (pBeaconStruct->HTCaps.present &&
+		       pBeaconStruct->HTCaps.supportedChannelWidthSet))) ||
+		    lim_is_eht_connection_op_info_present(pe_session,
+							  pAssocRsp)) {
 			pAddBssParams->ch_width =
 					pe_session->ch_width;
 			pAddBssParams->staContext.ch_width =
@@ -3877,9 +3877,11 @@ QDF_STATUS lim_sta_send_add_bss(struct mac_context *mac, tpSirAssocRsp pAssocRsp
 			lim_update_he_stbc_capable(&pAddBssParams->staContext);
 			lim_update_he_mcs_12_13(&pAddBssParams->staContext,
 						sta);
-			lim_update_he_6gop_assoc_resp(pAddBssParams,
-						      &pAssocRsp->he_op,
-						      pe_session);
+			if (!lim_is_eht_connection_op_info_present(pe_session,
+								   pAssocRsp))
+				lim_update_he_6gop_assoc_resp(pAddBssParams,
+							      &pAssocRsp->he_op,
+							      pe_session);
 			lim_update_he_6ghz_band_caps(mac,
 						&pAssocRsp->he_6ghz_band_cap,
 						&pAddBssParams->staContext);
