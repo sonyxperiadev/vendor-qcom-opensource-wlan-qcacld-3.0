@@ -5850,10 +5850,10 @@ QDF_STATUS csr_send_chng_mcc_beacon_interval(struct mac_context *mac,
 	/* NO need to update the Beacon Params if update beacon parameter flag
 	 * is not set
 	 */
-	if (!mac->roam.roamSession[sessionId].bssParams.update_bcn_int)
+	if (!mac->roam.roamSession[sessionId].update_bcn_int)
 		return QDF_STATUS_SUCCESS;
 
-	mac->roam.roamSession[sessionId].bssParams.update_bcn_int =
+	mac->roam.roamSession[sessionId].update_bcn_int =
 		false;
 
 	/* Create the message and send to lim */
@@ -5875,10 +5875,9 @@ QDF_STATUS csr_send_chng_mcc_beacon_interval(struct mac_context *mac,
 		pMsg->session_id = sessionId;
 		sme_debug("session %d BeaconInterval %d",
 			sessionId,
-			mac->roam.roamSession[sessionId].bssParams.
-			bcn_int);
+			mac->roam.roamSession[sessionId].bcn_int);
 		pMsg->beacon_interval =
-			mac->roam.roamSession[sessionId].bssParams.bcn_int;
+			mac->roam.roamSession[sessionId].bcn_int;
 		status = umac_send_mb_message_to_mac(pMsg);
 	}
 	return status;
@@ -7700,14 +7699,14 @@ QDF_STATUS csr_bss_start(struct mac_context *mac, uint32_t vdev_id,
 		     sizeof(struct start_bss_config));
 	start_bss_cfg->cmd_id = csr_get_monotonous_number(mac);
 
-	session->bssParams.cb_mode = start_bss_cfg->sec_ch_offset;
-	session->bssParams.bcn_int = bss_config->beaconInterval;
-	candidate.beacon_interval = session->bssParams.bcn_int;
+	session->cb_mode = start_bss_cfg->sec_ch_offset;
+	session->bcn_int = bss_config->beaconInterval;
+	candidate.beacon_interval = session->bcn_int;
 	candidate.chan_freq = bss_config->oper_ch_freq;
 	if_mgr_is_beacon_interval_valid(mac->pdev, vdev_id,
 					&candidate);
 	bss_config->beaconInterval = candidate.beacon_interval;
-	session->bssParams.bcn_int = candidate.beacon_interval;
+	session->bcn_int = candidate.beacon_interval;
 
 	cmd.cmd_id = start_bss_cfg->cmd_id;
 	csr_set_sap_ser_params(&cmd, WLAN_SER_CMD_VDEV_START_BSS);

@@ -121,17 +121,6 @@ struct bss_config_param {
 	tSirMacCapabilityInfo BssCap;
 };
 
-/* struct csr_roamstart_bssparams: csr bss parameters
- * @cb_mode: channel bonding mode
- * @bcn_int: beacon interval
- * @update_bcn_int: updated beacon interval
- */
-struct csr_roamstart_bssparams {
-	ePhyChanBondState cb_mode;
-	uint16_t bcn_int;
-	bool update_bcn_int;
-};
-
 struct roam_cmd {
 	enum csr_roam_reason roamReason;
 	tSirMacAddr peerMac;
@@ -242,6 +231,9 @@ struct csr_disconnect_stats {
 /**
  * struct csr_roam_session - CSR per-vdev context
  * @vdev_id: ID of the vdev for which this entry is applicable
+ * @cb_mode: channel bonding mode
+ * @bcn_int: beacon interval
+ * @update_bcn_int: updated beacon interval
  * @is_bcn_recv_start: Allow to process bcn recv indication
  * @beacon_report_do_not_resume: Do not resume the beacon reporting after scan
  */
@@ -256,7 +248,10 @@ struct csr_roam_session {
 	 * to remember some parameters needed for START_BSS.
 	 * All member must be set every time we try to join
 	 */
-	struct csr_roamstart_bssparams bssParams;
+	ePhyChanBondState cb_mode;
+	uint16_t bcn_int;
+	bool update_bcn_int;
+
 #ifdef WLAN_BCN_RECV_FEATURE
 	bool is_bcn_recv_start;
 	bool beacon_report_do_not_resume;
