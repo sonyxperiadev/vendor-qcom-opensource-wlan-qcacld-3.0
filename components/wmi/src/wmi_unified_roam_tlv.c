@@ -5283,6 +5283,7 @@ send_disconnect_roam_params_tlv(wmi_unified_t wmi_handle,
 	return QDF_STATUS_SUCCESS;
 }
 
+#define WLAN_TIME_IN_MS 1000
 /**
  * send_idle_roam_params_tlv() - send idle roam trigger parameters
  * @wmi_handle: wmi handle
@@ -5317,7 +5318,7 @@ send_idle_roam_params_tlv(wmi_unified_t wmi_handle,
 	cmd->band = idle_roam_params->band;
 	cmd->rssi_delta = idle_roam_params->conn_ap_rssi_delta;
 	cmd->min_rssi = idle_roam_params->conn_ap_min_rssi;
-	cmd->idle_time = idle_roam_params->inactive_time;
+	cmd->idle_time = idle_roam_params->inactive_time / WLAN_TIME_IN_MS;
 	cmd->data_packet_count = idle_roam_params->data_pkt_count;
 	wmi_debug("RSO_CFG: vdev_id:%d enable:%d band:%d rssi_delta:%d min_rssi:%d idle_time:%d data_pkt:%d",
 		 cmd->vdev_id, cmd->enable,
