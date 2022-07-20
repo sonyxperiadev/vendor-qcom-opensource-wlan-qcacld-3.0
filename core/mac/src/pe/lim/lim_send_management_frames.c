@@ -2681,8 +2681,10 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 					    &frm->he_6ghz_band_cap);
 	}
 
-	if (lim_is_session_eht_capable(pe_session))
+	if (lim_is_session_eht_capable(pe_session)) {
 		populate_dot11f_eht_caps(mac_ctx, pe_session, &frm->eht_cap);
+		lim_strip_mlo_ie(mac_ctx, add_ie, &add_ie_len);
+	}
 
 	mlo_ie_len =
 		 lim_send_assoc_req_mgmt_frame_mlo(mac_ctx, pe_session, frm);

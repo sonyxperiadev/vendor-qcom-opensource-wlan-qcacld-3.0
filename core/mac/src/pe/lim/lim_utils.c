@@ -8051,6 +8051,40 @@ QDF_STATUS lim_send_mlo_caps_ie(struct mac_context *mac_ctx,
 	return QDF_STATUS_SUCCESS;
 }
 
+void lim_strip_mlo_ie(struct mac_context *mac_ctx,
+		      uint8_t *add_ie, uint16_t *add_ielen)
+{
+	uint8_t *mlo_ie_buff = NULL;
+	uint16_t mlo_ie_buff_len = 0;
+	QDF_STATUS qdf_status;
+
+	/* MLO ext ie in addition IE*/
+	if (wlan_get_ext_ie_ptr_from_ext_id(MLO_IE_OUI_TYPE, ONE_BYTE,
+					    add_ie, *add_ielen)) {
+		mlo_ie_buff = qdf_mem_malloc(WLAN_MAX_IE_LEN + 2);
+
+		if (!mlo_ie_buff) {
+			pe_err("Failed to allocate MLO IE buff");
+			return;
+		}
+
+		qdf_status = lim_strip_ie(mac_ctx, add_ie, add_ielen,
+					  WLAN_ELEMID_EXTN_ELEM, ONE_BYTE,
+					  MLO_IE_OUI_TYPE, MLO_IE_OUI_SIZE,
+					  mlo_ie_buff, WLAN_MAX_IE_LEN);
+		if (QDF_IS_STATUS_ERROR(qdf_status)) {
+			pe_err("Failed to strip MLO IE");
+			qdf_mem_free(mlo_ie_buff);
+			return;
+		}
+		mlo_ie_buff_len = mlo_ie_buff[1] + 2; /* 2 - EID+LEN */
+		pe_debug("remove supplicant mlo ie, %d bytes", mlo_ie_buff[1]);
+		qdf_trace_hex_dump(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
+				   mlo_ie_buff, mlo_ie_buff_len);
+
+		qdf_mem_free(mlo_ie_buff);
+	}
+}
 #endif
 
 #ifdef WLAN_FEATURE_11BE

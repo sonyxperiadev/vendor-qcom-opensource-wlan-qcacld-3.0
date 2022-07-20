@@ -287,6 +287,18 @@ QDF_STATUS lim_send_mlo_caps_ie(struct mac_context *mac_ctx,
 				struct pe_session *session,
 				enum QDF_OPMODE device_mode,
 				uint8_t vdev_id);
+
+/**
+ * lim_strip_mlo_ie() - Removes the MLO IE data from additional IE data
+ *
+ * @mac_ctx: global MAC context
+ * @add_ie: Additional IE buffer
+ * @add_ielen: Pointer to length of additional IE
+ *
+ * Return: Void
+ */
+void lim_strip_mlo_ie(struct mac_context *mac_ctx,
+		      uint8_t *add_ie, uint16_t *add_ielen);
 #else
 static inline uint16_t lim_assign_mlo_conn_idx(struct mac_context *mac,
 					       struct pe_session *pe_session,
@@ -310,6 +322,12 @@ static inline void lim_update_sta_mlo_info(struct pe_session *session,
 static inline
 void lim_set_mlo_caps(struct mac_context *mac, struct pe_session *session,
 		      uint8_t *ie_start, uint32_t num_bytes)
+{
+}
+
+static inline
+void lim_strip_mlo_ie(struct mac_context *mac_ctx,
+		      uint8_t *addn_ie, uint16_t *addn_ielen)
 {
 }
 
