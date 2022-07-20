@@ -1768,11 +1768,13 @@ static int hdd_get_dwell_time_6g(struct wlan_objmgr_psoc *psoc,
 
 	if (strncmp(command, "GETDWELLTIME 6G MAX", 19) == 0) {
 		status = ucfg_scan_cfg_get_active_6g_dwelltime(psoc, &val);
+		hdd_debug("active 6g dwelltime:%d", val);
 		if (QDF_IS_STATUS_SUCCESS(status))
 			*len = scnprintf(extra, n, "GETDWELLTIME 6G MAX %u\n",
 					 val);
 	} else if (strncmp(command, "GETDWELLTIME PASSIVE 6G MAX", 27) == 0) {
 		status = ucfg_scan_cfg_get_passive_6g_dwelltime(psoc, &val);
+		hdd_debug("passive 6g dwelltime:%d", val);
 		if (QDF_IS_STATUS_SUCCESS(status))
 			*len = scnprintf(extra, n,
 					 "GETDWELLTIME PASSIVE 6G MAX %u\n",
@@ -1845,23 +1847,27 @@ static int hdd_get_dwell_time(struct wlan_objmgr_psoc *psoc, uint8_t *command,
 
 	if (strncmp(command, "GETDWELLTIME ACTIVE MAX", 23) == 0) {
 		ucfg_scan_cfg_get_active_dwelltime(psoc, &val);
+		hdd_debug("active max dwelltime:%d", val);
 		*len = scnprintf(extra, n, "GETDWELLTIME ACTIVE MAX %u\n", val);
 		return 0;
 	}
 	if (strncmp(command, "GETDWELLTIME PASSIVE MAX", 24) == 0) {
 		ucfg_scan_cfg_get_passive_dwelltime(psoc, &val);
+		hdd_debug("passive dwelltime:%d", val);
 		*len = scnprintf(extra, n, "GETDWELLTIME PASSIVE MAX %u\n",
 				 val);
 		return 0;
 	}
 	if (strncmp(command, "GETDWELLTIME 2G MAX", 19) == 0) {
 		ucfg_scan_cfg_get_active_2g_dwelltime(psoc, &val);
+		hdd_debug("active 2g dwelltime:%d", val);
 		*len = scnprintf(extra, n, "GETDWELLTIME 2G MAX %u\n",
 				 val);
 		return 0;
 	}
 	if (strncmp(command, "GETDWELLTIME", 12) == 0) {
 		ucfg_scan_cfg_get_active_dwelltime(psoc, &val);
+		hdd_debug("active dwelltime:%d", val);
 		*len = scnprintf(extra, n, "GETDWELLTIME %u\n", val);
 		return 0;
 	}
@@ -3651,6 +3657,8 @@ static int drv_cmd_get_scan_channel_time(struct hdd_adapter *adapter,
 	char extra[32];
 	uint8_t len = 0;
 
+	hdd_debug("vdev_id: %u, scan channel time: %u", adapter->vdev_id, val);
+
 	/* value is interms of msec */
 	len = scnprintf(extra, sizeof(extra), "%s %d",
 			"GETSCANCHANNELTIME", val);
@@ -3721,6 +3729,8 @@ static int drv_cmd_get_scan_home_time(struct hdd_adapter *adapter,
 						    adapter->vdev_id);
 	char extra[32];
 	uint8_t len = 0;
+
+	hdd_debug("vdev_id: %u, scan home time: %u", adapter->vdev_id, val);
 
 	/* value is interms of msec */
 	len = scnprintf(extra, sizeof(extra), "%s %d",
