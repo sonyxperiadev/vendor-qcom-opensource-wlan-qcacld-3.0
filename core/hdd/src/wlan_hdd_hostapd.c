@@ -7038,7 +7038,9 @@ wlan_hdd_is_ap_ap_force_scc_override(struct hdd_adapter *adapter,
 		hdd_err("failed to get vdev");
 		return false;
 	}
-	if (policy_mgr_is_ap_ap_mcc_allow(hdd_ctx->psoc, vdev)) {
+	if (policy_mgr_is_ap_ap_mcc_allow(
+			hdd_ctx->psoc, hdd_ctx->pdev, vdev, freq,
+			hdd_map_nl_chan_width(chandef->width))) {
 		hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_ID);
 		return false;
 	}

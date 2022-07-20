@@ -3682,7 +3682,8 @@ QDF_STATUS policy_mgr_filter_passive_ch(struct wlan_objmgr_pdev *pdev,
 }
 
 bool policy_mgr_is_3rd_conn_on_same_band_allowed(struct wlan_objmgr_psoc *psoc,
-						 enum policy_mgr_con_mode mode)
+						 enum policy_mgr_con_mode mode,
+						 qdf_freq_t ch_freq)
 {
 	enum policy_mgr_pcl_type pcl = PM_NONE;
 	enum policy_mgr_conc_priority_mode conc_system_pref = 0;
@@ -3694,6 +3695,16 @@ bool policy_mgr_is_3rd_conn_on_same_band_allowed(struct wlan_objmgr_psoc *psoc,
 	if (!pm_ctx) {
 		policy_mgr_err("context is NULL");
 			return false;
+	}
+
+	if (pm_conc_connection_list[0].freq != ch_freq ||
+	    pm_conc_connection_list[0].freq !=
+				pm_conc_connection_list[1].freq) {
+		policy_mgr_debug("No MCC support in 3vif in same mac: %d %d %d",
+				 pm_conc_connection_list[0].freq,
+				 pm_conc_connection_list[1].freq,
+				 ch_freq);
+		return false;
 	}
 
 	policy_mgr_debug("pref:%d requested mode:%d",
@@ -3729,7 +3740,9 @@ bool policy_mgr_is_3rd_conn_on_same_band_allowed(struct wlan_objmgr_psoc *psoc,
 			[third_index][mode][conc_system_pref];
 	}
 
-	policy_mgr_debug("pcl for third connection is %d", pcl);
+	policy_mgr_debug("pcl for third connection mode %s is %d %s",
+			 device_mode_to_string(mode), pcl,
+			 pcl_type_to_string(pcl));
 	switch (pcl) {
 	case PM_SCC_CH:
 	case PM_SCC_CH_24G:

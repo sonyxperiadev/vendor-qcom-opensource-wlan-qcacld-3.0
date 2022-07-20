@@ -3887,10 +3887,11 @@ bool policy_mgr_allow_same_mac_same_freq(struct wlan_objmgr_psoc *psoc,
 		 * and therefore a 3rd connection with the
 		 * same MAC is possible.
 		 */
-	} else if (policy_mgr_2_freq_always_on_same_mac(psoc, ch_freq,
-					pm_conc_connection_list[0].freq) &&
-		   !policy_mgr_is_3rd_conn_on_same_band_allowed(psoc, mode)) {
-			policy_mgr_rl_debug("don't allow 3rd home channel on same MAC – for sta+multi-AP");
+	} else if (policy_mgr_2_freq_always_on_same_mac(
+			psoc, ch_freq, pm_conc_connection_list[0].freq) &&
+		   !policy_mgr_is_3rd_conn_on_same_band_allowed(
+			psoc, mode, ch_freq)) {
+			policy_mgr_rl_debug("don't allow 3rd home channel on same MAC for sta+multi-AP");
 			allow = false;
 	}
 
