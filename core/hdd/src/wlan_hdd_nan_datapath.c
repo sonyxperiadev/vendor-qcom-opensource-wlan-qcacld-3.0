@@ -681,7 +681,7 @@ error_wmm_init:
 	hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 
 error_init_txrx:
-	hdd_unregister_wext(wlan_dev);
+	hdd_wext_unregister(wlan_dev, true);
 
 	QDF_BUG(!hdd_vdev_destroy(adapter));
 
