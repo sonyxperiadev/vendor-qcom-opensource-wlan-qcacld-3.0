@@ -851,15 +851,20 @@ uint32_t tdls_get_6g_pwr_for_power_type(struct wlan_objmgr_vdev *vdev,
 					enum supported_6g_pwr_types pwr_typ)
 {
 	struct wlan_objmgr_pdev *pdev = wlan_vdev_get_pdev(vdev);
-	struct regulatory_channel chan[NUM_CHANNELS] = {0};
+	struct regulatory_channel *chan;
 	uint8_t chn_idx, num_chan;
 	uint8_t band_mask = BIT(REG_BAND_6G);
+	uint32_t tx_power = 0;
 
 	if (!pdev)
 		return 0;
 
 	/* No power check is required for non 6 Ghz channel */
 	if (!wlan_reg_is_6ghz_chan_freq(freq))
+		return 0;
+
+	chan = qdf_mem_malloc(sizeof(struct regulatory_channel) * NUM_CHANNELS);
+	if (!chan)
 		return 0;
 
 	num_chan = wlan_reg_get_band_channel_list_for_pwrmode(pdev,
@@ -872,18 +877,19 @@ uint32_t tdls_get_6g_pwr_for_power_type(struct wlan_objmgr_vdev *vdev,
 			tdls_debug("VLP power for channel %d is %d",
 				   chan[chn_idx].center_freq,
 				   chan[chn_idx].tx_power);
-			return chan[chn_idx].tx_power;
+			tx_power = chan[chn_idx].tx_power;
 		}
 	}
 
-	return 0;
+	qdf_mem_free(chan);
+	return tx_power;
 }
 
 bool tdls_is_6g_freq_allowed(struct wlan_objmgr_vdev *vdev,
 			     qdf_freq_t freq)
 {
 	struct wlan_objmgr_pdev *pdev = wlan_vdev_get_pdev(vdev);
-	struct regulatory_channel chan[NUM_CHANNELS] = {0};
+	struct regulatory_channel *chan;
 	bool is_allowed = false;
 	uint8_t country_code[REG_ALPHA2_LEN + 1];
 	uint8_t chn_idx, num_chan = 0;
@@ -891,17 +897,21 @@ bool tdls_is_6g_freq_allowed(struct wlan_objmgr_vdev *vdev,
 
 	/* Return if freq is not 6 Ghz freq */
 	if (!wlan_reg_is_6ghz_chan_freq(freq))
-		goto error;
+		return false;
 
 	if (!wlan_cfg80211_tdls_is_fw_6ghz_capable(vdev))
-		goto error;
+		return false;
 
 	if (!pdev)
-		goto error;
+		return false;
 
 	wlan_cm_get_country_code(pdev, wlan_vdev_get_id(vdev), country_code);
 	if (!wlan_reg_ctry_support_vlp(country_code))
-		goto error;
+		return false;
+
+	chan = qdf_mem_malloc(sizeof(struct regulatory_channel) * NUM_CHANNELS);
+	if (!chan)
+		return false;
 
 	num_chan = wlan_reg_get_band_channel_list_for_pwrmode(pdev,
 							      band_mask,
@@ -922,6 +932,7 @@ bool tdls_is_6g_freq_allowed(struct wlan_objmgr_vdev *vdev,
 	}
 
 error:
+	qdf_mem_free(chan);
 	return is_allowed;
 }
 #else
