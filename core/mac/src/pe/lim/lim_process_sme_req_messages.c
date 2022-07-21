@@ -4279,6 +4279,13 @@ static void lim_process_sb_disconnect_req(struct mac_context *mac_ctx,
 	struct scheduler_msg msg = {0};
 	struct disassoc_cnf disassoc_cnf = {0};
 
+	/* For SB disconnect smeState should be in Deauth state
+	 * One scenario where the smeState is not updated is when
+	 * AP sends deauth on link vdev and disconnect req is triggered
+	 */
+	if (pe_session->limSmeState == eLIM_SME_LINK_EST_STATE)
+		pe_session->limSmeState = eLIM_SME_WT_DEAUTH_STATE;
+
 	if (pe_session->limSmeState == eLIM_SME_WT_DEAUTH_STATE)
 		disassoc_cnf.messageType = eWNI_SME_DEAUTH_CNF;
 	else
