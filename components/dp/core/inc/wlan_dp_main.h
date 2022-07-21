@@ -134,6 +134,16 @@ struct wlan_dp_intf*
 dp_get_intf_by_macaddr(struct wlan_dp_psoc_context *dp_ctx,
 		       struct qdf_mac_addr *addr);
 
+/**
+ * dp_get_intf_by_netdev() - Api to Get interface from netdev
+ * @dp_ctx: DP context
+ * @dev: Pointer to network device
+ *
+ * Return: Pointer to DP interface.
+ */
+struct wlan_dp_intf*
+dp_get_intf_by_netdev(struct wlan_dp_psoc_context *dp_ctx, qdf_netdev_t dev);
+
 /* MAX iteration count to wait for dp packet process to complete */
 #define DP_TASK_MAX_WAIT_CNT  100
 /* Milli seconds to wait when packet is getting processed */

@@ -6480,9 +6480,7 @@ int wlan_hdd_cfg80211_dump_station(struct wiphy *wiphy,
  */
 struct net_device_stats *hdd_get_stats(struct net_device *dev)
 {
-	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
-
-	return (struct net_device_stats *)ucfg_dp_get_dev_stats(&adapter->mac_addr);
+	return (struct net_device_stats *)ucfg_dp_get_dev_stats(dev);
 }
 
 

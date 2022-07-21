@@ -1259,17 +1259,17 @@ void ucfg_dp_softap_tx_timeout(struct wlan_objmgr_vdev *vdev)
 	dp_softap_tx_timeout(dp_intf);
 }
 
-qdf_net_dev_stats *ucfg_dp_get_dev_stats(struct qdf_mac_addr *intf_addr)
+qdf_net_dev_stats *ucfg_dp_get_dev_stats(qdf_netdev_t dev)
 {
 	struct wlan_dp_intf *dp_intf;
 	struct wlan_dp_psoc_context *dp_ctx;
 
 	dp_ctx =  dp_get_context();
 
-	dp_intf = dp_get_intf_by_macaddr(dp_ctx, intf_addr);
+	dp_intf = dp_get_intf_by_netdev(dp_ctx, dev);
 	if (!dp_intf) {
-		dp_err("DP interface not found addr:"QDF_MAC_ADDR_FMT,
-		       QDF_MAC_ADDR_REF(intf_addr));
+		dp_err("DP interface not found dev: %s",
+		       qdf_netdev_get_devname(dev));
 		QDF_BUG(0);
 		return NULL;
 	}

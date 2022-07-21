@@ -373,11 +373,11 @@ ucfg_dp_softap_start_xmit(qdf_nbuf_t nbuf, struct wlan_objmgr_vdev *vdev);
 
 /**
  * ucfg_dp_get_dev_stats() - Get netdev stats info
- * @intf_addr: DP interface MAC address
+ * @dev: Pointer to network device
  *
  * Return: qdf_net_dev_stats info
  */
-qdf_net_dev_stats *ucfg_dp_get_dev_stats(struct qdf_mac_addr *intf_addr);
+qdf_net_dev_stats *ucfg_dp_get_dev_stats(qdf_netdev_t dev);
 
 /**
  * ucfg_dp_inc_rx_pkt_stats() - DP increment RX pkt stats

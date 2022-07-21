@@ -128,6 +128,25 @@ dp_get_intf_by_macaddr(struct wlan_dp_psoc_context *dp_ctx,
 	return NULL;
 }
 
+struct wlan_dp_intf*
+dp_get_intf_by_netdev(struct wlan_dp_psoc_context *dp_ctx, qdf_netdev_t dev)
+{
+	struct wlan_dp_intf *dp_intf;
+
+	qdf_spin_lock_bh(&dp_ctx->intf_list_lock);
+	for (dp_get_front_intf_no_lock(dp_ctx, &dp_intf); dp_intf;
+	     dp_get_next_intf_no_lock(dp_ctx, dp_intf, &dp_intf)) {
+		if (!qdf_str_cmp(qdf_netdev_get_devname(dp_intf->dev),
+				 qdf_netdev_get_devname(dev))) {
+			qdf_spin_unlock_bh(&dp_ctx->intf_list_lock);
+			return dp_intf;
+		}
+	}
+	qdf_spin_unlock_bh(&dp_ctx->intf_list_lock);
+
+	return NULL;
+}
+
 /**
  * validate_interface_id() - Check if interface ID is valid
  * @intf_id: interface ID
