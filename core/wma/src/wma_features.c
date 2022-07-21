@@ -4152,6 +4152,9 @@ QDF_STATUS wma_send_apf_enable_cmd(WMA_HANDLE handle, uint8_t vdev_id,
 	tp_wma_handle wma = (tp_wma_handle) handle;
 	struct wmi_unified *wmi_handle;
 
+	if (!wma_is_vdev_valid(vdev_id))
+		return QDF_STATUS_E_INVAL;
+
 	if (wma_validate_handle(wma))
 		return QDF_STATUS_E_INVAL;
 
