@@ -472,8 +472,9 @@ static QDF_STATUS dp_softap_validate_peer_state(struct wlan_dp_intf *dp_intf,
 	}
 
 	if (peer_state == OL_TXRX_PEER_STATE_CONN) {
-		if (qdf_ntohs(qdf_nbuf_get_protocol(nbuf)) != ETHERTYPE_PAE) {
-			dp_debug_rl("NON-EAPOL packet in non-Authenticated state");
+		if (qdf_ntohs(qdf_nbuf_get_protocol(nbuf)) != ETHERTYPE_PAE &&
+		    qdf_ntohs(qdf_nbuf_get_protocol(nbuf)) != ETHERTYPE_WAI) {
+			dp_debug_rl("NON-EAPOL/WAPI pkt in non-Auth state");
 			return QDF_STATUS_E_FAILURE;
 		}
 	}

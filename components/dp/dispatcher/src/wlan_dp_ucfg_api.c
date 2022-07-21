@@ -53,6 +53,9 @@ void ucfg_dp_update_inf_mac(struct wlan_objmgr_psoc *psoc,
 		return;
 	}
 
+	dp_info("MAC update from " QDF_MAC_ADDR_FMT " to " QDF_MAC_ADDR_FMT "",
+		QDF_MAC_ADDR_REF(cur_mac), QDF_MAC_ADDR_REF(new_mac));
+
 	qdf_copy_macaddr(&dp_intf->mac_addr, new_mac);
 }
 
