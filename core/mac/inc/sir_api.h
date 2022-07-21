@@ -1085,6 +1085,9 @@ struct assoc_ind {
 	const uint8_t *owe_ie;
 	uint32_t owe_ie_len;
 	uint16_t owe_status;
+	const uint8_t *ft_ie;
+	uint32_t ft_ie_len;
+	uint16_t ft_status;
 	bool need_assoc_rsp_tx_cb;
 	tSirMacAddr peer_mld_addr;
 };
@@ -1095,6 +1098,16 @@ struct assoc_ind {
  * @assoc_ind: pointer to assoc ind
  */
 struct owe_assoc_ind {
+	qdf_list_node_t node;
+	struct assoc_ind *assoc_ind;
+};
+
+/**
+ * struct ft_assoc_ind - ft association indication
+ * @node: List entry element
+ * @assoc_ind: pointer to assoc ind
+ */
+struct ft_assoc_ind {
 	qdf_list_node_t node;
 	struct assoc_ind *assoc_ind;
 };
@@ -1111,6 +1124,8 @@ struct assoc_cnf {
 	enum wlan_status_code mac_status_code;
 	uint8_t *owe_ie;
 	uint32_t owe_ie_len;
+	uint8_t *ft_ie;
+	uint32_t ft_ie_len;
 	bool need_assoc_rsp_tx_cb;
 };
 

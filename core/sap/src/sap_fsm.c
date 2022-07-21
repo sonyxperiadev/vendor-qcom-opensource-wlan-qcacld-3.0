@@ -1898,6 +1898,27 @@ static bool sap_save_owe_pending_assoc_ind(struct sap_context *sap_ctx,
 	return true;
 }
 
+static bool sap_save_ft_pending_assoc_ind(struct sap_context *sap_ctx,
+					  struct assoc_ind *sme_assoc_ind)
+{
+	struct ft_assoc_ind *assoc_ind;
+	QDF_STATUS status;
+
+	assoc_ind = qdf_mem_malloc(sizeof(*assoc_ind));
+	if (!assoc_ind)
+		return false;
+	assoc_ind->assoc_ind = sme_assoc_ind;
+	status = qdf_list_insert_back(&sap_ctx->ft_pending_assoc_ind_list,
+				      &assoc_ind->node);
+	if (QDF_STATUS_SUCCESS != status) {
+		qdf_mem_free(assoc_ind);
+		return false;
+	}
+	qdf_event_set(&sap_ctx->ft_pending_event);
+
+	return true;
+}
+
 #ifdef FEATURE_RADAR_HISTORY
 /* Last cac result */
 static struct prev_cac_result prev_cac_history;
@@ -2312,6 +2333,18 @@ QDF_STATUS sap_signal_hdd_event(struct sap_context *sap_ctx,
 				return QDF_STATUS_E_INVAL;
 			}
 			csr_roaminfo->owe_pending_assoc_ind = NULL;
+		}
+
+		if (csr_roaminfo->ft_pending_assoc_ind) {
+			if (!sap_save_ft_pending_assoc_ind(sap_ctx,
+			    csr_roaminfo->ft_pending_assoc_ind)) {
+				sap_err("Failed to save ft assoc ind");
+				qdf_mem_free(csr_roaminfo->ft_pending_assoc_ind);
+				csr_roaminfo->ft_pending_assoc_ind = NULL;
+				qdf_mem_free(sap_ap_event);
+				return QDF_STATUS_E_INVAL;
+			}
+			csr_roaminfo->ft_pending_assoc_ind = NULL;
 		}
 		break;
 	case eSAP_START_BSS_EVENT:

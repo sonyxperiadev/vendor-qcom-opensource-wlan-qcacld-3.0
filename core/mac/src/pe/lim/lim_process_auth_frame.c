@@ -508,6 +508,73 @@ static inline void  lim_process_sae_auth_frame(struct mac_context *mac_ctx,
 {}
 #endif
 
+static void lim_process_ft_auth_frame(struct mac_context *mac_ctx,
+				      uint8_t *rx_pkt_info,
+				      struct pe_session *pe_session)
+{
+	tpSirMacMgmtHdr mac_hdr;
+	uint32_t frame_len;
+	uint8_t *body_ptr;
+	enum rxmgmt_flags rx_flags = RXMGMT_FLAG_NONE;
+	uint16_t auth_algo;
+
+	mac_hdr = WMA_GET_RX_MAC_HEADER(rx_pkt_info);
+	body_ptr = WMA_GET_RX_MPDU_DATA(rx_pkt_info);
+	frame_len = WMA_GET_RX_PAYLOAD_LEN(rx_pkt_info);
+
+	pe_debug("FT Auth RX type %d subtype %d from " QDF_MAC_ADDR_FMT,
+		 mac_hdr->fc.type, mac_hdr->fc.subType,
+		 QDF_MAC_ADDR_REF(mac_hdr->sa));
+
+	if (LIM_IS_AP_ROLE(pe_session)) {
+		struct tLimPreAuthNode *sta_pre_auth_ctx;
+
+		rx_flags = RXMGMT_FLAG_EXTERNAL_AUTH;
+		/* Extract pre-auth context for the STA, if any. */
+		sta_pre_auth_ctx = lim_search_pre_auth_list(mac_ctx,
+							    mac_hdr->sa);
+		if (sta_pre_auth_ctx) {
+			pe_debug("STA Auth ctx have ininted");
+			/* Pre-auth context exists for the STA */
+			if (sta_pre_auth_ctx->mlmState == eLIM_MLM_WT_FT_AUTH_STATE) {
+				pe_warn("previous Auth not completed, don't process this auth frame");
+				return;
+			}
+			lim_delete_pre_auth_node(mac_ctx, mac_hdr->sa);
+		}
+
+		/* Create entry for this STA in pre-auth list */
+		sta_pre_auth_ctx = lim_acquire_free_pre_auth_node(mac_ctx,
+			&mac_ctx->lim.gLimPreAuthTimerTable);
+		if (!sta_pre_auth_ctx) {
+			pe_warn("Max pre-auth nodes reached ");
+			lim_print_mac_addr(mac_ctx, mac_hdr->sa, LOGW);
+			return;
+		}
+		pe_debug("Alloc new data: %pK peer", sta_pre_auth_ctx);
+		auth_algo = *(uint16_t *)body_ptr;
+		lim_print_mac_addr(mac_ctx, mac_hdr->sa, LOGD);
+		qdf_mem_copy((uint8_t *)sta_pre_auth_ctx->peerMacAddr,
+			     mac_hdr->sa, sizeof(tSirMacAddr));
+		sta_pre_auth_ctx->mlmState = eLIM_MLM_WT_FT_AUTH_STATE;
+		sta_pre_auth_ctx->authType = (tAniAuthType) auth_algo;
+		sta_pre_auth_ctx->fSeen = 0;
+		sta_pre_auth_ctx->fTimerStarted = 0;
+		sta_pre_auth_ctx->seq_num =
+				((mac_hdr->seqControl.seqNumHi << 4) |
+				(mac_hdr->seqControl.seqNumLo));
+		sta_pre_auth_ctx->timestamp = qdf_mc_timer_get_system_ticks();
+		lim_add_pre_auth_node(mac_ctx, sta_pre_auth_ctx);
+		lim_send_sme_mgmt_frame_ind(mac_ctx, mac_hdr->fc.subType,
+			(uint8_t *)mac_hdr,
+			frame_len + sizeof(tSirMacMgmtHdr),
+			pe_session->smeSessionId,
+			WMA_GET_RX_FREQ(rx_pkt_info),
+			WMA_GET_RX_RSSI_NORMALIZED(rx_pkt_info),
+			rx_flags);
+	}
+}
+
 static uint8_t
 lim_get_pasn_peer_vdev_id(struct mac_context *mac, uint8_t *bssid)
 {
@@ -1668,6 +1735,11 @@ lim_process_auth_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 	} else if (auth_alg == eSIR_AUTH_TYPE_PASN) {
 		lim_process_pasn_auth_frame(mac_ctx, pe_session->vdev_id,
 					    rx_pkt_info);
+		goto free;
+	} else if (auth_alg == eSIR_FT_AUTH && LIM_IS_AP_ROLE(pe_session)) {
+		pe_debug("Auth Frame auth_alg  eSIR_FT_AUTH");
+			lim_process_ft_auth_frame(mac_ctx,
+						  rx_pkt_info, pe_session);
 		goto free;
 	} else if ((sir_convert_auth_frame2_struct(mac_ctx, body_ptr,
 				frame_len, rx_auth_frame) != QDF_STATUS_SUCCESS)

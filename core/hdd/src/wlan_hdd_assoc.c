@@ -2244,6 +2244,50 @@ static inline void hdd_translate_sae_rsn_to_csr_auth(int8_t auth_suite[4],
 }
 #endif
 
+void *hdd_filter_ft_info(const uint8_t *frame, size_t len,
+			 uint32_t *ft_info_len)
+{
+	uint32_t ft_ie_len, md_ie_len, rsn_ie_len, ie_len;
+	const uint8_t *rsn_ie, *md_ie, *ft_ie;
+	void *ft_info;
+
+	ft_ie_len = 0;
+	md_ie_len = 0;
+	rsn_ie_len = 0;
+	ie_len = len - DOT11F_FF_CAPABILITIES_LEN - DOT11F_FF_STATUS_LEN
+			   - DOT11F_IE_AID_MAX_LEN - sizeof(tSirMacMgmtHdr);
+	rsn_ie = wlan_get_ie_ptr_from_eid(DOT11F_EID_RSN, frame, ie_len);
+
+	if (rsn_ie) {
+		rsn_ie_len = rsn_ie[1] + 2;
+		QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_HDD, QDF_TRACE_LEVEL_DEBUG,
+			(void *)rsn_ie, rsn_ie_len);
+	}
+	md_ie = wlan_get_ie_ptr_from_eid(DOT11F_EID_MOBILITYDOMAIN,
+					 frame, ie_len);
+	if (md_ie) {
+		md_ie_len = md_ie[1] + 2;
+		QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_HDD, QDF_TRACE_LEVEL_DEBUG,
+			(void *)md_ie, md_ie_len);
+	}
+	ft_ie = wlan_get_ie_ptr_from_eid(DOT11F_EID_FTINFO, frame, ie_len);
+	if (ft_ie)
+		ft_ie_len = ft_ie[1] + 2;
+
+	*ft_info_len = rsn_ie_len + md_ie_len + ft_ie_len;
+	ft_info = qdf_mem_malloc(*ft_info_len);
+	if (!ft_info)
+		return NULL;
+	if (rsn_ie_len)
+		qdf_mem_copy(ft_info, rsn_ie, rsn_ie_len);
+	if (md_ie_len)
+		qdf_mem_copy(ft_info + rsn_ie_len, md_ie, md_ie_len);
+	if (ft_ie_len)
+		qdf_mem_copy(ft_info + rsn_ie_len + md_ie_len,
+			     ft_ie, ft_ie_len);
+	return ft_info;
+}
+
 /**
  * hdd_translate_rsn_to_csr_auth_type() - Translate RSN to CSR auth type
  * @auth_suite: auth suite

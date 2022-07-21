@@ -20304,6 +20304,7 @@ static int wlan_hdd_add_key_vdev(mac_handle_t mac_handle,
 	int errno;
 	enum wlan_crypto_cipher_type cipher;
 	bool ft_mode = false;
+	struct hdd_ap_ctx *hdd_ap_ctx;
 
 	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 
@@ -20355,6 +20356,11 @@ static int wlan_hdd_add_key_vdev(mac_handle_t mac_handle,
 	switch (adapter->device_mode) {
 	case QDF_SAP_MODE:
 	case QDF_P2P_GO_MODE:
+		hdd_ap_ctx = WLAN_HDD_GET_AP_CTX_PTR(adapter);
+		if (hdd_ap_ctx->during_auth_offload) {
+			hdd_err("don't need install key during auth");
+			return -EINVAL;
+		}
 		errno = wlan_hdd_add_key_sap(adapter, pairwise,
 					     key_index, cipher);
 		break;

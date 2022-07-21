@@ -45,6 +45,20 @@ enum csr_akm_type
 hdd_translate_rsn_to_csr_auth_type(uint8_t auth_suite[4]);
 
 /**
+ * hdd_filter_ft_info() -
+ * This function to filter fast BSS transition related IE
+ * @frame: pointer to the input frame.
+ * @len: input frame length.
+ * @ft_info_len: store the total length of FT related IE.
+ *
+ * Return: pointer to a buffer which stored the FT related IE
+ * This is a malloced memory that must be freed by the caller
+ */
+
+void *hdd_filter_ft_info(const uint8_t *frame,
+			 size_t len, uint32_t *ft_info_len);
+
+/**
  * hdd_softap_set_channel_change() -
  * This function to support SAP channel change with CSA IE
  * set in the beacons.

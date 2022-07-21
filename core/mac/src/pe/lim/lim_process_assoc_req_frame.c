@@ -2668,6 +2668,14 @@ void lim_process_assoc_req_frame(struct mac_context *mac_ctx,
 			sub_type, GET_LIM_SYSTEM_ROLE(session),
 			QDF_MAC_ADDR_REF(hdr->sa));
 			return;
+		} else if (sta_ds->mlmStaContext.akm_type == ANI_AKM_TYPE_FT_RSN_PSK) {
+			pe_debug("FT Assoc Req, delete STA hash entry");
+			lim_release_peer_idx(mac_ctx, sta_ds->assocId, session);
+			if (dph_delete_hash_entry(mac_ctx, hdr->sa,
+						  sta_ds->assocId,
+						  &session->dph.dphHashTable)
+			    != QDF_STATUS_SUCCESS)
+				pe_err("error deleting hash entry");
 		} else if (!sta_ds->rmfEnabled && (sub_type == LIM_REASSOC)) {
 			/*
 			 * SAP should send reassoc response with reject code
@@ -3441,6 +3449,15 @@ QDF_STATUS lim_send_mlm_assoc_ind(struct mac_context *mac_ctx,
 						   sta_ds, session_entry)) {
 			qdf_mem_free(assoc_ind);
 			return QDF_STATUS_E_INVAL;
+		}
+
+		pe_debug("assoc_ind->akm_type:%d ", assoc_ind->akm_type);
+		if (assoc_ind->akm_type == ANI_AKM_TYPE_FT_RSN_PSK) {
+			lim_send_sme_mgmt_frame_ind(mac_ctx, sub_type,
+			   qdf_nbuf_data(assoc_req->assoc_req_buf),
+			   qdf_nbuf_len(assoc_req->assoc_req_buf),
+			   session_entry->smeSessionId,
+			   0, 0, RXMGMT_FLAG_NONE);
 		}
 		lim_post_sme_message(mac_ctx, LIM_MLM_ASSOC_IND,
 				     (uint32_t *)assoc_ind);

@@ -15765,6 +15765,20 @@ QDF_STATUS sme_update_owe_info(struct mac_context *mac,
 	return status;
 }
 
+QDF_STATUS sme_update_ft_info(struct mac_context *mac,
+			      struct assoc_ind *assoc_ind)
+{
+	QDF_STATUS status;
+
+	status = sme_acquire_global_lock(&mac->sme);
+	if (QDF_IS_STATUS_SUCCESS(status)) {
+		status = csr_update_ft_info(mac, assoc_ind);
+		sme_release_global_lock(&mac->sme);
+	}
+
+	return status;
+}
+
 #ifdef WLAN_MWS_INFO_DEBUGFS
 QDF_STATUS
 sme_get_mws_coex_info(mac_handle_t mac_handle, uint32_t vdev_id,

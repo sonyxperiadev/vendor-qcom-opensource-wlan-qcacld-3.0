@@ -593,6 +593,8 @@ struct csr_roam_info {
 	struct sir_sae_info *sae_info;
 #endif
 	struct assoc_ind *owe_pending_assoc_ind;
+	struct assoc_ind *ft_pending_assoc_ind;
+
 	struct qdf_mac_addr peer_mld;
 #ifdef WLAN_FEATURE_SAP_ACS_OPTIMIZE
 	uint32_t chan_info_freq;
@@ -858,6 +860,17 @@ static inline void csr_packetdump_timer_start(void) {}
  */
 QDF_STATUS csr_update_owe_info(struct mac_context *mac,
 			       struct assoc_ind *assoc_ind);
+
+/**
+ * csr_update_ft_info() - Update FT info
+ * @mac: mac context
+ * @assoc_ind: assoc ind
+ *
+ * Return: QDF_STATUS
+ */
+
+QDF_STATUS csr_update_ft_info(struct mac_context *mac,
+			      struct assoc_ind *assoc_ind);
 
 typedef void (*csr_ani_callback)(int8_t *ani, void *context);
 

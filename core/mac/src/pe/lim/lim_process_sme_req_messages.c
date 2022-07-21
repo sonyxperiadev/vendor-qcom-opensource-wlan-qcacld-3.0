@@ -6638,6 +6638,8 @@ void __lim_process_sme_assoc_cnf_new(struct mac_context *mac_ctx, uint32_t msg_t
 			eLIM_MLM_LINK_ESTABLISHED_STATE;
 		sta_ds->mlmStaContext.owe_ie = assoc_cnf.owe_ie;
 		sta_ds->mlmStaContext.owe_ie_len = assoc_cnf.owe_ie_len;
+		sta_ds->mlmStaContext.ft_ie = assoc_cnf.ft_ie;
+		sta_ds->mlmStaContext.ft_ie_len = assoc_cnf.ft_ie_len;
 		pe_debug("sending Assoc Rsp frame to STA assoc id=%d, tx cb %d",
 			 sta_ds->assocId, assoc_cnf.need_assoc_rsp_tx_cb);
 		lim_send_assoc_rsp_mgmt_frame(
@@ -6648,6 +6650,8 @@ void __lim_process_sme_assoc_cnf_new(struct mac_context *mac_ctx, uint32_t msg_t
 					assoc_cnf.need_assoc_rsp_tx_cb);
 		sta_ds->mlmStaContext.owe_ie = NULL;
 		sta_ds->mlmStaContext.owe_ie_len = 0;
+		sta_ds->mlmStaContext.ft_ie = NULL;
+		sta_ds->mlmStaContext.ft_ie_len = 0;
 		goto end;
 	} else {
 		uint8_t add_pre_auth_context = true;
@@ -6691,6 +6695,7 @@ end:
 		session_entry->parsedAssocReq[sta_ds->assocId] = NULL;
 	}
 	qdf_mem_free(assoc_cnf.owe_ie);
+	qdf_mem_free(assoc_cnf.ft_ie);
 }
 
 static void

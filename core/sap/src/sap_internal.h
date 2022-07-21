@@ -229,6 +229,8 @@ struct sap_context {
 	/* Disabled mcs13 by sap or not */
 	bool disabled_mcs13;
 	qdf_list_t owe_pending_assoc_ind_list;
+	qdf_list_t ft_pending_assoc_ind_list;
+	qdf_event_t ft_pending_event;
 	uint32_t freq_before_ch_switch;
 #ifdef WLAN_FEATURE_P2P_P2P_STA
 /*

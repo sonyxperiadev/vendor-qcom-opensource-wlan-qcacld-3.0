@@ -136,6 +136,7 @@ typedef enum eLimMlmStates {
 	eLIM_MLM_WT_ADD_BSS_RSP_FT_REASSOC_STATE,
 	eLIM_MLM_WT_FT_REASSOC_RSP_STATE,
 	eLIM_MLM_WT_SAE_AUTH_STATE,
+	eLIM_MLM_WT_FT_AUTH_STATE,
 } tLimMlmStates;
 
 /* 11h channel switch states */
@@ -246,6 +247,8 @@ typedef struct tLimPreAuthTable {
  * @he_capable:     802.11ax HE capability
  * @owe_ie:         Pointer to OWE IE
  * @owe_ie_len:     Length of OWE IE
+ * @ft_ie:         Pointer to FT related IE
+ * @ft_ie_len:     Length of FT related IE
  * @eht_capable:     802.11be EHT capability
  */
 struct lim_sta_context {
@@ -272,6 +275,8 @@ struct lim_sta_context {
 	bool force_1x1;
 	uint8_t *owe_ie;
 	uint32_t owe_ie_len;
+	uint8_t *ft_ie;
+	uint32_t ft_ie_len;
 #ifdef WLAN_FEATURE_11BE
 	bool eht_capable;
 #endif

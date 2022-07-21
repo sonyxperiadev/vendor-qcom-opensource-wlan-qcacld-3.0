@@ -835,6 +835,7 @@ struct hdd_fw_txrx_stats {
  * @acs_in_progress: In progress acs flag for an adapter
  * @client_count: client count per dot11_mode
  * @country_ie_updated: country ie is updated or not by hdd hostapd
+ * @during_auth_offload: auth mgmt frame is offloading to hostapd
  */
 struct hdd_ap_ctx {
 	struct hdd_hostapd_state hostapd_state;
@@ -855,6 +856,7 @@ struct hdd_ap_ctx {
 	qdf_atomic_t acs_in_progress;
 	uint16_t client_count[QCA_WLAN_802_11_MODE_INVALID];
 	bool country_ie_updated;
+	bool during_auth_offload;
 };
 
 /**
