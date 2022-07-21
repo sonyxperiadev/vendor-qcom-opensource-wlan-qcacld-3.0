@@ -11985,7 +11985,17 @@ static int __hdd_psoc_idle_shutdown(struct hdd_context *hdd_ctx)
 	}
 
 	osif_psoc_sync_wait_for_ops(psoc_sync);
-	errno = hdd_wlan_stop_modules(hdd_ctx, false);
+	/*
+	 * This is to handle scenario in which platform driver triggers
+	 * idle_shutdown if Deep Sleep/Hibernate entry notification is
+	 * received from modem subsystem in wearable devices
+	 */
+	if (hdd_is_any_interface_open(hdd_ctx)) {
+		hdd_err_rl("all interfaces are not down, ignore idle shutdown");
+		errno = -EAGAIN;
+	} else {
+		errno = hdd_wlan_stop_modules(hdd_ctx, false);
+	}
 
 	osif_psoc_sync_trans_stop(psoc_sync);
 
@@ -12011,16 +12021,6 @@ int hdd_psoc_idle_shutdown(struct device *dev)
 	if (is_mode_change_psoc_idle_shutdown)
 		ret = __hdd_mode_change_psoc_idle_shutdown(hdd_ctx);
 	else {
-		/*
-		 * This is to handle scenario in which platform driver triggers
-		 * idle_shutdown if Deep Sleep/Hibernate entry notification is
-		 * received from modem subsystem in wearable devices
-		 */
-		if (hdd_is_any_interface_open(hdd_ctx)) {
-			hdd_err_rl("all interfaces are not down, ignore idle shutdown");
-			return -EINVAL;
-		}
-
 		ret =  __hdd_psoc_idle_shutdown(hdd_ctx);
 	}
 
