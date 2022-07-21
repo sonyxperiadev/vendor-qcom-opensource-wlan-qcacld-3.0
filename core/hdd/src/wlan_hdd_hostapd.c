@@ -5805,7 +5805,7 @@ hdd_softap_update_pasn_vdev_params(struct hdd_context *hdd_ctx,
 		return;
 
 	rsnxe_cap = wlan_crypto_parse_rsnxe_ie(rsnx_ie, &cap_len);
-	if (*rsnxe_cap & WLAN_CRYPTO_RSNX_CAP_URNM_MFPR)
+	if (rsnxe_cap && *rsnxe_cap & WLAN_CRYPTO_RSNX_CAP_URNM_MFPR)
 		pasn_vdev_param |= WLAN_CRYPTO_URNM_MFPR;
 
 	wlan_crypto_vdev_set_param(hdd_ctx->psoc, vdev_id,
