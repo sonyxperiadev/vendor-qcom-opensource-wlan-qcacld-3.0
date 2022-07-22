@@ -35,9 +35,9 @@
 #include "qdf_trace.h"
 #include <wlan_cm_ucfg_api.h>
 #include <qdf_threads.h>
+#include <qdf_net_stats.h>
 #include "wlan_dp_periodic_sta_stats.h"
 #include "wlan_mlme_ucfg_api.h"
-#include <i_qdf_net_stats.h>
 #include "wlan_dp_txrx.h"
 #include "cdp_txrx_host_stats.h"
 #include "wlan_cm_roam_api.h"
@@ -1729,8 +1729,9 @@ dp_link_monitoring(struct wlan_dp_psoc_context *dp_ctx,
 	psoc = dp_ctx->psoc;
 	/* If no rx packets received for N sec, set link speed to poor */
 	if (link_mon.is_rx_linkspeed_good) {
-		rx_packets = DP_BW_GET_DIFF(QDF_NET_DEV_STATS_RX_PKTS(&dp_intf->stats),
-					    dp_intf->prev_rx_packets);
+		rx_packets = DP_BW_GET_DIFF(
+			qdf_net_stats_get_rx_pkts(&dp_intf->stats),
+			dp_intf->prev_rx_packets);
 		if (!rx_packets)
 			no_rx_times++;
 		else
@@ -1855,13 +1856,13 @@ static void __dp_bus_bw_work_handler(struct wlan_dp_psoc_context *dp_ctx)
 			dp_rx_check_qdisc_for_intf(dp_intf);
 
 		tx_packets += DP_BW_GET_DIFF(
-			QDF_NET_DEV_STATS_TX_PKTS(&dp_intf->stats),
+			qdf_net_stats_get_tx_pkts(&dp_intf->stats),
 			dp_intf->prev_tx_packets);
 		rx_packets += DP_BW_GET_DIFF(
-			QDF_NET_DEV_STATS_RX_PKTS(&dp_intf->stats),
+			qdf_net_stats_get_rx_pkts(&dp_intf->stats),
 			dp_intf->prev_rx_packets);
 		tx_bytes = DP_BW_GET_DIFF(
-			QDF_NET_DEV_STATS_TX_BYTES(&dp_intf->stats),
+			qdf_net_stats_get_tx_bytes(&dp_intf->stats),
 			dp_intf->prev_tx_bytes);
 
 		if (dp_intf->device_mode == QDF_STA_MODE &&
@@ -1891,12 +1892,12 @@ static void __dp_bus_bw_work_handler(struct wlan_dp_psoc_context *dp_ctx)
 		if (dp_intf->device_mode == QDF_SAP_MODE) {
 			con_sap_dp_intf = dp_intf;
 			sap_tx_bytes =
-				QDF_NET_DEV_STATS_TX_BYTES(&dp_intf->stats);
+				qdf_net_stats_get_tx_bytes(&dp_intf->stats);
 		}
 
 		if (dp_intf->device_mode == QDF_STA_MODE)
 			sta_tx_bytes =
-				QDF_NET_DEV_STATS_TX_BYTES(&dp_intf->stats);
+				qdf_net_stats_get_tx_bytes(&dp_intf->stats);
 
 		dp_set_driver_del_ack_enable(dp_intf->intf_id, dp_ctx,
 					     rx_packets);
@@ -1904,18 +1905,18 @@ static void __dp_bus_bw_work_handler(struct wlan_dp_psoc_context *dp_ctx)
 		dp_set_vdev_bundle_require_flag(dp_intf->intf_id, dp_ctx,
 						tx_bytes);
 
-		total_rx += QDF_NET_DEV_STATS_RX_PKTS(&dp_intf->stats);
-		total_tx += QDF_NET_DEV_STATS_TX_PKTS(&dp_intf->stats);
+		total_rx += qdf_net_stats_get_rx_pkts(&dp_intf->stats);
+		total_tx += qdf_net_stats_get_tx_pkts(&dp_intf->stats);
 
 		qdf_spin_lock_bh(&dp_ctx->bus_bw_lock);
 		dp_intf->prev_tx_packets =
-			QDF_NET_DEV_STATS_TX_PKTS(&dp_intf->stats);
+			qdf_net_stats_get_tx_pkts(&dp_intf->stats);
 		dp_intf->prev_rx_packets =
-			QDF_NET_DEV_STATS_RX_PKTS(&dp_intf->stats);
+			qdf_net_stats_get_rx_pkts(&dp_intf->stats);
 		dp_intf->prev_fwd_tx_packets = fwd_tx_packets;
 		dp_intf->prev_fwd_rx_packets = fwd_rx_packets;
 		dp_intf->prev_tx_bytes =
-			QDF_NET_DEV_STATS_TX_BYTES(&dp_intf->stats);
+			qdf_net_stats_get_tx_bytes(&dp_intf->stats);
 		qdf_spin_unlock_bh(&dp_ctx->bus_bw_lock);
 		connected = true;
 
@@ -1937,10 +1938,10 @@ static void __dp_bus_bw_work_handler(struct wlan_dp_psoc_context *dp_ctx)
 	dp_ipa_set_perf_level(dp_ctx, &tx_packets, &rx_packets,
 			      &ipa_tx_packets, &ipa_rx_packets);
 	if (con_sap_dp_intf) {
-		QDF_NET_DEV_STATS_TX_PKTS(&con_sap_dp_intf->stats) +=
-			ipa_tx_packets;
-		QDF_NET_DEV_STATS_RX_PKTS(&con_sap_dp_intf->stats) +=
-			ipa_rx_packets;
+		qdf_net_stats_add_tx_pkts(&con_sap_dp_intf->stats,
+					  ipa_tx_packets);
+		qdf_net_stats_add_rx_pkts(&con_sap_dp_intf->stats,
+					  ipa_rx_packets);
 	}
 
 	tx_packets = tx_packets * bw_interval_us;
@@ -2153,9 +2154,9 @@ void dp_bus_bw_compute_prev_txrx_stats(struct wlan_objmgr_vdev *vdev)
 		return;
 
 	qdf_spin_lock_bh(&dp_ctx->bus_bw_lock);
-	dp_intf->prev_tx_packets = QDF_NET_DEV_STATS_TX_PKTS(&dp_intf->stats);
-	dp_intf->prev_rx_packets = QDF_NET_DEV_STATS_RX_PKTS(&dp_intf->stats);
-	dp_intf->prev_tx_bytes = QDF_NET_DEV_STATS_TX_BYTES(&dp_intf->stats);
+	dp_intf->prev_tx_packets = qdf_net_stats_get_tx_pkts(&dp_intf->stats);
+	dp_intf->prev_rx_packets = qdf_net_stats_get_rx_pkts(&dp_intf->stats);
+	dp_intf->prev_tx_bytes = qdf_net_stats_get_tx_bytes(&dp_intf->stats);
 
 	cdp_get_intra_bss_fwd_pkts_count(cds_get_context(QDF_MODULE_ID_SOC),
 					 dp_intf->intf_id,

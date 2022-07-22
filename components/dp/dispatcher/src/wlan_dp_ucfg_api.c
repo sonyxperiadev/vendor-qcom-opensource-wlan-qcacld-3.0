@@ -36,6 +36,7 @@
 #include "wlan_nlink_common.h"
 #include "wlan_pkt_capture_ucfg_api.h"
 #include <cdp_txrx_ctrl.h>
+#include <qdf_net_stats.h>
 
 void ucfg_dp_update_inf_mac(struct wlan_objmgr_psoc *psoc,
 			    struct qdf_mac_addr *cur_mac,
@@ -1299,8 +1300,8 @@ void ucfg_dp_inc_rx_pkt_stats(struct wlan_objmgr_vdev *vdev,
 	stats = &dp_intf->dp_stats.tx_rx_stats;
 
 	++stats->per_cpu[cpu_index].rx_packets;
-	QDF_NET_DEV_STATS_INC_RX_PKTS(&dp_intf->stats);
-	QDF_NET_DEV_STATS_RX_BYTES(&dp_intf->stats) += pkt_len;
+	qdf_net_stats_add_rx_pkts(&dp_intf->stats, 1);
+	qdf_net_stats_add_rx_bytes(&dp_intf->stats, pkt_len);
 
 	if (delivered)
 		++stats->per_cpu[cpu_index].rx_delivered;
