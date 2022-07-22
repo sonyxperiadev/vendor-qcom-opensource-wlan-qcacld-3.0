@@ -692,19 +692,6 @@ void lim_delete_sta_context(struct mac_context *mac, struct scheduler_msg *limMs
 void lim_delete_dialogue_token_list(struct mac_context *mac);
 
 /**
- * lim_add_channel_status_info() - store
- * chan status info into Global MAC structure
- * @p_mac: Pointer to Global MAC structure
- * @channel_stat: Pointer to chan status info reported by firmware
- * @channel_id: current channel id
- *
- * Return: None
- */
-void lim_add_channel_status_info(struct mac_context *p_mac,
-				 struct lim_channel_status *channel_stat,
-				 uint8_t channel_id);
-
-/**
  * lim_get_channel_from_beacon() - extract channel number
  * from beacon and convert to channel frequency
  * @mac: Pointer to Global MAC structure

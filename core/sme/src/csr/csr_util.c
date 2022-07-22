@@ -1209,40 +1209,6 @@ uint16_t sme_chn_to_freq(uint8_t chanNum)
 	return 0;
 }
 
-struct lim_channel_status *
-csr_get_channel_status(struct mac_context *mac, uint32_t chan_freq)
-{
-	uint8_t i;
-	struct lim_scan_channel_status *channel_status;
-	struct lim_channel_status *entry;
-
-	if (!mac->sap.acs_with_more_param)
-		return NULL;
-
-	channel_status = &mac->lim.scan_channel_status;
-	for (i = 0; i < channel_status->total_channel; i++) {
-		entry = &channel_status->channel_status_list[i];
-		if (entry->channelfreq == chan_freq)
-			return entry;
-	}
-	sme_err("Channel %d status info not exist", chan_freq);
-
-	return NULL;
-}
-
-void csr_clear_channel_status(struct mac_context *mac)
-{
-	struct lim_scan_channel_status *channel_status;
-
-	if (!mac->sap.acs_with_more_param)
-		return;
-
-	channel_status = &mac->lim.scan_channel_status;
-	channel_status->total_channel = 0;
-
-	return;
-}
-
 /**
  * sme_bsstype_to_string() - converts bss type to string.
  * @bss_type: bss type enum

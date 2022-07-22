@@ -1072,4 +1072,121 @@ void ucfg_mc_cp_stats_register_pmo_handler(void)
 	pmo_register_resume_handler(WLAN_UMAC_COMP_CP_STATS,
 				    ucfg_mc_cp_stats_resume_handler, NULL);
 }
+
+void wlan_cp_stats_update_chan_info(struct wlan_objmgr_psoc *psoc,
+				    struct channel_status *channel_stat,
+				    uint8_t vdev_id)
+{
+	struct wlan_objmgr_pdev *pdev;
+	struct wlan_objmgr_vdev *vdev;
+	struct pdev_cp_stats *pdev_cp_stats_priv;
+	struct per_channel_stats *channel_stats;
+	struct channel_status *channel_status_list;
+	uint8_t total_channel;
+	uint8_t i;
+	bool found = false;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_CP_STATS_ID);
+	if (!vdev)
+		return;
+
+	pdev = wlan_vdev_get_pdev(vdev);
+	if (!pdev)
+		return;
+
+	pdev_cp_stats_priv = wlan_cp_stats_get_pdev_stats_obj(pdev);
+	if (!pdev_cp_stats_priv) {
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_CP_STATS_ID);
+		cp_stats_err("pdev cp stats object is null");
+		return;
+	}
+
+	channel_stats = &pdev_cp_stats_priv->pdev_stats->chan_stats;
+	channel_status_list = channel_stats->channel_status_list;
+	total_channel = channel_stats->total_channel;
+
+	for (i = 0; i < total_channel; i++) {
+		if (channel_status_list[i].channel_id ==
+		    channel_stat->channel_id) {
+			if (channel_stat->cmd_flags ==
+			    WMI_CHAN_InFO_END_RESP &&
+			    channel_status_list[i].cmd_flags ==
+			    WMI_CHAN_InFO_START_RESP) {
+				/* adjust to delta value for counts */
+				channel_stat->rx_clear_count -=
+				    channel_status_list[i].rx_clear_count;
+				channel_stat->cycle_count -=
+				    channel_status_list[i].cycle_count;
+				channel_stat->rx_frame_count -=
+				    channel_status_list[i].rx_frame_count;
+				channel_stat->tx_frame_count -=
+				    channel_status_list[i].tx_frame_count;
+				channel_stat->bss_rx_cycle_count -=
+				    channel_status_list[i].bss_rx_cycle_count;
+			}
+			qdf_mem_copy(&channel_status_list[i], channel_stat,
+				     sizeof(*channel_status_list));
+			found = true;
+			break;
+		}
+	}
+
+	if (!found) {
+		if (total_channel < NUM_CHANNELS) {
+			qdf_mem_copy(&channel_status_list[total_channel++],
+				     channel_stat,
+				     sizeof(*channel_status_list));
+			channel_stats->total_channel = total_channel;
+		} else {
+			cp_stats_err("Chan cnt exceed, channel_id=%d",
+				     channel_stat->channel_id);
+		}
+	}
+
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_CP_STATS_ID);
+}
+
+struct channel_status *
+ucfg_mc_cp_stats_get_channel_status(struct wlan_objmgr_pdev *pdev,
+				    uint32_t chan_freq)
+{
+	struct pdev_cp_stats *pdev_cp_stats_priv;
+	struct per_channel_stats *channel_stats;
+	struct channel_status *entry;
+	uint8_t i;
+
+	pdev_cp_stats_priv = wlan_cp_stats_get_pdev_stats_obj(pdev);
+	if (!pdev_cp_stats_priv) {
+		cp_stats_err("pdev cp stats object is null");
+		return NULL;
+	}
+
+	channel_stats = &pdev_cp_stats_priv->pdev_stats->chan_stats;
+
+	for (i = 0; i < channel_stats->total_channel; i++) {
+		entry = &channel_stats->channel_status_list[i];
+		if (entry->channel_freq == chan_freq)
+			return entry;
+	}
+	cp_stats_err("Channel %d status info not exist", chan_freq);
+
+	return NULL;
+}
+
+void ucfg_mc_cp_stats_clear_channel_status(struct wlan_objmgr_pdev *pdev)
+{
+	struct pdev_cp_stats *pdev_cp_stats_priv;
+	struct per_channel_stats *channel_stats;
+
+	pdev_cp_stats_priv = wlan_cp_stats_get_pdev_stats_obj(pdev);
+	if (!pdev_cp_stats_priv) {
+		cp_stats_err("pdev cp stats object is null");
+		return;
+	}
+
+	channel_stats = &pdev_cp_stats_priv->pdev_stats->chan_stats;
+	channel_stats->total_channel = 0;
+}
+
 #endif

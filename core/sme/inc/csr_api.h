@@ -846,24 +846,6 @@ static inline void csr_packetdump_timer_start(void) {}
 #endif
 
 /**
- * csr_get_channel_status() - get chan info via channel number
- * @mac: Pointer to Global MAC structure
- * @chan_freq: channel frequency
- *
- * Return: chan status info
- */
-struct lim_channel_status *
-csr_get_channel_status(struct mac_context *mac, uint32_t chan_freq);
-
-/**
- * csr_clear_channel_status() - clear chan info
- * @mac: Pointer to Global MAC structure
- *
- * Return: none
- */
-void csr_clear_channel_status(struct mac_context *mac);
-
-/**
  * csr_update_owe_info() - Update OWE info
  * @mac: mac context
  * @assoc_ind: assoc ind

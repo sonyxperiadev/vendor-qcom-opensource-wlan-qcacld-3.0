@@ -82,6 +82,7 @@
 #include <wlan_mlo_mgr_main.h>
 #include "wlan_policy_mgr_ucfg.h"
 #include "wlan_wifi_pos_interface.h"
+#include "wlan_cp_stats_mc_ucfg_api.h"
 
 static QDF_STATUS init_sme_cmd_list(struct mac_context *mac);
 
@@ -2601,6 +2602,19 @@ static void sme_link_lost_ind(struct mac_context *mac,
 		mac->sme.lost_link_info_cb(mac->hdd_handle, ind);
 }
 
+static void sme_process_chan_info_event(struct mac_context *mac,
+					struct channel_status *chan_stats,
+					uint8_t vdev_id)
+{
+	if (!chan_stats) {
+		sme_err("Chan info report is NULL\n");
+		return;
+	}
+
+	if (mac->sap.acs_with_more_param || sap_is_acs_scan_optimize_enable())
+		wlan_cp_stats_update_chan_info(mac->psoc, chan_stats, vdev_id);
+}
+
 QDF_STATUS sme_process_msg(struct mac_context *mac, struct scheduler_msg *pMsg)
 {
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
@@ -2920,6 +2934,10 @@ QDF_STATUS sme_process_msg(struct mac_context *mac, struct scheduler_msg *pMsg)
 	case eWNI_SME_STOP_BSS_RSP:
 		csr_roam_roaming_state_stop_bss_rsp_processor(mac,
 							      pMsg->bodyptr);
+		qdf_mem_free(pMsg->bodyptr);
+		break;
+	case eWNI_SME_CHAN_INFO_EVENT:
+		sme_process_chan_info_event(mac, pMsg->bodyptr, pMsg->bodyval);
 		qdf_mem_free(pMsg->bodyptr);
 		break;
 	default:
@@ -3252,8 +3270,8 @@ uint32_t sme_get_11b_data_duration(mac_handle_t mac_handle, uint32_t chan_freq)
 {
 	uint32_t rx_11b_data_duration = 0;
 	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-	struct lim_channel_status *chan_status =
-					csr_get_channel_status(mac, chan_freq);
+	struct channel_status *chan_status =
+		ucfg_mc_cp_stats_get_channel_status(mac->pdev, chan_freq);
 
 	if (chan_status)
 		rx_11b_data_duration = chan_status->rx_11b_mode_data_duration;

@@ -306,8 +306,6 @@ typedef struct sAniSirLim {
 
 	/* ////////////////////////////////////     TIMER RELATED END /////////////////////////////////////////// */
 
-	struct lim_scan_channel_status scan_channel_status;
-
 	uint8_t gLimCurrentBssUapsd;
 
 	/* */

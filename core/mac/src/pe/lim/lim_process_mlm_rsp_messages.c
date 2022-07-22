@@ -3183,24 +3183,3 @@ QDF_STATUS lim_send_beacon_ind(struct mac_context *mac,
 
 	return sch_process_pre_beacon_ind(mac, &msg, reason);
 }
-
-void lim_process_rx_channel_status_event(struct mac_context *mac_ctx, void *buf)
-{
-	struct lim_channel_status *chan_status = buf;
-
-	if (!chan_status) {
-		pe_err("ACS evt report buf NULL");
-		return;
-	}
-
-	if (mac_ctx->sap.acs_with_more_param ||
-	    sap_is_acs_scan_optimize_enable())
-		lim_add_channel_status_info(mac_ctx, chan_status,
-					    chan_status->channel_id);
-	else
-		pe_warn("Error evt report");
-
-	qdf_mem_free(buf);
-
-	return;
-}
