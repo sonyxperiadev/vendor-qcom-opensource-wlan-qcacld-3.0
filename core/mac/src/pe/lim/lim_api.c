@@ -3599,6 +3599,12 @@ lim_gen_link_specific_probe_rsp(struct mac_context *mac_ctx,
 	uint8_t op_class;
 	uint16_t chan_freq;
 
+	if (!session_entry)
+		return QDF_STATUS_E_NULL_VALUE;
+
+	if (!session_entry->lim_join_req)
+		return status;
+
 	if (session_entry->lim_join_req->is_ml_probe_req_sent &&
 	    rcvd_probe_resp->mlo_ie.mlo_ie_present) {
 

@@ -165,7 +165,7 @@ lim_process_probe_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_Packet_info
 						 mac_ctx->lim.bss_rssi);
 
 	if (QDF_IS_STATUS_ERROR(status)) {
-		pe_debug("Link specific prb rsp generation failed");
+		pe_debug_rl("Link specific prb rsp generation failed");
 		goto end;
 	}
 
