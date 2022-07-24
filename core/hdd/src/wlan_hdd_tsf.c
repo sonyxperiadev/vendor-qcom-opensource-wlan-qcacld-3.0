@@ -1461,13 +1461,14 @@ static ssize_t hdd_wlan_tsf_show(struct device *dev,
 	return err_size;
 }
 
-static DEVICE_ATTR(tsf, 0400, hdd_wlan_tsf_show, NULL);
+static DEVICE_ATTR(tsf, 0444, hdd_wlan_tsf_show, NULL);
 
 static enum hdd_tsf_op_result hdd_tsf_sync_init(struct hdd_adapter *adapter)
 {
 	QDF_STATUS ret;
 	struct hdd_context *hddctx;
 	struct net_device *net_dev;
+	uint64_t host_time, qtime;
 
 	if (!adapter)
 		return HDD_TSF_OP_FAIL;
@@ -1510,6 +1511,14 @@ static enum hdd_tsf_op_result hdd_tsf_sync_init(struct hdd_adapter *adapter)
 	if (net_dev && hdd_tsf_is_dbg_fs_set(hddctx))
 		device_create_file(&net_dev->dev, &dev_attr_tsf);
 	hdd_set_th_sync_status(adapter, true);
+
+	qtime = qdf_get_log_timestamp();
+	host_time = hdd_get_monotonic_host_time(hddctx);
+
+	qtime = qdf_log_timestamp_to_usecs(qtime);
+	do_div(host_time, NSEC_PER_USEC);
+
+	adapter->delta_qtime = (qtime - host_time) * NSEC_PER_USEC;
 
 	return HDD_TSF_OP_SUCC;
 fail:
@@ -1774,10 +1783,18 @@ enum hdd_tsf_op_result hdd_netbuf_timestamp(qdf_nbuf_t netbuf,
 		int32_t ret = hdd_get_soctime_from_tsf64time(adapter,
 				tsf64_time, &soc_time);
 		if (!ret) {
-			hwtstamps.hwtstamp = soc_time;
-			*skb_hwtstamps(netbuf) = hwtstamps;
-			netbuf->tstamp = ktime_set(0, 0);
-			return HDD_TSF_OP_SUCC;
+			/* Adjust delta_qtime to soc_time(Qtime), so that
+			 * System Monotonic time and Qtime are in sync.
+			 */
+			if (soc_time > (adapter->delta_qtime)) {
+				hwtstamps.hwtstamp =
+				soc_time - (adapter->delta_qtime);
+				*skb_hwtstamps(netbuf) = hwtstamps;
+				netbuf->tstamp = ktime_set(0, 0);
+				return HDD_TSF_OP_SUCC;
+			} else {
+				return HDD_TSF_OP_FAIL;
+			}
 		}
 	}
 

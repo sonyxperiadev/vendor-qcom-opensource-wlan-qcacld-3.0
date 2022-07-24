@@ -3726,7 +3726,6 @@ int wma_update_tdls_peer_state(WMA_HANDLE handle,
 	int ret = 0;
 	uint32_t *ch_mhz = NULL;
 	size_t ch_mhz_len;
-	uint8_t chan_id;
 	bool restore_last_peer = false;
 	QDF_STATUS qdf_status;
 	struct wmi_unified *wmi_handle;
@@ -3777,10 +3776,8 @@ int wma_update_tdls_peer_state(WMA_HANDLE handle,
 			goto end_tdls_peer_state;
 		}
 
-		for (i = 0; i < peer_cap->peer_chanlen; ++i) {
-			chan_id = peer_cap->peer_chan[i].chan_id;
-			ch_mhz[i] = cds_chan_to_freq(chan_id);
-		}
+		for (i = 0; i < peer_cap->peer_chanlen; ++i)
+			ch_mhz[i] = peer_cap->peer_chan[i].ch_freq;
 	}
 
 	cdp_peer_set_tdls_offchan_enabled(soc, peer_state->vdev_id,

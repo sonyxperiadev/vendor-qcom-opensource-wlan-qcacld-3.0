@@ -164,76 +164,79 @@ error:
 }
 
 static bool
-is_duplicate_channel(uint8_t *arr, int index, uint8_t match)
+is_duplicate_freq(qdf_freq_t *arr, uint8_t index, qdf_freq_t freq)
 {
 	int i;
 
 	for (i = 0; i < index; i++) {
-		if (arr[i] == match)
+		if (arr[i] == freq)
 			return true;
 	}
 	return false;
+}
+
+static uint8_t
+tdls_fill_chan_freq_from_supported_ch_list(const uint8_t *src_chans,
+					   uint8_t src_chan_num,
+					   const uint8_t *src_opclass,
+					   uint8_t src_num_opclass,
+					   qdf_freq_t *freq_lst)
+{
+	uint8_t i = 0, j = 0, num_unique_freq = 0;
+	qdf_freq_t freq;
+
+	for (i = 0; i < src_num_opclass; i++) {
+		for (j = 0; j < src_chan_num; j++) {
+			freq = wlan_reg_chan_opclass_to_freq(src_chans[j],
+						      src_opclass[i], false);
+
+			if (is_duplicate_freq(freq_lst, num_unique_freq, freq))
+				continue;
+
+			if (wlan_reg_is_6ghz_chan_freq(freq) &&
+			    !wlan_reg_is_6ghz_psc_chan_freq(freq)) {
+				osif_debug("skipping non-psc channel %d", freq);
+				continue;
+			}
+
+			freq_lst[num_unique_freq] = freq;
+			osif_debug("freq %d index %d ", freq, num_unique_freq);
+			num_unique_freq++;
+
+			if (num_unique_freq > NUM_CHANNELS) {
+				osif_debug("num_unique_freq more than max num");
+				break;
+			}
+		}
+	}
+
+	return num_unique_freq;
 }
 
 static void
 tdls_calc_channels_from_staparams(struct tdls_update_peer_params *req_info,
 				  struct station_parameters *params)
 {
-	int i = 0, j = 0, k = 0, no_of_channels = 0;
-	int num_unique_channels;
-	int next;
-	uint8_t *dest_chans;
-	const uint8_t *src_chans;
+	uint8_t i = 0;
+	uint8_t num_unique_freq = 0;
+	const uint8_t *src_chans, *src_opclass;
+	qdf_freq_t *dest_freq;
 
-	dest_chans = req_info->supported_channels;
 	src_chans = params->supported_channels;
+	src_opclass = params->supported_oper_classes;
+	dest_freq = req_info->supported_chan_freq;
 
-	/* Convert (first channel , number of channels) tuple to
-	 * the total list of channels. This goes with the assumption
-	 * that if the first channel is < 14, then the next channels
-	 * are an incremental of 1 else an incremental of 4 till the number
-	 * of channels.
-	 */
-	for (i = 0; i < params->supported_channels_len &&
-	     j < WLAN_MAC_MAX_SUPP_CHANNELS; i += 2) {
-		int wifi_chan_index;
+	num_unique_freq = tdls_fill_chan_freq_from_supported_ch_list(src_chans,
+					     params->supported_channels_len,
+					     src_opclass,
+					     params->supported_oper_classes_len,
+					     dest_freq);
 
-		if (!is_duplicate_channel(dest_chans, j, src_chans[i]))
-			dest_chans[j] = src_chans[i];
-		else
-			continue;
-
-		wifi_chan_index = ((dest_chans[j] <= WLAN_CHANNEL_14) ? 1 : 4);
-		no_of_channels = src_chans[i + 1];
-
-		osif_debug("i:%d,j:%d,k:%d,[%d]:%d,index:%d,chans_num: %d",
-			   i, j, k, j,
-			   dest_chans[j],
-			   wifi_chan_index,
-			   no_of_channels);
-
-		for (k = 1; k <= no_of_channels &&
-		     j < WLAN_MAC_MAX_SUPP_CHANNELS - 1; k++) {
-			next = dest_chans[j] + wifi_chan_index;
-
-			if (!is_duplicate_channel(dest_chans, j + 1, next))
-				dest_chans[j + 1] = next;
-			else
-				continue;
-
-			osif_debug("i: %d, j: %d, k: %d, [%d]: %d",
-				   i, j, k, j + 1, dest_chans[j + 1]);
-			j += 1;
-		}
-	}
-	num_unique_channels = j + 1;
 	osif_debug("Unique Channel List: supported_channels ");
-	for (i = 0; i < num_unique_channels; i++)
-		osif_debug("[%d]: %d,", i, dest_chans[i]);
+	for (i = 0; i < num_unique_freq; i++)
+		osif_debug(" %d,", dest_freq[i]);
 
-	if (num_unique_channels > NUM_CHANNELS)
-		num_unique_channels = NUM_CHANNELS;
-	req_info->supported_channels_len = num_unique_channels;
+	req_info->supported_channels_len = num_unique_freq;
 	osif_debug("After removing duplcates supported_channels_len: %d",
 		   req_info->supported_channels_len);
 }
@@ -318,9 +321,6 @@ wlan_cfg80211_tdls_extract_params(struct tdls_update_peer_params *req_info,
 	req_info->uapsd_queues = params->uapsd_queues;
 	req_info->max_sp = params->max_sp;
 
-	if (params->supported_channels_len)
-		tdls_calc_channels_from_staparams(req_info, params);
-
 	if (params->supported_oper_classes_len > WLAN_MAX_SUPP_OPER_CLASSES) {
 		osif_debug("received oper classes:%d, resetting it to max supported: %d",
 			   params->supported_oper_classes_len,
@@ -333,6 +333,9 @@ wlan_cfg80211_tdls_extract_params(struct tdls_update_peer_params *req_info,
 		     params->supported_oper_classes_len);
 	req_info->supported_oper_classes_len =
 		params->supported_oper_classes_len;
+
+	if (params->supported_channels_len)
+		tdls_calc_channels_from_staparams(req_info, params);
 
 	if (params->ext_capab_len)
 		qdf_mem_copy(req_info->extn_capability, params->ext_capab,

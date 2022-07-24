@@ -1413,8 +1413,20 @@ int wma_peer_create_confirm_handler(void *handle, uint8_t *evt_param_info,
 
 int wma_peer_delete_handler(void *handle, uint8_t *cmd_param_info,
 				uint32_t len);
+
 void wma_remove_req(tp_wma_handle wma, uint8_t vdev_id,
-			    uint8_t type);
+		    uint8_t type);
+
+/**
+ * wma_remove_peer_req  - Remove the peer create
+ * request from WMA queue
+ * @wma: wma handle
+ * @vdev_id: vdev id
+ * @type: peer type
+ * @peer_addr: peer address
+ */
+void wma_remove_peer_req(tp_wma_handle wma, uint8_t vdev_id,
+			 uint8_t type, struct qdf_mac_addr *peer_addr);
 
 QDF_STATUS wma_process_hal_pwr_dbg_cmd(WMA_HANDLE handle,
 				       struct sir_mac_pwr_dbg_cmd *

@@ -34,9 +34,25 @@
  */
 QDF_STATUS
 ucfg_wifi_pos_psoc_open(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_wifi_pos_psoc_close  - Wifi pos module PSOC close api
+ * @psoc: Pointer to PSOC object
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+ucfg_wifi_pos_psoc_close(struct wlan_objmgr_psoc *psoc);
+#
 #else
 static inline QDF_STATUS
 ucfg_wifi_pos_psoc_open(struct wlan_objmgr_psoc *psoc)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+ucfg_wifi_pos_psoc_close(struct wlan_objmgr_psoc *psoc)
 {
 	return QDF_STATUS_SUCCESS;
 }

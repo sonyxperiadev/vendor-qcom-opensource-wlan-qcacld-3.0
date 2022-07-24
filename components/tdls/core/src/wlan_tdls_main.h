@@ -314,7 +314,7 @@ struct tdls_peer_mlme_info {
  * @buf_sta_capable: is buffer sta
  * @off_channel_capable: is offchannel supported flag
  * @supported_channels_len: supported channels length
- * @supported_channels: supported channels
+ * @supported_chan_freq: supported channel frequency
  * @supported_oper_classes_len: supported operation classes length
  * @supported_oper_classes: supported operation classes
  * @is_forced_peer: is forced peer
@@ -346,7 +346,7 @@ struct tdls_peer {
 	uint8_t buf_sta_capable;
 	uint8_t off_channel_capable;
 	uint8_t supported_channels_len;
-	uint8_t supported_channels[WLAN_MAC_MAX_SUPP_CHANNELS];
+	qdf_freq_t supported_chan_freq[WLAN_MAC_MAX_SUPP_CHANNELS];
 	uint8_t supported_oper_classes_len;
 	uint8_t supported_oper_classes[WLAN_MAX_SUPP_OPER_CLASSES];
 	bool is_forced_peer;

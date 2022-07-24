@@ -5709,6 +5709,36 @@ static QDF_STATUS wlan_hdd_mlo_update(struct hdd_context *hdd_ctx,
 }
 #endif
 
+static void
+hdd_softap_update_pasn_vdev_params(struct hdd_context *hdd_ctx,
+				   uint8_t vdev_id,
+				   struct hdd_beacon_data *beacon,
+				   bool mfp_capable, bool mfp_required)
+{
+	uint32_t pasn_vdev_param = 0;
+	const uint8_t *rsnx_ie, *rsnxe_cap;
+	uint8_t cap_len;
+
+	if (mfp_capable)
+		pasn_vdev_param |= WLAN_CRYPTO_MFPC;
+
+	if (mfp_required)
+		pasn_vdev_param |= WLAN_CRYPTO_MFPR;
+
+	rsnx_ie = wlan_get_ie_ptr_from_eid(WLAN_ELEMID_RSNXE,
+					   beacon->tail, beacon->tail_len);
+	if (!rsnx_ie)
+		return;
+
+	rsnxe_cap = wlan_crypto_parse_rsnxe_ie(rsnx_ie, &cap_len);
+	if (*rsnxe_cap & WLAN_CRYPTO_RSNX_CAP_URNM_MFPR)
+		pasn_vdev_param |= WLAN_CRYPTO_URNM_MFPR;
+
+	wlan_crypto_vdev_set_param(hdd_ctx->psoc, vdev_id,
+				   WMI_VDEV_PARAM_11AZ_SECURITY_CONFIG,
+				   pasn_vdev_param);
+}
+
 /**
  * wlan_hdd_cfg80211_start_bss() - start bss
  * @adapter: Pointer to hostapd adapter
@@ -6048,6 +6078,12 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 					   QDF_TRACE_LEVEL_DEBUG,
 					   config->akm_list.authType,
 					   config->akm_list.numEntries);
+
+			hdd_softap_update_pasn_vdev_params(hdd_ctx,
+							   adapter->vdev_id,
+							   beacon,
+							   mfp_capable,
+							   mfp_required);
 		}
 	}
 

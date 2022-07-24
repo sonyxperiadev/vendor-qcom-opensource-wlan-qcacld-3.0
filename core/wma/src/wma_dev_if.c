@@ -41,6 +41,7 @@
 #include "wma_types.h"
 #include "lim_api.h"
 #include "lim_session_utils.h"
+#include "wma_pasn_peer_api.h"
 
 #include "cds_utils.h"
 
@@ -64,6 +65,7 @@
 
 #include "wlan_policy_mgr_api.h"
 #include "wma_nan_datapath.h"
+#include "wifi_pos_pasn_api.h"
 #if defined(CONFIG_HL_SUPPORT)
 #include "wlan_tgt_def_config_hl.h"
 #else
@@ -95,6 +97,8 @@
 #include <../../core/src/wlan_cm_vdev_api.h>
 #include "wlan_nan_api.h"
 #include "wlan_mlo_mgr_peer.h"
+#include "wifi_pos_api.h"
+#include "wifi_pos_pasn_api.h"
 #ifdef DCS_INTERFERENCE_DETECTION
 #include <wlan_dcs_ucfg_api.h>
 #endif
@@ -270,6 +274,7 @@ static QDF_STATUS wma_find_req_on_timer_expiry(tp_wma_handle wma,
  * @wma: wma handle
  * @vdev_id: vdev id
  * @type: request type
+ * @peer_addr: Peer mac address
  *
  * Find target request for given vdev id & type of request.
  * Remove that request from active list.
@@ -277,7 +282,8 @@ static QDF_STATUS wma_find_req_on_timer_expiry(tp_wma_handle wma,
  * Return: return target request if found or NULL.
  */
 static struct wma_target_req *wma_find_req(tp_wma_handle wma,
-					   uint8_t vdev_id, uint8_t type)
+					   uint8_t vdev_id, uint8_t type,
+					   struct qdf_mac_addr *peer_addr)
 {
 	struct wma_target_req *req_msg = NULL;
 	bool found = false;
@@ -301,6 +307,11 @@ static struct wma_target_req *wma_find_req(tp_wma_handle wma,
 			continue;
 
 		found = true;
+		if (type == WMA_PEER_CREATE_RESPONSE &&
+		    peer_addr &&
+		    !qdf_is_macaddr_equal(&req_msg->addr, peer_addr))
+			found = false;
+
 		status = qdf_list_remove_node(&wma->wma_hold_req_queue, node1);
 		if (QDF_STATUS_SUCCESS != status) {
 			qdf_spin_unlock_bh(&wma->wma_hold_req_q_lock);
@@ -604,17 +615,9 @@ QDF_STATUS wma_p2p_self_peer_remove(struct wlan_objmgr_vdev *vdev)
 }
 #endif
 
-/**
- * wma_remove_objmgr_peer() - remove objmgr peer information from host driver
- * @wma: wma handle
- * @vdev_id: vdev id
- * @peer_addr: peer mac address
- *
- * Return: none
- */
-static void wma_remove_objmgr_peer(tp_wma_handle wma,
-				   struct wlan_objmgr_vdev *obj_vdev,
-				   uint8_t *peer_addr)
+void wma_remove_objmgr_peer(tp_wma_handle wma,
+			    struct wlan_objmgr_vdev *obj_vdev,
+			    uint8_t *peer_addr)
 {
 	struct wlan_objmgr_psoc *psoc;
 	struct wlan_objmgr_peer *obj_peer;
@@ -674,9 +677,9 @@ static QDF_STATUS wma_check_for_deffered_peer_delete(tp_wma_handle wma_handle,
 	return status;
 }
 
-static QDF_STATUS wma_vdev_self_peer_delete(tp_wma_handle wma_handle,
-					    struct del_vdev_params
-					    *pdel_vdev_req_param)
+static QDF_STATUS
+wma_vdev_self_peer_delete(tp_wma_handle wma_handle,
+			  struct del_vdev_params *pdel_vdev_req_param)
 {
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	uint8_t vdev_id = pdel_vdev_req_param->vdev_id;
@@ -1728,6 +1731,9 @@ static int wma_get_obj_mgr_peer_type(tp_wma_handle wma, uint8_t vdev_id,
 	if (wma_peer_type == WMI_PEER_TYPE_TDLS)
 		return WLAN_PEER_TDLS;
 
+	if (wma_peer_type == WMI_PEER_TYPE_PASN)
+		return WLAN_PEER_RTT_PASN;
+
 	if (!qdf_mem_cmp(addr, peer_addr, QDF_MAC_ADDR_SIZE)) {
 		obj_peer_type = WLAN_PEER_SELF;
 	} else if (wma->interfaces[vdev_id].type == WMI_VDEV_TYPE_STA) {
@@ -1752,20 +1758,10 @@ static int wma_get_obj_mgr_peer_type(tp_wma_handle wma, uint8_t vdev_id,
 
 }
 
-/**
- * wma_create_objmgr_peer() - create objmgr peer information in host driver
- * @wma: wma handle
- * @vdev_id: vdev id
- * @peer_addr: peer mac address
- * @wma_peer_type: peer type
- *
- * Return: objmgr peer pointer
- */
-
-static struct wlan_objmgr_peer *wma_create_objmgr_peer(tp_wma_handle wma,
-						       uint8_t vdev_id,
-						       uint8_t *peer_addr,
-						       uint32_t wma_peer_type)
+struct wlan_objmgr_peer *wma_create_objmgr_peer(tp_wma_handle wma,
+						uint8_t vdev_id,
+						uint8_t *peer_addr,
+						uint32_t wma_peer_type)
 {
 	uint32_t obj_peer_type = 0;
 	struct wlan_objmgr_peer *obj_peer = NULL;
@@ -2115,7 +2111,8 @@ wma_create_sta_mode_bss_peer(tp_wma_handle wma,
 				WMA_PEER_CREATE_RESPONSE_TIMEOUT);
 	if (!msg) {
 		wma_err("vdev:%d failed to fill peer create req", vdev_id);
-		wma_remove_req(wma, vdev_id, WMA_PEER_CREATE_RESPONSE);
+		wma_remove_peer_req(wma, vdev_id, WMA_PEER_CREATE_RESPONSE,
+				    (struct qdf_mac_addr *)peer_addr);
 		wma_remove_peer(wma, peer_addr, vdev_id, false);
 		wma_release_wakelock(&wma->wmi_cmd_rsp_wake_lock);
 		status = QDF_STATUS_E_FAILURE;
@@ -3321,7 +3318,7 @@ int wma_peer_assoc_conf_handler(void *handle, uint8_t *cmd_param_info,
 		 event->vdev_id, QDF_MAC_ADDR_REF(macaddr));
 
 	req_msg = wma_find_req(wma, event->vdev_id,
-				    WMA_PEER_ASSOC_CNF_START);
+			       WMA_PEER_ASSOC_CNF_START, NULL);
 
 	if (!req_msg) {
 		wma_err("Failed to lookup request message for vdev %d",
@@ -3375,6 +3372,7 @@ int wma_peer_create_confirm_handler(void *handle, uint8_t *evt_param_info,
 	struct qdf_mac_addr peer_mac;
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
 	int ret = -EINVAL;
+	uint8_t req_msg_type;
 
 	param_buf = (WMI_PEER_CREATE_CONF_EVENTID_param_tlvs *)evt_param_info;
 	if (!param_buf) {
@@ -3403,15 +3401,23 @@ int wma_peer_create_confirm_handler(void *handle, uint8_t *evt_param_info,
 		return -EINVAL;
 	}
 
-	wma_release_wakelock(&wma->wmi_cmd_rsp_wake_lock);
-
 	rsp_data = (struct peer_create_rsp_params *)req_msg->user_data;
+	req_msg_type = req_msg->type;
 
 	qdf_mc_timer_stop(&req_msg->event_timeout);
 	qdf_mc_timer_destroy(&req_msg->event_timeout);
 	qdf_mem_free(rsp_data);
 	qdf_mem_free(req_msg);
 
+	if (req_msg_type == WMA_PASN_PEER_CREATE_RESPONSE) {
+		wma_pasn_handle_peer_create_conf(wma, &peer_mac,
+						 peer_create_rsp->status,
+						 peer_create_rsp->vdev_id);
+		wma_release_wakelock(&wma->wmi_cmd_rsp_wake_lock);
+		return 0;
+	}
+
+	wma_release_wakelock(&wma->wmi_cmd_rsp_wake_lock);
 	if (!peer_create_rsp->status) {
 		if (!dp_soc) {
 			wma_err("DP SOC context is NULL");
@@ -3758,6 +3764,24 @@ void wma_hold_req_timer(void *data)
 					  QDF_STATUS_E_TIMEOUT,
 					  (uint8_t *)tgt_req->user_data);
 		qdf_mem_free(tgt_req->user_data);
+	} else if ((tgt_req->msg_type == WMA_PEER_CREATE_REQ) &&
+		   (tgt_req->type == WMA_PASN_PEER_CREATE_RESPONSE)) {
+		struct peer_create_rsp_params *peer_create_rsp;
+		struct qdf_mac_addr *peer_mac;
+
+		if (wma_crash_on_fw_timeout(wma->fw_timeout_crash))
+			wma_trigger_recovery_assert_on_fw_timeout(
+				WMA_PEER_CREATE_RESPONSE,
+				WMA_PEER_CREATE_RESPONSE_TIMEOUT);
+
+		peer_create_rsp =
+			(struct peer_create_rsp_params *)tgt_req->user_data;
+		peer_mac = &peer_create_rsp->peer_mac;
+
+		wma_pasn_handle_peer_create_conf(
+				wma, peer_mac, QDF_STATUS_E_TIMEOUT,
+				tgt_req->vdev_id);
+		qdf_mem_free(tgt_req->user_data);
 	} else {
 		wma_err("Unhandled timeout for msg_type:%d and type:%d",
 				tgt_req->msg_type, tgt_req->type);
@@ -3811,6 +3835,24 @@ struct wma_target_req *wma_fill_hold_req(tp_wma_handle wma,
 	return req;
 }
 
+void wma_remove_peer_req(tp_wma_handle wma, uint8_t vdev_id,
+			 uint8_t type, struct qdf_mac_addr *peer_addr)
+{
+	struct wma_target_req *req_msg;
+
+	wma_debug("Remove req for vdev: %d type: %d", vdev_id, type);
+	req_msg = wma_find_req(wma, vdev_id, type, peer_addr);
+	if (!req_msg) {
+		wma_err("target req not found for vdev: %d type: %d",
+			vdev_id, type);
+		return;
+	}
+
+	qdf_mc_timer_stop(&req_msg->event_timeout);
+	qdf_mc_timer_destroy(&req_msg->event_timeout);
+	qdf_mem_free(req_msg);
+}
+
 /**
  * wma_remove_req() - remove request
  * @wma: wma handle
@@ -3825,7 +3867,7 @@ void wma_remove_req(tp_wma_handle wma, uint8_t vdev_id,
 	struct wma_target_req *req_msg;
 
 	wma_debug("Remove req for vdev: %d type: %d", vdev_id, type);
-	req_msg = wma_find_req(wma, vdev_id, type);
+	req_msg = wma_find_req(wma, vdev_id, type, NULL);
 	if (!req_msg) {
 		wma_err("target req not found for vdev: %d type: %d",
 			 vdev_id, type);
@@ -5114,7 +5156,7 @@ static void wma_delete_sta_req_ap_mode(tp_wma_handle wma,
 			wma_err("Failed to allocate request. vdev_id %d",
 				 del_sta->smesessionId);
 			wma_remove_req(wma, del_sta->smesessionId,
-				WMA_DELETE_STA_RSP_START);
+				       WMA_DELETE_STA_RSP_START);
 			del_sta->status = QDF_STATUS_E_NOMEM;
 			goto send_del_rsp;
 		}

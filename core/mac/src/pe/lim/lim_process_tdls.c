@@ -189,6 +189,18 @@ void lim_init_tdls_data(struct mac_context *mac, struct pe_session *pe_session)
 	return;
 }
 
+static bool
+is_duplicate_chan(uint8_t *arr, uint8_t index, uint8_t ch_id)
+{
+	int i;
+
+	for (i = 0; i < index; i++) {
+		if (arr[i] == ch_id)
+			return true;
+	}
+	return false;
+}
+
 static void populate_dot11f_tdls_offchannel_params(
 				struct mac_context *mac,
 				struct pe_session *pe_session,
@@ -210,11 +222,6 @@ static void populate_dot11f_tdls_offchannel_params(
 
 	numChans = mac->mlme_cfg->reg.valid_channel_list_num;
 
-	for (i = 0; i < mac->mlme_cfg->reg.valid_channel_list_num; i++) {
-		validChan[i] = wlan_reg_freq_to_chan(mac->pdev,
-						     mac->mlme_cfg->reg.valid_channel_freq_list[i]);
-	}
-
 	if (wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq))
 		band = BAND_2G;
 	else
@@ -226,8 +233,15 @@ static void populate_dot11f_tdls_offchannel_params(
 			 mac->user_configured_nss);
 
 	/* validating the channel list for DFS and 2G channels */
-	for (i = 0U; i < numChans; i++) {
-		ch_freq = wlan_reg_legacy_chan_to_freq(mac->pdev, validChan[i]);
+	for (i = 0; i < numChans; i++) {
+		ch_freq = mac->mlme_cfg->reg.valid_channel_freq_list[i];
+
+		validChan[i] = wlan_reg_freq_to_chan(mac->pdev,
+						     mac->mlme_cfg->reg.valid_channel_freq_list[i]);
+
+		if (is_duplicate_chan(validChan, i, validChan[i]))
+			continue;
+
 		if ((band == BAND_5G) &&
 		    (NSS_2x2_MODE == nss_5g) &&
 		    (NSS_1x1_MODE == nss_2g) &&
@@ -243,8 +257,15 @@ static void populate_dot11f_tdls_offchannel_params(
 			}
 		}
 
+		if (wlan_reg_is_6ghz_chan_freq(ch_freq) &&
+		    !wlan_reg_is_6ghz_psc_chan_freq(ch_freq)) {
+			pe_debug("skipping non-psc channel %d", ch_freq);
+			continue;
+		}
+
 		if (valid_count >= ARRAY_SIZE(suppChannels->bands))
 			break;
+
 		suppChannels->bands[valid_count][0] = validChan[i];
 		suppChannels->bands[valid_count][1] = 1;
 		valid_count++;
@@ -277,11 +298,6 @@ static void populate_dot11f_tdls_offchannel_params(
 		wlan_reg_freq_to_chan(mac->pdev, pe_session->curr_op_freq),
 		chanOffset);
 
-	pe_debug("countryCodeCurrent: %s, curr_op_freq: %d, htSecondaryChannelOffset: %d, chanOffset: %d op class: %d",
-		 mac->scan.countryCodeCurrent,
-		 pe_session->curr_op_freq,
-		 pe_session->htSecondaryChannelOffset,
-		 chanOffset, op_class);
 	suppOperClasses->present = 1;
 	suppOperClasses->classes[0] = op_class;
 
@@ -289,6 +305,12 @@ static void populate_dot11f_tdls_offchannel_params(
 
 	for (i = 0; i < numClasses; i++)
 		suppOperClasses->classes[i + 1] = classes[i];
+
+	pe_debug("countryCodeCurrent: %s, curr_op_freq: %d, htSecondaryChannelOffset: %d, chanOffset: %d op class: %d num_supportd_chan %d num_supportd_opclass %d",
+		 mac->scan.countryCodeCurrent,
+		 pe_session->curr_op_freq,
+		 pe_session->htSecondaryChannelOffset,
+		 chanOffset, op_class, valid_count, numClasses);
 
 	/* add one for present operating class, added in the beginning */
 	suppOperClasses->num_classes = numClasses + 1;
@@ -700,6 +722,10 @@ static void populate_dot11f_tdls_ht_vht_cap(struct mac_context *mac,
 	uint8_t nss;
 	qdf_size_t val_len;
 	struct mlme_vht_capabilities_info *vht_cap_info;
+	bool is_wideband;
+
+	is_wideband =
+		wlan_cfg80211_tdls_is_fw_wideband_capable(pe_session->vdev);
 
 	vht_cap_info = &mac->mlme_cfg->vht_caps.vht_cap_info;
 
@@ -712,11 +738,17 @@ static void populate_dot11f_tdls_ht_vht_cap(struct mac_context *mac,
 	if (IS_DOT11_MODE_HT(selfDot11Mode) &&
 	    !lim_is_he_6ghz_band(pe_session)) {
 		/* Include HT Capability IE */
-		populate_dot11f_ht_caps(mac, NULL, htCap);
+		populate_dot11f_ht_caps(mac, pe_session, htCap);
 		val_len = SIZE_OF_SUPPORTED_MCS_SET;
 		wlan_mlme_get_cfg_str(&htCap->supportedMCSSet[0],
 				      &mac->mlme_cfg->rates.supported_mcs_set,
 				      &val_len);
+		if (WLAN_REG_IS_5GHZ_CH_FREQ(pe_session->curr_op_freq) &&
+		    !wlan_reg_is_dfs_for_freq(mac->pdev,
+					      pe_session->curr_op_freq) &&
+		    is_wideband)
+			htCap->supportedChannelWidthSet = 1;
+
 		if (NSS_1x1_MODE == nss)
 			htCap->supportedMCSSet[1] = 0;
 		/*
@@ -748,25 +780,24 @@ static void populate_dot11f_tdls_ht_vht_cap(struct mac_context *mac,
 	    WLAN_REG_IS_5GHZ_CH_FREQ(pe_session->curr_op_freq)) {
 		if (IS_DOT11_MODE_VHT(selfDot11Mode) &&
 		    IS_FEATURE_SUPPORTED_BY_FW(DOT11AC)) {
-			/* Include VHT Capability IE */
-			populate_dot11f_vht_caps(mac, NULL, vhtCap);
-
 			/*
-			 * Set to 0 if the TDLS STA does not support either 160
-			 * or 80+80 MHz.
-			 * Set to 1 if the TDLS STA supports 160 MHz.
-			 * Set to 2 if the TDLS STA supports 160 MHz and
-			 * 80+80 MHz.
-			 * The value 3 is reserved
+			 * Include VHT Capability IE
+			 *
+			 * VHT supportedChannelWidthSet should be set such as
+			 * 1. Set to 0 if AP does not support either
+			 *    160 or 80+80 MHz. With 0, it means 20/40/80 Mhz.
+			 *    Since for TDLS wideband we need to restrict the BW
+			 *    to 80 MHz for AP supporting BW less than 80 Mhz.
+			 *    So, set it to 0 for such cases so that TDLS STA
+			 *    can connect with 80 MHz width.
+			 * 2. Set to 1 if AP supports 160 MHz, thus TDLS STA can
+			 *    connect with 160 MHz BW
+			 * 3. Set to 2 if AP supports 160 MHz and
+			 *    80+80 MHz. Not possible in case of 5 GHz
+			 *
+			 *   The value 3 is reserved
 			 */
-			if (wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq))
-			{
-				vhtCap->supportedChannelWidthSet = 0;
-			} else if (wlan_reg_is_dfs_for_freq(mac->pdev,
-						pe_session->curr_op_freq)) {
-				if (pe_session->ch_width <= CH_WIDTH_80MHZ)
-					vhtCap->supportedChannelWidthSet = 0;
-			}
+			populate_dot11f_vht_caps(mac, pe_session, vhtCap);
 			vhtCap->suBeamformeeCap = 0;
 			vhtCap->suBeamFormerCap = 0;
 			vhtCap->muBeamformeeCap = 0;
@@ -857,43 +888,44 @@ static void lim_populate_tdls_setup_6g_cap(struct mac_context *mac,
 }
 #endif
 
+static void lim_fill_session_he_width(struct pe_session *session,
+				      tDot11fIEhe_cap *heCap)
+{
+	if (session->ch_width >= CH_WIDTH_40MHZ)
+		heCap->chan_width_0 = 1;
+	if (session->ch_width >= CH_WIDTH_80MHZ)
+		heCap->chan_width_1 = 1;
+	if (session->ch_width >= CH_WIDTH_160MHZ)
+		heCap->chan_width_2 = 1;
+	if (session->ch_width >= CH_WIDTH_80P80MHZ)
+		heCap->chan_width_3 = 1;
+}
+
 static void lim_tdls_set_he_chan_width(struct mac_context *mac,
 				       tDot11fIEhe_cap *heCap,
 				       struct pe_session *session,
 				       bool wideband_sta)
 {
-	tDot11fIEhe_cap *ap_he_cap = &session->he_config;
+	if (!wideband_sta) {
+		lim_fill_session_he_width(session, heCap);
+		return;
+	}
 
-	if (lim_is_session_he_capable(session)) {
-		if (wlan_reg_is_5ghz_ch_freq(session->curr_op_freq)) {
-			if (!wideband_sta ||
-			    wlan_reg_is_dfs_for_freq(mac->pdev,
-						     session->curr_op_freq)) {
-				heCap->chan_width_0 = ap_he_cap->chan_width_0 &
-						      heCap->chan_width_0;
-				heCap->chan_width_1 = ap_he_cap->chan_width_1 &
-						      heCap->chan_width_1;
-			}
-			/* Restrict BW till 80 Mhz for 5ghz */
-			heCap->chan_width_2 = ap_he_cap->chan_width_2 &
-					      heCap->chan_width_2;
-			heCap->chan_width_3 = ap_he_cap->chan_width_3 &
-					      heCap->chan_width_3;
-			heCap->chan_width_4 = ap_he_cap->chan_width_4 &
-					      heCap->chan_width_4;
-			heCap->chan_width_5 = ap_he_cap->chan_width_5 &
-					      heCap->chan_width_5;
-			heCap->chan_width_6 = ap_he_cap->chan_width_6 &
-					      heCap->chan_width_6;
-		}
-	} else {
-		if (session->ch_width == CH_WIDTH_20MHZ) {
-			heCap->chan_width_0 = 0;
-			heCap->chan_width_1 = 0;
-		}
-	/* Right now, no support for ch_width 160 Mhz or 80P80 Mhz in 5 Ghz*/
-		heCap->chan_width_2 = 0;
+	if (wlan_reg_is_5ghz_ch_freq(session->curr_op_freq)) {
+	/*
+	 * Right now, no support for ch_width 160 Mhz or 80P80 Mhz in 5 Ghz
+	 * Also, restricting bw to 80 Mhz in case ap on 5 ghz is operating in
+	 * less than 80 Mhz bw.
+	 */
+		if (session->ch_width <= CH_WIDTH_80MHZ)
+			heCap->chan_width_2 = 0;
 		heCap->chan_width_3 = 0;
+		heCap->chan_width_4 = 0;
+		heCap->chan_width_5 = 0;
+		heCap->chan_width_6 = 0;
+		if (wlan_reg_is_dfs_for_freq(mac->pdev,
+					     session->curr_op_freq))
+			lim_fill_session_he_width(session, heCap);
 	}
 }
 
@@ -2971,6 +3003,17 @@ lim_tdls_populate_matching_rate_set(struct mac_context *mac_ctx,
 	return QDF_STATUS_SUCCESS;
 }
 
+static void lim_tdls_fill_session_vht_width(struct pe_session *pe_session,
+					    tDphHashNode *sta)
+{
+	if (pe_session->ch_width)
+		sta->vhtSupportedChannelWidthSet =
+			       pe_session->ch_width - 1;
+	else
+		sta->vhtSupportedChannelWidthSet =
+				pe_session->ch_width;
+}
+
 /*
  * update HASH node entry info
  */
@@ -3054,21 +3097,38 @@ static void lim_tdls_update_hash_node_info(struct mac_context *mac,
 		 * 11.21.1 General: The channel width of the TDLS direct
 		 * link on the base channel shall not exceed the channel
 		 * width of the BSS to which the TDLS peer STAs are
-		 * associated, if the base channel is dfs channel
+		 * associated, if the base channel is dfs channel and peer is
+		 * not wide band supported
 		 */
-		if (!wide_band_peer ||
-		    wlan_reg_is_dfs_for_freq(mac->pdev,
-					     pe_session->curr_op_freq)) {
-			if (pe_session->ch_width)
+		if (!wide_band_peer) {
+			lim_tdls_fill_session_vht_width(pe_session, sta);
+		} else {
+			if (pVhtCaps->supportedChannelWidthSet >=
+			    VHT_CAP_NO_160M_SUPP)
 				sta->vhtSupportedChannelWidthSet =
-						pe_session->ch_width - 1;
-			else
-				sta->vhtSupportedChannelWidthSet =
-						pe_session->ch_width;
+						WNI_CFG_VHT_CHANNEL_WIDTH_80MHZ;
+			if (wlan_reg_is_dfs_for_freq(mac->pdev,
+						    pe_session->curr_op_freq)) {
+				lim_tdls_fill_session_vht_width(pe_session,
+								sta);
+			}
 		}
-		pe_debug("vhtSupportedChannelWidthSet: %hu htSupportedChannelWidthSet: %hu",
-			sta->vhtSupportedChannelWidthSet,
-			sta->htSupportedChannelWidthSet);
+
+		if (sta->htSupportedChannelWidthSet) {
+			if (sta->vhtSupportedChannelWidthSet >
+			    WNI_CFG_VHT_CHANNEL_WIDTH_80MHZ)
+				sta->ch_width = CH_WIDTH_160MHZ;
+			else
+				sta->ch_width =
+					   sta->vhtSupportedChannelWidthSet + 1;
+		} else {
+			sta->ch_width = CH_WIDTH_20MHZ;
+		}
+
+		pe_debug("vhtSupportedChannelWidthSet: %hu htSupportedChannelWidthSet: %hu sta_ch_width %d",
+			 sta->vhtSupportedChannelWidthSet,
+			 sta->htSupportedChannelWidthSet,
+			 sta->ch_width);
 
 		sta->vhtLdpcCapable = pVhtCaps->ldpcCodingCap;
 		sta->vhtBeamFormerCapable = 0;
