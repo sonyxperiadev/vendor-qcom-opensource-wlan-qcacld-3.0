@@ -92,7 +92,7 @@ static void lim_process_sae_msg_sta(struct mac_context *mac,
 							eLIM_AUTH_SAE_TIMER);
 		lim_sae_auth_cleanup_retry(mac, session->vdev_id);
 		/* success */
-		if (sae_msg->sae_status == IEEE80211_STATUS_SUCCESS)
+		if (sae_msg->sae_status == STATUS_SUCCESS)
 			lim_restore_from_auth_state(mac,
 						    eSIR_SME_SUCCESS,
 						    STATUS_SUCCESS,
@@ -141,7 +141,7 @@ static void lim_process_sae_msg_ap(struct mac_context *mac,
 
 	assoc_req = &sta_pre_auth_ctx->assoc_req;
 
-	if (sae_msg->sae_status != IEEE80211_STATUS_SUCCESS) {
+	if (sae_msg->sae_status != STATUS_SUCCESS) {
 		pe_debug("SAE authentication failed for "
 			 QDF_MAC_ADDR_FMT " status: %u",
 			 QDF_MAC_ADDR_REF(sae_msg->peer_mac_addr),
