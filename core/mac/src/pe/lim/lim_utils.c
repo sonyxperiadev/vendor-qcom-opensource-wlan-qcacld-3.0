@@ -7811,6 +7811,7 @@ QDF_STATUS lim_send_he_caps_ie(struct mac_context *mac_ctx,
 		pe_err("Unable send HE Cap IE for 5GHZ band, status: %d",
 			status_5g);
 
+	he_caps[1] = SIR_MAC_HE_CAP_MIN_LEN;
 	lim_set_he_caps(mac_ctx, session, he_caps, he_cap_total_len,
 			CDS_BAND_2GHZ);
 	he_cap = (struct he_capability_info *)(&he_caps[2 + HE_CAP_OUI_SIZE]);
