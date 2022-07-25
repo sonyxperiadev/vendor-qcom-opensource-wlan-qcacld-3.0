@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1228,7 +1229,7 @@ ol_tx_hl_vdev_tcp_del_ack_timer(qdf_hrtimer_data_t *timer)
 	struct ol_txrx_vdev_t *vdev = qdf_container_of(timer,
 						       struct ol_txrx_vdev_t,
 						       tcp_ack_hash.timer);
-	enum qdf_hrtimer_restart_status ret = __QDF_HRTIMER_NORESTART;
+	enum qdf_hrtimer_restart_status ret = QDF_HRTIMER_NORESTART;
 
 	qdf_sched_bh(&vdev->tcp_ack_hash.tcp_del_ack_tq);
 	qdf_atomic_set(&vdev->tcp_ack_hash.is_timer_running, 0);
