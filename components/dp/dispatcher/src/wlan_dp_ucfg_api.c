@@ -1815,6 +1815,16 @@ int ucfg_dp_get_current_throughput_level(struct wlan_objmgr_psoc *psoc)
 	return dp_get_current_throughput_level(dp_ctx);
 }
 
+uint32_t ucfg_dp_get_bus_bw_high_threshold(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
+
+	if (!dp_ctx)
+		return 0;
+
+	return dp_get_bus_bw_high_threshold(dp_ctx);
+}
+
 QDF_STATUS
 ucfg_dp_req_get_arp_stats(struct wlan_objmgr_psoc *psoc,
 			  struct dp_get_arp_stats_params *params)

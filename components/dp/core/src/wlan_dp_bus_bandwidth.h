@@ -349,6 +349,20 @@ void dp_bus_bw_compute_prev_txrx_stats(struct wlan_objmgr_vdev *vdev);
  * Return: None
  */
 void dp_bus_bw_compute_reset_prev_txrx_stats(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * dp_get_bus_bw_high_threshold() - Get the bus bw high threshold
+ * level
+ * @dp_ctx: DP Context handle
+ *
+ * Return: bus bw high threshold
+ */
+static inline uint32_t
+dp_get_bus_bw_high_threshold(struct wlan_dp_psoc_context *dp_ctx)
+{
+	return dp_ctx->dp_cfg.bus_bw_high_threshold;
+}
+
 #else
 static inline
 void dp_reset_tcp_delack(struct wlan_objmgr_psoc *psoc)
@@ -427,6 +441,12 @@ void dp_bus_bw_compute_prev_txrx_stats(struct wlan_objmgr_vdev *vdev)
 static inline
 void dp_bus_bw_compute_reset_prev_txrx_stats(struct wlan_objmgr_vdev *vdev)
 {
+}
+
+static inline uint32_t
+dp_get_bus_bw_high_threshold(struct wlan_dp_psoc_context *dp_ctx)
+{
+	return 0;
 }
 
 #endif /* WLAN_FEATURE_DP_BUS_BANDWIDTH */

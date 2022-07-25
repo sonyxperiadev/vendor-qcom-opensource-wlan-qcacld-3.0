@@ -370,7 +370,7 @@ int hdd_napi_apply_throughput_policy(struct hdd_context *hddctx,
 		napi_tput_policy_delay--;
 
 		/* make sure the next timer call calls us */
-		hddctx->cur_vote_level = -1;
+		ucfg_dp_set_current_throughput_level(hddctx->psoc, -1);
 
 		return rc;
 	}
@@ -386,7 +386,7 @@ int hdd_napi_apply_throughput_policy(struct hdd_context *hddctx,
 		return rc;
 	}
 
-	if (packets > hddctx->config->bus_bw_high_threshold)
+	if (packets > ucfg_dp_get_bus_bw_high_threshold(hddctx->psoc))
 		req_state = QCA_NAPI_TPUT_HI;
 	else
 		req_state = QCA_NAPI_TPUT_LO;
@@ -434,7 +434,8 @@ int hdd_napi_serialize(int is_on)
 		/* make sure that bus_bandwidth trigger is executed */
 		hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
 		if (hdd_ctx)
-			hdd_ctx->cur_vote_level = -1;
+			ucfg_dp_set_current_throughput_level(hdd_ctx->psoc,
+							     -1);
 
 	}
 	return rc;

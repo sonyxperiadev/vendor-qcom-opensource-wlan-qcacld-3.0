@@ -1190,4 +1190,12 @@ bool ucfg_dp_nud_fail_data_stall_evt_enabled(void);
  */
 uint32_t ucfg_dp_fw_data_stall_evt_enabled(void);
 
+/**
+ * ucfg_dp_get_bus_bw_high_threshold() - Get the bus bw high threshold
+ * @psoc: psoc handle
+ *
+ * Return: current bus bw high threshold
+ */
+uint32_t ucfg_dp_get_bus_bw_high_threshold(struct wlan_objmgr_psoc *psoc);
+
 #endif /* _WLAN_DP_UCFG_API_H_ */
