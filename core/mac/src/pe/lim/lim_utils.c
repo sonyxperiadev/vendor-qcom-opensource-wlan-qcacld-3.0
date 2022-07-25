@@ -8631,6 +8631,7 @@ void lim_set_eht_caps(struct mac_context *mac, struct pe_session *session,
 	struct wlan_eht_cap_info *eht_cap;
 	struct wlan_eht_cap_info eht_mcs_cap;
 	bool is_band_2g = false;
+	uint32_t cbm_24ghz;
 
 	if (band == CDS_BAND_2GHZ)
 		is_band_2g = true;
@@ -8638,6 +8639,15 @@ void lim_set_eht_caps(struct mac_context *mac, struct pe_session *session,
 	populate_dot11f_eht_caps_by_band(mac, is_band_2g, &dot11_cap);
 	populate_dot11f_he_caps_by_band(mac, is_band_2g, &dot11_he_cap);
 	lim_log_eht_cap(mac, &dot11_cap);
+
+	if (is_band_2g) {
+		ucfg_mlme_get_channel_bonding_24ghz(mac->psoc, &cbm_24ghz);
+		if (!cbm_24ghz) {
+			/* B0: 40Mhz channel width in the 2.4GHz band */
+			dot11_he_cap.chan_width_0 = 0;
+			dot11_he_cap.he_ppdu_20_in_40Mhz_2G = 0;
+		}
+	}
 
 	ie = wlan_get_ext_ie_ptr_from_ext_id(EHT_CAP_OUI_TYPE,
 					     EHT_CAP_OUI_SIZE,
