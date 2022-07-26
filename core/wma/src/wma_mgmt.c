@@ -1385,6 +1385,15 @@ static void wma_set_mlo_capability(tp_wma_handle wma,
 			req->mlo_params.trans_timeout_us =
 					params->emlsr_trans_timeout;
 		}
+		req->mlo_params.msd_cap_support = params->msd_caps_present;
+		if (req->mlo_params.msd_cap_support) {
+			req->mlo_params.medium_sync_duration =
+				params->msd_caps.med_sync_duration;
+			req->mlo_params.medium_sync_ofdm_ed_thresh =
+				params->msd_caps.med_sync_ofdm_ed_thresh;
+			req->mlo_params.medium_sync_max_txop_num =
+				params->msd_caps.med_sync_max_txop_num;
+		}
 	} else {
 		wma_debug("Peer MLO context is NULL");
 		req->mlo_params.mlo_enabled = false;

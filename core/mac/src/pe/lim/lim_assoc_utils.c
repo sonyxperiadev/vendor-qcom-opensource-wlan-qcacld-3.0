@@ -3897,6 +3897,7 @@ QDF_STATUS lim_sta_send_add_bss(struct mac_context *mac, tpSirAssocRsp pAssocRsp
 	}
 
 	lim_intersect_ap_emlsr_caps(mac, pe_session, pAddBssParams, pAssocRsp);
+	lim_extract_msd_caps(mac, pe_session, pAddBssParams, pAssocRsp);
 
 	pAddBssParams->staContext.smesessionId =
 		pe_session->smeSessionId;

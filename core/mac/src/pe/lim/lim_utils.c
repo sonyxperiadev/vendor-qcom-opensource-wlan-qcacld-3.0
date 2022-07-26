@@ -9009,6 +9009,71 @@ void lim_intersect_ap_emlsr_caps(struct mac_context *mac_ctx,
 		 add_bss->staContext.emlsr_support, add_bss->staContext.link_id,
 		 add_bss->staContext.emlsr_trans_timeout);
 }
+
+void lim_extract_msd_caps(struct mac_context *mac_ctx,
+			  struct pe_session *session,
+			  struct bss_params *add_bss,
+			  tpSirAssocRsp assoc_rsp)
+{
+	struct wlan_objmgr_peer *peer;
+	struct wlan_mlo_peer_context *mlo_peer_ctx;
+
+	peer = wlan_objmgr_get_peer_by_mac(mac_ctx->psoc, add_bss->bssId,
+					   WLAN_LEGACY_MAC_ID);
+	if (!peer) {
+		pe_err("peer is null");
+		return;
+	}
+
+	mlo_peer_ctx = peer->mlo_peer_ctx;
+	if (!mlo_peer_ctx) {
+		pe_err("mlo peer ctx is null");
+		wlan_objmgr_peer_release_ref(peer, WLAN_LEGACY_MAC_ID);
+		return;
+	}
+
+	if (wlan_vdev_mlme_is_mlo_link_vdev(session->vdev)) {
+		add_bss->staContext.msd_caps_present =
+			mlo_peer_ctx->msd_cap_present;
+		add_bss->staContext.msd_caps.med_sync_duration =
+			mlo_peer_ctx->mlpeer_msdcap.medium_sync_duration;
+		add_bss->staContext.msd_caps.med_sync_ofdm_ed_thresh =
+			mlo_peer_ctx->mlpeer_msdcap.medium_sync_ofdm_ed_thresh;
+		add_bss->staContext.msd_caps.med_sync_max_txop_num =
+			mlo_peer_ctx->mlpeer_msdcap.medium_sync_max_txop_num;
+	} else {
+		add_bss->staContext.msd_caps_present =
+			assoc_rsp->mlo_ie.mlo_ie.medium_sync_delay_info_present;
+		if (add_bss->staContext.msd_caps_present) {
+			add_bss->staContext.msd_caps.med_sync_duration =
+				assoc_rsp->mlo_ie.mlo_ie.medium_sync_delay_info.medium_sync_duration;
+			add_bss->staContext.msd_caps.med_sync_ofdm_ed_thresh =
+				assoc_rsp->mlo_ie.mlo_ie.medium_sync_delay_info.medium_sync_ofdm_ed_thresh;
+			add_bss->staContext.msd_caps.med_sync_max_txop_num =
+				assoc_rsp->mlo_ie.mlo_ie.medium_sync_delay_info.medium_sync_max_txop_num;
+		} else {
+			/* Fill MSD params with zeroes if MSD caps are absent */
+			add_bss->staContext.msd_caps.med_sync_duration = 0;
+			add_bss->staContext.msd_caps.med_sync_ofdm_ed_thresh = 0;
+			add_bss->staContext.msd_caps.med_sync_max_txop_num = 0;
+		}
+		mlo_peer_ctx->msd_cap_present =
+			add_bss->staContext.msd_caps_present;
+		mlo_peer_ctx->mlpeer_msdcap.medium_sync_duration =
+			add_bss->staContext.msd_caps.med_sync_duration;
+		mlo_peer_ctx->mlpeer_msdcap.medium_sync_ofdm_ed_thresh =
+			add_bss->staContext.msd_caps.med_sync_ofdm_ed_thresh;
+		mlo_peer_ctx->mlpeer_msdcap.medium_sync_max_txop_num =
+			add_bss->staContext.msd_caps.med_sync_max_txop_num;
+	}
+
+	wlan_objmgr_peer_release_ref(peer, WLAN_LEGACY_MAC_ID);
+	pe_debug("MSD caps: %d, Duration: %d, Threshold:%d, TXOP num: %d",
+		 add_bss->staContext.msd_caps_present,
+		 add_bss->staContext.msd_caps.med_sync_duration,
+		 add_bss->staContext.msd_caps.med_sync_ofdm_ed_thresh,
+		 add_bss->staContext.msd_caps.med_sync_max_txop_num);
+}
 #endif
 
 #if defined(CONFIG_BAND_6GHZ) && defined(WLAN_FEATURE_11AX)

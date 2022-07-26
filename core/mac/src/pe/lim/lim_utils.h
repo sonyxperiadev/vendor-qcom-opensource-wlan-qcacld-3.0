@@ -2254,12 +2254,35 @@ void lim_intersect_ap_emlsr_caps(struct mac_context *mac_ctx,
 				 struct pe_session *session,
 				 struct bss_params *add_bss,
 				 tpSirAssocRsp assoc_rsp);
+
+/**
+ * lim_extract_msd_caps() - Extract MLD AP MSD capabilities and assign
+ * the same caps to link vdev
+ * @mac_ctx: Global MAC context
+ * @session: pointer to PE session
+ * @add_bss: pointer to ADD BSS params
+ * @assoc_rsp: pointer to assoc response
+ *
+ * Return: None
+ */
+void lim_extract_msd_caps(struct mac_context *mac_ctx,
+			  struct pe_session *session,
+			  struct bss_params *add_bss,
+			  tpSirAssocRsp assoc_rsp);
 #else
 static inline void
 lim_intersect_ap_emlsr_caps(struct mac_context *mac_ctx,
 			    struct pe_session *session,
 			    struct bss_params *add_bss,
 			    tpSirAssocRsp assoc_rsp)
+{
+}
+
+static inline void
+lim_extract_msd_caps(struct mac_context *mac_ctx,
+		     struct pe_session *session,
+		     struct bss_params *add_bss,
+		     tpSirAssocRsp assoc_rsp)
 {
 }
 #endif /* WLAN_FEATURE_11BE_MLO */
