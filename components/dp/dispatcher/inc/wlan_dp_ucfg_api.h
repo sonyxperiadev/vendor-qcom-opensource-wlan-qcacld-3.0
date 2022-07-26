@@ -1059,7 +1059,7 @@ uint32_t ucfg_dp_get_bus_bw_compute_interval(struct wlan_objmgr_psoc *psoc);
 int ucfg_dp_get_current_throughput_level(struct wlan_objmgr_psoc *psoc);
 
 /**
- * ucfg_dp_get_txrx_stats() - get current bandwidth level
+ * ucfg_dp_get_txrx_stats() - get dp txrx stats
  * @vdev: vdev handle
  * @dp_stats : dp_stats pointer
  *
@@ -1069,6 +1069,24 @@ int ucfg_dp_get_current_throughput_level(struct wlan_objmgr_psoc *psoc);
  */
 QDF_STATUS ucfg_dp_get_txrx_stats(struct wlan_objmgr_vdev *vdev,
 				  struct dp_tx_rx_stats *dp_stats);
+
+/*
+ * ucfg_dp_get_net_dev_stats(): Get netdev stats
+ * @vdev: vdev handle
+ * @stats: To hold netdev stats
+ *
+ * Return: None
+ */
+void ucfg_dp_get_net_dev_stats(struct wlan_objmgr_vdev *vdev,
+			       qdf_net_dev_stats *stats);
+
+/*
+ * ucfg_dp_clear_net_dev_stats(): Clear netdev stats
+ * @dev: Pointer to netdev
+ *
+ * Return: None
+ */
+void ucfg_dp_clear_net_dev_stats(qdf_netdev_t dev);
 
 /**
  * ucfg_dp_reset_cont_txtimeout_cnt() - Reset Tx Timeout count

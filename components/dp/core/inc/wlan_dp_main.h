@@ -622,4 +622,29 @@ dp_is_low_tput_gro_enable(struct wlan_dp_psoc_context *dp_ctx)
  */
 bool dp_is_data_stall_event_enabled(uint32_t evt);
 
+/*
+ * dp_get_net_dev_stats(): Get netdev stats
+ * @dp_intf: DP interface handle
+ * @stats: To hold netdev stats
+ *
+ * Return: None
+ */
+static inline void
+dp_get_net_dev_stats(struct wlan_dp_intf *dp_intf, qdf_net_dev_stats *stats)
+{
+	qdf_mem_copy(stats, &dp_intf->stats, sizeof(dp_intf->stats));
+}
+
+/*
+ * dp_clear_net_dev_stats(): Clear netdev stats
+ * @dp_intf: DP interface handle
+ *
+ * Return: None
+ */
+static inline
+void dp_clear_net_dev_stats(struct wlan_dp_intf *dp_intf)
+{
+	qdf_mem_set(&dp_intf->stats, sizeof(dp_intf->stats), 0);
+}
+
 #endif

@@ -1969,6 +1969,40 @@ QDF_STATUS ucfg_dp_get_txrx_stats(struct wlan_objmgr_vdev *vdev,
 	return QDF_STATUS_SUCCESS;
 }
 
+void ucfg_dp_get_net_dev_stats(struct wlan_objmgr_vdev *vdev,
+			       qdf_net_dev_stats *stats)
+{
+	struct wlan_dp_intf *dp_intf;
+
+	dp_intf = dp_get_vdev_priv_obj(vdev);
+	if (unlikely(!dp_intf)) {
+		dp_err_rl("DP interface not found");
+		return;
+	}
+
+	dp_get_net_dev_stats(dp_intf, stats);
+}
+
+void ucfg_dp_clear_net_dev_stats(qdf_netdev_t dev)
+{
+	struct wlan_dp_intf *dp_intf;
+	struct wlan_dp_psoc_context *dp_ctx;
+
+	dp_ctx =  dp_get_context();
+	if (qdf_unlikely(!dp_ctx)) {
+		dp_err_rl("DP context not found");
+		return;
+	}
+
+	dp_intf = dp_get_intf_by_netdev(dp_ctx, dev);
+	if (qdf_unlikely(!dp_intf)) {
+		dp_err_rl("DP interface not found");
+		return;
+	}
+
+	dp_clear_net_dev_stats(dp_intf);
+}
+
 void ucfg_dp_reset_cont_txtimeout_cnt(struct wlan_objmgr_vdev *vdev)
 {
 	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);

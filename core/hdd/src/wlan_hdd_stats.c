@@ -5968,6 +5968,7 @@ static int wlan_hdd_get_sta_stats(struct wiphy *wiphy,
 	int link_speed_rssi_low = 0;
 	uint32_t link_speed_rssi_report = 0;
 	struct wlan_objmgr_vdev *vdev;
+	qdf_net_dev_stats stats = {0};
 
 	qdf_mtrace(QDF_MODULE_ID_HDD, QDF_MODULE_ID_HDD,
 		   TRACE_CODE_HDD_CFG80211_GET_STA,
@@ -6097,15 +6098,16 @@ static int wlan_hdd_get_sta_stats(struct wiphy *wiphy,
 		  (int)rx_mcs_index, (int)tx_nss, (int)rx_nss,
 		  (int)tx_dcm, (int)rx_dcm, (int)tx_gi, (int)rx_gi);
 
+	vdev = hdd_objmgr_get_vdev_by_user(adapter,
+					   WLAN_OSIF_STATS_ID);
+	if (!vdev)
+		/* Keep GUI happy */
+		return 0;
+
 	if (!ucfg_mlme_stats_is_link_speed_report_actual(hdd_ctx->psoc)) {
 		bool tx_rate_calc, rx_rate_calc;
 		uint8_t tx_nss_max, rx_nss_max;
 
-		vdev = hdd_objmgr_get_vdev_by_user(adapter,
-						   WLAN_OSIF_STATS_ID);
-		if (!vdev)
-			/* Keep GUI happy */
-			return 0;
 		/*
 		 * Take static NSS for reporting max rates. NSS from the FW
 		 * is not reliable as it changes as per the environment
@@ -6113,7 +6115,6 @@ static int wlan_hdd_get_sta_stats(struct wiphy *wiphy,
 		 */
 		tx_nss_max = wlan_vdev_mlme_get_nss(vdev);
 		rx_nss_max = wlan_vdev_mlme_get_nss(vdev);
-		hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_STATS_ID);
 
 		hdd_check_and_update_nss(hdd_ctx, &tx_nss_max, &rx_nss_max);
 
@@ -6133,9 +6134,11 @@ static int wlan_hdd_get_sta_stats(struct wiphy *wiphy,
 						   my_rx_rate,
 						   rx_nss_max);
 
-		if (!tx_rate_calc || !rx_rate_calc)
+		if (!tx_rate_calc || !rx_rate_calc) {
+			hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_STATS_ID);
 			/* Keep GUI happy */
 			return 0;
+		}
 	} else {
 
 		/* Fill TX stats */
@@ -6153,9 +6156,13 @@ static int wlan_hdd_get_sta_stats(struct wiphy *wiphy,
 	wlan_hdd_fill_summary_stats(&adapter->hdd_stats.summary_stat,
 				    sinfo,
 				    adapter->vdev_id);
-	sinfo->tx_bytes = adapter->stats.tx_bytes;
-	sinfo->rx_bytes = adapter->stats.rx_bytes;
-	sinfo->rx_packets = adapter->stats.rx_packets;
+
+	ucfg_dp_get_net_dev_stats(vdev, &stats);
+	sinfo->tx_bytes = stats.tx_bytes;
+	sinfo->rx_bytes = stats.rx_bytes;
+	sinfo->rx_packets = stats.rx_packets;
+
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_STATS_ID);
 
 	hdd_fill_fcs_and_mpdu_count(adapter, sinfo);
 

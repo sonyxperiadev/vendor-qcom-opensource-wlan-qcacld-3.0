@@ -10677,7 +10677,7 @@ int hdd_wlan_clear_stats(struct hdd_adapter *adapter, int stats_id)
 
 	switch (stats_id) {
 	case CDP_HDD_STATS:
-		memset(&adapter->stats, 0, sizeof(adapter->stats));
+		ucfg_dp_clear_net_dev_stats(adapter->dev);
 		memset(&adapter->hdd_stats, 0, sizeof(adapter->hdd_stats));
 		break;
 	case CDP_TXRX_HIST_STATS:

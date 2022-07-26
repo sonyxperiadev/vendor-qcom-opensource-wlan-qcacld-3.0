@@ -1070,8 +1070,6 @@ struct hdd_adapter {
 
 	unsigned long event_flags;
 
-	/**Device TX/RX statistics*/
-	struct net_device_stats stats;
 	/** HDD statistics*/
 	struct hdd_stats hdd_stats;
 

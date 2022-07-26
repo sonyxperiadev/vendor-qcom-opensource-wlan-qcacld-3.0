@@ -956,8 +956,7 @@ static __iw_softap_setparam(struct net_device *dev,
 		hdd_debug("QCASAP_CLEAR_STATS val %d", set_value);
 		switch (set_value) {
 		case CDP_HDD_STATS:
-			memset(&adapter->stats, 0,
-						sizeof(adapter->stats));
+			ucfg_dp_clear_net_dev_stats(adapter->dev);
 			memset(&adapter->hdd_stats, 0,
 					sizeof(adapter->hdd_stats));
 			break;
