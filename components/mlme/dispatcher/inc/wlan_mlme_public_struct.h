@@ -2740,4 +2740,47 @@ struct wlan_change_bi {
 	uint8_t session_id;
 };
 
+#ifdef FEATURE_SET
+/**
+ * struct wlan_mlme_features - Mlme feature set structure
+ * @enable_wifi_optimizer: indicates wifi optimizer is enabled or disabled
+ * @roaming_high_cu_roam_trigger: Roaming high CPU trigger enabled or disabled
+ * @roaming_emergency_trigger: Roaming emergency trigger enabled or disabled
+ * @roaming_btm_trihgger: Roaming btm trigger enabled or disabled
+ * @roaming_idle_trigger: Roaming idle trigger enabled or disabled
+ * @roaming_wtc_trigger: Roaming wtc trigger enabled or disabled
+ * @roaming_btcoex_trigger: Roaming btcoex trigger enabled or disabled
+ * @roaming_btw_wpa_wpa2: Roaming btw wpa wpa2 enabled or disabled
+ * @roaming_manage_chan_list_api: Roaming manage chan list api enabled or
+ * disabled
+ * @roaming_adaptive_11r: Roaming adaptive 11r enabled or disabled
+ * @roaming_ctrl_api_get_set: Roaming ctrl api get set enabled or disabled
+ * @roaming_ctrl_api_reassoc: Roaming ctrl api reassoc enabled or disabled
+ * @roaming_ctrl_get_cu: Roaming ctrl get cu enabled or disabled
+ * @vendor_req_1_version: Vendor requirement version 1
+ * @vendor_req_2_version: Vendor requirement version 2
+ * @sta_dual_p2p_support: STA + dual p2p support enabled or not
+ * @enable2x2: Enable 2x2
+ */
+struct wlan_mlme_features {
+	bool enable_wifi_optimizer;
+	uint8_t sap_max_num_clients;
+	bool roaming_high_cu_roam_trigger;
+	bool roaming_emergency_trigger;
+	bool roaming_btm_trihgger;
+	bool roaming_idle_trigger;
+	bool roaming_wtc_trigger;
+	bool roaming_btcoex_trigger;
+	bool roaming_btw_wpa_wpa2;
+	bool roaming_manage_chan_list_api;
+	bool roaming_adaptive_11r;
+	bool roaming_ctrl_api_get_set;
+	bool roaming_ctrl_api_reassoc;
+	bool roaming_ctrl_get_cu;
+	WMI_HOST_VENDOR1_REQ1_VERSION vendor_req_1_version;
+	WMI_HOST_VENDOR1_REQ2_VERSION vendor_req_2_version;
+	bool sta_dual_p2p_support;
+	bool enable2x2;
+};
+#endif
 #endif

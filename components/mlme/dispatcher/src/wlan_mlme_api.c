@@ -6030,3 +6030,117 @@ wlan_mlme_get_peer_ch_width(struct wlan_objmgr_psoc *psoc, uint8_t *mac)
 
 	return wlan_mlme_get_ch_width_from_phymode(phy_mode);
 }
+
+#ifdef FEATURE_SET
+
+/**
+ * wlan_mlme_get_latency_enable() - get wlm latency cfg value
+ * @psoc: psoc context
+ * @value: Pointer in which wlam latency cfg value needs to be filled
+ *
+ * Return: QDF_STATUS_SUCCESS on success or QDF_STATUS_E_INVAL on failure
+ */
+static QDF_STATUS
+wlan_mlme_get_latency_enable(struct wlan_objmgr_psoc *psoc, bool *value)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj) {
+		mlme_legacy_err("mlme obj null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	*value = mlme_obj->cfg.wlm_config.latency_enable;
+	return QDF_STATUS_SUCCESS;
+}
+
+#ifdef WLAN_ADAPTIVE_11R
+/**
+ * wlan_mlme_get_adaptive11r_enabled() - get adaptive 11r cfg value
+ * @psoc: psoc context
+ * @val: Pointer in which adaptive 11r cfg value needs to be filled
+ *
+ * Return: QDF_STATUS_SUCCESS on success or QDF_STATUS_E_INVAL on failure
+ */
+static QDF_STATUS
+wlan_mlme_get_adaptive11r_enabled(struct wlan_objmgr_psoc *psoc, bool *val)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj) {
+		*val = cfg_default(CFG_ADAPTIVE_11R);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	*val = mlme_obj->cfg.lfr.enable_adaptive_11r;
+
+	return QDF_STATUS_SUCCESS;
+}
+#else
+static inline QDF_STATUS
+wlan_mlme_get_adaptive11r_enabled(struct wlan_objmgr_psoc *psoc, bool *val)
+{
+	*val = false;
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
+#ifdef WLAN_FEATURE_P2P_P2P_STA
+static bool
+wlan_mlme_get_p2p_p2p_host_conc_support(void)
+{
+	return true;
+}
+#else
+static bool
+wlan_mlme_get_p2p_p2p_host_conc_support(void)
+{
+	return false;
+}
+#endif
+
+void wlan_mlme_get_feature_info(struct wlan_objmgr_psoc *psoc,
+				struct wlan_mlme_features *mlme_feature_set)
+{
+	uint32_t roam_triggers;
+	int sap_max_num_clients;
+
+	wlan_mlme_get_latency_enable(psoc,
+				     &mlme_feature_set->enable_wifi_optimizer);
+	wlan_mlme_get_sap_max_peers(psoc, &sap_max_num_clients);
+	mlme_feature_set->sap_max_num_clients = sap_max_num_clients;
+	mlme_feature_set->vendor_req_1_version =
+					WMI_HOST_VENDOR1_REQ1_VERSION_3_20;
+	roam_triggers = wlan_mlme_get_roaming_triggers(psoc);
+
+	mlme_feature_set->roaming_high_cu_roam_trigger =
+			roam_triggers & BIT(ROAM_TRIGGER_REASON_BSS_LOAD);
+	mlme_feature_set->roaming_emergency_trigger =
+			roam_triggers & BIT(ROAM_TRIGGER_REASON_FORCED);
+	mlme_feature_set->roaming_btm_trihgger =
+			roam_triggers & BIT(ROAM_TRIGGER_REASON_BTM);
+	mlme_feature_set->roaming_idle_trigger =
+			roam_triggers & BIT(ROAM_TRIGGER_REASON_IDLE);
+	mlme_feature_set->roaming_wtc_trigger =
+			roam_triggers & BIT(ROAM_TRIGGER_REASON_WTC_BTM);
+	mlme_feature_set->roaming_btcoex_trigger =
+			roam_triggers & BIT(ROAM_TRIGGER_REASON_BTC);
+	mlme_feature_set->roaming_btw_wpa_wpa2 = true;
+	mlme_feature_set->roaming_manage_chan_list_api = true;
+
+	wlan_mlme_get_adaptive11r_enabled(
+				psoc,
+				&mlme_feature_set->roaming_adaptive_11r);
+	mlme_feature_set->roaming_ctrl_api_get_set = true;
+	mlme_feature_set->roaming_ctrl_api_reassoc = true;
+	mlme_feature_set->roaming_ctrl_get_cu = true;
+
+	mlme_feature_set->vendor_req_2_version =
+					WMI_HOST_VENDOR1_REQ2_VERSION_3_20;
+	mlme_feature_set->sta_dual_p2p_support =
+				wlan_mlme_get_p2p_p2p_host_conc_support();
+	wlan_mlme_get_vht_enable2x2(psoc, &mlme_feature_set->enable2x2);
+}
+#endif

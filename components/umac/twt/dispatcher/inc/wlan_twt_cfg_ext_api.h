@@ -22,6 +22,8 @@
 #if defined(WLAN_SUPPORT_TWT) && defined(WLAN_TWT_CONV_SUPPORTED)
 #include <wlan_objmgr_psoc_obj.h>
 #include <wlan_twt_public_structs.h>
+#include <wlan_mlme_twt_public_struct.h>
+
 /**
  * wlan_twt_cfg_get_req_flag() - Get TWT requestor flag
  * @psoc: Pointer to global psoc object
@@ -63,6 +65,19 @@ wlan_twt_cfg_get_support_in_11n(struct wlan_objmgr_psoc *psoc,
 QDF_STATUS
 wlan_twt_cfg_get_support_requestor(struct wlan_objmgr_psoc *psoc,
 				   bool *val);
+
+#ifdef FEATURE_SET
+/**
+ * wlan_twt_get_feature_info() - Get TWT feature set information
+ * @psoc: Pointer to global psoc object
+ * @twt_feature_set: pointer to output twt feature set structure
+ *
+ * Return: None
+ */
+void wlan_twt_get_feature_info(struct wlan_objmgr_psoc *psoc,
+			       struct wlan_twt_features *twt_feature_set);
+#endif
+
 #else
 static inline QDF_STATUS
 wlan_twt_cfg_get_res_flag(struct wlan_objmgr_psoc *psoc, bool *val)

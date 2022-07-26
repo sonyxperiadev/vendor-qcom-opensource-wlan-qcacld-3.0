@@ -28,6 +28,19 @@
 #include <wlan_cmn.h>
 #include "sme_api.h"
 
+#ifdef FEATURE_SET
+/**
+ * wlan_mlme_get_feature_info() - Get mlme features
+ * @psoc: psoc context
+ * @mlme_feature_set: MLME feature set info structure
+ *
+ * Return: None
+ */
+void wlan_mlme_get_feature_info(
+				struct wlan_objmgr_psoc *psoc,
+				struct wlan_mlme_features *mlme_feature_set);
+#endif
+
 /**
  * wlan_mlme_get_cfg_str() - Copy the uint8_t array for a particular CFG
  * @dst:       pointer to the destination buffer.

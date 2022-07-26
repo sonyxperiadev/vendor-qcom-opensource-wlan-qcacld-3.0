@@ -12955,6 +12955,97 @@ static inline void hdd_txrx_populate_cds_config(struct cds_config_info
 }
 #endif
 
+#ifdef FEATURE_SET
+#ifdef WLAN_FEATURE_11BE
+/**
+ * hdd_is_cfg_dot11_mode_11be() - Check if dot11 mode is 11 be
+ * @dot11_mode: Input dot11_mode which needs to be checked
+ *
+ * Return: True, ifinput dot11_mode is 11be dot11 mode else return false
+ */
+static bool hdd_is_cfg_dot11_mode_11be(enum hdd_dot11_mode dot11_mode)
+{
+	return (dot11_mode == eHDD_DOT11_MODE_11be ||
+		dot11_mode == eHDD_DOT11_MODE_11be_ONLY);
+}
+#else
+static bool hdd_is_cfg_dot11_mode_11be(enum hdd_dot11_mode dot11_mode)
+{
+	return false;
+}
+#endif
+
+/**
+ * hdd_get_wifi_standard() - Get wifi standard
+ * @hdd_ctx: hdd context pointer
+ *
+ * Return: WMI_HOST_WIFI_STANDARD
+ */
+static WMI_HOST_WIFI_STANDARD hdd_get_wifi_standard(struct hdd_context *hdd_ctx)
+{
+	WMI_HOST_WIFI_STANDARD wifi_standard = WMI_HOST_WIFI_STANDARD_4;
+
+	if (hdd_ctx->config->dot11Mode == eHDD_DOT11_MODE_AUTO ||
+	    hdd_is_cfg_dot11_mode_11be(hdd_ctx->config->dot11Mode))
+		wifi_standard = WMI_HOST_WIFI_STANDARD_7;
+
+	if (hdd_ctx->config->dot11Mode == eHDD_DOT11_MODE_11ax ||
+	    (hdd_ctx->config->dot11Mode == eHDD_DOT11_MODE_11ax_ONLY)) {
+		if (wlan_reg_is_6ghz_supported(hdd_ctx->psoc))
+			wifi_standard =  WMI_HOST_WIFI_STANDARD_6E;
+		else
+			wifi_standard = WMI_HOST_WIFI_STANDARD_6;
+	}
+
+	if ((hdd_ctx->config->dot11Mode == eHDD_DOT11_MODE_11ac) ||
+	    (hdd_ctx->config->dot11Mode == eHDD_DOT11_MODE_11ac_ONLY))
+		wifi_standard = WMI_HOST_WIFI_STANDARD_5;
+
+	return wifi_standard;
+}
+
+/**
+ * hdd_populate_feature_set_cds_config() - Populate cds feature set config
+ * @cds_cfg: cds config where feature set info needs to be updated
+ * @hdd_ctx: hdd context pointer
+ *
+ * Return: None
+ */
+static void hdd_populate_feature_set_cds_config(struct cds_config_info *cds_cfg,
+						struct hdd_context *hdd_ctx)
+{
+	struct wlan_objmgr_psoc *psoc;
+	uint32_t band_capability;
+	QDF_STATUS status;
+
+	if (!hdd_ctx)
+		return;
+
+	psoc = hdd_ctx->psoc;
+
+	cds_cfg->cds_feature_set.wifi_standard = hdd_get_wifi_standard(hdd_ctx);
+
+	status = ucfg_mlme_get_band_capability(hdd_ctx->psoc, &band_capability);
+	if (QDF_IS_STATUS_ERROR(status))
+		hdd_err("Failed to get MLME band capability");
+
+	band_capability =
+		hdd_update_band_cap_from_dot11mode(hdd_ctx, band_capability);
+
+	cds_cfg->cds_feature_set.sap_5g_supported =
+					band_capability & BIT(REG_BAND_5G);
+
+	cds_cfg->cds_feature_set.sap_6g_supported =
+					band_capability & BIT(REG_BAND_6G);
+}
+#else
+static inline void
+hdd_populate_feature_set_cds_config(struct cds_config_info *cds_cfg,
+				    struct hdd_context *hdd_ctx)
+{
+}
+#endif
+
 /**
  * hdd_update_cds_config() - API to update cds configuration parameters
  * @hdd_ctx: HDD Context
@@ -13046,6 +13137,7 @@ static int hdd_update_cds_config(struct hdd_context *hdd_ctx)
 		hdd_tsf_is_tsf64_tx_set(hdd_ctx);
 	hdd_txrx_populate_cds_config(cds_cfg, hdd_ctx);
 	hdd_lpass_populate_cds_config(cds_cfg, hdd_ctx);
+	hdd_populate_feature_set_cds_config(cds_cfg, hdd_ctx);
 	cds_init_ini_config(cds_cfg);
 	return 0;
 

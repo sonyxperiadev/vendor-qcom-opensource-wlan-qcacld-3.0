@@ -4511,4 +4511,13 @@ bool policy_mgr_is_ap_ap_mcc_allow(struct wlan_objmgr_psoc *psoc,
 bool policy_mgr_any_other_vdev_on_same_mac_as_freq(
 				struct wlan_objmgr_psoc *psoc,
 				uint32_t freq, uint8_t vdev_id);
+
+/**
+ * policy_mgr_get_sbs_cfg() - Get SBS INI value
+ * @psoc: PSOC object
+ * @sbs: output sbs cfg value
+ *
+ */
+QDF_STATUS policy_mgr_get_sbs_cfg(struct wlan_objmgr_psoc *psoc, bool *sbs);
+
 #endif /* __WLAN_POLICY_MGR_API_H */

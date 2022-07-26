@@ -8714,3 +8714,17 @@ bool policy_mgr_any_other_vdev_on_same_mac_as_freq(
 
 	return same_mac;
 }
+
+QDF_STATUS policy_mgr_get_sbs_cfg(struct wlan_objmgr_psoc *psoc, bool *sbs)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("pm_ctx is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+	*sbs = pm_ctx->cfg.sbs_enable;
+
+	return QDF_STATUS_SUCCESS;
+}
