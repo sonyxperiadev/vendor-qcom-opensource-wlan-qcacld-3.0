@@ -2718,7 +2718,8 @@ cm_roam_stats_get_trigger_detail_str(struct wmi_roam_trigger_info *ptr,
 	case ROAM_TRIGGER_REASON_UNIT_TEST:
 		break;
 	case ROAM_TRIGGER_REASON_BTM:
-		cm_roam_btm_req_event(&ptr->btm_trig_data, vdev_id);
+		cm_roam_btm_req_event(&ptr->btm_trig_data, ptr, vdev_id,
+				      false);
 		buf_cons = qdf_snprint(
 				temp, buf_left,
 				"Req_mode: %d Disassoc_timer: %d",
@@ -3261,6 +3262,7 @@ cm_roam_stats_event_handler(struct wlan_objmgr_psoc *psoc,
 			    struct roam_stats_event *stats_info)
 {
 	uint8_t i, rem_tlv = 0;
+	bool is_wtc = false;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 
 	if (!stats_info)
@@ -3355,16 +3357,25 @@ cm_roam_stats_event_handler(struct wlan_objmgr_psoc *psoc,
 		 * wmi_roam_trigger_reason TLV is sent only for userspace
 		 * logging of BTM/WTC frame without roam scans.
 		 */
-		if (stats_info->trigger[0].present &&
-		    stats_info->trigger[0].trigger_reason ==
-		    ROAM_TRIGGER_REASON_BTM)
-			cm_roam_btm_req_event(
-				&stats_info->trigger[0].btm_trig_data,
-				stats_info->vdev_id);
 
 		if (stats_info->data_11kv[0].present)
 			cm_roam_stats_print_11kv_info(&stats_info->data_11kv[0],
 						      stats_info->vdev_id);
+
+		if (stats_info->trigger[0].present &&
+		    (stats_info->trigger[0].trigger_reason ==
+		     ROAM_TRIGGER_REASON_BTM ||
+		     stats_info->trigger[0].trigger_reason ==
+		     ROAM_TRIGGER_REASON_WTC_BTM)) {
+			if (stats_info->trigger[0].trigger_reason ==
+			    ROAM_TRIGGER_REASON_WTC_BTM)
+				is_wtc = true;
+
+			cm_roam_btm_req_event(
+				&stats_info->trigger[0].btm_trig_data,
+				&stats_info->trigger[0], stats_info->vdev_id,
+				is_wtc);
+		}
 
 		if (stats_info->scan[0].present &&
 		    stats_info->trigger[0].present)

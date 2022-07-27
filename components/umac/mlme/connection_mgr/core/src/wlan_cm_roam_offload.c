@@ -6625,7 +6625,8 @@ cm_roam_btm_candidate_event(struct wmi_btm_req_candidate_info *btm_data,
 
 QDF_STATUS
 cm_roam_btm_req_event(struct wmi_roam_btm_trigger_data *btm_data,
-		      uint8_t vdev_id)
+		      struct wmi_roam_trigger_info *trigger_info,
+		      uint8_t vdev_id, bool is_wtc)
 {
 	uint8_t i;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
@@ -6653,6 +6654,10 @@ cm_roam_btm_req_event(struct wmi_roam_btm_trigger_data *btm_data,
 	wlan_diag_event.cand_lst_cnt = btm_data->candidate_list_count;
 
 	WLAN_HOST_DIAG_EVENT_REPORT(&wlan_diag_event, EVENT_WLAN_BTM);
+
+	if (is_wtc)
+		cm_roam_wtc_btm_event(trigger_info, NULL, vdev_id, true);
+
 	for (i = 0; i < btm_data->candidate_list_count; i++)
 		cm_roam_btm_candidate_event(&btm_data->btm_cand[i], vdev_id, i);
 
@@ -6679,7 +6684,8 @@ cm_roam_mgmt_frame_event(struct roam_frame_info *frame_data,
 	wlan_diag_event.sn = frame_data->seq_num;
 	wlan_diag_event.auth_algo = frame_data->auth_algo;
 	wlan_diag_event.rssi = (-1) * frame_data->rssi;
-	wlan_diag_event.tx_status = frame_data->tx_status;
+	wlan_diag_event.tx_status =
+				wlan_get_diag_tx_status(frame_data->tx_status);
 	wlan_diag_event.status = frame_data->status_code;
 	wlan_diag_event.assoc_id = frame_data->assoc_id;
 
@@ -6896,7 +6902,8 @@ cm_roam_btm_candidate_event(struct wmi_btm_req_candidate_info *btm_data,
 
 QDF_STATUS
 cm_roam_btm_req_event(struct wmi_roam_btm_trigger_data *btm_data,
-		      uint8_t vdev_id)
+		      struct wmi_roam_trigger_info *trigger_info,
+		      uint8_t vdev_id, bool is_wtc)
 {
 	struct wlan_log_record *log_record = NULL;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
@@ -6927,6 +6934,10 @@ cm_roam_btm_req_event(struct wmi_roam_btm_trigger_data *btm_data,
 				btm_data->candidate_list_count;
 
 	status = wlan_connectivity_log_enqueue(log_record);
+
+	if (is_wtc)
+		cm_roam_wtc_btm_event(trigger_info, NULL, vdev_id, true);
+
 	for (i = 0; i < log_record->btm_info.candidate_list_count; i++)
 		cm_roam_btm_candidate_event(&btm_data->btm_cand[i], vdev_id, i);
 

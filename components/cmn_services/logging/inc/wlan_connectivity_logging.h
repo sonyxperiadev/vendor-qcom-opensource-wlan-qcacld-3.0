@@ -27,7 +27,7 @@
 #include "wlan_logging_sock_svc.h"
 #include "wlan_cm_roam_public_struct.h"
 
-#define WLAN_MAX_LOGGING_FREQ 90
+#define WLAN_MAX_LOGGING_FREQ 120
 
 /**
  * enum wlan_main_tag  - Main Tag used in logging
@@ -401,13 +401,13 @@ struct wlan_diag_btm_info {
  * @tx_status: Frame TX status defined by enum qdf_dp_tx_rx_status
  * @reason: reason code defined in Table 9-49 Reason codes field’ from the
  * IEEE 802.11 standard document.
- * @eap_len: EAP data length
- * @eap_type: EAP type. Values defined by IANA at:
- * https://www.iana.org/assignments/eap-numbers
  * @is_retry_frame: Retry frame indicator
  * @reserved: Reserved field
  * @subtype: Diag event defined in  enum qca_conn_diag_log_event_type
  * @assoc_id: Association ID
+ * @eap_len: EAP data length
+ * @eap_type: EAP type. Values defined by IANA at:
+ * https://www.iana.org/assignments/eap-numbers
  * @sn: Frame sequence number
  * @rssi: Peer RSSI in dBm
  */
@@ -420,13 +420,13 @@ struct wlan_diag_packet_info {
 	uint8_t status;
 	uint8_t tx_status;
 	uint8_t reason;
-	uint8_t eap_len;
-	uint8_t eap_type;
 	uint8_t is_retry_frame:1;
 	uint8_t reserved:7;
 	uint16_t subtype;
 	uint16_t assoc_id;
-	uint16_t sn;
+	uint16_t eap_len;
+	uint16_t eap_type;
+	uint32_t sn;
 	int32_t rssi;
 } qdf_packed;
 
