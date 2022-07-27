@@ -191,6 +191,7 @@
 #include "os_if_dp.h"
 #include "os_if_dp_lro.h"
 #include "wlan_mlo_mgr_sta.h"
+#include "wlan_hdd_coap.h"
 
 #define g_mode_rates_size (12)
 #define a_mode_rates_size (8)
@@ -17980,6 +17981,7 @@ const struct wiphy_vendor_command hdd_wiphy_vendor_commands[] = {
 		.doit = wlan_hdd_cfg80211_get_radio_combination_matrix,
 		vendor_command_policy(VENDOR_CMD_RAW_DATA, 0)
 	},
+	FEATURE_COAP_OFFLOAD_COMMANDS
 };
 
 struct hdd_context *hdd_cfg80211_wiphy_alloc(void)
