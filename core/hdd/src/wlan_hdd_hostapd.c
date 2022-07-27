@@ -3807,6 +3807,7 @@ uint32_t hdd_get_ap_6ghz_capable(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
 	struct sap_context *sap_context;
 	struct sap_config *sap_config;
 	uint32_t capable = 0;
+	enum policy_mgr_con_mode conn_mode;
 
 	if (!psoc) {
 		hdd_err("PSOC is NULL");
@@ -3826,11 +3827,16 @@ uint32_t hdd_get_ap_6ghz_capable(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
 		wlan_objmgr_vdev_release_ref(vdev, WLAN_HDD_ID_OBJ_MGR);
 		return 0;
 	}
-	if (ap_adapter->device_mode != QDF_SAP_MODE) {
+
+	conn_mode = policy_mgr_convert_device_mode_to_qdf_type(
+			ap_adapter->device_mode);
+	if ((conn_mode != PM_SAP_MODE && conn_mode != PM_P2P_GO_MODE) ||
+	    !policy_mgr_is_6ghz_conc_mode_supported(psoc, conn_mode)) {
 		hdd_err("unexpected device mode %d", ap_adapter->device_mode);
 		wlan_objmgr_vdev_release_ref(vdev, WLAN_HDD_ID_OBJ_MGR);
 		return 0;
 	}
+
 	ap_ctx = WLAN_HDD_GET_AP_CTX_PTR(ap_adapter);
 	sap_config = &ap_ctx->sap_config;
 	sap_context = ap_ctx->sap_context;

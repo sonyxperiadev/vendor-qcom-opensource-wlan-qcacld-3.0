@@ -3788,7 +3788,7 @@ void policy_mgr_incr_active_session(struct wlan_objmgr_psoc *psoc,
 
 	if (mode != QDF_NAN_DISC_MODE && pm_ctx->dp_cbacks.hdd_v2_flow_pool_map)
 		pm_ctx->dp_cbacks.hdd_v2_flow_pool_map(session_id);
-	if (mode == QDF_SAP_MODE)
+	if (mode == QDF_SAP_MODE || mode == QDF_P2P_GO_MODE)
 		policy_mgr_get_ap_6ghz_capable(psoc, session_id,
 					       &conn_6ghz_flag);
 
@@ -3854,7 +3854,7 @@ void policy_mgr_incr_active_session(struct wlan_objmgr_psoc *psoc,
 		if (pm_ctx->dp_cbacks.hdd_set_rx_mode_rps_cb)
 			pm_ctx->dp_cbacks.hdd_set_rx_mode_rps_cb(true);
 	}
-	if (mode == QDF_SAP_MODE)
+	if (mode == QDF_SAP_MODE || mode == QDF_P2P_GO_MODE)
 		policy_mgr_init_ap_6ghz_capable(psoc, session_id,
 						conn_6ghz_flag);
 	if (mode == QDF_SAP_MODE || mode == QDF_P2P_GO_MODE ||
@@ -8079,7 +8079,10 @@ void policy_mgr_set_ap_6ghz_capable(struct wlan_objmgr_psoc *psoc,
 	for (conn_index = 0; conn_index < MAX_NUMBER_OF_CONC_CONNECTIONS;
 			conn_index++) {
 		conn_info = &pm_conc_connection_list[conn_index];
-		if (conn_info->in_use && PM_SAP_MODE == conn_info->mode &&
+		if (conn_info->in_use && (PM_SAP_MODE == conn_info->mode ||
+					  PM_P2P_GO_MODE == conn_info->mode) &&
+		    policy_mgr_is_6ghz_conc_mode_supported(
+						psoc, conn_info->mode) &&
 		    vdev_id == conn_info->vdev_id) {
 			if (set)
 				conn_info->conn_6ghz_flag |= ap_6ghz_capable;
@@ -8117,7 +8120,10 @@ bool policy_mgr_get_ap_6ghz_capable(struct wlan_objmgr_psoc *psoc,
 	for (conn_index = 0; conn_index < MAX_NUMBER_OF_CONC_CONNECTIONS;
 			conn_index++) {
 		conn_info = &pm_conc_connection_list[conn_index];
-		if (conn_info->in_use && PM_SAP_MODE == conn_info->mode &&
+		if (conn_info->in_use && (PM_SAP_MODE == conn_info->mode ||
+					  PM_P2P_GO_MODE == conn_info->mode) &&
+		    policy_mgr_is_6ghz_conc_mode_supported(
+						psoc, conn_info->mode) &&
 		    vdev_id == conn_info->vdev_id) {
 			conn_6ghz_flag = conn_info->conn_6ghz_flag;
 			break;
