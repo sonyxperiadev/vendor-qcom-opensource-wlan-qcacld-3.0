@@ -1489,6 +1489,7 @@ static void dp_pld_request_bus_bandwidth(struct wlan_dp_psoc_context *dp_ctx,
 
 	param.policy = BBM_TPUT_POLICY;
 	param.policy_info.tput_level = tput_level;
+	dp_bbm_apply_independent_policy(dp_ctx->psoc, &param);
 
 	dp_rtpm_tput_policy_apply(dp_ctx, tput_level);
 
