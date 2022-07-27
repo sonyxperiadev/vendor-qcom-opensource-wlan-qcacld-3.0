@@ -98,6 +98,7 @@ static struct kobject *wlan_kobject;
 static struct kobject *driver_kobject;
 static struct kobject *fw_kobject;
 static struct kobject *psoc_kobject;
+static struct kobject *wifi_kobject;
 
 int
 hdd_sysfs_validate_and_copy_buf(char *dest_buf, size_t dest_buf_size,
@@ -687,6 +688,40 @@ static void hdd_sysfs_destroy_driver_root_obj(void)
 	}
 }
 
+static void hdd_sysfs_create_wifi_root_obj(struct hdd_context *hdd_ctx)
+{
+	wifi_kobject = pld_get_wifi_kobj(hdd_ctx->parent_dev);
+	if (wifi_kobject) {
+		hdd_debug("wifi_kobject created by platform");
+		return;
+	}
+	wifi_kobject = kobject_create_and_add("wifi", NULL);
+	if (!wifi_kobject)
+		hdd_err("could not allocate wifi kobject");
+}
+
+static void hdd_sysfs_destroy_wifi_root_obj(void)
+{
+	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
+
+	if (!hdd_ctx) {
+		hdd_err("hdd context is NULL");
+		return;
+	}
+	if (pld_get_wifi_kobj(hdd_ctx->parent_dev)) {
+		hdd_debug("wifi_kobject created by platform");
+		wifi_kobject = NULL;
+		return;
+	}
+
+	if (!wifi_kobject) {
+		hdd_err("could not get wifi kobject!");
+		return;
+	}
+	kobject_put(wifi_kobject);
+	wifi_kobject = NULL;
+}
+
 #ifdef WLAN_FEATURE_BEACON_RECEPTION_STATS
 static int hdd_sysfs_create_bcn_reception_interface(struct hdd_adapter
 						     *adapter)
@@ -843,10 +878,10 @@ void hdd_create_sysfs_files(struct hdd_context *hdd_ctx)
 	hdd_sysfs_create_driver_root_obj();
 	hdd_sysfs_create_version_interface(hdd_ctx->psoc);
 	hdd_sysfs_mem_stats_create(wlan_kobject);
-	hdd_sysfs_create_wifi_root_obj();
+	hdd_sysfs_create_wifi_root_obj(hdd_ctx);
 	if  (QDF_GLOBAL_MISSION_MODE == hdd_get_conparam()) {
 		hdd_sysfs_create_powerstats_interface();
-		hdd_sysfs_create_dump_in_progress_interface();
+		hdd_sysfs_create_dump_in_progress_interface(wifi_kobject);
 		hdd_sysfs_fw_mode_config_create(driver_kobject);
 		hdd_sysfs_scan_disable_create(driver_kobject);
 		hdd_sysfs_wow_ito_create(driver_kobject);
@@ -885,7 +920,7 @@ void hdd_destroy_sysfs_files(void)
 		hdd_sysfs_wow_ito_destroy(driver_kobject);
 		hdd_sysfs_scan_disable_destroy(driver_kobject);
 		hdd_sysfs_fw_mode_config_destroy(driver_kobject);
-		hdd_sysfs_destroy_dump_in_progress_interface();
+		hdd_sysfs_destroy_dump_in_progress_interface(wifi_kobject);
 		hdd_sysfs_destroy_powerstats_interface();
 	}
 	hdd_sysfs_destroy_wifi_root_obj();
