@@ -923,6 +923,7 @@ struct hdd_chan_change_params {
  * @is_user_wakelock_acquired: boolean to check if user wakelock status
  * @monitor_mode: monitor mode context to prevent/allow runtime pm
  * @wow_unit_test: wow unit test mode context to prevent/allow runtime pm
+ * @system_suspend: system suspend context to prevent/allow runtime pm
  *
  * Runtime PM control for underlying activities
  */
@@ -933,6 +934,7 @@ struct hdd_runtime_pm_context {
 	bool is_user_wakelock_acquired;
 	qdf_runtime_lock_t monitor_mode;
 	qdf_runtime_lock_t wow_unit_test;
+	qdf_runtime_lock_t system_suspend;
 };
 
 /*
