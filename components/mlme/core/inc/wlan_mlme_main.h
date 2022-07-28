@@ -473,8 +473,13 @@ struct mlme_legacy_priv {
 	uint32_t vdev_stop_type;
 	struct wlan_mlme_roam mlme_roam;
 	struct wlan_cm_roam cm_roam;
-#ifdef WLAN_FEATURE_ROAM_OFFLOAD
-	struct wlan_log_record auth_log[MAX_ROAM_CANDIDATE_AP][WLAN_ROAM_MAX_CACHED_AUTH_FRAMES];
+#if defined(WLAN_FEATURE_ROAM_OFFLOAD) && \
+		defined(WLAN_FEATURE_CONNECTIVITY_LOGGING)
+	struct wlan_log_record
+	    auth_log[MAX_ROAM_CANDIDATE_AP][WLAN_ROAM_MAX_CACHED_AUTH_FRAMES];
+#elif defined(WLAN_FEATURE_ROAM_OFFLOAD) && defined(CONNECTIVITY_DIAG_EVENT)
+	struct wlan_diag_packet_info
+	    auth_log[MAX_ROAM_CANDIDATE_AP][WLAN_ROAM_MAX_CACHED_AUTH_FRAMES];
 #endif
 	bool bigtk_vdev_support;
 	struct sae_auth_retry sae_retry;

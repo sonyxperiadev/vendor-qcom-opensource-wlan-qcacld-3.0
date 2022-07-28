@@ -2252,6 +2252,7 @@ static void wlan_send_tx_complete_event(struct mac_context *mac, qdf_nbuf_t buf,
 				type = seq;
 
 			wlan_connectivity_mgmt_event(
+					mac->psoc,
 					mac_hdr, params->vdev_id, status,
 					qdf_tx_complete, mac->lim.bss_rssi,
 					algo, type, seq, 0, WLAN_AUTH_REQ);
@@ -2262,6 +2263,7 @@ static void wlan_send_tx_complete_event(struct mac_context *mac, qdf_nbuf_t buf,
 			reason_code = pe_session->deauth_disassoc_rc;
 
 		wlan_connectivity_mgmt_event(
+					mac->psoc,
 					mac_hdr, params->vdev_id, reason_code,
 					qdf_tx_complete, mac->lim.bss_rssi,
 					0, 0, 0, 0, tag);
@@ -4238,7 +4240,8 @@ lim_send_disassoc_mgmt_frame(struct mac_context *mac,
 		lim_diag_mgmt_tx_event_report(mac, pMacHdr,
 					      pe_session,
 					      QDF_STATUS_SUCCESS, QDF_STATUS_SUCCESS);
-		wlan_connectivity_mgmt_event((struct wlan_frame_hdr *)pMacHdr,
+		wlan_connectivity_mgmt_event(mac->psoc,
+					     (struct wlan_frame_hdr *)pMacHdr,
 					     pe_session->vdev_id, nReason,
 					     QDF_TX_RX_STATUS_OK,
 					     mac->lim.bss_rssi, 0, 0, 0, 0,
@@ -4484,7 +4487,8 @@ lim_send_deauth_mgmt_frame(struct mac_context *mac,
 					      QDF_STATUS_SUCCESS,
 					      QDF_STATUS_SUCCESS);
 
-		wlan_connectivity_mgmt_event((struct wlan_frame_hdr *)pMacHdr,
+		wlan_connectivity_mgmt_event(mac->psoc,
+					     (struct wlan_frame_hdr *)pMacHdr,
 					     pe_session->vdev_id, nReason,
 					     QDF_TX_RX_STATUS_OK,
 					     mac->lim.bss_rssi, 0, 0, 0, 0,

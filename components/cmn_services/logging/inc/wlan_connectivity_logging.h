@@ -764,53 +764,63 @@ struct wlan_connectivity_log_buf_data {
 #define logging_err(params...) QDF_TRACE_ERROR(QDF_MODULE_ID_QDF, ## params)
 #define logging_info(params...) QDF_TRACE_INFO(QDF_MODULE_ID_QDF, ## params)
 
-#if defined(WLAN_FEATURE_CONNECTIVITY_LOGGING) && \
+#if (defined(WLAN_FEATURE_CONNECTIVITY_LOGGING) || \
+	defined(CONNECTIVITY_DIAG_EVENT)) && \
 	defined(WLAN_FEATURE_ROAM_OFFLOAD)
 /**
  * wlan_print_cached_sae_auth_logs() - Enqueue SAE authentication frame logs
+ * @psoc: Global psoc pointer
  * @bssid:  BSSID
  * @vdev_id: Vdev id
  *
  * Return: QDF_STATUS
  */
-QDF_STATUS wlan_print_cached_sae_auth_logs(struct qdf_mac_addr *bssid,
+QDF_STATUS wlan_print_cached_sae_auth_logs(struct wlan_objmgr_psoc *psoc,
+					   struct qdf_mac_addr *bssid,
 					   uint8_t vdev_id);
 
 /**
  * wlan_is_log_record_present_for_bssid() - Check if there is existing log
  * record for the given bssid
+ * @psoc: Global psoc pointer
  * @bssid: BSSID
  * @vdev_id: vdev id
  *
  * Return: true if record is present else false
  */
-bool wlan_is_log_record_present_for_bssid(struct qdf_mac_addr *bssid,
+bool wlan_is_log_record_present_for_bssid(struct wlan_objmgr_psoc *psoc,
+					  struct qdf_mac_addr *bssid,
 					  uint8_t vdev_id);
 
 /**
  * wlan_clear_sae_auth_logs_cache() - Clear the cached auth related logs
+ * @psoc: Pointer to global psoc object
  * @vdev_id: vdev id
  *
  * Return: None
  */
-void wlan_clear_sae_auth_logs_cache(uint8_t vdev_id);
+void wlan_clear_sae_auth_logs_cache(struct wlan_objmgr_psoc *psoc,
+				    uint8_t vdev_id);
 #else
 static inline
-QDF_STATUS wlan_print_cached_sae_auth_logs(struct qdf_mac_addr *bssid,
+QDF_STATUS wlan_print_cached_sae_auth_logs(struct wlan_objmgr_psoc *psoc,
+					   struct qdf_mac_addr *bssid,
 					   uint8_t vdev_id)
 {
 	return QDF_STATUS_SUCCESS;
 }
 
 static inline
-bool wlan_is_log_record_present_for_bssid(struct qdf_mac_addr *bssid,
+bool wlan_is_log_record_present_for_bssid(struct wlan_objmgr_psoc *psoc,
+					  struct qdf_mac_addr *bssid,
 					  uint8_t vdev_id)
 {
 	return false;
 }
 
 static inline
-void wlan_clear_sae_auth_logs_cache(uint8_t vdev_id)
+void wlan_clear_sae_auth_logs_cache(struct wlan_objmgr_psoc *psoc,
+				    uint8_t vdev_id)
 {}
 #endif
 
@@ -818,6 +828,7 @@ void wlan_clear_sae_auth_logs_cache(uint8_t vdev_id)
 /**
  * wlan_connectivity_mgmt_event()  - Fill and enqueue a new record
  * for management frame information.
+ * @psoc: Pointer to global psoc object
  * @mac_hdr: 802.11 management frame header
  * @vdev_id: Vdev id
  * @status_code: Frame status code as defined in IEEE 802.11 - 2020 standard
@@ -836,7 +847,8 @@ void wlan_clear_sae_auth_logs_cache(uint8_t vdev_id)
  * Return: QDF_STATUS
  */
 void
-wlan_connectivity_mgmt_event(struct wlan_frame_hdr *mac_hdr,
+wlan_connectivity_mgmt_event(struct wlan_objmgr_psoc *psoc,
+			     struct wlan_frame_hdr *mac_hdr,
 			     uint8_t vdev_id, uint16_t status_code,
 			     enum qdf_dp_tx_rx_status tx_status,
 			     int8_t peer_rssi,
@@ -887,6 +899,7 @@ QDF_STATUS wlan_connectivity_log_enqueue(struct wlan_log_record *new_record);
 /**
  * wlan_connectivity_mgmt_event()  - Fill and enqueue a new record
  * for management frame information.
+ * @psoc: Pointer to global psoc object
  * @mac_hdr: 802.11 management frame header
  * @vdev_id: Vdev id
  * @status_code: Frame status code as defined in IEEE 802.11 - 2020 standard
@@ -905,7 +918,8 @@ QDF_STATUS wlan_connectivity_log_enqueue(struct wlan_log_record *new_record);
  * Return: QDF_STATUS
  */
 void
-wlan_connectivity_mgmt_event(struct wlan_frame_hdr *mac_hdr,
+wlan_connectivity_mgmt_event(struct wlan_objmgr_psoc *psoc,
+			     struct wlan_frame_hdr *mac_hdr,
 			     uint8_t vdev_id, uint16_t status_code,
 			     enum qdf_dp_tx_rx_status tx_status,
 			     int8_t peer_rssi,
@@ -934,7 +948,8 @@ QDF_STATUS wlan_connectivity_log_enqueue(struct wlan_log_record *new_record)
 }
 
 static inline void
-wlan_connectivity_mgmt_event(struct wlan_frame_hdr *mac_hdr,
+wlan_connectivity_mgmt_event(struct wlan_objmgr_psoc *psoc,
+			     struct wlan_frame_hdr *mac_hdr,
 			     uint8_t vdev_id, uint16_t status_code,
 			     enum qdf_dp_tx_rx_status tx_status,
 			     int8_t peer_rssi,

@@ -155,7 +155,7 @@ lim_process_deauth_frame(struct mac_context *mac, uint8_t *pRxPacketInfo,
 			pe_session->limSmeState,
 			GET_LIM_SYSTEM_ROLE(pe_session));
 
-	wlan_connectivity_mgmt_event((struct wlan_frame_hdr *)pHdr,
+	wlan_connectivity_mgmt_event(mac->psoc, (struct wlan_frame_hdr *)pHdr,
 				     pe_session->vdev_id, reasonCode,
 				     0, frame_rssi, 0, 0, 0, 0,
 				     WLAN_DEAUTH_RX);
