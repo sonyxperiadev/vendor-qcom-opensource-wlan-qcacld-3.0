@@ -766,8 +766,22 @@ void wma_populate_peer_eht_cap(struct peer_assoc_params *peer,
 	/* EHT MAC Capabilities */
 	WMI_EHTCAP_MAC_EPCSPRIACCESS_SET(mac_cap, eht_cap->epcs_pri_access);
 	WMI_EHTCAP_MAC_EHTOMCTRL_SET(mac_cap, eht_cap->eht_om_ctl);
-	WMI_EHTCAP_MAC_TRIGTXOP_SET(mac_cap,
-				    eht_cap->triggered_txop_sharing_mode1);
+	WMI_EHTCAP_MAC_TRIGTXOPMODE1_SET(mac_cap,
+					 eht_cap->triggered_txop_sharing_mode1);
+	WMI_EHTCAP_MAC_TRIGTXOPMODE2_SET(mac_cap,
+					 eht_cap->triggered_txop_sharing_mode2);
+	WMI_EHTCAP_MAC_RESTRICTTWT_SET(mac_cap,
+				       eht_cap->restricted_twt);
+	WMI_EHTCAP_MAC_SCSTRAFFICDESC_SET(mac_cap,
+					  eht_cap->scs_traffic_desc);
+	WMI_EHTCAP_MAC_MAXMPDULEN_SET(mac_cap,
+				      eht_cap->max_mpdu_len);
+	WMI_EHTCAP_MAC_MAXAMPDULEN_EXP_SET(mac_cap,
+					   eht_cap->max_a_mpdu_len_exponent_ext);
+	WMI_EHTCAP_MAC_TRS_SUPPORT_SET(mac_cap,
+				       eht_cap->eht_trs_support);
+	WMI_EHTCAP_MAC_TXOP_RETURN_SUPP_IN_SHARINGMODE2_SET(mac_cap,
+				eht_cap->txop_return_support_txop_share_m2);
 
 	/* EHT PHY Capabilities */
 	WMI_EHTCAP_PHY_320MHZIN6GHZ_SET(phy_cap, eht_cap->support_320mhz_6ghz);
