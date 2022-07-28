@@ -3523,6 +3523,9 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 		hdd_err("acs config chan count 0");
 		ret = -EINVAL;
 		goto out;
+	} else {
+		hdd_nofl_debug("Dump raw ACS chanlist - ");
+		sap_dump_acs_channel(&sap_config->acs_cfg);
 	}
 
 	hdd_handle_acs_2g_preferred_sap_conc(hdd_ctx->psoc, adapter,
