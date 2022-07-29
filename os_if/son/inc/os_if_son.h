@@ -286,13 +286,14 @@ uint32_t os_if_son_get_band_info(struct wlan_objmgr_vdev *vdev);
  * @chan_info: pointer to ieee80211_channel_info to get
  * @ic_nchans: number of chan information it gets
  * @flag_160: flag indicating the API to fill the center frequencies of 160MHz.
+ * @flag_6ghz: flag indicating the API to include 6 GHz or not
  *
  * Return: 0 on success, negative errno on failure
  */
 int os_if_son_get_chan_list(struct wlan_objmgr_vdev *vdev,
 			    struct ieee80211_ath_channel *ic_chans,
 			    struct ieee80211_channel_info *chan_info,
-			    uint8_t *ic_nchans, bool flag_160);
+			    uint8_t *ic_nchans, bool flag_160, bool flag_6ghz);
 
 /**
  * os_if_son_get_sta_count() - get connected STA count
