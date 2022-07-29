@@ -153,6 +153,7 @@ void lim_update_assoc_sta_datas(struct mac_context *mac_ctx,
 	sta_ds->mlmStaContext.authType = session_entry->limCurrentAuthType;
 
 	/* Add capabilities information, rates and AID */
+	sta_ds->assocId = assoc_rsp->aid & 0x3FFF;
 	sta_ds->mlmStaContext.capabilityInfo = assoc_rsp->capabilityInfo;
 	sta_ds->shortPreambleEnabled =
 		(uint8_t) assoc_rsp->capabilityInfo.shortPreamble;
