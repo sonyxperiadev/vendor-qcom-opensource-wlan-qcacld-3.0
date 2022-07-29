@@ -678,8 +678,8 @@ dp_start_xmit(struct wlan_dp_intf *dp_intf, qdf_nbuf_t nbuf)
 	dp_fix_broadcast_eapol(dp_intf, nbuf);
 
 	if (dp_intf->tx_fn(soc, dp_intf->intf_id, nbuf)) {
-		dp_debug("Failed to send packet from adapter %u",
-			 dp_intf->intf_id);
+		dp_debug_rl("Failed to send packet from adapter %u",
+			    dp_intf->intf_id);
 		goto drop_pkt_and_release_nbuf;
 	}
 
