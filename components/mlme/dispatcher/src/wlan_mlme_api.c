@@ -3205,6 +3205,45 @@ wlan_mlme_set_emlsr_mode_enabled(struct wlan_objmgr_psoc *psoc, bool value)
 
 	return QDF_STATUS_SUCCESS;
 }
+
+void
+wlan_mlme_set_eml_params(struct wlan_objmgr_psoc *psoc,
+			 struct wlan_psoc_host_mac_phy_caps_ext2 *cap)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	if (!cap->emlcap.emlsr_supp) {
+		mlme_legacy_debug("No EMLSR supp: %d", cap->emlcap.emlsr_supp);
+		return;
+	}
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj) {
+		mlme_legacy_err("No psoc object");
+		return;
+	}
+	mlme_obj->cfg.eml_cap.emlsr_supp = cap->emlcap.emlsr_supp;
+	mlme_obj->cfg.eml_cap.emlsr_pad_delay = cap->emlcap.emlsr_pad_delay;
+	mlme_obj->cfg.eml_cap.emlsr_trans_delay = cap->emlcap.emlsr_trans_delay;
+	mlme_obj->cfg.eml_cap.emlmr_supp = cap->emlcap.emlmr_supp;
+}
+
+void
+wlan_mlme_get_eml_params(struct wlan_objmgr_psoc *psoc,
+			 struct wlan_mlo_eml_cap *cap)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj) {
+		mlme_legacy_err("No psoc object");
+		return;
+	}
+	cap->emlsr_supp = mlme_obj->cfg.eml_cap.emlsr_supp;
+	cap->emlsr_pad_delay = mlme_obj->cfg.eml_cap.emlsr_pad_delay;
+	cap->emlsr_trans_delay = mlme_obj->cfg.eml_cap.emlsr_trans_delay;
+	cap->emlmr_supp = mlme_obj->cfg.eml_cap.emlmr_supp;
+}
 #endif
 
 QDF_STATUS

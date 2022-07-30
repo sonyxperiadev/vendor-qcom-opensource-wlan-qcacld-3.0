@@ -1438,6 +1438,7 @@ QDF_STATUS policy_mgr_update_hw_mode_list(struct wlan_objmgr_psoc *psoc,
 					  struct target_psoc_info *tgt_hdl)
 {
 	struct wlan_psoc_host_mac_phy_caps *tmp;
+	struct wlan_psoc_host_mac_phy_caps_ext2 *cap;
 	uint32_t i, j = 0;
 	enum wmi_hw_mode_config_type hw_config_type;
 	uint32_t dbs_mode, sbs_mode;
@@ -1529,7 +1530,10 @@ QDF_STATUS policy_mgr_update_hw_mode_list(struct wlan_objmgr_psoc *psoc,
 		/* eMLSR mode */
 		if (WMI_BECAP_PHY_GET_HW_MODE_CFG(hw_config_type) ==
 				WMI_HW_MODE_EMLSR) {
+			hw_config_type = WMI_HW_MODE_EMLSR;
 			tmp = &info->mac_phy_cap[j++];
+			cap = &info->mac_phy_caps_ext2[i];
+			wlan_mlme_set_eml_params(psoc, cap);
 			policy_mgr_get_hw_mode_params(tmp, &mac1_ss_bw_info);
 			policy_mgr_update_mac_freq_info(psoc, pm_ctx,
 							hw_config_type,

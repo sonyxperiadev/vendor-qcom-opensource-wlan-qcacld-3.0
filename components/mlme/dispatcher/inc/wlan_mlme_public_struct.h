@@ -1557,6 +1557,26 @@ struct wlan_mlme_obss_ht40 {
 };
 
 /**
+ * struct wlan_mlme_eml_cap - EML capabilities of MLD
+ * @emlsr_supp: eMLSR Support
+ * @emlsr_pad_delay: eMLSR Padding Delay
+ * @emlsr_trans_delay: eMLSR transition delay
+ * @emlmr_supp: eMLMR Support
+ * @emlmr_delay: eMLMR Delay
+ * @trans_timeout: Transition Timeout
+ * @reserved: Reserved
+ */
+struct wlan_mlme_eml_cap {
+	uint16_t emlsr_supp:1,
+		 emlsr_pad_delay:3,
+		 emlsr_trans_delay:3,
+		 emlmr_supp:1,
+		 emlmr_delay:3,
+		 trans_timeout:4,
+		 reserved:1;
+};
+
+/**
  * enum dot11p_mode - The 802.11p mode of operation
  * @WLAN_HDD_11P_DISABLED:   802.11p mode is disabled
  * @WLAN_HDD_11P_STANDALONE: 802.11p-only operation
@@ -2619,6 +2639,7 @@ struct wlan_mlme_iot {
  * @iot: IOT related CFG items
  * @connection_roaming_ini_flag: To indicate whether connection_roaming related
  * ini file is present or not.
+ * @eml_cap: EML capability subfield present in ML IE common info
  */
 struct wlan_mlme_cfg {
 	struct wlan_mlme_chainmask chainmask_cfg;
@@ -2668,6 +2689,7 @@ struct wlan_mlme_cfg {
 	struct wlan_mlme_ratemask ratemask_cfg;
 	struct wlan_mlme_iot iot;
 	bool connection_roaming_ini_flag;
+	struct wlan_mlme_eml_cap eml_cap;
 };
 
 enum pkt_origin {
