@@ -313,7 +313,8 @@ static int __wlan_hdd_mgmt_tx(struct wiphy *wiphy, struct wireless_dev *wdev,
 	if ((adapter->device_mode == QDF_STA_MODE ||
 	     adapter->device_mode == QDF_SAP_MODE ||
 	     adapter->device_mode == QDF_P2P_CLIENT_MODE ||
-	     adapter->device_mode == QDF_P2P_GO_MODE) &&
+	     adapter->device_mode == QDF_P2P_GO_MODE ||
+	     adapter->device_mode == QDF_NAN_DISC_MODE) &&
 	    (type == SIR_MAC_MGMT_FRAME &&
 	    sub_type == SIR_MAC_MGMT_AUTH)) {
 		/* Request ROC for PASN authentication frame */
