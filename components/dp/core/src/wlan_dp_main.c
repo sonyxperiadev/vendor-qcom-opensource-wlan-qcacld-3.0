@@ -1378,7 +1378,9 @@ void dp_try_set_rps_cpu_mask(struct wlan_objmgr_psoc *psoc)
 		dp_err("dp context is NULL");
 		return;
 	}
-	dp_set_rps_cpu_mask(dp_ctx);
+
+	if (dp_ctx->dynamic_rps)
+		dp_set_rps_cpu_mask(dp_ctx);
 }
 
 void dp_clear_rps_cpu_mask(struct wlan_dp_psoc_context *dp_ctx)
