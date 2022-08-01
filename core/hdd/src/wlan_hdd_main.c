@@ -10042,14 +10042,11 @@ bool wlan_hdd_sta_get_dot11mode(hdd_cb_handle context, uint8_t vdev_id,
 		return false;
 
 	adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
-	if (!adapter) {
-		hdd_err("adapter is null");
+	if (!adapter)
 		return false;
-	}
-	if (!hdd_cm_is_vdev_associated(adapter)) {
-		hdd_err("vdev not associated ");
+
+	if (!hdd_cm_is_vdev_associated(adapter))
 		return false;
-	}
 
 	sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
 	mode = sta_ctx->conn_info.dot11mode;
@@ -10285,12 +10282,12 @@ static inline bool hdd_any_adapter_connected(hdd_cb_handle context)
 
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
 /**
- * hdd_pld_remove_pm_qos() - Remove PLD PM QoS request
+ * hdd_pld_remove_pm_qos() - Request PLD PM QoS request
  * @context: HDD context
  *
  * Return: None
  */
-static inline void hdd_pld_remove_pm_qos(hdd_cb_handle context)
+static inline void hdd_pld_request_pm_qos(hdd_cb_handle context)
 {
 	struct hdd_context *hdd_ctx = hdd_cb_handle_to_context(context);
 
@@ -10306,12 +10303,12 @@ static inline void hdd_pld_remove_pm_qos(hdd_cb_handle context)
 }
 
 /**
- * hdd_pld_request_pm_qos() - Request PLD PM QoS request
+ * hdd_pld_request_pm_qos() - Remove PLD PM QoS request
  * @context: HDD context
  *
  * Return: None
  */
-static inline void hdd_pld_request_pm_qos(hdd_cb_handle context)
+static inline void hdd_pld_remove_pm_qos(hdd_cb_handle context)
 {
 	struct hdd_context *hdd_ctx = hdd_cb_handle_to_context(context);
 
