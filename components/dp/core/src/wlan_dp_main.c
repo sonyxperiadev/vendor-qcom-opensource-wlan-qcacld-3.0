@@ -136,8 +136,7 @@ dp_get_intf_by_netdev(struct wlan_dp_psoc_context *dp_ctx, qdf_netdev_t dev)
 	qdf_spin_lock_bh(&dp_ctx->intf_list_lock);
 	for (dp_get_front_intf_no_lock(dp_ctx, &dp_intf); dp_intf;
 	     dp_get_next_intf_no_lock(dp_ctx, dp_intf, &dp_intf)) {
-		if (!qdf_str_cmp(qdf_netdev_get_devname(dp_intf->dev),
-				 qdf_netdev_get_devname(dev))) {
+		if (dp_intf->dev == dev) {
 			qdf_spin_unlock_bh(&dp_ctx->intf_list_lock);
 			return dp_intf;
 		}
@@ -887,7 +886,7 @@ dp_vdev_obj_create_notification(struct wlan_objmgr_vdev *vdev, void *arg)
 	struct wlan_dp_intf *dp_intf;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	struct qdf_mac_addr *mac_addr;
-	struct qdf_mac_addr intf_mac;
+	qdf_netdev_t dev;
 
 	dp_info("DP VDEV OBJ create notification");
 
@@ -900,18 +899,18 @@ dp_vdev_obj_create_notification(struct wlan_objmgr_vdev *vdev, void *arg)
 	dp_ctx =  dp_psoc_get_priv(psoc);
 	mac_addr = (struct qdf_mac_addr *)wlan_vdev_mlme_get_macaddr(vdev);
 
-	status = dp_ctx->dp_ops.dp_get_nw_intf_mac_by_vdev_mac(mac_addr,
-							       &intf_mac);
-	if (QDF_IS_STATUS_ERROR(status)) {
+	dev = dp_ctx->dp_ops.dp_get_netdev_by_vdev_mac(mac_addr);
+	if (!dev) {
 		dp_err("Failed to get intf mac:" QDF_MAC_ADDR_FMT,
 		       QDF_MAC_ADDR_REF(mac_addr));
 		return QDF_STATUS_E_INVAL;
 	}
 
-	dp_intf = dp_get_intf_by_macaddr(dp_ctx, &intf_mac);
+	dp_intf = dp_get_intf_by_netdev(dp_ctx, dev);
 	if (!dp_intf) {
-		dp_err("Failed to get dp intf mac:" QDF_MAC_ADDR_FMT,
-		       QDF_MAC_ADDR_REF(mac_addr));
+		dp_err("Failed to get dp intf dev: %s",
+		       qdf_netdev_get_devname(dev));
+
 		return QDF_STATUS_E_INVAL;
 	}
 

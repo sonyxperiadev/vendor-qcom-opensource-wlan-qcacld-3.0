@@ -4835,9 +4835,16 @@ hdd_set_mld_address(struct hdd_adapter *adapter, struct hdd_context *hdd_ctx,
 	}
 }
 
-static QDF_STATUS
-hdd_get_nw_adapter_mac_by_vdev_mac(struct qdf_mac_addr *mac_addr,
-				   struct qdf_mac_addr *adapter_mac)
+/**
+ * hdd_get_netdev_by_vdev_mac() - Get Netdev based on MAC
+ * @mac_addr: Vdev MAC address
+ *
+ * Get netdev from adapter based upon Vdev MAC address.
+ *
+ * Return: netdev pointer.
+ */
+static qdf_netdev_t
+hdd_get_netdev_by_vdev_mac(struct qdf_mac_addr *mac_addr)
 {
 	struct hdd_context *hdd_ctx;
 	struct hdd_adapter *adapter;
@@ -4846,24 +4853,23 @@ hdd_get_nw_adapter_mac_by_vdev_mac(struct qdf_mac_addr *mac_addr,
 	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
 	if (!hdd_ctx) {
 		hdd_err("Invalid HDD context");
-		return QDF_STATUS_E_INVAL;
+		return NULL;
 	}
 
 	adapter = hdd_get_adapter_by_macaddr(hdd_ctx, mac_addr->bytes);
 	if (!adapter) {
-		hdd_err("Invalid Adapter context");
-		return QDF_STATUS_E_INVAL;
+		hdd_err("Adapter not foud for MAC " QDF_MAC_ADDR_FMT "",
+			QDF_MAC_ADDR_REF(mac_addr));
+		return NULL;
 	}
 
 	if (adapter->mlo_adapter_info.is_link_adapter &&
 	    adapter->mlo_adapter_info.associate_with_ml_adapter) {
 		ml_adapter = adapter->mlo_adapter_info.ml_adapter;
-		qdf_copy_macaddr(adapter_mac, &ml_adapter->mac_addr);
-	} else {
-		qdf_copy_macaddr(adapter_mac, &adapter->mac_addr);
+		adapter =  ml_adapter;
 	}
 
-	return QDF_STATUS_SUCCESS;
+	return adapter->dev;
 }
 #else
 static void
@@ -4872,12 +4878,26 @@ hdd_set_mld_address(struct hdd_adapter *adapter, struct hdd_context *hdd_ctx,
 {
 }
 
-static QDF_STATUS
-hdd_get_nw_adapter_mac_by_vdev_mac(struct qdf_mac_addr *mac_addr,
-				   struct qdf_mac_addr *adapter_mac)
+static qdf_netdev_t
+hdd_get_netdev_by_vdev_mac(struct qdf_mac_addr *mac_addr)
 {
-	qdf_copy_macaddr(adapter_mac, mac_addr);
-	return QDF_STATUS_SUCCESS;
+	struct hdd_context *hdd_ctx;
+	struct hdd_adapter *adapter;
+
+	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
+	if (!hdd_ctx) {
+		hdd_err("Invalid HDD context");
+		return NULL;
+	}
+
+	adapter = hdd_get_adapter_by_macaddr(hdd_ctx, mac_addr->bytes);
+	if (!adapter) {
+		hdd_err("Adapter not foud for MAC " QDF_MAC_ADDR_FMT "",
+			QDF_MAC_ADDR_REF(mac_addr));
+		return NULL;
+	}
+
+	return adapter->dev;
 }
 #endif
 
@@ -10472,8 +10492,8 @@ static void hdd_dp_register_callbacks(struct hdd_context *hdd_ctx)
 	cb_obj.dp_nud_failure_work = hdd_nud_failure_work;
 	cb_obj.dp_get_pause_map = hdd_get_pause_map;
 
-	cb_obj.dp_get_nw_intf_mac_by_vdev_mac =
-		hdd_get_nw_adapter_mac_by_vdev_mac;
+	cb_obj.dp_get_netdev_by_vdev_mac =
+		hdd_get_netdev_by_vdev_mac;
 	cb_obj.dp_get_tx_resource = hdd_get_tx_resource;
 	cb_obj.dp_get_tx_flow_low_watermark = hdd_get_tx_flow_low_watermark;
 	cb_obj.dp_get_tsf_time = hdd_get_tsf_time_cb;

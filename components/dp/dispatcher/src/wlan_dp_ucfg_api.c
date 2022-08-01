@@ -1895,8 +1895,8 @@ void ucfg_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 	dp_ctx->dp_ops.dp_tsf_timestamp_rx = cb_obj->dp_tsf_timestamp_rx;
 	dp_ctx->dp_ops.dp_gro_rx_legacy_get_napi =
 		cb_obj->dp_gro_rx_legacy_get_napi;
-	dp_ctx->dp_ops.dp_get_nw_intf_mac_by_vdev_mac =
-		cb_obj->dp_get_nw_intf_mac_by_vdev_mac;
+	dp_ctx->dp_ops.dp_get_netdev_by_vdev_mac =
+		cb_obj->dp_get_netdev_by_vdev_mac;
 
 	dp_ctx->dp_ops.dp_nbuf_push_pkt = cb_obj->dp_nbuf_push_pkt;
 	dp_ctx->dp_ops.dp_rx_napi_gro_flush = cb_obj->dp_rx_napi_gro_flush;
