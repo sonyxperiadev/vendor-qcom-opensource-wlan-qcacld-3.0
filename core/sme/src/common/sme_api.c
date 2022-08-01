@@ -606,6 +606,8 @@ QDF_STATUS sme_ser_cmd_callback(struct wlan_serialization_command *cmd,
 		status = sme_ser_handle_active_cmd(cmd);
 		break;
 	case WLAN_SER_CB_CANCEL_CMD:
+		if (cmd->cmd_type == WLAN_SER_CMD_SET_HW_MODE)
+			policy_mgr_reset_hw_mode_change(mac_ctx->psoc);
 		break;
 	case WLAN_SER_CB_RELEASE_MEM_CMD:
 		if (cmd->vdev)
@@ -622,6 +624,9 @@ QDF_STATUS sme_ser_cmd_callback(struct wlan_serialization_command *cmd,
 			qdf_trigger_self_recovery(mac_ctx->psoc,
 						  QDF_ACTIVE_LIST_TIMEOUT);
 		}
+
+		if (cmd->cmd_type == WLAN_SER_CMD_SET_HW_MODE)
+			policy_mgr_reset_hw_mode_change(mac_ctx->psoc);
 		break;
 	default:
 		sme_debug("unknown reason code");
