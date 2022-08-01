@@ -2019,6 +2019,11 @@ struct hdd_context {
 	uint8_t power_type;
 #endif
 	bool is_wlan_disabled;
+
+	uint8_t *oem_data;
+	uint8_t oem_data_len;
+	uint8_t *file_name;
+	qdf_mutex_t wifi_kobj_lock;
 };
 
 /**

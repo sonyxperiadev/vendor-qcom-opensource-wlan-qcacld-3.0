@@ -41,6 +41,8 @@
 #include "wlan_hdd_oemdata.h"
 #include "wlan_osif_request_manager.h"
 #include "wlan_hdd_main.h"
+#include "wlan_hdd_sysfs.h"
+
 #ifdef FEATURE_OEM_DATA_SUPPORT
 #ifdef CNSS_GENL
 #include <net/cnss_nl.h>
@@ -1133,6 +1135,55 @@ oem_data_attr_policy[QCA_WLAN_VENDOR_ATTR_OEM_DATA_PARAMS_MAX + 1] = {
 	[QCA_WLAN_VENDOR_ATTR_OEM_DATA_RESPONSE_EXPECTED] = {.type = NLA_FLAG},
 };
 
+/**
+ * hdd_copy_file_name_and_oem_data() - Copy file name and oem data
+ * @hdd_ctx: pointer to hdd context
+ * @oem_event_data: oem event data param buffe
+ *
+ * Return: none
+ */
+static void hdd_copy_file_name_and_oem_data(
+				struct hdd_context *hdd_ctx,
+				const struct oem_data *oem_event_data)
+{
+	if (!oem_event_data->data_len || !oem_event_data->file_name_len) {
+		hdd_err("Invalid file name or data length");
+		return;
+	}
+
+	if (hdd_ctx->oem_data || hdd_ctx->file_name) {
+		hdd_err("OEM data or file name already present");
+		return;
+	}
+
+	hdd_ctx->oem_data = qdf_mem_malloc(oem_event_data->data_len);
+	if (hdd_ctx->oem_data) {
+		hdd_ctx->oem_data_len = oem_event_data->data_len;
+		qdf_mem_copy(hdd_ctx->oem_data, oem_event_data->data,
+			     oem_event_data->data_len);
+		hdd_ctx->file_name = qdf_mem_malloc(
+					oem_event_data->file_name_len);
+		if (hdd_ctx->file_name)
+			qdf_mem_copy(hdd_ctx->file_name,
+				     oem_event_data->file_name,
+				     oem_event_data->file_name_len);
+		else
+			qdf_mem_free(hdd_ctx->oem_data);
+	}
+}
+
+/**
+ * hdd_create_wifi_feature_interface() - Create wifi feature interface
+ * @hdd_ctx: pointer to hdd context
+ *
+ * Return: none
+ */
+static void hdd_create_wifi_feature_interface(struct hdd_context *hdd_ctx)
+{
+	hdd_sysfs_create_wifi_root_obj(hdd_ctx);
+	hdd_create_wifi_feature_interface_sysfs_file();
+}
+
 void hdd_oem_event_async_cb(const struct oem_data *oem_event_data)
 {
 	struct sk_buff *vendor_event;
@@ -1142,9 +1193,13 @@ void hdd_oem_event_async_cb(const struct oem_data *oem_event_data)
 
 	hdd_enter();
 
-	ret = wlan_hdd_validate_context(hdd_ctx);
-	if (ret)
+	if (!hdd_ctx)
 		return;
+
+	if (oem_event_data->file_name) {
+		hdd_copy_file_name_and_oem_data(hdd_ctx, oem_event_data);
+		return hdd_create_wifi_feature_interface(hdd_ctx);
+	}
 
 	len = nla_total_size(oem_event_data->data_len) + NLMSG_HDRLEN;
 	vendor_event = cfg80211_vendor_event_alloc(
