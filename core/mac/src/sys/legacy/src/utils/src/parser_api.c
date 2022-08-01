@@ -8279,10 +8279,7 @@ QDF_STATUS lim_ieee80211_unpack_ehtcap(const uint8_t *eht_cap_ie,
 			idx++;
 		}
 
-		if ((dot11f_he_cap.chan_width_6 | dot11f_he_cap.chan_width_5 |
-		     dot11f_he_cap.chan_width_4 | dot11f_he_cap.chan_width_3 |
-		     dot11f_he_cap.chan_width_2 | dot11f_he_cap.chan_width_1 |
-		     dot11f_he_cap.chan_width_0) == 1) {
+		if (dot11f_he_cap.chan_width_2 == 1) {
 			dot11f_eht_cap->bw_160_rx_max_nss_for_mcs_0_to_9 =
 				ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
 					      EHTCAP_RX_MCS_NSS_MAP_IDX,
@@ -8697,10 +8694,7 @@ void lim_ieee80211_pack_ehtcap(uint8_t *ie, tDot11fIEeht_cap dot11f_eht_cap,
 			idx++;
 		}
 
-		if ((dot11f_he_cap.chan_width_6 | dot11f_he_cap.chan_width_5 |
-		     dot11f_he_cap.chan_width_4 | dot11f_he_cap.chan_width_3 |
-		     dot11f_he_cap.chan_width_2 | dot11f_he_cap.chan_width_1 |
-		     dot11f_he_cap.chan_width_0) == 1) {
+		if (dot11f_he_cap.chan_width_2 == 1) {
 			val = dot11f_eht_cap.bw_160_rx_max_nss_for_mcs_0_to_9;
 			ehtcap_ie_set(&ehtcap->mcs_nss_map_bytes[idx],
 				      EHTCAP_RX_MCS_NSS_MAP_IDX,
