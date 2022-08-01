@@ -3389,6 +3389,7 @@ QDF_STATUS policy_mgr_get_valid_chan_weights(struct wlan_objmgr_psoc *psoc,
 			info[MAX_NUMBER_OF_CONC_CONNECTIONS] = { {0} };
 	uint8_t num_del = 0;
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	bool strict_follow_pcl = false;
 
 	pm_ctx = policy_mgr_get_context(psoc);
 	if (!pm_ctx) {
@@ -3421,30 +3422,43 @@ QDF_STATUS policy_mgr_get_valid_chan_weights(struct wlan_objmgr_psoc *psoc,
 								   &num_del);
 		}
 		/*
+		 * For two port/three port connection strictly follow
+		 * PCL weight if coming intf is p2p GO/GC and existing
+		 * vdev is SAP/P2PGO/P2PGC.
+		 */
+		if ((mode == PM_P2P_GO_MODE || mode == PM_P2P_CLIENT_MODE) &&
+		    (policy_mgr_mode_specific_connection_count(
+						psoc, PM_SAP_MODE, NULL) ||
+		     policy_mgr_mode_specific_connection_count(
+						psoc, PM_P2P_GO_MODE, NULL) ||
+		     policy_mgr_mode_specific_connection_count(
+					psoc, PM_P2P_CLIENT_MODE, NULL)))
+			strict_follow_pcl = true;
+
+		/*
 		 * There is a small window between releasing the above lock
 		 * and acquiring the same in policy_mgr_allow_concurrency,
 		 * below!
 		 */
+
 		for (i = 0; i < weight->saved_num_chan; i++) {
-			if (policy_mgr_is_concurrency_allowed
+			/*
+			 * If channel is not allowed for concurrency, keep pcl
+			 * weight as 0 (WEIGHT_OF_DISALLOWED_CHANNELS)
+			 */
+			if (!policy_mgr_is_concurrency_allowed
 			    (psoc, mode, weight->saved_chan_list[i],
 			     HW_MODE_20_MHZ,
-			     policy_mgr_get_conc_ext_flags(vdev, false)) &&
-			     (policy_mgr_mode_specific_connection_count
-			      (psoc, PM_P2P_GO_MODE, NULL) ||
-			      (policy_mgr_mode_specific_connection_count
-			      (psoc, PM_P2P_CLIENT_MODE, NULL))) &&
-			      policy_mgr_go_scc_enforced(psoc))
-		/*
-		 * For two port/three port connection where if one p2p
-		 * connection is already present and force scc is enabled
-		 * then enforce Go negotiation channels to be strictly
-		 * based on PCL list.
-		 */
-				weight->weighed_valid_list[i] = 0;
-			else
-				weight->weighed_valid_list[i] =
-						WEIGHT_OF_NON_PCL_CHANNELS;
+			     policy_mgr_get_conc_ext_flags(vdev, false)))
+				continue;
+			/*
+			 * Keep weight 0 (WEIGHT_OF_DISALLOWED_CHANNELS) not
+			 * changed for scenarios which require to follow PCL.
+			 */
+			if (strict_follow_pcl)
+				continue;
+			weight->weighed_valid_list[i] =
+				WEIGHT_OF_NON_PCL_CHANNELS;
 		}
 		/* Restore the connection info */
 		if (mode == PM_STA_MODE)
