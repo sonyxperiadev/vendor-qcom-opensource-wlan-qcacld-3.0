@@ -413,6 +413,9 @@ endif
 ifeq ($(CONFIG_WLAN_DUMP_IN_PROGRESS), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_dump_in_progress.o
 endif
+ifeq ($(CONFIG_FEATURE_SET), y)
+HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_wifi_features.o
+endif
 ifeq ($(CONFIG_WLAN_BMISS), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_bmiss.o
 endif

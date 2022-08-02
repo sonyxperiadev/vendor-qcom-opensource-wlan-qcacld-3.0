@@ -85,6 +85,7 @@
 #include <wlan_hdd_sysfs_bmiss.h>
 #include <wlan_hdd_sysfs_get_freq_for_pwr.h>
 #include <wlan_hdd_sysfs_dp_tx_delay_stats.h>
+#include <wlan_hdd_sysfs_wifi_features.h>
 
 #define MAX_PSOC_ID_SIZE 10
 
@@ -880,6 +881,7 @@ void hdd_create_sysfs_files(struct hdd_context *hdd_ctx)
 	hdd_sysfs_mem_stats_create(wlan_kobject);
 	hdd_sysfs_create_wifi_root_obj(hdd_ctx);
 	if  (QDF_GLOBAL_MISSION_MODE == hdd_get_conparam()) {
+		hdd_sysfs_create_wifi_feature_interface(wifi_kobject);
 		hdd_sysfs_create_powerstats_interface();
 		hdd_sysfs_create_dump_in_progress_interface(wifi_kobject);
 		hdd_sysfs_fw_mode_config_create(driver_kobject);
@@ -922,6 +924,7 @@ void hdd_destroy_sysfs_files(void)
 		hdd_sysfs_fw_mode_config_destroy(driver_kobject);
 		hdd_sysfs_destroy_dump_in_progress_interface(wifi_kobject);
 		hdd_sysfs_destroy_powerstats_interface();
+		hdd_sysfs_destroy_wifi_feature_interface(wifi_kobject);
 	}
 	hdd_sysfs_destroy_wifi_root_obj();
 	hdd_sysfs_mem_stats_destroy(wlan_kobject);
