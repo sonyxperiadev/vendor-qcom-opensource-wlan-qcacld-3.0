@@ -1198,4 +1198,28 @@ uint32_t ucfg_dp_fw_data_stall_evt_enabled(void);
  */
 uint32_t ucfg_dp_get_bus_bw_high_threshold(struct wlan_objmgr_psoc *psoc);
 
+/**
+ * ucfg_dp_event_eapol_log() - send event to wlan diag
+ * @nbuf: Network buffer ptr
+ * @dir: direction
+ * @eapol_key_info: eapol key info
+ *
+ * Return: None
+ */
+void ucfg_dp_event_eapol_log(qdf_nbuf_t nbuf, enum qdf_proto_dir dir);
+
+/**
+ * ucfg_dp_softap_inspect_dhcp_packet() - Inspect DHCP packet
+ * @vdev: Vdev handle
+ * @nbuf: pointer to network buffer
+ * @dir: direction
+ *
+ * Inspect the Tx/Rx frame, and send DHCP START/STOP notification to the FW
+ * through WMI message, during DHCP based IP address acquisition phase.
+ *
+ * Return: error number
+ */
+QDF_STATUS
+ucfg_dp_softap_inspect_dhcp_packet(struct wlan_objmgr_vdev *vdev,
+				   qdf_nbuf_t nbuf, enum qdf_proto_dir dir);
 #endif /* _WLAN_DP_UCFG_API_H_ */

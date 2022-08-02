@@ -2132,3 +2132,22 @@ uint32_t ucfg_dp_fw_data_stall_evt_enabled(void)
 	return cdp_cfg_get(cds_get_context(QDF_MODULE_ID_SOC),
 			   cfg_dp_enable_data_stall) & FW_DATA_STALL_EVT_MASK;
 }
+
+void ucfg_dp_event_eapol_log(qdf_nbuf_t nbuf, enum qdf_proto_dir dir)
+{
+	dp_event_eapol_log(nbuf, dir);
+}
+
+QDF_STATUS
+ucfg_dp_softap_inspect_dhcp_packet(struct wlan_objmgr_vdev *vdev,
+				   qdf_nbuf_t nbuf, enum qdf_proto_dir dir)
+{
+	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("Unable to get DP interface");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	return dp_softap_inspect_dhcp_packet(dp_intf, nbuf, dir);
+}
