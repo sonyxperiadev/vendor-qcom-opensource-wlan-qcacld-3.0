@@ -398,6 +398,17 @@ static void lim_extract_eht_op(struct pe_session *session,
 void lim_update_eht_bw_cap_mcs(struct pe_session *session,
 			       tSirProbeRespBeacon *beacon)
 {
+	if (!session->eht_capable)
+		return;
+
+	if ((session->opmode == QDF_STA_MODE ||
+	     session->opmode == QDF_P2P_CLIENT_MODE) &&
+	    beacon && beacon->eht_cap.present) {
+		if (!beacon->eht_cap.support_320mhz_6ghz) {
+			pe_debug("Session 6G 320M unsupported");
+			session->eht_config.support_320mhz_6ghz = 0;
+		}
+	}
 }
 #else
 static void lim_extract_eht_op(struct pe_session *session,
