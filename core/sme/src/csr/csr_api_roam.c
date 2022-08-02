@@ -2549,9 +2549,12 @@ static void csr_get_peer_stats(struct mac_context *mac, uint32_t session_id,
 	mlme_obj = mlme_get_psoc_ext_obj(mac->psoc);
 	if (!mlme_obj) {
 		sme_err("NULL mlme psoc object");
-		csr_continue_peer_disconnect_after_get_stats(mac);
 		return;
 	}
+	/* Reset is_disconn_stats_completed before error handing. */
+	qdf_atomic_set(
+		&mlme_obj->disconnect_stats_param.is_disconn_stats_completed,
+		0);
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac->psoc, session_id,
 						    WLAN_LEGACY_SME_ID);
@@ -2577,9 +2580,6 @@ static void csr_get_peer_stats(struct mac_context *mac, uint32_t session_id,
 		return;
 	}
 
-	qdf_atomic_set(
-		&mlme_obj->disconnect_stats_param.is_disconn_stats_completed,
-		0);
 	qdf_mc_timer_start(
 		&mlme_obj->disconnect_stats_param.disconn_stats_timer,
 		SME_CMD_GET_DISCONNECT_STATS_TIMEOUT);
