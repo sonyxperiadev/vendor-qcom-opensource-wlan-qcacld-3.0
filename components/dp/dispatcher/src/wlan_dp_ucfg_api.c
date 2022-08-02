@@ -321,6 +321,7 @@ static QDF_STATUS
 ucfg_dp_suspend_handler(struct wlan_objmgr_psoc *psoc, void *arg)
 {
 	struct wlan_dp_psoc_context *dp_ctx;
+	struct wlan_dp_intf *dp_intf, *dp_intf_next = NULL;
 
 	dp_ctx = dp_psoc_get_priv(psoc);
 	if (!dp_ctx) {
@@ -328,7 +329,10 @@ ucfg_dp_suspend_handler(struct wlan_objmgr_psoc *psoc, void *arg)
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	dp_ctx->is_wiphy_suspended = true;
+	dp_ctx->is_suspend = true;
+	dp_for_each_intf_held_safe(dp_ctx, dp_intf, dp_intf_next) {
+		dp_intf->sap_tx_block_mask |= WLAN_DP_SUSPEND;
+	}
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -345,6 +349,7 @@ static QDF_STATUS
 ucfg_dp_resume_handler(struct wlan_objmgr_psoc *psoc, void *arg)
 {
 	struct wlan_dp_psoc_context *dp_ctx;
+	struct wlan_dp_intf *dp_intf, *dp_intf_next = NULL;
 
 	dp_ctx = dp_psoc_get_priv(psoc);
 	if (!dp_ctx) {
@@ -352,7 +357,10 @@ ucfg_dp_resume_handler(struct wlan_objmgr_psoc *psoc, void *arg)
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	dp_ctx->is_wiphy_suspended = false;
+	dp_ctx->is_suspend = false;
+	dp_for_each_intf_held_safe(dp_ctx, dp_intf, dp_intf_next) {
+		dp_intf->sap_tx_block_mask &= ~WLAN_DP_SUSPEND;
+	}
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -451,7 +459,6 @@ QDF_STATUS ucfg_dp_psoc_close(struct wlan_objmgr_psoc *psoc)
 void ucfg_dp_suspend_wlan(struct wlan_objmgr_psoc *psoc)
 {
 	struct wlan_dp_psoc_context *dp_ctx;
-	struct wlan_dp_intf *dp_intf, *dp_intf_next = NULL;
 
 	dp_ctx = dp_psoc_get_priv(psoc);
 	if (!dp_ctx) {
@@ -459,17 +466,12 @@ void ucfg_dp_suspend_wlan(struct wlan_objmgr_psoc *psoc)
 		return;
 	}
 
-	dp_ctx->wlan_suspended = true;
-
-	dp_for_each_intf_held_safe(dp_ctx, dp_intf, dp_intf_next) {
-		dp_intf->sap_tx_block_mask |= WLAN_DP_SUSPEND;
-	}
+	dp_ctx->is_wiphy_suspended = true;
 }
 
 void ucfg_dp_resume_wlan(struct wlan_objmgr_psoc *psoc)
 {
 	struct wlan_dp_psoc_context *dp_ctx;
-	struct wlan_dp_intf *dp_intf, *dp_intf_next = NULL;
 
 	dp_ctx = dp_psoc_get_priv(psoc);
 	if (!dp_ctx) {
@@ -477,11 +479,7 @@ void ucfg_dp_resume_wlan(struct wlan_objmgr_psoc *psoc)
 		return;
 	}
 
-	dp_ctx->wlan_suspended = false;
-
-	dp_for_each_intf_held_safe(dp_ctx, dp_intf, dp_intf_next) {
-		dp_intf->sap_tx_block_mask &= ~WLAN_DP_SUSPEND;
-	}
+	dp_ctx->is_wiphy_suspended = false;
 }
 
 void ucfg_dp_wait_complete_tasks(void)

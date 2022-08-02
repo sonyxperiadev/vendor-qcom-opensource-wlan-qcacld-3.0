@@ -1726,7 +1726,7 @@ static void __dp_bus_bw_work_handler(struct wlan_dp_psoc_context *dp_ctx)
 	if (wlan_dp_validate_context(dp_ctx))
 		goto stop_work;
 
-	if (dp_ctx->is_wiphy_suspended)
+	if (dp_ctx->is_suspend)
 		return;
 
 	bw_interval_us = dp_ctx->dp_cfg.bus_bw_compute_interval * 1000;

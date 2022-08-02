@@ -565,7 +565,7 @@ dp_start_xmit(struct wlan_dp_intf *dp_intf, qdf_nbuf_t nbuf)
 		goto drop_pkt;
 	}
 
-	if (qdf_unlikely(dp_ctx->wlan_suspended)) {
+	if (qdf_unlikely(dp_ctx->is_suspend)) {
 		dp_err_rl("Device is system suspended, drop pkt");
 		goto drop_pkt;
 	}
