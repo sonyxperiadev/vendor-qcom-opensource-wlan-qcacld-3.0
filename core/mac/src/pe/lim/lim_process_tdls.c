@@ -74,7 +74,7 @@
 #include "wlan_mlme_api.h"
 #include "wlan_tdls_public_structs.h"
 #include "wlan_cfg80211_tdls.h"
-
+#include "wlan_tdls_api.h"
 
 /* define NO_PAD_TDLS_MIN_8023_SIZE to NOT padding: See CR#447630
    There was IOT issue with cisco 1252 open mode, where it pads
@@ -3848,6 +3848,29 @@ void lim_update_tdls_set_state_for_fw(struct pe_session *session_entry,
 				      bool value)
 {
 	session_entry->tdls_send_set_state_disable  = value;
+}
+
+void lim_update_tdls_2g_bw(struct pe_session *session)
+{
+	struct wlan_objmgr_psoc *psoc = NULL;
+
+	/*
+	 * For 2.4 GHz band, if AP switches its BW from 40 MHz to 20 Mhz, it
+	 * changes its beacon respectivily with ch_width 20 Mhz without STA
+	 * disconnection.
+	 * This will result in TDLS remaining on 40 MHz and not follwoing APs BW
+	 * on 2.4 GHz.
+	 * Better Teardown the link here and with traffic going on between peers
+	 * the tdls connection will again be restablished with the new BW
+	 */
+	if (!wlan_reg_is_24ghz_ch_freq(session->curr_op_freq))
+		return;
+
+	psoc = wlan_vdev_get_psoc(session->vdev);
+	if (!psoc)
+		return;
+
+	wlan_tdls_teardown_links(psoc);
 }
 
 /**

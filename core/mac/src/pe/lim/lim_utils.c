@@ -4838,6 +4838,7 @@ bool lim_check_vht_op_mode_change(struct mac_context *mac,
 	qdf_mem_copy(tempParam.peer_mac, peerMac, sizeof(tSirMacAddr));
 
 	lim_send_mode_update(mac, &tempParam, pe_session);
+	lim_update_tdls_2g_bw(pe_session);
 
 	return true;
 }
