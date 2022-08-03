@@ -5556,7 +5556,8 @@ void lim_calculate_tpc(struct mac_context *mac,
 		if (mlme_obj->reg_tpc_obj.ap_constraint_power) {
 			local_constraint =
 				mlme_obj->reg_tpc_obj.ap_constraint_power;
-			reg_max = mlme_obj->reg_tpc_obj.reg_max[i];
+			pe_debug("local constraint: %d power constraint absolute %d",
+				 local_constraint, is_pwr_constraint_absolute);
 			if (is_pwr_constraint_absolute)
 				max_tx_power = QDF_MIN(reg_max,
 						       local_constraint);
