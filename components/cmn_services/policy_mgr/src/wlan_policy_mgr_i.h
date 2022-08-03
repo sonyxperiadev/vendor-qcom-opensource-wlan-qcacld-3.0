@@ -403,6 +403,9 @@ struct policy_mgr_psoc_priv_obj {
 	bool set_link_in_progress;
 	qdf_event_t set_link_update_done_evt;
 #endif
+#ifdef FEATURE_WLAN_CH_AVOID_EXT
+	uint32_t restriction_mask;
+#endif
 };
 
 /**
@@ -938,4 +941,36 @@ bool policy_mgr_2_freq_same_mac_in_sbs(struct policy_mgr_psoc_priv_obj *pm_ctx,
  */
 uint32_t policy_mgr_get_connection_for_vdev_id(struct wlan_objmgr_psoc *psoc,
 					       uint32_t vdev_id);
+
+#ifdef FEATURE_WLAN_CH_AVOID_EXT
+/**
+ * policy_mgr_set_freq_restriction_mask() - fill the restriction_mask
+ * in pm_ctx
+ *
+ * @pm_ctx: policy mgr psoc priv object
+ * @freq_list: avoid freq indication carries freq/mask/freq count
+ *
+ * Return: None
+ */
+void
+policy_mgr_set_freq_restriction_mask(struct policy_mgr_psoc_priv_obj *pm_ctx,
+				     struct ch_avoid_ind_type *freq_list);
+
+/**
+ * policy_mgr_get_freq_restriction_mask() - get restriction_mask from
+ * pm_ctx
+ *
+ * @pm_ctx: policy mgr psoc priv object
+ *
+ * Return: Restriction mask
+ */
+uint32_t
+policy_mgr_get_freq_restriction_mask(struct policy_mgr_psoc_priv_obj *pm_ctx);
+#else
+static inline void
+policy_mgr_set_freq_restriction_mask(struct policy_mgr_psoc_priv_obj *pm_ctx,
+				     struct ch_avoid_ind_type *freq_list)
+{
+}
+#endif
 #endif
