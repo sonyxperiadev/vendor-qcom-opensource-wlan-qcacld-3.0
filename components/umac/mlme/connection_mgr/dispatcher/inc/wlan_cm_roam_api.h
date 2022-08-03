@@ -575,6 +575,24 @@ static inline bool cm_is_open_mode(struct wlan_objmgr_vdev *vdev)
 	return wlan_vdev_is_open_mode(vdev);
 }
 
+#ifdef WLAN_FEATURE_SAE
+/**
+ * cm_is_auth_type_sae() - is vdev SAE auth type
+ * @vdev: pointer to vdev
+ *
+ * Return: true if vdev is SAE auth type
+ */
+static inline bool cm_is_auth_type_sae(struct wlan_objmgr_vdev *vdev)
+{
+	return wlan_vdev_is_sae_auth_type(vdev);
+}
+#else
+static inline bool cm_is_auth_type_sae(struct wlan_objmgr_vdev *vdev)
+{
+	return false;
+}
+#endif
+
 #ifdef FEATURE_WLAN_ESE
 bool
 cm_ese_open_present(struct wlan_objmgr_vdev *vdev,

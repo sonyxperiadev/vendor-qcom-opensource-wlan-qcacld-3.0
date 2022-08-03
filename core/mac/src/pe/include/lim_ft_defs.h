@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -32,7 +33,8 @@
    Preprocessor definitions and constants
    ------------------------------------------------------------------------*/
 /* Time to dwell on preauth channel during roaming, in milliseconds */
-#define LIM_FT_PREAUTH_SCAN_TIME 50
+#define LIM_FT_PREAUTH_ACTIVE_SCAN_TIME 50
+#define LIM_FT_PREAUTH_PASSIVE_SCAN_TIME 150
 
 /*--------------------------------------------------------------------------
    Type declarations

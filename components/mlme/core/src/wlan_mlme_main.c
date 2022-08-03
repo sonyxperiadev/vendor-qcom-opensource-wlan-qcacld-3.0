@@ -1447,6 +1447,21 @@ static bool is_sae_sap_enabled(struct wlan_objmgr_psoc *psoc)
 {
 	return cfg_get(psoc, CFG_IS_SAP_SAE_ENABLED);
 }
+
+bool wlan_vdev_is_sae_auth_type(struct wlan_objmgr_vdev *vdev)
+{
+	int32_t auth_mode;
+
+	auth_mode = wlan_crypto_get_param(vdev, WLAN_CRYPTO_PARAM_AUTH_MODE);
+
+	if (auth_mode == -1)
+		return false;
+
+	if (QDF_HAS_PARAM(auth_mode, WLAN_CRYPTO_AUTH_SAE))
+		return true;
+
+	return false;
+}
 #else
 static bool is_sae_sap_enabled(struct wlan_objmgr_psoc *psoc)
 {

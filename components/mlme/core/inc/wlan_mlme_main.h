@@ -1212,4 +1212,14 @@ wlan_mlme_is_pmk_set_deferred(struct wlan_objmgr_psoc *psoc,
 	return false;
 }
 #endif
+
+#ifdef WLAN_FEATURE_SAE
+/**
+ * wlan_vdev_is_sae_auth_type() - is vdev SAE auth type
+ * @vdev: pointer to vdev
+ *
+ * Return: true if vdev is SAE auth type
+ */
+bool wlan_vdev_is_sae_auth_type(struct wlan_objmgr_vdev *vdev);
+#endif /* WLAN_FEATURE_SAE */
 #endif

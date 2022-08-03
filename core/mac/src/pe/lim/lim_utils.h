@@ -2925,8 +2925,26 @@ lim_fill_oci_params(struct mac_context *mac, struct pe_session *session,
  * Return: None
  */
 void lim_process_sae_msg(struct mac_context *mac, struct sir_sae_msg *body);
+
+/**
+ * lim_trigger_auth_req_sae() - sends SAE auth request to sme
+ * @mac_ctx: Global MAC pointer
+ * @session: pointer to pe session
+ * @peer_bssid: bssid to do SAE auth
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS lim_trigger_auth_req_sae(struct mac_context *mac_ctx,
+				    struct pe_session *session,
+				    struct qdf_mac_addr *peer_bssid);
 #else
-static inline void lim_process_sae_msg(struct mac_context *mac, void *body);
+static inline void lim_process_sae_msg(struct mac_context *mac, void *body)
+{}
+
+static inline QDF_STATUS lim_trigger_auth_req_sae(
+					struct mac_context *mac_ctx,
+					struct pe_session *session,
+					struct qdf_mac_addr *peer_bssid)
 {}
 #endif
 

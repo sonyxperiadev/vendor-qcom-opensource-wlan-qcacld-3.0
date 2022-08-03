@@ -6386,6 +6386,7 @@ static void lim_tx_mgmt_frame(struct mac_context *mac_ctx, uint8_t vdev_id,
 	enum rateid min_rid = RATEID_DEFAULT;
 	enum QDF_OPMODE opmode;
 	uint16_t session_id;
+	uint16_t channel_freq = 0;
 
 	opmode = wlan_get_opmode_from_vdev_id(mac_ctx->pdev, vdev_id);
 	if (opmode != QDF_NAN_DISC_MODE) {
@@ -6407,13 +6408,26 @@ static void lim_tx_mgmt_frame(struct mac_context *mac_ctx, uint8_t vdev_id,
 	if (opmode != QDF_NAN_DISC_MODE) {
 		min_rid = lim_get_min_session_txrate(session);
 	}
+	if (fc->subType == SIR_MAC_MGMT_AUTH) {
+		tpSirFTPreAuthReq pre_auth_req;
+		uint16_t auth_algo = *(uint16_t *)(frame +
+						   sizeof(tSirMacMgmtHdr));
+
+		if ((auth_algo == eSIR_AUTH_TYPE_SAE) &&
+		    (session->ftPEContext.pFTPreAuthReq)) {
+			pre_auth_req = session->ftPEContext.pFTPreAuthReq;
+			channel_freq = pre_auth_req->pre_auth_channel_freq;
+		}
+		pe_debug("TX SAE pre-auth frame on freq %d", channel_freq);
+	}
 
 	qdf_status = wma_tx_frameWithTxComplete(mac_ctx, packet,
 					 (uint16_t)msg_len,
 					 TXRX_FRM_802_11_MGMT, ANI_TXDIR_TODS,
 					 7, lim_tx_complete, frame,
 					 lim_auth_tx_complete_cnf,
-					 0, vdev_id, false, 0, min_rid, 0);
+					 0, vdev_id, false, channel_freq,
+					 min_rid, 0);
 	MTRACE(qdf_trace(QDF_MODULE_ID_PE, TRACE_CODE_TX_COMPLETE,
 		session_id, qdf_status));
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
