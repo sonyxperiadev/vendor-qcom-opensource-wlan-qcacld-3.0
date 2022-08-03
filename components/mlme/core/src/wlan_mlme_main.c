@@ -2140,7 +2140,7 @@ static void mlme_init_lfr_cfg(struct wlan_objmgr_psoc *psoc,
 
 	if (val)
 		lfr->roam_scan_inactivity_time =
-			cfg_get(psoc, CFG_ROAM_SCAN_SECOND_TIMER) * 1000;
+			cfg_get(psoc, CFG_ROAM_SCAN_INACTIVE_TIMER) * 1000;
 	else
 		lfr->roam_scan_inactivity_time =
 			cfg_get(psoc, CFG_ROAM_SCAN_INACTIVITY_TIME);
@@ -2150,7 +2150,7 @@ static void mlme_init_lfr_cfg(struct wlan_objmgr_psoc *psoc,
 
 	if (val)
 		lfr->roam_scan_period_after_inactivity =
-			cfg_get(psoc, CFG_ROAM_SCAN_INACTIVE_TIMER) * 1000;
+			cfg_get(psoc, CFG_ROAM_SCAN_SECOND_TIMER) * 1000;
 
 	else
 		lfr->roam_scan_period_after_inactivity =
