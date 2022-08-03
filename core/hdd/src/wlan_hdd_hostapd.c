@@ -3565,6 +3565,8 @@ void wlan_hdd_set_sap_csa_reason(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 	sap_ctx = WLAN_HDD_GET_SAP_CTX_PTR(ap_adapter);
 	if (sap_ctx)
 		sap_ctx->csa_reason = reason;
+	hdd_nofl_debug("set csa reason %d %s vdev %d",
+		       reason, sap_get_csa_reason_str(reason), vdev_id);
 }
 
 QDF_STATUS wlan_hdd_get_channel_for_sap_restart(
@@ -5373,6 +5375,9 @@ hdd_handle_acs_2g_preferred_sap_conc(struct wlan_objmgr_psoc *psoc,
 	uint8_t vdev_id_list[MAX_NUMBER_OF_CONC_CONNECTIONS];
 	uint32_t freq_list[MAX_NUMBER_OF_CONC_CONNECTIONS];
 	uint8_t vdev_num;
+	uint8_t sta_vdev_id_list[MAX_NUMBER_OF_CONC_CONNECTIONS];
+	uint32_t sta_freq_list[MAX_NUMBER_OF_CONC_CONNECTIONS];
+	uint8_t sta_vdev_num;
 	struct hdd_hostapd_state *hostapd_state;
 	uint8_t go_vdev_id = WLAN_UMAC_VDEV_ID_MAX;
 	qdf_freq_t go_ch_freq = 0, go_new_ch_freq;
@@ -5395,7 +5400,7 @@ hdd_handle_acs_2g_preferred_sap_conc(struct wlan_objmgr_psoc *psoc,
 	vdev_num = policy_mgr_get_mode_specific_conn_info(
 			psoc, freq_list, vdev_id_list,
 			PM_P2P_GO_MODE);
-	if (!vdev_num)
+	if (!vdev_num || vdev_num > 1)
 		return;
 	for (i = 0; i < vdev_num; i++) {
 		if (WLAN_REG_IS_24GHZ_CH_FREQ(freq_list[i])) {
@@ -5406,6 +5411,13 @@ hdd_handle_acs_2g_preferred_sap_conc(struct wlan_objmgr_psoc *psoc,
 	}
 	if (!go_ch_freq)
 		return;
+	sta_vdev_num = policy_mgr_get_mode_specific_conn_info(
+			psoc, sta_freq_list, sta_vdev_id_list,
+			PM_STA_MODE);
+	for (i = 0; i < sta_vdev_num; i++)
+		if (go_ch_freq == sta_freq_list[i])
+			return;
+
 	go_new_ch_freq =
 		policy_mgr_get_alternate_channel_for_sap(psoc,
 							 go_vdev_id,
@@ -5435,6 +5447,108 @@ hdd_handle_acs_2g_preferred_sap_conc(struct wlan_objmgr_psoc *psoc,
 					       SME_CMD_START_BSS_TIMEOUT);
 	if (!QDF_IS_STATUS_SUCCESS(status))
 		hdd_err("wait for qdf_event failed!!");
+}
+
+/**
+ * hdd_handle_p2p_go_for_3rd_ap_conc() - Move P2P GO to other band if
+ * SAP starting
+ * @psoc: soc object
+ * @adapter: sap adapter
+ * @sap_ch_freq: sap channel frequency
+ *
+ * In GO+STA+SAP concurrency, if GO is MCC with STA, the new SAP
+ * will not be allowed in same MAC. FW doesn't support MCC in same
+ * MAC for 3 or more vdevs. Move GO to other band to avoid SAP
+ * starting failed.
+ *
+ * Return: true if GO is moved to other band successfully.
+ */
+static bool
+hdd_handle_p2p_go_for_3rd_ap_conc(struct wlan_objmgr_psoc *psoc,
+				  struct hdd_adapter *adapter,
+				  uint32_t sap_ch_freq)
+{
+	uint32_t i;
+	int ret;
+	QDF_STATUS status;
+	uint8_t go_vdev_id_list[MAX_NUMBER_OF_CONC_CONNECTIONS];
+	uint32_t go_freq_list[MAX_NUMBER_OF_CONC_CONNECTIONS];
+	uint8_t go_vdev_num;
+	uint8_t sta_vdev_id_list[MAX_NUMBER_OF_CONC_CONNECTIONS];
+	uint32_t sta_freq_list[MAX_NUMBER_OF_CONC_CONNECTIONS];
+	uint8_t sta_vdev_num;
+	struct hdd_hostapd_state *hostapd_state;
+	uint8_t go_vdev_id;
+	qdf_freq_t go_ch_freq, go_new_ch_freq;
+	struct hdd_adapter *go_adapter;
+
+	if (adapter->device_mode != QDF_SAP_MODE)
+		return false;
+	if (!policy_mgr_is_hw_dbs_capable(psoc))
+		return false;
+	go_vdev_num = policy_mgr_get_mode_specific_conn_info(
+			psoc, go_freq_list, go_vdev_id_list,
+			PM_P2P_GO_MODE);
+	if (!go_vdev_num || go_vdev_num > 1)
+		return false;
+
+	if (!policy_mgr_2_freq_always_on_same_mac(
+			psoc, go_freq_list[0], sap_ch_freq))
+		return false;
+
+	sta_vdev_num = policy_mgr_get_mode_specific_conn_info(
+			psoc, sta_freq_list, sta_vdev_id_list,
+			PM_STA_MODE);
+	if (!sta_vdev_num)
+		return false;
+	for (i = 0; i < sta_vdev_num; i++) {
+		if (go_freq_list[0] != sta_freq_list[i] &&
+		    policy_mgr_2_freq_always_on_same_mac(
+				psoc, go_freq_list[0], sta_freq_list[i]))
+			break;
+	}
+	if (i == sta_vdev_num)
+		return false;
+	go_ch_freq = go_freq_list[0];
+	go_vdev_id = go_vdev_id_list[0];
+	go_new_ch_freq =
+		policy_mgr_get_alternate_channel_for_sap(psoc,
+							 go_vdev_id,
+							 go_ch_freq,
+							 REG_BAND_UNKNOWN);
+	if (!go_new_ch_freq) {
+		hdd_debug("no alternate GO channel");
+		return false;
+	}
+	if (go_new_ch_freq != sta_freq_list[i] &&
+	    policy_mgr_3_freq_always_on_same_mac(
+			psoc, sap_ch_freq, go_new_ch_freq, sta_freq_list[i])) {
+		hdd_debug("no alternate GO channel to avoid 3vif MCC");
+		return false;
+	}
+
+	go_adapter = hdd_get_adapter_by_vdev(adapter->hdd_ctx, go_vdev_id);
+	if (hdd_validate_adapter(go_adapter))
+		return false;
+
+	wlan_hdd_set_sap_csa_reason(psoc, go_vdev_id,
+				    CSA_REASON_SAP_FIX_CH_CONC_WITH_GO);
+	hostapd_state = WLAN_HDD_GET_HOSTAP_STATE_PTR(go_adapter);
+	qdf_event_reset(&hostapd_state->qdf_event);
+
+	ret = hdd_softap_set_channel_change(go_adapter->dev, go_new_ch_freq,
+					    CH_WIDTH_80MHZ, false);
+	if (ret) {
+		hdd_err("CSA failed to %d, ret %d", go_new_ch_freq, ret);
+		return false;
+	}
+
+	status = qdf_wait_for_event_completion(&hostapd_state->qdf_event,
+					       SME_CMD_START_BSS_TIMEOUT);
+	if (!QDF_IS_STATUS_SUCCESS(status))
+		hdd_err("wait for qdf_event failed!!");
+
+	return true;
 }
 
 #ifdef DISABLE_CHANNEL_LIST
@@ -7045,6 +7159,9 @@ wlan_hdd_is_ap_ap_force_scc_override(struct hdd_adapter *adapter,
 		return false;
 	}
 	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_ID);
+
+	if (hdd_handle_p2p_go_for_3rd_ap_conc(hdd_ctx->psoc, adapter, freq))
+		return false;
 
 	cc_count = policy_mgr_get_mode_specific_conn_info(hdd_ctx->psoc,
 							  &op_freq[0],

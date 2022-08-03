@@ -1567,6 +1567,14 @@ wlansap_override_csa_strict_for_sap(mac_handle_t mac_handle,
 				    uint32_t target_chan_freq,
 				    bool strict);
 
+/**
+ * sap_get_csa_reason_str() - Get csa reason in string
+ * @reason: sap reason enum value
+ *
+ * Return: string reason
+ */
+const char *sap_get_csa_reason_str(enum sap_csa_reason_code reason);
+
 #ifdef FEATURE_RADAR_HISTORY
 /**
  * wlansap_query_radar_history() -  get radar history info
