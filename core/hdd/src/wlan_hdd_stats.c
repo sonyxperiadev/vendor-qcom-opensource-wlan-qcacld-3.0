@@ -5839,7 +5839,6 @@ bool hdd_report_max_rate(struct hdd_adapter *adapter,
 
 /**
  * hdd_report_actual_rate() - Fill the actual rate stats.
- *
  * @rate_flags: The rate flags computed from rate
  * @my_rate: The rate from fw stats
  * @rate: The station_info struct member strust rate_info to be filled
@@ -5941,6 +5940,97 @@ void hdd_check_and_update_nss(struct hdd_context *hdd_ctx,
 		(*rx_nss)--;
 	}
 }
+
+#ifdef FEATURE_RX_LINKSPEED_ROAM_TRIGGER
+static void
+wlan_hdd_refill_os_bw(struct rate_info *os_rate, enum rx_tlv_bw bw)
+{
+	if (bw == RX_TLV_BW_20MHZ)
+		os_rate->bw = RATE_INFO_BW_20;
+	else if (bw == RX_TLV_BW_40MHZ)
+		os_rate->bw = RATE_INFO_BW_40;
+	else if (bw == RX_TLV_BW_80MHZ)
+		os_rate->bw = RATE_INFO_BW_80;
+	else if (bw == RX_TLV_BW_160MHZ)
+		os_rate->bw = RATE_INFO_BW_160;
+	else
+		wlan_hdd_refill_os_eht_bw(os_rate, bw);
+}
+
+static void
+wlan_hdd_refill_os_rateflags(struct rate_info *os_rate, uint8_t preamble)
+{
+	if (preamble == DOT11_N)
+		os_rate->flags |= RATE_INFO_FLAGS_MCS;
+	else if (preamble == DOT11_AC)
+		os_rate->flags |= RATE_INFO_FLAGS_VHT_MCS;
+	else if (preamble == DOT11_AX)
+		os_rate->flags |= RATE_INFO_FLAGS_HE_MCS;
+	else
+		wlan_hdd_refill_os_eht_rateflags(os_rate, preamble);
+}
+
+/**
+ * wlan_hdd_refill_actual_rate() - Refill actual rates info stats
+ * @os_rate: rate info for os
+ * @adapter: The HDD adapter structure
+ *
+ * When rates info reported is provided by driver, this function
+ * will take effect to replace the bandwidth calculated from fw.
+ *
+ * Return: None
+ */
+static void
+wlan_hdd_refill_actual_rate(struct rate_info *os_rate,
+			    struct hdd_adapter *adapter)
+{
+	ol_txrx_soc_handle soc;
+	uint32_t rate;
+	enum txrate_gi guard_interval;
+	enum rx_tlv_bw bw;
+	uint8_t preamble, mcs_index, nss;
+
+	soc = cds_get_context(QDF_MODULE_ID_SOC);
+	rate = adapter->hdd_stats.class_a_stat.rx_rate;
+	guard_interval = adapter->hdd_stats.class_a_stat.rx_gi;
+	preamble = adapter->hdd_stats.class_a_stat.rx_preamble;
+	bw = adapter->hdd_stats.class_a_stat.rx_bw;
+	mcs_index = adapter->hdd_stats.class_a_stat.rx_mcs_index;
+	nss = adapter->hdd_stats.class_a_stat.rx_nss;
+
+	/*
+	 *  If througput is high, do not get rx rate
+	 *  info to avoid the performance penalty
+	 */
+	if (cdp_get_bus_lvl_high(soc))
+		return;
+
+	os_rate->nss = nss;
+	if (preamble == DOT11_A || preamble == DOT11_B) {
+		os_rate->legacy = rate;
+		hdd_debug("Reporting legacy rate %d", os_rate->legacy);
+		return;
+	}
+
+	wlan_hdd_refill_os_rateflags(os_rate, preamble);
+
+	os_rate->mcs = mcs_index;
+
+	wlan_hdd_refill_os_bw(os_rate, bw);
+	/* Fill out gi and dcm in HE mode */
+	os_rate->he_gi = hdd_map_he_gi_to_os(guard_interval);
+	os_rate->he_dcm = 0;
+
+	if (guard_interval == TXRATE_GI_0_4_US)
+		os_rate->flags |= RATE_INFO_FLAGS_SHORT_GI;
+}
+#else
+static inline void
+wlan_hdd_refill_actual_rate(struct rate_info *os_rate,
+			    struct hdd_adapter *adapter)
+{
+}
+#endif
 
 /**
  * wlan_hdd_get_sta_stats() - get aggregate STA stats
@@ -6157,6 +6247,8 @@ static int wlan_hdd_get_sta_stats(struct wiphy *wiphy,
 		hdd_report_actual_rate(rx_rate_flags, my_rx_rate,
 				       &sinfo->rxrate, rx_mcs_index,
 				       rx_nss, rx_dcm, rx_gi);
+
+		wlan_hdd_refill_actual_rate(&sinfo->rxrate, adapter);
 	}
 
 	wlan_hdd_fill_summary_stats(&adapter->hdd_stats.summary_stat,
@@ -7271,6 +7363,11 @@ void wlan_hdd_get_peer_rx_rate_stats(struct hdd_adapter *adapter)
 	QDF_STATUS status;
 	ol_txrx_soc_handle soc;
 	uint8_t *peer_mac_addr;
+	struct wlan_objmgr_psoc *psoc;
+
+	psoc = adapter->hdd_ctx->psoc;
+	if (!ucfg_mlme_stats_is_link_speed_report_actual(psoc))
+		return;
 
 	soc = cds_get_context(QDF_MODULE_ID_SOC);
 
@@ -7278,7 +7375,7 @@ void wlan_hdd_get_peer_rx_rate_stats(struct hdd_adapter *adapter)
 	 *  If througput is high, do not get rx rate
 	 *  info to avoid the performance penalty
 	 */
-	if (cdp_get_bus_lvl_high(soc) == true)
+	if (cdp_get_bus_lvl_high(soc))
 		return;
 
 	peer_stats = qdf_mem_malloc(sizeof(*peer_stats));
@@ -7297,7 +7394,19 @@ void wlan_hdd_get_peer_rx_rate_stats(struct hdd_adapter *adapter)
 		return;
 	}
 
-	adapter->hdd_stats.class_a_stat.rx_rate = peer_stats->rx.last_rx_rate;
+	/*
+	 * The linkspeed calculated by driver is in kbps so we
+	 * convert it in units of 100 kbps expected by userspace
+	 */
+	adapter->hdd_stats.class_a_stat.rx_rate =
+		peer_stats->rx.last_rx_rate / 100;
+	adapter->hdd_stats.class_a_stat.rx_mcs_index = peer_stats->rx.mcs_info;
+	adapter->hdd_stats.class_a_stat.rx_nss = peer_stats->rx.nss_info;
+	adapter->hdd_stats.class_a_stat.rx_gi = peer_stats->rx.gi_info;
+	adapter->hdd_stats.class_a_stat.rx_preamble =
+		peer_stats->rx.preamble_info;
+	adapter->hdd_stats.class_a_stat.rx_bw = peer_stats->rx.bw_info;
+
 	qdf_mem_free(peer_stats);
 }
 #endif

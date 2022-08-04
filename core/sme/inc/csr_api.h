@@ -663,6 +663,8 @@ typedef struct tagCsrSummaryStatsInfo {
 typedef struct tagCsrGlobalClassAStatsInfo {
 	uint8_t tx_nss;
 	uint8_t rx_nss;
+	uint8_t rx_preamble;
+	uint8_t rx_bw;
 	uint32_t max_pwr;
 	uint32_t tx_rate;
 	uint32_t rx_rate;

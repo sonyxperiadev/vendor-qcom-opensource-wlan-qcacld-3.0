@@ -174,4 +174,41 @@ void wlan_hdd_fill_os_eht_rateflags(struct rate_info *os_rate,
 {
 }
 #endif
+
+#if defined(WLAN_FEATURE_11BE) && defined(CFG80211_11BE_BASIC) && \
+	defined(FEATURE_RX_LINKSPEED_ROAM_TRIGGER)
+/**
+ * wlan_hdd_refill_os_eht_rateflags() - Refill EHT rate flag
+ * @os_rate: rate info for os
+ * @preamble: Use to acquire wlan mode, whether in EHT mode
+ *
+ * Fill out os ETH MCS rate flag according to preamble.
+ *
+ * Return: none
+ */
+void
+wlan_hdd_refill_os_eht_rateflags(struct rate_info *os_rate, uint8_t preamble);
+
+/**
+ * wlan_hdd_refill_os_eht_bw() - Refill EHT bandwidth
+ * @os_rate: rate info for os
+ * @bw: Bandwidth of the frame
+ *
+ * Fill out os ETH BW flag according to CMN BW from driver.
+ *
+ * Return: none
+ */
+void
+wlan_hdd_refill_os_eht_bw(struct rate_info *os_rate, enum rx_tlv_bw bw);
+#else
+static inline void
+wlan_hdd_refill_os_eht_rateflags(struct rate_info *os_rate, uint8_t preamble)
+{
+}
+
+static inline void
+wlan_hdd_refill_os_eht_bw(struct rate_info *os_rate, enum rx_tlv_bw bw)
+{
+}
+#endif
 #endif /* if !defined(WLAN_HDD_EHT_H)*/
