@@ -2829,6 +2829,18 @@ wlan_mlme_get_mgmt_max_retry(struct wlan_objmgr_psoc *psoc,
 			     uint8_t *max_retry);
 
 /**
+ * wlan_mlme_get_mgmt_6ghz_rate_support() - Get status of HE rates for
+ * 6GHz mgmt frames
+ * @psoc: pointer to psoc object
+ * @enable_he_mcs0_for_6ghz_mgmt: pointer to check for HE rates support
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+wlan_mlme_get_mgmt_6ghz_rate_support(struct wlan_objmgr_psoc *psoc,
+				     bool *enable_he_mcs0_for_6ghz_mgmt);
+
+/**
  * wlan_mlme_get_status_ring_buffer() - Get the
  * status of ring buffer
  * @psoc: pointer to psoc object

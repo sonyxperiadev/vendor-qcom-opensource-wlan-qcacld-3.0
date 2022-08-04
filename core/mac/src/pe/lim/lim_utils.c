@@ -9254,9 +9254,25 @@ enum rateid lim_get_min_session_txrate(struct pe_session *session)
 	enum rateid rid = RATEID_DEFAULT;
 	uint8_t min_rate = SIR_MAC_RATE_54, curr_rate, i;
 	tSirMacRateSet *rateset = &session->rateSet;
+	bool enable_he_mcs0_for_6ghz_mgmt = false;
+	qdf_freq_t op_freq;
 
 	if (!session)
 		return rid;
+	else {
+		op_freq = wlan_get_operation_chan_freq(session->vdev);
+		/*
+		 * For 6GHz freq and if enable_he_mcs0_for_mgmt_6ghz INI is
+		 * enabled then FW will use rate of MCS0 for 11AX and configured
+		 * via WMI_MGMT_TX_SEND_CMDID
+		 */
+		wlan_mlme_get_mgmt_6ghz_rate_support(
+				session->mac_ctx->psoc,
+				&enable_he_mcs0_for_6ghz_mgmt);
+		if (op_freq && wlan_reg_is_6ghz_chan_freq(op_freq) &&
+		    enable_he_mcs0_for_6ghz_mgmt)
+			return rid;
+	}
 
 	for (i = 0; i < rateset->numRates; i++) {
 		/* Ignore MSB - set to indicate basic rate */
