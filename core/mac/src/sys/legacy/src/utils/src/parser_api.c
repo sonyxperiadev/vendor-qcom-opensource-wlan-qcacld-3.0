@@ -8233,33 +8233,49 @@ QDF_STATUS lim_ieee80211_unpack_ehtcap(const uint8_t *eht_cap_ie,
 				ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
 					      EHTCAP_RX_MCS_NSS_MAP_IDX,
 					      EHTCAP_RX_MCS_NSS_MAP_BITS);
+			dot11f_eht_cap->bw_20_rx_max_nss_for_mcs_0_to_7 =
+			     dot11f_eht_cap->bw_le_80_rx_max_nss_for_mcs_0_to_9;
+			dot11f_eht_cap->bw_20_rx_max_nss_for_mcs_8_and_9 =
+			     dot11f_eht_cap->bw_le_80_rx_max_nss_for_mcs_0_to_9;
 
 			dot11f_eht_cap->bw_le_80_tx_max_nss_for_mcs_0_to_9 =
 				ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
 					      EHTCAP_TX_MCS_NSS_MAP_IDX,
 					      EHTCAP_TX_MCS_NSS_MAP_BITS);
+			dot11f_eht_cap->bw_20_tx_max_nss_for_mcs_0_to_7 =
+			     dot11f_eht_cap->bw_le_80_tx_max_nss_for_mcs_0_to_9;
+			dot11f_eht_cap->bw_20_tx_max_nss_for_mcs_8_and_9 =
+			     dot11f_eht_cap->bw_le_80_tx_max_nss_for_mcs_0_to_9;
 			idx++;
 
 			dot11f_eht_cap->bw_le_80_rx_max_nss_for_mcs_10_and_11 =
 				ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
 					      EHTCAP_RX_MCS_NSS_MAP_IDX,
 					      EHTCAP_RX_MCS_NSS_MAP_BITS);
+			dot11f_eht_cap->bw_20_rx_max_nss_for_mcs_10_and_11 =
+			  dot11f_eht_cap->bw_le_80_rx_max_nss_for_mcs_10_and_11;
 
 			dot11f_eht_cap->bw_le_80_tx_max_nss_for_mcs_10_and_11 =
 				ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
 					      EHTCAP_TX_MCS_NSS_MAP_IDX,
 					      EHTCAP_TX_MCS_NSS_MAP_BITS);
+			dot11f_eht_cap->bw_20_tx_max_nss_for_mcs_10_and_11 =
+			  dot11f_eht_cap->bw_le_80_tx_max_nss_for_mcs_10_and_11;
 			idx++;
 
 			dot11f_eht_cap->bw_le_80_rx_max_nss_for_mcs_12_and_13 =
 				ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
 					      EHTCAP_RX_MCS_NSS_MAP_IDX,
 					      EHTCAP_RX_MCS_NSS_MAP_BITS);
+			dot11f_eht_cap->bw_20_rx_max_nss_for_mcs_12_and_13 =
+			  dot11f_eht_cap->bw_le_80_rx_max_nss_for_mcs_12_and_13;
 
 			dot11f_eht_cap->bw_le_80_tx_max_nss_for_mcs_12_and_13 =
 				ehtcap_ie_get(ehtcap->mcs_nss_map_bytes[idx],
 					      EHTCAP_TX_MCS_NSS_MAP_IDX,
 					      EHTCAP_TX_MCS_NSS_MAP_BITS);
+			dot11f_eht_cap->bw_20_tx_max_nss_for_mcs_12_and_13 =
+			  dot11f_eht_cap->bw_le_80_tx_max_nss_for_mcs_12_and_13;
 			idx++;
 		}
 
