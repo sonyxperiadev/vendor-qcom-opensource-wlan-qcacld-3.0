@@ -4885,6 +4885,7 @@ cm_restore_default_roaming_params(struct wlan_mlme_psoc_ext_obj *mlme_obj,
 {
 	struct rso_config *rso_cfg;
 	struct rso_cfg_params *cfg_params;
+	uint32_t current_band = REG_BAND_MASK_ALL;
 
 	rso_cfg = wlan_cm_get_rso_config(vdev);
 	if (!rso_cfg)
@@ -4919,6 +4920,8 @@ cm_restore_default_roaming_params(struct wlan_mlme_psoc_ext_obj *mlme_obj,
 			mlme_obj->cfg.lfr.roam_inactive_data_packet_count;
 	cfg_params->roam_scan_period_after_inactivity =
 			mlme_obj->cfg.lfr.roam_scan_period_after_inactivity;
+	ucfg_reg_get_band(wlan_vdev_get_pdev(vdev), &current_band);
+	rso_cfg->roam_band_bitmask = current_band;
 }
 
 QDF_STATUS cm_roam_control_restore_default_config(struct wlan_objmgr_pdev *pdev,
