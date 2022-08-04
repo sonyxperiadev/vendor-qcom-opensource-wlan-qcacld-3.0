@@ -1075,14 +1075,51 @@ static void lim_tdls_fill_setup_cnf_he_op(struct mac_context *mac,
 						&tdls_setup_cnf->he_op);
 }
 
-static void lim_tdls_populate_he_wideband_mcs(struct mac_context *mac_ctx,
-					      tpDphHashNode stads,
-					      uint8_t nss)
+static void lim_tdls_fill_he_wideband_offchannel_mcs(struct mac_context *mac_ctx,
+						     tpDphHashNode stads,
+						     uint8_t nss,
+						     struct pe_session *session)
 {
 	struct supported_rates *rates = &stads->supportedRates;
 	tDot11fIEhe_cap *peer_he_caps = &stads->he_config;
+	struct tdls_vdev_priv_obj *tdls_obj = NULL;
+	struct tdls_peer *tdls_peer_candidate = NULL;
+	struct tdls_peer *curr_peer_candidate = NULL;
+	qdf_list_t *head;
+	qdf_list_node_t *p_node;
+	int i = 0;
+	QDF_STATUS status;
 
-	if (stads->ch_width == CH_WIDTH_160MHZ) {
+	tdls_obj = wlan_vdev_get_tdls_vdev_obj(session->vdev);
+	if (!tdls_obj) {
+		pe_debug("failed to ger tdls priv object");
+		return;
+	}
+
+	for (i = 0; i < WLAN_TDLS_PEER_LIST_SIZE; i++) {
+		head = &tdls_obj->peer_list[i];
+		status = qdf_list_peek_front(head, &p_node);
+		while (QDF_IS_STATUS_SUCCESS(status)) {
+			curr_peer_candidate = qdf_container_of(p_node,
+							       struct tdls_peer,
+							       node);
+			if (!qdf_mem_cmp(&curr_peer_candidate->peer_mac.bytes,
+					&stads->staAddr, QDF_MAC_ADDR_SIZE)) {
+				tdls_peer_candidate = curr_peer_candidate;
+				break;
+			}
+			status = qdf_list_peek_next(head, p_node, &p_node);
+		}
+	}
+
+	if (!tdls_peer_candidate) {
+		pe_debug("failed to ger tdls peer object");
+		return;
+	}
+
+	if (stads->ch_width == CH_WIDTH_160MHZ ||
+	    (tdls_peer_candidate->pref_off_chan_width &
+	     (1 << BW_160_OFFSET_BIT))) {
 		lim_populate_he_mcs_per_bw(
 			mac_ctx, &rates->rx_he_mcs_map_160,
 			&rates->tx_he_mcs_map_160,
@@ -1120,9 +1157,8 @@ static void lim_tdls_populate_he_matching_rate_set(struct mac_context *mac_ctx,
 {
 	lim_populate_he_mcs_set(mac_ctx, &stads->supportedRates,
 				&stads->he_config, session, nss);
-	/*mcs rates for less than 80 mhz bw */
-	if (stads->ch_width > session->ch_width)
-		lim_tdls_populate_he_wideband_mcs(mac_ctx, stads, nss);
+
+	lim_tdls_fill_he_wideband_offchannel_mcs(mac_ctx, stads, nss, session);
 }
 
 static QDF_STATUS
