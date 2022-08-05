@@ -1049,6 +1049,9 @@ QDF_STATUS mlme_update_tgt_eht_caps_in_cfg(struct wlan_objmgr_psoc *psoc,
 		mlme_eht_cap->bfee_ss_160mhz = 0;
 		mlme_eht_cap->bfee_ss_320mhz = 0;
 	}
+	mlme_obj->cfg.eht_caps.eht_cap_orig =
+		mlme_obj->cfg.eht_caps.dot11_eht_cap;
+
 	return QDF_STATUS_SUCCESS;
 }
 

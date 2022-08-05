@@ -10725,6 +10725,14 @@ void sme_update_tgt_eht_cap(mac_handle_t mac_handle,
 	qdf_mem_copy(&mac_ctx->eht_cap_5g,
 		     &cfg->eht_cap_5g,
 		     sizeof(tDot11fIEeht_cap));
+
+	qdf_mem_copy(&mac_ctx->eht_cap_2g_orig,
+		     &mac_ctx->eht_cap_2g,
+		     sizeof(tDot11fIEeht_cap));
+
+	qdf_mem_copy(&mac_ctx->eht_cap_5g_orig,
+		     &mac_ctx->eht_cap_5g,
+		     sizeof(tDot11fIEeht_cap));
 }
 
 void sme_update_eht_cap_nss(mac_handle_t mac_handle, uint8_t session_id,
@@ -10783,6 +10791,15 @@ void sme_update_tgt_he_cap(mac_handle_t mac_handle,
 	mac_ctx->he_cap_5g.tx_he_mcs_map_lt_80 = HE_INTERSECT_MCS(
 		mac_ctx->he_cap_5g.tx_he_mcs_map_lt_80,
 		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.tx_he_mcs_map_lt_80);
+
+	qdf_mem_copy(&mac_ctx->he_cap_2g_orig,
+		     &mac_ctx->he_cap_2g,
+		     sizeof(tDot11fIEhe_cap));
+
+	qdf_mem_copy(&mac_ctx->he_cap_5g_orig,
+		     &mac_ctx->he_cap_5g,
+		     sizeof(tDot11fIEhe_cap));
+
 }
 
 void sme_update_he_cap_nss(mac_handle_t mac_handle, uint8_t session_id,
@@ -14850,15 +14867,29 @@ void sme_set_he_testbed_def(mac_handle_t mac_handle, uint8_t vdev_id)
 	mac_ctx->mlme_cfg->he_caps.dot11_he_cap.he_er_su_ppdu = 0;
 	mac_ctx->mlme_cfg->he_caps.dot11_he_cap.dl_mu_mimo_part_bw = 0;
 	mac_ctx->mlme_cfg->he_caps.dot11_he_cap.rx_pream_puncturing = 0;
+	mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_0 = 0;
+	mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_1 = 1;
+	mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_2 = 0;
+	mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_3 = 0;
+	mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_4 = 0;
+	mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_5 = 0;
+	mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_6 = 0;
 	csr_update_session_he_cap(mac_ctx, session);
 
+	qdf_mem_copy(&mac_ctx->he_cap_2g,
+		     &mac_ctx->mlme_cfg->he_caps.dot11_he_cap,
+		     sizeof(tDot11fIEhe_cap));
+
+	mac_ctx->he_cap_2g.chan_width_1 = 0;
+	ucfg_mlme_set_channel_bonding_24ghz(mac_ctx->psoc, 0);
+	qdf_mem_copy(&mac_ctx->he_cap_5g,
+		     &mac_ctx->mlme_cfg->he_caps.dot11_he_cap,
+		     sizeof(tDot11fIEhe_cap));
 	status = ucfg_mlme_set_enable_bcast_probe_rsp(mac_ctx->psoc, false);
 	if (QDF_IS_STATUS_ERROR(status))
 		sme_err("Failed not set enable bcast probe resp info, %d",
 			status);
-
 	status = sme_send_unit_test_cmd(vdev_id, 77, 2, prevent_pm);
-
 	if (QDF_STATUS_SUCCESS != status)
 		sme_err("prevent pm cmd send failed");
 	status = wma_cli_set_command(vdev_id,
@@ -14890,6 +14921,13 @@ void sme_reset_he_caps(mac_handle_t mac_handle, uint8_t vdev_id)
 		mac_ctx->mlme_cfg->he_caps.he_cap_orig;
 	csr_update_session_he_cap(mac_ctx, session);
 
+	qdf_mem_copy(&mac_ctx->he_cap_2g,
+		     &mac_ctx->he_cap_2g_orig,
+		     sizeof(tDot11fIEhe_cap));
+	qdf_mem_copy(&mac_ctx->he_cap_5g,
+		     &mac_ctx->he_cap_5g_orig,
+		     sizeof(tDot11fIEhe_cap));
+	ucfg_mlme_set_channel_bonding_24ghz(mac_ctx->psoc, 1);
 	wlan_cm_set_check_6ghz_security(mac_ctx->psoc, true);
 	status = sme_send_unit_test_cmd(vdev_id, 77, 2, prevent_pm);
 
@@ -14920,13 +14958,111 @@ void sme_reset_he_caps(mac_handle_t mac_handle, uint8_t vdev_id)
 #ifdef WLAN_FEATURE_11BE
 void sme_set_eht_testbed_def(mac_handle_t mac_handle, uint8_t vdev_id)
 {
+	struct mac_context *mac_ctx = MAC_CONTEXT(mac_handle);
+	struct csr_roam_session *session;
+	tDot11fIEeht_cap *mlme_eht_cap;
+
+	session = CSR_GET_SESSION(mac_ctx, vdev_id);
+
+	if (!session) {
+		sme_err("No session for id %d", vdev_id);
+		return;
+	}
+	mlme_eht_cap = &mac_ctx->mlme_cfg->eht_caps.dot11_eht_cap;
+	sme_debug("set EHT caps testbed defaults");
+	mlme_eht_cap->restricted_twt = 0;
+	mlme_eht_cap->support_320mhz_6ghz = 0;
+	mlme_eht_cap->partial_bw_mu_mimo = 0;
+	mlme_eht_cap->su_beamformer = 0;
+	mlme_eht_cap->su_beamformee = 1;
+	mlme_eht_cap->bfee_ss_le_80mhz = 3;
+	mlme_eht_cap->bfee_ss_160mhz = 3;
+	mlme_eht_cap->bfee_ss_320mhz = 0;
+	mlme_eht_cap->num_sounding_dim_le_80mhz = 0;
+	mlme_eht_cap->num_sounding_dim_160mhz = 0;
+	mlme_eht_cap->num_sounding_dim_320mhz = 0;
+	mlme_eht_cap->mu_bformer_le_80mhz = 0;
+	mlme_eht_cap->mu_bformer_160mhz = 0;
+	mlme_eht_cap->mu_bformer_320mhz = 0;
+	mlme_eht_cap->partial_bw_dl_mu_mimo = 0;
+	mlme_eht_cap->ru_242tone_wt_20mhz = 0;
+	mlme_eht_cap->psr_based_sr = 0;
+	mlme_eht_cap->triggered_cqi_feedback = 0;
+	mlme_eht_cap->trig_mu_bforming_partial_bw_feedback = 0;
+	mlme_eht_cap->trig_su_bforming_feedback = 0;
+	mlme_eht_cap->cb_sz_7_5_su_feedback = 0;
+	mlme_eht_cap->cb_sz_4_2_su_feedback = 0;
+	mlme_eht_cap->ng_16_mu_feedback = 0;
+	mlme_eht_cap->ng_16_su_feedback = 0;
+	mlme_eht_cap->ndp_4x_eht_ltf_3dot2_us_gi = 0;
+	mlme_eht_cap->common_nominal_pkt_padding = 3;
+	mlme_eht_cap->ppet_present = 0;
+	mlme_eht_cap->rx_1024_4096_qam_lt_242_tone_ru = 0;
+	mlme_eht_cap->tx_1024_4096_qam_lt_242_tone_ru = 0;
+	mlme_eht_cap->non_trig_cqi_feedback = 0;
+	mlme_eht_cap->max_nc = 0;
+	mlme_eht_cap->rx_4k_qam_in_wider_bw_dl_ofdma = 0;
+	mlme_eht_cap->rx_1k_qam_in_wider_bw_dl_ofdma = 0;
+	mlme_eht_cap->tb_sounding_feedback_rl = 0;
+	mlme_eht_cap->non_ofdma_ul_mu_mimo_320mhz = 0;
+	mlme_eht_cap->non_ofdma_ul_mu_mimo_160mhz = 0;
+	mlme_eht_cap->non_ofdma_ul_mu_mimo_le_80mhz = 0;
+	mlme_eht_cap->op_sta_rx_ndp_wider_bw_20mhz = 0;
+	mlme_eht_cap->eht_dup_6ghz = 0;
+	mlme_eht_cap->mcs_15 = 0;
+	mlme_eht_cap->max_num_eht_ltf = 0;
+	mlme_eht_cap->eht_mu_ppdu_4x_ltf_0_8_us_gi = 0;
+	mlme_eht_cap->power_boost_factor = 0;
+	mlme_eht_cap->bw_20_rx_max_nss_for_mcs_0_to_7 = 1;
+	mlme_eht_cap->bw_20_tx_max_nss_for_mcs_0_to_7 = 1;
+	mlme_eht_cap->bw_20_rx_max_nss_for_mcs_8_and_9 = 1;
+	mlme_eht_cap->bw_20_tx_max_nss_for_mcs_8_and_9 = 1;
+	mlme_eht_cap->bw_20_rx_max_nss_for_mcs_10_and_11 = 0;
+	mlme_eht_cap->bw_20_tx_max_nss_for_mcs_10_and_11 = 0;
+	mlme_eht_cap->bw_20_rx_max_nss_for_mcs_12_and_13 = 0;
+	mlme_eht_cap->bw_20_tx_max_nss_for_mcs_12_and_13 = 0;
+	mlme_eht_cap->bw_le_80_rx_max_nss_for_mcs_0_to_9 = 1;
+	mlme_eht_cap->bw_le_80_tx_max_nss_for_mcs_0_to_9 = 1;
+	mlme_eht_cap->bw_le_80_rx_max_nss_for_mcs_10_and_11 = 0;
+	mlme_eht_cap->bw_le_80_tx_max_nss_for_mcs_10_and_11 = 0;
+	mlme_eht_cap->bw_le_80_rx_max_nss_for_mcs_12_and_13 = 0;
+	mlme_eht_cap->bw_le_80_tx_max_nss_for_mcs_12_and_13 = 0;
+	mlme_eht_cap->bw_160_rx_max_nss_for_mcs_0_to_9 = 0;
+	mlme_eht_cap->bw_160_tx_max_nss_for_mcs_0_to_9 = 0;
+	mlme_eht_cap->bw_160_rx_max_nss_for_mcs_10_and_11 = 0;
+	mlme_eht_cap->bw_160_tx_max_nss_for_mcs_10_and_11 = 0;
+	mlme_eht_cap->bw_160_rx_max_nss_for_mcs_12_and_13 = 0;
+	mlme_eht_cap->bw_160_tx_max_nss_for_mcs_12_and_13 = 0;
+	mlme_eht_cap->bw_320_rx_max_nss_for_mcs_0_to_9 = 0;
+	mlme_eht_cap->bw_320_tx_max_nss_for_mcs_0_to_9 = 0;
+	mlme_eht_cap->bw_320_rx_max_nss_for_mcs_10_and_11 = 0;
+	mlme_eht_cap->bw_320_tx_max_nss_for_mcs_10_and_11 = 0;
+	mlme_eht_cap->bw_320_rx_max_nss_for_mcs_12_and_13 = 0;
+	mlme_eht_cap->bw_320_tx_max_nss_for_mcs_12_and_13 = 0;
+
+	csr_update_session_eht_cap(mac_ctx, session);
+
+	qdf_mem_copy(&mac_ctx->eht_cap_2g, mlme_eht_cap,
+		     sizeof(tDot11fIEeht_cap));
+
+	mac_ctx->eht_cap_2g.bw_le_80_rx_max_nss_for_mcs_0_to_9 = 0;
+	mac_ctx->eht_cap_2g.bw_le_80_tx_max_nss_for_mcs_0_to_9 = 0;
+
+	qdf_mem_copy(&mac_ctx->eht_cap_5g, mlme_eht_cap,
+		     sizeof(tDot11fIEeht_cap));
+
+	mac_ctx->eht_cap_5g.bw_20_rx_max_nss_for_mcs_0_to_7 = 0;
+	mac_ctx->eht_cap_5g.bw_20_tx_max_nss_for_mcs_0_to_7 = 0;
+	mac_ctx->eht_cap_5g.bw_20_rx_max_nss_for_mcs_8_and_9 = 0;
+	mac_ctx->eht_cap_5g.bw_20_tx_max_nss_for_mcs_8_and_9 = 0;
+	mac_ctx->usr_eht_testbed_cfg = true;
+	mac_ctx->roam.configParam.channelBondingMode24GHz = 0;
 }
 
 void sme_reset_eht_caps(mac_handle_t mac_handle, uint8_t vdev_id)
 {
 	struct mac_context *mac_ctx = MAC_CONTEXT(mac_handle);
 	struct csr_roam_session *session;
-	QDF_STATUS status;
 
 	session = CSR_GET_SESSION(mac_ctx, vdev_id);
 
@@ -14936,22 +15072,18 @@ void sme_reset_eht_caps(mac_handle_t mac_handle, uint8_t vdev_id)
 	}
 	sme_debug("reset EHT caps");
 	mac_ctx->mlme_cfg->eht_caps.dot11_eht_cap =
-		mac_ctx->mlme_cfg->eht_caps.dot11_eht_cap;
+		mac_ctx->mlme_cfg->eht_caps.eht_cap_orig;
 	csr_update_session_eht_cap(mac_ctx, session);
 
-	wlan_cm_reset_check_6ghz_security(mac_ctx->psoc);
-	status = ucfg_mlme_set_enable_bcast_probe_rsp(mac_ctx->psoc, true);
-	if (QDF_IS_STATUS_ERROR(status))
-		sme_err("Failed not set enable bcast probe resp info, %d",
-			status);
+	qdf_mem_copy(&mac_ctx->eht_cap_2g,
+		     &mac_ctx->eht_cap_2g_orig,
+		     sizeof(tDot11fIEeht_cap));
 
-	status = wma_cli_set_command(vdev_id,
-				     WMI_VDEV_PARAM_ENABLE_BCAST_PROBE_RESPONSE,
-				     1, VDEV_CMD);
-	if (QDF_IS_STATUS_ERROR(status))
-		sme_err("Failed to set enable bcast probe resp in FW, %d",
-			status);
-	mac_ctx->is_usr_cfg_pmf_wep = PMF_CORRECT_KEY;
+	qdf_mem_copy(&mac_ctx->eht_cap_5g,
+		     &mac_ctx->eht_cap_5g_orig,
+		     sizeof(tDot11fIEeht_cap));
+	mac_ctx->usr_eht_testbed_cfg = false;
+	mac_ctx->roam.configParam.channelBondingMode24GHz = 1;
 }
 #endif
 
