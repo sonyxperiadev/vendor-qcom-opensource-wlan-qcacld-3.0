@@ -1416,8 +1416,8 @@
  * <ini>
  * gNeighborLookupThreshold/RoamRSSI_Trigger - Set neighbor lookup rssi
  * threshold
- * @Min: -100
- * @Max: 120
+ * @Min: 50
+ * @Max: 100
  * @Default: 78
  *
  * This is used to control the RSSI threshold for neighbor lookup.
@@ -1432,8 +1432,8 @@
  */
 #define CFG_LFR_NEIGHBOR_LOOKUP_RSSI_THRESHOLD CFG_INI_INT( \
 	"gNeighborLookupThreshold RoamRSSI_Trigger", \
-	-100, \
-	120, \
+	50, \
+	100, \
 	78, \
 	CFG_VALUE_OR_DEFAULT, \
 	"Neighbor lookup rssi threshold")
