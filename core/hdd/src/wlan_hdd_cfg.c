@@ -2126,6 +2126,9 @@ int hdd_update_channel_width(struct hdd_adapter *adapter,
 	sme_config->csr_config.channelBondingMode5GHz = bonding_mode;
 	sme_config->csr_config.channelBondingMode24GHz = bonding_mode;
 	sme_update_config(hdd_ctx->mac_handle, sme_config);
+	sme_set_he_bw_cap(hdd_ctx->mac_handle, adapter->vdev_id, chwidth);
+	sme_set_vdev_ies_per_band(hdd_ctx->mac_handle, adapter->vdev_id,
+				  adapter->device_mode);
 
 free_config:
 	qdf_mem_free(sme_config);

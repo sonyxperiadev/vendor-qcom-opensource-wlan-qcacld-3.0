@@ -14782,6 +14782,72 @@ void sme_set_bss_max_idle_period(mac_handle_t mac_handle, uint16_t cfg_val)
 }
 
 #ifdef WLAN_FEATURE_11AX
+void sme_set_he_bw_cap(mac_handle_t mac_handle, uint8_t vdev_id,
+		       enum eSirMacHTChannelWidth chwidth)
+{
+	struct mac_context *mac_ctx = MAC_CONTEXT(mac_handle);
+	struct csr_roam_session *session;
+
+	session = CSR_GET_SESSION(mac_ctx, vdev_id);
+	if (!session) {
+		sme_debug("No session for id %d", vdev_id);
+		return;
+	}
+	sme_debug("Config HE caps for BW %d", chwidth);
+	mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_0 = 0;
+	mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_1 = 0;
+	mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_2 = 0;
+	mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_3 = 0;
+	mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_4 = 0;
+	mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_5 = 0;
+	mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_6 = 0;
+
+	switch (chwidth) {
+	case eHT_CHANNEL_WIDTH_20MHZ:
+		qdf_mem_copy(&mac_ctx->he_cap_2g,
+			     &mac_ctx->mlme_cfg->he_caps.dot11_he_cap,
+			     sizeof(tDot11fIEhe_cap));
+		qdf_mem_copy(&mac_ctx->he_cap_5g,
+			     &mac_ctx->mlme_cfg->he_caps.dot11_he_cap,
+			     sizeof(tDot11fIEhe_cap));
+		break;
+	case eHT_CHANNEL_WIDTH_40MHZ:
+		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_0 = 1;
+		qdf_mem_copy(&mac_ctx->he_cap_2g,
+			     &mac_ctx->mlme_cfg->he_caps.dot11_he_cap,
+			     sizeof(tDot11fIEhe_cap));
+		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_0 = 0;
+		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_1 = 1;
+		qdf_mem_copy(&mac_ctx->he_cap_5g,
+			     &mac_ctx->mlme_cfg->he_caps.dot11_he_cap,
+			     sizeof(tDot11fIEhe_cap));
+		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_0 = 1;
+		break;
+	case eHT_CHANNEL_WIDTH_80MHZ:
+		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_1 = 1;
+		qdf_mem_copy(&mac_ctx->he_cap_5g,
+			     &mac_ctx->mlme_cfg->he_caps.dot11_he_cap,
+			     sizeof(tDot11fIEhe_cap));
+		break;
+	case eHT_CHANNEL_WIDTH_160MHZ:
+		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_1 = 1;
+		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_2 = 1;
+		*((uint16_t *)
+		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.rx_he_mcs_map_160) =
+		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.rx_he_mcs_map_lt_80;
+		*((uint16_t *)
+		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.tx_he_mcs_map_160) =
+		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.tx_he_mcs_map_lt_80;
+		qdf_mem_copy(&mac_ctx->he_cap_5g,
+			     &mac_ctx->mlme_cfg->he_caps.dot11_he_cap,
+			     sizeof(tDot11fIEhe_cap));
+		break;
+	default:
+		sme_debug("Config BW %d not handled", chwidth);
+	}
+	csr_update_session_he_cap(mac_ctx, session);
+}
+
 void sme_check_enable_ru_242_tx(mac_handle_t mac_handle, uint8_t vdev_id)
 {
 	struct mac_context *mac_ctx = MAC_CONTEXT(mac_handle);
