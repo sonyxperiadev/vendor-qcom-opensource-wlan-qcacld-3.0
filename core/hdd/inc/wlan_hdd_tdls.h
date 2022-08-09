@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -156,6 +157,47 @@ int hdd_set_tdls_offchannel(struct hdd_context *hdd_ctx,
 			    int offchannel);
 
 /**
+ * hdd_check_and_set_tdls_conn_params() - Gets conencted TDLS peer count.
+ * @adapter: Pointer to adapter
+ *
+ * This function return number of connected peer.
+ *
+ * Return: void
+ */
+uint16_t
+hdd_get_tdls_connected_peer_count(struct hdd_adapter *adapter);
+
+/**
+ * hdd_check_and_set_tdls_conn_params() - Sets and Overwrite netdev params if
+ *                               stations is conencted in 11A, 11B and 11G mode.
+ * @vdev: Pointer to vdev objmgr
+ *
+ * This function updates the netdev params such as enabling checksum/tso
+ * if the feature "disable checksum/tso for 11abg connections" is enabled via
+ * INI. if INI is enabled then 11abg sta link will be created by disabling
+ * checksum/tso which are needed to be enabled for better thorughput
+ * for TDLS connected in 11AX, 11AC, 11N mode
+ *
+ * Return: void
+ */
+void hdd_check_and_set_tdls_conn_params(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * hdd_check_and_set_tdls_disconn_params() - Overwrite netdev params if BSS
+ *                                           STA link is 11A, 11B and 11G mode
+ *                                           when TDLS is disconnected
+ * @vdev: Pointer to vdev objmgr
+ *
+ * During TDLS connection if STA-BSS link is in 11a, 11b, 11g mode, then
+ * legacy netdev features such as checksum/tso are enabled. This function will
+ * take care of disabling them during TDLS disconnection if the feature
+ * "disable checksum/tso for 11abg connections" is enabled via INI.
+ *
+ * Return: void
+ */
+void hdd_check_and_set_tdls_disconn_params(struct wlan_objmgr_vdev *vdev);
+
+/**
  * hdd_set_tdls_secoffchanneloffset() - set secondary tdls off-channel offset
  * @hdd_ctx:     Pointer to the HDD context
  * @adapter: Pointer to the HDD adapter
@@ -258,5 +300,20 @@ static inline void hdd_config_tdls_with_band_switch(struct hdd_context *hdd_ctx)
 {
 }
 
+static inline uint16_t
+hdd_get_tdls_connected_peer_count(struct hdd_adapter *adapter)
+{
+	return 0;
+}
+
+static inline void
+hdd_check_and_set_tdls_conn_params(struct wlan_objmgr_vdev *vdev)
+{
+}
+
+static inline void
+hdd_check_and_set_tdls_disconn_params(struct wlan_objmgr_vdev *vdev)
+{
+}
 #endif /* End of FEATURE_WLAN_TDLS */
 #endif /* __HDD_TDLS_H */

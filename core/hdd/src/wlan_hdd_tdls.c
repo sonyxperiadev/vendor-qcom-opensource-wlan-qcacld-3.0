@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -618,6 +619,113 @@ int wlan_hdd_cfg80211_tdls_mgmt(struct wiphy *wiphy,
 	osif_vdev_sync_op_stop(vdev_sync);
 
 	return errno;
+}
+
+static bool
+hdd_is_sta_legacy(struct hdd_adapter *adapter)
+{
+	struct hdd_station_ctx *sta_ctx;
+
+	sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
+	if (!sta_ctx)
+		return false;
+
+	if ((sta_ctx->conn_info.dot11mode == eCSR_CFG_DOT11_MODE_AUTO) ||
+	    (sta_ctx->conn_info.dot11mode == eCSR_CFG_DOT11_MODE_11N) ||
+	    (sta_ctx->conn_info.dot11mode == eCSR_CFG_DOT11_MODE_11AC) ||
+	    (sta_ctx->conn_info.dot11mode == eCSR_CFG_DOT11_MODE_11N_ONLY) ||
+	    (sta_ctx->conn_info.dot11mode == eCSR_CFG_DOT11_MODE_11AC_ONLY) ||
+	    (sta_ctx->conn_info.dot11mode == eCSR_CFG_DOT11_MODE_11AX) ||
+	    (sta_ctx->conn_info.dot11mode == eCSR_CFG_DOT11_MODE_11AX_ONLY))
+		return false;
+
+	return true;
+}
+
+uint16_t
+hdd_get_tdls_connected_peer_count(struct hdd_adapter *adapter)
+{
+	struct wlan_objmgr_vdev *vdev;
+	uint16_t peer_count;
+
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_TDLS_ID);
+
+	peer_count = ucfg_get_tdls_conn_peer_count(vdev);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_OSIF_TDLS_ID);
+
+	return peer_count;
+}
+
+void
+hdd_check_and_set_tdls_conn_params(struct wlan_objmgr_vdev *vdev)
+{
+	uint8_t vdev_id;
+	enum hdd_dot11_mode selfdot11mode;
+	struct hdd_adapter *adapter;
+	struct wlan_objmgr_psoc *psoc;
+	struct hdd_context *hdd_ctx;
+
+	psoc = wlan_vdev_get_psoc(vdev);
+	if (!psoc)
+		return;
+
+	vdev_id = wlan_vdev_get_id(vdev);
+	adapter = wlan_hdd_get_adapter_from_vdev(psoc, vdev_id);
+	if (!adapter)
+		return;
+
+	/*
+	 * Only need to set this if STA link is in legacy mode
+	 */
+	if (!hdd_is_sta_legacy(adapter))
+		return;
+
+	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	if (!hdd_ctx)
+		return;
+
+	selfdot11mode = hdd_ctx->config->dot11Mode;
+	/*
+	 * When STA connection is made in legacy mode (11a, 11b and 11g) and
+	 * selfdot11Mode is either 11ax, 11ac or 11n, TDLS connection can be
+	 * made upto supporting selfdot11mode. Since, TDLS shares same netdev
+	 * that of STA, checksum/TSO will be disabled during STA connection.
+	 * For better TDLS thorughput, enable checksum/TSO which were already
+	 * disabled during STA connection.
+	 */
+	if (selfdot11mode == eHDD_DOT11_MODE_AUTO ||
+	    selfdot11mode == eHDD_DOT11_MODE_11ax ||
+	    selfdot11mode == eHDD_DOT11_MODE_11ax_ONLY ||
+	    selfdot11mode == eHDD_DOT11_MODE_11ac_ONLY ||
+	    selfdot11mode == eHDD_DOT11_MODE_11ac ||
+	    selfdot11mode == eHDD_DOT11_MODE_11n ||
+	    selfdot11mode == eHDD_DOT11_MODE_11n_ONLY)
+		hdd_cm_netif_queue_enable(adapter);
+}
+
+void
+hdd_check_and_set_tdls_disconn_params(struct wlan_objmgr_vdev *vdev)
+{
+	struct hdd_adapter *adapter;
+	uint8_t vdev_id;
+	struct wlan_objmgr_psoc *psoc;
+
+	psoc = wlan_vdev_get_psoc(vdev);
+	if (!psoc)
+		return;
+
+	vdev_id = wlan_vdev_get_id(vdev);
+	adapter = wlan_hdd_get_adapter_from_vdev(psoc, vdev_id);
+	if (!adapter)
+		return;
+
+	/*
+	 * Only need to set this if STA link is in legacy mode
+	 */
+	if (!hdd_is_sta_legacy(adapter))
+		return;
+
+	hdd_cm_netif_queue_enable(adapter);
 }
 
 /**

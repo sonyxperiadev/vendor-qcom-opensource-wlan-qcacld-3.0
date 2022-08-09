@@ -40,9 +40,21 @@
 #include "nan_ucfg_api.h"
 #include "wlan_mlme_main.h"
 
-static uint16_t tdls_get_connected_peer(struct tdls_soc_priv_obj *soc_obj)
+static uint16_t tdls_get_connected_peer_count(struct tdls_soc_priv_obj *soc_obj)
 {
 	return soc_obj->connected_peer_count;
+}
+
+uint16_t tdls_get_connected_peer_count_from_vdev(struct wlan_objmgr_vdev *vdev)
+{
+	struct tdls_soc_priv_obj *soc_obj;
+
+	soc_obj = wlan_vdev_get_tdls_soc_obj(vdev);
+
+	if (!soc_obj)
+		return 0;
+
+	return tdls_get_connected_peer_count(soc_obj);
 }
 
 #ifdef WLAN_FEATURE_11AX
@@ -196,6 +208,10 @@ void tdls_decrement_peer_count(struct wlan_objmgr_vdev *vdev,
 
 	tdls_debug("Connected peer count %d", soc_obj->connected_peer_count);
 
+	/* Need to update osif params when last peer gets disconnected */
+	if (!soc_obj->connected_peer_count &&
+	    soc_obj->tdls_osif_update_cb.tdls_osif_disconn_update)
+		soc_obj->tdls_osif_update_cb.tdls_osif_disconn_update(vdev);
 	tdls_update_6g_power(vdev, soc_obj, false);
 }
 
@@ -637,7 +653,7 @@ static QDF_STATUS tdls_activate_add_peer(struct tdls_add_peer_request *req)
 	}
 
 	/* first to check if we reached to maximum supported TDLS peer. */
-	curr_tdls_peers = tdls_get_connected_peer(soc_obj);
+	curr_tdls_peers = tdls_get_connected_peer_count(soc_obj);
 	if (soc_obj->max_num_tdls_sta <= curr_tdls_peers) {
 		tdls_err(QDF_MAC_ADDR_FMT
 			 " Request declined. Current %d, Max allowed %d.",
@@ -1099,7 +1115,7 @@ tdls_activate_update_peer(struct tdls_update_peer_request *req)
 		goto setlink;
 	}
 
-	curr_tdls_peers = tdls_get_connected_peer(soc_obj);
+	curr_tdls_peers = tdls_get_connected_peer_count(soc_obj);
 	if (soc_obj->max_num_tdls_sta <= curr_tdls_peers) {
 		tdls_err(QDF_MAC_ADDR_FMT
 			 " Request declined. Current: %d, Max allowed: %d.",
@@ -1811,6 +1827,10 @@ QDF_STATUS tdls_process_enable_link(struct tdls_oper_request *req)
 
 	tdls_update_6g_power(vdev, soc_obj, true);
 	tdls_increment_peer_count(soc_obj);
+	/* Need to update osif params when first peer gets connected */
+	if (soc_obj->connected_peer_count == 1 &&
+	    soc_obj->tdls_osif_update_cb.tdls_osif_conn_update)
+		soc_obj->tdls_osif_update_cb.tdls_osif_conn_update(vdev);
 	feature = soc_obj->tdls_configs.tdls_feature_flags;
 
 	if (soc_obj->tdls_dp_vdev_update)

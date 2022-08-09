@@ -657,6 +657,18 @@ typedef QDF_STATUS (*tdls_vdev_init_cb)(struct wlan_objmgr_vdev *vdev);
 typedef void (*tdls_vdev_deinit_cb)(struct wlan_objmgr_vdev *vdev);
 
 /**
+ * tdls_osif_cb() - Callbacks for updating osif params.
+ * @tdls_osif_conn_update: Update osif params when TDLS peer is connected
+ * @tdls_osif_disconn_update: Update osif params when TDLS peer is disconnected
+ *
+ * These callbacks will be used for updating osif params.
+ */
+struct tdls_osif_cb {
+	void (*tdls_osif_conn_update)(struct wlan_objmgr_vdev *vdev);
+	void (*tdls_osif_disconn_update)(struct wlan_objmgr_vdev *vdev);
+};
+
+/**
  * struct tdls_start_params - tdls start params
  * @config: tdls user config
  * @tdls_send_mgmt_req: pass eWNI_SME_TDLS_SEND_MGMT_REQ value
@@ -672,6 +684,7 @@ typedef void (*tdls_vdev_deinit_cb)(struct wlan_objmgr_vdev *vdev);
  * @tdls_dp_vdev_update: update vdev flags in datapath
  * @tdls_osif_init_cb: callback to initialize the tdls priv
  * @tdls_osif_deinit_cb: callback to deinitialize the tdls priv
+ * @tdls_osif_cb: callback to update osif params
  */
 struct tdls_start_params {
 	struct tdls_user_config config;
@@ -692,6 +705,7 @@ struct tdls_start_params {
 	tdls_dp_vdev_update_flags_callback tdls_dp_vdev_update;
 	tdls_vdev_init_cb tdls_osif_init_cb;
 	tdls_vdev_deinit_cb tdls_osif_deinit_cb;
+	struct tdls_osif_cb tdls_osif_update_cb;
 };
 
 /**
