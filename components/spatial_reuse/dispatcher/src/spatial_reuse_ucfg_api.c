@@ -43,20 +43,22 @@ void ucfg_spatial_reuse_send_sr_config(struct wlan_objmgr_vdev *vdev,
 				       bool enable)
 {
 	uint8_t sr_ctrl = 0;
-	uint8_t non_srg_max_pd_offset = 0;
+	/* Disabled PD Threshold */
+	uint8_t non_srg_max_pd_offset = 0x80;
 
-	if (enable && (!wlan_vdev_mlme_get_he_spr_enabled(vdev))) {
+	/* SR feature itself is disabled by user */
+	if (!wlan_vdev_mlme_get_he_spr_enabled(vdev))
+		return;
+
+	if (enable) {
 		sr_ctrl = wlan_vdev_mlme_get_sr_ctrl(vdev);
 		non_srg_max_pd_offset = wlan_vdev_mlme_get_pd_offset(vdev);
-		if (sr_ctrl && non_srg_max_pd_offset) {
+		if (sr_ctrl && non_srg_max_pd_offset)
 			wlan_spatial_reuse_config_set(vdev, sr_ctrl,
 						      non_srg_max_pd_offset);
-			wlan_vdev_mlme_set_he_spr_enabled(vdev, true);
-		}
-	} else if (!enable && wlan_vdev_mlme_get_he_spr_enabled(vdev)) {
+	} else {
 		wlan_spatial_reuse_config_set(vdev, sr_ctrl,
 					      non_srg_max_pd_offset);
-		wlan_vdev_mlme_set_he_spr_enabled(vdev, false);
 	}
 }
 

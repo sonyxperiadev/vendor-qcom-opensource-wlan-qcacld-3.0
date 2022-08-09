@@ -2600,7 +2600,7 @@ SR_UCFG_INC := -I$(WLAN_ROOT)/components/spatial_reuse/dispatcher/inc
 SR_TGT_DIR  := $(WLAN_COMMON_ROOT)/target_if/spatial_reuse/src
 SR_TGT_INC  := -I$(WLAN_COMMON_INC)/target_if/spatial_reuse/inc/
 
-ifeq ($(CONFIG_WLAN_FEATURE_11AX), y)
+ifeq ($(CONFIG_WLAN_FEATURE_SR), y)
 WLAN_SR_OBJS := $(SR_UCFG_DIR)/spatial_reuse_ucfg_api.o \
 		 $(SR_UCFG_DIR)/spatial_reuse_api.o \
 		 $(SR_TGT_DIR)/target_if_spatial_reuse.o

@@ -464,7 +464,6 @@ hdd_cm_disconnect_complete_post_user_update(struct wlan_objmgr_vdev *vdev,
 	hdd_cm_set_default_wlm_mode(adapter);
 	__hdd_cm_disconnect_handler_post_user_update(adapter, vdev);
 	wlan_twt_concurrency_update(hdd_ctx);
-	hdd_update_he_obss_pd(adapter, NULL, false);
 	hdd_cm_reset_udp_qos_upgrade_config(adapter);
 
 	return QDF_STATUS_SUCCESS;

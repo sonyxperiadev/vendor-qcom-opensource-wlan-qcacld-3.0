@@ -645,25 +645,36 @@ QDF_STATUS wma_process_dhcp_ind(WMA_HANDLE handle,
 					    &peer_set_param_fp);
 }
 
-#if defined WLAN_FEATURE_11AX
+#ifdef WLAN_FEATURE_SR
 
-#define NON_SRG_PD_SR_DISALLOWED 0x02
-#define NON_SRG_OFFSET_PRESENT 0x04
-#define NON_SRG_SPR_ENABLE_POS 24
-#define NON_SRG_PARAM_VAL_DBM_UNIT 0x20
-#define NON_SRG_SPR_ENABLE 0x80
-
-QDF_STATUS wma_spr_update(tp_wma_handle wma,
-			  uint8_t vdev_id,
-			  bool enable)
+static void wma_sr_send_pd_threshold(tp_wma_handle wma,
+				     uint8_t vdev_id,
+				     uint32_t val)
 {
-	struct pdev_params pparam;
-	uint32_t val = 0;
+	struct vdev_set_params vparam;
 	wmi_unified_t wmi_handle = wma->wmi_handle;
+	bool sr_supported =
+		wmi_service_enabled(wmi_handle,
+				    wmi_service_srg_srp_spatial_reuse_support);
+
+	if (sr_supported) {
+		vparam.vdev_id = vdev_id;
+		vparam.param_id = WMI_VDEV_PARAM_SET_CMD_OBSS_PD_THRESHOLD;
+		vparam.param_value = val;
+		wmi_unified_vdev_set_param_send(wmi_handle, &vparam);
+	} else {
+		wma_debug("Target doesn't support SR operations");
+	}
+}
+
+QDF_STATUS wma_sr_update(tp_wma_handle wma, uint8_t vdev_id, bool enable)
+{
+	uint32_t val = 0;
 	uint8_t mac_id;
 	uint32_t conc_vdev_id;
 	struct wlan_objmgr_vdev *vdev;
 	uint8_t sr_ctrl, non_srg_pd_max_offset;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(wma->psoc, vdev_id,
 						    WLAN_LEGACY_WMA_ID);
@@ -671,9 +682,16 @@ QDF_STATUS wma_spr_update(tp_wma_handle wma,
 		wma_err("Can't get vdev by vdev_id:%d", vdev_id);
 		return QDF_STATUS_E_INVAL;
 	}
+	if (!wlan_vdev_mlme_get_he_spr_enabled(vdev)) {
+		wma_err("Spatial Reuse disabled");
+		status = QDF_STATUS_E_NOSUPPORT;
+		goto release_ref;
+	}
 
 	sr_ctrl = wlan_vdev_mlme_get_sr_ctrl(vdev);
 	non_srg_pd_max_offset = wlan_vdev_mlme_get_pd_offset(vdev);
+	wma_debug("SR Control: %x pd_max_offset: %x",
+		  sr_ctrl, non_srg_pd_max_offset);
 	if (!(sr_ctrl & NON_SRG_PD_SR_DISALLOWED) &&
 	    (sr_ctrl & NON_SRG_OFFSET_PRESENT)) {
 		policy_mgr_get_mac_id_by_session_id(wma->psoc,
@@ -683,36 +701,28 @@ QDF_STATUS wma_spr_update(tp_wma_handle wma,
 			policy_mgr_get_conc_vdev_on_same_mac(wma->psoc,
 							     vdev_id,
 							     mac_id);
-		if (conc_vdev_id != WLAN_INVALID_VDEV_ID) {
+		if (conc_vdev_id != WLAN_INVALID_VDEV_ID &&
+		    !policy_mgr_sr_same_mac_conc_enabled(wma->psoc)) {
 			wma_debug("Concurrent intf present,SR PD not enabled");
 			goto release_ref;
 		}
-		qdf_mem_zero(&pparam, sizeof(pparam));
-		pparam.param_id = WMI_PDEV_PARAM_SET_CMD_OBSS_PD_THRESHOLD;
 		if (enable) {
-			val = NON_SRG_SPR_ENABLE;
-			val |= NON_SRG_PARAM_VAL_DBM_UNIT;
-			val = val << NON_SRG_SPR_ENABLE_POS;
-			val |= non_srg_pd_max_offset;
-			wlan_vdev_mlme_set_he_spr_enabled(vdev, true);
-		} else {
-			wlan_vdev_mlme_set_he_spr_enabled(vdev, false);
+			val |= 1 << NON_SRG_SPR_ENABLE_POS;
+			val |= SR_PARAM_VAL_DBM_UNIT << SR_PARAM_VAL_DBM_POS;
+			val |= (uint8_t)((non_srg_pd_max_offset +
+						NON_SR_PD_THRESHOLD_MIN) <<
+						NON_SRG_MAX_PD_OFFSET_POS);
 		}
 
-		pparam.param_value = val;
-
-		wma_debug("non-srg param val: %u, enable: %d",
-			  pparam.param_value, enable);
-
-		wmi_unified_pdev_param_send(wmi_handle, &pparam,
-					    WMA_WILDCARD_PDEV_ID);
+		wma_debug("non-srg param val: %x, enable: %x", val, enable);
+		wma_sr_send_pd_threshold(wma, vdev_id, val);
 	} else {
-		wma_debug("Spatial reuse not enabled");
+		wma_debug("Spatial reuse is disabled in ctrl");
 	}
 
 release_ref:
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_WMA_ID);
-	return QDF_STATUS_SUCCESS;
+	return status;
 }
 #endif
 

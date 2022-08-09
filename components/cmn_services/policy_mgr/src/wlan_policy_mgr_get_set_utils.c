@@ -8839,3 +8839,28 @@ QDF_STATUS policy_mgr_get_sbs_cfg(struct wlan_objmgr_psoc *psoc, bool *sbs)
 
 	return QDF_STATUS_SUCCESS;
 }
+
+#ifdef WLAN_FEATURE_SR
+bool policy_mgr_sr_same_mac_conc_enabled(struct wlan_objmgr_psoc *psoc)
+{
+	struct wmi_unified *wmi_handle;
+	bool sr_conc_enabled;
+
+	if (!psoc) {
+		mlme_err("PSOC is NULL");
+		return false;
+	}
+
+	wmi_handle = get_wmi_unified_hdl_from_psoc(psoc);
+	if (!wmi_handle) {
+		mlme_err("wmi_handle is null");
+		return false;
+	}
+
+	sr_conc_enabled = policy_mgr_get_same_mac_conc_sr_status(psoc);
+
+	return (sr_conc_enabled &&
+		wmi_service_enabled(wmi_handle,
+				    wmi_service_obss_per_packet_sr_support));
+}
+#endif

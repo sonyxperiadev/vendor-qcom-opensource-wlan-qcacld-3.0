@@ -7167,6 +7167,7 @@ populate_dot11f_sr_info(struct mac_context *mac_ctx,
 	sr_info->srg_info_present = 0;
 	sr_info->non_srg_offset_present = 1;
 	sr_info->srg_info_present = 0;
+	sr_info->sr_value15_allow = (sr_ctrl & WLAN_HE_SIGA_SR_VAL15_ALLOWED);
 	sr_info->non_srg_offset.info.non_srg_pd_max_offset = non_srg_pd_offset;
 
 	return QDF_STATUS_SUCCESS;

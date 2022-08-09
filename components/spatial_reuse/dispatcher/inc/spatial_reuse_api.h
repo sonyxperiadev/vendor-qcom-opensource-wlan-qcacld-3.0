@@ -25,6 +25,7 @@
 #include <qdf_trace.h>
 #include <wlan_objmgr_vdev_obj.h>
 
+#ifdef WLAN_FEATURE_SR
 /**
  * wlan_spatial_reuse_config_set() - Set spatial reuse config
  * @vdev: objmgr manager vdev
@@ -36,6 +37,15 @@
 QDF_STATUS wlan_spatial_reuse_config_set(struct wlan_objmgr_vdev *vdev,
 					 uint8_t sr_ctrl,
 					 uint8_t non_srg_max_pd_offset);
+#else
+static inline
+QDF_STATUS wlan_spatial_reuse_config_set(struct wlan_objmgr_vdev *vdev,
+					 uint8_t sr_ctrl,
+					 uint8_t non_srg_max_pd_offset)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 
 /**
  * wlan_spatial_reuse_he_siga_val15_allowed_set() - Set spatial reuse config

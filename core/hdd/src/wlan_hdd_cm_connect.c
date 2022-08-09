@@ -724,7 +724,6 @@ hdd_cm_connect_failure_post_user_update(struct wlan_objmgr_vdev *vdev,
 				     WLAN_CONTROL_PATH);
 	ucfg_dp_periodic_sta_stats_start(vdev);
 	wlan_twt_concurrency_update(hdd_ctx);
-	hdd_update_he_obss_pd(adapter, NULL, false);
 }
 
 static void hdd_cm_connect_failure(struct wlan_objmgr_vdev *vdev,
@@ -1389,7 +1388,6 @@ hdd_cm_connect_success_post_user_update(struct wlan_objmgr_vdev *vdev,
 	}
 	ucfg_dp_periodic_sta_stats_start(vdev);
 	wlan_twt_concurrency_update(hdd_ctx);
-	hdd_update_he_obss_pd(adapter, NULL, true);
 }
 
 static void hdd_cm_connect_success(struct wlan_objmgr_vdev *vdev,

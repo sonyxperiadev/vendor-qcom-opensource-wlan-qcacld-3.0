@@ -2318,6 +2318,7 @@ lim_send_bss_color_change_ie_update(struct mac_context *mac_ctx,
 		 session->he_bss_color_change.countdown);
 }
 
+#ifdef WLAN_FEATURE_SR
 static void
 lim_update_spatial_reuse(struct pe_session *session)
 {
@@ -2329,7 +2330,7 @@ lim_update_spatial_reuse(struct pe_session *session)
 	sr_ctrl = wlan_vdev_mlme_get_sr_ctrl(session->vdev);
 	non_srg_pd_max_offset = wlan_vdev_mlme_get_pd_offset(session->vdev);
 	if (non_srg_pd_max_offset && sr_ctrl &&
-	    !wlan_vdev_mlme_get_he_spr_enabled(session->vdev)) {
+	    wlan_vdev_mlme_get_he_spr_enabled(session->vdev)) {
 		psoc = wlan_vdev_get_psoc(session->vdev);
 		policy_mgr_get_mac_id_by_session_id(psoc,
 						    vdev_id,
@@ -2337,17 +2338,18 @@ lim_update_spatial_reuse(struct pe_session *session)
 		conc_vdev_id = policy_mgr_get_conc_vdev_on_same_mac(psoc,
 								    vdev_id,
 								    mac_id);
-		if (conc_vdev_id == WLAN_INVALID_VDEV_ID) {
-		/*
-		 * Enable spatial reuse only if no concurrent
-		 * vdev running on same mac
-		 */
+		if (conc_vdev_id == WLAN_INVALID_VDEV_ID ||
+		    policy_mgr_sr_same_mac_conc_enabled(psoc))
 			wlan_spatial_reuse_config_set(session->vdev, sr_ctrl,
 						      non_srg_pd_max_offset);
-			wlan_vdev_mlme_set_he_spr_enabled(session->vdev, true);
-		}
 	}
 }
+#else
+static void
+lim_update_spatial_reuse(struct pe_session *session)
+{
+}
+#endif
 
 static void
 lim_handle_bss_color_change_ie(struct mac_context *mac_ctx,

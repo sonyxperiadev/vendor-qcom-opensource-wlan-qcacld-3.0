@@ -2091,7 +2091,6 @@ static void hdd_roam_channel_switch_handler(struct hdd_adapter *adapter,
 
 	policy_mgr_check_concurrent_intf_and_restart_sap(hdd_ctx->psoc);
 	wlan_twt_concurrency_update(hdd_ctx);
-	hdd_update_he_obss_pd(adapter, NULL, true);
 }
 
 #ifdef WLAN_FEATURE_HOST_ROAM

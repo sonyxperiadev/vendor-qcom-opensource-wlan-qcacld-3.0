@@ -4110,6 +4110,8 @@ QDF_STATUS wma_send_vdev_down_to_fw(t_wma_handle *wma, uint8_t vdev_id)
 	}
 
 	status = vdev_mgr_down_send(vdev_mlme);
+	if (QDF_IS_STATUS_SUCCESS(status))
+		wma_sr_update(wma, vdev_id, false);
 
 	return status;
 }
@@ -4434,6 +4436,7 @@ QDF_STATUS wma_sta_vdev_up_send(struct vdev_mlme_obj *vdev_mlme,
 		status = QDF_STATUS_E_FAILURE;
 	} else {
 		wma_set_vdev_mgmt_rate(wma, vdev_id);
+		wma_sr_update(wma, vdev_id, true);
 		if (iface->beacon_filter_enabled)
 			wma_add_beacon_filter(
 					wma,
