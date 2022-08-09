@@ -3621,6 +3621,10 @@ sir_convert_assoc_resp_frame2_mlo_struct(uint8_t *frame, uint32_t frame_len,
 					       ml_ie_total_len,
 					       &session_entry->ml_partner_info);
 
+			session_entry->ml_partner_info.num_partner_links =
+			QDF_MIN(
+			session_entry->ml_partner_info.num_partner_links,
+			session_entry->lim_join_req->partner_info.num_partner_links);
 			util_get_bvmlie_mldmacaddr(ml_ie, ml_ie_total_len,
 						   &mld_mac_addr);
 			qdf_mem_copy(ml_ie_info->mld_mac_addr,
