@@ -422,6 +422,14 @@ wlan_cm_mlo_update_disconnecting_vdev_id(struct wlan_objmgr_psoc *psoc,
 		goto done;
 	}
 
+	/*
+	 * During the link vdev disconnection the RSO stop vdev id will be of
+	 * assoc vdev (changed during cm_handle_mlo_rso_state_change), So try
+	 * to get the link vdev on which disconnect was actually happening i.e
+	 * the one with active disconnecting state from the mlo links, so that
+	 * continue disconnect is initiated on a proper vdev in connection
+	 * manager.
+	 */
 	mlo_get_ml_vdev_list(vdev, &num_links, vdev_list);
 	if (!num_links) {
 		mlme_err("No VDEVs under vdev id: %d", *vdev_id);
@@ -437,6 +445,7 @@ wlan_cm_mlo_update_disconnecting_vdev_id(struct wlan_objmgr_psoc *psoc,
 
 	for (i = 0; i < num_links; i++) {
 		if (wlan_vdev_mlme_is_mlo_link_vdev(vdev_list[i]) &&
+		    wlan_cm_is_vdev_disconnecting(vdev_list[i]) &&
 		    wlan_cm_get_active_req_type(vdev_list[i]) ==
 							CM_DISCONNECT_ACTIVE) {
 			/*
