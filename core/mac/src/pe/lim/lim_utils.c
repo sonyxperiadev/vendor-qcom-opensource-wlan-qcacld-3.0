@@ -8773,10 +8773,12 @@ void lim_set_eht_caps(struct mac_context *mac, struct pe_session *session,
 				dot11_cap.bw_20_tx_max_nss_for_mcs_12_and_13;
 			offset = ie_start[1] + 3;
 			qdf_mem_copy(&ie_start[offset],
-				     (((uint8_t *)&eht_mcs_cap) + offset),
+				     (((uint8_t *)&eht_mcs_cap) +
+				      EHT_CAP_FIXED_FIELDS),
 				     EHT_CAP_20M_MCS_MAP_LEN);
-
 			ie_start[1] += EHT_CAP_20M_MCS_MAP_LEN;
+
+			return;
 		}
 
 		if ((is_band_2g && dot11_he_cap.chan_width_0) ||
