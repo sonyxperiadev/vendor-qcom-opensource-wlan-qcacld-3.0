@@ -12384,7 +12384,7 @@ __wlan_hdd_cfg80211_set_wifi_test_config(struct wiphy *wiphy,
 					status);
 		} else {
 			hdd_update_channel_width(
-					adapter, eHT_CHANNEL_WIDTH_80MHZ,
+					adapter, eHT_CHANNEL_WIDTH_160MHZ,
 					WNI_CFG_CHANNEL_BONDING_MODE_ENABLE);
 			hdd_set_tx_stbc(adapter, 1);
 			hdd_set_11ax_rate(adapter, 0xFFFF, NULL);

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1231,6 +1231,8 @@ QDF_STATUS hdd_update_nss(struct hdd_adapter *adapter, uint8_t tx_nss,
 		}
 
 		hdd_update_nss_in_vdev(adapter, mac_handle, tx_nss, rx_nss);
+		sme_set_nss_capability(mac_handle, adapter->vdev_id, rx_nss,
+				       adapter->device_mode);
 
 		return QDF_STATUS_SUCCESS;
 	}
@@ -1339,7 +1341,8 @@ skip_ht_cap_update:
 		status = false;
 		hdd_err("Could not get MCS SET from CFG");
 	}
-	sme_update_he_cap_nss(mac_handle, adapter->vdev_id, rx_nss);
+	sme_set_nss_capability(mac_handle, adapter->vdev_id, rx_nss,
+			       adapter->device_mode);
 #undef WLAN_HDD_RX_MCS_ALL_NSTREAM_RATES
 
 	if (QDF_STATUS_SUCCESS != sme_update_nss(mac_handle, rx_nss))
