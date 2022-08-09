@@ -816,7 +816,8 @@ void lim_extract_ap_capability(struct mac_context *mac_ctx, uint8_t *p_ie,
 	lim_check_peer_ldpc_and_update(session, beacon_struct);
 	lim_extract_he_op(session, beacon_struct);
 	lim_extract_eht_op(session, beacon_struct);
-	lim_update_he_bw_cap_mcs(session, beacon_struct);
+	if (!mac_ctx->usr_eht_testbed_cfg)
+		lim_update_he_bw_cap_mcs(session, beacon_struct);
 	lim_update_eht_bw_cap_mcs(session, beacon_struct);
 	/* Extract the UAPSD flag from WMM Parameter element */
 	if (beacon_struct->wmeEdcaPresent)
