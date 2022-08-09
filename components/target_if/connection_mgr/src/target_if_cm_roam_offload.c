@@ -1256,6 +1256,12 @@ target_if_stop_rso_stop_timer(struct roam_offload_roam_event *roam_event)
 		return QDF_STATUS_E_INVAL;
 	}
 
+	if (!qdf_atomic_test_bit(RSO_STOP_RESPONSE_BIT,
+				 &vdev_rsp->rsp_status)) {
+		roam_event->rso_timer_stopped = true;
+		return QDF_STATUS_SUCCESS;
+	}
+
 	if ((roam_event->reason == ROAM_REASON_RSO_STATUS &&
 	     (roam_event->notif == CM_ROAM_NOTIF_SCAN_MODE_SUCCESS ||
 	      roam_event->notif == CM_ROAM_NOTIF_SCAN_MODE_FAIL)) ||
