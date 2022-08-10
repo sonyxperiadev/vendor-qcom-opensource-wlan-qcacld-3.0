@@ -2602,6 +2602,52 @@ static void sme_link_lost_ind(struct mac_context *mac,
 		mac->sme.lost_link_info_cb(mac->hdd_handle, ind);
 }
 
+#ifdef WLAN_FEATURE_SAP_ACS_OPTIMIZE
+static void sme_indicate_chan_info_event(struct mac_context *mac,
+					 struct channel_status *chan_stats,
+					 uint8_t vdev_id)
+{
+	struct csr_roam_info *roam_info;
+	struct wlan_objmgr_vdev *vdev;
+	eRoamCmdStatus roam_status;
+	eCsrRoamResult roam_result;
+	enum QDF_OPMODE mode;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac->psoc, vdev_id,
+						    WLAN_LEGACY_SME_ID);
+	if (!vdev) {
+		sme_err("vdev not found for vdev %d", vdev_id);
+		return;
+	}
+
+	mode = wlan_vdev_mlme_get_opmode(vdev);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
+
+	if (mode != QDF_SAP_MODE)
+		return;
+
+	roam_info = qdf_mem_malloc(sizeof(*roam_info));
+	if (!roam_info)
+		return;
+
+	roam_info->chan_info_freq = chan_stats->channel_freq;
+	roam_status = eCSR_ROAM_CHANNEL_INFO_EVENT_IND;
+	roam_result = eCSR_ROAM_RESULT_NONE;
+
+	/* Indicate channel info event to SAP */
+	csr_roam_call_callback(mac, vdev_id, roam_info,
+			       roam_status, roam_result);
+
+	qdf_mem_free(roam_info);
+}
+#else
+static void sme_indicate_chan_info_event(struct mac_context *mac,
+					 struct channel_status *chan_stats,
+					 uint8_t vdev_id)
+{
+}
+#endif
+
 static void sme_process_chan_info_event(struct mac_context *mac,
 					struct channel_status *chan_stats,
 					uint8_t vdev_id)
@@ -2613,6 +2659,8 @@ static void sme_process_chan_info_event(struct mac_context *mac,
 
 	if (mac->sap.acs_with_more_param || sap_is_acs_scan_optimize_enable())
 		wlan_cp_stats_update_chan_info(mac->psoc, chan_stats, vdev_id);
+
+	sme_indicate_chan_info_event(mac, chan_stats, vdev_id);
 }
 
 QDF_STATUS sme_process_msg(struct mac_context *mac, struct scheduler_msg *pMsg)

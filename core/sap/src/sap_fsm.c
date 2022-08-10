@@ -1204,6 +1204,23 @@ validation_done:
 }
 
 #ifdef WLAN_FEATURE_SAP_ACS_OPTIMIZE
+
+static void sap_sort_freq_list(struct chan_list *list,
+			       uint8_t num_ch)
+{
+	int i, j, temp;
+
+	for (i = 0; i < num_ch - 1; i++) {
+		for (j = 0 ; j < num_ch - i - 1; j++) {
+			if (list->chan[j].freq < list->chan[j + 1].freq) {
+				temp = list->chan[j].freq;
+				list->chan[j].freq = list->chan[j + 1].freq;
+				list->chan[j + 1].freq = temp;
+			}
+		}
+	}
+}
+
 /**
  * sap_acs_scan_freq_list_optimize - optimize the ACS scan freq list based
  * on when last scan was performed on particular frequency. If last scan
@@ -1247,6 +1264,8 @@ static void sap_acs_scan_freq_list_optimize(struct sap_context *sap_ctx,
 	}
 	if (*ch_count == 0)
 		sap_info("All ACS freq channels are scanned recently, skip ACS scan\n");
+	else
+		sap_sort_freq_list(list, *ch_count);
 }
 #else
 static void sap_acs_scan_freq_list_optimize(struct sap_context *sap_ctx,
@@ -1363,6 +1382,7 @@ QDF_STATUS sap_channel_sel(struct sap_context *sap_context)
 		req->scan_req.chan_list.num_chan = j;
 		sap_context->freq_list = freq_list;
 		sap_context->num_of_channel = num_of_channels;
+		sap_context->optimize_acs_chan_selected = false;
 		/* Set requestType to Full scan */
 
 		/*

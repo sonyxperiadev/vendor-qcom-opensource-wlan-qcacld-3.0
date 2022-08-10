@@ -67,6 +67,7 @@ const char *get_e_roam_cmd_status_str(eRoamCmdStatus val)
 		CASE_RETURN_STR(eCSR_ROAM_NDP_STATUS_UPDATE);
 		CASE_RETURN_STR(eCSR_ROAM_CHANNEL_COMPLETE_IND);
 		CASE_RETURN_STR(eCSR_ROAM_SAE_COMPUTE);
+		CASE_RETURN_STR(eCSR_ROAM_CHANNEL_INFO_EVENT_IND);
 	default:
 		return "unknown";
 	}

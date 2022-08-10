@@ -243,6 +243,7 @@ struct sap_context {
 #endif
 	bool require_h2e;
 	bool partial_acs_scan;
+	bool optimize_acs_chan_selected;
 };
 
 /*----------------------------------------------------------------------------

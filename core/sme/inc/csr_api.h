@@ -286,6 +286,7 @@ typedef enum {
 	eCSR_ROAM_CHANNEL_COMPLETE_IND = 47,
 	eCSR_ROAM_CAC_COMPLETE_IND = 48,
 	eCSR_ROAM_SAE_COMPUTE = 49,
+	eCSR_ROAM_CHANNEL_INFO_EVENT_IND = 50,
 } eRoamCmdStatus;
 
 /* comment inside indicates what roaming callback gets */
@@ -593,6 +594,9 @@ struct csr_roam_info {
 #endif
 	struct assoc_ind *owe_pending_assoc_ind;
 	struct qdf_mac_addr peer_mld;
+#ifdef WLAN_FEATURE_SAP_ACS_OPTIMIZE
+	uint32_t chan_info_freq;
+#endif
 };
 
 typedef struct sSirSmeAssocIndToUpperLayerCnf {

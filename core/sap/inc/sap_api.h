@@ -1825,10 +1825,19 @@ static inline bool sap_is_acs_scan_optimize_enable(void)
 {
 	return true;
 }
+
+void wlansap_process_chan_info_event(struct sap_context *sap_ctx,
+				     struct csr_roam_info *roam_info);
 #else
 static inline bool sap_is_acs_scan_optimize_enable(void)
 {
 	return false;
+}
+
+static inline
+void wlansap_process_chan_info_event(struct sap_context *sap_ctx,
+				     struct csr_roam_info *roam_info)
+{
 }
 #endif
 

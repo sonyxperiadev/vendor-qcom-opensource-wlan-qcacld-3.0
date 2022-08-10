@@ -7855,3 +7855,31 @@ bool hdd_is_peer_associated(struct hdd_adapter *adapter,
 
 	return is_associated;
 }
+
+#ifdef WLAN_FEATURE_SAP_ACS_OPTIMIZE
+bool hdd_sap_is_acs_in_progress(struct wlan_objmgr_vdev *vdev)
+{
+	struct hdd_adapter *adapter;
+	bool in_progress = false;
+
+	if (!vdev) {
+		hdd_err("vdev is NULL");
+		return in_progress;
+	}
+
+	adapter = wlan_hdd_get_adapter_from_objmgr(vdev);
+	if (!adapter) {
+		hdd_err("null adapter");
+		return in_progress;
+	}
+
+	if (!hdd_adapter_is_ap(adapter)) {
+		hdd_err("vdev id %d is not AP", adapter->vdev_id);
+		return in_progress;
+	}
+
+	in_progress = qdf_atomic_read(&adapter->session.ap.acs_in_progress);
+
+	return in_progress;
+}
+#endif
