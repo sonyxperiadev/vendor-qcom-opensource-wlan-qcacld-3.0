@@ -10509,6 +10509,16 @@ static inline void wlan_hdd_send_mscs_action_frame(hdd_cb_handle context,
 }
 #endif
 
+#if defined(WLAN_FEATURE_ROAM_OFFLOAD) && \
+defined(FEATURE_RX_LINKSPEED_ROAM_TRIGGER)
+void wlan_hdd_link_speed_update(struct wlan_objmgr_psoc *psoc,
+				uint8_t vdev_id,
+				bool is_link_speed_good)
+{
+	ucfg_cm_roam_link_speed_update(psoc, vdev_id, is_link_speed_good);
+}
+#endif
+
 /**
  * hdd_dp_register_callbacks() - Register DP callbacks with HDD
  * @hdd_ctx: HDD context
@@ -10551,6 +10561,7 @@ static void hdd_dp_register_callbacks(struct hdd_context *hdd_ctx)
 	cb_obj.dp_get_tsf_time = hdd_get_tsf_time_cb;
 	cb_obj.dp_tsf_timestamp_rx = hdd_tsf_timestamp_rx;
 	cb_obj.dp_gro_rx_legacy_get_napi = hdd_legacy_gro_get_napi;
+	cb_obj.link_monitoring_cb = wlan_hdd_link_speed_update;
 
 	os_if_dp_register_hdd_callbacks(hdd_ctx->psoc, &cb_obj);
 }

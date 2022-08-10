@@ -5006,6 +5006,7 @@ roam_control_policy[QCA_ATTR_ROAM_CONTROL_MAX + 1] = {
 	[QCA_ATTR_ROAM_CONTROL_USER_REASON] = {.type = NLA_U32},
 	[QCA_ATTR_ROAM_CONTROL_SCAN_SCHEME_TRIGGERS] = {.type = NLA_U32},
 	[QCA_ATTR_ROAM_CONTROL_BAND_MASK] = {.type = NLA_U32},
+	[QCA_ATTR_ROAM_CONTROL_RX_LINKSPEED_THRESHOLD] = {.type = NLA_U16},
 };
 
 /**
@@ -5398,6 +5399,44 @@ hdd_send_roam_scan_period_to_sme(struct hdd_context *hdd_ctx,
 	return status;
 }
 
+#if defined(WLAN_FEATURE_ROAM_OFFLOAD) && \
+defined(FEATURE_RX_LINKSPEED_ROAM_TRIGGER)
+/**
+ * hdd_set_roam_rx_linkspeed_threshold() - Set rx link speed threshold
+ * @psoc: Pointer to psoc
+ * @vdev_id: vdev id
+ *
+ * Return: none
+ */
+static QDF_STATUS
+hdd_set_roam_rx_linkspeed_threshold(struct wlan_objmgr_psoc *psoc,
+				    struct wlan_objmgr_vdev *vdev,
+				    uint32_t linkspeed_threshold)
+{
+	if (!ucfg_cm_is_linkspeed_roam_trigger_supported(psoc))
+		return QDF_STATUS_E_NOSUPPORT;
+
+	if (linkspeed_threshold) {
+		dp_ucfg_enable_link_monitoring(psoc, vdev,
+					       linkspeed_threshold);
+	} else {
+		dp_ucfg_disable_link_monitoring(psoc, vdev);
+		wlan_hdd_link_speed_update(psoc, wlan_vdev_get_id(vdev),
+					   false);
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+#else
+static inline QDF_STATUS
+hdd_set_roam_rx_linkspeed_threshold(struct wlan_objmgr_psoc *psoc,
+				    struct wlan_objmgr_vdev *vdev,
+				    uint32_t linkspeed_threshold)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+#endif
+
 /**
  * hdd_set_roam_with_control_config() - Set roam control configuration
  * @hdd_ctx: HDD context
@@ -5420,6 +5459,7 @@ hdd_set_roam_with_control_config(struct hdd_context *hdd_ctx,
 	struct wlan_cm_roam_vendor_btm_params param = {0};
 	bool is_wtc_param_updated = false;
 	uint32_t band_mask;
+	uint16_t threshold;
 	struct hdd_adapter *adapter;
 	uint8_t roam_control_enable = false;
 
@@ -5637,6 +5677,14 @@ hdd_set_roam_with_control_config(struct hdd_context *hdd_ctx,
 			sme_start_roaming(hdd_ctx->mac_handle, vdev_id,
 					  REASON_DRIVER_ENABLED, RSO_SET_PCL);
 		}
+	}
+
+	attr = tb2[QCA_ATTR_ROAM_CONTROL_RX_LINKSPEED_THRESHOLD];
+	if (attr) {
+		threshold = nla_get_u16(attr);
+		status = hdd_set_roam_rx_linkspeed_threshold(hdd_ctx->psoc,
+							     adapter->vdev,
+							     threshold);
 	}
 
 	if (is_wtc_param_updated) {

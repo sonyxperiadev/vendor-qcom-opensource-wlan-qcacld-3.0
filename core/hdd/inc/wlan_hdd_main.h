@@ -4680,4 +4680,25 @@ hdd_is_dynamic_set_mac_addr_allowed(struct hdd_adapter *adapter)
 }
 
 #endif /* WLAN_FEATURE_DYNAMIC_MAC_ADDR_UPDATE */
+
+#if defined(WLAN_FEATURE_ROAM_OFFLOAD) && \
+defined(FEATURE_RX_LINKSPEED_ROAM_TRIGGER)
+/**
+ * wlan_hdd_link_speed_update() - Update link speed to F/W
+ * @psoc: pointer to soc
+ * @vdev_id: Vdev ID
+ * @is_link_speed_good: true means good link speed,  false means bad link speed
+ *
+ * Return: None
+ */
+void wlan_hdd_link_speed_update(struct wlan_objmgr_psoc *psoc,
+				uint8_t vdev_id,
+				bool is_link_speed_good);
+#else
+static inline void wlan_hdd_link_speed_update(struct wlan_objmgr_psoc *psoc,
+					      uint8_t vdev_id,
+					      bool is_link_speed_good)
+{}
+#endif
+
 #endif /* end #if !defined(WLAN_HDD_MAIN_H) */
