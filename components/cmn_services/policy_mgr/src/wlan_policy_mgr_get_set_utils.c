@@ -8922,3 +8922,32 @@ qdf_freq_t policy_mgr_get_ll_sap_freq(struct wlan_objmgr_psoc *psoc)
 
 	return freq;
 }
+
+bool policy_mgr_is_ll_sap_concurrency_valid(struct wlan_objmgr_psoc *psoc,
+					    qdf_freq_t freq,
+					    enum policy_mgr_con_mode mode)
+{
+	qdf_freq_t ll_sap_freq;
+
+	ll_sap_freq = policy_mgr_get_ll_sap_freq(psoc);
+	if (!ll_sap_freq)
+		return true;
+
+	/*
+	 * Scenario: When low latency SAP with 5GHz channel(whose
+	 * profile is set as gaming or lossless audio) is present
+	 * on SBS/DBS hardware and the other interface like
+	 * STA/SAP/GC/GO trying to form connection.
+	 * Allow connection on those freq which are mutually exclusive
+	 * to LL SAP mac
+	 */
+
+	if (policy_mgr_2_freq_always_on_same_mac(psoc, ll_sap_freq,
+						 freq)) {
+		policy_mgr_debug("Invalid LL-SAP concurrency for SBS/DBS hw, ll-sap freq %d, conc_freq %d, conc_mode %d",
+				 ll_sap_freq, freq, mode);
+		return false;
+	}
+
+	return true;
+}

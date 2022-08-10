@@ -893,5 +893,13 @@ QDF_STATUS if_mgr_validate_candidate(struct wlan_objmgr_vdev *vdev,
 	if (conc_freq)
 		return QDF_STATUS_E_INVAL;
 
+	/* Check low latency SAP and STA/GC concurrency are valid or not */
+	if (!policy_mgr_is_ll_sap_concurrency_valid(psoc, chan_freq, mode)) {
+		ifmgr_debug("STA connection not allowed on bssid: "QDF_MAC_ADDR_FMT" with freq: %d due to LL SAP present",
+			    QDF_MAC_ADDR_REF(candidate_info->peer_addr.bytes),
+			    chan_freq);
+		return QDF_STATUS_E_INVAL;
+	}
+
 	return QDF_STATUS_SUCCESS;
 }

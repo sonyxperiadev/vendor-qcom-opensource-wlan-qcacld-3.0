@@ -4614,4 +4614,17 @@ QDF_STATUS policy_mgr_get_sbs_cfg(struct wlan_objmgr_psoc *psoc, bool *sbs);
  */
 qdf_freq_t policy_mgr_get_ll_sap_freq(struct wlan_objmgr_psoc *psoc);
 
+/**
+ * policy_mgr_is_ll_sap_concurrency_valid() - Function to check whether
+ * low latency SAP + STA/SAP/GC/GO concurrency allowed or not
+ * @psoc: PSOC object
+ * @freq: Channel frequency
+ * @mode: Device mode
+ *
+ * Return: True if concurrency are allowed otherwise false
+ *
+ */
+bool policy_mgr_is_ll_sap_concurrency_valid(struct wlan_objmgr_psoc *psoc,
+					    qdf_freq_t freq,
+					    enum policy_mgr_con_mode mode);
 #endif /* __WLAN_POLICY_MGR_API_H */
