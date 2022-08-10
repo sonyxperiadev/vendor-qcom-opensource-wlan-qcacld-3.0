@@ -2387,12 +2387,14 @@ struct wlan_cm_vendor_handoff_param {
  * @pcl_vdev_cmd_active:  Flag to check if vdev level pcl command needs to be
  * sent or PDEV level PCL command needs to be sent
  * @vendor_handoff_param: vendor handoff params
+ * @sae_offload_ssid: SSID of the roam auth offload bssid
  */
 struct wlan_cm_roam {
 	bool pcl_vdev_cmd_active;
 #ifdef WLAN_VENDOR_HANDOFF_CONTROL
 	struct wlan_cm_vendor_handoff_param vendor_handoff_param;
 #endif
+	struct wlan_ssid sae_offload_ssid;
 };
 
 /**

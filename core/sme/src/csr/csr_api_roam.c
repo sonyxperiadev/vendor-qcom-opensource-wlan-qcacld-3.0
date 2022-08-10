@@ -7566,9 +7566,9 @@ csr_process_roam_auth_sae_callback(struct mac_context *mac_ctx,
 
 	sae_info.msg_len = sizeof(sae_info);
 	sae_info.vdev_id = vdev_id;
-	wlan_mlme_get_ssid_vdev_id(mac_ctx->pdev, vdev_id,
-				   sae_info.ssid.ssId,
-				   &sae_info.ssid.length);
+	wlan_cm_get_roam_offload_ssid(mac_ctx->psoc, vdev_id,
+				      sae_info.ssid.ssId,
+				      &sae_info.ssid.length);
 	qdf_mem_copy(sae_info.peer_mac_addr.bytes,
 		     roam_bssid.bytes, QDF_MAC_ADDR_SIZE);
 

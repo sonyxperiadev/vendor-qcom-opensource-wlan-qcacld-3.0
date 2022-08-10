@@ -1105,6 +1105,32 @@ cm_roam_candidate_event_handler(struct wlan_objmgr_psoc *psoc,
  */
 bool wlan_cm_is_roam_sync_in_progress(struct wlan_objmgr_psoc *psoc,
 				      uint8_t vdev_id);
+
+/**
+ * wlan_cm_set_roam_offload_ssid() - Set the roam offload candidate ssid
+ *
+ * @vdev: pointer to vdev
+ * @ssid_ie: ssid ie of the candidate
+ *
+ * Return: None
+ */
+void
+wlan_cm_set_roam_offload_ssid(struct wlan_objmgr_vdev *vdev, uint8_t *ssid_ie);
+
+/**
+ * wlan_cm_get_roam_offload_ssid() - Get the roam offload candidate ssid
+ *
+ * @psoc: pointer to psoc
+ * @vdev_id: vdev id
+ * @ssid: ssid of the candidate
+ * @len: length of the ssid
+ *
+ * Return: None
+ */
+void
+wlan_cm_get_roam_offload_ssid(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
+			      uint8_t *ssid, uint8_t *len);
+
 #else
 static inline
 void wlan_cm_roam_activate_pcl_per_vdev(struct wlan_objmgr_psoc *psoc,
@@ -1293,6 +1319,18 @@ wlan_cm_is_roam_sync_in_progress(struct wlan_objmgr_psoc *psoc,
 {
 	return false;
 }
+
+static inline void
+wlan_cm_set_roam_offload_ssid(struct wlan_objmgr_vdev *vdev, uint8_t *ssid_ie)
+{
+}
+
+static inline void
+wlan_cm_get_roam_offload_ssid(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
+			      uint8_t *ssid, uint8_t *len)
+{
+}
+
 #endif /* WLAN_FEATURE_ROAM_OFFLOAD */
 
 #ifdef WLAN_FEATURE_FIPS

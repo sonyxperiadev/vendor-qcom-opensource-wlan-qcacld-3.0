@@ -3260,29 +3260,6 @@ enum QDF_OPMODE wlan_get_opmode_from_vdev_id(struct wlan_objmgr_pdev *pdev,
 	return opmode;
 }
 
-QDF_STATUS wlan_mlme_get_ssid_vdev_id(struct wlan_objmgr_pdev *pdev,
-				      uint8_t vdev_id,
-				      uint8_t *ssid, uint8_t *ssid_len)
-{
-	struct wlan_objmgr_vdev *vdev;
-	QDF_STATUS status;
-
-	*ssid_len = 0;
-
-	if (!pdev)
-		return QDF_STATUS_E_INVAL;
-
-	vdev = wlan_objmgr_get_vdev_by_id_from_pdev(pdev, vdev_id,
-						    WLAN_LEGACY_MAC_ID);
-	if (!vdev)
-		return QDF_STATUS_E_INVAL;
-
-	status = wlan_vdev_mlme_get_ssid(vdev, ssid, ssid_len);
-	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
-
-	return status;
-}
-
 QDF_STATUS wlan_mlme_get_bssid_vdev_id(struct wlan_objmgr_pdev *pdev,
 				       uint8_t vdev_id,
 				       struct qdf_mac_addr *bss_peer_mac)

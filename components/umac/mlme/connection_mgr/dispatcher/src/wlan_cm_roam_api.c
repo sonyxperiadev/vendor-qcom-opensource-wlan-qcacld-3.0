@@ -3542,6 +3542,57 @@ bool wlan_cm_is_roam_sync_in_progress(struct wlan_objmgr_psoc *psoc,
 
 	return ret;
 }
+
+void
+wlan_cm_set_roam_offload_ssid(struct wlan_objmgr_vdev *vdev, uint8_t *ssid_ie)
+{
+	struct mlme_legacy_priv *mlme_priv;
+	uint8_t ssid_len = ssid_ie[1];
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_err("vdev legacy private object is NULL");
+		return;
+	}
+
+	if (ssid_len > WLAN_SSID_MAX_LEN)
+		ssid_len = WLAN_SSID_MAX_LEN;
+
+	qdf_mem_zero(&mlme_priv->cm_roam.sae_offload_ssid,
+		     sizeof(struct wlan_ssid));
+	qdf_mem_copy(mlme_priv->cm_roam.sae_offload_ssid.ssid,
+		     &ssid_ie[2], ssid_len);
+	mlme_priv->cm_roam.sae_offload_ssid.length = ssid_len;
+}
+
+void
+wlan_cm_get_roam_offload_ssid(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
+			      uint8_t *ssid, uint8_t *len)
+{
+	struct wlan_objmgr_vdev *vdev;
+	struct mlme_legacy_priv *mlme_priv;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_MLME_CM_ID);
+	if (!vdev) {
+		mlme_err("VDEV is NULL");
+		return;
+	}
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_err("vdev legacy private object is NULL");
+		goto ret;
+	}
+
+	qdf_mem_copy(ssid, mlme_priv->cm_roam.sae_offload_ssid.ssid,
+		     mlme_priv->cm_roam.sae_offload_ssid.length);
+	*len = mlme_priv->cm_roam.sae_offload_ssid.length;
+
+ret:
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_CM_ID);
+}
+
 #else
 QDF_STATUS
 cm_roam_stats_event_handler(struct wlan_objmgr_psoc *psoc,
