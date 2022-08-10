@@ -29,6 +29,7 @@
 #include "wlan_mlme_main.h"
 #include "wlan_mlme_api.h"
 #include "wlan_reg_ucfg_api.h"
+#include "wlan_cm_tgt_if_tx_api.h"
 
 #if defined(WLAN_FEATURE_HOST_ROAM) || defined(WLAN_FEATURE_ROAM_OFFLOAD)
 /**
@@ -839,6 +840,48 @@ wlan_cm_update_roam_scan_scheme_bitmap(struct wlan_objmgr_psoc *psoc,
 QDF_STATUS wlan_cm_set_roam_band_bitmask(struct wlan_objmgr_psoc *psoc,
 					 uint8_t vdev_id,
 					 uint32_t roam_band_bitmask);
+
+#ifdef FEATURE_RX_LINKSPEED_ROAM_TRIGGER
+/**
+ * struct link_speed_cfg - link speed state config
+ * @psoc: pointer to psoc
+ * @vdev_id: vdev id
+ * @is_link_speed_good: true means link speed good, false means bad
+ */
+struct roam_link_speed_cfg {
+	struct wlan_objmgr_psoc *psoc;
+	uint8_t vdev_id;
+	uint8_t is_link_speed_good;
+};
+
+/**
+ * wlan_cm_send_roam_linkspeed_state() - Send link speed state to target
+ * @msg: Pointer to schedule message
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS wlan_cm_send_roam_linkspeed_state(struct scheduler_msg *msg);
+
+/**
+ * wlan_cm_roam_link_speed_update() - Update link speed state for roaming
+ * @psoc: psoc pointer
+ * @vdev_id: vdev id
+ * @is_link_speed_good: true means link speed good, false means bad
+ *
+ * Return: None
+ */
+void wlan_cm_roam_link_speed_update(struct wlan_objmgr_psoc *psoc,
+				    uint8_t vdev_id,
+				    bool is_link_speed_good);
+
+/**
+ * wlan_mlme_is_linkspeed_roam_trigger_supported() - Get roam linkspeed check
+ * @psoc: pointer to psoc object
+ *
+ * Return: bool, true: Linkspeed check for low rssi roaming supported
+ */
+bool wlan_cm_is_linkspeed_roam_trigger_supported(struct wlan_objmgr_psoc *psoc);
+#endif
 
 /**
  * wlan_cm_set_roam_band_update() - send rso update on set band

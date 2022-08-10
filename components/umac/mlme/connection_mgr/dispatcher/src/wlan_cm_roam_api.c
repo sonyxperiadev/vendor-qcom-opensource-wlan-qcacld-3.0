@@ -35,6 +35,7 @@
 #include <../../core/src/wlan_cm_roam_i.h>
 #include "wlan_reg_ucfg_api.h"
 #include "wlan_connectivity_logging.h"
+#include "target_if.h"
 
 /* Support for "Fast roaming" (i.e., ESE, LFR, or 802.11r.) */
 #define BG_SCAN_OCCUPIED_CHANNEL_LIST_LEN 15
@@ -316,6 +317,70 @@ bool wlan_cm_same_band_sta_allowed(struct wlan_objmgr_psoc *psoc)
 }
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
+#ifdef FEATURE_RX_LINKSPEED_ROAM_TRIGGER
+QDF_STATUS wlan_cm_send_roam_linkspeed_state(struct scheduler_msg *msg)
+{
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	struct roam_link_speed_cfg *link_speed_cfg;
+	struct roam_disable_cfg  roam_link_speed_cfg;
+
+	if (!msg || !msg->bodyptr)
+		return QDF_STATUS_E_FAILURE;
+
+	link_speed_cfg = msg->bodyptr;
+	roam_link_speed_cfg.vdev_id = link_speed_cfg->vdev_id;
+	roam_link_speed_cfg.cfg = link_speed_cfg->is_link_speed_good;
+	status = wlan_cm_tgt_send_roam_linkspeed_state(link_speed_cfg->psoc,
+						       &roam_link_speed_cfg);
+	qdf_mem_free(link_speed_cfg);
+
+	return status;
+}
+
+void wlan_cm_roam_link_speed_update(struct wlan_objmgr_psoc *psoc,
+				    uint8_t vdev_id,
+				    bool is_link_speed_good)
+{
+	QDF_STATUS qdf_status;
+	struct scheduler_msg msg = {0};
+	struct roam_link_speed_cfg *link_speed_cfg;
+
+	link_speed_cfg = qdf_mem_malloc(sizeof(*link_speed_cfg));
+	if (!link_speed_cfg)
+		return;
+
+	link_speed_cfg->psoc = psoc;
+	link_speed_cfg->vdev_id = vdev_id;
+	link_speed_cfg->is_link_speed_good = is_link_speed_good;
+
+	msg.bodyptr = link_speed_cfg;
+	msg.callback = wlan_cm_send_roam_linkspeed_state;
+
+	qdf_status = scheduler_post_message(QDF_MODULE_ID_MLME,
+					    QDF_MODULE_ID_OS_IF,
+					    QDF_MODULE_ID_OS_IF, &msg);
+
+	if (QDF_IS_STATUS_ERROR(qdf_status)) {
+		mlme_err("post msg failed");
+		qdf_mem_free(link_speed_cfg);
+	}
+}
+
+bool wlan_cm_is_linkspeed_roam_trigger_supported(struct wlan_objmgr_psoc *psoc)
+{
+	struct wmi_unified *wmi_handle;
+
+	wmi_handle = get_wmi_unified_hdl_from_psoc(psoc);
+	if (!wmi_handle) {
+		mlme_debug("Invalid WMI handle");
+		return false;
+	}
+
+	return wmi_service_enabled(wmi_handle,
+				   wmi_service_linkspeed_roam_trigger_support);
+}
+#endif
+
 QDF_STATUS
 wlan_cm_fw_roam_abort_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
 {

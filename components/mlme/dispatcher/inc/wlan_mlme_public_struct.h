@@ -1758,7 +1758,8 @@ struct fw_scan_channels {
 	uint32_t freq[NUM_CHANNELS];
 };
 
-/*
+/**
+ * struct wlan_mlme_lfr_cfg - MLME LMAC fast roaming config
  * @mawc_roam_enabled:              Enable/Disable MAWC during roaming
  * @enable_fast_roam_in_concurrency:Enable LFR roaming on STA during concurrency
  * @vendor_btm_param:               Vendor WTC roam trigger parameters

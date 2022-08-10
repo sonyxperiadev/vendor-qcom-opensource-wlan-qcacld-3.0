@@ -2293,6 +2293,7 @@ struct roam_pmkid_req_event {
  * @send_roam_abort: send roam abort
  * @send_roam_disable_config: send roam disable config
  * @send_roam_rt_stats_config: Send roam events vendor command param value to FW
+ * @send_roam_linkspeed_state: Send roam link speed good/poor state to FW
  * @send_roam_vendor_handoff_config: send vendor handoff config command to FW
  */
 struct wlan_cm_roam_tx_ops {
@@ -2324,6 +2325,10 @@ struct wlan_cm_roam_tx_ops {
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 	QDF_STATUS (*send_roam_rt_stats_config)(struct wlan_objmgr_vdev *vdev,
 						uint8_t vdev_id, uint8_t value);
+#ifdef FEATURE_RX_LINKSPEED_ROAM_TRIGGER
+	QDF_STATUS (*send_roam_linkspeed_state)(struct wlan_objmgr_vdev *vdev,
+						uint8_t vdev_id, bool value);
+#endif
 #endif
 #ifdef WLAN_VENDOR_HANDOFF_CONTROL
 	QDF_STATUS (*send_roam_vendor_handoff_config)(
