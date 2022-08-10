@@ -24,11 +24,13 @@
  *
  */
 
+#include <net/cfg80211.h>
 #include <wlan_hdd_green_ap.h>
 #include <wlan_hdd_main.h>
 #include <wlan_policy_mgr_api.h>
 #include <wlan_green_ap_ucfg_api.h>
 #include "wlan_mlme_ucfg_api.h"
+#include <osif_vdev_sync.h>
 
 /**
  * hdd_green_ap_check_enable() - to check whether to enable green ap or not
@@ -187,3 +189,90 @@ int hdd_green_ap_start_state_mc(struct hdd_context *hdd_ctx,
 	}
 	return ret;
 }
+
+#ifdef WLAN_SUPPORT_GAP_LL_PS_MODE
+const struct nla_policy
+wlan_hdd_sap_low_pwr_mode[QCA_WLAN_VENDOR_ATTR_DOZED_AP_MAX + 1] = {
+	[QCA_WLAN_VENDOR_ATTR_DOZED_AP_STATE] = {.type = NLA_U8},
+};
+
+/**
+ * __wlan_hdd_enter_sap_low_pwr_mode() - Green AP low latency power
+ * save mode
+ * vendor command
+ * @wiphy: wiphy device pointer
+ * @wdev: wireless device pointer
+ * @data: Vendor command data buffer
+ * @data_len: Buffer length
+ *
+ * Return: 0 for Success and negative value for failure
+ */
+static int
+__wlan_hdd_enter_sap_low_pwr_mode(struct wiphy *wiphy,
+				  struct wireless_dev *wdev,
+				  const void *data, int data_len)
+{
+	uint8_t lp_flags;
+	QDF_STATUS status;
+	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
+	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(wdev->netdev);
+	struct nlattr *tb[QCA_WLAN_VENDOR_ATTR_DOZED_AP_MAX + 1];
+
+	hdd_enter_dev(wdev->netdev);
+
+	if (wlan_cfg80211_nla_parse(tb,
+				    QCA_WLAN_VENDOR_ATTR_DOZED_AP_MAX,
+				    data, data_len,
+				    wlan_hdd_sap_low_pwr_mode)) {
+		hdd_err("Invalid ATTR");
+		return -EINVAL;
+	}
+
+	if (!tb[QCA_WLAN_VENDOR_ATTR_DOZED_AP_STATE]) {
+		hdd_err("low power flag is not present");
+		return -EINVAL;
+	}
+
+	lp_flags =
+		nla_get_u8(tb[QCA_WLAN_VENDOR_ATTR_DOZED_AP_STATE]);
+
+	if (lp_flags > QCA_WLAN_DOZED_AP_ENABLE) {
+		hdd_err("Invalid state received");
+		return -EINVAL;
+	}
+
+	hdd_debug("state: %s",
+		  lp_flags == QCA_WLAN_DOZED_AP_ENABLE ? "ENABLE" : "DISABLE");
+
+	status = ucfg_green_ap_ll_ps(hdd_ctx->pdev, adapter->vdev, lp_flags,
+				     adapter->session.ap.sap_config.beacon_int);
+	if (status != QDF_STATUS_SUCCESS) {
+		hdd_err("unable to send low latency power save cmd");
+		return -EINVAL;
+	}
+
+	hdd_exit();
+
+	return 0;
+}
+
+int
+wlan_hdd_enter_sap_low_pwr_mode(struct wiphy *wiphy,
+				struct wireless_dev *wdev,
+				const void *data, int data_len)
+{
+	int errno;
+	struct osif_vdev_sync *vdev_sync;
+
+	errno = osif_vdev_sync_op_start(wdev->netdev, &vdev_sync);
+	if (errno)
+		return errno;
+
+	errno = __wlan_hdd_enter_sap_low_pwr_mode(wiphy, wdev,
+						  data, data_len);
+
+	osif_vdev_sync_op_stop(vdev_sync);
+
+	return 0;
+}
+#endif
