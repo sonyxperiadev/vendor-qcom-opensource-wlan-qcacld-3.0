@@ -39,6 +39,8 @@
 #include "wlan_mlme_ucfg_api.h"
 #include <i_qdf_net_stats.h>
 #include "wlan_dp_txrx.h"
+#include "cdp_txrx_host_stats.h"
+#include "wlan_cm_roam_api.h"
 
 #ifdef FEATURE_BUS_BANDWIDTH_MGR
 /**
@@ -1697,6 +1699,96 @@ dp_rx_check_qdisc_for_intf(struct wlan_dp_intf *dp_intf)
 }
 #endif
 
+#define NO_RX_PKT_LINK_SPEED_AGEOUT_COUNT 50
+static void
+dp_link_monitoring(struct wlan_dp_psoc_context *dp_ctx,
+		   struct wlan_dp_intf *dp_intf)
+{
+	struct cdp_peer_stats *peer_stats;
+	QDF_STATUS status;
+	ol_txrx_soc_handle soc;
+	struct wlan_objmgr_peer *bss_peer;
+	static uint32_t no_rx_times;
+	uint64_t  rx_packets;
+	uint32_t link_speed;
+	struct wlan_objmgr_psoc *psoc;
+	struct link_monitoring link_mon;
+
+	/*
+	 *  If throughput is high, link speed should be good,  don't check it
+	 *  to avoid performance penalty
+	 */
+	soc = cds_get_context(QDF_MODULE_ID_SOC);
+	if (cdp_get_bus_lvl_high(soc) == true)
+		return;
+
+	link_mon = dp_intf->link_monitoring;
+	if (!dp_ctx->dp_ops.link_monitoring_cb)
+		return;
+
+	psoc = dp_ctx->psoc;
+	/* If no rx packets received for N sec, set link speed to poor */
+	if (link_mon.is_rx_linkspeed_good) {
+		rx_packets = DP_BW_GET_DIFF(QDF_NET_DEV_STATS_RX_PKTS(&dp_intf->stats),
+					    dp_intf->prev_rx_packets);
+		if (!rx_packets)
+			no_rx_times++;
+		else
+			no_rx_times = 0;
+		if (no_rx_times >= NO_RX_PKT_LINK_SPEED_AGEOUT_COUNT) {
+			no_rx_times = 0;
+			dp_ctx->dp_ops.link_monitoring_cb(psoc,
+							  dp_intf->intf_id,
+							  false);
+			return;
+		}
+	}
+	/* Get rx link speed from dp peer */
+	peer_stats = qdf_mem_malloc(sizeof(*peer_stats));
+	if (!peer_stats)
+		return;
+	bss_peer = wlan_vdev_get_bsspeer(dp_intf->vdev);
+	if (!bss_peer) {
+		dp_debug("Invalid bss peer");
+		qdf_mem_free(peer_stats);
+		return;
+	}
+	status = cdp_host_get_peer_stats(soc, dp_intf->intf_id,
+					 bss_peer->macaddr,
+					 peer_stats);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		qdf_mem_free(peer_stats);
+		return;
+	}
+	/* Convert rx linkspeed from kbps to mbps to compare with threshold */
+	link_speed = peer_stats->rx.last_rx_rate / 1000;
+
+	/*
+	 * When found current rx link speed becomes good(above threshold) or
+	 * poor, update to firmware.
+	 * If the current RX link speed is above the threshold, low rssi
+	 * roaming is not needed. If linkspeed_threshold is set to 0, the
+	 * firmware will not consider RX link speed in the roaming decision,
+	 * driver will send rx link speed poor state to firmware.
+	 */
+	if (!link_mon.rx_linkspeed_threshold) {
+		dp_ctx->dp_ops.link_monitoring_cb(psoc, dp_intf->intf_id,
+						  false);
+	} else if (link_speed > link_mon.rx_linkspeed_threshold &&
+	     !link_mon.is_rx_linkspeed_good) {
+		dp_ctx->dp_ops.link_monitoring_cb(psoc, dp_intf->intf_id,
+						  true);
+		link_mon.is_rx_linkspeed_good = true;
+	} else if (link_speed < link_mon.rx_linkspeed_threshold &&
+		   link_mon.is_rx_linkspeed_good) {
+		dp_ctx->dp_ops.link_monitoring_cb(psoc, dp_intf->intf_id,
+						  false);
+		link_mon.is_rx_linkspeed_good = false;
+	}
+
+	qdf_mem_free(peer_stats);
+}
+
 /**
  * __dp_bus_bw_work_handler() - Bus bandwidth work handler
  * @dp_ctx: handle to DP context
@@ -1770,10 +1862,12 @@ static void __dp_bus_bw_work_handler(struct wlan_dp_psoc_context *dp_ctx)
 			dp_intf->prev_tx_bytes);
 
 		if (dp_intf->device_mode == QDF_STA_MODE &&
-		    ucfg_cm_is_vdev_active(vdev))
+		    ucfg_cm_is_vdev_active(vdev)) {
 			dp_ctx->dp_ops.dp_send_mscs_action_frame(ctx,
 							dp_intf->intf_id);
-
+			if (dp_intf->link_monitoring.enabled)
+				dp_link_monitoring(dp_ctx, dp_intf);
+		}
 		if (dp_intf->device_mode == QDF_SAP_MODE ||
 		    dp_intf->device_mode == QDF_P2P_GO_MODE ||
 		    dp_intf->device_mode == QDF_NDI_MODE) {
@@ -1821,6 +1915,7 @@ static void __dp_bus_bw_work_handler(struct wlan_dp_psoc_context *dp_ctx)
 			QDF_NET_DEV_STATS_TX_BYTES(&dp_intf->stats);
 		qdf_spin_unlock_bh(&dp_ctx->bus_bw_lock);
 		connected = true;
+
 		dp_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 	}
 

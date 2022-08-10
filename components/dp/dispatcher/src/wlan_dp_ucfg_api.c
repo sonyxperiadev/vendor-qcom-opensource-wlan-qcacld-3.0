@@ -1915,6 +1915,7 @@ void ucfg_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 		cb_obj->os_if_dp_nud_stats_info;
 	dp_ctx->dp_ops.osif_dp_process_mic_error =
 		cb_obj->osif_dp_process_mic_error;
+	dp_ctx->dp_ops.link_monitoring_cb = cb_obj->link_monitoring_cb;
 	}
 
 void ucfg_dp_register_event_handler(struct wlan_objmgr_psoc *psoc,
@@ -2152,4 +2153,35 @@ ucfg_dp_softap_inspect_dhcp_packet(struct wlan_objmgr_vdev *vdev,
 	}
 
 	return dp_softap_inspect_dhcp_packet(dp_intf, nbuf, dir);
+}
+
+void
+dp_ucfg_enable_link_monitoring(struct wlan_objmgr_psoc *psoc,
+			       struct wlan_objmgr_vdev *vdev,
+			       uint32_t threshold)
+{
+	struct wlan_dp_intf *dp_intf;
+
+	dp_intf = dp_get_vdev_priv_obj(vdev);
+	if (unlikely(!dp_intf)) {
+		dp_err("DP interface not found");
+		return;
+	}
+	dp_intf->link_monitoring.rx_linkspeed_threshold = threshold;
+	dp_intf->link_monitoring.enabled = true;
+}
+
+void
+dp_ucfg_disable_link_monitoring(struct wlan_objmgr_psoc *psoc,
+				struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_dp_intf *dp_intf;
+
+	dp_intf = dp_get_vdev_priv_obj(vdev);
+	if (unlikely(!dp_intf)) {
+		dp_err("DP interface not found");
+		return;
+	}
+	dp_intf->link_monitoring.enabled = false;
+	dp_intf->link_monitoring.rx_linkspeed_threshold = 0;
 }

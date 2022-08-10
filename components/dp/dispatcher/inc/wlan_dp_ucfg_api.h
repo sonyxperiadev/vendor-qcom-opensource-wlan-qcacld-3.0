@@ -1222,4 +1222,13 @@ void ucfg_dp_event_eapol_log(qdf_nbuf_t nbuf, enum qdf_proto_dir dir);
 QDF_STATUS
 ucfg_dp_softap_inspect_dhcp_packet(struct wlan_objmgr_vdev *vdev,
 				   qdf_nbuf_t nbuf, enum qdf_proto_dir dir);
+
+void
+dp_ucfg_enable_link_monitoring(struct wlan_objmgr_psoc *psoc,
+			       struct wlan_objmgr_vdev *vdev,
+			       uint32_t threshold);
+
+void
+dp_ucfg_disable_link_monitoring(struct wlan_objmgr_psoc *psoc,
+				struct wlan_objmgr_vdev *vdev);
 #endif /* _WLAN_DP_UCFG_API_H_ */

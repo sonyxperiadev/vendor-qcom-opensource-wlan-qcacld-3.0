@@ -587,6 +587,7 @@ union wlan_tp_data {
  * @os_if_dp_nud_stats_info: osif callback to print nud stats info
  * @dp_get_pause_map: Callback API to get pause map count
  * @dp_nud_failure_work: Callback API to handle NUD failuire work
+ * @link_monitoring_cb: Callback API to handle link speed change
  */
 struct wlan_dp_psoc_callbacks {
 	hdd_cb_handle callback_ctx;
@@ -666,6 +667,9 @@ struct wlan_dp_psoc_callbacks {
 	void (*os_if_dp_nud_stats_info)(struct wlan_objmgr_vdev *vdev);
 	uint32_t (*dp_get_pause_map)(hdd_cb_handle context, uint8_t vdev_id);
 	void (*dp_nud_failure_work)(hdd_cb_handle context, uint8_t vdev_id);
+	void (*link_monitoring_cb)(struct wlan_objmgr_psoc *psoc,
+				   uint8_t vdev_id,
+				   bool is_link_speed_good);
 };
 
 /**
