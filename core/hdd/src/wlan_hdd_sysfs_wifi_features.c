@@ -77,12 +77,12 @@ void hdd_sysfs_create_wifi_feature_interface(struct kobject *wifi_kobject)
 	if (!hdd_ctx)
 		return;
 
-	if (!wifi_kobject) {
-		hdd_err("could not get wifi kobject!");
+	if (!hdd_ctx->oem_data_len || !hdd_ctx->file_name) {
+		hdd_err("Invalid oem data length or file name");
 		return;
 	}
-	if (!hdd_ctx->oem_data_len) {
-		hdd_err("Invalid oem data length");
+	if (!wifi_kobject) {
+		hdd_err("could not get wifi kobject!");
 		return;
 	}
 	feature_set_attribute.attr.name = hdd_ctx->file_name;
@@ -98,6 +98,18 @@ void hdd_sysfs_create_wifi_feature_interface(struct kobject *wifi_kobject)
 
 void hdd_sysfs_destroy_wifi_feature_interface(struct kobject *wifi_kobject)
 {
+	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
+
+	if (!hdd_ctx) {
+		hdd_err("HDD context is NULL");
+		return;
+	}
+
+	if (!hdd_ctx->file_name) {
+		hdd_debug("file name is NULL");
+		return;
+	}
+
 	if (!wifi_kobject) {
 		hdd_err("could not get wifi kobject!");
 		return;
