@@ -24,6 +24,16 @@
 #ifndef CFG_MLME_LFR_H__
 #define CFG_MLME_LFR_H__
 
+#ifdef CONNECTION_ROAMING_CFG
+# define RoamScan_ActiveCH_DwellTime_min 0
+# define RoamScan_ActiveCH_DwellTime_max 200
+# define RoamScan_ActiveCH_DwellTime_default 40
+#else
+# define RoamScan_ActiveCH_DwellTime_min 3
+# define RoamScan_ActiveCH_DwellTime_max 300
+# define RoamScan_ActiveCH_DwellTime_default 40
+#endif
+
 /*
  * <ini>
  * mawc_roam_enabled - Enable/Disable MAWC during roaming
@@ -1534,9 +1544,9 @@
  */
 #define CFG_LFR_NEIGHBOR_SCAN_MAX_CHAN_TIME CFG_INI_UINT( \
 	"gNeighborScanChannelMaxTime RoamScan_ActiveCH_DwellTime", \
-	3, \
-	300, \
-	40, \
+	RoamScan_ActiveCH_DwellTime_min, \
+	RoamScan_ActiveCH_DwellTime_max, \
+	RoamScan_ActiveCH_DwellTime_default, \
 	CFG_VALUE_OR_DEFAULT, \
 	"Neighbor scan channel max time")
 
