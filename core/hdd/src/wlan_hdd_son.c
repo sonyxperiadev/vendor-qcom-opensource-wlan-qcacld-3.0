@@ -2610,10 +2610,11 @@ int hdd_son_deliver_acs_complete_event(struct hdd_adapter *adapter)
 }
 
 int hdd_son_deliver_cac_status_event(struct hdd_adapter *adapter,
-				     bool radar_detected)
+				     qdf_freq_t freq, bool radar_detected)
 {
 	int ret = -EINVAL;
 	struct wlan_objmgr_vdev *vdev;
+	struct son_ald_cac_info cac_info;
 
 	if (adapter) {
 		vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_SON_ID);
@@ -2621,9 +2622,11 @@ int hdd_son_deliver_cac_status_event(struct hdd_adapter *adapter,
 			hdd_err("null vdev");
 			return ret;
 		}
+		cac_info.freq = freq;
+		cac_info.radar_detected = radar_detected;
 		ret = os_if_son_deliver_ald_event(vdev, NULL,
 						  MLME_EVENT_CAC_STATUS,
-						  &radar_detected);
+						  &cac_info);
 		hdd_objmgr_put_vdev_by_user(vdev, WLAN_SON_ID);
 	}
 

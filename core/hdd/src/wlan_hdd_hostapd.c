@@ -1895,6 +1895,7 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 	uint8_t pdev_id;
 	bool notify_new_sta = true;
 	struct wlan_objmgr_vdev *vdev;
+	qdf_freq_t dfs_freq;
 
 	dev = context;
 	if (!dev) {
@@ -2223,7 +2224,10 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 		} else {
 			hdd_debug("Sent CAC end (interrupted) to user space");
 		}
-		hdd_son_deliver_cac_status_event(adapter, true);
+		dfs_freq = wlan_reg_chan_band_to_freq(hdd_ctx->pdev,
+						      dfs_info.channel,
+						      BIT(REG_BAND_5G));
+		hdd_son_deliver_cac_status_event(adapter, dfs_freq, true);
 		break;
 	case eSAP_DFS_CAC_END:
 		wlan_hdd_send_svc_nlink_msg(hdd_ctx->radio_index,
@@ -2248,7 +2252,10 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 		} else {
 			hdd_debug("Sent CAC end to user space");
 		}
-		hdd_son_deliver_cac_status_event(adapter, false);
+		dfs_freq = wlan_reg_chan_band_to_freq(hdd_ctx->pdev,
+						      dfs_info.channel,
+						      BIT(REG_BAND_5G));
+		hdd_son_deliver_cac_status_event(adapter, dfs_freq, false);
 		break;
 	case eSAP_DFS_RADAR_DETECT:
 	{
@@ -2275,7 +2282,10 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 		} else {
 			hdd_debug("Sent radar detected to user space");
 		}
-		hdd_son_deliver_cac_status_event(adapter, true);
+		dfs_freq = wlan_reg_chan_band_to_freq(hdd_ctx->pdev,
+						      dfs_info.channel,
+						      BIT(REG_BAND_5G));
+		hdd_son_deliver_cac_status_event(adapter, dfs_freq, true);
 		break;
 	}
 

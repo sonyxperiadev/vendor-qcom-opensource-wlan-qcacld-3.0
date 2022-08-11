@@ -531,7 +531,9 @@ wlan_hdd_pre_cac_conditional_freq_switch_ind(struct wlan_objmgr_vdev *vdev,
 		adapter->hdd_ctx->dev_dfs_cac_status = DFS_CAC_ALREADY_DONE;
 	} else {
 		adapter->hdd_ctx->dev_dfs_cac_status = DFS_CAC_NEVER_DONE;
-		hdd_son_deliver_cac_status_event(adapter, true);
+		hdd_son_deliver_cac_status_event(adapter,
+						 ucfg_pre_cac_get_freq(vdev),
+						 true);
 	}
 }
 
