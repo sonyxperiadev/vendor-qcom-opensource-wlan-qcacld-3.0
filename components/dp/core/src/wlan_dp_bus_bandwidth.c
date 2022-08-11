@@ -1740,6 +1740,8 @@ dp_link_monitoring(struct wlan_dp_psoc_context *dp_ctx,
 			dp_ctx->dp_ops.link_monitoring_cb(psoc,
 							  dp_intf->intf_id,
 							  false);
+			dp_intf->link_monitoring.is_rx_linkspeed_good = false;
+
 			return;
 		}
 	}
@@ -1774,16 +1776,17 @@ dp_link_monitoring(struct wlan_dp_psoc_context *dp_ctx,
 	if (!link_mon.rx_linkspeed_threshold) {
 		dp_ctx->dp_ops.link_monitoring_cb(psoc, dp_intf->intf_id,
 						  false);
+		dp_intf->link_monitoring.is_rx_linkspeed_good = false;
 	} else if (link_speed > link_mon.rx_linkspeed_threshold &&
 	     !link_mon.is_rx_linkspeed_good) {
 		dp_ctx->dp_ops.link_monitoring_cb(psoc, dp_intf->intf_id,
 						  true);
-		link_mon.is_rx_linkspeed_good = true;
+		dp_intf->link_monitoring.is_rx_linkspeed_good = true;
 	} else if (link_speed < link_mon.rx_linkspeed_threshold &&
 		   link_mon.is_rx_linkspeed_good) {
 		dp_ctx->dp_ops.link_monitoring_cb(psoc, dp_intf->intf_id,
 						  false);
-		link_mon.is_rx_linkspeed_good = false;
+		dp_intf->link_monitoring.is_rx_linkspeed_good = false;
 	}
 
 	qdf_mem_free(peer_stats);
