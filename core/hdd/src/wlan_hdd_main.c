@@ -17798,8 +17798,15 @@ void hdd_driver_unload(void)
 	void *hif_ctx;
 	bool soft_unload;
 
-	pr_info("%s: Unloading driver v%s\n", WLAN_MODULE_NAME,
-		QWLAN_VERSIONSTR);
+	soft_unload = hdd_get_wlan_driver_status();
+	if (soft_unload) {
+		pr_info("%s: Soft Unloading driver v%s\n", WLAN_MODULE_NAME,
+			QWLAN_VERSIONSTR);
+	} else {
+		pr_info("%s: Hard Unloading driver v%s\n", WLAN_MODULE_NAME,
+			QWLAN_VERSIONSTR);
+	}
+
 	hdd_place_marker(NULL, "START UNLOADING", NULL);
 
 	/*
@@ -17845,7 +17852,6 @@ void hdd_driver_unload(void)
 	 */
 	osif_driver_sync_trans_stop(driver_sync);
 
-	soft_unload = hdd_get_wlan_driver_status();
 	if (!soft_unload)
 		wlan_hdd_state_ctrl_param_destroy();
 
