@@ -3259,7 +3259,7 @@ int hdd_softap_set_channel_change(struct net_device *dev, int target_chan_freq,
 							    NULL);
 	/*
 	 * For non-dbs HW, don't allow Channel switch on DFS channel if STA is
-	 * not connected and sta_sap_scc_on_dfs_chnl is enabled.
+	 * not connected and sta_sap_scc_on_dfs_chnl is 1.
 	 */
 	status = policy_mgr_get_sta_sap_scc_on_dfs_chnl(
 				hdd_ctx->psoc, &sta_sap_scc_on_dfs_chnl);
@@ -3268,7 +3268,8 @@ int hdd_softap_set_channel_change(struct net_device *dev, int target_chan_freq,
 	}
 
 	if (!sta_cnt && !policy_mgr_is_hw_dbs_capable(hdd_ctx->psoc) &&
-	    !!sta_sap_scc_on_dfs_chnl &&
+	    (sta_sap_scc_on_dfs_chnl ==
+	     PM_STA_SAP_ON_DFS_MASTER_MODE_DISABLED) &&
 	    (wlan_reg_is_dfs_for_freq(hdd_ctx->pdev, target_chan_freq) ||
 	    (wlan_reg_is_5ghz_ch_freq(target_chan_freq) &&
 	     target_bw == CH_WIDTH_160MHZ))) {
