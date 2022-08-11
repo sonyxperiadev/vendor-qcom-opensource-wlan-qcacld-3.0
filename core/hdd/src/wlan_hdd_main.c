@@ -12390,6 +12390,26 @@ static void hdd_sar_cfg_update(struct hdd_config *config,
 }
 #endif
 
+#ifdef FEATURE_SET
+/**
+ * hdd_get_wifi_features_cfg_update() - Initialize get wifi features cfg
+ * @config: Pointer to HDD config
+ * @psoc: psoc pointer
+ *
+ * Return: None
+ */
+static void hdd_get_wifi_features_cfg_update(struct hdd_config *config,
+					     struct wlan_objmgr_psoc *psoc)
+{
+	config->get_wifi_features = cfg_get(psoc, CFG_GET_WIFI_FEATURES);
+}
+#else
+static void hdd_get_wifi_features_cfg_update(struct hdd_config *config,
+					     struct wlan_objmgr_psoc *psoc)
+{
+}
+#endif
+
 /**
  * hdd_cfg_params_init() - Initialize hdd params in hdd_config strucuture
  * @hdd_ctx - Pointer to HDD context
@@ -12511,6 +12531,8 @@ static void hdd_cfg_params_init(struct hdd_context *hdd_ctx)
 	hdd_club_ll_stats_in_get_sta_cfg_update(config, psoc);
 	config->read_mac_addr_from_mac_file =
 			cfg_get(psoc, CFG_READ_MAC_ADDR_FROM_MAC_FILE);
+
+	hdd_get_wifi_features_cfg_update(config, psoc);
 }
 
 #ifdef CONNECTION_ROAMING_CFG
@@ -13023,6 +13045,7 @@ static void hdd_populate_feature_set_cds_config(struct cds_config_info *cds_cfg,
 
 	psoc = hdd_ctx->psoc;
 
+	cds_cfg->get_wifi_features = hdd_ctx->config->get_wifi_features;
 	cds_cfg->cds_feature_set.wifi_standard = hdd_get_wifi_standard(hdd_ctx);
 
 	status = ucfg_mlme_get_band_capability(hdd_ctx->psoc, &band_capability);

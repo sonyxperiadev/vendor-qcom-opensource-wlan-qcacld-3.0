@@ -507,8 +507,29 @@ static void wma_send_feature_set_cmd(tp_wma_handle wma_handle)
  */
 static bool wma_is_feature_set_supported(tp_wma_handle wma_handle)
 {
-	return wmi_service_enabled(wma_handle->wmi_handle,
-				   wmi_service_feature_set_event_support);
+	struct cds_context *cds_ctx =
+		(struct cds_context *)(wma_handle->cds_context);
+	bool is_feature_enabled_from_fw;
+
+	if (!cds_ctx) {
+		wma_err("Invalid cds context");
+		return false;
+	}
+
+	if (!cds_ctx->cds_cfg) {
+		wma_err("Invalid cds config");
+		return false;
+	}
+
+	is_feature_enabled_from_fw =
+		wmi_service_enabled(wma_handle->wmi_handle,
+				    wmi_service_feature_set_event_support);
+
+	if (!is_feature_enabled_from_fw)
+		wma_debug("Get wifi feature is disabled from fw");
+
+	return (is_feature_enabled_from_fw &&
+		cds_ctx->cds_cfg->get_wifi_features);
 }
 #else
 static inline void wma_send_feature_set_cmd(tp_wma_handle wma_handle)

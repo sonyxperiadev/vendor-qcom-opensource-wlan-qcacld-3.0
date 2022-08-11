@@ -92,6 +92,7 @@ struct wlan_cds_feature_set {
  * Structure for holding cds ini parameters.
  * @num_vdevs: Configured max number of VDEVs can be supported in the stack.
  * @cds_feature_set: CDS feature set structure.
+ * @get_wifi_features: Get wifi features from fw
  */
 
 struct cds_config_info {
@@ -126,6 +127,7 @@ struct cds_config_info {
 	bool enable_tx_compl_tsf64;
 #ifdef FEATURE_SET
 	struct wlan_cds_feature_set cds_feature_set;
+	bool get_wifi_features;
 #endif
 };
 #endif /* !defined( __CDS_CONFIG_H ) */
