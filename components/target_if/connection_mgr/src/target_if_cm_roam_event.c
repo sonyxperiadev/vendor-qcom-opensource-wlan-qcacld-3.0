@@ -31,6 +31,8 @@
 #include <../../core/src/wlan_cm_roam_i.h>
 #include "wlan_cm_roam_api.h"
 #include "target_if_cm_roam_offload.h"
+#include <target_if_vdev_mgr_rx_ops.h>
+#include <target_if_psoc_wake_lock.h>
 
 struct wlan_cm_roam_rx_ops *
 target_if_cm_get_roam_rx_ops(struct wlan_objmgr_psoc *psoc)
@@ -277,6 +279,8 @@ int target_if_cm_roam_sync_event(ol_scn_t scn, uint8_t *event,
 		return -EINVAL;
 	}
 
+	target_if_prevent_pm_during_roam_sync(psoc);
+
 	qdf_status = wmi_extract_roam_sync_event(wmi_handle, event,
 						 len, &sync_ind);
 	if (QDF_IS_STATUS_ERROR(qdf_status)) {
@@ -302,6 +306,9 @@ int target_if_cm_roam_sync_event(ol_scn_t scn, uint8_t *event,
 		status = -EINVAL;
 
 err:
+	if (status == -EINVAL)
+		target_if_allow_pm_after_roam_sync(psoc);
+
 	if (sync_ind && sync_ind->ric_tspec_data)
 		qdf_mem_free(sync_ind->ric_tspec_data);
 	if (sync_ind)
@@ -655,13 +662,13 @@ int target_if_get_roam_vendor_control_param_event_handler(ol_scn_t scn,
 	psoc = target_if_get_psoc_from_scn_hdl(scn);
 	if (!psoc) {
 		target_if_err("psoc is null");
-		ret = -EINVAL;
+		return -EINVAL;
 	}
 
 	wmi_handle = get_wmi_unified_hdl_from_psoc(psoc);
 	if (!wmi_handle) {
 		target_if_err("wmi_handle is null");
-		ret = -EINVAL;
+		return -EINVAL;
 	}
 
 	qdf_status = wmi_extract_roam_vendor_control_param_event(wmi_handle,

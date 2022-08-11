@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -502,13 +502,14 @@ void dp_prealloc_deinit(void);
  * dp_prealloc_get_context_memory() - gets pre-alloc DP context memory from
  *				      global pool
  * @ctxt_type: type of DP context
+ * @ctxt_size: size of memory needed
  *
  * This is done only as part of init happening in a single context. Hence
  * no lock is used for protection
  *
  * Return: Address of context
  */
-void *dp_prealloc_get_context_memory(uint32_t ctxt_type);
+void *dp_prealloc_get_context_memory(uint32_t ctxt_type, size_t ctxt_size);
 
 /**
  * dp_prealloc_put_context_memory() - puts back pre-alloc DP context memory to

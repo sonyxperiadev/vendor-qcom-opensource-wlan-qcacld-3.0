@@ -256,19 +256,16 @@ bool ucfg_dp_is_ol_enabled(struct wlan_objmgr_psoc *psoc);
 /**
  * ucfg_dp_rx_handle_concurrency() - Handle concurrency setting in DP
  * @psoc: PSOC mapped to DP context
- * @is_wifi3_0_target: true if it is wifi3.0 target
- * @is_concurrency: Is concurrency enabled/disabled
+ * @disable: true/false to disable/enable the Rx offload
  *
  * Return: None
  */
 void ucfg_dp_rx_handle_concurrency(struct wlan_objmgr_psoc *psoc,
-				   bool is_wifi3_0_target,
-				   bool is_concurrency);
+				   bool disable);
 #else
 static inline
 void ucfg_dp_rx_handle_concurrency(struct wlan_objmgr_psoc *psoc,
-				   bool is_wifi3_0_target,
-				   bool is_concurrency) { }
+				   bool disable) { }
 #endif
 
 /**
@@ -376,11 +373,11 @@ ucfg_dp_softap_start_xmit(qdf_nbuf_t nbuf, struct wlan_objmgr_vdev *vdev);
 
 /**
  * ucfg_dp_get_dev_stats() - Get netdev stats info
- * @intf_addr: DP interface MAC address
+ * @dev: Pointer to network device
  *
  * Return: qdf_net_dev_stats info
  */
-qdf_net_dev_stats *ucfg_dp_get_dev_stats(struct qdf_mac_addr *intf_addr);
+qdf_net_dev_stats *ucfg_dp_get_dev_stats(qdf_netdev_t dev);
 
 /**
  * ucfg_dp_inc_rx_pkt_stats() - DP increment RX pkt stats
@@ -1062,7 +1059,7 @@ uint32_t ucfg_dp_get_bus_bw_compute_interval(struct wlan_objmgr_psoc *psoc);
 int ucfg_dp_get_current_throughput_level(struct wlan_objmgr_psoc *psoc);
 
 /**
- * ucfg_dp_get_txrx_stats() - get current bandwidth level
+ * ucfg_dp_get_txrx_stats() - get dp txrx stats
  * @vdev: vdev handle
  * @dp_stats : dp_stats pointer
  *
@@ -1072,6 +1069,24 @@ int ucfg_dp_get_current_throughput_level(struct wlan_objmgr_psoc *psoc);
  */
 QDF_STATUS ucfg_dp_get_txrx_stats(struct wlan_objmgr_vdev *vdev,
 				  struct dp_tx_rx_stats *dp_stats);
+
+/*
+ * ucfg_dp_get_net_dev_stats(): Get netdev stats
+ * @vdev: vdev handle
+ * @stats: To hold netdev stats
+ *
+ * Return: None
+ */
+void ucfg_dp_get_net_dev_stats(struct wlan_objmgr_vdev *vdev,
+			       qdf_net_dev_stats *stats);
+
+/*
+ * ucfg_dp_clear_net_dev_stats(): Clear netdev stats
+ * @dev: Pointer to netdev
+ *
+ * Return: None
+ */
+void ucfg_dp_clear_net_dev_stats(qdf_netdev_t dev);
 
 /**
  * ucfg_dp_reset_cont_txtimeout_cnt() - Reset Tx Timeout count
@@ -1124,13 +1139,13 @@ void ucfg_dp_set_rx_aggregation_val(struct wlan_objmgr_psoc *psoc,
 				    uint32_t value);
 
 /**
- * ucfg_dp_set_force_gro_enable() - Set force gro enable
+ * ucfg_dp_set_tc_based_dyn_gro() - Set tc based dynamic gro
  * @psoc: psoc handle
  * @value : value to be set
  *
  * Return: None
  */
-void ucfg_dp_set_force_gro_enable(struct wlan_objmgr_psoc *psoc, bool value);
+void ucfg_dp_set_tc_based_dyn_gro(struct wlan_objmgr_psoc *psoc, bool value);
 
 /**
  * ucfg_dp_runtime_disable_rx_thread() - Disable rx thread
@@ -1149,4 +1164,38 @@ void ucfg_dp_runtime_disable_rx_thread(struct wlan_objmgr_vdev *vdev,
  * Return: true if NAPI enabled
  */
 bool ucfg_dp_get_napi_enabled(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_dp_set_tc_ingress_prio() - Set tc ingress priority
+ * @psoc: psoc handle mapped to DP context
+ * @value: value to be set
+ *
+ * Return: None
+ */
+void ucfg_dp_set_tc_ingress_prio(struct wlan_objmgr_psoc *psoc, uint32_t value);
+
+/**
+ * ucfg_dp_nud_fail_data_stall_evt_enabled() - Check if NUD failuire data stall
+ * detection is enabled
+ *
+ * Return: True if the data stall event is enabled
+ */
+bool ucfg_dp_nud_fail_data_stall_evt_enabled(void);
+
+/**
+ * ucfg_dp_fw_data_stall_evt_enabled() - Check if Fw data stall
+ * detection is enabled
+ *
+ * Return: data stall event mask
+ */
+uint32_t ucfg_dp_fw_data_stall_evt_enabled(void);
+
+/**
+ * ucfg_dp_get_bus_bw_high_threshold() - Get the bus bw high threshold
+ * @psoc: psoc handle
+ *
+ * Return: current bus bw high threshold
+ */
+uint32_t ucfg_dp_get_bus_bw_high_threshold(struct wlan_objmgr_psoc *psoc);
+
 #endif /* _WLAN_DP_UCFG_API_H_ */

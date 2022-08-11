@@ -755,7 +755,7 @@ void dp_tx_timeout(struct wlan_dp_intf *dp_intf)
 		dp_err("Data stall due to continuous TX timeouts");
 		dp_intf->dp_stats.tx_rx_stats.cont_txtimeout_cnt = 0;
 
-		if (cdp_cfg_get(soc, cfg_dp_enable_data_stall))
+		if (dp_is_data_stall_event_enabled(DP_HOST_STA_TX_TIMEOUT))
 			cdp_post_data_stall_event(soc,
 					  DATA_STALL_LOG_INDICATOR_HOST_DRIVER,
 					  DATA_STALL_LOG_HOST_STA_TX_TIMEOUT,
@@ -961,11 +961,13 @@ static QDF_STATUS dp_gro_rx_bh_disable(struct wlan_dp_intf *dp_intf,
 	uint32_t rx_aggregation;
 	uint8_t rx_ctx_id = QDF_NBUF_CB_RX_CTX_ID(nbuf);
 	uint8_t low_tput_force_flush = 0;
+	int32_t gro_disallowed;
 
 	rx_aggregation = qdf_atomic_read(&dp_ctx->dp_agg_param.rx_aggregation);
+	gro_disallowed = qdf_atomic_read(&dp_intf->gro_disallowed);
 
 	if (dp_get_current_throughput_level(dp_ctx) == PLD_BUS_WIDTH_IDLE ||
-	    !rx_aggregation || dp_intf->gro_disallowed[rx_ctx_id]) {
+	    !rx_aggregation || gro_disallowed) {
 		status = dp_ctx->dp_ops.dp_rx_napi_gro_flush(napi_to_use, nbuf,
 						   &low_tput_force_flush);
 		if (!low_tput_force_flush)
@@ -973,7 +975,7 @@ static QDF_STATUS dp_gro_rx_bh_disable(struct wlan_dp_intf *dp_intf,
 					rx_gro_low_tput_flush++;
 		if (!rx_aggregation)
 			dp_ctx->dp_agg_param.gro_force_flush[rx_ctx_id] = 1;
-		if (dp_intf->gro_disallowed[rx_ctx_id])
+		if (gro_disallowed)
 			dp_intf->gro_flushed[rx_ctx_id] = 1;
 	} else {
 		status = dp_ctx->dp_ops.dp_rx_napi_gro_receive(napi_to_use,
@@ -1400,58 +1402,6 @@ void wlan_dp_set_fisa_disallowed_for_vdev(ol_txrx_soc_handle soc,
 #endif
 
 #ifdef WLAN_FEATURE_DYNAMIC_RX_AGGREGATION
-/**
- * dp_rx_check_qdisc_for_intf() - Check if any ingress qdisc is configured
- *  for given adapter
- * @dp_intf: pointer to DP interface context
- * @rx_ctx_id: Rx context id
- *
- * The function checks if ingress qdisc is registered for a given
- * net device.
- *
- * Return: None
- */
-static void
-dp_rx_check_qdisc_for_intf(struct wlan_dp_intf *dp_intf,
-			   uint8_t rx_ctx_id)
-{
-	ol_txrx_soc_handle soc = cds_get_context(QDF_MODULE_ID_SOC);
-	struct wlan_dp_psoc_callbacks *dp_ops;
-	QDF_STATUS status;
-
-	/*
-	 * Restrict the qdisc based dynamic GRO enable/disable to
-	 * standalone STA mode only. Reset the configuration for
-	 * any other device mode or concurrency.
-	 */
-	if (dp_intf->device_mode != QDF_STA_MODE ||
-	    (qdf_atomic_read(&dp_intf->dp_ctx->rx_skip_qdisc_chk_conc)))
-		goto reset_wl;
-
-	dp_ops = &dp_intf->dp_ctx->dp_ops;
-	status = dp_ops->dp_rx_check_qdisc_configured(dp_intf->dev,
-						      rx_ctx_id);
-	if (QDF_IS_STATUS_SUCCESS(status)) {
-		if (qdf_likely(dp_intf->gro_disallowed[rx_ctx_id]))
-			return;
-
-		dp_debug("ingress qdisc/filter configured disable GRO");
-		dp_intf->gro_disallowed[rx_ctx_id] = 1;
-		wlan_dp_set_fisa_disallowed_for_vdev(soc, dp_intf->intf_id,
-						     rx_ctx_id, 1);
-		return;
-	}
-
-reset_wl:
-	if (qdf_unlikely(dp_intf->gro_disallowed[rx_ctx_id])) {
-		dp_debug("ingress qdisc/filter removed enable GRO");
-		wlan_dp_set_fisa_disallowed_for_vdev(soc, dp_intf->intf_id,
-						     rx_ctx_id, 0);
-		dp_intf->gro_disallowed[rx_ctx_id] = 0;
-		dp_intf->gro_flushed[rx_ctx_id] = 0;
-	}
-}
-
 QDF_STATUS wlan_dp_rx_deliver_to_stack(struct wlan_dp_intf *dp_intf,
 				       qdf_nbuf_t nbuf)
 {
@@ -1461,14 +1411,28 @@ QDF_STATUS wlan_dp_rx_deliver_to_stack(struct wlan_dp_intf *dp_intf,
 	bool nbuf_receive_offload_ok = false;
 	enum dp_nbuf_push_type push_type;
 	uint8_t rx_ctx_id = QDF_NBUF_CB_RX_CTX_ID(nbuf);
-
-	if (!dp_ctx->dp_agg_param.force_gro_enable)
-		/* rx_ctx_id is already verified for out-of-range */
-		dp_rx_check_qdisc_for_intf(dp_intf, rx_ctx_id);
+	ol_txrx_soc_handle soc = cds_get_context(QDF_MODULE_ID_SOC);
+	int32_t gro_disallowed;
 
 	if (QDF_NBUF_CB_RX_TCP_PROTO(nbuf) &&
 	    !QDF_NBUF_CB_RX_PEER_CACHED_FRM(nbuf))
 		nbuf_receive_offload_ok = true;
+
+	gro_disallowed = qdf_atomic_read(&dp_intf->gro_disallowed);
+	if (gro_disallowed == 0 &&
+	    dp_intf->gro_flushed[rx_ctx_id] != 0) {
+		if (qdf_likely(soc))
+			wlan_dp_set_fisa_disallowed_for_vdev(soc,
+							     dp_intf->intf_id,
+							     rx_ctx_id, 0);
+		dp_intf->gro_flushed[rx_ctx_id] = 0;
+	} else if (gro_disallowed &&
+		   dp_intf->gro_flushed[rx_ctx_id] == 0) {
+		if (qdf_likely(soc))
+			wlan_dp_set_fisa_disallowed_for_vdev(soc,
+							     dp_intf->intf_id,
+							     rx_ctx_id, 1);
+	}
 
 	if (nbuf_receive_offload_ok && dp_ctx->receive_offload_cb &&
 	    !dp_ctx->dp_agg_param.gro_force_flush[rx_ctx_id] &&

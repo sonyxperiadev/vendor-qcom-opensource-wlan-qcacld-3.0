@@ -618,7 +618,7 @@ struct wlan_dp_psoc_callbacks {
 	void (*dp_register_rx_offld_flush_cb)(enum dp_rx_offld_flush_cb type);
 
 	QDF_STATUS (*dp_rx_check_qdisc_configured)(qdf_netdev_t dev,
-						   uint8_t rx_ctx_id);
+						   uint32_t prio);
 
 	bool (*dp_is_gratuitous_arp_unsolicited_na)(qdf_nbuf_t nbuf);
 

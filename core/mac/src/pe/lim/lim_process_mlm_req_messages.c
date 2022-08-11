@@ -48,6 +48,7 @@
 #include <lim_mlo.h>
 #include "wlan_mlo_mgr_peer.h"
 #include <son_api.h>
+#include "wifi_pos_pasn_api.h"
 
 static void lim_process_mlm_auth_req(struct mac_context *, uint32_t *);
 static void lim_process_mlm_assoc_req(struct mac_context *, uint32_t *);
@@ -402,6 +403,33 @@ lim_send_peer_create_resp_mlo(struct wlan_objmgr_vdev *vdev,
 {
 }
 #endif /* WLAN_FEATURE_11BE_MLO */
+
+#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
+void
+lim_pasn_peer_del_all_resp_vdev_delete_resume(struct mac_context *mac,
+					      struct wlan_objmgr_vdev *vdev)
+{
+	if (!mac) {
+		pe_err("Mac ctx is NULL");
+		return;
+	}
+
+	/*
+	 * If PASN peer delete all command to firmware timedout, then
+	 * the PASN peers will not be cleaned up. So cleanup the
+	 * objmgr peers from here and reset the peer delete all in
+	 * progress flag.
+	 */
+	if (wifi_pos_get_pasn_peer_count(vdev))
+		wifi_pos_cleanup_pasn_peers(mac->psoc, vdev);
+
+	wifi_pos_set_delete_all_peer_in_progress(vdev, false);
+
+	pe_debug("Resume vdev delete");
+	if (mac->sme.sme_vdev_del_cb)
+		mac->sme.sme_vdev_del_cb(MAC_HANDLE(mac), vdev);
+}
+#endif
 
 void lim_send_peer_create_resp(struct mac_context *mac, uint8_t vdev_id,
 			       QDF_STATUS qdf_status, uint8_t *peer_mac)

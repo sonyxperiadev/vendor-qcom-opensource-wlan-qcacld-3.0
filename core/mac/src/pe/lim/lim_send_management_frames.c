@@ -173,7 +173,6 @@ lim_populate_ml_probe_req(struct mac_context *mac,
 	*ml_prb_req_ie = (uint8_t *)ml_prb_req;
 	/* Fill the Element ID IE Type (0xFF) */
 	ml_prb_req->ml_ie_ff.elem_id = WLAN_ELEMID_EXTN_ELEM;
-	ml_probe_len += sizeof(struct ie_header);
 	/* Fill the Multi link extn Element ID IE Type (0x6B) */
 	ml_prb_req->ml_ie_ff.elem_id_ext = WLAN_EXTN_ELEMID_MULTI_LINK;
 	ml_probe_len++;
@@ -221,11 +220,11 @@ lim_populate_ml_probe_req(struct mac_context *mac,
 		ml_probe_len += WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_SIZE;
 	}
 	ml_prb_req->ml_ie_ff.elem_len = ml_probe_len;
-	*ml_probe_req_len = ml_probe_len;
+	*ml_probe_req_len = ml_probe_len + MIN_IE_LEN;
 
-	pe_nofl_debug("Send ML probe req %d", ml_probe_len);
+	pe_nofl_debug("Send ML probe req %zu", ml_probe_len);
 	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-			   ml_probe, ml_probe_len);
+			   ml_probe, ml_probe_len + MIN_IE_LEN);
 
 	session->lim_join_req->is_ml_probe_req_sent = true;
 
@@ -875,6 +874,8 @@ lim_send_probe_rsp_mgmt_frame(struct mac_context *mac_ctx,
 					&frm->he_cap);
 		populate_dot11f_he_operation(mac_ctx, pe_session,
 					     &frm->he_op);
+		populate_dot11f_sr_info(mac_ctx, pe_session,
+					&frm->spatial_reuse);
 		populate_dot11f_he_6ghz_cap(mac_ctx, pe_session,
 					    &frm->he_6ghz_band_cap);
 	}
@@ -1738,6 +1739,8 @@ lim_send_assoc_rsp_mgmt_frame(struct mac_context *mac_ctx,
 		    lim_is_session_he_capable(pe_session)) {
 			populate_dot11f_he_caps(mac_ctx, pe_session,
 						&frm.he_cap);
+			populate_dot11f_sr_info(mac_ctx, pe_session,
+						&frm.spatial_reuse);
 			populate_dot11f_he_operation(mac_ctx, pe_session,
 						     &frm.he_op);
 			populate_dot11f_he_6ghz_cap(mac_ctx, pe_session,
@@ -2440,11 +2443,12 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 	uint8_t mbo_ie_len = 0, adaptive_11r_ie_len = 0, rsnx_ie_len = 0;
 	uint8_t mscs_ext_ie_len = 0;
 	uint8_t *eht_cap_ie = NULL, eht_cap_ie_len = 0;
-	bool bss_mfp_capable;
+	bool bss_mfp_capable, frag_ie_present = false;
 	int8_t peer_rssi = 0;
 	bool is_band_2g;
 	uint16_t ie_buf_size;
-	uint16_t mlo_ie_len;
+	uint16_t mlo_ie_len, fils_hlp_ie_len = 0;
+	uint8_t *fils_hlp_ie = NULL;
 
 	if (!pe_session) {
 		pe_err("pe_session is NULL");
@@ -2771,6 +2775,43 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 	if (lim_is_fils_connection(pe_session)) {
 		populate_dot11f_fils_params(mac_ctx, frm, pe_session);
 		aes_block_size_len = AES_BLOCK_SIZE;
+		if (wlan_get_ie_ptr_from_eid(WLAN_ELEMID_FRAGMENT,
+					     add_ie, add_ie_len))
+			frag_ie_present = true;
+	}
+
+	/* Strip and append HLP container IE only if it is fragmented */
+	if (frag_ie_present &&
+	    wlan_get_ext_ie_ptr_from_ext_id(SIR_FILS_HLP_OUI_TYPE,
+					    SIR_FILS_HLP_OUI_LEN, add_ie,
+					    add_ie_len)) {
+		fils_hlp_ie = qdf_mem_malloc(SIR_FILS_HLP_IE_LEN);
+		if (!fils_hlp_ie)
+			goto end;
+
+		qdf_status =
+			lim_strip_ie(mac_ctx, add_ie, &add_ie_len,
+				     WLAN_ELEMID_EXTN_ELEM, ONE_BYTE,
+				     SIR_FILS_HLP_OUI_TYPE,
+				     SIR_FILS_HLP_OUI_LEN, fils_hlp_ie,
+				     SIR_FILS_HLP_IE_LEN - 2);
+		if (QDF_IS_STATUS_ERROR(qdf_status)) {
+			pe_err("Failed to strip FILS HLP container IE");
+			goto end;
+		}
+		fils_hlp_ie_len = fils_hlp_ie[1] + 2;
+
+		current_len = add_ie_len;
+		qdf_status =
+			lim_strip_ie(mac_ctx, add_ie, &add_ie_len,
+				     WLAN_ELEMID_FRAGMENT, ONE_BYTE,
+				     NULL, 0, &fils_hlp_ie[fils_hlp_ie_len],
+				     SIR_FILS_HLP_IE_LEN - fils_hlp_ie_len - 2);
+		if (QDF_IS_STATUS_ERROR(qdf_status)) {
+			pe_err("Failed to strip fragment IE of HLP container IE");
+			goto end;
+		}
+		fils_hlp_ie_len += current_len - add_ie_len;
 	}
 
 	/* RSNX IE for SAE PWE derivation based on H2E */
@@ -2906,7 +2947,7 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 
 	bytes = payload + sizeof(tSirMacMgmtHdr) + aes_block_size_len +
 		rsnx_ie_len + mbo_ie_len + adaptive_11r_ie_len +
-		mscs_ext_ie_len + vendor_ie_len + mlo_ie_len;
+		mscs_ext_ie_len + vendor_ie_len + mlo_ie_len + fils_hlp_ie_len;
 
 
 	qdf_status = cds_packet_alloc((uint16_t) bytes, (void **)&frame,
@@ -2945,6 +2986,12 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 		goto end;
 	} else if (DOT11F_WARNED(status)) {
 		pe_warn("Assoc request pack warning (0x%08x)", status);
+	}
+
+	if (fils_hlp_ie && fils_hlp_ie_len) {
+		qdf_mem_copy(frame + sizeof(tSirMacMgmtHdr) + payload,
+			     fils_hlp_ie, fils_hlp_ie_len);
+		payload = payload + fils_hlp_ie_len;
 	}
 
 	/* Strip EHT capabilities IE */
@@ -3102,6 +3149,7 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 	}
 
 end:
+	qdf_mem_free(fils_hlp_ie);
 	qdf_mem_free(rsnx_ie);
 	qdf_mem_free(vendor_ies);
 	qdf_mem_free(mbo_ie);

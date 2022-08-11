@@ -133,6 +133,27 @@ void lim_process_beacon_mlo(struct mac_context *mac_ctx,
 }
 #endif
 
+static QDF_STATUS
+lim_validate_rsn_ie(const uint8_t *ie_ptr, uint16_t ie_len)
+{
+	QDF_STATUS status;
+	const uint8_t *rsn_ie;
+	struct wlan_crypto_params crypto_params;
+
+	rsn_ie = wlan_get_ie_ptr_from_eid(WLAN_ELEMID_RSN, ie_ptr, ie_len);
+	if (!rsn_ie)
+		return QDF_STATUS_SUCCESS;
+
+	qdf_mem_zero(&crypto_params, sizeof(struct wlan_crypto_params));
+	status = wlan_crypto_rsnie_check(&crypto_params, rsn_ie);
+	if (status != QDF_STATUS_SUCCESS) {
+		pe_debug_rl("RSN IE check failed %d", status);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
 /**
  * lim_process_beacon_frame() - to process beacon frames
  * @mac_ctx: Pointer to Global MAC structure
@@ -173,7 +194,14 @@ lim_process_beacon_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 		 QDF_MAC_ADDR_REF(mac_hdr->sa),
 		 (uint)abs((int8_t)
 		 WMA_GET_RX_RSSI_NORMALIZED(rx_pkt_info)));
-
+	if (frame_len < SIR_MAC_B_PR_SSID_OFFSET) {
+		pe_debug_rl("payload invalid len %d", frame_len);
+		return;
+	}
+	if (lim_validate_rsn_ie(frame + SIR_MAC_B_PR_SSID_OFFSET,
+				frame_len - SIR_MAC_B_PR_SSID_OFFSET) !=
+			QDF_STATUS_SUCCESS)
+		return;
 	/* Expect Beacon in any state as Scan is independent of LIM state */
 	bcn_ptr = qdf_mem_malloc(sizeof(*bcn_ptr));
 	if (!bcn_ptr)
@@ -194,6 +222,9 @@ lim_process_beacon_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 		qdf_mem_free(bcn_ptr);
 		return;
 	}
+
+	if (QDF_IS_STATUS_SUCCESS(lim_check_for_ml_probe_req(session)))
+		goto end;
 
 	lim_process_beacon_mlo(mac_ctx, session, bcn_ptr);
 
@@ -251,6 +282,7 @@ lim_process_beacon_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 		lim_check_and_announce_join_success(mac_ctx, bcn_ptr,
 				mac_hdr, session);
 	}
+end:
 	qdf_mem_free(bcn_ptr);
 	return;
 }

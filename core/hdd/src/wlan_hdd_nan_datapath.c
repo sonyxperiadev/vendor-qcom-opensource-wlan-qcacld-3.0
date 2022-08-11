@@ -43,6 +43,7 @@
 #include "qdf_util.h"
 #include <cdp_txrx_misc.h>
 #include "wlan_fwol_ucfg_api.h"
+#include "wlan_dp_ucfg_api.h"
 
 /**
  * hdd_nan_datapath_target_config() - Configure NAN datapath features
@@ -608,6 +609,7 @@ int hdd_init_nan_data_mode(struct hdd_adapter *adapter)
 	mac_handle_t mac_handle;
 	bool bval = false;
 	uint8_t enable_sifs_burst = 0;
+	struct wlan_objmgr_vdev *vdev;
 
 	ret_val = hdd_vdev_create(adapter);
 	if (ret_val) {
@@ -631,9 +633,16 @@ int hdd_init_nan_data_mode(struct hdd_adapter *adapter)
 	hdd_roam_profile_init(adapter);
 	hdd_register_wext(wlan_dev);
 
-	status = hdd_init_tx_rx(adapter);
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+	if (!vdev) {
+		ret_val = -EAGAIN;
+		goto error_init_txrx;
+	}
+
+	status = ucfg_dp_init_txrx(vdev);
 	if (QDF_STATUS_SUCCESS != status) {
-		hdd_err("hdd_init_tx_rx() init failed, status %d", status);
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+		hdd_err("ucfg_dp_init_tx_rx() init failed, status %d", status);
 		ret_val = -EAGAIN;
 		goto error_init_txrx;
 	}
@@ -663,14 +672,16 @@ int hdd_init_nan_data_mode(struct hdd_adapter *adapter)
 	hdd_set_netdev_flags(adapter);
 
 	update_ndi_state(adapter, NAN_DATA_NDI_CREATING_STATE);
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 	return ret_val;
 
 error_wmm_init:
 	clear_bit(INIT_TX_RX_SUCCESS, &adapter->event_flags);
-	hdd_deinit_tx_rx(adapter);
+	ucfg_dp_deinit_txrx(vdev);
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 
 error_init_txrx:
-	hdd_unregister_wext(wlan_dev);
+	hdd_wext_unregister(wlan_dev, true);
 
 	QDF_BUG(!hdd_vdev_destroy(adapter));
 
@@ -759,17 +770,13 @@ int hdd_ndi_set_mode(const char *iface_name)
 			return -EFAULT;
 		}
 		ndi_mac_addr = &random_ndi_mac.bytes[0];
+		ucfg_dp_update_inf_mac(hdd_ctx->psoc, &adapter->mac_addr,
+				       (struct qdf_mac_addr *)ndi_mac_addr);
+		hdd_update_dynamic_mac(hdd_ctx, &adapter->mac_addr,
+				       (struct qdf_mac_addr *)ndi_mac_addr);
+		qdf_mem_copy(&adapter->mac_addr, ndi_mac_addr, ETH_ALEN);
+		qdf_mem_copy(adapter->dev->dev_addr, ndi_mac_addr, ETH_ALEN);
 	}
-
-	if (!ndi_mac_addr) {
-		hdd_err("ndi mac address is null");
-		return -EINVAL;
-	}
-
-	hdd_update_dynamic_mac(hdd_ctx, &adapter->mac_addr,
-			       (struct qdf_mac_addr *)ndi_mac_addr);
-	qdf_mem_copy(&adapter->mac_addr, ndi_mac_addr, ETH_ALEN);
-	qdf_mem_copy(adapter->dev->dev_addr, ndi_mac_addr, ETH_ALEN);
 
 	adapter->device_mode = QDF_NDI_MODE;
 	hdd_debug("Created NDI with device mode:%d and iface_name:%s",
@@ -838,6 +845,19 @@ err_handler:
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0))
 static int hdd_delete_ndi_intf(struct wiphy *wiphy, struct wireless_dev *wdev)
 {
+	struct net_device *dev = wdev->netdev;
+	struct hdd_context *hdd_ctx = (struct hdd_context *)wiphy_priv(wiphy);
+	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
+
+	hdd_enter_dev(dev);
+
+	wlan_hdd_release_intf_addr(hdd_ctx,
+				   adapter->mac_addr.bytes);
+	hdd_stop_adapter(hdd_ctx, adapter);
+	hdd_deinit_adapter(hdd_ctx, adapter, true);
+
+	hdd_exit();
+
 	return 0;
 }
 #else
@@ -1053,6 +1073,7 @@ int hdd_ndp_new_peer_handler(uint8_t vdev_id, uint16_t sta_id,
 	struct hdd_adapter *adapter;
 	struct hdd_station_ctx *sta_ctx;
 	struct csr_roam_info *roam_info;
+	struct wlan_objmgr_vdev *vdev;
 
 	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
 	if (!hdd_ctx)
@@ -1089,14 +1110,18 @@ int hdd_ndp_new_peer_handler(uint8_t vdev_id, uint16_t sta_id,
 	if (first_peer) {
 		hdd_debug("Set ctx connection state to connected");
 		/* Disable LRO/GRO for NDI Mode */
-		if (hdd_ctx->ol_enable &&
+		if (ucfg_dp_is_ol_enabled(hdd_ctx->psoc) &&
 		    !NAN_CONCURRENCY_SUPPORTED(hdd_ctx->psoc)) {
 			hdd_debug("Disable LRO/GRO in NDI Mode");
 			hdd_disable_rx_ol_in_concurrency(true);
 		}
 
-		hdd_bus_bw_compute_prev_txrx_stats(adapter);
-		hdd_bus_bw_compute_timer_start(hdd_ctx);
+		vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+		if (vdev) {
+			ucfg_dp_bus_bw_compute_prev_txrx_stats(vdev);
+			hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+		}
+		ucfg_dp_bus_bw_compute_timer_start(hdd_ctx->psoc);
 		sta_ctx->conn_info.conn_state = eConnectionState_NdiConnected;
 		hdd_wmm_connect(adapter, roam_info, eCSR_BSS_TYPE_NDI);
 		wlan_hdd_netif_queue_control(
@@ -1120,6 +1145,7 @@ void hdd_cleanup_ndi(struct hdd_context *hdd_ctx,
 		     struct hdd_adapter *adapter)
 {
 	struct hdd_station_ctx *sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
+	struct wlan_objmgr_vdev *vdev;
 
 	if (sta_ctx->conn_info.conn_state != eConnectionState_NdiConnected) {
 		hdd_debug("NDI has no NDPs");
@@ -1132,9 +1158,13 @@ void hdd_cleanup_ndi(struct hdd_context *hdd_ctx,
 	wlan_hdd_netif_queue_control(adapter,
 				     WLAN_STOP_ALL_NETIF_QUEUE_N_CARRIER,
 				     WLAN_CONTROL_PATH);
-	hdd_bus_bw_compute_reset_prev_txrx_stats(adapter);
-	hdd_bus_bw_compute_timer_try_stop(hdd_ctx);
-	if ((hdd_ctx->ol_enable &&
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+	if (vdev) {
+		ucfg_dp_bus_bw_compute_reset_prev_txrx_stats(vdev);
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+	}
+	ucfg_dp_bus_bw_compute_timer_try_stop(hdd_ctx->psoc);
+	if ((ucfg_dp_is_ol_enabled(hdd_ctx->psoc) &&
 	     !NAN_CONCURRENCY_SUPPORTED(hdd_ctx->psoc)) &&
 	    ((policy_mgr_get_connection_count(hdd_ctx->psoc) == 0) ||
 	     ((policy_mgr_get_connection_count(hdd_ctx->psoc) == 1) &&
@@ -1143,7 +1173,7 @@ void hdd_cleanup_ndi(struct hdd_context *hdd_ctx,
 						PM_STA_MODE,
 						NULL) == 1)))) {
 		hdd_debug("Enable LRO/GRO");
-		hdd_disable_rx_ol_in_concurrency(false);
+		ucfg_dp_rx_handle_concurrency(hdd_ctx->psoc, false);
 	}
 }
 

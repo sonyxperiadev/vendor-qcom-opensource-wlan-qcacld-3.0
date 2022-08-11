@@ -20,7 +20,14 @@
 #include <dp_types.h>
 #include <dp_internal.h>
 #include <wlan_cfg.h>
-#include "dp_swlm.h"
+#include "wlan_dp_swlm.h"
+#include "qdf_time.h"
+#include "qdf_util.h"
+#include "hal_internal.h"
+#include "hal_api.h"
+#include "hif.h"
+#include <qdf_status.h>
+#include <qdf_nbuf.h>
 
 /**
  * dp_swlm_is_tput_thresh_reached() - Calculate the current tx and rx TPUT
@@ -196,8 +203,6 @@ static void dp_swlm_tcl_flush_timer(void *arg)
 
 fail:
 	DP_STATS_INC(swlm, tcl[tcl->ring_id].timer_flush_fail, 1);
-
-	return;
 }
 
 /**

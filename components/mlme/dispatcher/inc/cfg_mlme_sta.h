@@ -568,8 +568,8 @@
  * <cfg>
  * mlo_support_link_band - Set band bitmap of mlo connection supports for sta
  * @Min: 1
- * @Max: 7
- * @Default: 7
+ * @Max: 0x77
+ * @Default: 0x77
  *
  * This cfg is used to configure the band bitmap of mlo connection supports
  *
@@ -579,17 +579,23 @@
  *
  * Usage: Internal
  *
+ * Supported band of all mlo links
  * bits 0: REG_BAND_2G
  * bits 1: REG_BAND_5G
  * bits 2: REG_BAND_6G
+ *
+ * Supported band of assoc link
+ * bits 4: REG_BAND_2G
+ * bits 5: REG_BAND_5G
+ * bits 6: REG_BAND_6G
  *
  * </cfg>
  */
 #define CFG_MLO_SUPPORT_LINK_BAND CFG_UINT( \
 			"mlo_support_link_band", \
-			1, \
-			7, \
-			7, \
+			0x1, \
+			0x77, \
+			0x77, \
 			CFG_VALUE_OR_DEFAULT, \
 			"supported mlo link band")
 

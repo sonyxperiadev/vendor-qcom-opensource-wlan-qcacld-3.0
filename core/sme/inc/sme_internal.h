@@ -525,6 +525,8 @@ struct sme_context {
 	void (*roam_rt_stats_cb)(hdd_handle_t hdd_handle, uint8_t idx,
 				 struct roam_stats_event *roam_stats);
 #endif
+	QDF_STATUS (*sme_vdev_del_cb)(mac_handle_t mac_handle,
+				      struct wlan_objmgr_vdev *vdev);
 };
 
 #endif /* #if !defined( __SMEINTERNAL_H ) */

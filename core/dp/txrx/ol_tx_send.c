@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022, Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -55,6 +55,7 @@
 #include <pktlog_ac_fmt.h>
 #include <cdp_txrx_handle.h>
 #include <wlan_pkt_capture_ucfg_api.h>
+#include <wlan_dp_txrx.h>
 #ifdef TX_CREDIT_RECLAIM_SUPPORT
 
 #define OL_TX_CREDIT_RECLAIM(pdev)					\
@@ -947,7 +948,7 @@ static void ol_tx_update_connectivity_stats(struct ol_tx_desc_t *tx_desc,
 	stats_rx = tx_desc->vdev->stats_rx;
 	ol_tx_flow_pool_unlock(tx_desc);
 
-	pkt_type_bitmap = cds_get_connectivity_stats_pkt_bitmap(osif_dev);
+	pkt_type_bitmap = wlan_dp_intf_get_pkt_type_bitmap_value(tx_desc->vdev);
 
 	if (pkt_type_bitmap) {
 		if (status != htt_tx_status_download_fail)

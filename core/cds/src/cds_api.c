@@ -85,6 +85,7 @@
 #include <qwlan_version.h>
 #include <qdf_trace.h>
 #include <qdf_nbuf.h>
+#include "wlan_dp_ucfg_api.h"
 
 /* Preprocessor Definitions and Constants */
 
@@ -443,7 +444,6 @@ static void cds_cdp_cfg_attach(struct wlan_objmgr_psoc *psoc)
 {
 	struct txrx_pdev_cfg_param_t cdp_cfg = {0};
 	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
-	struct hdd_context *hdd_ctx = gp_cds_context->hdd_context;
 	uint32_t gro_bit_set;
 
 	cdp_cfg.is_full_reorder_offload = DP_REORDER_OFFLOAD_SUPPORT;
@@ -455,7 +455,7 @@ static void cds_cdp_cfg_attach(struct wlan_objmgr_psoc *psoc)
 		cfg_get(psoc, CFG_DP_IPA_UC_RX_IND_RING_COUNT);
 	cdp_cfg.uc_tx_partition_base =
 		cfg_get(psoc, CFG_DP_IPA_UC_TX_PARTITION_BASE);
-	cdp_cfg.enable_rxthread = hdd_ctx->enable_rxthread;
+	cdp_cfg.enable_rxthread = ucfg_dp_is_rx_common_thread_enabled(psoc);
 	cdp_cfg.ip_tcp_udp_checksum_offload =
 		cfg_get(psoc, CFG_DP_TCP_UDP_CKSUM_OFFLOAD);
 	cdp_cfg.nan_ip_tcp_udp_checksum_offload =
@@ -1002,12 +1002,12 @@ QDF_STATUS cds_dp_open(struct wlan_objmgr_psoc *psoc)
 	cds_debug("CDS successfully Opened");
 
 	if (cdp_cfg_get(gp_cds_context->dp_soc, cfg_dp_tc_based_dyn_gro_enable))
-		hdd_ctx->dp_agg_param.tc_based_dyn_gro = true;
+		ucfg_dp_set_tc_based_dyn_gro(psoc, true);
 	else
-		hdd_ctx->dp_agg_param.tc_based_dyn_gro = false;
+		ucfg_dp_set_tc_based_dyn_gro(psoc, false);
 
-	hdd_ctx->dp_agg_param.tc_ingress_prio =
-		    cdp_cfg_get(gp_cds_context->dp_soc, cfg_dp_tc_ingress_prio);
+	ucfg_dp_set_tc_ingress_prio(psoc, cdp_cfg_get(gp_cds_context->dp_soc,
+						      cfg_dp_tc_ingress_prio));
 
 	return 0;
 
@@ -2828,22 +2828,6 @@ cds_print_htc_credit_history(uint32_t count, qdf_abstract_print *print,
 }
 #endif
 
-uint32_t cds_get_connectivity_stats_pkt_bitmap(void *context)
-{
-	struct hdd_adapter *adapter = NULL;
-
-	if (!context)
-		return 0;
-
-	adapter = (struct hdd_adapter *)context;
-	if (unlikely(adapter->magic != WLAN_HDD_ADAPTER_MAGIC)) {
-		cds_err("Magic cookie(%x) for adapter sanity verification is invalid",
-			adapter->magic);
-		return 0;
-	}
-	return adapter->pkt_type_bitmap;
-}
-
 #ifdef FEATURE_ALIGN_STATS_FROM_DP
 /**
  * cds_get_cdp_vdev_stats() - Function which retrieves cdp vdev stats
@@ -2900,8 +2884,9 @@ QDF_STATUS cds_smmu_mem_map_setup(qdf_device_t osdev, bool ipa_present)
 	domain = pld_smmu_get_domain(osdev->dev);
 	if (domain) {
 		int attr = 0;
-		int errno = iommu_domain_get_attr(domain,
-						  DOMAIN_ATTR_S1_BYPASS, &attr);
+		int errno = qdf_iommu_domain_get_attr(domain,
+						      QDF_DOMAIN_ATTR_S1_BYPASS,
+						      &attr);
 
 		wlan_smmu_enabled = !errno && !attr;
 	} else {
@@ -2947,8 +2932,9 @@ QDF_STATUS cds_smmu_mem_map_setup(qdf_device_t osdev, bool ipa_present)
 	mapping = pld_smmu_get_mapping(osdev->dev);
 	if (mapping) {
 		int attr = 0;
-		int errno = iommu_domain_get_attr(mapping->domain,
-						  DOMAIN_ATTR_S1_BYPASS, &attr);
+		int errno = qdf_iommu_domain_get_attr(mapping->domain,
+						      QDF_DOMAIN_ATTR_S1_BYPASS,
+						      &attr);
 
 		wlan_smmu_enabled = !errno && !attr;
 	} else {

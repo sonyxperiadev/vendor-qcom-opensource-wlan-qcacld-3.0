@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -267,9 +268,9 @@
  * b14-27 => NSS2, MCS 0-13 and so on for other NSS.
  * Note that the bit representation is continuous.
  *
- * For VHT targets, 10 bits correspond to one NSS setting.
- * b0-9   => NSS1, MCS 0-9
- * b10-19 => NSS2, MCS 0-9 and so on for other NSS.
+ * For VHT targets, 12 bits correspond to one NSS setting.
+ * b0-11   => NSS1, MCS 0-11
+ * b12-23 => NSS2, MCS 0-11 and so on for other NSS.
  *
  * For HT targets, 8 bits correspond to one NSS setting.
  * b0-7  => NSS1, MCS 0-7

@@ -489,6 +489,27 @@ int wlan_hdd_get_linkspeed_for_peermac(struct hdd_adapter *adapter,
  */
 int wlan_hdd_get_link_speed(struct hdd_adapter *adapter, uint32_t *link_speed);
 
+#ifdef FEATURE_RX_LINKSPEED_ROAM_TRIGGER
+/**
+ * wlan_hdd_get_peer_rx_rate_stats() - STA gets rx rate stats
+ * @adapter: adapter upon which the measurement is requested
+ *
+ * STA gets rx rate stats through using the existed API
+ * cdp_host_get_peer_stats. The reason that we make this
+ * function is to avoid being disrupted by the flag
+ * "get_station_fw_request_needed"
+ *
+ * Return: void
+ */
+void
+wlan_hdd_get_peer_rx_rate_stats(struct hdd_adapter *adapter);
+#else
+static inline void
+wlan_hdd_get_peer_rx_rate_stats(struct hdd_adapter *adapter)
+{
+}
+#endif
+
 /**
  * wlan_hdd_get_station_stats() - Get station statistics
  * @adapter: adapter for which statistics are desired
@@ -585,6 +606,22 @@ void wlan_hdd_display_txrx_stats(struct hdd_context *hdd_ctx);
  */
 void hdd_get_max_tx_bitrate(struct hdd_context *hdd_ctx,
 			    struct hdd_adapter *adapter);
+
+#ifdef TX_MULTIQ_PER_AC
+/**
+ * wlan_hdd_display_tx_multiq_stats() - display Tx multi queue stats
+ * @context: hdd context
+ * @vdev_id: vdev id
+ *
+ * Return: none
+ */
+void wlan_hdd_display_tx_multiq_stats(hdd_cb_handle context, uint8_t vdev_id);
+#else
+static inline
+void wlan_hdd_display_tx_multiq_stats(hdd_cb_handle context, uint8_t vdev_id)
+{
+}
+#endif
 
 /**
  * hdd_report_max_rate() - Fill the max rate stats in the station info structure

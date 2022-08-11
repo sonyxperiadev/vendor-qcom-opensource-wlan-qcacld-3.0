@@ -30,7 +30,6 @@
 #include "wlan_hdd_connectivity_logging.h"
 #include <osif_cm_req.h>
 #include <wlan_logging_sock_svc.h>
-#include <wlan_hdd_periodic_sta_stats.h>
 #include <wlan_hdd_green_ap.h>
 #include <wlan_hdd_p2p.h>
 #include <wlan_p2p_ucfg_api.h>
@@ -54,6 +53,7 @@
 #include <osif_twt_internal.h>
 #include "wlan_osif_features.h"
 #include "wlan_osif_request_manager.h"
+#include <wlan_dp_ucfg_api.h>
 
 bool hdd_cm_is_vdev_associated(struct hdd_adapter *adapter)
 {
@@ -262,13 +262,12 @@ void hdd_cm_handle_assoc_event(struct wlan_objmgr_vdev *vdev, uint8_t *peer_mac)
 	if (ret)
 		hdd_err("Peer object " QDF_MAC_ADDR_FMT " fail to set associated state",
 			QDF_MAC_ADDR_REF(peer_mac));
-	hdd_add_latency_critical_client(
-			adapter,
+	ucfg_dp_add_latency_critical_client(vdev,
 			hdd_convert_cfgdot11mode_to_80211mode(
 				sta_ctx->conn_info.dot11mode));
 
-	hdd_bus_bw_compute_prev_txrx_stats(adapter);
-	hdd_bus_bw_compute_timer_start(hdd_ctx);
+	ucfg_dp_bus_bw_compute_prev_txrx_stats(vdev);
+	ucfg_dp_bus_bw_compute_timer_start(hdd_ctx->psoc);
 
 	if (ucfg_pkt_capture_get_pktcap_mode(hdd_ctx->psoc))
 		ucfg_pkt_capture_record_channel(adapter->vdev);
@@ -706,6 +705,7 @@ hdd_cm_connect_failure_pre_user_update(struct wlan_objmgr_vdev *vdev,
 	hdd_init_scan_reject_params(hdd_ctx);
 	hdd_cm_save_connect_status(adapter, rsp->status_code);
 	hdd_conn_remove_connect_info(hdd_sta_ctx);
+	ucfg_dp_remove_conn_info(vdev);
 	hdd_cm_update_rssi_snr_by_bssid(adapter);
 	hdd_cm_rec_connect_info(adapter, rsp);
 	hdd_debug("Invoking packetdump deregistration API");
@@ -744,8 +744,9 @@ hdd_cm_connect_failure_post_user_update(struct wlan_objmgr_vdev *vdev,
 	wlan_hdd_netif_queue_control(adapter,
 				     WLAN_STOP_ALL_NETIF_QUEUE_N_CARRIER,
 				     WLAN_CONTROL_PATH);
-	hdd_periodic_sta_stats_start(adapter);
+	ucfg_dp_periodic_sta_stats_start(vdev);
 	wlan_twt_concurrency_update(hdd_ctx);
+	hdd_update_he_obss_pd(adapter, NULL, false);
 }
 
 static void hdd_cm_connect_failure(struct wlan_objmgr_vdev *vdev,
@@ -762,6 +763,44 @@ static void hdd_cm_connect_failure(struct wlan_objmgr_vdev *vdev,
 	default:
 		hdd_cm_connect_failure_pre_user_update(vdev, rsp);
 		hdd_cm_connect_failure_post_user_update(vdev, rsp);
+	}
+}
+
+/**
+ * hdd_cm_update_prev_ap_ie() - Update the connected AP IEs
+ * @hdd_sta_ctx: Station context.
+ * @rsp: Connect response
+ *
+ * This API updates the connected ap beacon IEs to station context connection
+ * info.
+ *
+ * Return: None
+ */
+static void hdd_cm_update_prev_ap_ie(struct hdd_station_ctx *hdd_sta_ctx,
+				     struct wlan_cm_connect_resp *rsp)
+{
+	struct element_info *bcn_probe_rsp = &rsp->connect_ies.bcn_probe_rsp;
+	struct element_info *bcn_ie;
+	uint32_t len;
+
+	bcn_ie = &hdd_sta_ctx->conn_info.prev_ap_bcn_ie;
+	if (bcn_ie->ptr) {
+		qdf_mem_free(bcn_ie->ptr);
+		bcn_ie->ptr = NULL;
+		bcn_ie->len = 0;
+	}
+
+	if (bcn_probe_rsp->ptr &&
+	    bcn_probe_rsp->len > sizeof(struct wlan_frame_hdr)) {
+		len = bcn_probe_rsp->len - sizeof(struct wlan_frame_hdr);
+		bcn_ie->ptr = qdf_mem_malloc(len);
+		if (!bcn_ie->ptr) {
+			bcn_ie->len = 0;
+			return;
+		}
+		qdf_mem_copy(bcn_ie->ptr, bcn_probe_rsp->ptr +
+			     sizeof(struct wlan_frame_hdr), len);
+		bcn_ie->len = len;
 	}
 }
 
@@ -842,6 +881,7 @@ static void hdd_cm_save_bss_info(struct hdd_adapter *adapter,
 			     sizeof(hdd_sta_ctx->cache_conn_info));
 
 		hdd_copy_he_operation(hdd_sta_ctx, &assoc_resp->he_op);
+		hdd_cm_update_prev_ap_ie(hdd_sta_ctx, rsp);
 	}
 
 	qdf_mem_free(assoc_resp);
@@ -965,6 +1005,7 @@ static void hdd_cm_save_connect_info(struct hdd_adapter *adapter,
 	uint8_t *ie_field;
 	uint32_t ie_len, status;
 	tDot11fBeaconIEs *bcn_ie;
+	struct s_ext_cap *p_ext_cap = NULL;
 	mac_handle_t mac_handle = hdd_adapter_get_mac_handle(adapter);
 
 	sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
@@ -973,6 +1014,11 @@ static void hdd_cm_save_connect_info(struct hdd_adapter *adapter,
 		return;
 
 	qdf_copy_macaddr(&sta_ctx->conn_info.bssid, &rsp->bssid);
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+	if (vdev) {
+		ucfg_dp_conn_info_set_bssid(vdev, &rsp->bssid);
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+	}
 	sta_ctx->conn_info.assoc_status_code = rsp->status_code;
 
 	crypto_params = wlan_crypto_vdev_get_crypto_params(adapter->vdev);
@@ -1032,10 +1078,10 @@ static void hdd_cm_save_connect_info(struct hdd_adapter *adapter,
 		return;
 	}
 	if (bcn_ie->ExtCap.present) {
-		struct s_ext_cap *p_ext_cap = (struct s_ext_cap *)
-						bcn_ie->ExtCap.bytes;
+		p_ext_cap = (struct s_ext_cap *)bcn_ie->ExtCap.bytes;
 		sta_ctx->conn_info.proxy_arp_service =
 						p_ext_cap->proxy_arp_service;
+
 	}
 
 	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_CM_ID);
@@ -1045,6 +1091,11 @@ static void hdd_cm_save_connect_info(struct hdd_adapter *adapter,
 					     &sta_ctx->conn_info.rate_flags);
 		hdd_wmm_cm_connect(vdev, adapter, bcn_ie,
 				   sta_ctx->conn_info.auth_type);
+
+		if (p_ext_cap)
+			ucfg_dp_conn_info_set_arp_service(vdev,
+					p_ext_cap->proxy_arp_service);
+
 		hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_CM_ID);
 	}
 	qdf_mem_free(bcn_ie);
@@ -1307,7 +1358,7 @@ hdd_cm_connect_success_pre_user_update(struct wlan_objmgr_vdev *vdev,
 		QDF_PROTO_TYPE_MGMT, QDF_PROTO_MGMT_ASSOC));
 
 	if (is_roam)
-		hdd_nud_indicate_roam(adapter);
+		ucfg_dp_nud_indicate_roam(vdev);
 	 /* hdd_objmgr_set_peer_mlme_auth_state */
 }
 
@@ -1349,8 +1400,9 @@ hdd_cm_connect_success_post_user_update(struct wlan_objmgr_vdev *vdev,
 				      &rsp->bssid,
 				      TWT_ALL_SESSIONS_DIALOG_ID);
 	}
-	hdd_periodic_sta_stats_start(adapter);
+	ucfg_dp_periodic_sta_stats_start(vdev);
 	wlan_twt_concurrency_update(hdd_ctx);
+	hdd_update_he_obss_pd(adapter, NULL, true);
 }
 
 static void hdd_cm_connect_success(struct wlan_objmgr_vdev *vdev,
@@ -1594,7 +1646,13 @@ static void hdd_update_hlp_info(struct net_device *dev,
 	 */
 	skb->ip_summed = CHECKSUM_UNNECESSARY;
 
-	status = hdd_rx_packet_cbk(adapter, skb);
+	/*
+	 * adapter->vdev is directly dereferenced because in per packet
+	 * path usage of hdd_get_vdev_by_user is costly operation as it
+	 * involves lock access. And it is guranteed during TX/RX operations
+	 * vdev will be active will not deleted.
+	 */
+	status = ucfg_dp_rx_packet_cbk(adapter->vdev, (qdf_nbuf_t)skb);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		hdd_err("Sending HLP packet fails");
 		return;

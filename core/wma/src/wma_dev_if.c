@@ -337,19 +337,9 @@ static struct wma_target_req *wma_find_req(tp_wma_handle wma,
 	return req_msg;
 }
 
-/**
- * wma_find_remove_req_msgtype() - find and remove request for vdev id
- * @wma: wma handle
- * @vdev_id: vdev id
- * @msg_type: message request type
- *
- * Find target request for given vdev id & sub type of request.
- * Remove the same from active list.
- *
- * Return: Success if request found, failure other wise
- */
-static struct wma_target_req *wma_find_remove_req_msgtype(tp_wma_handle wma,
-					   uint8_t vdev_id, uint32_t msg_type)
+struct wma_target_req *wma_find_remove_req_msgtype(tp_wma_handle wma,
+						   uint8_t vdev_id,
+						   uint32_t msg_type)
 {
 	struct wma_target_req *req_msg = NULL;
 	bool found = false;
@@ -1284,6 +1274,7 @@ QDF_STATUS wma_vdev_start_resp_handler(struct vdev_mlme_obj *vdev_mlme,
 		wma_dcs_clear_vdev_starting(mac_ctx, rsp->vdev_id);
 		wma_dcs_wlan_interference_mitigation_enable(mac_ctx,
 							    iface->mac_id, rsp);
+		wma_spr_update(wma, rsp->vdev_id, true);
 	}
 
 #ifdef FEATURE_AP_MCC_CH_AVOIDANCE
@@ -2304,6 +2295,7 @@ void wma_send_del_bss_response(tp_wma_handle wma, struct del_bss_resp *resp)
 		 vdev_id);
 	cdp_fc_vdev_unpause(soc, vdev_id, OL_TXQ_PAUSE_REASON_VDEV_STOP, 0);
 	wma_vdev_clear_pause_bit(vdev_id, PAUSE_TYPE_HOST);
+	wma_spr_update(wma, vdev_id, false);
 	qdf_atomic_set(&iface->bss_status, WMA_BSS_STATUS_STOPPED);
 	wma_debug("(type %d subtype %d) BSS is stopped",
 		 iface->type, iface->sub_type);
@@ -3782,6 +3774,16 @@ void wma_hold_req_timer(void *data)
 				wma, peer_mac, QDF_STATUS_E_TIMEOUT,
 				tgt_req->vdev_id);
 		qdf_mem_free(tgt_req->user_data);
+	} else if (tgt_req->msg_type == WMA_PASN_PEER_DELETE_REQUEST &&
+		   tgt_req->type == WMA_PASN_PEER_DELETE_RESPONSE) {
+		wma_err("PASN Peer delete all resp not received. vdev:%d",
+			tgt_req->vdev_id);
+		if (wma_crash_on_fw_timeout(wma->fw_timeout_crash))
+			wma_trigger_recovery_assert_on_fw_timeout(
+				WMA_PASN_PEER_DELETE_RESPONSE,
+				WMA_PEER_DELETE_RESPONSE_TIMEOUT);
+
+		wma_resume_vdev_delete(wma, tgt_req->vdev_id);
 	} else {
 		wma_err("Unhandled timeout for msg_type:%d and type:%d",
 				tgt_req->msg_type, tgt_req->type);

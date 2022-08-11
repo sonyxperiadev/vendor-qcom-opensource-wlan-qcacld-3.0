@@ -53,6 +53,7 @@
 #include "wlan_policy_mgr_api.h"
 #include "wlan_mlme_public_struct.h"
 #include "wlan_mlme_ucfg_api.h"
+#include "wma_pasn_peer_api.h"
 #ifdef WLAN_FEATURE_11AX_BSS_COLOR
 #include "wma_he.h"
 #endif
@@ -569,6 +570,27 @@ void lim_deactivate_timers_for_vdev(struct mac_context *mac_ctx,
 		return;
 	}
 }
+
+#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
+QDF_STATUS
+lim_process_pasn_delete_all_peers(struct mac_context *mac,
+				  struct pasn_peer_delete_msg *msg)
+{
+	struct wlan_objmgr_vdev *vdev;
+	tp_wma_handle wma = cds_get_context(QDF_MODULE_ID_WMA);
+	QDF_STATUS status;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac->psoc, msg->vdev_id,
+						    WLAN_WIFI_POS_CORE_ID);
+	status = wma_delete_all_pasn_peers(wma, vdev);
+	if (QDF_IS_STATUS_ERROR(status))
+		pe_err("Failed to delete all PASN peers");
+
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_WIFI_POS_CORE_ID);
+
+	return status;
+}
+#endif
 
 /**
  * lim_cleanup_mlm() - This function is called to cleanup
@@ -1111,10 +1133,8 @@ lim_decide_ap_protection(struct mac_context *mac, tSirMacAddr peerMacAddr,
 	sta =
 		dph_lookup_hash_entry(mac, peerMacAddr, &tmpAid,
 				      &pe_session->dph.dphHashTable);
-	if (!sta) {
-		pe_err("sta is NULL");
+	if (!sta)
 		return;
-	}
 	lim_get_rf_band_new(mac, &rfBand, pe_session);
 	/* if we are in 5 GHZ band */
 	if (REG_BAND_5G == rfBand) {
@@ -7791,6 +7811,7 @@ QDF_STATUS lim_send_he_caps_ie(struct mac_context *mac_ctx,
 		pe_err("Unable send HE Cap IE for 5GHZ band, status: %d",
 			status_5g);
 
+	he_caps[1] = SIR_MAC_HE_CAP_MIN_LEN;
 	lim_set_he_caps(mac_ctx, session, he_caps, he_cap_total_len,
 			CDS_BAND_2GHZ);
 	he_cap = (struct he_capability_info *)(&he_caps[2 + HE_CAP_OUI_SIZE]);
@@ -8484,6 +8505,7 @@ void lim_update_session_eht_capable(struct mac_context *mac,
 {
 	session->eht_capable = true;
 	pe_debug("eht_capable: %d", session->eht_capable);
+	pe_debug("Draft 2.0 support enabled");
 }
 
 void lim_add_bss_eht_cfg(struct bss_params *add_bss, struct pe_session *session)
@@ -8915,27 +8937,58 @@ void lim_update_stads_eht_bw_320mhz(struct pe_session *session,
 #endif
 
 #ifdef WLAN_FEATURE_11BE_MLO
-void lim_intersect_ap_emlsr_caps(struct pe_session *session,
+void lim_intersect_ap_emlsr_caps(struct mac_context *mac_ctx,
+				 struct pe_session *session,
 				 struct bss_params *add_bss,
 				 tpSirAssocRsp assoc_rsp)
 {
-	struct vdev_mlme_obj *mlme_obj;
+	struct wlan_mlo_peer_context *mlo_peer_ctx;
+	struct wlan_objmgr_peer *peer;
 
-	mlme_obj = wlan_vdev_mlme_get_cmpt_obj(session->vdev);
-	if (!mlme_obj) {
-		pe_err("vdev component object is NULL");
+	peer = wlan_objmgr_get_peer_by_mac(mac_ctx->psoc, add_bss->bssId,
+					   WLAN_LEGACY_MAC_ID);
+	if (!peer) {
+		pe_err("peer is null");
 		return;
 	}
 
-	if (wlan_vdev_mlme_cap_get(session->vdev, WLAN_VDEV_C_EMLSR_CAP)) {
-		add_bss->staContext.emlsr_support = true;
-		add_bss->staContext.link_id =
-		    assoc_rsp->mlo_ie.mlo_ie.link_id;
-		add_bss->staContext.emlsr_trans_timeout =
-		    assoc_rsp->mlo_ie.mlo_ie.eml_capabilities_info.transition_timeout;
-	} else {
-		add_bss->staContext.emlsr_support = false;
+	mlo_peer_ctx = peer->mlo_peer_ctx;
+	if (!mlo_peer_ctx) {
+		pe_err("mlo peer ctx is null");
+		wlan_objmgr_peer_release_ref(peer, WLAN_LEGACY_MAC_ID);
+		return;
 	}
+
+	if (!wlan_vdev_mlme_cap_get(session->vdev, WLAN_VDEV_C_EMLSR_CAP)) {
+		add_bss->staContext.emlsr_support = false;
+		wlan_objmgr_peer_release_ref(peer, WLAN_LEGACY_MAC_ID);
+		return;
+	}
+
+	if (wlan_vdev_mlme_is_mlo_link_vdev(session->vdev)) {
+		add_bss->staContext.emlsr_support =
+				mlo_peer_ctx->mlpeer_emlcap.emlsr_supp;
+		add_bss->staContext.emlsr_trans_timeout =
+				mlo_peer_ctx->mlpeer_emlcap.trans_timeout;
+		add_bss->staContext.link_id =
+				wlan_vdev_get_link_id(session->vdev);
+	} else {
+		add_bss->staContext.emlsr_support = true;
+		add_bss->staContext.emlsr_trans_timeout =
+			assoc_rsp->mlo_ie.mlo_ie.eml_capabilities_info.transition_timeout;
+		add_bss->staContext.link_id =
+				assoc_rsp->mlo_ie.mlo_ie.link_id;
+
+		mlo_peer_ctx->mlpeer_emlcap.emlsr_supp =
+				add_bss->staContext.emlsr_support;
+		mlo_peer_ctx->mlpeer_emlcap.trans_timeout =
+				add_bss->staContext.emlsr_trans_timeout;
+	}
+
+	wlan_objmgr_peer_release_ref(peer, WLAN_LEGACY_MAC_ID);
+	pe_debug("emlsr support: %d, link id: %d, transition timeout:%d",
+		 add_bss->staContext.emlsr_support, add_bss->staContext.link_id,
+		 add_bss->staContext.emlsr_trans_timeout);
 }
 #endif
 

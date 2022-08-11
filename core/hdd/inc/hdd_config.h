@@ -37,12 +37,12 @@
 
 /**
  * enum hdd_wext_control - knob for wireless extensions
- * @hdd_wext_disabled - interface is completely disabled. An access
+ * @hdd_wext_disabled: interface is completely disabled. An access
  *      control error log will be generated for each attempted use.
- * @hdd_wext_deprecated - interface is available but should not be
+ * @hdd_wext_deprecated: interface is available but should not be
  *      used. An access control warning log will be generated for each
  *      use.
- * @hdd_wext_enabled - interface is available without restriction. No
+ * @hdd_wext_enabled: interface is available without restriction. No
  *      access control logs will be generated.
  *
  * enum hdd_wext_control is used to enable coarse grained control on
@@ -1345,6 +1345,43 @@ struct dhcp_server {
 
 /*
  * <ini>
+ * gActionOUIExtendWowITO - Used to extend ITO(Inactivity Time-Out) value under
+ * WoWLAN mode for specified APs.
+ *
+ * @Default: NULL
+ *
+ * Some APs sometimes don't honor Qos null frames under WoWLAN mode if
+ * station's ITO is too small. This ini is used to specify AP OUIs which
+ * exhibit this behavior. When connected to such an AP, the station's ITO
+ * value will be extended when in WoWLAN mode.
+ * For example, it extends the ITO value(under WoWLAN mode) when connected
+ * to AP whose OUI is 001018 and vendor specific data is 0201009C0000 with
+ * the following setting:
+ *     gActionOUIExtendWowITO=001018 06 0201009C0000 FC 01
+ *         OUI: 001018
+ *         OUI data Len : 06
+ *         OUI Data : 0201009C0000
+ *         OUI data Mask: FC - 11111100
+ *         Info Mask : 01 - only OUI present in Info mask
+ * Refer to gEnableActionOUI for more detail about the format.
+ *
+ * Related: gEnableActionOUI
+ *
+ * Supported Feature: Action OUIs
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_ACTION_OUI_EXTEND_WOW_ITO CFG_INI_STRING( \
+	"gActionOUIExtendWowITO", \
+	0, \
+	ACTION_OUI_MAX_STR_LEN, \
+	"", \
+	"Used to extend inactivity time out under WoWLAN mode for specified APs")
+
+/*
+ * <ini>
  * gActionOUIReconnAssocTimeout - Used to specify action OUIs to
  * reconnect to same BSSID when wait for association response timeout
  *
@@ -1876,6 +1913,7 @@ enum host_log_level {
 	CFG(CFG_ACTION_OUI_FORCE_MAX_NSS) \
 	CFG(CFG_ACTION_OUI_DISABLE_AGGRESSIVE_EDCA) \
 	CFG(CFG_ACTION_OUI_DISABLE_MU_EDCA) \
+	CFG(CFG_ACTION_OUI_EXTEND_WOW_ITO) \
 	CFG(CFG_ACTION_OUI_SWITCH_TO_11N_MODE) \
 	CFG(CFG_ACTION_OUI_RECONN_ASSOCTIMEOUT) \
 	CFG(CFG_ACTION_OUI_DISABLE_TWT) \

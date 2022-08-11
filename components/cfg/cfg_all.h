@@ -45,6 +45,7 @@
 #include "cfg_ftm_time_sync.h"
 
 #include "wlan_pmo_cfg.h"
+#include "wlan_dp_cfg.h"
 #include "hdd_config.h"
 #include "hdd_dp_cfg.h"
 #include "cfg_legacy_dp.h"
@@ -59,6 +60,7 @@
 	CFG_POLICY_MGR_ALL \
 	CFG_HDD_ALL \
 	CFG_HDD_DP_ALL \
+	CFG_DP_ALL \
 	CFG_LEGACY_DP_ALL \
 	CFG_MLME_ALL \
 	CFG_NAN_ALL \

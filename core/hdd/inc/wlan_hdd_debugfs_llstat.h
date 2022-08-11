@@ -67,7 +67,7 @@ void hdd_debugfs_process_radio_stats(struct hdd_adapter *adapter,
 		uint32_t more_data, void *data, uint32_t num_radio);
 
 /**
- * hdd_link_layer_process_iface_stats() - This function is called after
+ * hdd_debugfs_process_iface_stats() - This function is called after
  * @adapter: Pointer to device adapter
  * @data: Pointer to stats data
  * @num_peers: Number of peers

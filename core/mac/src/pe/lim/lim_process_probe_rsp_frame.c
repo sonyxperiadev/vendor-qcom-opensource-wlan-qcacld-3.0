@@ -155,12 +155,19 @@ lim_process_probe_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_Packet_info
 		qdf_mem_free(probe_rsp);
 		return;
 	}
+	qdf_trace_hex_dump(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG, body,
+			   frame_len);
 
 	status = lim_gen_link_specific_probe_rsp(mac_ctx, session_entry,
 						 probe_rsp,
 						 body,
 						 frame_len,
 						 mac_ctx->lim.bss_rssi);
+
+	if (QDF_IS_STATUS_ERROR(status)) {
+		pe_debug_rl("Link specific prb rsp generation failed");
+		goto end;
+	}
 
 	if (session_entry->limMlmState ==
 			eLIM_MLM_WT_JOIN_BEACON_STATE) {
@@ -277,6 +284,7 @@ lim_process_probe_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_Packet_info
 				mac_ctx, probe_rsp, session_entry);
 		}
 	}
+end:
 	qdf_mem_free(probe_rsp);
 
 	/* Ignore Probe Response frame in all other states */

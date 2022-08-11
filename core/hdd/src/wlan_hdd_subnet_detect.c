@@ -33,6 +33,8 @@
 #include "wlan_hdd_main.h"
 #include "wlan_hdd_subnet_detect.h"
 #include <qca_vendor.h>
+#include "wlan_dp_ucfg_api.h"
+#include "wlan_hdd_object_manager.h"
 
 /*
  * define short names for the global vendor params
@@ -74,6 +76,7 @@ static int __wlan_hdd_cfg80211_set_gateway_params(struct wiphy *wiphy,
 	int ret;
 	QDF_STATUS status;
 	bool subnet_detection_enabled;
+	struct wlan_objmgr_vdev *vdev;
 
 	hdd_enter_dev(dev);
 
@@ -156,7 +159,11 @@ static int __wlan_hdd_cfg80211_set_gateway_params(struct wiphy *wiphy,
 		  req.ipv4_addr, req.ipv4_addr_type,
 		  req.ipv6_addr, req.ipv6_addr_type);
 
-	hdd_nud_set_gateway_addr(adapter, req.gw_mac_addr);
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+	if (vdev) {
+		ucfg_dp_nud_set_gateway_addr(vdev, req.gw_mac_addr);
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+	}
 
 	status = sme_gateway_param_update(hdd_ctx->mac_handle, &req);
 	if (!QDF_IS_STATUS_SUCCESS(status)) {

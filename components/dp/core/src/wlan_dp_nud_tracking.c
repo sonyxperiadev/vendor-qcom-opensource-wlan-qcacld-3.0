@@ -369,6 +369,12 @@ static void dp_nud_filter_netevent(struct qdf_mac_addr *netdev_addr,
 		return;
 	}
 	dp_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+	if (!dp_intf->conn_info.is_authenticated) {
+		dp_info("client " QDF_MAC_ADDR_FMT
+			" is in the middle of WPS/EAPOL exchange.",
+			QDF_MAC_ADDR_REF(dp_intf->mac_addr.bytes));
+		return;
+	}
 
 	if (!qdf_is_macaddr_equal(&dp_intf->nud_tracking.gw_mac_addr,
 				  gw_mac_addr))

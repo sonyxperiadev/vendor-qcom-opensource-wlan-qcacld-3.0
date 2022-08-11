@@ -37,10 +37,17 @@ void dp_fisa_rx_fst_update_work(void *arg);
 
 void dp_rx_dump_fisa_table(struct dp_soc *soc)
 {
+	struct wlan_cfg_dp_soc_ctxt *cfg = soc->wlan_cfg_ctx;
 	hal_soc_handle_t hal_soc_hdl = soc->hal_soc;
 	struct dp_rx_fst *fst = soc->rx_fst;
 	struct dp_fisa_rx_sw_ft *sw_ft_entry;
 	int i;
+
+	/* Check if it is enabled in the INI */
+	if (!wlan_cfg_is_rx_fisa_enabled(cfg)) {
+		dp_err("RX FISA feature is disabled");
+		return;
+	}
 
 	if (!fst->fst_in_cmem)
 		return hal_rx_dump_fse_table(soc->rx_fst->hal_rx_fst);

@@ -129,7 +129,8 @@
 #define SME_CMD_POLICY_MGR_CMD_TIMEOUT (SIR_VDEV_PLCY_MGR_TIMEOUT + 1000)
 #define SME_POLICY_MGR_CMD_TIMEOUT (SME_CMD_POLICY_MGR_CMD_TIMEOUT + 1000)
 
-#define SME_VDEV_DELETE_CMD_TIMEOUT (DELETE_RESPONSE_TIMER + 2000)
+#define SME_VDEV_DELETE_CMD_TIMEOUT (DELETE_RESPONSE_TIMER + \
+				     PEER_DELETE_ALL_RESPONSE_TIMER + 2000)
 #define SME_CMD_VDEV_CREATE_DELETE_TIMEOUT QDF_MAX(13000, \
 						SME_VDEV_DELETE_CMD_TIMEOUT + 1)
 
@@ -4346,21 +4347,6 @@ QDF_STATUS sme_get_ani_level(mac_handle_t mac_handle, uint32_t *freqs,
 			     void *context), void *context);
 #endif /* FEATURE_ANI_LEVEL_REQUEST */
 
-/**
- * sme_get_prev_connected_bss_ies() - Get the previous connected AP IEs
- * @mac_handle: The handle returned by mac_open.
- * @vdev_id: vdev id
- * @ies: IEs of the disconnected AP. Currently to carry beacon IEs.
- * @ie_len: Length of the @ies
- *
- * This API extracts the IEs from the previous connected AP info and update
- * them to the ies and ie_len.
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS sme_get_prev_connected_bss_ies(mac_handle_t mac_handle,
-					  uint8_t vdev_id,
-					  uint8_t **ies, uint32_t *ie_len);
 /*
  * sme_vdev_self_peer_delete_resp() - Response for self peer delete
  * @del_vdev_params: parameters for which vdev self peer has been deleted

@@ -127,6 +127,10 @@ typedef uint8_t tSirVersionString[SIR_VERSION_STRING_LEN];
 #define SIR_KEK_KEY_LEN 16
 #define SIR_KEK_KEY_LEN_FILS 64
 
+#define SIR_FILS_HLP_OUI_TYPE  "\x5"
+#define SIR_FILS_HLP_OUI_LEN   1
+#define SIR_FILS_HLP_IE_LEN    2048
+
 #define SIR_REPLAY_CTR_LEN 8
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 #define SIR_UAPSD_BITOFFSET_ACVO     0
@@ -3144,6 +3148,7 @@ struct wifi_peer_info {
  * @ac_stats: per-Access Category statistics
  * @num_offload_stats: @offload_stats record count
  * @offload_stats: per-offload statistics
+ * @powersave_stats: powersave statistics
  * @vdev_id: vdev id
  *
  * Statistics corresponding to 2nd most LSB in wifi statistics bitmap
@@ -3159,6 +3164,7 @@ struct wifi_interface_stats {
 	wmi_wmm_ac_stats ac_stats[WIFI_AC_MAX];
 	uint32_t num_offload_stats;
 	wmi_iface_offload_stats offload_stats[WMI_OFFLOAD_STATS_TYPE_MAX];
+	wmi_iface_powersave_stats powersave_stats;
 	uint8_t vdev_id;
 };
 

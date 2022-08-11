@@ -2755,6 +2755,7 @@ int wma_unified_link_iface_stats_event_handler(void *handle,
 	wmi_iface_link_stats *link_stats, *iface_link_stats;
 	wmi_wmm_ac_stats *ac_stats, *iface_ac_stats;
 	wmi_iface_offload_stats *offload_stats, *iface_offload_stats;
+	wmi_iface_powersave_stats *powersave_stats;
 	tSirLLStatsResults *link_stats_results;
 	struct wifi_interface_stats *iface_stat;
 	uint32_t count;
@@ -2887,6 +2888,10 @@ int wma_unified_link_iface_stats_event_handler(void *handle,
 		offload_stats++;
 		iface_offload_stats++;
 	}
+
+	powersave_stats = param_tlvs->iface_powersave_stats;
+	if (powersave_stats)
+		iface_stat->powersave_stats = *powersave_stats;
 
 	/* Copying vdev_id info into the iface_stat for MLO*/
 	iface_stat->vdev_id = fixed_param->vdev_id;

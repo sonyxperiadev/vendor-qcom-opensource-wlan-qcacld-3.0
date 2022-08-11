@@ -49,6 +49,7 @@
 #include "wlan_reg_services_api.h"
 #include "wlan_cm_roam_api.h"
 #include "wlan_mlo_mgr_sta.h"
+#include <wlan_cmn_ieee80211.h>
 #ifdef WLAN_FEATURE_11BE_MLO
 #include <lim_mlo.h>
 #include <utils_mlo.h>
@@ -1024,6 +1025,11 @@ populate_dot11f_ht_caps(struct mac_context *mac,
 				&ch_params);
 			if (ch_params.ch_width != CH_WIDTH_40MHZ)
 				pDot11f->supportedChannelWidthSet = 0;
+		} else if (LIM_IS_STA_ROLE(pe_session)) {
+			if (pe_session->ch_width == CH_WIDTH_20MHZ)
+				pDot11f->supportedChannelWidthSet = 0;
+			else
+				pDot11f->supportedChannelWidthSet = 1;
 		} else {
 			pDot11f->supportedChannelWidthSet =
 				pe_session->htSupportedChannelWidthSet;
@@ -7086,6 +7092,32 @@ populate_dot11f_he_operation(struct mac_context *mac_ctx,
 }
 
 QDF_STATUS
+populate_dot11f_sr_info(struct mac_context *mac_ctx,
+			struct pe_session *session,
+			tDot11fIEspatial_reuse *sr_info)
+{
+	uint8_t non_srg_pd_offset;
+	uint8_t sr_ctrl = wlan_vdev_mlme_get_sr_ctrl(session->vdev);
+	bool sr_enabled = wlan_vdev_mlme_get_he_spr_enabled(session->vdev);
+
+	if (!sr_enabled || !sr_ctrl ||
+	    (sr_ctrl & WLAN_HE_NON_SRG_PD_SR_DISALLOWED) ||
+	    !(sr_ctrl & WLAN_HE_NON_SRG_OFFSET_PRESENT))
+		return QDF_STATUS_SUCCESS;
+
+	non_srg_pd_offset = wlan_vdev_mlme_get_pd_offset(session->vdev);
+	sr_info->present = 1;
+	sr_info->psr_disallow = 1;
+	sr_info->non_srg_pd_sr_disallow = 0;
+	sr_info->srg_info_present = 0;
+	sr_info->non_srg_offset_present = 1;
+	sr_info->srg_info_present = 0;
+	sr_info->non_srg_offset.info.non_srg_pd_max_offset = non_srg_pd_offset;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
 populate_dot11f_he_6ghz_cap(struct mac_context *mac_ctx,
 			    struct pe_session *session,
 			    tDot11fIEhe_6ghz_band_cap *he_6g_cap)
@@ -9889,7 +9921,6 @@ populate_dot11f_mlo_caps(struct mac_context *mac_ctx,
 {
 	uint8_t *mld_addr;
 	uint8_t common_info_len = 0;
-	bool emlsr_cap, emlsr_enabled, emlsr_allowed = false;
 
 	mlo_ie->type = 0;
 	/* Common Info Length */
@@ -9903,26 +9934,13 @@ populate_dot11f_mlo_caps(struct mac_context *mac_ctx,
 	mlo_ie->bss_param_change_cnt_present = 0;
 	mlo_ie->medium_sync_delay_info_present = 0;
 
-	/* Check if HW supports eMLSR mode */
-	emlsr_cap = policy_mgr_is_hw_emlsr_capable(mac_ctx->psoc);
-
-	/* Check if vendor command chooses eMLSR mode */
-	wlan_mlme_get_emlsr_mode_enabled(mac_ctx->psoc, &emlsr_enabled);
-
-	emlsr_allowed = emlsr_cap && emlsr_enabled;
-
-	if (emlsr_allowed) {
-		wlan_vdev_obj_lock(session->vdev);
-		wlan_vdev_mlme_cap_set(session->vdev, WLAN_VDEV_C_EMLSR_CAP);
-		wlan_vdev_obj_unlock(session->vdev);
+	if (wlan_vdev_mlme_cap_get(session->vdev, WLAN_VDEV_C_EMLSR_CAP)) {
 		mlo_ie->eml_capab_present = 1;
+		mlo_ie->eml_capabilities_info.emlmr_support = 0;
 		mlo_ie->eml_capabilities_info.emlsr_support = 1;
+		common_info_len += WLAN_ML_BV_CINFO_EMLCAP_SIZE;
 	} else {
-		wlan_vdev_obj_lock(session->vdev);
-		wlan_vdev_mlme_cap_clear(session->vdev, WLAN_VDEV_C_EMLSR_CAP);
-		wlan_vdev_obj_unlock(session->vdev);
 		mlo_ie->eml_capab_present = 0;
-		mlo_ie->eml_capabilities_info.emlsr_support = 0;
 	}
 
 	mlo_ie->mld_capab_and_op_present = 1;

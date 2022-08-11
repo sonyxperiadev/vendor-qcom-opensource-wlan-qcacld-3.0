@@ -23,6 +23,7 @@
 #include "wlan_pre_cac_ucfg_api.h"
 #include "wlan_ipa_ucfg_api.h"
 #include "wlan_hdd_son.h"
+#include "wlan_dp_ucfg_api.h"
 
 /**
  * __wlan_hdd_sap_pre_cac_failure() - Process the pre cac failure
@@ -526,6 +527,7 @@ wlan_hdd_pre_cac_conditional_freq_switch_ind(struct wlan_objmgr_vdev *vdev,
 		ap_ctx->dfs_cac_block_tx = false;
 		ucfg_ipa_set_dfs_cac_tx(adapter->hdd_ctx->pdev,
 					ap_ctx->dfs_cac_block_tx);
+		ucfg_dp_set_dfs_cac_tx(vdev, ap_ctx->dfs_cac_block_tx);
 		adapter->hdd_ctx->dev_dfs_cac_status = DFS_CAC_ALREADY_DONE;
 	} else {
 		adapter->hdd_ctx->dev_dfs_cac_status = DFS_CAC_NEVER_DONE;

@@ -135,10 +135,6 @@ HDD_OBJS := 	$(HDD_SRC_DIR)/wlan_hdd_assoc.o \
 		$(HDD_SRC_DIR)/wlan_hdd_wmm.o \
 		$(HDD_SRC_DIR)/wlan_hdd_wowl.o\
 
-ifeq ($(CONFIG_WLAN_FEATURE_PERIODIC_STA_STATS), y)
-HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_periodic_sta_stats.o
-endif
-
 ifeq ($(CONFIG_UNIT_TEST), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_unit_test.o
 endif
@@ -200,10 +196,6 @@ endif
 
 ifeq ($(CONFIG_WLAN_FEATURE_LPSS), y)
 HDD_OBJS +=	$(HDD_SRC_DIR)/wlan_hdd_lpass.o
-endif
-
-ifeq ($(CONFIG_WLAN_LRO), y)
-HDD_OBJS +=     $(HDD_SRC_DIR)/wlan_hdd_lro.o
 endif
 
 ifeq ($(CONFIG_WLAN_NAPI), y)
@@ -496,10 +488,6 @@ ifeq ($(CONFIG_WLAN_BOOTUP_MARKER), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_bootup_marker.o
 endif
 
-ifeq ($(CONFIG_FEATURE_BUS_BANDWIDTH_MGR),y)
-HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_bus_bandwidth.o
-endif
-
 ifeq ($(CONFIG_FEATURE_WLAN_CH_AVOID_EXT),y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_avoid_freq_ext.o
 endif
@@ -533,6 +521,12 @@ endif
 
 ifeq ($(CONFIG_WLAN_FEATURE_PEER_TXQ_FLUSH_CONF), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_peer_txq_flush.o
+endif
+
+ifeq ($(CONFIG_WIFI_POS_CONVERGED), y)
+ifeq ($(CONFIG_WIFI_POS_PASN), y)
+HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_wifi_pos_pasn.o
+endif
 endif
 
 $(call add-wlan-objs,hdd,$(HDD_OBJS))
@@ -2109,10 +2103,6 @@ TXRX3.0_OBJS += $(TXRX3.0_DIR)/dp_fisa_rx.o
 TXRX3.0_OBJS += $(TXRX3.0_DIR)/dp_rx_fst.o
 endif
 
-ifeq ($(CONFIG_DP_SWLM), y)
-TXRX3.0_OBJS += $(TXRX3.0_DIR)/dp_swlm.o
-endif
-
 endif #LITHIUM
 
 $(call add-wlan-objs,txrx30,$(TXRX3.0_OBJS))
@@ -2123,7 +2113,8 @@ DP_INC := -I$(WLAN_COMMON_INC)/dp/inc \
 	-I$(WLAN_COMMON_INC)/dp/wifi3.0 \
 	-I$(WLAN_COMMON_INC)/target_if/dp/inc \
 	-I$(WLAN_COMMON_INC)/dp/wifi3.0/monitor \
-	-I$(WLAN_COMMON_INC)/dp/wifi3.0/monitor/1.0
+	-I$(WLAN_COMMON_INC)/dp/wifi3.0/monitor/1.0 \
+	-I$(WLAN_COMMON_INC)/dp/cmn_dp_api
 
 DP_SRC := $(WLAN_COMMON_ROOT)/dp/wifi3.0
 DP_OBJS := $(DP_SRC)/dp_main.o \
@@ -2149,6 +2140,8 @@ DP_OBJS += $(DP_SRC)/monitor/dp_mon.o \
 		$(DP_SRC)/monitor/1.0/dp_mon_filter_1.0.o \
 		$(DP_SRC)/monitor/1.0/dp_mon_1.0.o
 endif
+
+DP_OBJS += $(DP_SRC)/../cmn_dp_api/dp_ratetable.o
 
 ifeq ($(CONFIG_BERYLLIUM), y)
 DP_OBJS += $(DP_SRC)/be/dp_be.o
@@ -2508,6 +2501,47 @@ $(call add-wlan-objs,nan,$(WLAN_NAN_OBJS))
 
 #######################################################
 
+######################### DP_COMPONENT #########################
+DP_COMP_CORE_DIR := components/dp/core/src
+DP_COMP_UCFG_DIR := components/dp/dispatcher/src
+DP_COMP_TGT_DIR  := components/target_if/dp/src
+DP_COMP_OS_IF_DIR  := os_if/dp/src
+
+DP_COMP_INC	:= -I$(WLAN_ROOT)/components/dp/core/inc	\
+		-I$(WLAN_ROOT)/components/dp/core/src		\
+		-I$(WLAN_ROOT)/components/dp/dispatcher/inc	\
+		-I$(WLAN_ROOT)/components/target_if/dp/inc	\
+		-I$(WLAN_ROOT)/os_if/dp/inc
+
+WLAN_DP_COMP_OBJS := $(DP_COMP_CORE_DIR)/wlan_dp_main.o \
+		 $(DP_COMP_UCFG_DIR)/wlan_dp_ucfg_api.o \
+		 $(DP_COMP_OS_IF_DIR)/os_if_dp.o \
+		 $(DP_COMP_OS_IF_DIR)/os_if_dp_txrx.o \
+		 $(DP_COMP_CORE_DIR)/wlan_dp_bus_bandwidth.o \
+		 $(DP_COMP_CORE_DIR)/wlan_dp_softap_txrx.o \
+		 $(DP_COMP_CORE_DIR)/wlan_dp_txrx.o \
+		 $(DP_COMP_TGT_DIR)/target_if_dp_comp.o
+
+ifeq ($(CONFIG_WLAN_LRO), y)
+WLAN_DP_COMP_OBJS += $(DP_COMP_OS_IF_DIR)/os_if_dp_lro.o
+endif
+
+ifeq ($(CONFIG_WLAN_NUD_TRACKING), y)
+WLAN_DP_COMP_OBJS += $(DP_COMP_CORE_DIR)/wlan_dp_nud_tracking.o
+endif
+
+ifeq ($(CONFIG_WLAN_FEATURE_PERIODIC_STA_STATS), y)
+WLAN_DP_COMP_OBJS += $(DP_COMP_CORE_DIR)/wlan_dp_periodic_sta_stats.o
+endif
+
+ifeq ($(CONFIG_DP_SWLM), y)
+WLAN_DP_COMP_OBJS += $(DP_COMP_CORE_DIR)/wlan_dp_swlm.o
+endif
+
+$(call add-wlan-objs,dp_comp,$(WLAN_DP_COMP_OBJS))
+
+#######################################################
+
 ######################### SON #########################
 #SON_CORE_DIR := components/son/core/src
 #SON_CORE_INC := -I$(WLAN_ROOT)/components/son/core/inc
@@ -2527,6 +2561,22 @@ WLAN_SON_OBJS := $(SON_UCFG_DIR)/son_ucfg_api.o \
 endif
 
 $(call add-wlan-objs,son,$(WLAN_SON_OBJS))
+
+#######################################################
+
+######################### SPATIAL_REUSE #########################
+SR_UCFG_DIR := components/spatial_reuse/dispatcher/src
+SR_UCFG_INC := -I$(WLAN_ROOT)/components/spatial_reuse/dispatcher/inc
+SR_TGT_DIR  := $(WLAN_COMMON_ROOT)/target_if/spatial_reuse/src
+SR_TGT_INC  := -I$(WLAN_COMMON_INC)/target_if/spatial_reuse/inc/
+
+ifeq ($(CONFIG_WLAN_FEATURE_11AX), y)
+WLAN_SR_OBJS := $(SR_UCFG_DIR)/spatial_reuse_ucfg_api.o \
+		 $(SR_UCFG_DIR)/spatial_reuse_api.o \
+		 $(SR_TGT_DIR)/target_if_spatial_reuse.o
+endif
+
+$(call add-wlan-objs,spatial_reuse,$(WLAN_SR_OBJS))
 
 #######################################################
 
@@ -3014,12 +3064,18 @@ INCS +=		$(NAN_CORE_INC)
 INCS +=		$(NAN_UCFG_INC)
 INCS +=		$(NAN_TGT_INC)
 INCS +=		$(NAN_OS_IF_INC)
+###########DP_COMPONENT ####################
+INCS +=		$(DP_COMP_INC)
 ################ SON ################
 INCS +=		$(SON_CORE_INC)
 INCS +=		$(SON_UCFG_INC)
 INCS +=		$(SON_TGT_INC)
 INCS +=		$(SON_OS_IF_INC)
+################ SPATIAL_REUSE ################
+INCS +=		$(SR_UCFG_INC)
+INCS +=		$(SR_TGT_INC)
 ##########################################
+
 INCS +=		$(UMAC_OBJMGR_INC)
 INCS +=		$(UMAC_MGMT_TXRX_INC)
 INCS +=		$(PMO_INC)
@@ -3870,7 +3926,6 @@ cppflags-$(CONFIG_DYNAMIC_RX_AGGREGATION) += -DWLAN_FEATURE_DYNAMIC_RX_AGGREGATI
 cppflags-$(CONFIG_DP_FEATURE_HW_COOKIE_CONVERSION) += -DDP_FEATURE_HW_COOKIE_CONVERSION
 cppflags-$(CONFIG_DP_HW_COOKIE_CONVERT_EXCEPTION) += -DDP_HW_COOKIE_CONVERT_EXCEPTION
 cppflags-$(CONFIG_TX_ADDR_INDEX_SEARCH) += -DTX_ADDR_INDEX_SEARCH
-cppflags-$(CONFIG_DP_RX_DELIVER_ALL_OOR_FRAMES) += -DDP_RX_DELIVER_ALL_OOR_FRAMES
 cppflags-$(CONFIG_QCA_SUPPORT_TX_MIN_RATES_FOR_SPECIAL_FRAMES) += -DQCA_SUPPORT_TX_MIN_RATES_FOR_SPECIAL_FRAMES
 cppflags-$(CONFIG_RX_HASH_DEBUG) += -DRX_HASH_DEBUG
 
@@ -3900,6 +3955,7 @@ cppflags-$(CONFIG_TX_MULTI_TCL) += -DTX_MULTI_TCL
 cppflags-$(CONFIG_WLAN_DP_DISABLE_TCL_CMD_CRED_SRNG) += -DWLAN_DP_DISABLE_TCL_CMD_CRED_SRNG
 cppflags-$(CONFIG_WLAN_DP_DISABLE_TCL_STATUS_SRNG) += -DWLAN_DP_DISABLE_TCL_STATUS_SRNG
 cppflags-$(CONFIG_DP_WAR_VALIDATE_RX_ERR_MSDU_COOKIE) += -DDP_WAR_VALIDATE_RX_ERR_MSDU_COOKIE
+cppflags-$(CONFIG_WLAN_DP_SRNG_USAGE_WM_TRACKING) += -DWLAN_DP_SRNG_USAGE_WM_TRACKING
 
 # Enable Low latency
 cppflags-$(CONFIG_WLAN_FEATURE_LL_MODE) += -DWLAN_FEATURE_LL_MODE
@@ -4324,6 +4380,7 @@ ccflags-y += -DQDF_LOCK_STATS_DESTROY_PRINT=0
 ifneq ($(CONFIG_ARCH_SDXPRAIRIE), y)
 ccflags-y += -DQDF_LOCK_STATS_BUG_ON=1
 endif
+cppflags-$(CONFIG_VCPU_TIMESTOLEN) += -DVCPU_TIMESTOLEN
 ccflags-y += -DQDF_LOCK_STATS_LIST=1
 ccflags-y += -DQDF_LOCK_STATS_LIST_SIZE=256
 endif
@@ -4344,6 +4401,11 @@ cppflags-y += -DCONFIG_CHAN_FREQ_API
 
 #Flag to enable/disable MCC specific feature regarding unallowed phymodes
 cppflags-y += -DCHECK_REG_PHYMODE
+
+cppflags-$(CONFIG_FEATURE_RX_LINKSPEED_ROAM_TRIGGER) += -DFEATURE_RX_LINKSPEED_ROAM_TRIGGER
+#DP_RATETABLE_SUPPORT is enabled when CONFIG_FEATURE_RX_LINKSPEED_ROAM_TRIGGER is enabled
+cppflags-$(CONFIG_FEATURE_RX_LINKSPEED_ROAM_TRIGGER) += -DDP_RATETABLE_SUPPORT
+ccflags-y += -DALL_POSSIBLE_RATES_SUPPORTED=1
 
 cppflags-$(CONFIG_BAND_6GHZ) += -DCONFIG_BAND_6GHZ
 cppflags-$(CONFIG_6G_SCAN_CHAN_SORT_ALGO) += -DFEATURE_6G_SCAN_CHAN_SORT_ALGO
@@ -4460,6 +4522,11 @@ endif
 
 #Flags to enable/disable Dynamic WLAN interface control feature
 cppflags-$(CONFIG_CNSS_HW_SECURE_DISABLE) += -DFEATURE_CNSS_HW_SECURE_DISABLE
+
+#DBAM feature needs COEX feature to be enabled
+ifeq ($(CONFIG_FEATURE_COEX), y)
+cppflags-$(CONFIG_WLAN_FEATURE_COEX_DBAM) += -DWLAN_FEATURE_DBAM_CONFIG
+endif
 
 KBUILD_CPPFLAGS += $(cppflags-y)
 

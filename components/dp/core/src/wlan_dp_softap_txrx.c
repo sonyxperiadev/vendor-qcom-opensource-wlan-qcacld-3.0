@@ -472,8 +472,9 @@ static QDF_STATUS dp_softap_validate_peer_state(struct wlan_dp_intf *dp_intf,
 	}
 
 	if (peer_state == OL_TXRX_PEER_STATE_CONN) {
-		if (qdf_ntohs(qdf_nbuf_get_protocol(nbuf)) != ETHERTYPE_PAE) {
-			dp_debug_rl("NON-EAPOL packet in non-Authenticated state");
+		if (qdf_ntohs(qdf_nbuf_get_protocol(nbuf)) != ETHERTYPE_PAE &&
+		    qdf_ntohs(qdf_nbuf_get_protocol(nbuf)) != ETHERTYPE_WAI) {
+			dp_debug_rl("NON-EAPOL/WAPI pkt in non-Auth state");
 			return QDF_STATUS_E_FAILURE;
 		}
 	}
@@ -622,7 +623,7 @@ void dp_softap_tx_timeout(struct wlan_dp_intf *dp_intf)
 		dp_err("Detected data stall due to continuous TX timeouts");
 		dp_intf->dp_stats.tx_rx_stats.cont_txtimeout_cnt = 0;
 
-		if (cdp_cfg_get(soc, cfg_dp_enable_data_stall))
+		if (dp_is_data_stall_event_enabled(DP_HOST_SAP_TX_TIMEOUT))
 			cdp_post_data_stall_event(soc,
 					  DATA_STALL_LOG_INDICATOR_HOST_DRIVER,
 					  DATA_STALL_LOG_HOST_SOFTAP_TX_TIMEOUT,

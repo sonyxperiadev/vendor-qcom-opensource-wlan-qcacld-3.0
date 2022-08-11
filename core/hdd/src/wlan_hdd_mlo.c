@@ -26,6 +26,7 @@
 #include "wlan_hdd_mlo.h"
 #include "osif_vdev_sync.h"
 #include "wlan_osif_features.h"
+#include "wlan_dp_ucfg_api.h"
 
 #if defined(CFG80211_11BE_BASIC)
 void hdd_update_mld_mac_addr(struct hdd_context *hdd_ctx,
@@ -154,10 +155,13 @@ QDF_STATUS hdd_wlan_unregister_mlo_interfaces(struct hdd_adapter *adapter,
 	int i;
 	struct hdd_mlo_adapter_info *mlo_adapter_info;
 	struct hdd_adapter *link_adapter;
+	struct qdf_mac_addr adapter_mac;
 
 	mlo_adapter_info = &adapter->mlo_adapter_info;
 
 	if (mlo_adapter_info->is_link_adapter) {
+		qdf_copy_macaddr(&adapter_mac, &adapter->mac_addr);
+		ucfg_dp_destroy_intf(adapter->hdd_ctx->psoc, &adapter_mac);
 		hdd_remove_front_adapter(adapter->hdd_ctx, &adapter);
 		return QDF_STATUS_E_AGAIN;
 	}

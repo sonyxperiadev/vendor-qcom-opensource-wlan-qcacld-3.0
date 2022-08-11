@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -34,15 +35,31 @@
 #define coex_debug(params...) \
 	QDF_TRACE_DEBUG(QDF_MODULE_ID_COEX, params)
 
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+/**
+ * struct wlan_coex_callback - coex dbam callback structure
+ * @set_dbam_config_cb: callback for set_dbam_config
+ * @set_dbam_config_ctx: context for set_dbam_config callback
+ */
+struct wlan_coex_callback {
+	void (*set_dbam_config_cb)(void *ctx, enum coex_dbam_comp_status *rsp);
+	void *set_dbam_config_ctx;
+};
+#endif
+
 /**
  * struct coex_psoc_obj - coex object definition
  * @btc_chain_mode: BT Coex chain mode.
  * @coex_config_updated: callback functions for each config type, which will
  *  be called when config is updated.
+ * @cb: structure to dbam callback
  */
 struct coex_psoc_obj {
 	uint8_t btc_chain_mode;
 	update_coex_cb coex_config_updated[COEX_CONFIG_TYPE_MAX];
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+	struct wlan_coex_callback cb;
+#endif
 };
 
 /**
@@ -157,4 +174,64 @@ wlan_coex_psoc_set_btc_chain_mode(struct wlan_objmgr_psoc *psoc, uint8_t val);
 QDF_STATUS
 wlan_coex_psoc_get_btc_chain_mode(struct wlan_objmgr_psoc *psoc, uint8_t *val);
 #endif
+
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+/**
+ * wlan_dbam_config_send() - private API to send dbam config
+ * @vdev: pointer to vdev object
+ * @param: parameters of dbam config
+ *
+ * Return: QDF_STATUS of operation
+ */
+QDF_STATUS wlan_dbam_config_send(struct wlan_objmgr_vdev *vdev,
+				 struct coex_dbam_config_params *param);
+
+static inline struct wlan_lmac_if_dbam_rx_ops *
+wlan_psoc_get_dbam_rx_ops(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_lmac_if_rx_ops *rx_ops;
+
+	rx_ops = wlan_psoc_get_lmac_if_rxops(psoc);
+	if (!rx_ops) {
+		coex_err("rx_ops is NULL");
+		return NULL;
+	}
+
+	return &rx_ops->dbam_rx_ops;
+}
+
+static inline struct wlan_lmac_if_dbam_tx_ops *
+wlan_psoc_get_dbam_tx_ops(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_lmac_if_tx_ops *tx_ops;
+
+	tx_ops = wlan_psoc_get_lmac_if_txops(psoc);
+	if (!tx_ops) {
+		coex_err("tx_ops is NULL");
+		return NULL;
+	}
+
+	return &tx_ops->dbam_tx_ops;
+}
+
+/**
+ * wlan_dbam_attach() - Attach dbam handler
+ * @psoc: psoc pointer
+ *
+ * This function gets called to register dbam FW events handler
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS wlan_dbam_attach(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * wlan_dbam_detach() - Detach dbam handler
+ * @psoc: psoc pointer
+ *
+ * This function gets called to unregister dbam FW events handler
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS wlan_dbam_detach(struct wlan_objmgr_psoc *psoc);
+#endif /* WLAN_FEATURE_DBAM_CONFIG */
 #endif

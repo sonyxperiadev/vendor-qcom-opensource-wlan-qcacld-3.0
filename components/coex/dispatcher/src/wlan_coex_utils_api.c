@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -133,3 +134,15 @@ wlan_coex_psoc_close(struct wlan_objmgr_psoc *psoc)
 {
 	return wlan_coex_psoc_deinit(psoc);
 }
+
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+QDF_STATUS wlan_dbam_psoc_enable(struct wlan_objmgr_psoc *psoc)
+{
+	return wlan_dbam_attach(psoc);
+}
+
+QDF_STATUS wlan_dbam_psoc_disable(struct wlan_objmgr_psoc *psoc)
+{
+	return wlan_dbam_detach(psoc);
+}
+#endif

@@ -56,6 +56,7 @@
 #include "ol_txrx.h"
 #include "wifi_pos_api.h"
 #include "net/cfg80211.h"
+#include "wifi_pos_pasn_api.h"
 #include <wlan_spectral_utils_api.h>
 #include "wlan_mlme_public_struct.h"
 #include "wlan_mlme_main.h"
@@ -80,7 +81,7 @@
 #include <wlan_mlo_mgr_sta.h>
 #include <wlan_mlo_mgr_main.h>
 #include "wlan_policy_mgr_ucfg.h"
-#include "wma_pasn_peer_api.h"
+#include "wlan_wifi_pos_interface.h"
 
 static QDF_STATUS init_sme_cmd_list(struct mac_context *mac);
 
@@ -774,6 +775,12 @@ static inline void sme_unregister_power_debug_stats_cb(struct mac_context *mac)
 }
 #endif
 
+static void
+sme_register_vdev_delete_callback(struct mac_context *mac)
+{
+	mac->sme.sme_vdev_del_cb = sme_vdev_delete;
+}
+
 /* Global APIs */
 
 /**
@@ -831,6 +838,7 @@ QDF_STATUS sme_open(mac_handle_t mac_handle)
 	sme_trace_init(mac);
 	sme_register_debug_callback();
 	sme_register_power_debug_stats_cb(mac);
+	sme_register_vdev_delete_callback(mac);
 
 	return status;
 }
@@ -4777,19 +4785,22 @@ QDF_STATUS sme_vdev_delete(mac_handle_t mac_handle,
 {
 	QDF_STATUS status;
 	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-	tp_wma_handle wma = cds_get_context(QDF_MODULE_ID_WMA);
 	uint8_t *self_peer_macaddr, vdev_id = wlan_vdev_get_id(vdev);
 	struct scheduler_msg self_peer_delete_msg = {0};
 	struct del_vdev_params *del_self_peer;
+	bool is_pasn_peer_delete_all_required;
 
 	MTRACE(qdf_trace(QDF_MODULE_ID_SME,
 			 TRACE_CODE_SME_RX_HDD_CLOSE_SESSION, vdev_id, 0));
 
-	status = sme_acquire_global_lock(&mac->sme);
+	is_pasn_peer_delete_all_required =
+		wlan_wifi_pos_pasn_peer_delete_all(mac->psoc, vdev_id);
+	if (is_pasn_peer_delete_all_required) {
+		sme_info("Resume vdev delete after pasn peers deletion");
+		return QDF_STATUS_SUCCESS;
+	}
 
-	if (vdev->vdev_mlme.vdev_opmode == QDF_STA_MODE ||
-	    vdev->vdev_mlme.vdev_opmode == QDF_SAP_MODE)
-		wma_delete_all_pasn_peers(wma, vdev);
+	status = sme_acquire_global_lock(&mac->sme);
 
 	if (QDF_IS_STATUS_SUCCESS(status)) {
 		status = csr_prepare_vdev_delete(mac, vdev_id, false);
@@ -7630,21 +7641,21 @@ QDF_STATUS sme_set_ht2040_mode(mac_handle_t mac_handle, uint8_t sessionId,
 	}
 	session = CSR_GET_SESSION(mac, sessionId);
 	sme_debug("Update HT operation beacon IE, channel_type=%d cur cbmode %d",
-		channel_type, session->bssParams.cb_mode);
+		channel_type, session->cb_mode);
 
 	switch (channel_type) {
 	case eHT_CHAN_HT20:
-		if (!session->bssParams.cb_mode)
+		if (!session->cb_mode)
 			return QDF_STATUS_SUCCESS;
 		cb_mode = PHY_SINGLE_CHANNEL_CENTERED;
 		break;
 	case eHT_CHAN_HT40MINUS:
-		if (session->bssParams.cb_mode)
+		if (session->cb_mode)
 			return QDF_STATUS_SUCCESS;
 		cb_mode = PHY_DOUBLE_CHANNEL_HIGH_PRIMARY;
 		break;
 	case eHT_CHAN_HT40PLUS:
-		if (session->bssParams.cb_mode)
+		if (session->cb_mode)
 			return QDF_STATUS_SUCCESS;
 		cb_mode = PHY_DOUBLE_CHANNEL_LOW_PRIMARY;
 		break;
@@ -7652,7 +7663,7 @@ QDF_STATUS sme_set_ht2040_mode(mac_handle_t mac_handle, uint8_t sessionId,
 		sme_err("Error!!! Invalid HT20/40 mode !");
 		return QDF_STATUS_E_FAILURE;
 	}
-	session->bssParams.cb_mode = cb_mode;
+	session->cb_mode = cb_mode;
 	status = sme_acquire_global_lock(&mac->sme);
 	if (QDF_IS_STATUS_SUCCESS(status)) {
 		status = csr_set_ht2040_mode(mac, sessionId,
@@ -7674,9 +7685,9 @@ QDF_STATUS sme_get_ht2040_mode(mac_handle_t mac_handle, uint8_t vdev_id,
 	}
 	session = CSR_GET_SESSION(mac, vdev_id);
 	sme_debug("Get HT operation beacon IE, channel_type=%d cur cbmode %d",
-		  *channel_type, session->bssParams.cb_mode);
+		  *channel_type, session->cb_mode);
 
-	switch (session->bssParams.cb_mode) {
+	switch (session->cb_mode) {
 	case PHY_SINGLE_CHANNEL_CENTERED:
 		*channel_type = eHT_CHAN_HT20;
 		break;
@@ -14943,6 +14954,24 @@ sme_get_roam_scan_stats(mac_handle_t mac_handle,
 	return status;
 }
 
+#ifdef WLAN_FEATURE_11BE
+static inline bool sme_is_phy_mode_11be(eCsrPhyMode phy_mode)
+{
+	if (phy_mode == eCSR_DOT11_MODE_AUTO ||
+	    CSR_IS_DOT11_PHY_MODE_11BE(phy_mode) ||
+	    CSR_IS_DOT11_PHY_MODE_11BE_ONLY(phy_mode)) {
+		return true;
+	}
+
+	return false;
+}
+#else
+static inline bool sme_is_phy_mode_11be(eCsrPhyMode phy_mode)
+{
+	return false;
+}
+#endif
+
 void sme_update_score_config(mac_handle_t mac_handle, eCsrPhyMode phy_mode,
 			     uint8_t num_rf_chains)
 {
@@ -14960,15 +14989,13 @@ void sme_update_score_config(mac_handle_t mac_handle, eCsrPhyMode phy_mode,
 
 	config.vdev_nss_24g = vdev_ini_cfg.rx_nss[NSS_CHAINS_BAND_2GHZ];
 	config.vdev_nss_5g = vdev_ini_cfg.rx_nss[NSS_CHAINS_BAND_5GHZ];
-#ifdef WLAN_FEATURE_11BE
-	if (phy_mode == eCSR_DOT11_MODE_AUTO ||
-	    CSR_IS_DOT11_PHY_MODE_11BE(phy_mode) ||
-	    CSR_IS_DOT11_PHY_MODE_11BE_ONLY(phy_mode)) {
+
+	if (sme_is_phy_mode_11be(phy_mode))
 		config.eht_cap = 1;
-		config.he_cap = 1;
-	}
-#endif
-	if (phy_mode == eCSR_DOT11_MODE_11ax ||
+
+	if (config.eht_cap ||
+	    phy_mode == eCSR_DOT11_MODE_AUTO ||
+	    phy_mode == eCSR_DOT11_MODE_11ax ||
 	    phy_mode == eCSR_DOT11_MODE_11ax_ONLY)
 		config.he_cap = 1;
 
@@ -15724,53 +15751,6 @@ QDF_STATUS sme_get_ani_level(mac_handle_t mac_handle, uint32_t *freqs,
 	return status;
 }
 #endif /* FEATURE_ANI_LEVEL_REQUEST */
-
-QDF_STATUS sme_get_prev_connected_bss_ies(mac_handle_t mac_handle,
-					  uint8_t vdev_id,
-					  uint8_t **ies, uint32_t *ie_len)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-	QDF_STATUS status = QDF_STATUS_SUCCESS;
-	uint32_t len;
-	uint8_t *beacon_ie;
-	struct rso_config *rso_cfg;
-	struct wlan_objmgr_vdev *vdev;
-	struct element_info *bcn_ie;
-
-	vdev = wlan_objmgr_get_vdev_by_id_from_pdev(mac->pdev, vdev_id,
-						    WLAN_LEGACY_SME_ID);
-	if (!vdev)
-		return QDF_STATUS_E_INVAL;
-
-	rso_cfg = wlan_cm_get_rso_config(vdev);
-	if (!rso_cfg) {
-		status = QDF_STATUS_E_INVAL;
-		goto end;
-	}
-
-	bcn_ie = &rso_cfg->prev_ap_bcn_ie;
-
-	if (!bcn_ie->len) {
-		sme_debug("No IEs to return");
-		status = QDF_STATUS_E_INVAL;
-		goto end;
-	}
-
-	len = bcn_ie->len;
-	beacon_ie = qdf_mem_malloc(len);
-	if (!beacon_ie) {
-		status = QDF_STATUS_E_NOMEM;
-		goto end;
-	}
-	qdf_mem_copy(beacon_ie, bcn_ie->ptr, len);
-
-	*ie_len = len;
-	*ies = beacon_ie;
-end:
-	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
-
-	return status;
-}
 
 #ifdef FEATURE_MONITOR_MODE_SUPPORT
 

@@ -1806,7 +1806,6 @@ hdd_check_and_upgrade_udp_qos(struct hdd_adapter *adapter,
 
 /**
  * hdd_wmm_classify_critical_pkt() - Function checks and classifies critical skb
- * @adapter: adapter for which skb is being transmitted
  * @skb: pointer to network buffer
  * @user_pri: user priority of the OS packet to be determined
  * @is_critical: pointer to be marked true for a critical packet
@@ -1822,8 +1821,7 @@ hdd_check_and_upgrade_udp_qos(struct hdd_adapter *adapter,
  * Return: None
  */
 static
-void hdd_wmm_classify_critical_pkt(struct hdd_adapter *adapter,
-				   struct sk_buff *skb,
+void hdd_wmm_classify_critical_pkt(struct sk_buff *skb,
 				   enum sme_qos_wmmuptype *user_pri,
 				   bool *is_critical)
 {
@@ -1990,7 +1988,7 @@ void hdd_wmm_classify_pkt(struct hdd_adapter *adapter,
 			  enum sme_qos_wmmuptype *user_pri,
 			  bool *is_critical)
 {
-	hdd_wmm_classify_critical_pkt(adapter, skb, user_pri, is_critical);
+	hdd_wmm_classify_critical_pkt(skb, user_pri, is_critical);
 
 	if (false == *is_critical) {
 		hdd_wmm_get_user_priority_from_ip_tos(adapter, skb, user_pri);
@@ -2005,7 +2003,7 @@ void hdd_wmm_classify_pkt_cb(void *adapter,
 	enum sme_qos_wmmuptype user_pri;
 	bool is_critical;
 
-	hdd_wmm_classify_critical_pkt(adapter, skb, &user_pri, &is_critical);
+	hdd_wmm_classify_critical_pkt(skb, &user_pri, &is_critical);
 
 	if (is_critical) {
 		skb->priority = user_pri;

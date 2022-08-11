@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022, Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -234,7 +235,8 @@ enum eWniMsgTypes {
 	CM_PREAUTH_REQ = SIR_SME_MSG_TYPES_BEGIN + 175,
 	eWNI_SME_CSA_REQ = SIR_SME_MSG_TYPES_BEGIN + 176,
 	CM_ABORT_CONN_TIMER = SIR_SME_MSG_TYPES_BEGIN + 177,
-	eWNI_SME_MSG_TYPES_END = SIR_SME_MSG_TYPES_BEGIN + 178
+	WIFI_POS_PASN_PEER_DELETE_ALL = SIR_SME_MSG_TYPES_BEGIN + 178,
+	eWNI_SME_MSG_TYPES_END = SIR_SME_MSG_TYPES_BEGIN + 179
 };
 
 typedef struct sAniCfgTxRateCtrs {

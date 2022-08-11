@@ -459,5 +459,11 @@ wlan_cfg80211_mc_bmiss_get_infra_cp_stats(
 {
 	return NULL;
 }
+
+static inline void
+ucfg_mc_cp_stats_get_tx_power(struct wlan_objmgr_vdev *vdev,
+			      int *dbm)
+{}
+
 #endif /* QCA_SUPPORT_CP_STATS */
 #endif /* __WLAN_CP_STATS_MC_UCFG_API_H__ */

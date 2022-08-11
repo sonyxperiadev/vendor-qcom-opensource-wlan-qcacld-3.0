@@ -30,6 +30,8 @@
 #include <wlan_hdd_sysfs.h>
 #include "wlan_hdd_sysfs_stats.h"
 #include "cdp_txrx_stats.h"
+#include "wlan_hdd_object_manager.h"
+#include "wlan_dp_ucfg_api.h"
 
 static int stats_id = -1;
 
@@ -37,6 +39,7 @@ static void hdd_sysfs_get_stats(struct hdd_adapter *adapter, ssize_t *length,
 				char *buffer, size_t buf_len)
 {
 	struct hdd_tx_rx_stats *stats = &adapter->hdd_stats.tx_rx_stats;
+	struct dp_tx_rx_stats dp_stats = {0};
 	uint32_t len = 0;
 	uint32_t total_rx_pkt = 0, total_rx_dropped = 0;
 	uint32_t total_rx_delv = 0, total_rx_refused = 0;
@@ -46,17 +49,32 @@ static void hdd_sysfs_get_stats(struct hdd_adapter *adapter, ssize_t *length,
 	uint32_t total_tx_classified_ac[WLAN_MAX_AC] = {0};
 	uint32_t total_tx_dropped_ac[WLAN_MAX_AC] = {0};
 	int i = 0;
-	uint8_t ac;
+	uint8_t ac, rx_ol_con = 0, rx_ol_low_tput = 0;
 	struct hdd_context *hdd_ctx = adapter->hdd_ctx;
+	struct wlan_objmgr_vdev *vdev;
+
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+	if (!vdev)
+		return;
+
+	if (ucfg_dp_get_txrx_stats(vdev, &dp_stats)) {
+		hdd_err("Unable to get stats from DP component");
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+		return;
+	}
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+
+	ucfg_dp_get_disable_rx_ol_val(hdd_ctx->psoc,
+				      &rx_ol_con, &rx_ol_low_tput);
 
 	for (; i < NUM_CPUS; i++) {
-		total_rx_pkt += stats->per_cpu[i].rx_packets;
-		total_rx_dropped += stats->per_cpu[i].rx_dropped;
-		total_rx_delv += stats->per_cpu[i].rx_delivered;
-		total_rx_refused += stats->per_cpu[i].rx_refused;
-		total_tx_pkt += stats->per_cpu[i].tx_called;
-		total_tx_dropped += stats->per_cpu[i].tx_dropped;
-		total_tx_orphaned += stats->per_cpu[i].tx_orphaned;
+		total_rx_pkt += dp_stats.per_cpu[i].rx_packets;
+		total_rx_dropped += dp_stats.per_cpu[i].rx_dropped;
+		total_rx_delv += dp_stats.per_cpu[i].rx_delivered;
+		total_rx_refused += dp_stats.per_cpu[i].rx_refused;
+		total_tx_pkt += dp_stats.per_cpu[i].tx_called;
+		total_tx_dropped += dp_stats.per_cpu[i].tx_dropped;
+		total_tx_orphaned += dp_stats.per_cpu[i].tx_orphaned;
 		for (ac = 0; ac < WLAN_MAX_AC; ac++) {
 			total_tx_classified_ac[ac] +=
 					 stats->per_cpu[i].tx_classified_ac[ac];
@@ -87,25 +105,25 @@ static void hdd_sysfs_get_stats(struct hdd_adapter *adapter, ssize_t *length,
 			total_tx_classified_ac[SME_AC_VO],
 			qdf_system_ticks(),
 			total_rx_pkt, total_rx_dropped,
-			qdf_atomic_read(&stats->rx_usolict_arp_n_mcast_drp),
+			qdf_atomic_read(&dp_stats.rx_usolict_arp_n_mcast_drp),
 			total_rx_delv,
 			total_rx_refused,
-			stats->rx_aggregated, stats->rx_non_aggregated,
-			stats->rx_gro_flush_skip,
-			stats->rx_gro_low_tput_flush,
-			qdf_atomic_read(&hdd_ctx->disable_rx_ol_in_concurrency),
-			qdf_atomic_read(&hdd_ctx->disable_rx_ol_in_low_tput));
+			dp_stats.rx_aggregated, dp_stats.rx_non_aggregated,
+			dp_stats.rx_gro_flush_skip,
+			dp_stats.rx_gro_low_tput_flush,
+			rx_ol_con,
+			rx_ol_low_tput);
 
 	for (i = 0; i < NUM_CPUS; i++) {
-		if (stats->per_cpu[i].rx_packets == 0)
+		if (dp_stats.per_cpu[i].rx_packets == 0)
 			continue;
 		len += scnprintf(buffer + len, buf_len - len,
 				 "Rx CPU[%d]:"
 				 "packets %u, dropped %u, delivered %u, refused %u\n",
-				 i, stats->per_cpu[i].rx_packets,
-				 stats->per_cpu[i].rx_dropped,
-				 stats->per_cpu[i].rx_delivered,
-				 stats->per_cpu[i].rx_refused);
+				 i, dp_stats.per_cpu[i].rx_packets,
+				 dp_stats.per_cpu[i].rx_dropped,
+				 dp_stats.per_cpu[i].rx_delivered,
+				 dp_stats.per_cpu[i].rx_refused);
 	}
 
 	len += scnprintf(buffer + len, buf_len - len,

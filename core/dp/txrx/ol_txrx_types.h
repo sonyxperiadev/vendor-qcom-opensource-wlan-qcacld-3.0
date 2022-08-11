@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1292,7 +1293,7 @@ struct ol_txrx_vdev_t {
 		/** @node: tcp ack frame will be stored in this hash table */
 		struct tcp_del_ack_hash_node node[OL_TX_HL_DEL_ACK_HASH_SIZE];
 		/** @timer: timeout if no more tcp ack feeding */
-		__qdf_hrtimer_data_t timer;
+		qdf_hrtimer_data_t timer;
 		/** @is_timer_running: is timer running? */
 		qdf_atomic_t is_timer_running;
 		/** @tcp_node_in_use_count: number of nodes in use */

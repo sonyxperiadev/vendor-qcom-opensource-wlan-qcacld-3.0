@@ -44,6 +44,7 @@
 #include <cdp_txrx_ocb.h>
 #include "ol_txrx.h"
 #include "wlan_hdd_object_manager.h"
+#include "wlan_dp_ucfg_api.h"
 
 /* Structure definitions for WLAN_SET_DOT11P_CHANNEL_SCHED */
 #define AIFSN_MIN		(2)
@@ -220,8 +221,8 @@ static int hdd_ocb_register_sta(struct hdd_adapter *adapter)
 	QDF_STATUS qdf_status = QDF_STATUS_E_FAILURE;
 	struct ol_txrx_desc_type sta_desc = {0};
 	struct hdd_station_ctx *sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
-	struct ol_txrx_ops txrx_ops;
 	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
+	struct wlan_objmgr_vdev *vdev;
 
 	qdf_status = cdp_peer_register_ocb_peer(soc,
 				adapter->mac_addr.bytes);
@@ -233,14 +234,16 @@ static int hdd_ocb_register_sta(struct hdd_adapter *adapter)
 	WLAN_ADDR_COPY(sta_desc.peer_addr.bytes, adapter->mac_addr.bytes);
 	sta_desc.is_qos_enabled = 1;
 
-	/* Register the vdev transmit and receive functions */
-	qdf_mem_zero(&txrx_ops, sizeof(txrx_ops));
-	txrx_ops.rx.rx = hdd_rx_packet_cbk;
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+	if (!vdev)
+		return -EINVAL;
 
-	cdp_vdev_register(soc, adapter->vdev_id, (ol_osif_vdev_handle)adapter,
-			  &txrx_ops);
-	txrx_ops.rx.stats_rx = hdd_tx_rx_collect_connectivity_stats_info;
-	adapter->tx_fn = txrx_ops.tx.tx;
+	qdf_status = ucfg_dp_ocb_register_txrx_ops(vdev);
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
+		hdd_err("Failed to register tx/rx ops. Status= %d", qdf_status);
+		return -EINVAL;
+	}
 
 	qdf_status = cdp_peer_register(soc, OL_TXRX_PDEV_ID, &sta_desc);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {

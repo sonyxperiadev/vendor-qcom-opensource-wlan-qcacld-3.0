@@ -1436,6 +1436,7 @@ static void dp_pld_request_bus_bandwidth(struct wlan_dp_psoc_context *dp_ctx,
 	bool is_tx_pm_qos_high;
 	bool pmqos_on_low_tput = false;
 	enum tput_level tput_level;
+	bool is_tput_level_high;
 	struct bbm_params param = {0};
 	bool legacy_client = false;
 	void *hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
@@ -1488,6 +1489,7 @@ static void dp_pld_request_bus_bandwidth(struct wlan_dp_psoc_context *dp_ctx,
 
 	param.policy = BBM_TPUT_POLICY;
 	param.policy_info.tput_level = tput_level;
+	dp_bbm_apply_independent_policy(dp_ctx->psoc, &param);
 
 	dp_rtpm_tput_policy_apply(dp_ctx, tput_level);
 
@@ -1603,6 +1605,9 @@ static void dp_pld_request_bus_bandwidth(struct wlan_dp_psoc_context *dp_ctx,
 							  false);
 		}
 		dp_ops->dp_pm_qos_update_request(ctx, &pm_qos_cpu_mask);
+		is_tput_level_high =
+			tput_level >= TPUT_LEVEL_HIGH ? true : false;
+		cdp_set_bus_vote_lvl_high(soc, is_tput_level_high);
 	}
 
 	if (vote_level_change || tx_level_change || rx_level_change) {
@@ -1649,6 +1654,48 @@ static void dp_pld_request_bus_bandwidth(struct wlan_dp_psoc_context *dp_ctx,
 		dp_periodic_sta_stats_display(dp_ctx);
 	}
 }
+
+#ifdef WLAN_FEATURE_DYNAMIC_RX_AGGREGATION
+/**
+ * dp_rx_check_qdisc_for_intf() - Check if any ingress qdisc is configured
+ *  for given adapter
+ * @dp_intf: pointer to DP interface context
+ *
+ * The function checks if ingress qdisc is registered for a given
+ * net device.
+ *
+ * Return: None
+ */
+static void
+dp_rx_check_qdisc_for_intf(struct wlan_dp_intf *dp_intf)
+{
+	struct wlan_dp_psoc_callbacks *dp_ops;
+	QDF_STATUS status;
+
+	dp_ops = &dp_intf->dp_ctx->dp_ops;
+	status = dp_ops->dp_rx_check_qdisc_configured(dp_intf->dev,
+				 dp_intf->dp_ctx->dp_agg_param.tc_ingress_prio);
+	if (QDF_IS_STATUS_SUCCESS(status)) {
+		if (qdf_likely(qdf_atomic_read(&dp_intf->gro_disallowed)))
+			return;
+
+		dp_debug("ingress qdisc/filter configured disable GRO");
+		qdf_atomic_set(&dp_intf->gro_disallowed, 1);
+
+		return;
+	} else if (status == QDF_STATUS_E_NOSUPPORT) {
+		if (qdf_unlikely(qdf_atomic_read(&dp_intf->gro_disallowed))) {
+			dp_debug("ingress qdisc/filter removed enable GRO");
+			qdf_atomic_set(&dp_intf->gro_disallowed, 0);
+		}
+	}
+}
+#else
+static void
+dp_rx_check_qdisc_for_intf(struct wlan_dp_intf *dp_intf)
+{
+}
+#endif
 
 /**
  * __dp_bus_bw_work_handler() - Bus bandwidth work handler
@@ -1708,6 +1755,9 @@ static void __dp_bus_bw_work_handler(struct wlan_dp_psoc_context *dp_ctx)
 			dp_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 			continue;
 		}
+
+		if (dp_ctx->dp_agg_param.tc_based_dyn_gro)
+			dp_rx_check_qdisc_for_intf(dp_intf);
 
 		tx_packets += DP_BW_GET_DIFF(
 			QDF_NET_DEV_STATS_TX_PKTS(&dp_intf->stats),
@@ -1928,6 +1978,7 @@ static void __dp_bus_bw_compute_timer_stop(struct wlan_objmgr_psoc *psoc)
 {
 	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
 	hdd_cb_handle ctx = dp_ctx->dp_ops.callback_ctx;
+	ol_txrx_soc_handle soc = cds_get_context(QDF_MODULE_ID_SOC);
 
 	struct bbm_params param = {0};
 	bool is_any_adapter_conn =
@@ -1951,6 +2002,7 @@ static void __dp_bus_bw_compute_timer_stop(struct wlan_objmgr_psoc *psoc)
 	cdp_pdev_reset_bundle_require_flag(cds_get_context(QDF_MODULE_ID_SOC),
 					   OL_TXRX_PDEV_ID);
 
+	cdp_set_bus_vote_lvl_high(soc, false);
 	dp_ctx->bw_vote_time = 0;
 
 exit:

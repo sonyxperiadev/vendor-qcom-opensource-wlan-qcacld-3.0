@@ -1258,6 +1258,15 @@ void update_fils_data(struct sir_fils_indication *fils_ind,
 				 tDot11fIEfils_indication * fils_indication);
 #endif
 #ifdef WLAN_FEATURE_11AX
+/**
+ * populate_dot11f_he_caps() - populate he capabilities IE
+ *                             in beacon/probe response structure
+ * @mac_context: pointer to mac context
+ * @pe_session: pointer to pe session
+ * @he_cap: he capability IE
+ *
+ * Return: QDF_STATUS
+ */
 QDF_STATUS populate_dot11f_he_caps(struct mac_context *, struct pe_session *,
 				   tDot11fIEhe_cap *);
 
@@ -1273,10 +1282,34 @@ QDF_STATUS
 populate_dot11f_he_caps_by_band(struct mac_context *mac_ctx,
 				bool is_2g,
 				tDot11fIEhe_cap *he_cap);
+
+/**
+ * populate_dot11f_he_operation() - populate he operation IE
+ *                                  in beacon/probe response structure
+ * @mac_context: pointer to mac context
+ * @pe_session: pointer to pe session
+ * @he_op: he operation IE
+ *
+ * Return: QDF_STATUS
+ */
 QDF_STATUS populate_dot11f_he_operation(struct mac_context *, struct pe_session *,
 					tDot11fIEhe_op *);
+
 /**
- * populate_dot11f_he_6ghz_cap() - pouldate HE 6GHz caps IE
+ * populate_dot11f_sr_info() - populate tDot11fIEspatial_reuse to
+ *                             beacon/probe response structure.
+ * @mac_context: pointer to mac context
+ * @pe_session: pointer to pe session
+ * @sr_info: spatial reuse IE
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS populate_dot11f_sr_info(struct mac_context *mac_ctx,
+				   struct pe_session *session,
+				   tDot11fIEspatial_reuse *sr_info);
+
+/**
+ * populate_dot11f_he_6ghz_cap() - populdate HE 6GHz caps IE
  * @mac_ctx: Global MAC context
  * @session: PE session
  * @he_6g_cap: pointer to HE 6GHz IE
@@ -1333,6 +1366,14 @@ static inline QDF_STATUS populate_dot11f_he_bss_color_change(
 				struct mac_context *mac_ctx,
 				struct pe_session *session,
 				tDot11fIEbss_color_change *bss_color)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS populate_dot11f_sr_info(
+					struct mac_context *mac_ctx,
+					struct pe_session *session,
+					tDot11fIEspatial_reuse *sr_info)
 {
 	return QDF_STATUS_SUCCESS;
 }

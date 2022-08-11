@@ -3334,13 +3334,6 @@ QDF_STATUS wma_open(struct wlan_objmgr_psoc *psoc,
 					   wmi_peer_sta_kickout_event_id,
 					   wma_peer_sta_kickout_event_handler,
 					   WMA_RX_SERIALIZER_CTX);
-
-	/* register for stats response event */
-	wmi_unified_register_event_handler(wma_handle->wmi_handle,
-					   wmi_get_arp_stats_req_id,
-					   wma_get_arp_stats_handler,
-					   WMA_RX_SERIALIZER_CTX);
-
 	/* register for fw state response event */
 	wma_register_fw_state_events(wma_handle->wmi_handle);
 

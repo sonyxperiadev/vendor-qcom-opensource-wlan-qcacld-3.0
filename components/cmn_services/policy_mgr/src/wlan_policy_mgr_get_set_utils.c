@@ -1527,7 +1527,8 @@ QDF_STATUS policy_mgr_update_hw_mode_list(struct wlan_objmgr_psoc *psoc,
 				sbs_mode = HW_MODE_SBS;
 		}
 		/* eMLSR mode */
-		if (hw_config_type == WMI_HW_MODE_EMLSR) {
+		if (WMI_BECAP_PHY_GET_HW_MODE_CFG(hw_config_type) ==
+				WMI_HW_MODE_EMLSR) {
 			tmp = &info->mac_phy_cap[j++];
 			policy_mgr_get_hw_mode_params(tmp, &mac1_ss_bw_info);
 			policy_mgr_update_mac_freq_info(psoc, pm_ctx,
@@ -8670,4 +8671,40 @@ bool policy_mgr_is_ap_ap_mcc_allow(struct wlan_objmgr_psoc *psoc,
 		return true;
 
 	return false;
+}
+
+bool policy_mgr_any_other_vdev_on_same_mac_as_freq(
+				struct wlan_objmgr_psoc *psoc,
+				uint32_t freq, uint8_t vdev_id)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	uint32_t conn_index = 0;
+	bool same_mac = false;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return false;
+	}
+
+	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
+	for (conn_index = 0; conn_index < MAX_NUMBER_OF_CONC_CONNECTIONS;
+	     conn_index++) {
+		if (!pm_conc_connection_list[conn_index].in_use)
+			continue;
+
+		if (pm_conc_connection_list[conn_index].vdev_id == vdev_id)
+			continue;
+
+		if (policy_mgr_are_2_freq_on_same_mac(
+				psoc,
+				pm_conc_connection_list[conn_index].freq,
+				freq)) {
+			same_mac = true;
+			break;
+		}
+	}
+	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+
+	return same_mac;
 }

@@ -1025,7 +1025,7 @@ int osif_dp_get_nud_stats(struct wiphy *wiphy,
 	arp_stats_params.vdev_id = ucfg_dp_get_intf_id(vdev);
 
 	/* send NUD failure event only when ARP tracking is enabled. */
-	if (cdp_cfg_get(soc, cfg_dp_enable_data_stall) &&
+	if (ucfg_dp_nud_fail_data_stall_evt_enabled() &&
 	    !ucfg_dp_nud_tracking_enabled(psoc) &&
 	    (pkt_type_bitmap & CONNECTIVITY_CHECK_SET_ARP)) {
 		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_ERROR,

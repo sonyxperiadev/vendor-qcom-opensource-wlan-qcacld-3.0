@@ -90,6 +90,8 @@
 #include "qdf_types.h"
 #include <linux/cpuidle.h>
 #include <cdp_txrx_ctrl.h>
+#include <wlan_cp_stats_mc_ucfg_api.h>
+#include "wlan_dp_ucfg_api.h"
 
 /* Preprocessor definitions and constants */
 #ifdef QCA_WIFI_EMULATION
@@ -1695,6 +1697,8 @@ hdd_suspend_wlan(void)
 
 	hdd_ctx->hdd_wlan_suspended = true;
 
+	ucfg_dp_suspend_wlan(hdd_ctx->psoc);
+
 	hdd_configure_sar_sleep_index(hdd_ctx);
 
 	hdd_wlan_suspend_resume_event(HDD_WLAN_EARLY_SUSPEND);
@@ -1754,6 +1758,7 @@ static int hdd_resume_wlan(void)
 	}
 
 	ucfg_ipa_resume(hdd_ctx->pdev);
+	ucfg_dp_resume_wlan(hdd_ctx->psoc);
 	status = ucfg_pmo_psoc_user_space_resume_req(hdd_ctx->psoc,
 						     QDF_SYSTEM_SUSPEND);
 	if (QDF_IS_STATUS_ERROR(status))
@@ -1852,20 +1857,6 @@ QDF_STATUS hdd_wlan_shutdown(void)
 			}
 		}
 	}
-
-	/*
-	 * After SSR, FW clear its txrx stats. In host,
-	 * as adapter is intact so those counts are still
-	 * available. Now if agains Set stats command comes,
-	 * then host will increment its counts start from its
-	 * last saved value, i.e., count before SSR, and FW will
-	 * increment its count from 0. This will finally sends a
-	 * mismatch of packet counts b/w host and FW to framework
-	 * that will create ambiquity. Therfore, Resetting the host
-	 * counts here so that after SSR both FW and host start
-	 * increment their counts from 0.
-	 */
-	hdd_reset_all_adapters_connectivity_stats(hdd_ctx);
 
 	hdd_reset_all_adapters(hdd_ctx);
 
@@ -2062,8 +2053,6 @@ QDF_STATUS hdd_wlan_re_init(void)
 	adapter = hdd_get_first_valid_adapter(hdd_ctx);
 	if (!adapter)
 		hdd_err("Failed to get adapter");
-
-	hdd_dp_trace_init(hdd_ctx->config);
 
 	ret = hdd_wlan_start_modules(hdd_ctx, true);
 	if (ret) {
@@ -2323,10 +2312,10 @@ static int __wlan_hdd_cfg80211_resume_wlan(struct wiphy *wiphy)
 		goto exit_with_code;
 	}
 	/* Resume tlshim Rx thread */
-	if (hdd_ctx->enable_rxthread)
+	if (ucfg_dp_is_rx_common_thread_enabled(hdd_ctx->psoc))
 		wlan_hdd_rx_thread_resume(hdd_ctx);
 
-	if (hdd_ctx->enable_dp_rx_threads)
+	if (ucfg_dp_is_rx_threads_enabled(hdd_ctx->psoc))
 		dp_txrx_resume(cds_get_context(QDF_MODULE_ID_SOC));
 
 	if (ucfg_pkt_capture_get_mode(hdd_ctx->psoc) !=
@@ -2612,12 +2601,12 @@ static int __wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
 	}
 	hdd_ctx->is_scheduler_suspended = true;
 
-	if (hdd_ctx->enable_rxthread) {
+	if (ucfg_dp_is_rx_common_thread_enabled(hdd_ctx->psoc)) {
 		if (wlan_hdd_rx_thread_suspend(hdd_ctx))
 			goto resume_ol_rx;
 	}
 
-	if (hdd_ctx->enable_dp_rx_threads) {
+	if (ucfg_dp_is_rx_threads_enabled(hdd_ctx->psoc)) {
 		if (dp_txrx_suspend(cds_get_context(QDF_MODULE_ID_SOC)))
 			goto resume_ol_rx;
 	}
@@ -2656,7 +2645,7 @@ static int __wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
 	return 0;
 
 resume_dp_thread:
-	if (hdd_ctx->enable_dp_rx_threads)
+	if (ucfg_dp_is_rx_threads_enabled(hdd_ctx->psoc))
 		dp_txrx_resume(cds_get_context(QDF_MODULE_ID_SOC));
 
 	/* Resume packet capture MON thread */
@@ -3167,6 +3156,7 @@ static int __wlan_hdd_cfg80211_get_txpower(struct wiphy *wiphy,
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(ndev);
 	int status;
 	static bool is_rate_limited;
+	struct wlan_objmgr_vdev *vdev;
 
 	hdd_enter_dev(ndev);
 
@@ -3215,7 +3205,13 @@ static int __wlan_hdd_cfg80211_get_txpower(struct wiphy *wiphy,
 	    is_rate_limited) {
 		hdd_debug("Modules not enabled/rate limited, use cached stats");
 		/* Send cached data to upperlayer*/
-		*dbm = adapter->hdd_stats.class_a_stat.max_pwr;
+		vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_POWER_ID);
+		if (!vdev) {
+			hdd_err("vdev is NULL");
+			return -EINVAL;
+		}
+		ucfg_mc_cp_stats_get_tx_power(vdev, dbm);
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_POWER_ID);
 		return 0;
 	}
 

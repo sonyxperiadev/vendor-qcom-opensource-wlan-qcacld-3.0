@@ -320,6 +320,7 @@ target_if_dp_send_dhcp_ind(uint16_t vdev_id,
 	struct wmi_unified *wmi_handle;
 	struct wlan_objmgr_psoc *psoc;
 	wmi_peer_set_param_cmd_fixed_param peer_set_param_fp = {0};
+	QDF_STATUS status;
 
 	psoc = wlan_objmgr_get_psoc_by_id(0, WLAN_PSOC_TARGET_IF_ID);
 	if (!psoc) {
@@ -345,8 +346,11 @@ target_if_dp_send_dhcp_ind(uint16_t vdev_id,
 	WMI_CHAR_ARRAY_TO_MAC_ADDR(dhcp_ind->peer_mac_addr.bytes,
 				   &peer_set_param_fp.peer_macaddr);
 
-	return wmi_unified_process_dhcp_ind(wmi_handle,
-						&peer_set_param_fp);
+	status = wmi_unified_process_dhcp_ind(wmi_handle,
+					      &peer_set_param_fp);
+	wlan_objmgr_psoc_release_ref(psoc, WLAN_PSOC_TARGET_IF_ID);
+
+	return status;
 }
 
 void target_if_dp_register_tx_ops(struct wlan_dp_psoc_sb_ops *sb_ops)

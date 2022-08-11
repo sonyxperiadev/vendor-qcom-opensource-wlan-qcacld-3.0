@@ -37,28 +37,19 @@
 #include <cds_sched.h>
 #include <cds_utils.h>
 
-#include <wlan_hdd_p2p.h>
 #include <linux/wireless.h>
 #include <net/cfg80211.h>
 #include "sap_api.h"
 #include "wlan_hdd_wmm.h"
-#include "wlan_hdd_tdls.h"
-#include "wlan_hdd_ocb.h"
-#include "wlan_hdd_lro.h"
 #include <cdp_txrx_cmn.h>
 #include <cdp_txrx_peer_ops.h>
 #include <cdp_txrx_flow_ctrl_v2.h>
-#include "wlan_hdd_nan_datapath.h"
-#include "pld_common.h"
 #include <cdp_txrx_misc.h>
-#include "wlan_hdd_rx_monitor.h"
 #include "wlan_hdd_power.h"
 #include "wlan_hdd_cfg80211.h"
 #include <wlan_hdd_tsf.h>
 #include <net/tcp.h>
-#include "wma_api.h"
 
-#include "wlan_hdd_nud_tracking.h"
 #include "dp_txrx.h"
 #if defined(WLAN_SUPPORT_RX_FISA)
 #include "dp_fisa_rx.h"
@@ -69,11 +60,10 @@
 #include "cfg_ucfg_api.h"
 #include "target_type.h"
 #include "wlan_hdd_object_manager.h"
-#include "nan_public_structs.h"
-#include "nan_ucfg_api.h"
 #include <wlan_hdd_sar_limits.h>
 #include "wlan_hdd_object_manager.h"
-#include "wlan_hdd_mlo.h"
+#include "wlan_dp_ucfg_api.h"
+#include "os_if_dp.h"
 
 #ifdef TX_MULTIQ_PER_AC
 #if defined(QCA_LL_TX_FLOW_CONTROL_V2) || defined(QCA_LL_PDEV_TX_FLOW_CONTROL)
@@ -286,49 +276,6 @@ hdd_tx_resume_false(struct hdd_adapter *adapter, bool tx_resume)
 	adapter->hdd_stats.tx_rx_stats.is_txflow_paused = true;
 }
 
-static inline struct sk_buff *hdd_skb_orphan(struct hdd_adapter *adapter,
-		struct sk_buff *skb)
-{
-	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
-	int need_orphan = 0;
-	int cpu;
-
-	if (adapter->tx_flow_low_watermark > 0) {
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(3, 19, 0))
-		/*
-		 * The TCP TX throttling logic is changed a little after
-		 * 3.19-rc1 kernel, the TCP sending limit will be smaller,
-		 * which will throttle the TCP packets to the host driver.
-		 * The TCP UP LINK throughput will drop heavily. In order to
-		 * fix this issue, need to orphan the socket buffer asap, which
-		 * will call skb's destructor to notify the TCP stack that the
-		 * SKB buffer is unowned. And then the TCP stack will pump more
-		 * packets to host driver.
-		 *
-		 * The TX packets might be dropped for UDP case in the iperf
-		 * testing. So need to be protected by follow control.
-		 */
-		need_orphan = 1;
-#else
-		if (hdd_ctx->config->tx_orphan_enable)
-			need_orphan = 1;
-#endif
-	} else if (hdd_ctx->config->tx_orphan_enable) {
-		if (qdf_nbuf_is_ipv4_tcp_pkt(skb) ||
-		    qdf_nbuf_is_ipv6_tcp_pkt(skb))
-			need_orphan = 1;
-	}
-
-	if (need_orphan) {
-		skb_orphan(skb);
-		cpu = qdf_get_smp_processor_id();
-		++adapter->hdd_stats.tx_rx_stats.per_cpu[cpu].tx_orphaned;
-	} else
-		skb = skb_unshare(skb, GFP_ATOMIC);
-
-	return skb;
-}
-
 /**
  * hdd_tx_resume_cb() - Resume OS TX Q.
  * @adapter_context: pointer to vdev apdapter
@@ -414,9 +361,21 @@ void hdd_deregister_tx_flow_control(struct hdd_adapter *adapter)
 	}
 }
 
-void hdd_get_tx_resource(struct hdd_adapter *adapter,
-			 struct qdf_mac_addr *mac_addr, uint16_t timer_value)
+void hdd_get_tx_resource(uint8_t vdev_id,
+			 struct qdf_mac_addr *mac_addr)
 {
+	struct hdd_adapter *adapter;
+	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
+	uint16_t timer_value = WLAN_HDD_TX_FLOW_CONTROL_OS_Q_BLOCK_TIME;
+
+	adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
+	if (!adapter)
+		return;
+
+	if (adapter->device_mode == QDF_P2P_GO_MODE ||
+	    adapter->device_mode == QDF_SAP_MODE)
+		timer_value = WLAN_SAP_HDD_TX_FLOW_CONTROL_OS_Q_BLOCK_TIME;
+
 	if (false ==
 	    cdp_fc_get_tx_resource(cds_get_context(QDF_MODULE_ID_SOC),
 				   OL_TXRX_PDEV_ID,
@@ -440,56 +399,61 @@ void hdd_get_tx_resource(struct hdd_adapter *adapter,
 		}
 	}
 }
+
+unsigned int
+hdd_get_tx_flow_low_watermark(hdd_cb_handle cb_ctx, uint8_t intf_id)
+{
+	struct hdd_context *hdd_ctx = hdd_cb_handle_to_context(cb_ctx);
+	struct hdd_adapter *adapter;
+
+	adapter = hdd_get_adapter_by_vdev(hdd_ctx, intf_id);
+	if (!adapter)
+		return 0;
+
+	return adapter->tx_flow_low_watermark;
+}
 #endif /* QCA_LL_LEGACY_TX_FLOW_CONTROL */
+
+#ifdef RECEIVE_OFFLOAD
+qdf_napi_struct
+*hdd_legacy_gro_get_napi(qdf_nbuf_t nbuf, bool enable_rxthread)
+{
+	struct qca_napi_info *qca_napii;
+	struct qca_napi_data *napid;
+	struct napi_struct *napi_to_use;
+
+	napid = hdd_napi_get_all();
+	if (unlikely(!napid))
+		return NULL;
+
+	qca_napii = hif_get_napi(QDF_NBUF_CB_RX_CTX_ID(nbuf), napid);
+	if (unlikely(!qca_napii))
+		return NULL;
+
+	/*
+	 * As we are breaking context in Rxthread mode, there is rx_thread NAPI
+	 * corresponds each hif_napi.
+	 */
+	if (enable_rxthread)
+		napi_to_use =  &qca_napii->rx_thread_napi;
+	else
+		napi_to_use = &qca_napii->napi;
+
+	return (qdf_napi_struct *)napi_to_use;
+}
+#else
+qdf_napi_struct
+*hdd_legacy_gro_get_napi(qdf_nbuf_t nbuf, bool enable_rxthread)
+{
+	return NULL;
+}
+#endif
 
 uint32_t hdd_txrx_get_tx_ack_count(struct hdd_adapter *adapter)
 {
 	return cdp_get_tx_ack_stats(cds_get_context(QDF_MODULE_ID_SOC),
 				    adapter->vdev_id);
 }
-
-#ifdef FEATURE_WLAN_DIAG_SUPPORT
-/**
- * hdd_event_eapol_log() - send event to wlan diag
- * @skb: skb ptr
- * @dir: direction
- *
- * Return: None
- */
-void hdd_event_eapol_log(struct sk_buff *skb, enum qdf_proto_dir dir)
-{
-	int16_t eapol_key_info;
-
-	WLAN_HOST_DIAG_EVENT_DEF(wlan_diag_event, struct host_event_wlan_eapol);
-
-	if ((dir == QDF_TX &&
-		(QDF_NBUF_CB_PACKET_TYPE_EAPOL !=
-		 QDF_NBUF_CB_GET_PACKET_TYPE(skb))))
-		return;
-	else if (!qdf_nbuf_is_ipv4_eapol_pkt(skb))
-		return;
-
-	eapol_key_info = (uint16_t)(*(uint16_t *)
-				(skb->data + EAPOL_KEY_INFO_OFFSET));
-
-	wlan_diag_event.event_sub_type =
-		(dir == QDF_TX ?
-		 WIFI_EVENT_DRIVER_EAPOL_FRAME_TRANSMIT_REQUESTED :
-		 WIFI_EVENT_DRIVER_EAPOL_FRAME_RECEIVED);
-	wlan_diag_event.eapol_packet_type = (uint8_t)(*(uint8_t *)
-				(skb->data + EAPOL_PACKET_TYPE_OFFSET));
-	wlan_diag_event.eapol_key_info = eapol_key_info;
-	wlan_diag_event.eapol_rate = 0;
-	qdf_mem_copy(wlan_diag_event.dest_addr,
-			(skb->data + QDF_NBUF_DEST_MAC_OFFSET),
-			sizeof(wlan_diag_event.dest_addr));
-	qdf_mem_copy(wlan_diag_event.src_addr,
-			(skb->data + QDF_NBUF_SRC_MAC_OFFSET),
-			sizeof(wlan_diag_event.src_addr));
-
-	WLAN_HOST_DIAG_EVENT_REPORT(&wlan_diag_event, EVENT_WLAN_EAPOL);
-}
-#endif /* FEATURE_WLAN_DIAG_SUPPORT */
 
 int hdd_set_udp_qos_upgrade_config(struct hdd_adapter *adapter,
 				   uint8_t priority)
@@ -512,577 +476,21 @@ int hdd_set_udp_qos_upgrade_config(struct hdd_adapter *adapter,
 	return 0;
 }
 
-/**
- * wlan_hdd_mark_critical_pkt() - Identify and mark critical packets
- * @skb: skb ptr
- *
- * Return: None
- */
-static void wlan_hdd_mark_critical_pkt(struct sk_buff *skb)
+#ifdef QCA_WIFI_FTM
+static inline bool
+hdd_drop_tx_packet_on_ftm(struct sk_buff *skb)
 {
-	if (qdf_nbuf_is_ipv4_eapol_pkt(skb)) {
-		QDF_NBUF_CB_GET_PACKET_TYPE(skb) =
-				QDF_NBUF_CB_PACKET_TYPE_EAPOL;
-	} else if (qdf_nbuf_is_ipv4_arp_pkt(skb)) {
-		QDF_NBUF_CB_GET_PACKET_TYPE(skb) =
-				QDF_NBUF_CB_PACKET_TYPE_ARP;
-	} else if (qdf_nbuf_is_ipv4_dhcp_pkt(skb)) {
-		QDF_NBUF_CB_GET_PACKET_TYPE(skb) =
-				QDF_NBUF_CB_PACKET_TYPE_DHCP;
-	} else if (qdf_nbuf_is_ipv6_dhcp_pkt(skb)) {
-		QDF_NBUF_CB_GET_PACKET_TYPE(skb) =
-				QDF_NBUF_CB_PACKET_TYPE_DHCPV6;
-	} else if (qdf_nbuf_is_icmpv6_pkt(skb)) {
-		QDF_NBUF_CB_GET_PACKET_TYPE(skb) =
-			QDF_NBUF_CB_PACKET_TYPE_ICMPv6;
+	if (hdd_get_conparam() == QDF_GLOBAL_FTM_MODE) {
+		kfree_skb(skb);
+		return true;
 	}
-
-	QDF_NBUF_CB_TX_EXTRA_IS_CRITICAL(skb) = true;
-}
-
-/**
- * wlan_hdd_mark_non_critical_pkt() - Identify and mark non-critical packets
- * @skb: skb ptr
- *
- * Return: None
- */
-static void wlan_hdd_mark_non_critical_pkt(struct sk_buff *skb)
-{
-	if (qdf_nbuf_is_icmp_pkt(skb))
-		QDF_NBUF_CB_GET_PACKET_TYPE(skb) =
-				QDF_NBUF_CB_PACKET_TYPE_ICMP;
-	else if (qdf_nbuf_is_ipv4_wapi_pkt(skb))
-		QDF_NBUF_CB_GET_PACKET_TYPE(skb) =
-			QDF_NBUF_CB_PACKET_TYPE_WAPI;
-}
-
-void wlan_hdd_mark_pkt_type(struct sk_buff *skb)
-{
-	struct ethhdr *eh = (struct ethhdr *)skb->data;
-
-	/*
-	 * Zero out CB before accessing it. Expection is that cb is accessed
-	 * for the first time here on TX path in hard_start_xmit.
-	 */
-	qdf_mem_zero(skb->cb, sizeof(skb->cb));
-
-	/* check destination mac address is broadcast/multicast */
-	if (is_broadcast_ether_addr((uint8_t *)eh))
-		QDF_NBUF_CB_GET_IS_BCAST(skb) = true;
-	else if (is_multicast_ether_addr((uint8_t *)eh))
-		QDF_NBUF_CB_GET_IS_MCAST(skb) = true;
-
-	/*
-	 * TX Packets in the HI_PRIO queue are assumed to be critical and
-	 * marked accordingly.
-	 */
-	if (skb->queue_mapping == TX_GET_QUEUE_IDX(HDD_LINUX_AC_HI_PRIO, 0))
-		wlan_hdd_mark_critical_pkt(skb);
-	else
-		wlan_hdd_mark_non_critical_pkt(skb);
-}
-
-/**
- * hdd_clear_tx_rx_connectivity_stats() - clear connectivity stats
- * @hdd_ctx: pointer to HDD Station Context
- *
- * Return: None
- */
-static void hdd_clear_tx_rx_connectivity_stats(struct hdd_adapter *adapter)
-{
-	hdd_debug("Clear txrx connectivity stats");
-	qdf_mem_zero(&adapter->hdd_stats.hdd_arp_stats,
-		     sizeof(adapter->hdd_stats.hdd_arp_stats));
-	qdf_mem_zero(&adapter->hdd_stats.hdd_dns_stats,
-		     sizeof(adapter->hdd_stats.hdd_dns_stats));
-	qdf_mem_zero(&adapter->hdd_stats.hdd_tcp_stats,
-		     sizeof(adapter->hdd_stats.hdd_tcp_stats));
-	qdf_mem_zero(&adapter->hdd_stats.hdd_icmpv4_stats,
-		     sizeof(adapter->hdd_stats.hdd_icmpv4_stats));
-	adapter->pkt_type_bitmap = 0;
-	adapter->track_arp_ip = 0;
-	qdf_mem_zero(adapter->dns_payload, adapter->track_dns_domain_len);
-	adapter->track_dns_domain_len = 0;
-	adapter->track_src_port = 0;
-	adapter->track_dest_port = 0;
-	adapter->track_dest_ipv4 = 0;
-}
-
-void hdd_reset_all_adapters_connectivity_stats(struct hdd_context *hdd_ctx)
-{
-	struct hdd_adapter *adapter = NULL, *next = NULL;
-	QDF_STATUS status;
-
-	hdd_enter();
-
-	status = hdd_get_front_adapter(hdd_ctx, &adapter);
-
-	while (adapter && QDF_STATUS_SUCCESS == status) {
-		hdd_clear_tx_rx_connectivity_stats(adapter);
-		status = hdd_get_next_adapter(hdd_ctx, adapter, &next);
-		adapter = next;
-	}
-
-	hdd_exit();
-}
-
-/**
- * hdd_is_tx_allowed() - check if Tx is allowed based on current peer state
- * @adapter: pointer to adapter structure
- * @skb: pointer to OS packet (sk_buff)
- * @peer_mac: Peer mac address
- *
- * This function gets the peer state from DP and check if it is either
- * in OL_TXRX_PEER_STATE_CONN or OL_TXRX_PEER_STATE_AUTH. Only EAP packets
- * are allowed when peer_state is OL_TXRX_PEER_STATE_CONN. All packets
- * allowed when peer_state is OL_TXRX_PEER_STATE_AUTH.
- *
- * Return: true if Tx is allowed and false otherwise.
- */
-static inline bool hdd_is_tx_allowed(struct hdd_adapter *adapter,
-				     struct sk_buff *skb,
-				     uint8_t *peer_mac)
-{
-	enum ol_txrx_peer_state peer_state;
-	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
-
-	QDF_BUG(soc);
-
-	/**
-	 * If is_authenticated is true, then peer state is
-	 * OL_TXRX_PEER_STATE_AUTH already, skip cdp peer
-	 * API which is not efficient for T-put.
-	 */
-	if (adapter->device_mode != QDF_NDI_MODE &&
-	    hdd_is_sta_authenticated(adapter))
-		return true;
-
-	peer_state = cdp_peer_state_get(soc, adapter->vdev_id, peer_mac);
-	if (likely(OL_TXRX_PEER_STATE_AUTH == peer_state))
-		return true;
-	if (OL_TXRX_PEER_STATE_CONN == peer_state &&
-		(ntohs(skb->protocol) == HDD_ETHERTYPE_802_1_X
-		|| IS_HDD_ETHERTYPE_WAI(skb)))
-		return true;
-	QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_INFO_HIGH,
-		  FL("Invalid peer state for Tx: %d"), peer_state);
 	return false;
 }
-
-/**
- * hdd_tx_rx_is_dns_domain_name_match() - function to check whether dns
- * domain name in the received skb matches with the tracking dns domain
- * name or not
- *
- * @skb: pointer to skb
- * @adapter: pointer to adapter
- *
- * Returns: true if matches else false
- */
-static bool hdd_tx_rx_is_dns_domain_name_match(struct sk_buff *skb,
-					       struct hdd_adapter *adapter)
-{
-	uint8_t *domain_name;
-
-	if (adapter->track_dns_domain_len == 0)
-		return false;
-
-	/* check OOB , is strncmp accessing data more than skb->len */
-	if ((adapter->track_dns_domain_len +
-	    QDF_NBUF_PKT_DNS_NAME_OVER_UDP_OFFSET) > qdf_nbuf_len(skb))
-		return false;
-
-	domain_name = qdf_nbuf_get_dns_domain_name(skb,
-						adapter->track_dns_domain_len);
-	if (strncmp(domain_name, adapter->dns_payload,
-		    adapter->track_dns_domain_len) == 0)
-		return true;
-	else
-		return false;
-}
-
-void hdd_tx_rx_collect_connectivity_stats_info(struct sk_buff *skb,
-			void *context,
-			enum connectivity_stats_pkt_status action,
-			uint8_t *pkt_type)
-{
-	uint32_t pkt_type_bitmap;
-	struct hdd_adapter *adapter = NULL;
-
-	adapter = (struct hdd_adapter *)context;
-	if (unlikely(adapter->magic != WLAN_HDD_ADAPTER_MAGIC)) {
-		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_ERROR,
-			  "Magic cookie(%x) for adapter sanity verification is invalid",
-			  adapter->magic);
-		return;
-	}
-
-	/* ARP tracking is done already. */
-	pkt_type_bitmap = adapter->pkt_type_bitmap;
-	pkt_type_bitmap &= ~CONNECTIVITY_CHECK_SET_ARP;
-
-	if (!pkt_type_bitmap)
-		return;
-
-	switch (action) {
-	case PKT_TYPE_REQ:
-	case PKT_TYPE_TX_HOST_FW_SENT:
-		if (qdf_nbuf_is_icmp_pkt(skb)) {
-			if (qdf_nbuf_data_is_icmpv4_req(skb) &&
-			    (adapter->track_dest_ipv4 ==
-					qdf_nbuf_get_icmpv4_tgt_ip(skb))) {
-				*pkt_type = CONNECTIVITY_CHECK_SET_ICMPV4;
-				if (action == PKT_TYPE_REQ) {
-					++adapter->hdd_stats.hdd_icmpv4_stats.
-							tx_icmpv4_req_count;
-					QDF_TRACE(QDF_MODULE_ID_HDD_DATA,
-						  QDF_TRACE_LEVEL_INFO_HIGH,
-						  "%s : ICMPv4 Req packet",
-						  __func__);
-				} else
-					/* host receives tx completion */
-					++adapter->hdd_stats.hdd_icmpv4_stats.
-								tx_host_fw_sent;
-			}
-		} else if (qdf_nbuf_is_ipv4_tcp_pkt(skb)) {
-			if (qdf_nbuf_data_is_tcp_syn(skb) &&
-			    (adapter->track_dest_port ==
-					qdf_nbuf_data_get_tcp_dst_port(skb))) {
-				*pkt_type = CONNECTIVITY_CHECK_SET_TCP_SYN;
-				if (action == PKT_TYPE_REQ) {
-					++adapter->hdd_stats.hdd_tcp_stats.
-							tx_tcp_syn_count;
-					QDF_TRACE(QDF_MODULE_ID_HDD_DATA,
-						  QDF_TRACE_LEVEL_INFO_HIGH,
-						  "%s : TCP Syn packet",
-						  __func__);
-				} else
-					/* host receives tx completion */
-					++adapter->hdd_stats.hdd_tcp_stats.
-							tx_tcp_syn_host_fw_sent;
-			} else if ((adapter->hdd_stats.hdd_tcp_stats.
-				    is_tcp_syn_ack_rcv || adapter->hdd_stats.
-					hdd_tcp_stats.is_tcp_ack_sent) &&
-				   qdf_nbuf_data_is_tcp_ack(skb) &&
-				   (adapter->track_dest_port ==
-				    qdf_nbuf_data_get_tcp_dst_port(skb))) {
-				*pkt_type = CONNECTIVITY_CHECK_SET_TCP_ACK;
-				if (action == PKT_TYPE_REQ &&
-					adapter->hdd_stats.hdd_tcp_stats.
-							is_tcp_syn_ack_rcv) {
-					++adapter->hdd_stats.hdd_tcp_stats.
-							tx_tcp_ack_count;
-					adapter->hdd_stats.hdd_tcp_stats.
-						is_tcp_syn_ack_rcv = false;
-					adapter->hdd_stats.hdd_tcp_stats.
-						is_tcp_ack_sent = true;
-					QDF_TRACE(QDF_MODULE_ID_HDD_DATA,
-						  QDF_TRACE_LEVEL_INFO_HIGH,
-						  "%s : TCP Ack packet",
-						  __func__);
-				} else if (action == PKT_TYPE_TX_HOST_FW_SENT &&
-					adapter->hdd_stats.hdd_tcp_stats.
-							is_tcp_ack_sent) {
-					/* host receives tx completion */
-					++adapter->hdd_stats.hdd_tcp_stats.
-							tx_tcp_ack_host_fw_sent;
-					adapter->hdd_stats.hdd_tcp_stats.
-							is_tcp_ack_sent = false;
-				}
-			}
-		} else if (qdf_nbuf_is_ipv4_udp_pkt(skb)) {
-			if (qdf_nbuf_data_is_dns_query(skb) &&
-			    hdd_tx_rx_is_dns_domain_name_match(skb, adapter)) {
-				*pkt_type = CONNECTIVITY_CHECK_SET_DNS;
-				if (action == PKT_TYPE_REQ) {
-					++adapter->hdd_stats.hdd_dns_stats.
-							tx_dns_req_count;
-					QDF_TRACE(QDF_MODULE_ID_HDD_DATA,
-						  QDF_TRACE_LEVEL_INFO_HIGH,
-						  "%s : DNS query packet",
-						  __func__);
-				} else
-					/* host receives tx completion */
-					++adapter->hdd_stats.hdd_dns_stats.
-								tx_host_fw_sent;
-			}
-		}
-		break;
-
-	case PKT_TYPE_RSP:
-		if (qdf_nbuf_is_icmp_pkt(skb)) {
-			if (qdf_nbuf_data_is_icmpv4_rsp(skb) &&
-			    (adapter->track_dest_ipv4 ==
-					qdf_nbuf_get_icmpv4_src_ip(skb))) {
-				++adapter->hdd_stats.hdd_icmpv4_stats.
-							rx_icmpv4_rsp_count;
-				*pkt_type =
-				CONNECTIVITY_CHECK_SET_ICMPV4;
-				QDF_TRACE(QDF_MODULE_ID_HDD_DATA,
-					  QDF_TRACE_LEVEL_INFO_HIGH,
-					  "%s : ICMPv4 Res packet", __func__);
-			}
-		} else if (qdf_nbuf_is_ipv4_tcp_pkt(skb)) {
-			if (qdf_nbuf_data_is_tcp_syn_ack(skb) &&
-			    (adapter->track_dest_port ==
-					qdf_nbuf_data_get_tcp_src_port(skb))) {
-				++adapter->hdd_stats.hdd_tcp_stats.
-							rx_tcp_syn_ack_count;
-				adapter->hdd_stats.hdd_tcp_stats.
-					is_tcp_syn_ack_rcv = true;
-				*pkt_type =
-				CONNECTIVITY_CHECK_SET_TCP_SYN_ACK;
-				QDF_TRACE(QDF_MODULE_ID_HDD_DATA,
-					  QDF_TRACE_LEVEL_INFO_HIGH,
-					  "%s : TCP Syn ack packet", __func__);
-			}
-		} else if (qdf_nbuf_is_ipv4_udp_pkt(skb)) {
-			if (qdf_nbuf_data_is_dns_response(skb) &&
-			    hdd_tx_rx_is_dns_domain_name_match(skb, adapter)) {
-				++adapter->hdd_stats.hdd_dns_stats.
-							rx_dns_rsp_count;
-				*pkt_type = CONNECTIVITY_CHECK_SET_DNS;
-				QDF_TRACE(QDF_MODULE_ID_HDD_DATA,
-					  QDF_TRACE_LEVEL_INFO_HIGH,
-					  "%s : DNS response packet", __func__);
-			}
-		}
-		break;
-
-	case PKT_TYPE_TX_DROPPED:
-		switch (*pkt_type) {
-		case CONNECTIVITY_CHECK_SET_ICMPV4:
-			++adapter->hdd_stats.hdd_icmpv4_stats.tx_dropped;
-			QDF_TRACE(QDF_MODULE_ID_HDD_DATA,
-				  QDF_TRACE_LEVEL_INFO_HIGH,
-				  "%s : ICMPv4 Req packet dropped", __func__);
-			break;
-		case CONNECTIVITY_CHECK_SET_TCP_SYN:
-			++adapter->hdd_stats.hdd_tcp_stats.tx_tcp_syn_dropped;
-			QDF_TRACE(QDF_MODULE_ID_HDD_DATA,
-				  QDF_TRACE_LEVEL_INFO_HIGH,
-				  "%s : TCP syn packet dropped", __func__);
-			break;
-		case CONNECTIVITY_CHECK_SET_TCP_ACK:
-			++adapter->hdd_stats.hdd_tcp_stats.tx_tcp_ack_dropped;
-			QDF_TRACE(QDF_MODULE_ID_HDD_DATA,
-				  QDF_TRACE_LEVEL_INFO_HIGH,
-				  "%s : TCP ack packet dropped", __func__);
-			break;
-		case CONNECTIVITY_CHECK_SET_DNS:
-			++adapter->hdd_stats.hdd_dns_stats.tx_dropped;
-			QDF_TRACE(QDF_MODULE_ID_HDD_DATA,
-				  QDF_TRACE_LEVEL_INFO_HIGH,
-				  "%s : DNS query packet dropped", __func__);
-			break;
-		default:
-			break;
-		}
-		break;
-	case PKT_TYPE_RX_DELIVERED:
-		switch (*pkt_type) {
-		case CONNECTIVITY_CHECK_SET_ICMPV4:
-			++adapter->hdd_stats.hdd_icmpv4_stats.rx_delivered;
-			break;
-		case CONNECTIVITY_CHECK_SET_TCP_SYN_ACK:
-			++adapter->hdd_stats.hdd_tcp_stats.rx_delivered;
-			break;
-		case CONNECTIVITY_CHECK_SET_DNS:
-			++adapter->hdd_stats.hdd_dns_stats.rx_delivered;
-			break;
-		default:
-			break;
-		}
-		break;
-	case PKT_TYPE_RX_REFUSED:
-		switch (*pkt_type) {
-		case CONNECTIVITY_CHECK_SET_ICMPV4:
-			++adapter->hdd_stats.hdd_icmpv4_stats.rx_refused;
-			break;
-		case CONNECTIVITY_CHECK_SET_TCP_SYN_ACK:
-			++adapter->hdd_stats.hdd_tcp_stats.rx_refused;
-			break;
-		case CONNECTIVITY_CHECK_SET_DNS:
-			++adapter->hdd_stats.hdd_dns_stats.rx_refused;
-			break;
-		default:
-			break;
-		}
-		break;
-	case PKT_TYPE_TX_ACK_CNT:
-		switch (*pkt_type) {
-		case CONNECTIVITY_CHECK_SET_ICMPV4:
-			++adapter->hdd_stats.hdd_icmpv4_stats.tx_ack_cnt;
-			break;
-		case CONNECTIVITY_CHECK_SET_TCP_SYN:
-			++adapter->hdd_stats.hdd_tcp_stats.tx_tcp_syn_ack_cnt;
-			break;
-		case CONNECTIVITY_CHECK_SET_TCP_ACK:
-			++adapter->hdd_stats.hdd_tcp_stats.tx_tcp_ack_ack_cnt;
-			break;
-		case CONNECTIVITY_CHECK_SET_DNS:
-			++adapter->hdd_stats.hdd_dns_stats.tx_ack_cnt;
-			break;
-		default:
-			break;
-		}
-		break;
-	default:
-		break;
-	}
-}
-
-/**
- * hdd_is_xmit_allowed_on_ndi() - Verify if xmit is allowed on NDI
- * @adapter: The adapter structure
- *
- * Return: True if xmit is allowed on NDI and false otherwise
- */
-static bool hdd_is_xmit_allowed_on_ndi(struct hdd_adapter *adapter)
-{
-	enum nan_datapath_state state;
-	struct wlan_objmgr_vdev *vdev;
-
-	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_NAN_ID);
-	if (!vdev)
-		return false;
-
-	state = ucfg_nan_get_ndi_state(vdev);
-	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_NAN_ID);
-	return (state == NAN_DATA_NDI_CREATED_STATE ||
-		state == NAN_DATA_CONNECTED_STATE ||
-		state == NAN_DATA_CONNECTING_STATE ||
-		state == NAN_DATA_PEER_CREATE_STATE);
-}
-
-/**
- * hdd_get_transmit_mac_addr() - Get the mac address to validate the xmit
- * @adapter: The adapter structure
- * @skb: The network buffer
- * @mac_addr_tx_allowed: The mac address to be filled
- *
- * Return: None
- */
-static
-void hdd_get_transmit_mac_addr(struct hdd_adapter *adapter, struct sk_buff *skb,
-			       struct qdf_mac_addr *mac_addr_tx_allowed)
-{
-	struct hdd_station_ctx *sta_ctx = &adapter->session.station;
-	bool is_mc_bc_addr = false;
-
-	if (QDF_NBUF_CB_GET_IS_BCAST(skb) || QDF_NBUF_CB_GET_IS_MCAST(skb))
-		is_mc_bc_addr = true;
-
-	if (adapter->device_mode == QDF_NDI_MODE &&
-		   hdd_is_xmit_allowed_on_ndi(adapter)) {
-		if (is_mc_bc_addr)
-			qdf_copy_macaddr(mac_addr_tx_allowed,
-					 &adapter->mac_addr);
-		else
-			qdf_copy_macaddr(mac_addr_tx_allowed,
-					 (struct qdf_mac_addr *)skb->data);
-	} else {
-		/* If is_authenticated is true, vdev must be associated */
-		if (qdf_likely(hdd_is_sta_authenticated(adapter)) ||
-		    hdd_cm_is_vdev_associated(adapter))
-			qdf_copy_macaddr(mac_addr_tx_allowed,
-					 &sta_ctx->conn_info.bssid);
-	}
-}
-
-#ifdef HANDLE_BROADCAST_EAPOL_TX_FRAME
-/**
- * wlan_hdd_fix_broadcast_eapol() - Fix broadcast eapol
- * @adapter: pointer to adapter
- * @skb: pointer to OS packet (sk_buff)
- *
- * Override DA of broadcast eapol with bssid addr.
- *
- * Return: None
- */
-static void wlan_hdd_fix_broadcast_eapol(struct hdd_adapter *adapter,
-					 struct sk_buff *skb)
-{
-	struct ethhdr *eh = (struct ethhdr *)skb->data;
-	unsigned char *ap_mac_addr =
-		&adapter->session.station.conn_info.bssid.bytes[0];
-
-	if (qdf_unlikely((QDF_NBUF_CB_GET_PACKET_TYPE(skb) ==
-			  QDF_NBUF_CB_PACKET_TYPE_EAPOL) &&
-			 QDF_NBUF_CB_GET_IS_BCAST(skb))) {
-		hdd_debug("SA: "QDF_MAC_ADDR_FMT " override DA: "QDF_MAC_ADDR_FMT " with AP mac address "QDF_MAC_ADDR_FMT,
-			  QDF_MAC_ADDR_REF(&eh->h_source[0]),
-			  QDF_MAC_ADDR_REF(&eh->h_dest[0]),
-			  QDF_MAC_ADDR_REF(ap_mac_addr));
-
-		qdf_mem_copy(&eh->h_dest, ap_mac_addr, QDF_MAC_ADDR_SIZE);
-	}
-}
 #else
-static void wlan_hdd_fix_broadcast_eapol(struct hdd_adapter *adapter,
-					 struct sk_buff *skb)
+static inline bool
+hdd_drop_tx_packet_on_ftm(struct sk_buff *skb)
 {
-}
-#endif /* HANDLE_BROADCAST_EAPOL_TX_FRAME */
-
-#ifdef WLAN_DP_FEATURE_MARK_ICMP_REQ_TO_FW
-/**
- * hdd_mark_icmp_req_to_fw() - Mark the ICMP request at a certain time interval
- *			       to be sent to the FW.
- * @hdd_ctx: Global hdd context (Caller's responsibility to validate)
- * @skb: packet to be transmitted
- *
- * This func sets the "to_fw" flag in the packet context block, if the
- * current packet is an ICMP request packet. This marking is done at a
- * specific time interval, unless the INI value indicates to disable/enable
- * this for all frames.
- *
- * Return: none
- */
-static void hdd_mark_icmp_req_to_fw(struct hdd_context *hdd_ctx,
-				    struct sk_buff *skb)
-{
-	uint64_t curr_time, time_delta;
-	int time_interval_ms = hdd_ctx->config->icmp_req_to_fw_mark_interval;
-	static uint64_t prev_marked_icmp_time;
-
-	if (!hdd_ctx->config->icmp_req_to_fw_mark_interval)
-		return;
-
-	if ((qdf_nbuf_get_icmp_subtype(skb) != QDF_PROTO_ICMP_REQ) &&
-	    (qdf_nbuf_get_icmpv6_subtype(skb) != QDF_PROTO_ICMPV6_REQ))
-		return;
-
-	/* Mark all ICMP request to be sent to FW */
-	if (time_interval_ms == WLAN_CFG_ICMP_REQ_TO_FW_MARK_ALL)
-		QDF_NBUF_CB_TX_PACKET_TO_FW(skb) = 1;
-
-	curr_time = qdf_get_log_timestamp();
-	time_delta = curr_time - prev_marked_icmp_time;
-	if (time_delta >= (time_interval_ms *
-			   QDF_LOG_TIMESTAMP_CYCLES_PER_10_US * 100)) {
-		QDF_NBUF_CB_TX_PACKET_TO_FW(skb) = 1;
-		prev_marked_icmp_time = curr_time;
-	}
-}
-#else
-static void hdd_mark_icmp_req_to_fw(struct hdd_context *hdd_ctx,
-				    struct sk_buff *skb)
-{
-}
-#endif
-
-#ifdef CONFIG_DP_PKT_ADD_TIMESTAMP
-void hdd_pkt_add_timestamp(struct hdd_adapter *adapter,
-			   enum qdf_pkt_timestamp_index index, uint64_t time,
-			   struct sk_buff *skb)
-{
-	if (unlikely(qdf_is_dp_pkt_timestamp_enabled())) {
-		uint64_t tsf_time;
-
-		hdd_get_tsf_time(adapter, time, &tsf_time);
-		qdf_add_dp_pkt_timestamp(skb, index, tsf_time);
-	}
+	return false;
 }
 #endif
 
@@ -1102,126 +510,22 @@ void hdd_pkt_add_timestamp(struct hdd_adapter *adapter,
 static void __hdd_hard_start_xmit(struct sk_buff *skb,
 				  struct net_device *dev)
 {
-	QDF_STATUS status;
+	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
+	struct hdd_tx_rx_stats *stats = &adapter->hdd_stats.tx_rx_stats;
+	struct hdd_station_ctx *sta_ctx = &adapter->session.station;
+	int cpu = qdf_get_smp_processor_id();
+	bool granted;
 	sme_ac_enum_type ac;
 	enum sme_qos_wmmuptype up;
-	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
-	bool granted;
-	struct qdf_mac_addr mac_addr_tx_allowed = QDF_MAC_ADDR_ZERO_INIT;
-	uint8_t pkt_type = 0;
-	bool is_arp = false;
-	struct hdd_context *hdd_ctx;
-	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
-	enum qdf_proto_subtype subtype = QDF_PROTO_INVALID;
-	bool is_eapol = false;
-	bool is_dhcp = false;
-	struct hdd_tx_rx_stats *stats = &adapter->hdd_stats.tx_rx_stats;
-	int cpu = qdf_get_smp_processor_id();
-	uint16_t dump_level;
+	QDF_STATUS status;
 
-#ifdef QCA_WIFI_FTM
-	if (hdd_get_conparam() == QDF_GLOBAL_FTM_MODE) {
-		kfree_skb(skb);
+	if (hdd_drop_tx_packet_on_ftm(skb))
 		return;
-	}
-#endif
 
-	++stats->per_cpu[cpu].tx_called;
-	stats->cont_txtimeout_cnt = 0;
-
-	if (cds_is_driver_transitioning()) {
-		QDF_TRACE_DEBUG_RL(QDF_MODULE_ID_HDD_DATA,
-				   "Recovery/(Un)load in progress, dropping the packet");
-		goto drop_pkt;
-	}
-
-	hdd_ctx = adapter->hdd_ctx;
-
-	if (!hdd_ctx || hdd_ctx->hdd_wlan_suspended) {
-		hdd_err_rl("Device is system suspended, drop pkt");
-		goto drop_pkt;
-	}
-
-	dump_level = cfg_get(hdd_ctx->psoc, CFG_ENABLE_DEBUG_PACKET_LOG);
-
-	/*
-	 * wlan_hdd_mark_pkt_type zeros out skb->cb.  All skb->cb access
-	 * should be after it.
-	 */
-	wlan_hdd_mark_pkt_type(skb);
-	QDF_NBUF_CB_TX_EXTRA_FRAG_FLAGS_NOTIFY_COMP(skb) = 1;
-
-	if (QDF_NBUF_CB_GET_PACKET_TYPE(skb) == QDF_NBUF_CB_PACKET_TYPE_ARP) {
-		if (qdf_nbuf_data_is_arp_req(skb) &&
-		    (adapter->track_arp_ip == qdf_nbuf_get_arp_tgt_ip(skb))) {
-			is_arp = true;
-			++adapter->hdd_stats.hdd_arp_stats.tx_arp_req_count;
-			QDF_TRACE(QDF_MODULE_ID_HDD_DATA,
-				  QDF_TRACE_LEVEL_INFO_HIGH,
-					"%s : ARP packet", __func__);
-		}
-	} else if (QDF_NBUF_CB_GET_PACKET_TYPE(skb) ==
-		   QDF_NBUF_CB_PACKET_TYPE_EAPOL) {
-		subtype = qdf_nbuf_get_eapol_subtype(skb);
-		if (subtype == QDF_PROTO_EAPOL_M2) {
-			++adapter->hdd_stats.hdd_eapol_stats.eapol_m2_count;
-			is_eapol = true;
-		} else if (subtype == QDF_PROTO_EAPOL_M4) {
-			++adapter->hdd_stats.hdd_eapol_stats.eapol_m4_count;
-			is_eapol = true;
-		}
-	} else if (QDF_NBUF_CB_GET_PACKET_TYPE(skb) ==
-		   QDF_NBUF_CB_PACKET_TYPE_DHCP) {
-		subtype = qdf_nbuf_get_dhcp_subtype(skb);
-		if (subtype == QDF_PROTO_DHCP_DISCOVER) {
-			++adapter->hdd_stats.hdd_dhcp_stats.dhcp_dis_count;
-			is_dhcp = true;
-		} else if (subtype == QDF_PROTO_DHCP_REQUEST) {
-			++adapter->hdd_stats.hdd_dhcp_stats.dhcp_req_count;
-			is_dhcp = true;
-		}
-	} else if ((QDF_NBUF_CB_GET_PACKET_TYPE(skb) ==
-		   QDF_NBUF_CB_PACKET_TYPE_ICMP) ||
-		   (QDF_NBUF_CB_GET_PACKET_TYPE(skb) ==
-		   QDF_NBUF_CB_PACKET_TYPE_ICMPv6)) {
-		hdd_mark_icmp_req_to_fw(hdd_ctx, skb);
-	}
-
-	if (qdf_unlikely(dump_level >= DEBUG_PKTLOG_TYPE_EAPOL))
-		hdd_debug_pkt_dump(skb, skb->len, &dump_level);
-
-	hdd_pkt_add_timestamp(adapter, QDF_PKT_TX_DRIVER_ENTRY,
-			      qdf_get_log_timestamp(), skb);
-
-	/* track connectivity stats */
-	if (adapter->pkt_type_bitmap)
-		hdd_tx_rx_collect_connectivity_stats_info(skb, adapter,
-						PKT_TYPE_REQ, &pkt_type);
-
-	hdd_get_transmit_mac_addr(adapter, skb, &mac_addr_tx_allowed);
-	if (qdf_is_macaddr_zero(&mac_addr_tx_allowed)) {
-		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_INFO_HIGH,
-			  "tx not allowed, transmit operation suspended");
-		goto drop_pkt;
-	}
-
-	hdd_get_tx_resource(adapter, &mac_addr_tx_allowed,
-			    WLAN_HDD_TX_FLOW_CONTROL_OS_Q_BLOCK_TIME);
+	osif_dp_mark_pkt_type(skb);
 
 	/* Get TL AC corresponding to Qdisc queue index/AC. */
 	ac = hdd_qdisc_ac_to_tl_ac[skb->queue_mapping];
-
-	if (!qdf_nbuf_ipa_owned_get(skb)) {
-		skb = hdd_skb_orphan(adapter, skb);
-		if (!skb)
-			goto drop_pkt_accounting;
-	}
-
-	/*
-	 * Add SKB to internal tracking table before further processing
-	 * in WLAN driver.
-	 */
-	qdf_net_buf_debug_acquire_skb(skb, __FILE__, __LINE__);
 
 	/*
 	 * user priority from IP header, which is already extracted and set from
@@ -1250,13 +554,13 @@ static void __hdd_hard_start_xmit(struct sk_buff *skb,
 	 */
 
 	if (((adapter->psb_changed & (1 << ac)) &&
-		likely(adapter->hdd_wmm_status.ac_status[ac].
+	     likely(adapter->hdd_wmm_status.ac_status[ac].
 			is_access_allowed)) ||
-		(!hdd_is_sta_authenticated(adapter) &&
-		 (QDF_NBUF_CB_PACKET_TYPE_EAPOL ==
-			QDF_NBUF_CB_GET_PACKET_TYPE(skb) ||
-		  QDF_NBUF_CB_PACKET_TYPE_WAPI ==
-			QDF_NBUF_CB_GET_PACKET_TYPE(skb)))) {
+	    ((!sta_ctx->conn_info.is_authenticated) &&
+	     (QDF_NBUF_CB_PACKET_TYPE_EAPOL ==
+	      QDF_NBUF_CB_GET_PACKET_TYPE(skb) ||
+	      QDF_NBUF_CB_PACKET_TYPE_WAPI ==
+	      QDF_NBUF_CB_GET_PACKET_TYPE(skb)))) {
 		granted = true;
 	} else {
 		status = hdd_wmm_acquire_access(adapter, ac, &granted);
@@ -1264,7 +568,7 @@ static void __hdd_hard_start_xmit(struct sk_buff *skb,
 	}
 
 	if (!granted) {
-		bool isDefaultAc = false;
+		bool is_default_ac = false;
 		/*
 		 * ADDTS request for this AC is sent, for now
 		 * send this packet through next available lower
@@ -1289,111 +593,29 @@ static void __hdd_hard_start_xmit(struct sk_buff *skb,
 			default:
 				ac = SME_AC_BK;
 				up = SME_QOS_WMM_UP_BK;
-				isDefaultAc = true;
+				is_default_ac = true;
 				break;
 			}
-			if (isDefaultAc)
+			if (is_default_ac)
 				break;
 		}
 		skb->priority = up;
 		skb->queue_mapping = hdd_linux_up_to_ac_map[up];
 	}
 
-	adapter->stats.tx_bytes += skb->len;
-
-	if (qdf_nbuf_is_tso(skb)) {
-		adapter->stats.tx_packets += qdf_nbuf_get_tso_num_seg(skb);
-	} else {
-		++adapter->stats.tx_packets;
-		hdd_ctx->no_tx_offload_pkt_cnt++;
-	}
-
-	hdd_event_eapol_log(skb, QDF_TX);
-	QDF_NBUF_CB_TX_PACKET_TRACK(skb) = QDF_NBUF_TX_PKT_DATA_TRACK;
-	QDF_NBUF_UPDATE_TX_PKT_COUNT(skb, QDF_NBUF_TX_PKT_HDD);
-
-	qdf_dp_trace_set_track(skb, QDF_TX);
-
-	DPTRACE(qdf_dp_trace(skb, QDF_DP_TRACE_HDD_TX_PACKET_PTR_RECORD,
-			QDF_TRACE_DEFAULT_PDEV_ID, qdf_nbuf_data_addr(skb),
-			sizeof(qdf_nbuf_data(skb)),
-			QDF_TX));
-
-	if (!hdd_is_tx_allowed(adapter, skb,
-			       mac_addr_tx_allowed.bytes)) {
-		QDF_TRACE(QDF_MODULE_ID_HDD_DATA,
-			  QDF_TRACE_LEVEL_INFO_HIGH,
-			  FL("Tx not allowed for sta: "
-			  QDF_MAC_ADDR_FMT), QDF_MAC_ADDR_REF(
-			  mac_addr_tx_allowed.bytes));
-		++stats->per_cpu[cpu].tx_dropped_ac[ac];
-		goto drop_pkt_and_release_skb;
-	}
-
-	/* check whether need to linearize skb, like non-linear udp data */
-	if (hdd_skb_nontso_linearize(skb) != QDF_STATUS_SUCCESS) {
-		QDF_TRACE(QDF_MODULE_ID_HDD_DATA,
-			  QDF_TRACE_LEVEL_INFO_HIGH,
-			  "%s: skb %pK linearize failed. drop the pkt",
-			  __func__, skb);
-		++stats->per_cpu[cpu].tx_dropped_ac[ac];
-		goto drop_pkt_and_release_skb;
-	}
-
 	/*
-	 * If a transmit function is not registered, drop packet
+	 * adapter->vdev is directly dereferenced because this is per packet
+	 * path, hdd_get_vdev_by_user() usage will be very costly as it
+	 * involves lock access.
+	 * Expectation here is vdev will be present during TX/RX processing
+	 * and also DP internally maintaining vdev ref count
 	 */
-	if (!adapter->tx_fn) {
-		QDF_TRACE(QDF_MODULE_ID_HDD_SAP_DATA, QDF_TRACE_LEVEL_INFO_HIGH,
-			 "%s: TX function not registered by the data path",
-			 __func__);
+	status = ucfg_dp_start_xmit((qdf_nbuf_t)skb, adapter->vdev);
+	if (QDF_IS_STATUS_SUCCESS(status)) {
+		netif_trans_update(dev);
+		wlan_hdd_sar_unsolicited_timer_start(adapter->hdd_ctx);
+	} else {
 		++stats->per_cpu[cpu].tx_dropped_ac[ac];
-		goto drop_pkt_and_release_skb;
-	}
-
-	wlan_hdd_fix_broadcast_eapol(adapter, skb);
-
-	if (adapter->tx_fn(soc, adapter->vdev_id, (qdf_nbuf_t)skb)) {
-		hdd_dp_debug_rl("Failed to send packet from adapter %u",
-				adapter->vdev_id);
-		++stats->per_cpu[cpu].tx_dropped_ac[ac];
-		goto drop_pkt_and_release_skb;
-	}
-
-	netif_trans_update(dev);
-
-	wlan_hdd_sar_unsolicited_timer_start(hdd_ctx);
-
-	return;
-
-drop_pkt_and_release_skb:
-	qdf_net_buf_debug_release_skb(skb);
-drop_pkt:
-
-	/* track connectivity stats */
-	if (adapter->pkt_type_bitmap)
-		hdd_tx_rx_collect_connectivity_stats_info(skb, adapter,
-							  PKT_TYPE_TX_DROPPED,
-							  &pkt_type);
-	qdf_dp_trace_data_pkt(skb, QDF_TRACE_DEFAULT_PDEV_ID,
-			      QDF_DP_TRACE_DROP_PACKET_RECORD, 0,
-			      QDF_TX);
-	kfree_skb(skb);
-
-drop_pkt_accounting:
-
-	++adapter->stats.tx_dropped;
-	++stats->per_cpu[cpu].tx_dropped;
-	if (is_arp) {
-		++adapter->hdd_stats.hdd_arp_stats.tx_dropped;
-		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_INFO_HIGH,
-			"%s : ARP packet dropped", __func__);
-	} else if (is_eapol) {
-		++adapter->hdd_stats.hdd_eapol_stats.
-				tx_dropped[subtype - QDF_PROTO_EAPOL_M1];
-	} else if (is_dhcp) {
-		++adapter->hdd_stats.hdd_dhcp_stats.
-				tx_dropped[subtype - QDF_PROTO_DHCP_DISCOVER];
 	}
 }
 
@@ -1433,8 +655,7 @@ static void __hdd_tx_timeout(struct net_device *dev)
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
 	struct hdd_context *hdd_ctx;
 	struct netdev_queue *txq;
-	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
-	u64 diff_jiffies;
+	struct wlan_objmgr_vdev *vdev;
 	int i = 0;
 
 	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
@@ -1466,47 +687,10 @@ static void __hdd_tx_timeout(struct net_device *dev)
 
 	wlan_hdd_display_adapter_netif_queue_history(adapter);
 
-	cdp_dump_flow_pool_info(cds_get_context(QDF_MODULE_ID_SOC));
-
-	++adapter->hdd_stats.tx_rx_stats.tx_timeout_cnt;
-	++adapter->hdd_stats.tx_rx_stats.cont_txtimeout_cnt;
-
-	diff_jiffies = jiffies -
-		       adapter->hdd_stats.tx_rx_stats.jiffies_last_txtimeout;
-
-	if ((adapter->hdd_stats.tx_rx_stats.cont_txtimeout_cnt > 1) &&
-	    (diff_jiffies > (HDD_TX_TIMEOUT * 2))) {
-		/*
-		 * In case when there is no traffic is running, it may
-		 * possible tx time-out may once happen and later system
-		 * recovered then continuous tx timeout count has to be
-		 * reset as it is gets modified only when traffic is running.
-		 * If over a period of time if this count reaches to threshold
-		 * then host triggers a false subsystem restart. In genuine
-		 * time out case kernel will call the tx time-out back to back
-		 * at interval of HDD_TX_TIMEOUT. Here now check if previous
-		 * TX TIME out has occurred more than twice of HDD_TX_TIMEOUT
-		 * back then host may recovered here from data stall.
-		 */
-		adapter->hdd_stats.tx_rx_stats.cont_txtimeout_cnt = 0;
-		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_DEBUG,
-			  "Reset continuous tx timeout stat");
-	}
-
-	adapter->hdd_stats.tx_rx_stats.jiffies_last_txtimeout = jiffies;
-
-	if (adapter->hdd_stats.tx_rx_stats.cont_txtimeout_cnt >
-	    HDD_TX_STALL_THRESHOLD) {
-		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_ERROR,
-			  "Data stall due to continuous TX timeouts");
-		adapter->hdd_stats.tx_rx_stats.cont_txtimeout_cnt = 0;
-
-		if (hdd_is_data_stall_event_enabled(HDD_HOST_STA_TX_TIMEOUT))
-			cdp_post_data_stall_event(soc,
-					  DATA_STALL_LOG_INDICATOR_HOST_DRIVER,
-					  DATA_STALL_LOG_HOST_STA_TX_TIMEOUT,
-					  OL_TXRX_PDEV_ID, 0xFF,
-					  DATA_STALL_LOG_RECOVERY_TRIGGER_PDR);
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+	if (vdev) {
+		ucfg_dp_tx_timeout(vdev);
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 	}
 }
 
@@ -1526,589 +710,7 @@ void hdd_tx_timeout(struct net_device *net_dev)
 	osif_vdev_sync_op_stop(vdev_sync);
 }
 
-/**
- * @hdd_init_tx_rx() - Initialize Tx/RX module
- * @adapter: pointer to adapter context
- *
- * Return: QDF_STATUS_E_FAILURE if any errors encountered,
- *	   QDF_STATUS_SUCCESS otherwise
- */
-QDF_STATUS hdd_init_tx_rx(struct hdd_adapter *adapter)
-{
-	QDF_STATUS status = QDF_STATUS_SUCCESS;
-
-	if (!adapter) {
-		hdd_err("adapter is NULL");
-		QDF_ASSERT(0);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	return status;
-}
-
-/**
- * @hdd_deinit_tx_rx() - Deinitialize Tx/RX module
- * @adapter: pointer to adapter context
- *
- * Return: QDF_STATUS_E_FAILURE if any errors encountered,
- *	   QDF_STATUS_SUCCESS otherwise
- */
-QDF_STATUS hdd_deinit_tx_rx(struct hdd_adapter *adapter)
-{
-	QDF_BUG(adapter);
-	if (!adapter)
-		return QDF_STATUS_E_FAILURE;
-
-	adapter->tx_fn = NULL;
-
-	return QDF_STATUS_SUCCESS;
-}
-
-#ifdef FEATURE_MONITOR_MODE_SUPPORT
-QDF_STATUS hdd_mon_rx_packet_cbk(void *context, qdf_nbuf_t rxbuf)
-{
-	struct hdd_adapter *adapter;
-	int rxstat;
-	struct sk_buff *skb;
-	struct sk_buff *skb_next;
-	unsigned int cpu_index;
-	struct hdd_tx_rx_stats *stats;
-
-	/* Sanity check on inputs */
-	if ((!context) || (!rxbuf)) {
-		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_ERROR,
-			  "%s: Null params being passed", __func__);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	adapter = (struct hdd_adapter *)context;
-	if ((!adapter) || (WLAN_HDD_ADAPTER_MAGIC != adapter->magic)) {
-		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_ERROR,
-			  "invalid adapter %pK", adapter);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	cpu_index = wlan_hdd_get_cpu();
-	stats = &adapter->hdd_stats.tx_rx_stats;
-
-	/* walk the chain until all are processed */
-	skb = (struct sk_buff *) rxbuf;
-	while (skb) {
-		skb_next = skb->next;
-		skb->dev = adapter->dev;
-
-		++stats->per_cpu[cpu_index].rx_packets;
-		++adapter->stats.rx_packets;
-		adapter->stats.rx_bytes += skb->len;
-
-		/* Remove SKB from internal tracking table before submitting
-		 * it to stack
-		 */
-		qdf_net_buf_debug_release_skb(skb);
-
-		/*
-		 * If this is not a last packet on the chain
-		 * Just put packet into backlog queue, not scheduling RX sirq
-		 */
-		if (skb->next) {
-			rxstat = netif_rx(skb);
-		} else {
-			/*
-			 * This is the last packet on the chain
-			 * Scheduling rx sirq
-			 */
-			rxstat = netif_rx_ni(skb);
-		}
-
-		if (NET_RX_SUCCESS == rxstat)
-			++stats->per_cpu[cpu_index].rx_delivered;
-		else
-			++stats->per_cpu[cpu_index].rx_refused;
-
-		skb = skb_next;
-	}
-
-	return QDF_STATUS_SUCCESS;
-}
-#endif
-
-/*
- * hdd_is_mcast_replay() - checks if pkt is multicast replay
- * @skb: packet skb
- *
- * Return: true if replayed multicast pkt, false otherwise
- */
-static bool hdd_is_mcast_replay(struct sk_buff *skb)
-{
-	struct ethhdr *eth;
-
-	eth = eth_hdr(skb);
-	if (unlikely(skb->pkt_type == PACKET_MULTICAST)) {
-		if (unlikely(ether_addr_equal(eth->h_source,
-				skb->dev->dev_addr)))
-			return true;
-	}
-	return false;
-}
-
-/**
- * hdd_is_arp_local() - check if local or non local arp
- * @skb: pointer to sk_buff
- *
- * Return: true if local arp or false otherwise.
- */
-static bool hdd_is_arp_local(struct sk_buff *skb)
-{
-	struct arphdr *arp;
-	struct in_ifaddr **ifap = NULL;
-	struct in_ifaddr *ifa = NULL;
-	struct in_device *in_dev;
-	unsigned char *arp_ptr;
-	__be32 tip;
-
-	arp = (struct arphdr *)skb->data;
-	if (arp->ar_op == htons(ARPOP_REQUEST)) {
-		/* if fail to acquire rtnl lock, assume it's local arp */
-		if (!rtnl_trylock())
-			return true;
-
-		in_dev = __in_dev_get_rtnl(skb->dev);
-		if (in_dev) {
-			for (ifap = &in_dev->ifa_list; (ifa = *ifap) != NULL;
-				ifap = &ifa->ifa_next) {
-				if (!strcmp(skb->dev->name, ifa->ifa_label))
-					break;
-			}
-		}
-
-		if (ifa && ifa->ifa_local) {
-			arp_ptr = (unsigned char *)(arp + 1);
-			arp_ptr += (skb->dev->addr_len + 4 +
-					skb->dev->addr_len);
-			memcpy(&tip, arp_ptr, 4);
-			hdd_debug("ARP packet: local IP: %x dest IP: %x",
-				ifa->ifa_local, tip);
-			if (ifa->ifa_local == tip) {
-				rtnl_unlock();
-				return true;
-			}
-		}
-		rtnl_unlock();
-	}
-
-	return false;
-}
-
-/**
- * hdd_is_rx_wake_lock_needed() - check if wake lock is needed
- * @skb: pointer to sk_buff
- *
- * RX wake lock is needed for:
- * 1) Unicast data packet OR
- * 2) Local ARP data packet
- *
- * Return: true if wake lock is needed or false otherwise.
- */
-static bool hdd_is_rx_wake_lock_needed(struct sk_buff *skb)
-{
-	if ((skb->pkt_type != PACKET_BROADCAST &&
-	     skb->pkt_type != PACKET_MULTICAST) || hdd_is_arp_local(skb))
-		return true;
-
-	return false;
-}
-
 #ifdef RECEIVE_OFFLOAD
-/**
- * hdd_resolve_rx_ol_mode() - Resolve Rx offload method, LRO or GRO
- * @hdd_ctx: pointer to HDD Station Context
- *
- * Return: None
- */
-static void hdd_resolve_rx_ol_mode(struct hdd_context *hdd_ctx)
-{
-	void *soc;
-
-	soc = cds_get_context(QDF_MODULE_ID_SOC);
-
-	if (!(cdp_cfg_get(soc, cfg_dp_lro_enable) ^
-	    cdp_cfg_get(soc, cfg_dp_gro_enable))) {
-		cdp_cfg_get(soc, cfg_dp_lro_enable) &&
-			cdp_cfg_get(soc, cfg_dp_gro_enable) ?
-		hdd_debug("Can't enable both LRO and GRO, disabling Rx offload") :
-		hdd_debug("LRO and GRO both are disabled");
-		hdd_ctx->ol_enable = 0;
-	} else if (cdp_cfg_get(soc, cfg_dp_lro_enable)) {
-		hdd_debug("Rx offload LRO is enabled");
-		hdd_ctx->ol_enable = CFG_LRO_ENABLED;
-	} else {
-		hdd_debug("Rx offload: GRO is enabled");
-		hdd_ctx->ol_enable = CFG_GRO_ENABLED;
-	}
-}
-
-/**
- * When bus bandwidth is idle, if RX data is delivered with
- * napi_gro_receive, to reduce RX delay related with GRO,
- * check gro_result returned from napi_gro_receive to determine
- * is extra GRO flush still necessary.
- */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0))
-#define HDD_IS_EXTRA_GRO_FLUSH_NECESSARY(_gro_ret) true
-#define GRO_DROP_UPDATE_STATUS(gro_ret, status)
-#else
-#define GRO_DROP_UPDATE_STATUS(gro_ret, status) \
-	if ((gro_ret) == GRO_DROP) ((status) = QDF_STATUS_E_GRO_DROP)
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
-#define HDD_IS_EXTRA_GRO_FLUSH_NECESSARY(_gro_ret) \
-	((_gro_ret) != GRO_DROP)
-#else
-#define HDD_IS_EXTRA_GRO_FLUSH_NECESSARY(_gro_ret) \
-	((_gro_ret) != GRO_DROP && (_gro_ret) != GRO_NORMAL)
-#endif
-#endif
-
-#ifdef WLAN_FEATURE_DYNAMIC_RX_AGGREGATION
-/**
- * hdd_gro_rx_bh_disable() - GRO RX/flush function.
- * @napi_to_use: napi to be used to give packets to the stack, gro flush
- * @skb: pointer to sk_buff
- *
- * Function calls napi_gro_receive for the skb. If the skb indicates that a
- * flush needs to be done (set by the lower DP layer), the function also calls
- * napi_gro_flush. Local softirqs are disabled (and later enabled) while making
- * napi_gro__ calls.
- *
- * Return: QDF_STATUS_SUCCESS if not dropped by napi_gro_receive or
- *	   QDF error code.
- */
-static QDF_STATUS hdd_gro_rx_bh_disable(struct hdd_adapter *adapter,
-					struct napi_struct *napi_to_use,
-					struct sk_buff *skb)
-{
-	QDF_STATUS status = QDF_STATUS_SUCCESS;
-	struct hdd_context *hdd_ctx = adapter->hdd_ctx;
-	gro_result_t gro_ret;
-	uint32_t rx_aggregation;
-	uint8_t rx_ctx_id = QDF_NBUF_CB_RX_CTX_ID(skb);
-	int32_t gro_disallowed;
-
-	rx_aggregation = qdf_atomic_read(&hdd_ctx->dp_agg_param.rx_aggregation);
-	gro_disallowed = qdf_atomic_read(&adapter->gro_disallowed);
-
-	skb_set_hash(skb, QDF_NBUF_CB_RX_FLOW_ID(skb), PKT_HASH_TYPE_L4);
-
-	local_bh_disable();
-	gro_ret = napi_gro_receive(napi_to_use, skb);
-
-	if (hdd_get_current_throughput_level(hdd_ctx) == PLD_BUS_WIDTH_IDLE ||
-	    !rx_aggregation || gro_disallowed) {
-		if (HDD_IS_EXTRA_GRO_FLUSH_NECESSARY(gro_ret)) {
-			adapter->hdd_stats.tx_rx_stats.
-					rx_gro_low_tput_flush++;
-			dp_rx_napi_gro_flush(napi_to_use,
-					     DP_RX_GRO_NORMAL_FLUSH);
-		}
-		if (!rx_aggregation)
-			hdd_ctx->dp_agg_param.gro_force_flush[rx_ctx_id] = 1;
-		if (gro_disallowed)
-			adapter->gro_flushed[rx_ctx_id] = 1;
-	}
-	local_bh_enable();
-
-	GRO_DROP_UPDATE_STATUS(gro_ret, status);
-
-	return status;
-}
-
-#else /* WLAN_FEATURE_DYNAMIC_RX_AGGREGATION */
-
-/**
- * hdd_gro_rx_bh_disable() - GRO RX/flush function.
- * @napi_to_use: napi to be used to give packets to the stack, gro flush
- * @skb: pointer to sk_buff
- *
- * Function calls napi_gro_receive for the skb. If the skb indicates that a
- * flush needs to be done (set by the lower DP layer), the function also calls
- * napi_gro_flush. Local softirqs are disabled (and later enabled) while making
- * napi_gro__ calls.
- *
- * Return: QDF_STATUS_SUCCESS if not dropped by napi_gro_receive or
- *	   QDF error code.
- */
-static QDF_STATUS hdd_gro_rx_bh_disable(struct hdd_adapter *adapter,
-					struct napi_struct *napi_to_use,
-					struct sk_buff *skb)
-{
-	QDF_STATUS status = QDF_STATUS_SUCCESS;
-	struct hdd_context *hdd_ctx = adapter->hdd_ctx;
-	gro_result_t gro_ret;
-
-	skb_set_hash(skb, QDF_NBUF_CB_RX_FLOW_ID(skb), PKT_HASH_TYPE_L4);
-
-	local_bh_disable();
-	gro_ret = napi_gro_receive(napi_to_use, skb);
-
-	if (hdd_get_current_throughput_level(hdd_ctx) == PLD_BUS_WIDTH_IDLE) {
-		if (HDD_IS_EXTRA_GRO_FLUSH_NECESSARY(gro_ret)) {
-			adapter->hdd_stats.tx_rx_stats.rx_gro_low_tput_flush++;
-			dp_rx_napi_gro_flush(napi_to_use,
-					     DP_RX_GRO_NORMAL_FLUSH);
-		}
-	}
-	local_bh_enable();
-
-	GRO_DROP_UPDATE_STATUS(gro_ret, status);
-
-	return status;
-}
-#endif /* WLAN_FEATURE_DYNAMIC_RX_AGGREGATION */
-
-/**
- * hdd_gro_rx_dp_thread() - Handle Rx procesing via GRO for DP thread
- * @adapter: pointer to adapter context
- * @skb: pointer to sk_buff
- *
- * Return: QDF_STATUS_SUCCESS if processed via GRO or non zero return code
- */
-static
-QDF_STATUS hdd_gro_rx_dp_thread(struct hdd_adapter *adapter,
-				struct sk_buff *skb)
-{
-	struct napi_struct *napi_to_use = NULL;
-	QDF_STATUS status = QDF_STATUS_E_FAILURE;
-
-	if (!adapter->hdd_ctx->enable_dp_rx_threads) {
-		hdd_dp_err_rl("gro not supported without DP RX thread!");
-		return status;
-	}
-
-	napi_to_use =
-		dp_rx_get_napi_context(cds_get_context(QDF_MODULE_ID_SOC),
-				       QDF_NBUF_CB_RX_CTX_ID(skb));
-
-	if (!napi_to_use) {
-		hdd_dp_err_rl("no napi to use for GRO!");
-		return status;
-	}
-
-	status = hdd_gro_rx_bh_disable(adapter, napi_to_use, skb);
-
-	return status;
-}
-
-/**
- * hdd_gro_rx_legacy() - Handle Rx processing via GRO for ihelium based targets
- * @adapter: pointer to adapter context
- * @skb: pointer to sk_buff
- *
- * Supports GRO for only station mode
- *
- * Return: QDF_STATUS_SUCCESS if processed via GRO or non zero return code
- */
-static
-QDF_STATUS hdd_gro_rx_legacy(struct hdd_adapter *adapter, struct sk_buff *skb)
-{
-	struct qca_napi_info *qca_napii;
-	struct qca_napi_data *napid;
-	struct napi_struct *napi_to_use;
-	QDF_STATUS status = QDF_STATUS_E_FAILURE;
-	struct hdd_context *hdd_ctx = adapter->hdd_ctx;
-
-	/* Only enabling it for STA mode like LRO today */
-	if (QDF_STA_MODE != adapter->device_mode)
-		return QDF_STATUS_E_NOSUPPORT;
-
-	if (qdf_atomic_read(&hdd_ctx->disable_rx_ol_in_low_tput) ||
-	    qdf_atomic_read(&hdd_ctx->disable_rx_ol_in_concurrency))
-		return QDF_STATUS_E_NOSUPPORT;
-
-	napid = hdd_napi_get_all();
-	if (unlikely(!napid))
-		goto out;
-
-	qca_napii = hif_get_napi(QDF_NBUF_CB_RX_CTX_ID(skb), napid);
-	if (unlikely(!qca_napii))
-		goto out;
-
-	/*
-	 * As we are breaking context in Rxthread mode, there is rx_thread NAPI
-	 * corresponds each hif_napi.
-	 */
-	if (adapter->hdd_ctx->enable_rxthread)
-		napi_to_use =  &qca_napii->rx_thread_napi;
-	else
-		napi_to_use = &qca_napii->napi;
-
-	status = hdd_gro_rx_bh_disable(adapter, napi_to_use, skb);
-out:
-
-	return status;
-}
-
-/**
- * hdd_rxthread_napi_gro_flush() - GRO flush callback for NAPI+Rx_Thread Rx mode
- * @data: hif NAPI context
- *
- * Return: none
- */
-static void hdd_rxthread_napi_gro_flush(void *data)
-{
-	struct qca_napi_info *qca_napii = (struct qca_napi_info *)data;
-
-	local_bh_disable();
-	/*
-	 * As we are breaking context in Rxthread mode, there is rx_thread NAPI
-	 * corresponds each hif_napi.
-	 */
-	dp_rx_napi_gro_flush(&qca_napii->rx_thread_napi,
-			     DP_RX_GRO_NORMAL_FLUSH);
-	local_bh_enable();
-}
-
-/**
- * hdd_hif_napi_gro_flush() - GRO flush callback for NAPI Rx mode
- * @data: hif NAPI context
- *
- * Return: none
- */
-static void hdd_hif_napi_gro_flush(void *data)
-{
-	struct qca_napi_info *qca_napii = (struct qca_napi_info *)data;
-
-	local_bh_disable();
-	napi_gro_flush(&qca_napii->napi, false);
-	local_bh_enable();
-}
-
-#ifdef FEATURE_LRO
-/**
- * hdd_qdf_lro_flush() - LRO flush wrapper
- * @data: hif NAPI context
- *
- * Return: none
- */
-static void hdd_qdf_lro_flush(void *data)
-{
-	struct qca_napi_info *qca_napii = (struct qca_napi_info *)data;
-	qdf_lro_ctx_t qdf_lro_ctx = qca_napii->lro_ctx;
-
-	qdf_lro_flush(qdf_lro_ctx);
-}
-#else
-static void hdd_qdf_lro_flush(void *data)
-{
-}
-#endif
-
-/**
- * hdd_register_rx_ol() - Register LRO/GRO rx processing callbacks
- * @hdd_ctx: pointer to hdd_ctx
- * @wifi3_0_target: whether its a lithium/beryllium arch based target or not
- *
- * Return: none
- */
-static void hdd_register_rx_ol_cb(struct hdd_context *hdd_ctx,
-				  bool wifi3_0_target)
-{
-	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
-
-	if  (!hdd_ctx) {
-		hdd_err("HDD context is NULL");
-		return;
-	}
-
-	hdd_ctx->en_tcp_delack_no_lro = 0;
-
-	if (!hdd_is_lro_enabled(hdd_ctx)) {
-		cdp_register_rx_offld_flush_cb(soc, hdd_qdf_lro_flush);
-		hdd_ctx->receive_offload_cb = hdd_lro_rx;
-		hdd_debug("LRO is enabled");
-	} else if (hdd_ctx->ol_enable == CFG_GRO_ENABLED) {
-		qdf_atomic_set(&hdd_ctx->dp_agg_param.rx_aggregation, 1);
-		if (wifi3_0_target) {
-		/* no flush registration needed, it happens in DP thread */
-			hdd_ctx->receive_offload_cb = hdd_gro_rx_dp_thread;
-		} else {
-			/*ihelium based targets */
-			if (hdd_ctx->enable_rxthread)
-				cdp_register_rx_offld_flush_cb(soc,
-							       hdd_rxthread_napi_gro_flush);
-			else
-				cdp_register_rx_offld_flush_cb(soc,
-							       hdd_hif_napi_gro_flush);
-			hdd_ctx->receive_offload_cb = hdd_gro_rx_legacy;
-		}
-		hdd_debug("GRO is enabled");
-	} else if (HDD_MSM_CFG(hdd_ctx->config->enable_tcp_delack)) {
-		hdd_ctx->en_tcp_delack_no_lro = 1;
-		hdd_debug("TCP Del ACK is enabled");
-	}
-}
-
-/**
- * hdd_rx_ol_send_config() - Send RX offload configuration to FW
- * @hdd_ctx: pointer to hdd_ctx
- *
- * This function is only used for non lithium targets. Lithium based targets are
- * sending LRO config to FW in vdev attach implemented in cmn DP layer.
- *
- * Return: 0 on success, non zero on failure
- */
-static int hdd_rx_ol_send_config(struct hdd_context *hdd_ctx)
-{
-	struct cdp_lro_hash_config lro_config = {0};
-	/*
-	 * This will enable flow steering and Toeplitz hash
-	 * So enable it for LRO or GRO processing.
-	 */
-	if (cfg_get(hdd_ctx->psoc, CFG_DP_GRO) ||
-	    cfg_get(hdd_ctx->psoc, CFG_DP_LRO)) {
-		lro_config.lro_enable = 1;
-		lro_config.tcp_flag = TCPHDR_ACK;
-		lro_config.tcp_flag_mask = TCPHDR_FIN | TCPHDR_SYN |
-					   TCPHDR_RST | TCPHDR_ACK |
-					   TCPHDR_URG | TCPHDR_ECE |
-					   TCPHDR_CWR;
-	}
-
-	get_random_bytes(lro_config.toeplitz_hash_ipv4,
-			 (sizeof(lro_config.toeplitz_hash_ipv4[0]) *
-			  LRO_IPV4_SEED_ARR_SZ));
-
-	get_random_bytes(lro_config.toeplitz_hash_ipv6,
-			 (sizeof(lro_config.toeplitz_hash_ipv6[0]) *
-			  LRO_IPV6_SEED_ARR_SZ));
-
-	if (wma_lro_init(&lro_config))
-		return -EAGAIN;
-	else
-		hdd_debug("LRO Config: lro_enable: 0x%x tcp_flag 0x%x tcp_flag_mask 0x%x",
-			  lro_config.lro_enable, lro_config.tcp_flag,
-			  lro_config.tcp_flag_mask);
-
-	return 0;
-}
-
-int hdd_rx_ol_init(struct hdd_context *hdd_ctx)
-{
-	int ret = 0;
-
-	hdd_resolve_rx_ol_mode(hdd_ctx);
-	hdd_register_rx_ol_cb(hdd_ctx, hdd_ctx->is_wifi3_0_target);
-
-	if (!hdd_ctx->is_wifi3_0_target) {
-		ret = hdd_rx_ol_send_config(hdd_ctx);
-		if (ret) {
-			hdd_ctx->ol_enable = 0;
-			hdd_err("Failed to send LRO/GRO configuration! %u", ret);
-			return ret;
-		}
-	}
-
-	return 0;
-}
-
 void hdd_disable_rx_ol_in_concurrency(bool disable)
 {
 	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
@@ -2116,626 +718,38 @@ void hdd_disable_rx_ol_in_concurrency(bool disable)
 	if (!hdd_ctx)
 		return;
 
-	if (disable) {
-		if (HDD_MSM_CFG(hdd_ctx->config->enable_tcp_delack)) {
-			struct wlan_rx_tp_data rx_tp_data;
-
-			hdd_info("Enable TCP delack as LRO disabled in concurrency");
-			rx_tp_data.rx_tp_flags = TCP_DEL_ACK_IND;
-			rx_tp_data.level = GET_CUR_RX_LVL(hdd_ctx);
-			wlan_hdd_update_tcp_rx_param(hdd_ctx, &rx_tp_data);
-			hdd_ctx->en_tcp_delack_no_lro = 1;
-		}
-		qdf_atomic_set(&hdd_ctx->disable_rx_ol_in_concurrency, 1);
-	} else {
-		if (HDD_MSM_CFG(hdd_ctx->config->enable_tcp_delack)) {
-			hdd_info("Disable TCP delack as LRO is enabled");
-			hdd_ctx->en_tcp_delack_no_lro = 0;
-			hdd_reset_tcp_delack(hdd_ctx);
-		}
-		qdf_atomic_set(&hdd_ctx->disable_rx_ol_in_concurrency, 0);
-	}
+	ucfg_dp_rx_handle_concurrency(hdd_ctx->psoc, disable);
 }
-
-void hdd_disable_rx_ol_for_low_tput(struct hdd_context *hdd_ctx, bool disable)
-{
-	if (disable)
-		qdf_atomic_set(&hdd_ctx->disable_rx_ol_in_low_tput, 1);
-	else
-		qdf_atomic_set(&hdd_ctx->disable_rx_ol_in_low_tput, 0);
-}
-
 #else /* RECEIVE_OFFLOAD */
-int hdd_rx_ol_init(struct hdd_context *hdd_ctx)
-{
-	hdd_err("Rx_OL, LRO/GRO not supported");
-	return -EPERM;
-}
-
 void hdd_disable_rx_ol_in_concurrency(bool disable)
-{
-}
-
-void hdd_disable_rx_ol_for_low_tput(struct hdd_context *hdd_ctx, bool disable)
 {
 }
 #endif /* RECEIVE_OFFLOAD */
 
 #ifdef WLAN_FEATURE_TSF_PLUS_SOCK_TS
-static inline void hdd_tsf_timestamp_rx(struct hdd_context *hdd_ctx,
-					qdf_nbuf_t netbuf,
-					uint64_t target_time)
+void hdd_tsf_timestamp_rx(hdd_cb_handle ctx, qdf_nbuf_t netbuf)
 {
+	struct hdd_context *hdd_ctx = hdd_cb_handle_to_context(ctx);
+
 	if (!hdd_tsf_is_rx_set(hdd_ctx))
 		return;
 
-	hdd_rx_timestamp(netbuf, target_time);
-}
-#else
-static inline void hdd_tsf_timestamp_rx(struct hdd_context *hdd_ctx,
-					qdf_nbuf_t netbuf,
-					uint64_t target_time)
-{
-}
-#endif
-
-QDF_STATUS hdd_rx_thread_gro_flush_ind_cbk(void *adapter, int rx_ctx_id)
-{
-	struct hdd_adapter *hdd_adapter = adapter;
-	enum dp_rx_gro_flush_code gro_flush_code = DP_RX_GRO_NORMAL_FLUSH;
-
-	if (qdf_unlikely((!hdd_adapter) || (!hdd_adapter->hdd_ctx))) {
-		hdd_err("Null params being passed");
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	if (hdd_adapter->runtime_disable_rx_thread)
-		return QDF_STATUS_SUCCESS;
-
-	if (hdd_is_low_tput_gro_enable(hdd_adapter->hdd_ctx)) {
-		hdd_adapter->hdd_stats.tx_rx_stats.rx_gro_flush_skip++;
-		gro_flush_code = DP_RX_GRO_LOW_TPUT_FLUSH;
-	}
-
-	return dp_rx_gro_flush_ind(cds_get_context(QDF_MODULE_ID_SOC),
-				   rx_ctx_id, gro_flush_code);
+	hdd_rx_timestamp(netbuf, ktime_to_us(netbuf->tstamp));
 }
 
-QDF_STATUS hdd_rx_pkt_thread_enqueue_cbk(void *adapter,
-					 qdf_nbuf_t nbuf_list)
-{
-	struct hdd_adapter *hdd_adapter;
-	uint8_t vdev_id;
-	qdf_nbuf_t head_ptr;
-
-	if (qdf_unlikely(!adapter || !nbuf_list)) {
-		hdd_err("Null params being passed");
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	hdd_adapter = (struct hdd_adapter *)adapter;
-	if (hdd_validate_adapter(hdd_adapter))
-		return QDF_STATUS_E_FAILURE;
-
-	if (hdd_adapter->runtime_disable_rx_thread &&
-	    hdd_adapter->rx_stack)
-		return hdd_adapter->rx_stack(adapter, nbuf_list);
-
-	vdev_id = hdd_adapter->vdev_id;
-
-	if (vdev_id >= WLAN_UMAC_VDEV_ID_MAX) {
-		hdd_info_rl("Vdev invalid. Dropping packets");
-		qdf_nbuf_list_free(nbuf_list);
-		return QDF_STATUS_E_NETDOWN;
-	}
-
-	head_ptr = nbuf_list;
-	while (head_ptr) {
-		qdf_nbuf_cb_update_vdev_id(head_ptr, vdev_id);
-		head_ptr = qdf_nbuf_next(head_ptr);
-	}
-
-	return dp_rx_enqueue_pkt(cds_get_context(QDF_MODULE_ID_SOC), nbuf_list);
-}
-
-#ifdef CONFIG_HL_SUPPORT
-QDF_STATUS hdd_rx_deliver_to_stack(struct hdd_adapter *adapter,
-				   struct sk_buff *skb)
-{
-	struct hdd_context *hdd_ctx = adapter->hdd_ctx;
-	int status = QDF_STATUS_E_FAILURE;
-	int netif_status;
-
-	adapter->hdd_stats.tx_rx_stats.rx_non_aggregated++;
-	hdd_ctx->no_rx_offload_pkt_cnt++;
-	netif_status = netif_rx_ni(skb);
-
-	if (netif_status == NET_RX_SUCCESS)
-		status = QDF_STATUS_SUCCESS;
-
-	return status;
-}
-#else
-
-#ifdef WLAN_FEATURE_DYNAMIC_RX_AGGREGATION
-#if defined(WLAN_SUPPORT_RX_FISA)
-/**
- * hdd_set_fisa_disallowed_for_vdev() - Set fisa disallowed bit for a vdev
- * @soc: DP soc handle
- * @vdev_id: Vdev id
- * @rx_ctx_id: rx context id
- * @val: Enable or disable
- *
- * The function sets the fisa disallowed flag for a given vdev
- *
- * Return: None
- */
-static inline
-void hdd_set_fisa_disallowed_for_vdev(ol_txrx_soc_handle soc, uint8_t vdev_id,
-				      uint8_t rx_ctx_id, uint8_t val)
-{
-	dp_set_fisa_disallowed_for_vdev(soc, vdev_id, rx_ctx_id, val);
-}
-#else
-static inline
-void hdd_set_fisa_disallowed_for_vdev(ol_txrx_soc_handle soc, uint8_t vdev_id,
-				      uint8_t rx_ctx_id, uint8_t val)
-{
-}
-#endif
-
-QDF_STATUS hdd_rx_deliver_to_stack(struct hdd_adapter *adapter,
-				   struct sk_buff *skb)
-{
-	struct hdd_context *hdd_ctx = adapter->hdd_ctx;
-	int status = QDF_STATUS_E_FAILURE;
-	int netif_status;
-	bool skb_receive_offload_ok = false;
-	uint8_t rx_ctx_id = QDF_NBUF_CB_RX_CTX_ID(skb);
-	ol_txrx_soc_handle soc = cds_get_context(QDF_MODULE_ID_SOC);
-
-	if (QDF_NBUF_CB_RX_TCP_PROTO(skb) &&
-	    !QDF_NBUF_CB_RX_PEER_CACHED_FRM(skb))
-		skb_receive_offload_ok = true;
-
-	if (qdf_atomic_read(&adapter->gro_disallowed) == 0 &&
-	    adapter->gro_flushed[rx_ctx_id] != 0) {
-		if (qdf_likely(soc))
-			hdd_set_fisa_disallowed_for_vdev(soc, adapter->vdev_id,
-							 rx_ctx_id, 0);
-		adapter->gro_flushed[rx_ctx_id] = 0;
-	} else if (qdf_atomic_read(&adapter->gro_disallowed) &&
-		   adapter->gro_flushed[rx_ctx_id] == 0) {
-		if (qdf_likely(soc))
-			hdd_set_fisa_disallowed_for_vdev(soc, adapter->vdev_id,
-							 rx_ctx_id, 1);
-	}
-
-	if (skb_receive_offload_ok && hdd_ctx->receive_offload_cb &&
-	    !hdd_ctx->dp_agg_param.gro_force_flush[rx_ctx_id] &&
-	    !adapter->gro_flushed[rx_ctx_id] &&
-	    !adapter->runtime_disable_rx_thread) {
-		status = hdd_ctx->receive_offload_cb(adapter, skb);
-
-		if (QDF_IS_STATUS_SUCCESS(status)) {
-			adapter->hdd_stats.tx_rx_stats.rx_aggregated++;
-			return status;
-		}
-
-		if (status == QDF_STATUS_E_GRO_DROP) {
-			adapter->hdd_stats.tx_rx_stats.rx_gro_dropped++;
-			return status;
-		}
-	}
-
-	/*
-	 * The below case handles the scenario when rx_aggregation is
-	 * re-enabled dynamically, in which case gro_force_flush needs
-	 * to be reset to 0 to allow GRO.
-	 */
-	if (qdf_atomic_read(&hdd_ctx->dp_agg_param.rx_aggregation) &&
-	    hdd_ctx->dp_agg_param.gro_force_flush[rx_ctx_id])
-		hdd_ctx->dp_agg_param.gro_force_flush[rx_ctx_id] = 0;
-
-	adapter->hdd_stats.tx_rx_stats.rx_non_aggregated++;
-
-	/* Account for GRO/LRO ineligible packets, mostly UDP */
-	if (qdf_nbuf_get_gso_segs(skb) == 0)
-		hdd_ctx->no_rx_offload_pkt_cnt++;
-
-	if (qdf_likely((hdd_ctx->enable_dp_rx_threads ||
-		        hdd_ctx->enable_rxthread) &&
-		        !adapter->runtime_disable_rx_thread)) {
-		local_bh_disable();
-		netif_status = netif_receive_skb(skb);
-		local_bh_enable();
-	} else if (qdf_unlikely(QDF_NBUF_CB_RX_PEER_CACHED_FRM(skb))) {
-		/*
-		 * Frames before peer is registered to avoid contention with
-		 * NAPI softirq.
-		 * Refer fix:
-		 * qcacld-3.0: Do netif_rx_ni() for frames received before
-		 * peer assoc
-		 */
-		netif_status = netif_rx_ni(skb);
-	} else { /* NAPI Context */
-		netif_status = netif_receive_skb(skb);
-	}
-
-	if (netif_status == NET_RX_SUCCESS)
-		status = QDF_STATUS_SUCCESS;
-
-	return status;
-}
-
-#else /* WLAN_FEATURE_DYNAMIC_RX_AGGREGATION */
-
-QDF_STATUS hdd_rx_deliver_to_stack(struct hdd_adapter *adapter,
-				   struct sk_buff *skb)
-{
-	struct hdd_context *hdd_ctx = adapter->hdd_ctx;
-	int status = QDF_STATUS_E_FAILURE;
-	int netif_status;
-	bool skb_receive_offload_ok = false;
-
-	if (QDF_NBUF_CB_RX_TCP_PROTO(skb) &&
-	    !QDF_NBUF_CB_RX_PEER_CACHED_FRM(skb))
-		skb_receive_offload_ok = true;
-
-	if (skb_receive_offload_ok && hdd_ctx->receive_offload_cb) {
-		status = hdd_ctx->receive_offload_cb(adapter, skb);
-
-		if (QDF_IS_STATUS_SUCCESS(status)) {
-			adapter->hdd_stats.tx_rx_stats.rx_aggregated++;
-			return status;
-		}
-
-		if (status == QDF_STATUS_E_GRO_DROP) {
-			adapter->hdd_stats.tx_rx_stats.rx_gro_dropped++;
-			return status;
-		}
-	}
-
-	adapter->hdd_stats.tx_rx_stats.rx_non_aggregated++;
-
-	/* Account for GRO/LRO ineligible packets, mostly UDP */
-	if (qdf_nbuf_get_gso_segs(skb) == 0)
-		hdd_ctx->no_rx_offload_pkt_cnt++;
-
-	if (qdf_likely((hdd_ctx->enable_dp_rx_threads ||
-		        hdd_ctx->enable_rxthread) &&
-		        !adapter->runtime_disable_rx_thread)) {
-		local_bh_disable();
-		netif_status = netif_receive_skb(skb);
-		local_bh_enable();
-	} else if (qdf_unlikely(QDF_NBUF_CB_RX_PEER_CACHED_FRM(skb))) {
-		/*
-		 * Frames before peer is registered to avoid contention with
-		 * NAPI softirq.
-		 * Refer fix:
-		 * qcacld-3.0: Do netif_rx_ni() for frames received before
-		 * peer assoc
-		 */
-		netif_status = netif_rx_ni(skb);
-	} else { /* NAPI Context */
-		netif_status = netif_receive_skb(skb);
-	}
-
-	if (netif_status == NET_RX_SUCCESS)
-		status = QDF_STATUS_SUCCESS;
-
-	return status;
-}
-#endif /* WLAN_FEATURE_DYNAMIC_RX_AGGREGATION */
-#endif
-
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0))
-static bool hdd_is_gratuitous_arp_unsolicited_na(struct sk_buff *skb)
-{
-	return false;
-}
-#else
-static bool hdd_is_gratuitous_arp_unsolicited_na(struct sk_buff *skb)
-{
-	return cfg80211_is_gratuitous_arp_unsolicited_na(skb);
-}
-#endif
-
-QDF_STATUS hdd_rx_flush_packet_cbk(void *adapter_context, uint8_t vdev_id)
+void hdd_get_tsf_time_cb(uint8_t vdev_id, uint64_t input_time,
+			 uint64_t *tsf_time)
 {
 	struct hdd_adapter *adapter;
-	struct hdd_context *hdd_ctx;
-	ol_txrx_soc_handle soc = cds_get_context(QDF_MODULE_ID_SOC);
+	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
 
-	if (qdf_unlikely(!soc))
-		return QDF_STATUS_E_FAILURE;
+	adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
+	if (!adapter)
+		return;
 
-	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
-	if (unlikely(!hdd_ctx))
-		return QDF_STATUS_E_FAILURE;
-
-	adapter = hdd_adapter_get_by_reference(hdd_ctx, adapter_context);
-	if (!adapter) {
-		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_ERROR,
-			  "%s: Adapter reference is Null", __func__);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	/* do fisa flush for this vdev */
-	if (hdd_ctx->config->fisa_enable)
-		hdd_rx_fisa_flush_by_vdev_id(soc, vdev_id);
-
-	if (hdd_ctx->enable_dp_rx_threads)
-		dp_txrx_flush_pkts_by_vdev_id(soc, vdev_id);
-
-	hdd_adapter_put(adapter);
-
-	return QDF_STATUS_SUCCESS;
-}
-
-#if defined(WLAN_SUPPORT_RX_FISA)
-QDF_STATUS hdd_rx_fisa_cbk(void *dp_soc, void *dp_vdev, qdf_nbuf_t nbuf_list)
-{
-	return dp_fisa_rx((struct dp_soc *)dp_soc, (struct dp_vdev *)dp_vdev,
-			  nbuf_list);
-}
-
-QDF_STATUS hdd_rx_fisa_flush_by_ctx_id(void *dp_soc, int ring_num)
-{
-	return dp_rx_fisa_flush_by_ctx_id((struct dp_soc *)dp_soc, ring_num);
-}
-
-QDF_STATUS hdd_rx_fisa_flush_by_vdev_id(void *dp_soc, uint8_t vdev_id)
-{
-	return dp_rx_fisa_flush_by_vdev_id((struct dp_soc *)dp_soc, vdev_id);
+	hdd_get_tsf_time(adapter, input_time, tsf_time);
 }
 #endif
-
-QDF_STATUS hdd_rx_packet_cbk(void *adapter_context,
-			     qdf_nbuf_t rxBuf)
-{
-	struct hdd_adapter *adapter = NULL;
-	struct hdd_context *hdd_ctx = NULL;
-	QDF_STATUS qdf_status = QDF_STATUS_E_FAILURE;
-	struct sk_buff *skb = NULL;
-	struct sk_buff *next = NULL;
-	struct hdd_station_ctx *sta_ctx = NULL;
-	unsigned int cpu_index;
-	struct qdf_mac_addr *mac_addr, *dest_mac_addr;
-	bool wake_lock = false;
-	uint8_t pkt_type = 0;
-	bool track_arp = false;
-	struct wlan_objmgr_vdev *vdev;
-	enum qdf_proto_subtype subtype = QDF_PROTO_INVALID;
-	bool is_eapol, send_over_nl;
-	bool is_dhcp;
-	struct hdd_tx_rx_stats *stats;
-	uint16_t dump_level;
-	/* Sanity check on inputs */
-	if (unlikely((!adapter_context) || (!rxBuf))) {
-		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_ERROR,
-			  "%s: Null params being passed", __func__);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	adapter = (struct hdd_adapter *)adapter_context;
-	if (unlikely(WLAN_HDD_ADAPTER_MAGIC != adapter->magic)) {
-		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_ERROR,
-			  "Magic cookie(%x) for adapter sanity verification is invalid",
-			  adapter->magic);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
-	if (unlikely(!hdd_ctx)) {
-		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_ERROR,
-			  "%s: HDD context is Null", __func__);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	dump_level = cfg_get(hdd_ctx->psoc, CFG_ENABLE_DEBUG_PACKET_LOG);
-
-	cpu_index = wlan_hdd_get_cpu();
-	stats = &adapter->hdd_stats.tx_rx_stats;
-
-	next = (struct sk_buff *)rxBuf;
-
-	while (next) {
-		skb = next;
-		next = skb->next;
-		skb->next = NULL;
-		is_eapol = false;
-		is_dhcp = false;
-		send_over_nl = false;
-
-		if (qdf_nbuf_is_ipv4_arp_pkt(skb)) {
-			if (qdf_nbuf_data_is_arp_rsp(skb) &&
-				(adapter->track_arp_ip ==
-			     qdf_nbuf_get_arp_src_ip(skb))) {
-				++adapter->hdd_stats.hdd_arp_stats.
-							rx_arp_rsp_count;
-				QDF_TRACE(QDF_MODULE_ID_HDD_DATA,
-						QDF_TRACE_LEVEL_DEBUG,
-						"%s: ARP packet received",
-						__func__);
-				track_arp = true;
-			}
-			dump_level &= DEBUG_PKTLOG_TYPE_ARP;
-		} else if (qdf_nbuf_is_ipv4_eapol_pkt(skb)) {
-			subtype = qdf_nbuf_get_eapol_subtype(skb);
-			send_over_nl = true;
-			if (subtype == QDF_PROTO_EAPOL_M1) {
-				++adapter->hdd_stats.hdd_eapol_stats.
-						eapol_m1_count;
-				is_eapol = true;
-			} else if (subtype == QDF_PROTO_EAPOL_M3) {
-				++adapter->hdd_stats.hdd_eapol_stats.
-						eapol_m3_count;
-				is_eapol = true;
-			}
-			dump_level &= DEBUG_PKTLOG_TYPE_EAPOL;
-		} else if (qdf_nbuf_is_ipv4_dhcp_pkt(skb)) {
-			subtype = qdf_nbuf_get_dhcp_subtype(skb);
-			if (subtype == QDF_PROTO_DHCP_OFFER) {
-				++adapter->hdd_stats.hdd_dhcp_stats.
-						dhcp_off_count;
-				is_dhcp = true;
-			} else if (subtype == QDF_PROTO_DHCP_ACK) {
-				++adapter->hdd_stats.hdd_dhcp_stats.
-						dhcp_ack_count;
-				is_dhcp = true;
-			}
-			dump_level &= DEBUG_PKTLOG_TYPE_DHCP;
-		} else {
-			dump_level = DEBUG_PKTLOG_TYPE_NONE;
-		}
-
-		hdd_pkt_add_timestamp(adapter, QDF_PKT_RX_DRIVER_EXIT,
-				      qdf_get_log_timestamp(), skb);
-
-		/* track connectivity stats */
-		if (adapter->pkt_type_bitmap)
-			hdd_tx_rx_collect_connectivity_stats_info(skb, adapter,
-						PKT_TYPE_RSP, &pkt_type);
-
-		sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
-		if ((sta_ctx->conn_info.proxy_arp_service) &&
-		    hdd_is_gratuitous_arp_unsolicited_na(skb)) {
-			qdf_atomic_inc(&stats->rx_usolict_arp_n_mcast_drp);
-			/* Remove SKB from internal tracking table before
-			 * submitting it to stack.
-			 */
-			qdf_nbuf_free(skb);
-			continue;
-		}
-
-		hdd_event_eapol_log(skb, QDF_RX);
-		qdf_dp_trace_log_pkt(adapter->vdev_id, skb, QDF_RX,
-				     QDF_TRACE_DEFAULT_PDEV_ID);
-
-		DPTRACE(qdf_dp_trace(skb,
-			QDF_DP_TRACE_RX_HDD_PACKET_PTR_RECORD,
-			QDF_TRACE_DEFAULT_PDEV_ID,
-			qdf_nbuf_data_addr(skb),
-			sizeof(qdf_nbuf_data(skb)), QDF_RX));
-
-		DPTRACE(qdf_dp_trace_data_pkt(skb, QDF_TRACE_DEFAULT_PDEV_ID,
-			QDF_DP_TRACE_RX_PACKET_RECORD,
-			0, QDF_RX));
-
-		dest_mac_addr = (struct qdf_mac_addr *)(skb->data);
-		mac_addr = (struct qdf_mac_addr *)(skb->data+QDF_MAC_ADDR_SIZE);
-
-		if (dump_level)
-			qdf_trace_hex_dump(QDF_MODULE_ID_HDD,
-					   QDF_TRACE_LEVEL_DEBUG,
-					   skb->data, skb->len - skb->data_len);
-
-		vdev = hdd_objmgr_get_vdev_by_user(adapter,
-						   WLAN_OSIF_TDLS_ID);
-		if (vdev) {
-			ucfg_tdls_update_rx_pkt_cnt(vdev, mac_addr,
-						    dest_mac_addr);
-			hdd_objmgr_put_vdev_by_user(vdev,
-						    WLAN_OSIF_TDLS_ID);
-		}
-
-		if (hdd_rx_pkt_tracepoints_enabled())
-			qdf_trace_dp_packet(skb, QDF_RX, NULL, 0);
-
-		skb->dev = adapter->dev;
-		skb->protocol = eth_type_trans(skb, skb->dev);
-		++stats->per_cpu[cpu_index].rx_packets;
-		++adapter->stats.rx_packets;
-		/* count aggregated RX frame into stats */
-		adapter->stats.rx_packets += qdf_nbuf_get_gso_segs(skb);
-		adapter->stats.rx_bytes += skb->len;
-
-		/* Incr GW Rx count for NUD tracking based on GW mac addr */
-		hdd_nud_incr_gw_rx_pkt_cnt(adapter, mac_addr);
-
-		/* Check & drop replayed mcast packets (for IPV6) */
-		if (hdd_ctx->config->multicast_replay_filter &&
-				hdd_is_mcast_replay(skb)) {
-			qdf_atomic_inc(&stats->rx_usolict_arp_n_mcast_drp);
-			qdf_nbuf_free(skb);
-			continue;
-		}
-
-		/* hold configurable wakelock for unicast traffic */
-		if (!hdd_is_current_high_throughput(hdd_ctx) &&
-		    hdd_ctx->config->rx_wakelock_timeout &&
-		    sta_ctx->conn_info.is_authenticated)
-			wake_lock = hdd_is_rx_wake_lock_needed(skb);
-
-		if (wake_lock) {
-			cds_host_diag_log_work(&hdd_ctx->rx_wake_lock,
-						   hdd_ctx->config->rx_wakelock_timeout,
-						   WIFI_POWER_EVENT_WAKELOCK_HOLD_RX);
-			qdf_wake_lock_timeout_acquire(&hdd_ctx->rx_wake_lock,
-							  hdd_ctx->config->
-								  rx_wakelock_timeout);
-		}
-
-		/* Remove SKB from internal tracking table before submitting
-		 * it to stack
-		 */
-		qdf_net_buf_debug_release_skb(skb);
-
-		hdd_tsf_timestamp_rx(hdd_ctx, skb, ktime_to_us(skb->tstamp));
-
-		if (send_over_nl && SEND_EAPOL_OVER_NL) {
-			if (wlan_hdd_cfg80211_rx_control_port(
-			 adapter->dev,
-			 (u8 *)&adapter->session.station.conn_info.peer_macaddr,
-			 skb, false))
-				qdf_status = QDF_STATUS_SUCCESS;
-			else
-				qdf_status = QDF_STATUS_E_INVAL;
-			dev_kfree_skb(skb);
-		} else {
-			qdf_status = hdd_rx_deliver_to_stack(adapter, skb);
-		}
-
-		if (QDF_IS_STATUS_SUCCESS(qdf_status)) {
-			++stats->per_cpu[cpu_index].rx_delivered;
-			if (track_arp)
-				++adapter->hdd_stats.hdd_arp_stats.
-							rx_delivered;
-			if (is_eapol)
-				++adapter->hdd_stats.hdd_eapol_stats.
-				     rx_delivered[subtype - QDF_PROTO_EAPOL_M1];
-			else if (is_dhcp)
-				++adapter->hdd_stats.hdd_dhcp_stats.
-				rx_delivered[subtype - QDF_PROTO_DHCP_DISCOVER];
-
-			/* track connectivity stats */
-			if (adapter->pkt_type_bitmap)
-				hdd_tx_rx_collect_connectivity_stats_info(
-					skb, adapter,
-					PKT_TYPE_RX_DELIVERED, &pkt_type);
-		} else {
-			++stats->per_cpu[cpu_index].rx_refused;
-			if (track_arp)
-				++adapter->hdd_stats.hdd_arp_stats.rx_refused;
-
-			if (is_eapol)
-				++adapter->hdd_stats.hdd_eapol_stats.
-				       rx_refused[subtype - QDF_PROTO_EAPOL_M1];
-			else if (is_dhcp)
-				++adapter->hdd_stats.hdd_dhcp_stats.
-				  rx_refused[subtype - QDF_PROTO_DHCP_DISCOVER];
-
-			/* track connectivity stats */
-			if (adapter->pkt_type_bitmap)
-				hdd_tx_rx_collect_connectivity_stats_info(
-					skb, adapter,
-					PKT_TYPE_RX_REFUSED, &pkt_type);
-		}
-	}
-
-	return QDF_STATUS_SUCCESS;
-}
 
 /**
  * hdd_reason_type_to_string() - return string conversion of reason type
@@ -3307,16 +1321,26 @@ int hdd_set_mon_rx_cb(struct net_device *dev)
 	int ret;
 	QDF_STATUS qdf_status;
 	struct ol_txrx_desc_type sta_desc = {0};
-	struct ol_txrx_ops txrx_ops;
 	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
+	struct wlan_objmgr_vdev *vdev;
 
 	WLAN_ADDR_COPY(sta_desc.peer_addr.bytes, adapter->mac_addr.bytes);
-	qdf_mem_zero(&txrx_ops, sizeof(txrx_ops));
-	txrx_ops.rx.rx = hdd_mon_rx_packet_cbk;
-	hdd_monitor_set_rx_monitor_cb(&txrx_ops, hdd_rx_monitor_callback);
-	cdp_vdev_register(soc, adapter->vdev_id,
-			  (ol_osif_vdev_handle)adapter,
-			  &txrx_ops);
+
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+	if (!vdev) {
+		hdd_err("failed to get vdev");
+		return -EINVAL;
+	}
+
+	qdf_status = ucfg_dp_mon_register_txrx_ops(vdev);
+	if (QDF_STATUS_SUCCESS != qdf_status) {
+		hdd_err("failed to register txrx ops. Status= %d [0x%08X]",
+			qdf_status, qdf_status);
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+		goto exit;
+	}
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+
 	/* peer is created wma_vdev_attach->wma_create_peer */
 	qdf_status = cdp_peer_register(soc, OL_TXRX_PDEV_ID, &sta_desc);
 	if (QDF_STATUS_SUCCESS != qdf_status) {
@@ -3336,145 +1360,6 @@ int hdd_set_mon_rx_cb(struct net_device *dev)
 exit:
 	ret = qdf_status_to_os_return(qdf_status);
 	return ret;
-}
-#endif
-
-/**
- * hdd_send_rps_ind() - send rps indication to daemon
- * @adapter: adapter context
- *
- * If RPS feature enabled by INI, send RPS enable indication to daemon
- * Indication contents is the name of interface to find correct sysfs node
- * Should send all available interfaces
- *
- * Return: none
- */
-void hdd_send_rps_ind(struct hdd_adapter *adapter)
-{
-	int i;
-	uint8_t cpu_map_list_len = 0;
-	struct hdd_context *hdd_ctxt = NULL;
-	struct wlan_rps_data rps_data;
-	struct cds_config_info *cds_cfg;
-
-	cds_cfg = cds_get_ini_config();
-
-	if (!adapter) {
-		hdd_err("adapter is NULL");
-		return;
-	}
-
-	if (!cds_cfg) {
-		hdd_err("cds_cfg is NULL");
-		return;
-	}
-
-	hdd_ctxt = WLAN_HDD_GET_CTX(adapter);
-	rps_data.num_queues = NUM_RX_QUEUES;
-
-	hdd_debug("cpu_map_list '%s'", hdd_ctxt->config->cpu_map_list);
-
-	/* in case no cpu map list is provided, simply return */
-	if (!strlen(hdd_ctxt->config->cpu_map_list)) {
-		hdd_debug("no cpu map list found");
-		goto err;
-	}
-
-	if (QDF_STATUS_SUCCESS !=
-		hdd_hex_string_to_u16_array(hdd_ctxt->config->cpu_map_list,
-				rps_data.cpu_map_list,
-				&cpu_map_list_len,
-				WLAN_SVC_IFACE_NUM_QUEUES)) {
-		hdd_err("invalid cpu map list");
-		goto err;
-	}
-
-	rps_data.num_queues =
-		(cpu_map_list_len < rps_data.num_queues) ?
-				cpu_map_list_len : rps_data.num_queues;
-
-	for (i = 0; i < rps_data.num_queues; i++) {
-		hdd_debug("cpu_map_list[%d] = 0x%x",
-			  i, rps_data.cpu_map_list[i]);
-	}
-
-	strlcpy(rps_data.ifname, adapter->dev->name,
-			sizeof(rps_data.ifname));
-	wlan_hdd_send_svc_nlink_msg(hdd_ctxt->radio_index,
-				WLAN_SVC_RPS_ENABLE_IND,
-				&rps_data, sizeof(rps_data));
-
-	cds_cfg->rps_enabled = true;
-
-	return;
-
-err:
-	hdd_debug("Wrong RPS configuration. enabling rx_thread");
-	cds_cfg->rps_enabled = false;
-}
-
-/**
- * hdd_send_rps_disable_ind() - send rps disable indication to daemon
- * @adapter: adapter context
- *
- * Return: none
- */
-void hdd_send_rps_disable_ind(struct hdd_adapter *adapter)
-{
-	struct hdd_context *hdd_ctxt = NULL;
-	struct wlan_rps_data rps_data;
-	struct cds_config_info *cds_cfg;
-
-	cds_cfg = cds_get_ini_config();
-
-	if (!adapter) {
-		hdd_err("adapter is NULL");
-		return;
-	}
-
-	if (!cds_cfg) {
-		hdd_err("cds_cfg is NULL");
-		return;
-	}
-
-	hdd_ctxt = WLAN_HDD_GET_CTX(adapter);
-	rps_data.num_queues = NUM_RX_QUEUES;
-
-	hdd_info("Set cpu_map_list 0");
-
-	qdf_mem_zero(&rps_data.cpu_map_list, sizeof(rps_data.cpu_map_list));
-
-	strlcpy(rps_data.ifname, adapter->dev->name, sizeof(rps_data.ifname));
-	wlan_hdd_send_svc_nlink_msg(hdd_ctxt->radio_index,
-				    WLAN_SVC_RPS_ENABLE_IND,
-				    &rps_data, sizeof(rps_data));
-
-	cds_cfg->rps_enabled = false;
-}
-
-#ifdef QCA_CONFIG_RPS
-void hdd_adapter_set_rps(uint8_t vdev_id, bool enable)
-{
-	struct hdd_context *hdd_ctx;
-	struct hdd_adapter *adapter;
-
-	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
-	if (!hdd_ctx)
-		return;
-
-	adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
-	if (!adapter) {
-		hdd_err_rl("Adapter not found for vdev_id: %d", vdev_id);
-		return;
-	}
-
-	hdd_debug("Set RPS to %d for vdev_id %d", enable, vdev_id);
-	if (!hdd_ctx->rps) {
-		if (enable)
-			hdd_send_rps_ind(adapter);
-		else
-			hdd_send_rps_disable_ind(adapter);
-	}
 }
 #endif
 
@@ -3506,62 +1391,6 @@ void hdd_tx_queue_cb(hdd_handle_t hdd_handle, uint32_t vdev_id,
 
 	wlan_hdd_netif_queue_control(adapter, action, reason);
 }
-
-#ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
-/**
- * hdd_reset_tcp_delack() - Reset tcp delack value to default
- * @hdd_ctx: Handle to hdd context
- *
- * Function used to reset TCP delack value to its default value
- *
- * Return: None
- */
-void hdd_reset_tcp_delack(struct hdd_context *hdd_ctx)
-{
-	enum wlan_tp_level next_level = WLAN_SVC_TP_LOW;
-	struct wlan_rx_tp_data rx_tp_data = {0};
-
-	if (!hdd_ctx->en_tcp_delack_no_lro)
-		return;
-
-	rx_tp_data.rx_tp_flags |= TCP_DEL_ACK_IND;
-	rx_tp_data.level = next_level;
-	hdd_ctx->rx_high_ind_cnt = 0;
-	wlan_hdd_update_tcp_rx_param(hdd_ctx, &rx_tp_data);
-}
-
-void hdd_reset_tcp_adv_win_scale(struct hdd_context *hdd_ctx)
-{
-	enum wlan_tp_level next_level = WLAN_SVC_TP_NONE;
-	struct wlan_rx_tp_data rx_tp_data = {0};
-
-	if (!hdd_ctx->config->enable_tcp_adv_win_scale)
-		return;
-
-	rx_tp_data.rx_tp_flags |= TCP_ADV_WIN_SCL;
-	rx_tp_data.level = next_level;
-	hdd_ctx->cur_rx_level = WLAN_SVC_TP_NONE;
-	wlan_hdd_update_tcp_rx_param(hdd_ctx, &rx_tp_data);
-}
-
-/**
- * hdd_is_current_high_throughput() - Check if vote level is high
- * @hdd_ctx: Handle to hdd context
- *
- * Function used to check if vote level is high
- *
- * Return: True if vote level is high
- */
-#ifdef RX_PERFORMANCE
-bool hdd_is_current_high_throughput(struct hdd_context *hdd_ctx)
-{
-	if (hdd_ctx->cur_vote_level < PLD_BUS_WIDTH_MEDIUM)
-		return false;
-	else
-		return true;
-}
-#endif
-#endif
 
 #ifdef QCA_LL_LEGACY_TX_FLOW_CONTROL
 /**
@@ -3624,300 +1453,20 @@ static inline void hdd_ini_mscs_params(struct hdd_config *config,
 }
 #endif
 
-#ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
-/**
- * hdd_ini_tx_flow_control() - Initialize INIs concerned about bus bandwidth
- * @config: pointer to hdd config
- * @psoc: pointer to psoc obj
- *
- * Return: none
- */
-static void hdd_ini_bus_bandwidth(struct hdd_config *config,
-				  struct wlan_objmgr_psoc *psoc)
-{
-	config->bus_bw_super_high_threshold =
-		cfg_get(psoc, CFG_DP_BUS_BANDWIDTH_SUPER_HIGH_THRESHOLD);
-	config->bus_bw_ultra_high_threshold =
-		cfg_get(psoc, CFG_DP_BUS_BANDWIDTH_ULTRA_HIGH_THRESHOLD);
-	config->bus_bw_very_high_threshold =
-		cfg_get(psoc, CFG_DP_BUS_BANDWIDTH_VERY_HIGH_THRESHOLD);
-	config->bus_bw_dbs_threshold =
-		cfg_get(psoc, CFG_DP_BUS_BANDWIDTH_DBS_THRESHOLD);
-	config->bus_bw_high_threshold =
-		cfg_get(psoc, CFG_DP_BUS_BANDWIDTH_HIGH_THRESHOLD);
-	config->bus_bw_medium_threshold =
-		cfg_get(psoc, CFG_DP_BUS_BANDWIDTH_MEDIUM_THRESHOLD);
-	config->bus_bw_low_threshold =
-		cfg_get(psoc, CFG_DP_BUS_BANDWIDTH_LOW_THRESHOLD);
-	config->bus_bw_compute_interval =
-		cfg_get(psoc, CFG_DP_BUS_BANDWIDTH_COMPUTE_INTERVAL);
-	config->bus_low_cnt_threshold =
-		cfg_get(psoc, CFG_DP_BUS_LOW_BW_CNT_THRESHOLD);
-	config->enable_latency_crit_clients =
-		cfg_get(psoc, CFG_DP_BUS_HANDLE_LATENCY_CRITICAL_CLIENTS);
-}
-
-/**
- * hdd_ini_tx_flow_control() - Initialize INIs concerned about tcp settings
- * @config: pointer to hdd config
- * @psoc: pointer to psoc obj
- *
- * Return: none
- */
-static void hdd_ini_tcp_settings(struct hdd_config *config,
-				 struct wlan_objmgr_psoc *psoc)
-{
-	config->enable_tcp_limit_output =
-		cfg_get(psoc, CFG_DP_ENABLE_TCP_LIMIT_OUTPUT);
-	config->enable_tcp_adv_win_scale =
-		cfg_get(psoc, CFG_DP_ENABLE_TCP_ADV_WIN_SCALE);
-	config->enable_tcp_delack =
-		cfg_get(psoc, CFG_DP_ENABLE_TCP_DELACK);
-	config->tcp_delack_thres_high =
-		cfg_get(psoc, CFG_DP_TCP_DELACK_THRESHOLD_HIGH);
-	config->tcp_delack_thres_low =
-		cfg_get(psoc, CFG_DP_TCP_DELACK_THRESHOLD_LOW);
-	config->tcp_delack_timer_count =
-		cfg_get(psoc, CFG_DP_TCP_DELACK_TIMER_COUNT);
-	config->tcp_tx_high_tput_thres =
-		cfg_get(psoc, CFG_DP_TCP_TX_HIGH_TPUT_THRESHOLD);
-	config->enable_tcp_param_update =
-		cfg_get(psoc, CFG_DP_ENABLE_TCP_PARAM_UPDATE);
-}
-#else
-static void hdd_ini_bus_bandwidth(struct hdd_config *config,
-				 struct wlan_objmgr_psoc *psoc)
-{
-}
-
-static void hdd_ini_tcp_settings(struct hdd_config *config,
-				 struct wlan_objmgr_psoc *psoc)
-{
-}
-#endif /*WLAN_FEATURE_DP_BUS_BANDWIDTH*/
-
-/**
- * hdd_set_rx_mode_value() - set rx_mode values
- * @hdd_ctx: hdd context
- *
- * Return: none
- */
-static void hdd_set_rx_mode_value(struct hdd_context *hdd_ctx)
-{
-	uint32_t rx_mode = hdd_ctx->config->rx_mode;
-	enum QDF_GLOBAL_MODE con_mode = 0;
-
-	con_mode = hdd_get_conparam();
-
-	/* RPS has higher priority than dynamic RPS when both bits are set */
-	if (rx_mode & CFG_ENABLE_RPS && rx_mode & CFG_ENABLE_DYNAMIC_RPS)
-		rx_mode &= ~CFG_ENABLE_DYNAMIC_RPS;
-
-	if (rx_mode & CFG_ENABLE_RX_THREAD && rx_mode & CFG_ENABLE_RPS) {
-		hdd_warn("rx_mode wrong configuration. Make it default");
-		rx_mode = CFG_RX_MODE_DEFAULT;
-	}
-
-	if (rx_mode & CFG_ENABLE_RX_THREAD)
-		hdd_ctx->enable_rxthread = true;
-	else if (rx_mode & CFG_ENABLE_DP_RX_THREADS) {
-		if (con_mode == QDF_GLOBAL_MONITOR_MODE)
-			hdd_ctx->enable_dp_rx_threads = false;
-		else
-			hdd_ctx->enable_dp_rx_threads = true;
-	}
-
-	if (rx_mode & CFG_ENABLE_RPS)
-		hdd_ctx->rps = true;
-
-	if (rx_mode & CFG_ENABLE_NAPI)
-		hdd_ctx->napi_enable = true;
-
-	if (rx_mode & CFG_ENABLE_DYNAMIC_RPS)
-		hdd_ctx->dynamic_rps = true;
-
-	hdd_debug("rx_mode:%u dp_rx_threads:%u rx_thread:%u napi:%u rps:%u dynamic rps %u",
-		  rx_mode, hdd_ctx->enable_dp_rx_threads,
-		  hdd_ctx->enable_rxthread, hdd_ctx->napi_enable,
-		  hdd_ctx->rps, hdd_ctx->dynamic_rps);
-}
-
-#ifdef CONFIG_DP_TRACE
-static void
-hdd_dp_dp_trace_cfg_update(struct hdd_config *config,
-			   struct wlan_objmgr_psoc *psoc)
-{
-	qdf_size_t array_out_size;
-
-	config->enable_dp_trace = cfg_get(psoc, CFG_DP_ENABLE_DP_TRACE);
-	qdf_uint8_array_parse(cfg_get(psoc, CFG_DP_DP_TRACE_CONFIG),
-			      config->dp_trace_config,
-			      sizeof(config->dp_trace_config), &array_out_size);
-	config->dp_proto_event_bitmap = cfg_get(psoc,
-						CFG_DP_PROTO_EVENT_BITMAP);
-}
-#else
-static void
-hdd_dp_dp_trace_cfg_update(struct hdd_config *config,
-			   struct wlan_objmgr_psoc *psoc)
-{
-}
-#endif
-
-#ifdef WLAN_NUD_TRACKING
-static void
-hdd_dp_nud_tracking_cfg_update(struct hdd_config *config,
-			       struct wlan_objmgr_psoc *psoc)
-{
-	config->enable_nud_tracking = cfg_get(psoc, CFG_DP_ENABLE_NUD_TRACKING);
-}
-#else
-static void
-hdd_dp_nud_tracking_cfg_update(struct hdd_config *config,
-			       struct wlan_objmgr_psoc *psoc)
-{
-}
-#endif
-
-#ifdef QCA_SUPPORT_TXRX_DRIVER_TCP_DEL_ACK
-static void hdd_ini_tcp_del_ack_settings(struct hdd_config *config,
-					 struct wlan_objmgr_psoc *psoc)
-{
-	config->del_ack_threshold_high =
-		cfg_get(psoc, CFG_DP_DRIVER_TCP_DELACK_HIGH_THRESHOLD);
-	config->del_ack_threshold_low =
-		cfg_get(psoc, CFG_DP_DRIVER_TCP_DELACK_LOW_THRESHOLD);
-	config->del_ack_enable =
-		cfg_get(psoc, CFG_DP_DRIVER_TCP_DELACK_ENABLE);
-	config->del_ack_pkt_count =
-		cfg_get(psoc, CFG_DP_DRIVER_TCP_DELACK_PKT_CNT);
-	config->del_ack_timer_value =
-		cfg_get(psoc, CFG_DP_DRIVER_TCP_DELACK_TIMER_VALUE);
-}
-#else
-static void hdd_ini_tcp_del_ack_settings(struct hdd_config *config,
-					 struct wlan_objmgr_psoc *psoc)
-{
-}
-#endif
-
-#ifdef WLAN_SUPPORT_TXRX_HL_BUNDLE
-static void hdd_dp_hl_bundle_cfg_update(struct hdd_config *config,
-					struct wlan_objmgr_psoc *psoc)
-{
-	config->pkt_bundle_threshold_high =
-		cfg_get(psoc, CFG_DP_HL_BUNDLE_HIGH_TH);
-	config->pkt_bundle_threshold_low =
-		cfg_get(psoc, CFG_DP_HL_BUNDLE_LOW_TH);
-	config->pkt_bundle_timer_value =
-		cfg_get(psoc, CFG_DP_HL_BUNDLE_TIMER_VALUE);
-	config->pkt_bundle_size =
-		cfg_get(psoc, CFG_DP_HL_BUNDLE_SIZE);
-}
-#else
-static void hdd_dp_hl_bundle_cfg_update(struct hdd_config *config,
-					struct wlan_objmgr_psoc *psoc)
-{
-}
-#endif
-
 void hdd_dp_cfg_update(struct wlan_objmgr_psoc *psoc,
 		       struct hdd_context *hdd_ctx)
 {
 	struct hdd_config *config;
-	uint16_t cfg_len;
 
 	config = hdd_ctx->config;
-	cfg_len = qdf_str_len(cfg_get(psoc, CFG_DP_RPS_RX_QUEUE_CPU_MAP_LIST))
-		  + 1;
-	hdd_ini_tx_flow_control(config, psoc);
-	hdd_ini_bus_bandwidth(config, psoc);
-	hdd_ini_tcp_settings(config, psoc);
-	hdd_ini_mscs_params(config, psoc);
-
-	hdd_ini_tcp_del_ack_settings(config, psoc);
-
-	hdd_dp_hl_bundle_cfg_update(config, psoc);
 
 	config->napi_cpu_affinity_mask =
 		cfg_get(psoc, CFG_DP_NAPI_CE_CPU_MASK);
-	config->rx_thread_ul_affinity_mask =
-		cfg_get(psoc, CFG_DP_RX_THREAD_UL_CPU_MASK);
-	config->rx_thread_affinity_mask =
-		cfg_get(psoc, CFG_DP_RX_THREAD_CPU_MASK);
-	config->fisa_enable = cfg_get(psoc, CFG_DP_RX_FISA_ENABLE);
 	config->enable_fisa_lru_deletion =
 				cfg_get(psoc, CFG_DP_RX_FISA_LRU_DEL_ENABLE);
-
-	if (cfg_len < CFG_DP_RPS_RX_QUEUE_CPU_MAP_LIST_LEN) {
-		qdf_str_lcopy(config->cpu_map_list,
-			      cfg_get(psoc, CFG_DP_RPS_RX_QUEUE_CPU_MAP_LIST),
-			      cfg_len);
-	} else {
-		hdd_err("ini string length greater than max size %d",
-			CFG_DP_RPS_RX_QUEUE_CPU_MAP_LIST_LEN);
-		cfg_len = qdf_str_len(cfg_default(CFG_DP_RPS_RX_QUEUE_CPU_MAP_LIST));
-		qdf_str_lcopy(config->cpu_map_list,
-			      cfg_default(CFG_DP_RPS_RX_QUEUE_CPU_MAP_LIST),
-			      cfg_len);
-	}
-	config->tx_orphan_enable = cfg_get(psoc, CFG_DP_TX_ORPHAN_ENABLE);
-	config->rx_mode = cfg_get(psoc, CFG_DP_RX_MODE);
-	hdd_set_rx_mode_value(hdd_ctx);
-	config->multicast_replay_filter =
-		cfg_get(psoc, CFG_DP_FILTER_MULTICAST_REPLAY);
-	config->rx_wakelock_timeout =
-		cfg_get(psoc, CFG_DP_RX_WAKELOCK_TIMEOUT);
-	config->num_dp_rx_threads = cfg_get(psoc, CFG_DP_NUM_DP_RX_THREADS);
 	config->cfg_wmi_credit_cnt = cfg_get(psoc, CFG_DP_HTC_WMI_CREDIT_CNT);
-	config->icmp_req_to_fw_mark_interval =
-		cfg_get(psoc, CFG_DP_ICMP_REQ_TO_FW_MARK_INTERVAL);
-	hdd_dp_dp_trace_cfg_update(config, psoc);
-	hdd_dp_nud_tracking_cfg_update(config, psoc);
+
+	hdd_ini_tx_flow_control(config, psoc);
+	hdd_ini_mscs_params(config, psoc);
 }
 
-void hdd_sta_notify_tx_comp_cb(qdf_nbuf_t skb, void *ctx, uint16_t flag)
-{
-	struct hdd_adapter *adapter = ctx;
-	enum qdf_proto_subtype subtype;
-	struct wlan_objmgr_vdev *vdev;
-	struct qdf_mac_addr *dest_mac_addr;
-
-	if (hdd_validate_adapter(adapter))
-		return;
-
-	dest_mac_addr = (struct qdf_mac_addr *)skb->data;
-
-	switch (QDF_NBUF_CB_GET_PACKET_TYPE(skb)) {
-	case QDF_NBUF_CB_PACKET_TYPE_ARP:
-		if (flag & BIT(QDF_TX_RX_STATUS_DOWNLOAD_SUCC))
-			++adapter->hdd_stats.hdd_arp_stats.
-				tx_host_fw_sent;
-		if (flag & BIT(QDF_TX_RX_STATUS_OK))
-			++adapter->hdd_stats.hdd_arp_stats.tx_ack_cnt;
-		break;
-	case QDF_NBUF_CB_PACKET_TYPE_EAPOL:
-		subtype = qdf_nbuf_get_eapol_subtype(skb);
-		if (!(flag & BIT(QDF_TX_RX_STATUS_OK)) &&
-		    subtype != QDF_PROTO_INVALID)
-			++adapter->hdd_stats.hdd_eapol_stats.
-				tx_noack_cnt[subtype - QDF_PROTO_EAPOL_M1];
-		break;
-	case QDF_NBUF_CB_PACKET_TYPE_DHCP:
-		subtype = qdf_nbuf_get_dhcp_subtype(skb);
-		if (!(flag & BIT(QDF_TX_RX_STATUS_OK)) &&
-		    subtype != QDF_PROTO_INVALID &&
-		    subtype <= QDF_PROTO_DHCP_ACK)
-			++adapter->hdd_stats.hdd_dhcp_stats.
-				tx_noack_cnt[subtype - QDF_PROTO_DHCP_DISCOVER];
-		break;
-	default:
-		break;
-	}
-
-	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_TDLS_ID);
-	if (vdev) {
-		ucfg_tdls_update_tx_pkt_cnt(vdev, dest_mac_addr);
-		hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_TDLS_ID);
-	}
-}

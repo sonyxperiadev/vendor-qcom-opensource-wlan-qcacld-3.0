@@ -373,7 +373,7 @@ void wlan_son_ind_assoc_req_frm(struct wlan_objmgr_vdev *vdev,
 	struct wlan_objmgr_peer *peer;
 	struct wlan_lmac_if_rx_ops *rx_ops;
 	struct wlan_objmgr_psoc *psoc;
-	uint16_t assocstatus = IEEE80211_STATUS_UNSPECIFIED;
+	uint16_t assocstatus = STATUS_UNSPECIFIED_FAILURE;
 	uint16_t sub_type = IEEE80211_FC0_SUBTYPE_ASSOC_REQ;
 
 	if (!vdev) {
@@ -400,7 +400,7 @@ void wlan_son_ind_assoc_req_frm(struct wlan_objmgr_vdev *vdev,
 	if (is_reassoc)
 		sub_type = IEEE80211_FC0_SUBTYPE_REASSOC_REQ;
 	if (QDF_IS_STATUS_SUCCESS(status))
-		assocstatus = IEEE80211_STATUS_SUCCESS;
+		assocstatus = STATUS_SUCCESS;
 	son_debug("subtype %u frame_len %u assocstatus %u",
 		  sub_type, frame_len, assocstatus);
 	rx_ops->son_rx_ops.process_mgmt_frame(vdev, peer, sub_type,

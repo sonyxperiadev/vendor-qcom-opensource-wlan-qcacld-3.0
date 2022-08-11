@@ -101,7 +101,6 @@
 #include <cdp_txrx_cmn.h>
 #include <cdp_txrx_misc.h>
 #include <cdp_txrx_ctrl.h>
-#include <qca_vendor.h>
 #include "wlan_pmo_ucfg_api.h"
 #include "os_if_wifi_pos.h"
 #include "wlan_utility.h"
@@ -132,7 +131,6 @@
 #include "cfg_ucfg_api.h"
 
 #include "wlan_crypto_def_i.h"
-#include "wifi_pos_ucfg_i.h"
 #include "wlan_crypto_global_api.h"
 #include "wlan_nl_to_crypto_params.h"
 #include "wlan_crypto_global_def.h"
@@ -168,6 +166,7 @@
 #include "wlan_if_mgr_ucfg_api.h"
 #include "wlan_if_mgr_public_struct.h"
 #include "wlan_wfa_ucfg_api.h"
+#include "wifi_pos_ucfg_i.h"
 #include <osif_cm_util.h>
 #include <osif_cm_req.h>
 #include "wlan_hdd_bootup_marker.h"
@@ -185,6 +184,12 @@
 #include "wlan_hdd_peer_txq_flush.h"
 #include "wlan_cfg80211_wifi_pos.h"
 #include "wlan_osif_features.h"
+#include "wlan_hdd_wifi_pos_pasn.h"
+#include "wlan_coex_ucfg_api.h"
+#include "wlan_coex_public_structs.h"
+#include "wlan_dp_ucfg_api.h"
+#include "os_if_dp.h"
+#include "os_if_dp_lro.h"
 
 #define g_mode_rates_size (12)
 #define a_mode_rates_size (8)
@@ -1792,6 +1797,7 @@ static const struct nl80211_vendor_cmd_info wlan_hdd_cfg80211_vendor_events[] = 
 		.vendor_id = QCA_NL80211_VENDOR_ID,
 		.subcmd = QCA_NL80211_VENDOR_SUBCMD_DRIVER_READY,
 	},
+	FEATURE_WIFI_POS_11AZ_AUTH_EVENTS
 };
 
 /**
@@ -7520,6 +7526,7 @@ const struct nla_policy wlan_hdd_wifi_config_policy[
 							.type = NLA_U8 },
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_FT_OVER_DS] = {.type = NLA_U8 },
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_ARP_NS_OFFLOAD] = {.type = NLA_U8 },
+	[QCA_WLAN_VENDOR_ATTR_CONFIG_DBAM] = {.type = NLA_U8 },
 };
 
 static const struct nla_policy
@@ -8587,12 +8594,19 @@ static int hdd_config_listen_interval(struct hdd_adapter *adapter,
 static int hdd_config_lro(struct hdd_adapter *adapter,
 			  const struct nlattr *attr)
 {
-	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	struct wlan_objmgr_vdev *vdev;
 	uint8_t enable_flag;
+	QDF_STATUS status = QDF_STATUS_E_FAULT;
 
 	enable_flag = nla_get_u8(attr);
 
-	return hdd_lro_set_reset(hdd_ctx, adapter, enable_flag);
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+	if (vdev) {
+		status = osif_dp_lro_set_reset(vdev, enable_flag);
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+	}
+
+	return qdf_status_to_os_return(status);
 }
 
 static int hdd_config_scan_enable(struct hdd_adapter *adapter,
@@ -9080,6 +9094,7 @@ static void hdd_set_wlm_host_latency_level(struct hdd_context *hdd_ctx,
 					   uint32_t latency_host_flags)
 {
 	ol_txrx_soc_handle soc_hdl = cds_get_context(QDF_MODULE_ID_SOC);
+	struct wlan_objmgr_vdev *vdev;
 
 	if (!soc_hdl)
 		return;
@@ -9095,14 +9110,22 @@ static void hdd_set_wlm_host_latency_level(struct hdd_context *hdd_ctx,
 		wlan_hdd_set_pm_qos_request(hdd_ctx, false);
 
 	if (latency_host_flags & WLM_HOST_HBB_FLAG)
-		hdd_ctx->high_bus_bw_request |= (1 << adapter->vdev_id);
+		ucfg_dp_set_high_bus_bw_request(hdd_ctx->psoc,
+						adapter->vdev_id, true);
 	else
-		hdd_ctx->high_bus_bw_request &= ~(1 << adapter->vdev_id);
+		ucfg_dp_set_high_bus_bw_request(hdd_ctx->psoc,
+						adapter->vdev_id, false);
+
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+	if (!vdev)
+		return;
 
 	if (latency_host_flags & WLM_HOST_RX_THREAD_FLAG)
-		adapter->runtime_disable_rx_thread = true;
+		ucfg_dp_runtime_disable_rx_thread(vdev, true);
 	else
-		adapter->runtime_disable_rx_thread = false;
+		ucfg_dp_runtime_disable_rx_thread(vdev, false);
+
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 }
 
 #ifdef MULTI_CLIENT_LL_SUPPORT
@@ -9882,6 +9905,159 @@ static int hdd_set_arp_ns_offload(struct hdd_adapter *adapter,
 #undef DYNAMIC_ARP_NS_DISABLE
 #endif
 
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+
+static int
+hdd_convert_qca_dbam_config_mode(enum qca_dbam_config qca_dbam,
+				 enum coex_dbam_config_mode *coex_dbam)
+{
+	switch (qca_dbam) {
+	case QCA_DBAM_DISABLE:
+		*coex_dbam = COEX_DBAM_DISABLE;
+		break;
+	case QCA_DBAM_ENABLE:
+		*coex_dbam = COEX_DBAM_ENABLE;
+		break;
+	case QCA_DBAM_FORCE_ENABLE:
+		*coex_dbam = COEX_DBAM_FORCE_ENABLE;
+		break;
+	default:
+		hdd_err("Invalid dbam config mode %d", qca_dbam);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int
+hdd_convert_dbam_comp_status(enum coex_dbam_comp_status dbam_resp)
+{
+	switch (dbam_resp) {
+	case COEX_DBAM_COMP_SUCCESS:
+		return 0;
+	case COEX_DBAM_COMP_NOT_SUPPORT:
+		return -ENOTSUPP;
+	case COEX_DBAM_COMP_FAIL:
+		return -EINVAL;
+	default:
+		hdd_err("Invalid dbam config resp received from FW");
+		break;
+	}
+
+	return -EINVAL;
+}
+
+/**
+ * hdd_dbam_config_resp_cb() - DBAM config response callback
+ * @context: request manager context
+ * @fw_resp: pointer to dbam config fw response
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+static void
+hdd_dbam_config_resp_cb(void *context,
+			enum coex_dbam_comp_status *resp)
+{
+	struct osif_request *request;
+	struct coex_dbam_config_resp *priv;
+
+	request = osif_request_get(context);
+	if (!request) {
+		osif_err("Obsolete request");
+		return;
+	}
+
+	priv = osif_request_priv(request);
+	priv->dbam_resp = *resp;
+
+	osif_request_complete(request);
+	osif_request_put(request);
+}
+
+/**
+ * hdd_set_dbam_config() - enable/disable DBAM config
+ * @adapter: hdd adapter
+ * @attr: pointer to nla attr
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+static int hdd_set_dbam_config(struct hdd_adapter *adapter,
+			       const struct nlattr *attr)
+{
+	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	struct wlan_objmgr_vdev *vdev;
+	int errno;
+	QDF_STATUS status;
+	enum qca_dbam_config dbam_config;
+	enum coex_dbam_config_mode dbam_mode;
+	enum coex_dbam_comp_status dbam_resp;
+	struct coex_dbam_config_params dbam_params = {0};
+	void *cookie;
+	struct osif_request *request;
+	struct coex_dbam_config_resp *priv;
+	static const struct osif_request_params params = {
+		.priv_size = sizeof(*priv),
+		.timeout_ms = WLAN_SET_DBAM_CONFIG_TIMEOUT,
+	};
+
+	errno = wlan_hdd_validate_context(hdd_ctx);
+	if (errno)
+		return -EINVAL;
+
+	if (hdd_ctx->num_rf_chains < 2) {
+		hdd_debug("Num of chains [%u] < 2, DBAM config is not allowed",
+			  hdd_ctx->num_rf_chains);
+		return -EINVAL;
+	}
+
+	dbam_config = nla_get_u8(attr);
+	errno = hdd_convert_qca_dbam_config_mode(dbam_config, &dbam_mode);
+	if (errno)
+		return errno;
+
+	request = osif_request_alloc(&params);
+	if (!request) {
+		osif_err("Request allocation failure");
+		return -ENOMEM;
+	}
+	cookie = osif_request_cookie(request);
+
+	dbam_params.vdev_id = adapter->vdev_id;
+	dbam_params.dbam_mode = dbam_mode;
+
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_ID);
+	if (!vdev) {
+		hdd_err("vdev is NULL");
+		errno = -EINVAL;
+		goto err;
+	}
+
+	status = ucfg_coex_send_dbam_config(vdev, &dbam_params,
+					    hdd_dbam_config_resp_cb, cookie);
+
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_ID);
+
+	if (!QDF_IS_STATUS_SUCCESS(status)) {
+		hdd_err("Unable to set dbam config to [%u]", dbam_mode);
+		errno = qdf_status_to_os_return(status);
+		goto err;
+	}
+
+	errno = osif_request_wait_for_response(request);
+	if (errno) {
+		osif_err("DBAM config operation timed out");
+		goto err;
+	}
+
+	priv = osif_request_priv(request);
+	dbam_resp = priv->dbam_resp;
+	errno = hdd_convert_dbam_comp_status(dbam_resp);
+err:
+	osif_request_put(request);
+	return errno;
+}
+#endif
+
 /**
  * typedef independent_setter_fn - independent attribute handler
  * @adapter: The adapter being configured
@@ -9999,6 +10175,10 @@ static const struct independent_setters independent_setters[] = {
 #ifdef FEATURE_WLAN_DYNAMIC_ARP_NS_OFFLOAD
 	{QCA_WLAN_VENDOR_ATTR_CONFIG_ARP_NS_OFFLOAD,
 	 hdd_set_arp_ns_offload},
+#endif
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+	{QCA_WLAN_VENDOR_ATTR_CONFIG_DBAM,
+	 hdd_set_dbam_config},
 #endif
 };
 
@@ -10952,8 +11132,8 @@ static int hdd_test_config_emlsr_mode(struct hdd_context *hdd_ctx,
 
 	cfg_val = nla_get_u8(attr);
 	hdd_info("11be op mode setting %d", cfg_val);
-	if (cfg_val) {
-		hdd_debug("eMLSR mode is enabled");
+	if (cfg_val && policy_mgr_is_hw_emlsr_capable(hdd_ctx->psoc)) {
+		hdd_debug("HW supports eMLSR mode, set caps");
 		ucfg_mlme_set_emlsr_mode_enabled(hdd_ctx->psoc, cfg_val);
 	} else {
 		hdd_debug("Default mode: MLMR, no action required");
@@ -14281,6 +14461,10 @@ __wlan_hdd_cfg80211_get_radio_combination_matrix(struct wiphy *wiphy,
 			if (!comb[comb_idx].band_mask[radio_idx])
 				break;
 			radio = nla_nest_start(reply_skb, radio_idx);
+			if (!radio) {
+				ret = -ENOMEM;
+				goto err;
+			}
 			if (comb[comb_idx].band_mask[radio_idx] ==
 							BIT(REG_BAND_5G)) {
 				qca_band = QCA_SETBAND_5G;
@@ -15350,240 +15534,6 @@ qca_wlan_vendor_set_connectivity_check_stats[CONNECTIVITY_STATS_SET_MAX + 1] = {
 					.len = ICMPv6_ADDR_LEN },
 };
 
-/**
- * hdd_dns_unmake_name_query() - Convert an uncompressed DNS name to a
- *			     NUL-terminated string
- * @name: DNS name
- *
- * Return: Produce a printable version of a DNS name.
- */
-static inline uint8_t *hdd_dns_unmake_name_query(uint8_t *name)
-{
-	uint8_t *p;
-	unsigned int len;
-
-	p = name;
-	while ((len = *p)) {
-		*(p++) = '.';
-		p += len;
-	}
-
-	return name + 1;
-}
-
-/**
- * hdd_dns_make_name_query() - Convert a standard NUL-terminated string
- *				to DNS name
- * @string: Name as a NUL-terminated string
- * @buf: Buffer in which to place DNS name
- *
- * DNS names consist of "<length>element" pairs.
- *
- * Return: Byte following constructed DNS name
- */
-static uint8_t *hdd_dns_make_name_query(const uint8_t *string,
-					uint8_t *buf, uint8_t len)
-{
-	uint8_t *length_byte = buf++;
-	uint8_t c;
-
-	if (string[len - 1]) {
-		hdd_debug("DNS name is not null terminated");
-		return NULL;
-	}
-
-	while ((c = *(string++))) {
-		if (c == '.') {
-			*length_byte = buf - length_byte - 1;
-			length_byte = buf;
-		}
-		*(buf++) = c;
-	}
-	*length_byte = buf - length_byte - 1;
-	*(buf++) = '\0';
-	return buf;
-}
-
-/**
- * hdd_set_clear_connectivity_check_stats_info() - set/clear stats info
- * @adapter: Pointer to hdd adapter
- * @arp_stats_params: arp stats structure to be sent to FW
- * @tb: nl attribute
- * @is_set_stats: set/clear stats
- *
- *
- * Return: 0 on success, negative errno on failure
- */
-static int hdd_set_clear_connectivity_check_stats_info(
-		struct hdd_adapter *adapter,
-		struct set_arp_stats_params *arp_stats_params,
-		struct nlattr **tb, bool is_set_stats)
-{
-	struct nlattr *tb2[CONNECTIVITY_STATS_SET_MAX + 1];
-	struct nlattr *curr_attr = NULL;
-	int err = 0;
-	uint32_t pkt_bitmap;
-	int rem;
-
-	/* Set NUD command for start tracking is received. */
-	nla_for_each_nested(curr_attr,
-			    tb[STATS_SET_DATA_PKT_INFO],
-			    rem) {
-
-		if (wlan_cfg80211_nla_parse(tb2,
-				CONNECTIVITY_STATS_SET_MAX,
-				nla_data(curr_attr), nla_len(curr_attr),
-				qca_wlan_vendor_set_connectivity_check_stats)) {
-			hdd_err("nla_parse failed");
-			err = -EINVAL;
-			goto end;
-		}
-
-		if (tb2[STATS_PKT_INFO_TYPE]) {
-			pkt_bitmap = nla_get_u32(tb2[STATS_PKT_INFO_TYPE]);
-			if (!pkt_bitmap) {
-				hdd_err("pkt tracking bitmap is empty");
-				err = -EINVAL;
-				goto end;
-			}
-
-			if (is_set_stats) {
-				arp_stats_params->pkt_type_bitmap = pkt_bitmap;
-				arp_stats_params->flag = true;
-				adapter->pkt_type_bitmap |=
-					arp_stats_params->pkt_type_bitmap;
-
-				if (pkt_bitmap & CONNECTIVITY_CHECK_SET_ARP) {
-					if (!tb[STATS_GW_IPV4]) {
-						hdd_err("GW ipv4 address is not present");
-						err = -EINVAL;
-						goto end;
-					}
-					arp_stats_params->ip_addr =
-						nla_get_u32(tb[STATS_GW_IPV4]);
-					arp_stats_params->pkt_type =
-						WLAN_NUD_STATS_ARP_PKT_TYPE;
-					adapter->track_arp_ip =
-						arp_stats_params->ip_addr;
-				}
-
-				if (pkt_bitmap & CONNECTIVITY_CHECK_SET_DNS) {
-					uint8_t *domain_name;
-
-					if (!tb2[STATS_DNS_DOMAIN_NAME]) {
-						hdd_err("DNS domain id is not present");
-						err = -EINVAL;
-						goto end;
-					}
-					domain_name = nla_data(
-						tb2[STATS_DNS_DOMAIN_NAME]);
-					adapter->track_dns_domain_len =
-						nla_len(tb2[
-							STATS_DNS_DOMAIN_NAME]);
-					if (!hdd_dns_make_name_query(
-						domain_name,
-						adapter->dns_payload,
-						adapter->track_dns_domain_len))
-						adapter->track_dns_domain_len =
-							0;
-					/* DNStracking isn't supported in FW. */
-					arp_stats_params->pkt_type_bitmap &=
-						~CONNECTIVITY_CHECK_SET_DNS;
-				}
-
-				if (pkt_bitmap &
-				    CONNECTIVITY_CHECK_SET_TCP_HANDSHAKE) {
-					if (!tb2[STATS_SRC_PORT] ||
-					    !tb2[STATS_DEST_PORT]) {
-						hdd_err("Source/Dest port is not present");
-						err = -EINVAL;
-						goto end;
-					}
-					arp_stats_params->tcp_src_port =
-						nla_get_u32(
-							tb2[STATS_SRC_PORT]);
-					arp_stats_params->tcp_dst_port =
-						nla_get_u32(
-							tb2[STATS_DEST_PORT]);
-					adapter->track_src_port =
-						arp_stats_params->tcp_src_port;
-					adapter->track_dest_port =
-						arp_stats_params->tcp_dst_port;
-				}
-
-				if (pkt_bitmap &
-				    CONNECTIVITY_CHECK_SET_ICMPV4) {
-					if (!tb2[STATS_DEST_IPV4]) {
-						hdd_err("destination ipv4 address to track ping packets is not present");
-						err = -EINVAL;
-						goto end;
-					}
-					arp_stats_params->icmp_ipv4 =
-						nla_get_u32(
-							tb2[STATS_DEST_IPV4]);
-					adapter->track_dest_ipv4 =
-						arp_stats_params->icmp_ipv4;
-				}
-			} else {
-				/* clear stats command received */
-				arp_stats_params->pkt_type_bitmap = pkt_bitmap;
-				arp_stats_params->flag = false;
-				adapter->pkt_type_bitmap &=
-					(~arp_stats_params->pkt_type_bitmap);
-
-				if (pkt_bitmap & CONNECTIVITY_CHECK_SET_ARP) {
-					arp_stats_params->pkt_type =
-						WLAN_NUD_STATS_ARP_PKT_TYPE;
-					qdf_mem_zero(&adapter->hdd_stats.
-								hdd_arp_stats,
-						     sizeof(adapter->hdd_stats.
-								hdd_arp_stats));
-					adapter->track_arp_ip = 0;
-				}
-
-				if (pkt_bitmap & CONNECTIVITY_CHECK_SET_DNS) {
-					/* DNStracking isn't supported in FW. */
-					arp_stats_params->pkt_type_bitmap &=
-						~CONNECTIVITY_CHECK_SET_DNS;
-					qdf_mem_zero(&adapter->hdd_stats.
-								hdd_dns_stats,
-						     sizeof(adapter->hdd_stats.
-								hdd_dns_stats));
-					qdf_mem_zero(adapter->dns_payload,
-						adapter->track_dns_domain_len);
-					adapter->track_dns_domain_len = 0;
-				}
-
-				if (pkt_bitmap &
-				    CONNECTIVITY_CHECK_SET_TCP_HANDSHAKE) {
-					qdf_mem_zero(&adapter->hdd_stats.
-								hdd_tcp_stats,
-						     sizeof(adapter->hdd_stats.
-								hdd_tcp_stats));
-					adapter->track_src_port = 0;
-					adapter->track_dest_port = 0;
-				}
-
-				if (pkt_bitmap &
-				    CONNECTIVITY_CHECK_SET_ICMPV4) {
-					qdf_mem_zero(&adapter->hdd_stats.
-							hdd_icmpv4_stats,
-						     sizeof(adapter->hdd_stats.
-							hdd_icmpv4_stats));
-					adapter->track_dest_ipv4 = 0;
-				}
-			}
-		} else {
-			hdd_err("stats list empty");
-			err = -EINVAL;
-			goto end;
-		}
-	}
-
-end:
-	return err;
-}
-
 const struct nla_policy qca_wlan_vendor_set_trace_level_policy[
 		QCA_WLAN_VENDOR_ATTR_SET_TRACE_LEVEL_MAX + 1] = {
 	[QCA_WLAN_VENDOR_ATTR_SET_TRACE_LEVEL_PARAM] =
@@ -15731,13 +15681,11 @@ static int __wlan_hdd_cfg80211_set_nud_stats(struct wiphy *wiphy,
 					     struct wireless_dev *wdev,
 					     const void *data, int data_len)
 {
-	struct nlattr *tb[STATS_SET_MAX + 1];
 	struct net_device   *dev = wdev->netdev;
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
 	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
-	struct set_arp_stats_params arp_stats_params = {0};
+	struct wlan_objmgr_vdev *vdev;
 	int err = 0;
-	mac_handle_t mac_handle;
 
 	hdd_enter();
 
@@ -15768,81 +15716,13 @@ static int __wlan_hdd_cfg80211_set_nud_stats(struct wiphy *wiphy,
 	if (hdd_is_roaming_in_progress(hdd_ctx))
 		return -EINVAL;
 
-	err = wlan_cfg80211_nla_parse(tb, STATS_SET_MAX, data, data_len,
-				      qca_wlan_vendor_set_nud_stats_policy);
-	if (err) {
-		hdd_err("STATS_SET_START ATTR");
-		return err;
-	}
-
-	if (tb[STATS_SET_START]) {
-		/* tracking is enabled for stats other than arp. */
-		if (tb[STATS_SET_DATA_PKT_INFO]) {
-			err = hdd_set_clear_connectivity_check_stats_info(
-						adapter,
-						&arp_stats_params, tb, true);
-			if (err)
-				return -EINVAL;
-
-			/*
-			 * if only tracking dns, then don't send
-			 * wmi command to FW.
-			 */
-			if (!arp_stats_params.pkt_type_bitmap)
-				return err;
-		} else {
-			if (!tb[STATS_GW_IPV4]) {
-				hdd_err("STATS_SET_START CMD");
-				return -EINVAL;
-			}
-
-			arp_stats_params.pkt_type_bitmap =
-						CONNECTIVITY_CHECK_SET_ARP;
-			adapter->pkt_type_bitmap |=
-					arp_stats_params.pkt_type_bitmap;
-			arp_stats_params.flag = true;
-			arp_stats_params.ip_addr =
-					nla_get_u32(tb[STATS_GW_IPV4]);
-			adapter->track_arp_ip = arp_stats_params.ip_addr;
-			arp_stats_params.pkt_type = WLAN_NUD_STATS_ARP_PKT_TYPE;
-		}
-	} else {
-		/* clear stats command received. */
-		if (tb[STATS_SET_DATA_PKT_INFO]) {
-			err = hdd_set_clear_connectivity_check_stats_info(
-						adapter,
-						&arp_stats_params, tb, false);
-			if (err)
-				return -EINVAL;
-
-			/*
-			 * if only tracking dns, then don't send
-			 * wmi command to FW.
-			 */
-			if (!arp_stats_params.pkt_type_bitmap)
-				return err;
-		} else {
-			arp_stats_params.pkt_type_bitmap =
-						CONNECTIVITY_CHECK_SET_ARP;
-			adapter->pkt_type_bitmap &=
-					(~arp_stats_params.pkt_type_bitmap);
-			arp_stats_params.flag = false;
-			qdf_mem_zero(&adapter->hdd_stats.hdd_arp_stats,
-				     sizeof(adapter->hdd_stats.hdd_arp_stats));
-			arp_stats_params.pkt_type = WLAN_NUD_STATS_ARP_PKT_TYPE;
-		}
-	}
-
-	hdd_debug("STATS_SET_START Received flag %d!", arp_stats_params.flag);
-
-	arp_stats_params.vdev_id = adapter->vdev_id;
-
-	mac_handle = hdd_ctx->mac_handle;
-	if (QDF_STATUS_SUCCESS !=
-	    sme_set_nud_debug_stats(mac_handle, &arp_stats_params)) {
-		hdd_err("STATS_SET_START CMD Failed!");
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+	if (!vdev)
 		return -EINVAL;
-	}
+
+	err = osif_dp_set_nud_stats(wiphy, vdev, data, data_len);
+
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 
 	hdd_exit();
 
@@ -15965,272 +15845,6 @@ qca_wlan_vendor_get_nud_stats[STATS_GET_MAX + 1] = {
 };
 
 /**
- * hdd_populate_dns_stats_info() - send dns stats info to network stack
- * @adapter: pointer to adapter context
- * @skb: pointer to skb
- *
- *
- * Return: An error code or 0 on success.
- */
-static int hdd_populate_dns_stats_info(struct hdd_adapter *adapter,
-				       struct sk_buff *skb)
-{
-	uint8_t *dns_query;
-
-	dns_query = qdf_mem_malloc(adapter->track_dns_domain_len + 1);
-	if (!dns_query)
-		return -EINVAL;
-
-	qdf_mem_copy(dns_query, adapter->dns_payload,
-		     adapter->track_dns_domain_len);
-
-	if (nla_put_u16(skb, CHECK_STATS_PKT_TYPE,
-		CONNECTIVITY_CHECK_SET_DNS) ||
-	    nla_put(skb, CHECK_STATS_PKT_DNS_DOMAIN_NAME,
-		adapter->track_dns_domain_len,
-		hdd_dns_unmake_name_query(dns_query)) ||
-	    nla_put_u16(skb, CHECK_STATS_PKT_REQ_COUNT_FROM_NETDEV,
-		adapter->hdd_stats.hdd_dns_stats.tx_dns_req_count) ||
-	    nla_put_u16(skb, CHECK_STATS_PKT_REQ_COUNT_TO_LOWER_MAC,
-		adapter->hdd_stats.hdd_dns_stats.tx_host_fw_sent) ||
-	    nla_put_u16(skb, CHECK_STATS_PKT_REQ_RX_COUNT_BY_LOWER_MAC,
-		adapter->hdd_stats.hdd_dns_stats.tx_host_fw_sent) ||
-	    nla_put_u16(skb, CHECK_STATS_PKT_REQ_COUNT_TX_SUCCESS,
-		adapter->hdd_stats.hdd_dns_stats.tx_ack_cnt) ||
-	    nla_put_u16(skb, CHECK_STATS_PKT_RSP_RX_COUNT_BY_UPPER_MAC,
-		adapter->hdd_stats.hdd_dns_stats.rx_dns_rsp_count) ||
-	    nla_put_u16(skb, CHECK_STATS_PKT_RSP_COUNT_TO_NETDEV,
-		adapter->hdd_stats.hdd_dns_stats.rx_delivered) ||
-	    nla_put_u16(skb, CHECK_STATS_PKT_RSP_COUNT_OUT_OF_ORDER_DROP,
-		adapter->hdd_stats.hdd_dns_stats.rx_host_drop)) {
-		hdd_err("nla put fail");
-		qdf_mem_free(dns_query);
-		kfree_skb(skb);
-		return -EINVAL;
-	}
-	qdf_mem_free(dns_query);
-	return 0;
-}
-
-/**
- * hdd_populate_tcp_stats_info() - send tcp stats info to network stack
- * @adapter: pointer to adapter context
- * @skb: pointer to skb
- * @pkt_type: tcp pkt type
- *
- * Return: An error code or 0 on success.
- */
-static int hdd_populate_tcp_stats_info(struct hdd_adapter *adapter,
-				       struct sk_buff *skb,
-				       uint8_t pkt_type)
-{
-	switch (pkt_type) {
-	case CONNECTIVITY_CHECK_SET_TCP_SYN:
-		/* Fill info for tcp syn packets (tx packet) */
-		if (nla_put_u16(skb, CHECK_STATS_PKT_TYPE,
-			CONNECTIVITY_CHECK_SET_TCP_SYN) ||
-		    nla_put_u16(skb, CHECK_STATS_PKT_SRC_PORT,
-			adapter->track_src_port) ||
-		    nla_put_u16(skb, CHECK_STATS_PKT_DEST_PORT,
-			adapter->track_dest_port) ||
-		    nla_put_u16(skb, CHECK_STATS_PKT_REQ_COUNT_FROM_NETDEV,
-			adapter->hdd_stats.hdd_tcp_stats.tx_tcp_syn_count) ||
-		    nla_put_u16(skb, CHECK_STATS_PKT_REQ_COUNT_TO_LOWER_MAC,
-			adapter->hdd_stats.hdd_tcp_stats.
-						tx_tcp_syn_host_fw_sent) ||
-		    nla_put_u16(skb, CHECK_STATS_PKT_REQ_RX_COUNT_BY_LOWER_MAC,
-			adapter->hdd_stats.hdd_tcp_stats.
-						tx_tcp_syn_host_fw_sent) ||
-		    nla_put_u16(skb, CHECK_STATS_PKT_REQ_COUNT_TX_SUCCESS,
-			adapter->hdd_stats.hdd_tcp_stats.tx_tcp_syn_ack_cnt)) {
-			hdd_err("nla put fail");
-			kfree_skb(skb);
-			return -EINVAL;
-		}
-		break;
-	case CONNECTIVITY_CHECK_SET_TCP_SYN_ACK:
-		/* Fill info for tcp syn-ack packets (rx packet) */
-		if (nla_put_u16(skb, CHECK_STATS_PKT_TYPE,
-			CONNECTIVITY_CHECK_SET_TCP_SYN_ACK) ||
-		    nla_put_u16(skb, CHECK_STATS_PKT_SRC_PORT,
-			adapter->track_src_port) ||
-		    nla_put_u16(skb, CHECK_STATS_PKT_DEST_PORT,
-			adapter->track_dest_port) ||
-		    nla_put_u16(skb, CHECK_STATS_PKT_RSP_RX_COUNT_BY_LOWER_MAC,
-			adapter->hdd_stats.hdd_tcp_stats.rx_fw_cnt) ||
-		    nla_put_u16(skb, CHECK_STATS_PKT_RSP_RX_COUNT_BY_UPPER_MAC,
-			adapter->hdd_stats.hdd_tcp_stats.
-							rx_tcp_syn_ack_count) ||
-		    nla_put_u16(skb, CHECK_STATS_PKT_RSP_COUNT_TO_NETDEV,
-			adapter->hdd_stats.hdd_tcp_stats.rx_delivered) ||
-		    nla_put_u16(skb,
-			CHECK_STATS_PKT_RSP_COUNT_OUT_OF_ORDER_DROP,
-			adapter->hdd_stats.hdd_tcp_stats.rx_host_drop)) {
-			hdd_err("nla put fail");
-			kfree_skb(skb);
-			return -EINVAL;
-		}
-		break;
-	case CONNECTIVITY_CHECK_SET_TCP_ACK:
-		/* Fill info for tcp ack packets (tx packet) */
-		if (nla_put_u16(skb, CHECK_STATS_PKT_TYPE,
-			CONNECTIVITY_CHECK_SET_TCP_ACK) ||
-		    nla_put_u16(skb, CHECK_STATS_PKT_SRC_PORT,
-			adapter->track_src_port) ||
-		    nla_put_u16(skb, CHECK_STATS_PKT_DEST_PORT,
-			adapter->track_dest_port) ||
-		    nla_put_u16(skb, CHECK_STATS_PKT_REQ_COUNT_FROM_NETDEV,
-			adapter->hdd_stats.hdd_tcp_stats.tx_tcp_ack_count) ||
-		    nla_put_u16(skb, CHECK_STATS_PKT_REQ_COUNT_TO_LOWER_MAC,
-			adapter->hdd_stats.hdd_tcp_stats.
-						tx_tcp_ack_host_fw_sent) ||
-		    nla_put_u16(skb, CHECK_STATS_PKT_REQ_RX_COUNT_BY_LOWER_MAC,
-			adapter->hdd_stats.hdd_tcp_stats.
-						tx_tcp_ack_host_fw_sent) ||
-		    nla_put_u16(skb, CHECK_STATS_PKT_REQ_COUNT_TX_SUCCESS,
-			adapter->hdd_stats.hdd_tcp_stats.tx_tcp_ack_ack_cnt)) {
-			hdd_err("nla put fail");
-			kfree_skb(skb);
-			return -EINVAL;
-		}
-		break;
-	default:
-		break;
-	}
-	return 0;
-}
-
-/**
- * hdd_populate_icmpv4_stats_info() - send icmpv4 stats info to network stack
- * @adapter: pointer to adapter context
- * @skb: pointer to skb
- *
- *
- * Return: An error code or 0 on success.
- */
-static int hdd_populate_icmpv4_stats_info(struct hdd_adapter *adapter,
-					  struct sk_buff *skb)
-{
-	if (nla_put_u16(skb, CHECK_STATS_PKT_TYPE,
-		CONNECTIVITY_CHECK_SET_ICMPV4) ||
-	    nla_put_u32(skb, CHECK_STATS_PKT_DEST_IPV4,
-		adapter->track_dest_ipv4) ||
-	    nla_put_u16(skb, CHECK_STATS_PKT_REQ_COUNT_FROM_NETDEV,
-		adapter->hdd_stats.hdd_icmpv4_stats.tx_icmpv4_req_count) ||
-	    nla_put_u16(skb, CHECK_STATS_PKT_REQ_COUNT_TO_LOWER_MAC,
-		adapter->hdd_stats.hdd_icmpv4_stats.tx_host_fw_sent) ||
-	    nla_put_u16(skb, CHECK_STATS_PKT_REQ_RX_COUNT_BY_LOWER_MAC,
-		adapter->hdd_stats.hdd_icmpv4_stats.tx_host_fw_sent) ||
-	    nla_put_u16(skb, CHECK_STATS_PKT_REQ_COUNT_TX_SUCCESS,
-		adapter->hdd_stats.hdd_icmpv4_stats.tx_ack_cnt) ||
-	    nla_put_u16(skb, CHECK_STATS_PKT_RSP_RX_COUNT_BY_LOWER_MAC,
-		adapter->hdd_stats.hdd_icmpv4_stats.rx_fw_cnt) ||
-	    nla_put_u16(skb, CHECK_STATS_PKT_RSP_RX_COUNT_BY_UPPER_MAC,
-		adapter->hdd_stats.hdd_icmpv4_stats.rx_icmpv4_rsp_count) ||
-	    nla_put_u16(skb, CHECK_STATS_PKT_RSP_COUNT_TO_NETDEV,
-		adapter->hdd_stats.hdd_icmpv4_stats.rx_delivered) ||
-	    nla_put_u16(skb, CHECK_STATS_PKT_RSP_COUNT_OUT_OF_ORDER_DROP,
-		adapter->hdd_stats.hdd_icmpv4_stats.rx_host_drop)) {
-		hdd_err("nla put fail");
-		kfree_skb(skb);
-		return -EINVAL;
-	}
-	return 0;
-}
-
-/**
- * hdd_populate_connectivity_check_stats_info() - send connectivity stats info
- *						  to network stack
- * @adapter: pointer to adapter context
- * @skb: pointer to skb
- *
- *
- * Return: An error code or 0 on success.
- */
-
-static int hdd_populate_connectivity_check_stats_info(
-	struct hdd_adapter *adapter, struct sk_buff *skb)
-{
-	struct nlattr *connect_stats, *connect_info;
-	uint32_t count = 0;
-
-	connect_stats = nla_nest_start(skb, DATA_PKT_STATS);
-	if (!connect_stats) {
-		hdd_err("nla_nest_start failed");
-		return -EINVAL;
-	}
-
-	if (adapter->pkt_type_bitmap & CONNECTIVITY_CHECK_SET_DNS) {
-		connect_info = nla_nest_start(skb, count);
-		if (!connect_info) {
-			hdd_err("nla_nest_start failed count %u", count);
-			return -EINVAL;
-		}
-
-		if (hdd_populate_dns_stats_info(adapter, skb))
-			goto put_attr_fail;
-		nla_nest_end(skb, connect_info);
-		count++;
-	}
-
-	if (adapter->pkt_type_bitmap & CONNECTIVITY_CHECK_SET_TCP_HANDSHAKE) {
-		connect_info = nla_nest_start(skb, count);
-		if (!connect_info) {
-			hdd_err("nla_nest_start failed count %u", count);
-			return -EINVAL;
-		}
-		if (hdd_populate_tcp_stats_info(adapter, skb,
-					CONNECTIVITY_CHECK_SET_TCP_SYN))
-			goto put_attr_fail;
-		nla_nest_end(skb, connect_info);
-		count++;
-
-		connect_info = nla_nest_start(skb, count);
-		if (!connect_info) {
-			hdd_err("nla_nest_start failed count %u", count);
-			return -EINVAL;
-		}
-		if (hdd_populate_tcp_stats_info(adapter, skb,
-					CONNECTIVITY_CHECK_SET_TCP_SYN_ACK))
-			goto put_attr_fail;
-		nla_nest_end(skb, connect_info);
-		count++;
-
-		connect_info = nla_nest_start(skb, count);
-		if (!connect_info) {
-			hdd_err("nla_nest_start failed count %u", count);
-			return -EINVAL;
-		}
-		if (hdd_populate_tcp_stats_info(adapter, skb,
-					CONNECTIVITY_CHECK_SET_TCP_ACK))
-			goto put_attr_fail;
-		nla_nest_end(skb, connect_info);
-		count++;
-	}
-
-	if (adapter->pkt_type_bitmap & CONNECTIVITY_CHECK_SET_ICMPV4) {
-		connect_info = nla_nest_start(skb, count);
-		if (!connect_info) {
-			hdd_err("nla_nest_start failed count %u", count);
-			return -EINVAL;
-		}
-
-		if (hdd_populate_icmpv4_stats_info(adapter, skb))
-			goto put_attr_fail;
-		nla_nest_end(skb, connect_info);
-		count++;
-	}
-
-	nla_nest_end(skb, connect_stats);
-	return 0;
-
-put_attr_fail:
-	hdd_err("QCA_WLAN_VENDOR_ATTR put fail. count %u", count);
-	return -EINVAL;
-}
-
-
-/**
  * __wlan_hdd_cfg80211_get_nud_stats() - get arp stats command to firmware
  * @wiphy: pointer to wireless wiphy structure.
  * @wdev: pointer to wireless_dev structure.
@@ -16250,17 +15864,7 @@ static int __wlan_hdd_cfg80211_get_nud_stats(struct wiphy *wiphy,
 	struct net_device *dev = wdev->netdev;
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
 	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
-	struct get_arp_stats_params arp_stats_params;
-	mac_handle_t mac_handle;
-	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
-	uint32_t pkt_type_bitmap;
-	struct sk_buff *skb;
-	struct osif_request *request = NULL;
-	static const struct osif_request_params params = {
-		.priv_size = 0,
-		.timeout_ms = WLAN_WAIT_TIME_NUD_STATS,
-	};
-	void *cookie = NULL;
+	struct wlan_objmgr_vdev *vdev;
 
 	hdd_enter();
 
@@ -16282,102 +15886,14 @@ static int __wlan_hdd_cfg80211_get_nud_stats(struct wiphy *wiphy,
 		return -EINVAL;
 	}
 
-	request = osif_request_alloc(&params);
-	if (!request) {
-		hdd_err("Request allocation failure");
-		return -ENOMEM;
-	}
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+	if (!vdev)
+		return -EINVAL;
 
-	cookie = osif_request_cookie(request);
+	err = osif_dp_get_nud_stats(wiphy, vdev, data, data_len);
 
-	arp_stats_params.pkt_type = WLAN_NUD_STATS_ARP_PKT_TYPE;
-	arp_stats_params.vdev_id = adapter->vdev_id;
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 
-	pkt_type_bitmap = adapter->pkt_type_bitmap;
-
-	/* send NUD failure event only when ARP tracking is enabled. */
-	if (hdd_is_data_stall_event_enabled(HDD_HOST_NUD_FAILURE) &&
-	    !hdd_ctx->config->enable_nud_tracking &&
-	    (pkt_type_bitmap & CONNECTIVITY_CHECK_SET_ARP)) {
-		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_ERROR,
-			  "Data stall due to NUD failure");
-		cdp_post_data_stall_event(soc,
-				      DATA_STALL_LOG_INDICATOR_FRAMEWORK,
-				      DATA_STALL_LOG_NUD_FAILURE,
-				      OL_TXRX_PDEV_ID, 0XFF,
-				      DATA_STALL_LOG_RECOVERY_TRIGGER_PDR);
-	}
-
-	mac_handle = hdd_ctx->mac_handle;
-	if (sme_set_nud_debug_stats_cb(mac_handle, hdd_get_nud_stats_cb,
-				       cookie) != QDF_STATUS_SUCCESS) {
-		hdd_err("Setting NUD debug stats callback failure");
-		err = -EINVAL;
-		goto exit;
-	}
-
-	if (QDF_STATUS_SUCCESS !=
-	    sme_get_nud_debug_stats(mac_handle, &arp_stats_params)) {
-		hdd_err("STATS_SET_START CMD Failed!");
-		err = -EINVAL;
-		goto exit;
-	}
-
-	err = osif_request_wait_for_response(request);
-	if (err) {
-		hdd_err("SME timedout while retrieving NUD stats");
-		err = -ETIMEDOUT;
-		goto exit;
-	}
-
-	skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy,
-						  WLAN_NUD_STATS_LEN);
-	if (!skb) {
-		hdd_err("cfg80211_vendor_cmd_alloc_reply_skb failed");
-		err = -ENOMEM;
-		goto exit;
-	}
-
-	if (nla_put_u16(skb, COUNT_FROM_NETDEV,
-			adapter->hdd_stats.hdd_arp_stats.tx_arp_req_count) ||
-	    nla_put_u16(skb, COUNT_TO_LOWER_MAC,
-			adapter->hdd_stats.hdd_arp_stats.tx_host_fw_sent) ||
-	    nla_put_u16(skb, RX_COUNT_BY_LOWER_MAC,
-			adapter->hdd_stats.hdd_arp_stats.tx_host_fw_sent) ||
-	    nla_put_u16(skb, COUNT_TX_SUCCESS,
-			adapter->hdd_stats.hdd_arp_stats.tx_ack_cnt) ||
-	    nla_put_u16(skb, RSP_RX_COUNT_BY_LOWER_MAC,
-			adapter->hdd_stats.hdd_arp_stats.rx_fw_cnt) ||
-	    nla_put_u16(skb, RSP_RX_COUNT_BY_UPPER_MAC,
-			adapter->hdd_stats.hdd_arp_stats.rx_arp_rsp_count) ||
-	    nla_put_u16(skb, RSP_COUNT_TO_NETDEV,
-			adapter->hdd_stats.hdd_arp_stats.rx_delivered) ||
-	    nla_put_u16(skb, RSP_COUNT_OUT_OF_ORDER_DROP,
-			adapter->hdd_stats.hdd_arp_stats.
-			rx_host_drop_reorder)) {
-		hdd_err("nla put fail");
-		kfree_skb(skb);
-		err = -EINVAL;
-		goto exit;
-	}
-	if (adapter->con_status)
-		nla_put_flag(skb, AP_LINK_ACTIVE);
-	if (adapter->dad)
-		nla_put_flag(skb, AP_LINK_DAD);
-
-	/* ARP tracking is done above. */
-	pkt_type_bitmap &= ~CONNECTIVITY_CHECK_SET_ARP;
-
-	if (pkt_type_bitmap) {
-		if (hdd_populate_connectivity_check_stats_info(adapter, skb)) {
-			err = -EINVAL;
-			goto exit;
-		}
-	}
-
-	cfg80211_vendor_cmd_reply(skb);
-exit:
-	osif_request_put(request);
 	return err;
 }
 
@@ -16545,7 +16061,6 @@ static int hdd_process_peer_chain_rssi_req(struct hdd_adapter *adapter,
 		if (stats)
 			wlan_cfg80211_mc_cp_stats_free_stats_event(stats);
 		hdd_err("Unable to get chain rssi from fw");
-		retval = qdf_status_to_os_return(retval);
 		return retval;
 	}
 
@@ -17214,8 +16729,7 @@ static int __wlan_hdd_cfg80211_get_chain_rssi(struct wiphy *wiphy,
 	qdf_copy_macaddr(&peer_macaddr,
 			 nla_data(tb[QCA_WLAN_VENDOR_ATTR_MAC_ADDR]));
 
-	hdd_process_peer_chain_rssi_req(adapter, &peer_macaddr);
-
+	retval = hdd_process_peer_chain_rssi_req(adapter, &peer_macaddr);
 	hdd_exit();
 	return retval;
 }
@@ -18387,6 +17901,8 @@ const struct wiphy_vendor_command hdd_wiphy_vendor_commands[] = {
 			      QCA_WLAN_VENDOR_ATTR_ROAM_EVENTS_MAX)
 	},
 #endif
+	FEATURE_WIFI_POS_11AZ_AUTH_COMMANDS
+	FEATURE_WIFI_POS_SET_SECURE_RANGING_CONTEXT_COMMANDS
 	FEATURE_MCC_QUOTA_VENDOR_COMMANDS
 	FEATURE_PEER_FLUSH_VENDOR_COMMANDS
 	{
@@ -20390,129 +19906,6 @@ static int wlan_hdd_add_key_sta(struct wlan_objmgr_pdev *pdev,
 	return errno;
 }
 
-#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
-static int wlan_cfg80211_set_pasn_key(struct wlan_objmgr_psoc *psoc,
-				      struct wlan_objmgr_vdev *vdev,
-				      struct key_params *params,
-				      const u8 *mac_addr,
-				      const u8 *src_addr,
-				      enum wlan_crypto_key_type key_type,
-				      int key_index)
-{
-	struct wlan_crypto_key *crypto_key;
-	struct wlan_objmgr_peer *peer;
-	struct wlan_pasn_auth_status *pasn_status;
-	enum wlan_crypto_cipher_type cipher;
-	int cipher_len, ret = 0;
-	bool is_ltf_keyseed_required;
-	QDF_STATUS status;
-
-	if (!params) {
-		osif_err("Key params is NULL");
-		return -EINVAL;
-	}
-
-	crypto_key = qdf_mem_malloc(sizeof(*crypto_key));
-	if (!crypto_key)
-		return -ENOMEM;
-
-	cipher_len = osif_nl_to_crypto_cipher_len(params->cipher);
-	if (cipher_len < 0 || params->key_len < cipher_len) {
-		osif_err("cipher length %d less than reqd len %d",
-			 params->key_len, cipher_len);
-		qdf_mem_free(crypto_key);
-		return -EINVAL;
-	}
-
-	cipher = osif_nl_to_crypto_cipher_type(params->cipher);
-	if (!IS_WEP_CIPHER(cipher) &&
-	    key_type == WLAN_CRYPTO_KEY_TYPE_UNICAST && !mac_addr) {
-		osif_err("mac_addr is NULL for pairwise Key");
-		qdf_mem_free(crypto_key);
-		return -EINVAL;
-	}
-
-	status = wlan_crypto_validate_key_params(cipher, key_index,
-						 params->key_len,
-						 params->seq_len);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		osif_err("Invalid key params");
-		qdf_mem_free(crypto_key);
-		return -EINVAL;
-	}
-
-	wlan_cfg80211_translate_key(vdev, key_index, key_type, mac_addr,
-				    params, crypto_key);
-
-	hdd_debug("Set PASN unicast key");
-	status = ucfg_crypto_set_key_req(vdev, crypto_key, key_type);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		osif_err("PASN set_key failed");
-		qdf_mem_free(crypto_key);
-		return -EFAULT;
-	}
-
-	qdf_mem_free(crypto_key);
-
-	peer = wlan_objmgr_get_peer_by_mac(psoc, (uint8_t *)mac_addr,
-					   WLAN_WIFI_POS_CORE_ID);
-	if (!peer) {
-		osif_err("PASN peer is not found");
-		return -EFAULT;
-	}
-
-	/*
-	 * If LTF key seed is not required for the peer, then update
-	 * the source mac address for that peer by sending PASN auth
-	 * status command.
-	 * If LTF keyseed is required, then PASN Auth status command
-	 * will be sent after LTF keyseed command.
-	 */
-	is_ltf_keyseed_required =
-			ucfg_wifi_pos_is_ltf_keyseed_required_for_peer(peer);
-	wlan_objmgr_peer_release_ref(peer, WLAN_WIFI_POS_CORE_ID);
-	if (is_ltf_keyseed_required)
-		return 0;
-
-	pasn_status = qdf_mem_malloc(sizeof(*pasn_status));
-	if (!pasn_status)
-		return -ENOMEM;
-
-	pasn_status->vdev_id = vdev->vdev_objmgr.vdev_id;
-	pasn_status->num_peers = 1;
-
-	if (mac_addr)
-		qdf_mem_copy(pasn_status->auth_status[0].peer_mac.bytes,
-			     mac_addr, QDF_MAC_ADDR_SIZE);
-
-	if (src_addr)
-		qdf_mem_copy(pasn_status->auth_status[0].self_mac.bytes,
-			     src_addr, QDF_MAC_ADDR_SIZE);
-
-	status = wifi_pos_send_pasn_auth_status(psoc, pasn_status);
-	if (QDF_IS_STATUS_ERROR(status))
-		osif_err("Send PASN auth status failed");
-
-	ret = qdf_status_to_os_return(status);
-
-	qdf_mem_free(pasn_status);
-
-	return ret;
-}
-#else
-static inline
-int wlan_cfg80211_set_pasn_key(struct wlan_objmgr_psoc *psoc,
-			       struct wlan_objmgr_vdev *vdev,
-			       struct key_params *params,
-			       const u8 *mac_addr,
-			       const u8 *src_addr,
-			       enum wlan_crypto_key_type key_type,
-			       int key_index)
-{
-	return 0;
-}
-#endif
-
 static int __wlan_hdd_cfg80211_add_key(struct wiphy *wiphy,
 				       struct net_device *ndev,
 				       u8 key_index, bool pairwise,
@@ -20523,8 +19916,7 @@ static int __wlan_hdd_cfg80211_add_key(struct wiphy *wiphy,
 	mac_handle_t mac_handle;
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(ndev);
 	struct wlan_objmgr_vdev *vdev;
-	struct wlan_objmgr_peer *peer;
-	bool ft_mode = false, is_peer_type_pasn;
+	bool ft_mode = false;
 	enum wlan_crypto_cipher_type cipher;
 	int errno;
 	int32_t cipher_cap, ucast_cipher = 0;
@@ -20574,24 +19966,6 @@ static int __wlan_hdd_cfg80211_add_key(struct wiphy *wiphy,
 		if (mac_addr)
 			qdf_mem_copy(mac_address.bytes, mac_addr,
 				     QDF_MAC_ADDR_SIZE);
-	}
-
-	peer = wlan_objmgr_get_peer_by_mac(hdd_ctx->psoc, mac_address.bytes,
-					   WLAN_OSIF_ID);
-	is_peer_type_pasn = peer &&
-			    (wlan_peer_get_peer_type(peer) ==
-			     WLAN_PEER_RTT_PASN);
-	wlan_objmgr_peer_release_ref(peer, WLAN_OSIF_ID);
-
-	if (is_peer_type_pasn) {
-		errno = wlan_cfg80211_set_pasn_key(
-				hdd_ctx->psoc,
-				vdev, params, mac_addr, NULL,
-				(pairwise ?
-				 WLAN_CRYPTO_KEY_TYPE_UNICAST : WLAN_CRYPTO_KEY_TYPE_GROUP),
-				 key_index);
-
-		return errno;
 	}
 
 	errno = wlan_cfg80211_store_key(vdev, key_index,
@@ -21638,7 +21012,7 @@ QDF_STATUS hdd_softap_deauth_current_sta(struct hdd_adapter *adapter,
 	qdf_status = hdd_softap_sta_deauth(adapter, param);
 
 	if (QDF_IS_STATUS_SUCCESS(qdf_status)) {
-		if(qdf_is_macaddr_broadcast(&sta_info->sta_mac)) {
+		if (qdf_is_macaddr_broadcast(&sta_info->sta_mac)) {
 			hdd_for_each_sta_ref_safe(
 					adapter->sta_info_list,
 					sta_info, tmp,
@@ -21782,9 +21156,16 @@ int __wlan_hdd_cfg80211_del_station(struct wiphy *wiphy,
 								     param)))
 			goto fn_end;
 	} else {
-		if (param->reason_code == REASON_1X_AUTH_FAILURE)
-			hdd_softap_check_wait_for_tx_eap_pkt(
-					adapter, (struct qdf_mac_addr *)mac);
+		if (param->reason_code == REASON_1X_AUTH_FAILURE) {
+			struct wlan_objmgr_vdev *vdev;
+
+			vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+			if (vdev) {
+				ucfg_dp_softap_check_wait_for_tx_eap_pkt(vdev,
+						(struct qdf_mac_addr *)mac);
+				hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+			}
+		}
 
 		sta_info = hdd_get_sta_info_by_mac(
 						&adapter->sta_info_list,
@@ -24043,194 +23424,6 @@ wlan_hdd_cfg80211_external_auth(struct wiphy *wiphy,
 }
 #endif
 
-#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
-static int
-__wlan_hdd_cfg80211_send_pasn_auth_status(struct wiphy *wiphy,
-					  struct net_device *dev,
-					  struct cfg80211_pasn_params *params)
-{
-	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
-	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
-	struct wlan_pasn_auth_status *data;
-	QDF_STATUS status = QDF_STATUS_SUCCESS;
-	int ret, i;
-
-	if (hdd_get_conparam() == QDF_GLOBAL_FTM_MODE) {
-		hdd_err("Command not allowed in FTM mode");
-		return -EPERM;
-	}
-
-	if (wlan_hdd_validate_vdev_id(adapter->vdev_id))
-		return -EINVAL;
-
-	ret = wlan_hdd_validate_context(hdd_ctx);
-	if (ret)
-		return ret;
-
-	data = qdf_mem_malloc(sizeof(*data));
-	if (!data)
-		return -ENOMEM;
-
-	data->vdev_id = adapter->vdev_id;
-	data->num_peers = params->num_pasn_peers;
-	if (!data->num_peers) {
-		hdd_err("No peers");
-		qdf_mem_free(data);
-		return -EINVAL;
-	}
-
-	if (data->num_peers > WLAN_MAX_11AZ_PEERS)
-		data->num_peers = WLAN_MAX_11AZ_PEERS;
-
-	for (i = 0; i < data->num_peers; i++) {
-		data->auth_status[i].status = params->peer[i].status;
-		if (params->peer[i].peer_addr)
-			qdf_mem_copy(data->auth_status[i].peer_mac.bytes,
-				     params->peer[i].peer_addr,
-				     QDF_MAC_ADDR_SIZE);
-
-		if (params->peer[i].src_addr)
-			qdf_mem_copy(data->auth_status[i].self_mac.bytes,
-				     params->peer[i].src_addr,
-				     QDF_MAC_ADDR_SIZE);
-	}
-
-	status = wifi_pos_send_pasn_auth_status(hdd_ctx->psoc, data);
-	if (QDF_IS_STATUS_ERROR(status))
-		hdd_err("Send pasn auth status failed");
-
-	qdf_mem_free(data);
-	ret = qdf_status_to_os_return(status);
-
-	return ret;
-}
-
-static int
-__wlan_hdd_cfg80211_set_ltf_keyseed(struct wiphy *wiphy, struct net_device *dev,
-				    struct cfg80211_ltf_keyseed_conf *conf)
-{
-	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
-	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
-	struct wlan_crypto_ltf_keyseed_data *data;
-	struct wlan_pasn_auth_status *pasn_auth_status;
-	QDF_STATUS status = QDF_STATUS_SUCCESS;
-	int ret;
-
-	if (hdd_get_conparam() == QDF_GLOBAL_FTM_MODE) {
-		hdd_err("Command not allowed in FTM mode");
-		return -EPERM;
-	}
-
-	if (wlan_hdd_validate_vdev_id(adapter->vdev_id))
-		return -EINVAL;
-
-	ret = wlan_hdd_validate_context(hdd_ctx);
-	if (ret)
-		return ret;
-
-	if (!conf->bssid) {
-		hdd_err("Null BSSID");
-		return -EINVAL;
-	}
-
-	data = qdf_mem_malloc(sizeof(*data));
-	if (!data)
-		return -ENOMEM;
-
-	data->vdev_id = adapter->vdev_id;
-	qdf_mem_copy(data->peer_mac_addr.bytes, conf->bssid, QDF_MAC_ADDR_SIZE);
-
-	if (conf->src_addr)
-		qdf_mem_copy(data->src_mac_addr.bytes, conf->src_addr,
-			     QDF_MAC_ADDR_SIZE);
-
-	data->key_seed_len = conf->ltf_keyseed_len;
-	if (!data->key_seed_len ||
-	    data->key_seed_len < WLAN_MIN_SECURE_LTF_KEYSEED_LEN) {
-		hdd_err("Invalid key seed length:%d", conf->ltf_keyseed_len);
-		ret = -EINVAL;
-		goto err;
-	}
-
-	qdf_mem_copy(data->key_seed, conf->ltf_keyseed,
-		     data->key_seed_len);
-
-	status = wlan_crypto_set_ltf_keyseed(hdd_ctx->psoc, data);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		hdd_err("Set LTF Keyseed failed");
-		ret = qdf_status_to_os_return(status);
-		goto err;
-	}
-
-	/*
-	 * Send PASN Auth status followed by SET LTF keyseed command to
-	 * set the peer as authorized at firmware and firmware will start
-	 * ranging after this.
-	 */
-	pasn_auth_status = qdf_mem_malloc(sizeof(*pasn_auth_status));
-	if (!pasn_auth_status) {
-		ret = -ENOMEM;
-		goto err;
-	}
-
-	pasn_auth_status->vdev_id = adapter->vdev_id;
-	pasn_auth_status->num_peers = 1;
-	qdf_mem_copy(pasn_auth_status->auth_status[0].peer_mac.bytes,
-		     conf->bssid, QDF_MAC_ADDR_SIZE);
-	qdf_mem_copy(pasn_auth_status->auth_status[0].self_mac.bytes,
-		     conf->src_addr, QDF_MAC_ADDR_SIZE);
-
-	status = wifi_pos_send_pasn_auth_status(hdd_ctx->psoc,
-						pasn_auth_status);
-	qdf_mem_free(pasn_auth_status);
-	if (QDF_IS_STATUS_ERROR(status))
-		hdd_err("Send PASN auth status failed");
-
-	ret = qdf_status_to_os_return(status);
-err:
-	qdf_mem_free(data);
-
-	return ret;
-}
-
-static int
-wlan_hdd_cfg80211_set_ltf_keyseed(struct wiphy *wiphy, struct net_device *dev,
-				  struct cfg80211_ltf_keyseed_conf *conf)
-{
-	int errno;
-	struct osif_vdev_sync *vdev_sync;
-
-	errno = osif_vdev_sync_op_start(dev, &vdev_sync);
-	if (errno)
-		return errno;
-
-	errno = __wlan_hdd_cfg80211_set_ltf_keyseed(wiphy, dev, conf);
-
-	osif_vdev_sync_op_stop(vdev_sync);
-
-	return errno;
-}
-
-static int
-wlan_hdd_cfg80211_send_pasn_auth_status(struct wiphy *wiphy,
-					struct net_device *dev,
-					struct cfg80211_pasn_params *params)
-{
-	int errno;
-	struct osif_vdev_sync *vdev_sync;
-
-	errno = osif_vdev_sync_op_start(dev, &vdev_sync);
-	if (errno)
-		return errno;
-
-	errno = __wlan_hdd_cfg80211_send_pasn_auth_status(wiphy, dev, params);
-
-	osif_vdev_sync_op_stop(vdev_sync);
-
-	return errno;
-}
-#endif
-
 #if defined(WLAN_FEATURE_NAN) && \
 	   (KERNEL_VERSION(4, 9, 0) <= LINUX_VERSION_CODE)
 static int
@@ -25209,10 +24402,6 @@ static struct cfg80211_ops wlan_hdd_cfg80211_ops = {
 		(defined(CFG80211_EXTERNAL_AUTH_SUPPORT) || \
 		LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0))
 	.external_auth = wlan_hdd_cfg80211_external_auth,
-#endif
-#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
-	.set_ltf_keyseed = wlan_hdd_cfg80211_set_ltf_keyseed,
-	.pasn_auth = wlan_hdd_cfg80211_send_pasn_auth_status,
 #endif
 #if defined(WLAN_FEATURE_NAN) && \
 	   (KERNEL_VERSION(4, 9, 0) <= LINUX_VERSION_CODE)
