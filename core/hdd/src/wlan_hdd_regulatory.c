@@ -1794,6 +1794,27 @@ static void __hdd_country_change_work_handle(struct hdd_context *hdd_ctx)
 }
 
 /**
+ * hdd_handle_country_change_work_error() - handle country code change error
+ * @hdd_ctx: Global HDD context
+ * @errno: country code change error number
+ *
+ * This function handles error code in country code change worker
+ *
+ * Return: none
+ */
+static void hdd_handle_country_change_work_error(struct hdd_context *hdd_ctx,
+						 int errno)
+{
+	if (errno == -EAGAIN) {
+		qdf_sleep(COUNTRY_CHANGE_WORK_RESCHED_WAIT_TIME);
+		hdd_debug("rescheduling country change work");
+		qdf_sched_work(0, &hdd_ctx->country_change_work);
+	} else {
+		hdd_err("can not handle country change %d", errno);
+	}
+}
+
+/**
  * hdd_country_change_work_handle() - handle country code change
  * @arg: Global HDD context
  *
@@ -1810,19 +1831,11 @@ static void hdd_country_change_work_handle(void *arg)
 
 	errno = wlan_hdd_validate_context(hdd_ctx);
 	if (errno)
-		return;
+		return hdd_handle_country_change_work_error(hdd_ctx, errno);
 
 	errno = osif_psoc_sync_op_start(wiphy_dev(hdd_ctx->wiphy), &psoc_sync);
-
-	if (errno == -EAGAIN) {
-		qdf_sleep(COUNTRY_CHANGE_WORK_RESCHED_WAIT_TIME);
-		hdd_debug("rescheduling country change work");
-		qdf_sched_work(0, &hdd_ctx->country_change_work);
-		return;
-	} else if (errno) {
-		hdd_err("can not handle country change %d", errno);
-		return;
-	}
+	if (errno)
+		return hdd_handle_country_change_work_error(hdd_ctx, errno);
 
 	if (hdd_ctx->driver_status != DRIVER_MODULES_ENABLED)
 		hdd_err("Driver disabled, ignore country code change");
