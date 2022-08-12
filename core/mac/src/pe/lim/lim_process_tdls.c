@@ -209,7 +209,7 @@ static void populate_dot11f_tdls_offchannel_params(
 {
 	uint32_t numChans = CFG_VALID_CHANNEL_LIST_LEN;
 	uint8_t validChan[CFG_VALID_CHANNEL_LIST_LEN];
-	uint8_t i;
+	uint8_t i, count_opclss = 1;
 	uint8_t valid_count = 0;
 	uint8_t chanOffset;
 	uint8_t op_class;
@@ -219,6 +219,10 @@ static void populate_dot11f_tdls_offchannel_params(
 	uint8_t nss_2g;
 	uint8_t nss_5g;
 	qdf_freq_t ch_freq;
+	bool is_vlp_country;
+	uint8_t band_mask;
+	uint8_t *ap_cc;
+	uint8_t reg_cc[REG_ALPHA2_LEN + 1];
 
 	numChans = mac->mlme_cfg->reg.valid_channel_list_num;
 
@@ -231,6 +235,11 @@ static void populate_dot11f_tdls_offchannel_params(
 			 mac->user_configured_nss);
 	nss_2g = QDF_MIN(mac->vdev_type_nss_2g.tdls,
 			 mac->user_configured_nss);
+
+	ap_cc = mac->scan.countryCodeCurrent;
+	wlan_reg_read_current_country(mac->psoc, reg_cc);
+	is_vlp_country = wlan_reg_ctry_support_vlp(ap_cc) &&
+			 wlan_reg_ctry_support_vlp(reg_cc);
 
 	/* validating the channel list for DFS and 2G channels */
 	for (i = 0; i < numChans; i++) {
@@ -258,8 +267,10 @@ static void populate_dot11f_tdls_offchannel_params(
 		}
 
 		if (wlan_reg_is_6ghz_chan_freq(ch_freq) &&
-		    !wlan_reg_is_6ghz_psc_chan_freq(ch_freq)) {
-			pe_debug("skipping non-psc channel %d", ch_freq);
+		    !(is_vlp_country &&
+		      wlan_reg_is_6ghz_psc_chan_freq(ch_freq))) {
+			pe_debug("skipping is_vlp_country %d or non-psc channel %d",
+				 is_vlp_country, ch_freq);
 			continue;
 		}
 
@@ -303,17 +314,25 @@ static void populate_dot11f_tdls_offchannel_params(
 
 	wlan_reg_dmn_get_curr_opclasses(&numClasses, &classes[0]);
 
-	for (i = 0; i < numClasses; i++)
-		suppOperClasses->classes[i + 1] = classes[i];
+	for (i = 0; i < numClasses; i++) {
+		band_mask = wlan_reg_get_band_cap_from_op_class(reg_cc, 1,
+								&classes[i]);
+		if ((band_mask & BIT(REG_BAND_6G)) && !is_vlp_country)
+			continue;
 
-	pe_debug("countryCodeCurrent: %s, curr_op_freq: %d, htSecondaryChannelOffset: %d, chanOffset: %d op class: %d num_supportd_chan %d num_supportd_opclass %d",
+		suppOperClasses->classes[count_opclss] = classes[i];
+		count_opclss++;
+	}
+
+	pe_debug("countryCodeCurrent: %s, curr_op_freq: %d, htSecondaryChannelOffset: %d, chanOffset: %d op class: %d num_supportd_chan %d total opclasses %d num_supportd_opclass %d",
 		 mac->scan.countryCodeCurrent,
 		 pe_session->curr_op_freq,
 		 pe_session->htSecondaryChannelOffset,
-		 chanOffset, op_class, valid_count, numClasses);
+		 chanOffset, op_class, valid_count, numClasses,
+		 count_opclss);
 
 	/* add one for present operating class, added in the beginning */
-	suppOperClasses->num_classes = numClasses + 1;
+	suppOperClasses->num_classes = count_opclss;
 
 	return;
 }
