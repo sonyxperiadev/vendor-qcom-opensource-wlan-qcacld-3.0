@@ -122,13 +122,15 @@ is_multi_link_roam(struct roam_offload_synch_ind *sync_ind);
  *
  * @pdev: pdev pointer
  * @vdev: assoc vdev pointer
+ * @rsp: cm connect rsp
  *
  * This api will be called to enable RSO for MLO connection.
  *
  * Return: qdf_status success or fail
  */
 QDF_STATUS mlo_enable_rso(struct wlan_objmgr_pdev *pdev,
-			  struct wlan_objmgr_vdev *vdev);
+			  struct wlan_objmgr_vdev *vdev,
+			  struct wlan_cm_connect_resp *rsp);
 
 /**
  * mlo_roam_copy_partner_info - copy partner link info to connect response
@@ -270,7 +272,8 @@ is_multi_link_roam(struct roam_offload_synch_ind *sync_ind)
 
 static inline
 QDF_STATUS mlo_enable_rso(struct wlan_objmgr_pdev *pdev,
-			  struct wlan_objmgr_vdev *vdev)
+			  struct wlan_objmgr_vdev *vdev,
+			  struct wlan_cm_connect_resp *rsp)
 {
 	return QDF_STATUS_SUCCESS;
 }

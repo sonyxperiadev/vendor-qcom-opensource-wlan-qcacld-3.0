@@ -3536,6 +3536,7 @@ lim_add_bcn_probe(struct wlan_objmgr_vdev *vdev, uint8_t *bcn_probe,
 					    &rx_param, frm_type);
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
 static QDF_STATUS
 lim_validate_probe_rsp_link_info(struct pe_session *session_entry,
 				 uint8_t *probe_rsp,
@@ -3576,6 +3577,35 @@ lim_validate_probe_rsp_link_info(struct pe_session *session_entry,
 
 	return status;
 }
+
+static void
+lim_clear_ml_partner_info(struct pe_session *session_entry)
+{
+	uint8_t idx;
+	struct mlo_partner_info *partner_info = NULL;
+
+	if (!session_entry || !session_entry->lim_join_req)
+		return;
+
+	partner_info = &session_entry->lim_join_req->partner_info;
+	if (!partner_info) {
+		pe_err("Partner link info not present");
+		return;
+	}
+	pe_debug_rl("Clear Partner Link/s information");
+	for (idx = 0; idx < partner_info->num_partner_links; idx++) {
+		partner_info->partner_link_info[idx].link_id = 0;
+		qdf_zero_macaddr(
+			&partner_info->partner_link_info[idx].link_addr);
+	}
+	partner_info->num_partner_links = 0;
+}
+#else
+static inline void
+lim_clear_ml_partner_info(struct pe_session *session_entry)
+{
+}
+#endif
 
 QDF_STATUS lim_check_for_ml_probe_req(struct pe_session *session)
 {
@@ -3620,12 +3650,16 @@ lim_gen_link_specific_probe_rsp(struct mac_context *mac_ctx,
 	if (session_entry->lim_join_req->is_ml_probe_req_sent &&
 	    rcvd_probe_resp->mlo_ie.mlo_ie_present) {
 
+		session_entry->lim_join_req->is_ml_probe_req_sent = false;
+
 		status = lim_validate_probe_rsp_link_info(session_entry,
 							  probe_rsp,
 							  probe_rsp_len);
 
-		if (QDF_IS_STATUS_ERROR(status))
-			return status;
+		if (QDF_IS_STATUS_ERROR(status)) {
+			lim_clear_ml_partner_info(session_entry);
+			goto end;
+		}
 
 		link_probe_rsp.ptr = qdf_mem_malloc(probe_rsp_len);
 		if (!link_probe_rsp.ptr)
@@ -3644,6 +3678,7 @@ lim_gen_link_specific_probe_rsp(struct mac_context *mac_ctx,
 
 		if (QDF_IS_STATUS_ERROR(status)) {
 			pe_err("MLO: Link probe response generation failed %d", status);
+			lim_clear_ml_partner_info(session_entry);
 			status = QDF_STATUS_E_FAILURE;
 			goto end;
 		}
@@ -3676,7 +3711,8 @@ lim_gen_link_specific_probe_rsp(struct mac_context *mac_ctx,
 		return status;
 	}
 end:
-	qdf_mem_free(link_probe_rsp.ptr);
+	if (link_probe_rsp.ptr)
+		qdf_mem_free(link_probe_rsp.ptr);
 	link_probe_rsp.len = 0;
 	return status;
 }

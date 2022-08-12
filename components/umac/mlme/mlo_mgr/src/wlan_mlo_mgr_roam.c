@@ -373,17 +373,27 @@ bool is_multi_link_roam(struct roam_offload_synch_ind *sync_ind)
 }
 
 QDF_STATUS mlo_enable_rso(struct wlan_objmgr_pdev *pdev,
-			  struct wlan_objmgr_vdev *vdev)
+			  struct wlan_objmgr_vdev *vdev,
+			  struct wlan_cm_connect_resp *rsp)
 {
 	struct wlan_objmgr_vdev *assoc_vdev;
+	uint8_t num_partner_links;
 
-	if (wlan_vdev_mlme_is_mlo_link_vdev(vdev)) {
+	if (!rsp) {
+		mlo_err("Connect resp is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	num_partner_links = rsp->ml_parnter_info.num_partner_links;
+
+	if (wlan_vdev_mlme_is_mlo_link_vdev(vdev) ||
+	    !num_partner_links ||
+	    num_partner_links == 1) {
 		assoc_vdev = wlan_mlo_get_assoc_link_vdev(vdev);
 		if (!assoc_vdev) {
 			mlo_err("Assoc vdev is null");
 			return QDF_STATUS_E_NULL_VALUE;
 		}
-
 		cm_roam_start_init_on_connect(pdev,
 					      wlan_vdev_get_id(assoc_vdev));
 	}
@@ -410,6 +420,7 @@ mlo_roam_copy_partner_info(struct wlan_cm_connect_resp *connect_rsp,
 			&partner_info->partner_link_info[i].link_addr,
 			&sync_ind->ml_link[i].link_addr);
 	}
+	partner_info->num_partner_links = sync_ind->num_setup_links;
 }
 
 void
