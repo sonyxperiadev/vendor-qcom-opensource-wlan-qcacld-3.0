@@ -208,6 +208,18 @@ QDF_STATUS wmi_unified_vdev_set_pcl_cmd(wmi_unified_t wmi_handle,
 }
 #endif /* WLAN_FEATURE_ROAM_OFFLOAD */
 
+#ifdef WLAN_FEATURE_11BE_MLO
+QDF_STATUS
+wmi_unified_roam_mlo_config_cmd(wmi_unified_t wmi_handle,
+				struct wlan_roam_mlo_config *req)
+{
+	if (wmi_handle->ops->send_roam_mlo_config)
+		return wmi_handle->ops->send_roam_mlo_config(wmi_handle,
+							     req);
+	return QDF_STATUS_E_FAILURE;
+}
+#endif
+
 QDF_STATUS wmi_unified_roam_scan_offload_mode_cmd(
 			wmi_unified_t wmi_handle,
 			struct wlan_roam_scan_offload_params *rso_cfg)

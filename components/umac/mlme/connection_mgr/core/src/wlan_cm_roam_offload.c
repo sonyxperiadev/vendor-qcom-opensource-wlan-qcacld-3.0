@@ -2841,6 +2841,41 @@ cm_roam_scan_btm_offload(struct wlan_objmgr_psoc *psoc,
 	params->btm_candidate_min_score = btm_cfg->btm_trig_min_candidate_score;
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+/**
+ * cm_roam_mlo_config() - set roam mlo offload parameters
+ * @psoc: psoc ctx
+ * @vdev: vdev
+ * @params:  roam mlo offload parameters
+ * @rso_cfg: rso config
+ *
+ * This function is used to set roam mlo offload related parameters
+ *
+ * Return: None
+ */
+static void
+cm_roam_mlo_config(struct wlan_objmgr_psoc *psoc,
+		   struct wlan_objmgr_vdev *vdev,
+		   struct wlan_roam_start_config *start_req)
+{
+	struct wlan_roam_mlo_config *roam_mlo_params;
+
+	roam_mlo_params = &start_req->roam_mlo_params;
+	roam_mlo_params->vdev_id = wlan_vdev_get_id(vdev);
+	roam_mlo_params->support_link_num =
+		wlan_mlme_get_sta_mlo_conn_max_num(psoc);
+	roam_mlo_params->support_link_band =
+		wlan_mlme_get_sta_mlo_conn_band_bmp(psoc);
+}
+#else
+static void
+cm_roam_mlo_config(struct wlan_objmgr_psoc *psoc,
+		   struct wlan_objmgr_vdev *vdev,
+		   struct wlan_roam_start_config *start_req)
+{
+}
+#endif
+
 /**
  * cm_roam_offload_11k_params() - set roam 11k offload parameters
  * @psoc: psoc ctx
@@ -3015,6 +3050,7 @@ cm_roam_start_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 				   true);
 	start_req->wlan_roam_rt_stats_config =
 			wlan_cm_get_roam_rt_stats(psoc, ROAM_RT_STATS_ENABLE);
+	cm_roam_mlo_config(psoc, vdev, start_req);
 
 	status = wlan_cm_tgt_send_roam_start_req(psoc, vdev_id, start_req);
 	if (QDF_IS_STATUS_ERROR(status))

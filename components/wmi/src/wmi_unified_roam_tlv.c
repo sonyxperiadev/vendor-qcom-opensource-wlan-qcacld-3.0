@@ -4385,10 +4385,87 @@ send_update_mlo_roam_params(wmi_roam_cnd_scoring_param *score_param,
 		  score_param->eht_weightage_pcnt,
 		  score_param->mlo_weightage_pcnt);
 }
+
+static uint32_t convert_support_link_band_to_wmi(uint32_t bands)
+{
+	uint32_t target_bands = 0;
+
+	if (bands & BIT(REG_BAND_2G))
+		target_bands |= BIT(0);
+	if (bands & BIT(REG_BAND_5G))
+		target_bands |= BIT(1);
+	if (bands & BIT(REG_BAND_6G))
+		target_bands |= BIT(2);
+
+	return target_bands;
+}
+
+/**
+ * send_roam_mlo_config_tlv() - send roam mlo config parameters
+ * @wmi_handle: wmi handle
+ * @req: pointer to wlan roam mlo config parameters
+ *
+ * This function sends the roam mlo config parameters to fw.
+ *
+ * Return: QDF status
+ */
+static QDF_STATUS
+send_roam_mlo_config_tlv(wmi_unified_t wmi_handle,
+			 struct wlan_roam_mlo_config *req)
+{
+	wmi_roam_mlo_config_cmd_fixed_param *cmd;
+	wmi_buf_t buf;
+	uint32_t len;
+
+	len = sizeof(*cmd);
+	buf = wmi_buf_alloc(wmi_handle, len);
+	if (!buf)
+		return QDF_STATUS_E_NOMEM;
+
+	cmd = (wmi_roam_mlo_config_cmd_fixed_param *)wmi_buf_data(buf);
+	WMITLV_SET_HDR(
+	    &cmd->tlv_header,
+	    WMITLV_TAG_STRUC_wmi_roam_mlo_config_cmd_fixed_param,
+	    WMITLV_GET_STRUCT_TLVLEN(wmi_roam_mlo_config_cmd_fixed_param));
+
+	cmd->vdev_id = req->vdev_id;
+	cmd->support_link_num = req->support_link_num;
+	cmd->support_link_band = convert_support_link_band_to_wmi(
+						req->support_link_band);
+	WMI_CHAR_ARRAY_TO_MAC_ADDR(req->partner_link_addr.bytes,
+				   &cmd->partner_link_addr);
+
+	wmi_debug("RSO_CFG MLO: vdev_id:%d support_link_num:%d support_link_band:0x%0x link addr:"QDF_MAC_ADDR_FMT,
+		  cmd->vdev_id, cmd->support_link_num,
+		  cmd->support_link_band,
+		  QDF_MAC_ADDR_REF(req->partner_link_addr.bytes));
+
+	wmi_mtrace(WMI_ROAM_MLO_CONFIG_CMDID, cmd->vdev_id, 0);
+	if (wmi_unified_cmd_send(wmi_handle, buf, len,
+				 WMI_ROAM_MLO_CONFIG_CMDID)) {
+		wmi_err("Failed to send WMI_ROAM_MLO_CONFIG_CMDID");
+		wmi_buf_free(buf);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+static void wmi_roam_mlo_attach_tlv(struct wmi_unified *wmi_handle)
+{
+	struct wmi_ops *ops = wmi_handle->ops;
+
+	ops->send_roam_mlo_config = send_roam_mlo_config_tlv;
+}
+
 #else
 static void
 send_update_mlo_roam_params(wmi_roam_cnd_scoring_param *score_param,
 			    struct ap_profile_params *ap_profile)
+{
+}
+
+static void wmi_roam_mlo_attach_tlv(struct wmi_unified *wmi_handle)
 {
 }
 #endif
@@ -5596,6 +5673,7 @@ void wmi_roam_attach_tlv(wmi_unified_t wmi_handle)
 	ops->send_roam_preauth_status = send_roam_preauth_status_tlv;
 	ops->extract_roam_event = extract_roam_event_tlv;
 
+	wmi_roam_mlo_attach_tlv(wmi_handle);
 	wmi_lfr_subnet_detection_attach_tlv(wmi_handle);
 	wmi_rssi_monitor_attach_tlv(wmi_handle);
 	wmi_ese_attach_tlv(wmi_handle);

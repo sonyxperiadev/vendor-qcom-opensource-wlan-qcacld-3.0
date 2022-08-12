@@ -477,6 +477,19 @@ wmi_extract_roam_candidate_frame_event(wmi_unified_t wmi_handle, uint8_t *event,
 				       struct roam_scan_candidate_frame *data);
 #endif /* WLAN_FEATURE_ROAM_OFFLOAD */
 
+#ifdef WLAN_FEATURE_11BE_MLO
+QDF_STATUS
+wmi_unified_roam_mlo_config_cmd(wmi_unified_t wmi_handle,
+				struct wlan_roam_mlo_config *req);
+#else
+static inline QDF_STATUS
+wmi_unified_roam_mlo_config_cmd(wmi_unified_t wmi_handle,
+				struct wlan_roam_mlo_config *req)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 /**
  * wmi_unified_roam_scan_offload_mode_cmd() - set roam scan parameters
  * @wmi_handle: wmi handle
