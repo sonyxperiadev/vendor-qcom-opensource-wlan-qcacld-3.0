@@ -211,6 +211,21 @@ enum roam_trigger_sub_reason {
 };
 
 /**
+ * enum roam_stats_scan_type  - Roam scan type defines
+ * @ROAM_STATS_SCAN_TYPE_PARTIAL: Partial scan
+ * @ROAM_STATS_SCAN_TYPE_FULL: Full scan
+ * @ROAM_STATS_SCAN_TYPE_NO_SCAN: No roam scan was triggered. This is generally
+ * used in BTM events to indicate BTM frame exchange logs.
+ * @ROAM_STATS_SCAN_TYPE_HIGHER_BAND: Higher band roam scan
+ */
+enum roam_stats_scan_type {
+	ROAM_STATS_SCAN_TYPE_PARTIAL = 0,
+	ROAM_STATS_SCAN_TYPE_FULL = 1,
+	ROAM_STATS_SCAN_TYPE_NO_SCAN = 2,
+	ROAM_STATS_SCAN_TYPE_HIGHER_BAND = 3,
+};
+
+/**
  * enum wlan_roam_frame_subtype - Roam frame subtypes
  * @ROAM_FRAME_SUBTYPE_M1: EAPOL M1 Frame
  * @ROAM_FRAME_SUBTYPE_M2: EAPOL M2 Frame

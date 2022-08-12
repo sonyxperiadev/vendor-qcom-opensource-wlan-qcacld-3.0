@@ -512,8 +512,8 @@ cm_roam_mgmt_frame_event(struct roam_frame_info *frame_data,
 
 /**
  * cm_roam_btm_req_event  - Send BTM request related logging event
- * @btm_data: BTM trigger related data
  * @vdev_id: Vdev id
+ * @btm_data: BTM trigger related data
  * @trigger_info: Roam trigger related info
  * @is_wtc: Is WTC or BTM response
  *
