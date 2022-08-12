@@ -20355,7 +20355,7 @@ static int wlan_hdd_cfg80211_add_key(struct wiphy *wiphy,
 
 	return errno;
 }
-#elif defined(CFG80211_SAE_AUTH_TA_ADDR_SUPPORT)
+#elif defined(CFG80211_MLO_KEY_OPERATION_SUPPORT)
 static int wlan_hdd_cfg80211_add_key(struct wiphy *wiphy,
 				     struct net_device *ndev,
 				     int link_id, u8 key_index, bool pairwise,
@@ -20527,7 +20527,7 @@ static int wlan_hdd_cfg80211_get_key(struct wiphy *wiphy,
 
 	return errno;
 }
-#elif defined(CFG80211_SAE_AUTH_TA_ADDR_SUPPORT)
+#elif defined(CFG80211_MLO_KEY_OPERATION_SUPPORT)
 static int wlan_hdd_cfg80211_get_key(struct wiphy *wiphy,
 				     struct net_device *ndev,
 				     int link_id, u8 key_index, bool pairwise,
@@ -20695,7 +20695,7 @@ static int wlan_hdd_cfg80211_del_key(struct wiphy *wiphy,
 
 	return errno;
 }
-#elif defined(CFG80211_SAE_AUTH_TA_ADDR_SUPPORT)
+#elif defined(CFG80211_MLO_KEY_OPERATION_SUPPORT)
 static int wlan_hdd_cfg80211_del_key(struct wiphy *wiphy,
 				     struct net_device *dev,
 				     int link_id, u8 key_index,
@@ -20856,7 +20856,7 @@ static int wlan_hdd_cfg80211_set_default_key(struct wiphy *wiphy,
 
 	return errno;
 }
-#elif defined(CFG80211_SAE_AUTH_TA_ADDR_SUPPORT)
+#elif defined(CFG80211_MLO_KEY_OPERATION_SUPPORT)
 static int wlan_hdd_cfg80211_set_default_key(struct wiphy *wiphy,
 					     struct net_device *ndev,
 					     int link_id, u8 key_index,
@@ -20936,7 +20936,7 @@ static int wlan_hdd_cfg80211_set_default_beacon_key(struct wiphy *wiphy,
 
 	return errno;
 }
-#elif defined(CFG80211_SAE_AUTH_TA_ADDR_SUPPORT)
+#elif defined(CFG80211_MLO_KEY_OPERATION_SUPPORT)
 static int wlan_hdd_cfg80211_set_default_beacon_key(struct wiphy *wiphy,
 						    struct net_device *ndev,
 						    int link_id, u8 key_index)
@@ -21284,7 +21284,7 @@ static int wlan_hdd_set_default_mgmt_key(struct wiphy *wiphy,
 
 	return errno;
 }
-#elif defined(CFG80211_SAE_AUTH_TA_ADDR_SUPPORT)
+#elif defined(CFG80211_MLO_KEY_OPERATION_SUPPORT)
 static int wlan_hdd_set_default_mgmt_key(struct wiphy *wiphy,
 					 struct net_device *netdev,
 					 int link_id, u8 key_index)

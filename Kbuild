@@ -34,6 +34,17 @@ ifneq ($(ANDROID_BUILD_TOP),)
 endif
 endif
 
+# CFG80211_MLO_KEY_OPERATION_SUPPORT
+# Used to indicate the Linux Kernel contains support for ML key operation
+# support.
+#
+# This feature was backported to Android Common Kernel 5.15 via:
+# https://android-review.googlesource.com/c/kernel/common/+/2173923
+found = $(shell if grep -qF "nl80211_validate_key_link_id" $(srctree)/net/wireless/nl80211.c; then echo "yes" ;else echo "no" ;fi;)
+ifeq ($(findstring yes, $(found)), yes)
+cppflags-y += -DCFG80211_MLO_KEY_OPERATION_SUPPORT
+endif
+
 include $(WLAN_ROOT)/configs/$(CONFIG_QCA_CLD_WLAN_PROFILE)_defconfig
 
 # add configurations in WLAN_CFG_OVERRIDE
