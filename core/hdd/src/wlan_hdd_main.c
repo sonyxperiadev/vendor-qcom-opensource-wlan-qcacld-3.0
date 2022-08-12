@@ -83,7 +83,6 @@
 #include <linux/ctype.h>
 #include <linux/compat.h>
 #include <linux/ethtool.h>
-#include <linux/suspend.h>
 
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
 #include "qdf_periodic_work.h"
@@ -9411,7 +9410,6 @@ void hdd_context_destroy(struct hdd_context *hdd_ctx)
 	hdd_ctx->config = NULL;
 	cfg_release();
 
-	unregister_pm_notifier(&hdd_ctx->pm_notifier);
 	qdf_delayed_work_destroy(&hdd_ctx->psoc_idle_timeout_work);
 	wiphy_free(hdd_ctx->wiphy);
 }
@@ -12563,58 +12561,6 @@ static inline QDF_STATUS hdd_cfg_parse_connection_roaming_cfg(void)
 }
 #endif
 
-static QDF_STATUS hdd_shutdown_wlan_in_suspend_prepare(void)
-{
-#define SHUTDOWN_IN_SUSPEND_RETRY 10
-
-	int count = 0;
-	struct hdd_context *hdd_ctx;
-
-	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
-	if (wlan_hdd_validate_context(hdd_ctx) != 0)
-		return -EINVAL;
-
-	if (ucfg_pmo_get_suspend_mode(hdd_ctx->psoc) != PMO_SUSPEND_SHUTDOWN) {
-		hdd_info("shutdown in suspend not supported");
-		return 0;
-	}
-
-	while (hdd_is_any_interface_open(hdd_ctx) &&
-	       count < SHUTDOWN_IN_SUSPEND_RETRY) {
-		count++;
-		hdd_info_rl("sleep 50ms to wait apdaters stopped, #%d", count);
-		msleep(50);
-	}
-	if (count >= SHUTDOWN_IN_SUSPEND_RETRY) {
-		hdd_err("some adapters not stopped");
-		return -EBUSY;
-	}
-
-	qdf_delayed_work_stop_sync(&hdd_ctx->psoc_idle_timeout_work);
-
-	hdd_debug("call pld idle shutdown directly");
-	return pld_idle_shutdown(hdd_ctx->parent_dev, hdd_psoc_idle_shutdown);
-}
-
-static int hdd_pm_notify(struct notifier_block *b,
-			 unsigned long event, void *p)
-{
-	hdd_info("got PM event: %lu", event);
-
-	switch (event) {
-	case PM_SUSPEND_PREPARE:
-	case PM_HIBERNATION_PREPARE:
-		if (0 != hdd_shutdown_wlan_in_suspend_prepare())
-			return NOTIFY_STOP;
-		break;
-	case PM_POST_SUSPEND:
-	case PM_POST_HIBERNATION:
-		break;
-	}
-
-	return NOTIFY_DONE;
-}
-
 struct hdd_context *hdd_context_create(struct device *dev)
 {
 	QDF_STATUS status;
@@ -12636,9 +12582,6 @@ struct hdd_context *hdd_context_create(struct device *dev)
 		ret = qdf_status_to_os_return(status);
 		goto wiphy_dealloc;
 	}
-
-	hdd_ctx->pm_notifier.notifier_call = hdd_pm_notify;
-	register_pm_notifier(&hdd_ctx->pm_notifier);
 
 	hdd_ctx->parent_dev = dev;
 	hdd_ctx->last_scan_reject_vdev_id = WLAN_UMAC_VDEV_ID_MAX;
