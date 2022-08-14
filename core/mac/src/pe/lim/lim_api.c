@@ -3559,7 +3559,7 @@ lim_validate_probe_rsp_link_info(struct pe_session *session_entry,
 	}
 
 	ml_partner_info = session_entry->lim_join_req->partner_info;
-	for (i = 0; i < partner_info.num_partner_links; i++) {
+	for (i = 0; i < ml_partner_info.num_partner_links; i++) {
 		if (!lim_match_link_info(ml_partner_info.partner_link_info[i].link_id,
 					 &ml_partner_info.partner_link_info[i].link_addr,
 					 &partner_info)) {
