@@ -1725,7 +1725,7 @@ void wlan_hdd_cfg80211_link_layer_stats_callback(hdd_handle_t hdd_handle,
 		}
 
 		adapter = hdd_get_adapter_by_vdev(hdd_ctx, results->ifaceId);
-		if (!adapter)
+		if (!adapter) {
 			hdd_debug_rl("invalid vdev_id %d sent by FW",
 				     results->ifaceId);
 			/* for peer stats FW doesn't update the vdev_id info*/
@@ -1736,7 +1736,7 @@ void wlan_hdd_cfg80211_link_layer_stats_callback(hdd_handle_t hdd_handle,
 				osif_request_put(request);
 				return;
 			}
-
+		}
 		wlan_hdd_update_ll_stats_request_bitmap(hdd_ctx, request,
 							results);
 		if (results->rspId == DEBUGFS_LLSTATS_REQID) {
