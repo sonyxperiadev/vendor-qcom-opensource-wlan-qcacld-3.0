@@ -11286,8 +11286,22 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 						DOT11F_EID_SUPPRATES;
 		}
 
-		if (!WLAN_REG_IS_6GHZ_CHAN_FREQ(chan_freq))
+		if (!WLAN_REG_IS_6GHZ_CHAN_FREQ(chan_freq)) {
 			populate_dot11f_ht_caps(mac_ctx, NULL, &ht_caps);
+			ht_caps.supportedChannelWidthSet = 0;
+			ht_caps.shortGI40MHz = 0;
+		}
+		if (WLAN_REG_IS_5GHZ_CH_FREQ(chan_freq) &&
+		    mac_ctx->roam.configParam.channelBondingMode5GHz) {
+			ht_caps.supportedChannelWidthSet = 1;
+			ht_caps.shortGI40MHz = 1;
+		}
+		if (WLAN_REG_IS_24GHZ_CH_FREQ(chan_freq) &&
+		    mac_ctx->roam.configParam.channelBondingMode24GHz) {
+			ht_caps.supportedChannelWidthSet = 1;
+			ht_caps.shortGI40MHz = 1;
+		}
+
 		if ((ht_caps.present && frm->HTCaps.present &&
 		     qdf_mem_cmp(&ht_caps, &frm->HTCaps, sizeof(ht_caps))) ||
 		     (ht_caps.present && !frm->HTCaps.present)) {
