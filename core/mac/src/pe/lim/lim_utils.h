@@ -2050,6 +2050,15 @@ void lim_update_stads_eht_caps(struct mac_context *mac_ctx,
 void lim_update_stads_eht_bw_320mhz(struct pe_session *session,
 				    tpDphHashNode sta_ds);
 
+/**
+ * lim_is_session_chwidth_320mhz() - Check if session chan width is 320 MHz
+ * @session: pointer to PE session
+ *
+ * Check if session channel width is 320 MHz
+ *
+ * Return: bool
+ */
+bool lim_is_session_chwidth_320mhz(struct pe_session *session);
 #else
 static inline bool lim_is_session_eht_capable(struct pe_session *session)
 {
@@ -2219,6 +2228,12 @@ static inline void
 lim_update_stads_eht_bw_320mhz(struct pe_session *session,
 			       tpDphHashNode sta_ds)
 {
+}
+
+static inline bool
+lim_is_session_chwidth_320mhz(struct pe_session *session)
+{
+	return false;
 }
 #endif /* WLAN_FEATURE_11BE */
 

@@ -5768,6 +5768,11 @@ static bool is_dot11mode_support_eht_cap(enum csr_cfgdot11mode dot11mode)
 
 	return false;
 }
+
+bool lim_is_session_chwidth_320mhz(struct pe_session *session)
+{
+	return session->ch_width == CH_WIDTH_320MHZ;
+}
 #else
 static bool is_dot11mode_support_eht_cap(enum csr_cfgdot11mode dot11mode)
 {
@@ -7922,6 +7927,7 @@ QDF_STATUS lim_populate_he_mcs_set(struct mac_context *mac_ctx,
 		return QDF_STATUS_E_FAILURE;
 	}
 
+	pe_debug("session chan width: %d", session_entry->ch_width);
 	pe_debug("PEER: lt 80: rx 0x%04x tx 0x%04x, 160: rx 0x%04x tx 0x%04x, 80+80: rx 0x%04x tx 0x%04x",
 		peer_he_caps->rx_he_mcs_map_lt_80,
 		peer_he_caps->tx_he_mcs_map_lt_80,
@@ -7960,7 +7966,9 @@ QDF_STATUS lim_populate_he_mcs_set(struct mac_context *mac_ctx,
 			mac_ctx->he_cap_5g.rx_he_mcs_map_lt_80,
 			mac_ctx->he_cap_5g.tx_he_mcs_map_lt_80);
 
-	if (session_entry->ch_width == CH_WIDTH_160MHZ) {
+	if ((session_entry->ch_width == CH_WIDTH_160MHZ ||
+	     lim_is_session_chwidth_320mhz(session_entry)) &&
+	     peer_he_caps->chan_width_2) {
 		lim_populate_he_mcs_per_bw(
 			mac_ctx, &rates->rx_he_mcs_map_160,
 			&rates->tx_he_mcs_map_160,
