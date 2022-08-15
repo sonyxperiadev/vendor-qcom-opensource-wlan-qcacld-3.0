@@ -1320,7 +1320,7 @@ target_if_stop_rso_stop_timer(struct roam_offload_roam_event *roam_event)
 
 	if (!qdf_atomic_test_bit(RSO_STOP_RESPONSE_BIT,
 				 &vdev_rsp->rsp_status)) {
-		roam_event->rso_timer_stopped = true;
+		mlme_debug("rso stop timer is not started");
 		return QDF_STATUS_SUCCESS;
 	}
 

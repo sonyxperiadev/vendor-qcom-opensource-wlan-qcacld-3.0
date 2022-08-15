@@ -1057,10 +1057,11 @@ extract_roam_event_tlv(wmi_unified_t wmi_handle, void *evt_buf, uint32_t len,
 					  QDF_PROTO_TYPE_EVENT,
 					  QDF_ROAM_EVENTID));
 
-	wmi_debug("FW_ROAM_EVT: Reason:%s[%d], Notif %x for vdevid %x, rssi %d",
+	wmi_debug("FW_ROAM_EVT: Reason:%s[%d], Notif %x for vdevid %x, rssi %d, params %d, params1 %d",
 		  wmi_get_roam_event_reason_string(roam_event->reason),
 		  roam_event->reason,
-		  roam_event->notif, roam_event->vdev_id, roam_event->rssi);
+		  roam_event->notif, roam_event->vdev_id, roam_event->rssi,
+		  roam_event->notif_params, roam_event->notif_params1);
 
 	if (param_buf->hw_mode_transition_fixed_param) {
 		hw_mode_trans_ind = qdf_mem_malloc(sizeof(*hw_mode_trans_ind));
