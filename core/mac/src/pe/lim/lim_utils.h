@@ -2907,12 +2907,14 @@ lim_is_self_and_peer_ocv_capable(struct mac_context *mac,
  * @mac:        pointer to mac data
  * @session: pointer to pe session
 .* @oci:       pointer of tDot11fIEoci
+ * @peer: peer mac address
+ * @tx_chan_width: tx channel width in MHz
  *
  * Return: void
  */
 void
 lim_fill_oci_params(struct mac_context *mac, struct pe_session *session,
-		    tDot11fIEoci *oci);
+		    tDot11fIEoci *oci, uint8_t *peer, uint16_t *tx_chan_width);
 
 #ifdef WLAN_FEATURE_SAE
 /**

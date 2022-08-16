@@ -5621,8 +5621,10 @@ lim_is_self_and_peer_ocv_capable(struct mac_context *mac,
 
 void
 lim_fill_oci_params(struct mac_context *mac, struct pe_session *session,
-		    tDot11fIEoci *oci)
+		    tDot11fIEoci *oci, uint8_t *peer, uint16_t *tx_chan_width)
 {
+	tpDphHashNode sta_ds;
+	uint16_t aid;
 	uint8_t ch_offset;
 	uint8_t prim_ch_num = wlan_reg_freq_to_chan(mac->pdev,
 						    session->curr_op_freq);
@@ -5648,6 +5650,30 @@ lim_fill_oci_params(struct mac_context *mac, struct pe_session *session,
 	oci->prim_ch_num = prim_ch_num;
 	oci->freq_seg_1_ch_num = session->ch_center_freq_seg1;
 	oci->present = 1;
+	if (tx_chan_width)
+		*tx_chan_width = ch_width_in_mhz(session->ch_width);
+	if (LIM_IS_STA_ROLE(session))
+		return;
+
+	if (!peer || !tx_chan_width)
+		return;
+
+	sta_ds = dph_lookup_hash_entry(mac, peer, &aid,
+				       &session->dph.dphHashTable);
+	if (!sta_ds) {
+		pe_nofl_debug("no find sta ds "QDF_MAC_ADDR_FMT,
+			      QDF_MAC_ADDR_REF(peer));
+		return;
+	}
+	if (WLAN_REG_IS_24GHZ_CH_FREQ(session->curr_op_freq)) {
+		if (*tx_chan_width > 20 &&
+		    !sta_ds->htSupportedChannelWidthSet) {
+			*tx_chan_width = 20;
+			pe_nofl_debug("peer no support ht40 in 2g, %d :"QDF_MAC_ADDR_FMT,
+				      sta_ds->ch_width,
+				      QDF_MAC_ADDR_REF(peer));
+		}
+	}
 }
 
 /**
@@ -5693,7 +5719,7 @@ QDF_STATUS lim_send_sa_query_request_frame(struct mac_context *mac, uint8_t *tra
 	qdf_mem_copy(&frm.TransactionId.transId[0], &transId[0], 2);
 
 	if (lim_is_self_and_peer_ocv_capable(mac, peer, pe_session))
-		lim_fill_oci_params(mac, pe_session, &frm.oci);
+		lim_fill_oci_params(mac, pe_session, &frm.oci, NULL, NULL);
 
 	nStatus = dot11f_get_packed_sa_query_req_size(mac, &frm, &nPayload);
 	if (DOT11F_FAILED(nStatus)) {
@@ -5825,7 +5851,7 @@ QDF_STATUS lim_send_sa_query_response_frame(struct mac_context *mac,
 	   SA query request transId */
 	qdf_mem_copy(&frm.TransactionId.transId[0], &transId[0], 2);
 	if (lim_is_self_and_peer_ocv_capable(mac, peer, pe_session))
-		lim_fill_oci_params(mac, pe_session, &frm.oci);
+		lim_fill_oci_params(mac, pe_session, &frm.oci, NULL, NULL);
 
 	nStatus = dot11f_get_packed_sa_query_rsp_size(mac, &frm, &nPayload);
 	if (DOT11F_FAILED(nStatus)) {
