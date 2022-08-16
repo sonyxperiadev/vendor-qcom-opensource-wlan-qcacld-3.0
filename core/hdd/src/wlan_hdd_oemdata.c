@@ -1190,6 +1190,8 @@ void hdd_oem_event_async_cb(const struct oem_data *oem_event_data)
 	uint32_t len;
 	int ret;
 	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
+	struct hdd_adapter *adapter;
+	struct wireless_dev *wdev = NULL;
 
 	hdd_enter();
 
@@ -1201,9 +1203,13 @@ void hdd_oem_event_async_cb(const struct oem_data *oem_event_data)
 		return hdd_create_wifi_feature_interface(hdd_ctx);
 	}
 
+	adapter = hdd_get_adapter_by_vdev(hdd_ctx, oem_event_data->vdev_id);
+	if (adapter)
+		wdev = &(adapter->wdev);
+
 	len = nla_total_size(oem_event_data->data_len) + NLMSG_HDRLEN;
 	vendor_event = cfg80211_vendor_event_alloc(
-				hdd_ctx->wiphy, NULL, len,
+				hdd_ctx->wiphy, wdev, len,
 				QCA_NL80211_VENDOR_SUBCMD_OEM_DATA_INDEX,
 				GFP_KERNEL);
 
@@ -1234,6 +1240,8 @@ void hdd_oem_event_handler_cb(const struct oem_data *oem_event_data,
 	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
 	struct hdd_adapter *hdd_adapter = hdd_get_adapter_by_vdev(hdd_ctx,
 								  vdev_id);
+	struct wireless_dev *wdev = NULL;
+
 	hdd_enter();
 
 	ret = wlan_hdd_validate_context(hdd_ctx);
@@ -1269,10 +1277,12 @@ void hdd_oem_event_handler_cb(const struct oem_data *oem_event_data,
 		osif_request_complete(request);
 		osif_request_put(request);
 	} else {
+		wdev = &(hdd_adapter->wdev);
+
 		len = nla_total_size(oem_event_data->data_len) + NLMSG_HDRLEN;
 		vendor_event =
 			cfg80211_vendor_event_alloc(
-				hdd_ctx->wiphy, NULL, len,
+				hdd_ctx->wiphy, wdev, len,
 				QCA_NL80211_VENDOR_SUBCMD_OEM_DATA_INDEX,
 				GFP_KERNEL);
 
