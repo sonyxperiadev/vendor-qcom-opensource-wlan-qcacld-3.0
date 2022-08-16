@@ -22,6 +22,33 @@
 #ifndef __CFG_MLME_ROAM_SCORING_H
 #define __CFG_MLME_ROAM_SCORING_H
 
+#ifdef CONNECTION_ROAMING_CFG
+#define RoamCommon_Delta_min 0
+#define RoamCommon_Delta_max 30
+#define RoamCommon_Delta_default 20
+#define RoamIdle_Delta_min 0
+#define RoamIdle_Delta_max 20
+#define RoamIdle_Delta_default 0
+#define RoamBeaconLoss_TargetMinRSSI_min -127
+#define RoamBeaconLoss_TargetMinRSSI_max -70
+#define RoamBeaconLoss_TargetMinRSSI_default -75
+#define RoamBTM_Delta_min 0
+#define RoamBTM_Delta_max 20
+#define RoamBTM_Delta_default 0
+#else
+#define RoamCommon_Delta_min 0
+#define RoamCommon_Delta_max 100
+#define RoamCommon_Delta_default 0
+#define RoamIdle_Delta_min 0
+#define RoamIdle_Delta_max 100
+#define RoamIdle_Delta_default 0
+#define RoamBeaconLoss_TargetMinRSSI_min -120
+#define RoamBeaconLoss_TargetMinRSSI_max 0
+#define RoamBeaconLoss_TargetMinRSSI_default -75
+#define RoamBTM_Delta_min 0
+#define RoamBTM_Delta_max 100
+#define RoamBTM_Delta_default 0
+#endif
 /*
  * <ini>
  * roam_score_delta_bitmap - bitmap to enable roam triggers on
@@ -90,9 +117,9 @@
  */
 #define CFG_ROAM_SCORE_DELTA CFG_INI_UINT( \
 			"roam_score_delta RoamCommon_Delta", \
-			0, \
-			100, \
-			0, \
+			RoamCommon_Delta_min,\
+			RoamCommon_Delta_max, \
+			RoamCommon_Delta_default, \
 			CFG_VALUE_OR_DEFAULT, \
 			"candidate AP's percentage roam score delta")
 
@@ -259,9 +286,9 @@
  */
 #define CFG_BMISS_ROAM_MIN_RSSI CFG_INI_INT( \
 	"candidate_min_rssi_for_beacon_miss RoamBeaconLoss_TargetMinRSSI", \
-	-120, \
-	0, \
-	-75, \
+	RoamBeaconLoss_TargetMinRSSI_min, \
+	RoamBeaconLoss_TargetMinRSSI_max, \
+	RoamBeaconLoss_TargetMinRSSI_default, \
 	CFG_VALUE_OR_DEFAULT, \
 	"Minimum RSSI of candidate AP for Bmiss roam trigger")
 
@@ -315,9 +342,9 @@
  */
 #define CFG_IDLE_ROAM_SCORE_DELTA CFG_INI_UINT( \
 		"idle_roam_score_delta RoamIdle_Delta", \
-		0, \
-		100, \
-		0, \
+		RoamIdle_Delta_min, \
+		RoamIdle_Delta_max, \
+		RoamIdle_Delta_default, \
 		CFG_VALUE_OR_DEFAULT, \
 		"Roam score delta for Idle roam trigger")
 
@@ -345,9 +372,9 @@
  */
 #define CFG_BTM_ROAM_SCORE_DELTA CFG_INI_UINT( \
 	"btm_roam_score_delta RoamBTM_Delta", \
-	0, \
-	100, \
-	0, \
+	RoamBTM_Delta_min, \
+	RoamBTM_Delta_max, \
+	RoamBTM_Delta_default, \
 	CFG_VALUE_OR_DEFAULT, \
 	"Roam score delta for BTM roam trigger")
 
