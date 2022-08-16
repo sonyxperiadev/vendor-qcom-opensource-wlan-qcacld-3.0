@@ -3605,6 +3605,12 @@ lim_gen_link_specific_probe_rsp(struct mac_context *mac_ctx,
 	if (!session_entry->lim_join_req)
 		return status;
 
+	partner_info = &session_entry->lim_join_req->partner_info;
+	if (!partner_info->num_partner_links) {
+		pe_debug("No partner link info since supports 1 link only");
+		return status;
+	}
+
 	if (session_entry->lim_join_req->is_ml_probe_req_sent &&
 	    rcvd_probe_resp->mlo_ie.mlo_ie_present) {
 
@@ -3632,13 +3638,6 @@ lim_gen_link_specific_probe_rsp(struct mac_context *mac_ctx,
 
 		if (QDF_IS_STATUS_ERROR(status)) {
 			pe_err("MLO: Link probe response generation failed %d", status);
-			status = QDF_STATUS_E_FAILURE;
-			goto end;
-		}
-
-		partner_info = &session_entry->lim_join_req->partner_info;
-		if (!partner_info->num_partner_links) {
-			pe_err("Partner link info not available");
 			status = QDF_STATUS_E_FAILURE;
 			goto end;
 		}
