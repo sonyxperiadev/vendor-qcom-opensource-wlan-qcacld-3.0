@@ -20123,6 +20123,8 @@ static int wlan_hdd_add_key_all_mlo_vdev(mac_handle_t mac_handle,
 	struct hdd_adapter *link_adapter;
 	struct hdd_context *hdd_ctx;
 	struct wlan_objmgr_vdev *wlan_vdev_list[WLAN_UMAC_MLO_MAX_VDEVS];
+	struct wlan_objmgr_peer *peer;
+	struct qdf_mac_addr peer_mac;
 	int errno;
 	uint16_t link, vdev_count = 0;
 	uint8_t vdev_id;
@@ -20136,13 +20138,26 @@ static int wlan_hdd_add_key_all_mlo_vdev(mac_handle_t mac_handle,
 		vdev_id = wlan_vdev_get_id(wlan_vdev_list[link]);
 
 		link_adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
-		if (!link_adapter)
+		if (!link_adapter) {
+			mlo_release_vdev_ref(wlan_vdev_list[link]);
 			continue;
+		}
+
+		peer = wlan_objmgr_vdev_try_get_bsspeer(wlan_vdev_list[link],
+							WLAN_OSIF_ID);
+		if (!peer) {
+			hdd_err("Peer is null");
+			mlo_release_vdev_ref(wlan_vdev_list[link]);
+			continue;
+		}
+		qdf_mem_copy(peer_mac.bytes,
+			     wlan_peer_get_macaddr(peer), QDF_MAC_ADDR_SIZE);
+		wlan_objmgr_peer_release_ref(peer, WLAN_OSIF_ID);
 
 		errno = wlan_hdd_add_key_vdev(mac_handle,
 					      wlan_vdev_list[link],
 					      key_index, pairwise,
-					      mac_addr, params, link_id,
+					      peer_mac.bytes, params, link_id,
 					      link_adapter);
 		mlo_release_vdev_ref(wlan_vdev_list[link]);
 	}
