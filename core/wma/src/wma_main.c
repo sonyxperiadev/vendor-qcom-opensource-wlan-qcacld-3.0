@@ -2376,7 +2376,7 @@ static inline void wma_process_cal_fail_info(uint8_t *wmi_event)
 /**
  * wma_flush_complete_evt_handler() - FW log flush complete event handler
  * @handle: WMI handle
- * @event:  Event recevied from FW
+ * @event:  Event received from FW
  * @len:    Length of the event
  *
  */
@@ -4006,7 +4006,7 @@ static int wma_log_supported_evt_handler(void *handle,
 /**
  * wma_pdev_set_hw_mode_resp_evt_handler() - Set HW mode resp evt handler
  * @handle: WMI handle
- * @event:  Event recevied from FW
+ * @event:  Event received from FW
  * @len:    Length of the event
  *
  * Event handler for WMI_PDEV_SET_HW_MODE_RESP_EVENTID that is sent to host
@@ -4245,7 +4245,7 @@ wma_process_mac_freq_mapping(struct cm_hw_mode_trans_ind *hw_mode_trans_ind,
 /**
  * wma_pdev_hw_mode_transition_evt_handler() - HW mode transition evt handler
  * @handle: WMI handle
- * @event:  Event recevied from FW
+ * @event:  Event received from FW
  * @len:    Length of the event
  *
  * Event handler for WMI_PDEV_HW_MODE_TRANSITION_EVENTID that indicates an

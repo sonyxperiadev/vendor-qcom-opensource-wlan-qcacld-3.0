@@ -327,7 +327,7 @@ static inline QDF_STATUS hdd_get_sap_ht2040_mode(
  * wlan_hdd_cfg80211_stop_ap() - stop sap
  * @wiphy: Pointer to wiphy
  * @dev: Pointer to netdev
- * @link_id: Link id for which this stop_ap is recevied.
+ * @link_id: Link id for which this stop_ap is received.
  *
  * Return: zero for success non-zero for failure
  */

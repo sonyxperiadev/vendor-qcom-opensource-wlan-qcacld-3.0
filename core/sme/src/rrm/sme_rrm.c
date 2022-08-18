@@ -681,7 +681,7 @@ static QDF_STATUS sme_rrm_scan_request_callback(struct mac_context *mac,
 	QDF_STATUS qdf_status = QDF_STATUS_SUCCESS;
 
 	/*
-	 * Even if RRM scan response is recevied after roaming to different AP
+	 * Even if RRM scan response is received after roaming to different AP
 	 * the messege shall be posted to PE for rrm cleanup.
 	 */
 

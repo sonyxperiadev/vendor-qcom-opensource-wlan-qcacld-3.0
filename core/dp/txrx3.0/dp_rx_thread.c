@@ -433,7 +433,7 @@ static qdf_nbuf_t dp_rx_tm_thread_dequeue(struct dp_rx_thread *rx_thread)
 #ifdef CONFIG_SLUB_DEBUG_ON
 /**
  * dp_rx_thread_should_yield() - check whether rx loop should yield
- * @iter - iteration of packets recevied
+ * @iter - iteration of packets received
  *
  * Returns: should yield or not
  */
