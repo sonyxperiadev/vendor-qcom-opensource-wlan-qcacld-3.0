@@ -3695,7 +3695,7 @@ lim_is_rsnxe_cap_set(struct mac_context *mac_ctx,
 	 * TODO: If spec supports more than this range in future, this needs to
 	 * be an array to hold the complete bitmap/bitmask.
 	 */
-	cap_mask = ~(WLAN_CRYPTO_RSNX_CAP_SAE_H2E |
+	cap_mask = ~(0xF | WLAN_CRYPTO_RSNX_CAP_SAE_H2E |
 		     WLAN_CRYPTO_RSNX_CAP_SAE_PK |
 		     WLAN_CRYPTO_RSNX_CAP_SECURE_LTF |
 		     WLAN_CRYPTO_RSNX_CAP_SECURE_RTT |
