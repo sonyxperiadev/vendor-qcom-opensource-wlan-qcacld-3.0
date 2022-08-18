@@ -1503,11 +1503,11 @@ cm_connect_complete_ind(struct wlan_objmgr_vdev *vdev,
 					     mlme_get_tdls_prohibited(vdev),
 					     vdev);
 		wlan_p2p_status_connect(vdev);
-
 	}
 
 	if (op_mode == QDF_STA_MODE &&
-	    !wlan_vdev_mlme_is_mlo_vdev(vdev))
+		(wlan_vdev_mlme_is_mlo_link_vdev(vdev) ||
+	    !wlan_vdev_mlme_is_mlo_vdev(vdev)))
 		wlan_cm_roam_state_change(pdev, vdev_id, WLAN_ROAM_INIT,
 					  REASON_CONNECT);
 
