@@ -9119,7 +9119,7 @@ QDF_STATUS populate_dot11f_assoc_rsp_mlo_ie(struct mac_context *mac_ctx,
 		sta_data = sta_pro->data;
 		sta_len_left = sizeof(sta_pro->data);
 
-		*sta_data++ = WLAN_ML_BV_LINFO_SUBELEMID_PERSTAPROFILE;
+		*sta_data++ = WLAN_ML_LINFO_SUBELEMID_PERSTAPROFILE;
 		/* set length later */
 		*sta_data++ = 0;
 		sta_len_left -= 2;
@@ -9755,7 +9755,7 @@ QDF_STATUS populate_dot11f_bcn_mlo_ie(struct mac_context *mac_ctx,
 		sta_pro_present = false;
 		sta_data = sta_pro->data;
 		sta_len_left = sizeof(sta_pro->data);
-		*sta_data++ = WLAN_ML_BV_LINFO_SUBELEMID_PERSTAPROFILE;
+		*sta_data++ = WLAN_ML_LINFO_SUBELEMID_PERSTAPROFILE;
 		*sta_data++ = 0;
 		sta_data += 2; /* sta control */
 		sta_len_left -= 4;
@@ -11149,7 +11149,7 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 		len_remaining = sizeof(sta_prof->data);
 
 		/* subelement ID 0, length(sta_prof->num_data - 2) */
-		*p_sta_prof++ = WLAN_ML_BV_LINFO_SUBELEMID_PERSTAPROFILE;
+		*p_sta_prof++ = WLAN_ML_LINFO_SUBELEMID_PERSTAPROFILE;
 		*p_sta_prof++ = 0;
 		len_remaining -= 2;
 
