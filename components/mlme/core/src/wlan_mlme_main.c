@@ -2099,7 +2099,7 @@ static void mlme_init_lfr_cfg(struct wlan_objmgr_psoc *psoc,
 	lfr->neighbor_scan_max_chan_time =
 		cfg_get(psoc, CFG_LFR_NEIGHBOR_SCAN_MAX_CHAN_TIME);
 	lfr->passive_max_channel_time =
-		cfg_get(psoc, CFG_PASSIVE_MAX_CHANNEL_TIME);
+		cfg_get(psoc, CFG_ROAM_PASSIVE_MAX_CHANNEL_TIME);
 	lfr->neighbor_scan_results_refresh_period =
 		cfg_get(psoc, CFG_LFR_NEIGHBOR_SCAN_RESULTS_REFRESH_PERIOD);
 

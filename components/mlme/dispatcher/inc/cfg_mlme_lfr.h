@@ -36,6 +36,29 @@
 
 /*
  * <ini>
+ * RoamScan_PassiveCH_DwellTime - Set max channel time for roam passive scan
+ * @Min: 0
+ * @Max: 200
+ * @Default: 130
+ *
+ * This ini is used to set maximum channel time in msecs spent in
+ * passive scan for roaming
+ *
+ * Related: None
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_ROAM_PASSIVE_MAX_CHANNEL_TIME CFG_INI_UINT(\
+		"RoamScan_PassiveCH_DwellTime",\
+		0, \
+		200, \
+		130, \
+		CFG_VALUE_OR_DEFAULT, "roam scan passive dwell time")
+
+/*
+ * <ini>
  * mawc_roam_enabled - Enable/Disable MAWC during roaming
  * @Min: 0 - Disabled
  * @Max: 1 - Enabled
@@ -3187,6 +3210,7 @@
 	CFG(CFG_ROAM_SCAN_SECOND_TIMER) \
 	CFG(CFG_FT_IM_ROAMING) \
 	CFG(CFG_ROAM_INACTIVE_COUNT) \
+	CFG(CFG_ROAM_PASSIVE_MAX_CHANNEL_TIME) \
 	CFG(CFG_POST_INACTIVITY_ROAM_SCAN_PERIOD) \
 	CFG(CFG_ROAM_SCAN_INACTIVE_TIMER) \
 	CFG(CFG_BSS_LOAD_TRIG_6G_RSSI_THRES) \
