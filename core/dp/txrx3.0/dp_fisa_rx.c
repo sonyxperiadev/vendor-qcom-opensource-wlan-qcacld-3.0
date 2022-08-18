@@ -553,10 +553,8 @@ dp_rx_fisa_add_ft_entry(struct dp_vdev *vdev,
 		get_flow_tuple_from_nbuf(fisa_hdl->soc_hdl,
 					 &rx_flow_tuple_info,
 					 nbuf, rx_tlv_hdr);
-		if (rx_flow_tuple_info.bypass_fisa) {
-			qdf_spin_unlock_bh(&fisa_hdl->dp_rx_fst_lock);
+		if (rx_flow_tuple_info.bypass_fisa)
 			return NULL;
-		}
 	}
 
 	do {
