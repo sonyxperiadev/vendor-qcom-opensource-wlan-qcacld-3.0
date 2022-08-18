@@ -7216,12 +7216,17 @@ int wma_rx_service_ready_ext_event(void *handle, uint8_t *event,
 	 * If firmware is going to create NAN discovery vdev, host should
 	 * indicate 3 vdevs and firmware shall add 1 vdev for NAN. So decrement
 	 * the num_vdevs by 1.
+	 * If NAN is not supported on some target(disabled through ini
+	 * param gEnableNanSupport), there is no use of reserving one vdev for
+	 * it in firmware though firmware advertises wmi_service_nan. Indicate
+	 * firmware that host is going to take care of the NAN vdev. Host can
+	 * use the vdev either for NAN or other operations on need basis.
 	 */
 
-	if (wmi_service_enabled(wma_handle->wmi_handle, wmi_service_nan) &&
-	    cfg_nan_get_enable(wma_handle->psoc)) {
+	if (wmi_service_enabled(wma_handle->wmi_handle, wmi_service_nan)) {
 		if (ucfg_nan_is_vdev_creation_allowed(wma_handle->psoc) ||
-		    QDF_GLOBAL_FTM_MODE == cds_get_conparam()) {
+		    QDF_GLOBAL_FTM_MODE == cds_get_conparam() ||
+		    !cfg_nan_get_enable(wma_handle->psoc)) {
 			wlan_res_cfg->nan_separate_iface_support = true;
 		} else {
 			wlan_res_cfg->num_vdevs--;
