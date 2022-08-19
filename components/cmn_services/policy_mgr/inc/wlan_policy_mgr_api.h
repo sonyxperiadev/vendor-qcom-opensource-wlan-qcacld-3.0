@@ -4605,4 +4605,13 @@ bool policy_mgr_any_other_vdev_on_same_mac_as_freq(
  */
 QDF_STATUS policy_mgr_get_sbs_cfg(struct wlan_objmgr_psoc *psoc, bool *sbs);
 
+/**
+ * policy_mgr_get_ll_sap_freq()- Function to get ll sap freq if it's present
+ * @psoc: PSOC object
+ *
+ * Return: True if it's LL SAP otherwise false
+ *
+ */
+qdf_freq_t policy_mgr_get_ll_sap_freq(struct wlan_objmgr_psoc *psoc);
+
 #endif /* __WLAN_POLICY_MGR_API_H */

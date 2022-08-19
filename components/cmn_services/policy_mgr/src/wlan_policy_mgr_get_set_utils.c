@@ -8864,3 +8864,61 @@ bool policy_mgr_sr_same_mac_conc_enabled(struct wlan_objmgr_psoc *psoc)
 				    wmi_service_obss_per_packet_sr_support));
 }
 #endif
+
+qdf_freq_t policy_mgr_get_ll_sap_freq(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_objmgr_vdev *sap_vdev;
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	uint32_t conn_idx = 0, vdev_id;
+	bool is_ll_sap_present = false;
+	qdf_freq_t freq = 0;
+	enum host_concurrent_ap_policy profile =
+					HOST_CONCURRENT_AP_POLICY_UNSPECIFIED;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("pm_ctx is NULL");
+		return 0;
+	}
+
+	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
+	for (conn_idx = 0; conn_idx < MAX_NUMBER_OF_CONC_CONNECTIONS;
+	     conn_idx++) {
+		if (!(pm_conc_connection_list[conn_idx].mode == PM_SAP_MODE &&
+		    pm_conc_connection_list[conn_idx].in_use))
+			continue;
+
+		vdev_id = pm_conc_connection_list[conn_idx].vdev_id;
+		freq = pm_conc_connection_list[conn_idx].freq;
+
+		sap_vdev = wlan_objmgr_get_vdev_by_id_from_psoc(
+							psoc,
+							vdev_id,
+							WLAN_POLICY_MGR_ID);
+
+		if (!sap_vdev) {
+			policy_mgr_err("vdev %d: invalid vdev", vdev_id);
+			continue;
+		}
+
+		profile = wlan_mlme_get_ap_policy(sap_vdev);
+		wlan_objmgr_vdev_release_ref(sap_vdev, WLAN_POLICY_MGR_ID);
+
+		if (profile == HOST_CONCURRENT_AP_POLICY_GAMING_AUDIO ||
+		    profile == HOST_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING) {
+			is_ll_sap_present = true;
+			break;
+		}
+	}
+	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+
+	if (!is_ll_sap_present) {
+		policy_mgr_debug("LL SAP not present");
+		return 0;
+	}
+
+	policy_mgr_debug("LL SAP present with vdev_id %d and freq %d",
+			 vdev_id, freq);
+
+	return freq;
+}
