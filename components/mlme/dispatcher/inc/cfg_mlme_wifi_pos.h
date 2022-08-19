@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -93,9 +94,31 @@
 		"oem_6g_support_disable", \
 		1, \
 		"oem 6Ghz support Enabled/disabled")
+/*
+ * <ini>
+ * enable_responder_secure_ltf_support - R-STA secure LTF keyseed support
+ * @Min: false
+ * @Max: true
+ * @Default: false
+ *
+ * This ini is used to enable R-STA advertising secure LTF support.
+ *
+ * Related: None
+ *
+ * Supported Feature: WIFI POS
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+#define CFG_RESPONDER_SECURE_LTF_SUPPORT CFG_INI_BOOL( \
+		"enable_responder_secure_ltf_support", \
+		false, \
+		"enable Responder secure LTF support")
 
 #define CFG_WIFI_POS_ALL \
 	CFG(CFG_FINE_TIME_MEAS_CAPABILITY) \
-	CFG(CFG_OEM_SIXG_SUPPORT_DISABLE)
+	CFG(CFG_OEM_SIXG_SUPPORT_DISABLE) \
+	CFG(CFG_RESPONDER_SECURE_LTF_SUPPORT)
 
 #endif /* __CFG_MLME_WIFI_POS_H */
