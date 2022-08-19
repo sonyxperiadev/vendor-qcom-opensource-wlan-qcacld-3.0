@@ -6801,7 +6801,6 @@ static void wma_update_hw_mode_config(tp_wma_handle wma_handle,
 				      struct target_psoc_info *tgt_hdl)
 {
 	uint32_t conc_scan_config_bits, fw_config_bits;
-	uint8_t sta_sap_scc_on_dfs_chnl;
 
 	fw_config_bits = target_if_get_fw_config_bits(tgt_hdl);
 	conc_scan_config_bits = target_if_get_conc_scan_config_bits(tgt_hdl);
@@ -6818,18 +6817,6 @@ static void wma_update_hw_mode_config(tp_wma_handle wma_handle,
 	}
 	wma_init_scan_fw_mode_config(wma_handle->psoc, conc_scan_config_bits,
 				     fw_config_bits);
-
-	policy_mgr_get_sta_sap_scc_on_dfs_chnl(wma_handle->psoc,
-					       &sta_sap_scc_on_dfs_chnl);
-
-	/*
-	 * For non-dbs HW, disallow sta+sap on DFS channel as if SAP comes
-	 * on DFS master mode enable (sta_sap_scc_on_dfs_chnl = 2), scan will
-	 * be disabled and STA cannot connect to any other channel
-	 */
-	if (!policy_mgr_is_hw_dbs_capable(wma_handle->psoc) &&
-	    sta_sap_scc_on_dfs_chnl == 2)
-		policy_mgr_set_sta_sap_scc_on_dfs_chnl(wma_handle->psoc, 1);
 }
 
 int wma_rx_service_ready_ext2_event(void *handle, uint8_t *ev, uint32_t len)

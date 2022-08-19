@@ -3106,7 +3106,9 @@ static bool hdd_max_sta_interface_up_count_reached(struct hdd_adapter *adapter)
 	return false;
 }
 
-#if defined(WLAN_FEATURE_11BE_MLO) && defined(CFG80211_IFTYPE_MLO_LINK_SUPPORT)
+#if defined(WLAN_FEATURE_11BE_MLO) && \
+(defined(CFG80211_IFTYPE_MLO_LINK_SUPPORT) || \
+defined(CFG80211_SINGLE_NETDEV_MULTI_LINK_SUPPORT))
 static int hdd_start_link_adapter(struct hdd_adapter *sta_adapter)
 {
 	int i, ret = 0;
@@ -4833,9 +4835,16 @@ hdd_set_mld_address(struct hdd_adapter *adapter, struct hdd_context *hdd_ctx,
 	}
 }
 
-static QDF_STATUS
-hdd_get_nw_adapter_mac_by_vdev_mac(struct qdf_mac_addr *mac_addr,
-				   struct qdf_mac_addr *adapter_mac)
+/**
+ * hdd_get_netdev_by_vdev_mac() - Get Netdev based on MAC
+ * @mac_addr: Vdev MAC address
+ *
+ * Get netdev from adapter based upon Vdev MAC address.
+ *
+ * Return: netdev pointer.
+ */
+static qdf_netdev_t
+hdd_get_netdev_by_vdev_mac(struct qdf_mac_addr *mac_addr)
 {
 	struct hdd_context *hdd_ctx;
 	struct hdd_adapter *adapter;
@@ -4844,24 +4853,23 @@ hdd_get_nw_adapter_mac_by_vdev_mac(struct qdf_mac_addr *mac_addr,
 	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
 	if (!hdd_ctx) {
 		hdd_err("Invalid HDD context");
-		return QDF_STATUS_E_INVAL;
+		return NULL;
 	}
 
 	adapter = hdd_get_adapter_by_macaddr(hdd_ctx, mac_addr->bytes);
 	if (!adapter) {
-		hdd_err("Invalid Adapter context");
-		return QDF_STATUS_E_INVAL;
+		hdd_err("Adapter not foud for MAC " QDF_MAC_ADDR_FMT "",
+			QDF_MAC_ADDR_REF(mac_addr));
+		return NULL;
 	}
 
 	if (adapter->mlo_adapter_info.is_link_adapter &&
 	    adapter->mlo_adapter_info.associate_with_ml_adapter) {
 		ml_adapter = adapter->mlo_adapter_info.ml_adapter;
-		qdf_copy_macaddr(adapter_mac, &ml_adapter->mac_addr);
-	} else {
-		qdf_copy_macaddr(adapter_mac, &adapter->mac_addr);
+		adapter =  ml_adapter;
 	}
 
-	return QDF_STATUS_SUCCESS;
+	return adapter->dev;
 }
 #else
 static void
@@ -4870,12 +4878,26 @@ hdd_set_mld_address(struct hdd_adapter *adapter, struct hdd_context *hdd_ctx,
 {
 }
 
-static QDF_STATUS
-hdd_get_nw_adapter_mac_by_vdev_mac(struct qdf_mac_addr *mac_addr,
-				   struct qdf_mac_addr *adapter_mac)
+static qdf_netdev_t
+hdd_get_netdev_by_vdev_mac(struct qdf_mac_addr *mac_addr)
 {
-	qdf_copy_macaddr(adapter_mac, mac_addr);
-	return QDF_STATUS_SUCCESS;
+	struct hdd_context *hdd_ctx;
+	struct hdd_adapter *adapter;
+
+	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
+	if (!hdd_ctx) {
+		hdd_err("Invalid HDD context");
+		return NULL;
+	}
+
+	adapter = hdd_get_adapter_by_macaddr(hdd_ctx, mac_addr->bytes);
+	if (!adapter) {
+		hdd_err("Adapter not foud for MAC " QDF_MAC_ADDR_FMT "",
+			QDF_MAC_ADDR_REF(mac_addr));
+		return NULL;
+	}
+
+	return adapter->dev;
 }
 #endif
 
@@ -10040,14 +10062,11 @@ bool wlan_hdd_sta_get_dot11mode(hdd_cb_handle context, uint8_t vdev_id,
 		return false;
 
 	adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
-	if (!adapter) {
-		hdd_err("adapter is null");
+	if (!adapter)
 		return false;
-	}
-	if (!hdd_cm_is_vdev_associated(adapter)) {
-		hdd_err("vdev not associated ");
+
+	if (!hdd_cm_is_vdev_associated(adapter))
 		return false;
-	}
 
 	sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
 	mode = sta_ctx->conn_info.dot11mode;
@@ -10283,12 +10302,12 @@ static inline bool hdd_any_adapter_connected(hdd_cb_handle context)
 
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
 /**
- * hdd_pld_remove_pm_qos() - Remove PLD PM QoS request
+ * hdd_pld_remove_pm_qos() - Request PLD PM QoS request
  * @context: HDD context
  *
  * Return: None
  */
-static inline void hdd_pld_remove_pm_qos(hdd_cb_handle context)
+static inline void hdd_pld_request_pm_qos(hdd_cb_handle context)
 {
 	struct hdd_context *hdd_ctx = hdd_cb_handle_to_context(context);
 
@@ -10304,12 +10323,12 @@ static inline void hdd_pld_remove_pm_qos(hdd_cb_handle context)
 }
 
 /**
- * hdd_pld_request_pm_qos() - Request PLD PM QoS request
+ * hdd_pld_request_pm_qos() - Remove PLD PM QoS request
  * @context: HDD context
  *
  * Return: None
  */
-static inline void hdd_pld_request_pm_qos(hdd_cb_handle context)
+static inline void hdd_pld_remove_pm_qos(hdd_cb_handle context)
 {
 	struct hdd_context *hdd_ctx = hdd_cb_handle_to_context(context);
 
@@ -10473,8 +10492,8 @@ static void hdd_dp_register_callbacks(struct hdd_context *hdd_ctx)
 	cb_obj.dp_nud_failure_work = hdd_nud_failure_work;
 	cb_obj.dp_get_pause_map = hdd_get_pause_map;
 
-	cb_obj.dp_get_nw_intf_mac_by_vdev_mac =
-		hdd_get_nw_adapter_mac_by_vdev_mac;
+	cb_obj.dp_get_netdev_by_vdev_mac =
+		hdd_get_netdev_by_vdev_mac;
 	cb_obj.dp_get_tx_resource = hdd_get_tx_resource;
 	cb_obj.dp_get_tx_flow_low_watermark = hdd_get_tx_flow_low_watermark;
 	cb_obj.dp_get_tsf_time = hdd_get_tsf_time_cb;
@@ -11983,7 +12002,17 @@ static int __hdd_psoc_idle_shutdown(struct hdd_context *hdd_ctx)
 	}
 
 	osif_psoc_sync_wait_for_ops(psoc_sync);
-	errno = hdd_wlan_stop_modules(hdd_ctx, false);
+	/*
+	 * This is to handle scenario in which platform driver triggers
+	 * idle_shutdown if Deep Sleep/Hibernate entry notification is
+	 * received from modem subsystem in wearable devices
+	 */
+	if (hdd_is_any_interface_open(hdd_ctx)) {
+		hdd_err_rl("all interfaces are not down, ignore idle shutdown");
+		errno = -EAGAIN;
+	} else {
+		errno = hdd_wlan_stop_modules(hdd_ctx, false);
+	}
 
 	osif_psoc_sync_trans_stop(psoc_sync);
 
@@ -12009,16 +12038,6 @@ int hdd_psoc_idle_shutdown(struct device *dev)
 	if (is_mode_change_psoc_idle_shutdown)
 		ret = __hdd_mode_change_psoc_idle_shutdown(hdd_ctx);
 	else {
-		/*
-		 * This is to handle scenario in which platform driver triggers
-		 * idle_shutdown if Deep Sleep/Hibernate entry notification is
-		 * received from modem subsystem in wearable devices
-		 */
-		if (hdd_is_any_interface_open(hdd_ctx)) {
-			hdd_err_rl("all interfaces are not down, ignore idle shutdown");
-			return -EINVAL;
-		}
-
 		ret =  __hdd_psoc_idle_shutdown(hdd_ctx);
 	}
 
@@ -19060,6 +19079,8 @@ wlan_hdd_add_monitor_check(struct hdd_context *hdd_ctx,
 	if (ucfg_pkt_capture_get_mode(hdd_ctx->psoc) !=
 						PACKET_CAPTURE_MODE_DISABLE)
 		wlan_hdd_del_p2p_interface(hdd_ctx);
+
+	params.is_add_virtual_iface = 1;
 
 	mon_adapter = hdd_open_adapter(hdd_ctx, QDF_MONITOR_MODE, name,
 				       wlan_hdd_get_intf_addr(

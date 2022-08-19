@@ -380,7 +380,7 @@ static void dp_nud_filter_netevent(struct qdf_mac_addr *netdev_addr,
 				  gw_mac_addr))
 		return;
 
-	if (dp_ctx->wlan_suspended) {
+	if (dp_ctx->is_wiphy_suspended) {
 		dp_info("wlan is suspended, ignore NUD event");
 		return;
 	}

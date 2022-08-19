@@ -1824,7 +1824,10 @@ static void hdd_country_change_work_handle(void *arg)
 		return;
 	}
 
-	__hdd_country_change_work_handle(hdd_ctx);
+	if (hdd_ctx->driver_status != DRIVER_MODULES_ENABLED)
+		hdd_err("Driver disabled, ignore country code change");
+	else
+		__hdd_country_change_work_handle(hdd_ctx);
 
 	osif_psoc_sync_op_stop(psoc_sync);
 }

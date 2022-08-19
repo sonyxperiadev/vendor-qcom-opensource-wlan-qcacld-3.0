@@ -386,7 +386,7 @@ struct wlan_dp_psoc_context {
 	uint64_t no_rx_offload_pkt_cnt;
 	uint64_t no_tx_offload_pkt_cnt;
 
-	bool wlan_suspended;
+	bool is_suspend;
 	/* Flag keeps track of wiphy suspend/resume */
 	bool is_wiphy_suspended;
 

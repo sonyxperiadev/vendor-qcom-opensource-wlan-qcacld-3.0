@@ -3661,6 +3661,117 @@ static inline void lim_update_pmksa_to_profile(struct wlan_objmgr_vdev *vdev,
 }
 #endif
 
+static inline bool
+lim_is_rsnxe_cap_set(struct mac_context *mac_ctx,
+		     struct cm_vdev_join_req *req)
+{
+	const uint8_t *rsnxe, *rsnxe_cap;
+	uint8_t cap_len, cap_index;
+	uint32_t cap_mask;
+
+	rsnxe = wlan_get_ie_ptr_from_eid(WLAN_ELEMID_RSNXE,
+					 req->assoc_ie.ptr,
+					 req->assoc_ie.len);
+	if (!rsnxe)
+		return false;
+
+	rsnxe_cap = wlan_crypto_parse_rsnxe_ie(rsnxe, &cap_len);
+	if (!rsnxe_cap) {
+		mlme_debug("RSNXE caps not present");
+		return false;
+	}
+
+	/*
+	 * Below is the definition of RSNXE capabilities defined
+	 * in (IEEE Std 802.11-2020, 9.4.2.241, Table 9-780).
+	 * The Extended RSN Capabilities field, except its first 4 bits, is a
+	 * bit field indicating the extended RSN capabilities being advertised
+	 * by the STA transmitting the element. The length of the Extended
+	 * RSN Capabilities field is a variable n, in octets, as indicated by
+	 * the first 4 bits in the field.
+	 * Let's consider a uint32_t cap_mask which can accommodate 28(32-4)
+	 * bits to check if those bits are set or not. This is to keep it
+	 * simple as current supported bits are only 11.
+	 * TODO: If spec supports more than this range in future, this needs to
+	 * be an array to hold the complete bitmap/bitmask.
+	 */
+	cap_mask = ~(WLAN_CRYPTO_RSNX_CAP_SAE_H2E |
+		     WLAN_CRYPTO_RSNX_CAP_SAE_PK |
+		     WLAN_CRYPTO_RSNX_CAP_SECURE_LTF |
+		     WLAN_CRYPTO_RSNX_CAP_SECURE_RTT |
+		     WLAN_CRYPTO_RSNX_CAP_PROT_RANGE_NEG);
+
+	/* Check if any other bits are set than cap_mask */
+	for (cap_index = 0; cap_index <= cap_len; cap_index++) {
+		if (rsnxe_cap[cap_index] & (cap_mask & 0xFF))
+			return true;
+		cap_mask >>= 8;
+	}
+
+	return false;
+}
+
+/**
+ * lim_is_akm_wpa_wpa2() - Check if the AKM is legacy than wpa3
+ *
+ * @session: PE session
+ *
+ * This is to check if the AKM is older than WPA3. This helps to determine if
+ * RSNXE needs to be carried or not.
+ *
+ * return true - If AKM is WPA/WPA2 which means it's older than WPA3
+ *        false - If AKM is not older than WPA3
+ */
+static inline bool
+lim_is_akm_wpa_wpa2(struct pe_session *session)
+{
+	int32_t akm;
+
+	akm = wlan_crypto_get_param(session->vdev, WLAN_CRYPTO_PARAM_KEY_MGMT);
+	if (akm == -1)
+		return false;
+
+	if (WLAN_CRYPTO_IS_WPA_WPA2(akm))
+		return true;
+
+	return false;
+}
+
+static inline void
+lim_strip_rsnx_ie(struct mac_context *mac_ctx,
+		  struct pe_session *session,
+		  struct cm_vdev_join_req *req)
+{
+	/*
+	 * Userspace may send RSNXE also in connect request irrespective
+	 * of the connecting AP capabilities. This allows the driver to chose
+	 * best candidate based on score. But the chosen candidate may
+	 * not support the RSNXE feature and may not advertise RSNXE
+	 * in beacon/probe response. Station is not supposed to include
+	 * the RSNX IE in assoc request in such cases as legacy APs
+	 * may misbahave due to the new IE. It's observed that few
+	 * legacy APs which don't support the RSNXE reject the
+	 * connection at EAPOL stage.
+	 * So, strip the IE when below conditions are met to avoid
+	 * sending the RSNXE to legacy APs,
+	 * 1. If AP doesn't support/advertise the RSNXE
+	 * 2. If the connection is in a older mode than WPA3 i.e. WPA/WPA2 mode
+	 * 3. If no other bits are set than SAE_H2E, SAE_PK, SECURE_LTF,
+	 * SECURE_RTT, PROT_RANGE_NEGOTIOATION in RSNXE capabilities
+	 * field.
+
+	 */
+	if (!util_scan_entry_rsnxe(req->entry) &&
+	    lim_is_akm_wpa_wpa2(session) &&
+	    !lim_is_rsnxe_cap_set(mac_ctx, req)) {
+		mlme_debug("Strip RSNXE as it's not supported by AP");
+		lim_strip_ie(mac_ctx, req->assoc_ie.ptr,
+			     (uint16_t *)&req->assoc_ie.len,
+			     WLAN_ELEMID_RSNXE, ONE_BYTE,
+			     NULL, 0, NULL, WLAN_MAX_IE_LEN);
+	}
+}
+
 static QDF_STATUS
 lim_fill_rsn_ie(struct mac_context *mac_ctx, struct pe_session *session,
 		struct cm_vdev_join_req *req)
@@ -3741,6 +3852,8 @@ lim_fill_rsn_ie(struct mac_context *mac_ctx, struct pe_session *session,
 				    pmksa_peer->pmk, pmksa_peer->pmk_len);
 		lim_update_pmksa_to_profile(session->vdev, pmksa_peer);
 	}
+
+	lim_strip_rsnx_ie(mac_ctx, session, req);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -4278,6 +4391,13 @@ static void lim_process_sb_disconnect_req(struct mac_context *mac_ctx,
 {
 	struct scheduler_msg msg = {0};
 	struct disassoc_cnf disassoc_cnf = {0};
+
+	/* For SB disconnect smeState should be in Deauth state
+	 * One scenario where the smeState is not updated is when
+	 * AP sends deauth on link vdev and disconnect req is triggered
+	 */
+	if (pe_session->limSmeState == eLIM_SME_LINK_EST_STATE)
+		pe_session->limSmeState = eLIM_SME_WT_DEAUTH_STATE;
 
 	if (pe_session->limSmeState == eLIM_SME_WT_DEAUTH_STATE)
 		disassoc_cnf.messageType = eWNI_SME_DEAUTH_CNF;
@@ -5436,7 +5556,8 @@ void lim_calculate_tpc(struct mac_context *mac,
 		if (mlme_obj->reg_tpc_obj.ap_constraint_power) {
 			local_constraint =
 				mlme_obj->reg_tpc_obj.ap_constraint_power;
-			reg_max = mlme_obj->reg_tpc_obj.reg_max[i];
+			pe_debug("local constraint: %d power constraint absolute %d",
+				 local_constraint, is_pwr_constraint_absolute);
 			if (is_pwr_constraint_absolute)
 				max_tx_power = QDF_MIN(reg_max,
 						       local_constraint);

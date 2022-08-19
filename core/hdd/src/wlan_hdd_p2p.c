@@ -313,7 +313,8 @@ static int __wlan_hdd_mgmt_tx(struct wiphy *wiphy, struct wireless_dev *wdev,
 	if ((adapter->device_mode == QDF_STA_MODE ||
 	     adapter->device_mode == QDF_SAP_MODE ||
 	     adapter->device_mode == QDF_P2P_CLIENT_MODE ||
-	     adapter->device_mode == QDF_P2P_GO_MODE) &&
+	     adapter->device_mode == QDF_P2P_GO_MODE ||
+	     adapter->device_mode == QDF_NAN_DISC_MODE) &&
 	    (type == SIR_MAC_MGMT_FRAME &&
 	    sub_type == SIR_MAC_MGMT_AUTH)) {
 		/* Request ROC for PASN authentication frame */
@@ -1151,8 +1152,7 @@ __hdd_indicate_mgmt_frame_to_user(struct hdd_adapter *adapter,
 
 	assoc_adapter = adapter;
 
-	if (wlan_vdev_mlme_is_mlo_vdev(adapter->vdev) &&
-	    !hdd_adapter_is_ml_adapter(adapter)) {
+	if (hdd_adapter_is_link_adapter(adapter)) {
 		hdd_debug("adapter is not ml adapter move to ml adapter");
 		assoc_adapter = hdd_adapter_get_mlo_adapter_from_link(adapter);
 		if (!assoc_adapter) {

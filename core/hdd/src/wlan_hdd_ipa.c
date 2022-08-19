@@ -36,6 +36,8 @@
 	IS_ENABLED(CONFIG_SCHED_WALT)
 #include <linux/sched/walt.h>
 #endif
+#include "wlan_hdd_object_manager.h"
+#include "wlan_dp_ucfg_api.h"
 
 void hdd_ipa_set_tx_flow_info(void)
 {
@@ -452,6 +454,7 @@ static int hdd_ipa_aggregated_rx_ind(qdf_nbuf_t skb)
 void hdd_ipa_send_nbuf_to_network(qdf_nbuf_t nbuf, qdf_netdev_t dev)
 {
 	struct hdd_adapter *adapter = (struct hdd_adapter *) netdev_priv(dev);
+	struct wlan_objmgr_vdev *vdev;
 	int result;
 	bool delivered = false;
 	uint32_t enabled;
@@ -476,14 +479,18 @@ void hdd_ipa_send_nbuf_to_network(qdf_nbuf_t nbuf, qdf_netdev_t dev)
 	if ((adapter->device_mode == QDF_SAP_MODE) &&
 	    (qdf_nbuf_is_ipv4_dhcp_pkt(nbuf) == true)) {
 		/* Send DHCP Indication to FW */
-		hdd_softap_inspect_dhcp_packet(adapter, nbuf, QDF_RX);
+		vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
+		if (vdev) {
+			ucfg_dp_softap_inspect_dhcp_packet(vdev, nbuf, QDF_RX);
+			hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+		}
 	}
 
 	is_eapol = qdf_nbuf_is_ipv4_eapol_pkt(nbuf);
 
 	qdf_dp_trace_set_track(nbuf, QDF_RX);
 
-	hdd_event_eapol_log(nbuf, QDF_RX);
+	ucfg_dp_event_eapol_log(nbuf, QDF_RX);
 	qdf_dp_trace_log_pkt(adapter->vdev_id,
 			     nbuf, QDF_RX, QDF_TRACE_DEFAULT_PDEV_ID);
 	DPTRACE(qdf_dp_trace(nbuf,

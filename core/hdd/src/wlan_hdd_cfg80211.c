@@ -589,6 +589,10 @@ static const struct ieee80211_txrx_stypes
 		      BIT(SIR_MAC_MGMT_DEAUTH) |
 		      BIT(SIR_MAC_MGMT_ACTION),
 	},
+	[NL80211_IFTYPE_NAN] = {
+		.tx = 0xffff,
+		.rx = BIT(SIR_MAC_MGMT_AUTH),
+	},
 };
 
 /* Interface limits and combinations registered by the driver */
@@ -3523,6 +3527,9 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 		hdd_err("acs config chan count 0");
 		ret = -EINVAL;
 		goto out;
+	} else {
+		hdd_nofl_debug("Dump raw ACS chanlist - ");
+		sap_dump_acs_channel(&sap_config->acs_cfg);
 	}
 
 	hdd_handle_acs_2g_preferred_sap_conc(hdd_ctx->psoc, adapter,
@@ -16804,7 +16811,8 @@ __wlan_hdd_cfg80211_set_monitor_mode(struct wiphy *wiphy,
 		return -EPERM;
 	}
 
-	if (!ucfg_pkt_capture_get_mode(hdd_ctx->psoc))
+	if (!ucfg_pkt_capture_get_mode(hdd_ctx->psoc) ||
+	    !hdd_is_pkt_capture_mon_enable(adapter))
 		return -EPERM;
 
 	errno = hdd_validate_adapter(adapter);
@@ -19994,6 +20002,7 @@ static int __wlan_hdd_cfg80211_add_key(struct wiphy *wiphy,
 		break;
 	case QDF_STA_MODE:
 	case QDF_P2P_CLIENT_MODE:
+	case QDF_NAN_DISC_MODE:
 		errno = wlan_hdd_add_key_sta(hdd_ctx->pdev, adapter, pairwise,
 					     key_index, &ft_mode);
 		if (ft_mode)

@@ -3493,7 +3493,8 @@ void peer_unmap_timer_handler(void *data)
  * @soc_hdl: datapath soc handle
  * @vdev_id: virtual interface id
  * @peer_mac: peer MAC address
- * @bitmap - bitmap indicating special handling of request.
+ * @bitmap: bitmap indicating special handling of request.
+ * @peer_type: link or mld peer
  * When the host's control SW disassociates a peer, it calls
  * this function to detach and delete the peer. The reference
  * stored in the control peer object to the data peer
@@ -3501,8 +3502,10 @@ void peer_unmap_timer_handler(void *data)
  *
  * Return: SUCCESS or Failure
  */
-static QDF_STATUS ol_txrx_peer_detach(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
-				      uint8_t *peer_mac, uint32_t bitmap)
+static QDF_STATUS ol_txrx_peer_detach(struct cdp_soc_t *soc_hdl,
+				      uint8_t vdev_id, uint8_t *peer_mac,
+				      uint32_t bitmap,
+				      enum cdp_peer_type peer_type)
 {
 	ol_txrx_peer_handle peer;
 	struct ol_txrx_soc_t *soc = cdp_soc_t_to_ol_txrx_soc_t(soc_hdl);
@@ -3611,7 +3614,8 @@ static void ol_txrx_peer_detach_force_delete(struct cdp_soc_t *soc_hdl,
 	/* Clear the peer_id_to_obj map entries */
 	ol_txrx_peer_remove_obj_map_entries(pdev, peer);
 	ol_txrx_peer_detach(soc_hdl, vdev_id, peer_mac,
-			    1 << CDP_PEER_DELETE_NO_SPECIAL);
+			    1 << CDP_PEER_DELETE_NO_SPECIAL,
+			    CDP_LINK_PEER_TYPE);
 }
 
 /**
@@ -3641,7 +3645,8 @@ static void ol_txrx_peer_detach_sync(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	if (!pdev->peer_unmap_sync_cb)
 		pdev->peer_unmap_sync_cb = peer_unmap_sync;
 
-	ol_txrx_peer_detach(soc_hdl, vdev_id, peer_mac, bitmap);
+	ol_txrx_peer_detach(soc_hdl, vdev_id, peer_mac, bitmap,
+			    CDP_LINK_PEER_TYPE);
 }
 
 /**

@@ -2816,7 +2816,8 @@ p2p_is_vdev_support_rand_mac(struct wlan_objmgr_vdev *vdev)
 	mode = wlan_vdev_mlme_get_opmode(vdev);
 	if (mode == QDF_STA_MODE ||
 	    mode == QDF_P2P_CLIENT_MODE ||
-	    mode == QDF_P2P_DEVICE_MODE)
+	    mode == QDF_P2P_DEVICE_MODE ||
+	    mode == QDF_NAN_DISC_MODE)
 		return true;
 	return false;
 }
@@ -3018,18 +3019,35 @@ void p2p_rand_mac_tx(struct wlan_objmgr_pdev *pdev,
 		     struct tx_action_context *tx_action)
 {
 	struct wlan_objmgr_psoc *soc;
+	struct wlan_objmgr_vdev *vdev;
 	QDF_STATUS status;
+	bool is_vdev_up;
 
 	if (!tx_action || !tx_action->p2p_soc_obj ||
 	    !tx_action->p2p_soc_obj->soc)
 		return;
 	soc = tx_action->p2p_soc_obj->soc;
 
+	vdev = wlan_objmgr_get_vdev_by_id_from_pdev(pdev, tx_action->vdev_id,
+						    WLAN_P2P_ID);
+	if (!vdev) {
+		p2p_err("vdev is null id:%d", tx_action->vdev_id);
+		return;
+	}
+
+	/*
+	 * For PASN authentication frames, fw may request PASN authentication
+	 * with source address same as vdev mac address when vdev is not already
+	 * started. Allow RX_FILTER configuration for vdev mac address also if
+	 * vdev is not started to prevent PASN authentication frame drops.
+	 */
+	is_vdev_up = QDF_IS_STATUS_SUCCESS(wlan_vdev_is_up(vdev));
 	if (!tx_action->no_ack && tx_action->chan_freq &&
 	    tx_action->buf_len > MIN_MAC_HEADER_LEN &&
 	    p2p_is_vdev_support_rand_mac_by_id(soc, tx_action->vdev_id) &&
-	    p2p_is_random_mac(soc, tx_action->vdev_id,
-			      &tx_action->buf[SRC_MAC_ADDR_OFFSET])) {
+	    (p2p_is_random_mac(soc, tx_action->vdev_id,
+			      &tx_action->buf[SRC_MAC_ADDR_OFFSET]) ||
+	     !is_vdev_up)) {
 		status = p2p_request_random_mac(
 			soc, tx_action->vdev_id,
 			&tx_action->buf[SRC_MAC_ADDR_OFFSET],
@@ -3041,6 +3059,8 @@ void p2p_rand_mac_tx(struct wlan_objmgr_pdev *pdev,
 		else
 			tx_action->rand_mac_tx = false;
 	}
+
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_P2P_ID);
 }
 
 void

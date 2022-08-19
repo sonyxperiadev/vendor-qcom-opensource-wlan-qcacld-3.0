@@ -2434,6 +2434,7 @@ static int __wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
 	struct hdd_adapter *adapter, *next_adapter = NULL;
 	mac_handle_t mac_handle;
 	struct wlan_objmgr_vdev *vdev;
+	enum pmo_suspend_mode mode;
 	int rc;
 	wlan_net_dev_ref_dbgid dbgid = NET_DEV_HOLD_CFG80211_SUSPEND_WLAN;
 	struct hdd_hostapd_state *hapd_state;
@@ -2460,14 +2461,18 @@ static int __wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
 			return rc;
 	}
 
-	if (ucfg_pmo_get_suspend_mode(hdd_ctx->psoc) == PMO_SUSPEND_NONE) {
-		hdd_info_rl("Suspend is not supported");
-		return -EINVAL;
-	}
-
 	if (hdd_ctx->driver_status != DRIVER_MODULES_ENABLED) {
 		hdd_debug("Driver Modules not Enabled ");
 		return 0;
+	}
+
+	mode = ucfg_pmo_get_suspend_mode(hdd_ctx->psoc);
+	if (mode == PMO_SUSPEND_NONE) {
+		hdd_info_rl("Suspend is not supported");
+		return -EINVAL;
+	} else if (mode == PMO_SUSPEND_SHUTDOWN) {
+		hdd_info_rl("shutdown suspend should complete in prepare");
+		return -EINVAL;
 	}
 
 	mac_handle = hdd_ctx->mac_handle;

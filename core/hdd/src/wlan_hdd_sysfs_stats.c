@@ -39,7 +39,7 @@ static void hdd_sysfs_get_stats(struct hdd_adapter *adapter, ssize_t *length,
 				char *buffer, size_t buf_len)
 {
 	struct hdd_tx_rx_stats *stats = &adapter->hdd_stats.tx_rx_stats;
-	struct dp_tx_rx_stats dp_stats = {0};
+	struct dp_tx_rx_stats *dp_stats;
 	uint32_t len = 0;
 	uint32_t total_rx_pkt = 0, total_rx_dropped = 0;
 	uint32_t total_rx_delv = 0, total_rx_refused = 0;
@@ -57,9 +57,16 @@ static void hdd_sysfs_get_stats(struct hdd_adapter *adapter, ssize_t *length,
 	if (!vdev)
 		return;
 
-	if (ucfg_dp_get_txrx_stats(vdev, &dp_stats)) {
+	dp_stats = qdf_mem_malloc(sizeof(*stats));
+	if (!dp_stats) {
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+		return;
+	}
+
+	if (ucfg_dp_get_txrx_stats(vdev, dp_stats)) {
 		hdd_err("Unable to get stats from DP component");
 		hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+		qdf_mem_free(dp_stats);
 		return;
 	}
 	hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
@@ -68,13 +75,13 @@ static void hdd_sysfs_get_stats(struct hdd_adapter *adapter, ssize_t *length,
 				      &rx_ol_con, &rx_ol_low_tput);
 
 	for (; i < NUM_CPUS; i++) {
-		total_rx_pkt += dp_stats.per_cpu[i].rx_packets;
-		total_rx_dropped += dp_stats.per_cpu[i].rx_dropped;
-		total_rx_delv += dp_stats.per_cpu[i].rx_delivered;
-		total_rx_refused += dp_stats.per_cpu[i].rx_refused;
-		total_tx_pkt += dp_stats.per_cpu[i].tx_called;
-		total_tx_dropped += dp_stats.per_cpu[i].tx_dropped;
-		total_tx_orphaned += dp_stats.per_cpu[i].tx_orphaned;
+		total_rx_pkt += dp_stats->per_cpu[i].rx_packets;
+		total_rx_dropped += dp_stats->per_cpu[i].rx_dropped;
+		total_rx_delv += dp_stats->per_cpu[i].rx_delivered;
+		total_rx_refused += dp_stats->per_cpu[i].rx_refused;
+		total_tx_pkt += dp_stats->per_cpu[i].tx_called;
+		total_tx_dropped += dp_stats->per_cpu[i].tx_dropped;
+		total_tx_orphaned += dp_stats->per_cpu[i].tx_orphaned;
 		for (ac = 0; ac < WLAN_MAX_AC; ac++) {
 			total_tx_classified_ac[ac] +=
 					 stats->per_cpu[i].tx_classified_ac[ac];
@@ -105,25 +112,25 @@ static void hdd_sysfs_get_stats(struct hdd_adapter *adapter, ssize_t *length,
 			total_tx_classified_ac[SME_AC_VO],
 			qdf_system_ticks(),
 			total_rx_pkt, total_rx_dropped,
-			qdf_atomic_read(&dp_stats.rx_usolict_arp_n_mcast_drp),
+			qdf_atomic_read(&dp_stats->rx_usolict_arp_n_mcast_drp),
 			total_rx_delv,
 			total_rx_refused,
-			dp_stats.rx_aggregated, dp_stats.rx_non_aggregated,
-			dp_stats.rx_gro_flush_skip,
-			dp_stats.rx_gro_low_tput_flush,
+			dp_stats->rx_aggregated, dp_stats->rx_non_aggregated,
+			dp_stats->rx_gro_flush_skip,
+			dp_stats->rx_gro_low_tput_flush,
 			rx_ol_con,
 			rx_ol_low_tput);
 
 	for (i = 0; i < NUM_CPUS; i++) {
-		if (dp_stats.per_cpu[i].rx_packets == 0)
+		if (dp_stats->per_cpu[i].rx_packets == 0)
 			continue;
 		len += scnprintf(buffer + len, buf_len - len,
 				 "Rx CPU[%d]:"
 				 "packets %u, dropped %u, delivered %u, refused %u\n",
-				 i, dp_stats.per_cpu[i].rx_packets,
-				 dp_stats.per_cpu[i].rx_dropped,
-				 dp_stats.per_cpu[i].rx_delivered,
-				 dp_stats.per_cpu[i].rx_refused);
+				 i, dp_stats->per_cpu[i].rx_packets,
+				 dp_stats->per_cpu[i].rx_dropped,
+				 dp_stats->per_cpu[i].rx_delivered,
+				 dp_stats->per_cpu[i].rx_refused);
 	}
 
 	len += scnprintf(buffer + len, buf_len - len,
@@ -139,6 +146,7 @@ static void hdd_sysfs_get_stats(struct hdd_adapter *adapter, ssize_t *length,
 	len += cdp_stats(cds_get_context(QDF_MODULE_ID_SOC),
 			 adapter->vdev_id, &buffer[len], (buf_len - len));
 	*length = len + 1;
+	qdf_mem_free(dp_stats);
 }
 
 static ssize_t

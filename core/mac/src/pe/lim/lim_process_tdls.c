@@ -748,6 +748,9 @@ static void populate_dot11f_tdls_ht_vht_cap(struct mac_context *mac,
 					      pe_session->curr_op_freq) &&
 		    is_wideband)
 			htCap->supportedChannelWidthSet = 1;
+		else
+			if (pe_session->ch_width == CH_WIDTH_20MHZ)
+				htCap->supportedChannelWidthSet = 0;
 
 		if (NSS_1x1_MODE == nss)
 			htCap->supportedMCSSet[1] = 0;
@@ -3123,7 +3126,8 @@ static void lim_tdls_update_hash_node_info(struct mac_context *mac,
 		 * associated, if the base channel is dfs channel and peer is
 		 * not wide band supported
 		 */
-		if (!wide_band_peer) {
+		if (!wide_band_peer ||
+		    wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq)) {
 			lim_tdls_fill_session_vht_width(pe_session, sta);
 		} else {
 			if (pVhtCaps->supportedChannelWidthSet >=

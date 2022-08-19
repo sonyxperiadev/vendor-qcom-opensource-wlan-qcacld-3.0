@@ -218,17 +218,21 @@ struct big_data_stats_event {
 
 /**
  * struct medium_assess_data - medium assess data from firmware
- * @part1_valid: the flag for part1 data
+ * @part1_valid: the flag for part1 data, include cycle_count,
+ *    rx_clear_count and tx_frame_count
  * @cycle_count: accumulative cycle count (total time)
  * @rx_clear_count: accumulative rx clear count (busy time)
  * @tx_frame_count: accumulative tx frame count (total time)
+ * @part2_valid: the flag for part2 data, include my_rx_count
+ * @my_rx_count: my RX count
  */
 struct medium_assess_data {
-	/* part1 data */
-	uint8_t part1_valid;
+	bool part1_valid;
 	uint32_t cycle_count;
 	uint32_t rx_clear_count;
 	uint32_t tx_frame_count;
+	bool part2_valid;
+	uint32_t my_rx_count;
 };
 
 /**
@@ -254,7 +258,8 @@ struct request_info {
 		void (*get_peer_stats_cb)(struct stats_event *ev,
 					  void *cookie);
 		void (*congestion_notif_cb)(uint8_t vdev_id,
-					  struct medium_assess_data *data);
+					  struct medium_assess_data *data,
+					  bool last);
 #ifdef WLAN_FEATURE_BIG_DATA_STATS
 		void (*get_big_data_stats_cb)(struct big_data_stats_event *ev,
 					      void *cookie);
@@ -304,6 +309,24 @@ struct psoc_mc_cp_stats {
 #ifdef WLAN_FEATURE_BIG_DATA_STATS
 	bool big_data_fw_support_enable;
 #endif
+};
+
+/**
+ * struct pdev_extd_stats - pdev extd stats
+ * @pdev_id: pdev id
+ * @my_rx_count: What portion of time, as measured by the MAC HW clock was
+ *               occupied, by receiving PPDUs addressed to one of the vdevs
+ *               within this pdev.
+ * @rx_matched_11ax_msdu_cnt: number of Rx 11ax MSDUs with matching BSS color
+ *                            counter updated at EOP (end of packet)
+ * @rx_other_11ax_msdu_cnt: number of Rx 11ax MSDUs with other BSS color counter
+ *                          updated at EOP (end of packet)
+ */
+struct pdev_mc_cp_extd_stats {
+	uint32_t pdev_id;
+	uint32_t my_rx_count;
+	uint32_t rx_matched_11ax_msdu_cnt;
+	uint32_t rx_other_11ax_msdu_cnt;
 };
 
 /**
@@ -643,6 +666,9 @@ struct peer_stats_info_ext_event {
  * struct stats_event - parameters populated by stats event
  * @num_pdev_stats: num pdev stats
  * @pdev_stats: if populated array indicating pdev stats (index = pdev_id)
+ * @num_pdev_extd_stats: num pdev extended stats
+ * @pdev_extd_stats: if populated array indicating pdev extended stats
+ *                   (index = pdev_id)
  * @num_peer_stats: num peer stats
  * @peer_stats: if populated array indicating peer stats
  * @peer_adv_stats: if populated, indicates peer adv (extd2) stats
@@ -667,6 +693,8 @@ struct peer_stats_info_ext_event {
 struct stats_event {
 	uint32_t num_pdev_stats;
 	struct pdev_mc_cp_stats *pdev_stats;
+	uint32_t num_pdev_extd_stats;
+	struct pdev_mc_cp_extd_stats *pdev_extd_stats;
 	uint32_t num_peer_stats;
 	struct peer_mc_cp_stats *peer_stats;
 	uint32_t num_peer_adv_stats;

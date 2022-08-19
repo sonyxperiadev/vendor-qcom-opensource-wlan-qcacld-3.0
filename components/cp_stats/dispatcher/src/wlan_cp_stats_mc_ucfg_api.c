@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -944,6 +945,7 @@ void ucfg_mc_cp_stats_free_stats_resources(struct stats_event *ev)
 		return;
 
 	qdf_mem_free(ev->pdev_stats);
+	qdf_mem_free(ev->pdev_extd_stats);
 	qdf_mem_free(ev->peer_adv_stats);
 	qdf_mem_free(ev->peer_stats);
 	qdf_mem_free(ev->cca_stats);
