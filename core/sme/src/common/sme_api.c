@@ -14956,6 +14956,50 @@ void sme_reset_he_caps(mac_handle_t mac_handle, uint8_t vdev_id)
 #endif
 
 #ifdef WLAN_FEATURE_11BE
+void sme_set_mlo_max_links(mac_handle_t mac_handle, uint8_t vdev_id,
+			   uint8_t val)
+{
+	struct mac_context *mac_ctx = MAC_CONTEXT(mac_handle);
+	struct csr_roam_session *session;
+
+	session = CSR_GET_SESSION(mac_ctx, vdev_id);
+
+	if (!session) {
+		sme_err("No session for id %d", vdev_id);
+		return;
+	}
+	wlan_mlme_set_sta_mlo_conn_max_num(mac_ctx->psoc, val);
+}
+
+void sme_set_mlo_max_simultaneous_links(mac_handle_t mac_handle,
+					uint8_t vdev_id, uint8_t val)
+{
+	struct mac_context *mac_ctx = MAC_CONTEXT(mac_handle);
+	struct csr_roam_session *session;
+
+	session = CSR_GET_SESSION(mac_ctx, vdev_id);
+	if (!session) {
+		sme_err("No session for id %d", vdev_id);
+		return;
+	}
+	wlan_mlme_set_sta_mlo_simulataneous_links(mac_ctx->psoc, val);
+}
+
+void sme_set_mlo_assoc_link_band(mac_handle_t mac_handle, uint8_t vdev_id,
+				 uint8_t val)
+{
+	struct mac_context *mac_ctx = MAC_CONTEXT(mac_handle);
+	struct csr_roam_session *session;
+
+	session = CSR_GET_SESSION(mac_ctx, vdev_id);
+
+	if (!session) {
+		sme_err("No session for id %d", vdev_id);
+		return;
+	}
+	wlan_mlme_set_sta_mlo_conn_band_bmp(mac_ctx->psoc, val);
+}
+
 void sme_set_eht_testbed_def(mac_handle_t mac_handle, uint8_t vdev_id)
 {
 	struct mac_context *mac_ctx = MAC_CONTEXT(mac_handle);
@@ -15057,6 +15101,7 @@ void sme_set_eht_testbed_def(mac_handle_t mac_handle, uint8_t vdev_id)
 	mac_ctx->eht_cap_5g.bw_20_tx_max_nss_for_mcs_8_and_9 = 0;
 	mac_ctx->usr_eht_testbed_cfg = true;
 	mac_ctx->roam.configParam.channelBondingMode24GHz = 0;
+	wlan_mlme_set_sta_mlo_conn_max_num(mac_ctx->psoc, 1);
 }
 
 void sme_reset_eht_caps(mac_handle_t mac_handle, uint8_t vdev_id)
@@ -15084,6 +15129,8 @@ void sme_reset_eht_caps(mac_handle_t mac_handle, uint8_t vdev_id)
 		     sizeof(tDot11fIEeht_cap));
 	mac_ctx->usr_eht_testbed_cfg = false;
 	mac_ctx->roam.configParam.channelBondingMode24GHz = 1;
+	wlan_mlme_set_sta_mlo_conn_band_bmp(mac_ctx->psoc, 0x77);
+	wlan_mlme_set_sta_mlo_conn_max_num(mac_ctx->psoc, 2);
 }
 #endif
 

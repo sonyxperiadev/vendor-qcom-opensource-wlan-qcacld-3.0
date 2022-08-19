@@ -3543,7 +3543,7 @@ uint8_t wlan_mlme_get_sta_mlo_conn_max_num(struct wlan_objmgr_psoc *psoc);
  * Return: QDF Status
  */
 QDF_STATUS wlan_mlme_set_sta_mlo_conn_max_num(struct wlan_objmgr_psoc *psoc,
-					      bool value);
+					      uint8_t value);
 
 /**
  * wlan_mlme_get_sta_mlo_conn_band_bmp() - get band bitmap that sta mlo
@@ -3555,6 +3555,25 @@ QDF_STATUS wlan_mlme_set_sta_mlo_conn_max_num(struct wlan_objmgr_psoc *psoc,
 uint8_t wlan_mlme_get_sta_mlo_conn_band_bmp(struct wlan_objmgr_psoc *psoc);
 
 /**
+ * wlan_mlme_set_sta_mlo_simulataneous_links() - set mlo simulataneous links
+ * @psoc: pointer to psoc object
+ * @value: value to set
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+wlan_mlme_set_sta_mlo_simulataneous_links(struct wlan_objmgr_psoc *psoc,
+					  uint8_t value);
+
+/**
+ * wlan_mlme_get_sta_mlo_simultaneous_links() - get mlo simulataneous links
+ * @psoc: pointer to psoc object
+ *
+ * Return: number of links
+ */
+uint8_t wlan_mlme_get_sta_mlo_simultaneous_links(struct wlan_objmgr_psoc *psoc);
+
+/**
  * wlan_mlme_set_sta_mlo_conn_band_bmp() - set band bitmap that sta mlo
  *                                         connection can support
  * @psoc: pointer to psoc object
@@ -3563,7 +3582,7 @@ uint8_t wlan_mlme_get_sta_mlo_conn_band_bmp(struct wlan_objmgr_psoc *psoc);
  * Return: QDF Status
  */
 QDF_STATUS wlan_mlme_set_sta_mlo_conn_band_bmp(struct wlan_objmgr_psoc *psoc,
-					       bool value);
+					       uint8_t value);
 #endif
 
 /**

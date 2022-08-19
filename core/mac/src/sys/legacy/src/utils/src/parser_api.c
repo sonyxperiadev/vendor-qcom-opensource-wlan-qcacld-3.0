@@ -11025,7 +11025,10 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 	if (mlo_ie->mld_capab_and_op_present) {
 		presence_bitmap |= WLAN_ML_BV_CTRL_PBM_MLDCAPANDOP_P;
 		mlo_ie->common_info_length += WLAN_ML_BV_CINFO_MLDCAPANDOP_SIZE;
-		mlo_ie->mld_capab_and_op_info.max_simultaneous_link_num = 1;
+		mlo_ie->mld_capab_and_op_info.max_simultaneous_link_num =
+			wlan_mlme_get_sta_mlo_simultaneous_links(psoc);
+		pe_debug("max_simultaneous_link_num %d",
+			 mlo_ie->mld_capab_and_op_info.max_simultaneous_link_num);
 		mlo_ie->mld_capab_and_op_info.srs_support = 0;
 		mlo_ie->mld_capab_and_op_info.tid_link_map_supported = 0;
 		mlo_ie->mld_capab_and_op_info.str_freq_separation = 0;

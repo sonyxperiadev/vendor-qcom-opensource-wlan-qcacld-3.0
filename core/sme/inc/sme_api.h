@@ -3682,13 +3682,65 @@ void sme_set_eht_testbed_def(mac_handle_t mac_handle, uint8_t vdev_id);
  * Return: None
  */
 void sme_reset_eht_caps(mac_handle_t mac_handle, uint8_t vdev_id);
+
+/**
+ * sme_set_mlo_max_links() - set mlo max links
+ * @mac_handle: Opaque handle to the global MAC context
+ * @vdev_id: VDEV id
+ * @val: value to be set
+ *
+ * Return: None
+ */
+void sme_set_mlo_max_links(mac_handle_t mac_handle, uint8_t vdev_id,
+			   uint8_t val);
+
+/**
+ * sme_set_mlo_max_simultaneous_links() - set mlo max simultaneous links
+ * @mac_handle: Opaque handle to the global MAC context
+ * @vdev_id: VDEV id
+ * @val: value to set
+ *
+ * Return: None
+ */
+void sme_set_mlo_max_simultaneous_links(mac_handle_t mac_handle,
+					uint8_t vdev_id, uint8_t val);
+
+/**
+ * sme_set_mlo_assoc_link_band() - set mlo assoc link band
+ * @mac_handle: Opaque handle to the global MAC context
+ * @vdev_id: VDEV id
+ * @val: value to be set
+ *
+ * Return: None
+ */
+void sme_set_mlo_assoc_link_band(mac_handle_t mac_handle, uint8_t vdev_id,
+				 uint8_t val);
 #else
 static inline void sme_set_eht_testbed_def(mac_handle_t mac_handle,
 					   uint8_t vdev_id)
 {
 }
 
-static inline void sme_reset_eht_caps(mac_handle_t mac_handle, uint8_t vdev_id)
+static inline
+void sme_reset_eht_caps(mac_handle_t mac_handle, uint8_t vdev_id)
+{
+}
+
+static inline
+void sme_set_mlo_max_links(mac_handle_t mac_handle, uint8_t vdev_id,
+			   uint8_t val)
+{
+}
+
+static inline
+void sme_set_mlo_assoc_link_band(mac_handle_t mac_handle, uint8_t vdev_id,
+				 uint8_t val)
+{
+}
+
+static inline
+void sme_set_mlo_max_simultaneous_links(mac_handle_t mac_handle,
+					uint8_t vdev_id, uint8_t val)
 {
 }
 #endif
