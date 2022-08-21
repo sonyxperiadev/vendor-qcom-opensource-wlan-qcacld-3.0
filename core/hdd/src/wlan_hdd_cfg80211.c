@@ -20608,7 +20608,6 @@ static int __wlan_hdd_cfg80211_del_key(struct wiphy *wiphy,
 				       bool pairwise, const u8 *mac_addr)
 {
 	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
-	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(ndev);
 	struct wlan_objmgr_peer *peer;
 	struct qdf_mac_addr peer_mac;
 	enum wlan_peer_type peer_type;
@@ -20617,17 +20616,15 @@ static int __wlan_hdd_cfg80211_del_key(struct wiphy *wiphy,
 
 	hdd_enter();
 
-	if (wlan_hdd_validate_vdev_id(adapter->vdev_id))
-		return -EINVAL;
+	if (!mac_addr) {
+		hdd_debug("Peer mac address is NULL");
+		hdd_exit();
+		return 0;
+	}
 
 	ret = wlan_hdd_validate_context(hdd_ctx);
 	if (ret)
 		return ret;
-
-	if (!mac_addr) {
-		hdd_err("Peer mac address is NULL");
-		return 0;
-	}
 
 	qdf_mem_copy(peer_mac.bytes, mac_addr, QDF_MAC_ADDR_SIZE);
 	if (qdf_is_macaddr_zero(&peer_mac) ||
