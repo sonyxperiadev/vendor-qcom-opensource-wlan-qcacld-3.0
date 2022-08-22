@@ -2667,6 +2667,9 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 	populate_dot11f_bss_max_idle(mac_ctx, pe_session,
 				     &frm->bss_max_idle_period);
 
+	if (IS_DOT11_MODE_HE(pe_session->dot11mode))
+		lim_update_session_he_capable(mac_ctx, pe_session);
+
 	if (lim_is_session_he_capable(pe_session)) {
 		populate_dot11f_he_caps(mac_ctx, pe_session,
 					&frm->he_cap);

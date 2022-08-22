@@ -7464,11 +7464,15 @@ void lim_update_session_he_capable(struct mac_context *mac, struct pe_session *s
 	    !mac->mlme_cfg->vht_caps.vht_cap_info.b24ghz_band)
 		session->vhtCapability = 0;
 
-	if (!wlan_reg_is_24ghz_ch_freq(session->curr_op_freq))
+	if (!wlan_reg_is_24ghz_ch_freq(session->curr_op_freq)) {
 		session->he_config.ul_mu = mac->he_cap_5g.ul_mu;
+		session->he_config.rx_pream_puncturing =
+					mac->he_cap_5g.rx_pream_puncturing;
+	}
 
-	pe_debug("he_capable: %d ul mu %d",
-		 session->he_capable, session->he_config.ul_mu);
+	pe_debug("he_capable: %d ul mu %d, rx_pream_puncturing %d",
+		 session->he_capable, session->he_config.ul_mu,
+		 mac->he_cap_5g.rx_pream_puncturing);
 }
 
 void lim_update_session_he_capable_chan_switch(struct mac_context *mac,
