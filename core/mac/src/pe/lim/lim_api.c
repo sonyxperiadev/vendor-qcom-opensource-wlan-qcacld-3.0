@@ -2789,11 +2789,14 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 	reassoc_resp = (uint8_t *)roam_sync_ind_ptr +
 			roam_sync_ind_ptr->reassocRespOffset;
 
-	if (wlan_vdev_mlme_get_is_mlo_link(mac_ctx->psoc, vdev_id))
-		lim_gen_link_specific_assoc_rsp(mac_ctx,
+	if (wlan_vdev_mlme_get_is_mlo_link(mac_ctx->psoc, vdev_id)) {
+		status = lim_gen_link_specific_assoc_rsp(mac_ctx,
 						ft_session_ptr,
 						reassoc_resp,
 						roam_sync_ind_ptr->reassocRespLength);
+		if (QDF_IS_STATUS_ERROR(status))
+			return status;
+	}
 	else
 		lim_process_assoc_rsp_frame(mac_ctx, reassoc_resp,
 					    roam_sync_ind_ptr->reassocRespLength,
