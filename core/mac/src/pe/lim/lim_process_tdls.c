@@ -377,7 +377,9 @@ static void populate_dot11f_tdls_ext_capability(struct mac_context *mac,
 	/*
 	 * For supporting wider bandwidth set tdls_wider_bw set as 1
 	 */
-	if (wlan_cfg80211_tdls_is_fw_wideband_capable(pe_session->vdev))
+	if (wlan_cfg80211_tdls_is_fw_wideband_capable(pe_session->vdev) &&
+	    (mac->lim.gLimTDLSOffChannelEnabled ||
+	     !wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq)))
 		p_ext_cap->tdls_wider_bw = 1;
 
 	extCapability->present = 1;
