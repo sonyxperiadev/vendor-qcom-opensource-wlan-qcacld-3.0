@@ -1490,6 +1490,11 @@ QDF_STATUS wma_set_smps_params(tp_wma_handle wma, uint8_t vdev_id,
 {
 	QDF_STATUS ret;
 
+	if (!wma_is_vdev_valid(vdev_id)) {
+		wma_err("Invalid VDEV ID: %d", vdev_id);
+		return QDF_STATUS_E_INVAL;
+	}
+
 	ret = wmi_unified_set_smps_params(wma->wmi_handle, vdev_id,
 				   value);
 	if (QDF_IS_STATUS_ERROR(ret))
