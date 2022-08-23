@@ -52,7 +52,7 @@ int wlan_hdd_cm_connect(struct wiphy *wiphy,
  *        supplicant initiated disconnect or during vdev delete/change interface
  *        sync should be true.
  *
- * This function is used to issue disconnect request to conection manager
+ * This function is used to issue disconnect request to connection manager
  *
  * Return: QDF_STATUS
  */
@@ -66,7 +66,7 @@ QDF_STATUS wlan_hdd_cm_issue_disconnect(struct hdd_adapter *adapter,
  * @dev: Pointer to network device
  * @reason: Disconnect reason code
  *
- * This function is used to issue disconnect request to conection manager
+ * This function is used to issue disconnect request to connection manager
  *
  * Return: 0 for success, non-zero for failure
  */
