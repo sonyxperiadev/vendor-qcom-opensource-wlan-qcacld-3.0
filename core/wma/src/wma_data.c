@@ -1607,7 +1607,7 @@ int wma_mcc_vdev_tx_pause_evt_handler(void *handle, uint8_t *event,
  * @config:	Bad peer configuration from SIR module
  *
  * It is a wrapper function to sent WMI_PEER_SET_RATE_REPORT_CONDITION_CMDID
- * to the firmare\target.If the command sent to firmware failed, free the
+ * to the firmware\target. If the command sent to firmware failed, free the
  * buffer that allocated.
  *
  * Return: QDF_STATUS based on values sent to firmware

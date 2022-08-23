@@ -220,7 +220,7 @@ void wlan_hdd_twt_deinit(struct hdd_context *hdd_ctx);
 /**
  * hdd_test_config_twt_setup_session() - Process TWT setup
  * operation in the received test config vendor command and
- * send it to firmare
+ * send it to firmware
  * @adapter: adapter pointer
  * @tb: nl attributes
  *
@@ -234,7 +234,7 @@ int hdd_test_config_twt_setup_session(struct hdd_adapter *adapter,
 /**
  * hdd_test_config_twt_terminate_session() - Process TWT terminate
  * operation in the received test config vendor command and send
- * it to firmare
+ * it to firmware
  * @adapter: adapter pointer
  * @tb: nl attributes
  *

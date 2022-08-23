@@ -167,7 +167,7 @@ void wlan_hdd_twt_init(struct hdd_context *hdd_ctx)
 /**
  * hdd_twt_terminate_session - Process TWT terminate
  * operation in the received vendor command and
- * send it to firmare
+ * send it to firmware
  * @adapter: adapter pointer
  * @twt_param_attr: nl attributes
  *
@@ -1431,7 +1431,7 @@ wmi_twt_nudge_status_to_vendor_twt_status(enum WMI_HOST_NUDGE_TWT_STATUS status)
 /**
  * wmi_twt_add_cmd_to_vendor_twt_resp_type() - convert from
  * WMI_HOST_TWT_COMMAND to qca_wlan_vendor_twt_setup_resp_type
- * @status: WMI_HOST_TWT_COMMAND value from firmare
+ * @status: WMI_HOST_TWT_COMMAND value from firmware
  *
  * Return: qca_wlan_vendor_twt_setup_resp_type values for valid
  * WMI_HOST_TWT_COMMAND value and -EINVAL for invalid value
@@ -1456,7 +1456,7 @@ int wmi_twt_add_cmd_to_vendor_twt_resp_type(enum WMI_HOST_TWT_COMMAND type)
 /**
  * wmi_twt_del_status_to_vendor_twt_status() - convert from
  * WMI_HOST_DEL_TWT_STATUS to qca_wlan_vendor_twt_status
- * @status: WMI_HOST_DEL_TWT_STATUS value from firmare
+ * @status: WMI_HOST_DEL_TWT_STATUS value from firmware
  *
  * Return: qca_wlan_vendor_twt_status values corresponsing
  * to the firmware failure status
@@ -1499,7 +1499,7 @@ int wmi_twt_del_status_to_vendor_twt_status(enum WMI_HOST_DEL_TWT_STATUS status)
 /**
  * wmi_twt_add_status_to_vendor_twt_status() - convert from
  * WMI_HOST_ADD_TWT_STATUS to qca_wlan_vendor_twt_status
- * @status: WMI_HOST_ADD_TWT_STATUS value from firmare
+ * @status: WMI_HOST_ADD_TWT_STATUS value from firmware
  *
  * Return: qca_wlan_vendor_twt_status values corresponding
  * to WMI_HOST_ADD_TWT_STATUS.
@@ -2034,7 +2034,7 @@ static bool hdd_twt_setup_conc_allowed(struct hdd_context *hdd_ctx,
 
 /**
  * hdd_twt_setup_session() - Process TWT setup operation in the
- * received vendor command and send it to firmare
+ * received vendor command and send it to firmware
  * @adapter: adapter pointer
  * @twt_param_attr: nl attributes
  *
@@ -2692,7 +2692,7 @@ static int hdd_sta_twt_terminate_session(struct hdd_adapter *adapter,
 /**
  * hdd_twt_terminate_session - Process TWT terminate
  * operation in the received vendor command and
- * send it to firmare
+ * send it to firmware
  * @adapter: adapter pointer
  * @twt_param_attr: nl attributes
  *
