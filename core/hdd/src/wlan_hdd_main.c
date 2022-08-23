@@ -7299,7 +7299,7 @@ static void wlan_hdd_cfg80211_scan_block_cb(struct work_struct *work)
 }
 
 /**
- * hdd_open_adapter() - open and setup the hdd adatper
+ * hdd_open_adapter() - open and setup the hdd adapter
  * @hdd_ctx: global hdd context
  * @session_type: type of the interface to be created
  * @iface_name: User-visible name of the interface
@@ -7308,7 +7308,7 @@ static void wlan_hdd_cfg80211_scan_block_cb(struct work_struct *work)
  * @rtnl_held: the rtnl lock hold flag
  * @params: adapter create params
  *
- * This function open and setup the hdd adpater according to the device
+ * This function open and setup the hdd adapter according to the device
  * type request, assign the name, the mac address assigned, and then prepared
  * the hdd related parameters, queue, lock and ready to start.
  *

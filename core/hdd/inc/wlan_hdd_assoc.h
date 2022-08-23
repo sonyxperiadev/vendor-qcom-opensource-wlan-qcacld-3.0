@@ -245,7 +245,7 @@ enum band_info hdd_conn_get_connected_band(struct hdd_adapter *adapter);
  *                                        is in progress
  * @hdd_ctx: hdd context
  *
- * Return: hdd adpater for which connection is in progress
+ * Return: hdd adapter for which connection is in progress
  */
 struct hdd_adapter *hdd_get_sta_connection_in_progress(
 			struct hdd_context *hdd_ctx);

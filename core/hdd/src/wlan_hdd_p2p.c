@@ -1351,7 +1351,7 @@ static uint32_t set_first_connection_operating_channel(
 
 	oper_chan_freq = hdd_get_operating_chan_freq(hdd_ctx, dev_mode);
 	if (!oper_chan_freq) {
-		hdd_err(" First adpter operating channel is invalid");
+		hdd_err(" First adapter operating channel is invalid");
 		return -EINVAL;
 	}
 	operating_channel = wlan_reg_freq_to_chan(hdd_ctx->pdev,

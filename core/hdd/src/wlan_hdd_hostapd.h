@@ -74,7 +74,7 @@ int hdd_softap_set_channel_change(struct net_device *dev,
  *
  */
 void hdd_stop_sap_set_tx_power(struct wlan_objmgr_psoc *psoc,
-			       struct hdd_adapter *adapte);
+			       struct hdd_adapter *adapter);
 
 #ifdef FEATURE_WLAN_MCC_TO_SCC_SWITCH
 /**
