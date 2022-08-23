@@ -1036,6 +1036,10 @@ hdd_cache_ll_iface_stats(struct hdd_context *hdd_ctx,
 	struct hdd_adapter *adapter;
 
 	adapter = hdd_get_adapter_by_vdev(hdd_ctx, if_stat->vdev_id);
+	if (!adapter) {
+		hdd_err("Invalid adapter for LL_STATS");
+		return;
+	}
 	/*
 	 * There is no need for wlan_hdd_validate_context here. This is a NB
 	 * operation that will come with DSC synchronization. This ensures that
