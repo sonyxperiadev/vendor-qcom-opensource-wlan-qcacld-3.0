@@ -1159,6 +1159,9 @@ static void hdd_son_get_sta_list(struct wlan_objmgr_vdev *vdev,
 			qdf_mem_copy(si->isi_macaddr, &sta_info->sta_mac,
 				     QDF_MAC_ADDR_SIZE);
 			si->isi_ext_cap = sta_info->ext_cap;
+			si->isi_beacon_measurement_support =
+					!!(sta_info->capability &
+					   WLAN_CAPABILITY_RADIO_MEASURE);
 			si->isi_operating_bands = sta_info->supported_band;
 			si->isi_assoc_time = sta_info->assoc_ts;
 			current_ts = qdf_system_ticks();
@@ -1167,14 +1170,15 @@ static void hdd_son_get_sta_list(struct wlan_objmgr_vdev *vdev,
 			si->isi_rssi = sta_info->rssi;
 			si->isi_len = len;
 			si->isi_ie_len = 0;
-			si = (struct ieee80211req_sta_info *)(((uint8_t *)si) +
-			     len);
-			*space -= len;
-			hdd_debug("sta " QDF_MAC_ADDR_FMT " ext_cap %u op band %u rssi %d len %u, assoc ts %lu, curr ts %lu",
+			hdd_debug("sta " QDF_MAC_ADDR_FMT " ext_cap 0x%x op band %u rssi %d len %u, assoc ts %lu, curr ts %lu rrm %d",
 				  QDF_MAC_ADDR_REF(si->isi_macaddr),
 				  si->isi_ext_cap, si->isi_operating_bands,
 				  si->isi_rssi, si->isi_len, sta_info->assoc_ts,
-				  current_ts);
+				  current_ts,
+				  si->isi_beacon_measurement_support);
+			si = (struct ieee80211req_sta_info *)(((uint8_t *)si) +
+			     len);
+			*space -= len;
 		}
 		hdd_put_sta_info_ref(&adapter->sta_info_list,
 				     &sta_info, true,
