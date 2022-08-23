@@ -600,7 +600,7 @@ static void hdd_set_oem_6g_supported(struct hdd_context *hdd_ctx)
 	ucfg_wifi_pos_set_oem_6g_supported(hdd_ctx->psoc,
 					   set_wifi_pos_6g_disabled);
 	hdd_debug("oem 6g support is - %s",
-		  set_wifi_pos_6g_disabled ? "Disbaled" : "Enabled");
+		  set_wifi_pos_6g_disabled ? "Disabled" : "Enabled");
 }
 
 /**

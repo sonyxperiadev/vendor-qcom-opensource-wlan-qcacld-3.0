@@ -3572,7 +3572,7 @@ static int __wlan_hdd_cfg80211_ll_stats_ext_set_param(struct wiphy *wiphy,
 			period = LL_STATS_MIN_PERIOD;
 
 		/*
-		 * Only enable/disbale counters.
+		 * Only enable/disable counters.
 		 * Keep the last threshold settings.
 		 */
 		goto set_period;

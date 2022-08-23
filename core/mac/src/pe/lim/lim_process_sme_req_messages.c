@@ -9328,7 +9328,7 @@ send_ie:
  * @mac_ctx: Pointer to Global MAC structure
  * @session: pointer to session
  *
- * This function will disbale bss color.
+ * This function will disable bss color.
  *
  * Return: None
  */
