@@ -1109,6 +1109,8 @@ static void lim_tdls_fill_he_wideband_offchannel_mcs(struct mac_context *mac_ctx
 	qdf_list_t *head;
 	qdf_list_node_t *p_node;
 	int i = 0;
+	uint16_t rx_he_mcs_map_160 = 0xfffa;
+	uint16_t tx_he_mcs_map_160 = 0xfffa;
 	QDF_STATUS status;
 
 	tdls_obj = wlan_vdev_get_tdls_vdev_obj(session->vdev);
@@ -1138,14 +1140,24 @@ static void lim_tdls_fill_he_wideband_offchannel_mcs(struct mac_context *mac_ctx
 		return;
 	}
 
-	if (stads->ch_width == CH_WIDTH_160MHZ ||
-	    (tdls_peer_candidate->pref_off_chan_width &
-	     (1 << BW_160_OFFSET_BIT))) {
+	if (stads->ch_width == CH_WIDTH_160MHZ) {
 		lim_populate_he_mcs_per_bw(
 			mac_ctx, &rates->rx_he_mcs_map_160,
 			&rates->tx_he_mcs_map_160,
 			*((uint16_t *)peer_he_caps->rx_he_mcs_map_160),
 			*((uint16_t *)peer_he_caps->tx_he_mcs_map_160),
+			nss,
+			*((uint16_t *)mac_ctx->mlme_cfg->he_caps.dot11_he_cap.
+				rx_he_mcs_map_160),
+			*((uint16_t *)mac_ctx->mlme_cfg->he_caps.dot11_he_cap.
+					tx_he_mcs_map_160));
+	} else if (tdls_peer_candidate->pref_off_chan_width &
+	     (1 << BW_160_OFFSET_BIT)) {
+		lim_populate_he_mcs_per_bw(
+			mac_ctx, &rates->rx_he_mcs_map_160,
+			&rates->tx_he_mcs_map_160,
+			rx_he_mcs_map_160,
+			tx_he_mcs_map_160,
 			nss,
 			*((uint16_t *)mac_ctx->mlme_cfg->he_caps.dot11_he_cap.
 				rx_he_mcs_map_160),
