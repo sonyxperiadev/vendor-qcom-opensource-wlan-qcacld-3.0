@@ -286,6 +286,56 @@ QDF_STATUS wlan_mlme_get_dual_sta_policy(struct wlan_objmgr_psoc *psoc,
 	return QDF_STATUS_SUCCESS;
 }
 
+enum host_concurrent_ap_policy
+wlan_mlme_convert_ap_policy_config(
+		enum qca_wlan_concurrent_ap_policy_config ap_config)
+{
+	switch (ap_config) {
+	case QCA_WLAN_CONCURRENT_AP_POLICY_UNSPECIFIED:
+		return HOST_CONCURRENT_AP_POLICY_UNSPECIFIED;
+	case QCA_WLAN_CONCURRENT_AP_POLICY_GAMING_AUDIO:
+		return HOST_CONCURRENT_AP_POLICY_GAMING_AUDIO;
+	case QCA_WLAN_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING:
+		return HOST_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING;
+	default:
+		return HOST_CONCURRENT_AP_POLICY_UNSPECIFIED;
+	}
+}
+
+QDF_STATUS wlan_mlme_set_ap_policy(struct wlan_objmgr_vdev *vdev,
+				   enum host_concurrent_ap_policy ap_cfg_policy)
+
+{
+	struct mlme_legacy_priv *mlme_priv;
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_legacy_err("vdev legacy private object is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	mlme_priv->mlme_ap.ap_policy = ap_cfg_policy;
+	mlme_debug("Set ap_cfg_policy to :%d", mlme_priv->mlme_ap.ap_policy);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+enum host_concurrent_ap_policy
+wlan_mlme_get_ap_policy(struct wlan_objmgr_vdev *vdev)
+{
+	struct mlme_legacy_priv *mlme_priv;
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_legacy_err("vdev legacy private object is NULL");
+		return HOST_CONCURRENT_AP_POLICY_UNSPECIFIED;
+	}
+
+	mlme_debug("Get ap_cfg_policy to :%d", mlme_priv->mlme_ap.ap_policy);
+
+	return mlme_priv->mlme_ap.ap_policy;
+}
+
 QDF_STATUS wlan_mlme_get_prevent_link_down(struct wlan_objmgr_psoc *psoc,
 					   bool *prevent_link_down)
 {

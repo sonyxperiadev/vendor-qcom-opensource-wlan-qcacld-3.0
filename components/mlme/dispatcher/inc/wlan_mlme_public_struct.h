@@ -2809,4 +2809,17 @@ struct wlan_mlme_features {
 	bool enable2x2;
 };
 #endif
+
+/**
+ * host_concurrent_ap_policy - Host concurrent AP policy value
+ * @HOST_CONCURRENT_AP_POLICY_UNSPECIFIED: Unspecified concurrent policy value
+ * @HOST_CONCURRENT_AP_POLICY_GAMING_AUDIO: Gaming audio concurrent policy value
+ * @HOST_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING: Lossless audio
+ * concurrent streaming policy value
+ */
+enum host_concurrent_ap_policy {
+	HOST_CONCURRENT_AP_POLICY_UNSPECIFIED = 0,
+	HOST_CONCURRENT_AP_POLICY_GAMING_AUDIO = 1,
+	HOST_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING = 2
+};
 #endif

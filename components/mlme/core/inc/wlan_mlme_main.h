@@ -410,12 +410,14 @@ struct wait_for_key_timer {
  * @user_config_sap_ch_freq : Frequency from userspace to start SAP
  * @update_required_scc_sta_power: Change the 6 GHz power type of the
  * concurrent STA
+ * @ap_policy: Concurrent ap policy config
  */
 struct mlme_ap_config {
 	qdf_freq_t user_config_sap_ch_freq;
 #ifdef CONFIG_BAND_6GHZ
 	bool update_required_scc_sta_power;
 #endif
+	enum host_concurrent_ap_policy ap_policy;
 };
 
 /**

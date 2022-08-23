@@ -339,6 +339,37 @@ QDF_STATUS wlan_mlme_get_dual_sta_policy(struct wlan_objmgr_psoc *psoc,
 					 uint8_t *dual_sta_config);
 
 /**
+ * wlan_mlme_convert_ap_policy_config() - Convert vendor attr ap policy
+ * config to host enum
+ * @ap_config: Value to convert
+ *
+ * Return: enum host_concurrent_ap_policy
+ */
+enum host_concurrent_ap_policy
+wlan_mlme_convert_ap_policy_config(
+		enum qca_wlan_concurrent_ap_policy_config ap_config);
+
+/**
+ * wlan_mlme_set_ap_policy() - Set ap config policy value
+ * @vdev: pointer to vdev object
+ * @ap_cfg_policy: Value to be set from the caller
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+wlan_mlme_set_ap_policy(struct wlan_objmgr_vdev *vdev,
+			enum host_concurrent_ap_policy ap_cfg_policy);
+
+/**
+ * wlan_mlme_get_ap_policy() - Get ap config policy value
+ * @vdev: pointer to vdev object
+ *
+ * Return: enum host_concurrent_ap_policy
+ */
+enum host_concurrent_ap_policy
+wlan_mlme_get_ap_policy(struct wlan_objmgr_vdev *vdev);
+
+/**
  * wlan_mlme_get_prevent_link_down() - Get the prevent link down config
  * @psoc: pointer to psoc object
  * @prevent_link_down: Pointer to the variable from caller
