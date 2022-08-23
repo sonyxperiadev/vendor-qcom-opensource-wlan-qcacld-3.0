@@ -221,7 +221,7 @@ QDF_STATUS hdd_send_dscp_up_map_to_fw(struct hdd_adapter *adapter);
  * hdd_wmm_dscp_initial_state() - initialize the WMM DSCP configuration
  * @adapter : [in]  pointer to Adapter context
  *
- * This function will initialize the WMM DSCP configuation of an
+ * This function will initialize the WMM DSCP configuration of an
  * adapter to an initial state.  The configuration can later be
  * overwritten via application APIs or via QoS Map sent OTA.
  *
@@ -233,7 +233,7 @@ QDF_STATUS hdd_wmm_dscp_initial_state(struct hdd_adapter *adapter);
  * hdd_wmm_adapter_init() - initialize the WMM configuration of an adapter
  * @adapter: [in]  pointer to Adapter context
  *
- * This function will initialize the WMM configuation and status of an
+ * This function will initialize the WMM configuration and status of an
  * adapter to an initial state.  The configuration can later be
  * overwritten via application APIs
  *
