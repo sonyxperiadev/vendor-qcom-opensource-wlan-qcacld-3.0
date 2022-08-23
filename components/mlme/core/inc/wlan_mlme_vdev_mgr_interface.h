@@ -502,6 +502,27 @@ void mlme_vdev_self_peer_delete_resp(struct del_vdev_params *param);
  */
 void mlme_vdev_del_resp(uint8_t vdev_id);
 
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_FEATURE_ROAM_OFFLOAD)
+/**
+ * mlme_set_single_link_mlo_roaming() - to set single link mlo roaming
+ * @vdev: vdev pointer
+ * @val: single link mlo roaming value true/false
+ *
+ * This API will set single link mlo roaming value.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+mlme_set_single_link_mlo_roaming(struct wlan_objmgr_vdev *vdev, bool val);
+
+/**
+ * mlme_get_single_link_mlo_roaming() - get single link mlo roaming
+ * @vdev: vdev pointer
+ *
+ * Return: single link mlo roaming boolean value true/false
+ */
+bool mlme_get_single_link_mlo_roaming(struct wlan_objmgr_vdev *vdev);
+#endif
 /**
  * wlan_sap_disconnect_all_p2p_client() - send SAP disconnect all P2P
  *	client event to the SAP event handler

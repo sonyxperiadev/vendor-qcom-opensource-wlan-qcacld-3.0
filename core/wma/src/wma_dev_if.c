@@ -109,7 +109,7 @@
 
 #include "son_api.h"
 #include "wlan_vdev_mgr_tgt_if_tx_defs.h"
-
+#include "wlan_mlo_mgr_roam.h"
 /*
  * FW only supports 8 clients in SAP/GO mode for D3 WoW feature
  * and hence host needs to hold a wake lock after 9th client connects
@@ -2001,8 +2001,13 @@ static void wma_cdp_peer_setup(tp_wma_handle wma,
 		peer_info.is_primary_link = 0;
 	} else if (wlan_cm_is_roam_sync_in_progress(wma->psoc, vdev_id) &&
 		   wlan_vdev_mlme_get_is_mlo_vdev(wma->psoc, vdev_id)) {
-		peer_info.is_first_link = 0;
-		peer_info.is_primary_link = 1;
+		if (mlo_get_single_link_ml_roaming(wma->psoc, vdev_id)) {
+			peer_info.is_first_link = 1;
+			peer_info.is_primary_link = 1;
+		} else {
+			peer_info.is_first_link = 0;
+			peer_info.is_primary_link = 1;
+		}
 	} else {
 		peer_info.is_first_link = wlan_peer_mlme_is_assoc_peer(obj_peer);
 		peer_info.is_primary_link = peer_info.is_first_link;

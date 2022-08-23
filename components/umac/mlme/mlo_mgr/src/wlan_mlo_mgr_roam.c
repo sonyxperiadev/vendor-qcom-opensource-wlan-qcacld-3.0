@@ -27,6 +27,7 @@
 #include "wlan_mlo_mgr_sta.h"
 #include <../../core/src/wlan_cm_roam_i.h>
 #include "wlan_cm_roam_api.h"
+#include "wlan_mlme_vdev_mgr_interface.h"
 
 #ifdef WLAN_FEATURE_11BE_MLO
 static bool
@@ -176,7 +177,9 @@ mlo_update_for_multi_link_roam(struct wlan_objmgr_psoc *psoc,
 
 static inline bool
 mlo_check_connect_req_bmap(struct wlan_objmgr_vdev *vdev)
-{}
+{
+	return false;
+}
 #endif
 QDF_STATUS mlo_fw_roam_sync_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 				void *event, uint32_t event_data_len)
@@ -193,10 +196,14 @@ QDF_STATUS mlo_fw_roam_sync_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 		mlo_update_for_multi_link_roam(psoc, vdev_id,
 					       sync_ind->ml_link[i].vdev_id);
 
-	if (!sync_ind->num_setup_links)
+	if (!sync_ind->num_setup_links) {
 		mlo_debug("MLO_ROAM: Roamed to Legacy");
-	else
+	} else if (sync_ind->num_setup_links == 1) {
+		mlo_debug("MLO_ROAM: Roamed to single link MLO");
+		mlo_set_single_link_ml_roaming(psoc, vdev_id, sync_ind, true);
+	} else {
 		mlo_debug("MLO_ROAM: Roamed to MLO");
+	}
 
 	status = cm_fw_roam_sync_req(psoc, vdev_id, event, event_data_len);
 
@@ -430,4 +437,57 @@ wlan_mlo_roam_abort_on_link(struct wlan_objmgr_psoc *psoc,
 		}
 
 	return QDF_STATUS_SUCCESS;
+}
+
+void
+mlo_set_single_link_ml_roaming(struct wlan_objmgr_psoc *psoc,
+			       uint8_t vdev_id,
+			       struct roam_offload_synch_ind *sync_ind,
+			       bool is_single_link_ml_roaming)
+{
+	struct wlan_objmgr_vdev *vdev;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc,
+						    vdev_id,
+						    WLAN_MLME_SB_ID);
+	if (!vdev) {
+		mlo_err("VDEV is null");
+		return;
+	}
+
+	if (!sync_ind) {
+		mlo_err("Roam sync ind is null");
+		goto end;
+	}
+
+	if (sync_ind->num_setup_links == 1 &&
+	    !wlan_vdev_mlme_is_mlo_link_vdev(vdev))
+		mlme_set_single_link_mlo_roaming(vdev,
+						 is_single_link_ml_roaming);
+
+end:
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_SB_ID);
+}
+
+bool
+mlo_get_single_link_ml_roaming(struct wlan_objmgr_psoc *psoc,
+			       uint8_t vdev_id)
+{
+	bool is_single_link_ml_roaming = false;
+	struct wlan_objmgr_vdev *vdev;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc,
+						    vdev_id,
+						    WLAN_MLME_SB_ID);
+	if (!vdev) {
+		mlo_err("VDEV is null");
+		return is_single_link_ml_roaming;
+	}
+
+	is_single_link_ml_roaming = mlme_get_single_link_mlo_roaming(vdev);
+	mlo_debug("MLO:is_single_link_ml_roaming %d",
+		  is_single_link_ml_roaming);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_SB_ID);
+
+	return is_single_link_ml_roaming;
 }

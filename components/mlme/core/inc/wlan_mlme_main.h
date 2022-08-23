@@ -456,6 +456,7 @@ struct mlme_ap_config {
  * @vdev_traffic_type: to set if vdev is LOW_LATENCY or HIGH_TPUT
  * @country_ie_for_all_band: take all band channel info in country ie
  * @mlme_ap: SAP related vdev private configurations
+ * @is_single_link_mlo_roam: Single link mlo roam flag
  */
 struct mlme_legacy_priv {
 	bool chan_switch_in_progress;
@@ -511,6 +512,9 @@ struct mlme_legacy_priv {
 	uint8_t vdev_traffic_type;
 	bool country_ie_for_all_band;
 	struct mlme_ap_config mlme_ap;
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_FEATURE_ROAM_OFFLOAD)
+	bool is_single_link_mlo_roam;
+#endif
 };
 
 /**
