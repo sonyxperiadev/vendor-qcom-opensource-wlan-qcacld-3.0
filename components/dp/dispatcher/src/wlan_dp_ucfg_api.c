@@ -1791,6 +1791,11 @@ void ucfg_dp_set_nud_stats_cb(struct wlan_objmgr_psoc *psoc, void *cookie)
 {
 	struct wlan_dp_psoc_sb_ops *sb_ops = dp_intf_get_tx_ops(psoc);
 
+	if (!sb_ops) {
+		dp_err("Unable to get ops");
+		return;
+	}
+
 	sb_ops->dp_arp_stats_register_event_handler(psoc);
 	sb_ops->arp_request_ctx = cookie;
 }
@@ -1798,6 +1803,11 @@ void ucfg_dp_set_nud_stats_cb(struct wlan_objmgr_psoc *psoc, void *cookie)
 void ucfg_dp_clear_nud_stats_cb(struct wlan_objmgr_psoc *psoc)
 {
 	struct wlan_dp_psoc_sb_ops *sb_ops = dp_intf_get_tx_ops(psoc);
+
+	if (!sb_ops) {
+		dp_err("Unable to get ops");
+		return;
+	}
 
 	sb_ops->dp_arp_stats_unregister_event_handler(psoc);
 }
@@ -1833,6 +1843,11 @@ ucfg_dp_req_get_arp_stats(struct wlan_objmgr_psoc *psoc,
 {
 	struct wlan_dp_psoc_sb_ops *sb_ops = dp_intf_get_tx_ops(psoc);
 
+	if (!sb_ops) {
+		dp_err("Unable to get ops");
+		return QDF_STATUS_E_INVAL;
+	}
+
 	return sb_ops->dp_get_arp_req_stats(psoc, params);
 }
 
@@ -1841,6 +1856,11 @@ ucfg_dp_req_set_arp_stats(struct wlan_objmgr_psoc *psoc,
 			  struct dp_set_arp_stats_params *params)
 {
 	struct wlan_dp_psoc_sb_ops *sb_ops = dp_intf_get_tx_ops(psoc);
+
+	if (!sb_ops) {
+		dp_err("Unable to get ops");
+		return QDF_STATUS_E_INVAL;
+	}
 
 	return sb_ops->dp_set_arp_req_stats(psoc, params);
 }

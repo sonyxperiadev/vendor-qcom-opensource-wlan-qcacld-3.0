@@ -2150,6 +2150,11 @@ void dp_bus_bw_compute_prev_txrx_stats(struct wlan_objmgr_vdev *vdev)
 	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
 	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
 
+	if (!dp_intf) {
+		dp_err("Unable to get DP interface");
+		return;
+	}
+
 	if (QDF_GLOBAL_FTM_MODE == cds_get_conparam())
 		return;
 
@@ -2171,6 +2176,10 @@ void dp_bus_bw_compute_reset_prev_txrx_stats(struct wlan_objmgr_vdev *vdev)
 	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
 	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
 
+	if (!dp_intf) {
+		dp_err("Unable to get DP interface");
+		return;
+	}
 	if (QDF_GLOBAL_FTM_MODE == cds_get_conparam())
 		return;
 

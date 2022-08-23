@@ -317,6 +317,11 @@ dp_add_latency_critical_client(struct wlan_objmgr_vdev *vdev,
 {
 	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
 
+	if (!dp_intf) {
+		dp_err("Unable to get DP interface");
+		return;
+	}
+
 	switch (phymode) {
 	case QCA_WLAN_802_11_MODE_11A:
 	case QCA_WLAN_802_11_MODE_11G:
@@ -349,6 +354,11 @@ dp_del_latency_critical_client(struct wlan_objmgr_vdev *vdev,
 			       enum qca_wlan_802_11_mode phymode)
 {
 	struct wlan_dp_intf *dp_intf = dp_get_vdev_priv_obj(vdev);
+
+	if (!dp_intf) {
+		dp_err("Unable to get DP interface");
+		return;
+	}
 
 	switch (phymode) {
 	case QCA_WLAN_802_11_MODE_11A:
