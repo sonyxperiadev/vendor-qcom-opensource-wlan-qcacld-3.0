@@ -5705,17 +5705,21 @@ bool hdd_report_max_rate(struct hdd_adapter *adapter,
 	if ((3 != rssidx) && !(rate_flags & TX_RATE_LEGACY)) {
 		rate_flag = 0;
 		if (rate_flags & (TX_RATE_VHT80 | TX_RATE_HE80 |
-				TX_RATE_HE160 | TX_RATE_VHT160))
+				TX_RATE_HE160 | TX_RATE_VHT160 |
+				TX_RATE_EHT80 | TX_RATE_EHT160 |
+				TX_RATE_EHT320))
 			mode = 2;
 		else if (rate_flags & (TX_RATE_HT40 |
-			 TX_RATE_VHT40 | TX_RATE_HE40))
+			 TX_RATE_VHT40 | TX_RATE_HE40 | TX_RATE_EHT40))
 			mode = 1;
 		else
 			mode = 0;
 
 		if (rate_flags & (TX_RATE_VHT20 | TX_RATE_VHT40 |
 		    TX_RATE_VHT80 | TX_RATE_HE20 | TX_RATE_HE40 |
-		    TX_RATE_HE80 | TX_RATE_HE160 | TX_RATE_VHT160)) {
+		    TX_RATE_HE80 | TX_RATE_HE160 | TX_RATE_VHT160 |
+		    TX_RATE_EHT20 | TX_RATE_EHT40 | TX_RATE_EHT80 |
+		    TX_RATE_EHT160 | TX_RATE_EHT320)) {
 			stat = ucfg_mlme_cfg_get_vht_tx_mcs_map(hdd_ctx->psoc,
 								&vht_mcs_map);
 			if (QDF_IS_STATUS_ERROR(stat))
@@ -5747,6 +5751,10 @@ bool hdd_report_max_rate(struct hdd_adapter *adapter,
 				else
 					max_mcs_idx = 9;
 			}
+
+			if (rate_flags & (TX_RATE_EHT20 | TX_RATE_EHT40 |
+			    TX_RATE_EHT80 | TX_RATE_EHT160 | TX_RATE_EHT320))
+				max_mcs_idx = 13;
 
 			if (rate_flags & (TX_RATE_HE20 | TX_RATE_HE40 |
 			    TX_RATE_HE80 | TX_RATE_HE160)) {
