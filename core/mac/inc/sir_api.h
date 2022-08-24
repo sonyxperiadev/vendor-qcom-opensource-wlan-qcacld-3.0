@@ -1615,19 +1615,9 @@ typedef struct sSirWPSBeaconIE {
 	uint8_t RFBand;         /* RF bands available on the AP */
 } tSirWPSBeaconIE;
 
-#define SIR_WPS_ASSOCRSP_VER_PRESENT    0x00000001
-#define SIR_WPS_ASSOCRSP_RESPONSETYPE_PRESENT    0x00000002
-
-typedef struct sSirWPSAssocRspIE {
-	uint32_t FieldPresent;
-	uint32_t Version;
-	uint8_t ResposeType;
-} tSirWPSAssocRspIE;
-
 typedef struct sSirAPWPSIEs {
 	tSirWPSProbeRspIE SirWPSProbeRspIE;     /*WPS Set Probe Respose IE */
 	tSirWPSBeaconIE SirWPSBeaconIE; /*WPS Set Beacon IE */
-	tSirWPSAssocRspIE SirWPSAssocRspIE;     /*WPS Set Assoc Response IE */
 } tSirAPWPSIEs, *tpSiriAPWPSIEs;
 
 struct update_config {
