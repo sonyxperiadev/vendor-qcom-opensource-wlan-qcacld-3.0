@@ -3307,7 +3307,7 @@ void hdd_get_roam_scan_ch_cb(hdd_handle_t hdd_handle,
 		  roam_ch->vdev_id, roam_ch->command_resp);
 	/**
 	 * If command response is set in the response message, then it is
-	 * getroamscanchannels command response else this event is asyncronous
+	 * getroamscanchannels command response else this event is asynchronous
 	 * event raised by firmware.
 	 */
 	if (!roam_ch->command_resp) {
