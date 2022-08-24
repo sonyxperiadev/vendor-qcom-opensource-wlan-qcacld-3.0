@@ -104,7 +104,7 @@ struct hdd_mlo_adapter_info {
  * @hdd_context: Global hdd context
  * @hw_macaddr: Hardware mac address
  *
- * This function dervies mld mac address based on the input hardware mac address
+ * This function derives mld mac address based on the input hardware mac address
  *
  * Return: none
  */
