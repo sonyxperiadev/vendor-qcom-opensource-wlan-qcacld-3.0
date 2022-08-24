@@ -2600,7 +2600,8 @@ policy_mgr_valid_sap_conc_channel_check(struct wlan_objmgr_psoc *psoc,
 		find_alternate = true;
 		policymgr_nofl_debug("sap not capable of DFS SCC on con ch_freq %d",
 				     ch_freq);
-	} else if (wlan_reg_is_disable_for_freq(pm_ctx->pdev, ch_freq)) {
+	} else if (wlan_reg_is_disable_for_pwrmode(pm_ctx->pdev, ch_freq,
+						   REG_CURRENT_PWR_MODE)) {
 		find_alternate = true;
 		policymgr_nofl_debug("sap not capable on disabled con ch_freq %d",
 				     ch_freq);

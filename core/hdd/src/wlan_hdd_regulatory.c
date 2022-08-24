@@ -1598,8 +1598,10 @@ static void hdd_country_change_update_sta(struct hdd_context *hdd_ctx)
 		width_changed = false;
 		oper_freq = hdd_get_adapter_home_channel(adapter);
 		if (oper_freq)
-			freq_changed = wlan_reg_is_disable_for_freq(pdev,
-								    oper_freq);
+			freq_changed = wlan_reg_is_disable_for_pwrmode(
+							pdev,
+							oper_freq,
+							REG_CURRENT_PWR_MODE);
 		else
 			freq_changed = false;
 

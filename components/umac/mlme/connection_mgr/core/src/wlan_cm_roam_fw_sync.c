@@ -1005,7 +1005,8 @@ QDF_STATUS cm_fw_roam_complete(struct cnx_mgr *cm_ctx, void *data)
 	 * roam sync to make sure the new AP is not on disable freq
 	 * or disconnect the AP.
 	 */
-	if (wlan_reg_is_disable_for_freq(pdev, roam_synch_data->chan_freq)) {
+	if (wlan_reg_is_disable_for_pwrmode(pdev, roam_synch_data->chan_freq,
+					    REG_CURRENT_PWR_MODE)) {
 		mlo_disconnect(cm_ctx->vdev, CM_ROAM_DISCONNECT,
 			       REASON_OPER_CHANNEL_BAND_CHANGE, NULL);
 		status = QDF_STATUS_E_FAILURE;

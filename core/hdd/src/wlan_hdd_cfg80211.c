@@ -2569,13 +2569,16 @@ static int wlan_hdd_sap_get_valid_channellist(struct hdd_adapter *adapter,
 
 		if (band == BAND_2G &&
 		    WLAN_REG_IS_24GHZ_CH_FREQ(pcl_freqs[i]) &&
-		    !wlan_reg_is_disable_for_freq(pdev, pcl_freqs[i])) {
+		    !wlan_reg_is_disable_for_pwrmode(pdev, pcl_freqs[i],
+						     REG_CURRENT_PWR_MODE)) {
 			freq_list[*channel_count] = pcl_freqs[i];
 			*channel_count += 1;
 		} else if (band == BAND_5G &&
 			   (WLAN_REG_IS_5GHZ_CH_FREQ(pcl_freqs[i]) ||
 			    WLAN_REG_IS_6GHZ_CHAN_FREQ(pcl_freqs[i])) &&
-			   !wlan_reg_is_disable_for_freq(pdev, pcl_freqs[i])) {
+			   !wlan_reg_is_disable_for_pwrmode(
+							pdev, pcl_freqs[i],
+							REG_CURRENT_PWR_MODE)) {
 			freq_list[*channel_count] = pcl_freqs[i];
 			*channel_count += 1;
 		}
