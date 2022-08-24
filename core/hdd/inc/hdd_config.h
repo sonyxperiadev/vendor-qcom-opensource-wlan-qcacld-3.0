@@ -66,7 +66,7 @@ enum hdd_wext_control {
  * Values are per enum hdd_wext_control.
  * This ini is used to control access to private wireless extensions
  * ioctls SIOCIWFIRSTPRIV (0x8BE0) thru SIOCIWLASTPRIV (0x8BFF). The
- * functionality provided by some of these ioctls has been superceeded
+ * functionality provided by some of these ioctls has been superseded
  * by cfg80211 (either standard commands or vendor commands), but many
  * of the private ioctls do not have a cfg80211-based equivalent, so
  * by default support for these ioctls is deprecated.
