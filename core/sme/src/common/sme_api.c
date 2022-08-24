@@ -7283,7 +7283,7 @@ bool sme_get_is_ft_feature_enabled(mac_handle_t mac_handle)
  * sme_is_feature_supported_by_fw() - check if feature is supported by FW
  * @feature: enum value of requested feature.
  *
- * Retrun: 1 if supported; 0 otherwise
+ * Return: 1 if supported; 0 otherwise
  */
 bool sme_is_feature_supported_by_fw(enum cap_bitmap feature)
 {
