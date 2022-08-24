@@ -248,7 +248,7 @@ end:
 	found = csr_nonscan_active_ll_remove_entry(mac, entry,
 			LL_ACCESS_LOCK);
 	if (found)
-		/* Now put this command back on the avilable command list */
+		/* Now put this command back on the available command list */
 		csr_release_command(mac, command);
 
 	return QDF_STATUS_SUCCESS;
@@ -3088,7 +3088,7 @@ static QDF_STATUS sme_process_nss_update_resp(struct mac_context *mac, uint8_t *
 
 	found = csr_nonscan_active_ll_remove_entry(mac, entry, LL_ACCESS_LOCK);
 	if (found) {
-		/* Now put this command back on the avilable command list */
+		/* Now put this command back on the available command list */
 		csr_release_command(mac, command);
 	}
 

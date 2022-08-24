@@ -2209,14 +2209,14 @@ bool lim_send_assoc_ind_to_sme(struct mac_context *mac_ctx,
 
 	if (!peer_idx && !partner_peer_idx) {
 		/* Could not assign AID. Reject association */
-		pe_err("PeerIdx not avaialble. Reject associaton");
+		pe_err("PeerIdx not available. Reject associaton");
 		lim_reject_association(mac_ctx, sa, sub_type,
 				       true, auth_type, peer_idx, false,
 				       STATUS_UNSPECIFIED_FAILURE,
 				       session);
 		return false;
 	} else if (!peer_idx) {
-		pe_err("mlo partner PeerIdx not avaialble. Reject associaton");
+		pe_err("mlo partner PeerIdx not available. Reject associaton");
 		lim_send_sme_max_assoc_exceeded_ntf(mac_ctx, sa,
 						    session->smeSessionId);
 		return false;

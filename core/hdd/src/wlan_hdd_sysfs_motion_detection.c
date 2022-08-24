@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -355,7 +356,7 @@ __hdd_sysfs_mt_start_store(struct net_device *net_dev,
 	}
 
 	if (!adapter->motion_det_cfg) {
-		hdd_err("Motion Detection config values not availbale");
+		hdd_err("Motion Detection config values not available");
 		return -EINVAL;
 	}
 
