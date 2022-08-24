@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -95,7 +96,7 @@
  * Management frames are not subjected to WoWL filtering and are
  * discarded when WoWL is enabled.
  *
- * Whenever a patern match succeeds, RX path is restored and packets
+ * Whenever a pattern match succeeds, RX path is restored and packets
  * (both management and data) will be pushed to the host from that
  * point onwards.  Therefore, exit from WoWL is implicit and happens
  * automatically when the first packet match succeeds.
