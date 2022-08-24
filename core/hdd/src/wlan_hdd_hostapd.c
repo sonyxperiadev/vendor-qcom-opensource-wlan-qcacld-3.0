@@ -7604,7 +7604,7 @@ static int __wlan_hdd_cfg80211_start_ap(struct wiphy *wiphy,
 	 * different or same band( whether we require DBS or Not).
 	 * If we dont require DBS, then the driver does nothing assuming
 	 * the state would be already in non DBS mode, and just continues
-	 * with vdev up on same MAC, by stoping the opportunistic timer,
+	 * with vdev up on same MAC, by stopping the opportunistic timer,
 	 * which results in a connection of 1x1 if already the state was in
 	 * DBS. So first stop timer, and check the current hw mode.
 	 * If the SAP comes up in band different from STA, DBS mode is already

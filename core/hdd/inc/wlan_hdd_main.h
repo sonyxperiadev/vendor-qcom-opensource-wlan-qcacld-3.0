@@ -3501,7 +3501,7 @@ wlan_hdd_deinit_multi_client_info_table(struct hdd_adapter *adapter)
 int hdd_wlan_start_modules(struct hdd_context *hdd_ctx, bool reinit);
 
 /**
- * hdd_wlan_stop_modules - Single driver state machine for stoping modules
+ * hdd_wlan_stop_modules - Single driver state machine for stopping modules
  * @hdd_ctx: HDD context
  * @ftm_mode: ftm mode
  *
