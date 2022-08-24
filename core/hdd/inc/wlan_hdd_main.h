@@ -2495,7 +2495,7 @@ struct hdd_adapter *hdd_get_adapter_by_macaddr(struct hdd_context *hdd_ctx,
  * @adapter: hdd adapter of vdev
  *
  * This function returns operation channel of station/p2p-cli if
- * connected, returns opration channel of sap/p2p-go if started.
+ * connected, returns operation channel of sap/p2p-go if started.
  *
  * Return: home channel if connected/started or invalid channel 0
  */
