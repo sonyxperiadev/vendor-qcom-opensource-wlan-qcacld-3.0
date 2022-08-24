@@ -1650,7 +1650,7 @@ static inline bool hdd_get_wlan_driver_status(void)
 #endif
 
 /**
- * enum wlan_state_ctrl_str_id - state contrl param string id
+ * enum wlan_state_ctrl_str_id - state control param string id
  * @WLAN_OFF_STR: Turn OFF WiFi
  * @WLAN_ON_STR: Turn ON WiFi
  * @WLAN_ENABLE_STR: Enable WiFi

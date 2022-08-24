@@ -15649,7 +15649,7 @@ __wlan_hdd_cfg80211_set_trace_level(struct wiphy *wiphy,
 
 	print_idx = qdf_get_pidx();
 	if (print_idx < 0 || print_idx >= MAX_PRINT_CONFIG_SUPPORTED) {
-		hdd_err("Invalid print controle object index");
+		hdd_err("Invalid print control object index");
 		return -EINVAL;
 	}
 
