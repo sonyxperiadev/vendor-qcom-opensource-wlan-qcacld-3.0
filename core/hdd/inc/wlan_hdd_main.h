@@ -2828,7 +2828,7 @@ int wlan_hdd_scan_abort(struct hdd_adapter *adapter);
  * @vdev_id: vdev id
  * @cnt: number of active ndp sessions
  *
- * This HDD callback registerd with policy manager to indicates number of active
+ * This HDD callback registered with policy manager to indicates number of active
  * ndp sessions to hdd.
  *
  * Return:  none
