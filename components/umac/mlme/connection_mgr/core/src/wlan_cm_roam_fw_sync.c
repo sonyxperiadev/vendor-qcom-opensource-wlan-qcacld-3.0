@@ -1010,8 +1010,6 @@ QDF_STATUS cm_fw_roam_complete(struct cnx_mgr *cm_ctx, void *data)
 		goto end;
 	}
 
-	/* Check if FW as indicated this link as disabled */
-	cm_get_and_disable_link_from_roam_ind(psoc, vdev_id, roam_synch_data);
 	/*
 	 * Following operations need to be done once roam sync
 	 * completion is sent to FW, hence called here:
@@ -1020,7 +1018,13 @@ QDF_STATUS cm_fw_roam_complete(struct cnx_mgr *cm_ctx, void *data)
 	 * 2) Force SCC switch if needed
 	 */
 	/* first update connection info from wma interface */
-	policy_mgr_update_connection_info(psoc, vdev_id);
+	status = policy_mgr_update_connection_info(psoc, vdev_id);
+	if (status == QDF_STATUS_NOT_INITIALIZED)
+		policy_mgr_incr_active_session(psoc, QDF_STA_MODE, vdev_id);
+
+	/* Check if FW as indicated this link as disabled */
+	cm_get_and_disable_link_from_roam_ind(psoc, vdev_id, roam_synch_data);
+
 	/* then update remaining parameters from roam sync ctx */
 	if (roam_synch_data->hw_mode_trans_present)
 		policy_mgr_hw_mode_transition_cb(
