@@ -110,7 +110,7 @@ enum hdd_wmm_linuxac {
  *
  * @node: list node which can be used to put the context into a list
  *	of contexts
- * @handle: identifer which uniquely identifies this context to userspace
+ * @handle: identifier which uniquely identifies this context to userspace
  * @flow_id: identifier which uniquely identifies this flow to SME
  * @adapter: adapter upon which this flow was configured
  * @ac_type: access category for this flow
