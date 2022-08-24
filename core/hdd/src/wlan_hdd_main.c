@@ -3147,7 +3147,7 @@ static int hdd_start_link_adapter(struct hdd_adapter *sta_adapter)
 static int hdd_stop_link_adapter(struct hdd_context *hdd_ctx,
 				 struct hdd_adapter *sta_adapter)
 {
-	int i, ret;
+	int i, ret = 0;
 	struct hdd_mlo_adapter_info *mlo_adapter_info;
 	struct hdd_adapter *link_adapter;
 
