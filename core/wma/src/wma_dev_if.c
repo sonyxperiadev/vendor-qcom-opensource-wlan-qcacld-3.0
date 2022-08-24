@@ -692,7 +692,8 @@ wma_vdev_self_peer_delete(tp_wma_handle wma_handle,
 			cds_trigger_recovery(QDF_REASON_UNSPECIFIED);
 			return status;
 		}
-	} else if (iface->type == WMI_VDEV_TYPE_STA) {
+	} else if (iface->type == WMI_VDEV_TYPE_STA ||
+		   iface->type == WMI_VDEV_TYPE_NAN) {
 		wma_remove_objmgr_peer(wma_handle, iface->vdev,
 				       pdel_vdev_req_param->self_mac_addr);
 	}
@@ -2651,7 +2652,8 @@ QDF_STATUS wma_vdev_self_peer_create(struct vdev_mlme_obj *vdev_mlme)
 					 NULL, false);
 		if (QDF_IS_STATUS_ERROR(status))
 			wma_err("Failed to create peer %d", status);
-	} else if (vdev_mlme->mgmt.generic.type == WMI_VDEV_TYPE_STA) {
+	} else if (vdev_mlme->mgmt.generic.type == WMI_VDEV_TYPE_STA ||
+		   vdev_mlme->mgmt.generic.type == WMI_VDEV_TYPE_NAN) {
 		if (!qdf_is_macaddr_zero(
 				(struct qdf_mac_addr *)vdev->vdev_mlme.mldaddr))
 			self_peer_macaddr = vdev->vdev_mlme.mldaddr;
