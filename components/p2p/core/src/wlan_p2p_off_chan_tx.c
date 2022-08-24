@@ -662,6 +662,7 @@ static QDF_STATUS p2p_populate_mac_header(
 	uint16_t seq_num;
 	uint8_t pdev_id;
 	struct wlan_objmgr_vdev *vdev;
+	enum QDF_OPMODE opmode;
 
 	psoc = tx_ctx->p2p_soc_obj->soc;
 
@@ -680,14 +681,25 @@ static QDF_STATUS p2p_populate_mac_header(
 		peer = wlan_objmgr_get_peer(psoc, pdev_id, mac_addr,
 					    WLAN_P2P_ID);
 	}
-	if (!peer && tx_ctx->rand_mac_tx) {
+	if (!peer) {
 		vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc,
 							    tx_ctx->vdev_id,
 							    WLAN_P2P_ID);
 		if (vdev) {
-			mac_addr = wlan_vdev_mlme_get_macaddr(vdev);
-			peer = wlan_objmgr_get_peer(psoc, pdev_id, mac_addr,
-						    WLAN_P2P_ID);
+			opmode = wlan_vdev_mlme_get_opmode(vdev);
+			/*
+			 * For NAN iface, retrieves mac address from vdev
+			 * as it is self peer. Also, rand_mac_tx would be
+			 * false as tx channel is not available.
+			 */
+			if (opmode == QDF_NAN_DISC_MODE ||
+			    tx_ctx->rand_mac_tx) {
+				mac_addr = wlan_vdev_mlme_get_macaddr(vdev);
+				peer = wlan_objmgr_get_peer(psoc, pdev_id,
+							    mac_addr,
+							    WLAN_P2P_ID);
+			}
+
 			wlan_objmgr_vdev_release_ref(vdev, WLAN_P2P_ID);
 		}
 	}
@@ -1162,6 +1174,7 @@ static QDF_STATUS p2p_mgmt_tx(struct tx_action_context *tx_ctx,
 	uint8_t pdev_id;
 	struct wlan_objmgr_vdev *vdev;
 	struct wlan_objmgr_pdev *pdev;
+	enum QDF_OPMODE opmode;
 
 	psoc = tx_ctx->p2p_soc_obj->soc;
 	mgmt_param.tx_frame = packet;
@@ -1200,11 +1213,21 @@ static QDF_STATUS p2p_mgmt_tx(struct tx_action_context *tx_ctx,
 		peer = wlan_objmgr_get_peer(psoc, pdev_id, mac_addr,
 					    WLAN_P2P_ID);
 	}
-	if (!peer && tx_ctx->rand_mac_tx) {
+	if (!peer) {
 		if (vdev) {
-			mac_addr = wlan_vdev_mlme_get_macaddr(vdev);
-			peer = wlan_objmgr_get_peer(psoc, pdev_id, mac_addr,
-						    WLAN_P2P_ID);
+			opmode = wlan_vdev_mlme_get_opmode(vdev);
+			/*
+			 * For NAN iface, retrieves mac address from vdev
+			 * as it is self peer. Also, rand_mac_tx would be
+			 * false as tx channel is not available.
+			 */
+			if (opmode == QDF_NAN_DISC_MODE ||
+			    tx_ctx->rand_mac_tx) {
+				mac_addr = wlan_vdev_mlme_get_macaddr(vdev);
+				peer = wlan_objmgr_get_peer(psoc, pdev_id,
+							    mac_addr,
+							    WLAN_P2P_ID);
+			}
 		}
 	}
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_P2P_ID);
