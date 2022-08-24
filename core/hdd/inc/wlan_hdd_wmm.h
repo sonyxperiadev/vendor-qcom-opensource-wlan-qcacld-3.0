@@ -141,7 +141,7 @@ struct hdd_wmm_qos_context {
  * @has_access_failed - has implicit QoS negotiation already failed?
  * @was_access_granted - has implicit QoS negotiation already succeeded?
  * @is_access_allowed - is access to this AC allowed, either because we
- *	are not doing WMM, we are not doing implicit QoS, implict QoS has
+ *	are not doing WMM, we are not doing implicit QoS, implicit QoS has
  *	completed, or explicit QoS has completed?
  * @is_tspec_valid - is the tspec valid?
  * @is_uapsd_info_valid - are the UAPSD-related fields valid?

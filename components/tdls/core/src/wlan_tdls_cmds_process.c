@@ -1920,7 +1920,7 @@ static QDF_STATUS tdls_config_force_peer(
 
 	/*
 	 * In case of liberal external mode, supplicant will provide peer mac
-	 * address but driver has to behave similar to implict mode ie
+	 * address but driver has to behave similar to implicit mode ie
 	 * establish tdls link with any peer that supports tdls and meets stats
 	 */
 	if (TDLS_IS_LIBERAL_EXTERNAL_CONTROL_ENABLED(feature)) {
