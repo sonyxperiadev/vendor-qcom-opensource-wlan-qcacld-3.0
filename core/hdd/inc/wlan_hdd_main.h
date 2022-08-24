@@ -1549,7 +1549,7 @@ struct hdd_cache_channels {
 
 /**
  * struct hdd_dynamic_mac - hdd structure to handle dynamic mac address changes
- * @dynamic_mac: Dynamicaly configured mac, this contains the mac on which
+ * @dynamic_mac: Dynamically configured mac, this contains the mac on which
  * current interface is up
  * @is_provisioned_mac: is this mac from provisioned list
  * @bit_position: holds the bit mask position from where this mac is assigned,
