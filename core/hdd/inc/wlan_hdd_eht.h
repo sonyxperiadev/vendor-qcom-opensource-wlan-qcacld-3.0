@@ -75,7 +75,7 @@ void wlan_hdd_check_11be_support(struct hdd_beacon_data *beacon,
  * hdd_update_wiphy_eht_cap() - update the wiphy with eht capabilities
  * @hdd_ctx: HDD context
  *
- * update wiphy with the eht capabilties.
+ * update wiphy with the eht capabilities.
  *
  * Return: None
  */

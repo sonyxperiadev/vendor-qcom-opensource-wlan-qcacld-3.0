@@ -1703,7 +1703,7 @@ lim_send_assoc_rsp_mgmt_frame(struct mac_context *mac_ctx,
 			 * WAR: In P2P GO mode, if the P2P client device
 			 * is only HT capable and not VHT capable, but the P2P
 			 * GO device is VHT capable and advertises 2x2 NSS with
-			 * HT capablity client device, which results in IOT
+			 * HT capability client device, which results in IOT
 			 * issues.
 			 * When GO is operating in DBS mode, GO beacons
 			 * advertise 2x2 capability but include OMN IE to

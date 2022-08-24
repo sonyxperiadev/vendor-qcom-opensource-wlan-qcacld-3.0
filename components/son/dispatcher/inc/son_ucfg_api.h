@@ -181,7 +181,7 @@ uint8_t ucfg_son_get_tx_power(struct element_info assoc_req_ies);
 /**
  * ucfg_son_get_peer_rrm_info() - Get RRM info for peer
  * @assoc_req_ies: assoc req ies
- * @rrmcaps: rrm capabiities
+ * @rrmcaps: rrm capabilities
  * @is_beacon_meas_supported: if beacon meas is supported
  *
  * Return: Returns QDF_STATUS_SUCCESS if succeed

@@ -1087,7 +1087,7 @@ struct wlan_mlme_chain_cfg {
  * @dual_sta_roam_fw_support: Firmware support for dual sta roaming feature
  * @ocv_support: FW supports OCV
  *
- * Add all the mlme-tgt related capablities here, and the public API would fill
+ * Add all the mlme-tgt related capabilities here, and the public API would fill
  * the related capability in the required mlme cfg structure.
  */
 struct mlme_tgt_caps {

@@ -456,7 +456,7 @@ static void lim_update_ese_tsm(struct mac_context *mac_ctx,
  * @assoc_rsp:  pointer to assoc response
  *
  * This function is called by lim_process_assoc_rsp_frame() to
- * update STA DS with ext capablities.
+ * update STA DS with ext capabilities.
  *
  * Return: None
  */
@@ -766,7 +766,7 @@ lim_update_iot_aggr_sz(struct mac_context *mac_ctx, uint8_t *ie_ptr,
 /**
  * hdd_cm_update_mcs_rate_set() - Update MCS rate set from HT capability
  * @vdev: Pointer to vdev boject
- * @ht_cap: pointer to parsed HT capablity
+ * @ht_cap: pointer to parsed HT capability
  *
  * Return: None.
  */

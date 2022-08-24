@@ -353,7 +353,7 @@ typedef struct sLimMlmSetKeysReq {
  * @updateBss: update the existing BSS entry, if this flag is set
  * @maxTxPower: max power to be used after applying the power constraint
  * @bSpectrumMgtEnabled: Spectrum Management Capability, 1:Enabled, 0:Disabled.
- * @vhtCapable: VHT capablity
+ * @vhtCapable: VHT capability
  * @ch_width: VHT tx channel width
  * @he_capable: HE Capability
  * @no_ptk_4_way: Do not need 4-way handshake

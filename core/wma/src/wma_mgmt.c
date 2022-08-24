@@ -3139,7 +3139,7 @@ QDF_STATUS wma_set_cts2self_for_p2p_go(void *wma_handle,
 /**
  * wma_set_htconfig() - set ht config parameters to target
  * @vdev_id: vdev id
- * @ht_capab: ht capablity
+ * @ht_capab: ht capability
  * @value: value of ht param
  *
  * Return: QDF status
@@ -3877,7 +3877,7 @@ static int wma_mgmt_rx_process(void *handle, uint8_t *data,
 	/*
 	 * Allocate the memory for this rx packet, add extra 100 bytes for:-
 	 *
-	 * 1.  Filling the missing RSN capabilites by some APs, which fill the
+	 * 1.  Filling the missing RSN capabilities by some APs, which fill the
 	 *     RSN IE length as extra 2 bytes but dont fill the IE data with
 	 *     capabilities, resulting in failure in unpack core due to length
 	 *     mismatch. Check sir_validate_and_rectify_ies for more info.

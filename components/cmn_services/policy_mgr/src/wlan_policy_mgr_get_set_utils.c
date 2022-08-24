@@ -6219,7 +6219,7 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 		return status;
 	}
 
-	/* Allow sta+p2p+p2p only if firmware supports the capablity */
+	/* Allow sta+p2p+p2p only if firmware supports the capability */
 	if (!policy_mgr_is_third_conn_sta_p2p_p2p_valid(psoc, mode)) {
 		policy_mgr_err("Don't allow third connection as GO or GC or STA with old fw");
 		return status;

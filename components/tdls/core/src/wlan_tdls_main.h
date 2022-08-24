@@ -193,7 +193,7 @@ struct tdls_set_state_info {
  * @tdls_osif_init_cb: Callback to initialize the tdls private
  * @tdls_osif_deinit_cb: Callback to deinitialize the tdls private
  * @tdls_osif_update_cb: Callback for updating osif params
- * @fw_tdls_11ax_capablity: bool for tdls 11ax fw capability
+ * @fw_tdls_11ax_capability: bool for tdls 11ax fw capability
  * @fw_tdls_6g_capability: bool for tdls 6g fw capability
  * @bss_sta_power: bss sta power
  * @@bss_sta_power_type: bss sta power type

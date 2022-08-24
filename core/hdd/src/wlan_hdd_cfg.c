@@ -719,7 +719,7 @@ bool hdd_update_config_cfg(struct hdd_context *hdd_ctx)
 
 	/*
 	 * During the initialization both 2G and 5G capabilities should be same.
-	 * So read 5G HT capablity and update 2G and 5G capablities.
+	 * So read 5G HT capability and update 2G and 5G capabilities.
 	 */
 
 	if (0 != hdd_update_he_cap_in_cfg(hdd_ctx)) {

@@ -937,7 +937,7 @@ struct tdls_ch_params {
 };
 
 /**
- * struct tdls_peer_params - TDLS peer capablities parameters
+ * struct tdls_peer_params - TDLS peer capabilities parameters
  * @is_peer_responder: is peer responder or not
  * @peer_uapsd_queue: peer uapsd queue
  * @peer_max_sp: peer max SP value

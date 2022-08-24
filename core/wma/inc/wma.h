@@ -826,7 +826,7 @@ struct wma_wlm_stats_data {
  *   was done
  * @last_umac_data_nbuf: cache nbuf ptr for the last umac data buf
  * @tgt_cfg_update_cb: configuration update callback
- * @reg_cap: regulatory capablities
+ * @reg_cap: regulatory capabilities
  * @scan_id: scan id
  * @interfaces: txrx nodes(per vdev)
  * @pdevconfig: pdev related configrations
