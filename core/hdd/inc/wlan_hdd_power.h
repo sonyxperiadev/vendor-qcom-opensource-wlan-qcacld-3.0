@@ -539,7 +539,7 @@ void wlan_hdd_inc_suspend_stats(struct hdd_context *hdd_ctx,
 /*
  * Unit-test suspend/resume is a testing feature that allows putting firmware
  * into WoW suspend irrespective of Apps suspend status. It emulates the chain
- * of events that occur durring normal system-level suspend/resume, such as
+ * of events that occur during normal system-level suspend/resume, such as
  * initiating all of the suspend/resume stages in the correct order, and
  * enabling/disabling appropriate copy engine irqs.
  */
