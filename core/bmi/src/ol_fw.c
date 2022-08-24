@@ -140,7 +140,7 @@ end:
  *
  * The API return board filename based on the board_id and chip_id.
  * eg: input = "bdwlan30.bin", board_id = 0x01, board_file = "bdwlan30.b01"
- * Return: The buffer with the formated board filename.
+ * Return: The buffer with the formatted board filename.
  */
 static char *ol_board_id_to_filename(const char *old_name,
 				     uint16_t board_id)

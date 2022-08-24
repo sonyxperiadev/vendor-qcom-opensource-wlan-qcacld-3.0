@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -56,7 +57,7 @@ struct iw_fips_test_response {
  * @extra: extra payload for wireless extensions ioctl
  *
  * This API implements the FIPS test interface. Upon entry the @extra
- * buffer will contain a FIPS test vector formated as a &struct
+ * buffer will contain a FIPS test vector formatted as a &struct
  * iw_fips_test_request. This vector will be sent to firmware where it
  * will be run through the appropriate hardware. The result of the
  * operation will be sent back to userspace via @extra encoded as a
