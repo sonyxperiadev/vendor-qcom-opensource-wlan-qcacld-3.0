@@ -1004,9 +1004,9 @@ struct dhcp_server {
  * Example 1:
  *
  * OUI is 00-10-18, data length is 05 (hex form), data is 02-11-04-5C-DE and
- * need to consider first 3 bytes and last byte of data for comparision
+ * need to consider first 3 bytes and last byte of data for comparison
  * mac-addr EE-1A-59-FE-FD-AF is present and first 3 bytes and last byte of
- * mac address should be considered for comparision
+ * mac address should be considered for comparison
  * capability is not present
  * then action OUI for gActionOUIITOExtension is as follows:
  *
