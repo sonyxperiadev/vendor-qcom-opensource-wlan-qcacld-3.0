@@ -92,6 +92,7 @@ lim_send_stop_bss_response(struct mac_context *mac_ctx, uint8_t vdev_id,
 	struct scheduler_msg msg = {0};
 	struct stop_bss_rsp *stop_bss_rsp;
 	struct pe_session *pe_session;
+	struct pe_session *sta_session;
 
 	pe_debug("Sending stop bss response with reasonCode: %s",
 		 lim_result_code_str(result_code));
@@ -100,6 +101,22 @@ lim_send_stop_bss_response(struct mac_context *mac_ctx, uint8_t vdev_id,
 	if (!pe_session) {
 		pe_err("Unable to find session for stop bss response");
 		return;
+	}
+
+	/*
+	 * STA LPI + SAP VLP is supported. For this STA should operate in VLP
+	 * power level of the SAP.
+	 *
+	 * For the STA, if the TPC is changed to VLP, then restore the original
+	 * power for the STA when SAP disconnects.
+	 */
+	if (wlan_get_tpc_update_required_for_sta(pe_session->vdev)) {
+		sta_session = lim_get_concurrent_session(mac_ctx, vdev_id,
+							 pe_session->opmode);
+		if (sta_session &&
+		    sta_session->curr_op_freq == pe_session->curr_op_freq)
+			lim_update_tx_power(mac_ctx, pe_session,
+					    sta_session, true);
 	}
 
 	stop_bss_rsp = qdf_mem_malloc(sizeof(*stop_bss_rsp));
