@@ -770,6 +770,10 @@ static char *p2p_get_frame_type_str(struct p2p_frame_info *frame_info)
 		return "GAS come back response";
 	case P2P_PUBLIC_ACTION_WNM_BTM_REQ:
 		return "BTM request";
+	case P2P_PUBLIC_ACTION_RRM_BEACON_REQ:
+		return "BEACON request";
+	case P2P_PUBLIC_ACTION_RRM_NEIGHBOR_RSP:
+		return "NEIGHBOR response";
 	default:
 		return "Other frame";
 	}
@@ -852,6 +856,17 @@ static QDF_STATUS p2p_get_frame_info(uint8_t *data_buf, uint32_t length,
 				action_type = buf[0];
 				frame_info->public_action_type =
 					P2P_PUBLIC_ACTION_WNM_BTM_REQ;
+			}
+			break;
+		case RRM_ACTION_FRAME:
+			if (buf[1] == RRM_RADIO_MEASURE_REQ) {
+				action_type = buf[0];
+				frame_info->public_action_type =
+					P2P_PUBLIC_ACTION_RRM_BEACON_REQ;
+			} else if (buf[1] == RRM_NEIGHBOR_RPT) {
+				action_type = buf[0];
+				frame_info->public_action_type =
+					P2P_PUBLIC_ACTION_RRM_NEIGHBOR_RSP;
 			}
 			break;
 		default:
