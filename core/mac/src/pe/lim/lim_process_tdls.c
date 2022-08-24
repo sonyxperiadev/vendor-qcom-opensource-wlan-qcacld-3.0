@@ -3104,8 +3104,9 @@ static void lim_tdls_update_hash_node_info(struct mac_context *mac,
 
 	wide_band_peer = lim_is_wide_band_set(add_sta_req->extn_capability) &&
 		    wlan_cfg80211_tdls_is_fw_wideband_capable(pe_session->vdev);
+	selfDot11Mode = mac->mlme_cfg->dot11_mode.dot11_mode;
 	htCaps = &htCap;
-	if (htCaps->present) {
+	if (htCaps->present && IS_DOT11_MODE_HT(selfDot11Mode)) {
 		sta->mlmStaContext.htCapability = 1;
 		sta->htGreenfield = htCaps->greenField;
 		/*
@@ -3154,7 +3155,7 @@ static void lim_tdls_update_hash_node_info(struct mac_context *mac,
 	}
 	lim_tdls_populate_dot11f_vht_caps(mac, add_sta_req, &vhtCap);
 	pVhtCaps = &vhtCap;
-	if (pVhtCaps->present) {
+	if (pVhtCaps->present && IS_DOT11_MODE_VHT(selfDot11Mode)) {
 		sta->mlmStaContext.vhtCapability = 1;
 
 		/*
@@ -3209,7 +3210,6 @@ static void lim_tdls_update_hash_node_info(struct mac_context *mac,
 			WNI_CFG_VHT_CHANNEL_WIDTH_20_40MHZ;
 	}
 
-	selfDot11Mode = mac->mlme_cfg->dot11_mode.dot11_mode;
 	if (IS_DOT11_MODE_HE(selfDot11Mode))
 		lim_tdls_update_node_he_caps(mac, add_sta_req, sta, pe_session,
 					     wide_band_peer);
