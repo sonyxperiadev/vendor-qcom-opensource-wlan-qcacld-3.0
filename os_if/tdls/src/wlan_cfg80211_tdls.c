@@ -38,6 +38,7 @@
 #include "sir_api.h"
 #include "wlan_tdls_ucfg_api.h"
 #include "wlan_cm_roam_api.h"
+#include "wlan_mlo_mgr_sta.h"
 
 #define TDLS_MAX_NO_OF_2_4_CHANNELS 14
 
@@ -660,9 +661,10 @@ void wlan_cfg80211_tdls_rx_callback(void *user_data,
 	struct tdls_rx_mgmt_frame *rx_frame)
 {
 	struct wlan_objmgr_psoc *psoc;
-	struct wlan_objmgr_vdev *vdev;
+	struct wlan_objmgr_vdev *vdev, *assoc_vdev;
 	struct vdev_osif_priv *osif_priv;
 	struct wireless_dev *wdev;
+	enum QDF_OPMODE opmode;
 
 	psoc = user_data;
 	if (!psoc) {
@@ -677,7 +679,18 @@ void wlan_cfg80211_tdls_rx_callback(void *user_data,
 		return;
 	}
 
-	osif_priv = wlan_vdev_get_ospriv(vdev);
+	assoc_vdev = vdev;
+	opmode = wlan_vdev_mlme_get_opmode(vdev);
+
+	if (opmode == QDF_STA_MODE && wlan_vdev_mlme_is_mlo_vdev(vdev)) {
+		assoc_vdev = ucfg_mlo_get_assoc_link_vdev(vdev);
+		if (!assoc_vdev) {
+			osif_err("assoc vdev is null");
+			goto fail;
+		}
+	}
+
+	osif_priv = wlan_vdev_get_ospriv(assoc_vdev);
 	if (!osif_priv) {
 		osif_err("osif_priv is null");
 		goto fail;
