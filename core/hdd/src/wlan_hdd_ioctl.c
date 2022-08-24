@@ -1415,7 +1415,7 @@ static void wlan_hdd_ready_to_extwow(void *cookie, bool is_success)
 
 	request = osif_request_get(cookie);
 	if (!request) {
-		hdd_err("Obselete request");
+		hdd_err("obsolete request");
 		return;
 	}
 	priv = osif_request_priv(request);
@@ -5753,7 +5753,7 @@ wlan_hdd_soc_set_antenna_mode_cb(enum set_antenna_mode_status status,
 
 	request = osif_request_get(context);
 	if (!request) {
-		hdd_err("obselete request");
+		hdd_err("obsolete request");
 		return;
 	}
 

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -82,7 +83,7 @@ static void hdd_debugfs_mws_coex_info_cb(void *coex_info_data, void *context,
 
 	request = osif_request_get(context);
 	if (!request) {
-		hdd_err("obselete request");
+		hdd_err("obsolete request");
 		return;
 	}
 
