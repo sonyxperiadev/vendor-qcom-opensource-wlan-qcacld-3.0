@@ -818,6 +818,128 @@ void tdls_set_peer_link_status(struct tdls_peer *peer,
 	}
 }
 
+static void
+tdls_fill_peer_pref_offchan_bw(struct tdls_peer *peer,
+			       uint16_t bw)
+{
+	if (bw < BW_160_MHZ)
+		peer->pref_off_chan_width &= ~(1 << BW_160_OFFSET_BIT);
+
+	if (bw < BW_80_MHZ)
+		peer->pref_off_chan_width &= ~(1 << BW_80_OFFSET_BIT);
+
+	if (bw < BW_40_MHZ)
+		peer->pref_off_chan_width &= ~(1 << BW_40_OFFSET_BIT);
+}
+
+static void tdls_update_off_chan_peer_caps(struct tdls_vdev_priv_obj *vdev_obj,
+					   struct tdls_soc_priv_obj *soc_obj,
+					   struct tdls_peer *peer)
+{
+	struct wlan_objmgr_pdev *pdev = wlan_vdev_get_pdev(vdev_obj->vdev);
+	qdf_freq_t ini_pref_6g_freq, ini_pref_non6g_freq, peer_freq;
+	enum channel_enum peer_chan;
+	qdf_freq_t peer_5g_freq = 0, peer_6g_freq = 0;
+	bool is_6g_support = false;
+	bool peer_6g_supportd = false;
+	bool peer_5g_supportd = false;
+	uint8_t i;
+	uint16_t temp_bw, max_pref_width, peer_supportd_max_bw = 0;
+	uint8_t reg_bw_offset;
+
+	if (!pdev) {
+		tdls_err("pdev is NULL");
+		return;
+	}
+
+	/*
+	 * Update Pref Offcahnnel BW such that:
+	 * 1. If 6 GHz is supported then select the ini preferred 6 GHz channel
+	 *    frequency.
+	 * 2. If 6 GHz is supported and peer doesn't support the ini preffered
+	 *    channel frequency then select the very first 6 GHz channel which
+	 *    peer supports as prefferd offchannel.
+	 * 3. If peer doesn't support 6 GHz, then select ini preffered 5 GHz
+	 *    off channel frequency, given that peer should also support it
+	 * 4. If peer doesn support 6 GHz and also doesn't support ini preferred
+	 *    5 GHz offcahnnel, then select the very first 5 GHz channel it
+	 *    supports.
+	 */
+	ini_pref_6g_freq = soc_obj->tdls_configs.tdls_pre_off_chan_freq_6g;
+	ini_pref_non6g_freq = wlan_reg_legacy_chan_to_freq(pdev,
+				soc_obj->tdls_configs.tdls_pre_off_chan_num);
+
+	if (ini_pref_6g_freq == peer->pref_off_chan_freq)
+		is_6g_support = true;
+
+	for (i = 0; i < peer->supported_channels_len; i++) {
+		peer_freq = peer->supported_chan_freq[i];
+		peer_chan = wlan_reg_get_chan_enum_for_freq(peer_freq);
+
+		if (!wlan_reg_is_freq_idx_enabled(pdev, peer_chan,
+						  REG_CLI_DEF_VLP))
+			continue;
+
+		if (peer->pref_off_chan_freq == peer_freq)
+			break;
+
+		if (ini_pref_non6g_freq == peer_freq) {
+			peer_5g_supportd = true;
+			peer_5g_freq = ini_pref_non6g_freq;
+		}
+		if (!peer_5g_supportd &&
+		    wlan_reg_is_5ghz_ch_freq(peer_freq)) {
+			peer_5g_freq = peer_freq;
+			peer_5g_supportd = true;
+		}
+		if (!peer_6g_supportd &&
+		    wlan_reg_is_6ghz_chan_freq(peer_freq)) {
+			peer_6g_freq = peer_freq;
+			peer_6g_supportd = true;
+		}
+	}
+
+	if (peer->pref_off_chan_freq == peer->supported_chan_freq[i])
+		goto bw_check;
+
+	if (is_6g_support && peer_6g_freq)
+		peer->pref_off_chan_freq = peer_6g_freq;
+	else if (peer_5g_freq)
+		peer->pref_off_chan_freq = peer_5g_freq;
+	else
+		peer->pref_off_chan_freq = 0;
+
+bw_check:
+	max_pref_width = wlan_reg_get_max_chwidth(pdev,
+						  peer->pref_off_chan_freq);
+	for (i = 0; i < peer->supported_oper_classes_len; i++) {
+		temp_bw = wlan_reg_get_op_class_width(pdev,
+						peer->supported_oper_classes[i],
+						false);
+		if (temp_bw > peer_supportd_max_bw)
+			peer_supportd_max_bw = temp_bw;
+	}
+
+	peer_supportd_max_bw = (peer_supportd_max_bw > max_pref_width) ?
+				max_pref_width : peer_supportd_max_bw;
+	if (wlan_reg_is_6ghz_chan_freq(peer->pref_off_chan_freq) &&
+	    peer_supportd_max_bw < BW_160_MHZ)
+		tdls_fill_peer_pref_offchan_bw(peer, peer_supportd_max_bw);
+	else if (wlan_reg_is_5ghz_ch_freq(peer->pref_off_chan_freq) &&
+		 peer_supportd_max_bw < BW_80_MHZ)
+		tdls_fill_peer_pref_offchan_bw(peer, peer_supportd_max_bw);
+
+	if (wlan_reg_is_5ghz_ch_freq(peer->pref_off_chan_freq) &&
+	    CHECK_BIT(peer->pref_off_chan_width, BW_160_OFFSET_BIT))
+		peer->pref_off_chan_width &= ~(1 << BW_160_OFFSET_BIT);
+
+	peer->op_class_for_pref_off_chan =
+		tdls_get_opclass_from_bandwidth(
+				vdev_obj->vdev, peer->pref_off_chan_freq,
+				peer->pref_off_chan_width,
+				&reg_bw_offset);
+}
+
 void tdls_set_peer_caps(struct tdls_vdev_priv_obj *vdev_obj,
 			const uint8_t *macaddr,
 			struct tdls_update_peer_params  *req_info)
@@ -870,6 +992,8 @@ void tdls_set_peer_caps(struct tdls_vdev_priv_obj *vdev_obj,
 		req_info->supported_oper_classes_len;
 
 	curr_peer->qos = is_qos_wmm_sta;
+
+	tdls_update_off_chan_peer_caps(vdev_obj, soc_obj, curr_peer);
 }
 
 QDF_STATUS tdls_set_valid(struct tdls_vdev_priv_obj *vdev_obj,
