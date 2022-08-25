@@ -3240,6 +3240,59 @@ struct roam_ch_priv {
 	struct roam_scan_ch_resp roam_ch;
 };
 
+/**
+ * hdd_dump_roam_scan_ch_list() - Function to dump roam scan chan list content
+ * @chan_list: pointer to channel list received from FW via an event
+ * WMI_ROAM_SCAN_CHANNEL_LIST_EVENTID
+ * @num_channels: Number of channels
+ *
+ * Return: none
+ */
+static void
+hdd_dump_roam_scan_ch_list(uint32_t *chan_list, uint16_t num_channels)
+{
+	uint8_t i, j;
+	uint8_t ch_cache_str[128] = {0};
+
+	/* print channel list after sorting in ascending order */
+	for (i = 0, j = 0; i < num_channels; i++) {
+		if (j < sizeof(ch_cache_str))
+			j += snprintf(ch_cache_str + j,
+				      sizeof(ch_cache_str) - j, " %d",
+				      chan_list[i]);
+		else
+			break;
+	}
+
+	hdd_debug("No of freq:%d, freq list : %s", num_channels, ch_cache_str);
+}
+
+/**
+ * hdd_sort_roam_scan_ch_list() - Function to sort roam scan channel list in
+ * ascending order before sending it to supplicant
+ * @chan_list: pointer to channel list received from FW via an event
+ * WMI_ROAM_SCAN_CHANNEL_LIST_EVENTID
+ * @num_channels: Number of channels
+ *
+ * Return: none
+ */
+static void
+hdd_sort_roam_scan_ch_list(uint32_t *chan_list, uint16_t num_channels)
+{
+	uint8_t i, j, swap = 0;
+
+	for (i = 0; i < (num_channels - 1) &&
+	     i < WNI_CFG_VALID_CHANNEL_LIST_LEN; i++) {
+		for (j = 0; j < (num_channels - i - 1); j++) {
+			if (chan_list[j] > chan_list[j + 1]) {
+				swap = chan_list[j];
+				chan_list[j] = chan_list[j + 1];
+				chan_list[j + 1] = swap;
+			}
+		}
+	}
+}
+
 void hdd_get_roam_scan_ch_cb(hdd_handle_t hdd_handle,
 			     struct roam_scan_ch_resp *roam_ch,
 			     void *context)
@@ -3268,6 +3321,10 @@ void hdd_get_roam_scan_ch_cb(hdd_handle_t hdd_handle,
 			return;
 
 		freq = (uint32_t *)event;
+		hdd_sort_roam_scan_ch_list(roam_ch->chan_list,
+					   roam_ch->num_channels);
+		hdd_dump_roam_scan_ch_list(roam_ch->chan_list,
+					   roam_ch->num_channels);
 		for (i = 0; i < roam_ch->num_channels &&
 		     i < WNI_CFG_VALID_CHANNEL_LIST_LEN; i++) {
 			freq[i] = roam_ch->chan_list[i];
@@ -3285,6 +3342,9 @@ void hdd_get_roam_scan_ch_cb(hdd_handle_t hdd_handle,
 		return;
 	}
 	priv = osif_request_priv(request);
+
+	hdd_sort_roam_scan_ch_list(roam_ch->chan_list, roam_ch->num_channels);
+	hdd_dump_roam_scan_ch_list(roam_ch->chan_list, roam_ch->num_channels);
 
 	priv->roam_ch.num_channels = roam_ch->num_channels;
 	for (i = 0; i < priv->roam_ch.num_channels &&
