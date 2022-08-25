@@ -635,14 +635,6 @@ enum policy_mgr_con_mode policy_mgr_get_mode(uint8_t type,
 		uint8_t subtype);
 
 /**
- * policy_mgr_get_bw() - Convert phy_ch_width to hw_mode_bandwidth.
- * @chan_width: phy_ch_width
- *
- * Return: hw_mode_bandwidth
- */
-enum hw_mode_bandwidth policy_mgr_get_bw(enum phy_ch_width chan_width);
-
-/**
  * policy_mgr_get_channel_list() - Get channel list based on PCL and mode
  * @psoc: psoc object
  * @pcl: pcl type
