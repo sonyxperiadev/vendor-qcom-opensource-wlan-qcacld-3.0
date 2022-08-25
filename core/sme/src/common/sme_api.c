@@ -1541,8 +1541,9 @@ QDF_STATUS sme_set_plm_request(mac_handle_t mac_handle,
 
 		if (ch_freq > 2477) {
 			enum channel_state state =
-				wlan_reg_get_channel_state_for_freq(
-					mac->pdev, ch_freq);
+				wlan_reg_get_channel_state_for_pwrmode(
+					mac->pdev, ch_freq,
+					REG_CURRENT_PWR_MODE);
 
 			if (state == CHANNEL_STATE_DFS) {
 				/* DFS channel is provided, no PLM bursts can be
@@ -6074,8 +6075,10 @@ QDF_STATUS sme_ext_change_freq(mac_handle_t mac_handle, qdf_freq_t ch_freq,
 
 	sme_err("Set Channel freq: %d", ch_freq);
 
-	channel_state =
-		wlan_reg_get_channel_state_for_freq(mac_ctx->pdev, ch_freq);
+	channel_state = wlan_reg_get_channel_state_for_pwrmode(
+							mac_ctx->pdev,
+							ch_freq,
+							REG_CURRENT_PWR_MODE);
 
 	if (CHANNEL_STATE_DISABLE == channel_state) {
 		sme_err("Invalid channel freq: %d", ch_freq);

@@ -7798,8 +7798,8 @@ bool policy_mgr_is_sap_allowed_on_dfs_freq(struct wlan_objmgr_pdev *pdev,
 	/* if sta_sap_scc_on_dfs_chan ini is set, DFS master capability is
 	 * assumed disabled in the driver.
 	 */
-	if ((wlan_reg_get_channel_state_for_freq(pdev, ch_freq) ==
-	    CHANNEL_STATE_DFS) &&
+	if ((wlan_reg_get_channel_state_for_pwrmode(
+		pdev, ch_freq, REG_CURRENT_PWR_MODE) == CHANNEL_STATE_DFS) &&
 	    !sta_cnt && !gc_cnt && sta_sap_scc_on_dfs_chan &&
 	    !policy_mgr_get_dfs_master_dynamic_enabled(psoc, vdev_id)) {
 		policy_mgr_err("SAP not allowed on DFS channel if no dfs master capability!!");
@@ -8261,7 +8261,8 @@ bool policy_mgr_is_valid_for_channel_switch(struct wlan_objmgr_psoc *psoc,
 	sap_count = policy_mgr_mode_specific_connection_count(psoc,
 							      PM_SAP_MODE,
 							      NULL);
-	state = wlan_reg_get_channel_state_for_freq(pm_ctx->pdev, ch_freq);
+	state = wlan_reg_get_channel_state_for_pwrmode(pm_ctx->pdev, ch_freq,
+						       REG_CURRENT_PWR_MODE);
 
 	policy_mgr_debug("sta_sap_scc_on_dfs_chan %u, sap_count %u, ch freq %u, state %u",
 			 sta_sap_scc_on_dfs_chan, sap_count, ch_freq, state);

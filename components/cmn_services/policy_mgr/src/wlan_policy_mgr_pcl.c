@@ -416,8 +416,9 @@ policy_mgr_update_valid_ch_freq_list(struct policy_mgr_psoc_priv_obj *pm_ctx,
 	for (i = 0; i < NUM_CHANNELS; i++) {
 		ch_freq = reg_ch_list[i].center_freq;
 		if (is_client)
-			state = wlan_reg_get_channel_state_for_freq(
-							pm_ctx->pdev, ch_freq);
+			state = wlan_reg_get_channel_state_for_pwrmode(
+							pm_ctx->pdev, ch_freq,
+							REG_CURRENT_PWR_MODE);
 		else
 			state =
 			wlan_reg_get_channel_state_from_secondary_list_for_freq(

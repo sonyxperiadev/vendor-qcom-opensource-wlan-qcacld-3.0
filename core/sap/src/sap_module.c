@@ -1512,8 +1512,9 @@ QDF_STATUS wlansap_set_channel_change_with_csa(struct sap_context *sap_ctx,
 		       sap_get_csa_reason_str(sap_ctx->csa_reason),
 		       sap_ctx->csa_reason, strict, sap_ctx->sessionId);
 
-	state = wlan_reg_get_channel_state_for_freq(mac->pdev,
-						    target_chan_freq);
+	state = wlan_reg_get_channel_state_for_pwrmode(mac->pdev,
+						       target_chan_freq,
+						       REG_CURRENT_PWR_MODE);
 	if (state == CHANNEL_STATE_DISABLE || state == CHANNEL_STATE_INVALID) {
 		sap_nofl_debug("invalid target freq %d state %d",
 			       target_chan_freq, state);
@@ -3249,7 +3250,9 @@ static uint32_t wlansap_get_2g_first_safe_chan_freq(struct sap_context *sap_ctx)
 	acs_list_count = sap_ctx->acs_cfg->master_ch_list_count;
 	for (i = 0; i < NUM_CHANNELS; i++) {
 		freq = cur_chan_list[i].center_freq;
-		state = wlan_reg_get_channel_state_for_freq(pdev, freq);
+		state = wlan_reg_get_channel_state_for_pwrmode(
+							pdev, freq,
+							REG_CURRENT_PWR_MODE);
 		if (state != CHANNEL_STATE_DISABLE &&
 		    state != CHANNEL_STATE_PASSIVE &&
 		    state != CHANNEL_STATE_INVALID &&

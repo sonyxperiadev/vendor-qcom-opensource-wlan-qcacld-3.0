@@ -504,8 +504,9 @@ static int oem_process_channel_info_req_msg(int numOfChannels, char *chanList)
 
 			hddChanInfo.info = 0;
 			if (CHANNEL_STATE_DFS ==
-			    wlan_reg_get_channel_state_for_freq(
-				p_hdd_ctx->pdev, chan_freq))
+			    wlan_reg_get_channel_state_for_pwrmode(
+						p_hdd_ctx->pdev, chan_freq,
+						REG_CURRENT_PWR_MODE))
 				WMI_SET_CHANNEL_FLAG(&hddChanInfo,
 						     WMI_CHAN_FLAG_DFS);
 

@@ -795,9 +795,10 @@ static QDF_STATUS csr_fill_bss_from_scan_entry(struct mac_context *mac_ctx,
 	enum channel_state ap_channel_state;
 
 	ap_channel_state =
-		wlan_reg_get_channel_state_for_freq(
+		wlan_reg_get_channel_state_for_pwrmode(
 				mac_ctx->pdev,
-				scan_entry->channel.chan_freq);
+				scan_entry->channel.chan_freq,
+				REG_CURRENT_PWR_MODE);
 	if (ap_channel_state == CHANNEL_STATE_DISABLE ||
 	    ap_channel_state == CHANNEL_STATE_INVALID) {
 		sme_err("BSS "QDF_MAC_ADDR_FMT" channel %d invalid, not populating this BSSID",

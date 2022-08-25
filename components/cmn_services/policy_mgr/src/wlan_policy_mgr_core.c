@@ -2905,8 +2905,9 @@ void policy_mgr_set_weight_of_dfs_passive_channels_to_zero(
 	policy_mgr_debug("Set weight of DFS/passive channels to 0");
 
 	for (i = 0; i < orig_channel_count; i++) {
-		channel_state = wlan_reg_get_channel_state_for_freq(
-						pm_ctx->pdev, pcl_channels[i]);
+		channel_state = wlan_reg_get_channel_state_for_pwrmode(
+						pm_ctx->pdev, pcl_channels[i],
+						REG_CURRENT_PWR_MODE);
 		if ((channel_state == CHANNEL_STATE_DISABLE) ||
 				(channel_state == CHANNEL_STATE_INVALID))
 			/* Set weight of inactive channels to 0 */
@@ -4445,8 +4446,10 @@ void policy_mgr_check_scc_sbs_channel(struct wlan_objmgr_psoc *psoc,
 		if (WLAN_REG_IS_24GHZ_CH_FREQ(sap_ch_freq) &&
 		    user_config_freq &&
 		    !WLAN_REG_IS_24GHZ_CH_FREQ(user_config_freq) &&
-		    (wlan_reg_get_channel_state_for_freq(pm_ctx->pdev,
-							 *intf_ch_freq) == CHANNEL_STATE_ENABLE)) {
+		    (wlan_reg_get_channel_state_for_pwrmode(
+			pm_ctx->pdev,
+			*intf_ch_freq,
+			REG_CURRENT_PWR_MODE) == CHANNEL_STATE_ENABLE)) {
 			status = policy_mgr_get_sap_mandatory_channel(
 							psoc, sap_ch_freq,
 							intf_ch_freq, vdev_id);

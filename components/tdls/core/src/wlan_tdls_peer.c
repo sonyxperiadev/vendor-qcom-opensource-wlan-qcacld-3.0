@@ -615,7 +615,9 @@ void tdls_extract_peer_state_param(struct tdls_peer_update_state *peer_param,
 	num = 0;
 	for (i = 0; i < peer->supported_channels_len; i++) {
 		ch_freq = peer->supported_chan_freq[i];
-		ch_state = wlan_reg_get_channel_state_for_freq(pdev, ch_freq);
+		ch_state = wlan_reg_get_channel_state_for_pwrmode(
+							pdev, ch_freq,
+							REG_CURRENT_PWR_MODE);
 
 		if (CHANNEL_STATE_INVALID != ch_state &&
 		    CHANNEL_STATE_DFS != ch_state &&

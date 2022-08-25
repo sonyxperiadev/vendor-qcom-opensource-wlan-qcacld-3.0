@@ -824,8 +824,9 @@ static void csr_add_len_of_social_channels(struct mac_context *mac,
 			*num_chan);
 	if (CSR_IS_5G_BAND_ONLY(mac)) {
 		for (i = 0; i < MAX_SOCIAL_CHANNELS; i++) {
-			if (wlan_reg_get_channel_state_for_freq(
-				mac->pdev, social_channel_freq[i]) ==
+			if (wlan_reg_get_channel_state_for_pwrmode(
+				mac->pdev, social_channel_freq[i],
+				REG_CURRENT_PWR_MODE) ==
 					CHANNEL_STATE_ENABLE)
 				no_chan++;
 		}
@@ -845,8 +846,9 @@ static void csr_add_social_channels(struct mac_context *mac,
 			*num_chan);
 	if (CSR_IS_5G_BAND_ONLY(mac)) {
 		for (i = 0; i < MAX_SOCIAL_CHANNELS; i++) {
-			if (wlan_reg_get_channel_state_for_freq(
-					mac->pdev, social_channel_freq[i]) !=
+			if (wlan_reg_get_channel_state_for_pwrmode(
+					mac->pdev, social_channel_freq[i],
+					REG_CURRENT_PWR_MODE) !=
 					CHANNEL_STATE_ENABLE)
 				continue;
 			chan_list->chanParam[no_chan].freq =
@@ -992,8 +994,9 @@ QDF_STATUS csr_update_channel_list(struct mac_context *mac)
 			continue;
 
 		channel_state =
-			wlan_reg_get_channel_state_for_freq(
-				mac->pdev, channel_freq);
+			wlan_reg_get_channel_state_for_pwrmode(
+				mac->pdev, channel_freq,
+				REG_CURRENT_PWR_MODE);
 		if ((CHANNEL_STATE_ENABLE == channel_state) ||
 		    mac->scan.fEnableDFSChnlScan) {
 			if ((roam_policy->dfs_mode ==

@@ -2258,13 +2258,15 @@ lim_send_sme_ap_channel_switch_resp(struct mac_context *mac,
 		    ch_width, 0) == CHANNEL_STATE_DFS)
 			is_ch_dfs = true;
 	} else if (ch_width == CH_WIDTH_80P80MHZ) {
-		if (wlan_reg_get_channel_state_for_freq(
+		if (wlan_reg_get_channel_state_for_pwrmode(
 						mac->pdev,
-						pe_session->curr_op_freq) ==
+						pe_session->curr_op_freq,
+						REG_CURRENT_PWR_MODE) ==
 		    CHANNEL_STATE_DFS ||
-		    wlan_reg_get_channel_state_for_freq(
+		    wlan_reg_get_channel_state_for_pwrmode(
 						mac->pdev,
-						ch_cfreq1) ==
+						ch_cfreq1,
+						REG_CURRENT_PWR_MODE) ==
 				CHANNEL_STATE_DFS)
 			is_ch_dfs = true;
 	} else {

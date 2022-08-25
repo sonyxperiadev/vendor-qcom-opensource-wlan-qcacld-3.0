@@ -503,13 +503,15 @@ is_wlansap_cac_required_for_chan(struct mac_context *mac_ctx,
 		    ch_params->ch_width, 0) == CHANNEL_STATE_DFS)
 			is_ch_dfs = true;
 	} else if (ch_params->ch_width == CH_WIDTH_80P80MHZ) {
-		if (wlan_reg_get_channel_state_for_freq(
+		if (wlan_reg_get_channel_state_for_pwrmode(
 						mac_ctx->pdev,
-						chan_freq) ==
+						chan_freq,
+						REG_CURRENT_PWR_MODE) ==
 		    CHANNEL_STATE_DFS ||
-		    wlan_reg_get_channel_state_for_freq(
+		    wlan_reg_get_channel_state_for_pwrmode(
 					mac_ctx->pdev,
-					ch_params->mhz_freq_seg1) ==
+					ch_params->mhz_freq_seg1,
+					REG_CURRENT_PWR_MODE) ==
 				CHANNEL_STATE_DFS)
 			is_ch_dfs = true;
 	} else {
@@ -848,8 +850,9 @@ uint32_t sap_select_default_oper_chan(struct mac_context *mac_ctx,
 
 	for (i = 0; i < acs_cfg->ch_list_count; i++) {
 		enum channel_state state =
-			wlan_reg_get_channel_state_for_freq(
-					mac_ctx->pdev, acs_cfg->freq_list[i]);
+			wlan_reg_get_channel_state_for_pwrmode(
+					mac_ctx->pdev, acs_cfg->freq_list[i],
+					REG_CURRENT_PWR_MODE);
 		if (!freq0 && state == CHANNEL_STATE_ENABLE &&
 		    WLAN_REG_IS_5GHZ_CH_FREQ(acs_cfg->freq_list[i])) {
 			freq0 = acs_cfg->freq_list[i];
@@ -2055,8 +2058,9 @@ void sap_append_cac_history(struct mac_context *mac_ctx,
 
 		chan_cfreq = bonded_chan_ptr->start_freq;
 		while (chan_cfreq <= bonded_chan_ptr->end_freq) {
-			state = wlan_reg_get_channel_state_for_freq(
-					mac_ctx->pdev, chan_cfreq);
+			state = wlan_reg_get_channel_state_for_pwrmode(
+					mac_ctx->pdev, chan_cfreq,
+					REG_CURRENT_PWR_MODE);
 			if (state == CHANNEL_STATE_INVALID) {
 				sap_debug("invalid ch freq %d",
 					  chan_cfreq);
@@ -3566,13 +3570,15 @@ static QDF_STATUS sap_fsm_state_starting(struct sap_context *sap_ctx,
 					mac_ctx->pdev, sap_chan_freq,
 					CH_WIDTH_160MHZ) == CHANNEL_STATE_DFS;
 		} else if (sap_ctx->ch_params.ch_width == CH_WIDTH_80P80MHZ) {
-			if (wlan_reg_get_channel_state_for_freq(
+			if (wlan_reg_get_channel_state_for_pwrmode(
 							mac_ctx->pdev,
-							sap_chan_freq) ==
+							sap_chan_freq,
+							REG_CURRENT_PWR_MODE) ==
 			    CHANNEL_STATE_DFS ||
-			    wlan_reg_get_channel_state_for_freq(
+			    wlan_reg_get_channel_state_for_pwrmode(
 							mac_ctx->pdev,
-							ch_cfreq1) ==
+							ch_cfreq1,
+							REG_CURRENT_PWR_MODE) ==
 					CHANNEL_STATE_DFS)
 				is_dfs = true;
 		} else {
@@ -3749,9 +3755,10 @@ static QDF_STATUS sap_fsm_state_started(struct sap_context *sap_ctx,
 					sap_debug("vdev %d freq %d (state %d) is not DFS or disabled so continue",
 						  temp_sap_ctx->sessionId,
 						  temp_sap_ctx->chan_freq,
-						  wlan_reg_get_channel_state_for_freq(
+						  wlan_reg_get_channel_state_for_pwrmode(
 						  mac_ctx->pdev,
-						  temp_sap_ctx->chan_freq));
+						  temp_sap_ctx->chan_freq,
+						  REG_CURRENT_PWR_MODE));
 					continue;
 				}
 				sap_debug("vdev %d switch freq %d -> %d",

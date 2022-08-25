@@ -1118,7 +1118,9 @@ static uint32_t cm_remove_disabled_channels(struct wlan_objmgr_vdev *vdev,
 
 	for (i = 0; i < NUM_CHANNELS; i++) {
 		freq = cur_chan_list[i].center_freq;
-		state = wlan_reg_get_channel_state_for_freq(pdev, freq);
+		state = wlan_reg_get_channel_state_for_pwrmode(
+							pdev, freq,
+							REG_CURRENT_PWR_MODE);
 		if (state != CHANNEL_STATE_DISABLE &&
 		    state != CHANNEL_STATE_INVALID) {
 			for (j = 0; j < num_chan; j++) {

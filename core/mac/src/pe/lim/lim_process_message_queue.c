@@ -1939,9 +1939,10 @@ static void lim_process_messages(struct mac_context *mac_ctx,
 			 *    restart, in such a case, beacon params will be
 			 *    reset and thus will not contain Q2Q IE, by default
 			 */
-			if (wlan_reg_get_channel_state_for_freq(
+			if (wlan_reg_get_channel_state_for_pwrmode(
 				mac_ctx->pdev,
-				session_entry->curr_op_freq) !=
+				session_entry->curr_op_freq,
+				REG_CURRENT_PWR_MODE) !=
 				CHANNEL_STATE_DFS) {
 				beacon_params.bss_idx = session_entry->vdev_id;
 				beacon_params.beaconInterval =

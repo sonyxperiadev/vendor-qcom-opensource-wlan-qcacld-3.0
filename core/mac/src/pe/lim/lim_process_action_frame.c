@@ -190,8 +190,9 @@ lim_process_ext_channel_switch_action_frame(struct mac_context *mac_ctx,
 	 * and no concurrent session is running.
 	 */
 	if (!(session_entry->curr_op_freq != target_freq &&
-	      ((wlan_reg_get_channel_state_for_freq(mac_ctx->pdev, target_freq) ==
-		  CHANNEL_STATE_ENABLE) ||
+	      ((wlan_reg_get_channel_state_for_pwrmode(mac_ctx->pdev,
+						       target_freq,
+						       REG_CURRENT_PWR_MODE) == CHANNEL_STATE_ENABLE) ||
 	       (wlan_reg_is_dfs_for_freq(mac_ctx->pdev, target_freq) &&
 		!policy_mgr_concurrent_open_sessions_running(
 			mac_ctx->psoc))))) {

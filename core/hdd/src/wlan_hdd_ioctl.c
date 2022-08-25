@@ -5296,8 +5296,10 @@ static int drv_cmd_tdls_off_channel(struct hdd_adapter *adapter,
 		return -EINVAL;
 
 	ch_freq = wlan_reg_legacy_chan_to_freq(hdd_ctx->pdev, channel);
-	reg_state = wlan_reg_get_channel_state_for_freq(hdd_ctx->pdev,
-							ch_freq);
+	reg_state = wlan_reg_get_channel_state_for_pwrmode(
+							hdd_ctx->pdev,
+							ch_freq,
+							REG_CURRENT_PWR_MODE);
 
 	if (reg_state == CHANNEL_STATE_DFS ||
 		reg_state == CHANNEL_STATE_DISABLE ||

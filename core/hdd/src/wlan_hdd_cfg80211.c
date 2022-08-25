@@ -18219,9 +18219,10 @@ int wlan_hdd_cfg80211_update_band(struct hdd_context *hdd_ctx,
 		for (j = 0; j < wiphy->bands[i]->n_channels; j++) {
 			struct ieee80211_supported_band *band = wiphy->bands[i];
 
-			channel_state = wlan_reg_get_channel_state_for_freq(
+			channel_state = wlan_reg_get_channel_state_for_pwrmode(
 					hdd_ctx->pdev,
-					band->channels[j].center_freq);
+					band->channels[j].center_freq,
+					REG_CURRENT_PWR_MODE);
 
 			if (HDD_NL80211_BAND_2GHZ == i &&
 			    BAND_5G == new_band) {
@@ -23500,8 +23501,10 @@ static int __wlan_hdd_cfg80211_set_mon_ch(struct wiphy *wiphy,
 
 	/* Verify channel state before accepting this request */
 	chan_freq_state =
-		wlan_reg_get_channel_state_for_freq(hdd_ctx->pdev,
-						    chandef->chan->center_freq);
+		wlan_reg_get_channel_state_for_pwrmode(
+						hdd_ctx->pdev,
+						chandef->chan->center_freq,
+						REG_CURRENT_PWR_MODE);
 	if (chan_freq_state == CHANNEL_STATE_DISABLE ||
 	    chan_freq_state == CHANNEL_STATE_INVALID) {
 		hdd_err("Invalid chan freq received for monitor mode aborting");
