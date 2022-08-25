@@ -2808,6 +2808,63 @@ static void hdd_start_dhcp_ind(struct hdd_adapter *adapter)
 			   adapter->vdev_id);
 }
 
+static int wlan_hdd_set_ps(struct wlan_objmgr_psoc *psoc,
+			   struct hdd_adapter *adapter,
+			   bool allow_power_save, int timeout)
+{
+	int status;
+
+	ucfg_mlme_set_user_ps(psoc, adapter->vdev_id,
+			      allow_power_save);
+
+	status = wlan_hdd_set_powersave(adapter, allow_power_save, timeout);
+
+	if (!hdd_cm_is_vdev_associated(adapter)) {
+		hdd_debug("vdev[%d] mode %d disconnected ignore dhcp protection",
+			  adapter->vdev_id, adapter->device_mode);
+		return status;
+	}
+
+	hdd_debug("vdev[%d] mode %d enable dhcp protection",
+		  adapter->vdev_id, adapter->device_mode);
+	allow_power_save ? hdd_stop_dhcp_ind(adapter) :
+			   hdd_start_dhcp_ind(adapter);
+
+	return status;
+}
+
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(CFG80211_11BE_BASIC)
+static int wlan_hdd_set_mlo_ps(struct wlan_objmgr_psoc *psoc,
+			       struct hdd_adapter *adapter,
+			       bool allow_power_save, int timeout)
+{
+	struct hdd_adapter *link_adapter;
+	struct hdd_mlo_adapter_info *mlo_adapter_info;
+	int i, status;
+
+	mlo_adapter_info = &adapter->mlo_adapter_info;
+	for (i = 0; i < WLAN_MAX_MLD; i++) {
+		link_adapter = mlo_adapter_info->link_adapter[i];
+		if (!link_adapter)
+			continue;
+
+		status = wlan_hdd_set_ps(psoc, link_adapter, allow_power_save,
+					 timeout);
+		if (status)
+			return status;
+	}
+
+	return status;
+}
+#else
+static int wlan_hdd_set_mlo_ps(struct wlan_objmgr_psoc *psoc,
+			       struct hdd_adapter *adapter,
+			       bool allow_power_save, int timeout)
+{
+	return 0;
+}
+#endif
+
 /**
  * __wlan_hdd_cfg80211_set_power_mgmt() - set cfg80211 power management config
  * @wiphy: Pointer to wiphy
@@ -2825,6 +2882,8 @@ static int __wlan_hdd_cfg80211_set_power_mgmt(struct wiphy *wiphy,
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
 	struct hdd_context *hdd_ctx;
 	int status;
+	struct wlan_objmgr_vdev *vdev;
+	bool is_mlo_vdev;
 
 	hdd_enter();
 
@@ -2857,21 +2916,26 @@ static int __wlan_hdd_cfg80211_set_power_mgmt(struct wiphy *wiphy,
 		return 0;
 	}
 
-	ucfg_mlme_set_user_ps(hdd_ctx->psoc, adapter->vdev_id,
-			      allow_power_save);
-
-	status = wlan_hdd_set_powersave(adapter, allow_power_save, timeout);
-
-	if (hdd_cm_is_vdev_associated(adapter)) {
-		hdd_debug("vdev mode %d enable dhcp protection",
-			  adapter->device_mode);
-		allow_power_save ? hdd_stop_dhcp_ind(adapter) :
-			hdd_start_dhcp_ind(adapter);
-	} else {
-		hdd_debug("vdev mod %d disconnected ignore dhcp protection",
-			  adapter->device_mode);
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_POWER_ID);
+	if (!vdev) {
+		hdd_info("vdev is NULL");
+		return -EINVAL;
 	}
 
+	is_mlo_vdev = wlan_vdev_mlme_is_mlo_vdev(vdev);
+
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_POWER_ID);
+
+	if (is_mlo_vdev) {
+		status = wlan_hdd_set_mlo_ps(hdd_ctx->psoc, adapter,
+					     allow_power_save, timeout);
+		goto exit;
+	}
+
+	status = wlan_hdd_set_ps(hdd_ctx->psoc, adapter,
+				 allow_power_save, timeout);
+
+exit:
 	hdd_exit();
 	return status;
 }
