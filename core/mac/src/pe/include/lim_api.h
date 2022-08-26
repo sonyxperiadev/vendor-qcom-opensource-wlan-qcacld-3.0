@@ -614,6 +614,26 @@ lim_check_for_ml_probe_req(struct pe_session *session)
 }
 #endif
 
+#ifdef WLAN_FEATURE_SR
+
+/**
+ * lim_update_vdev_sr_elements() - Update VDEV variable with
+ * parsed values received in SRP IE
+ * @session_entry: pe session
+ * @sta_ds: STA node
+ *
+ * Return void
+ */
+void lim_update_vdev_sr_elements(struct pe_session *session_entry,
+				 tpDphHashNode sta_ds);
+#else
+static inline void
+lim_update_vdev_sr_elements(struct pe_session *session_entry,
+			    tpDphHashNode sta_ds)
+{
+}
+#endif
+
 #if defined(WLAN_FEATURE_ROAM_OFFLOAD) && defined(WLAN_FEATURE_11BE_MLO)
 /**
  * lim_cm_roam_create_session() - Create pe session for legacy to MLO roaming

@@ -3700,6 +3700,20 @@ sir_convert_assoc_resp_frame2_mlo_struct(struct mac_context *mac,
 	return QDF_STATUS_SUCCESS;
 }
 #endif
+#ifdef WLAN_FEATURE_SR
+static void sir_convert_assoc_resp_frame2_sr(tpSirAssocRsp pAssocRsp,
+					     tDot11fAssocResponse *ar)
+{
+	if (ar->spatial_reuse.present)
+		qdf_mem_copy(&pAssocRsp->srp_ie, &ar->spatial_reuse,
+			     sizeof(tDot11fIEspatial_reuse));
+}
+#else
+static inline void sir_convert_assoc_resp_frame2_sr(tpSirAssocRsp pAssocRsp,
+						    tDot11fAssocResponse *ar)
+{
+}
+#endif
 
 QDF_STATUS
 sir_convert_assoc_resp_frame2_struct(struct mac_context *mac,
@@ -3965,6 +3979,8 @@ sir_convert_assoc_resp_frame2_struct(struct mac_context *mac,
 	if (ar->he_op.present)
 		qdf_mem_copy(&pAssocRsp->he_op, &ar->he_op,
 			     sizeof(tDot11fIEhe_op));
+
+	sir_convert_assoc_resp_frame2_sr(pAssocRsp, ar);
 
 	if (ar->he_6ghz_band_cap.present)
 		qdf_mem_copy(&pAssocRsp->he_6ghz_band_cap,

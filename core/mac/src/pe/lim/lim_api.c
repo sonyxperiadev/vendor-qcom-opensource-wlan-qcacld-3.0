@@ -3752,3 +3752,25 @@ end:
 	return status;
 }
 #endif
+
+#ifdef WLAN_FEATURE_SR
+void lim_update_vdev_sr_elements(struct pe_session *session_entry,
+				 tpDphHashNode sta_ds)
+{
+	uint8_t sr_ctrl;
+	uint8_t max_pd_offset;
+	tDot11fIEspatial_reuse *srp_ie = &sta_ds->parsed_ies.srp_ie;
+
+	sr_ctrl = srp_ie->sr_value15_allow << 4 |
+		  srp_ie->srg_info_present << 3 |
+		  srp_ie->non_srg_offset_present << 2 |
+		  srp_ie->non_srg_pd_sr_disallow << 1 |
+		  srp_ie->psr_disallow;
+	max_pd_offset = srp_ie->non_srg_offset.info.non_srg_pd_max_offset;
+	pe_debug("Spatial Reuse Control field: %x Non-SRG Max PD Offset: %x",
+		 sr_ctrl, max_pd_offset);
+
+	wlan_vdev_mlme_set_sr_ctrl(session_entry->vdev, sr_ctrl);
+	wlan_vdev_mlme_set_pd_offset(session_entry->vdev, max_pd_offset);
+}
+#endif
