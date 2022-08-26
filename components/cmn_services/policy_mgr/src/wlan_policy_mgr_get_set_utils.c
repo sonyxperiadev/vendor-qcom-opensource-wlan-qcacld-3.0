@@ -4705,9 +4705,12 @@ policy_mgr_mlo_sta_set_link(struct wlan_objmgr_psoc *psoc,
 	policy_mgr_fill_ml_active_link_vdev_bitmap(req, mlo_vdev_lst,
 						   num_mlo_vdev);
 
-	/* fill num of links for MLO_LINK_FORCE_MODE_ACTIVE_NUM */
-	if (mode == MLO_LINK_FORCE_MODE_ACTIVE_NUM) {
-		req->param.force_mode = MLO_LINK_FORCE_MODE_ACTIVE_NUM;
+	/*
+	 * Fill number of links for MLO_LINK_FORCE_MODE_ACTIVE_NUM or
+	 * MLO_LINK_FORCE_MODE_INACTIVE_NUM mode.
+	 */
+	if (mode == MLO_LINK_FORCE_MODE_ACTIVE_NUM ||
+	    mode == MLO_LINK_FORCE_MODE_INACTIVE_NUM) {
 		req->param.num_link_entry = 1;
 		req->param.link_num[0].num_of_link = num_mlo_vdev - 1;
 	}
