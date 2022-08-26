@@ -485,8 +485,7 @@ QDF_STATUS ucfg_tdls_update_config(struct wlan_objmgr_psoc *psoc,
 
 	soc_obj->tdls_last_mode = soc_obj->tdls_current_mode;
 	if (TDLS_IS_BUFFER_STA_ENABLED(tdls_feature_flags) ||
-	    TDLS_IS_SLEEP_STA_ENABLED(tdls_feature_flags) ||
-	    TDLS_IS_OFF_CHANNEL_ENABLED(tdls_feature_flags))
+	    TDLS_IS_SLEEP_STA_ENABLED(tdls_feature_flags))
 		soc_obj->max_num_tdls_sta =
 			WLAN_TDLS_STA_P_UAPSD_OFFCHAN_MAX_NUM;
 

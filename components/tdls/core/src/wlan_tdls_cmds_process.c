@@ -213,6 +213,15 @@ void tdls_decrement_peer_count(struct wlan_objmgr_vdev *vdev,
 	    soc_obj->tdls_osif_update_cb.tdls_osif_disconn_update)
 		soc_obj->tdls_osif_update_cb.tdls_osif_disconn_update(vdev);
 	tdls_update_6g_power(vdev, soc_obj, false);
+
+	/*
+	 * Offchannel is allowed only when TDLS is connected with one peer.
+	 * If more than one peer is connected then Offchannel is disabled by
+	 * WMI_TDLS_SET_OFFCHAN_MODE_CMDID with DISABLE_CHANSWITCH.
+	 * Hence, re-enable offchannel when only one conencted peer is left.
+	 */
+	if (soc_obj->connected_peer_count == 1)
+		tdls_set_tdls_offchannelmode(vdev, ENABLE_CHANSWITCH);
 }
 
 /**
@@ -1797,6 +1806,19 @@ QDF_STATUS tdls_process_enable_link(struct tdls_oper_request *req)
 		goto error;
 	}
 
+	/*
+	 * Offchannel is allowed only when TDLS is connected with one peer.
+	 * If more than one peer is connected then Disable Offchannel by sending
+	 * WMI_TDLS_SET_OFFCHAN_MODE_CMDID with DISABLE_CHANSWITCH.
+	 * So, basically when the 2nd peer enable_link is there, offchannel
+	 * should be disabled and will remain disabled for all subsequent
+	 * TDLS peer conenction.
+	 * Offchannel will be re-enabled when connected peer count again
+	 * becomes 1.
+	 */
+	if (soc_obj->connected_peer_count == 1)
+		tdls_set_tdls_offchannelmode(vdev, DISABLE_CHANSWITCH);
+
 	peer->tdls_support = TDLS_CAP_SUPPORTED;
 	if (TDLS_LINK_CONNECTED != peer->link_status)
 		tdls_set_peer_link_status(peer, TDLS_LINK_CONNECTED,
@@ -2550,13 +2572,28 @@ free:
 
 int tdls_process_set_offchan_mode(struct tdls_set_offchanmode *req)
 {
-	int status;
+	int status = QDF_STATUS_E_FAILURE;
+	struct tdls_soc_priv_obj *tdls_soc_obj;
 
 	tdls_debug("TDLS offchan mode to be configured %d", req->offchan_mode);
+
+	tdls_soc_obj = wlan_vdev_get_tdls_soc_obj(req->vdev);
+	if (!tdls_soc_obj)
+		goto free;
+
+	if ((tdls_get_connected_peer_count(tdls_soc_obj) > 1) &&
+	    req->offchan_mode == ENABLE_CHANSWITCH) {
+		tdls_debug("Reject off chan enable, Connected peer count %d",
+			   tdls_get_connected_peer_count(tdls_soc_obj));
+		goto free;
+	}
+
 	status = tdls_set_tdls_offchannelmode(req->vdev, req->offchan_mode);
 
 	if (req->callback)
 		req->callback(req->vdev);
+
+free:
 	qdf_mem_free(req);
 
 	return status;

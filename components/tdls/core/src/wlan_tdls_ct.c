@@ -1130,6 +1130,8 @@ int tdls_set_tdls_offchannelmode(struct wlan_objmgr_vdev *vdev,
 				vdev, conn_peer->pref_off_chan_freq,
 				conn_peer->pref_off_chan_width,
 				&chan_switch_params.tdls_off_ch_bw_offset);
+			chan_switch_params.tdls_off_chan_freq =
+						 conn_peer->pref_off_chan_freq;
 		} else {
 			tdls_err("TDLS off-channel parameters are not set yet!!!");
 			return -EINVAL;
