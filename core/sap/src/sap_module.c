@@ -1365,8 +1365,9 @@ wlansap_get_csa_chanwidth_from_phymode(struct sap_context *sap_context,
 	ch_params.ch_width = ch_width;
 	if (sap_phymode_is_eht(sap_context->phyMode))
 		wlan_reg_set_create_punc_bitmap(&ch_params, true);
-	wlan_reg_set_channel_params_for_freq(mac->pdev, chan_freq, sec_ch_freq,
-					     &ch_params);
+	wlan_reg_set_channel_params_for_pwrmode(mac->pdev, chan_freq,
+						sec_ch_freq, &ch_params,
+						REG_CURRENT_PWR_MODE);
 	ch_width = ch_params.ch_width;
 	if (tgt_ch_params)
 		*tgt_ch_params = ch_params;
@@ -1497,9 +1498,10 @@ wlansap_set_chan_params_for_csa(struct mac_context *mac,
 	}
 	if (sap_phymode_is_eht(sap_ctx->phyMode))
 		wlan_reg_set_create_punc_bitmap(&sap_ctx->ch_params, true);
-	wlan_reg_set_channel_params_for_freq(
+	wlan_reg_set_channel_params_for_pwrmode(
 		mac->pdev, target_chan_freq, 0,
-		&mac->sap.SapDfsInfo.new_ch_params);
+		&mac->sap.SapDfsInfo.new_ch_params,
+		REG_CURRENT_PWR_MODE);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -1605,8 +1607,9 @@ QDF_STATUS wlansap_set_channel_change_with_csa(struct sap_context *sap_ctx,
 
 	if (sap_phymode_is_eht(sap_ctx->phyMode))
 		wlan_reg_set_create_punc_bitmap(&tmp_ch_params, true);
-	wlan_reg_set_channel_params_for_freq(mac->pdev, target_chan_freq, 0,
-					     &tmp_ch_params);
+	wlan_reg_set_channel_params_for_pwrmode(mac->pdev, target_chan_freq, 0,
+						&tmp_ch_params,
+						REG_CURRENT_PWR_MODE);
 	if (sap_ctx->chan_freq == target_chan_freq &&
 	    sap_ctx->ch_params.ch_width == tmp_ch_params.ch_width) {
 		sap_nofl_debug("target freq and bw %d not changed",
@@ -1941,8 +1944,9 @@ QDF_STATUS wlansap_channel_change_request(struct sap_context *sap_ctx,
 	ch_params = &mac_ctx->sap.SapDfsInfo.new_ch_params;
 	if (sap_phymode_is_eht(sap_ctx->phyMode))
 		wlan_reg_set_create_punc_bitmap(ch_params, true);
-	wlan_reg_set_channel_params_for_freq(mac_ctx->pdev, target_chan_freq,
-			0, ch_params);
+	wlan_reg_set_channel_params_for_pwrmode(mac_ctx->pdev, target_chan_freq,
+						0, ch_params,
+						REG_CURRENT_PWR_MODE);
 	sap_ctx->ch_params = *ch_params;
 	sap_ctx->freq_before_ch_switch = sap_ctx->chan_freq;
 	/* Update the channel as this will be used to
@@ -2022,9 +2026,10 @@ QDF_STATUS wlansap_dfs_send_csa_ie_request(struct sap_context *sap_ctx)
 	if (sap_phymode_is_eht(sap_ctx->phyMode))
 		wlan_reg_set_create_punc_bitmap(
 			&mac->sap.SapDfsInfo.new_ch_params, true);
-	wlan_reg_set_channel_params_for_freq(mac->pdev,
+	wlan_reg_set_channel_params_for_pwrmode(mac->pdev,
 			mac->sap.SapDfsInfo.target_chan_freq,
-			0, &mac->sap.SapDfsInfo.new_ch_params);
+			0, &mac->sap.SapDfsInfo.new_ch_params,
+			REG_CURRENT_PWR_MODE);
 
 	sap_get_cac_dur_dfs_region(sap_ctx, &new_cac_ms, &dfs_region,
 				   mac->sap.SapDfsInfo.target_chan_freq,
@@ -2449,9 +2454,10 @@ wlansap_son_update_sap_config_phymode(struct wlan_objmgr_vdev *vdev,
 		}
 	}
 
-	wlan_reg_set_channel_params_for_freq(pdev, config->chan_freq,
-					     config->sec_ch_freq,
-					     &config->ch_params);
+	wlan_reg_set_channel_params_for_pwrmode(pdev, config->chan_freq,
+						config->sec_ch_freq,
+						&config->ch_params,
+						REG_CURRENT_PWR_MODE);
 
 	return QDF_STATUS_SUCCESS;
 }

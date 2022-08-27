@@ -1661,9 +1661,11 @@ static QDF_STATUS lim_process_csa_wbw_ie(struct mac_context *mac_ctx,
 			 fw_vht_ch_wd);
 		ap_new_ch_width = fw_vht_ch_wd;
 		ch_params.ch_width = ap_new_ch_width;
-		wlan_reg_set_channel_params_for_freq(mac_ctx->pdev,
+		wlan_reg_set_channel_params_for_pwrmode(
+						     mac_ctx->pdev,
 						     csa_params->csa_chan_freq,
-						     0, &ch_params);
+						     0, &ch_params,
+						     REG_CURRENT_PWR_MODE);
 		ap_new_ch_width = ch_params.ch_width;
 		csa_params->new_ch_freq_seg1 = ch_params.center_freq_seg0;
 		csa_params->new_ch_freq_seg2 = ch_params.center_freq_seg1;
@@ -1817,9 +1819,11 @@ static void lim_handle_sta_csa_param(struct mac_context *mac_ctx,
 		pe_debug("new freq: %u, width: %d", csa_params->csa_chan_freq,
 			 csa_params->new_ch_width);
 		ch_params.ch_width = csa_params->new_ch_width;
-		wlan_reg_set_channel_params_for_freq(mac_ctx->pdev,
+		wlan_reg_set_channel_params_for_pwrmode(
+						     mac_ctx->pdev,
 						     csa_params->csa_chan_freq,
-						     0, &ch_params);
+						     0, &ch_params,
+						     REG_CURRENT_PWR_MODE);
 		pe_debug("idea width: %d, chn_seg0 %u chn_seg1 %u freq_seg0 %u freq_seg1 %u",
 			 ch_params.ch_width, ch_params.center_freq_seg0,
 			 ch_params.center_freq_seg1, ch_params.mhz_freq_seg0,
@@ -1856,9 +1860,11 @@ static void lim_handle_sta_csa_param(struct mac_context *mac_ctx,
 			if (chnl_switch_info->newChanWidth) {
 				ch_params.ch_width =
 					chnl_switch_info->newChanWidth;
-				wlan_reg_set_channel_params_for_freq(mac_ctx->pdev,
-								     csa_params->csa_chan_freq,
-								     0, &ch_params);
+				wlan_reg_set_channel_params_for_pwrmode(
+						mac_ctx->pdev,
+						csa_params->csa_chan_freq,
+						0, &ch_params,
+						REG_CURRENT_PWR_MODE);
 				lim_ch_switch->sec_ch_offset =
 					ch_params.sec_ch_offset;
 				session_entry->htSupportedChannelWidthSet =
@@ -1907,9 +1913,9 @@ static void lim_handle_sta_csa_param(struct mac_context *mac_ctx,
 
 			ch_params.ch_width =
 				chnl_switch_info->newChanWidth;
-			wlan_reg_set_channel_params_for_freq(
+			wlan_reg_set_channel_params_for_pwrmode(
 				mac_ctx->pdev, csa_params->csa_chan_freq, 0,
-				&ch_params);
+				&ch_params, REG_CURRENT_PWR_MODE);
 			chnl_switch_info->newCenterChanFreq0 =
 				ch_params.center_freq_seg0;
 			/*
@@ -1927,9 +1933,11 @@ static void lim_handle_sta_csa_param(struct mac_context *mac_ctx,
 			lim_ch_switch->state =
 				eLIM_CHANNEL_SWITCH_PRIMARY_AND_SECONDARY;
 			ch_params.ch_width = CH_WIDTH_40MHZ;
-			wlan_reg_set_channel_params_for_freq(mac_ctx->pdev,
-							     csa_params->csa_chan_freq,
-							     0, &ch_params);
+			wlan_reg_set_channel_params_for_pwrmode(
+						mac_ctx->pdev,
+						csa_params->csa_chan_freq,
+						0, &ch_params,
+						REG_CURRENT_PWR_MODE);
 			lim_ch_switch->sec_ch_offset =
 				ch_params.sec_ch_offset;
 			chnl_switch_info->newChanWidth = CH_WIDTH_40MHZ;
@@ -1962,9 +1970,11 @@ static void lim_handle_sta_csa_param(struct mac_context *mac_ctx,
 					CH_WIDTH_40MHZ;
 				ch_params.ch_width =
 					chnl_switch_info->newChanWidth;
-				wlan_reg_set_channel_params_for_freq(mac_ctx->pdev,
-								     csa_params->csa_chan_freq,
-								     0, &ch_params);
+				wlan_reg_set_channel_params_for_pwrmode(
+						mac_ctx->pdev,
+						csa_params->csa_chan_freq,
+						0, &ch_params,
+						REG_CURRENT_PWR_MODE);
 				lim_ch_switch->ch_center_freq_seg0 =
 					ch_params.center_freq_seg0;
 				lim_ch_switch->sec_ch_offset =
@@ -1987,9 +1997,11 @@ static void lim_handle_sta_csa_param(struct mac_context *mac_ctx,
 			lim_ch_switch->state =
 				eLIM_CHANNEL_SWITCH_PRIMARY_AND_SECONDARY;
 			ch_params.ch_width = CH_WIDTH_40MHZ;
-			wlan_reg_set_channel_params_for_freq(mac_ctx->pdev,
-							     csa_params->csa_chan_freq,
-							     0, &ch_params);
+			wlan_reg_set_channel_params_for_pwrmode(
+						mac_ctx->pdev,
+						csa_params->csa_chan_freq,
+						0, &ch_params,
+						REG_CURRENT_PWR_MODE);
 			lim_ch_switch->ch_center_freq_seg0 =
 				ch_params.center_freq_seg0;
 			lim_ch_switch->sec_ch_offset =

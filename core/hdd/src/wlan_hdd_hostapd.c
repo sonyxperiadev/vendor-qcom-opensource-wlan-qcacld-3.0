@@ -1688,11 +1688,11 @@ static QDF_STATUS hdd_hostapd_chan_change(struct hdd_adapter *adapter,
 	sap_ch_param.mhz_freq_seg1 =
 		sap_chan_selected->vht_seg1_center_ch_freq;
 
-	wlan_reg_set_channel_params_for_freq(
+	wlan_reg_set_channel_params_for_pwrmode(
 		hdd_ctx->pdev,
 		sap_chan_selected->pri_ch_freq,
 		sap_chan_selected->ht_sec_ch_freq,
-		&sap_ch_param);
+		&sap_ch_param, REG_CURRENT_PWR_MODE);
 
 	phy_mode = wlan_sap_get_phymode(
 			WLAN_HDD_GET_SAP_CTX_PTR(adapter));
@@ -6549,9 +6549,11 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 		}
 	}
 
-	wlan_reg_set_channel_params_for_freq(hdd_ctx->pdev, config->chan_freq,
-					     config->sec_ch_freq,
-					     &config->ch_params);
+	wlan_reg_set_channel_params_for_pwrmode(hdd_ctx->pdev,
+						config->chan_freq,
+						config->sec_ch_freq,
+						&config->ch_params,
+						REG_CURRENT_PWR_MODE);
 	if (0 != wlan_hdd_cfg80211_update_apies(adapter)) {
 		hdd_err("SAP Not able to set AP IEs");
 		ret = -EINVAL;
@@ -7102,9 +7104,9 @@ wlan_hdd_get_sap_ch_params(struct hdd_context *hdd_ctx,
 
 	if (!wlan_sap_get_ch_params(WLAN_HDD_GET_SAP_CTX_PTR(adapter),
 				    ch_params))
-		wlan_reg_set_channel_params_for_freq(hdd_ctx->pdev,
-						     freq, 0,
-						     ch_params);
+		wlan_reg_set_channel_params_for_pwrmode(hdd_ctx->pdev, freq, 0,
+							ch_params,
+							REG_CURRENT_PWR_MODE);
 	return QDF_STATUS_SUCCESS;
 }
 

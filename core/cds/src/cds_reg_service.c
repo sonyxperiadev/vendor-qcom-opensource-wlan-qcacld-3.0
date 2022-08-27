@@ -94,7 +94,9 @@ uint32_t cds_get_vendor_reg_flags(struct wlan_objmgr_pdev *pdev,
 	case CH_WIDTH_40MHZ:
 		qdf_mem_zero(&ch_params, sizeof(ch_params));
 		ch_params.ch_width = bandwidth;
-		wlan_reg_set_channel_params_for_freq(pdev, freq, 0, &ch_params);
+		wlan_reg_set_channel_params_for_pwrmode(pdev, freq, 0,
+							&ch_params,
+							REG_CURRENT_PWR_MODE);
 
 		if (ch_params.sec_ch_offset == LOW_PRIMARY_CH)
 			sec_freq = freq + 20;

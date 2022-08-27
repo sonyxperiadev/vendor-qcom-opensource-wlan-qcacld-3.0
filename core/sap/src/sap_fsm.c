@@ -254,8 +254,9 @@ static qdf_freq_t sap_random_channel_sel(struct sap_context *sap_ctx)
 		chan_freq = sap_ctx->candidate_freq;
 		if (sap_phymode_is_eht(sap_ctx->phyMode))
 			wlan_reg_set_create_punc_bitmap(ch_params, true);
-		wlan_reg_set_channel_params_for_freq(pdev, chan_freq, 0,
-						     ch_params);
+		wlan_reg_set_channel_params_for_pwrmode(pdev, chan_freq, 0,
+							ch_params,
+							REG_CURRENT_PWR_MODE);
 		sap_debug("random chan select candidate freq=%d", chan_freq);
 		sap_ctx->candidate_freq = 0;
 	} else if (QDF_IS_STATUS_ERROR(
@@ -3012,10 +3013,11 @@ static QDF_STATUS sap_validate_dfs_nol(struct sap_context *sap_ctx,
 		if (sap_phymode_is_eht(sap_ctx->phyMode))
 			wlan_reg_set_create_punc_bitmap(&sap_ctx->ch_params,
 							true);
-		wlan_reg_set_channel_params_for_freq(mac_ctx->pdev,
-						     sap_ctx->chan_freq,
-						     sap_ctx->sec_ch_freq,
-						     &sap_ctx->ch_params);
+		wlan_reg_set_channel_params_for_pwrmode(mac_ctx->pdev,
+							sap_ctx->chan_freq,
+							sap_ctx->sec_ch_freq,
+							&sap_ctx->ch_params,
+							REG_CURRENT_PWR_MODE);
 	}
 
 	return QDF_STATUS_SUCCESS;
@@ -3045,17 +3047,19 @@ static void sap_validate_chanmode_and_chwidth(struct mac_context *mac_ctx,
 	     sap_ctx->phyMode == eCSR_DOT11_MODE_11g ||
 	     sap_ctx->phyMode == eCSR_DOT11_MODE_11b)) {
 		sap_ctx->ch_params.ch_width = CH_WIDTH_20MHZ;
-		wlan_reg_set_channel_params_for_freq(mac_ctx->pdev,
+		wlan_reg_set_channel_params_for_pwrmode(mac_ctx->pdev,
 					       sap_ctx->chan_freq,
 					       sap_ctx->ch_params.sec_ch_offset,
-					       &sap_ctx->ch_params);
+					       &sap_ctx->ch_params,
+					       REG_CURRENT_PWR_MODE);
 	} else if (sap_ctx->ch_params.ch_width > CH_WIDTH_40MHZ &&
 		   sap_ctx->phyMode == eCSR_DOT11_MODE_11n) {
 		sap_ctx->ch_params.ch_width = CH_WIDTH_40MHZ;
-		wlan_reg_set_channel_params_for_freq(mac_ctx->pdev,
+		wlan_reg_set_channel_params_for_pwrmode(mac_ctx->pdev,
 					       sap_ctx->chan_freq,
 					       sap_ctx->ch_params.sec_ch_offset,
-					       &sap_ctx->ch_params);
+					       &sap_ctx->ch_params,
+					       REG_CURRENT_PWR_MODE);
 	}
 
 	if (orig_ch_width != sap_ctx->ch_params.ch_width ||
@@ -3182,10 +3186,11 @@ static QDF_STATUS sap_goto_starting(struct sap_context *sap_ctx,
 			if (sap_phymode_is_eht(sap_ctx->phyMode))
 				wlan_reg_set_create_punc_bitmap(
 					&sap_ctx->ch_params, true);
-			wlan_reg_set_channel_params_for_freq(
+			wlan_reg_set_channel_params_for_pwrmode(
 						    mac_ctx->pdev,
 						    con_ch_freq, 0,
-						    &sap_ctx->ch_params);
+						    &sap_ctx->ch_params,
+						    REG_CURRENT_PWR_MODE);
 		}
 	}
 
@@ -3378,9 +3383,9 @@ static QDF_STATUS sap_fsm_handle_radar_during_cac(struct sap_context *sap_ctx,
 		if (sap_phymode_is_eht(sap_ctx->phyMode))
 			wlan_reg_set_create_punc_bitmap(&sap_ctx->ch_params,
 							true);
-		wlan_reg_set_channel_params_for_freq(mac_ctx->pdev,
+		wlan_reg_set_channel_params_for_pwrmode(mac_ctx->pdev,
 				    mac_ctx->sap.SapDfsInfo.target_chan_freq, 0,
-				    &sap_ctx->ch_params);
+				    &sap_ctx->ch_params, REG_CURRENT_PWR_MODE);
 	} else {
 		sap_err("Invalid target channel freq %d",
 			 mac_ctx->sap.SapDfsInfo.target_chan_freq);

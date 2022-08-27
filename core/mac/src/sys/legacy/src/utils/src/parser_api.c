@@ -479,9 +479,9 @@ populate_dot11f_tx_power_env(struct mac_context *mac,
 
 		chan_params.ch_width = chan_width;
 		bw_val = wlan_reg_get_bw_value(chan_width);
-		wlan_reg_set_channel_params_for_freq(mac->pdev, chan_freq,
-						     chan_freq,
-						     &chan_params);
+		wlan_reg_set_channel_params_for_pwrmode(mac->pdev, chan_freq,
+							chan_freq, &chan_params,
+							REG_CURRENT_PWR_MODE);
 
 		if (chan_params.mhz_freq_seg1)
 			psd_start_freq =
@@ -1021,9 +1021,9 @@ populate_dot11f_ht_caps(struct mac_context *mac,
 		    mac->roam.configParam.channelBondingMode24GHz) {
 			pDot11f->supportedChannelWidthSet = 1;
 			ch_params.ch_width = CH_WIDTH_40MHZ;
-			wlan_reg_set_channel_params_for_freq(
+			wlan_reg_set_channel_params_for_pwrmode(
 				mac->pdev, pe_session->curr_op_freq, 0,
-				&ch_params);
+				&ch_params, REG_CURRENT_PWR_MODE);
 			if (ch_params.ch_width != CH_WIDTH_40MHZ)
 				pDot11f->supportedChannelWidthSet = 0;
 		} else if (LIM_IS_STA_ROLE(pe_session)) {
@@ -1219,8 +1219,9 @@ ePhyChanBondState wlan_get_cb_mode(struct mac_context *mac,
 
 	if (cb_mode != PHY_SINGLE_CHANNEL_CENTERED) {
 		ch_params.ch_width = CH_WIDTH_40MHZ;
-		wlan_reg_set_channel_params_for_freq(mac->pdev, ch_freq,
-						     sec_ch_freq, &ch_params);
+		wlan_reg_set_channel_params_for_pwrmode(mac->pdev, ch_freq,
+							sec_ch_freq, &ch_params,
+							REG_CURRENT_PWR_MODE);
 		if (ch_params.ch_width == CH_WIDTH_20MHZ ||
 		    ch_params.sec_ch_offset != cb_mode) {
 			pe_err("ch freq %d :: Supported HT BW %d and cbmode %d, APs HT BW %d and cbmode %d, so switch to 20Mhz",

@@ -1622,9 +1622,10 @@ static void sap_sort_chl_weight_80_mhz(struct mac_context *mac_ctx,
 		acs_ch_params.ch_width = CH_WIDTH_80MHZ;
 		sap_acs_set_puncture_support(sap_ctx, &acs_ch_params);
 
-		wlan_reg_set_channel_params_for_freq(mac_ctx->pdev,
-						     pSpectInfo[j].chan_freq,
-						     0, &acs_ch_params);
+		wlan_reg_set_channel_params_for_pwrmode(mac_ctx->pdev,
+							pSpectInfo[j].chan_freq,
+							0, &acs_ch_params,
+							REG_CURRENT_PWR_MODE);
 
 		/* Check if the freq supports 80 Mhz */
 		if (acs_ch_params.ch_width != CH_WIDTH_80MHZ) {
@@ -1756,9 +1757,10 @@ static void sap_sort_chl_weight_160_mhz(struct mac_context *mac_ctx,
 		acs_ch_params.ch_width = CH_WIDTH_160MHZ;
 		sap_acs_set_puncture_support(sap_ctx, &acs_ch_params);
 
-		wlan_reg_set_channel_params_for_freq(mac_ctx->pdev,
-						     pSpectInfo[j].chan_freq,
-						     0, &acs_ch_params);
+		wlan_reg_set_channel_params_for_pwrmode(mac_ctx->pdev,
+							pSpectInfo[j].chan_freq,
+							0, &acs_ch_params,
+							REG_CURRENT_PWR_MODE);
 
 		/* Check if the freq supports 160 Mhz */
 		if (acs_ch_params.ch_width != CH_WIDTH_160MHZ) {
@@ -1926,9 +1928,10 @@ static void sap_sort_chl_weight_320_mhz(struct mac_context *mac_ctx,
 		acs_ch_params.ch_width = CH_WIDTH_320MHZ;
 		sap_acs_set_puncture_support(sap_ctx, &acs_ch_params);
 
-		wlan_reg_set_channel_params_for_freq(mac_ctx->pdev,
-						     pSpectInfo[j].chan_freq,
-						     0, &acs_ch_params);
+		wlan_reg_set_channel_params_for_pwrmode(mac_ctx->pdev,
+							pSpectInfo[j].chan_freq,
+							0, &acs_ch_params,
+							REG_CURRENT_PWR_MODE);
 
 		/* Check if the freq supports 320 Mhz */
 		if (acs_ch_params.ch_width != CH_WIDTH_320MHZ) {
@@ -2354,9 +2357,10 @@ static void sap_sort_chl_weight_40_mhz(struct mac_context *mac_ctx,
 
 		acs_ch_params.ch_width = CH_WIDTH_40MHZ;
 
-		wlan_reg_set_channel_params_for_freq(mac_ctx->pdev,
-						     pSpectInfo[j].chan_freq,
-						     0, &acs_ch_params);
+		wlan_reg_set_channel_params_for_pwrmode(mac_ctx->pdev,
+							pSpectInfo[j].chan_freq,
+							0, &acs_ch_params,
+							REG_CURRENT_PWR_MODE);
 
 		/* Check if the freq supports 40 Mhz */
 		if (acs_ch_params.ch_width != CH_WIDTH_40MHZ) {
@@ -2665,8 +2669,9 @@ next_bw:
 				continue;
 			ch_params.ch_width = pref_bw;
 			sap_acs_set_puncture_support(sap_ctx, &ch_params);
-			wlan_reg_set_channel_params_for_freq(
-				mac_ctx->pdev, cal_chan_freq, 0, &ch_params);
+			wlan_reg_set_channel_params_for_pwrmode(
+				mac_ctx->pdev, cal_chan_freq, 0, &ch_params,
+				REG_CURRENT_PWR_MODE);
 			if (ch_params.ch_width != pref_bw)
 				continue;
 			best_chan_freq = cal_chan_freq;

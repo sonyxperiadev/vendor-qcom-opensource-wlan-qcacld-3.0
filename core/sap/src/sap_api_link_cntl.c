@@ -134,9 +134,9 @@ void sap_config_acs_result(mac_handle_t mac_handle,
 
 	ch_params.ch_width = sap_ctx->acs_cfg->ch_width;
 	sap_acs_set_puncture_support(sap_ctx, &ch_params);
-	wlan_reg_set_channel_params_for_freq(
+	wlan_reg_set_channel_params_for_pwrmode(
 			mac_ctx->pdev, sap_ctx->acs_cfg->pri_ch_freq,
-			sec_ch_freq, &ch_params);
+			sec_ch_freq, &ch_params, REG_CURRENT_PWR_MODE);
 	sap_ctx->acs_cfg->ch_width = ch_params.ch_width;
 	if (sap_ctx->acs_cfg->ch_width > CH_WIDTH_40MHZ ||
 	    WLAN_REG_IS_6GHZ_CHAN_FREQ(sap_ctx->acs_cfg->pri_ch_freq))
@@ -599,9 +599,9 @@ wlansap_roam_process_dfs_chansw_update(mac_handle_t mac_handle,
 		if (sap_phymode_is_eht(sap_ctx->phyMode))
 			wlan_reg_set_create_punc_bitmap(&sap_ctx->ch_params,
 							true);
-		wlan_reg_set_channel_params_for_freq(mac_ctx->pdev,
+		wlan_reg_set_channel_params_for_pwrmode(mac_ctx->pdev,
 				mac_ctx->sap.SapDfsInfo.target_chan_freq,
-				0, &sap_ctx->ch_params);
+				0, &sap_ctx->ch_params, REG_CURRENT_PWR_MODE);
 	}
 
 	/*

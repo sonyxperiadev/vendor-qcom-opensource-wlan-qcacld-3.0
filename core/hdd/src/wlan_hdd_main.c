@@ -8580,8 +8580,9 @@ int wlan_hdd_set_mon_chan(struct hdd_adapter *adapter, qdf_freq_t freq,
 		     QDF_MAC_ADDR_SIZE);
 
 	ch_params.ch_width = bandwidth;
-	wlan_reg_set_channel_params_for_freq(hdd_ctx->pdev, freq, 0,
-					     &ch_params);
+	wlan_reg_set_channel_params_for_pwrmode(hdd_ctx->pdev, freq, 0,
+						&ch_params,
+						REG_CURRENT_PWR_MODE);
 
 	if (ch_params.ch_width == CH_WIDTH_INVALID) {
 		hdd_err("Invalid capture channel or bandwidth for a country");
@@ -16433,10 +16434,11 @@ void wlan_hdd_start_sap(struct hdd_adapter *ap_adapter, bool reinit)
 		hdd_err("SAP Not able to set AP IEs");
 		goto end;
 	}
-	wlan_reg_set_channel_params_for_freq(
+	wlan_reg_set_channel_params_for_pwrmode(
 				hdd_ctx->pdev,
 				hdd_ap_ctx->sap_config.chan_freq,
-				0, &hdd_ap_ctx->sap_config.ch_params);
+				0, &hdd_ap_ctx->sap_config.ch_params,
+				REG_CURRENT_PWR_MODE);
 	if (QDF_IS_STATUS_ERROR(wlan_hdd_mlo_sap_reinit(hdd_ctx, sap_config,
 							ap_adapter))) {
 		hdd_err("SAP Not able to do mlo attach");
