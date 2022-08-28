@@ -15717,9 +15717,9 @@ int hdd_register_cb(struct hdd_context *hdd_ctx)
 	sme_set_md_bl_evt_cb(mac_handle, hdd_md_bl_evt_cb, (void *)hdd_ctx);
 #endif /* WLAN_FEATURE_MOTION_DETECTION */
 
-	mac_register_sesssion_open_close_cb(hdd_ctx->mac_handle,
-					    hdd_sme_close_session_callback,
-					    hdd_common_roam_callback);
+	mac_register_session_open_close_cb(hdd_ctx->mac_handle,
+					   hdd_sme_close_session_callback,
+					   hdd_common_roam_callback);
 
 	sme_set_roam_scan_ch_event_cb(mac_handle, hdd_get_roam_scan_ch_cb);
 	status = sme_set_monitor_mode_cb(mac_handle,
