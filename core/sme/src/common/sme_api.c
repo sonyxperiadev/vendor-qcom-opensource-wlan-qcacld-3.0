@@ -14623,6 +14623,9 @@ QDF_STATUS sme_handle_sae_msg(mac_handle_t mac_handle,
 		qdf_mem_copy(sae_msg->peer_mac_addr,
 			     peer_mac_addr.bytes,
 			     QDF_MAC_ADDR_SIZE);
+		qdf_mem_zero(sae_msg->pmkid, PMKID_LEN);
+		if (pmkid)
+			qdf_mem_copy(sae_msg->pmkid, pmkid, PMKID_LEN);
 		sme_debug("SAE: sae_status %d vdev_id %d Peer: "
 			  QDF_MAC_ADDR_FMT, sae_msg->sae_status,
 			  sae_msg->vdev_id,

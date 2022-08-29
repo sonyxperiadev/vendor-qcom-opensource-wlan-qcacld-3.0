@@ -3772,6 +3772,26 @@ lim_strip_rsnx_ie(struct mac_context *mac_ctx,
 	}
 }
 
+void
+lim_update_connect_rsn_ie(struct pe_session *session,
+			  uint8_t *rsn_ie_buf, struct wlan_crypto_pmksa *pmksa)
+{
+	uint8_t *rsn_ie_end;
+	uint16_t rsn_ie_len = 0;
+
+	rsn_ie_end = wlan_crypto_build_rsnie_with_pmksa(session->vdev,
+							rsn_ie_buf, pmksa);
+	if (!rsn_ie_end) {
+		pe_debug("Build RSN IE failed");
+		return;
+	}
+
+	rsn_ie_len = rsn_ie_end - rsn_ie_buf;
+	session->lim_join_req->rsnIE.length = rsn_ie_len;
+	qdf_mem_copy(session->lim_join_req->rsnIE.rsnIEdata,
+		     rsn_ie_buf, rsn_ie_len);
+}
+
 static QDF_STATUS
 lim_fill_rsn_ie(struct mac_context *mac_ctx, struct pe_session *session,
 		struct cm_vdev_join_req *req)
@@ -3779,7 +3799,6 @@ lim_fill_rsn_ie(struct mac_context *mac_ctx, struct pe_session *session,
 	QDF_STATUS status;
 	uint8_t *rsn_ie;
 	uint8_t rsn_ie_len = 0;
-	uint8_t *rsn_ie_end = NULL;
 	struct wlan_crypto_pmksa pmksa, *pmksa_peer;
 	struct bss_description *bss_desc;
 
@@ -3831,17 +3850,9 @@ lim_fill_rsn_ie(struct mac_context *mac_ctx, struct pe_session *session,
 			 session->vdev_id, pmksa.ssid_len, pmksa.ssid,
 			 bss_desc->fils_info_element.is_cache_id_present);
 
-	/* TODO: Add support for Adaptive 11r connection */
-	rsn_ie_end = wlan_crypto_build_rsnie_with_pmksa(session->vdev, rsn_ie,
-							pmksa_peer);
-	if (rsn_ie_end)
-		rsn_ie_len = rsn_ie_end - rsn_ie;
-
-	session->lim_join_req->rsnIE.length = rsn_ie_len;
-	qdf_mem_copy(session->lim_join_req->rsnIE.rsnIEdata,
-		     rsn_ie, rsn_ie_len);
-
+	lim_update_connect_rsn_ie(session, rsn_ie, pmksa_peer);
 	qdf_mem_free(rsn_ie);
+
 	/*
 	 * If a PMK cache is found for the BSSID, then
 	 * update the PMK in CSR session also as this

@@ -1045,6 +1045,18 @@ QDF_STATUS lim_send_ies_per_band(struct mac_context *mac_ctx,
 				 enum QDF_OPMODE device_mode);
 
 /**
+ * lim_update_connect_rsn_ie() - Update the connection RSN IE
+ * @session: PE session
+ * @rsn_ie_buf: RSN IE buffer
+ * @pmksa: PMKSA entry for the connecting AP
+ *
+ * Return: None
+ */
+void
+lim_update_connect_rsn_ie(struct pe_session *session, uint8_t *rsn_ie_buf,
+			  struct wlan_crypto_pmksa *pmksa);
+
+/**
  * lim_send_action_frm_tb_ppdu_cfg() - sets action frame in TB PPDU cfg to FW
  * @mac_ctx: global MAC context
  * @vdev_id: vdev id
