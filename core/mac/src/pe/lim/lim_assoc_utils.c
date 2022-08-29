@@ -3706,7 +3706,7 @@ QDF_STATUS lim_sta_send_add_bss(struct mac_context *mac, tpSirAssocRsp pAssocRsp
 	listen_interval = mac->mlme_cfg->sap_cfg.listen_interval;
 	pAddBssParams->staContext.listenInterval = listen_interval;
 
-	/* Fill Assoc id from the dph table */
+	/* Get STA hash entry from the dph table */
 	sta = dph_lookup_hash_entry(mac, pAddBssParams->staContext.bssId,
 				&pAddBssParams->staContext.assocId,
 				&pe_session->dph.dphHashTable);
@@ -3718,6 +3718,9 @@ QDF_STATUS lim_sta_send_add_bss(struct mac_context *mac, tpSirAssocRsp pAssocRsp
 			qdf_mem_free(pAddBssParams);
 			return QDF_STATUS_E_FAILURE;
 	}
+
+	/* Update Assoc id from pe_session for STA */
+	pAddBssParams->staContext.assocId = pe_session->limAID;
 
 	pAddBssParams->staContext.uAPSD =
 		pe_session->gUapsdPerAcBitmask;
