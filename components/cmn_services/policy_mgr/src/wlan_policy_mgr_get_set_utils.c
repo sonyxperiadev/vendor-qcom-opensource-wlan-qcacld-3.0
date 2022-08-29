@@ -6155,6 +6155,25 @@ static bool policy_mgr_is_third_conn_sta_p2p_p2p_valid(
 
 	return true;
 }
+
+static bool policy_mgr_is_sap_go_allowed_with_ll_sap(
+					struct wlan_objmgr_psoc *psoc,
+					qdf_freq_t freq,
+					enum policy_mgr_con_mode mode)
+{
+	/**
+	 * Scenario: When ll SAP(whose profile is set as gaming or
+	 * lossless audio) is present on 5GHz channel and SAP/GO
+	 * is trying to come up.
+	 * Validate the ch_freq of SAP/GO for both DBS and SBS case
+	 */
+	if ((mode == PM_SAP_MODE || mode == PM_P2P_GO_MODE) &&
+	    !policy_mgr_is_ll_sap_concurrency_valid(psoc, freq, mode))
+		return false;
+
+	return true;
+}
+
 bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 				       enum policy_mgr_con_mode mode,
 				       uint32_t ch_freq,
@@ -6301,6 +6320,11 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 		return status;
 	}
 
+	/* Validate ll sap + sap/go concurrency */
+	if (!policy_mgr_is_sap_go_allowed_with_ll_sap(psoc, ch_freq, mode)) {
+		policy_mgr_err("LL SAP concurrency is not valid");
+		return status;
+	}
 	status = true;
 
 	return status;
