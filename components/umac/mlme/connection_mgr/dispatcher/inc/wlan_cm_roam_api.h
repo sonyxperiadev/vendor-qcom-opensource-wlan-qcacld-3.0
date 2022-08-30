@@ -1614,15 +1614,15 @@ cm_roam_pe_sync_callback(struct roam_offload_synch_ind *sync_ind,
  * cm_update_phymode_on_roam() - Update new phymode after
  * ROAM SYNCH event is received from firmware
  * @vdev_id: roamed vdev id
- * @bssid: bssid
- * @chan: wmi channel
+ * @sync_ind: Structure with roam synch parameters
  *
  * This api will update the phy mode after roam sync is received.
  *
  * Return: none
  */
-void cm_update_phymode_on_roam(uint8_t vdev_id, uint8_t *bssid,
-			       wmi_channel *chan);
+void
+cm_update_phymode_on_roam(uint8_t vdev_id,
+			  struct roam_offload_synch_ind *sync_ind);
 
 /**
  * wlan_cm_fw_to_host_phymode() - Convert fw phymode to host

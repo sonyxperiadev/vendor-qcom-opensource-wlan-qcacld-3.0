@@ -513,3 +513,34 @@ mlo_get_single_link_ml_roaming(struct wlan_objmgr_psoc *psoc,
 
 	return is_single_link_ml_roaming;
 }
+
+QDF_STATUS
+mlo_roam_get_bssid_chan_for_link(uint8_t vdev_id,
+				 struct roam_offload_synch_ind *sync_ind,
+				 struct qdf_mac_addr *bssid,
+				 wmi_channel *chan)
+{
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	uint8_t i;
+
+	if (!sync_ind || !sync_ind->num_setup_links)
+		return QDF_STATUS_E_FAILURE;
+
+	for (i = 0; i < sync_ind->num_setup_links; i++) {
+		if (vdev_id == sync_ind->ml_link[i].vdev_id) {
+			qdf_mem_copy(chan, &sync_ind->ml_link[i].channel,
+				     sizeof(wmi_channel));
+			qdf_copy_macaddr(bssid,
+					 &sync_ind->ml_link[i].link_addr);
+			return status;
+		}
+	}
+
+	if (i == sync_ind->num_setup_links) {
+		mlo_err("roam sync info not found for vdev id %d", vdev_id);
+		status = QDF_STATUS_E_FAILURE;
+	}
+
+	return status;
+}
+

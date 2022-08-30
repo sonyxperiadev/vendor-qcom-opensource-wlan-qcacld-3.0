@@ -190,6 +190,24 @@ bool
 mlo_get_single_link_ml_roaming(struct wlan_objmgr_psoc *psoc,
 			       uint8_t vdev_id);
 
+/**
+ * mlo_roam_get_bssid_chan_for_link - get link mac addr and channel info
+ *
+ * @vdev_id: vdev id
+ * @sync_ind: roam sync ind pointer
+ * @bssid: link mac addr pointer
+ * @chan: link wmi channel pointer
+ *
+ * This api will be called to get link mac addr and channel info.
+ *
+ * Return: qdf status
+ */
+QDF_STATUS
+mlo_roam_get_bssid_chan_for_link(uint8_t vdev_id,
+				 struct roam_offload_synch_ind *sync_ind,
+				 struct qdf_mac_addr *bssid,
+				 wmi_channel *chan);
+
 #ifdef WLAN_FEATURE_11BE_MLO_ADV_FEATURE
 /**
  * mlo_cm_roam_sync_cb - Callback function from CM to MLO mgr
@@ -307,6 +325,15 @@ mlo_get_single_link_ml_roaming(struct wlan_objmgr_psoc *psoc,
 			       uint8_t vdev_id)
 {
 	return false;
+}
+
+static inline QDF_STATUS
+mlo_roam_get_bssid_chan_for_link(uint8_t vdev_id,
+				 struct roam_offload_synch_ind *sync_ind,
+				 struct qdf_mac_addr *bssid,
+				 wmi_channel *chan)
+{
+	return QDF_STATUS_E_NOSUPPORT;
 }
 #endif /* WLAN_FEATURE_11BE_MLO */
 #endif

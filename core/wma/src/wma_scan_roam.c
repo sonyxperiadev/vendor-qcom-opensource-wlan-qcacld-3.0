@@ -634,7 +634,8 @@ wma_roam_update_vdev(tp_wma_handle wma,
 	qdf_mem_free(add_sta_params);
 }
 
-static void wma_update_phymode_on_roam(tp_wma_handle wma, uint8_t *bssid,
+static void wma_update_phymode_on_roam(tp_wma_handle wma,
+				       struct qdf_mac_addr *bssid,
 				       wmi_channel *chan,
 				       struct wma_txrx_node *iface)
 {
@@ -701,7 +702,7 @@ static void wma_update_phymode_on_roam(tp_wma_handle wma, uint8_t *bssid,
 	vdev_mlme->mgmt.generic.phy_mode = wma_host_to_fw_phymode(bss_phymode);
 
 	/* update new phymode to peer */
-	wma_objmgr_set_peer_mlme_phymode(wma, bssid, bss_phymode);
+	wma_objmgr_set_peer_mlme_phymode(wma, bssid->bytes, bss_phymode);
 
 	wma_debug("LFR3: new phymode %d freq %d (bw %d, %d %d)",
 		  bss_phymode, des_chan->ch_freq, des_chan->ch_width,
@@ -3090,15 +3091,28 @@ cm_roam_pe_sync_callback(struct roam_offload_synch_ind *sync_ind,
 	return status;
 }
 
-void cm_update_phymode_on_roam(uint8_t vdev_id, uint8_t *bssid,
-			       wmi_channel *chan)
+void cm_update_phymode_on_roam(uint8_t vdev_id,
+			       struct roam_offload_synch_ind *sync_ind)
 {
 	tp_wma_handle wma = cds_get_context(QDF_MODULE_ID_WMA);
+	struct qdf_mac_addr link_bssid;
+	wmi_channel link_chan;
 
 	if (!wma)
 		return;
 
-	wma_update_phymode_on_roam(wma, bssid, chan, &wma->interfaces[vdev_id]);
+	if (is_multi_link_roam(sync_ind)) {
+		mlo_roam_get_bssid_chan_for_link(vdev_id, sync_ind,
+						 &link_bssid,
+						 &link_chan);
+		wma_update_phymode_on_roam(wma, &link_bssid,
+					   &link_chan,
+					   &wma->interfaces[vdev_id]);
+	} else {
+		wma_update_phymode_on_roam(wma, &sync_ind->bssid,
+					   &sync_ind->chan,
+					   &wma->interfaces[vdev_id]);
+	}
 }
 
 enum wlan_phymode
