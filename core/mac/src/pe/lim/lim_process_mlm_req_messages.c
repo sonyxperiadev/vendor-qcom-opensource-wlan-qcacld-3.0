@@ -1557,6 +1557,7 @@ end:
  */
 void lim_process_deauth_ack_timeout(struct mac_context *mac_ctx)
 {
+	pe_debug("Deauth Ack timeout");
 	lim_send_deauth_cnf(mac_ctx);
 }
 
