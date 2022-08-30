@@ -3555,18 +3555,18 @@ QDF_STATUS wlan_mlme_set_sta_mlo_conn_max_num(struct wlan_objmgr_psoc *psoc,
 uint8_t wlan_mlme_get_sta_mlo_conn_band_bmp(struct wlan_objmgr_psoc *psoc);
 
 /**
- * wlan_mlme_set_sta_mlo_simulataneous_links() - set mlo simulataneous links
+ * wlan_mlme_set_sta_mlo_simultaneous_links() - set mlo simultaneous links
  * @psoc: pointer to psoc object
  * @value: value to set
  *
  * Return: QDF Status
  */
 QDF_STATUS
-wlan_mlme_set_sta_mlo_simulataneous_links(struct wlan_objmgr_psoc *psoc,
-					  uint8_t value);
+wlan_mlme_set_sta_mlo_simultaneous_links(struct wlan_objmgr_psoc *psoc,
+					 uint8_t value);
 
 /**
- * wlan_mlme_get_sta_mlo_simultaneous_links() - get mlo simulataneous links
+ * wlan_mlme_get_sta_mlo_simultaneous_links() - get mlo simultaneous links
  * @psoc: pointer to psoc object
  *
  * Return: number of links

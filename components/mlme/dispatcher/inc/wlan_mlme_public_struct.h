@@ -1669,7 +1669,7 @@ enum station_prefer_bw {
  * @max_li_modulated_dtim_time_ms: Max modulated DTIM time in ms.
  * @mlo_support_link_num:           max number of links that sta mlo supports
  * @mlo_support_link_band:          band bitmap that sta mlo supports
- * @mlo_max_simultaneous_links      number of simulataneous links
+ * @mlo_max_simultaneous_links      number of simultaneous links
  */
 struct wlan_mlme_sta_cfg {
 	uint32_t sta_keep_alive_period;

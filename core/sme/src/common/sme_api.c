@@ -15048,7 +15048,7 @@ void sme_set_mlo_max_simultaneous_links(mac_handle_t mac_handle,
 		sme_err("No session for id %d", vdev_id);
 		return;
 	}
-	wlan_mlme_set_sta_mlo_simulataneous_links(mac_ctx->psoc, val);
+	wlan_mlme_set_sta_mlo_simultaneous_links(mac_ctx->psoc, val);
 }
 
 void sme_set_mlo_assoc_link_band(mac_handle_t mac_handle, uint8_t vdev_id,

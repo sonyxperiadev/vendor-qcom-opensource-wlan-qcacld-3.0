@@ -1086,8 +1086,8 @@ uint8_t wlan_mlme_get_sta_mlo_simultaneous_links(struct wlan_objmgr_psoc *psoc)
 }
 
 QDF_STATUS
-wlan_mlme_set_sta_mlo_simulataneous_links(struct wlan_objmgr_psoc *psoc,
-					  uint8_t value)
+wlan_mlme_set_sta_mlo_simultaneous_links(struct wlan_objmgr_psoc *psoc,
+					 uint8_t value)
 {
 	struct wlan_mlme_psoc_ext_obj *mlme_obj;
 
