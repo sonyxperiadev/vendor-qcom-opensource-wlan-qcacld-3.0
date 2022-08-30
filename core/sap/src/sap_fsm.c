@@ -1249,7 +1249,7 @@ static void sap_acs_scan_freq_list_optimize(struct sap_context *sap_ctx,
 		if (qdf_system_time_before(
 		    qdf_get_time_of_the_day_ms(),
 		    ts_last_scan + sap_ctx->acs_cfg->last_scan_ageout_time)) {
-			sap_info("ACS chan %d skipped from scan as last scan ts %d\n",
+			sap_info("ACS chan %d skipped from scan as last scan ts %lu\n",
 				 list->chan[loop_count].freq,
 				 qdf_get_time_of_the_day_ms() - ts_last_scan);
 
