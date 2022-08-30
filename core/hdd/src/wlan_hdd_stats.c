@@ -6020,6 +6020,11 @@ wlan_hdd_refill_actual_rate(struct rate_info *os_rate,
 	os_rate->nss = nss;
 	if (preamble == DOT11_A || preamble == DOT11_B) {
 		os_rate->legacy = rate;
+		/*
+		 * Clear os rate flags set by hdd_report_actual_rate(),
+		 * otherwise, kernel will not display legacy rate
+		 */
+		os_rate->flags = 0;
 		hdd_debug("Reporting legacy rate %d", os_rate->legacy);
 		return;
 	}
@@ -6035,6 +6040,9 @@ wlan_hdd_refill_actual_rate(struct rate_info *os_rate,
 
 	if (guard_interval == TXRATE_GI_0_4_US)
 		os_rate->flags |= RATE_INFO_FLAGS_SHORT_GI;
+
+	hdd_debug("sgi=%d, preamble=%d, bw=%d, mcs=%d, nss=%d, rate_flag=0x%x",
+		  guard_interval, preamble, bw, mcs_index, nss, os_rate->flags);
 }
 #else
 static inline void
