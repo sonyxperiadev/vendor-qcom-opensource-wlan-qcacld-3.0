@@ -2653,8 +2653,8 @@ static void cm_update_driver_assoc_ies(struct wlan_objmgr_psoc *psoc,
 						  power_cap_ie_data);
 	}
 
-	wlan_cm_ese_populate_addtional_ies(pdev, mlme_obj, vdev_id,
-					  rso_mode_cfg);
+	wlan_cm_ese_populate_additional_ies(pdev, mlme_obj, vdev_id,
+					    rso_mode_cfg);
 
 	/* Append QCN IE if g_support_qcn_ie INI is enabled */
 	if (mlme_obj->cfg.sta.qcn_ie_support)

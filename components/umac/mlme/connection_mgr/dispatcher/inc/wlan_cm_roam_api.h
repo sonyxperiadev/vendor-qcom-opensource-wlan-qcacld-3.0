@@ -363,7 +363,7 @@ void wlan_cm_set_ese_assoc(struct wlan_objmgr_pdev *pdev,
  */
 bool wlan_cm_get_ese_assoc(struct wlan_objmgr_pdev *pdev,
 			   uint8_t vdev_id);
-void wlan_cm_ese_populate_addtional_ies(struct wlan_objmgr_pdev *pdev,
+void wlan_cm_ese_populate_additional_ies(struct wlan_objmgr_pdev *pdev,
 			struct wlan_mlme_psoc_ext_obj *mlme_obj,
 			uint8_t vdev_id,
 			struct wlan_roam_scan_offload_params *rso_mode_cfg);
@@ -376,7 +376,7 @@ bool wlan_cm_get_ese_assoc(struct wlan_objmgr_pdev *pdev,
 {
 	return false;
 }
-static inline void wlan_cm_ese_populate_addtional_ies(
+static inline void wlan_cm_ese_populate_additional_ies(
 		struct wlan_objmgr_pdev *pdev,
 		struct wlan_mlme_psoc_ext_obj *mlme_obj,
 		uint8_t vdev_id,

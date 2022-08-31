@@ -6505,7 +6505,7 @@ QDF_STATUS csr_invoke_neighbor_report_request(
 }
 
 #ifdef FEATURE_WLAN_ESE
-void wlan_cm_ese_populate_addtional_ies(struct wlan_objmgr_pdev *pdev,
+void wlan_cm_ese_populate_additional_ies(struct wlan_objmgr_pdev *pdev,
 			struct wlan_mlme_psoc_ext_obj *mlme_obj,
 			uint8_t vdev_id,
 			struct wlan_roam_scan_offload_params *rso_mode_cfg)
