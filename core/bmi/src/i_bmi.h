@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -165,6 +166,7 @@ struct ol_context {
 	qdf_device_t qdf_dev;
 	qdf_work_t ramdump_work;
 	qdf_work_t fw_indication_work;
+	qdf_wake_lock_t fw_dl_wakelock;
 	struct hif_opaque_softc *scn;
 	struct targetdef_t {
 		struct targetdef_s *targetdef;

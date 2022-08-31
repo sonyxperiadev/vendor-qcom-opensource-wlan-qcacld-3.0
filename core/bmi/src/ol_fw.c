@@ -518,15 +518,15 @@ static int
 ol_transfer_bin_file(struct ol_context *ol_ctx, enum ATH_BIN_FILE file,
 		     uint32_t address, bool compressed)
 {
+#define MAX_WAKELOCK_FOR_FW_DOWNLOAD 1000	//1s
 	int ret;
-	qdf_device_t qdf_dev = ol_ctx->qdf_dev;
 
-	/* Wait until suspend and resume are completed before loading FW */
-	pld_lock_pm_sem(qdf_dev->dev);
+	qdf_wake_lock_timeout_acquire(&ol_ctx->fw_dl_wakelock,
+				      MAX_WAKELOCK_FOR_FW_DOWNLOAD);
 
 	ret = __ol_transfer_bin_file(ol_ctx, file, address, compressed);
 
-	pld_release_pm_sem(qdf_dev->dev);
+	qdf_wake_lock_release(&ol_ctx->fw_dl_wakelock, 0);
 
 	return ret;
 }
