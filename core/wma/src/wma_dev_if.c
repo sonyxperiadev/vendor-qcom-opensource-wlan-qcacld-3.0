@@ -668,7 +668,7 @@ static QDF_STATUS wma_check_for_deferred_peer_delete(tp_wma_handle wma_handle,
 		wma_debug("BSS is not yet stopped. Deferring vdev(vdev id %x) deletion",
 			  vdev_id);
 		iface->del_staself_req = pdel_vdev_req_param;
-		iface->is_del_sta_defered = true;
+		iface->is_del_sta_deferred = true;
 	}
 
 	return status;
@@ -724,10 +724,10 @@ QDF_STATUS wma_vdev_detach(struct del_vdev_params *pdel_vdev_req_param)
 	if (QDF_IS_STATUS_ERROR(status))
 		goto  send_fail_rsp;
 
-	if (iface->is_del_sta_defered)
+	if (iface->is_del_sta_deferred)
 		return status;
 
-	iface->is_del_sta_defered = false;
+	iface->is_del_sta_deferred = false;
 	iface->del_staself_req = NULL;
 
 	status = wma_vdev_self_peer_delete(wma_handle, pdel_vdev_req_param);
@@ -2342,9 +2342,9 @@ void wma_send_del_bss_response(tp_wma_handle wma, struct del_bss_resp *resp)
 					   (void *)resp, 0);
 	}
 
-	if (iface->del_staself_req && iface->is_del_sta_defered) {
-		iface->is_del_sta_defered = false;
-		wma_nofl_alert("scheduling defered deletion (vdev id %x)",
+	if (iface->del_staself_req && iface->is_del_sta_deferred) {
+		iface->is_del_sta_deferred = false;
+		wma_nofl_alert("scheduling deferred deletion (vdev id %x)",
 			      vdev_id);
 		wma_vdev_detach(iface->del_staself_req);
 	}
