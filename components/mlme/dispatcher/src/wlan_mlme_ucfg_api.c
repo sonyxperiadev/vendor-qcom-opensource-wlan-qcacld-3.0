@@ -31,6 +31,7 @@
 #include "wlan_pdev_mlme_api.h"
 #include "wlan_vdev_mgr_tgt_if_tx_api.h"
 #include "wlan_policy_mgr_public_struct.h"
+#include "spatial_reuse_api.h"
 
 QDF_STATUS ucfg_mlme_global_init(void)
 {
@@ -118,6 +119,9 @@ QDF_STATUS ucfg_mlme_pdev_open(struct wlan_objmgr_pdev *pdev)
 		return QDF_STATUS_E_FAILURE;
 	}
 	pdev_mlme->mlme_register_ops = mlme_register_vdev_mgr_ops;
+
+	/* Initialize MAC0/1 SR registers */
+	wlan_spatial_reuse_pdev_init(pdev);
 
 	return QDF_STATUS_SUCCESS;
 }
