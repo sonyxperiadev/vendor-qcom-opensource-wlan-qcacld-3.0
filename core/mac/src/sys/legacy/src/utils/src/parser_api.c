@@ -3596,7 +3596,9 @@ sir_convert_assoc_resp_frame2_eht_struct(tDot11fAssocResponse *ar,
 
 #ifdef WLAN_FEATURE_11BE_MLO
 static QDF_STATUS
-sir_convert_assoc_resp_frame2_mlo_struct(uint8_t *frame, uint32_t frame_len,
+sir_convert_assoc_resp_frame2_mlo_struct(struct mac_context *mac,
+					 uint8_t *frame,
+					 uint32_t frame_len,
 					 struct pe_session *session_entry,
 					 tDot11fAssocResponse *ar,
 					 tpSirAssocRsp p_assoc_rsp)
@@ -3621,11 +3623,12 @@ sir_convert_assoc_resp_frame2_mlo_struct(uint8_t *frame, uint32_t frame_len,
 			util_get_bvmlie_persta_partner_info(ml_ie,
 					       ml_ie_total_len,
 					       &session_entry->ml_partner_info);
-
-			session_entry->ml_partner_info.num_partner_links =
-			QDF_MIN(
-			session_entry->ml_partner_info.num_partner_links,
-			session_entry->lim_join_req->partner_info.num_partner_links);
+			if (!wlan_cm_is_roam_sync_in_progress(mac->psoc, session_entry->vdev_id)) {
+				session_entry->ml_partner_info.num_partner_links =
+				QDF_MIN(
+				session_entry->ml_partner_info.num_partner_links,
+				session_entry->lim_join_req->partner_info.num_partner_links);
+			}
 			util_get_bvmlie_mldmacaddr(ml_ie, ml_ie_total_len,
 						   &mld_mac_addr);
 			qdf_mem_copy(ml_ie_info->mld_mac_addr,
@@ -3686,7 +3689,9 @@ sir_convert_assoc_resp_frame2_mlo_struct(uint8_t *frame, uint32_t frame_len,
 }
 #else
 static inline QDF_STATUS
-sir_convert_assoc_resp_frame2_mlo_struct(uint8_t *frame, uint32_t frame_len,
+sir_convert_assoc_resp_frame2_mlo_struct(struct mac_context *mac,
+					 uint8_t *frame,
+					 uint32_t frame_len,
 					 struct pe_session *session_entry,
 					 tDot11fAssocResponse *ar,
 					 tpSirAssocRsp p_assoc_rsp)
@@ -3978,7 +3983,7 @@ sir_convert_assoc_resp_frame2_struct(struct mac_context *mac,
 
 	sir_convert_assoc_resp_frame2_eht_struct(ar, pAssocRsp);
 	fils_convert_assoc_rsp_frame2_struct(ar, pAssocRsp);
-	sir_convert_assoc_resp_frame2_mlo_struct(frame, frame_len,
+	sir_convert_assoc_resp_frame2_mlo_struct(mac, frame, frame_len,
 						 session_entry, ar, pAssocRsp);
 	pe_debug("ht %d vht %d vendor vht: cap %d op %d, he %d he 6ghband %d eht %d eht320 %d, max idle: present %d val %d, he mu edca %d wmm %d qos %d",
 		 ar->HTCaps.present, ar->VHTCaps.present,
