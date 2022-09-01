@@ -642,7 +642,7 @@ void wma_remove_objmgr_peer(tp_wma_handle wma,
 
 }
 
-static QDF_STATUS wma_check_for_deffered_peer_delete(tp_wma_handle wma_handle,
+static QDF_STATUS wma_check_for_deferred_peer_delete(tp_wma_handle wma_handle,
 						     struct del_vdev_params
 						     *pdel_vdev_req_param)
 {
@@ -665,7 +665,7 @@ static QDF_STATUS wma_check_for_deffered_peer_delete(tp_wma_handle wma_handle,
 			return status;
 		}
 
-		wma_debug("BSS is not yet stopped. Defering vdev(vdev id %x) deletion",
+		wma_debug("BSS is not yet stopped. Deferring vdev(vdev id %x) deletion",
 			  vdev_id);
 		iface->del_staself_req = pdel_vdev_req_param;
 		iface->is_del_sta_defered = true;
@@ -719,7 +719,7 @@ QDF_STATUS wma_vdev_detach(struct del_vdev_params *pdel_vdev_req_param)
 		return status;
 	}
 
-	status = wma_check_for_deffered_peer_delete(wma_handle,
+	status = wma_check_for_deferred_peer_delete(wma_handle,
 						    pdel_vdev_req_param);
 	if (QDF_IS_STATUS_ERROR(status))
 		goto  send_fail_rsp;
