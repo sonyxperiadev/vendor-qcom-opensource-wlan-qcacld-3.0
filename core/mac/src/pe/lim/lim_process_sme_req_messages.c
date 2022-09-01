@@ -361,18 +361,18 @@ static bool __lim_is_sme_assoc_cnf_valid(struct assoc_cnf *assoc_cnf)
 }
 
 /**
- * __lim_is_defered_msg_for_radar() - Defers the message if radar is detected
+ * __lim_is_deferred_msg_for_radar() - Defers the message if radar is detected
  * @mac_ctx: Pointer to Global MAC structure
  * @message: Pointer to message posted from SME to LIM.
  *
  * Has role only if 11h is enabled. Not used on STA side.
  * Defers the message if radar is detected.
  *
- * Return: true, if defered otherwise return false.
+ * Return: true, if deferred otherwise return false.
  */
 static bool
-__lim_is_defered_msg_for_radar(struct mac_context *mac_ctx,
-			       struct scheduler_msg *message)
+__lim_is_deferred_msg_for_radar(struct mac_context *mac_ctx,
+				struct scheduler_msg *message)
 {
 	/*
 	 * fRadarDetCurOperChan will be set only if we
@@ -1251,19 +1251,19 @@ free:
  * @pMsg: Message pointer
  *
  * Wrapper for the function __lim_handle_sme_start_bss_request
- * This message will be defered until softmac come out of
+ * This message will be deferred until softmac come out of
  * scan mode or if we have detected radar on the current
  * operating channel.
  *
  * return true - If we consumed the buffer
- *        false - If have defered the message.
+ *        false - If have deferred the message.
  */
 static bool __lim_process_sme_start_bss_req(struct mac_context *mac,
 					    struct scheduler_msg *pMsg)
 {
-	if (__lim_is_defered_msg_for_radar(mac, pMsg)) {
+	if (__lim_is_deferred_msg_for_radar(mac, pMsg)) {
 		/**
-		 * If message defered, buffer is not consumed yet.
+		 * If message deferred, buffer is not consumed yet.
 		 * So return false
 		 */
 		return false;
@@ -6471,12 +6471,12 @@ __lim_handle_sme_stop_bss_request(struct mac_context *mac, uint32_t *msg_buf)
  * @pMsg: Message from SME
  *
  * Wrapper for the function __lim_handle_sme_stop_bss_request
- * This message will be defered until softmac come out of
+ * This message will be deferred until softmac come out of
  * scan mode. Message should be handled even if we have
  * detected radar in the current operating channel.
  *
  * Return: true - If we consumed the buffer
- *         false - If have defered the message.
+ *         false - If have deferred the message.
  */
 
 static bool __lim_process_sme_stop_bss_req(struct mac_context *mac,
