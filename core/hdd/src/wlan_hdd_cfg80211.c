@@ -631,19 +631,6 @@ static const struct ieee80211_iface_limit
 	},
 };
 
-/* STA + AP combination */
-static const struct ieee80211_iface_limit
-	wlan_hdd_sta_ap_iface_limit[] = {
-	{
-		.max = 1,
-		.types = BIT(NL80211_IFTYPE_STATION),
-	},
-	{
-		.max = QDF_MAX_NO_OF_SAP_MODE,
-		.types = BIT(NL80211_IFTYPE_AP),
-	},
-};
-
 /* STA + P2P + P2P combination */
 static const struct ieee80211_iface_limit
 	wlan_hdd_sta_p2p_iface_limit[] = {
@@ -770,18 +757,6 @@ static struct ieee80211_iface_combination
 		.num_different_channels = 2,
 		.max_interfaces = 2,
 		.n_limits = ARRAY_SIZE(wlan_hdd_p2p_iface_limit),
-	},
-	/* STA + AP */
-	{
-		.limits = wlan_hdd_sta_ap_iface_limit,
-		.num_different_channels = 2,
-		.max_interfaces = (1 + QDF_MAX_NO_OF_SAP_MODE),
-		.n_limits = ARRAY_SIZE(wlan_hdd_sta_ap_iface_limit),
-		.beacon_int_infra_match = true,
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)) || \
-	defined(CFG80211_BEACON_INTERVAL_BACKPORT)
-		.beacon_int_min_gcd = 1,
-#endif
 	},
 	/* STA + P2P + P2P */
 	{
