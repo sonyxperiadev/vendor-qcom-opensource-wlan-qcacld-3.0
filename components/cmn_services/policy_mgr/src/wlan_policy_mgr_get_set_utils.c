@@ -6433,6 +6433,90 @@ policy_mgr_is_restart_sap_required_with_mlo_sta(struct wlan_objmgr_psoc *psoc,
 
 	return restart_required;
 }
+
+void policy_mgr_activate_mlo_links(struct wlan_objmgr_psoc *psoc,
+				   uint8_t session_id, uint8_t num_links,
+				   struct qdf_mac_addr active_link_addr[2])
+{
+	uint8_t idx, link, active_vdev_cnt = 0, inactive_vdev_cnt = 0;
+	uint16_t ml_vdev_cnt = 0;
+	struct wlan_objmgr_vdev *tmp_vdev_lst[WLAN_UMAC_MLO_MAX_VDEVS] = {0};
+	uint8_t active_vdev_lst[WLAN_UMAC_MLO_MAX_VDEVS] = {0};
+	uint8_t inactive_vdev_lst[WLAN_UMAC_MLO_MAX_VDEVS] = {0};
+	struct wlan_objmgr_vdev *vdev;
+	uint8_t *link_mac_addr;
+	bool active_vdev_present = false;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, session_id,
+						    WLAN_POLICY_MGR_ID);
+	if (!vdev) {
+		policy_mgr_err("vdev_id: %d vdev not found", session_id);
+		return;
+	}
+
+	if (!wlan_cm_is_vdev_connected(vdev)) {
+		policy_mgr_err("vdev is not in connected state");
+		goto done;
+	}
+
+	if (!wlan_vdev_mlme_is_mlo_vdev(vdev)) {
+		policy_mgr_err("vdev is not mlo vdev");
+		goto done;
+	}
+
+	mlo_get_ml_vdev_list(vdev, &ml_vdev_cnt, tmp_vdev_lst);
+	policy_mgr_debug("Num active links: %d, ML vdev cnt: %d", num_links,
+			 ml_vdev_cnt);
+	for (idx = 0; idx < ml_vdev_cnt; idx++) {
+		link_mac_addr = wlan_vdev_mlme_get_macaddr(tmp_vdev_lst[idx]);
+		policy_mgr_debug("link addr: " QDF_MAC_ADDR_FMT,
+				 QDF_MAC_ADDR_REF(link_mac_addr));
+		for (link = 0; link < num_links; link++) {
+			policy_mgr_debug("active addr: " QDF_MAC_ADDR_FMT,
+					 QDF_MAC_ADDR_REF(&active_link_addr[link]));
+			if (!qdf_mem_cmp(link_mac_addr,
+					 &active_link_addr[link].bytes[0],
+					 QDF_MAC_ADDR_SIZE)) {
+				active_vdev_lst[active_vdev_cnt] =
+					wlan_vdev_get_id(tmp_vdev_lst[idx]);
+				active_vdev_cnt++;
+				active_vdev_present = true;
+				policy_mgr_debug("Link address match");
+			}
+		}
+		if (!active_vdev_present) {
+			inactive_vdev_lst[inactive_vdev_cnt] =
+					wlan_vdev_get_id(tmp_vdev_lst[idx]);
+			inactive_vdev_cnt++;
+			policy_mgr_err("No link address match");
+		}
+		active_vdev_present = false;
+	}
+
+	policy_mgr_debug("active vdev cnt: %d, inactive vdev cnt: %d",
+			 active_vdev_cnt, inactive_vdev_cnt);
+	/*
+	 * Invoke Force active link cmd first, followed by Force inactive link
+	 * cmd. This ensures that there is atleast 1 link active at any given
+	 * time.
+	 */
+	if (active_vdev_cnt)
+		policy_mgr_mlo_sta_set_link(psoc,
+					    MLO_LINK_FORCE_REASON_DISCONNECT,
+					    MLO_LINK_FORCE_MODE_ACTIVE,
+					    active_vdev_cnt,
+					    active_vdev_lst);
+	if (inactive_vdev_cnt)
+		policy_mgr_mlo_sta_set_link(psoc, MLO_LINK_FORCE_REASON_CONNECT,
+					    MLO_LINK_FORCE_MODE_INACTIVE,
+					    inactive_vdev_cnt,
+					    inactive_vdev_lst);
+
+	for (idx = 0; idx < ml_vdev_cnt; idx++)
+		mlo_release_vdev_ref(tmp_vdev_lst[idx]);
+done:
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
+}
 #else
 static bool
 policy_mgr_allow_sta_concurrency(struct wlan_objmgr_psoc *psoc,

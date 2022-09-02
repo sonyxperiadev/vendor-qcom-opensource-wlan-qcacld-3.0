@@ -15111,6 +15111,24 @@ void sme_update_eht_cap_mcs(mac_handle_t mac_handle, uint8_t vdev_id,
 	qdf_mem_copy(&mac_ctx->eht_cap_5g, mlme_eht_cap,
 		     sizeof(tDot11fIEeht_cap));
 }
+
+void sme_activate_mlo_links(mac_handle_t mac_handle, uint8_t session_id,
+			    uint8_t num_links,
+			    struct qdf_mac_addr active_link_addr[2])
+{
+	struct mac_context *mac_ctx = MAC_CONTEXT(mac_handle);
+	struct csr_roam_session *session;
+
+	session = CSR_GET_SESSION(mac_ctx, session_id);
+
+	if (!session) {
+		sme_err("No session for id %d", session_id);
+		return;
+	}
+
+	policy_mgr_activate_mlo_links(mac_ctx->psoc, session_id, num_links,
+				      active_link_addr);
+}
 #endif
 
 void sme_set_nss_capability(mac_handle_t mac_handle, uint8_t vdev_id,

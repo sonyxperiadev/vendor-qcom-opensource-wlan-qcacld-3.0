@@ -4530,7 +4530,7 @@ bool policy_mgr_is_mlo_in_mode_dbs(struct wlan_objmgr_psoc *psoc,
 bool policy_mgr_is_mlo_in_mode_emlsr(struct wlan_objmgr_psoc *psoc,
 				     uint8_t *mlo_vdev_lst, uint8_t *num_mlo);
 
-/*
+/**
  * policy_mgr_handle_ml_sta_links_on_vdev_up_csa() - Handle enable/disable
  * link on vdev UP and channel change
  * @psoc: objmgr psoc
@@ -4544,7 +4544,7 @@ policy_mgr_handle_ml_sta_links_on_vdev_up_csa(struct wlan_objmgr_psoc *psoc,
 					      enum QDF_OPMODE mode,
 					      uint8_t vdev_id);
 
-/*
+/**
  * policy_mgr_handle_ml_sta_link_on_traffic_type_change() - Handle
  * enable/disable link on vdev traffic type change on SAP/P2P vdev
  * @psoc: objmgr psoc
@@ -4559,7 +4559,7 @@ void policy_mgr_handle_ml_sta_link_on_traffic_type_change(
 						struct wlan_objmgr_psoc *psoc,
 						struct wlan_objmgr_vdev *vdev);
 
-/*
+/**
  * policy_mgr_handle_ml_sta_links_on_vdev_down() - Handle enable
  * link on any vdev down
  * @psoc: objmgr psoc
@@ -4572,9 +4572,35 @@ void policy_mgr_handle_ml_sta_links_on_vdev_down(struct wlan_objmgr_psoc *psoc,
 						 enum QDF_OPMODE mode,
 						 uint8_t vdev_id);
 
+/**
+ * policy_mgr_handle_emlsr_sta_concurrency() - Handle EMLSR STA concurrency
+ * cases
+ *
+ * @psoc: objmgr psoc
+ * @vdev: pointer to vdev on which new connection is coming up
+ * @is_ap_up: flag to check if new connection is SAP/P2P GO
+ * @sta_coming_up: flag to check if new connection is STA/P2P client
+ *
+ * Return: void
+ */
 void policy_mgr_handle_emlsr_sta_concurrency(struct wlan_objmgr_psoc *psoc,
 					     struct wlan_objmgr_vdev *vdev,
 					     bool is_ap_up, bool sta_coming_up);
+
+/**
+ * policy_mgr_activate_mlo_links() - Force active ML links based on user
+ * requested link mac address
+ *
+ * @psoc: objmgr psoc
+ * @session_id: session id
+ * @num_links: number of links to be forced active
+ * @active_link_addr: link mac address of links to be forced active
+ *
+ * Return: void
+ */
+void policy_mgr_activate_mlo_links(struct wlan_objmgr_psoc *psoc,
+				   uint8_t session_id, uint8_t num_links,
+				   struct qdf_mac_addr *active_link_addr);
 #else
 
 static inline bool policy_mgr_is_mlo_sap_concurrency_allowed(
