@@ -107,6 +107,37 @@ void wlan_cfg80211_mc_infra_cp_stats_dealloc(void *priv)
 #endif /* WLAN_SUPPORT_INFRA_CTRL_PATH_STATS */
 
 /**
+ * wlan_cfg80211_mc_cp_stats_free_peer_stats_info_ext() - API to free peer stats
+ * info ext structure
+ * @ev: structure from where peer stats info ext needs to be freed
+ *
+ * Return: none
+ */
+static void wlan_cfg80211_mc_cp_stats_free_peer_stats_info_ext(
+							struct stats_event *ev)
+{
+	struct peer_stats_info_ext_event *peer_stats_info =
+							ev->peer_stats_info_ext;
+	uint16_t i;
+
+	if (!ev->peer_stats_info_ext) {
+		ev->num_peer_stats_info_ext = 0;
+		return;
+	}
+	for (i = 0; i < ev->num_peer_stats_info_ext; i++) {
+		qdf_mem_free(peer_stats_info->tx_pkt_per_mcs);
+		peer_stats_info->tx_pkt_per_mcs = NULL;
+		qdf_mem_free(peer_stats_info->rx_pkt_per_mcs);
+		peer_stats_info->tx_pkt_per_mcs = NULL;
+		peer_stats_info++;
+	}
+
+	qdf_mem_free(ev->peer_stats_info_ext);
+	ev->peer_stats_info_ext = NULL;
+	ev->num_peer_stats_info_ext = 0;
+}
+
+/**
  * wlan_cfg80211_mc_cp_stats_dealloc() - callback to free priv
  * allocations for stats
  * @priv: Pointer to priv data statucture
@@ -129,7 +160,7 @@ static void wlan_cfg80211_mc_cp_stats_dealloc(void *priv)
 	qdf_mem_free(stats->vdev_summary_stats);
 	qdf_mem_free(stats->vdev_chain_rssi);
 	qdf_mem_free(stats->peer_adv_stats);
-	qdf_mem_free(stats->peer_stats_info_ext);
+	wlan_cfg80211_mc_cp_stats_free_peer_stats_info_ext(stats);
 	wlan_free_mib_stats(stats);
 }
 
@@ -1549,7 +1580,7 @@ void wlan_cfg80211_mc_cp_stats_free_stats_event(struct stats_event *stats)
 	qdf_mem_free(stats->vdev_chain_rssi);
 	qdf_mem_free(stats->peer_adv_stats);
 	wlan_free_mib_stats(stats);
-	qdf_mem_free(stats->peer_stats_info_ext);
+	wlan_cfg80211_mc_cp_stats_free_peer_stats_info_ext(stats);
 	qdf_mem_free(stats);
 }
 

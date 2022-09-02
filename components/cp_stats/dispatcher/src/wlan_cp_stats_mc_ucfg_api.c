@@ -939,6 +939,28 @@ QDF_STATUS ucfg_mc_cp_stats_get_pending_req(struct wlan_objmgr_psoc *psoc,
 	return QDF_STATUS_SUCCESS;
 }
 
+/**
+ * ucfg_mc_cp_stats_free_peer_stats_info_ext() - API to free peer stats info ext
+ * structure
+ * @ev: structure from where peer stats info ext needs to be freed
+ *
+ * Return: none
+ */
+static void ucfg_mc_cp_stats_free_peer_stats_info_ext(struct stats_event *ev)
+{
+	struct peer_stats_info_ext_event *peer_stats_info =
+							ev->peer_stats_info_ext;
+	uint16_t i;
+
+	for (i = 0; i < ev->num_peer_stats_info_ext; i++) {
+		qdf_mem_free(peer_stats_info->tx_pkt_per_mcs);
+		qdf_mem_free(peer_stats_info->rx_pkt_per_mcs);
+		peer_stats_info++;
+	}
+
+	qdf_mem_free(ev->peer_stats_info_ext);
+}
+
 void ucfg_mc_cp_stats_free_stats_resources(struct stats_event *ev)
 {
 	if (!ev)
@@ -952,7 +974,7 @@ void ucfg_mc_cp_stats_free_stats_resources(struct stats_event *ev)
 	qdf_mem_free(ev->vdev_summary_stats);
 	qdf_mem_free(ev->vdev_chain_rssi);
 	qdf_mem_free(ev->peer_extended_stats);
-	qdf_mem_free(ev->peer_stats_info_ext);
+	ucfg_mc_cp_stats_free_peer_stats_info_ext(ev);
 	qdf_mem_zero(ev, sizeof(*ev));
 }
 

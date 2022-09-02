@@ -689,6 +689,10 @@ struct chain_rssi_event {
  * @rx_rate: last used rx bitrate (kbps)
  * @rx_rate_code: last rx rate code (last_rx_rate_code of wmi_peer_stats_info)
  * @peer_rssi_per_chain: the average value of RSSI (dbm) per chain
+ * @num_tx_rate_counts: Num tx rate count for current peer
+ * @num_rx_rate_counts: Num rx rate count for current peer
+ * @tx_pkt_per_mcs: Number of tx packets for each MCS
+ * @rx_pkt_per_mcs: Number of rx packets for each MCS
  */
 struct peer_stats_info_ext_event {
 	struct qdf_mac_addr peer_macaddr;
@@ -705,6 +709,10 @@ struct peer_stats_info_ext_event {
 	uint32_t rx_rate;
 	uint32_t rx_rate_code;
 	int32_t peer_rssi_per_chain[WMI_MAX_CHAINS];
+	uint32_t num_tx_rate_counts;
+	uint32_t num_rx_rate_counts;
+	uint32_t *tx_pkt_per_mcs;
+	uint32_t *rx_pkt_per_mcs;
 };
 
 /**
@@ -794,6 +802,10 @@ struct peer_stats_request_params {
  * @peer_rssi: peer rssi
  * @tx_succeed: tx succeed MPDU
  * @peer_rssi_per_chain: peer rssi per chain
+ * @num_tx_rate_counts: Num tx rate count for current peer
+ * @num_rx_rate_counts: Num rx rate count for current peer
+ * @tx_pkt_per_mcs: Number of tx rate counts for each MCS
+ * @rx_pkt_per_mcs: Number of rx rate counts for each MCS
  */
 typedef struct {
 	struct qdf_mac_addr peer_macaddr;
@@ -810,6 +822,10 @@ typedef struct {
 	int32_t peer_rssi;
 	uint32_t tx_succeed;
 	int32_t peer_rssi_per_chain[WMI_MAX_CHAINS];
+	uint32_t num_tx_rate_counts;
+	uint32_t num_rx_rate_counts;
+	uint32_t *tx_pkt_per_mcs;
+	uint32_t *rx_pkt_per_mcs;
 } wmi_host_peer_stats_info;
 
 #endif /* __WLAN_CP_STATS_MC_DEFS_H__ */

@@ -336,6 +336,33 @@ static void target_if_cp_stats_free_mib_stats(struct stats_event *ev)
 {
 }
 #endif
+
+/**
+ * target_if_cp_stats_free_peer_stats_info_ext() - API to free peer stats
+ * info ext structure
+ * @ev: structure from where peer stats info ext needs to be freed
+ *
+ * Return: none
+ */
+static void target_if_cp_stats_free_peer_stats_info_ext(struct stats_event *ev)
+{
+	struct peer_stats_info_ext_event *peer_stats_info =
+							ev->peer_stats_info_ext;
+	uint16_t i;
+
+	for (i = 0; i < ev->num_peer_stats_info_ext; i++) {
+		qdf_mem_free(peer_stats_info->tx_pkt_per_mcs);
+		peer_stats_info->tx_pkt_per_mcs = NULL;
+		qdf_mem_free(peer_stats_info->rx_pkt_per_mcs);
+		peer_stats_info->rx_pkt_per_mcs = NULL;
+		peer_stats_info++;
+	}
+
+	qdf_mem_free(ev->peer_stats_info_ext);
+	ev->peer_stats_info_ext = NULL;
+	ev->num_peer_stats_info_ext = 0;
+}
+
 static void target_if_cp_stats_free_stats_event(struct stats_event *ev)
 {
 	qdf_mem_free(ev->pdev_stats);
@@ -355,8 +382,7 @@ static void target_if_cp_stats_free_stats_event(struct stats_event *ev)
 	qdf_mem_free(ev->vdev_chain_rssi);
 	ev->vdev_chain_rssi = NULL;
 	target_if_cp_stats_free_mib_stats(ev);
-	qdf_mem_free(ev->peer_stats_info_ext);
-	ev->peer_stats_info_ext = NULL;
+	target_if_cp_stats_free_peer_stats_info_ext(ev);
 }
 
 static QDF_STATUS target_if_cp_stats_extract_pdev_stats(
@@ -1067,6 +1093,7 @@ target_if_cp_stats_extract_peer_stats_event(struct wmi_unified *wmi_hdl,
 	wmi_host_peer_stats_info stats_info;
 	uint32_t peer_stats_info_size;
 	int i, j;
+	uint32_t tx_rate_count_idx = 0, rx_rate_count_idx = 0;
 
 	status = wmi_extract_peer_stats_param(wmi_hdl, data, &stats_param);
 	if (QDF_IS_STATUS_ERROR(status)) {
@@ -1095,9 +1122,7 @@ target_if_cp_stats_extract_peer_stats_event(struct wmi_unified *wmi_hdl,
 		if (QDF_IS_STATUS_ERROR(status)) {
 			cp_stats_err("peer stats info extract failed: %d",
 				     status);
-			qdf_mem_free(ev->peer_stats_info_ext);
-			ev->peer_stats_info_ext = NULL;
-			ev->num_peer_stats_info_ext = 0;
+			target_if_cp_stats_free_peer_stats_info_ext(ev);
 			return status;
 		}
 		qdf_mem_copy(&peer_stats_info->peer_macaddr,
@@ -1118,6 +1143,45 @@ target_if_cp_stats_extract_peer_stats_event(struct wmi_unified *wmi_hdl,
 		for (j = 0; j < WMI_MAX_CHAINS; j++)
 			peer_stats_info->peer_rssi_per_chain[j] =
 					      stats_info.peer_rssi_per_chain[j];
+
+		if (stats_info.num_tx_rate_counts) {
+			peer_stats_info->num_tx_rate_counts =
+						stats_info.num_tx_rate_counts;
+			status = wmi_extract_peer_tx_pkt_per_mcs(
+							wmi_hdl, data,
+							tx_rate_count_idx,
+							&stats_info);
+			if (QDF_IS_STATUS_ERROR(status)) {
+				wmi_err("tx rate count extract failed");
+				target_if_cp_stats_free_peer_stats_info_ext(ev);
+				return status;
+			}
+			tx_rate_count_idx +=
+					peer_stats_info->num_tx_rate_counts;
+
+			peer_stats_info->tx_pkt_per_mcs =
+						stats_info.tx_pkt_per_mcs;
+			stats_info.tx_pkt_per_mcs = NULL;
+		}
+		if (stats_info.num_rx_rate_counts) {
+			peer_stats_info->num_rx_rate_counts =
+						stats_info.num_rx_rate_counts;
+			status = wmi_extract_peer_rx_pkt_per_mcs(
+							wmi_hdl, data,
+							rx_rate_count_idx,
+							&stats_info);
+			if (QDF_IS_STATUS_ERROR(status)) {
+				wmi_err("rx rate count extract failed");
+				target_if_cp_stats_free_peer_stats_info_ext(ev);
+				return status;
+			}
+			rx_rate_count_idx +=
+					peer_stats_info->num_rx_rate_counts;
+
+			peer_stats_info->rx_pkt_per_mcs =
+						stats_info.rx_pkt_per_mcs;
+			stats_info.rx_pkt_per_mcs = NULL;
+		}
 		peer_stats_info++;
 	}
 
