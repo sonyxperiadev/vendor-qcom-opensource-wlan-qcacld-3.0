@@ -1692,11 +1692,20 @@ prnt_log:
 }
 
 static bool lim_is_csa_channel_allowed(struct mac_context *mac_ctx,
+				       struct pe_session *session_entry,
 				       qdf_freq_t ch_freq1,
 				       uint32_t ch_freq2)
 {
 	bool is_allowed = true;
 	u32 cnx_count = 0;
+
+	if (!session_entry->vdev ||
+	    wlan_cm_is_vdev_disconnecting(session_entry->vdev) ||
+	    wlan_cm_is_vdev_disconnected(session_entry->vdev)) {
+		pe_warn("CSA is ignored, vdev %d is disconnecting/ed",
+			session_entry->vdev_id);
+		return false;
+	}
 
 	cnx_count = policy_mgr_get_connection_count(mac_ctx->psoc);
 	if ((cnx_count > 1) && !policy_mgr_is_hw_dbs_capable(mac_ctx->psoc) &&
@@ -1754,7 +1763,8 @@ static void lim_handle_sta_csa_param(struct mac_context *mac_ctx,
 		goto err;
 	}
 
-	if (!lim_is_csa_channel_allowed(mac_ctx, session_entry->curr_op_freq,
+	if (!lim_is_csa_channel_allowed(mac_ctx, session_entry,
+					session_entry->curr_op_freq,
 					csa_params->csa_chan_freq)) {
 		pe_debug("Channel switch is not allowed");
 		goto err;
