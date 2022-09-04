@@ -4851,6 +4851,24 @@ csr_convert_mode_to_nw_type(enum csr_cfgdot11mode dot11_mode,
 }
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
+#ifdef WLAN_FEATURE_11BE_MLO
+static bool csr_pmk_match_mlo_address(struct wlan_objmgr_vdev *vdev,
+				      struct wlan_crypto_pmksa *pmksa)
+{
+	struct qdf_mac_addr bss_peer_mld_mac = {0};
+
+	wlan_vdev_get_bss_peer_mld_mac(vdev, &bss_peer_mld_mac);
+
+	return qdf_is_macaddr_equal(&bss_peer_mld_mac, &pmksa->bssid);
+}
+#else
+static inline bool csr_pmk_match_mlo_address(struct wlan_objmgr_vdev *vdev,
+					     struct wlan_crypto_pmksa *pmksa)
+{
+	return false;
+}
+#endif
+
 void csr_get_pmk_info(struct mac_context *mac_ctx, uint8_t session_id,
 		      struct wlan_crypto_pmksa *pmk_cache)
 {
@@ -4890,7 +4908,8 @@ QDF_STATUS csr_roam_set_psk_pmk(struct mac_context *mac,
 	 */
 	if (wlan_vdev_mlme_get_state(vdev) == WLAN_VDEV_S_UP &&
 	    !pmksa->ssid_len &&
-	    !qdf_is_macaddr_equal(&connected_bssid, &pmksa->bssid)) {
+	    !qdf_is_macaddr_equal(&connected_bssid, &pmksa->bssid) &&
+	    !csr_pmk_match_mlo_address(vdev, pmksa)) {
 		wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
 		sme_debug("Set pmksa received for non-connected bss");
 		return QDF_STATUS_E_INVAL;
