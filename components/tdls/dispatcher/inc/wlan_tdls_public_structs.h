@@ -1425,7 +1425,7 @@ struct tdls_link_teardown {
 struct wlan_tdls_features {
 	bool enable_tdls;
 	bool enable_tdls_offchannel;
-	bool max_tdls_peers;
+	uint8_t max_tdls_peers;
 	bool enable_tdls_capability_enhance;
 };
 #endif
