@@ -1503,6 +1503,40 @@ bool policy_mgr_is_dbs_allowed_for_concurrency(
 		struct wlan_objmgr_psoc *psoc, enum QDF_OPMODE new_conn_mode);
 
 /**
+ * policy_mgr_get_pcl_chlist_for_ll_sap() - Get pcl channel list for LL SAP
+ * @psoc: PSOC object information
+ * @mode: Device mode
+ * @vdev_id: Vdev id
+ * @pcl_channels: Preferred channel freq list
+ * @pcl_weight: Weights of the PCL
+ * @len: length of the PCL
+ *
+ * This function provides the preferred channel list on which the ll sap
+ * can come.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+policy_mgr_get_pcl_chlist_for_ll_sap(struct wlan_objmgr_psoc *psoc,
+				     enum policy_mgr_con_mode mode,
+				     uint32_t vdev_id, uint32_t *pcl_channels,
+				     uint8_t *pcl_weight, uint32_t *len);
+
+/**
+ * policy_mgr_is_ll_sap_present_in_current_mode() - Check whether LL SAP is
+ * present in current mode or not.
+ * @psoc: psoc object
+ * @mode: device mode
+ * @vdev_id: vdev id
+ *
+ * Return: true if it's present otherwise false
+ */
+bool
+policy_mgr_is_ll_sap_present_in_current_mode(struct wlan_objmgr_psoc *psoc,
+					     enum policy_mgr_con_mode mode,
+					     uint32_t vdev_id);
+
+/**
  * policy_mgr_get_preferred_dbs_action_table() - get dbs action table type
  * @psoc: Pointer to psoc
  * @vdev_id: vdev Id

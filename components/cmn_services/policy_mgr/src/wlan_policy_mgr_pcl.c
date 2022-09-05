@@ -3853,3 +3853,103 @@ bool policy_mgr_is_sta_chan_valid_for_connect_and_roam(
 
 	return true;
 }
+
+bool
+policy_mgr_is_ll_sap_present_in_current_mode(struct wlan_objmgr_psoc *psoc,
+					     enum policy_mgr_con_mode curr_mode,
+					     uint32_t vdev_id)
+{
+	struct wlan_objmgr_vdev *vdev;
+	bool is_ll_sap = false;
+	enum host_concurrent_ap_policy profile =
+					HOST_CONCURRENT_AP_POLICY_UNSPECIFIED;
+	if (curr_mode != PM_SAP_MODE)
+		return is_ll_sap;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_POLICY_MGR_ID);
+	if (!vdev) {
+		policy_mgr_err("vdev %d: invalid vdev", vdev_id);
+		return is_ll_sap;
+	}
+
+	profile = wlan_mlme_get_ap_policy(vdev);
+	if (profile == HOST_CONCURRENT_AP_POLICY_GAMING_AUDIO ||
+	    profile == HOST_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING)
+		is_ll_sap = true;
+
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
+	return is_ll_sap;
+}
+
+QDF_STATUS
+policy_mgr_get_pcl_chlist_for_ll_sap(struct wlan_objmgr_psoc *psoc,
+				     enum policy_mgr_con_mode curr_mode,
+				     uint32_t vdev_id, uint32_t *pcl_channels,
+				     uint8_t *pcl_weight, uint32_t *len)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	uint32_t pcl_len = 0, i, conn_idx = 0;
+	uint32_t pcl_list[NUM_CHANNELS], total_connection = 0;
+	uint8_t weight_list[NUM_CHANNELS];
+	qdf_freq_t freq;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("pm_ctx is null");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!policy_mgr_is_ll_sap_present_in_current_mode(psoc, curr_mode,
+							  vdev_id)) {
+		policy_mgr_debug("LL SAP is not present in current mode %d",
+				 curr_mode);
+		return QDF_STATUS_SUCCESS;
+	}
+
+	total_connection = policy_mgr_get_connection_count(psoc);
+	if (!total_connection && curr_mode == PM_SAP_MODE) {
+		for (i = 0; i < *len; i++) {
+			if (WLAN_REG_IS_24GHZ_CH_FREQ(pcl_channels[i]))
+				continue;
+
+			pcl_list[pcl_len] = pcl_channels[i];
+			weight_list[pcl_len++] = pcl_weight[i];
+		}
+		qdf_mem_zero(pcl_channels, *len * sizeof(*pcl_channels));
+		qdf_mem_copy(pcl_channels, pcl_list,
+			     pcl_len * sizeof(*pcl_channels));
+	} else {
+		qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
+		for (conn_idx = 0; conn_idx < MAX_NUMBER_OF_CONC_CONNECTIONS;
+		     conn_idx++) {
+			if (!pm_conc_connection_list[conn_idx].in_use)
+				continue;
+
+			freq = pm_conc_connection_list[conn_idx].freq;
+
+			for (i = 0; i < *len; i++) {
+				if (policy_mgr_2_freq_always_on_same_mac(
+								psoc,
+								pcl_channels[i],
+								freq) ||
+				    WLAN_REG_IS_24GHZ_CH_FREQ(pcl_channels[i]))
+					continue;
+				pcl_list[pcl_len] = pcl_channels[i];
+				weight_list[pcl_len++] = pcl_weight[i];
+			}
+			*len = pcl_len;
+			qdf_mem_zero(pcl_channels,
+				     *len * sizeof(*pcl_channels));
+			qdf_mem_copy(pcl_channels, pcl_list,
+				     pcl_len * sizeof(*pcl_channels));
+		}
+		qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+	}
+
+	qdf_mem_zero(pcl_weight, *len * sizeof(*pcl_weight));
+	qdf_mem_copy(pcl_weight, weight_list, pcl_len);
+	*len = pcl_len;
+
+	return QDF_STATUS_SUCCESS;
+}

@@ -3728,6 +3728,12 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 					pcl_channels_weight_list,
 					NUM_CHANNELS);
 
+	policy_mgr_get_pcl_chlist_for_ll_sap(
+				hdd_ctx->psoc, pm_mode, adapter->vdev_id,
+				sap_config->acs_cfg.pcl_chan_freq,
+				sap_config->acs_cfg.pcl_channels_weight_list,
+				&sap_config->acs_cfg.pcl_ch_count);
+
 	sap_config->acs_cfg.band = hw_mode;
 
 	qdf_status = ucfg_mlme_get_external_acs_policy(hdd_ctx->psoc,
@@ -3752,7 +3758,11 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 					&sap_config->acs_cfg.ch_list_count);
 		if (!sap_config->acs_cfg.ch_list_count &&
 		    sap_config->acs_cfg.master_ch_list_count &&
-		    !is_vendor_unsafe_ch_present)
+		    !is_vendor_unsafe_ch_present &&
+		    !policy_mgr_is_ll_sap_present_in_current_mode(
+							hdd_ctx->psoc,
+							pm_mode,
+							adapter->vdev_id))
 			wlan_hdd_handle_zero_acs_list(
 				hdd_ctx,
 				sap_config->acs_cfg.freq_list,
