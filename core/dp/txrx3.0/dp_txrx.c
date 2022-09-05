@@ -681,6 +681,14 @@ dp_update_mem_size_by_ring_type(struct wlan_dp_prealloc_cfg *cfg,
 		*mem_size = (sizeof(struct reo_destination_ring)) *
 			    cfg->num_reo_exception_ring_entries;
 		return;
+	case REO_DST:
+		*mem_size = (sizeof(struct reo_destination_ring)) *
+			    cfg->num_reo_dst_ring_entries;
+		return;
+	case RXDMA_BUF:
+		*mem_size = (sizeof(struct wbm_buffer_ring)) *
+			    cfg->num_rxdma_buf_ring_entries;
+		return;
 	default:
 		return;
 	}
