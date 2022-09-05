@@ -4338,6 +4338,22 @@ bool policy_mgr_is_mlo_in_mode_sbs(struct wlan_objmgr_psoc *psoc,
 				   uint8_t *mlo_vdev_lst, uint8_t *num_mlo);
 
 /**
+ * policy_mgr_is_mlo_in_mode_dbs() - Check whether MLO present is DBS
+ * @psoc: PSOC object information
+ * @mode: mlo mode to check
+ * @mlo_vdev_lst: Pointer to mlo vdev list, this function wil fill this with
+ *                list of mlo vdev
+ * @num_mlo: Pointer to number of mlo link, this function will fill this with
+ *           number of mlo links
+ *
+ * Return: True if MLO one link is on 2 GHz band and other links on
+ * 5/6 GHz band
+ */
+bool policy_mgr_is_mlo_in_mode_dbs(struct wlan_objmgr_psoc *psoc,
+				   enum policy_mgr_con_mode mode,
+				   uint8_t *mlo_vdev_lst, uint8_t *num_mlo);
+
+/**
  * policy_mgr_is_mlo_in_mode_emlsr() - Check whether current connection is eMLSR
  * @psoc: PSOC object information
  * @mlo_vdev_lst: Pointer to mlo vdev list, this function wil fill this with
@@ -4418,6 +4434,14 @@ static inline bool policy_mgr_is_mlo_sta_present(struct wlan_objmgr_psoc *psoc)
 
 static inline
 bool policy_mgr_is_mlo_in_mode_sbs(struct wlan_objmgr_psoc *psoc,
+				   enum policy_mgr_con_mode mode,
+				   uint8_t *mlo_vdev_lst, uint8_t *num_mlo)
+{
+	return false;
+}
+
+static inline
+bool policy_mgr_is_mlo_in_mode_dbs(struct wlan_objmgr_psoc *psoc,
 				   enum policy_mgr_con_mode mode,
 				   uint8_t *mlo_vdev_lst, uint8_t *num_mlo)
 {
