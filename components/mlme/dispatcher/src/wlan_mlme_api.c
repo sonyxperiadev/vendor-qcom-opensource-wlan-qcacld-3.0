@@ -3878,13 +3878,17 @@ mlme_update_vht_cap(struct wlan_objmgr_psoc *psoc, struct wma_tgt_vht_cap *cfg)
 	if (vht_cap_info->short_gi_80mhz && !cfg->vht_short_gi_80)
 		vht_cap_info->short_gi_80mhz = cfg->vht_short_gi_80;
 
-	/* Set VHT TX STBC cap */
-	if (vht_cap_info->tx_stbc && !cfg->vht_tx_stbc)
-		vht_cap_info->tx_stbc = cfg->vht_tx_stbc;
+	/* Set VHT TX/RX STBC cap */
+	if (vht_cap_info->enable2x2) {
+		if (vht_cap_info->tx_stbc && !cfg->vht_tx_stbc)
+			vht_cap_info->tx_stbc = cfg->vht_tx_stbc;
 
-	/* Set VHT RX STBC cap */
-	if (vht_cap_info->rx_stbc && !cfg->vht_rx_stbc)
-		vht_cap_info->rx_stbc = cfg->vht_rx_stbc;
+		if (vht_cap_info->rx_stbc && !cfg->vht_rx_stbc)
+			vht_cap_info->rx_stbc = cfg->vht_rx_stbc;
+	} else {
+		vht_cap_info->tx_stbc = 0;
+		vht_cap_info->rx_stbc = 0;
+	}
 
 	/* Set VHT SU Beamformer cap */
 	if (vht_cap_info->su_bformer && !cfg->vht_su_bformer)
