@@ -971,4 +971,15 @@ bool wlan_hdd_cfg80211_rx_control_port(struct net_device *dev,
 				       struct sk_buff *skb,
 				       bool unencrypted);
 
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+/**
+ * hdd_send_dbam_config() - send DBAM config
+ * @adapter: hdd adapter
+ * @dbam_mode: dbam mode configuration
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+int hdd_send_dbam_config(struct hdd_adapter *adapter,
+			 enum coex_dbam_config_mode dbam_mode);
+#endif
 #endif

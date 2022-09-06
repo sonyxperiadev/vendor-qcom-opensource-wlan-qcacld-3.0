@@ -1309,6 +1309,9 @@ struct hdd_adapter {
 #ifdef DP_TRAFFIC_END_INDICATION
 	bool traffic_end_ind_en;
 #endif
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+	bool is_dbam_configured;
+#endif
 };
 
 #define WLAN_HDD_GET_STATION_CTX_PTR(adapter) (&(adapter)->session.station)
@@ -2027,6 +2030,9 @@ struct hdd_context {
 	uint8_t oem_data_len;
 	uint8_t *file_name;
 	qdf_mutex_t wifi_kobj_lock;
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+	enum coex_dbam_config_mode dbam_mode;
+#endif
 };
 
 /**

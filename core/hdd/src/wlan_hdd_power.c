@@ -1902,6 +1902,34 @@ static inline void hdd_wlan_ssr_reinit_event(void)
 }
 #endif
 
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+/**
+ * hdd_retore_dbam_config - restore and send dbam config to fw
+ *
+ * This function is used to send  store dbam config to fw
+ * in case of wlan re-init
+ *
+ * Return: void
+ */
+static void hdd_restore_dbam_config(struct hdd_context *hdd_ctx)
+{
+	struct hdd_adapter *adapter, *next_adapter = NULL;
+	wlan_net_dev_ref_dbgid dbgid = NET_DEV_HOLD_GET_ADAPTER;
+
+	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter,
+					   dbgid) {
+		if (hdd_is_interface_up(adapter) &&
+		    adapter->is_dbam_configured)
+			hdd_send_dbam_config(adapter, hdd_ctx->dbam_mode);
+		hdd_adapter_dev_put_debug(adapter, dbgid);
+	}
+}
+#else
+static inline void hdd_restore_dbam_config(struct hdd_context *hdd_ctx)
+{
+}
+#endif
+
 /**
  * hdd_restore_dual_sta_config() - Restore dual sta configuration
  * @hdd_ctx: pointer to struct hdd_context
@@ -2082,6 +2110,7 @@ QDF_STATUS hdd_wlan_re_init(void)
 
 	hdd_send_default_scan_ies(hdd_ctx);
 	hdd_restore_dual_sta_config(hdd_ctx);
+	hdd_restore_dbam_config(hdd_ctx);
 	hdd_info("WLAN host driver reinitiation completed!");
 
 	ucfg_mlme_get_sap_internal_restart(hdd_ctx->psoc, &value);
