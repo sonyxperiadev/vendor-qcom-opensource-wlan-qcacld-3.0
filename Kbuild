@@ -2625,6 +2625,7 @@ COEX_OS_IF_INC      := -I$(WLAN_ROOT)/os_if/coex/inc
 COEX_TGT_INC        := -I$(WLAN_ROOT)/components/target_if/coex/inc
 COEX_DISPATCHER_INC := -I$(WLAN_ROOT)/components/coex/dispatcher/inc
 COEX_CORE_INC       := -I$(WLAN_ROOT)/components/coex/core/inc
+COEX_STRUCT_INC     := -I$(WLAN_COMMON_INC)/coex/dispatcher/inc
 
 ifeq ($(CONFIG_FEATURE_COEX), y)
 COEX_OBJS := $(COEX_TGT_SRC)/target_if_coex.o                 \
@@ -3192,6 +3193,7 @@ INCS +=		$(COEX_OS_IF_INC)
 INCS +=		$(COEX_TGT_INC)
 INCS +=		$(COEX_DISPATCHER_INC)
 INCS +=		$(COEX_CORE_INC)
+INCS +=		$(COEX_STRUCT_INC)
 ################ COAP ################
 INCS +=		$(COAP_OS_IF_INC)
 INCS +=		$(COAP_TGT_INC)
