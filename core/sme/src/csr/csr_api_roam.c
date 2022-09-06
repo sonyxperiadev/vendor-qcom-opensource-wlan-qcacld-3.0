@@ -3919,6 +3919,7 @@ csr_roam_chk_lnk_assoc_ind(struct mac_context *mac_ctx, tSirSmeRsp *msg_ptr)
 #endif
 	roam_info->addIELen = (uint8_t)pAssocInd->addIE.length;
 	roam_info->paddIE = pAssocInd->addIE.addIEdata;
+	roam_info->fReassocReq = pAssocInd->reassocReq;
 	qdf_mem_copy(roam_info->peerMac.bytes,
 		     pAssocInd->peerMacAddr,
 		     sizeof(tSirMacAddr));

@@ -61,6 +61,7 @@
 #include "wlan_mlme_vdev_mgr_interface.h"
 #include "wlan_vdev_mgr_utils_api.h"
 #include "wlan_pre_cac_api.h"
+#include <wlan_cmn_ieee80211.h>
 
 /*----------------------------------------------------------------------------
  * Preprocessor Definitions and Constants
@@ -1785,6 +1786,7 @@ static void sap_handle_acs_scan_event(struct sap_context *sap_context,
  * Function to fill OWE IE in assoc indication
  * @assoc_ind: SAP STA association indication
  * @sme_assoc_ind: SME association indication
+ * @reassoc: True if it is reassoc frame
  *
  * This function is to get OWE IEs (RSN IE, DH IE etc) from assoc request
  * and fill them in association indication.
@@ -1792,19 +1794,37 @@ static void sap_handle_acs_scan_event(struct sap_context *sap_context,
  * Return: true for success and false for failure
  */
 static bool sap_fill_owe_ie_in_assoc_ind(tSap_StationAssocIndication *assoc_ind,
-					 struct assoc_ind *sme_assoc_ind)
+					 struct assoc_ind *sme_assoc_ind,
+					 bool reassoc)
 {
 	uint32_t owe_ie_len, rsn_ie_len, dh_ie_len;
 	const uint8_t *rsn_ie, *dh_ie;
+	uint8_t *assoc_req_ie;
+	uint16_t assoc_req_ie_len;
 
-	if (assoc_ind->assocReqLength < ASSOC_REQ_IE_OFFSET) {
-		sap_err("Invalid assoc req");
-		return false;
+	if (reassoc) {
+		if (assoc_ind->assocReqLength < WLAN_REASSOC_REQ_IES_OFFSET) {
+			sap_err("Invalid reassoc req");
+			return false;
+		}
+
+		assoc_req_ie = assoc_ind->assocReqPtr +
+			       WLAN_REASSOC_REQ_IES_OFFSET;
+		assoc_req_ie_len = assoc_ind->assocReqLength -
+				   WLAN_REASSOC_REQ_IES_OFFSET;
+	} else {
+		if (assoc_ind->assocReqLength < WLAN_ASSOC_REQ_IES_OFFSET) {
+			sap_err("Invalid assoc req");
+			return false;
+		}
+
+		assoc_req_ie = assoc_ind->assocReqPtr +
+			       WLAN_ASSOC_REQ_IES_OFFSET;
+		assoc_req_ie_len = assoc_ind->assocReqLength -
+				   WLAN_ASSOC_REQ_IES_OFFSET;
 	}
-
 	rsn_ie = wlan_get_ie_ptr_from_eid(DOT11F_EID_RSN,
-			       assoc_ind->assocReqPtr + ASSOC_REQ_IE_OFFSET,
-			       assoc_ind->assocReqLength - ASSOC_REQ_IE_OFFSET);
+					  assoc_req_ie, assoc_req_ie_len);
 	if (!rsn_ie) {
 		sap_err("RSN IE is not present");
 		return false;
@@ -1817,8 +1837,7 @@ static bool sap_fill_owe_ie_in_assoc_ind(tSap_StationAssocIndication *assoc_ind,
 	}
 
 	dh_ie = wlan_get_ext_ie_ptr_from_ext_id(DH_OUI_TYPE, DH_OUI_TYPE_SIZE,
-		   assoc_ind->assocReqPtr + ASSOC_REQ_IE_OFFSET,
-		   (uint16_t)(assoc_ind->assocReqLength - ASSOC_REQ_IE_OFFSET));
+						assoc_req_ie, assoc_req_ie_len);
 	if (!dh_ie) {
 		sap_err("DH IE is not present");
 		return false;
@@ -2269,7 +2288,8 @@ QDF_STATUS sap_signal_hdd_event(struct sap_context *sap_ctx,
 		assoc_ind->ecsa_capable = csr_roaminfo->ecsa_capable;
 		if (csr_roaminfo->owe_pending_assoc_ind) {
 			if (!sap_fill_owe_ie_in_assoc_ind(assoc_ind,
-					 csr_roaminfo->owe_pending_assoc_ind)) {
+					 csr_roaminfo->owe_pending_assoc_ind,
+					 csr_roaminfo->fReassocReq)) {
 				sap_err("Failed to fill OWE IE");
 				qdf_mem_free(csr_roaminfo->
 					     owe_pending_assoc_ind);
