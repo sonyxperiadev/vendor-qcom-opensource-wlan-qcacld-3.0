@@ -4521,10 +4521,22 @@ enum csr_cfgdot11mode sme_phy_mode_to_dot11mode(enum wlan_phymode phy_mode);
  * Return: Max EHT channel width supported by FW (eg. 80, 160, 320)
  */
 uint32_t sme_get_eht_ch_width(void);
+
+/**
+ * sme_is_11be_capable() - Check if 11 be is supported or not
+ *
+ * Return: True if 11be is supported
+ */
+bool sme_is_11be_capable(void);
 #else /* !WLAN_FEATURE_11BE */
 static inline uint32_t sme_get_eht_ch_width(void)
 {
 	return 0;
+}
+
+static inline bool sme_is_11be_capable(void)
+{
+	return false;
 }
 #endif /* WLAN_FEATURE_11BE */
 

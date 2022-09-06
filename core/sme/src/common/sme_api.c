@@ -16199,14 +16199,9 @@ QDF_STATUS sme_switch_channel(mac_handle_t mac_handle,
 #ifdef WLAN_FEATURE_DYNAMIC_MAC_ADDR_UPDATE
 
 #ifdef WLAN_FEATURE_11BE
-static inline bool sme_is_11be_capable(void)
+bool sme_is_11be_capable(void)
 {
 	return sme_is_feature_supported_by_fw(DOT11BE);
-}
-#else
-static inline bool sme_is_11be_capable(void)
-{
-	return false;
 }
 #endif
 
