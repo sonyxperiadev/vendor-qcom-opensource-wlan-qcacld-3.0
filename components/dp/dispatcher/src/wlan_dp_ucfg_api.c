@@ -37,6 +37,7 @@
 #include "wlan_pkt_capture_ucfg_api.h"
 #include <cdp_txrx_ctrl.h>
 #include <qdf_net_stats.h>
+#include "wlan_dp_prealloc.h"
 
 void ucfg_dp_update_inf_mac(struct wlan_objmgr_psoc *psoc,
 			    struct qdf_mac_addr *cur_mac,
@@ -2281,4 +2282,30 @@ end:
 		wlan_objmgr_vdev_release_ref(vdev, WLAN_DP_ID);
 	}
 }
+#endif
+
+QDF_STATUS ucfg_dp_prealloc_init(struct cdp_ctrl_objmgr_psoc *ctrl_psoc)
+{
+	return dp_prealloc_init(ctrl_psoc);
+}
+
+void ucfg_dp_prealloc_deinit(void)
+{
+	dp_prealloc_deinit();
+}
+
+#ifdef DP_MEM_PRE_ALLOC
+void *ucfg_dp_prealloc_get_consistent_mem_unaligned(qdf_size_t size,
+						    qdf_dma_addr_t *base_addr,
+						    uint32_t ring_type)
+{
+	return dp_prealloc_get_consistent_mem_unaligned(size, base_addr,
+							ring_type);
+}
+
+void ucfg_dp_prealloc_put_consistent_mem_unaligned(void *va_unaligned)
+{
+	dp_prealloc_put_consistent_mem_unaligned(va_unaligned);
+}
+
 #endif
