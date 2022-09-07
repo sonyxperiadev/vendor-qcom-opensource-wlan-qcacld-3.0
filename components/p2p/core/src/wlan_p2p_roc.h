@@ -189,9 +189,10 @@ struct p2p_roc_context *p2p_find_roc_by_chan_freq(
 QDF_STATUS p2p_restart_roc_timer(struct p2p_roc_context *roc_ctx);
 
 /**
- * p2p_cleanup_roc_sync() - Cleanup roc context in queue
+ * p2p_cleanup_roc() - Cleanup roc context in queue
  * @p2p_soc_obj: p2p psoc private object
  * @vdev:        vdev object
+ * @sync: whether to wait for complete event
  *
  * This function cleanup roc context in queue, include the roc
  * context in progressing until cancellation done. To avoid deadlock,
@@ -199,9 +200,9 @@ QDF_STATUS p2p_restart_roc_timer(struct p2p_roc_context *roc_ctx);
  *
  * Return: QDF_STATUS_SUCCESS - in case of success
  */
-QDF_STATUS p2p_cleanup_roc_sync(
-	struct p2p_soc_priv_obj *p2p_soc_obj,
-	struct wlan_objmgr_vdev *vdev);
+QDF_STATUS p2p_cleanup_roc(struct p2p_soc_priv_obj *p2p_soc_obj,
+			   struct wlan_objmgr_vdev *vdev,
+			   bool sync);
 
 /**
  * p2p_process_cleanup_roc_queue() - process the message to cleanup roc
