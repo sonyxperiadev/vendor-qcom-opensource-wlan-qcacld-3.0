@@ -240,6 +240,10 @@ char *sta_info_string_from_dbgid(wlan_sta_info_dbgid id);
  * @pending_eap_frm_type: EAP frame type in tx queue without tx completion
  * @is_attached: Flag to check if the stainfo is attached/detached
  * @peer_rssi_per_chain: Average value of RSSI (dbm) per chain
+ * @num_tx_rate_counts: Num tx rate count for current peer
+ * @num_rx_rate_counts: Num rx rate count for current peer
+ * @tx_pkt_per_mcs: Number of tx rate counts for each MCS
+ * @rx_pkt_per_mcs: Number of rx rate counts for each MCS
  */
 struct hdd_station_info {
 	qdf_list_node_t sta_node;
@@ -305,6 +309,10 @@ struct hdd_station_info {
 	unsigned long pending_eap_frm_type;
 	bool is_attached;
 	int32_t peer_rssi_per_chain[WMI_MAX_CHAINS];
+	uint32_t num_tx_rate_count;
+	uint32_t num_rx_rate_count;
+	uint32_t *tx_pkt_per_mcs;
+	uint32_t *rx_pkt_per_mcs;
 };
 
 /**
