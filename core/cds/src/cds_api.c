@@ -86,6 +86,7 @@
 #include <qdf_trace.h>
 #include <qdf_nbuf.h>
 #include "wlan_dp_ucfg_api.h"
+#include "wlan_dp_prealloc.h"
 
 /* Preprocessor Definitions and Constants */
 
