@@ -1607,7 +1607,7 @@ int wma_mcc_vdev_tx_pause_evt_handler(void *handle, uint8_t *event,
  * @config:	Bad peer configuration from SIR module
  *
  * It is a wrapper function to sent WMI_PEER_SET_RATE_REPORT_CONDITION_CMDID
- * to the firmare\target.If the command sent to firmware failed, free the
+ * to the firmware\target. If the command sent to firmware failed, free the
  * buffer that allocated.
  *
  * Return: QDF_STATUS based on values sent to firmware
@@ -2673,6 +2673,13 @@ QDF_STATUS wma_tx_packet(void *wma_context, void *tx_frame, uint16_t frmLen,
 	mgmt_param.use_6mbps = use_6mbps;
 	mgmt_param.tx_type = tx_frm_index;
 	mgmt_param.peer_rssi = peer_rssi;
+	if (wlan_vdev_mlme_get_opmode(iface->vdev) == QDF_STA_MODE &&
+	    wlan_vdev_mlme_is_mlo_vdev(iface->vdev) &&
+	    frmType == TXRX_FRM_802_11_MGMT &&
+	    pFc->subType != SIR_MAC_MGMT_PROBE_REQ &&
+	    pFc->subType != SIR_MAC_MGMT_AUTH &&
+	    pFc->subType != SIR_MAC_MGMT_ASSOC_REQ)
+		mgmt_param.mlo_link_agnostic = true;
 
 	if (tx_flag & HAL_USE_INCORRECT_KEY_PMF)
 		mgmt_param.tx_flags |= MGMT_TX_USE_INCORRECT_KEY;

@@ -24,6 +24,39 @@
 #ifndef CFG_MLME_LFR_H__
 #define CFG_MLME_LFR_H__
 
+#ifdef CONNECTION_ROAMING_CFG
+# define RoamScan_ActiveCH_DwellTime_min 0
+# define RoamScan_ActiveCH_DwellTime_max 200
+# define RoamScan_ActiveCH_DwellTime_default 40
+#else
+# define RoamScan_ActiveCH_DwellTime_min 3
+# define RoamScan_ActiveCH_DwellTime_max 300
+# define RoamScan_ActiveCH_DwellTime_default 40
+#endif
+
+/*
+ * <ini>
+ * RoamScan_PassiveCH_DwellTime - Set max channel time for roam passive scan
+ * @Min: 0
+ * @Max: 200
+ * @Default: 130
+ *
+ * This ini is used to set maximum channel time in msecs spent in
+ * passive scan for roaming
+ *
+ * Related: None
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_ROAM_PASSIVE_MAX_CHANNEL_TIME CFG_INI_UINT(\
+		"RoamScan_PassiveCH_DwellTime",\
+		0, \
+		200, \
+		130, \
+		CFG_VALUE_OR_DEFAULT, "roam scan passive dwell time")
+
 /*
  * <ini>
  * mawc_roam_enabled - Enable/Disable MAWC during roaming
@@ -1406,8 +1439,8 @@
  * <ini>
  * gNeighborLookupThreshold/RoamRSSI_Trigger - Set neighbor lookup rssi
  * threshold
- * @Min: -100
- * @Max: 120
+ * @Min: 50
+ * @Max: 100
  * @Default: 78
  *
  * This is used to control the RSSI threshold for neighbor lookup.
@@ -1422,8 +1455,8 @@
  */
 #define CFG_LFR_NEIGHBOR_LOOKUP_RSSI_THRESHOLD CFG_INI_INT( \
 	"gNeighborLookupThreshold RoamRSSI_Trigger", \
-	-100, \
-	120, \
+	50, \
+	100, \
 	78, \
 	CFG_VALUE_OR_DEFAULT, \
 	"Neighbor lookup rssi threshold")
@@ -1534,9 +1567,9 @@
  */
 #define CFG_LFR_NEIGHBOR_SCAN_MAX_CHAN_TIME CFG_INI_UINT( \
 	"gNeighborScanChannelMaxTime RoamScan_ActiveCH_DwellTime", \
-	3, \
-	300, \
-	40, \
+	RoamScan_ActiveCH_DwellTime_min, \
+	RoamScan_ActiveCH_DwellTime_max, \
+	RoamScan_ActiveCH_DwellTime_default, \
 	CFG_VALUE_OR_DEFAULT, \
 	"Neighbor scan channel max time")
 
@@ -3177,6 +3210,7 @@
 	CFG(CFG_ROAM_SCAN_SECOND_TIMER) \
 	CFG(CFG_FT_IM_ROAMING) \
 	CFG(CFG_ROAM_INACTIVE_COUNT) \
+	CFG(CFG_ROAM_PASSIVE_MAX_CHANNEL_TIME) \
 	CFG(CFG_POST_INACTIVITY_ROAM_SCAN_PERIOD) \
 	CFG(CFG_ROAM_SCAN_INACTIVE_TIMER) \
 	CFG(CFG_BSS_LOAD_TRIG_6G_RSSI_THRES) \

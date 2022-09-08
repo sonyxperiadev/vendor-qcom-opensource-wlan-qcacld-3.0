@@ -566,6 +566,32 @@
 
 /*
  * <cfg>
+ * mlo_max_simultaneous_links- Set number of mlo simultaneous links for sta
+ * @Min: 0
+ * @Max: 1
+ * @Default: 1
+ *
+ * This cfg is used to configure the mlo max simultaneous links
+ *
+ * Related: None
+ *
+ * Supported Feature: STA
+ *
+ * Usage: Internal
+ *
+ * </cfg>
+ */
+#define CFG_MLO_MAX_SIMULTANEOUS_LINKS CFG_UINT( \
+			"mlo_max_simultaneous_links", \
+			0, \
+			1, \
+			1, \
+			CFG_VALUE_OR_DEFAULT, \
+			"mlo max simultaneous links")
+
+#define CFG_MLO_MAX_SIMULTANEOUS_LINKS_CFG CFG(CFG_MLO_MAX_SIMULTANEOUS_LINKS)
+/*
+ * <cfg>
  * mlo_support_link_band - Set band bitmap of mlo connection supports for sta
  * @Min: 1
  * @Max: 0x77
@@ -603,6 +629,7 @@
 #else
 #define CFG_MLO_SUPPORT_LINK_NUM_CFG
 #define CFG_MLO_SUPPORT_LINK_BAND_CFG
+#define CFG_MLO_MAX_SIMULTANEOUS_LINKS_CFG
 #endif
 
 #define CFG_STA_ALL \
@@ -627,6 +654,7 @@
 	CFG(CFG_TX_POWER_CTRL) \
 	CFG(CFG_MAX_LI_MODULATED_DTIM_MS) \
 	CFG_MLO_SUPPORT_LINK_NUM_CFG \
+	CFG_MLO_MAX_SIMULTANEOUS_LINKS_CFG \
 	CFG_MLO_SUPPORT_LINK_BAND_CFG
 
 #endif /* CFG_MLME_STA_H__ */

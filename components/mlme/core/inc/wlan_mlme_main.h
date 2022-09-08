@@ -456,6 +456,7 @@ struct mlme_ap_config {
  * @vdev_traffic_type: to set if vdev is LOW_LATENCY or HIGH_TPUT
  * @country_ie_for_all_band: take all band channel info in country ie
  * @mlme_ap: SAP related vdev private configurations
+ * @is_single_link_mlo_roam: Single link mlo roam flag
  */
 struct mlme_legacy_priv {
 	bool chan_switch_in_progress;
@@ -473,8 +474,13 @@ struct mlme_legacy_priv {
 	uint32_t vdev_stop_type;
 	struct wlan_mlme_roam mlme_roam;
 	struct wlan_cm_roam cm_roam;
-#ifdef WLAN_FEATURE_ROAM_OFFLOAD
-	struct wlan_log_record auth_log[MAX_ROAM_CANDIDATE_AP][WLAN_ROAM_MAX_CACHED_AUTH_FRAMES];
+#if defined(WLAN_FEATURE_ROAM_OFFLOAD) && \
+		defined(WLAN_FEATURE_CONNECTIVITY_LOGGING)
+	struct wlan_log_record
+	    auth_log[MAX_ROAM_CANDIDATE_AP][WLAN_ROAM_MAX_CACHED_AUTH_FRAMES];
+#elif defined(WLAN_FEATURE_ROAM_OFFLOAD) && defined(CONNECTIVITY_DIAG_EVENT)
+	struct wlan_diag_packet_info
+	    auth_log[MAX_ROAM_CANDIDATE_AP][WLAN_ROAM_MAX_CACHED_AUTH_FRAMES];
 #endif
 	bool bigtk_vdev_support;
 	struct sae_auth_retry sae_retry;
@@ -506,6 +512,9 @@ struct mlme_legacy_priv {
 	uint8_t vdev_traffic_type;
 	bool country_ie_for_all_band;
 	struct mlme_ap_config mlme_ap;
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_FEATURE_ROAM_OFFLOAD)
+	bool is_single_link_mlo_roam;
+#endif
 };
 
 /**
@@ -765,23 +774,6 @@ bool mlme_get_peer_pmf_status(struct wlan_objmgr_peer *peer);
  */
 enum QDF_OPMODE wlan_get_opmode_from_vdev_id(struct wlan_objmgr_pdev *pdev,
 					     uint8_t vdev_id);
-
-/**
- * wlan_mlme_get_ssid_vdev_id() - get ssid
- * @pdev: pdev object
- * @vdev_id: vdev id
- * @ssid: SSID
- * @ssid_len: Length of SSID
- *
- * API to get the SSID of vdev id, it updates the SSID and its length
- * in @ssid, @ssid_len respectively
- *
- * Return: SUCCESS, if update is done
- *          FAILURE, if ssid length is > max ssid len
- */
-QDF_STATUS wlan_mlme_get_ssid_vdev_id(struct wlan_objmgr_pdev *pdev,
-				      uint8_t vdev_id,
-				      uint8_t *ssid, uint8_t *ssid_len);
 
 /**
  * wlan_mlme_get_bssid_vdev_id() - get bss peer mac address(BSSID) using vdev id
@@ -1229,4 +1221,14 @@ wlan_mlme_is_pmk_set_deferred(struct wlan_objmgr_psoc *psoc,
 	return false;
 }
 #endif
+
+#ifdef WLAN_FEATURE_SAE
+/**
+ * wlan_vdev_is_sae_auth_type() - is vdev SAE auth type
+ * @vdev: pointer to vdev
+ *
+ * Return: true if vdev is SAE auth type
+ */
+bool wlan_vdev_is_sae_auth_type(struct wlan_objmgr_vdev *vdev);
+#endif /* WLAN_FEATURE_SAE */
 #endif

@@ -90,7 +90,7 @@ QDF_STATUS wlan_coex_deinit(void)
 static void
 wlan_coex_set_btc_chain_mode_with_ini(struct wlan_objmgr_psoc *psoc)
 {
-	uint8_t btc_chain_mode;
+	enum coex_btc_chain_mode btc_chain_mode;
 	QDF_STATUS status;
 
 	status = wlan_coex_psoc_get_btc_chain_mode(psoc, &btc_chain_mode);
@@ -101,8 +101,7 @@ wlan_coex_set_btc_chain_mode_with_ini(struct wlan_objmgr_psoc *psoc)
 
 	if (btc_chain_mode == WLAN_COEX_BTC_CHAIN_MODE_UNSETTLED) {
 		btc_chain_mode = cfg_get(psoc, CFG_SET_INIT_CHAIN_MODE_FOR_BTC);
-		if (btc_chain_mode != WLAN_COEX_BTC_CHAIN_MODE_SHARED &&
-		    btc_chain_mode != WLAN_COEX_BTC_CHAIN_MODE_SEPARATED &&
+		if (btc_chain_mode > WLAN_COEX_BTC_CHAIN_MODE_HYBRID &&
 		    btc_chain_mode != WLAN_COEX_BTC_CHAIN_MODE_UNSETTLED) {
 			coex_err("invalid ini config %d for btc chain mode",
 				 btc_chain_mode);

@@ -34,6 +34,17 @@ ifneq ($(ANDROID_BUILD_TOP),)
 endif
 endif
 
+# CFG80211_MLO_KEY_OPERATION_SUPPORT
+# Used to indicate the Linux Kernel contains support for ML key operation
+# support.
+#
+# This feature was backported to Android Common Kernel 5.15 via:
+# https://android-review.googlesource.com/c/kernel/common/+/2173923
+found = $(shell if grep -qF "nl80211_validate_key_link_id" $(srctree)/net/wireless/nl80211.c; then echo "yes" ;else echo "no" ;fi;)
+ifeq ($(findstring yes, $(found)), yes)
+cppflags-y += -DCFG80211_MLO_KEY_OPERATION_SUPPORT
+endif
+
 include $(WLAN_ROOT)/configs/$(CONFIG_QCA_CLD_WLAN_PROFILE)_defconfig
 
 # add configurations in WLAN_CFG_OVERRIDE
@@ -413,6 +424,9 @@ endif
 ifeq ($(CONFIG_WLAN_DUMP_IN_PROGRESS), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_dump_in_progress.o
 endif
+ifeq ($(CONFIG_FEATURE_SET), y)
+HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_wifi_features.o
+endif
 ifeq ($(CONFIG_WLAN_BMISS), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_bmiss.o
 endif
@@ -426,6 +440,10 @@ endif
 
 ifeq ($(CONFIG_DP_PKT_ADD_TIMESTAMP), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_add_timestamp.o
+endif
+
+ifeq ($(CONFIG_DP_TRAFFIC_END_INDICATION), y)
+HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_dp_traffic_end_indication.o
 endif
 
 ifeq ($(CONFIG_QCACLD_FEATURE_FW_STATE), y)
@@ -2602,6 +2620,33 @@ endif
 
 $(call add-wlan-objs,coex,$(COEX_OBJS))
 
+###### COAP ########
+COAP_HDD_SRC := core/hdd/src
+COAP_OS_IF_SRC := os_if/coap/src
+COAP_TGT_SRC := components/target_if/coap/src
+COAP_CORE_SRC  := components/coap/core/src
+COAP_DISPATCHER_SRC := components/coap/dispatcher/src
+COAP_WMI_SRC := components/wmi/src
+
+COAP_OS_IF_INC  := -I$(WLAN_ROOT)/os_if/coap/inc
+COAP_TGT_INC := -I$(WLAN_ROOT)/components/target_if/coap/inc
+COAP_DISPATCHER_INC := -I$(WLAN_ROOT)/components/coap/dispatcher/inc
+COAP_CORE_INC := -I$(WLAN_ROOT)/components/coap/core/inc
+COAP_WMI_INC := -I$(WLAN_ROOT)/components/wmi/inc
+
+ifeq ($(CONFIG_WLAN_FEATURE_COAP), y)
+COAP_OBJS := \
+	$(COAP_HDD_SRC)/wlan_hdd_coap.o \
+	$(COAP_OS_IF_SRC)/wlan_cfg80211_coap.o \
+	$(COAP_TGT_SRC)/target_if_coap.o  \
+	$(COAP_CORE_SRC)/wlan_coap_main.o  \
+	$(COAP_DISPATCHER_SRC)/wlan_coap_tgt_api.o \
+	$(COAP_DISPATCHER_SRC)/wlan_coap_ucfg_api.o \
+	$(COAP_WMI_SRC)/wmi_unified_coap_tlv.o
+endif
+
+$(call add-wlan-objs,coap,$(COAP_OBJS))
+
 ############## HTC ##########
 HTC_DIR := htc
 HTC_INC := -I$(WLAN_COMMON_INC)/$(HTC_DIR)
@@ -3131,6 +3176,12 @@ INCS +=		$(COEX_OS_IF_INC)
 INCS +=		$(COEX_TGT_INC)
 INCS +=		$(COEX_DISPATCHER_INC)
 INCS +=		$(COEX_CORE_INC)
+################ COAP ################
+INCS +=		$(COAP_OS_IF_INC)
+INCS +=		$(COAP_TGT_INC)
+INCS +=		$(COAP_DISPATCHER_INC)
+INCS +=		$(COAP_CORE_INC)
+INCS +=		$(COAP_WMI_INC)
 
 ccflags-y += $(INCS)
 
@@ -3139,6 +3190,7 @@ cppflags-y +=	-DANI_OS_TYPE_ANDROID=6 \
 		-Werror\
 		-D__linux__
 
+cppflags-$(CONFIG_DP_TRAFFIC_END_INDICATION) += -DDP_TRAFFIC_END_INDICATION
 cppflags-$(CONFIG_THERMAL_STATS_SUPPORT) += -DTHERMAL_STATS_SUPPORT
 cppflags-$(CONFIG_PTT_SOCK_SVC_ENABLE) += -DPTT_SOCK_SVC_ENABLE
 cppflags-$(CONFIG_FEATURE_WLAN_WAPI) += -DFEATURE_WLAN_WAPI
@@ -3264,6 +3316,7 @@ ifeq ($(CONFIG_FEATURE_MONITOR_MODE_SUPPORT), y)
 cppflags-y += -DFEATURE_MONITOR_MODE_SUPPORT
 cppflags-$(CONFIG_DP_CON_MON_MSI_ENABLED) += -DDP_CON_MON_MSI_ENABLED
 cppflags-$(CONFIG_WLAN_RX_MON_PARSE_CMN_USER_INFO) += -DWLAN_RX_MON_PARSE_CMN_USER_INFO
+cppflags-$(CONFIG_DP_CON_MON_MSI_SKIP_SET) += -DDP_CON_MON_MSI_SKIP_SET
 else
 cppflags-y += -DDISABLE_MON_CONFIG
 endif
@@ -3929,6 +3982,7 @@ cppflags-$(CONFIG_TX_ADDR_INDEX_SEARCH) += -DTX_ADDR_INDEX_SEARCH
 cppflags-$(CONFIG_QCA_SUPPORT_TX_MIN_RATES_FOR_SPECIAL_FRAMES) += -DQCA_SUPPORT_TX_MIN_RATES_FOR_SPECIAL_FRAMES
 cppflags-$(CONFIG_RX_HASH_DEBUG) += -DRX_HASH_DEBUG
 cppflags-$(CONFIG_DP_PKT_STATS_PER_LMAC) += -DDP_PKT_STATS_PER_LMAC
+cppflags-$(CONFIG_NO_RX_PKT_HDR_TLV) += -DNO_RX_PKT_HDR_TLV
 
 ifeq ($(CONFIG_QCA6290_11AX), y)
 cppflags-y += -DQCA_WIFI_QCA6290_11AX -DQCA_WIFI_QCA6290_11AX_MU_UL
@@ -4145,6 +4199,7 @@ cppflags-$(CONFIG_QCACLD_RX_DESC_MULTI_PAGE_ALLOC) += -DRX_DESC_MULTI_PAGE_ALLOC
 cppflags-$(CONFIG_SAR_SAFETY_FEATURE) += -DSAR_SAFETY_FEATURE
 
 cppflags-$(CONFIG_CONNECTION_ROAMING_CFG) += -DCONNECTION_ROAMING_CFG
+cppflags-$(CONFIG_FEATURE_SET) += -DFEATURE_SET
 
 cppflags-$(CONFIG_WLAN_FEATURE_NEAR_FULL_IRQ) += -DWLAN_FEATURE_NEAR_FULL_IRQ
 cppflags-$(CONFIG_WLAN_FEATURE_DP_EVENT_HISTORY) += -DWLAN_FEATURE_DP_EVENT_HISTORY
@@ -4528,6 +4583,9 @@ cppflags-$(CONFIG_CNSS_HW_SECURE_DISABLE) += -DFEATURE_CNSS_HW_SECURE_DISABLE
 ifeq ($(CONFIG_FEATURE_COEX), y)
 cppflags-$(CONFIG_WLAN_FEATURE_COEX_DBAM) += -DWLAN_FEATURE_DBAM_CONFIG
 endif
+
+# Flag to enable Constrained Application Protocol feature
+cppflags-$(CONFIG_WLAN_FEATURE_COAP) += -DWLAN_FEATURE_COAP
 
 KBUILD_CPPFLAGS += $(cppflags-y)
 

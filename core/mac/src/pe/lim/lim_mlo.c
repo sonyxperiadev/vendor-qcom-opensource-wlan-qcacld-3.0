@@ -1012,7 +1012,7 @@ QDF_STATUS lim_store_mlo_ie_raw_info(uint8_t *ie, uint8_t *sta_prof_ie,
 	copied = mlo_ie->num_data;
 	pfrm = buf + copied;
 	while (copied < ml_ie_len && sta_index < WLAN_MLO_MAX_VDEVS &&
-	       pfrm[ID_POS] == WLAN_ML_BV_LINFO_SUBELEMID_PERSTAPROFILE) {
+	       pfrm[ID_POS] == WLAN_ML_LINFO_SUBELEMID_PERSTAPROFILE) {
 		sta_prof = &mlo_ie->sta_profile[sta_index++];
 		sta_data = sta_prof->data;
 
@@ -1033,7 +1033,7 @@ QDF_STATUS lim_store_mlo_ie_raw_info(uint8_t *ie, uint8_t *sta_prof_ie,
 			if (copied < ml_ie_len &&
 			    pfrm[TAG_LEN_POS] == WLAN_MAX_IE_LEN &&
 			    pfrm[WLAN_MAX_IE_LEN + MIN_IE_LEN] ==
-					WLAN_ML_BV_LINFO_SUBELEMID_FRAGMENT) {
+					WLAN_ML_LINFO_SUBELEMID_FRAGMENT) {
 				frag = TRUE;
 				/* skip sta profile frag IE */
 				copied += MIN_IE_LEN;
@@ -1081,7 +1081,7 @@ QDF_STATUS lim_add_frag_ie_for_sta_profile(uint8_t *data, uint16_t *len)
 	for (i = 0; i < (*len - MIN_IE_LEN); i++) {
 		data[consumed++] = buf[index++];
 		if (i && i % WLAN_MAX_IE_LEN == 0) {
-			data[consumed++] = WLAN_ML_BV_LINFO_SUBELEMID_FRAGMENT;
+			data[consumed++] = WLAN_ML_LINFO_SUBELEMID_FRAGMENT;
 			if ((*len - MIN_IE_LEN - i) > WLAN_MAX_IE_LEN)
 				data[consumed++] = WLAN_MAX_IE_LEN;
 			else

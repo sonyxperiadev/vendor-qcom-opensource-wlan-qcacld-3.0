@@ -118,6 +118,8 @@
 #include "wlan_pkt_capture_ucfg_api.h"
 #include "target_if_cm_roam_event.h"
 #include "wlan_fwol_ucfg_api.h"
+#include "wlan_tdls_api.h"
+#include "wlan_twt_cfg_ext_api.h"
 
 #define WMA_LOG_COMPLETION_TIMER 500 /* 500 msecs */
 #define WMI_TLV_HEADROOM 128
@@ -297,6 +299,248 @@ static void wma_set_peer_map_unmap_v2_config(struct wlan_objmgr_psoc *psoc,
 {
 	tgt_cfg->peer_map_unmap_v2 = false;
 }
+#endif
+
+#ifdef FEATURE_SET
+/**
+ * wma_get_concurrency_support() - Get concurrency support
+ * @psoc: Object manager psoc
+ *
+ * Return: WMI_HOST_BAND_CONCURRENCY
+ */
+static WMI_HOST_BAND_CONCURRENCY
+wma_get_concurrency_support(struct wlan_objmgr_psoc *psoc)
+{
+	bool is_sbs_enabled = false;
+
+	if (policy_mgr_is_dual_mac_disabled_in_ini(psoc))
+		return WMI_HOST_BAND_CONCURRENCY_NONE;
+
+	policy_mgr_get_sbs_cfg(psoc, &is_sbs_enabled);
+
+	if (is_sbs_enabled)
+		return WMI_HOST_BAND_CONCURRENCY_DBS_SBS;
+	else
+		return WMI_HOST_BAND_CONCURRENCY_DBS;
+}
+
+/**
+ * wma_set_feature_set_info() - Set feature set info
+ * @wma_handle: WMA handle
+ * @feature_set: Feature set structure which needs to be filled
+ *
+ * Return: WMI_HOST_BAND_CONCURRENCY
+ */
+static void wma_set_feature_set_info(tp_wma_handle wma_handle,
+				     struct target_feature_set *feature_set)
+{
+	struct cds_context *cds_ctx =
+		(struct cds_context *)(wma_handle->cds_context);
+	struct wlan_objmgr_psoc *psoc;
+	struct wlan_scan_features scan_feature_set;
+	struct wlan_twt_features twt_feature_set;
+	struct wlan_mlme_features mlme_feature_set;
+	struct wlan_tdls_features tdls_feature_set;
+
+	psoc = wma_handle->psoc;
+	if (!psoc) {
+		wma_err("Invalid psoc");
+		return;
+	}
+
+	if (!cds_ctx) {
+		wma_err("Invalid cds context");
+		return;
+	}
+
+	if (!cds_ctx->cds_cfg) {
+		wma_err("Invalid cds config");
+		return;
+	}
+
+	feature_set->wifi_standard =
+			cds_ctx->cds_cfg->cds_feature_set.wifi_standard;
+	feature_set->sap_5g_supported =
+			cds_ctx->cds_cfg->cds_feature_set.sap_5g_supported;
+	feature_set->sap_6g_supported =
+			cds_ctx->cds_cfg->cds_feature_set.sap_6g_supported;
+
+	feature_set->concurrency_support = wma_get_concurrency_support(psoc);
+
+	wlan_scan_get_feature_info(psoc, &scan_feature_set);
+	feature_set->pno_in_unassoc_state =
+					scan_feature_set.pno_in_unassoc_state;
+	if (feature_set->pno_in_unassoc_state)
+		feature_set->pno_in_assoc_state =
+					scan_feature_set.pno_in_assoc_state;
+
+	wlan_twt_get_feature_info(psoc, &twt_feature_set);
+	feature_set->enable_twt = twt_feature_set.enable_twt;
+	if (feature_set->enable_twt) {
+		feature_set->enable_twt_requester =
+					twt_feature_set.enable_twt_requester;
+		feature_set->enable_twt_broadcast =
+					twt_feature_set.enable_twt_broadcast;
+		feature_set->enable_twt_flexible =
+					twt_feature_set.enable_twt_flexible;
+	}
+
+	feature_set->enable_rfc835 = true;
+
+	wlan_mlme_get_feature_info(psoc, &mlme_feature_set);
+
+	feature_set->enable_wifi_optimizer =
+				mlme_feature_set.enable_wifi_optimizer;
+	feature_set->sap_max_num_clients =
+				mlme_feature_set.sap_max_num_clients;
+
+	feature_set->vendor_req_1_version =
+				mlme_feature_set.vendor_req_1_version;
+	feature_set->roaming_high_cu_roam_trigger =
+				mlme_feature_set.roaming_high_cu_roam_trigger;
+	feature_set->roaming_emergency_trigger =
+				mlme_feature_set.roaming_emergency_trigger;
+	feature_set->roaming_btm_trihgger =
+					mlme_feature_set.roaming_btm_trihgger;
+	feature_set->roaming_idle_trigger =
+					mlme_feature_set.roaming_idle_trigger;
+	feature_set->roaming_wtc_trigger =
+				mlme_feature_set.roaming_wtc_trigger;
+	feature_set->roaming_btcoex_trigger =
+				mlme_feature_set.roaming_btcoex_trigger;
+	feature_set->roaming_btw_wpa_wpa2 =
+					mlme_feature_set.roaming_btw_wpa_wpa2;
+	feature_set->roaming_manage_chan_list_api =
+				mlme_feature_set.roaming_manage_chan_list_api;
+
+	feature_set->roaming_adaptive_11r =
+					mlme_feature_set.roaming_adaptive_11r;
+	feature_set->roaming_ctrl_api_get_set =
+				mlme_feature_set.roaming_ctrl_api_get_set;
+	feature_set->roaming_ctrl_api_reassoc =
+				mlme_feature_set.roaming_ctrl_api_reassoc;
+	feature_set->roaming_ctrl_get_cu =
+					mlme_feature_set.roaming_ctrl_get_cu;
+	feature_set->vendor_req_2_version =
+			mlme_feature_set.vendor_req_2_version;
+	feature_set->sta_dual_p2p_support =
+					mlme_feature_set.sta_dual_p2p_support;
+	if (mlme_feature_set.enable2x2)
+		feature_set->num_antennas = WMI_HOST_MIMO_2X2;
+	else
+		feature_set->num_antennas = WMI_HOST_SISO;
+
+	feature_set->set_country_code_hal_supported = true;
+	feature_set->get_valid_channel_supported = true;
+	feature_set->supported_dot11mode = feature_set->wifi_standard;
+	feature_set->sap_wpa3_support = true;
+	feature_set->assurance_disconnect_reason_api = true;
+	feature_set->frame_pcap_log_mgmt = true;
+	feature_set->frame_pcap_log_ctrl = true;
+	feature_set->frame_pcap_log_data = true;
+
+	/*
+	 * This information is hardcoded based on hdd_sta_akm_suites,
+	 *wlan_crypto_key_mgmt and wlan_crypto_rsnx_cap
+	 */
+
+	/* WLAN_CRYPTO_RSNX_CAP_SAE_H2E support*/
+	feature_set->security_wpa3_sae_h2e = true;
+	feature_set->security_wpa3_sae_ft = true;
+	feature_set->security_wpa3_enterp_suitb = true;
+	feature_set->security_wpa3_enterp_suitb_192bit = true;
+	feature_set->security_fills_sha_256 = true;
+	feature_set->security_fills_sha_384 = true;
+	feature_set->security_fills_sha_256_FT = true;
+	feature_set->security_fills_sha_384_FT = true;
+	/* This is OWE security support */
+	feature_set->security_enhanced_open = true;
+
+	feature_set->enable_nan = cfg_nan_get_enable(psoc);
+
+	wlan_tdls_get_features_info(psoc, &tdls_feature_set);
+	feature_set->enable_tdls = tdls_feature_set.enable_tdls;
+	if (feature_set->enable_tdls) {
+		feature_set->enable_tdls_offchannel =
+				tdls_feature_set.enable_tdls_offchannel;
+		feature_set->max_tdls_peers = tdls_feature_set.max_tdls_peers;
+		feature_set->enable_tdls_capability_enhance =
+			tdls_feature_set.enable_tdls_capability_enhance;
+	}
+
+	feature_set->enable_p2p_6e = policy_mgr_is_6ghz_conc_mode_supported(
+							psoc,
+							PM_P2P_CLIENT_MODE);
+
+	feature_set->peer_bigdata_getbssinfo_support = true;
+	feature_set->peer_bigdata_assocreject_info_support = true;
+	feature_set->peer_getstainfo_support = true;
+	feature_set->feature_set_version = 1;
+}
+
+/**
+ * wma_send_feature_set_cmd() - Send feature set command to FW
+ * @wma_handle: WMA handle
+ *
+ * Return: None
+ */
+static void wma_send_feature_set_cmd(tp_wma_handle wma_handle)
+{
+	struct target_feature_set feature_set;
+
+	if (!wma_handle) {
+		wma_err("Invalid wma_handle");
+		return;
+	}
+
+	wma_set_feature_set_info(wma_handle, &feature_set);
+
+	wmi_feature_set_cmd_send(wma_handle->wmi_handle,
+				 &feature_set);
+}
+
+/**
+ * wma_is_feature_set_supported() - Check if feaure set is supported or not
+ * @wma_handle: WMA handle
+ *
+ * Return: True, if feature set is supporte lese return false
+ */
+static bool wma_is_feature_set_supported(tp_wma_handle wma_handle)
+{
+	struct cds_context *cds_ctx =
+		(struct cds_context *)(wma_handle->cds_context);
+	bool is_feature_enabled_from_fw;
+
+	if (!cds_ctx) {
+		wma_err("Invalid cds context");
+		return false;
+	}
+
+	if (!cds_ctx->cds_cfg) {
+		wma_err("Invalid cds config");
+		return false;
+	}
+
+	is_feature_enabled_from_fw =
+		wmi_service_enabled(wma_handle->wmi_handle,
+				    wmi_service_feature_set_event_support);
+
+	if (!is_feature_enabled_from_fw)
+		wma_debug("Get wifi feature is disabled from fw");
+
+	return (is_feature_enabled_from_fw &&
+		cds_ctx->cds_cfg->get_wifi_features);
+}
+#else
+static inline void wma_send_feature_set_cmd(tp_wma_handle wma_handle)
+{
+}
+
+static bool wma_is_feature_set_supported(tp_wma_handle wma_handle)
+{
+	return false;
+}
+
 #endif
 
 /**
@@ -2132,7 +2376,7 @@ static inline void wma_process_cal_fail_info(uint8_t *wmi_event)
 /**
  * wma_flush_complete_evt_handler() - FW log flush complete event handler
  * @handle: WMI handle
- * @event:  Event recevied from FW
+ * @event:  Event received from FW
  * @len:    Length of the event
  *
  */
@@ -3762,7 +4006,7 @@ static int wma_log_supported_evt_handler(void *handle,
 /**
  * wma_pdev_set_hw_mode_resp_evt_handler() - Set HW mode resp evt handler
  * @handle: WMI handle
- * @event:  Event recevied from FW
+ * @event:  Event received from FW
  * @len:    Length of the event
  *
  * Event handler for WMI_PDEV_SET_HW_MODE_RESP_EVENTID that is sent to host
@@ -4001,7 +4245,7 @@ wma_process_mac_freq_mapping(struct cm_hw_mode_trans_ind *hw_mode_trans_ind,
 /**
  * wma_pdev_hw_mode_transition_evt_handler() - HW mode transition evt handler
  * @handle: WMI handle
- * @event:  Event recevied from FW
+ * @event:  Event received from FW
  * @len:    Length of the event
  *
  * Event handler for WMI_PDEV_HW_MODE_TRANSITION_EVENTID that indicates an
@@ -6972,12 +7216,17 @@ int wma_rx_service_ready_ext_event(void *handle, uint8_t *event,
 	 * If firmware is going to create NAN discovery vdev, host should
 	 * indicate 3 vdevs and firmware shall add 1 vdev for NAN. So decrement
 	 * the num_vdevs by 1.
+	 * If NAN is not supported on some target(disabled through ini
+	 * param gEnableNanSupport), there is no use of reserving one vdev for
+	 * it in firmware though firmware advertises wmi_service_nan. Indicate
+	 * firmware that host is going to take care of the NAN vdev. Host can
+	 * use the vdev either for NAN or other operations on need basis.
 	 */
 
-	if (wmi_service_enabled(wma_handle->wmi_handle, wmi_service_nan) &&
-	    cfg_nan_get_enable(wma_handle->psoc)) {
+	if (wmi_service_enabled(wma_handle->wmi_handle, wmi_service_nan)) {
 		if (ucfg_nan_is_vdev_creation_allowed(wma_handle->psoc) ||
-		    QDF_GLOBAL_FTM_MODE == cds_get_conparam()) {
+		    QDF_GLOBAL_FTM_MODE == cds_get_conparam() ||
+		    !cfg_nan_get_enable(wma_handle->psoc)) {
 			wlan_res_cfg->nan_separate_iface_support = true;
 		} else {
 			wlan_res_cfg->num_vdevs--;
@@ -7036,6 +7285,9 @@ int wma_rx_ready_event(void *handle, uint8_t *cmd_param_info,
 	}
 
 	wma_debug("WMA <-- WMI_READY_EVENTID");
+
+	if (wma_is_feature_set_supported(wma_handle))
+		wma_send_feature_set_cmd(wma_handle);
 
 	ev = param_buf->fixed_param;
 	/* Indicate to the waiting thread that the ready

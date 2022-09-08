@@ -28,6 +28,7 @@
 #include "wlan_cm_roam_ucfg_api.h"
 #include <wlan_cm_ucfg_api.h>
 #include "wlan_dp_nud_tracking.h"
+#include "wlan_vdev_mgr_ucfg_api.h"
 
 #ifdef WLAN_NUD_TRACKING
 /**
@@ -206,23 +207,36 @@ static void dp_nud_capture_stats(struct wlan_dp_intf *dp_intf,
  */
 static bool dp_nud_honour_failure(struct wlan_dp_intf *dp_intf)
 {
-	uint32_t tx_transmitted;
-	uint32_t tx_acked;
-	uint32_t gw_rx_pkt;
+	uint32_t tx_transmitted, tx_acked, gw_rx_pkt, rx_received;
 	struct dp_nud_tracking_info *nud_tracking = &dp_intf->nud_tracking;
+	struct wlan_objmgr_vdev *vdev;
+	uint8_t bssid[QDF_MAC_ADDR_SIZE];
+	bool ap_is_gateway;
+
+	vdev = dp_objmgr_get_vdev_by_user(dp_intf, WLAN_DP_ID);
+	if (!vdev)
+		goto fail;
+	ucfg_wlan_vdev_mgr_get_param_bssid(vdev, bssid);
+	dp_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 
 	tx_transmitted = nud_tracking->tx_rx_stats.post_tx_packets -
 		nud_tracking->tx_rx_stats.pre_tx_packets;
 	tx_acked = nud_tracking->tx_rx_stats.post_tx_acked -
 		nud_tracking->tx_rx_stats.pre_tx_acked;
 	gw_rx_pkt = qdf_atomic_read(&nud_tracking->tx_rx_stats.gw_rx_packets);
+	rx_received = nud_tracking->tx_rx_stats.post_rx_packets -
+		nud_tracking->tx_rx_stats.pre_rx_packets;
+	ap_is_gateway = qdf_is_macaddr_equal(&dp_intf->nud_tracking.gw_mac_addr,
+					     (struct qdf_mac_addr *)bssid);
 
-	if (!tx_transmitted || !tx_acked || !gw_rx_pkt) {
+	if (!tx_transmitted || !tx_acked ||
+	    !(gw_rx_pkt || (ap_is_gateway && rx_received))) {
 		dp_info("NUD_FAILURE_HONORED [mac:" QDF_MAC_ADDR_FMT "]",
 			QDF_MAC_ADDR_REF(nud_tracking->gw_mac_addr.bytes));
 		dp_nud_stats_info(dp_intf);
 		return true;
 	}
+fail:
 	dp_info("NUD_FAILURE_NOT_HONORED [mac:" QDF_MAC_ADDR_FMT "]",
 		QDF_MAC_ADDR_REF(nud_tracking->gw_mac_addr.bytes));
 

@@ -37,6 +37,8 @@
 #include "wlan_cfg80211_mc_cp_stats.h"
 #include "sir_api.h"
 #include "wlan_tdls_ucfg_api.h"
+#include "wlan_cm_roam_api.h"
+#include "wlan_mlo_mgr_sta.h"
 
 #define TDLS_MAX_NO_OF_2_4_CHANNELS 14
 
@@ -176,21 +178,52 @@ is_duplicate_freq(qdf_freq_t *arr, uint8_t index, qdf_freq_t freq)
 }
 
 static uint8_t
-tdls_fill_chan_freq_from_supported_ch_list(const uint8_t *src_chans,
+tdls_fill_chan_freq_from_supported_ch_list(struct wlan_objmgr_pdev *pdev,
+					   const uint8_t *country,
+					   const uint8_t *src_chans,
 					   uint8_t src_chan_num,
-					   const uint8_t *src_opclass,
-					   uint8_t src_num_opclass,
+					   uint8_t src_opclass,
+					   uint8_t *num_freq,
 					   qdf_freq_t *freq_lst)
 {
-	uint8_t i = 0, j = 0, num_unique_freq = 0;
+	uint8_t i = 0, j = 0, num_unique_freq = *num_freq;
+	uint8_t chan_count;
+	uint8_t wifi_chan_index;
+	uint8_t next_ch;
 	qdf_freq_t freq;
 
-	for (i = 0; i < src_num_opclass; i++) {
-		for (j = 0; j < src_chan_num; j++) {
-			freq = wlan_reg_chan_opclass_to_freq(src_chans[j],
-						      src_opclass[i], false);
+	for (i = 0; i < src_chan_num &&
+	     num_unique_freq < WLAN_MAC_MAX_SUPP_CHANNELS; i += 2) {
+		freq = wlan_reg_country_chan_opclass_to_freq(pdev, country,
+							     src_chans[i],
+							     src_opclass,
+							     false);
 
-			if (is_duplicate_freq(freq_lst, num_unique_freq, freq))
+		if (!freq || is_duplicate_freq(freq_lst, num_unique_freq, freq))
+			continue;
+
+		if (wlan_reg_is_6ghz_chan_freq(freq) &&
+		    !wlan_reg_is_6ghz_psc_chan_freq(freq)) {
+			osif_debug("skipping non-psc channel %d", freq);
+			continue;
+		}
+
+		chan_count = src_chans[i + 1];
+		wifi_chan_index = ((src_chans[i] <= WLAN_CHANNEL_14) ? 1 : 4);
+		freq_lst[num_unique_freq] = freq;
+		num_unique_freq++;
+		next_ch = src_chans[i];
+		osif_debug("freq %d index %d ", freq, num_unique_freq);
+
+		for (j = 1; j < chan_count &&
+		     num_unique_freq < WLAN_MAC_MAX_SUPP_CHANNELS; j++) {
+			next_ch += wifi_chan_index;
+			freq = wlan_reg_country_chan_opclass_to_freq(
+							pdev, country, next_ch,
+							src_opclass, false);
+
+			if (!freq ||
+			    is_duplicate_freq(freq_lst, num_unique_freq, freq))
 				continue;
 
 			if (wlan_reg_is_6ghz_chan_freq(freq) &&
@@ -209,28 +242,51 @@ tdls_fill_chan_freq_from_supported_ch_list(const uint8_t *src_chans,
 			}
 		}
 	}
+	*num_freq = num_unique_freq;
 
 	return num_unique_freq;
 }
 
 static void
-tdls_calc_channels_from_staparams(struct tdls_update_peer_params *req_info,
+tdls_calc_channels_from_staparams(struct wlan_objmgr_vdev *vdev,
+				  struct tdls_update_peer_params *req_info,
 				  struct station_parameters *params)
 {
 	uint8_t i = 0;
 	uint8_t num_unique_freq = 0;
 	const uint8_t *src_chans, *src_opclass;
 	qdf_freq_t *dest_freq;
+	uint8_t country[REG_ALPHA2_LEN + 1];
+	QDF_STATUS status;
+	struct wlan_objmgr_pdev *pdev;
 
+	if (!vdev) {
+		osif_err("null vdev");
+		return;
+	}
+
+	pdev = wlan_vdev_get_pdev(vdev);
+	if (!pdev) {
+		osif_err("null pdev");
+		return;
+	}
 	src_chans = params->supported_channels;
 	src_opclass = params->supported_oper_classes;
 	dest_freq = req_info->supported_chan_freq;
+	pdev = wlan_vdev_get_pdev(vdev);
+	status = wlan_cm_get_country_code(pdev, wlan_vdev_get_id(vdev),
+					  country);
 
-	num_unique_freq = tdls_fill_chan_freq_from_supported_ch_list(src_chans,
-					     params->supported_channels_len,
-					     src_opclass,
-					     params->supported_oper_classes_len,
-					     dest_freq);
+	osif_debug("Country info from AP:%c%c 0x%x", country[0],
+		   country[1], country[2]);
+
+	for (i = 0; i < params->supported_oper_classes_len; i++)
+		tdls_fill_chan_freq_from_supported_ch_list(
+						pdev, country, src_chans,
+						params->supported_channels_len,
+						src_opclass[i],
+						&num_unique_freq,
+						dest_freq);
 
 	osif_debug("Unique Channel List: supported_channels ");
 	for (i = 0; i < num_unique_freq; i++)
@@ -303,7 +359,8 @@ wlan_cfg80211_tdls_extract_he_params(struct tdls_update_peer_params *req_info,
 #endif
 
 static void
-wlan_cfg80211_tdls_extract_params(struct tdls_update_peer_params *req_info,
+wlan_cfg80211_tdls_extract_params(struct wlan_objmgr_vdev *vdev,
+				  struct tdls_update_peer_params *req_info,
 				  struct station_parameters *params,
 				  bool tdls_11ax_support, bool tdls_6g_support)
 {
@@ -335,7 +392,7 @@ wlan_cfg80211_tdls_extract_params(struct tdls_update_peer_params *req_info,
 		params->supported_oper_classes_len;
 
 	if (params->supported_channels_len)
-		tdls_calc_channels_from_staparams(req_info, params);
+		tdls_calc_channels_from_staparams(vdev, req_info, params);
 
 	if (params->ext_capab_len)
 		qdf_mem_copy(req_info->extn_capability, params->ext_capab,
@@ -425,7 +482,8 @@ int wlan_cfg80211_tdls_update_peer(struct wlan_objmgr_vdev *vdev,
 
 	tdls_11ax_support = ucfg_tdls_is_fw_11ax_capable(psoc);
 	tdls_6g_support = ucfg_tdls_is_fw_6g_capable(psoc);
-	wlan_cfg80211_tdls_extract_params(req_info, params, tdls_11ax_support,
+	wlan_cfg80211_tdls_extract_params(vdev, req_info, params,
+					  tdls_11ax_support,
 					  tdls_6g_support);
 
 	osif_priv = wlan_vdev_get_ospriv(vdev);
@@ -603,9 +661,10 @@ void wlan_cfg80211_tdls_rx_callback(void *user_data,
 	struct tdls_rx_mgmt_frame *rx_frame)
 {
 	struct wlan_objmgr_psoc *psoc;
-	struct wlan_objmgr_vdev *vdev;
+	struct wlan_objmgr_vdev *vdev, *assoc_vdev;
 	struct vdev_osif_priv *osif_priv;
 	struct wireless_dev *wdev;
+	enum QDF_OPMODE opmode;
 
 	psoc = user_data;
 	if (!psoc) {
@@ -620,7 +679,18 @@ void wlan_cfg80211_tdls_rx_callback(void *user_data,
 		return;
 	}
 
-	osif_priv = wlan_vdev_get_ospriv(vdev);
+	assoc_vdev = vdev;
+	opmode = wlan_vdev_mlme_get_opmode(vdev);
+
+	if (opmode == QDF_STA_MODE && wlan_vdev_mlme_is_mlo_vdev(vdev)) {
+		assoc_vdev = ucfg_mlo_get_assoc_link_vdev(vdev);
+		if (!assoc_vdev) {
+			osif_err("assoc vdev is null");
+			goto fail;
+		}
+	}
+
+	osif_priv = wlan_vdev_get_ospriv(assoc_vdev);
 	if (!osif_priv) {
 		osif_err("osif_priv is null");
 		goto fail;

@@ -591,18 +591,9 @@ static bool lim_is_preauth_ctx_exists(struct mac_context *mac_ctx,
 }
 
 #ifdef WLAN_FEATURE_SAE
-/**
- * lim_process_mlm_auth_req_sae() - Handle SAE authentication
- * @mac_ctx: global MAC context
- * @session: PE session entry
- *
- * This function is called by lim_process_mlm_auth_req to handle SAE
- * authentication.
- *
- * Return: QDF_STATUS
- */
-static QDF_STATUS lim_process_mlm_auth_req_sae(struct mac_context *mac_ctx,
-		struct pe_session *session)
+QDF_STATUS lim_trigger_auth_req_sae(struct mac_context *mac_ctx,
+				    struct pe_session *session,
+				    struct qdf_mac_addr *peer_bssid)
 {
 	QDF_STATUS qdf_status = QDF_STATUS_SUCCESS;
 	struct sir_sae_info *sae_info;
@@ -616,9 +607,7 @@ static QDF_STATUS lim_process_mlm_auth_req_sae(struct mac_context *mac_ctx,
 	sae_info->msg_len = sizeof(*sae_info);
 	sae_info->vdev_id = session->smeSessionId;
 
-	qdf_mem_copy(sae_info->peer_mac_addr.bytes,
-		session->bssId,
-		QDF_MAC_ADDR_SIZE);
+	qdf_copy_macaddr(&sae_info->peer_mac_addr, peer_bssid);
 
 	sae_info->ssid.length = session->ssId.length;
 	qdf_mem_copy(sae_info->ssid.ssId,
@@ -641,6 +630,31 @@ static QDF_STATUS lim_process_mlm_auth_req_sae(struct mac_context *mac_ctx,
 		qdf_mem_free(sae_info);
 		return qdf_status;
 	}
+
+	return qdf_status;
+}
+
+/**
+ * lim_process_mlm_auth_req_sae() - Handle SAE authentication
+ * @mac_ctx: global MAC context
+ * @session: PE session entry
+ *
+ * This function is called by lim_process_mlm_auth_req to handle SAE
+ * authentication.
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS lim_process_mlm_auth_req_sae(struct mac_context *mac_ctx,
+					       struct pe_session *session)
+{
+	QDF_STATUS qdf_status;
+
+	qdf_status = lim_trigger_auth_req_sae(
+					mac_ctx, session,
+					(struct qdf_mac_addr *)session->bssId);
+	if (QDF_IS_STATUS_ERROR(qdf_status))
+		return qdf_status;
+
 	session->limMlmState = eLIM_MLM_WT_SAE_AUTH_STATE;
 
 	MTRACE(mac_trace(mac_ctx, TRACE_CODE_MLM_STATE, session->peSessionId,

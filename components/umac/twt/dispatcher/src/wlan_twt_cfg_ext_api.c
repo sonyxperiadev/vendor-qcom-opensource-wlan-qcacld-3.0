@@ -17,6 +17,8 @@
  */
 #include <wlan_twt_cfg_ext_api.h>
 #include "twt/core/src/wlan_twt_cfg.h"
+#include "wlan_mlme_api.h"
+#include "wlan_mlme_twt_api.h"
 
 QDF_STATUS
 wlan_twt_cfg_get_req_flag(struct wlan_objmgr_psoc *psoc, bool *val)
@@ -41,3 +43,21 @@ wlan_twt_cfg_get_support_requestor(struct wlan_objmgr_psoc *psoc, bool *val)
 {
 	return wlan_twt_cfg_get_requestor(psoc, val);
 }
+
+#ifdef FEATURE_SET
+void wlan_twt_get_feature_info(struct wlan_objmgr_psoc *psoc,
+			       struct wlan_twt_features *twt_feature_set)
+{
+	twt_feature_set->enable_twt = mlme_is_twt_enabled(psoc);
+	if (twt_feature_set->enable_twt) {
+		wlan_twt_cfg_get_bcast_requestor(
+					psoc,
+					&twt_feature_set->enable_twt_broadcast);
+		wlan_twt_cfg_get_requestor(
+					psoc,
+					&twt_feature_set->enable_twt_requester);
+		twt_feature_set->enable_twt_flexible =
+					mlme_is_flexible_twt_enabled(psoc);
+	}
+}
+#endif

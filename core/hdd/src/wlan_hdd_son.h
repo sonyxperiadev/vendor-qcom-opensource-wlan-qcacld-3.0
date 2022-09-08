@@ -56,12 +56,13 @@ int hdd_son_deliver_acs_complete_event(struct hdd_adapter *adapter);
 /**
  * hdd_son_deliver_cac_status_event() - send cac status to son
  * @adapter: adapter object
+ * @freq: the operating frequency when radar is detected
  * @radar_detected: true if radar is detected else false
  *
  * Return: 0 if event is sent successfully
  */
 int hdd_son_deliver_cac_status_event(struct hdd_adapter *adapter,
-				     bool radar_detected);
+				     qdf_freq_t freq, bool radar_detected);
 
 /**
  * hdd_son_deliver_assoc_disassoc_event() - send sta assoc disassoc event
@@ -135,7 +136,7 @@ static inline int
 
 static inline int
 	hdd_son_deliver_cac_status_event(struct hdd_adapter *adapter,
-					 bool radar_detected)
+					 qdf_freq_t freq, bool radar_detected)
 {
 	return 0;
 }

@@ -254,8 +254,10 @@ target_if_dp_set_arp_req_stats(struct wlan_objmgr_psoc *psoc,
 		dp_err("Can't get vdev by vdev_id:%d", req_buf->vdev_id);
 		return QDF_STATUS_E_INVAL;
 	}
-	if (!wlan_vdev_is_up(vdev)) {
-		dp_debug("vdev id:%d is not started", req_buf->vdev_id);
+
+	status = wlan_vdev_is_up(vdev);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		dp_err("vdev id:%d is not started", req_buf->vdev_id);
 		status = QDF_STATUS_E_INVAL;
 		goto release_ref;
 	}

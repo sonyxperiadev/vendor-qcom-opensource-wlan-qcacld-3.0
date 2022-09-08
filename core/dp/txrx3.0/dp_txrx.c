@@ -724,6 +724,9 @@ QDF_STATUS dp_prealloc_init(struct cdp_ctrl_objmgr_psoc *ctrl_psoc)
 		mp->in_use = false;
 		dp_update_num_elements_by_desc_type(&cfg, mp->desc_type,
 						    &mp->element_num);
+		if (mp->cacheable)
+			mp->pages.page_size = DP_BLOCKMEM_SIZE;
+
 		qdf_mem_multi_pages_alloc(qdf_ctx, &mp->pages,
 					  mp->element_size,
 					  mp->element_num,

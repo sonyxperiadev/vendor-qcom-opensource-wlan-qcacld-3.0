@@ -433,6 +433,21 @@ policy_mgr_update_valid_ch_freq_list(struct policy_mgr_psoc_priv_obj *pm_ctx,
 	pm_ctx->valid_ch_freq_list_count = j;
 }
 
+#ifdef FEATURE_WLAN_CH_AVOID_EXT
+void
+policy_mgr_set_freq_restriction_mask(struct policy_mgr_psoc_priv_obj *pm_ctx,
+				     struct ch_avoid_ind_type *freq_list)
+{
+	pm_ctx->restriction_mask = freq_list->restriction_mask;
+}
+
+uint32_t
+policy_mgr_get_freq_restriction_mask(struct policy_mgr_psoc_priv_obj *pm_ctx)
+{
+	return pm_ctx->restriction_mask;
+}
+#endif
+
 void
 policy_mgr_reg_chan_change_callback(struct wlan_objmgr_psoc *psoc,
 				    struct wlan_objmgr_pdev *pdev,
@@ -442,6 +457,7 @@ policy_mgr_reg_chan_change_callback(struct wlan_objmgr_psoc *psoc,
 {
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
 	uint32_t i;
+	struct ch_avoid_ind_type *freq_list;
 
 	pm_ctx = policy_mgr_get_context(psoc);
 	if (!pm_ctx) {
@@ -465,6 +481,9 @@ policy_mgr_reg_chan_change_callback(struct wlan_objmgr_psoc *psoc,
 	pm_ctx->unsafe_channel_count = avoid_freq_ind->chan_list.chan_cnt >=
 			NUM_CHANNELS ?
 			NUM_CHANNELS : avoid_freq_ind->chan_list.chan_cnt;
+
+	freq_list = &avoid_freq_ind->freq_list;
+	policy_mgr_set_freq_restriction_mask(pm_ctx, freq_list);
 
 	for (i = 0; i < pm_ctx->unsafe_channel_count; i++)
 		pm_ctx->unsafe_channel_list[i] =
@@ -3370,6 +3389,7 @@ QDF_STATUS policy_mgr_get_valid_chan_weights(struct wlan_objmgr_psoc *psoc,
 			info[MAX_NUMBER_OF_CONC_CONNECTIONS] = { {0} };
 	uint8_t num_del = 0;
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	bool strict_follow_pcl = false;
 
 	pm_ctx = policy_mgr_get_context(psoc);
 	if (!pm_ctx) {
@@ -3402,30 +3422,43 @@ QDF_STATUS policy_mgr_get_valid_chan_weights(struct wlan_objmgr_psoc *psoc,
 								   &num_del);
 		}
 		/*
+		 * For two port/three port connection strictly follow
+		 * PCL weight if coming intf is p2p GO/GC and existing
+		 * vdev is SAP/P2PGO/P2PGC.
+		 */
+		if ((mode == PM_P2P_GO_MODE || mode == PM_P2P_CLIENT_MODE) &&
+		    (policy_mgr_mode_specific_connection_count(
+						psoc, PM_SAP_MODE, NULL) ||
+		     policy_mgr_mode_specific_connection_count(
+						psoc, PM_P2P_GO_MODE, NULL) ||
+		     policy_mgr_mode_specific_connection_count(
+					psoc, PM_P2P_CLIENT_MODE, NULL)))
+			strict_follow_pcl = true;
+
+		/*
 		 * There is a small window between releasing the above lock
 		 * and acquiring the same in policy_mgr_allow_concurrency,
 		 * below!
 		 */
+
 		for (i = 0; i < weight->saved_num_chan; i++) {
-			if (policy_mgr_is_concurrency_allowed
+			/*
+			 * If channel is not allowed for concurrency, keep pcl
+			 * weight as 0 (WEIGHT_OF_DISALLOWED_CHANNELS)
+			 */
+			if (!policy_mgr_is_concurrency_allowed
 			    (psoc, mode, weight->saved_chan_list[i],
 			     HW_MODE_20_MHZ,
-			     policy_mgr_get_conc_ext_flags(vdev, false)) &&
-			     (policy_mgr_mode_specific_connection_count
-			      (psoc, PM_P2P_GO_MODE, NULL) ||
-			      (policy_mgr_mode_specific_connection_count
-			      (psoc, PM_P2P_CLIENT_MODE, NULL))) &&
-			      policy_mgr_go_scc_enforced(psoc))
-		/*
-		 * For two port/three port connection where if one p2p
-		 * connection is already present and force scc is enabled
-		 * then enforce Go negotiation channels to be strictly
-		 * based on PCL list.
-		 */
-				weight->weighed_valid_list[i] = 0;
-			else
-				weight->weighed_valid_list[i] =
-						WEIGHT_OF_NON_PCL_CHANNELS;
+			     policy_mgr_get_conc_ext_flags(vdev, false)))
+				continue;
+			/*
+			 * Keep weight 0 (WEIGHT_OF_DISALLOWED_CHANNELS) not
+			 * changed for scenarios which require to follow PCL.
+			 */
+			if (strict_follow_pcl)
+				continue;
+			weight->weighed_valid_list[i] =
+				WEIGHT_OF_NON_PCL_CHANNELS;
 		}
 		/* Restore the connection info */
 		if (mode == PM_STA_MODE)
@@ -3663,7 +3696,8 @@ QDF_STATUS policy_mgr_filter_passive_ch(struct wlan_objmgr_pdev *pdev,
 }
 
 bool policy_mgr_is_3rd_conn_on_same_band_allowed(struct wlan_objmgr_psoc *psoc,
-						 enum policy_mgr_con_mode mode)
+						 enum policy_mgr_con_mode mode,
+						 qdf_freq_t ch_freq)
 {
 	enum policy_mgr_pcl_type pcl = PM_NONE;
 	enum policy_mgr_conc_priority_mode conc_system_pref = 0;
@@ -3675,6 +3709,16 @@ bool policy_mgr_is_3rd_conn_on_same_band_allowed(struct wlan_objmgr_psoc *psoc,
 	if (!pm_ctx) {
 		policy_mgr_err("context is NULL");
 			return false;
+	}
+
+	if (pm_conc_connection_list[0].freq != ch_freq ||
+	    pm_conc_connection_list[0].freq !=
+				pm_conc_connection_list[1].freq) {
+		policy_mgr_debug("No MCC support in 3vif in same mac: %d %d %d",
+				 pm_conc_connection_list[0].freq,
+				 pm_conc_connection_list[1].freq,
+				 ch_freq);
+		return false;
 	}
 
 	policy_mgr_debug("pref:%d requested mode:%d",
@@ -3710,7 +3754,9 @@ bool policy_mgr_is_3rd_conn_on_same_band_allowed(struct wlan_objmgr_psoc *psoc,
 			[third_index][mode][conc_system_pref];
 	}
 
-	policy_mgr_debug("pcl for third connection is %d", pcl);
+	policy_mgr_debug("pcl for third connection mode %s is %d %s",
+			 device_mode_to_string(mode), pcl,
+			 pcl_type_to_string(pcl));
 	switch (pcl) {
 	case PM_SCC_CH:
 	case PM_SCC_CH_24G:

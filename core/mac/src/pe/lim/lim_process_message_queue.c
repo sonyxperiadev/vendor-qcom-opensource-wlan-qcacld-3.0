@@ -1868,9 +1868,6 @@ static void lim_process_messages(struct mac_context *mac_ctx,
 	case WMA_AGGR_QOS_RSP:
 		lim_process_ft_aggr_qos_rsp(mac_ctx, msg);
 		break;
-	case WMA_RX_CHN_STATUS_EVENT:
-		lim_process_rx_channel_status_event(mac_ctx, msg->bodyptr);
-		break;
 	case WMA_DFS_BEACON_TX_SUCCESS_IND:
 		lim_process_beacon_tx_success_ind(mac_ctx, msg->type,
 				(void *)msg->bodyptr);

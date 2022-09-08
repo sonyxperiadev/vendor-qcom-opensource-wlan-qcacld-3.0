@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -25,6 +26,20 @@
 #include "wlan_objmgr_vdev_obj.h"
 
 #ifdef FEATURE_WLAN_TDLS
+
+#ifdef FEATURE_SET
+/**
+ * wlan_tdls_get_features_info() - Get tdls features info
+ * @psoc: psoc context
+ * @tdls_feature_set: TDLS feature set info structure
+ *
+ * Return: None
+ */
+
+void wlan_tdls_get_features_info(struct wlan_objmgr_psoc *psoc,
+				 struct wlan_tdls_features *tdls_feature_set);
+#endif
+
 /**
  * wlan_tdls_teardown_links() - notify TDLS module to teardown all TDLS links
  * @psoc: psoc object

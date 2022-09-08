@@ -4152,6 +4152,9 @@ QDF_STATUS wma_send_apf_enable_cmd(WMA_HANDLE handle, uint8_t vdev_id,
 	tp_wma_handle wma = (tp_wma_handle) handle;
 	struct wmi_unified *wmi_handle;
 
+	if (!wma_is_vdev_valid(vdev_id))
+		return QDF_STATUS_E_INVAL;
+
 	if (wma_validate_handle(wma))
 		return QDF_STATUS_E_INVAL;
 
@@ -5068,10 +5071,11 @@ int wma_chan_info_event_handler(void *handle, uint8_t *event_buf,
 	wmi_chan_info_event_fixed_param *event;
 	struct scan_chan_info buf;
 	struct mac_context *mac = NULL;
-	struct lim_channel_status *channel_status;
+	struct channel_status *channel_status;
 	bool snr_monitor_enabled;
 	struct wlan_objmgr_vdev *vdev;
 	enum QDF_OPMODE mode;
+	struct scheduler_msg sme_msg = {0};
 
 	if (wma && wma->cds_context)
 		mac = (struct mac_context *)cds_get_context(QDF_MODULE_ID_PE);
@@ -5123,7 +5127,7 @@ int wma_chan_info_event_handler(void *handle, uint8_t *event_buf,
 			  event->rx_clear_count, event->cycle_count,
 			  event->chan_tx_pwr_range, event->chan_tx_pwr_tp);
 
-		channel_status->channelfreq = event->freq;
+		channel_status->channel_freq = event->freq;
 		channel_status->noise_floor = event->noise_floor;
 		channel_status->rx_clear_count =
 			 event->rx_clear_count;
@@ -5145,8 +5149,16 @@ int wma_chan_info_event_handler(void *handle, uint8_t *event_buf,
 		channel_status->cmd_flags =
 			event->cmd_flags;
 
-		wma_send_msg(handle, WMA_RX_CHN_STATUS_EVENT,
-			     (void *)channel_status, 0);
+		sme_msg.type = eWNI_SME_CHAN_INFO_EVENT;
+		sme_msg.bodyptr = channel_status;
+		sme_msg.bodyval = event->vdev_id;
+
+		if (QDF_STATUS_SUCCESS !=
+			scheduler_post_message(QDF_MODULE_ID_WMA,
+					       QDF_MODULE_ID_SME,
+					       QDF_MODULE_ID_SME, &sme_msg))
+			qdf_mem_free(channel_status);
+
 	}
 
 	return 0;

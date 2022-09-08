@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -31,12 +32,28 @@ btc_chain_mode_policy[QCA_VENDOR_ATTR_BTC_CHAIN_MODE_MAX + 1] = {
 	[QCA_VENDOR_ATTR_BTC_CHAIN_MODE_RESTART] = {.type = NLA_FLAG},
 };
 
+static enum coex_btc_chain_mode
+__wlan_cfg80211_coex_map_btc_chain_mode(enum qca_btc_chain_mode mode)
+{
+	switch (mode) {
+	case QCA_BTC_CHAIN_SHARED:
+		return WLAN_COEX_BTC_CHAIN_MODE_SHARED;
+	case QCA_BTC_CHAIN_SEPARATED_HYBRID:
+		return WLAN_COEX_BTC_CHAIN_MODE_HYBRID;
+	case QCA_BTC_CHAIN_SEPARATED_FDD:
+		return WLAN_COEX_BTC_CHAIN_MODE_FDD;
+	default:
+		return WLAN_COEX_BTC_CHAIN_MODE_UNSETTLED;
+	}
+}
+
 static int
 __wlan_cfg80211_coex_set_btc_chain_mode(struct wlan_objmgr_vdev *vdev,
-					uint8_t mode, bool do_restart)
+					enum coex_btc_chain_mode mode,
+					bool do_restart)
 {
 	QDF_STATUS status;
-	uint8_t cur_mode;
+	enum coex_btc_chain_mode cur_mode;
 	int err;
 	struct wlan_objmgr_psoc *psoc;
 	struct wlan_objmgr_vdev *vdev_tmp;
@@ -107,6 +124,7 @@ int wlan_cfg80211_coex_set_btc_chain_mode(struct wlan_objmgr_vdev *vdev,
 {
 	struct nlattr *tb[QCA_VENDOR_ATTR_BTC_CHAIN_MODE_MAX + 1];
 	uint32_t mode;
+	enum coex_btc_chain_mode chain_mode;
 	bool restart;
 
 	if (wlan_cfg80211_nla_parse(tb, QCA_VENDOR_ATTR_BTC_CHAIN_MODE_MAX,
@@ -121,15 +139,24 @@ int wlan_cfg80211_coex_set_btc_chain_mode(struct wlan_objmgr_vdev *vdev,
 	}
 
 	mode = nla_get_u32(tb[QCA_VENDOR_ATTR_BTC_CHAIN_MODE]);
-	if (mode < QCA_BTC_CHAIN_SHARED || mode > QCA_BTC_CHAIN_SEPARATED) {
+	if (mode > QCA_BTC_CHAIN_SEPARATED_FDD) {
 		coex_err("Invalid btc chain mode %d", mode);
 		return -EINVAL;
 	}
 
 	restart = nla_get_flag(tb[QCA_VENDOR_ATTR_BTC_CHAIN_MODE_RESTART]);
 
-	coex_debug("vdev_id %u mode %u restart %u",
-		   wlan_vdev_get_id(vdev), mode, restart);
+	/* map to internal mode definitions */
+	chain_mode = __wlan_cfg80211_coex_map_btc_chain_mode(mode);
+	if (chain_mode == WLAN_COEX_BTC_CHAIN_MODE_UNSETTLED) {
+		coex_err("Invalid wlan btc chain mode %d", chain_mode);
+		return -EINVAL;
+	}
 
-	return __wlan_cfg80211_coex_set_btc_chain_mode(vdev, mode, restart);
+	coex_debug("vdev_id %u mode %u restart %u",
+		   wlan_vdev_get_id(vdev), chain_mode, restart);
+
+	return __wlan_cfg80211_coex_set_btc_chain_mode(vdev,
+						       chain_mode,
+						       restart);
 }

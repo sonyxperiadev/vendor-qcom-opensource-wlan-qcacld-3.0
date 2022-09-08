@@ -48,6 +48,19 @@ wlan_cm_roam_send_set_vdev_pcl(struct wlan_objmgr_psoc *psoc,
  */
 QDF_STATUS wlan_cm_tgt_send_roam_rt_stats_config(struct wlan_objmgr_psoc *psoc,
 						 struct roam_disable_cfg *req);
+
+#ifdef FEATURE_RX_LINKSPEED_ROAM_TRIGGER
+/**
+ * wlan_cm_tgt_send_roam_linkspeed_state() - Send roam link speed state
+ * command to FW
+ * @psoc: psoc pointer
+ * @req: roam stats config parameter
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS wlan_cm_tgt_send_roam_linkspeed_state(struct wlan_objmgr_psoc *psoc,
+						 struct roam_disable_cfg *req);
+#endif
 #else
 static inline QDF_STATUS
 wlan_cm_roam_send_set_vdev_pcl(struct wlan_objmgr_psoc *psoc,
@@ -62,6 +75,7 @@ wlan_cm_tgt_send_roam_rt_stats_config(struct wlan_objmgr_psoc *psoc,
 {
 	return QDF_STATUS_E_FAILURE;
 }
+
 #endif /* WLAN_FEATURE_ROAM_OFFLOAD */
 
 #ifdef WLAN_VENDOR_HANDOFF_CONTROL

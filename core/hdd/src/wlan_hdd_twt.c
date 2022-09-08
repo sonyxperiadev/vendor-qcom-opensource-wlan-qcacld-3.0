@@ -167,7 +167,7 @@ void wlan_hdd_twt_init(struct hdd_context *hdd_ctx)
 /**
  * hdd_twt_terminate_session - Process TWT terminate
  * operation in the received vendor command and
- * send it to firmare
+ * send it to firmware
  * @adapter: adapter pointer
  * @twt_param_attr: nl attributes
  *
@@ -796,7 +796,7 @@ hdd_get_converted_twt_state(enum wlan_twt_session_state state)
  * hdd_twt_pack_get_params_resp_nlmsg()- Packs and sends twt get_params response
  * @psoc: Pointer to Global psoc
  * @reply_skb: pointer to response skb buffer
- * @params: Ponter to twt peer session parameters
+ * @params: Pointer to twt peer session parameters
  * @num_twt_session: total number of valid twt session
  *
  * Return: QDF_STATUS_SUCCESS on success, else other qdf error values
@@ -1431,7 +1431,7 @@ wmi_twt_nudge_status_to_vendor_twt_status(enum WMI_HOST_NUDGE_TWT_STATUS status)
 /**
  * wmi_twt_add_cmd_to_vendor_twt_resp_type() - convert from
  * WMI_HOST_TWT_COMMAND to qca_wlan_vendor_twt_setup_resp_type
- * @status: WMI_HOST_TWT_COMMAND value from firmare
+ * @status: WMI_HOST_TWT_COMMAND value from firmware
  *
  * Return: qca_wlan_vendor_twt_setup_resp_type values for valid
  * WMI_HOST_TWT_COMMAND value and -EINVAL for invalid value
@@ -1456,7 +1456,7 @@ int wmi_twt_add_cmd_to_vendor_twt_resp_type(enum WMI_HOST_TWT_COMMAND type)
 /**
  * wmi_twt_del_status_to_vendor_twt_status() - convert from
  * WMI_HOST_DEL_TWT_STATUS to qca_wlan_vendor_twt_status
- * @status: WMI_HOST_DEL_TWT_STATUS value from firmare
+ * @status: WMI_HOST_DEL_TWT_STATUS value from firmware
  *
  * Return: qca_wlan_vendor_twt_status values corresponsing
  * to the firmware failure status
@@ -1499,7 +1499,7 @@ int wmi_twt_del_status_to_vendor_twt_status(enum WMI_HOST_DEL_TWT_STATUS status)
 /**
  * wmi_twt_add_status_to_vendor_twt_status() - convert from
  * WMI_HOST_ADD_TWT_STATUS to qca_wlan_vendor_twt_status
- * @status: WMI_HOST_ADD_TWT_STATUS value from firmare
+ * @status: WMI_HOST_ADD_TWT_STATUS value from firmware
  *
  * Return: qca_wlan_vendor_twt_status values corresponding
  * to WMI_HOST_ADD_TWT_STATUS.
@@ -2034,7 +2034,7 @@ static bool hdd_twt_setup_conc_allowed(struct hdd_context *hdd_ctx,
 
 /**
  * hdd_twt_setup_session() - Process TWT setup operation in the
- * received vendor command and send it to firmare
+ * received vendor command and send it to firmware
  * @adapter: adapter pointer
  * @twt_param_attr: nl attributes
  *
@@ -2692,7 +2692,7 @@ static int hdd_sta_twt_terminate_session(struct hdd_adapter *adapter,
 /**
  * hdd_twt_terminate_session - Process TWT terminate
  * operation in the received vendor command and
- * send it to firmare
+ * send it to firmware
  * @adapter: adapter pointer
  * @twt_param_attr: nl attributes
  *
@@ -3773,7 +3773,7 @@ wmi_twt_get_stats_status_to_vendor_twt_status(enum WMI_HOST_GET_STATS_TWT_STATUS
  * hdd_twt_pack_get_stats_resp_nlmsg()- Packs and sends twt get stats response
  * hdd_ctx: pointer to the hdd context
  * @reply_skb: pointer to response skb buffer
- * @params: Ponter to twt session parameter buffer
+ * @params: Pointer to twt session parameter buffer
  * @num_session_stats: number of twt statistics
  *
  * Return: QDF_STATUS_SUCCESS on success, else other qdf error values

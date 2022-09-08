@@ -74,7 +74,7 @@ int hdd_softap_set_channel_change(struct net_device *dev,
  *
  */
 void hdd_stop_sap_set_tx_power(struct wlan_objmgr_psoc *psoc,
-			       struct hdd_adapter *adapte);
+			       struct hdd_adapter *adapter);
 
 #ifdef FEATURE_WLAN_MCC_TO_SCC_SWITCH
 /**
@@ -327,7 +327,7 @@ static inline QDF_STATUS hdd_get_sap_ht2040_mode(
  * wlan_hdd_cfg80211_stop_ap() - stop sap
  * @wiphy: Pointer to wiphy
  * @dev: Pointer to netdev
- * @link_id: Link id for which this stop_ap is recevied.
+ * @link_id: Link id for which this stop_ap is received.
  *
  * Return: zero for success non-zero for failure
  */
@@ -483,4 +483,20 @@ static inline void wlan_hdd_mlo_reset(struct hdd_adapter *adapter)
 {
 }
 #endif /* end WLAN_FEATURE_11BE_MLO */
+
+#ifdef WLAN_FEATURE_SAP_ACS_OPTIMIZE
+/**
+ * hdd_sap_is_acs_in_progress() - API to return if ACS is in progress
+ * @vdev: pointer t vdev object
+ *
+ * Return: bool
+ */
+bool hdd_sap_is_acs_in_progress(struct wlan_objmgr_vdev *vdev);
+#else
+static inline
+bool hdd_sap_is_acs_in_progress(struct wlan_objmgr_vdev *vdev)
+{
+	return false;
+}
+#endif
 #endif /* end #if !defined(WLAN_HDD_HOSTAPD_H) */

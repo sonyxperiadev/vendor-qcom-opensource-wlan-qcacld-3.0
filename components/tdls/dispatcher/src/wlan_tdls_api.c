@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -27,6 +28,7 @@
 #include "../../core/src/wlan_tdls_mgmt.h"
 #include <wlan_objmgr_global_obj.h>
 #include <wlan_objmgr_cmn.h>
+#include "wlan_tdls_cfg_api.h"
 
 static QDF_STATUS tdls_teardown_flush_cb(struct scheduler_msg *msg)
 {
@@ -251,3 +253,18 @@ wlan_tdls_notify_sta_connect(uint8_t session_id,
 	tdls_notify_connect(&notify_info);
 }
 
+#ifdef FEATURE_SET
+void wlan_tdls_get_features_info(struct wlan_objmgr_psoc *psoc,
+				 struct wlan_tdls_features *tdls_feature_set)
+{
+	cfg_tdls_get_support_enable(psoc, &tdls_feature_set->enable_tdls);
+	if (tdls_feature_set->enable_tdls) {
+		cfg_tdls_get_off_channel_enable(
+				psoc,
+				&tdls_feature_set->enable_tdls_offchannel);
+		tdls_feature_set->max_tdls_peers =
+					cfg_tdls_get_max_peer_count(psoc);
+		tdls_feature_set->enable_tdls_capability_enhance = true;
+	}
+}
+#endif

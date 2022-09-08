@@ -1227,6 +1227,37 @@ int8_t mlme_get_max_reg_power(struct wlan_objmgr_vdev *vdev)
 	return vdev_mlme->mgmt.generic.maxregpower;
 }
 
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_FEATURE_ROAM_OFFLOAD)
+QDF_STATUS
+mlme_set_single_link_mlo_roaming(struct wlan_objmgr_vdev *vdev, bool val)
+{
+	struct mlme_legacy_priv *mlme_priv;
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_legacy_err("vdev legacy private object is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	mlme_priv->is_single_link_mlo_roam = val;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+bool mlme_get_single_link_mlo_roaming(struct wlan_objmgr_vdev *vdev)
+{
+	struct mlme_legacy_priv *mlme_priv;
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_legacy_err("vdev legacy private object is NULL");
+		return false;
+	}
+
+	return mlme_priv->is_single_link_mlo_roam;
+}
+#endif
+
 /**
  * mlme_get_vdev_types() - get vdev type and subtype from its operation mode
  * @mode: operation mode of vdev

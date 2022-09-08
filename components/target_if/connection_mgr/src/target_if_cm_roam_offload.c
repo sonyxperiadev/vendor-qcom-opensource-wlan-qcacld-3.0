@@ -184,6 +184,46 @@ target_if_cm_roam_rt_stats_config(struct wlan_objmgr_vdev *vdev,
 	return status;
 }
 
+#ifdef FEATURE_RX_LINKSPEED_ROAM_TRIGGER
+/**
+ * target_if_cm_roam_linkspeed_state() - Send link speed state for roaming
+ * commands to wmi
+ * @vdev: vdev object
+ * @vdev_id: vdev id
+ * @is_linkspeed_good: true, don't need low rssi roaming
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+target_if_cm_roam_linkspeed_state(struct wlan_objmgr_vdev *vdev,
+				  uint8_t vdev_id, bool is_linkspeed_good)
+{
+	QDF_STATUS status = QDF_STATUS_E_FAILURE;
+	wmi_unified_t wmi_handle;
+
+	wmi_handle = target_if_cm_roam_get_wmi_handle_from_vdev(vdev);
+	if (!wmi_handle)
+		return status;
+
+	status = target_if_roam_set_param(wmi_handle,
+					  vdev_id,
+					  WMI_ROAM_PARAM_LINKSPEED_STATE,
+					  is_linkspeed_good);
+
+	if (QDF_IS_STATUS_ERROR(status))
+		target_if_err("Failed to set WMI_ROAM_PARAM_LINKSPEED_STATE");
+
+	return status;
+}
+#else
+static inline QDF_STATUS
+target_if_cm_roam_linkspeed_state(struct wlan_objmgr_vdev *vdev,
+				  uint8_t vdev_id, bool is_linkspeed_good)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 #ifdef WLAN_VENDOR_HANDOFF_CONTROL
 /**
  * target_if_cm_roam_vendor_handoff_config() - Send vendor handoff config
@@ -228,6 +268,27 @@ static inline void target_if_cm_roam_register_vendor_handoff_ops(
 }
 #endif
 
+#ifdef FEATURE_RX_LINKSPEED_ROAM_TRIGGER
+/**
+ * target_if_cm_roam_register_linkspeed_state() - Register tx ops to send
+ * roam link speed state command to fw
+ * @tx_ops: structure of tx function pointers for roaming related commands
+ *
+ * Return: none
+ */
+static inline void
+target_if_cm_roam_register_linkspeed_state(struct wlan_cm_roam_tx_ops *tx_ops)
+{
+	tx_ops->send_roam_linkspeed_state =
+				target_if_cm_roam_linkspeed_state;
+}
+#else
+static inline void
+target_if_cm_roam_register_linkspeed_state(struct wlan_cm_roam_tx_ops *tx_ops)
+{
+}
+#endif
+
 static void
 target_if_cm_roam_register_lfr3_ops(struct wlan_cm_roam_tx_ops *tx_ops)
 {
@@ -236,6 +297,7 @@ target_if_cm_roam_register_lfr3_ops(struct wlan_cm_roam_tx_ops *tx_ops)
 	tx_ops->send_roam_sync_complete_cmd = target_if_cm_roam_send_roam_sync_complete;
 	tx_ops->send_roam_rt_stats_config = target_if_cm_roam_rt_stats_config;
 	target_if_cm_roam_register_vendor_handoff_ops(tx_ops);
+	target_if_cm_roam_register_linkspeed_state(tx_ops);
 }
 #else
 static inline void
@@ -1254,6 +1316,12 @@ target_if_stop_rso_stop_timer(struct roam_offload_roam_event *roam_event)
 			 roam_event->vdev_id,
 			 wlan_psoc_get_id(roam_event->psoc));
 		return QDF_STATUS_E_INVAL;
+	}
+
+	if (!qdf_atomic_test_bit(RSO_STOP_RESPONSE_BIT,
+				 &vdev_rsp->rsp_status)) {
+		mlme_debug("rso stop timer is not started");
+		return QDF_STATUS_SUCCESS;
 	}
 
 	if ((roam_event->reason == ROAM_REASON_RSO_STATUS &&

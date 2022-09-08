@@ -1222,4 +1222,68 @@ void ucfg_dp_event_eapol_log(qdf_nbuf_t nbuf, enum qdf_proto_dir dir);
 QDF_STATUS
 ucfg_dp_softap_inspect_dhcp_packet(struct wlan_objmgr_vdev *vdev,
 				   qdf_nbuf_t nbuf, enum qdf_proto_dir dir);
+
+void
+dp_ucfg_enable_link_monitoring(struct wlan_objmgr_psoc *psoc,
+			       struct wlan_objmgr_vdev *vdev,
+			       uint32_t threshold);
+
+void
+dp_ucfg_disable_link_monitoring(struct wlan_objmgr_psoc *psoc,
+				struct wlan_objmgr_vdev *vdev);
+
+#ifdef DP_TRAFFIC_END_INDICATION
+/**
+ * ucfg_dp_traffic_end_indication_get() - Get data end indication info
+ * @vdev: vdev handle
+ * @info: variable to hold stored data end indication info
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+ucfg_dp_traffic_end_indication_get(struct wlan_objmgr_vdev *vdev,
+				   struct dp_traffic_end_indication *info);
+/**
+ * ucfg_dp_traffic_end_indication_set() - Store data end indication info
+ * @vdev: vdev handle
+ * @info: variable holding new data end indication info
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+ucfg_dp_traffic_end_indication_set(struct wlan_objmgr_vdev *vdev,
+				   struct dp_traffic_end_indication info);
+/**
+ * ucfg_dp_traffic_end_indication_update_dscp() - update dscp value to default
+ * @psoc: psoc handle
+ * @vdev_id: vdev id
+ * @dscp: dscp value to be updated
+ *
+ * Return: void
+ */
+void
+ucfg_dp_traffic_end_indication_update_dscp(struct wlan_objmgr_psoc *psoc,
+					   uint8_t vdev_id,
+					   unsigned char *dscp);
+#else
+static inline QDF_STATUS
+ucfg_dp_traffic_end_indication_get(struct wlan_objmgr_vdev *vdev,
+				   struct dp_traffic_end_indication *info)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+ucfg_dp_traffic_end_indication_set(struct wlan_objmgr_vdev *vdev,
+				   struct dp_traffic_end_indication info)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline void
+ucfg_dp_traffic_end_indication_update_dscp(struct wlan_objmgr_psoc *psoc,
+					   uint8_t vdev_id,
+					   unsigned char *dscp)
+{}
+#endif
 #endif /* _WLAN_DP_UCFG_API_H_ */

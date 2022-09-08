@@ -286,6 +286,7 @@ typedef enum {
 	eCSR_ROAM_CHANNEL_COMPLETE_IND = 47,
 	eCSR_ROAM_CAC_COMPLETE_IND = 48,
 	eCSR_ROAM_SAE_COMPUTE = 49,
+	eCSR_ROAM_CHANNEL_INFO_EVENT_IND = 50,
 } eRoamCmdStatus;
 
 /* comment inside indicates what roaming callback gets */
@@ -593,6 +594,9 @@ struct csr_roam_info {
 #endif
 	struct assoc_ind *owe_pending_assoc_ind;
 	struct qdf_mac_addr peer_mld;
+#ifdef WLAN_FEATURE_SAP_ACS_OPTIMIZE
+	uint32_t chan_info_freq;
+#endif
 };
 
 typedef struct sSirSmeAssocIndToUpperLayerCnf {
@@ -663,6 +667,8 @@ typedef struct tagCsrSummaryStatsInfo {
 typedef struct tagCsrGlobalClassAStatsInfo {
 	uint8_t tx_nss;
 	uint8_t rx_nss;
+	uint8_t rx_preamble;
+	uint8_t rx_bw;
 	uint32_t max_pwr;
 	uint32_t tx_rate;
 	uint32_t rx_rate;
@@ -842,24 +848,6 @@ void csr_packetdump_timer_start(void);
 static inline void csr_packetdump_timer_stop(void) {}
 static inline void csr_packetdump_timer_start(void) {}
 #endif
-
-/**
- * csr_get_channel_status() - get chan info via channel number
- * @mac: Pointer to Global MAC structure
- * @chan_freq: channel frequency
- *
- * Return: chan status info
- */
-struct lim_channel_status *
-csr_get_channel_status(struct mac_context *mac, uint32_t chan_freq);
-
-/**
- * csr_clear_channel_status() - clear chan info
- * @mac: Pointer to Global MAC structure
- *
- * Return: none
- */
-void csr_clear_channel_status(struct mac_context *mac);
 
 /**
  * csr_update_owe_info() - Update OWE info

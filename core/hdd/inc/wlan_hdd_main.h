@@ -923,6 +923,7 @@ struct hdd_chan_change_params {
  * @is_user_wakelock_acquired: boolean to check if user wakelock status
  * @monitor_mode: monitor mode context to prevent/allow runtime pm
  * @wow_unit_test: wow unit test mode context to prevent/allow runtime pm
+ * @system_suspend: system suspend context to prevent/allow runtime pm
  *
  * Runtime PM control for underlying activities
  */
@@ -933,6 +934,7 @@ struct hdd_runtime_pm_context {
 	bool is_user_wakelock_acquired;
 	qdf_runtime_lock_t monitor_mode;
 	qdf_runtime_lock_t wow_unit_test;
+	qdf_runtime_lock_t system_suspend;
 };
 
 /*
@@ -1023,6 +1025,7 @@ struct wlm_multi_client_info_table {
  * @mon_adapter: hdd_adapter of monitor mode.
  * @set_mac_addr_req_ctx: Set MAC address command request context
  * @delta_qtime: delta between host qtime and monotonic time
+ * @traffic_end_ind_en: traffic end indication feature enable/disable
  */
 struct hdd_adapter {
 	/* Magic cookie for adapter sanity verification.  Note that this
@@ -1303,6 +1306,9 @@ struct hdd_adapter {
 	void *set_mac_addr_req_ctx;
 #endif
 	int64_t delta_qtime;
+#ifdef DP_TRAFFIC_END_INDICATION
+	bool traffic_end_ind_en;
+#endif
 };
 
 #define WLAN_HDD_GET_STATION_CTX_PTR(adapter) (&(adapter)->session.station)
@@ -1870,7 +1876,6 @@ struct hdd_context {
 	/* Present state of driver cds modules */
 	enum driver_modules_status driver_status;
 	struct qdf_delayed_work psoc_idle_timeout_work;
-	struct notifier_block pm_notifier;
 	struct acs_dfs_policy acs_policy;
 	uint16_t wmi_max_len;
 	struct suspend_resume_stats suspend_resume_stats;
@@ -2017,6 +2022,11 @@ struct hdd_context {
 	uint8_t power_type;
 #endif
 	bool is_wlan_disabled;
+
+	uint8_t *oem_data;
+	uint8_t oem_data_len;
+	uint8_t *file_name;
+	qdf_mutex_t wifi_kobj_lock;
 };
 
 /**
@@ -4396,8 +4406,6 @@ static inline bool hdd_nbuf_dst_addr_is_self_addr(struct hdd_adapter *adapter,
 				    QDF_NBUF_DEST_MAC_OFFSET);
 }
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0)) && \
-     defined(WLAN_FEATURE_11AX)
 /**
  * hdd_cleanup_conn_info() - Cleanup connectin info
  * @adapter: Adapter upon which the command was received
@@ -4408,23 +4416,6 @@ static inline bool hdd_nbuf_dst_addr_is_self_addr(struct hdd_adapter *adapter,
  * Return: none
  */
 void hdd_cleanup_conn_info(struct hdd_adapter *adapter);
-/**
- * hdd_sta_destroy_ctx_all() - cleanup all station contexts
- * @hdd_ctx: Global HDD context
- *
- * This function destroys all the station contexts
- *
- * Return: none
- */
-void hdd_sta_destroy_ctx_all(struct hdd_context *hdd_ctx);
-#else
-static inline void hdd_cleanup_conn_info(struct hdd_adapter *adapter)
-{
-}
-static inline void hdd_sta_destroy_ctx_all(struct hdd_context *hdd_ctx)
-{
-}
-#endif
 
 #ifdef FEATURE_WLAN_RESIDENT_DRIVER
 extern char *country_code;
@@ -4697,4 +4688,25 @@ hdd_is_dynamic_set_mac_addr_allowed(struct hdd_adapter *adapter)
 }
 
 #endif /* WLAN_FEATURE_DYNAMIC_MAC_ADDR_UPDATE */
+
+#if defined(WLAN_FEATURE_ROAM_OFFLOAD) && \
+defined(FEATURE_RX_LINKSPEED_ROAM_TRIGGER)
+/**
+ * wlan_hdd_link_speed_update() - Update link speed to F/W
+ * @psoc: pointer to soc
+ * @vdev_id: Vdev ID
+ * @is_link_speed_good: true means good link speed,  false means bad link speed
+ *
+ * Return: None
+ */
+void wlan_hdd_link_speed_update(struct wlan_objmgr_psoc *psoc,
+				uint8_t vdev_id,
+				bool is_link_speed_good);
+#else
+static inline void wlan_hdd_link_speed_update(struct wlan_objmgr_psoc *psoc,
+					      uint8_t vdev_id,
+					      bool is_link_speed_good)
+{}
+#endif
+
 #endif /* end #if !defined(WLAN_HDD_MAIN_H) */

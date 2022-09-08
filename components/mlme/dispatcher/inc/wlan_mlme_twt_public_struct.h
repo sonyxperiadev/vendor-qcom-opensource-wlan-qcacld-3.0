@@ -52,5 +52,21 @@ struct twt_context {
 	uint8_t num_twt_sessions;
 	struct twt_session_info session_info[WLAN_MAX_TWT_SESSIONS_PER_PEER];
 };
+
+#ifdef FEATURE_SET
+/**
+ * struct wlan_twt_features  - TWT features info
+ * @enable_twt: Enable TWT
+ * enable_twt_requester Enable TWT requester
+ * @enable_twt_broadcast: Enable TWT broadcast
+ * @enable_twt_flexible: Enable flexible TWT
+ */
+struct wlan_twt_features {
+	bool enable_twt;
+	bool enable_twt_requester;
+	bool enable_twt_broadcast;
+	bool enable_twt_flexible;
+};
+#endif /* FEATURE_SET */
 #endif /* WLAN_SUPPORT_TWT */
 #endif /* _WLAN_MLME_TWT_PUBLIC_STRUCT_H_ */

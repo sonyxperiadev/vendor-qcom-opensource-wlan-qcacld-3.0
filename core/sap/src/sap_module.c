@@ -1333,7 +1333,7 @@ static inline void sap_start_csa_restart(struct mac_context *mac,
  *
  * Return: string reason
  */
-static char *sap_get_csa_reason_str(enum sap_csa_reason_code reason)
+const char *sap_get_csa_reason_str(enum sap_csa_reason_code reason)
 {
 	switch (reason) {
 	case CSA_REASON_UNKNOWN:
@@ -1362,6 +1362,12 @@ static char *sap_get_csa_reason_str(enum sap_csa_reason_code reason)
 		return "DISABLED";
 	case CSA_REASON_CHAN_PASSIVE:
 		return "PASSIVE";
+	case CSA_REASON_GO_BSS_STARTED:
+		return "GO_BSS_STARTED";
+	case CSA_REASON_SAP_ACS:
+		return "CSA_REASON_SAP_ACS";
+	case CSA_REASON_SAP_FIX_CH_CONC_WITH_GO:
+		return "SAP_FIX_CH_CONC_WITH_GO";
 	default:
 		return "UNKNOWN";
 	}

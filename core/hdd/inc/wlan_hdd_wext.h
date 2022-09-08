@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -127,11 +128,11 @@ typedef enum {
 	/* some internal failure like memory allocation failure, etc, sync */
 	HDD_WLAN_WMM_STATUS_INTERNAL_FAILURE = 19,
 
-	/* U-APSD failed during setup but OTA setup (whether TSPEC exchnage or
+	/* U-APSD failed during setup but OTA setup (whether TSPEC exchange or
 	 * re-assoc) was done so app should release this QoS, async
 	 */
 	HDD_WLAN_WMM_STATUS_SETUP_UAPSD_SET_FAILED = 20,
-	/* U-APSD failed during modify, but OTA setup (whether TSPEC exchnage or
+	/* U-APSD failed during modify, but OTA setup (whether TSPEC exchange or
 	 * re-assoc) was done so app should release this QoS, async
 	 */
 	HDD_WLAN_WMM_STATUS_MODIFY_UAPSD_SET_FAILED = 21

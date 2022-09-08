@@ -587,6 +587,7 @@ union wlan_tp_data {
  * @os_if_dp_nud_stats_info: osif callback to print nud stats info
  * @dp_get_pause_map: Callback API to get pause map count
  * @dp_nud_failure_work: Callback API to handle NUD failuire work
+ * @link_monitoring_cb: Callback API to handle link speed change
  */
 struct wlan_dp_psoc_callbacks {
 	hdd_cb_handle callback_ctx;
@@ -666,6 +667,9 @@ struct wlan_dp_psoc_callbacks {
 	void (*os_if_dp_nud_stats_info)(struct wlan_objmgr_vdev *vdev);
 	uint32_t (*dp_get_pause_map)(hdd_cb_handle context, uint8_t vdev_id);
 	void (*dp_nud_failure_work)(hdd_cb_handle context, uint8_t vdev_id);
+	void (*link_monitoring_cb)(struct wlan_objmgr_psoc *psoc,
+				   uint8_t vdev_id,
+				   bool is_link_speed_good);
 };
 
 /**
@@ -716,4 +720,16 @@ struct wlan_dp_user_config {
 	uint32_t arp_connectivity_map;
 };
 
+/**
+ * struct dp_traffic_end_indication - Trafic end indication
+ * @enabled: Feature enabled/disabled config
+ * @def_dscp: Default DSCP value in regular packets in traffic
+ * @spl_dscp: Special DSCP value to be used by packet to mark
+ *            end of data stream
+ */
+struct dp_traffic_end_indication {
+	bool enabled;
+	uint8_t def_dscp;
+	uint8_t spl_dscp;
+};
 #endif /* end  of _WLAN_DP_PUBLIC_STRUCT_H_ */

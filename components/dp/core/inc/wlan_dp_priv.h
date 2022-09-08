@@ -253,8 +253,21 @@ struct wlan_dp_conn_info {
 };
 
 /**
+ * struct link_monitoring - link speed monitoring related info
+ * @enabled: Is link speed monitoring feature enabled
+ * @rx_linkspeed_threshold: link speed good/bad threshold
+ * @is_link_speed_good: true means link speed good, false means bad
+ */
+struct link_monitoring {
+	uint8_t enabled;
+	uint32_t rx_linkspeed_threshold;
+	uint8_t is_rx_linkspeed_good;
+};
+
+/**
  * struct wlan_dp_intf - DP interface object related info
  * @dp_ctx: DP context reference
+ * @link_monitoring: Link monitoring related info
  * @mac_addr: Device MAC address
  * @device_mode: Device Mode
  * @intf_id: Interface ID
@@ -273,9 +286,12 @@ struct wlan_dp_conn_info {
  * @conn_info: STA connection information
  * @bss_state: AP BSS state
  * @qdf_sta_eap_frm_done_event: EAP frame event management
+ * @traffic_end_ind: store traffic end indication info
  */
 struct wlan_dp_intf {
 	struct wlan_dp_psoc_context *dp_ctx;
+
+	struct link_monitoring link_monitoring;
 
 	struct qdf_mac_addr mac_addr;
 
@@ -331,6 +347,7 @@ struct wlan_dp_intf {
 
 	enum bss_intf_state bss_state;
 	qdf_event_t qdf_sta_eap_frm_done_event;
+	struct dp_traffic_end_indication traffic_end_ind;
 };
 
 /**

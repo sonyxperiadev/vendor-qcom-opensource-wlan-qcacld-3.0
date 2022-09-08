@@ -287,6 +287,18 @@ QDF_STATUS lim_send_mlo_caps_ie(struct mac_context *mac_ctx,
 				struct pe_session *session,
 				enum QDF_OPMODE device_mode,
 				uint8_t vdev_id);
+
+/**
+ * lim_strip_mlo_ie() - Removes the MLO IE data from additional IE data
+ *
+ * @mac_ctx: global MAC context
+ * @add_ie: Additional IE buffer
+ * @add_ielen: Pointer to length of additional IE
+ *
+ * Return: Void
+ */
+void lim_strip_mlo_ie(struct mac_context *mac_ctx,
+		      uint8_t *add_ie, uint16_t *add_ielen);
 #else
 static inline uint16_t lim_assign_mlo_conn_idx(struct mac_context *mac,
 					       struct pe_session *pe_session,
@@ -310,6 +322,12 @@ static inline void lim_update_sta_mlo_info(struct pe_session *session,
 static inline
 void lim_set_mlo_caps(struct mac_context *mac, struct pe_session *session,
 		      uint8_t *ie_start, uint32_t num_bytes)
+{
+}
+
+static inline
+void lim_strip_mlo_ie(struct mac_context *mac_ctx,
+		      uint8_t *addn_ie, uint16_t *addn_ielen)
 {
 }
 
@@ -692,19 +710,6 @@ void lim_delete_sta_context(struct mac_context *mac, struct scheduler_msg *limMs
 void lim_delete_dialogue_token_list(struct mac_context *mac);
 
 /**
- * lim_add_channel_status_info() - store
- * chan status info into Global MAC structure
- * @p_mac: Pointer to Global MAC structure
- * @channel_stat: Pointer to chan status info reported by firmware
- * @channel_id: current channel id
- *
- * Return: None
- */
-void lim_add_channel_status_info(struct mac_context *p_mac,
-				 struct lim_channel_status *channel_stat,
-				 uint8_t channel_id);
-
-/**
  * lim_get_channel_from_beacon() - extract channel number
  * from beacon and convert to channel frequency
  * @mac: Pointer to Global MAC structure
@@ -789,10 +794,8 @@ static inline uint16_t ch_width_in_mhz(enum phy_ch_width ch_width)
 		return 5;
 	case CH_WIDTH_10MHZ:
 		return 10;
-#if defined(WLAN_FEATURE_11BE)
 	case CH_WIDTH_320MHZ:
 		return 320;
-#endif
 	default:
 		return 20;
 	}
@@ -2050,6 +2053,15 @@ void lim_update_stads_eht_caps(struct mac_context *mac_ctx,
 void lim_update_stads_eht_bw_320mhz(struct pe_session *session,
 				    tpDphHashNode sta_ds);
 
+/**
+ * lim_is_session_chwidth_320mhz() - Check if session chan width is 320 MHz
+ * @session: pointer to PE session
+ *
+ * Check if session channel width is 320 MHz
+ *
+ * Return: bool
+ */
+bool lim_is_session_chwidth_320mhz(struct pe_session *session);
 #else
 static inline bool lim_is_session_eht_capable(struct pe_session *session)
 {
@@ -2219,6 +2231,12 @@ static inline void
 lim_update_stads_eht_bw_320mhz(struct pe_session *session,
 			       tpDphHashNode sta_ds)
 {
+}
+
+static inline bool
+lim_is_session_chwidth_320mhz(struct pe_session *session)
+{
+	return false;
 }
 #endif /* WLAN_FEATURE_11BE */
 
@@ -2905,12 +2923,14 @@ lim_is_self_and_peer_ocv_capable(struct mac_context *mac,
  * @mac:        pointer to mac data
  * @session: pointer to pe session
 .* @oci:       pointer of tDot11fIEoci
+ * @peer: peer mac address
+ * @tx_chan_width: tx channel width in MHz
  *
  * Return: void
  */
 void
 lim_fill_oci_params(struct mac_context *mac, struct pe_session *session,
-		    tDot11fIEoci *oci);
+		    tDot11fIEoci *oci, uint8_t *peer, uint16_t *tx_chan_width);
 
 #ifdef WLAN_FEATURE_SAE
 /**
@@ -2921,8 +2941,26 @@ lim_fill_oci_params(struct mac_context *mac, struct pe_session *session,
  * Return: None
  */
 void lim_process_sae_msg(struct mac_context *mac, struct sir_sae_msg *body);
+
+/**
+ * lim_trigger_auth_req_sae() - sends SAE auth request to sme
+ * @mac_ctx: Global MAC pointer
+ * @session: pointer to pe session
+ * @peer_bssid: bssid to do SAE auth
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS lim_trigger_auth_req_sae(struct mac_context *mac_ctx,
+				    struct pe_session *session,
+				    struct qdf_mac_addr *peer_bssid);
 #else
-static inline void lim_process_sae_msg(struct mac_context *mac, void *body);
+static inline void lim_process_sae_msg(struct mac_context *mac, void *body)
+{}
+
+static inline QDF_STATUS lim_trigger_auth_req_sae(
+					struct mac_context *mac_ctx,
+					struct pe_session *session,
+					struct qdf_mac_addr *peer_bssid)
 {}
 #endif
 

@@ -2353,9 +2353,8 @@ exit_with_code:
 static int _wlan_hdd_cfg80211_resume_wlan(struct wiphy *wiphy)
 {
 	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
+	qdf_runtime_lock_t *suspend_lock;
 	int errno;
-
-	qdf_rtpm_put(QDF_RTPM_PUT, QDF_RTPM_ID_WIPHY_SUSPEND);
 
 	if (!hdd_ctx) {
 		hdd_err_rl("hdd context is null");
@@ -2372,6 +2371,10 @@ static int _wlan_hdd_cfg80211_resume_wlan(struct wiphy *wiphy)
 	if (errno)
 		return errno;
 
+	suspend_lock = &hdd_ctx->runtime_context.system_suspend;
+	errno = qdf_runtime_pm_allow_suspend(suspend_lock);
+	if (errno)
+		return errno;
 
 	errno = __wlan_hdd_cfg80211_resume_wlan(wiphy);
 
@@ -2689,6 +2692,7 @@ static int _wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
 {
 	void *hif_ctx;
 	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
+	qdf_runtime_lock_t *suspend_lock;
 	int errno;
 
 	if (!hdd_ctx) {
@@ -2714,13 +2718,14 @@ static int _wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
 	if (!hif_ctx)
 		return -EINVAL;
 
-	errno = qdf_rtpm_get(QDF_RTPM_GET_SYNC, QDF_RTPM_ID_WIPHY_SUSPEND);
+	suspend_lock = &hdd_ctx->runtime_context.system_suspend;
+	errno = qdf_runtime_pm_prevent_suspend_sync(suspend_lock);
 	if (errno)
 		return errno;
 
 	errno = __wlan_hdd_cfg80211_suspend_wlan(wiphy, wow);
 	if (errno) {
-		qdf_rtpm_put(QDF_RTPM_PUT, QDF_RTPM_ID_WIPHY_SUSPEND);
+		qdf_runtime_pm_allow_suspend(suspend_lock);
 		return errno;
 	}
 

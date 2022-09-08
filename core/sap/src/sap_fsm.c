@@ -1020,20 +1020,6 @@ static bool sap_process_liberal_scc_for_go(struct sap_context *sap_context)
 }
 #endif
 
-#ifdef FEATURE_WLAN_CH_AVOID_EXT
-static inline
-uint32_t sap_get_restriction_mask(struct sap_context *sap_context)
-{
-	return sap_context->restriction_mask;
-}
-#else
-static inline
-uint32_t sap_get_restriction_mask(struct sap_context *sap_context)
-{
-	return -EINVAL;
-}
-#endif
-
 QDF_STATUS
 sap_validate_chan(struct sap_context *sap_context,
 		  bool pre_start_bss,
@@ -1186,8 +1172,7 @@ validation_done:
 		  sap_context->chan_freq);
 
 	if (!policy_mgr_is_safe_channel(mac_ctx->psoc,
-					sap_context->chan_freq) &&
-	   (sap_get_restriction_mask(sap_context) & BIT(NL80211_IFTYPE_AP))) {
+					sap_context->chan_freq)) {
 		sap_warn("Abort SAP start due to unsafe channel");
 		return QDF_STATUS_E_ABORTED;
 	}
@@ -1217,6 +1202,78 @@ validation_done:
 
 	return QDF_STATUS_SUCCESS;
 }
+
+#ifdef WLAN_FEATURE_SAP_ACS_OPTIMIZE
+
+static void sap_sort_freq_list(struct chan_list *list,
+			       uint8_t num_ch)
+{
+	int i, j, temp;
+
+	for (i = 0; i < num_ch - 1; i++) {
+		for (j = 0 ; j < num_ch - i - 1; j++) {
+			if (list->chan[j].freq < list->chan[j + 1].freq) {
+				temp = list->chan[j].freq;
+				list->chan[j].freq = list->chan[j + 1].freq;
+				list->chan[j + 1].freq = temp;
+			}
+		}
+	}
+}
+
+/**
+ * sap_acs_scan_freq_list_optimize - optimize the ACS scan freq list based
+ * on when last scan was performed on particular frequency. If last scan
+ * performed on particular frequency is less than configured last_scan_ageout
+ * time, then skip that frequency from ACS scan freq list.
+ *
+ * sap_ctx: sap context
+ * list: ACS scan frequency list
+ * ch_count: number of frequency in list
+ *
+ * Return: None
+ */
+static void sap_acs_scan_freq_list_optimize(struct sap_context *sap_ctx,
+					    struct chan_list *list,
+					    uint8_t *ch_count)
+{
+	int loop_count = 0, j = 0;
+	uint32_t ts_last_scan;
+
+	sap_ctx->partial_acs_scan = false;
+
+	while (loop_count < *ch_count) {
+		ts_last_scan = scm_get_last_scan_time_per_channel(
+				sap_ctx->vdev, list->chan[loop_count].freq);
+
+		if (qdf_system_time_before(
+		    qdf_get_time_of_the_day_ms(),
+		    ts_last_scan + sap_ctx->acs_cfg->last_scan_ageout_time)) {
+			sap_info("ACS chan %d skipped from scan as last scan ts %d\n",
+				 list->chan[loop_count].freq,
+				 qdf_get_time_of_the_day_ms() - ts_last_scan);
+
+			for (j = loop_count; j < *ch_count - 1; j++)
+				list->chan[j].freq = list->chan[j + 1].freq;
+
+			(*ch_count)--;
+			sap_ctx->partial_acs_scan = true;
+			continue;
+		}
+		loop_count++;
+	}
+	if (*ch_count == 0)
+		sap_info("All ACS freq channels are scanned recently, skip ACS scan\n");
+	else
+		sap_sort_freq_list(list, *ch_count);
+}
+#else
+static void sap_acs_scan_freq_list_optimize(struct sap_context *sap_ctx,
+					    struct chan_list *list,
+					    uint8_t *ch_count)
+{
+}
+#endif
 
 QDF_STATUS sap_channel_sel(struct sap_context *sap_context)
 {
@@ -1325,7 +1382,28 @@ QDF_STATUS sap_channel_sel(struct sap_context *sap_context)
 		req->scan_req.chan_list.num_chan = j;
 		sap_context->freq_list = freq_list;
 		sap_context->num_of_channel = num_of_channels;
+		sap_context->optimize_acs_chan_selected = false;
 		/* Set requestType to Full scan */
+
+		/*
+		 * send partial channels to be scanned in SCAN request if
+		 * vendor command included last scan ageout time to be used to
+		 * optimize the SAP bring up time
+		 */
+		if (sap_context->acs_cfg->last_scan_ageout_time)
+			sap_acs_scan_freq_list_optimize(
+					sap_context, &req->scan_req.chan_list,
+					&req->scan_req.chan_list.num_chan);
+
+		if (!req->scan_req.chan_list.num_chan) {
+			sap_info("## SKIPPED ACS SCAN");
+			wlansap_pre_start_bss_acs_scan_callback(
+				mac_handle, sap_context, sap_context->sessionId,
+				0, eCSR_SCAN_SUCCESS);
+			qdf_mem_free(req);
+			qdf_ret_status = QDF_STATUS_SUCCESS;
+			goto release_vdev_ref;
+		}
 
 		sap_context->acs_req_timestamp = qdf_get_time_of_the_day_ms();
 		qdf_ret_status = wlan_scan_start(req);
@@ -1355,6 +1433,7 @@ QDF_STATUS sap_channel_sel(struct sap_context *sap_context)
 			wlansap_dump_acs_ch_freq(sap_context);
 			host_log_acs_scan_start(scan_id, vdev_id);
 		}
+
 #ifdef FEATURE_WLAN_AP_AP_ACS_OPTIMIZE
 	} else {
 		sap_context->acs_cfg->skip_scan_status = eSAP_SKIP_ACS_SCAN;
@@ -1538,7 +1617,6 @@ static inline uint16_t he_mcs_12_13_support(void)
 }
 #endif
 
-#ifdef WLAN_FEATURE_11BE
 static bool is_mcs13_ch_width(enum phy_ch_width ch_width)
 {
 	if ((ch_width == CH_WIDTH_320MHZ) ||
@@ -1548,16 +1626,6 @@ static bool is_mcs13_ch_width(enum phy_ch_width ch_width)
 
 	return false;
 }
-#else
-static bool is_mcs13_ch_width(enum phy_ch_width ch_width)
-{
-	if ((ch_width == CH_WIDTH_160MHZ) ||
-	    (ch_width == CH_WIDTH_80P80MHZ))
-		return true;
-
-	return false;
-}
-#endif
 
 /**
  * sap_update_mcs_rate() - Update SAP MCS rate

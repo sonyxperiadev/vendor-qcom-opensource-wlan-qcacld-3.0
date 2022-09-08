@@ -53,6 +53,8 @@
 #include <wlan_scan_api.h>
 #include <wlan_scan_utils_api.h>
 #include "wlan_pre_cac_api.h"
+#include <wlan_cfg80211_scan.h>
+#include <wlan_hdd_hostapd.h>
 
 /* IF MGR API header file */
 #include "wlan_if_mgr_ucfg_api.h"
@@ -245,9 +247,14 @@ wlansap_calculate_chan_from_scan_result(mac_handle_t mac_handle,
 
 	filter = qdf_mem_malloc(sizeof(*filter));
 
-	if (filter)
-		filter->age_threshold = qdf_get_time_of_the_day_ms() -
+	if (filter) {
+		if (sap_ctx->partial_acs_scan)
+			filter->age_threshold =
+					sap_ctx->acs_cfg->last_scan_ageout_time;
+		else
+			filter->age_threshold = qdf_get_time_of_the_day_ms() -
 						sap_ctx->acs_req_timestamp;
+	}
 
 	list = wlan_scan_get_result(mac_ctx->pdev, filter);
 
@@ -342,6 +349,11 @@ QDF_STATUS wlansap_pre_start_bss_acs_scan_callback(mac_handle_t mac_handle,
 
 	host_log_acs_scan_done(acs_scan_done_status_str(scan_status),
 			  sessionid, scanid);
+
+	if (sap_ctx->optimize_acs_chan_selected) {
+		sap_debug("SAP channel selected using first clean channel, ignore scan complete event");
+		return QDF_STATUS_SUCCESS;
+	}
 
 	/* This has to be done before the ACS selects default channel */
 	wlansap_filter_unsafe_ch(mac_ctx->psoc, sap_ctx);
@@ -1195,6 +1207,9 @@ QDF_STATUS wlansap_roam_callback(void *ctx,
 	case eCSR_ROAM_EXT_CHG_CHNL_IND:
 		sap_debug("Received set channel Indication");
 		break;
+	case eCSR_ROAM_CHANNEL_INFO_EVENT_IND:
+		wlansap_process_chan_info_event(sap_ctx, csr_roam_info);
+		break;
 	default:
 		break;
 	}
@@ -1455,3 +1470,83 @@ void sap_scan_event_callback(struct wlan_objmgr_vdev *vdev,
 						arg, session_id,
 						scan_id, scan_status);
 }
+
+#ifdef WLAN_FEATURE_SAP_ACS_OPTIMIZE
+#define WLAN_INVALID_PDEV_ID 0xFFFFFFFF
+void wlansap_process_chan_info_event(struct sap_context *sap_ctx,
+				     struct csr_roam_info *roam_info)
+{
+	struct mac_context *mac;
+	struct scan_filter *filter;
+	qdf_list_t *list = NULL;
+
+	mac = sap_get_mac_context();
+	if (!mac) {
+		sap_err("Invalid MAC context");
+		return;
+	}
+
+	if (!hdd_sap_is_acs_in_progress(sap_ctx->vdev))
+		return;
+
+	if (SAP_INIT != sap_ctx->fsm_state)
+		return;
+
+	if (WLAN_REG_IS_24GHZ_CH_FREQ(roam_info->chan_info_freq) ||
+	    sap_ctx->acs_cfg->ch_width != CH_WIDTH_20MHZ)
+		return;
+
+	if (sap_ctx->optimize_acs_chan_selected)
+		return;
+
+	filter = qdf_mem_malloc(sizeof(*filter));
+	if (!filter)
+		return;
+
+	filter->age_threshold = qdf_get_time_of_the_day_ms() -
+				sap_ctx->acs_req_timestamp;
+	filter->num_of_channels = 1;
+	filter->chan_freq_list[0] = roam_info->chan_info_freq;
+
+	list = ucfg_scan_get_result(mac->pdev, filter);
+	qdf_mem_free(filter);
+	if (!list)
+		return;
+
+	if (qdf_list_size(list))
+		goto exit;
+
+	if (!policy_mgr_is_sap_freq_allowed(mac->psoc,
+					    roam_info->chan_info_freq))
+		goto exit;
+
+	sap_debug("ACS Best channel %d as no beacon/probe rsp found\n",
+		  roam_info->chan_info_freq);
+
+	sap_ctx->optimize_acs_chan_selected = true;
+
+	wlan_abort_scan(mac->pdev, WLAN_INVALID_PDEV_ID,
+			sap_ctx->sessionId, INVALID_SCAN_ID, false);
+
+	wlansap_set_acs_ch_freq(sap_ctx, roam_info->chan_info_freq);
+	sap_ctx->acs_cfg->pri_ch_freq = roam_info->chan_info_freq;
+	sap_config_acs_result(MAC_HANDLE(mac), sap_ctx,
+			      sap_ctx->acs_cfg->ht_sec_ch_freq);
+
+	wlansap_dump_acs_ch_freq(sap_ctx);
+
+	sap_ctx->sap_state = eSAP_ACS_CHANNEL_SELECTED;
+	sap_ctx->sap_status = eSAP_STATUS_SUCCESS;
+
+	if (sap_ctx->freq_list) {
+		qdf_mem_free(sap_ctx->freq_list);
+		sap_ctx->freq_list = NULL;
+		sap_ctx->num_of_channel = 0;
+	}
+
+	sap_hdd_signal_event_handler(sap_ctx);
+
+exit:
+	ucfg_scan_purge_results(list);
+}
+#endif

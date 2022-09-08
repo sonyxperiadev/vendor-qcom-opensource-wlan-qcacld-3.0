@@ -35,7 +35,8 @@ wlan_hdd_btc_chain_mode_handler(struct wlan_objmgr_vdev *vdev)
 	QDF_STATUS status;
 	struct hdd_adapter *adapter;
 	mac_handle_t mac_handle;
-	uint8_t nss, mode, band;
+	uint8_t nss, band;
+	enum coex_btc_chain_mode mode;
 	uint8_t vdev_id;
 	uint32_t freq;
 	struct wlan_objmgr_psoc *psoc;
@@ -73,7 +74,8 @@ wlan_hdd_btc_chain_mode_handler(struct wlan_objmgr_vdev *vdev)
 		return -EINVAL;
 	}
 
-	nss = ((mode == QCA_BTC_CHAIN_SEPARATED) ? 1 : 2);
+	nss = ((mode == WLAN_COEX_BTC_CHAIN_MODE_FDD ||
+		mode == WLAN_COEX_BTC_CHAIN_MODE_HYBRID) ? 1 : 2);
 
 	hdd_debug("update nss to %d for vdev %d, device mode %d",
 		  nss, adapter->vdev_id, adapter->device_mode);

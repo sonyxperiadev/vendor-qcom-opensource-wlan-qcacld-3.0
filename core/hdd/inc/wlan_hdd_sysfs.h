@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2018, 2020 The Linux Foundation. All rights reserved.
+* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -67,6 +68,23 @@ void hdd_create_adapter_sysfs_files(struct hdd_adapter *adapter);
  * Return: none
  */
 void hdd_destroy_adapter_sysfs_files(struct hdd_adapter *adapter);
+
+/**
+ * hdd_create_wifi_feature_interface_sysfs_file - Create wifi feature interface
+ * sysfs file
+ *
+ * Return: none
+ */
+void hdd_create_wifi_feature_interface_sysfs_file(void);
+
+/**
+ * hdd_sysfs_create_wifi_root_obj() - create wifi root kobj
+ * @hdd_ctx: pointer to hdd context
+ *
+ * Return: none
+ */
+void hdd_sysfs_create_wifi_root_obj(struct hdd_context *hdd_ctx);
+
 #else
 static inline int
 hdd_sysfs_validate_and_copy_buf(char *dest_buf, size_t dest_buf_size,
@@ -98,6 +116,14 @@ static void hdd_create_adapter_sysfs_files(struct hdd_adapter *adapter)
 }
 
 static void hdd_destroy_adapter_sysfs_files(struct hdd_adapter *adapter)
+{
+}
+
+static inline void hdd_create_wifi_feature_interface_sysfs_file(void)
+{
+}
+
+static inline void hdd_sysfs_create_wifi_root_obj(struct hdd_context *hdd_ctx)
 {
 }
 #endif /* End of WLAN SYSFS*/

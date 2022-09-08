@@ -391,6 +391,15 @@ QDF_STATUS ucfg_tdls_set_rssi(struct wlan_objmgr_vdev *vdev,
 void ucfg_tdls_notify_connect_failure(struct wlan_objmgr_psoc *psoc);
 
 /**
+ * ucfg_get_tdls_conn_peer_count() - This api is called to get number of
+ *                                    connected TDLS peer
+ * @vdev: vdev object
+ *
+ * Return: tdls connected peer count
+ */
+uint16_t ucfg_get_tdls_conn_peer_count(struct wlan_objmgr_vdev *vdev);
+
+/**
  * ucfg_get_tdls_vdev() - Ucfg api to get tdls specific vdev object
  * @psoc: wlan psoc object manager
  * @dbg_id: debug id

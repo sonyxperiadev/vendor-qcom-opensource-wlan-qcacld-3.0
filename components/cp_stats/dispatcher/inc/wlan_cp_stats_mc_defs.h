@@ -330,12 +330,56 @@ struct pdev_mc_cp_extd_stats {
 };
 
 /**
+ * struct channel_status
+ * @channel_freq: Channel freq
+ * @noise_floor: Noise Floor value
+ * @rx_clear_count: rx clear count
+ * @cycle_count: cycle count
+ * @chan_tx_pwr_range: channel tx power per range in 0.5dBm steps
+ * @chan_tx_pwr_throughput: channel tx power per throughput
+ * @rx_frame_count: rx frame count (cumulative)
+ * @bss_rx_cycle_count: BSS rx cycle count
+ * @rx_11b_mode_data_duration: b-mode data rx time (units are microseconds)
+ * @tx_frame_count: BSS tx cycle count
+ * @mac_clk_mhz: sample frequency
+ * @channel_id: channel index
+ * @cmd_flags: indicate which stat event is this status coming from
+ */
+struct channel_status {
+	uint32_t    channel_freq;
+	uint32_t    noise_floor;
+	uint32_t    rx_clear_count;
+	uint32_t    cycle_count;
+	uint32_t    chan_tx_pwr_range;
+	uint32_t    chan_tx_pwr_throughput;
+	uint32_t    rx_frame_count;
+	uint32_t    bss_rx_cycle_count;
+	uint32_t    rx_11b_mode_data_duration;
+	uint32_t    tx_frame_count;
+	uint32_t    mac_clk_mhz;
+	uint32_t    channel_id;
+	uint32_t    cmd_flags;
+};
+
+/**
+ * struct per_channel_stats
+ * @total_channel: total number of be scanned channel
+ * @channel_status_list: channel status info store in this array
+ */
+struct per_channel_stats {
+	uint8_t total_channel;
+	struct channel_status
+		 channel_status_list[NUM_CHANNELS];
+};
+
+/**
  * struct pdev_mc_cp_stats: pdev specific stats
  * @max_pwr: max tx power for pdev
  * @pdev_id: pdev id
  * @rx_clear_count: accumulative rx clear count (busy time) of pdev
  * @cycle_count: accumulative cycle count (total time) of pdev
  * @tx_frame_count: accumulative tx frame count (total time) of pdev
+ * @chan_stats: per channel info stats
  */
 struct pdev_mc_cp_stats {
 	int32_t max_pwr;
@@ -343,6 +387,7 @@ struct pdev_mc_cp_stats {
 	uint32_t rx_clear_count;
 	uint32_t cycle_count;
 	uint32_t tx_frame_count;
+	struct per_channel_stats chan_stats;
 };
 
 /**

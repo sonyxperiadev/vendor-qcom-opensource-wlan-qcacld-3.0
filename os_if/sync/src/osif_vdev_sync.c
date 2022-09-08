@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2019, 2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -24,6 +25,8 @@
 #include "qdf_lock.h"
 #include "qdf_status.h"
 #include "qdf_types.h"
+#include <qdf_trace.h>
+#include <wlan_cfg80211.h>
 
 static struct osif_vdev_sync __osif_vdev_sync_arr[WLAN_MAX_VDEVS +
 						  WLAN_MAX_ML_VDEVS];
@@ -325,5 +328,6 @@ uint8_t osif_vdev_get_cached_cmd(struct osif_vdev_sync *vdev_sync)
 void osif_vdev_cache_command(struct osif_vdev_sync *vdev_sync, uint8_t cmd_id)
 {
 	dsc_vdev_cache_command(vdev_sync->dsc_vdev, cmd_id);
+	osif_debug("Set cache cmd to %d", cmd_id);
 }
 

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012, 2014-2017, 2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -124,7 +125,7 @@ struct ol_txrx_stats_tx {
 	/* MSDUs successfully sent across the WLAN */
 	struct ol_txrx_stats_elem delivered;
 	struct ol_txrx_stats_tx_dropped dropped;
-	/* contains information of packets recevied per tx completion*/
+	/* contains information of packets received per tx completion*/
 	struct ol_txrx_stats_tx_histogram comp_histogram;
 	/* TSO (TCP segmentation offload) information */
 	struct ol_txrx_stats_tx_tso tso;

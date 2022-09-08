@@ -619,7 +619,7 @@ int hdd_set_p2p_opps(struct net_device *dev, uint8_t *command)
 	if (ctwindow != -1)
 		adapter->ctw = ctwindow;
 
-	/* Send command to FW when OppPS is either enabled(1)/disbaled(0) */
+	/* Send command to FW when OppPS is either enabled(1)/disabled(0) */
 	if (opp_ps != -1) {
 		adapter->ops = opp_ps;
 		noa.opp_ps = adapter->ops;
@@ -1351,7 +1351,7 @@ static uint32_t set_first_connection_operating_channel(
 
 	oper_chan_freq = hdd_get_operating_chan_freq(hdd_ctx, dev_mode);
 	if (!oper_chan_freq) {
-		hdd_err(" First adpter operating channel is invalid");
+		hdd_err(" First adapter operating channel is invalid");
 		return -EINVAL;
 	}
 	operating_channel = wlan_reg_freq_to_chan(hdd_ctx->pdev,

@@ -133,6 +133,33 @@ enum hdd_dot11_mode {
 			CFG_VALUE_OR_DEFAULT, \
 			"dot11 mode")
 
+#ifdef FEATURE_SET
+  /*
+   * <ini>
+   * get_wifi_features  - Get wifi features info from fw
+   * @Min: 0
+   * @Max: 1
+   * @Default: 0
+   *
+   * This ini is used to enable feature to get wifi supported features from fw
+   *
+   * Related: None
+   *
+   * Supported Feature: All
+   *
+   * Usage: External
+   *
+   * </ini>
+   */
+#define CFG_GET_WIFI_FEATURES CFG_INI_BOOL( \
+		"get_wifi_features", \
+		0, \
+		"Get wifi features")
+#define CFG_GET_WIFI_FEATURES_ALL CFG(CFG_GET_WIFI_FEATURES)
+#else
+#define CFG_GET_WIFI_FEATURES_ALL
+#endif
+
 #ifdef QCA_WIFI_EMULATION
 #define CFG_INTERFACE_CHANGE_WAIT_DEFAULT	300000
 #else
@@ -1944,5 +1971,6 @@ enum host_log_level {
 	CFG(CFG_READ_MAC_ADDR_FROM_MAC_FILE) \
 	CFG(CFG_SAR_CONVERSION) \
 	CFG(CFG_ENABLE_HOST_MODULE_LOG_LEVEL) \
-	SAR_SAFETY_FEATURE_ALL
+	SAR_SAFETY_FEATURE_ALL \
+	CFG_GET_WIFI_FEATURES_ALL
 #endif

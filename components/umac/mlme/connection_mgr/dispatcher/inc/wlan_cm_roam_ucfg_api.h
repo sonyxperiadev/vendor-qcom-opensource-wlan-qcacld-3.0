@@ -126,6 +126,38 @@ ucfg_cm_update_session_assoc_ie(struct wlan_objmgr_psoc *psoc,
 }
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
+#ifdef FEATURE_RX_LINKSPEED_ROAM_TRIGGER
+/**
+ * ucfg_cm_roam_link_speed_update() - Update link speed state for roaming
+ * @psoc: psoc pointer
+ * @vdev_id: vdev id
+ * @is_link_speed_good: true means link speed good, false means bad
+ *
+ * Return: QDF_STATUS
+ */
+static inline
+void ucfg_cm_roam_link_speed_update(struct wlan_objmgr_psoc *psoc,
+				    uint8_t vdev_id,
+				    bool is_link_speed_good)
+{
+	wlan_cm_roam_link_speed_update(psoc,
+				       vdev_id,
+				       is_link_speed_good);
+}
+
+/**
+ * ucfg_mlme_is_linkspeed_roam_trigger_supported() - Get roam linkspeed check
+ * @psoc: pointer to psoc object
+ *
+ * Return: bool, true: Linkspeed check for low rssi roaming supported
+ */
+static inline bool
+ucfg_cm_is_linkspeed_roam_trigger_supported(struct wlan_objmgr_psoc *psoc)
+{
+	return wlan_cm_is_linkspeed_roam_trigger_supported(psoc);
+}
+#endif
+
 static inline QDF_STATUS
 ucfg_cm_update_roam_scan_scheme_bitmap(struct wlan_objmgr_psoc *psoc,
 				       uint8_t vdev_id,

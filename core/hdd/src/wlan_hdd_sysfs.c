@@ -85,6 +85,8 @@
 #include <wlan_hdd_sysfs_bmiss.h>
 #include <wlan_hdd_sysfs_get_freq_for_pwr.h>
 #include <wlan_hdd_sysfs_dp_tx_delay_stats.h>
+#include <wlan_hdd_sysfs_wifi_features.h>
+#include <wlan_hdd_sysfs_dp_traffic_end_indication.h>
 
 #define MAX_PSOC_ID_SIZE 10
 
@@ -98,6 +100,7 @@ static struct kobject *wlan_kobject;
 static struct kobject *driver_kobject;
 static struct kobject *fw_kobject;
 static struct kobject *psoc_kobject;
+static struct kobject *wifi_kobject;
 
 int
 hdd_sysfs_validate_and_copy_buf(char *dest_buf, size_t dest_buf_size,
@@ -687,6 +690,54 @@ static void hdd_sysfs_destroy_driver_root_obj(void)
 	}
 }
 
+void hdd_sysfs_create_wifi_root_obj(struct hdd_context *hdd_ctx)
+{
+	qdf_mutex_acquire(&hdd_ctx->wifi_kobj_lock);
+	if (wifi_kobject) {
+		hdd_debug("wifi kobj already created");
+		goto wifi_kobj_created;
+	}
+	wifi_kobject = pld_get_wifi_kobj(hdd_ctx->parent_dev);
+	if (wifi_kobject) {
+		hdd_debug("wifi_kobject created by platform");
+		goto wifi_kobj_created;
+	}
+	wifi_kobject = kobject_create_and_add("wifi", NULL);
+	if (!wifi_kobject)
+		hdd_err("could not allocate wifi kobject");
+
+wifi_kobj_created:
+	qdf_mutex_release(&hdd_ctx->wifi_kobj_lock);
+
+}
+
+static void hdd_sysfs_destroy_wifi_root_obj(void)
+{
+	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
+
+	if (!hdd_ctx) {
+		hdd_err("hdd context is NULL");
+		return;
+	}
+	if (pld_get_wifi_kobj(hdd_ctx->parent_dev)) {
+		hdd_debug("wifi_kobject created by platform");
+		wifi_kobject = NULL;
+		return;
+	}
+
+	if (!wifi_kobject) {
+		hdd_err("could not get wifi kobject!");
+		return;
+	}
+	kobject_put(wifi_kobject);
+	wifi_kobject = NULL;
+}
+
+void hdd_create_wifi_feature_interface_sysfs_file(void)
+{
+	hdd_sysfs_create_wifi_feature_interface(wifi_kobject);
+}
+
 #ifdef WLAN_FEATURE_BEACON_RECEPTION_STATS
 static int hdd_sysfs_create_bcn_reception_interface(struct hdd_adapter
 						     *adapter)
@@ -795,11 +846,13 @@ hdd_sysfs_create_sap_adapter_root_obj(struct hdd_adapter *adapter)
 	hdd_sysfs_dl_modes_create(adapter);
 	hdd_sysfs_11be_rate_create(adapter);
 	hdd_sysfs_dp_tx_delay_stats_create(adapter);
+	hdd_sysfs_dp_traffic_end_indication_create(adapter);
 }
 
 static void
 hdd_sysfs_destroy_sap_adapter_root_obj(struct hdd_adapter *adapter)
 {
+	hdd_sysfs_dp_traffic_end_indication_destroy(adapter);
 	hdd_sysfs_dp_tx_delay_stats_destroy(adapter);
 	hdd_sysfs_11be_rate_destroy(adapter);
 	hdd_sysfs_dl_modes_destroy(adapter);
@@ -843,10 +896,11 @@ void hdd_create_sysfs_files(struct hdd_context *hdd_ctx)
 	hdd_sysfs_create_driver_root_obj();
 	hdd_sysfs_create_version_interface(hdd_ctx->psoc);
 	hdd_sysfs_mem_stats_create(wlan_kobject);
-	hdd_sysfs_create_wifi_root_obj();
+	hdd_sysfs_create_wifi_root_obj(hdd_ctx);
 	if  (QDF_GLOBAL_MISSION_MODE == hdd_get_conparam()) {
+		hdd_create_wifi_feature_interface_sysfs_file();
 		hdd_sysfs_create_powerstats_interface();
-		hdd_sysfs_create_dump_in_progress_interface();
+		hdd_sysfs_create_dump_in_progress_interface(wifi_kobject);
 		hdd_sysfs_fw_mode_config_create(driver_kobject);
 		hdd_sysfs_scan_disable_create(driver_kobject);
 		hdd_sysfs_wow_ito_create(driver_kobject);
@@ -885,8 +939,9 @@ void hdd_destroy_sysfs_files(void)
 		hdd_sysfs_wow_ito_destroy(driver_kobject);
 		hdd_sysfs_scan_disable_destroy(driver_kobject);
 		hdd_sysfs_fw_mode_config_destroy(driver_kobject);
-		hdd_sysfs_destroy_dump_in_progress_interface();
+		hdd_sysfs_destroy_dump_in_progress_interface(wifi_kobject);
 		hdd_sysfs_destroy_powerstats_interface();
+		hdd_sysfs_destroy_wifi_feature_interface(wifi_kobject);
 	}
 	hdd_sysfs_destroy_wifi_root_obj();
 	hdd_sysfs_mem_stats_destroy(wlan_kobject);

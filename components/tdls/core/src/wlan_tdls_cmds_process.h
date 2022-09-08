@@ -140,6 +140,14 @@ tdls_release_serialization_command(struct wlan_objmgr_vdev *vdev,
 				   enum wlan_serialization_cmd_type type);
 
 /**
+ * tdls_get_connected_peer_count_from_vdev() -  Get TDLS connected peer count
+ * @tdls_vdev: Pointer to vdev obj
+ *
+ * Return: Connected peer count
+ */
+uint16_t tdls_get_connected_peer_count_from_vdev(struct wlan_objmgr_vdev *vdev);
+
+/**
  * tdls_set_cap() - set TDLS capability type
  * @tdls_vdev: tdls vdev object
  * @mac: peer mac address

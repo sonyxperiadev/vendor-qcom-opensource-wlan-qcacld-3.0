@@ -116,10 +116,8 @@ wma_map_phy_ch_bw_to_wmi_channel_width(enum phy_ch_width ch_width)
 		return WMI_HOST_CHAN_WIDTH_5;
 	case CH_WIDTH_10MHZ:
 		return WMI_HOST_CHAN_WIDTH_10;
-#if defined(WLAN_FEATURE_11BE)
 	case CH_WIDTH_320MHZ:
 		return WMI_HOST_CHAN_WIDTH_320;
-#endif
 	default:
 		return WMI_HOST_CHAN_WIDTH_20;
 	}
@@ -217,8 +215,8 @@ QDF_STATUS wma_update_channel_list(WMA_HANDLE handle,
 		else if (chan_list->chanParam[i].quarter_rate)
 			chan_p->quarter_rate = 1;
 
-		if (wlan_reg_is_6ghz_psc_chan_freq(
-			    chan_p->mhz))
+		if (WLAN_REG_IS_6GHZ_CHAN_FREQ(chan_p->mhz) &&
+		    wlan_reg_is_6ghz_psc_chan_freq(chan_p->mhz))
 			chan_p->psc_channel = 1;
 
 		/*TODO: Set WMI_SET_CHANNEL_MIN_POWER */

@@ -2502,6 +2502,7 @@ void lim_process_mlm_set_sta_key_rsp(struct mac_context *mac_ctx,
 	uint16_t key_len;
 	uint16_t result_status;
 	tSetStaKeyParams *set_key_params;
+	tLimMlmStates mlm_state = eLIM_MLM_OFFLINE_STATE;
 
 	SET_LIM_PROCESS_DEFD_MESGS(mac_ctx, true);
 	qdf_mem_zero((void *)&mlm_set_key_cnf, sizeof(tLimMlmSetKeysCnf));
@@ -2511,20 +2512,28 @@ void lim_process_mlm_set_sta_key_rsp(struct mac_context *mac_ctx,
 	}
 	set_key_params = msg->bodyptr;
 	vdev_id = set_key_params->vdev_id;
-	session_entry = pe_find_session_by_vdev_id(mac_ctx, vdev_id);
-	if (!session_entry) {
-		pe_err("session does not exist for given vdev_id %d", vdev_id);
-		qdf_mem_zero(msg->bodyptr, sizeof(*set_key_params));
-		qdf_mem_free(msg->bodyptr);
-		msg->bodyptr = NULL;
-		lim_send_sme_set_context_rsp(mac_ctx,
-					     mlm_set_key_cnf.peer_macaddr,
-					     0, eSIR_SME_INVALID_SESSION, NULL,
-					     vdev_id);
-		return;
+	session_id = vdev_id;
+	if (wlan_get_opmode_from_vdev_id(mac_ctx->pdev,
+					 vdev_id) != QDF_NAN_DISC_MODE) {
+		session_entry = pe_find_session_by_vdev_id(mac_ctx, vdev_id);
+		if (!session_entry) {
+			pe_err("session does not exist for given vdev_id %d",
+			       vdev_id);
+			qdf_mem_zero(msg->bodyptr, sizeof(*set_key_params));
+			qdf_mem_free(msg->bodyptr);
+			msg->bodyptr = NULL;
+			lim_send_sme_set_context_rsp(mac_ctx,
+						     mlm_set_key_cnf.peer_macaddr,
+						     0,
+						     eSIR_SME_INVALID_SESSION,
+						     NULL, vdev_id);
+			return;
+		}
+		session_id = session_entry->peSessionId;
+		mlm_state = session_entry->limMlmState;
 	}
 
-	session_id = session_entry->peSessionId;
+	MTRACE(mac_trace(mac_ctx, TRACE_CODE_MLM_STATE, session_id, mlm_state));
 	pe_debug("PE session ID %d, vdev_id %d", session_id, vdev_id);
 	result_status = set_key_params->status;
 	key_len = set_key_params->key[0].keyLength;
@@ -2534,9 +2543,6 @@ void lim_process_mlm_set_sta_key_rsp(struct mac_context *mac_ctx,
 	else
 		mlm_set_key_cnf.key_len_nonzero = false;
 
-
-	MTRACE(mac_trace(mac_ctx, TRACE_CODE_MLM_STATE,
-		session_entry->peSessionId, session_entry->limMlmState));
 	if (resp_reqd) {
 		tpLimMlmSetKeysReq lpLimMlmSetKeysReq =
 			(tpLimMlmSetKeysReq) mac_ctx->lim.gpLimMlmSetKeysReq;
@@ -2758,6 +2764,7 @@ lim_process_switch_channel_join_mlo(struct pe_session *session_entry,
 	if (assoc_rsp.len) {
 		struct element_info link_assoc_rsp;
 		tLimMlmJoinCnf mlm_join_cnf;
+		tLimMlmAssocCnf assoc_cnf;
 
 		mlm_join_cnf.resultCode = eSIR_SME_SUCCESS;
 		mlm_join_cnf.protStatusCode = STATUS_SUCCESS;
@@ -2792,6 +2799,17 @@ lim_process_switch_channel_join_mlo(struct pe_session *session_entry,
 						    link_assoc_rsp.len,
 						    LIM_ASSOC,
 						    session_entry);
+			qdf_mem_free(link_assoc_rsp.ptr);
+		} else {
+			pe_debug("MLO: link vdev assoc rsp generation failed");
+			assoc_cnf.resultCode = eSIR_SME_INVALID_PARAMETERS;
+			assoc_cnf.protStatusCode = STATUS_UNSPECIFIED_FAILURE;
+			/* Update PE sessionId */
+			assoc_cnf.sessionId = session_entry->peSessionId;
+			lim_post_sme_message(mac_ctx, LIM_MLM_ASSOC_CNF,
+					(uint32_t *)&assoc_cnf);
+
+			session_entry->limMlmState = eLIM_MLM_IDLE_STATE;
 			qdf_mem_free(link_assoc_rsp.ptr);
 		}
 	}
@@ -3176,25 +3194,4 @@ QDF_STATUS lim_send_beacon_ind(struct mac_context *mac,
 	msg.bodyptr = params;
 
 	return sch_process_pre_beacon_ind(mac, &msg, reason);
-}
-
-void lim_process_rx_channel_status_event(struct mac_context *mac_ctx, void *buf)
-{
-	struct lim_channel_status *chan_status = buf;
-
-	if (!chan_status) {
-		pe_err("ACS evt report buf NULL");
-		return;
-	}
-
-	if (mac_ctx->sap.acs_with_more_param ||
-	    sap_is_acs_scan_optimize_enable())
-		lim_add_channel_status_info(mac_ctx, chan_status,
-					    chan_status->channel_id);
-	else
-		pe_warn("Error evt report");
-
-	qdf_mem_free(buf);
-
-	return;
 }

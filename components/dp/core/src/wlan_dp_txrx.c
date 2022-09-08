@@ -42,6 +42,7 @@
 #include <wlan_dp_bus_bandwidth.h>
 #include <wlan_tdls_ucfg_api.h>
 #include <qdf_trace.h>
+#include <qdf_net_stats.h>
 
 uint32_t wlan_dp_intf_get_pkt_type_bitmap_value(void *intf_ctx)
 {
@@ -632,13 +633,13 @@ dp_start_xmit(struct wlan_dp_intf *dp_intf, qdf_nbuf_t nbuf)
 	 */
 	qdf_net_buf_debug_acquire_skb(nbuf, __FILE__, __LINE__);
 
-	QDF_NET_DEV_STATS_TX_BYTES(&dp_intf->stats) += qdf_nbuf_len(nbuf);
+	qdf_net_stats_add_tx_bytes(&dp_intf->stats, qdf_nbuf_len(nbuf));
 
 	if (qdf_nbuf_is_tso(nbuf)) {
-		QDF_NET_DEV_STATS_TX_PKTS(&dp_intf->stats) +=
-			qdf_nbuf_get_tso_num_seg(nbuf);
+		qdf_net_stats_add_tx_pkts(&dp_intf->stats,
+					  qdf_nbuf_get_tso_num_seg(nbuf));
 	} else {
-		QDF_NET_DEV_STATS_INC_TX_PKTS(&dp_intf->stats);
+		qdf_net_stats_add_tx_pkts(&dp_intf->stats, 1);
 		dp_ctx->no_tx_offload_pkt_cnt++;
 	}
 
@@ -701,7 +702,7 @@ drop_pkt:
 
 drop_pkt_accounting:
 
-	QDF_NET_DEV_STATS_INC_TX_DROPEED(&dp_intf->stats);
+	qdf_net_stats_inc_tx_dropped(&dp_intf->stats);
 	++stats->per_cpu[cpu].tx_dropped;
 	if (is_arp) {
 		++dp_intf->dp_stats.arp_stats.tx_dropped;
@@ -839,9 +840,9 @@ QDF_STATUS dp_mon_rx_packet_cbk(void *context, qdf_nbuf_t rxbuf)
 		qdf_nbuf_set_dev(nbuf, dp_intf->dev);
 
 		++stats->per_cpu[cpu_index].rx_packets;
-		QDF_NET_DEV_STATS_INC_RX_PKTS(&dp_intf->stats);
-		QDF_NET_DEV_STATS_RX_BYTES(&dp_intf->stats) +=
-			qdf_nbuf_len(nbuf);
+		qdf_net_stats_add_rx_pkts(&dp_intf->stats, 1);
+		qdf_net_stats_add_rx_bytes(&dp_intf->stats,
+					   qdf_nbuf_len(nbuf));
 
 		/* Remove SKB from internal tracking table before submitting
 		 * it to stack
@@ -1727,12 +1728,12 @@ QDF_STATUS dp_rx_packet_cbk(void *dp_intf_context,
 		qdf_nbuf_set_dev(nbuf, dp_intf->dev);
 		qdf_nbuf_set_protocol_eth_tye_trans(nbuf);
 		++stats->per_cpu[cpu_index].rx_packets;
-		QDF_NET_DEV_STATS_INC_RX_PKTS(&dp_intf->stats);
+		qdf_net_stats_add_rx_pkts(&dp_intf->stats, 1);
 		/* count aggregated RX frame into stats */
-		QDF_NET_DEV_STATS_RX_PKTS(&dp_intf->stats) +=
-			qdf_nbuf_get_gso_segs(nbuf);
-		QDF_NET_DEV_STATS_RX_BYTES(&dp_intf->stats) +=
-			qdf_nbuf_len(nbuf);
+		qdf_net_stats_add_rx_pkts(&dp_intf->stats,
+					  qdf_nbuf_get_gso_segs(nbuf));
+		qdf_net_stats_add_rx_bytes(&dp_intf->stats,
+					   qdf_nbuf_len(nbuf));
 
 		/* Incr GW Rx count for NUD tracking based on GW mac addr */
 		dp_nud_incr_gw_rx_pkt_cnt(dp_intf, mac_addr);

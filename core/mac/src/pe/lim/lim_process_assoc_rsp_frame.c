@@ -1267,7 +1267,8 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 
 	if (subtype != LIM_REASSOC) {
 		aid = assoc_rsp->aid & 0x3FFF;
-		wlan_connectivity_mgmt_event((struct wlan_frame_hdr *)hdr,
+		wlan_connectivity_mgmt_event(mac_ctx->psoc,
+					     (struct wlan_frame_hdr *)hdr,
 					     session_entry->vdev_id,
 					     assoc_rsp->status_code, 0, rssi,
 					     0, 0, 0, aid,

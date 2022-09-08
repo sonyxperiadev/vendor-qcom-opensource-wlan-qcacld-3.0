@@ -34,6 +34,7 @@
 #include "wlan_cmn_ieee80211.h"
 #include "wlan_pmo_common_public_struct.h"
 #include "qca_vendor.h"
+#include "wmi_unified_param.h"
 
 /**
  * enum cfg_sub_20_channel_width: ini values for su 20 mhz channel width
@@ -45,6 +46,20 @@ enum cfg_sub_20_channel_width {
 	WLAN_SUB_20_CH_WIDTH_5 = 1,
 	WLAN_SUB_20_CH_WIDTH_10 = 2,
 };
+
+#ifdef FEATURE_SET
+/**
+ * struct wlan_cds_feature_set - CDS feature set struct
+ * @wifi_standard: Supported wifi standard
+ * @sap_5g_supported: 5GHz SAP supported or not
+ * @sap_6g_supported: 6GHz SAP supported or no
+ */
+struct wlan_cds_feature_set {
+	WMI_HOST_WIFI_STANDARD wifi_standard;
+	bool sap_5g_supported;
+	bool sap_6g_supported;
+};
+#endif
 
 /**
  * struct cds_config_info - Place Holder for cds configuration
@@ -76,6 +91,8 @@ enum cfg_sub_20_channel_width {
  * @rps_enabled: RPS enabled in SAP mode
  * Structure for holding cds ini parameters.
  * @num_vdevs: Configured max number of VDEVs can be supported in the stack.
+ * @cds_feature_set: CDS feature set structure.
+ * @get_wifi_features: Get wifi features from fw
  */
 
 struct cds_config_info {
@@ -108,5 +125,9 @@ struct cds_config_info {
 	bool rps_enabled;
 	uint32_t num_vdevs;
 	bool enable_tx_compl_tsf64;
+#ifdef FEATURE_SET
+	struct wlan_cds_feature_set cds_feature_set;
+	bool get_wifi_features;
+#endif
 };
 #endif /* !defined( __CDS_CONFIG_H ) */

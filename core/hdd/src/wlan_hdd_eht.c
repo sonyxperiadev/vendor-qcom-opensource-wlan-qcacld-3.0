@@ -397,4 +397,22 @@ void wlan_hdd_fill_os_eht_rateflags(struct rate_info *os_rate,
 		os_rate->flags |= RATE_INFO_FLAGS_EHT_MCS;
 	}
 }
+
+#ifdef FEATURE_RX_LINKSPEED_ROAM_TRIGGER
+void
+wlan_hdd_refill_os_eht_rateflags(struct rate_info *os_rate, uint8_t preamble)
+{
+	if (preamble == DOT11_BE)
+		os_rate->flags |= RATE_INFO_FLAGS_EHT_MCS;
+}
+
+void
+wlan_hdd_refill_os_eht_bw(struct rate_info *os_rate, enum rx_tlv_bw bw)
+{
+	if (bw == RX_TLV_BW_320MHZ)
+		os_rate->bw = RATE_INFO_BW_320;
+	else
+		os_rate->bw = RATE_INFO_BW_20; /* Invalid bw: set 20M */
+}
+#endif
 #endif

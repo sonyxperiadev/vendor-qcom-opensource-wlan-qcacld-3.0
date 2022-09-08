@@ -171,6 +171,9 @@ void osif_dp_send_tcp_param_update_event(struct wlan_objmgr_psoc *psoc,
 
 	event_len = sizeof(uint8_t) + sizeof(uint8_t) + NLMSG_HDRLEN;
 	pdev = wlan_objmgr_get_pdev_by_id(psoc, 0, WLAN_OSIF_ID);
+	if (!pdev)
+		return;
+
 	os_priv = wlan_pdev_get_ospriv(pdev);
 
 	if (dir == 0) /*TX Flow */ {
@@ -741,6 +744,11 @@ static int osif_dp_populate_dns_stats_info(struct wlan_objmgr_vdev *vdev,
 	uint32_t track_dns_domain_len;
 	struct dp_dns_stats *dns_stats = ucfg_dp_get_dns_stats(vdev);
 
+	if (!dns_stats) {
+		dp_err("Unable to get DNS stats");
+		return -EINVAL;
+	}
+
 	track_dns_domain_len = ucfg_dp_get_track_dns_domain_len_value(vdev);
 	dns_query = qdf_mem_malloc(track_dns_domain_len + 1);
 	if (!dns_query)
@@ -791,6 +799,11 @@ static int osif_dp_populate_tcp_stats_info(struct wlan_objmgr_vdev *vdev,
 	uint32_t track_src_port = ucfg_dp_get_track_src_port_value(vdev);
 	uint32_t track_dest_port = ucfg_dp_get_track_dest_port_value(vdev);
 	struct dp_tcp_stats *tcp_stats = ucfg_dp_get_tcp_stats(vdev);
+
+	if (!tcp_stats) {
+		dp_err("Unable to get TCP stats");
+		return -EINVAL;
+	}
 
 	switch (pkt_type) {
 	case CONNECTIVITY_CHECK_SET_TCP_SYN:
@@ -876,6 +889,11 @@ static int osif_dp_populate_icmpv4_stats_info(struct wlan_objmgr_vdev *vdev,
 {
 	struct dp_icmpv4_stats *icmpv4_stats = ucfg_dp_get_icmpv4_stats(vdev);
 	uint32_t track_dest_ipv4 = ucfg_dp_get_track_dest_ipv4_value(vdev);
+
+	if (!icmpv4_stats) {
+		dp_err("Unable to get ICMP stats");
+		return -EINVAL;
+	}
 
 	if (nla_put_u16(skb, CHECK_STATS_PKT_TYPE,
 			CONNECTIVITY_CHECK_SET_ICMPV4) ||
@@ -1059,6 +1077,12 @@ int osif_dp_get_nud_stats(struct wiphy *wiphy,
 		goto exit;
 	}
 	arp_stats = ucfg_dp_get_arp_stats(vdev);
+	if (!arp_stats) {
+		dp_err("Unable to get ARP stats");
+		err = -EINVAL;
+		goto exit;
+	}
+
 	if (nla_put_u16(skb, COUNT_FROM_NETDEV,
 			arp_stats->tx_arp_req_count) ||
 	    nla_put_u16(skb, COUNT_TO_LOWER_MAC,

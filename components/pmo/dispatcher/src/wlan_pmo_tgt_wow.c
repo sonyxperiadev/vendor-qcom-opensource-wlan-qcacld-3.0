@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2018, 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022, Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -150,6 +151,8 @@ QDF_STATUS pmo_tgt_del_wow_pattern(
 
 	if (user)
 		pmo_decrement_wow_user_ptrn(vdev_ctx);
+	else
+		pmo_decrement_wow_default_ptrn(vdev_ctx);
 out:
 
 	return status;

@@ -353,6 +353,11 @@ static inline int pld_pcie_get_pci_slot(struct device *dev)
 	return 0;
 }
 
+static inline struct kobject *pld_pcie_get_wifi_kobj(struct device *dev)
+{
+	return NULL;
+}
+
 static inline int pld_pcie_power_on(struct device *dev)
 {
 	return 0;
@@ -660,6 +665,18 @@ static inline int pld_pcie_get_pci_slot(struct device *dev)
 static inline int pld_pcie_get_pci_slot(struct device *dev)
 {
 	return 0;
+}
+#endif
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0))
+static inline struct kobject *pld_pcie_get_wifi_kobj(struct device *dev)
+{
+	return cnss_get_wifi_kobj(dev);
+}
+#else
+static inline struct kobject *pld_pcie_get_wifi_kobj(struct device *dev)
+{
+	return NULL;
 }
 #endif
 

@@ -587,6 +587,15 @@ cm_roam_candidate_event_handler(struct wlan_objmgr_psoc *psoc,
 	ie_ptr = candidate->frame + ie_offset;
 	ie_len = candidate->frame_length - ie_offset;
 
+	extracted_ie = (uint8_t *)wlan_get_ie_ptr_from_eid(WLAN_ELEMID_SSID,
+							   ie_ptr, ie_len);
+	if (extracted_ie && extracted_ie[0] == WLAN_ELEMID_SSID &&
+	    extracted_ie[1] > MIN_IE_LEN) {
+		mlme_debug("SSID of the candidate is %.*s", extracted_ie[1],
+			   &extracted_ie[2]);
+		wlan_cm_set_roam_offload_ssid(vdev, extracted_ie);
+	}
+
 	/* For 2.4GHz,5GHz get channel from DS IE */
 	extracted_ie = (uint8_t *)wlan_get_ie_ptr_from_eid(WLAN_ELEMID_DSPARMS,
 							   ie_ptr, ie_len);

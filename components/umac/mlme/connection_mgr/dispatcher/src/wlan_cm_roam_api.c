@@ -35,6 +35,7 @@
 #include <../../core/src/wlan_cm_roam_i.h>
 #include "wlan_reg_ucfg_api.h"
 #include "wlan_connectivity_logging.h"
+#include "target_if.h"
 
 /* Support for "Fast roaming" (i.e., ESE, LFR, or 802.11r.) */
 #define BG_SCAN_OCCUPIED_CHANNEL_LIST_LEN 15
@@ -316,6 +317,70 @@ bool wlan_cm_same_band_sta_allowed(struct wlan_objmgr_psoc *psoc)
 }
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
+#ifdef FEATURE_RX_LINKSPEED_ROAM_TRIGGER
+QDF_STATUS wlan_cm_send_roam_linkspeed_state(struct scheduler_msg *msg)
+{
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	struct roam_link_speed_cfg *link_speed_cfg;
+	struct roam_disable_cfg  roam_link_speed_cfg;
+
+	if (!msg || !msg->bodyptr)
+		return QDF_STATUS_E_FAILURE;
+
+	link_speed_cfg = msg->bodyptr;
+	roam_link_speed_cfg.vdev_id = link_speed_cfg->vdev_id;
+	roam_link_speed_cfg.cfg = link_speed_cfg->is_link_speed_good;
+	status = wlan_cm_tgt_send_roam_linkspeed_state(link_speed_cfg->psoc,
+						       &roam_link_speed_cfg);
+	qdf_mem_free(link_speed_cfg);
+
+	return status;
+}
+
+void wlan_cm_roam_link_speed_update(struct wlan_objmgr_psoc *psoc,
+				    uint8_t vdev_id,
+				    bool is_link_speed_good)
+{
+	QDF_STATUS qdf_status;
+	struct scheduler_msg msg = {0};
+	struct roam_link_speed_cfg *link_speed_cfg;
+
+	link_speed_cfg = qdf_mem_malloc(sizeof(*link_speed_cfg));
+	if (!link_speed_cfg)
+		return;
+
+	link_speed_cfg->psoc = psoc;
+	link_speed_cfg->vdev_id = vdev_id;
+	link_speed_cfg->is_link_speed_good = is_link_speed_good;
+
+	msg.bodyptr = link_speed_cfg;
+	msg.callback = wlan_cm_send_roam_linkspeed_state;
+
+	qdf_status = scheduler_post_message(QDF_MODULE_ID_MLME,
+					    QDF_MODULE_ID_OS_IF,
+					    QDF_MODULE_ID_OS_IF, &msg);
+
+	if (QDF_IS_STATUS_ERROR(qdf_status)) {
+		mlme_err("post msg failed");
+		qdf_mem_free(link_speed_cfg);
+	}
+}
+
+bool wlan_cm_is_linkspeed_roam_trigger_supported(struct wlan_objmgr_psoc *psoc)
+{
+	struct wmi_unified *wmi_handle;
+
+	wmi_handle = get_wmi_unified_hdl_from_psoc(psoc);
+	if (!wmi_handle) {
+		mlme_debug("Invalid WMI handle");
+		return false;
+	}
+
+	return wmi_service_enabled(wmi_handle,
+				   wmi_service_linkspeed_roam_trigger_support);
+}
+#endif
+
 QDF_STATUS
 wlan_cm_fw_roam_abort_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
 {
@@ -2653,7 +2718,7 @@ cm_roam_stats_get_trigger_detail_str(struct wmi_roam_trigger_info *ptr,
 	case ROAM_TRIGGER_REASON_UNIT_TEST:
 		break;
 	case ROAM_TRIGGER_REASON_BTM:
-		cm_roam_btm_req_event(&ptr->btm_trig_data, vdev_id);
+		cm_roam_btm_req_event(&ptr->btm_trig_data, ptr, vdev_id, false);
 		buf_cons = qdf_snprint(
 				temp, buf_left,
 				"Req_mode: %d Disassoc_timer: %d",
@@ -2738,7 +2803,8 @@ cm_roam_stats_get_trigger_detail_str(struct wmi_roam_trigger_info *ptr,
 
 /**
  * cm_roam_stats_print_trigger_info  - Roam trigger related details
- * @data:    Pointer to the roam trigger data
+ * @psoc:  Pointer to PSOC object
+ * @data:  Pointer to the roam trigger data
  * @scan_data: Roam scan data pointer
  * @vdev_id: Vdev ID
  *
@@ -2748,12 +2814,14 @@ cm_roam_stats_get_trigger_detail_str(struct wmi_roam_trigger_info *ptr,
  * Return: None
  */
 static void
-cm_roam_stats_print_trigger_info(struct wmi_roam_trigger_info *data,
+cm_roam_stats_print_trigger_info(struct wlan_objmgr_psoc *psoc,
+				 struct wmi_roam_trigger_info *data,
 				 struct wmi_roam_scan_data *scan_data,
 				 uint8_t vdev_id, bool is_full_scan)
 {
 	char *buf;
 	char time[TIME_STRING_LEN];
+	QDF_STATUS status;
 
 	buf = qdf_mem_malloc(MAX_ROAM_DEBUG_BUF_SIZE);
 	if (!buf)
@@ -2764,10 +2832,13 @@ cm_roam_stats_print_trigger_info(struct wmi_roam_trigger_info *data,
 
 	/* Update roam trigger info to userspace */
 	cm_roam_trigger_info_event(data, scan_data, vdev_id, is_full_scan);
-
 	mlme_nofl_info("%s [ROAM_TRIGGER]: VDEV[%d] %s", time, vdev_id, buf);
-
 	qdf_mem_free(buf);
+
+	status = wlan_cm_update_roam_states(psoc, vdev_id, data->trigger_reason,
+					    ROAM_TRIGGER_REASON);
+	if (QDF_IS_STATUS_ERROR(status))
+		mlme_err("failed to update rt stats trigger reason");
 }
 
 /**
@@ -2972,6 +3043,7 @@ cm_roam_stats_print_roam_result(struct wlan_objmgr_psoc *psoc,
 {
 	char *buf;
 	char time[TIME_STRING_LEN];
+	QDF_STATUS status;
 
 	/* Update roam result info to userspace */
 	cm_roam_result_info_event(psoc, trigger, res, scan_data, vdev_id);
@@ -2988,8 +3060,12 @@ cm_roam_stats_print_roam_result(struct wlan_objmgr_psoc *psoc,
 	mlme_nofl_info("%s [ROAM_RESULT]: VDEV[%d] %s %s",
 		       time, vdev_id, mlme_get_roam_status_str(res->status),
 		       buf);
-
 	qdf_mem_free(buf);
+
+	status = wlan_cm_update_roam_states(psoc, vdev_id, res->fail_reason,
+					    ROAM_FAIL_REASON);
+	if (QDF_IS_STATUS_ERROR(status))
+		mlme_err("failed to update rt stats roam fail reason");
 }
 
 #define WLAN_ROAM_11KV_REQ_TYPE_BTM        1
@@ -3090,7 +3166,8 @@ cm_get_frame_subtype_str(enum mgmt_subtype frame_subtype)
 
 #define WLAN_SAE_AUTH_ALGO 3
 static void
-cm_roam_print_frame_info(struct roam_frame_stats *frame_data,
+cm_roam_print_frame_info(struct wlan_objmgr_psoc *psoc,
+			 struct roam_frame_stats *frame_data,
 			 struct wmi_roam_scan_data *scan_data, uint8_t vdev_id)
 {
 	struct roam_frame_info *frame_info;
@@ -3103,9 +3180,11 @@ cm_roam_print_frame_info(struct roam_frame_stats *frame_data,
 	for (i = 0; i < frame_data->num_frame; i++) {
 		frame_info = &frame_data->frame_info[i];
 		if (frame_info->auth_algo == WLAN_SAE_AUTH_ALGO &&
-		    wlan_is_log_record_present_for_bssid(&frame_info->bssid,
+		    wlan_is_log_record_present_for_bssid(psoc,
+							 &frame_info->bssid,
 							 vdev_id)) {
-			wlan_print_cached_sae_auth_logs(&frame_info->bssid,
+			wlan_print_cached_sae_auth_logs(psoc,
+							&frame_info->bssid,
 							vdev_id);
 			continue;
 		}
@@ -3191,63 +3270,153 @@ void cm_report_roam_rt_stats(struct wlan_objmgr_psoc *psoc,
 	}
 }
 
+/**
+ * cm_roam_handle_btm_stats() - Handle BTM related logging roam stats.
+ * @psoc: psoc pointer
+ * @stats_info: Pointer to the roam stats
+ * @i: TLV indev for BTM roam trigger
+ * @rem_tlv_len: Remaining TLV length
+ *
+ * Return: None
+ */
+static void
+cm_roam_handle_btm_stats(struct wlan_objmgr_psoc *psoc,
+			 struct roam_stats_event *stats_info, uint8_t i,
+			 uint8_t *rem_tlv_len)
+{
+	bool log_btm_frames_only = false;
+
+	if (stats_info->data_11kv[i].present)
+		cm_roam_stats_print_11kv_info(&stats_info->data_11kv[i],
+					      stats_info->vdev_id);
+
+	/*
+	 * If roam trigger is BTM and roam scan type is no scan then
+	 * the roam stats event is for BTM frames logging.
+	 * So log the BTM frames alone and return.
+	 */
+	if (stats_info->scan[i].present &&
+	    stats_info->scan[i].type == ROAM_STATS_SCAN_TYPE_NO_SCAN) {
+		cm_roam_btm_req_event(&stats_info->trigger[i].btm_trig_data,
+				      &stats_info->trigger[i],
+				      stats_info->vdev_id, false);
+		log_btm_frames_only = true;
+		goto log_btm_frames_only;
+	}
+
+	if (stats_info->trigger[i].present) {
+		bool is_full_scan = stats_info->scan[i].present &&
+				    stats_info->scan[i].type;
+
+		/* BTM request diag log event will be sent from inside below */
+		cm_roam_stats_print_trigger_info(psoc, &stats_info->trigger[i],
+						 &stats_info->scan[i],
+						 stats_info->vdev_id,
+						 is_full_scan);
+
+		if (stats_info->scan[i].present)
+			cm_roam_stats_print_scan_info(
+				psoc, &stats_info->scan[i],
+				stats_info->vdev_id,
+				stats_info->trigger[i].trigger_reason,
+				stats_info->trigger[i].timestamp);
+	}
+
+	if (stats_info->result[i].present)
+		cm_roam_stats_print_roam_result(psoc, &stats_info->trigger[i],
+						&stats_info->result[i],
+						&stats_info->scan[i],
+						stats_info->vdev_id);
+
+	if (stats_info->frame_stats[i].num_frame)
+		cm_roam_print_frame_info(psoc, &stats_info->frame_stats[i],
+					 &stats_info->scan[i],
+					 stats_info->vdev_id);
+
+log_btm_frames_only:
+	/*
+	 * Print BTM resp TLV info (wmi_roam_btm_response_info) only
+	 * when trigger reason is BTM or WTC_BTM. As for other roam
+	 * triggers this TLV contains zeros, so host should not print.
+	 */
+	if (stats_info->btm_rsp[i].present && stats_info->trigger[i].present &&
+	    (stats_info->trigger[i].trigger_reason == ROAM_TRIGGER_REASON_BTM ||
+	     stats_info->trigger[i].trigger_reason ==
+						ROAM_TRIGGER_REASON_WTC_BTM))
+		cm_roam_stats_print_btm_rsp_info(&stats_info->trigger[i],
+						 &stats_info->btm_rsp[i],
+						 stats_info->vdev_id, false);
+
+	if (log_btm_frames_only)
+		return;
+
+	if (stats_info->roam_init_info[i].present)
+		cm_roam_stats_print_roam_initial_info(
+				&stats_info->roam_init_info[i],
+				stats_info->vdev_id);
+
+	if (stats_info->roam_msg_info && stats_info->roam_msg_info[i].present &&
+	    i < stats_info->num_roam_msg_info) {
+		*rem_tlv_len = *rem_tlv_len + 1;
+		cm_roam_stats_print_roam_msg_info(
+						  &stats_info->roam_msg_info[i],
+						  stats_info->vdev_id);
+	}
+
+	cm_report_roam_rt_stats(psoc, stats_info->vdev_id,
+				ROAM_RT_STATS_TYPE_ROAM_SCAN_INFO,
+				stats_info, 0, i);
+}
+
 QDF_STATUS
 cm_roam_stats_event_handler(struct wlan_objmgr_psoc *psoc,
 			    struct roam_stats_event *stats_info)
 {
 	uint8_t i, rem_tlv = 0;
+	bool is_wtc = false;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 
 	if (!stats_info)
 		return QDF_STATUS_E_FAILURE;
+
 	for (i = 0; i < stats_info->num_tlv; i++) {
 		if (stats_info->trigger[i].present) {
 			bool is_full_scan =
 				stats_info->scan[i].present &&
 				stats_info->scan[i].type;
 
+			if (stats_info->trigger[i].trigger_reason ==
+			    ROAM_TRIGGER_REASON_BTM) {
+				cm_roam_handle_btm_stats(psoc, stats_info, i,
+							 &rem_tlv);
+				continue;
+			}
+
 			cm_roam_stats_print_trigger_info(
-					&stats_info->trigger[i],
+					psoc, &stats_info->trigger[i],
 					&stats_info->scan[i],
 					stats_info->vdev_id, is_full_scan);
-		       status = wlan_cm_update_roam_states(psoc,
+
+			if (stats_info->scan[i].present)
+				cm_roam_stats_print_scan_info(
+					psoc, &stats_info->scan[i],
 					stats_info->vdev_id,
 					stats_info->trigger[i].trigger_reason,
-					ROAM_TRIGGER_REASON);
-			if (QDF_IS_STATUS_ERROR(status))
-				goto err;
+					stats_info->trigger[i].timestamp);
 		}
 
-		if (stats_info->scan[i].present &&
-		    stats_info->trigger[i].present)
-			cm_roam_stats_print_scan_info(psoc,
-					  &stats_info->scan[i],
-					  stats_info->vdev_id,
-					  stats_info->trigger[i].trigger_reason,
-					  stats_info->trigger[i].timestamp);
-
-		if (stats_info->result[i].present) {
+		if (stats_info->result[i].present)
 			cm_roam_stats_print_roam_result(psoc,
 							&stats_info->trigger[i],
 							&stats_info->result[i],
 							&stats_info->scan[i],
 							stats_info->vdev_id);
-			status = wlan_cm_update_roam_states(psoc,
-					      stats_info->vdev_id,
-					      stats_info->result[i].fail_reason,
-					      ROAM_FAIL_REASON);
-			if (QDF_IS_STATUS_ERROR(status))
-				goto err;
-		}
 
 		if (stats_info->frame_stats[i].num_frame)
-			cm_roam_print_frame_info(&stats_info->frame_stats[i],
+			cm_roam_print_frame_info(psoc,
+						 &stats_info->frame_stats[i],
 						 &stats_info->scan[i],
 						 stats_info->vdev_id);
-
-		if (stats_info->data_11kv[i].present)
-			cm_roam_stats_print_11kv_info(&stats_info->data_11kv[i],
-						      stats_info->vdev_id);
 
 		/*
 		 * Print BTM resp TLV info (wmi_roam_btm_response_info) only
@@ -3259,12 +3428,11 @@ cm_roam_stats_event_handler(struct wlan_objmgr_psoc *psoc,
 		    (stats_info->trigger[i].trigger_reason ==
 		     ROAM_TRIGGER_REASON_BTM ||
 		     stats_info->trigger[i].trigger_reason ==
-		     ROAM_TRIGGER_REASON_WTC_BTM)) {
+		     ROAM_TRIGGER_REASON_WTC_BTM))
 			cm_roam_stats_print_btm_rsp_info(
 						&stats_info->trigger[i],
 						&stats_info->btm_rsp[i],
 						stats_info->vdev_id, false);
-		}
 
 		if (stats_info->roam_init_info[i].present)
 			cm_roam_stats_print_roam_initial_info(
@@ -3290,16 +3458,24 @@ cm_roam_stats_event_handler(struct wlan_objmgr_psoc *psoc,
 		 * wmi_roam_trigger_reason TLV is sent only for userspace
 		 * logging of BTM/WTC frame without roam scans.
 		 */
-		if (stats_info->trigger[0].present &&
-		    stats_info->trigger[0].trigger_reason ==
-		    ROAM_TRIGGER_REASON_BTM)
-			cm_roam_btm_req_event(
-				&stats_info->trigger[0].btm_trig_data,
-				stats_info->vdev_id);
 
 		if (stats_info->data_11kv[0].present)
 			cm_roam_stats_print_11kv_info(&stats_info->data_11kv[0],
 						      stats_info->vdev_id);
+
+		if (stats_info->trigger[0].present &&
+		    (stats_info->trigger[0].trigger_reason ==
+		     ROAM_TRIGGER_REASON_BTM ||
+		     stats_info->trigger[0].trigger_reason ==
+		     ROAM_TRIGGER_REASON_WTC_BTM)) {
+			if (stats_info->trigger[0].trigger_reason ==
+			    ROAM_TRIGGER_REASON_WTC_BTM)
+				is_wtc = true;
+
+			cm_roam_btm_req_event(&stats_info->trigger[0].btm_trig_data,
+					      &stats_info->trigger[0],
+					      stats_info->vdev_id, is_wtc);
+		}
 
 		if (stats_info->scan[0].present &&
 		    stats_info->trigger[0].present)
@@ -3311,7 +3487,7 @@ cm_roam_stats_event_handler(struct wlan_objmgr_psoc *psoc,
 
 		if (stats_info->btm_rsp[0].present)
 			cm_roam_stats_print_btm_rsp_info(
-					&stats_info->trigger[i],
+					&stats_info->trigger[0],
 					&stats_info->btm_rsp[0],
 					stats_info->vdev_id, 0);
 
@@ -3326,6 +3502,7 @@ cm_roam_stats_event_handler(struct wlan_objmgr_psoc *psoc,
 			cm_roam_btm_resp_event(&stats_info->trigger[0], NULL,
 					       stats_info->vdev_id, true);
 	}
+
 	if (stats_info->roam_msg_info && stats_info->num_roam_msg_info &&
 	    stats_info->num_roam_msg_info - rem_tlv) {
 		for (i = 0; i < (stats_info->num_roam_msg_info-rem_tlv); i++) {
@@ -3336,11 +3513,10 @@ cm_roam_stats_event_handler(struct wlan_objmgr_psoc *psoc,
 		}
 	}
 
-	wlan_clear_sae_auth_logs_cache(stats_info->vdev_id);
-err:
-	if (stats_info->roam_msg_info)
-		qdf_mem_free(stats_info->roam_msg_info);
+	wlan_clear_sae_auth_logs_cache(psoc, stats_info->vdev_id);
+	qdf_mem_free(stats_info->roam_msg_info);
 	qdf_mem_free(stats_info);
+
 	return status;
 }
 
@@ -3370,6 +3546,57 @@ bool wlan_cm_is_roam_sync_in_progress(struct wlan_objmgr_psoc *psoc,
 
 	return ret;
 }
+
+void
+wlan_cm_set_roam_offload_ssid(struct wlan_objmgr_vdev *vdev, uint8_t *ssid_ie)
+{
+	struct mlme_legacy_priv *mlme_priv;
+	uint8_t ssid_len = ssid_ie[1];
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_err("vdev legacy private object is NULL");
+		return;
+	}
+
+	if (ssid_len > WLAN_SSID_MAX_LEN)
+		ssid_len = WLAN_SSID_MAX_LEN;
+
+	qdf_mem_zero(&mlme_priv->cm_roam.sae_offload_ssid,
+		     sizeof(struct wlan_ssid));
+	qdf_mem_copy(mlme_priv->cm_roam.sae_offload_ssid.ssid,
+		     &ssid_ie[2], ssid_len);
+	mlme_priv->cm_roam.sae_offload_ssid.length = ssid_len;
+}
+
+void
+wlan_cm_get_roam_offload_ssid(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
+			      uint8_t *ssid, uint8_t *len)
+{
+	struct wlan_objmgr_vdev *vdev;
+	struct mlme_legacy_priv *mlme_priv;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_MLME_CM_ID);
+	if (!vdev) {
+		mlme_err("VDEV is NULL");
+		return;
+	}
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_err("vdev legacy private object is NULL");
+		goto ret;
+	}
+
+	qdf_mem_copy(ssid, mlme_priv->cm_roam.sae_offload_ssid.ssid,
+		     mlme_priv->cm_roam.sae_offload_ssid.length);
+	*len = mlme_priv->cm_roam.sae_offload_ssid.length;
+
+ret:
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_CM_ID);
+}
+
 #else
 QDF_STATUS
 cm_roam_stats_event_handler(struct wlan_objmgr_psoc *psoc,

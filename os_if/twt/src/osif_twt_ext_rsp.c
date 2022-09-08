@@ -116,7 +116,7 @@ static uint32_t osif_twt_get_event_len(void)
 /**
  * twt_add_status_to_vendor_twt_status() - convert from
  * HOST_ADD_TWT_STATUS to qca_wlan_vendor_twt_status
- * @status: HOST_ADD_TWT_STATUS value from firmare
+ * @status: HOST_ADD_TWT_STATUS value from firmware
  *
  * Return: qca_wlan_vendor_twt_status values corresponding
  * to HOST_ADD_TWT_STATUS.
@@ -163,7 +163,7 @@ twt_add_status_to_vendor_twt_status(enum HOST_ADD_TWT_STATUS status)
 /**
  * twt_del_status_to_vendor_twt_status() - convert from
  * HOST_DEL_TWT_STATUS to qca_wlan_vendor_twt_status
- * @status: HOST_DEL_TWT_STATUS value from firmare
+ * @status: HOST_DEL_TWT_STATUS value from firmware
  *
  * Return: qca_wlan_vendor_twt_status values corresponding
  * to HOST_DEL_TWT_STATUS.
@@ -280,7 +280,7 @@ twt_nudge_status_to_vendor_twt_status(enum HOST_TWT_NUDGE_STATUS status)
 /**
  * twt_add_cmd_to_vendor_twt_resp_type() - convert from
  * HOST_TWT_COMMAND to qca_wlan_vendor_twt_setup_resp_type
- * @status: HOST_TWT_COMMAND value from firmare
+ * @status: HOST_TWT_COMMAND value from firmware
  *
  * Return: qca_wlan_vendor_twt_setup_resp_type values for valid
  * HOST_TWT_COMMAND value and -EINVAL for invalid value

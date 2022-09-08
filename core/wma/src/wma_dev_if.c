@@ -109,7 +109,7 @@
 
 #include "son_api.h"
 #include "wlan_vdev_mgr_tgt_if_tx_defs.h"
-
+#include "wlan_mlo_mgr_roam.h"
 /*
  * FW only supports 8 clients in SAP/GO mode for D3 WoW feature
  * and hence host needs to hold a wake lock after 9th client connects
@@ -135,7 +135,14 @@ QDF_STATUS wma_find_vdev_id_by_addr(tp_wma_handle wma, uint8_t *addr,
 			*vdev_id = i;
 			return QDF_STATUS_SUCCESS;
 		}
+
+		if (qdf_is_macaddr_equal((struct qdf_mac_addr *)wlan_vdev_mlme_get_mldaddr(vdev),
+					 (struct qdf_mac_addr *)addr) == true) {
+				*vdev_id = i;
+				return QDF_STATUS_SUCCESS;
+		}
 	}
+
 	return QDF_STATUS_E_FAILURE;
 }
 
@@ -685,7 +692,8 @@ wma_vdev_self_peer_delete(tp_wma_handle wma_handle,
 			cds_trigger_recovery(QDF_REASON_UNSPECIFIED);
 			return status;
 		}
-	} else if (iface->type == WMI_VDEV_TYPE_STA) {
+	} else if (iface->type == WMI_VDEV_TYPE_STA ||
+		   iface->type == WMI_VDEV_TYPE_NAN) {
 		wma_remove_objmgr_peer(wma_handle, iface->vdev,
 				       pdel_vdev_req_param->self_mac_addr);
 	}
@@ -1993,8 +2001,13 @@ static void wma_cdp_peer_setup(tp_wma_handle wma,
 		peer_info.is_primary_link = 0;
 	} else if (wlan_cm_is_roam_sync_in_progress(wma->psoc, vdev_id) &&
 		   wlan_vdev_mlme_get_is_mlo_vdev(wma->psoc, vdev_id)) {
-		peer_info.is_first_link = 0;
-		peer_info.is_primary_link = 1;
+		if (mlo_get_single_link_ml_roaming(wma->psoc, vdev_id)) {
+			peer_info.is_first_link = 1;
+			peer_info.is_primary_link = 1;
+		} else {
+			peer_info.is_first_link = 0;
+			peer_info.is_primary_link = 1;
+		}
 	} else {
 		peer_info.is_first_link = wlan_peer_mlme_is_assoc_peer(obj_peer);
 		peer_info.is_primary_link = peer_info.is_first_link;
@@ -2644,7 +2657,8 @@ QDF_STATUS wma_vdev_self_peer_create(struct vdev_mlme_obj *vdev_mlme)
 					 NULL, false);
 		if (QDF_IS_STATUS_ERROR(status))
 			wma_err("Failed to create peer %d", status);
-	} else if (vdev_mlme->mgmt.generic.type == WMI_VDEV_TYPE_STA) {
+	} else if (vdev_mlme->mgmt.generic.type == WMI_VDEV_TYPE_STA ||
+		   vdev_mlme->mgmt.generic.type == WMI_VDEV_TYPE_NAN) {
 		if (!qdf_is_macaddr_zero(
 				(struct qdf_mac_addr *)vdev->vdev_mlme.mldaddr))
 			self_peer_macaddr = vdev->vdev_mlme.mldaddr;
@@ -3135,7 +3149,7 @@ QDF_STATUS wma_vdev_pre_start(uint8_t vdev_id, bool restart)
 	struct wlan_objmgr_vdev *vdev;
 	struct wlan_channel *des_chan;
 	QDF_STATUS status;
-	uint8_t btc_chain_mode;
+	enum coex_btc_chain_mode btc_chain_mode;
 	struct wlan_mlme_qos *qos_aggr;
 	uint8_t amsdu_val;
 

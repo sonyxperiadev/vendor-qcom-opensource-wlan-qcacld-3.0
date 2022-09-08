@@ -332,7 +332,7 @@ cm_populate_connect_ies(struct roam_offload_synch_ind *roam_synch_data,
 		qdf_mem_copy(connect_ies->assoc_req.ptr, reassoc_req_ptr,
 			     connect_ies->assoc_req.len);
 	}
-	rsp->connect_rsp.is_ft = roam_synch_data->is_ft_im_roam;
+	rsp->connect_rsp.is_assoc = roam_synch_data->is_assoc;
 
 	cm_fill_fils_ie(connect_ies, roam_synch_data);
 
@@ -869,6 +869,8 @@ cm_fw_roam_sync_propagation(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 
 		mlo_roam_copy_partner_info(connect_rsp, roam_synch_data);
 		mlo_roam_update_connected_links(vdev, connect_rsp);
+		mlo_set_single_link_ml_roaming(psoc, vdev_id,
+					       roam_synch_data, false);
 	}
 	cm_connect_info(vdev, true, &connect_rsp->bssid, &connect_rsp->ssid,
 			connect_rsp->freq);
