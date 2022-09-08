@@ -3701,15 +3701,6 @@ cm_roam_switch_to_rso_stop(struct wlan_objmgr_pdev *pdev,
 	switch (cur_state) {
 	case WLAN_ROAM_RSO_ENABLED:
 	case WLAN_ROAMING_IN_PROG:
-		/*
-		 * Set the roam state to RSO_STOPPED for RSO_ENABLED
-		 * and ROAMING_IN_PROGRESS. cm_roam_stop_req() has a check
-		 * for ROAM_SYNC_IN_PROGRESS and return.
-		 * This is moved here i.e. before calling cm_roam_stop_req()
-		 * as the state may get modified from another thread while
-		 * cm_roam_stop_req is sending commands to firmware.
-		 */
-		mlme_set_roam_state(psoc, vdev_id, WLAN_ROAM_RSO_STOPPED);
 	case WLAN_ROAM_SYNCH_IN_PROG:
 		status = cm_roam_stop_req(psoc, vdev_id, reason,
 					  send_resp, start_timer);
@@ -3730,11 +3721,6 @@ cm_roam_switch_to_rso_stop(struct wlan_objmgr_pdev *pdev,
 
 		return QDF_STATUS_SUCCESS;
 	}
-	/*
-	 * This shall make sure the state is set to STOPPED in
-	 * ROAM_SYNC_IN_PROGRESS state also.
-	 * No harm in setting the state again to STOPPED in other cases.
-	 */
 	mlme_set_roam_state(psoc, vdev_id, WLAN_ROAM_RSO_STOPPED);
 
 	return QDF_STATUS_SUCCESS;
@@ -7075,12 +7061,10 @@ cm_send_rso_stop(struct wlan_objmgr_vdev *vdev)
 			     &send_resp, start_timer);
 	/*
 	 * RSO stop resp is not supported or RSO STOP timer/req failed,
-	 * then send resp from here
+	 * send QDF_STATUS_E_NOSUPPORT so that we continue from the caller
 	 */
 	if (send_resp)
-		wlan_cm_rso_stop_continue_disconnect(wlan_vdev_get_psoc(vdev),
-						     wlan_vdev_get_id(vdev),
-						     false);
+		return QDF_STATUS_E_NOSUPPORT;
 
 	return QDF_STATUS_SUCCESS;
 }
