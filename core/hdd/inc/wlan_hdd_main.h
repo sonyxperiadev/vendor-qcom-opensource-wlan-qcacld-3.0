@@ -1155,6 +1155,14 @@ struct hdd_adapter {
 	uint64_t cur_target_global_tsf_time;
 	uint64_t last_target_global_tsf_time;
 	qdf_mc_timer_t host_capture_req_timer;
+#ifdef QCA_GET_TSF_VIA_REG
+	/* TSF id as obtained from FW report */
+	int tsf_id;
+	/* mac_id as obtained from FW report */
+	int tsf_mac_id;
+	/* flag indicating whether tsf details are valid */
+	qdf_atomic_t tsf_details_valid;
+#endif
 #ifdef WLAN_FEATURE_TSF_PLUS
 	/* spin lock for read/write timestamps */
 	qdf_spinlock_t host_target_sync_lock;
