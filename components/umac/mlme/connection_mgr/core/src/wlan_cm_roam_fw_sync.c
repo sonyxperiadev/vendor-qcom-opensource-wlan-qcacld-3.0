@@ -430,9 +430,11 @@ cm_fill_bssid_freq_info(uint8_t vdev_id,
 			return QDF_STATUS_SUCCESS;
 		}
 	}
-	mlme_err("Failed to get vdev %u mlo link info");
 
-	return QDF_STATUS_E_FAILURE;
+	qdf_copy_macaddr(&rsp->connect_rsp.bssid, &roam_synch_data->bssid);
+	rsp->connect_rsp.freq = roam_synch_data->chan_freq;
+
+	return QDF_STATUS_SUCCESS;
 }
 #else
 static QDF_STATUS
