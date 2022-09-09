@@ -83,6 +83,7 @@
 #include <linux/ctype.h>
 #include <linux/compat.h>
 #include <linux/ethtool.h>
+#include <linux/suspend.h>
 
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
 #include "qdf_periodic_work.h"
@@ -9395,6 +9396,79 @@ out:
 	return ret;
 }
 
+#ifdef SHUTDOWN_WLAN_IN_SYSTEM_SUSPEND
+static QDF_STATUS
+hdd_shutdown_wlan_in_suspend_prepare(struct hdd_context *hdd_ctx)
+{
+#define SHUTDOWN_IN_SUSPEND_RETRY 10
+
+	int count = 0;
+
+	if (ucfg_pmo_get_suspend_mode(hdd_ctx->psoc) != PMO_SUSPEND_SHUTDOWN) {
+		hdd_debug("shutdown in suspend not supported");
+		return 0;
+	}
+
+	while (hdd_is_any_interface_open(hdd_ctx) &&
+	       count < SHUTDOWN_IN_SUSPEND_RETRY) {
+		count++;
+		hdd_debug_rl("sleep 50ms to wait adapters stopped, #%d", count);
+		msleep(50);
+	}
+	if (count >= SHUTDOWN_IN_SUSPEND_RETRY) {
+		hdd_err("some adapters not stopped");
+		return -EBUSY;
+	}
+
+	hdd_debug("call pld idle shutdown directly");
+	return pld_idle_shutdown(hdd_ctx->parent_dev, hdd_psoc_idle_shutdown);
+}
+
+static int hdd_pm_notify(struct notifier_block *b,
+			 unsigned long event, void *p)
+{
+	struct hdd_context *hdd_ctx = container_of(b, struct hdd_context,
+						   pm_notifier);
+
+	if (wlan_hdd_validate_context(hdd_ctx) != 0)
+		return NOTIFY_STOP;
+
+	hdd_debug("got PM event: %lu", event);
+
+	switch (event) {
+	case PM_SUSPEND_PREPARE:
+	case PM_HIBERNATION_PREPARE:
+		if (0 != hdd_shutdown_wlan_in_suspend_prepare(hdd_ctx))
+			return NOTIFY_STOP;
+		break;
+	case PM_POST_SUSPEND:
+	case PM_POST_HIBERNATION:
+		break;
+	}
+
+	return NOTIFY_DONE;
+}
+
+static void hdd_pm_notifier_init(struct hdd_context *hdd_ctx)
+{
+	hdd_ctx->pm_notifier.notifier_call = hdd_pm_notify;
+	register_pm_notifier(&hdd_ctx->pm_notifier);
+}
+
+static void hdd_pm_notifier_deinit(struct hdd_context *hdd_ctx)
+{
+	unregister_pm_notifier(&hdd_ctx->pm_notifier);
+}
+#else
+static inline void hdd_pm_notifier_init(struct hdd_context *hdd_ctx)
+{
+}
+
+static inline void hdd_pm_notifier_deinit(struct hdd_context *hdd_ctx)
+{
+}
+#endif
+
 /**
  * hdd_context_deinit() - Deinitialize HDD context
  * @hdd_ctx:    HDD context.
@@ -9438,6 +9512,7 @@ void hdd_context_destroy(struct hdd_context *hdd_ctx)
 	hdd_ctx->config = NULL;
 	cfg_release();
 
+	hdd_pm_notifier_deinit(hdd_ctx);
 	qdf_delayed_work_destroy(&hdd_ctx->psoc_idle_timeout_work);
 	wiphy_free(hdd_ctx->wiphy);
 }
@@ -12630,6 +12705,8 @@ struct hdd_context *hdd_context_create(struct device *dev)
 		ret = qdf_status_to_os_return(status);
 		goto wiphy_dealloc;
 	}
+
+	hdd_pm_notifier_init(hdd_ctx);
 
 	hdd_ctx->parent_dev = dev;
 	hdd_ctx->last_scan_reject_vdev_id = WLAN_UMAC_VDEV_ID_MAX;
