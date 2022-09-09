@@ -296,6 +296,9 @@ lim_send_probe_req_mgmt_frame(struct mac_context *mac_ctx,
 	uint8_t *ml_probe_req_ie = NULL;
 	uint16_t ml_probe_req_ie_len = 0;
 	int ret;
+	uint8_t *eht_cap_ie = NULL, eht_cap_ie_len = 0;
+	bool is_band_2g;
+	uint16_t ie_buf_size;
 
 	if (additional_ielen)
 		addn_ielen = *additional_ielen;
@@ -545,6 +548,40 @@ lim_send_probe_req_mgmt_frame(struct mac_context *mac_ctx,
 		pe_warn("There were warnings while packing a Probe Request (0x%08x)", status);
 	}
 
+	/* Strip EHT capabilities IE */
+	if (lim_is_session_eht_capable(pesession)) {
+		ie_buf_size = payload;
+
+		eht_cap_ie = qdf_mem_malloc(WLAN_MAX_IE_LEN + 2);
+		if (!eht_cap_ie) {
+			pe_err("malloc failed for eht_cap_ie");
+			goto skip_eht_ie_update;
+		}
+
+		qdf_status = lim_strip_eht_cap_ie(mac_ctx, frame +
+						  sizeof(tSirMacMgmtHdr),
+						  &ie_buf_size, eht_cap_ie);
+		if (QDF_IS_STATUS_ERROR(qdf_status)) {
+			pe_err("Failed to strip EHT cap IE");
+			qdf_mem_free(eht_cap_ie);
+			goto skip_eht_ie_update;
+		}
+
+		is_band_2g =
+			WLAN_REG_IS_24GHZ_CH_FREQ(pesession->curr_op_freq);
+
+		lim_ieee80211_pack_ehtcap(eht_cap_ie, pr->eht_cap, pr->he_cap,
+					  is_band_2g);
+		eht_cap_ie_len = eht_cap_ie[1] + 2;
+
+		/* Copy the EHT IE to the end of the frame */
+		qdf_mem_copy(frame + sizeof(tSirMacMgmtHdr) +
+			     ie_buf_size,
+			     eht_cap_ie, eht_cap_ie_len);
+		qdf_mem_free(eht_cap_ie);
+		payload = ie_buf_size +  eht_cap_ie_len;
+	}
+skip_eht_ie_update:
 	qdf_mem_free(pr);
 
 	/* Append any AddIE if present. */
