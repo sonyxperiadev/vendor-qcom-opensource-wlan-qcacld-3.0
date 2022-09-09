@@ -6417,18 +6417,21 @@ static void lim_tx_mgmt_frame(struct mac_context *mac_ctx, uint8_t vdev_id,
 
 	if (opmode != QDF_NAN_DISC_MODE) {
 		min_rid = lim_get_min_session_txrate(session);
-	}
-	if (fc->subType == SIR_MAC_MGMT_AUTH) {
-		tpSirFTPreAuthReq pre_auth_req;
-		uint16_t auth_algo = *(uint16_t *)(frame +
-						   sizeof(tSirMacMgmtHdr));
+		if (fc->subType == SIR_MAC_MGMT_AUTH) {
+			tpSirFTPreAuthReq pre_auth_req;
+			uint16_t auth_algo = *(uint16_t *)(frame +
+						sizeof(tSirMacMgmtHdr));
 
-		if ((auth_algo == eSIR_AUTH_TYPE_SAE) &&
-		    (session->ftPEContext.pFTPreAuthReq)) {
-			pre_auth_req = session->ftPEContext.pFTPreAuthReq;
-			channel_freq = pre_auth_req->pre_auth_channel_freq;
+			if ((auth_algo == eSIR_AUTH_TYPE_SAE) &&
+			    (session->ftPEContext.pFTPreAuthReq)) {
+				pre_auth_req =
+					session->ftPEContext.pFTPreAuthReq;
+				channel_freq =
+					pre_auth_req->pre_auth_channel_freq;
+			}
+			pe_debug("TX SAE pre-auth frame on freq %d",
+				 channel_freq);
 		}
-		pe_debug("TX SAE pre-auth frame on freq %d", channel_freq);
 	}
 
 	qdf_status = wma_tx_frameWithTxComplete(mac_ctx, packet,
