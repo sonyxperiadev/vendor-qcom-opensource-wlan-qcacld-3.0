@@ -1175,8 +1175,8 @@ validation_done:
 	sap_debug("for configured channel, Ch_freq = %d",
 		  sap_context->chan_freq);
 
-	if (!policy_mgr_is_safe_channel(mac_ctx->psoc,
-					sap_context->chan_freq)) {
+	if (!policy_mgr_is_sap_freq_allowed(mac_ctx->psoc,
+					    sap_context->chan_freq)) {
 		sap_warn("Abort SAP start due to unsafe channel");
 		return QDF_STATUS_E_ABORTED;
 	}
