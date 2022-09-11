@@ -88,10 +88,10 @@ end:
 
 static void
 mlo_cleanup_link(struct wlan_objmgr_vdev *tmp_vdev,
-		 struct wlan_objmgr_vdev *vdev)
+		 struct wlan_objmgr_vdev *vdev, bool is_legacy)
 {
-	wlan_vdev_mlme_feat_ext2_cap_clear(vdev,
-					   WLAN_VDEV_FEXT2_MLO);
+	if (is_legacy || wlan_vdev_mlme_is_mlo_link_vdev(tmp_vdev))
+		wlan_vdev_mlme_feat_ext2_cap_clear(vdev, WLAN_VDEV_FEXT2_MLO);
 
 	if (wlan_vdev_mlme_is_mlo_link_vdev(tmp_vdev)) {
 		cm_cleanup_mlo_link(tmp_vdev);
@@ -101,8 +101,8 @@ mlo_cleanup_link(struct wlan_objmgr_vdev *tmp_vdev,
 }
 
 static void
-mlo_update_for_legacy_roam(struct wlan_objmgr_psoc *psoc,
-			   uint8_t vdev_id)
+mlo_update_for_single_link_roam(struct wlan_objmgr_psoc *psoc,
+				uint8_t vdev_id, bool is_legacy)
 {
 	struct wlan_mlo_dev_context *mlo_dev_ctx;
 	uint8_t i;
@@ -125,7 +125,7 @@ mlo_update_for_legacy_roam(struct wlan_objmgr_psoc *psoc,
 			continue;
 
 		tmp_vdev = mlo_dev_ctx->wlan_vdev_list[i];
-		mlo_cleanup_link(tmp_vdev, vdev);
+		mlo_cleanup_link(tmp_vdev, vdev, is_legacy);
 	}
 
 end:
@@ -160,13 +160,13 @@ mlo_clear_link_bmap(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
 {}
 
 static inline void
-mlo_update_for_legacy_roam(struct wlan_objmgr_psoc *psoc,
-			   uint8_t vdev_id)
+mlo_update_for_single_link_roam(struct wlan_objmgr_psoc *psoc,
+				uint8_t vdev_id, bool is_legacy)
 {}
 
 static inline void
 mlo_cleanup_link(struct wlan_objmgr_vdev *tmp_vdev,
-		 struct wlan_objmgr_vdev *vdev)
+		 struct wlan_objmgr_vdev *vdev, bool is_legacy)
 {}
 
 static inline void
@@ -229,7 +229,9 @@ void mlo_cm_roam_sync_cb(struct wlan_objmgr_vdev *vdev,
 	psoc = wlan_vdev_get_psoc(vdev);
 
 	if (!sync_ind->num_setup_links)
-		mlo_update_for_legacy_roam(psoc, vdev_id);
+		mlo_update_for_single_link_roam(psoc, vdev_id, true);
+	else if (sync_ind->num_setup_links == 1)
+		mlo_update_for_single_link_roam(psoc, vdev_id, false);
 
 	for (i = 0; i < sync_ind->num_setup_links; i++) {
 		if (vdev_id == sync_ind->ml_link[i].vdev_id)
