@@ -219,6 +219,7 @@ void mlme_twt_set_wait_for_notify(struct wlan_objmgr_psoc *psoc,
 bool mlme_is_twt_notify_in_progress(struct wlan_objmgr_psoc *psoc,
 				    uint32_t vdev_id);
 
+#ifdef WLAN_FEATURE_11AX
 /**
  * mlme_is_flexible_twt_enabled() - Check if flexible TWT is enabled.
  * @psoc: Pointer to psoc object
@@ -226,6 +227,13 @@ bool mlme_is_twt_notify_in_progress(struct wlan_objmgr_psoc *psoc,
  * Return: True if flexible TWT is supported
  */
 bool mlme_is_flexible_twt_enabled(struct wlan_objmgr_psoc *psoc);
+#else
+static inline
+bool mlme_is_flexible_twt_enabled(struct wlan_objmgr_psoc *psoc)
+{
+	return false;
+}
+#endif /* WLAN_FEATURE_11AX */
 
 /**
  * mlme_sap_set_twt_command_in_progress() - Set TWT command is in progress.
@@ -332,6 +340,12 @@ QDF_STATUS mlme_init_twt_context(struct wlan_objmgr_psoc *psoc,
 				 uint8_t dialog_id)
 {
 	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline
+bool mlme_is_flexible_twt_enabled(struct wlan_objmgr_psoc *psoc)
+{
+	return false;
 }
 #endif /* WLAN_SUPPORT_TWT */
 #endif /* _WLAN_MLME_TWT_API_H_ */
