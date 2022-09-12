@@ -16695,21 +16695,15 @@ static void hdd_wlan_soft_driver_unload(void)
 	hdd_driver_unload();
 }
 
-static int hdd_disable_wifi(struct hdd_context *hdd_ctx)
+static int hdd_wlan_idle_shutdown(struct hdd_context *hdd_ctx)
 {
 	int ret;
 	int retries = 0;
 	void *hif_ctx;
 
-	if (hdd_ctx->is_wlan_disabled) {
-		hdd_err_rl("Wifi is already disabled");
-		return 0;
-	}
-
-	hdd_debug("Initiating WLAN idle shutdown");
-	if (hdd_is_any_interface_open(hdd_ctx)) {
-		hdd_err("Interfaces still open, cannot process wifi disable");
-		return -EAGAIN;
+	if (!hdd_ctx) {
+		hdd_err_rl("hdd_ctx is Null");
+		return -EINVAL;
 	}
 
 	hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
@@ -16732,6 +16726,7 @@ static int hdd_disable_wifi(struct hdd_context *hdd_ctx)
 				  retries);
 			msleep(WIFI_DISABLE_SLEEP);
 			retries++;
+			continue;
 		}
 		break;
 	}
@@ -16741,10 +16736,33 @@ static int hdd_disable_wifi(struct hdd_context *hdd_ctx)
 		hdd_debug("Max retries reached");
 		return -EINVAL;
 	}
-	hdd_ctx->is_wlan_disabled = true;
 	hdd_debug_rl("WiFi is disabled");
 
 	return 0;
+}
+
+static int hdd_disable_wifi(struct hdd_context *hdd_ctx)
+{
+	int ret;
+
+	if (hdd_ctx->is_wlan_disabled) {
+		hdd_err_rl("Wifi is already disabled");
+		return 0;
+	}
+
+	hdd_debug("Initiating WLAN idle shutdown");
+	if (hdd_is_any_interface_open(hdd_ctx)) {
+		hdd_err("Interfaces still open, cannot process wifi disable");
+		return -EAGAIN;
+	}
+
+	hdd_ctx->is_wlan_disabled = true;
+
+	ret = hdd_wlan_idle_shutdown(hdd_ctx);
+	if (ret)
+		hdd_ctx->is_wlan_disabled = false;
+
+	return ret;
 }
 #else
 static int hdd_wlan_soft_driver_load(void)
