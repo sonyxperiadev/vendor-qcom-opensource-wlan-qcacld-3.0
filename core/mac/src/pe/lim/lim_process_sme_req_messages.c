@@ -1975,8 +1975,24 @@ lim_get_self_dot11_mode(struct mac_context *mac_ctx, enum QDF_OPMODE opmode)
 	return self_dot11_mode;
 }
 
+static bool
+lim_get_bss_11be_mode_allowed(struct mac_context *mac_ctx,
+			      struct bss_description *bss_desc,
+			      tDot11fBeaconIEs *ie_struct)
+{
+	if (!ie_struct->eht_cap.present)
+		return false;
+
+	return mlme_get_bss_11be_allowed(
+			mac_ctx->psoc,
+			(struct qdf_mac_addr *)&bss_desc->bssId,
+			(uint8_t *)&bss_desc->ieFields[0],
+			wlan_get_ielen_from_bss_description(bss_desc));
+}
+
 static enum mlme_dot11_mode
-lim_get_bss_dot11_mode(struct bss_description *bss_desc,
+lim_get_bss_dot11_mode(struct mac_context *mac_ctx,
+		       struct bss_description *bss_desc,
 		       tDot11fBeaconIEs *ie_struct)
 {
 	enum mlme_dot11_mode bss_dot11_mode;
@@ -2007,7 +2023,8 @@ lim_get_bss_dot11_mode(struct bss_description *bss_desc,
 	if (ie_struct->he_cap.present)
 		bss_dot11_mode = MLME_DOT11_MODE_11AX;
 
-	if (ie_struct->eht_cap.present)
+	if (ie_struct->eht_cap.present &&
+	    lim_get_bss_11be_mode_allowed(mac_ctx, bss_desc, ie_struct))
 		bss_dot11_mode = MLME_DOT11_MODE_11BE;
 
 	pe_debug("bss HT %d VHT %d HE %d EHT %d nw_type %d bss dot11_mode %d",
@@ -2597,7 +2614,7 @@ lim_fill_dot11_mode(struct mac_context *mac_ctx, struct pe_session *session,
 	enum mlme_dot11_mode intersected_mode;
 
 	self_dot11_mode = lim_get_self_dot11_mode(mac_ctx, session->opmode);
-	bss_dot11_mode = lim_get_bss_dot11_mode(bss_desc, ie_struct);
+	bss_dot11_mode = lim_get_bss_dot11_mode(mac_ctx, bss_desc, ie_struct);
 
 	pe_debug("vdev id %d opmode %d self dot11mode %d bss_dot11 mode %d",
 		 session->vdev_id, session->opmode, self_dot11_mode,
@@ -5007,7 +5024,7 @@ lim_fill_preauth_req_dot11_mode(struct mac_context *mac_ctx,
 	}
 
 	self_dot11_mode = lim_get_self_dot11_mode(mac_ctx, QDF_STA_MODE);
-	bss_dot11_mode = lim_get_bss_dot11_mode(bss_desc, ie_struct);
+	bss_dot11_mode = lim_get_bss_dot11_mode(mac_ctx, bss_desc, ie_struct);
 
 	status = lim_get_intersected_dot11_mode_sta_ap(mac_ctx, self_dot11_mode,
 						       bss_dot11_mode,

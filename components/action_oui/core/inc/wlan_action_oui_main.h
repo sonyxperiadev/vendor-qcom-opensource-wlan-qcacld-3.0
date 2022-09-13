@@ -93,6 +93,18 @@ action_oui_psoc_destroy_notification(struct wlan_objmgr_psoc *psoc, void *arg);
 bool wlan_action_oui_search(struct wlan_objmgr_psoc *psoc,
 			    struct action_oui_search_attr *attr,
 			    enum action_oui_id action_id);
+
+/**
+ * wlan_action_oui_is_empty() - Check action oui present or not
+ * @psoc: psoc object
+ * @action_id: action oui id
+ *
+ * This function will check action oui present or not for specific action type.
+ *
+ * Return: True if no action oui for the action type.
+ */
+bool wlan_action_oui_is_empty(struct wlan_objmgr_psoc *psoc,
+			      enum action_oui_id action_id);
 #else
 static inline
 bool wlan_action_oui_search(struct wlan_objmgr_psoc *psoc,
@@ -100,6 +112,13 @@ bool wlan_action_oui_search(struct wlan_objmgr_psoc *psoc,
 			    enum action_oui_id action_id)
 {
 	return false;
+}
+
+static inline
+bool wlan_action_oui_is_empty(struct wlan_objmgr_psoc *psoc,
+			      enum action_oui_id action_id)
+{
+	return true;
 }
 #endif
 #endif /* end  of _WLAN_ACTION_OUI_MAIN_H_ */

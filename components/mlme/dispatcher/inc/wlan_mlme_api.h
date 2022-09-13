@@ -2224,6 +2224,31 @@ mlme_update_vht_cap(struct wlan_objmgr_psoc *psoc, struct wma_tgt_vht_cap *cfg);
  */
 QDF_STATUS mlme_update_nss_vht_cap(struct wlan_objmgr_psoc *psoc);
 
+#ifdef WLAN_FEATURE_11BE
+/**
+ * mlme_get_bss_11be_allowed() - Check BSS allowed in 11be mode
+ * @psoc: psoc context
+ * @bssid: bssid
+ * @ie_date: ie data
+ * @ie_length: ie data length
+ *
+ * Return: true if AP in 11be oui allow list
+ */
+bool mlme_get_bss_11be_allowed(struct wlan_objmgr_psoc *psoc,
+			       struct qdf_mac_addr *bssid,
+			       uint8_t *ie_data,
+			       uint32_t ie_length);
+#else
+static inline
+bool mlme_get_bss_11be_allowed(struct wlan_objmgr_psoc *psoc,
+			       struct qdf_mac_addr *bssid,
+			       uint8_t *ie_data,
+			       uint32_t ie_length)
+{
+	return false;
+}
+#endif
+
 /**
  * wlan_mlme_is_sap_uapsd_enabled() - Get if SAP UAPSD is enabled/disabled
  * @psoc: psoc context

@@ -12654,6 +12654,9 @@ static void hdd_cfg_params_init(struct hdd_context *hdd_ctx)
 	qdf_str_lcopy(config->action_oui_str[ACTION_OUI_TAKE_ALL_BAND_INFO],
 		      cfg_get(psoc, CFG_ACTION_OUI_TAKE_ALL_BAND_INFO),
 		      ACTION_OUI_MAX_STR_LEN);
+	qdf_str_lcopy(config->action_oui_str[ACTION_OUI_11BE_OUI_ALLOW],
+		      cfg_get(psoc, CFG_ACTION_11BE_OUI_ALLOW_LIST),
+		      ACTION_OUI_MAX_STR_LEN);
 
 	config->is_unit_test_framework_enabled =
 			cfg_get(psoc, CFG_ENABLE_UNIT_TEST_FRAMEWORK);

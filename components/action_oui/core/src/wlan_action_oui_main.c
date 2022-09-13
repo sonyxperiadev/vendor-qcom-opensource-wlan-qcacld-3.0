@@ -228,3 +228,31 @@ exit:
 	return found;
 }
 
+bool wlan_action_oui_is_empty(struct wlan_objmgr_psoc *psoc,
+			      enum action_oui_id action_id)
+{
+	struct action_oui_psoc_priv *psoc_priv;
+	bool empty = true;
+
+	if (!psoc) {
+		action_oui_err("Invalid psoc");
+		goto exit;
+	}
+
+	if (action_id >= ACTION_OUI_MAXIMUM_ID) {
+		action_oui_err("Invalid action_oui id: %u", action_id);
+		goto exit;
+	}
+
+	psoc_priv = action_oui_psoc_get_priv(psoc);
+	if (!psoc_priv) {
+		action_oui_err("psoc priv is NULL");
+		goto exit;
+	}
+
+	empty = action_oui_is_empty(psoc_priv, action_id);
+
+exit:
+	return empty;
+}
+

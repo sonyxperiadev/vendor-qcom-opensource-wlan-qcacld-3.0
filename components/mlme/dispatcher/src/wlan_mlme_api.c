@@ -33,6 +33,7 @@
 #include "wlan_vdev_mgr_utils_api.h"
 #include <../../core/src/wlan_cm_vdev_api.h>
 #include "wlan_psoc_mlme_api.h"
+#include "wlan_action_oui_main.h"
 
 /* quota in milliseconds */
 #define MCC_DUTY_CYCLE 70
@@ -3974,6 +3975,31 @@ QDF_STATUS mlme_update_nss_vht_cap(struct wlan_objmgr_psoc *psoc)
 
 	return QDF_STATUS_SUCCESS;
 }
+
+#ifdef WLAN_FEATURE_11BE
+bool mlme_get_bss_11be_allowed(struct wlan_objmgr_psoc *psoc,
+			       struct qdf_mac_addr *bssid,
+			       uint8_t *ie_data,
+			       uint32_t ie_length)
+{
+	struct action_oui_search_attr search_attr;
+
+	if (wlan_action_oui_is_empty(psoc, ACTION_OUI_11BE_OUI_ALLOW))
+		return true;
+
+	qdf_mem_zero(&search_attr, sizeof(search_attr));
+	search_attr.ie_data = ie_data;
+	search_attr.ie_length = ie_length;
+	if (wlan_action_oui_search(psoc, &search_attr,
+				   ACTION_OUI_11BE_OUI_ALLOW))
+		return true;
+
+	mlme_legacy_debug("AP not in 11be oui allow list "QDF_MAC_ADDR_FMT,
+			  QDF_MAC_ADDR_REF(bssid->bytes));
+
+	return false;
+}
+#endif
 
 QDF_STATUS wlan_mlme_is_sap_uapsd_enabled(struct wlan_objmgr_psoc *psoc,
 					  bool *value)

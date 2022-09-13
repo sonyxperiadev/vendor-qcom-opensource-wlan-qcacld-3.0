@@ -8236,6 +8236,10 @@ QDF_STATUS lim_populate_eht_mcs_set(struct mac_context *mac_ctx,
 		pe_debug("peer not eht capable or eht_caps NULL");
 		return QDF_STATUS_SUCCESS;
 	}
+	if (lim_is_session_eht_capable(session_entry)) {
+		pe_debug("session not eht capable");
+		return QDF_STATUS_SUCCESS;
+	}
 
 	switch (session_entry->ch_width) {
 	case CH_WIDTH_320MHZ:

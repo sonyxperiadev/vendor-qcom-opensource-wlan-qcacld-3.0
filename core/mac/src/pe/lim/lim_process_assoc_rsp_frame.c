@@ -1506,7 +1506,8 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 	if (lim_process_srp_ie(assoc_rsp, sta_ds) == QDF_STATUS_SUCCESS)
 		lim_update_vdev_sr_elements(session_entry, sta_ds);
 
-	lim_process_eht_info(beacon, sta_ds);
+	if (lim_is_session_eht_capable(session_entry))
+		lim_process_eht_info(beacon, sta_ds);
 
 	if (mac_ctx->lim.gLimProtectionControl !=
 	    MLME_FORCE_POLICY_PROTECTION_DISABLE)

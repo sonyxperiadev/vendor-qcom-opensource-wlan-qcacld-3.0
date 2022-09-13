@@ -94,6 +94,8 @@
  * @ACTION_OUI_DISABLE_TWT: disable TWT with the ap
  * @ACTION_OUI_EXTEND_WOW_ITO: extend ITO under WOW mode if vendor OUI is
  * received in beacon.
+ * @ACTION_OUI_11BE_OUI_ALLOW: ap oui for which station can connect with
+ * 11be mode
  * @ACTION_OUI_HOST_ONLY: host only action id start - placeholder.
  * New Firmware related "ACTION" needs to be added before this placeholder.
  * @ACTION_OUI_HOST_RECONN: reconnect to the same BSSID when wait for
@@ -113,6 +115,7 @@ enum action_oui_id {
 	ACTION_OUI_DISABLE_AGGRESSIVE_EDCA = 8,
 	ACTION_OUI_DISABLE_TWT = 9,
 	ACTION_OUI_EXTEND_WOW_ITO = 10,
+	ACTION_OUI_11BE_OUI_ALLOW = 11,
 	ACTION_OUI_HOST_ONLY,
 	ACTION_OUI_HOST_RECONN = ACTION_OUI_HOST_ONLY,
 	ACTION_OUI_TAKE_ALL_BAND_INFO,
