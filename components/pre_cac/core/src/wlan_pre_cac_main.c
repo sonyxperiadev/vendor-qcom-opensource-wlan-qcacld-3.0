@@ -34,7 +34,7 @@ void pre_cac_stop(struct wlan_objmgr_psoc *psoc)
 
 	if (!psoc_priv)
 		return;
-
+	pre_cac_debug("cancel pre_cac_work");
 	if (psoc_priv->pre_cac_work.fn)
 		qdf_cancel_work(&psoc_priv->pre_cac_work);
 }
@@ -146,19 +146,27 @@ bool pre_cac_complete_get(struct wlan_objmgr_vdev *vdev)
 	return vdev_priv->pre_cac_complete;
 }
 
-static void pre_cac_complete(struct wlan_objmgr_vdev *vdev,
+static void pre_cac_complete(struct wlan_objmgr_psoc *psoc,
+			     uint8_t vdev_id,
 			     QDF_STATUS status)
 {
 	if (glbl_pre_cac_ops &&
 	    glbl_pre_cac_ops->pre_cac_complete_cb)
-		glbl_pre_cac_ops->pre_cac_complete_cb(vdev, status);
+		glbl_pre_cac_ops->pre_cac_complete_cb(psoc, vdev_id, status);
 }
 
 static void pre_cac_handle_success(void *data)
 {
-	struct wlan_objmgr_vdev *vdev = (struct wlan_objmgr_vdev *)data;
+	struct wlan_objmgr_psoc *psoc = (struct wlan_objmgr_psoc *)data;
+	struct pre_cac_psoc_priv *psoc_priv;
 
-	pre_cac_complete(vdev, QDF_STATUS_SUCCESS);
+	psoc_priv = pre_cac_psoc_get_priv(psoc);
+	if (!psoc_priv) {
+		pre_cac_err("Invalid psoc priv");
+		return;
+	}
+	pre_cac_debug("vdev id %d", psoc_priv->pre_cac_vdev_id);
+	pre_cac_complete(psoc, psoc_priv->pre_cac_vdev_id, QDF_STATUS_SUCCESS);
 }
 
 static void pre_cac_conditional_csa_ind(struct wlan_objmgr_psoc *psoc,
@@ -172,15 +180,22 @@ static void pre_cac_conditional_csa_ind(struct wlan_objmgr_psoc *psoc,
 
 static void pre_cac_handle_failure(void *data)
 {
-	struct wlan_objmgr_vdev *vdev = (struct wlan_objmgr_vdev *)data;
+	struct wlan_objmgr_psoc *psoc = (struct wlan_objmgr_psoc *)data;
+	struct pre_cac_psoc_priv *psoc_priv;
 
-	pre_cac_complete(vdev, QDF_STATUS_E_FAILURE);
+	psoc_priv = pre_cac_psoc_get_priv(psoc);
+	if (!psoc_priv) {
+		pre_cac_err("Invalid psoc priv");
+		return;
+	}
+	pre_cac_debug("vdev id %d", psoc_priv->pre_cac_vdev_id);
+	pre_cac_complete(psoc, psoc_priv->pre_cac_vdev_id,
+			 QDF_STATUS_E_FAILURE);
 }
 
 void pre_cac_clean_up(struct wlan_objmgr_psoc *psoc)
 {
 	struct pre_cac_psoc_priv *psoc_priv = pre_cac_psoc_get_priv(psoc);
-	struct wlan_objmgr_vdev *vdev;
 	uint8_t vdev_id;
 
 	if (!psoc_priv) {
@@ -192,17 +207,11 @@ void pre_cac_clean_up(struct wlan_objmgr_psoc *psoc)
 		return;
 
 	pre_cac_get_vdev_id(psoc, &vdev_id);
-
-	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
-						    WLAN_PRE_CAC_ID);
-	if (!vdev) {
-		pre_cac_err("Invalid vdev");
-		return;
-	}
-
+	pre_cac_debug("schedue pre_cac_work vdev %d", vdev_id);
+	psoc_priv->pre_cac_vdev_id = vdev_id;
 	qdf_create_work(0, &psoc_priv->pre_cac_work,
 			pre_cac_handle_failure,
-			vdev);
+			psoc);
 	qdf_sched_work(0, &psoc_priv->pre_cac_work);
 }
 
@@ -211,11 +220,13 @@ void pre_cac_handle_radar_ind(struct wlan_objmgr_vdev *vdev)
 	struct wlan_objmgr_psoc *psoc = wlan_vdev_get_psoc(vdev);
 	struct pre_cac_psoc_priv *psoc_priv = pre_cac_psoc_get_priv(psoc);
 
-	pre_cac_conditional_csa_ind(psoc, vdev->vdev_objmgr.vdev_id, false);
+	pre_cac_conditional_csa_ind(psoc, wlan_vdev_get_id(vdev), false);
 
+	pre_cac_debug("schedue pre_cac_work vdev %d", wlan_vdev_get_id(vdev));
+	psoc_priv->pre_cac_vdev_id = wlan_vdev_get_id(vdev);
 	qdf_create_work(0, &psoc_priv->pre_cac_work,
 			pre_cac_handle_failure,
-			vdev);
+			psoc);
 	qdf_sched_work(0, &psoc_priv->pre_cac_work);
 }
 
@@ -224,11 +235,13 @@ void pre_cac_handle_cac_end(struct wlan_objmgr_vdev *vdev)
 	struct wlan_objmgr_psoc *psoc = wlan_vdev_get_psoc(vdev);
 	struct pre_cac_psoc_priv *psoc_priv = pre_cac_psoc_get_priv(psoc);
 
-	pre_cac_conditional_csa_ind(psoc, vdev->vdev_objmgr.vdev_id, true);
+	pre_cac_conditional_csa_ind(psoc, wlan_vdev_get_id(vdev), true);
 
+	pre_cac_debug("schedue pre_cac_work vdev %d", wlan_vdev_get_id(vdev));
+	psoc_priv->pre_cac_vdev_id = wlan_vdev_get_id(vdev);
 	qdf_create_work(0, &psoc_priv->pre_cac_work,
 			pre_cac_handle_success,
-			vdev);
+			psoc);
 	qdf_sched_work(0, &psoc_priv->pre_cac_work);
 }
 

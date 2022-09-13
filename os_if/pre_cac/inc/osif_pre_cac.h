@@ -42,7 +42,8 @@ typedef void
  * Return: None
  */
 typedef void
-	(*osif_pre_cac_complete_status_legacy_cb)(struct wlan_objmgr_vdev *vdev,
+	(*osif_pre_cac_complete_status_legacy_cb)(struct wlan_objmgr_psoc *psoc,
+						  uint8_t vdev_id,
 						  QDF_STATUS status);
 
 /**

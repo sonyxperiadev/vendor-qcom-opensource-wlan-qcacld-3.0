@@ -26,7 +26,8 @@
 static struct osif_pre_cac_legacy_ops *osif_pre_cac_legacy_ops;
 
 static void
-osif_pre_cac_complete_legacy_cb(struct wlan_objmgr_vdev *vdev,
+osif_pre_cac_complete_legacy_cb(struct wlan_objmgr_psoc *psoc,
+				uint8_t vdev_id,
 				QDF_STATUS status)
 {
 	osif_pre_cac_complete_status_legacy_cb cb = NULL;
@@ -35,22 +36,33 @@ osif_pre_cac_complete_legacy_cb(struct wlan_objmgr_vdev *vdev,
 		cb = osif_pre_cac_legacy_ops->pre_cac_complete_legacy_cb;
 
 	if (cb)
-		cb(vdev, status);
+		cb(psoc, vdev_id, status);
 }
 
-static void osif_pre_cac_complete_cb(struct wlan_objmgr_vdev *vdev,
+static void osif_pre_cac_complete_cb(struct wlan_objmgr_psoc *psoc,
+				     uint8_t vdev_id,
 				     QDF_STATUS status)
 {
-	struct vdev_osif_priv *osif_priv = wlan_vdev_get_ospriv(vdev);
+	struct vdev_osif_priv *osif_priv;
 	struct osif_vdev_sync *vdev_sync;
 	int errno;
+	struct wlan_objmgr_vdev *vdev;
 
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(
+				psoc, vdev_id,
+				WLAN_PRE_CAC_ID);
+	if (!vdev) {
+		osif_err("Invalid vdev for %d", vdev_id);
+		return;
+	}
+	osif_priv = wlan_vdev_get_ospriv(vdev);
 	errno = osif_vdev_sync_trans_start_wait(osif_priv->wdev->netdev,
 						&vdev_sync);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_PRE_CAC_ID);
 	if (errno)
 		return;
 
-	osif_pre_cac_complete_legacy_cb(vdev, status);
+	osif_pre_cac_complete_legacy_cb(psoc, vdev_id, status);
 
 	osif_vdev_sync_trans_stop(vdev_sync);
 }

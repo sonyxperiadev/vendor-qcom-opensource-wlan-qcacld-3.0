@@ -538,16 +538,15 @@ wlan_hdd_pre_cac_conditional_freq_switch_ind(struct wlan_objmgr_vdev *vdev,
 }
 
 static void
-wlan_hdd_pre_cac_complete(struct wlan_objmgr_vdev *vdev,
+wlan_hdd_pre_cac_complete(struct wlan_objmgr_psoc *psoc,
+			  uint8_t vdev_id,
 			  QDF_STATUS status)
 {
-	struct wlan_objmgr_psoc *psoc = wlan_vdev_get_psoc(vdev);
-	uint8_t vdev_id = vdev->vdev_objmgr.vdev_id;
 	struct hdd_adapter *adapter;
 
 	adapter = wlan_hdd_get_adapter_from_vdev(psoc, vdev_id);
 	if (!adapter) {
-		hdd_err("Invalid adapter");
+		hdd_err("Invalid adapter vdev %d", vdev_id);
 		return;
 	}
 

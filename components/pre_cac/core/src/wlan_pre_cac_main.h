@@ -77,9 +77,11 @@ struct pre_cac_vdev_priv {
 /**
  * struct pre_cac_psoc_priv - Private object to be stored in psoc
  * @pre_cac_work: pre cac work handler
+ * @pre_cac_vdev_id: pre cac vdev id
  */
 struct pre_cac_psoc_priv {
 	qdf_work_t pre_cac_work;
+	uint8_t pre_cac_vdev_id;
 };
 
 /**
@@ -158,8 +160,8 @@ pre_cac_psoc_get_priv_fl(struct wlan_objmgr_psoc *psoc,
  *
  * Return: pre_cac psoc private object
  */
-#define pre_cac_psoc_get_priv(vdev) \
-			      pre_cac_psoc_get_priv_fl(vdev, __func__, __LINE__)
+#define pre_cac_psoc_get_priv(psoc) \
+			      pre_cac_psoc_get_priv_fl(psoc, __func__, __LINE__)
 
 /**
  * pre_cac_init() - pre cac component initialization.

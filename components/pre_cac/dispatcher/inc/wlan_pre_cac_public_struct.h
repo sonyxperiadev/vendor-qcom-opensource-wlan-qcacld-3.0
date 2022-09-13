@@ -29,7 +29,8 @@ struct pre_cac_ops {
 	void (*pre_cac_conditional_csa_ind_cb)(
 			struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 			bool status);
-	void (*pre_cac_complete_cb)(struct wlan_objmgr_vdev *vdev,
-				    QDF_STATUS status);
+	void (*pre_cac_complete_cb)(
+			struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
+			QDF_STATUS status);
 };
 #endif /* _WLAN_PRE_CAC_PUBLIC_STRUCT_H_ */
