@@ -2807,7 +2807,7 @@ void hdd_wlan_get_stats(struct hdd_adapter *adapter, uint16_t *length,
 	if (!vdev)
 		return;
 
-	dp_stats = qdf_mem_malloc(sizeof(*stats));
+	dp_stats = qdf_mem_malloc(sizeof(*dp_stats));
 	if (!dp_stats) {
 		hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 		return;
