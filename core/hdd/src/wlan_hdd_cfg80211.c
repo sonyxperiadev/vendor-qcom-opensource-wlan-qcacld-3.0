@@ -22110,7 +22110,7 @@ static int __wlan_hdd_cfg80211_set_pmksa(struct wiphy *wiphy,
 		   TRACE_CODE_HDD_CFG80211_SET_PMKSA,
 		   adapter->vdev_id, result);
 
-	if (QDF_IS_STATUS_SUCCESS(result))
+	if (QDF_IS_STATUS_SUCCESS(result) || result == QDF_STATUS_E_EXISTS)
 		sme_set_del_pmkid_cache(hdd_ctx->psoc, adapter->vdev_id,
 					pmk_cache, true);
 
