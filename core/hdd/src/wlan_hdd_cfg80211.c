@@ -194,6 +194,12 @@
 #include "wlan_hdd_coap.h"
 #include "wlan_hdd_tdls.h"
 
+/*
+ * A value of 100 (milliseconds) can be sent to FW.
+ * FW would enable Tx beamforming based on this.
+ */
+#define TX_BFER_NDP_PERIODICITY 100
+
 #define g_mode_rates_size (12)
 #define a_mode_rates_size (8)
 
@@ -7692,6 +7698,8 @@ wlan_hdd_wifi_test_config_policy[
 			= {.type = NLA_U8},
 		[QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_11BE_EMLSR_MODE] = {
 			.type = NLA_U8},
+		[QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_BEAMFORMER_PERIODIC_SOUNDING] = {
+			.type = NLA_U8},
 };
 
 /**
@@ -12096,6 +12104,17 @@ __wlan_hdd_cfg80211_set_wifi_test_config(struct wiphy *wiphy,
 		wfa_param.value = nla_get_u8(tb[cmd_id]);
 
 		ret_val = hdd_test_config_emlsr_mode(hdd_ctx, tb[cmd_id]);
+	}
+
+	cmd_id = QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_BEAMFORMER_PERIODIC_SOUNDING;
+	if (tb[cmd_id]) {
+		cfg_val = nla_get_u8(tb[cmd_id]);
+
+		set_val = cfg_val ? TX_BFER_NDP_PERIODICITY : 0;
+
+		ret_val = wma_cli_set_command(adapter->vdev_id,
+					WMI_PDEV_PARAM_TXBF_SOUND_PERIOD_CMDID,
+					set_val, PDEV_CMD);
 	}
 
 	if (update_sme_cfg)
