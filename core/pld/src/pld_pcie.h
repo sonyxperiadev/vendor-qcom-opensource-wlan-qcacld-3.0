@@ -412,6 +412,11 @@ static inline int pld_pcie_get_msi_irq(struct device *dev, unsigned int vector)
 	return 0;
 }
 
+static inline bool pld_pcie_is_one_msi(struct device *dev)
+{
+	return false;
+}
+
 static inline void pld_pcie_get_msi_address(struct device *dev,
 					    uint32_t *msi_addr_low,
 					    uint32_t *msi_addr_high)
@@ -701,6 +706,18 @@ static inline int pld_pcie_get_msi_irq(struct device *dev, unsigned int vector)
 {
 	return cnss_get_msi_irq(dev, vector);
 }
+
+#ifdef WLAN_ONE_MSI_VECTOR
+static inline bool pld_pcie_is_one_msi(struct device *dev)
+{
+	return cnss_is_one_msi(dev);
+}
+#else
+static inline bool pld_pcie_is_one_msi(struct device *dev)
+{
+	return false;
+}
+#endif
 
 static inline void pld_pcie_get_msi_address(struct device *dev,
 					    uint32_t *msi_addr_low,

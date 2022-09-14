@@ -3391,3 +3391,19 @@ int pld_get_audio_wlan_timestamp(struct device *dev,
 	return ret;
 }
 #endif /* FEATURE_WLAN_TIME_SYNC_FTM */
+
+bool pld_is_one_msi(struct device *dev)
+{
+	bool ret = false;
+	enum pld_bus_type type = pld_get_bus_type(dev);
+
+	switch (type) {
+	case PLD_BUS_TYPE_PCIE:
+		ret = pld_pcie_is_one_msi(dev);
+		break;
+	default:
+		break;
+	}
+
+	return ret;
+}
