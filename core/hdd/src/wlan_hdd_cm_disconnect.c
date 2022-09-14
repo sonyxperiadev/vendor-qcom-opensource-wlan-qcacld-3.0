@@ -102,11 +102,12 @@ static void hdd_cm_print_bss_info(struct hdd_station_ctx *hdd_sta_ctx)
 	conn_info = &hdd_sta_ctx->conn_info;
 
 	hdd_nofl_debug("*********** WIFI DATA LOGGER **************");
-	hdd_nofl_debug("freq: %d dot11mode %d AKM %d ssid: \"%.*s\" ,roam_count %d nss %d legacy %d mcs %d signal %d noise: %d",
+	hdd_nofl_debug("freq: %d dot11mode %d AKM %d ssid: \"" QDF_SSID_FMT "\" ,roam_count %d nss %d legacy %d mcs %d signal %d noise: %d",
 		       conn_info->chan_freq, conn_info->dot11mode,
 		       conn_info->last_auth_type,
-		       conn_info->last_ssid.SSID.length,
-		       conn_info->last_ssid.SSID.ssId, conn_info->roam_count,
+		       QDF_SSID_REF(conn_info->last_ssid.SSID.length,
+				    conn_info->last_ssid.SSID.ssId),
+		       conn_info->roam_count,
 		       conn_info->txrate.nss, conn_info->txrate.legacy,
 		       conn_info->txrate.mcs, conn_info->signal,
 		       conn_info->noise);

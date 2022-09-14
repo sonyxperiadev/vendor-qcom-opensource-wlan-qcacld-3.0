@@ -809,8 +809,8 @@ void cm_connect_info(struct wlan_objmgr_vdev *vdev, bool connect_success,
 	mlme_nofl_debug("VDEV-ID: %d self_mac:"QDF_MAC_ADDR_FMT,
 			wlan_vdev_get_id(vdev),
 			QDF_MAC_ADDR_REF(wlan_vdev_mlme_get_macaddr(vdev)));
-	mlme_nofl_debug("ssid: %.*s bssid: "QDF_MAC_ADDR_FMT" RSSI: %d dBm",
-			conn_stats.ssid_len, conn_stats.ssid,
+	mlme_nofl_debug("ssid: " QDF_SSID_FMT " bssid: " QDF_MAC_ADDR_FMT " RSSI: %d dBm",
+			QDF_SSID_REF(conn_stats.ssid_len, conn_stats.ssid),
 			QDF_MAC_ADDR_REF(conn_stats.bssid), conn_stats.rssi);
 	mlme_nofl_debug("Channel Freq: %d channel_bw: %s dot11Mode: %s",
 			conn_stats.op_freq,

@@ -4511,6 +4511,7 @@ send_roam_scan_offload_ap_profile_cmd_tlv(wmi_unified_t wmi_handle,
 	wmi_owe_ap_profile *owe_ap_profile;
 	enum roam_trigger_reason trig_reason;
 	uint32_t *authmode_list;
+	wmi_ssid *ssid;
 	int i;
 
 	len = sizeof(wmi_roam_ap_profile_fixed_param) + sizeof(wmi_ap_profile);
@@ -4573,14 +4574,15 @@ send_roam_scan_offload_ap_profile_cmd_tlv(wmi_unified_t wmi_handle,
 				ap_profile->profile.rsn_mcastmgmtcipherset;
 	profile->rssi_abs_thresh = ap_profile->profile.rssi_abs_thresh;
 
-	wmi_debug("vdev %d AP PROFILE: flags:%x rssi_thres:%d bg_rssi_thres:%d ssid:%.*s authmode:%d uc cipher:%d mc cipher:%d mc mgmt cipher:%d rssi abs thresh:%d",
-		 roam_ap_profile_fp->vdev_id,
-		 profile->flags, profile->rssi_threshold,
-		 profile->bg_rssi_threshold,
-		 profile->ssid.ssid_len, ap_profile->profile.ssid.ssid,
-		 profile->rsn_authmode, profile->rsn_ucastcipherset,
-		 profile->rsn_mcastcipherset, profile->rsn_mcastmgmtcipherset,
-		 profile->rssi_abs_thresh);
+	wmi_debug("vdev %d AP PROFILE: flags:%x rssi_thres:%d bg_rssi_thres:%d ssid:" QDF_SSID_FMT " authmode:%d uc cipher:%d mc cipher:%d mc mgmt cipher:%d rssi abs thresh:%d",
+		  roam_ap_profile_fp->vdev_id,
+		  profile->flags, profile->rssi_threshold,
+		  profile->bg_rssi_threshold,
+		  QDF_SSID_REF(profile->ssid.ssid_len,
+			       ap_profile->profile.ssid.ssid),
+		  profile->rsn_authmode, profile->rsn_ucastcipherset,
+		  profile->rsn_mcastcipherset, profile->rsn_mcastmgmtcipherset,
+		  profile->rssi_abs_thresh);
 
 	buf_ptr += sizeof(wmi_ap_profile);
 
@@ -4816,18 +4818,17 @@ send_roam_scan_offload_ap_profile_cmd_tlv(wmi_unified_t wmi_handle,
 		buf_ptr += WMI_TLV_HDR_SIZE;
 
 		owe_ap_profile = (wmi_owe_ap_profile *)buf_ptr;
+		ssid = &owe_ap_profile->open_ssid_for_owe_transition;
 		WMITLV_SET_HDR(&owe_ap_profile->tlv_header,
 			       WMITLV_TAG_STRUC_wmi_owe_ap_profile,
 			       WMITLV_GET_STRUCT_TLVLEN(wmi_owe_ap_profile));
 
-		owe_ap_profile->open_ssid_for_owe_transition.ssid_len =
-					ap_profile->owe_ap_profile.ssid.length;
-		qdf_mem_copy(owe_ap_profile->open_ssid_for_owe_transition.ssid,
+		ssid->ssid_len = ap_profile->owe_ap_profile.ssid.length;
+		qdf_mem_copy(ssid->ssid,
 			     ap_profile->owe_ap_profile.ssid.ssid,
 			     ap_profile->owe_ap_profile.ssid.length);
-		wmi_debug("[OWE_TRANSITION]: open ssid:%.*s",
-		      owe_ap_profile->open_ssid_for_owe_transition.ssid_len,
-		     (char *)owe_ap_profile->open_ssid_for_owe_transition.ssid);
+		wmi_debug("[OWE_TRANSITION]: open ssid:" QDF_SSID_FMT,
+			  QDF_SSID_REF(ssid->ssid_len, (char *)ssid->ssid));
 
 		buf_ptr += sizeof(*owe_ap_profile);
 	} else {
@@ -5592,11 +5593,11 @@ send_offload_11k_cmd_tlv(wmi_unified_t wmi_handle,
 		  params->neighbor_report_params.low_rssi_offset,
 		  params->neighbor_report_params.bmiss_count_trigger,
 		  params->neighbor_report_params.per_threshold_offset);
-	wmi_debug("RSO_CFG: neighbor_report_cache_timeout:%u max_neighbor_report_req_cap:%u SSID:%.*s",
+	wmi_debug("RSO_CFG: neighbor_report_cache_timeout:%u max_neighbor_report_req_cap:%u SSID:" QDF_SSID_FMT,
 		  params->neighbor_report_params.neighbor_report_cache_timeout,
 		  params->neighbor_report_params.max_neighbor_report_req_cap,
-		  params->neighbor_report_params.ssid.length,
-		  params->neighbor_report_params.ssid.ssid);
+		  QDF_SSID_REF(params->neighbor_report_params.ssid.length,
+			       params->neighbor_report_params.ssid.ssid));
 
 	wmi_mtrace(WMI_11K_OFFLOAD_REPORT_CMDID, cmd->vdev_id, 0);
 	status = wmi_unified_cmd_send(wmi_handle, buf, len,

@@ -351,12 +351,11 @@ static bool lim_chk_ssid(struct mac_context *mac_ctx, tSirMacAddr sa,
 	if (!lim_cmp_ssid(&assoc_req->ssId, session))
 		return true;
 
-	pe_err("%s Req with ssid wrong(Rcvd: %.*s self: %.*s) from "
-			QDF_MAC_ADDR_FMT,
-		(LIM_ASSOC == sub_type) ? "Assoc" : "ReAssoc",
-		assoc_req->ssId.length, assoc_req->ssId.ssId,
-		session->ssId.length, session->ssId.ssId,
-		QDF_MAC_ADDR_REF(sa));
+	pe_err("%s Req with ssid wrong(Rcvd: " QDF_SSID_FMT " self: " QDF_SSID_FMT ") from " QDF_MAC_ADDR_FMT,
+	       (LIM_ASSOC == sub_type) ? "Assoc" : "ReAssoc",
+	       QDF_SSID_REF(assoc_req->ssId.length, assoc_req->ssId.ssId),
+	       QDF_SSID_REF(session->ssId.length, session->ssId.ssId),
+	       QDF_MAC_ADDR_REF(sa));
 
 	/*
 	 * Received Re/Association Request with either Broadcast SSID OR with
@@ -3412,9 +3411,10 @@ QDF_STATUS lim_send_mlm_assoc_ind(struct mac_context *mac_ctx,
 	else
 		sub_type = LIM_ASSOC;
 
-	pe_debug("Sessionid: %d ssid: %s sub_type: %d Associd: %d staAddr: "
+	pe_debug("Sessionid: %d ssid: " QDF_SSID_FMT " sub_type: %d Associd: %d staAddr: "
 		 QDF_MAC_ADDR_FMT, session_entry->peSessionId,
-		 assoc_req->ssId.ssId, sub_type, sta_ds->assocId,
+		 QDF_SSID_REF(assoc_req->ssId.length, assoc_req->ssId.ssId),
+		 sub_type, sta_ds->assocId,
 		 QDF_MAC_ADDR_REF(sta_ds->staAddr));
 
 	wlan_son_ind_assoc_req_frm(session_entry->vdev, sta_ds->staAddr,

@@ -258,8 +258,9 @@ void lim_process_mlm_start_cnf(struct mac_context *mac, uint32_t *msg_buf)
 
 		if (send_bcon_ind) {
 			/* Configure beacon and send beacons to HAL */
-			pe_debug("Start Beacon with ssid %s Ch freq %d",
-				 pe_session->ssId.ssId,
+			pe_debug("Start Beacon with ssid " QDF_SSID_FMT " Ch freq %d",
+				 QDF_SSID_REF(pe_session->ssId.length,
+					      pe_session->ssId.ssId),
 				 pe_session->curr_op_freq);
 			lim_send_beacon(mac, pe_session);
 			lim_enable_obss_detection_config(mac, pe_session);
@@ -2957,8 +2958,10 @@ static void lim_process_switch_channel_join_req(
 	/* assign appropriate sessionId to the timer object */
 	mac_ctx->lim.lim_timers.gLimPeriodicJoinProbeReqTimer.sessionId =
 		session_entry->peSessionId;
-	pe_debug("vdev %d Send Probe req on freq %d %.*s  " QDF_MAC_ADDR_FMT, session_entry->vdev_id,
-		 session_entry->curr_op_freq, ssId.length, ssId.ssId,
+	pe_debug("vdev %d Send Probe req on freq %d " QDF_SSID_FMT " " QDF_MAC_ADDR_FMT,
+		 session_entry->vdev_id,
+		 session_entry->curr_op_freq,
+		 QDF_SSID_REF(ssId.length, ssId.ssId),
 		 QDF_MAC_ADDR_REF(
 		 session_entry->pLimMlmJoinReq->bssDescription.bssId));
 

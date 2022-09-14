@@ -4810,6 +4810,7 @@ static int hdd_set_allow_list(struct hdd_context *hdd_ctx,
 	struct nlattr *tb2[MAX_ROAMING_PARAM + 1];
 	struct nlattr *curr_attr = NULL;
 	mac_handle_t mac_handle;
+	struct wlan_ssid *ssid;
 
 	i = 0;
 	if (tb[PARAM_NUM_NW]) {
@@ -4847,20 +4848,19 @@ static int hdd_set_allow_list(struct hdd_context *hdd_ctx,
 			 * the NULL termination character to the driver
 			 * buffer.
 			 */
-			if (buf_len > 1 &&
-			    ((buf_len - 1) <= WLAN_SSID_MAX_LEN)) {
-				nla_memcpy(rso_config->ssid_allowed_list[i].ssid,
-					tb2[PARAM_LIST_SSID], buf_len - 1);
-				rso_config->ssid_allowed_list[i].length = buf_len - 1;
-				hdd_debug("SSID[%d]: %.*s,length = %d",
-					i,
-					rso_config->ssid_allowed_list[i].length,
-					rso_config->ssid_allowed_list[i].ssid,
-					rso_config->ssid_allowed_list[i].length);
-					i++;
-			} else {
+			if (buf_len <= 1 || (buf_len - 1) > WLAN_SSID_MAX_LEN) {
 				hdd_err("Invalid buffer length");
+				continue;
 			}
+
+			ssid = &rso_config->ssid_allowed_list[i];
+			nla_memcpy(ssid->ssid,
+				   tb2[PARAM_LIST_SSID], buf_len - 1);
+			ssid->length = buf_len - 1;
+			hdd_debug("SSID[%d]: " QDF_SSID_FMT ",length = %d", i,
+				  QDF_SSID_REF(ssid->length, ssid->ssid),
+				  rso_config->ssid_allowed_list[i].length);
+			i++;
 		}
 	}
 
@@ -22309,10 +22309,10 @@ static void hdd_fill_pmksa_info(struct hdd_adapter *adapter,
 		qdf_mem_copy(pmk_cache->cache_id, pmksa->cache_id,
 			     CACHE_ID_LEN);
 		pmk_cache->ssid_len = pmksa->ssid_len;
-		hdd_debug("%s PMKSA for ssid %*.*s cache_id %x %x",
+		hdd_debug("%s PMKSA for ssid " QDF_SSID_FMT " cache_id %x %x",
 			  is_delete ? "Delete" : "Set",
-			  pmk_cache->ssid_len, pmk_cache->ssid_len,
-			  pmk_cache->ssid, pmk_cache->cache_id[0],
+			  QDF_SSID_REF(pmk_cache->ssid_len, pmk_cache->ssid),
+			  pmk_cache->cache_id[0],
 			  pmk_cache->cache_id[1]);
 	}
 

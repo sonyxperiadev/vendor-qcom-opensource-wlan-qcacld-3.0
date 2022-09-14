@@ -6538,10 +6538,11 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 		goto error;
 	}
 
-	hdd_nofl_debug("SAP mac:" QDF_MAC_ADDR_FMT " SSID: %.*s BCNINTV:%d Freq:%d freq_seg0:%d freq_seg1:%d ch_width:%d HW mode:%d privacy:%d akm:%d acs_mode:%d acs_dfs_mode %d dtim period:%d MFPC %d, MFPR %d",
+	hdd_nofl_debug("SAP mac:" QDF_MAC_ADDR_FMT " SSID: " QDF_SSID_FMT " BCNINTV:%d Freq:%d freq_seg0:%d freq_seg1:%d ch_width:%d HW mode:%d privacy:%d akm:%d acs_mode:%d acs_dfs_mode %d dtim period:%d MFPC %d, MFPR %d",
 		       QDF_MAC_ADDR_REF(adapter->mac_addr.bytes),
-		       config->SSIDinfo.ssid.length,
-		       config->SSIDinfo.ssid.ssId, (int)config->beacon_int,
+		       QDF_SSID_REF(config->SSIDinfo.ssid.length,
+				    config->SSIDinfo.ssid.ssId),
+		       (int)config->beacon_int,
 		       config->chan_freq, config->ch_params.mhz_freq_seg0,
 		       config->ch_params.mhz_freq_seg1,
 		       config->ch_params.ch_width,

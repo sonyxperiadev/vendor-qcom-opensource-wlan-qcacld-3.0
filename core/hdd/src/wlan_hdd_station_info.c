@@ -839,10 +839,11 @@ static int hdd_get_station_info(struct hdd_context *hdd_ctx,
 	}
 
 	hdd_nofl_debug(
-		"STA Info:: SSID:%s, BSSID:" QDF_MAC_ADDR_FMT ", freq:%d, "
+		"STA Info:: SSID:" QDF_SSID_FMT ", BSSID:" QDF_MAC_ADDR_FMT ", freq:%d, "
 		"Noise:%d, signal:%d, roam_count:%d, last_auth_type:%d, "
 		"dot11mode:%d, disconnect_reason:%d, ",
-		hdd_sta_ctx->cache_conn_info.last_ssid.SSID.ssId,
+		QDF_SSID_REF(WLAN_SSID_MAX_LEN,
+			hdd_sta_ctx->cache_conn_info.last_ssid.SSID.ssId),
 		QDF_MAC_ADDR_REF(hdd_sta_ctx->cache_conn_info.bssid.bytes),
 		hdd_sta_ctx->cache_conn_info.chan_freq,
 		(hdd_sta_ctx->cache_conn_info.noise + 100),

@@ -3847,8 +3847,9 @@ lim_fill_rsn_ie(struct mac_context *mac_ctx, struct pe_session *session,
 
 	pmksa_peer = wlan_crypto_get_peer_pmksa(session->vdev, &pmksa);
 	if (!pmksa_peer)
-		pe_debug("FILS: vdev:%d Peer PMKSA not found ssid:%.*s cache_id_present:%d",
-			 session->vdev_id, pmksa.ssid_len, pmksa.ssid,
+		pe_debug("FILS: vdev:%d Peer PMKSA not found ssid:" QDF_SSID_FMT " cache_id_present:%d",
+			 session->vdev_id,
+			 QDF_SSID_REF(pmksa.ssid_len, pmksa.ssid),
 			 bss_desc->fils_info_element.is_cache_id_present);
 
 	lim_update_connect_rsn_ie(session, rsn_ie, pmksa_peer);
@@ -4092,8 +4093,9 @@ lim_fill_session_params(struct mac_context *mac_ctx,
 	    QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_OWE) &&
 	    req->owe_trans_ssid.length) {
 		req->entry->ssid = req->owe_trans_ssid;
-		pe_debug("OWE transition ssid is %.*s", req->entry->ssid.length,
-			 req->entry->ssid.ssid);
+		pe_debug("OWE transition ssid is " QDF_SSID_FMT,
+			 QDF_SSID_REF(req->entry->ssid.length,
+				      req->entry->ssid.ssid));
 	}
 
 	/* Copy the SSID from req to session entry  */
@@ -8339,8 +8341,10 @@ static void lim_process_sme_start_beacon_req(struct mac_context *mac, uint32_t *
 		 * Tx right after the WMA_ADD_BSS_RSP.
 		 */
 		lim_apply_configuration(mac, pe_session);
-		pe_debug("Start Beacon with ssid %s Ch freq %d",
-			 pe_session->ssId.ssId, pe_session->curr_op_freq);
+		pe_debug("Start Beacon with ssid " QDF_SSID_FMT " Ch freq %d",
+			 QDF_SSID_REF(pe_session->ssId.length,
+				      pe_session->ssId.ssId),
+			 pe_session->curr_op_freq);
 		lim_send_beacon(mac, pe_session);
 		lim_enable_obss_detection_config(mac, pe_session);
 		lim_send_obss_color_collision_cfg(mac, pe_session,

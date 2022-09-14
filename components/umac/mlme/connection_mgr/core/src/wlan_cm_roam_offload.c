@@ -1387,8 +1387,8 @@ void cm_update_owe_info(struct wlan_objmgr_vdev *vdev,
 	qdf_mem_copy(owe_info->ssid.ssid, owe_transition_ie + OWE_SSID_OFFSET,
 		     owe_info->ssid.length);
 
-	mlme_debug("[OWE_TRANSITION] open bss ssid: \"%.*s\"",
-		   owe_info->ssid.length, owe_info->ssid.ssid);
+	mlme_debug("[OWE_TRANSITION] open bss ssid: \"" QDF_SSID_FMT "\"",
+		   QDF_SSID_REF(owe_info->ssid.length, owe_info->ssid.ssid));
 	return;
 
 reset:
@@ -2338,9 +2338,9 @@ cm_roam_scan_filter(struct wlan_objmgr_psoc *psoc,
 			     rso_usr_cfg->ssid_allowed_list[i].length);
 		params->ssid_allowed_list[i].length =
 				rso_usr_cfg->ssid_allowed_list[i].length;
-		mlme_debug("SSID %d: %.*s", i,
-			   params->ssid_allowed_list[i].length,
-			   params->ssid_allowed_list[i].ssid);
+		mlme_debug("SSID %d: " QDF_SSID_FMT, i,
+			   QDF_SSID_REF(params->ssid_allowed_list[i].length,
+					params->ssid_allowed_list[i].ssid));
 	}
 
 	if (params->num_bssid_preferred_list) {
