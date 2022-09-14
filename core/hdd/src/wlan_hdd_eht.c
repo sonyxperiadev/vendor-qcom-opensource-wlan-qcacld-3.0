@@ -32,6 +32,7 @@
 #include "wma_api.h"
 #include "wlan_hdd_sysfs.h"
 #include "wlan_osif_features.h"
+#include "wlan_psoc_mlme_ucfg_api.h"
 
 #if defined(WLAN_FEATURE_11BE) && defined(CFG80211_11BE_BASIC)
 #define CHAN_WIDTH_SET_40MHZ_IN_2G \
@@ -172,8 +173,13 @@ void hdd_update_wiphy_eht_cap(struct hdd_context *hdd_ctx)
 	uint32_t channel_bonding_mode_2g;
 	uint8_t *phy_info_2g =
 		    hdd_ctx->iftype_data_2g->eht_cap.eht_cap_elem.phy_cap_info;
+	bool eht_capab;
 
 	hdd_enter();
+
+	ucfg_psoc_mlme_get_11be_capab(hdd_ctx->psoc, &eht_capab);
+	if (!eht_capab)
+		return;
 
 	status = ucfg_mlme_cfg_get_eht_caps(hdd_ctx->psoc, &eht_cap_cfg);
 	if (QDF_IS_STATUS_ERROR(status))

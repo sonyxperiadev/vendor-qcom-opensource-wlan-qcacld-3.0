@@ -234,6 +234,7 @@
 #include "wlan_dp_public_struct.h"
 #include "os_if_dp.h"
 #include <wlan_dp_ucfg_api.h>
+#include "wlan_psoc_mlme_ucfg_api.h"
 
 #ifdef MULTI_CLIENT_LL_SUPPORT
 #define WLAM_WLM_HOST_DRIVER_PORT_ID 0xFFFFFF
@@ -1638,6 +1639,7 @@ static void hdd_update_tgt_services(struct hdd_context *hdd_ctx,
 	hdd_set_dynamic_macaddr_update_capability(hdd_ctx, cfg);
 	hdd_update_fw_tdls_6g_capability(hdd_ctx, cfg);
 	hdd_update_fw_tdls_wideband_capability(hdd_ctx, cfg);
+	ucfg_psoc_mlme_set_11be_capab(hdd_ctx->psoc, cfg->en_11be);
 }
 
 /**
@@ -2625,6 +2627,7 @@ int hdd_update_tgt_cfg(hdd_handle_t hdd_handle, struct wma_tgt_cfg *cfg)
 	hdd_update_score_config(hdd_ctx);
 	hdd_update_multi_client_thermal_support(hdd_ctx);
 
+	ucfg_psoc_mlme_set_11be_capab(hdd_ctx->psoc, cfg->services.en_11be);
 	return 0;
 
 dispatcher_close:
@@ -4834,8 +4837,11 @@ static void
 hdd_set_mld_address(struct hdd_adapter *adapter, struct hdd_context *hdd_ctx,
 		    struct qdf_mac_addr *mac_addr)
 {
+	bool eht_capab;
+
+	ucfg_psoc_mlme_get_11be_capab(hdd_ctx->psoc, &eht_capab);
 	if (adapter->device_mode == QDF_STA_MODE &&
-	    adapter->mlo_adapter_info.is_ml_adapter) {
+	    adapter->mlo_adapter_info.is_ml_adapter && eht_capab) {
 		hdd_update_dynamic_mld_mac_addr(hdd_ctx, &adapter->mld_addr,
 						mac_addr,
 						adapter->device_mode);
@@ -5122,6 +5128,7 @@ static int __hdd_set_mac_address(struct net_device *dev, void *addr)
 	int ret;
 	struct qdf_mac_addr mac_addr;
 	bool net_if_running = netif_running(dev);
+	bool eht_capab;
 
 	hdd_enter_dev(dev);
 
@@ -5159,7 +5166,8 @@ static int __hdd_set_mac_address(struct net_device *dev, void *addr)
 			return ret;
 	}
 
-	if (hdd_adapter_is_ml_adapter(adapter))
+	ucfg_psoc_mlme_get_11be_capab(hdd_ctx->psoc, &eht_capab);
+	if (hdd_adapter_is_ml_adapter(adapter) && eht_capab)
 		hdd_set_mld_address(adapter, hdd_ctx, &mac_addr);
 	else
 		hdd_update_dynamic_mac(hdd_ctx, &adapter->mac_addr, &mac_addr);
@@ -6224,12 +6232,15 @@ hdd_populate_vdev_create_params(struct hdd_adapter *adapter,
 	int i;
 	struct hdd_mlo_adapter_info *mlo_adapter_info, *link_mlo_adapter_info;
 	struct hdd_adapter *link_adapter;
+	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	bool eht_capab;
 
 	hdd_enter_dev(adapter->dev);
 	mlo_adapter_info = &adapter->mlo_adapter_info;
 
+	ucfg_psoc_mlme_get_11be_capab(hdd_ctx->psoc, &eht_capab);
 	if (mlo_adapter_info->is_ml_adapter &&
-	    adapter->device_mode == QDF_STA_MODE) {
+	    adapter->device_mode == QDF_STA_MODE && eht_capab) {
 		for (i = 0; i < WLAN_MAX_MLD; i++) {
 			link_adapter = mlo_adapter_info->link_adapter[i];
 			if (!link_adapter)
@@ -6249,7 +6260,9 @@ hdd_populate_vdev_create_params(struct hdd_adapter *adapter,
 
 	vdev_params->opmode = adapter->device_mode;
 
-	hdd_populate_mld_vdev_params(adapter, vdev_params);
+	if (eht_capab)
+		hdd_populate_mld_vdev_params(adapter, vdev_params);
+
 	vdev_params->size_vdev_priv = sizeof(struct vdev_osif_priv);
 	hdd_exit();
 }
@@ -7334,6 +7347,7 @@ struct hdd_adapter *hdd_open_adapter(struct hdd_context *hdd_ctx,
 	struct hdd_adapter *adapter = NULL, *sta_adapter = NULL;
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
 	uint32_t i;
+	bool eht_capab;
 
 	status = wlan_hdd_validate_mac_address((struct qdf_mac_addr *)mac_addr);
 	if (QDF_IS_STATUS_ERROR(status)) {
@@ -7531,8 +7545,11 @@ struct hdd_adapter *hdd_open_adapter(struct hdd_context *hdd_ctx,
 
 	if (params->is_ml_adapter) {
 		hdd_adapter_set_ml_adapter(adapter);
-		qdf_mem_copy(adapter->mld_addr.bytes, adapter->mac_addr.bytes,
-			     QDF_MAC_ADDR_SIZE);
+		ucfg_psoc_mlme_get_11be_capab(hdd_ctx->psoc, &eht_capab);
+		if (eht_capab)
+			qdf_mem_copy(adapter->mld_addr.bytes,
+				     adapter->mac_addr.bytes,
+				     QDF_MAC_ADDR_SIZE);
 	}
 	status = hdd_adapter_feature_update_work_init(adapter);
 	if (QDF_IS_STATUS_ERROR(status))
@@ -15122,7 +15139,13 @@ static
 uint8_t *wlan_hdd_get_mlo_intf_addr(struct hdd_context *hdd_ctx,
 				    enum QDF_OPMODE interface_type)
 {
-		return wlan_hdd_get_mld_addr(hdd_ctx, QDF_STA_MODE);
+		bool eht_capab;
+
+		ucfg_psoc_mlme_get_11be_capab(hdd_ctx->psoc, &eht_capab);
+		if (eht_capab)
+			return wlan_hdd_get_mld_addr(hdd_ctx, QDF_STA_MODE);
+		else
+			return wlan_hdd_get_intf_addr(hdd_ctx, QDF_STA_MODE);
 }
 #else
 static inline
@@ -15264,8 +15287,10 @@ hdd_open_adapters_for_mission_mode(struct hdd_context *hdd_ctx)
 	QDF_STATUS status;
 	uint8_t *mac_addr;
 	struct hdd_adapter_create_param params = {0};
+	bool eht_capab;
 
 	ucfg_mlme_get_dot11p_mode(hdd_ctx->psoc, &dot11p_mode);
+	ucfg_psoc_mlme_get_11be_capab(hdd_ctx->psoc, &eht_capab);
 
 	/* Create only 802.11p interface? */
 	if (dot11p_mode == CFG_11P_STANDALONE)
@@ -15315,7 +15340,9 @@ hdd_open_adapters_for_mission_mode(struct hdd_context *hdd_ctx)
 			goto err_close_adapters;
 	}
 
-	hdd_wlan_register_mlo_interfaces(hdd_ctx);
+	if (eht_capab)
+		hdd_wlan_register_mlo_interfaces(hdd_ctx);
+
 	return QDF_STATUS_SUCCESS;
 
 err_close_adapters:

@@ -27,6 +27,7 @@
 #include "osif_vdev_sync.h"
 #include "wlan_osif_features.h"
 #include "wlan_dp_ucfg_api.h"
+#include "wlan_psoc_mlme_ucfg_api.h"
 
 #if defined(CFG80211_11BE_BASIC)
 void hdd_update_mld_mac_addr(struct hdd_context *hdd_ctx,
@@ -379,8 +380,10 @@ int hdd_update_vdev_mac_address(struct hdd_context *hdd_ctx,
 	int i, ret = 0;
 	struct hdd_mlo_adapter_info *mlo_adapter_info;
 	struct hdd_adapter *link_adapter;
+	bool eht_capab;
 
-	if (hdd_adapter_is_ml_adapter(adapter)) {
+	ucfg_psoc_mlme_get_11be_capab(hdd_ctx->psoc, &eht_capab);
+	if (hdd_adapter_is_ml_adapter(adapter) && eht_capab) {
 		mlo_adapter_info = &adapter->mlo_adapter_info;
 
 		for (i = 0; i < WLAN_MAX_MLD; i++) {

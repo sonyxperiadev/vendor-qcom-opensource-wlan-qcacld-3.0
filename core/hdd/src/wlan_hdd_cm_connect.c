@@ -54,6 +54,7 @@
 #include "wlan_osif_features.h"
 #include "wlan_osif_request_manager.h"
 #include <wlan_dp_ucfg_api.h>
+#include "wlan_psoc_mlme_ucfg_api.h"
 
 bool hdd_cm_is_vdev_associated(struct hdd_adapter *adapter)
 {
@@ -1141,6 +1142,12 @@ static
 struct hdd_adapter *hdd_get_assoc_link_adapter(struct hdd_adapter *ml_adapter)
 {
 	int i;
+	bool eht_capab;
+	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(ml_adapter);
+
+	ucfg_psoc_mlme_get_11be_capab(hdd_ctx->psoc, &eht_capab);
+	if (!eht_capab)
+		return ml_adapter;
 
 	for (i = 0; i < WLAN_MAX_MLD; i++) {
 		if (hdd_adapter_is_associated_with_ml_adapter(

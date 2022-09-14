@@ -290,6 +290,7 @@ void wma_eht_update_tgt_services(struct wmi_unified *wmi_handle,
 		wma_set_fw_wlan_feat_caps(DOT11BE);
 		wma_debug("11be is enabled");
 	} else {
+		cfg->en_11be = false;
 		wma_debug("11be is not enabled");
 	}
 }

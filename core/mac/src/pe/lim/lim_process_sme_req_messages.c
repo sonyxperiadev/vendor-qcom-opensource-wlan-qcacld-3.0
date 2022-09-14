@@ -70,6 +70,7 @@
 #include "cfg_ucfg_api.h"
 #include "wlan_twt_cfg_ext_api.h"
 #include <spatial_reuse_api.h>
+#include "wlan_psoc_mlme_api.h"
 
 /* SME REQ processing function templates */
 static bool __lim_process_sme_sys_ready_ind(struct mac_context *, uint32_t *);
@@ -4059,6 +4060,7 @@ lim_fill_session_params(struct mac_context *mac_ctx,
 	int32_t akm;
 	struct mlme_legacy_priv *mlme_priv;
 	uint32_t assoc_ie_len;
+	bool eht_capab;
 
 	ie_len = util_scan_entry_ie_len(req->entry);
 	bss_len = (uint16_t)(offsetof(struct bss_description,
@@ -4189,7 +4191,9 @@ lim_fill_session_params(struct mac_context *mac_ctx,
 		}
 	}
 
-	lim_fill_ml_info(req, pe_join_req);
+	wlan_psoc_mlme_get_11be_capab(mac_ctx->psoc, &eht_capab);
+	if (eht_capab)
+		lim_fill_ml_info(req, pe_join_req);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -4529,7 +4533,7 @@ static void wma_get_mld_info_sta(struct cm_peer_create_req *req,
 				 uint8_t **peer_mld_addr,
 				 bool *is_assoc_peer)
 {
-	if (req) {
+	if (!qdf_is_macaddr_zero(&req->mld_mac)) {
 		*peer_mld_addr = req->mld_mac.bytes;
 		*is_assoc_peer = req->is_assoc_peer;
 	} else {
