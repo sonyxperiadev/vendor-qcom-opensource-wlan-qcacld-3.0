@@ -1614,6 +1614,7 @@ static int hdd_get_peer_stats(struct hdd_adapter *adapter,
 {
 	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
 	struct cdp_peer_stats *peer_stats;
+	struct cds_vdev_dp_stats dp_stats;
 	struct stats_event *stats;
 	QDF_STATUS status;
 	int i, ret = 0;
@@ -1650,8 +1651,12 @@ static int hdd_get_peer_stats(struct hdd_adapter *adapter,
 		return -EINVAL;
 	}
 
-	stainfo->tx_retry_succeed = stats->peer_stats_info_ext->tx_retries -
-				    stats->peer_stats_info_ext->tx_failed;
+	if (cds_dp_get_vdev_stats(adapter->vdev_id, &dp_stats))
+		stainfo->tx_retry_succeed =
+					dp_stats.tx_mpdu_success_with_retries;
+	else
+		hdd_err("failed to get dp vdev stats");
+
 	/* This host counter is not supported
 	 * since currently tx retry is not done in host side
 	 */
