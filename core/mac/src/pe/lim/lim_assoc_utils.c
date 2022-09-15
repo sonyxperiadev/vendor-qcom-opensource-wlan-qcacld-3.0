@@ -1595,6 +1595,13 @@ static bool lim_check_valid_mcs_for_nss(struct pe_session *session,
 		mcs_count--;
 	} while (mcs_count);
 
+	if ((session->ch_width == CH_WIDTH_160MHZ ||
+	     lim_is_session_chwidth_320mhz(session)) &&
+	     !he_caps->chan_width_2) {
+		pe_err("session BW 160/320 MHz but peer BW less than 160 MHz");
+		return false;
+	}
+
 	return true;
 
 }
