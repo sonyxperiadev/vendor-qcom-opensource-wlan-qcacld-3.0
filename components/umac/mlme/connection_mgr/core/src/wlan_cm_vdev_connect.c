@@ -1491,6 +1491,56 @@ static void cm_process_connect_complete(struct wlan_objmgr_psoc *psoc,
 
 }
 
+static void
+cm_install_link_vdev_keys(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_objmgr_peer *peer;
+	struct wlan_crypto_key *crypto_key;
+	enum QDF_OPMODE op_mode = wlan_vdev_mlme_get_opmode(vdev);
+	uint16_t i;
+	bool pairwise;
+	uint8_t vdev_id;
+	uint16_t max_key_index = WLAN_CRYPTO_MAXKEYIDX +
+				 WLAN_CRYPTO_MAXIGTKKEYIDX +
+				 WLAN_CRYPTO_MAXBIGTKKEYIDX;
+
+	if (!vdev)
+		return;
+
+	vdev_id = wlan_vdev_get_id(vdev);
+	if (op_mode != QDF_STA_MODE ||
+	    !wlan_vdev_mlme_is_mlo_link_vdev(vdev))
+		return;
+
+	peer = wlan_objmgr_vdev_try_get_bsspeer(vdev, WLAN_MLME_CM_ID);
+	if (!peer) {
+		mlo_err("Peer is null return");
+		return;
+	}
+
+	if (!mlo_get_keys_saved(vdev, wlan_peer_get_macaddr(peer))) {
+		mlo_debug("keys are not saved for vdev_id %d", vdev_id);
+		wlan_objmgr_peer_release_ref(peer, WLAN_MLME_CM_ID);
+		return;
+	}
+
+	for (i = 0; i < max_key_index; i++) {
+		crypto_key = wlan_crypto_get_key(vdev, i);
+		if (!crypto_key)
+			continue;
+
+		pairwise = crypto_key->key_type ? WLAN_CRYPTO_KEY_TYPE_UNICAST : WLAN_CRYPTO_KEY_TYPE_GROUP;
+		mlo_debug("MLO:send keys for vdev_id %d, key_idx %d, pairwise %d",
+			  vdev_id, i, pairwise);
+		mlme_cm_osif_send_keys(vdev, i, pairwise,
+				       crypto_key->cipher_type);
+	}
+	mlo_set_keys_saved(vdev,
+			   (struct qdf_mac_addr *)wlan_peer_get_macaddr(peer),
+			   false);
+	wlan_objmgr_peer_release_ref(peer, WLAN_MLME_CM_ID);
+}
+
 QDF_STATUS
 cm_connect_complete_ind(struct wlan_objmgr_vdev *vdev,
 			struct wlan_cm_connect_resp *rsp)
@@ -1532,7 +1582,9 @@ cm_connect_complete_ind(struct wlan_objmgr_vdev *vdev,
 								psoc, vdev_id);
 		else
 			policy_mgr_incr_active_session(psoc, op_mode, vdev_id);
+
 		cm_process_connect_complete(psoc, pdev, vdev, rsp);
+		cm_install_link_vdev_keys(vdev);
 		wlan_tdls_notify_sta_connect(vdev_id,
 					     mlme_get_tdls_chan_switch_prohibited(vdev),
 					     mlme_get_tdls_prohibited(vdev),

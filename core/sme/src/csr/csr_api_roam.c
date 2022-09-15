@@ -84,6 +84,8 @@
 #include "wlan_mlme_twt_api.h"
 #include <wlan_serialization_api.h>
 #include <wlan_vdev_mlme_ser_if.h>
+#include "wlan_mlo_mgr_sta.h"
+#include "wlan_mlo_mgr_roam.h"
 
 #define RSN_AUTH_KEY_MGMT_SAE           WLAN_RSN_SEL(WLAN_AKM_SAE)
 #define MAX_PWR_FCC_CHAN_12 8
@@ -3404,6 +3406,49 @@ csr_roam_diag_set_ctx_rsp(struct mac_context *mac_ctx,
 }
 #endif /* FEATURE_WLAN_DIAG_SUPPORT_CSR */
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static QDF_STATUS
+csr_roam_send_rso_enable(struct mac_context *mac_ctx, uint8_t vdev_id)
+{
+	struct wlan_objmgr_vdev *vdev = NULL;
+	struct wlan_objmgr_vdev *assoc_vdev = NULL;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac_ctx->psoc,
+						    vdev_id,
+						    WLAN_MLME_OBJMGR_ID);
+	if (!vdev) {
+		sme_err("vdev object is NULL for vdev %d", vdev_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (wlan_vdev_mlme_is_mlo_vdev(vdev) &&
+	    mlo_check_if_all_links_up(vdev)) {
+		assoc_vdev = wlan_mlo_get_assoc_link_vdev(vdev);
+		if (!assoc_vdev) {
+			sme_err("Assoc vdev is null");
+			wlan_objmgr_vdev_release_ref(vdev,
+						     WLAN_MLME_OBJMGR_ID);
+			return QDF_STATUS_E_FAILURE;
+		}
+		cm_roam_start_init_on_connect(mac_ctx->pdev,
+					      wlan_vdev_get_id(assoc_vdev));
+	} else if (!wlan_vdev_mlme_is_mlo_vdev(vdev)) {
+		cm_roam_start_init_on_connect(mac_ctx->pdev, vdev_id);
+	}
+	wlan_objmgr_vdev_release_ref(vdev,
+				     WLAN_MLME_OBJMGR_ID);
+
+	return QDF_STATUS_SUCCESS;
+}
+#else
+static QDF_STATUS
+csr_roam_send_rso_enable(struct mac_context *mac_ctx, uint8_t vdev_id)
+{
+	cm_roam_start_init_on_connect(mac_ctx->pdev, vdev_id);
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 static void
 csr_roam_chk_lnk_set_ctx_rsp(struct mac_context *mac_ctx, tSirSmeRsp *msg_ptr)
 {
@@ -3448,7 +3493,11 @@ csr_roam_chk_lnk_set_ctx_rsp(struct mac_context *mac_ctx, tSirSmeRsp *msg_ptr)
 		csr_roam_substate_change(mac_ctx, eCSR_ROAM_SUBSTATE_NONE,
 					 sessionId);
 		cm_stop_wait_for_key_timer(mac_ctx->psoc, sessionId);
-		cm_roam_start_init_on_connect(mac_ctx->pdev, sessionId);
+		if (QDF_IS_STATUS_ERROR(csr_roam_send_rso_enable(mac_ctx,
+								 sessionId))) {
+			qdf_mem_free(roam_info);
+			return;
+		}
 	}
 	if (eSIR_SME_SUCCESS == pRsp->status_code) {
 		qdf_copy_macaddr(&roam_info->peerMac, &pRsp->peer_macaddr);

@@ -85,6 +85,22 @@ QDF_STATUS hdd_cm_connect_complete(struct wlan_objmgr_vdev *vdev,
 				   struct wlan_cm_connect_resp *rsp,
 				   enum osif_cb_type type);
 
+/**
+ * hdd_cm_send_vdev_keys() - send vdev keys
+ * @vdev: Pointer to vdev
+ * @key_index: key index value
+ * @pairwise: pairwise boolean value
+ * @cipher_type: cipher type enum value
+ *
+ * This function is used to send vdev keys
+ *
+ * Context: Any context.
+ * Return: QDF_STATUS
+ */
+QDF_STATUS hdd_cm_send_vdev_keys(struct wlan_objmgr_vdev *vdev,
+				 u8 key_index, bool pairwise,
+				 enum wlan_crypto_cipher_type cipher_type);
+
 #ifdef WLAN_VENDOR_HANDOFF_CONTROL
 /**
  * hdd_cm_get_vendor_handoff_params() - to get vendor handoff params from fw

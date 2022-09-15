@@ -241,6 +241,18 @@ QDF_STATUS
 wlan_mlo_roam_abort_on_link(struct wlan_objmgr_psoc *psoc,
 			    uint8_t *event, uint8_t vdev_id);
 
+/**
+ * mlo_check_if_all_links_up - Check if all links are up
+ * @vdev: vdev pointer
+ *
+ * This api will check if all the requested links are  in CM connected
+ * state.
+ *
+ * Return: QDF_STATUS
+ */
+bool
+mlo_check_if_all_links_up(struct wlan_objmgr_vdev *vdev);
+
 #else /* WLAN_FEATURE_11BE_MLO */
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 static inline
@@ -335,6 +347,12 @@ mlo_roam_get_bssid_chan_for_link(uint8_t vdev_id,
 				 wmi_channel *chan)
 {
 	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline bool
+mlo_check_if_all_links_up(struct wlan_objmgr_vdev *vdev)
+{
+	return false;
 }
 #endif /* WLAN_FEATURE_11BE_MLO */
 #endif

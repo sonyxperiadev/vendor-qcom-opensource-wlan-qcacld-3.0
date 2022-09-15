@@ -1418,6 +1418,13 @@ QDF_STATUS hdd_cm_connect_complete(struct wlan_objmgr_vdev *vdev,
 	return QDF_STATUS_SUCCESS;
 }
 
+QDF_STATUS hdd_cm_send_vdev_keys(struct wlan_objmgr_vdev *vdev,
+				 u8 key_index, bool pairwise,
+				 enum wlan_crypto_cipher_type cipher_type)
+{
+	return wlan_hdd_send_key_vdev(vdev, key_index, pairwise, cipher_type);
+}
+
 #ifdef WLAN_VENDOR_HANDOFF_CONTROL
 #define WLAN_WAIT_TIME_HANDOFF_PARAMS 1000
 

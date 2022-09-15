@@ -982,4 +982,29 @@ bool wlan_hdd_cfg80211_rx_control_port(struct net_device *dev,
 int hdd_send_dbam_config(struct hdd_adapter *adapter,
 			 enum coex_dbam_config_mode dbam_mode);
 #endif
+
+#ifdef WLAN_FEATURE_11BE_MLO
+/**
+ * wlan_hdd_send_key_vdev() - api to send vdev keys
+ * @vdev: vdev pointer
+ * @key_index: key index value
+ * @pairwise: pairwise keys
+ * @cipher_type: cipher type value
+ *
+ * Api to send vdev keys for mlo link
+ *
+ * Return: none
+ */
+QDF_STATUS wlan_hdd_send_key_vdev(struct wlan_objmgr_vdev *vdev,
+				  u8 key_index, bool pairwise,
+				  enum wlan_crypto_cipher_type cipher_type);
+#else
+static inline
+QDF_STATUS wlan_hdd_send_key_vdev(struct wlan_objmgr_vdev *vdev,
+				  u8 key_index, bool pairwise,
+				  enum wlan_crypto_cipher_type cipher_type)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+#endif /* WLAN_FEATURE_11BE_MLO */
 #endif

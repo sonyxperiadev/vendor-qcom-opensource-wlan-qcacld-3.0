@@ -581,3 +581,37 @@ mlo_roam_get_bssid_chan_for_link(uint8_t vdev_id,
 	return status;
 }
 
+bool
+mlo_check_if_all_links_up(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_mlo_dev_context *mlo_dev_ctx;
+	struct wlan_mlo_sta *sta_ctx;
+	uint8_t i;
+
+	if (!vdev || !vdev->mlo_dev_ctx) {
+		mlo_err("Vdev is null");
+		return false;
+	}
+
+	mlo_dev_ctx = vdev->mlo_dev_ctx;
+	sta_ctx = mlo_dev_ctx->sta_ctx;
+	for (i = 0; i < WLAN_UMAC_MLO_MAX_VDEVS; i++) {
+		if (!mlo_dev_ctx->wlan_vdev_list[i])
+			continue;
+
+		if (qdf_test_bit(i, sta_ctx->wlan_connected_links) &&
+		    !wlan_cm_is_vdev_connected(mlo_dev_ctx->wlan_vdev_list[i])) {
+			mlo_debug("Vdev id %d is not in connected state",
+				  wlan_vdev_get_id(mlo_dev_ctx->wlan_vdev_list[i]));
+			return false;
+		}
+	}
+
+	if (i == WLAN_UMAC_MLO_MAX_VDEVS) {
+		mlo_debug("all links are up");
+		return true;
+	}
+
+	return false;
+}
+

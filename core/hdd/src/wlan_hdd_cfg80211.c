@@ -20254,6 +20254,37 @@ static int wlan_hdd_add_key_sta(struct wlan_objmgr_pdev *pdev,
 	return errno;
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static bool
+wlan_hdd_mlo_set_keys_saved(struct hdd_adapter *adapter,
+			    struct wlan_objmgr_vdev *vdev,
+			    struct qdf_mac_addr *mac_address)
+{
+	if (!adapter)
+		return false;
+
+	if (!vdev)
+		return false;
+
+	if ((adapter->device_mode == QDF_STA_MODE) &&
+	    (!wlan_cm_is_vdev_connected(vdev))) {
+		hdd_debug("MLO:Save keys for vdev %d", wlan_vdev_get_id(vdev));
+		mlo_set_keys_saved(vdev, mac_address, true);
+		return true;
+	}
+
+	return false;
+}
+#else
+static bool
+wlan_hdd_mlo_set_keys_saved(struct hdd_adapter *adapter,
+			    struct wlan_objmgr_vdev *vdev,
+			    struct qdf_mac_addr *mac_address)
+{
+	return false;
+}
+#endif
+
 static int wlan_hdd_add_key_vdev(mac_handle_t mac_handle,
 				 struct wlan_objmgr_vdev *vdev,
 				 u8 key_index, bool pairwise,
@@ -20268,7 +20299,6 @@ static int wlan_hdd_add_key_vdev(mac_handle_t mac_handle,
 	enum wlan_crypto_cipher_type cipher;
 	bool ft_mode = false;
 
-
 	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 
 	if (hdd_is_btk_enc_type(params->cipher))
@@ -20277,7 +20307,6 @@ static int wlan_hdd_add_key_vdev(mac_handle_t mac_handle,
 	if (hdd_is_krk_enc_type(params->cipher))
 		return sme_add_key_krk(mac_handle, wlan_vdev_get_id(vdev),
 				       params->key, params->key_len);
-
 
 	if (!pairwise && ((wlan_vdev_mlme_get_opmode(vdev) == QDF_STA_MODE) ||
 	   (wlan_vdev_mlme_get_opmode(vdev) == QDF_P2P_CLIENT_MODE))) {
@@ -20296,12 +20325,15 @@ static int wlan_hdd_add_key_vdev(mac_handle_t mac_handle,
 				     QDF_MAC_ADDR_SIZE);
 	}
 
-
 	errno = wlan_cfg80211_store_key(vdev, key_index,
 					(pairwise ?
 					WLAN_CRYPTO_KEY_TYPE_UNICAST :
 					WLAN_CRYPTO_KEY_TYPE_GROUP),
 					mac_address.bytes, params);
+
+	if (wlan_hdd_mlo_set_keys_saved(adapter, vdev, &mac_address))
+		return 0;
+
 	cipher_cap = wlan_crypto_get_param(vdev, WLAN_CRYPTO_PARAM_CIPHER_CAP);
 	if (errno)
 		return errno;
@@ -20338,6 +20370,68 @@ static int wlan_hdd_add_key_vdev(mac_handle_t mac_handle,
 	hdd_exit();
 	return errno;
 }
+
+#ifdef WLAN_FEATURE_11BE_MLO
+QDF_STATUS wlan_hdd_send_key_vdev(struct wlan_objmgr_vdev *vdev,
+				  u8 key_index, bool pairwise,
+				  enum wlan_crypto_cipher_type cipher_type)
+{
+	struct wlan_objmgr_peer *peer;
+	struct qdf_mac_addr mac_address;
+	int32_t cipher_cap, ucast_cipher = 0;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	int errno;
+	bool ft_mode = false;
+	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
+	struct hdd_adapter *adapter;
+
+	if (!hdd_ctx) {
+		hdd_err("hdd_ctx is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	adapter = hdd_get_adapter_by_vdev(hdd_ctx, wlan_vdev_get_id(vdev));
+	if (!adapter) {
+		hdd_err("adapter is NULL for vdev %d", wlan_vdev_get_id(vdev));
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (wlan_vdev_mlme_get_opmode(vdev) != QDF_STA_MODE) {
+		hdd_debug("vdev opmode is not STA mode");
+		return QDF_STATUS_E_INVAL;
+	}
+	peer = wlan_objmgr_vdev_try_get_bsspeer(vdev, WLAN_OSIF_ID);
+	if (!peer) {
+		hdd_err("Peer is null return");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+	qdf_mem_copy(mac_address.bytes,
+		     wlan_peer_get_macaddr(peer), QDF_MAC_ADDR_SIZE);
+	wlan_objmgr_peer_release_ref(peer, WLAN_OSIF_ID);
+
+	cipher_cap = wlan_crypto_get_param(vdev, WLAN_CRYPTO_PARAM_CIPHER_CAP);
+	QDF_SET_PARAM(ucast_cipher, cipher_type);
+	if (pairwise)
+		wma_set_peer_ucast_cipher(mac_address.bytes,
+					  ucast_cipher, cipher_cap);
+
+	cdp_peer_flush_frags(cds_get_context(QDF_MODULE_ID_SOC),
+			     wlan_vdev_get_id(vdev), mac_address.bytes);
+
+	errno = wlan_hdd_add_key_sta(hdd_ctx->pdev, adapter, pairwise,
+				     key_index, &ft_mode);
+	if (ft_mode)
+		return QDF_STATUS_SUCCESS;
+
+	if (!errno)
+		wma_update_set_key(wlan_vdev_get_id(vdev), pairwise, key_index,
+				   cipher_type);
+	else
+		status = QDF_STATUS_E_FAILURE;
+
+	return status;
+}
+#endif
 
 #if defined(WLAN_FEATURE_11BE_MLO) && \
 defined(CFG80211_SINGLE_NETDEV_MULTI_LINK_SUPPORT)
