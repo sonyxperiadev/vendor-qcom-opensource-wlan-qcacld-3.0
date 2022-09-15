@@ -5855,10 +5855,12 @@ void wma_delete_bss(tp_wma_handle wma, uint8_t vdev_id)
 			  OL_TXQ_PAUSE_REASON_VDEV_STOP, 0);
 
 	if (wma_send_vdev_stop_to_fw(wma, vdev_id)) {
-		wma_err("Failed to send vdev stop");
-		status = QDF_STATUS_E_FAILURE;
+		struct vdev_stop_response vdev_stop_rsp = {0};
+
+		wma_err("Failed to send vdev stop to FW, explicitly invoke vdev stop rsp");
+		vdev_stop_rsp.vdev_id = vdev_id;
+		wma_handle_vdev_stop_rsp(wma, &vdev_stop_rsp);
 		qdf_atomic_set(&iface->bss_status, WMA_BSS_STATUS_STOPPED);
-		goto detach_peer;
 	}
 	wma_debug("bssid "QDF_MAC_ADDR_FMT" vdev_id %d",
 		  QDF_MAC_ADDR_REF(bssid.bytes), vdev_id);
