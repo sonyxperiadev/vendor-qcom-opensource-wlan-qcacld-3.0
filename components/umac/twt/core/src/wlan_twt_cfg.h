@@ -80,6 +80,14 @@ QDF_STATUS
 wlan_twt_cfg_set_responder(struct wlan_objmgr_psoc *psoc, bool val);
 
 /**
+ * wlan_twt_cfg_is_twt_enabled() - API to check if TWT is enabled
+ * @psoc: Pointer to PSOC object
+ *
+ * Return: True if TWT is enabled else false
+ */
+bool wlan_twt_cfg_is_twt_enabled(struct wlan_objmgr_psoc *psoc);
+
+/**
  * wlan_twt_cfg_get_congestion_timeout() - get congestion timeout
  * @psoc: Pointer to global psoc
  * @val: pointer to output variable

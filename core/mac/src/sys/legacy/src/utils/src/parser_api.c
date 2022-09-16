@@ -49,6 +49,7 @@
 #include "wlan_reg_services_api.h"
 #include "wlan_cm_roam_api.h"
 #include "wlan_mlo_mgr_sta.h"
+#include "wlan_twt_cfg_ext_api.h"
 #include <wlan_cmn_ieee80211.h>
 #ifdef WLAN_FEATURE_11BE_MLO
 #include <lim_mlo.h>
@@ -10045,6 +10046,8 @@ QDF_STATUS populate_dot11f_twt_extended_caps(struct mac_context *mac_ctx,
 					     tDot11fIEExtCap *dot11f)
 {
 	struct s_ext_cap *p_ext_cap;
+	bool twt_responder = false;
+	bool twt_requestor = false;
 
 	if (pe_session->opmode == QDF_STA_MODE &&
 	    !pe_session->enable_session_twt_support) {
@@ -10055,15 +10058,17 @@ QDF_STATUS populate_dot11f_twt_extended_caps(struct mac_context *mac_ctx,
 	p_ext_cap = (struct s_ext_cap *)dot11f->bytes;
 	dot11f->present = 1;
 
-	if (pe_session->opmode == QDF_STA_MODE)
+	if (pe_session->opmode == QDF_STA_MODE) {
+		wlan_twt_get_requestor_cfg(mac_ctx->psoc, &twt_requestor);
 		p_ext_cap->twt_requestor_support =
-			mac_ctx->mlme_cfg->he_caps.dot11_he_cap.twt_request &&
-			twt_get_requestor_flag(mac_ctx);
+			twt_requestor && twt_get_requestor_flag(mac_ctx);
+	}
 
-	if (pe_session->opmode == QDF_SAP_MODE)
+	if (pe_session->opmode == QDF_SAP_MODE) {
+		wlan_twt_get_responder_cfg(mac_ctx->psoc, &twt_responder);
 		p_ext_cap->twt_responder_support =
-			mac_ctx->mlme_cfg->he_caps.dot11_he_cap.twt_responder &&
-			twt_get_responder_flag(mac_ctx);
+			twt_responder && twt_get_responder_flag(mac_ctx);
+	}
 
 	dot11f->num_bytes = lim_compute_ext_cap_ie_length(dot11f);
 	if (!dot11f->num_bytes) {

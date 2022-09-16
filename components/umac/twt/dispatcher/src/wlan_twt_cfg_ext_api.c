@@ -39,6 +39,18 @@ wlan_twt_cfg_get_support_in_11n(struct wlan_objmgr_psoc *psoc, bool *val)
 }
 
 QDF_STATUS
+wlan_twt_get_requestor_cfg(struct wlan_objmgr_psoc *psoc, bool *val)
+{
+	return wlan_twt_cfg_get_requestor(psoc, val);
+}
+
+QDF_STATUS
+wlan_twt_get_responder_cfg(struct wlan_objmgr_psoc *psoc, bool *val)
+{
+	return wlan_twt_cfg_get_responder(psoc, val);
+}
+
+QDF_STATUS
 wlan_twt_cfg_get_support_requestor(struct wlan_objmgr_psoc *psoc, bool *val)
 {
 	return wlan_twt_cfg_get_requestor(psoc, val);
