@@ -1449,6 +1449,11 @@ policy_mgr_handle_conc_multiport(struct wlan_objmgr_psoc *psoc,
 				 uint32_t request_id)
 {
 	QDF_STATUS status;
+	uint8_t num_cxn_del = 0;
+	struct policy_mgr_conc_connection_info info = {0};
+
+	policy_mgr_store_and_del_conn_info_by_vdev_id(psoc, session_id,
+						      &info, &num_cxn_del);
 
 	if (!policy_mgr_check_for_session_conc(psoc, session_id, ch_freq)) {
 		policy_mgr_err("Conc not allowed for the session %d",
@@ -1463,10 +1468,12 @@ policy_mgr_handle_conc_multiport(struct wlan_objmgr_psoc *psoc,
 	status = policy_mgr_current_connections_update(psoc, session_id,
 						       ch_freq, reason,
 						       request_id);
-	if (QDF_STATUS_E_FAILURE == status) {
+	if (QDF_STATUS_E_FAILURE == status)
 		policy_mgr_err("connections update failed");
-		return status;
-	}
+
+	if (num_cxn_del > 0)
+		policy_mgr_restore_deleted_conn_info(psoc, &info,
+						     num_cxn_del);
 
 	return status;
 }
