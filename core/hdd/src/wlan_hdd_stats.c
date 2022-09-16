@@ -6262,9 +6262,13 @@ static int wlan_hdd_get_sta_stats(struct wiphy *wiphy,
 						   rx_nss_max);
 
 		if (!tx_rate_calc || !rx_rate_calc) {
-			hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_STATS_ID);
-			/* Keep GUI happy */
-			return 0;
+			hdd_report_actual_rate(tx_rate_flags, my_tx_rate,
+					       &sinfo->txrate, tx_mcs_index,
+					       tx_nss, tx_dcm, tx_gi);
+
+			hdd_report_actual_rate(rx_rate_flags, my_rx_rate,
+					       &sinfo->rxrate, rx_mcs_index,
+					       rx_nss, rx_dcm, rx_gi);
 		}
 	} else {
 		uint8_t rx_nss_max, rx_preamble;
