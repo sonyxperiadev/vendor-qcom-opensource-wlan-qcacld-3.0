@@ -4283,6 +4283,18 @@ QDF_STATUS policy_mgr_get_radio_combinations(struct wlan_objmgr_psoc *psoc,
 					     uint32_t comb_max,
 					     uint32_t *comb_num);
 
+/**
+ * policy_mgr_is_mlo_sta_disconnected() - Check all STA in mlo are disconnected
+ * @psoc: PSOC object information
+ * @vdev_id: vdev id for sta
+ *
+ * if any link is associated the API will return false.
+ *
+ * Return: True if all sta links are disconnected
+ */
+bool policy_mgr_is_mlo_sta_disconnected(struct wlan_objmgr_psoc *psoc,
+					uint8_t vdev_id);
+
 #ifdef WLAN_FEATURE_11BE_MLO
 /**
  * policy_mgr_is_mlo_sap_concurrency_allowed() - Check for mlo sap allowed

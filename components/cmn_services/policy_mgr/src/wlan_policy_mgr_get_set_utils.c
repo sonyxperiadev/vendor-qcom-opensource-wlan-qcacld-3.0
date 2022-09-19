@@ -3751,6 +3751,26 @@ policy_mgr_delete_from_disabled_links(struct policy_mgr_psoc_priv_obj *pm_ctx,
 }
 #endif
 
+bool policy_mgr_is_mlo_sta_disconnected(struct wlan_objmgr_psoc *psoc,
+					 uint8_t vdev_id)
+{
+	struct wlan_objmgr_vdev *vdev;
+	bool disconnected;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_POLICY_MGR_ID);
+	if (!vdev)
+		return true;
+	/* mlo mgr has no corresponding protocol api used in non-osif/hdd
+	 * component. Todo: clean up to use internal API
+	 */
+	disconnected = ucfg_mlo_is_mld_disconnected(vdev);
+
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
+
+	return disconnected;
+}
+
 void policy_mgr_incr_active_session(struct wlan_objmgr_psoc *psoc,
 				enum QDF_OPMODE mode,
 				uint8_t session_id)
