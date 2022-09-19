@@ -220,8 +220,7 @@ static void populate_dot11f_tdls_offchannel_params(
 	uint8_t nss_5g;
 	qdf_freq_t ch_freq;
 	bool is_vlp_country;
-	uint8_t band_mask;
-	uint8_t *ap_cc;
+	uint8_t ap_cc[REG_ALPHA2_LEN + 1];
 	uint8_t reg_cc[REG_ALPHA2_LEN + 1];
 
 	numChans = mac->mlme_cfg->reg.valid_channel_list_num;
@@ -236,7 +235,7 @@ static void populate_dot11f_tdls_offchannel_params(
 	nss_2g = QDF_MIN(mac->vdev_type_nss_2g.tdls,
 			 mac->user_configured_nss);
 
-	ap_cc = mac->scan.countryCodeCurrent;
+	wlan_cm_get_country_code(mac->pdev, pe_session->vdev_id, ap_cc);
 	wlan_reg_read_current_country(mac->psoc, reg_cc);
 	is_vlp_country = wlan_reg_ctry_support_vlp(ap_cc) &&
 			 wlan_reg_ctry_support_vlp(reg_cc);
@@ -315,9 +314,8 @@ static void populate_dot11f_tdls_offchannel_params(
 	wlan_reg_dmn_get_curr_opclasses(&numClasses, &classes[0]);
 
 	for (i = 0; i < numClasses; i++) {
-		band_mask = wlan_reg_get_band_cap_from_op_class(reg_cc, 1,
-								&classes[i]);
-		if ((band_mask & BIT(REG_BAND_6G)) && !is_vlp_country)
+		if (wlan_reg_is_6ghz_op_class(mac->pdev, classes[i]) &&
+		    !is_vlp_country)
 			continue;
 
 		suppOperClasses->classes[count_opclss] = classes[i];

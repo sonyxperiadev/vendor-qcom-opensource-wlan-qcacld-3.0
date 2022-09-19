@@ -938,6 +938,10 @@ bw_check:
 				vdev_obj->vdev, peer->pref_off_chan_freq,
 				peer->pref_off_chan_width,
 				&reg_bw_offset);
+
+	tdls_debug("Updated preff offchannel freq %d width %d opclass %d",
+		   peer->pref_off_chan_freq, peer->pref_off_chan_width,
+		   peer->op_class_for_pref_off_chan);
 }
 
 void tdls_set_peer_caps(struct tdls_vdev_priv_obj *vdev_obj,
