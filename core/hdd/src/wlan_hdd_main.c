@@ -69,6 +69,7 @@
 #include <cdp_txrx_misc.h>
 #include <cdp_txrx_stats.h>
 #include "cdp_txrx_flow_ctrl_legacy.h"
+#include "qdf_ssr_driver_dump.h"
 
 #include <net/addrconf.h>
 #include <linux/wireless.h>
@@ -17890,6 +17891,7 @@ static QDF_STATUS hdd_qdf_init(void)
 
 	qdf_trace_init();
 	qdf_minidump_init();
+	qdf_ssr_driver_dump_init();
 	qdf_register_debugcb_init();
 
 	return QDF_STATUS_SUCCESS;
@@ -17917,6 +17919,7 @@ exit:
 static void hdd_qdf_deinit(void)
 {
 	/* currently, no debugcb deinit */
+	qdf_ssr_driver_dump_deinit();
 	qdf_minidump_deinit();
 	qdf_trace_deinit();
 

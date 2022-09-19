@@ -49,6 +49,7 @@
 #include <qdf_hang_event_notifier.h>
 #include "wlan_hdd_thermal.h"
 #include "wlan_dp_ucfg_api.h"
+#include "qdf_ssr_driver_dump.h"
 
 #ifdef MODULE
 #ifdef WLAN_WEAR_CHIPSET
@@ -2233,6 +2234,21 @@ wlan_hdd_pld_uevent(struct device *dev, struct pld_uevent_data *event_data)
 
 }
 
+#ifdef WLAN_FEATURE_SSR_DRIVER_DUMP
+static int
+wlan_hdd_pld_collect_driver_dump(struct device *dev,
+				 enum pld_bus_type bus_type,
+				 struct cnss_ssr_driver_dump_entry *input_array,
+				 size_t *num_entries_loaded)
+{
+	QDF_STATUS status;
+
+	status =  qdf_ssr_driver_dump_retrieve_regions(input_array,
+						       num_entries_loaded);
+	return qdf_status_to_os_return(status);
+}
+#endif
+
 #ifdef FEATURE_RUNTIME_PM
 /**
  * wlan_hdd_pld_runtime_suspend() - runtime suspend function registered to PLD
@@ -2299,6 +2315,9 @@ struct pld_driver_ops wlan_drv_ops = {
 	.reset_resume = wlan_hdd_pld_reset_resume,
 	.modem_status = wlan_hdd_pld_notify_handler,
 	.uevent = wlan_hdd_pld_uevent,
+#ifdef WLAN_FEATURE_SSR_DRIVER_DUMP
+	.collect_driver_dump = wlan_hdd_pld_collect_driver_dump,
+#endif
 #ifdef FEATURE_RUNTIME_PM
 	.runtime_suspend = wlan_hdd_pld_runtime_suspend,
 	.runtime_resume = wlan_hdd_pld_runtime_resume,

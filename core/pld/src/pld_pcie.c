@@ -308,6 +308,28 @@ out:
 	return;
 }
 
+#ifdef WLAN_FEATURE_SSR_DRIVER_DUMP
+static int
+pld_pcie_collect_driver_dump(struct pci_dev *pdev,
+			     struct cnss_ssr_driver_dump_entry *input_array,
+			     size_t *num_entries)
+{
+	struct pld_context *pld_context;
+	struct pld_driver_ops *ops;
+	int ret = -EINVAL;
+
+	pld_context = pld_get_global_context();
+	ops = pld_context->ops;
+	if (ops->collect_driver_dump) {
+		ret =  ops->collect_driver_dump(&pdev->dev,
+						PLD_BUS_TYPE_PCIE,
+						input_array,
+						num_entries);
+	}
+	return ret;
+}
+#endif
+
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
 /**
  * pld_bus_event_type_convert() - Convert enum cnss_bus_event_type
@@ -713,6 +735,9 @@ struct cnss_wlan_driver pld_pcie_ops = {
 	.crash_shutdown = pld_pcie_crash_shutdown,
 	.modem_status   = pld_pcie_notify_handler,
 	.update_status  = pld_pcie_uevent,
+#ifdef WLAN_FEATURE_SSR_DRIVER_DUMP
+	.collect_driver_dump = pld_pcie_collect_driver_dump,
+#endif
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
 	.update_event = pld_pcie_update_event,
 #endif
