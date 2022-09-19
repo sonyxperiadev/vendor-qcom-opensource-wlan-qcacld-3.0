@@ -1178,7 +1178,6 @@ static inline int32_t hdd_get_soctime_from_tsf64time(
  *
  * @adapter: Adapter pointer
  * @qtime: current qtime, us
- * @tsf_sync_qtime: qtime of the tsf, us
  * @tsf_time: current tsf time(qtime), us
  *
  * This function determines current tsf time
@@ -1188,10 +1187,10 @@ static inline int32_t hdd_get_soctime_from_tsf64time(
  */
 static inline int32_t
 hdd_get_tsftime_from_qtime(struct hdd_adapter *adapter, uint64_t qtime,
-			   uint64_t tsf_sync_qtime, uint64_t *tsf_time)
+			   uint64_t *tsf_time)
 {
 	int32_t ret = -EINVAL;
-	uint64_t delta64_tsf64time;
+	uint64_t delta64_tsf64time, tsf_sync_qtime;
 	bool in_cap_state;
 
 	in_cap_state = hdd_tsf_is_in_cap(adapter);
@@ -1202,6 +1201,9 @@ hdd_get_tsftime_from_qtime(struct hdd_adapter *adapter, uint64_t qtime,
 	 */
 	if (in_cap_state)
 		qdf_spin_lock_bh(&adapter->host_target_sync_lock);
+
+	tsf_sync_qtime = adapter->last_tsf_sync_soc_time;
+	tsf_sync_qtime = qdf_do_div(tsf_sync_qtime, NSEC_PER_USEC);
 
 	if (qtime > tsf_sync_qtime) {
 		delta64_tsf64time = qtime - tsf_sync_qtime;
@@ -1223,7 +1225,7 @@ QDF_STATUS hdd_get_tsf_time(void *adapter_ctx, uint64_t input_time,
 			    uint64_t *tsf_time)
 {
 	struct hdd_adapter *adapter;
-	uint64_t tsf_sync_qtime, qtime;
+	uint64_t qtime;
 
 	/* Sanity check on inputs */
 	if (unlikely((!adapter_ctx) || (!input_time))) {
@@ -1238,11 +1240,8 @@ QDF_STATUS hdd_get_tsf_time(void *adapter_ctx, uint64_t input_time,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	tsf_sync_qtime = adapter->last_tsf_sync_soc_time;
-	tsf_sync_qtime = qdf_do_div(tsf_sync_qtime, NSEC_PER_USEC);
-
 	qtime = qdf_log_timestamp_to_usecs(input_time);
-	hdd_get_tsftime_from_qtime(adapter, qtime, tsf_sync_qtime, tsf_time);
+	hdd_get_tsftime_from_qtime(adapter, qtime, tsf_time);
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -1470,16 +1469,14 @@ static ssize_t __hdd_wlan_tsf_show(struct device *dev,
 	if (!hdd_ctx)
 		return scnprintf(buf, PAGE_SIZE, "Invalid HDD context\n");
 
-	tsf_sync_qtime = adapter->last_tsf_sync_soc_time;
-	do_div(tsf_sync_qtime, NSEC_PER_USEC);
-
 	reg_qtime = qdf_get_log_timestamp();
 	host_time = hdd_get_monotonic_host_time(hdd_ctx);
 
 	qtime = qdf_log_timestamp_to_usecs(reg_qtime);
 	do_div(host_time, NSEC_PER_USEC);
-	hdd_get_tsftime_from_qtime(adapter, qtime, tsf_sync_qtime,
-				   &target_time);
+	hdd_get_tsftime_from_qtime(adapter, qtime, &target_time);
+	tsf_sync_qtime = adapter->last_tsf_sync_soc_time;
+	do_div(tsf_sync_qtime, NSEC_PER_USEC);
 
 	if (adapter->device_mode == QDF_STA_MODE ||
 	    adapter->device_mode == QDF_P2P_CLIENT_MODE) {
