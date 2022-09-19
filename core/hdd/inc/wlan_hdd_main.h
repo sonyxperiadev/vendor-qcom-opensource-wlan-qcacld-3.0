@@ -2555,7 +2555,18 @@ bool hdd_is_vdev_in_conn_state(struct hdd_adapter *adapter);
  */
 int hdd_vdev_create(struct hdd_adapter *adapter);
 int hdd_vdev_destroy(struct hdd_adapter *adapter);
-int hdd_vdev_ready(struct hdd_adapter *adapter);
+
+/**
+ * hdd_vdev_ready() - Configure FW post VDEV create
+ * @vdev: VDEV object.
+ *
+ * The function is used send configuration to the FW
+ * post VDEV creation.
+ * The caller to ensure to hold the VDEV reference
+ *
+ * Return: 0 on success, negative value on failure.
+ */
+int hdd_vdev_ready(struct wlan_objmgr_vdev *vdev);
 
 QDF_STATUS hdd_init_station_mode(struct hdd_adapter *adapter);
 struct hdd_adapter *hdd_get_adapter(struct hdd_context *hdd_ctx,
