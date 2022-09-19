@@ -55,6 +55,17 @@
  */
 uint32_t wlan_dp_intf_get_pkt_type_bitmap_value(void *intf_ctx);
 
+#if defined(WLAN_SUPPORT_RX_FISA)
+/**
+ * dp_rx_skip_fisa() - Set flags to skip fisa aggregation
+ * @cdp_soc: core txrx main context
+ * @value: allow or skip fisa
+ *
+ * Return: None
+ */
+void dp_rx_skip_fisa(struct cdp_soc_t *cdp_soc, uint32_t value);
+#endif
+
 /**
  * dp_reset_all_intfs_connectivity_stats() - reset connectivity stats
  * @dp_ctx: pointer to DP Context

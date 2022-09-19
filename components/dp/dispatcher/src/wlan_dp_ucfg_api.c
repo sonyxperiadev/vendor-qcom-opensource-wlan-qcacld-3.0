@@ -2311,5 +2311,16 @@ void ucfg_dp_prealloc_put_consistent_mem_unaligned(void *va_unaligned)
 {
 	dp_prealloc_put_consistent_mem_unaligned(va_unaligned);
 }
+#endif
 
+#if defined(WLAN_SUPPORT_RX_FISA)
+void ucfg_dp_rx_skip_fisa(uint32_t value)
+{
+	void *dp_soc;
+
+	dp_soc = cds_get_context(QDF_MODULE_ID_SOC);
+
+	if (dp_soc)
+		dp_rx_skip_fisa(dp_soc, value);
+}
 #endif

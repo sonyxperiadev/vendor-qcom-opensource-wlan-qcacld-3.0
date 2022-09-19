@@ -2118,11 +2118,6 @@ ifeq ($(CONFIG_WLAN_FEATURE_DP_RX_THREADS), y)
 TXRX3.0_OBJS += $(TXRX3.0_DIR)/dp_rx_thread.o
 endif
 
-ifeq ($(CONFIG_RX_FISA), y)
-TXRX3.0_OBJS += $(TXRX3.0_DIR)/dp_fisa_rx.o
-TXRX3.0_OBJS += $(TXRX3.0_DIR)/dp_rx_fst.o
-endif
-
 endif #LITHIUM
 
 $(call add-wlan-objs,txrx30,$(TXRX3.0_OBJS))
@@ -2560,6 +2555,11 @@ endif
 
 ifeq (y,$(filter y,$(CONFIG_LITHIUM) $(CONFIG_BERYLLIUM)))
 WLAN_DP_COMP_OBJS += $(DP_COMP_CORE_DIR)/wlan_dp_prealloc.o
+endif
+
+ifeq ($(CONFIG_RX_FISA), y)
+WLAN_DP_COMP_OBJS += $(DP_COMP_CORE_DIR)/wlan_dp_fisa_rx.o
+WLAN_DP_COMP_OBJS += $(DP_COMP_CORE_DIR)/wlan_dp_rx_fst.o
 endif
 
 $(call add-wlan-objs,dp_comp,$(WLAN_DP_COMP_OBJS))

@@ -112,21 +112,6 @@ QDF_STATUS dp_rx_fisa_flush_by_ctx_id(struct dp_soc *soc, int napi_id);
 QDF_STATUS dp_rx_fisa_flush_by_vdev_id(struct dp_soc *soc, uint8_t vdev_id);
 
 /**
- * dp_rx_skip_fisa() - Set flags to skip fisa aggregation
- * @cdp_soc: core txrx main context
- * @value: allow or skip fisa
- *
- * Return: None
- */
-static inline
-void dp_rx_skip_fisa(struct cdp_soc_t *cdp_soc, uint32_t value)
-{
-	struct dp_soc *soc = (struct dp_soc *)cdp_soc;
-
-	qdf_atomic_set(&soc->skip_fisa_param.skip_fisa, !value);
-}
-
-/**
  * dp_set_fisa_disallowed_for_vdev() - Set fisa disallowed flag for vdev
  * @cdp_soc: core txrx main context
  * @vdev_id: Vdev id

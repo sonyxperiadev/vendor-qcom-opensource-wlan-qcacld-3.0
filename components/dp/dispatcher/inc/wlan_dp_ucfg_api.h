@@ -1232,6 +1232,22 @@ void
 dp_ucfg_disable_link_monitoring(struct wlan_objmgr_psoc *psoc,
 				struct wlan_objmgr_vdev *vdev);
 
+#if defined(WLAN_SUPPORT_RX_FISA)
+/**
+ * ucfg_dp_rx_skip_fisa() - Set flags to skip fisa aggregation
+ * @value: allow or skip fisa
+ *
+ * Return: None
+ */
+void ucfg_dp_rx_skip_fisa(uint32_t value);
+
+#else
+static inline
+void ucfg_dp_rx_skip_fisa(uint32_t value)
+{
+}
+#endif
+
 #ifdef DP_TRAFFIC_END_INDICATION
 /**
  * ucfg_dp_traffic_end_indication_get() - Get data end indication info
