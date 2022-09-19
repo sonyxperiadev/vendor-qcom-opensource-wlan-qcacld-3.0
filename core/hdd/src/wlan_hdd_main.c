@@ -6199,6 +6199,23 @@ bool hdd_is_vdev_in_conn_state(struct hdd_adapter *adapter)
 	return 0;
 }
 
+static void hdd_store_vdev_info(struct hdd_adapter *adapter,
+				struct wlan_objmgr_vdev *vdev)
+{
+	struct vdev_osif_priv *osif_priv;
+
+	osif_priv = wlan_vdev_get_ospriv(vdev);
+	if (osif_priv) {
+		osif_priv->wdev = adapter->dev->ieee80211_ptr;
+		osif_priv->legacy_osif_priv = adapter;
+	}
+
+	qdf_spin_lock_bh(&adapter->vdev_lock);
+	adapter->vdev_id = wlan_vdev_get_id(vdev);
+	adapter->vdev = vdev;
+	qdf_spin_unlock_bh(&adapter->vdev_lock);
+}
+
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(CFG80211_11BE_BASIC)
 static void
 hdd_populate_vdev_create_params(struct hdd_adapter *adapter,
@@ -6256,7 +6273,6 @@ int hdd_vdev_create(struct hdd_adapter *adapter)
 	bool bval;
 	struct hdd_context *hdd_ctx;
 	struct wlan_objmgr_vdev *vdev;
-	struct vdev_osif_priv *osif_priv;
 	struct wlan_vdev_create_params vdev_params = {0};
 	bool target_bigtk_support = false;
 	uint16_t max_peer_count;
@@ -6281,11 +6297,6 @@ int hdd_vdev_create(struct hdd_adapter *adapter)
 		return -EINVAL;
 	}
 
-	/* Initialize the vdev OS private structure*/
-	osif_priv = wlan_vdev_get_ospriv(vdev);
-	osif_priv->wdev = adapter->dev->ieee80211_ptr;
-	osif_priv->legacy_osif_priv = adapter;
-
 	if (wlan_objmgr_vdev_try_get_ref(vdev, WLAN_HDD_ID_OBJ_MGR) !=
 	    QDF_STATUS_SUCCESS) {
 		errno = QDF_STATUS_E_INVAL;
@@ -6293,11 +6304,7 @@ int hdd_vdev_create(struct hdd_adapter *adapter)
 		return -EINVAL;
 	}
 
-	qdf_spin_lock_bh(&adapter->vdev_lock);
-	adapter->vdev_id = wlan_vdev_get_id(vdev);
-	adapter->vdev = vdev;
-	qdf_spin_unlock_bh(&adapter->vdev_lock);
-
+	hdd_store_vdev_info(adapter, vdev);
 	osif_cm_osif_priv_init(vdev);
 
 	set_bit(SME_SESSION_OPENED, &adapter->event_flags);
