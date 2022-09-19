@@ -444,13 +444,6 @@ QDF_STATUS sme_vdev_delete(mac_handle_t mac_handle,
 void sme_cleanup_session(mac_handle_t mac_handle, uint8_t vdev_id);
 
 /**
- * sme_set_curr_device_mode() - Sets the current operating device mode.
- * @mac_handle: The handle returned by mac_open.
- * @curr_device_mode: Current operating device mode.
- */
-void sme_set_curr_device_mode(mac_handle_t mac_handle,
-			      enum QDF_OPMODE curr_device_mode);
-/**
  * sme_update_roam_params() - Store/Update the roaming params
  * @mac_handle: Opaque handle to the global MAC context
  * @vdev_id:                  vdev ID
