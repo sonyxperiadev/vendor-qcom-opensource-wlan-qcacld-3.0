@@ -24263,8 +24263,7 @@ bool hdd_is_legacy_connection(struct hdd_adapter *adapter)
 
 static int __wlan_hdd_cfg80211_get_channel(struct wiphy *wiphy,
 					   struct wireless_dev *wdev,
-					   struct cfg80211_chan_def *chandef,
-					   int link_id)
+					   struct cfg80211_chan_def *chandef)
 {
 	struct net_device *dev = wdev->netdev;
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
@@ -24272,7 +24271,6 @@ static int __wlan_hdd_cfg80211_get_channel(struct wiphy *wiphy,
 	bool is_legacy_phymode = false;
 	struct wlan_objmgr_vdev *vdev;
 	uint32_t chan_freq;
-	QDF_STATUS status;
 
 	hdd_enter_dev(wdev->netdev);
 
@@ -24320,9 +24318,8 @@ static int __wlan_hdd_cfg80211_get_channel(struct wiphy *wiphy,
 		return -EINVAL;
 	}
 
-	vdev = wlan_key_get_link_vdev(adapter, link_id);
-	status = wlan_objmgr_vdev_try_get_ref(vdev, WLAN_OSIF_ID);
-	if (QDF_IS_STATUS_ERROR(status))
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_ID);
+	if (!vdev)
 		return -EINVAL;
 
 	chan_freq = vdev->vdev_mlme.des_chan->ch_freq;
@@ -24365,9 +24362,7 @@ static int __wlan_hdd_cfg80211_get_channel(struct wiphy *wiphy,
 
 	wlan_hdd_set_chandef(vdev, chandef);
 
-	wlan_key_put_link_vdev(vdev);
 	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_ID);
-
 	hdd_debug("primary_freq:%d, ch_width:%d, center_freq1:%d, center_freq2:%d",
 		  chan_freq, chandef->width, chandef->center_freq1,
 		  chandef->center_freq2);
@@ -24387,41 +24382,25 @@ static int wlan_hdd_cfg80211_get_channel(struct wiphy *wiphy,
 					 struct wireless_dev *wdev,
 					 unsigned int link_id,
 					 struct cfg80211_chan_def *chandef)
-{
-	int errno;
-	struct osif_vdev_sync *vdev_sync;
-
-	errno = osif_vdev_sync_op_start(wdev->netdev, &vdev_sync);
-	if (errno)
-		return errno;
-
-	errno = __wlan_hdd_cfg80211_get_channel(wiphy, wdev, chandef, link_id);
-
-	osif_vdev_sync_op_stop(vdev_sync);
-
-	return errno;
-}
 #else
 static int wlan_hdd_cfg80211_get_channel(struct wiphy *wiphy,
 					 struct wireless_dev *wdev,
 					 struct cfg80211_chan_def *chandef)
+#endif
 {
 	int errno;
 	struct osif_vdev_sync *vdev_sync;
-	/* Legacy purposes */
-	int link_id = -1;
 
 	errno = osif_vdev_sync_op_start(wdev->netdev, &vdev_sync);
 	if (errno)
 		return errno;
 
-	errno = __wlan_hdd_cfg80211_get_channel(wiphy, wdev, chandef, link_id);
+	errno = __wlan_hdd_cfg80211_get_channel(wiphy, wdev, chandef);
 
 	osif_vdev_sync_op_stop(vdev_sync);
 
 	return errno;
 }
-#endif
 
 static bool hdd_check_bitmask_for_single_rate(enum nl80211_band band,
 				const struct cfg80211_bitrate_mask *mask)
