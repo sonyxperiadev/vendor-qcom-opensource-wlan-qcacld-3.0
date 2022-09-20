@@ -364,6 +364,8 @@ static void wma_set_feature_set_info(tp_wma_handle wma_handle,
 			cds_ctx->cds_cfg->cds_feature_set.sap_5g_supported;
 	feature_set->sap_6g_supported =
 			cds_ctx->cds_cfg->cds_feature_set.sap_6g_supported;
+	feature_set->band_capability =
+			cds_ctx->cds_cfg->cds_feature_set.band_capability;
 
 	feature_set->concurrency_support = wma_get_concurrency_support(psoc);
 

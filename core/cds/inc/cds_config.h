@@ -53,11 +53,13 @@ enum cfg_sub_20_channel_width {
  * @wifi_standard: Supported wifi standard
  * @sap_5g_supported: 5GHz SAP supported or not
  * @sap_6g_supported: 6GHz SAP supported or no
+ * @band_capability: Supported band capability bitmap;
  */
 struct wlan_cds_feature_set {
 	WMI_HOST_WIFI_STANDARD wifi_standard;
 	bool sap_5g_supported;
 	bool sap_6g_supported;
+	uint32_t band_capability;
 };
 #endif
 

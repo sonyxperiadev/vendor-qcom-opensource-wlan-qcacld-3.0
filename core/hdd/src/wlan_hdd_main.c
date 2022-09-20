@@ -13164,6 +13164,7 @@ static void hdd_populate_feature_set_cds_config(struct cds_config_info *cds_cfg,
 
 	cds_cfg->cds_feature_set.sap_6g_supported =
 					band_capability & BIT(REG_BAND_6G);
+	cds_cfg->cds_feature_set.band_capability = band_capability;
 }
 #else
 static inline void
