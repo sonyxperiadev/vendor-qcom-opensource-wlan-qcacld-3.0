@@ -400,7 +400,7 @@ hdd_get_curr_thermal_stats_val(struct wiphy *wiphy,
 	if (!therm_attr) {
 		hdd_err_rl("nla_nest_start failed for attr failed");
 		ret = -EINVAL;
-		goto completed;
+		goto nla_failed;
 	}
 
 	for (i = 0; i < get_tt_stats->therm_throt_levels; i++) {
@@ -409,7 +409,7 @@ hdd_get_curr_thermal_stats_val(struct wiphy *wiphy,
 			hdd_err_rl("nla_nest_start failed for thermal level %d",
 				   i);
 			ret = -EINVAL;
-			goto completed;
+			goto nla_failed;
 		}
 
 		hdd_debug("level %d, Temp Range: %d - %d, Dwell time %d, Counter %d",
@@ -436,7 +436,10 @@ hdd_get_curr_thermal_stats_val(struct wiphy *wiphy,
 	}
 	nla_nest_end(skb, therm_attr);
 	wlan_cfg80211_vendor_cmd_reply(skb);
+	goto completed;
 
+nla_failed:
+	kfree_skb(skb);
 completed:
 	hdd_ctx->is_therm_stats_in_progress = false;
 	osif_request_put(request);

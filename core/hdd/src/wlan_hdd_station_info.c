@@ -2389,6 +2389,7 @@ static int hdd_get_station_info_ex(struct hdd_context *hdd_ctx,
 	if (connect_fail_rsn_len) {
 		if (hdd_add_connect_fail_reason_code(skb, adapter)) {
 			hdd_err_rl("hdd_add_connect_fail_reason_code fail");
+			kfree_skb(skb);
 			return -ENOMEM;
 		}
 	}
