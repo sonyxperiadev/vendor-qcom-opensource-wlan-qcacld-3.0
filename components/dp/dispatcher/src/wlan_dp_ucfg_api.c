@@ -325,6 +325,7 @@ ucfg_dp_suspend_handler(struct wlan_objmgr_psoc *psoc, void *arg)
 {
 	struct wlan_dp_psoc_context *dp_ctx;
 	struct wlan_dp_intf *dp_intf, *dp_intf_next = NULL;
+	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
 
 	dp_ctx = dp_psoc_get_priv(psoc);
 	if (!dp_ctx) {
@@ -333,6 +334,7 @@ ucfg_dp_suspend_handler(struct wlan_objmgr_psoc *psoc, void *arg)
 	}
 
 	dp_ctx->is_suspend = true;
+	cdp_set_tx_pause(soc, true);
 	dp_for_each_intf_held_safe(dp_ctx, dp_intf, dp_intf_next) {
 		dp_intf->sap_tx_block_mask |= WLAN_DP_SUSPEND;
 	}
@@ -353,6 +355,7 @@ ucfg_dp_resume_handler(struct wlan_objmgr_psoc *psoc, void *arg)
 {
 	struct wlan_dp_psoc_context *dp_ctx;
 	struct wlan_dp_intf *dp_intf, *dp_intf_next = NULL;
+	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
 
 	dp_ctx = dp_psoc_get_priv(psoc);
 	if (!dp_ctx) {
@@ -361,6 +364,7 @@ ucfg_dp_resume_handler(struct wlan_objmgr_psoc *psoc, void *arg)
 	}
 
 	dp_ctx->is_suspend = false;
+	cdp_set_tx_pause(soc, false);
 	dp_for_each_intf_held_safe(dp_ctx, dp_intf, dp_intf_next) {
 		dp_intf->sap_tx_block_mask &= ~WLAN_DP_SUSPEND;
 	}
