@@ -8836,6 +8836,7 @@ populate_dot11f_eht_caps_by_band(struct mac_context *mac_ctx,
 				 bool is_2g,
 				 tDot11fIEeht_cap *eht_cap)
 {
+	pe_debug("is_2g %d", is_2g);
 	if (is_2g)
 		qdf_mem_copy(eht_cap,
 			     &mac_ctx->eht_cap_2g,
@@ -11478,8 +11479,11 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 				pe_err("malloc failed for eht_cap_ie");
 			}
 		} else if (frm->eht_cap.present && !eht_caps.present) {
+			pe_debug("eht non inher");
 			non_inher_ext_ie_lists[non_inher_ext_len++] =
 						WLAN_EXTN_ELEMID_EHTCAP;
+		} else {
+			pe_debug("eht ie not included");
 		}
 
 		populate_dot11f_non_inheritance(
