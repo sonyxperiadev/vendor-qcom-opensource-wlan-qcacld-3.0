@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -37,7 +37,8 @@ bool wlan_p2p_check_oui_and_force_1x1(uint8_t *assoc_ie, uint32_t assoc_ie_len)
 	return p2p_check_oui_and_force_1x1(assoc_ie, assoc_ie_len);
 }
 
-QDF_STATUS wlan_p2p_cleanup_roc_by_vdev(struct wlan_objmgr_vdev *vdev)
+QDF_STATUS wlan_p2p_cleanup_roc_by_vdev(struct wlan_objmgr_vdev *vdev,
+					bool sync)
 {
 	struct p2p_soc_priv_obj *p2p_soc_obj;
 	struct wlan_objmgr_psoc *psoc;
@@ -62,7 +63,7 @@ QDF_STATUS wlan_p2p_cleanup_roc_by_vdev(struct wlan_objmgr_vdev *vdev)
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	return p2p_cleanup_roc_sync(p2p_soc_obj, vdev);
+	return p2p_cleanup_roc(p2p_soc_obj, vdev, sync);
 }
 
 QDF_STATUS wlan_p2p_status_connect(struct wlan_objmgr_vdev *vdev)

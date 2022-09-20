@@ -1440,7 +1440,9 @@ static void cm_process_connect_complete(struct wlan_objmgr_psoc *psoc,
 	    QDF_HAS_PARAM(ucast_cipher, WLAN_CRYPTO_CIPHER_WEP_104) ||
 	    QDF_HAS_PARAM(ucast_cipher, WLAN_CRYPTO_CIPHER_WEP))) {
 		cm_csr_set_ss_none(vdev_id);
-		if (!wlan_vdev_mlme_is_mlo_vdev(vdev))
+		if (wlan_vdev_mlme_is_mlo_link_vdev(vdev))
+			mlo_enable_rso(pdev, vdev, rsp);
+		else if (!wlan_vdev_mlme_is_mlo_vdev(vdev))
 			cm_roam_start_init_on_connect(pdev, vdev_id);
 	} else {
 		if (rsp->is_wps_connection)
@@ -1462,7 +1464,6 @@ cm_connect_complete_ind(struct wlan_objmgr_vdev *vdev,
 	struct wlan_objmgr_pdev *pdev;
 	struct wlan_objmgr_psoc *psoc;
 	enum QDF_OPMODE op_mode;
-	QDF_STATUS status;
 
 	if (!vdev || !rsp) {
 		mlme_err("vdev or rsp is NULL");
@@ -1502,17 +1503,13 @@ cm_connect_complete_ind(struct wlan_objmgr_vdev *vdev,
 					     mlme_get_tdls_prohibited(vdev),
 					     vdev);
 		wlan_p2p_status_connect(vdev);
-
 	}
 
 	if (op_mode == QDF_STA_MODE &&
-	    !wlan_vdev_mlme_is_mlo_vdev(vdev))
+		(wlan_vdev_mlme_is_mlo_link_vdev(vdev) ||
+	    !wlan_vdev_mlme_is_mlo_vdev(vdev)))
 		wlan_cm_roam_state_change(pdev, vdev_id, WLAN_ROAM_INIT,
 					  REASON_CONNECT);
-
-	status = mlo_enable_rso(pdev, vdev);
-	if (QDF_IS_STATUS_ERROR(status))
-		return status;
 
 	return QDF_STATUS_SUCCESS;
 }

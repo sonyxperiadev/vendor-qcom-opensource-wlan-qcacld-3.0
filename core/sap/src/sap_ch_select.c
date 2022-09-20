@@ -51,6 +51,7 @@
 #include "wlan_reg_services_api.h"
 #include <wlan_scan_utils_api.h>
 #include <wlan_cp_stats_mc_ucfg_api.h>
+#include <wlan_policy_mgr_api.h>
 
 /*--------------------------------------------------------------------------
    Function definitions
@@ -417,6 +418,8 @@ static bool sap_chan_sel_init(mac_handle_t mac_handle,
 	bool include_dfs_ch = true;
 	uint8_t sta_sap_scc_on_dfs_chnl_config_value;
 	bool ch_support_puncture;
+	bool is_sta_sap_scc;
+	bool sta_sap_scc_on_indoor_channel;
 
 	pSpectInfoParams->numSpectChans =
 		mac->scan.base_channels.numChannels;
@@ -441,6 +444,9 @@ static bool sap_chan_sel_init(mac_handle_t mac_handle,
 	if (!mac->mlme_cfg->dfs_cfg.dfs_master_capable ||
 	    ACS_DFS_MODE_DISABLE == sap_ctx->dfs_mode)
 		include_dfs_ch = false;
+
+	sta_sap_scc_on_indoor_channel =
+		policy_mgr_get_sta_sap_scc_allowed_on_indoor_chnl(mac->psoc);
 
 	/* Fill the channel number in the spectrum in the operating freq band */
 	for (channelnum = 0;
@@ -468,7 +474,10 @@ static bool sap_chan_sel_init(mac_handle_t mac_handle,
 		}
 
 		if (!include_dfs_ch ||
-		    sta_sap_scc_on_dfs_chnl_config_value == 1) {
+		    (sta_sap_scc_on_dfs_chnl_config_value ==
+				PM_STA_SAP_ON_DFS_MASTER_MODE_DISABLED &&
+		     !policy_mgr_is_sta_sap_scc(mac->psoc,
+						pSpectCh->chan_freq))) {
 			if (wlan_reg_is_dfs_for_freq(mac->pdev,
 						     pSpectCh->chan_freq)) {
 				sap_debug("DFS Ch %d not considered for ACS. include_dfs_ch %u, sta_sap_scc_on_dfs_chnl_config_value %d",
@@ -497,6 +506,18 @@ static bool sap_chan_sel_init(mac_handle_t mac_handle,
 		/* Skip DSRC channels */
 		if (wlan_reg_is_dsrc_freq(pSpectCh->chan_freq))
 			continue;
+
+		/* Skip indoor channels for non-scc indoor scenario*/
+		is_sta_sap_scc = policy_mgr_is_sta_sap_scc(mac->psoc,
+							   *pChans);
+		if (!(is_sta_sap_scc && sta_sap_scc_on_indoor_channel) &&
+		    !policy_mgr_sap_allowed_on_indoor_freq(mac->psoc,
+							   mac->pdev,
+							   *pChans)) {
+			sap_debug("Do not allow SAP on indoor frequency %u",
+				  *pChans);
+			continue;
+		}
 
 		/*
 		 * Skip the channels which are not in ACS config from user

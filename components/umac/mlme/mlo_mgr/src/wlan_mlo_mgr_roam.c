@@ -373,17 +373,27 @@ bool is_multi_link_roam(struct roam_offload_synch_ind *sync_ind)
 }
 
 QDF_STATUS mlo_enable_rso(struct wlan_objmgr_pdev *pdev,
-			  struct wlan_objmgr_vdev *vdev)
+			  struct wlan_objmgr_vdev *vdev,
+			  struct wlan_cm_connect_resp *rsp)
 {
 	struct wlan_objmgr_vdev *assoc_vdev;
+	uint8_t num_partner_links;
 
-	if (wlan_vdev_mlme_is_mlo_link_vdev(vdev)) {
+	if (!rsp) {
+		mlo_err("Connect resp is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	num_partner_links = rsp->ml_parnter_info.num_partner_links;
+
+	if (wlan_vdev_mlme_is_mlo_link_vdev(vdev) ||
+	    !num_partner_links ||
+	    num_partner_links == 1) {
 		assoc_vdev = wlan_mlo_get_assoc_link_vdev(vdev);
 		if (!assoc_vdev) {
 			mlo_err("Assoc vdev is null");
 			return QDF_STATUS_E_NULL_VALUE;
 		}
-
 		cm_roam_start_init_on_connect(pdev,
 					      wlan_vdev_get_id(assoc_vdev));
 	}
@@ -406,10 +416,22 @@ mlo_roam_copy_partner_info(struct wlan_cm_connect_resp *connect_rsp,
 	for (i = 0; i < sync_ind->num_setup_links; i++) {
 		partner_info->partner_link_info[i].link_id =
 			sync_ind->ml_link[i].link_id;
+	       partner_info->partner_link_info[i].vdev_id =
+			sync_ind->ml_link[i].vdev_id;
+
 		qdf_copy_macaddr(
 			&partner_info->partner_link_info[i].link_addr,
 			&sync_ind->ml_link[i].link_addr);
+		partner_info->partner_link_info[i].chan_freq =
+				sync_ind->ml_link[i].channel.mhz;
+		mlo_debug("vdev_id %d link_id %d freq %d bssid" QDF_MAC_ADDR_FMT,
+			  sync_ind->ml_link[i].vdev_id,
+			  sync_ind->ml_link[i].link_id,
+			  sync_ind->ml_link[i].channel.mhz,
+			  QDF_MAC_ADDR_REF(sync_ind->ml_link[i].link_addr.bytes));
 	}
+	partner_info->num_partner_links = sync_ind->num_setup_links;
+	mlo_debug("num_setup_links %d", sync_ind->num_setup_links);
 }
 
 void
@@ -491,3 +513,34 @@ mlo_get_single_link_ml_roaming(struct wlan_objmgr_psoc *psoc,
 
 	return is_single_link_ml_roaming;
 }
+
+QDF_STATUS
+mlo_roam_get_bssid_chan_for_link(uint8_t vdev_id,
+				 struct roam_offload_synch_ind *sync_ind,
+				 struct qdf_mac_addr *bssid,
+				 wmi_channel *chan)
+{
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	uint8_t i;
+
+	if (!sync_ind || !sync_ind->num_setup_links)
+		return QDF_STATUS_E_FAILURE;
+
+	for (i = 0; i < sync_ind->num_setup_links; i++) {
+		if (vdev_id == sync_ind->ml_link[i].vdev_id) {
+			qdf_mem_copy(chan, &sync_ind->ml_link[i].channel,
+				     sizeof(wmi_channel));
+			qdf_copy_macaddr(bssid,
+					 &sync_ind->ml_link[i].link_addr);
+			return status;
+		}
+	}
+
+	if (i == sync_ind->num_setup_links) {
+		mlo_err("roam sync info not found for vdev id %d", vdev_id);
+		status = QDF_STATUS_E_FAILURE;
+	}
+
+	return status;
+}
+

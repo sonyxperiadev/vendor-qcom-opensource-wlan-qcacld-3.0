@@ -889,7 +889,7 @@ QDF_STATUS p2p_psoc_stop(struct wlan_objmgr_psoc *soc)
 
 	/* clean up queue of p2p psoc private object */
 	p2p_cleanup_tx_sync(p2p_soc_obj, NULL);
-	p2p_cleanup_roc_sync(p2p_soc_obj, NULL);
+	p2p_cleanup_roc(p2p_soc_obj, NULL, true);
 
 	/* unrgister scan request id*/
 	wlan_scan_unregister_requester(soc, p2p_soc_obj->scan_req_id);

@@ -337,6 +337,7 @@ static qdf_wake_lock_t wlan_wake_lock;
 #define WOW_MAX_FILTERS_PER_LIST 4
 #define WOW_MIN_PATTERN_SIZE 6
 #define WOW_MAX_PATTERN_SIZE 64
+#define MGMT_DEFAULT_DATA_RATE_6GHZ 0x400 /* This maps to 8.6Mbps data rate */
 
 #define IS_IDLE_STOP (!cds_is_driver_unloading() && \
 		      !cds_is_driver_recovering() && !cds_is_driver_loading())
@@ -5871,7 +5872,6 @@ hdd_alloc_station_adapter(struct hdd_context *hdd_ctx, tSirMacAddr mac_addr,
 
 	qdf_mem_copy(dev->dev_addr, mac_addr, sizeof(tSirMacAddr));
 	qdf_mem_copy(adapter->mac_addr.bytes, mac_addr, sizeof(tSirMacAddr));
-	qdf_mem_copy(adapter->mld_addr.bytes, mac_addr, sizeof(tSirMacAddr));
 	dev->watchdog_timeo = HDD_TX_TIMEOUT;
 
 	if (wlan_hdd_is_session_type_monitor(session_type)) {
@@ -7522,8 +7522,11 @@ struct hdd_adapter *hdd_open_adapter(struct hdd_context *hdd_ctx,
 		return NULL;
 	}
 
-	if (params->is_ml_adapter)
+	if (params->is_ml_adapter) {
 		hdd_adapter_set_ml_adapter(adapter);
+		qdf_mem_copy(adapter->mld_addr.bytes, adapter->mac_addr.bytes,
+			     QDF_MAC_ADDR_SIZE);
+	}
 	status = hdd_adapter_feature_update_work_init(adapter);
 	if (QDF_IS_STATUS_ERROR(status))
 		goto err_cleanup_adapter;
@@ -8667,13 +8670,23 @@ QDF_STATUS hdd_start_all_adapters(struct hdd_context *hdd_ctx)
 		case QDF_P2P_DEVICE_MODE:
 		case QDF_NAN_DISC_MODE:
 
-			hdd_start_station_adapter(adapter);
-
+			ret = hdd_start_station_adapter(adapter);
+			if (ret) {
+				hdd_err("[SSR] Failed to start station adapter: %d",
+					ret);
+				hdd_adapter_dev_put_debug(adapter, dbgid);
+				continue;
+			}
 			if (adapter->device_mode == QDF_STA_MODE) {
 				ret = hdd_start_link_adapter(adapter);
-				if (ret)
-					hdd_err("[SSR] Failed to start link adapter:%d",
+				if (ret) {
+					hdd_err("[SSR] Failed to start link adapter: %d",
 						ret);
+					hdd_stop_adapter(hdd_ctx, adapter);
+					hdd_adapter_dev_put_debug(adapter,
+								  dbgid);
+					continue;
+				}
 			}
 
 			/* Open the gates for HDD to receive Wext commands */
@@ -12423,6 +12436,26 @@ static void hdd_get_wifi_features_cfg_update(struct hdd_config *config,
 }
 #endif
 
+#ifdef FEATURE_RUNTIME_PM
+/**
+ * hdd_init_cpu_cxpc_threshold_cfg() - Initialize cpu cxpc threshold cfg
+ * @config: Pointer to HDD config
+ * @psoc: psoc pointer
+ *
+ * Return: None
+ */
+static void hdd_init_cpu_cxpc_threshold_cfg(struct hdd_config *config,
+					    struct wlan_objmgr_psoc *psoc)
+{
+	config->cpu_cxpc_threshold = cfg_get(psoc, CFG_CPU_CXPC_THRESHOLD);
+}
+#else
+static void hdd_init_cpu_cxpc_threshold_cfg(struct hdd_config *config,
+					    struct wlan_objmgr_psoc *psoc)
+{
+}
+#endif
+
 /**
  * hdd_cfg_params_init() - Initialize hdd params in hdd_config strucuture
  * @hdd_ctx - Pointer to HDD context
@@ -12507,10 +12540,6 @@ static void hdd_cfg_params_init(struct hdd_context *hdd_ctx)
 		      cfg_get(psoc,
 			      CFG_ACTION_OUI_DISABLE_AGGRESSIVE_EDCA),
 		      ACTION_OUI_MAX_STR_LEN);
-	qdf_str_lcopy(config->action_oui_str[ACTION_OUI_DISABLE_MU_EDCA],
-		      cfg_get(psoc,
-			      CFG_ACTION_OUI_DISABLE_MU_EDCA),
-		      ACTION_OUI_MAX_STR_LEN);
 	qdf_str_lcopy(config->action_oui_str[ACTION_OUI_EXTEND_WOW_ITO],
 		      cfg_get(psoc, CFG_ACTION_OUI_EXTEND_WOW_ITO),
 		      ACTION_OUI_MAX_STR_LEN);
@@ -12546,6 +12575,7 @@ static void hdd_cfg_params_init(struct hdd_context *hdd_ctx)
 			cfg_get(psoc, CFG_READ_MAC_ADDR_FROM_MAC_FILE);
 
 	hdd_get_wifi_features_cfg_update(config, psoc);
+	hdd_init_cpu_cxpc_threshold_cfg(config, psoc);
 }
 
 #ifdef CONNECTION_ROAMING_CFG
@@ -13737,6 +13767,7 @@ static int hdd_pre_enable_configure(struct hdd_context *hdd_ctx)
 	int ret;
 	uint8_t val = 0;
 	uint8_t max_retry = 0;
+	bool enable_he_mcs0_for_6ghz_mgmt = false;
 	uint32_t tx_retry_multiplier;
 	QDF_STATUS status;
 	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
@@ -13786,6 +13817,20 @@ static int hdd_pre_enable_configure(struct hdd_context *hdd_ctx)
 	if (0 != ret) {
 		hdd_err("WMI_PDEV_PARAM_MGMT_RETRY_LIMIT failed %d", ret);
 		goto out;
+	}
+
+	wlan_mlme_get_mgmt_6ghz_rate_support(hdd_ctx->psoc,
+					     &enable_he_mcs0_for_6ghz_mgmt);
+	if (enable_he_mcs0_for_6ghz_mgmt) {
+		hdd_debug("HE rates for 6GHz mgmt frames are supported");
+		ret = sme_cli_set_command(0, WMI_PDEV_PARAM_DEFAULT_6GHZ_RATE,
+					  MGMT_DEFAULT_DATA_RATE_6GHZ,
+					  PDEV_CMD);
+		if (0 != ret) {
+			hdd_err("WMI_PDEV_PARAM_DEFAULT_6GHZ_RATE failed %d",
+				ret);
+			goto out;
+		}
 	}
 
 	wlan_mlme_get_tx_retry_multiplier(hdd_ctx->psoc,
@@ -15668,9 +15713,9 @@ int hdd_register_cb(struct hdd_context *hdd_ctx)
 	sme_set_md_bl_evt_cb(mac_handle, hdd_md_bl_evt_cb, (void *)hdd_ctx);
 #endif /* WLAN_FEATURE_MOTION_DETECTION */
 
-	mac_register_sesssion_open_close_cb(hdd_ctx->mac_handle,
-					    hdd_sme_close_session_callback,
-					    hdd_common_roam_callback);
+	mac_register_session_open_close_cb(hdd_ctx->mac_handle,
+					   hdd_sme_close_session_callback,
+					   hdd_common_roam_callback);
 
 	sme_set_roam_scan_ch_event_cb(mac_handle, hdd_get_roam_scan_ch_cb);
 	status = sme_set_monitor_mode_cb(mac_handle,
@@ -16646,21 +16691,15 @@ static void hdd_wlan_soft_driver_unload(void)
 	hdd_driver_unload();
 }
 
-static int hdd_disable_wifi(struct hdd_context *hdd_ctx)
+static int hdd_wlan_idle_shutdown(struct hdd_context *hdd_ctx)
 {
 	int ret;
 	int retries = 0;
 	void *hif_ctx;
 
-	if (hdd_ctx->is_wlan_disabled) {
-		hdd_err_rl("Wifi is already disabled");
-		return 0;
-	}
-
-	hdd_debug("Initiating WLAN idle shutdown");
-	if (hdd_is_any_interface_open(hdd_ctx)) {
-		hdd_err("Interfaces still open, cannot process wifi disable");
-		return -EAGAIN;
+	if (!hdd_ctx) {
+		hdd_err_rl("hdd_ctx is Null");
+		return -EINVAL;
 	}
 
 	hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
@@ -16683,6 +16722,7 @@ static int hdd_disable_wifi(struct hdd_context *hdd_ctx)
 				  retries);
 			msleep(WIFI_DISABLE_SLEEP);
 			retries++;
+			continue;
 		}
 		break;
 	}
@@ -16692,10 +16732,33 @@ static int hdd_disable_wifi(struct hdd_context *hdd_ctx)
 		hdd_debug("Max retries reached");
 		return -EINVAL;
 	}
-	hdd_ctx->is_wlan_disabled = true;
 	hdd_debug_rl("WiFi is disabled");
 
 	return 0;
+}
+
+static int hdd_disable_wifi(struct hdd_context *hdd_ctx)
+{
+	int ret;
+
+	if (hdd_ctx->is_wlan_disabled) {
+		hdd_err_rl("Wifi is already disabled");
+		return 0;
+	}
+
+	hdd_debug("Initiating WLAN idle shutdown");
+	if (hdd_is_any_interface_open(hdd_ctx)) {
+		hdd_err("Interfaces still open, cannot process wifi disable");
+		return -EAGAIN;
+	}
+
+	hdd_ctx->is_wlan_disabled = true;
+
+	ret = hdd_wlan_idle_shutdown(hdd_ctx);
+	if (ret)
+		hdd_ctx->is_wlan_disabled = false;
+
+	return ret;
 }
 #else
 static int hdd_wlan_soft_driver_load(void)

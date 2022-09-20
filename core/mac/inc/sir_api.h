@@ -5140,6 +5140,7 @@ struct sir_sae_info {
  * @length: message length
  * @vdev_id: vdev id
  * @sae_status: SAE status, 0: Success, Non-zero: Failure.
+ * @pmkid: PMKID derived as part of SAE authentication
  * @peer_mac_addr: peer MAC address
  * @result_code: This carries the reason of the SAE auth failure.
  *               Currently, SAE authentication failure may happen due to
@@ -5152,6 +5153,7 @@ struct sir_sae_msg {
 	uint16_t message_type;
 	uint16_t length;
 	uint16_t vdev_id;
+	uint8_t pmkid[PMKID_LEN];
 	uint8_t sae_status;
 	tSirMacAddr peer_mac_addr;
 	tSirResultCodes result_code;

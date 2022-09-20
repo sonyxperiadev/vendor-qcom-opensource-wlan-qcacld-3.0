@@ -744,9 +744,9 @@ QDF_STATUS p2p_restart_roc_timer(struct p2p_roc_context *roc_ctx)
 	return status;
 }
 
-QDF_STATUS p2p_cleanup_roc_sync(
-	struct p2p_soc_priv_obj *p2p_soc_obj,
-	struct wlan_objmgr_vdev *vdev)
+QDF_STATUS p2p_cleanup_roc(struct p2p_soc_priv_obj *p2p_soc_obj,
+			   struct wlan_objmgr_vdev *vdev,
+			   bool sync)
 {
 	struct scheduler_msg msg = {0};
 	struct p2p_cleanup_param *param;
@@ -758,7 +758,8 @@ QDF_STATUS p2p_cleanup_roc_sync(
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	p2p_debug("p2p_soc_obj:%pK, vdev:%pK", p2p_soc_obj, vdev);
+	p2p_debug("p2p_soc_obj:%pK, vdev:%pK, sync:%d", p2p_soc_obj, vdev,
+		  sync);
 	param = qdf_mem_malloc(sizeof(*param));
 	if (!param)
 		return QDF_STATUS_E_NOMEM;
@@ -780,6 +781,9 @@ QDF_STATUS p2p_cleanup_roc_sync(
 		qdf_mem_free(param);
 		return status;
 	}
+
+	if (!sync)
+		return status;
 
 	status = qdf_wait_single_event(
 			&p2p_soc_obj->cleanup_roc_done,

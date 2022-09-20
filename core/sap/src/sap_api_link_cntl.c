@@ -673,7 +673,8 @@ wlansap_roam_process_dfs_chansw_update(mac_handle_t mac_handle,
 	for (intf = 0; intf < SAP_MAX_NUM_SESSION; intf++) {
 		struct sap_context *sap_context;
 
-		if (!((QDF_SAP_MODE == mac_ctx->sap.sapCtxList[intf].sapPersona)
+		if (!((QDF_SAP_MODE == mac_ctx->sap.sapCtxList[intf].sapPersona ||
+		       QDF_P2P_GO_MODE == mac_ctx->sap.sapCtxList[intf].sapPersona)
 		    && (mac_ctx->sap.sapCtxList[intf].sap_context)))
 			continue;
 		sap_context = mac_ctx->sap.sapCtxList[intf].sap_context;

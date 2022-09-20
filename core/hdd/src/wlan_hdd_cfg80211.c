@@ -631,19 +631,6 @@ static const struct ieee80211_iface_limit
 	},
 };
 
-/* STA + AP combination */
-static const struct ieee80211_iface_limit
-	wlan_hdd_sta_ap_iface_limit[] = {
-	{
-		.max = 1,
-		.types = BIT(NL80211_IFTYPE_STATION),
-	},
-	{
-		.max = QDF_MAX_NO_OF_SAP_MODE,
-		.types = BIT(NL80211_IFTYPE_AP),
-	},
-};
-
 /* STA + P2P + P2P combination */
 static const struct ieee80211_iface_limit
 	wlan_hdd_sta_p2p_iface_limit[] = {
@@ -770,18 +757,6 @@ static struct ieee80211_iface_combination
 		.num_different_channels = 2,
 		.max_interfaces = 2,
 		.n_limits = ARRAY_SIZE(wlan_hdd_p2p_iface_limit),
-	},
-	/* STA + AP */
-	{
-		.limits = wlan_hdd_sta_ap_iface_limit,
-		.num_different_channels = 2,
-		.max_interfaces = (1 + QDF_MAX_NO_OF_SAP_MODE),
-		.n_limits = ARRAY_SIZE(wlan_hdd_sta_ap_iface_limit),
-		.beacon_int_infra_match = true,
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)) || \
-	defined(CFG80211_BEACON_INTERVAL_BACKPORT)
-		.beacon_int_min_gcd = 1,
-#endif
 	},
 	/* STA + P2P + P2P */
 	{
@@ -10042,22 +10017,12 @@ hdd_dbam_config_resp_cb(void *context,
 	osif_request_put(request);
 }
 
-/**
- * hdd_set_dbam_config() - enable/disable DBAM config
- * @adapter: hdd adapter
- * @attr: pointer to nla attr
- *
- * Return: 0 on success, negative errno on failure
- */
-static int hdd_set_dbam_config(struct hdd_adapter *adapter,
-			       const struct nlattr *attr)
+int hdd_send_dbam_config(struct hdd_adapter *adapter,
+			 enum coex_dbam_config_mode dbam_mode)
 {
-	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
-	struct wlan_objmgr_vdev *vdev;
 	int errno;
 	QDF_STATUS status;
-	enum qca_dbam_config dbam_config;
-	enum coex_dbam_config_mode dbam_mode;
+	struct wlan_objmgr_vdev *vdev;
 	enum coex_dbam_comp_status dbam_resp;
 	struct coex_dbam_config_params dbam_params = {0};
 	void *cookie;
@@ -10068,18 +10033,7 @@ static int hdd_set_dbam_config(struct hdd_adapter *adapter,
 		.timeout_ms = WLAN_SET_DBAM_CONFIG_TIMEOUT,
 	};
 
-	errno = wlan_hdd_validate_context(hdd_ctx);
-	if (errno)
-		return -EINVAL;
-
-	if (hdd_ctx->num_rf_chains < 2) {
-		hdd_debug("Num of chains [%u] < 2, DBAM config is not allowed",
-			  hdd_ctx->num_rf_chains);
-		return -EINVAL;
-	}
-
-	dbam_config = nla_get_u8(attr);
-	errno = hdd_convert_qca_dbam_config_mode(dbam_config, &dbam_mode);
+	errno = hdd_validate_adapter(adapter);
 	if (errno)
 		return errno;
 
@@ -10123,6 +10077,43 @@ static int hdd_set_dbam_config(struct hdd_adapter *adapter,
 err:
 	osif_request_put(request);
 	return errno;
+}
+
+/**
+ * hdd_set_dbam_config() - set DBAM config
+ * @adapter: hdd adapter
+ * @attr: pointer to nla attr
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+static int hdd_set_dbam_config(struct hdd_adapter *adapter,
+			       const struct nlattr *attr)
+{
+	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	int errno;
+	enum qca_dbam_config dbam_config;
+	enum coex_dbam_config_mode dbam_mode;
+
+	errno = wlan_hdd_validate_context(hdd_ctx);
+	if (errno)
+		return -EINVAL;
+
+	if (hdd_ctx->num_rf_chains < 2) {
+		hdd_debug("Num of chains [%u] < 2, DBAM config is not allowed",
+			  hdd_ctx->num_rf_chains);
+		return -EINVAL;
+	}
+
+	dbam_config = nla_get_u8(attr);
+	errno = hdd_convert_qca_dbam_config_mode(dbam_config, &dbam_mode);
+	if (errno)
+		return errno;
+
+	/* Store dbam config in hdd_ctx, to restore in case of an SSR */
+	adapter->is_dbam_configured = true;
+	hdd_ctx->dbam_mode = dbam_mode;
+
+	return hdd_send_dbam_config(adapter, dbam_mode);
 }
 #endif
 
@@ -15649,7 +15640,7 @@ __wlan_hdd_cfg80211_set_trace_level(struct wiphy *wiphy,
 
 	print_idx = qdf_get_pidx();
 	if (print_idx < 0 || print_idx >= MAX_PRINT_CONFIG_SUPPORTED) {
-		hdd_err("Invalid print controle object index");
+		hdd_err("Invalid print control object index");
 		return -EINVAL;
 	}
 

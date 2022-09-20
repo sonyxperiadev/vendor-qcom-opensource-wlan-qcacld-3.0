@@ -286,7 +286,7 @@ void csr_send_set_ie(uint8_t type, uint8_t sub_type, uint8_t vdev_id);
  * csr_scan_result_purge() -
  * Remove all items(tCsrScanResult) in the list and free memory for each item
  * hScanResult - returned from csr_scan_get_result. hScanResult is considered
- * gone by calling this function and even before this function reutrns.
+ * gone by calling this function and even before this function returns.
  * Return QDF_STATUS
  */
 QDF_STATUS csr_scan_result_purge(struct mac_context *mac,

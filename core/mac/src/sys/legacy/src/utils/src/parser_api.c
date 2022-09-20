@@ -3596,7 +3596,9 @@ sir_convert_assoc_resp_frame2_eht_struct(tDot11fAssocResponse *ar,
 
 #ifdef WLAN_FEATURE_11BE_MLO
 static QDF_STATUS
-sir_convert_assoc_resp_frame2_mlo_struct(uint8_t *frame, uint32_t frame_len,
+sir_convert_assoc_resp_frame2_mlo_struct(struct mac_context *mac,
+					 uint8_t *frame,
+					 uint32_t frame_len,
 					 struct pe_session *session_entry,
 					 tDot11fAssocResponse *ar,
 					 tpSirAssocRsp p_assoc_rsp)
@@ -3606,8 +3608,9 @@ sir_convert_assoc_resp_frame2_mlo_struct(uint8_t *frame, uint32_t frame_len,
 	struct wlan_mlo_ie *ml_ie_info;
 	bool link_id_found;
 	uint8_t link_id;
-	bool eml_cap_found;
+	bool eml_cap_found, msd_cap_found;
 	uint16_t eml_cap;
+	uint16_t msd_cap;
 	struct qdf_mac_addr mld_mac_addr;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 
@@ -3620,11 +3623,12 @@ sir_convert_assoc_resp_frame2_mlo_struct(uint8_t *frame, uint32_t frame_len,
 			util_get_bvmlie_persta_partner_info(ml_ie,
 					       ml_ie_total_len,
 					       &session_entry->ml_partner_info);
-
-			session_entry->ml_partner_info.num_partner_links =
-			QDF_MIN(
-			session_entry->ml_partner_info.num_partner_links,
-			session_entry->lim_join_req->partner_info.num_partner_links);
+			if (!wlan_cm_is_roam_sync_in_progress(mac->psoc, session_entry->vdev_id)) {
+				session_entry->ml_partner_info.num_partner_links =
+				QDF_MIN(
+				session_entry->ml_partner_info.num_partner_links,
+				session_entry->lim_join_req->partner_info.num_partner_links);
+			}
 			util_get_bvmlie_mldmacaddr(ml_ie, ml_ie_total_len,
 						   &mld_mac_addr);
 			qdf_mem_copy(ml_ie_info->mld_mac_addr,
@@ -3636,6 +3640,27 @@ sir_convert_assoc_resp_frame2_mlo_struct(uint8_t *frame, uint32_t frame_len,
 			util_get_bvmlie_primary_linkid(ml_ie, ml_ie_total_len,
 						       &link_id_found,
 						       &link_id);
+			util_get_bvmlie_msd_cap(ml_ie, ml_ie_total_len,
+						&msd_cap_found, &msd_cap);
+			if (msd_cap_found) {
+				ml_ie_info->medium_sync_delay_info_present =
+								msd_cap_found;
+				ml_ie_info->medium_sync_delay_info.medium_sync_duration =
+				  QDF_GET_BITS(
+				     msd_cap,
+				     WLAN_ML_BV_CINFO_MEDMSYNCDELAYINFO_DURATION_IDX,
+				     WLAN_ML_BV_CINFO_MEDMSYNCDELAYINFO_DURATION_BITS);
+				ml_ie_info->medium_sync_delay_info.medium_sync_ofdm_ed_thresh =
+				  QDF_GET_BITS(
+				     msd_cap,
+				     WLAN_ML_BV_CINFO_MEDMSYNCDELAYINFO_OFDMEDTHRESH_IDX,
+				     WLAN_ML_BV_CINFO_MEDMSYNCDELAYINFO_OFDMEDTHRESH_BITS);
+				ml_ie_info->medium_sync_delay_info.medium_sync_max_txop_num =
+				  QDF_GET_BITS(
+				     msd_cap,
+				     WLAN_ML_BV_CINFO_MEDMSYNCDELAYINFO_MAXTXOPS_IDX,
+				     WLAN_ML_BV_CINFO_MEDMSYNCDELAYINFO_MAXTXOPS_BITS);
+			}
 			util_get_bvmlie_eml_cap(ml_ie, ml_ie_total_len,
 						&eml_cap_found, &eml_cap);
 			if (eml_cap_found) {
@@ -3664,7 +3689,9 @@ sir_convert_assoc_resp_frame2_mlo_struct(uint8_t *frame, uint32_t frame_len,
 }
 #else
 static inline QDF_STATUS
-sir_convert_assoc_resp_frame2_mlo_struct(uint8_t *frame, uint32_t frame_len,
+sir_convert_assoc_resp_frame2_mlo_struct(struct mac_context *mac,
+					 uint8_t *frame,
+					 uint32_t frame_len,
 					 struct pe_session *session_entry,
 					 tDot11fAssocResponse *ar,
 					 tpSirAssocRsp p_assoc_rsp)
@@ -3956,7 +3983,7 @@ sir_convert_assoc_resp_frame2_struct(struct mac_context *mac,
 
 	sir_convert_assoc_resp_frame2_eht_struct(ar, pAssocRsp);
 	fils_convert_assoc_rsp_frame2_struct(ar, pAssocRsp);
-	sir_convert_assoc_resp_frame2_mlo_struct(frame, frame_len,
+	sir_convert_assoc_resp_frame2_mlo_struct(mac, frame, frame_len,
 						 session_entry, ar, pAssocRsp);
 	pe_debug("ht %d vht %d vendor vht: cap %d op %d, he %d he 6ghband %d eht %d eht320 %d, max idle: present %d val %d, he mu edca %d wmm %d qos %d",
 		 ar->HTCaps.present, ar->VHTCaps.present,
@@ -7207,7 +7234,7 @@ const uint8_t *lim_get_ext_ie_ptr_from_ext_id(const uint8_t *ie,
 					       ie, ie_len);
 }
 
-/* EHT Opeartion */
+/* EHT Operation */
 /* 1 byte ext id, 1 byte eht op params, 4 bytes basic EHT MCS and NSS set*/
 #define EHTOP_FIXED_LEN         6
 

@@ -719,7 +719,7 @@ bool hdd_update_config_cfg(struct hdd_context *hdd_ctx)
 
 	/*
 	 * During the initialization both 2G and 5G capabilities should be same.
-	 * So read 5G HT capablity and update 2G and 5G capablities.
+	 * So read 5G HT capability and update 2G and 5G capabilities.
 	 */
 
 	if (0 != hdd_update_he_cap_in_cfg(hdd_ctx)) {
@@ -2126,6 +2126,9 @@ int hdd_update_channel_width(struct hdd_adapter *adapter,
 	sme_config->csr_config.channelBondingMode5GHz = bonding_mode;
 	sme_config->csr_config.channelBondingMode24GHz = bonding_mode;
 	sme_update_config(hdd_ctx->mac_handle, sme_config);
+	sme_set_he_bw_cap(hdd_ctx->mac_handle, adapter->vdev_id, chwidth);
+	sme_set_vdev_ies_per_band(hdd_ctx->mac_handle, adapter->vdev_id,
+				  adapter->device_mode);
 
 free_config:
 	qdf_mem_free(sme_config);

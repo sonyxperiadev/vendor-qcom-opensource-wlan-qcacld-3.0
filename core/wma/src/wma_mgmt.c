@@ -1385,6 +1385,15 @@ static void wma_set_mlo_capability(tp_wma_handle wma,
 			req->mlo_params.trans_timeout_us =
 					params->emlsr_trans_timeout;
 		}
+		req->mlo_params.msd_cap_support = params->msd_caps_present;
+		if (req->mlo_params.msd_cap_support) {
+			req->mlo_params.medium_sync_duration =
+				params->msd_caps.med_sync_duration;
+			req->mlo_params.medium_sync_ofdm_ed_thresh =
+				params->msd_caps.med_sync_ofdm_ed_thresh;
+			req->mlo_params.medium_sync_max_txop_num =
+				params->msd_caps.med_sync_max_txop_num;
+		}
 	} else {
 		wma_debug("Peer MLO context is NULL");
 		req->mlo_params.mlo_enabled = false;
@@ -3139,7 +3148,7 @@ QDF_STATUS wma_set_cts2self_for_p2p_go(void *wma_handle,
 /**
  * wma_set_htconfig() - set ht config parameters to target
  * @vdev_id: vdev id
- * @ht_capab: ht capablity
+ * @ht_capab: ht capability
  * @value: value of ht param
  *
  * Return: QDF status
@@ -3877,7 +3886,7 @@ static int wma_mgmt_rx_process(void *handle, uint8_t *data,
 	/*
 	 * Allocate the memory for this rx packet, add extra 100 bytes for:-
 	 *
-	 * 1.  Filling the missing RSN capabilites by some APs, which fill the
+	 * 1.  Filling the missing RSN capabilities by some APs, which fill the
 	 *     RSN IE length as extra 2 bytes but dont fill the IE data with
 	 *     capabilities, resulting in failure in unpack core due to length
 	 *     mismatch. Check sir_validate_and_rectify_ies for more info.

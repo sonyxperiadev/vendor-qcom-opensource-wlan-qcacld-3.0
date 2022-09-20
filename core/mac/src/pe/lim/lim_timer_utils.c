@@ -299,6 +299,8 @@ void lim_timer_handler(void *pMacGlobal, uint32_t param)
 	msg.bodyptr = NULL;
 	msg.bodyval = 0;
 
+	pe_debug("param %X ", msg.type);
+
 	status = lim_post_msg_high_priority(mac, &msg);
 	if (status != QDF_STATUS_SUCCESS)
 		pe_err("posting message: %X to LIM failed, reason: %d",

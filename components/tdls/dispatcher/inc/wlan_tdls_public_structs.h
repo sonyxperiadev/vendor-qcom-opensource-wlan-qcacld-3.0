@@ -937,7 +937,7 @@ struct tdls_ch_params {
 };
 
 /**
- * struct tdls_peer_params - TDLS peer capablities parameters
+ * struct tdls_peer_params - TDLS peer capabilities parameters
  * @is_peer_responder: is peer responder or not
  * @peer_uapsd_queue: peer uapsd queue
  * @peer_max_sp: peer max SP value
@@ -1425,7 +1425,7 @@ struct tdls_link_teardown {
 struct wlan_tdls_features {
 	bool enable_tdls;
 	bool enable_tdls_offchannel;
-	bool max_tdls_peers;
+	uint8_t max_tdls_peers;
 	bool enable_tdls_capability_enhance;
 };
 #endif

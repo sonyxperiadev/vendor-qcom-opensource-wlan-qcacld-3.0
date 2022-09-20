@@ -2118,10 +2118,6 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 				hdd_debug("set hw mode change not done");
 		}
 
-		if (!wlan_reg_is_6ghz_chan_freq(ap_ctx->operating_chan_freq))
-			wlan_reg_set_ap_pwr_and_update_chan_list(hdd_ctx->pdev,
-								 REG_INDOOR_AP);
-
 		/*
 		 * Enable wds source port learning on the dp vdev in AP mode
 		 * when WDS feature is enabled.
@@ -3209,6 +3205,7 @@ int hdd_softap_set_channel_change(struct net_device *dev, int target_chan_freq,
 	struct wlan_objmgr_vdev *vdev;
 	bool strict;
 	uint32_t sta_cnt = 0;
+	struct ch_params ch_params = {0};
 
 	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	ret = wlan_hdd_validate_context(hdd_ctx);
@@ -3290,7 +3287,9 @@ int hdd_softap_set_channel_change(struct net_device *dev, int target_chan_freq,
 		hdd_err("Channel switch in progress!!");
 		return -EBUSY;
 	}
-
+	ch_params.ch_width = target_bw;
+	target_bw = wlansap_get_csa_chanwidth_from_phymode(
+			sap_ctx, target_chan_freq, &ch_params);
 	/*
 	 * Do SAP concurrency check to cover channel switch case as following:
 	 * There is already existing SAP+GO combination but due to upper layer
@@ -3307,7 +3306,7 @@ int hdd_softap_set_channel_change(struct net_device *dev, int target_chan_freq,
 				hdd_ctx->psoc,
 				policy_mgr_convert_device_mode_to_qdf_type(
 					adapter->device_mode),
-				target_chan_freq,
+				target_chan_freq, policy_mgr_get_bw(target_bw),
 				adapter->vdev_id,
 				forced,
 				sap_ctx->csa_reason)) {
@@ -7605,7 +7604,7 @@ static int __wlan_hdd_cfg80211_start_ap(struct wiphy *wiphy,
 	 * different or same band( whether we require DBS or Not).
 	 * If we dont require DBS, then the driver does nothing assuming
 	 * the state would be already in non DBS mode, and just continues
-	 * with vdev up on same MAC, by stoping the opportunistic timer,
+	 * with vdev up on same MAC, by stopping the opportunistic timer,
 	 * which results in a connection of 1x1 if already the state was in
 	 * DBS. So first stop timer, and check the current hw mode.
 	 * If the SAP comes up in band different from STA, DBS mode is already

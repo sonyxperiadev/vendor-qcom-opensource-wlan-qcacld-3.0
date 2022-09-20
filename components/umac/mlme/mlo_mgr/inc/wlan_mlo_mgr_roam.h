@@ -122,13 +122,15 @@ is_multi_link_roam(struct roam_offload_synch_ind *sync_ind);
  *
  * @pdev: pdev pointer
  * @vdev: assoc vdev pointer
+ * @rsp: cm connect rsp
  *
  * This api will be called to enable RSO for MLO connection.
  *
  * Return: qdf_status success or fail
  */
 QDF_STATUS mlo_enable_rso(struct wlan_objmgr_pdev *pdev,
-			  struct wlan_objmgr_vdev *vdev);
+			  struct wlan_objmgr_vdev *vdev,
+			  struct wlan_cm_connect_resp *rsp);
 
 /**
  * mlo_roam_copy_partner_info - copy partner link info to connect response
@@ -187,6 +189,24 @@ mlo_set_single_link_ml_roaming(struct wlan_objmgr_psoc *psoc,
 bool
 mlo_get_single_link_ml_roaming(struct wlan_objmgr_psoc *psoc,
 			       uint8_t vdev_id);
+
+/**
+ * mlo_roam_get_bssid_chan_for_link - get link mac addr and channel info
+ *
+ * @vdev_id: vdev id
+ * @sync_ind: roam sync ind pointer
+ * @bssid: link mac addr pointer
+ * @chan: link wmi channel pointer
+ *
+ * This api will be called to get link mac addr and channel info.
+ *
+ * Return: qdf status
+ */
+QDF_STATUS
+mlo_roam_get_bssid_chan_for_link(uint8_t vdev_id,
+				 struct roam_offload_synch_ind *sync_ind,
+				 struct qdf_mac_addr *bssid,
+				 wmi_channel *chan);
 
 #ifdef WLAN_FEATURE_11BE_MLO_ADV_FEATURE
 /**
@@ -270,7 +290,8 @@ is_multi_link_roam(struct roam_offload_synch_ind *sync_ind)
 
 static inline
 QDF_STATUS mlo_enable_rso(struct wlan_objmgr_pdev *pdev,
-			  struct wlan_objmgr_vdev *vdev)
+			  struct wlan_objmgr_vdev *vdev,
+			  struct wlan_cm_connect_resp *rsp)
 {
 	return QDF_STATUS_SUCCESS;
 }
@@ -304,6 +325,15 @@ mlo_get_single_link_ml_roaming(struct wlan_objmgr_psoc *psoc,
 			       uint8_t vdev_id)
 {
 	return false;
+}
+
+static inline QDF_STATUS
+mlo_roam_get_bssid_chan_for_link(uint8_t vdev_id,
+				 struct roam_offload_synch_ind *sync_ind,
+				 struct qdf_mac_addr *bssid,
+				 wmi_channel *chan)
+{
+	return QDF_STATUS_E_NOSUPPORT;
 }
 #endif /* WLAN_FEATURE_11BE_MLO */
 #endif

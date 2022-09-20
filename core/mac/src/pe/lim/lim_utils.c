@@ -7261,6 +7261,17 @@ void lim_copy_join_req_he_cap(struct pe_session *session)
 		lim_revise_req_he_cap_per_band(mlme_priv, session);
 	qdf_mem_copy(&(session->he_config), &(mlme_priv->he_config),
 		     sizeof(session->he_config));
+	if (WLAN_REG_IS_24GHZ_CH_FREQ(session->curr_op_freq)) {
+		session->he_config.chan_width_1 = 0;
+		session->he_config.chan_width_2 = 0;
+		session->he_config.chan_width_3 = 0;
+		session->he_config.chan_width_5 = 0;
+		session->he_config.chan_width_6 = 0;
+	} else {
+		session->he_config.chan_width_0 = 0;
+		session->he_config.chan_width_4 = 0;
+		session->he_config.chan_width_6 = 0;
+	}
 }
 
 void lim_log_he_cap(struct mac_context *mac, tDot11fIEhe_cap *he_cap)
@@ -8762,10 +8773,12 @@ void lim_set_eht_caps(struct mac_context *mac, struct pe_session *session,
 				dot11_cap.bw_20_tx_max_nss_for_mcs_12_and_13;
 			offset = ie_start[1] + 3;
 			qdf_mem_copy(&ie_start[offset],
-				     (((uint8_t *)&eht_mcs_cap) + offset),
+				     (((uint8_t *)&eht_mcs_cap) +
+				      EHT_CAP_FIXED_FIELDS),
 				     EHT_CAP_20M_MCS_MAP_LEN);
-
 			ie_start[1] += EHT_CAP_20M_MCS_MAP_LEN;
+
+			return;
 		}
 
 		if ((is_band_2g && dot11_he_cap.chan_width_0) ||
@@ -8996,6 +9009,71 @@ void lim_intersect_ap_emlsr_caps(struct mac_context *mac_ctx,
 		 add_bss->staContext.emlsr_support, add_bss->staContext.link_id,
 		 add_bss->staContext.emlsr_trans_timeout);
 }
+
+void lim_extract_msd_caps(struct mac_context *mac_ctx,
+			  struct pe_session *session,
+			  struct bss_params *add_bss,
+			  tpSirAssocRsp assoc_rsp)
+{
+	struct wlan_objmgr_peer *peer;
+	struct wlan_mlo_peer_context *mlo_peer_ctx;
+
+	peer = wlan_objmgr_get_peer_by_mac(mac_ctx->psoc, add_bss->bssId,
+					   WLAN_LEGACY_MAC_ID);
+	if (!peer) {
+		pe_err("peer is null");
+		return;
+	}
+
+	mlo_peer_ctx = peer->mlo_peer_ctx;
+	if (!mlo_peer_ctx) {
+		pe_err("mlo peer ctx is null");
+		wlan_objmgr_peer_release_ref(peer, WLAN_LEGACY_MAC_ID);
+		return;
+	}
+
+	if (wlan_vdev_mlme_is_mlo_link_vdev(session->vdev)) {
+		add_bss->staContext.msd_caps_present =
+			mlo_peer_ctx->msd_cap_present;
+		add_bss->staContext.msd_caps.med_sync_duration =
+			mlo_peer_ctx->mlpeer_msdcap.medium_sync_duration;
+		add_bss->staContext.msd_caps.med_sync_ofdm_ed_thresh =
+			mlo_peer_ctx->mlpeer_msdcap.medium_sync_ofdm_ed_thresh;
+		add_bss->staContext.msd_caps.med_sync_max_txop_num =
+			mlo_peer_ctx->mlpeer_msdcap.medium_sync_max_txop_num;
+	} else {
+		add_bss->staContext.msd_caps_present =
+			assoc_rsp->mlo_ie.mlo_ie.medium_sync_delay_info_present;
+		if (add_bss->staContext.msd_caps_present) {
+			add_bss->staContext.msd_caps.med_sync_duration =
+				assoc_rsp->mlo_ie.mlo_ie.medium_sync_delay_info.medium_sync_duration;
+			add_bss->staContext.msd_caps.med_sync_ofdm_ed_thresh =
+				assoc_rsp->mlo_ie.mlo_ie.medium_sync_delay_info.medium_sync_ofdm_ed_thresh;
+			add_bss->staContext.msd_caps.med_sync_max_txop_num =
+				assoc_rsp->mlo_ie.mlo_ie.medium_sync_delay_info.medium_sync_max_txop_num;
+		} else {
+			/* Fill MSD params with zeroes if MSD caps are absent */
+			add_bss->staContext.msd_caps.med_sync_duration = 0;
+			add_bss->staContext.msd_caps.med_sync_ofdm_ed_thresh = 0;
+			add_bss->staContext.msd_caps.med_sync_max_txop_num = 0;
+		}
+		mlo_peer_ctx->msd_cap_present =
+			add_bss->staContext.msd_caps_present;
+		mlo_peer_ctx->mlpeer_msdcap.medium_sync_duration =
+			add_bss->staContext.msd_caps.med_sync_duration;
+		mlo_peer_ctx->mlpeer_msdcap.medium_sync_ofdm_ed_thresh =
+			add_bss->staContext.msd_caps.med_sync_ofdm_ed_thresh;
+		mlo_peer_ctx->mlpeer_msdcap.medium_sync_max_txop_num =
+			add_bss->staContext.msd_caps.med_sync_max_txop_num;
+	}
+
+	wlan_objmgr_peer_release_ref(peer, WLAN_LEGACY_MAC_ID);
+	pe_debug("MSD caps: %d, Duration: %d, Threshold:%d, TXOP num: %d",
+		 add_bss->staContext.msd_caps_present,
+		 add_bss->staContext.msd_caps.med_sync_duration,
+		 add_bss->staContext.msd_caps.med_sync_ofdm_ed_thresh,
+		 add_bss->staContext.msd_caps.med_sync_max_txop_num);
+}
 #endif
 
 #if defined(CONFIG_BAND_6GHZ) && defined(WLAN_FEATURE_11AX)
@@ -9176,9 +9254,25 @@ enum rateid lim_get_min_session_txrate(struct pe_session *session)
 	enum rateid rid = RATEID_DEFAULT;
 	uint8_t min_rate = SIR_MAC_RATE_54, curr_rate, i;
 	tSirMacRateSet *rateset = &session->rateSet;
+	bool enable_he_mcs0_for_6ghz_mgmt = false;
+	qdf_freq_t op_freq;
 
 	if (!session)
 		return rid;
+	else {
+		op_freq = wlan_get_operation_chan_freq(session->vdev);
+		/*
+		 * For 6GHz freq and if enable_he_mcs0_for_mgmt_6ghz INI is
+		 * enabled then FW will use rate of MCS0 for 11AX and configured
+		 * via WMI_MGMT_TX_SEND_CMDID
+		 */
+		wlan_mlme_get_mgmt_6ghz_rate_support(
+				session->mac_ctx->psoc,
+				&enable_he_mcs0_for_6ghz_mgmt);
+		if (op_freq && wlan_reg_is_6ghz_chan_freq(op_freq) &&
+		    enable_he_mcs0_for_6ghz_mgmt)
+			return rid;
+	}
 
 	for (i = 0; i < rateset->numRates; i++) {
 		/* Ignore MSB - set to indicate basic rate */
@@ -10593,4 +10687,268 @@ uint8_t lim_get_vht_ch_width(tDot11fIEVHTCaps *vht_cap,
 	}
 	pe_debug("The VHT Operation channel width is %d", ch_width);
 	return ch_width;
+}
+
+/*
+ * lim_set_tpc_power() - Function to compute and send TPC power level to the
+ * FW based on the opmode of the pe_session
+ *
+ * @mac_ctx:    Pointer to Global MAC structure
+ * @pe_session: Pointer to session
+ *
+ * Return: TPC status
+ */
+static bool
+lim_set_tpc_power(struct mac_context *mac_ctx, struct pe_session *session)
+{
+	struct wlan_lmac_if_reg_tx_ops *tx_ops;
+	struct vdev_mlme_obj *mlme_obj;
+	bool tpe_change = false;
+
+	if (!wlan_reg_is_ext_tpc_supported(mac_ctx->psoc))
+		return true;
+	tx_ops = wlan_reg_get_tx_ops(mac_ctx->psoc);
+
+	if (!tx_ops || !tx_ops->set_tpc_power)
+		return false;
+
+	mlme_obj = wlan_vdev_mlme_get_cmpt_obj(session->vdev);
+	if (!mlme_obj)
+		return false;
+
+	if (session->opmode == QDF_STA_MODE ||
+	    session->opmode == QDF_P2P_CLIENT_MODE)
+		lim_process_tpe_ie_from_beacon(mac_ctx, session,
+				       &session->lim_join_req->bssDescription,
+				       &tpe_change);
+
+	if (session->opmode == QDF_SAP_MODE ||
+	    session->opmode == QDF_P2P_GO_MODE)
+		mlme_obj->reg_tpc_obj.num_pwr_levels = 0;
+
+	lim_calculate_tpc(mac_ctx, session, false, 0, false);
+
+	tx_ops->set_tpc_power(mac_ctx->psoc, session->vdev_id,
+			      &mlme_obj->reg_tpc_obj);
+	return true;
+}
+
+/*
+ * lim_get_tx_power() - Function to get the Tx power of the center frequency
+ * of the sap interface.
+ *
+ * @reg_tpc: reg_tpc mlme obj pointer
+ * @freq: center frequency of the SAP.
+ *
+ * Return: tx power
+ */
+static uint8_t
+lim_get_tx_power(struct reg_tpc_power_info *reg_tpc, qdf_freq_t freq)
+{
+	int i;
+
+	for (i = 0; i < reg_tpc->num_pwr_levels; i++) {
+		if (reg_tpc->chan_power_info[i].chan_cfreq == freq)
+			return reg_tpc->chan_power_info[i].tx_power;
+	}
+
+	return 0;
+}
+
+struct pe_session *
+lim_get_concurrent_session(struct mac_context *mac_ctx, uint8_t vdev_id,
+			   enum QDF_OPMODE opmode)
+{
+	uint8_t mac_id, conc_vdev_id;
+	struct pe_session *session;
+
+	policy_mgr_get_mac_id_by_session_id(mac_ctx->psoc, vdev_id, &mac_id);
+
+	conc_vdev_id = policy_mgr_get_conc_vdev_on_same_mac(mac_ctx->psoc,
+							    vdev_id, mac_id);
+
+	session = pe_find_session_by_vdev_id(mac_ctx, conc_vdev_id);
+	if (!session)
+		return NULL;
+
+	switch (opmode) {
+	case QDF_STA_MODE:
+	case QDF_P2P_CLIENT_MODE:
+		if (session->opmode != QDF_SAP_MODE &&
+		    session->opmode != QDF_P2P_GO_MODE)
+			return NULL;
+		break;
+	case QDF_SAP_MODE:
+	case QDF_P2P_GO_MODE:
+		if (session->opmode != QDF_STA_MODE &&
+		    session->opmode != QDF_P2P_CLIENT_MODE)
+			return NULL;
+		break;
+	default:
+		return NULL;
+	}
+
+	return session;
+}
+
+QDF_STATUS
+lim_update_tx_power(struct mac_context *mac_ctx, struct pe_session *sap_session,
+		    struct pe_session *sta_session, bool restore_sta_power)
+{
+	uint8_t pwr_level;
+	struct vdev_mlme_obj *sta_mlme_obj, *sap_mlme_obj;
+	struct reg_tpc_power_info *reg_info;
+	uint8_t tx_power, i;
+
+	sta_mlme_obj = wlan_vdev_mlme_get_cmpt_obj(sta_session->vdev);
+	sap_mlme_obj = wlan_vdev_mlme_get_cmpt_obj(sap_session->vdev);
+
+	if (!sta_mlme_obj || !sap_mlme_obj)
+		return QDF_STATUS_E_FAILURE;
+
+	if (restore_sta_power) {
+		/* SAP interface is removed, restore the STA power */
+		wlan_set_tpc_update_required_for_sta(sap_session->vdev, false);
+		sta_session->sta_follows_sap_power = false;
+		lim_set_tpc_power(mac_ctx, sta_session);
+	} else {
+		/*
+		 * SAP and STA are in different AP power types. Therefore,
+		 * update the reg_tpc_obj of STA with new power levels.
+		 * Do not send new TPC power to FW.
+		 */
+		sta_session->sta_follows_sap_power = true;
+
+		if (sta_mlme_obj->reg_tpc_obj.power_type_6g ==
+		    sap_mlme_obj->reg_tpc_obj.power_type_6g) {
+			pe_err("STA and SAP are in same power type");
+			return QDF_STATUS_E_FAILURE;
+		}
+		pe_debug("STA is moved to %d from %d power type",
+			 sap_mlme_obj->reg_tpc_obj.power_type_6g,
+			 sta_mlme_obj->reg_tpc_obj.power_type_6g);
+		sta_mlme_obj->reg_tpc_obj.power_type_6g =
+			sap_mlme_obj->reg_tpc_obj.power_type_6g;
+
+		tx_power = lim_get_tx_power(&sap_mlme_obj->reg_tpc_obj,
+					    sap_session->curr_op_freq);
+
+		reg_info = &sta_mlme_obj->reg_tpc_obj;
+		pwr_level = reg_info->num_pwr_levels;
+		for (i = 0; i < pwr_level; i++)
+			reg_info->chan_power_info[i].tx_power = tx_power;
+		wlan_set_tpc_update_required_for_sta(sap_session->vdev, true);
+	}
+	return QDF_STATUS_SUCCESS;
+}
+
+bool
+lim_is_power_change_required_for_sta(struct mac_context *mac_ctx,
+				     struct pe_session *sta_session,
+				     struct pe_session *sap_session)
+{
+	enum channel_state channel_state;
+	struct vdev_mlme_obj *mlme_obj;
+	uint32_t ap_power_type_6g = 0;
+
+	channel_state =
+		wlan_reg_get_channel_state_for_pwrmode(mac_ctx->pdev,
+						       sap_session->curr_op_freq,
+						       REG_AP_VLP);
+
+	mlme_obj = wlan_vdev_mlme_get_cmpt_obj(sap_session->vdev);
+	if (!mlme_obj) {
+		pe_err("vdev component object is NULL");
+		return false;
+	}
+
+	if (sta_session->curr_op_freq != sap_session->curr_op_freq) {
+		pe_err("STA and SAP are not in same frequency, do not change TPC power");
+		return false;
+	}
+
+	wlan_reg_get_cur_6g_ap_pwr_type(mac_ctx->pdev, &ap_power_type_6g);
+
+	if (sta_session->ap_power_type_6g == REG_INDOOR_AP &&
+	    channel_state & CHANNEL_STATE_ENABLE &&
+	    ap_power_type_6g == REG_VERY_LOW_POWER_AP) {
+		pe_debug("Change the power type of STA from LPI to VLP");
+		return true;
+	}
+
+	return false;
+}
+
+void
+lim_check_conc_power_for_csa(struct mac_context *mac_ctx,
+			     struct pe_session *sap_session)
+{
+	struct pe_session *sta_session;
+	bool update_required_scc_sta_power =
+			wlan_get_tpc_update_required_for_sta(sap_session->vdev);
+
+	/*
+	 * If SCC power has changed and concurrent session doesn't exist,
+	 * then STA must have got deleted or moved out of 6GHz.
+	 * In that case, reset the change scc power flag for SAP.
+	 */
+	sta_session = lim_get_concurrent_session(mac_ctx, sap_session->vdev_id,
+						 sap_session->opmode);
+	if (!sta_session) {
+		pe_debug("STA session doesn't exist");
+		return;
+	}
+
+	/* If SCC power has changed and the SAP is moving away from 6GHz,
+	 * reset the scc power flag in SAP vdev and restore the STA
+	 * power
+	 */
+	if (update_required_scc_sta_power &&
+	    !WLAN_REG_IS_6GHZ_CHAN_FREQ(sap_session->curr_op_freq) &&
+	    WLAN_REG_IS_6GHZ_CHAN_FREQ(sta_session->curr_op_freq)) {
+		pe_debug("SAP has moved from 6GHz, restore STA power");
+		lim_update_tx_power(mac_ctx, sap_session, sta_session, true);
+		return;
+	}
+
+	/* If SAP is moving to 6GHz. Then:
+	 * a) If change scc power is not set, check if it needs to be set
+	 *    If it is getting set, then send new tpc power to FW.
+	 * b) If change scc power is already set, then SAP is moving from one
+	 *    6GHz to another 6GHz. Recompute the TPC.
+	 */
+	if (WLAN_REG_IS_6GHZ_CHAN_FREQ(sap_session->curr_op_freq) &&
+	    sta_session &&
+	    WLAN_REG_IS_6GHZ_CHAN_FREQ(sta_session->curr_op_freq) &&
+	    (wlan_vdev_mlme_get_state(sap_session->vdev) == WLAN_VDEV_S_UP)) {
+		if (lim_is_power_change_required_for_sta(mac_ctx, sta_session,
+							 sap_session)) {
+			lim_set_tpc_power(mac_ctx, sap_session);
+			if (lim_update_tx_power(mac_ctx, sap_session,
+						sta_session, false) ==
+							QDF_STATUS_SUCCESS)
+				wlan_set_tpc_update_required_for_sta(
+							sap_session->vdev,
+							true);
+		}
+	}
+}
+
+void
+lim_cleanup_power_change(struct mac_context *mac_ctx,
+			 struct pe_session *session)
+{
+	struct pe_session *sap_session;
+
+	if (session->opmode != QDF_STA_MODE &&
+	    session->opmode != QDF_P2P_CLIENT_MODE)
+		return;
+
+	sap_session =
+		lim_get_concurrent_session(mac_ctx, session->vdev_id,
+					   session->opmode);
+	if (!sap_session)
+		return;
+
+	wlan_set_tpc_update_required_for_sta(sap_session->vdev, false);
 }

@@ -545,7 +545,7 @@ void wma_print_he_cap(tDot11fIEhe_cap *he_cap)
 	wma_debug("HE Capabilities:");
 
 	/* HE MAC capabilities */
-	wma_nofl_debug("\tHTC-HE conrol: 0x%01x", he_cap->htc_he);
+	wma_nofl_debug("\tHTC-HE control: 0x%01x", he_cap->htc_he);
 	wma_nofl_debug("\tTWT Requestor support: 0x%01x", he_cap->twt_request);
 	wma_nofl_debug("\tTWT Responder support: 0x%01x", he_cap->twt_responder);
 	wma_nofl_debug("\tFragmentation support: 0x%02x", he_cap->fragmentation);
@@ -828,7 +828,7 @@ void wma_print_he_mac_cap_w1(uint32_t mac_cap)
 {
 	wma_debug("HE MAC Capabilities:");
 
-	wma_nofl_debug("\tHTC-HE conrol: 0x%01x", WMI_HECAP_MAC_HECTRL_GET(mac_cap));
+	wma_nofl_debug("\tHTC-HE control: 0x%01x", WMI_HECAP_MAC_HECTRL_GET(mac_cap));
 	wma_nofl_debug("\tTWT Requestor support: 0x%01x",
 		      WMI_HECAP_MAC_TWTREQ_GET(mac_cap));
 	wma_nofl_debug("\tTWT Responder support: 0x%01x",
@@ -1272,7 +1272,8 @@ void wma_populate_peer_he_cap(struct peer_assoc_params *peer,
 			 WMA_MCS_12_13_MAP_L80) & WMA_MCS_12_13_PEER_RATE_MAP;
 	}
 
-	if (params->ch_width > CH_WIDTH_80MHZ) {
+	if (params->ch_width > CH_WIDTH_80MHZ ||
+	    params->staType == STA_ENTRY_TDLS_PEER) {
 		peer->peer_he_mcs_count = WMI_HOST_MAX_HE_RATE_SET;
 		peer->peer_he_rx_mcs_set[1] |=
 			params->supportedRates.rx_he_mcs_map_160;

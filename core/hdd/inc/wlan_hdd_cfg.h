@@ -207,6 +207,9 @@ struct hdd_config {
 #ifdef FEATURE_SET
 	bool get_wifi_features;
 #endif
+#ifdef FEATURE_RUNTIME_PM
+	uint16_t cpu_cxpc_threshold;
+#endif
 };
 
 /**

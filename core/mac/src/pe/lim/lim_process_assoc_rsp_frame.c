@@ -49,7 +49,6 @@
 #include <lim_mlo.h>
 #include "parser_api.h"
 #include "wlan_twt_cfg_ext_api.h"
-#include "wlan_action_oui_main.h"
 
 /**
  * lim_update_stads_htcap() - Updates station Descriptor HT capability
@@ -153,7 +152,6 @@ void lim_update_assoc_sta_datas(struct mac_context *mac_ctx,
 	sta_ds->mlmStaContext.authType = session_entry->limCurrentAuthType;
 
 	/* Add capabilities information, rates and AID */
-	sta_ds->assocId = assoc_rsp->aid & 0x3FFF;
 	sta_ds->mlmStaContext.capabilityInfo = assoc_rsp->capabilityInfo;
 	sta_ds->shortPreambleEnabled =
 		(uint8_t) assoc_rsp->capabilityInfo.shortPreamble;
@@ -456,7 +454,7 @@ static void lim_update_ese_tsm(struct mac_context *mac_ctx,
  * @assoc_rsp:  pointer to assoc response
  *
  * This function is called by lim_process_assoc_rsp_frame() to
- * update STA DS with ext capablities.
+ * update STA DS with ext capabilities.
  *
  * Return: None
  */
@@ -766,7 +764,7 @@ lim_update_iot_aggr_sz(struct mac_context *mac_ctx, uint8_t *ie_ptr,
 /**
  * hdd_cm_update_mcs_rate_set() - Update MCS rate set from HT capability
  * @vdev: Pointer to vdev boject
- * @ht_cap: pointer to parsed HT capablity
+ * @ht_cap: pointer to parsed HT capability
  *
  * Return: None.
  */
@@ -949,8 +947,6 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 	enum ani_akm_type auth_type;
 	bool sha384_akm, twt_support_in_11n = false;
 	struct s_ext_cap *ext_cap;
-	bool bad_ap;
-	struct action_oui_search_attr attr = {0};
 
 	assoc_cnf.resultCode = eSIR_SME_SUCCESS;
 	/* Update PE session Id */
@@ -1452,25 +1448,8 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 	lim_update_assoc_sta_datas(mac_ctx, sta_ds, assoc_rsp,
 				   session_entry, beacon);
 
-	/*
-	 * One special AP sets MU EDCA timer as 255 wrongly in both beacon and
-	 * assoc rsp, lead to 2 sec SU upload data stall periodically.
-	 * To fix it, reset MU EDCA timer to 1 and config to F/W for such AP.
-	 */
 	if (lim_is_session_he_capable(session_entry)) {
-		attr.ie_data = ie;
-		attr.ie_length = ie_len;
-		bad_ap = wlan_action_oui_search(mac_ctx->psoc,
-						&attr,
-						ACTION_OUI_DISABLE_MU_EDCA);
 		session_entry->mu_edca_present = assoc_rsp->mu_edca_present;
-		if (session_entry->mu_edca_present && bad_ap) {
-			pe_debug("IoT AP with bad mu edca timer, reset to 1");
-			assoc_rsp->mu_edca.acbe.mu_edca_timer = 1;
-			assoc_rsp->mu_edca.acbk.mu_edca_timer = 1;
-			assoc_rsp->mu_edca.acvi.mu_edca_timer = 1;
-			assoc_rsp->mu_edca.acvo.mu_edca_timer = 1;
-		}
 		if (session_entry->mu_edca_present) {
 			pe_debug("Save MU EDCA params to session");
 			session_entry->ap_mu_edca_params[QCA_WLAN_AC_BE] =

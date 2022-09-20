@@ -524,9 +524,8 @@ QDF_STATUS cm_roam_sync_event_handler_cb(struct wlan_objmgr_vdev *vdev,
 	 * processing beacon. Any mismatch of this value with firmware phymode
 	 * results in firmware assert.
 	 */
-	cm_update_phymode_on_roam(sync_ind->roamed_vdev_id,
-				  sync_ind->bssid.bytes,
-				  &sync_ind->chan);
+	cm_update_phymode_on_roam(vdev_id,
+				  sync_ind);
 	cm_fw_roam_sync_propagation(psoc,
 				    vdev_id,
 				    sync_ind);

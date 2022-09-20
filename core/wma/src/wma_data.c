@@ -83,6 +83,7 @@
 #include <wlan_cm_api.h>
 #include "wlan_pkt_capture_ucfg_api.h"
 #include "wma_eht.h"
+#include "wlan_mlo_mgr_sta.h"
 
 struct wma_search_rate {
 	int32_t rate;
@@ -2286,7 +2287,9 @@ QDF_STATUS wma_tx_packet(void *wma_context, void *tx_frame, uint16_t frmLen,
 	struct ieee80211_frame *wh;
 	struct wlan_objmgr_peer *peer = NULL;
 	struct wlan_objmgr_psoc *psoc;
+	struct wlan_objmgr_vdev *vdev = NULL;
 	void *mac_addr;
+	uint8_t *mld_addr = NULL;
 	bool is_5g = false;
 	uint8_t pdev_id;
 
@@ -2716,6 +2719,31 @@ QDF_STATUS wma_tx_packet(void *wma_context, void *tx_frame, uint16_t frmLen,
 		mac_addr = wh->i_addr2;
 		peer = wlan_objmgr_get_peer(psoc, pdev_id, mac_addr,
 					WLAN_MGMT_NB_ID);
+		if (!peer) {
+			vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc,
+								    vdev_id,
+								    WLAN_MGMT_NB_ID);
+			if (!vdev) {
+				wma_err("vdev is null");
+				cds_packet_free((void *)tx_frame);
+				goto error;
+			}
+			if (wlan_vdev_mlme_is_mlo_vdev(vdev)) {
+				mld_addr = wlan_vdev_mlme_get_mldaddr(vdev);
+				if (!mld_addr) {
+					wma_err("mld addr is null");
+					wlan_objmgr_vdev_release_ref(vdev, WLAN_MGMT_NB_ID);
+					cds_packet_free((void *)tx_frame);
+					goto error;
+				}
+				peer = wlan_objmgr_get_peer(psoc, pdev_id,
+							    mld_addr,
+							    WLAN_MGMT_NB_ID);
+				wma_debug("mld mac addr " QDF_MAC_ADDR_FMT,
+					  QDF_MAC_ADDR_REF(mld_addr));
+			}
+			wlan_objmgr_vdev_release_ref(vdev, WLAN_MGMT_NB_ID);
+		}
 	}
 
 	if (ucfg_pkt_capture_get_pktcap_mode(psoc) &

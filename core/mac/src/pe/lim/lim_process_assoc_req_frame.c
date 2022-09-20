@@ -715,7 +715,7 @@ lim_process_for_spectrum_mgmt(struct mac_context *mac_ctx, tSirMacAddr sa,
 		} /* if(assoc.capabilityInfo.spectrumMgt) */
 		else {
 			/*
-			 * As per the capabiities, the spectrum management is
+			 * As per the capabilities, the spectrum management is
 			 * not enabled on the station. The AP may allow the
 			 * associations to happen even if spectrum management
 			 * is not allowed, if the transmit power of station is
@@ -2209,14 +2209,14 @@ bool lim_send_assoc_ind_to_sme(struct mac_context *mac_ctx,
 
 	if (!peer_idx && !partner_peer_idx) {
 		/* Could not assign AID. Reject association */
-		pe_err("PeerIdx not avaialble. Reject associaton");
+		pe_err("PeerIdx not available. Reject associaton");
 		lim_reject_association(mac_ctx, sa, sub_type,
 				       true, auth_type, peer_idx, false,
 				       STATUS_UNSPECIFIED_FAILURE,
 				       session);
 		return false;
 	} else if (!peer_idx) {
-		pe_err("mlo partner PeerIdx not avaialble. Reject associaton");
+		pe_err("mlo partner PeerIdx not available. Reject associaton");
 		lim_send_sme_max_assoc_exceeded_ntf(mac_ctx, sa,
 						    session->smeSessionId);
 		return false;
@@ -2572,7 +2572,7 @@ QDF_STATUS lim_proc_assoc_req_frm_cmn(struct mac_context *mac_ctx,
 		 * WAR: In P2P GO mode, if the P2P client device
 		 * is only HT capable and not VHT capable, but the P2P
 		 * GO device is VHT capable and advertises 2x2 NSS with
-		 * HT capablity client device, which results in IOT
+		 * HT capability client device, which results in IOT
 		 * issues.
 		 * When GO is operating in DBS mode, GO beacons
 		 * advertise 2x2 capability but include OMN IE to

@@ -726,7 +726,7 @@ void hdd_thermal_mitigation_unregister(struct hdd_context *hdd_ctx,
  * @psoc: psoc object
  * @info: thermal throttle information from target
  *
- * Retrun: QDF_STATUS_SUCCESS for success.
+ * Return: QDF_STATUS_SUCCESS for success.
  */
 static QDF_STATUS
 hdd_notify_thermal_throttle_handler(struct wlan_objmgr_psoc *psoc,

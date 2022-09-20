@@ -199,6 +199,9 @@ QDF_STATUS hdd_wlan_unregister_mlo_interfaces(struct hdd_adapter *adapter,
 		link_adapter = mlo_adapter_info->link_adapter[i];
 		if (!link_adapter)
 			continue;
+		qdf_copy_macaddr(&adapter_mac, &link_adapter->mac_addr);
+		ucfg_dp_destroy_intf(link_adapter->hdd_ctx->psoc, &adapter_mac);
+		hdd_remove_adapter(link_adapter->hdd_ctx, link_adapter);
 		hdd_mlo_close_adapter(link_adapter, rtnl_held);
 	}
 

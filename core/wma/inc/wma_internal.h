@@ -221,19 +221,6 @@ wma_roam_pmkid_request_event_handler(void *handle,
 #endif /* WLAN_FEATURE_FIPS */
 
 /**
- * wma_roam_auth_offload_event_handler() - Handle LFR-3.0 Roam authentication
- * offload event.
- * @handle: wma_handle
- * @event:  rso auth offload event data pointer
- * @len: length of the data
- *
- * Handles roam authentication offload event from firmware which is triggered
- * after roam candidate selection.
- */
-int wma_roam_auth_offload_event_handler(WMA_HANDLE handle, uint8_t *event,
-					uint32_t len);
-
-/**
  * wma_roam_stats_event_handler() - Handle the WMI_ROAM_STATS_EVENTID
  * from target
  * @handle: wma_handle

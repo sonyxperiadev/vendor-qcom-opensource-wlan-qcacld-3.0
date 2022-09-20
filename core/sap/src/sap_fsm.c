@@ -61,6 +61,7 @@
 #include "wlan_mlme_vdev_mgr_interface.h"
 #include "wlan_vdev_mgr_utils_api.h"
 #include "wlan_pre_cac_api.h"
+#include <wlan_cmn_ieee80211.h>
 
 /*----------------------------------------------------------------------------
  * Preprocessor Definitions and Constants
@@ -1249,7 +1250,7 @@ static void sap_acs_scan_freq_list_optimize(struct sap_context *sap_ctx,
 		if (qdf_system_time_before(
 		    qdf_get_time_of_the_day_ms(),
 		    ts_last_scan + sap_ctx->acs_cfg->last_scan_ageout_time)) {
-			sap_info("ACS chan %d skipped from scan as last scan ts %d\n",
+			sap_info("ACS chan %d skipped from scan as last scan ts %lu\n",
 				 list->chan[loop_count].freq,
 				 qdf_get_time_of_the_day_ms() - ts_last_scan);
 
@@ -1785,6 +1786,7 @@ static void sap_handle_acs_scan_event(struct sap_context *sap_context,
  * Function to fill OWE IE in assoc indication
  * @assoc_ind: SAP STA association indication
  * @sme_assoc_ind: SME association indication
+ * @reassoc: True if it is reassoc frame
  *
  * This function is to get OWE IEs (RSN IE, DH IE etc) from assoc request
  * and fill them in association indication.
@@ -1792,19 +1794,37 @@ static void sap_handle_acs_scan_event(struct sap_context *sap_context,
  * Return: true for success and false for failure
  */
 static bool sap_fill_owe_ie_in_assoc_ind(tSap_StationAssocIndication *assoc_ind,
-					 struct assoc_ind *sme_assoc_ind)
+					 struct assoc_ind *sme_assoc_ind,
+					 bool reassoc)
 {
 	uint32_t owe_ie_len, rsn_ie_len, dh_ie_len;
 	const uint8_t *rsn_ie, *dh_ie;
+	uint8_t *assoc_req_ie;
+	uint16_t assoc_req_ie_len;
 
-	if (assoc_ind->assocReqLength < ASSOC_REQ_IE_OFFSET) {
-		sap_err("Invalid assoc req");
-		return false;
+	if (reassoc) {
+		if (assoc_ind->assocReqLength < WLAN_REASSOC_REQ_IES_OFFSET) {
+			sap_err("Invalid reassoc req");
+			return false;
+		}
+
+		assoc_req_ie = assoc_ind->assocReqPtr +
+			       WLAN_REASSOC_REQ_IES_OFFSET;
+		assoc_req_ie_len = assoc_ind->assocReqLength -
+				   WLAN_REASSOC_REQ_IES_OFFSET;
+	} else {
+		if (assoc_ind->assocReqLength < WLAN_ASSOC_REQ_IES_OFFSET) {
+			sap_err("Invalid assoc req");
+			return false;
+		}
+
+		assoc_req_ie = assoc_ind->assocReqPtr +
+			       WLAN_ASSOC_REQ_IES_OFFSET;
+		assoc_req_ie_len = assoc_ind->assocReqLength -
+				   WLAN_ASSOC_REQ_IES_OFFSET;
 	}
-
 	rsn_ie = wlan_get_ie_ptr_from_eid(DOT11F_EID_RSN,
-			       assoc_ind->assocReqPtr + ASSOC_REQ_IE_OFFSET,
-			       assoc_ind->assocReqLength - ASSOC_REQ_IE_OFFSET);
+					  assoc_req_ie, assoc_req_ie_len);
 	if (!rsn_ie) {
 		sap_err("RSN IE is not present");
 		return false;
@@ -1817,8 +1837,7 @@ static bool sap_fill_owe_ie_in_assoc_ind(tSap_StationAssocIndication *assoc_ind,
 	}
 
 	dh_ie = wlan_get_ext_ie_ptr_from_ext_id(DH_OUI_TYPE, DH_OUI_TYPE_SIZE,
-		   assoc_ind->assocReqPtr + ASSOC_REQ_IE_OFFSET,
-		   (uint16_t)(assoc_ind->assocReqLength - ASSOC_REQ_IE_OFFSET));
+						assoc_req_ie, assoc_req_ie_len);
 	if (!dh_ie) {
 		sap_err("DH IE is not present");
 		return false;
@@ -2269,7 +2288,8 @@ QDF_STATUS sap_signal_hdd_event(struct sap_context *sap_ctx,
 		assoc_ind->ecsa_capable = csr_roaminfo->ecsa_capable;
 		if (csr_roaminfo->owe_pending_assoc_ind) {
 			if (!sap_fill_owe_ie_in_assoc_ind(assoc_ind,
-					 csr_roaminfo->owe_pending_assoc_ind)) {
+					 csr_roaminfo->owe_pending_assoc_ind,
+					 csr_roaminfo->fReassocReq)) {
 				sap_err("Failed to fill OWE IE");
 				qdf_mem_free(csr_roaminfo->
 					     owe_pending_assoc_ind);
@@ -3008,6 +3028,57 @@ static void sap_validate_chanmode_and_chwidth(struct mac_context *mac_ctx,
 			 orig_phymode, sap_ctx->phyMode);
 }
 
+static bool
+wlansap_is_power_change_required(struct mac_context *mac_ctx,
+				 qdf_freq_t sap_freq)
+{
+	struct wlan_objmgr_vdev *sta_vdev;
+	uint8_t sta_vdev_id;
+	enum hw_mode_bandwidth ch_wd;
+	uint8_t country[CDS_COUNTRY_CODE_LEN + 1];
+	enum channel_state state;
+	uint32_t ap_pwr_type_6g = 0;
+	bool indoor_ch_support = false;
+
+	if (!mac_ctx || !mac_ctx->psoc || !mac_ctx->pdev)
+		return false;
+
+	if (!policy_mgr_is_sta_present_on_freq(mac_ctx->psoc, &sta_vdev_id,
+					       sap_freq, &ch_wd)) {
+		return false;
+	}
+
+	sta_vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac_ctx->psoc,
+							sta_vdev_id,
+							WLAN_LEGACY_SAP_ID);
+	if (!sta_vdev)
+		return false;
+
+	ap_pwr_type_6g = wlan_mlme_get_6g_ap_power_type(sta_vdev);
+
+	wlan_objmgr_vdev_release_ref(sta_vdev, WLAN_LEGACY_SAP_ID);
+
+	if (ap_pwr_type_6g == REG_VERY_LOW_POWER_AP)
+		return false;
+	ucfg_mlme_get_indoor_channel_support(mac_ctx->psoc, &indoor_ch_support);
+
+	if (ap_pwr_type_6g == REG_INDOOR_AP && indoor_ch_support) {
+		sap_debug("STA is connected to Indoor AP and indoor concurrency is supported");
+		return false;
+	}
+
+	wlan_reg_read_current_country(mac_ctx->psoc, country);
+	if (!wlan_reg_ctry_support_vlp(country)) {
+		sap_debug("Device country doesn't support VLP");
+		return false;
+	}
+
+	state = wlan_reg_get_channel_state_for_pwrmode(mac_ctx->pdev,
+						       sap_freq, REG_AP_VLP);
+
+	return state & CHANNEL_STATE_ENABLE;
+}
+
 /**
  * sap_goto_starting() - Trigger softap start
  * @sap_ctx: SAP context
@@ -3042,6 +3113,9 @@ static QDF_STATUS sap_goto_starting(struct sap_context *sap_ctx,
 	} else if (!policy_mgr_get_ap_6ghz_capable(mac_ctx->psoc,
 						   sap_ctx->sessionId, NULL)) {
 		return QDF_STATUS_E_FAILURE;
+	} else if (wlansap_is_power_change_required(mac_ctx,
+						    sap_ctx->chan_freq)) {
+		wlan_set_tpc_update_required_for_sta(sap_ctx->vdev, true);
 	}
 
 	/*

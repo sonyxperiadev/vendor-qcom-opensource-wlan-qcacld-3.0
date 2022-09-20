@@ -318,7 +318,7 @@ static qdf_nbuf_t htt_rx_buff_alloc(struct htt_pdev_t *pdev)
 }
 
 /**
- * htt_rx_ring_buf_attach() - retrun net buf to attach in ring
+ * htt_rx_ring_buf_attach() - return net buf to attach in ring
  * @pdev: pointer to device
  *
  * Return: nbuf or NULL

@@ -46,6 +46,9 @@ static void if_mgr_enable_roaming_on_vdev(struct wlan_objmgr_pdev *pdev,
 	vdev_id = wlan_vdev_get_id(vdev);
 	curr_vdev_id = roam_arg->curr_vdev_id;
 
+	if (wlan_vdev_mlme_is_mlo_vdev(vdev))
+		return;
+
 	if (curr_vdev_id != vdev_id &&
 	    vdev->vdev_mlme.vdev_opmode == QDF_STA_MODE &&
 	    vdev->vdev_mlme.mlme_state == WLAN_VDEV_S_UP) {

@@ -129,7 +129,7 @@
  * gEnableTDLSOffChannel - Enables off-channel support for TDLS link.
  * @Min: 0
  * @Max: 1
- * @Default: 0
+ * @Default: 1
  *
  * This ini is used to enable/disable off-channel support for TDLS link.
  *
@@ -143,7 +143,7 @@
  */
 #define CFG_TDLS_OFF_CHANNEL_ENABLED CFG_INI_BOOL( \
 	"gEnableTDLSOffChannel", \
-	0, \
+	1, \
 	"Enables off-channel support for TDLS")
 
 /*

@@ -92,6 +92,7 @@ lim_send_stop_bss_response(struct mac_context *mac_ctx, uint8_t vdev_id,
 	struct scheduler_msg msg = {0};
 	struct stop_bss_rsp *stop_bss_rsp;
 	struct pe_session *pe_session;
+	struct pe_session *sta_session;
 
 	pe_debug("Sending stop bss response with reasonCode: %s",
 		 lim_result_code_str(result_code));
@@ -100,6 +101,22 @@ lim_send_stop_bss_response(struct mac_context *mac_ctx, uint8_t vdev_id,
 	if (!pe_session) {
 		pe_err("Unable to find session for stop bss response");
 		return;
+	}
+
+	/*
+	 * STA LPI + SAP VLP is supported. For this STA should operate in VLP
+	 * power level of the SAP.
+	 *
+	 * For the STA, if the TPC is changed to VLP, then restore the original
+	 * power for the STA when SAP disconnects.
+	 */
+	if (wlan_get_tpc_update_required_for_sta(pe_session->vdev)) {
+		sta_session = lim_get_concurrent_session(mac_ctx, vdev_id,
+							 pe_session->opmode);
+		if (sta_session &&
+		    sta_session->curr_op_freq == pe_session->curr_op_freq)
+			lim_update_tx_power(mac_ctx, pe_session,
+					    sta_session, true);
 	}
 
 	stop_bss_rsp = qdf_mem_malloc(sizeof(*stop_bss_rsp));
@@ -1675,11 +1692,20 @@ prnt_log:
 }
 
 static bool lim_is_csa_channel_allowed(struct mac_context *mac_ctx,
+				       struct pe_session *session_entry,
 				       qdf_freq_t ch_freq1,
 				       uint32_t ch_freq2)
 {
 	bool is_allowed = true;
 	u32 cnx_count = 0;
+
+	if (!session_entry->vdev ||
+	    wlan_cm_is_vdev_disconnecting(session_entry->vdev) ||
+	    wlan_cm_is_vdev_disconnected(session_entry->vdev)) {
+		pe_warn("CSA is ignored, vdev %d is disconnecting/ed",
+			session_entry->vdev_id);
+		return false;
+	}
 
 	cnx_count = policy_mgr_get_connection_count(mac_ctx->psoc);
 	if ((cnx_count > 1) && !policy_mgr_is_hw_dbs_capable(mac_ctx->psoc) &&
@@ -1737,7 +1763,8 @@ static void lim_handle_sta_csa_param(struct mac_context *mac_ctx,
 		goto err;
 	}
 
-	if (!lim_is_csa_channel_allowed(mac_ctx, session_entry->curr_op_freq,
+	if (!lim_is_csa_channel_allowed(mac_ctx, session_entry,
+					session_entry->curr_op_freq,
 					csa_params->csa_chan_freq)) {
 		pe_debug("Channel switch is not allowed");
 		goto err;

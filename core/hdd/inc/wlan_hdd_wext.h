@@ -348,7 +348,7 @@ void hdd_wext_send_event(struct net_device *dev, unsigned int cmd,
 /**
  * hdd_dump_log_buffer() - dump log buffer history
  *
- * Reture: None
+ * Return: None
  */
 void hdd_dump_log_buffer(void);
 #else

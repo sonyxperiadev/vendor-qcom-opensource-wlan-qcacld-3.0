@@ -228,7 +228,7 @@ QDF_STATUS ucfg_p2p_roc_cancel_req(struct wlan_objmgr_psoc *soc,
 
 QDF_STATUS ucfg_p2p_cleanup_roc_by_vdev(struct wlan_objmgr_vdev *vdev)
 {
-	return wlan_p2p_cleanup_roc_by_vdev(vdev);
+	return wlan_p2p_cleanup_roc_by_vdev(vdev, true);
 }
 
 QDF_STATUS ucfg_p2p_cleanup_roc_by_psoc(struct wlan_objmgr_psoc *psoc)
@@ -246,7 +246,7 @@ QDF_STATUS ucfg_p2p_cleanup_roc_by_psoc(struct wlan_objmgr_psoc *psoc)
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	return p2p_cleanup_roc_sync(obj, NULL);
+	return p2p_cleanup_roc(obj, NULL, true);
 }
 
 QDF_STATUS ucfg_p2p_cleanup_tx_by_vdev(struct wlan_objmgr_vdev *vdev)

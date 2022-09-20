@@ -2829,6 +2829,18 @@ wlan_mlme_get_mgmt_max_retry(struct wlan_objmgr_psoc *psoc,
 			     uint8_t *max_retry);
 
 /**
+ * wlan_mlme_get_mgmt_6ghz_rate_support() - Get status of HE rates for
+ * 6GHz mgmt frames
+ * @psoc: pointer to psoc object
+ * @enable_he_mcs0_for_6ghz_mgmt: pointer to check for HE rates support
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+wlan_mlme_get_mgmt_6ghz_rate_support(struct wlan_objmgr_psoc *psoc,
+				     bool *enable_he_mcs0_for_6ghz_mgmt);
+
+/**
  * wlan_mlme_get_status_ring_buffer() - Get the
  * status of ring buffer
  * @psoc: pointer to psoc object
@@ -3555,18 +3567,18 @@ QDF_STATUS wlan_mlme_set_sta_mlo_conn_max_num(struct wlan_objmgr_psoc *psoc,
 uint8_t wlan_mlme_get_sta_mlo_conn_band_bmp(struct wlan_objmgr_psoc *psoc);
 
 /**
- * wlan_mlme_set_sta_mlo_simulataneous_links() - set mlo simulataneous links
+ * wlan_mlme_set_sta_mlo_simultaneous_links() - set mlo simultaneous links
  * @psoc: pointer to psoc object
  * @value: value to set
  *
  * Return: QDF Status
  */
 QDF_STATUS
-wlan_mlme_set_sta_mlo_simulataneous_links(struct wlan_objmgr_psoc *psoc,
-					  uint8_t value);
+wlan_mlme_set_sta_mlo_simultaneous_links(struct wlan_objmgr_psoc *psoc,
+					 uint8_t value);
 
 /**
- * wlan_mlme_get_sta_mlo_simultaneous_links() - get mlo simulataneous links
+ * wlan_mlme_get_sta_mlo_simultaneous_links() - get mlo simultaneous links
  * @psoc: pointer to psoc object
  *
  * Return: number of links

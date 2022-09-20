@@ -1280,6 +1280,7 @@ policy_mgr_nan_sap_pre_enable_conc_check(struct wlan_objmgr_psoc *psoc,
  * @psoc:	PSOC object information
  * @mode:	connection mode
  * @ch_freq:	target channel frequency to switch
+ * @bw:	target channel bandwidth
  * @vdev_id:	vdev id of channel switch interface
  * @forced:	forced to chan switch.
  * @reason:	request reason of CSA
@@ -1299,8 +1300,17 @@ policy_mgr_nan_sap_pre_enable_conc_check(struct wlan_objmgr_psoc *psoc,
 bool
 policy_mgr_allow_concurrency_csa(struct wlan_objmgr_psoc *psoc,
 				 enum policy_mgr_con_mode mode,
-				 uint32_t ch_freq, uint32_t vdev_id,
-				 bool forced, enum sap_csa_reason_code reason);
+				 uint32_t ch_freq, enum hw_mode_bandwidth bw,
+				 uint32_t vdev_id, bool forced,
+				 enum sap_csa_reason_code reason);
+
+/**
+ * policy_mgr_get_bw() - Convert phy_ch_width to hw_mode_bandwidth.
+ * @chan_width: phy_ch_width
+ *
+ * Return: hw_mode_bandwidth
+ */
+enum hw_mode_bandwidth policy_mgr_get_bw(enum phy_ch_width chan_width);
 
 /**
  * policy_mgr_get_first_connection_pcl_table_index() - provides the
@@ -2081,6 +2091,14 @@ QDF_STATUS policy_mgr_wait_for_connection_update(
  * Return: QDF_STATUS
  */
 QDF_STATUS policy_mgr_reset_connection_update(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * policy_mgr_reset_hw_mode_change() - Reset the hw mode change.
+ * @psoc: Pointer to PSOC object
+ *
+ * Return: none
+ */
+void policy_mgr_reset_hw_mode_change(struct wlan_objmgr_psoc *psoc);
 
 /**
  * policy_mgr_set_connection_update() - Set connection update
@@ -4320,6 +4338,22 @@ bool policy_mgr_is_mlo_in_mode_sbs(struct wlan_objmgr_psoc *psoc,
 				   uint8_t *mlo_vdev_lst, uint8_t *num_mlo);
 
 /**
+ * policy_mgr_is_mlo_in_mode_dbs() - Check whether MLO present is DBS
+ * @psoc: PSOC object information
+ * @mode: mlo mode to check
+ * @mlo_vdev_lst: Pointer to mlo vdev list, this function wil fill this with
+ *                list of mlo vdev
+ * @num_mlo: Pointer to number of mlo link, this function will fill this with
+ *           number of mlo links
+ *
+ * Return: True if MLO one link is on 2 GHz band and other links on
+ * 5/6 GHz band
+ */
+bool policy_mgr_is_mlo_in_mode_dbs(struct wlan_objmgr_psoc *psoc,
+				   enum policy_mgr_con_mode mode,
+				   uint8_t *mlo_vdev_lst, uint8_t *num_mlo);
+
+/**
  * policy_mgr_is_mlo_in_mode_emlsr() - Check whether current connection is eMLSR
  * @psoc: PSOC object information
  * @mlo_vdev_lst: Pointer to mlo vdev list, this function wil fill this with
@@ -4400,6 +4434,14 @@ static inline bool policy_mgr_is_mlo_sta_present(struct wlan_objmgr_psoc *psoc)
 
 static inline
 bool policy_mgr_is_mlo_in_mode_sbs(struct wlan_objmgr_psoc *psoc,
+				   enum policy_mgr_con_mode mode,
+				   uint8_t *mlo_vdev_lst, uint8_t *num_mlo)
+{
+	return false;
+}
+
+static inline
+bool policy_mgr_is_mlo_in_mode_dbs(struct wlan_objmgr_psoc *psoc,
 				   enum policy_mgr_con_mode mode,
 				   uint8_t *mlo_vdev_lst, uint8_t *num_mlo)
 {

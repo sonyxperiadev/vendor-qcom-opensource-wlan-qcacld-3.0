@@ -411,6 +411,44 @@ cm_fils_update_erp_seq_num(struct wlan_objmgr_vdev *vdev,
 {}
 #endif
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static QDF_STATUS
+cm_fill_bssid_freq_info(uint8_t vdev_id,
+			struct roam_offload_synch_ind *roam_synch_data,
+			struct cm_vdev_join_rsp *rsp)
+{
+	uint8_t i;
+	struct ml_setup_link_param *ml_link;
+
+	for (i = 0; i < roam_synch_data->num_setup_links; i++) {
+		ml_link = &roam_synch_data->ml_link[i];
+		if (vdev_id == ml_link->vdev_id) {
+			qdf_copy_macaddr(&rsp->connect_rsp.bssid,
+					 &ml_link->link_addr);
+			rsp->connect_rsp.freq = ml_link->channel.mhz;
+
+			return QDF_STATUS_SUCCESS;
+		}
+	}
+
+	qdf_copy_macaddr(&rsp->connect_rsp.bssid, &roam_synch_data->bssid);
+	rsp->connect_rsp.freq = roam_synch_data->chan_freq;
+
+	return QDF_STATUS_SUCCESS;
+}
+#else
+static QDF_STATUS
+cm_fill_bssid_freq_info(uint8_t vdev_id,
+			struct roam_offload_synch_ind *roam_synch_data,
+			struct cm_vdev_join_rsp *rsp)
+{
+	qdf_copy_macaddr(&rsp->connect_rsp.bssid, &roam_synch_data->bssid);
+	rsp->connect_rsp.freq = roam_synch_data->chan_freq;
+
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 static QDF_STATUS
 cm_fill_roam_info(struct wlan_objmgr_vdev *vdev,
 		  struct roam_offload_synch_ind *roam_synch_data,
@@ -423,7 +461,13 @@ cm_fill_roam_info(struct wlan_objmgr_vdev *vdev,
 	if (!rsp->connect_rsp.roaming_info)
 			return QDF_STATUS_E_NOMEM;
 	rsp->connect_rsp.vdev_id = wlan_vdev_get_id(vdev);
-	qdf_copy_macaddr(&rsp->connect_rsp.bssid, &roam_synch_data->bssid);
+	status = cm_fill_bssid_freq_info(wlan_vdev_get_id(vdev),
+					 roam_synch_data, rsp);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		mlme_err(CM_PREFIX_FMT "Failed to get bssid and freq",
+			 CM_PREFIX_REF(rsp->connect_rsp.vdev_id, cm_id));
+		return QDF_STATUS_E_FAILURE;
+	}
 
 	if (!util_scan_is_null_ssid(&roam_synch_data->ssid))
 		wlan_vdev_mlme_set_ssid(vdev,
@@ -442,7 +486,6 @@ cm_fill_roam_info(struct wlan_objmgr_vdev *vdev,
 	rsp->connect_rsp.is_reassoc = true;
 	rsp->connect_rsp.connect_status = QDF_STATUS_SUCCESS;
 	rsp->connect_rsp.cm_id = cm_id;
-	rsp->connect_rsp.freq = roam_synch_data->chan_freq;
 	rsp->nss = roam_synch_data->nss;
 
 	if (roam_synch_data->ric_data_len) {
@@ -843,7 +886,7 @@ cm_fw_roam_sync_propagation(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 	if (wlan_vdev_mlme_is_mlo_vdev(vdev))
 		policy_mgr_move_vdev_from_disabled_to_connection_tbl(psoc,
 								     vdev_id);
-	mlme_cm_osif_connect_complete(vdev, connect_rsp);
+	mlo_roam_copy_partner_info(connect_rsp, roam_synch_data);
 
 	/**
 	 * Don't send roam_sync complete for MLO link vdevs.
@@ -867,7 +910,6 @@ cm_fw_roam_sync_propagation(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 		}
 		wlan_cm_tgt_send_roam_sync_complete_cmd(psoc, vdev_id);
 
-		mlo_roam_copy_partner_info(connect_rsp, roam_synch_data);
 		mlo_roam_update_connected_links(vdev, connect_rsp);
 		mlo_set_single_link_ml_roaming(psoc, vdev_id,
 					       roam_synch_data, false);
@@ -883,6 +925,7 @@ cm_fw_roam_sync_propagation(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 			 CM_PREFIX_REF(vdev_id, cm_id));
 		goto error;
 	}
+	mlme_cm_osif_connect_complete(vdev, connect_rsp);
 	mlme_cm_osif_roam_complete(vdev);
 	mlme_debug(CM_PREFIX_FMT, CM_PREFIX_REF(vdev_id, cm_id));
 	if (!wlan_vdev_mlme_is_mlo_link_vdev(vdev))
@@ -969,8 +1012,6 @@ QDF_STATUS cm_fw_roam_complete(struct cnx_mgr *cm_ctx, void *data)
 		goto end;
 	}
 
-	/* Check if FW as indicated this link as disabled */
-	cm_get_and_disable_link_from_roam_ind(psoc, vdev_id, roam_synch_data);
 	/*
 	 * Following operations need to be done once roam sync
 	 * completion is sent to FW, hence called here:
@@ -979,7 +1020,13 @@ QDF_STATUS cm_fw_roam_complete(struct cnx_mgr *cm_ctx, void *data)
 	 * 2) Force SCC switch if needed
 	 */
 	/* first update connection info from wma interface */
-	policy_mgr_update_connection_info(psoc, vdev_id);
+	status = policy_mgr_update_connection_info(psoc, vdev_id);
+	if (status == QDF_STATUS_NOT_INITIALIZED)
+		policy_mgr_incr_active_session(psoc, QDF_STA_MODE, vdev_id);
+
+	/* Check if FW as indicated this link as disabled */
+	cm_get_and_disable_link_from_roam_ind(psoc, vdev_id, roam_synch_data);
+
 	/* then update remaining parameters from roam sync ctx */
 	if (roam_synch_data->hw_mode_trans_present)
 		policy_mgr_hw_mode_transition_cb(

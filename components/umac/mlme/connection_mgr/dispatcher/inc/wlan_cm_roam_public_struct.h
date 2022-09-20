@@ -1735,6 +1735,25 @@ enum roam_rt_stats_params {
 	ROAM_RT_STATS_SUSPEND_MODE_ENABLE,
 };
 
+/*
+ * struct wlan_roam_mlo_config - Roam MLO config parameters
+ * @vdev_id: VDEV id
+ * @partner_link_addr: Assigned link address which can be used as self
+ *  link addr when vdev is not created
+ * @support_link_num: Configure max number of link mlo connection supports.
+ *  Invalid value or 0 will use max supported value by fw.
+ * @support_link_band: Configure the band bitmap of mlo connection supports
+ *  Bit 0: 2G band support if 1
+ *  Bit 1: 5G band support if 1
+ *  Bit 2: 6G band support if 1
+ */
+struct wlan_roam_mlo_config {
+	uint8_t vdev_id;
+	struct qdf_mac_addr partner_link_addr;
+	uint32_t support_link_num;
+	uint32_t support_link_band;
+};
+
 /**
  * struct wlan_roam_start_config - structure containing parameters for
  * roam start config
@@ -1755,6 +1774,7 @@ enum roam_rt_stats_params {
  * @disconnect_params: disconnect params
  * @idle_params: idle params
  * @wlan_roam_rt_stats_config: roam events stats config
+ * @roam_mlo_params: roam mlo config params
  */
 struct wlan_roam_start_config {
 	struct wlan_roam_offload_scan_rssi_params rssi_params;
@@ -1775,6 +1795,7 @@ struct wlan_roam_start_config {
 	struct wlan_roam_disconnect_params disconnect_params;
 	struct wlan_roam_idle_params idle_params;
 	uint8_t wlan_roam_rt_stats_config;
+	struct wlan_roam_mlo_config roam_mlo_params;
 	/* other wmi cmd structures */
 };
 
@@ -2349,6 +2370,10 @@ struct wlan_cm_roam_tx_ops {
 	QDF_STATUS (*send_roam_vendor_handoff_config)(
 					struct wlan_objmgr_vdev *vdev,
 					uint8_t vdev_id, uint32_t param_id);
+#endif
+#ifdef WLAN_FEATURE_11BE_MLO
+	QDF_STATUS (*send_roam_mlo_config)(struct wlan_objmgr_vdev *vdev,
+					   struct wlan_roam_mlo_config *req);
 #endif
 };
 

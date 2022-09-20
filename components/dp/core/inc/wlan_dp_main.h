@@ -283,13 +283,13 @@ dp_psoc_obj_destroy_notification(struct wlan_objmgr_psoc *psoc, void *arg);
 void dp_attach_ctx(struct wlan_dp_psoc_context *dp_ctx);
 
 /**
- * dp_dettach_ctx() - to dettach dp context
+ * dp_detach_ctx() - to detach dp context
  *
- * Helper function to dettach dp context
+ * Helper function to detach dp context
  *
  * Return: None.
  */
-void dp_dettach_ctx(void);
+void dp_detach_ctx(void);
 
 /**
  * dp_get_context() - to get dp context

@@ -1309,6 +1309,9 @@ struct hdd_adapter {
 #ifdef DP_TRAFFIC_END_INDICATION
 	bool traffic_end_ind_en;
 #endif
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+	bool is_dbam_configured;
+#endif
 };
 
 #define WLAN_HDD_GET_STATION_CTX_PTR(adapter) (&(adapter)->session.station)
@@ -1549,7 +1552,7 @@ struct hdd_cache_channels {
 
 /**
  * struct hdd_dynamic_mac - hdd structure to handle dynamic mac address changes
- * @dynamic_mac: Dynamicaly configured mac, this contains the mac on which
+ * @dynamic_mac: Dynamically configured mac, this contains the mac on which
  * current interface is up
  * @is_provisioned_mac: is this mac from provisioned list
  * @bit_position: holds the bit mask position from where this mac is assigned,
@@ -1650,7 +1653,7 @@ static inline bool hdd_get_wlan_driver_status(void)
 #endif
 
 /**
- * enum wlan_state_ctrl_str_id - state contrl param string id
+ * enum wlan_state_ctrl_str_id - state control param string id
  * @WLAN_OFF_STR: Turn OFF WiFi
  * @WLAN_ON_STR: Turn ON WiFi
  * @WLAN_ENABLE_STR: Enable WiFi
@@ -2027,6 +2030,9 @@ struct hdd_context {
 	uint8_t oem_data_len;
 	uint8_t *file_name;
 	qdf_mutex_t wifi_kobj_lock;
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+	enum coex_dbam_config_mode dbam_mode;
+#endif
 };
 
 /**
@@ -2495,7 +2501,7 @@ struct hdd_adapter *hdd_get_adapter_by_macaddr(struct hdd_context *hdd_ctx,
  * @adapter: hdd adapter of vdev
  *
  * This function returns operation channel of station/p2p-cli if
- * connected, returns opration channel of sap/p2p-go if started.
+ * connected, returns operation channel of sap/p2p-go if started.
  *
  * Return: home channel if connected/started or invalid channel 0
  */
@@ -2828,7 +2834,7 @@ int wlan_hdd_scan_abort(struct hdd_adapter *adapter);
  * @vdev_id: vdev id
  * @cnt: number of active ndp sessions
  *
- * This HDD callback registerd with policy manager to indicates number of active
+ * This HDD callback registered with policy manager to indicates number of active
  * ndp sessions to hdd.
  *
  * Return:  none
@@ -3501,7 +3507,7 @@ wlan_hdd_deinit_multi_client_info_table(struct hdd_adapter *adapter)
 int hdd_wlan_start_modules(struct hdd_context *hdd_ctx, bool reinit);
 
 /**
- * hdd_wlan_stop_modules - Single driver state machine for stoping modules
+ * hdd_wlan_stop_modules - Single driver state machine for stopping modules
  * @hdd_ctx: HDD context
  * @ftm_mode: ftm mode
  *

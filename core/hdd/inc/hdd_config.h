@@ -66,7 +66,7 @@ enum hdd_wext_control {
  * Values are per enum hdd_wext_control.
  * This ini is used to control access to private wireless extensions
  * ioctls SIOCIWFIRSTPRIV (0x8BE0) thru SIOCIWLASTPRIV (0x8BFF). The
- * functionality provided by some of these ioctls has been superceeded
+ * functionality provided by some of these ioctls has been superseded
  * by cfg80211 (either standard commands or vendor commands), but many
  * of the private ioctls do not have a cfg80211-based equivalent, so
  * by default support for these ioctls is deprecated.
@@ -158,6 +158,36 @@ enum hdd_dot11_mode {
 #define CFG_GET_WIFI_FEATURES_ALL CFG(CFG_GET_WIFI_FEATURES)
 #else
 #define CFG_GET_WIFI_FEATURES_ALL
+#endif
+
+#ifdef FEATURE_RUNTIME_PM
+/*
+ * <ini>
+ * cpu_cxpc_threshold - PM QOS threshold
+ * @Min: 0
+ * @Max: 15000
+ * @Default: 10000
+ *
+ * This ini is used to set PM QOS threshold value
+ *
+ * Related: None.
+ *
+ * Supported Feature: ALL
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+ #define CFG_CPU_CXPC_THRESHOLD CFG_INI_UINT( \
+			"cpu_cxpc_threshold", \
+			0, \
+			15000, \
+			10000, \
+			CFG_VALUE_OR_DEFAULT, \
+			"PM QOS threshold")
+#define CFG_CPU_CXPC_THRESHOLD_ALL CFG(CFG_CPU_CXPC_THRESHOLD)
+#else
+#define CFG_CPU_CXPC_THRESHOLD_ALL
 #endif
 
 #ifdef QCA_WIFI_EMULATION
@@ -974,9 +1004,9 @@ struct dhcp_server {
  * Example 1:
  *
  * OUI is 00-10-18, data length is 05 (hex form), data is 02-11-04-5C-DE and
- * need to consider first 3 bytes and last byte of data for comparision
+ * need to consider first 3 bytes and last byte of data for comparison
  * mac-addr EE-1A-59-FE-FD-AF is present and first 3 bytes and last byte of
- * mac address should be considered for comparision
+ * mac address should be considered for comparison
  * capability is not present
  * then action OUI for gActionOUIITOExtension is as follows:
  *
@@ -1333,42 +1363,6 @@ struct dhcp_server {
 	ACTION_OUI_MAX_STR_LEN, \
 	"", \
 	"Used to specify action OUIs to control edca configuration")
-
-/*
- * <ini>
- * gActionOUIDisableMuEDCA - Used to specify action OUIs to control
- * MU EDCA configuration when join the candidate AP
- *
- * Note: User should strictly add new action OUIs at the end of this
- * default value.
- *
- * One special AP sets MU EDCA timer as 255 wrongly in both beacon and assoc
- * rsp, lead to 2 sec SU UL data stall periodically.
- * This ini is used to specify AP OUIs. Don't follow mu edca in assoc rsp
- * when connecting to those AP, just reset mu edca timer to 1.
- * For default:
- *     gActionOUIDisableMuEDCA=000CE7 08 00000000BF0CB101 FF 01
- *          Explain: 000CE7: OUI
- *                   08: data length
- *                   00000000BF0CB101: data
- *                   FF: OUI data mask: 11111111
- *                   01: info mask, only OUI present in info mask
- * Refer to gEnableActionOUI for more detail about the format.
- *
- * Related: gEnableActionOUI
- *
- * Supported Feature: Action OUIs
- *
- * Usage: External
- *
- * </ini>
- */
-#define CFG_ACTION_OUI_DISABLE_MU_EDCA CFG_INI_STRING( \
-	"gActionOUIDisableMuEDCA", \
-	0, \
-	ACTION_OUI_MAX_STR_LEN, \
-	"000CE7 08 00000000BF0CB101 FF 01", \
-	"Used to specify action OUIs to control mu edca configuration")
 
 /*
  * <ini>
@@ -1939,7 +1933,6 @@ enum host_log_level {
 	CFG(CFG_ACTION_OUI_DISABLE_AGGRESSIVE_TX) \
 	CFG(CFG_ACTION_OUI_FORCE_MAX_NSS) \
 	CFG(CFG_ACTION_OUI_DISABLE_AGGRESSIVE_EDCA) \
-	CFG(CFG_ACTION_OUI_DISABLE_MU_EDCA) \
 	CFG(CFG_ACTION_OUI_EXTEND_WOW_ITO) \
 	CFG(CFG_ACTION_OUI_SWITCH_TO_11N_MODE) \
 	CFG(CFG_ACTION_OUI_RECONN_ASSOCTIMEOUT) \
@@ -1972,5 +1965,6 @@ enum host_log_level {
 	CFG(CFG_SAR_CONVERSION) \
 	CFG(CFG_ENABLE_HOST_MODULE_LOG_LEVEL) \
 	SAR_SAFETY_FEATURE_ALL \
-	CFG_GET_WIFI_FEATURES_ALL
+	CFG_GET_WIFI_FEATURES_ALL \
+	CFG_CPU_CXPC_THRESHOLD_ALL
 #endif

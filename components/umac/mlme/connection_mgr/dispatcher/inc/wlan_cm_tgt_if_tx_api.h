@@ -27,6 +27,28 @@
 #include "wlan_cm_roam_public_struct.h"
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
+#ifdef WLAN_FEATURE_11BE_MLO
+/**
+ * wlan_cm_tgt_send_roam_mlo_config()  - Send roam mlo config to firmware
+ * @psoc:    psoc pointer
+ * @vdev_id: vdev id
+ * @req: roam mlo config parameter
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS wlan_cm_tgt_send_roam_mlo_config(struct wlan_objmgr_psoc *psoc,
+					    uint8_t vdev_id,
+					    struct wlan_roam_mlo_config *req);
+#else
+static inline
+QDF_STATUS wlan_cm_tgt_send_roam_mlo_config(struct wlan_objmgr_psoc *psoc,
+					    uint8_t vdev_id,
+					    struct wlan_roam_mlo_config *req)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 /**
  * wlan_cm_roam_send_set_vdev_pcl()  - Send vdev set pcl command to firmware
  * @psoc:     PSOC pointer
@@ -76,6 +98,13 @@ wlan_cm_tgt_send_roam_rt_stats_config(struct wlan_objmgr_psoc *psoc,
 	return QDF_STATUS_E_FAILURE;
 }
 
+static inline
+QDF_STATUS wlan_cm_tgt_send_roam_mlo_config(struct wlan_objmgr_psoc *psoc,
+					    uint8_t vdev_id,
+					    struct wlan_roam_mlo_config *req)
+{
+	return QDF_STATUS_SUCCESS;
+}
 #endif /* WLAN_FEATURE_ROAM_OFFLOAD */
 
 #ifdef WLAN_VENDOR_HANDOFF_CONTROL

@@ -1291,7 +1291,8 @@ static QDF_STATUS dp_rx_tm_shutdown(struct dp_rx_tm_handle *rx_tm_hdl)
 	int i;
 
 	for (i = 0; i < rx_tm_hdl->num_dp_rx_threads; i++) {
-		if (!rx_tm_hdl->rx_thread[i])
+		if (!rx_tm_hdl->rx_thread[i] ||
+		    rx_tm_hdl->state == DP_RX_THREADS_INVALID)
 			continue;
 		qdf_set_bit(RX_SHUTDOWN_EVENT,
 			    &rx_tm_hdl->rx_thread[i]->event_flag);
@@ -1302,7 +1303,8 @@ static QDF_STATUS dp_rx_tm_shutdown(struct dp_rx_tm_handle *rx_tm_hdl)
 
 
 	for (i = 0; i < rx_tm_hdl->num_dp_rx_threads; i++) {
-		if (!rx_tm_hdl->rx_thread[i])
+		if (!rx_tm_hdl->rx_thread[i] ||
+		    rx_tm_hdl->state == DP_RX_THREADS_INVALID)
 			continue;
 		dp_debug("waiting for shutdown of thread %d", i);
 		qdf_wait_single_event(&rx_tm_hdl->rx_thread[i]->shutdown_event,

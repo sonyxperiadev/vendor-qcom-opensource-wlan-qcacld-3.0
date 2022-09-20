@@ -121,6 +121,18 @@ struct sAniProbeRspStruct {
 } qdf_packed;
 
 /**
+ * med_sync_delay - medium sync delay info
+ * @med_sync_duration: medium sync duration
+ * @med_sync_ofdm_ed_thresh: medium sync OFDM ED threshold
+ * @med_sync_max_txop_num: medium sync max txop num
+ */
+struct med_sync_delay {
+	uint16_t med_sync_duration:8;
+	uint16_t med_sync_ofdm_ed_thresh:4;
+	uint16_t med_sync_max_txop_num:4;
+};
+
+/**
  * struct tAddStaParams - add sta related parameters
  * @bssId: bssid of sta
  * @assocId: associd
@@ -259,13 +271,14 @@ typedef struct {
 	tDot11fIEeht_cap eht_config;
 	tDot11fIEeht_op eht_op;
 #endif
+	struct med_sync_delay msd_caps;
 #ifdef WLAN_FEATURE_11BE_MLO
 	uint8_t mld_mac_addr[QDF_MAC_ADDR_SIZE];
 	bool is_assoc_peer;
 	bool emlsr_support;
+	bool msd_caps_present;
 	uint8_t link_id;
 	uint16_t emlsr_trans_timeout;
-
 #endif
 } tAddStaParams, *tpAddStaParams;
 
@@ -353,7 +366,7 @@ typedef struct sLimMlmSetKeysReq {
  * @updateBss: update the existing BSS entry, if this flag is set
  * @maxTxPower: max power to be used after applying the power constraint
  * @bSpectrumMgtEnabled: Spectrum Management Capability, 1:Enabled, 0:Disabled.
- * @vhtCapable: VHT capablity
+ * @vhtCapable: VHT capability
  * @ch_width: VHT tx channel width
  * @he_capable: HE Capability
  * @no_ptk_4_way: Do not need 4-way handshake

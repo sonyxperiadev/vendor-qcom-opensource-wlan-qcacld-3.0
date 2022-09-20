@@ -257,7 +257,7 @@ void lim_send_sme_tdls_del_sta_ind(struct mac_context *mac, tpDphHashNode sta,
 				   uint16_t reasonCode);
 #endif
 
-/* / Function that checks for change in AP's capabilties on STA */
+/* / Function that checks for change in AP's capabilities on STA */
 void lim_detect_change_in_ap_capabilities(struct mac_context *,
 					  tpSirProbeRespBeacon,
 					  struct pe_session *);

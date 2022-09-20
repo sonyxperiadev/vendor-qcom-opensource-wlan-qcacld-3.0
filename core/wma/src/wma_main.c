@@ -126,7 +126,7 @@
 
 static uint32_t g_fw_wlan_feat_caps;
 /**
- * wma_get_fw_wlan_feat_caps() - get fw feature capablity
+ * wma_get_fw_wlan_feat_caps() - get fw feature capability
  * @feature: feature enum value
  *
  * Return: true/false
@@ -137,7 +137,7 @@ bool wma_get_fw_wlan_feat_caps(enum cap_bitmap feature)
 }
 
 /**
- * wma_set_fw_wlan_feat_caps() - set fw feature capablity
+ * wma_set_fw_wlan_feat_caps() - set fw feature capability
  * @feature: feature enum value
  *
  * Return: None

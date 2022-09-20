@@ -1087,7 +1087,7 @@ struct wlan_mlme_chain_cfg {
  * @dual_sta_roam_fw_support: Firmware support for dual sta roaming feature
  * @ocv_support: FW supports OCV
  *
- * Add all the mlme-tgt related capablities here, and the public API would fill
+ * Add all the mlme-tgt related capabilities here, and the public API would fill
  * the related capability in the required mlme cfg structure.
  */
 struct mlme_tgt_caps {
@@ -1339,6 +1339,7 @@ struct wlan_user_mcc_quota {
  * @disable_4way_hs_offload: enable/disable 4 way handshake offload to firmware
  * @as_enabled: antenna sharing enabled or not (FW capability)
  * @mgmt_retry_max: maximum retries for management frame
+ * @enable_he_mcs0_for_6ghz_mgmt: HE MCS0 rate for mgmt frames in 6GHz band
  * @bmiss_skip_full_scan: Decide if full scan can be skipped in firmware if no
  * candidate is found in partial scan based on channel map
  * @enable_ring_buffer: Decide to enable/disable ring buffer for bug report
@@ -1392,6 +1393,7 @@ struct wlan_mlme_generic {
 	uint32_t disable_4way_hs_offload;
 	bool as_enabled;
 	uint8_t mgmt_retry_max;
+	bool enable_he_mcs0_for_6ghz_mgmt;
 	bool bmiss_skip_full_scan;
 	bool enable_ring_buffer;
 	bool enable_peer_unmap_conf_support;
@@ -1669,7 +1671,7 @@ enum station_prefer_bw {
  * @max_li_modulated_dtim_time_ms: Max modulated DTIM time in ms.
  * @mlo_support_link_num:           max number of links that sta mlo supports
  * @mlo_support_link_band:          band bitmap that sta mlo supports
- * @mlo_max_simultaneous_links      number of simulataneous links
+ * @mlo_max_simultaneous_links      number of simultaneous links
  */
 struct wlan_mlme_sta_cfg {
 	uint32_t sta_keep_alive_period;

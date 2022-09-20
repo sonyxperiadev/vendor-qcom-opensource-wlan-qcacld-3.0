@@ -1199,7 +1199,7 @@ hdd_to_pmo_wow_enable_params(struct wow_enable_params *in_params,
  *	hif (bus) suspend
  *
  * Return: 0 for success, -EFAULT for null pointers,
- *     -EBUSY or -EAGAIN if another opperation is in progress and
+ *     -EBUSY or -EAGAIN if another operation is in progress and
  *     wlan will not be ready to suspend in time.
  */
 static int __wlan_hdd_bus_suspend(struct wow_enable_params wow_params,
@@ -1430,7 +1430,7 @@ done:
  * Does precondtion validation. Ensures that a subsystem restart isn't in
  * progress.  Ensures that no load or unload is in progress.  Ensures that
  * it has valid pointers for the required contexts.
- * Calls into hif to resume the bus opperation.
+ * Calls into hif to resume the bus operation.
  * Calls into wma to handshake with firmware and notify it that the bus is up.
  * Calls into ol_txrx for symetry.
  * Failures are treated as catastrophic.

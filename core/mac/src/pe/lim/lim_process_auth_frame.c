@@ -508,7 +508,6 @@ static inline void  lim_process_sae_auth_frame(struct mac_context *mac_ctx,
 {}
 #endif
 
-#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
 static uint8_t
 lim_get_pasn_peer_vdev_id(struct mac_context *mac, uint8_t *bssid)
 {
@@ -561,21 +560,6 @@ lim_process_pasn_auth_frame(struct mac_context *mac_ctx,
 
 	return QDF_STATUS_SUCCESS;
 }
-#else
-static inline QDF_STATUS
-lim_process_pasn_auth_frame(struct mac_context *mac_ctx,
-			    uint8_t vdev_id,
-			    uint8_t *rx_pkt_info)
-{
-	return QDF_STATUS_SUCCESS;
-}
-
-static inline uint8_t
-lim_get_pasn_peer_vdev_id(struct mac_context *mac, uint8_t *bssid)
-{
-	return WLAN_UMAC_VDEV_ID_MAX;
-}
-#endif
 
 static void lim_process_auth_frame_type1(struct mac_context *mac_ctx,
 		tpSirMacMgmtHdr mac_hdr,

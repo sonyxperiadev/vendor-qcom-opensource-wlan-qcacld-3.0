@@ -634,7 +634,8 @@ wma_roam_update_vdev(tp_wma_handle wma,
 	qdf_mem_free(add_sta_params);
 }
 
-static void wma_update_phymode_on_roam(tp_wma_handle wma, uint8_t *bssid,
+static void wma_update_phymode_on_roam(tp_wma_handle wma,
+				       struct qdf_mac_addr *bssid,
 				       wmi_channel *chan,
 				       struct wma_txrx_node *iface)
 {
@@ -701,81 +702,11 @@ static void wma_update_phymode_on_roam(tp_wma_handle wma, uint8_t *bssid,
 	vdev_mlme->mgmt.generic.phy_mode = wma_host_to_fw_phymode(bss_phymode);
 
 	/* update new phymode to peer */
-	wma_objmgr_set_peer_mlme_phymode(wma, bssid, bss_phymode);
+	wma_objmgr_set_peer_mlme_phymode(wma, bssid->bytes, bss_phymode);
 
 	wma_debug("LFR3: new phymode %d freq %d (bw %d, %d %d)",
 		  bss_phymode, des_chan->ch_freq, des_chan->ch_width,
 		  des_chan->ch_cfreq1, des_chan->ch_cfreq2);
-}
-
-int wma_roam_auth_offload_event_handler(WMA_HANDLE handle, uint8_t *event,
-					uint32_t len)
-{
-	QDF_STATUS status;
-	tp_wma_handle wma = (tp_wma_handle) handle;
-	struct mac_context *mac_ctx;
-	wmi_roam_preauth_start_event_fixed_param *rso_auth_start_ev;
-	WMI_ROAM_PREAUTH_START_EVENTID_param_tlvs *param_buf;
-	struct qdf_mac_addr ap_bssid;
-	uint8_t vdev_id;
-
-	if (!event) {
-		wma_err_rl("received null event from target");
-		return -EINVAL;
-	}
-
-	param_buf = (WMI_ROAM_PREAUTH_START_EVENTID_param_tlvs *) event;
-	if (!param_buf) {
-		wma_err_rl("received null buf from target");
-		return -EINVAL;
-	}
-
-	rso_auth_start_ev = param_buf->fixed_param;
-	if (!rso_auth_start_ev) {
-		wma_err_rl("received null event data from target");
-		return -EINVAL;
-	}
-
-	if (rso_auth_start_ev->vdev_id > wma->max_bssid) {
-		wma_err_rl("received invalid vdev_id %d",
-			   rso_auth_start_ev->vdev_id);
-		return -EINVAL;
-	}
-
-	mac_ctx = cds_get_context(QDF_MODULE_ID_PE);
-	if (!mac_ctx) {
-		wma_err("NULL mac ptr");
-		QDF_ASSERT(0);
-		return -EINVAL;
-	}
-
-	cds_host_diag_log_work(&wma->roam_preauth_wl,
-			       WMA_ROAM_PREAUTH_WAKE_LOCK_DURATION,
-			       WIFI_POWER_EVENT_WAKELOCK_WOW);
-	qdf_wake_lock_timeout_acquire(&wma->roam_ho_wl,
-				      WMA_ROAM_HO_WAKE_LOCK_DURATION);
-
-	WMI_MAC_ADDR_TO_CHAR_ARRAY(&rso_auth_start_ev->candidate_ap_bssid,
-				   ap_bssid.bytes);
-	if (qdf_is_macaddr_zero(&ap_bssid) ||
-	    qdf_is_macaddr_broadcast(&ap_bssid) ||
-	    qdf_is_macaddr_group(&ap_bssid)) {
-		wma_err_rl("Invalid bssid");
-		return -EINVAL;
-	}
-
-	vdev_id = rso_auth_start_ev->vdev_id;
-	wma_debug("Received Roam auth offload event for bss:"QDF_MAC_ADDR_FMT" vdev_id:%d",
-		  QDF_MAC_ADDR_REF(ap_bssid.bytes), vdev_id);
-
-	lim_sae_auth_cleanup_retry(mac_ctx, vdev_id);
-	status = wma->csr_roam_auth_event_handle_cb(mac_ctx, vdev_id, ap_bssid);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		wma_err_rl("Trigger pre-auth failed");
-		return -EINVAL;
-	}
-
-	return 0;
 }
 
 /**
@@ -3090,15 +3021,28 @@ cm_roam_pe_sync_callback(struct roam_offload_synch_ind *sync_ind,
 	return status;
 }
 
-void cm_update_phymode_on_roam(uint8_t vdev_id, uint8_t *bssid,
-			       wmi_channel *chan)
+void cm_update_phymode_on_roam(uint8_t vdev_id,
+			       struct roam_offload_synch_ind *sync_ind)
 {
 	tp_wma_handle wma = cds_get_context(QDF_MODULE_ID_WMA);
+	struct qdf_mac_addr link_bssid;
+	wmi_channel link_chan;
 
 	if (!wma)
 		return;
 
-	wma_update_phymode_on_roam(wma, bssid, chan, &wma->interfaces[vdev_id]);
+	if (is_multi_link_roam(sync_ind)) {
+		mlo_roam_get_bssid_chan_for_link(vdev_id, sync_ind,
+						 &link_bssid,
+						 &link_chan);
+		wma_update_phymode_on_roam(wma, &link_bssid,
+					   &link_chan,
+					   &wma->interfaces[vdev_id]);
+	} else {
+		wma_update_phymode_on_roam(wma, &sync_ind->bssid,
+					   &sync_ind->chan,
+					   &wma->interfaces[vdev_id]);
+	}
 }
 
 enum wlan_phymode

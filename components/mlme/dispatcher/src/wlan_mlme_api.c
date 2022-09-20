@@ -1086,8 +1086,8 @@ uint8_t wlan_mlme_get_sta_mlo_simultaneous_links(struct wlan_objmgr_psoc *psoc)
 }
 
 QDF_STATUS
-wlan_mlme_set_sta_mlo_simulataneous_links(struct wlan_objmgr_psoc *psoc,
-					  uint8_t value)
+wlan_mlme_set_sta_mlo_simultaneous_links(struct wlan_objmgr_psoc *psoc,
+					 uint8_t value)
 {
 	struct wlan_mlme_psoc_ext_obj *mlme_obj;
 
@@ -4560,6 +4560,25 @@ wlan_mlme_get_mgmt_max_retry(struct wlan_objmgr_psoc *psoc,
 }
 
 QDF_STATUS
+wlan_mlme_get_mgmt_6ghz_rate_support(struct wlan_objmgr_psoc *psoc,
+				     bool *enable_he_mcs0_for_6ghz_mgmt)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+
+	if (!mlme_obj) {
+		*enable_he_mcs0_for_6ghz_mgmt =
+			cfg_default(CFG_ENABLE_HE_MCS0_MGMT_6GHZ);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	*enable_he_mcs0_for_6ghz_mgmt =
+		mlme_obj->cfg.gen.enable_he_mcs0_for_6ghz_mgmt;
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
 wlan_mlme_get_status_ring_buffer(struct wlan_objmgr_psoc *psoc,
 				 bool *enable_ring_buffer)
 {
@@ -6154,6 +6173,7 @@ void wlan_mlme_get_feature_info(struct wlan_objmgr_psoc *psoc,
 {
 	uint32_t roam_triggers;
 	int sap_max_num_clients;
+	bool is_enable_idle_roam = false, is_bss_load_enabled = false;
 
 	wlan_mlme_get_latency_enable(psoc,
 				     &mlme_feature_set->enable_wifi_optimizer);
@@ -6163,14 +6183,21 @@ void wlan_mlme_get_feature_info(struct wlan_objmgr_psoc *psoc,
 					WMI_HOST_VENDOR1_REQ1_VERSION_3_20;
 	roam_triggers = wlan_mlme_get_roaming_triggers(psoc);
 
+	wlan_mlme_get_bss_load_enabled(psoc, &is_bss_load_enabled);
 	mlme_feature_set->roaming_high_cu_roam_trigger =
-			roam_triggers & BIT(ROAM_TRIGGER_REASON_BSS_LOAD);
+			(roam_triggers & BIT(ROAM_TRIGGER_REASON_BSS_LOAD)) &&
+			is_bss_load_enabled;
+
 	mlme_feature_set->roaming_emergency_trigger =
 			roam_triggers & BIT(ROAM_TRIGGER_REASON_FORCED);
 	mlme_feature_set->roaming_btm_trihgger =
 			roam_triggers & BIT(ROAM_TRIGGER_REASON_BTM);
+
+	wlan_mlme_get_enable_idle_roam(psoc, &is_enable_idle_roam);
 	mlme_feature_set->roaming_idle_trigger =
-			roam_triggers & BIT(ROAM_TRIGGER_REASON_IDLE);
+			(roam_triggers & BIT(ROAM_TRIGGER_REASON_IDLE)) &&
+			is_enable_idle_roam;
+
 	mlme_feature_set->roaming_wtc_trigger =
 			roam_triggers & BIT(ROAM_TRIGGER_REASON_WTC_BTM);
 	mlme_feature_set->roaming_btcoex_trigger =

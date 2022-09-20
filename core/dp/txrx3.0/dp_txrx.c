@@ -325,13 +325,68 @@ static struct dp_prealloc_context g_dp_context_allocs[] = {
 	false, false, NULL},
 #endif	/* WLAN_FEATURE_DP_RX_RING_HISTORY */
 #ifdef DP_TX_HW_DESC_HISTORY
-	{DP_TX_HW_DESC_HIST_TYPE, sizeof(struct dp_tx_hw_desc_history),
-	false, false, NULL},
+	/* 3 Slots */
+	{DP_TX_HW_DESC_HIST_TYPE,
+	 DP_TX_HW_DESC_HIST_PER_SLOT_MAX * sizeof(struct dp_tx_hw_desc_evt),
+	 false, false, NULL},
+	{DP_TX_HW_DESC_HIST_TYPE,
+	 DP_TX_HW_DESC_HIST_PER_SLOT_MAX * sizeof(struct dp_tx_hw_desc_evt),
+	 false, false, NULL},
+	{DP_TX_HW_DESC_HIST_TYPE,
+	 DP_TX_HW_DESC_HIST_PER_SLOT_MAX * sizeof(struct dp_tx_hw_desc_evt),
+	 false, false, NULL},
 #endif
 #ifdef WLAN_FEATURE_DP_TX_DESC_HISTORY
-	{DP_TX_TCL_HIST_TYPE, sizeof(struct dp_tx_tcl_history),
+	/* 8 Slots */
+	{DP_TX_TCL_HIST_TYPE,
+	 DP_TX_TCL_HIST_PER_SLOT_MAX * sizeof(struct dp_tx_desc_event),
 	 false, false, NULL},
-	{DP_TX_COMP_HIST_TYPE, sizeof(struct dp_tx_comp_history),
+	{DP_TX_TCL_HIST_TYPE,
+	 DP_TX_TCL_HIST_PER_SLOT_MAX * sizeof(struct dp_tx_desc_event),
+	 false, false, NULL},
+	{DP_TX_TCL_HIST_TYPE,
+	 DP_TX_TCL_HIST_PER_SLOT_MAX * sizeof(struct dp_tx_desc_event),
+	 false, false, NULL},
+	{DP_TX_TCL_HIST_TYPE,
+	 DP_TX_TCL_HIST_PER_SLOT_MAX * sizeof(struct dp_tx_desc_event),
+	 false, false, NULL},
+	{DP_TX_TCL_HIST_TYPE,
+	 DP_TX_TCL_HIST_PER_SLOT_MAX * sizeof(struct dp_tx_desc_event),
+	 false, false, NULL},
+	{DP_TX_TCL_HIST_TYPE,
+	 DP_TX_TCL_HIST_PER_SLOT_MAX * sizeof(struct dp_tx_desc_event),
+	 false, false, NULL},
+	{DP_TX_TCL_HIST_TYPE,
+	 DP_TX_TCL_HIST_PER_SLOT_MAX * sizeof(struct dp_tx_desc_event),
+	 false, false, NULL},
+	{DP_TX_TCL_HIST_TYPE,
+	 DP_TX_TCL_HIST_PER_SLOT_MAX * sizeof(struct dp_tx_desc_event),
+	 false, false, NULL},
+
+	/* 8 Slots */
+	{DP_TX_COMP_HIST_TYPE,
+	 DP_TX_COMP_HIST_PER_SLOT_MAX * sizeof(struct dp_tx_desc_event),
+	 false, false, NULL},
+	{DP_TX_COMP_HIST_TYPE,
+	 DP_TX_COMP_HIST_PER_SLOT_MAX * sizeof(struct dp_tx_desc_event),
+	 false, false, NULL},
+	{DP_TX_COMP_HIST_TYPE,
+	 DP_TX_COMP_HIST_PER_SLOT_MAX * sizeof(struct dp_tx_desc_event),
+	 false, false, NULL},
+	{DP_TX_COMP_HIST_TYPE,
+	 DP_TX_COMP_HIST_PER_SLOT_MAX * sizeof(struct dp_tx_desc_event),
+	 false, false, NULL},
+	{DP_TX_COMP_HIST_TYPE,
+	 DP_TX_COMP_HIST_PER_SLOT_MAX * sizeof(struct dp_tx_desc_event),
+	 false, false, NULL},
+	{DP_TX_COMP_HIST_TYPE,
+	 DP_TX_COMP_HIST_PER_SLOT_MAX * sizeof(struct dp_tx_desc_event),
+	 false, false, NULL},
+	{DP_TX_COMP_HIST_TYPE,
+	 DP_TX_COMP_HIST_PER_SLOT_MAX * sizeof(struct dp_tx_desc_event),
+	 false, false, NULL},
+	{DP_TX_COMP_HIST_TYPE,
+	 DP_TX_COMP_HIST_PER_SLOT_MAX * sizeof(struct dp_tx_desc_event),
 	 false, false, NULL},
 #endif	/* WLAN_FEATURE_DP_TX_DESC_HISTORY */
 #ifdef WLAN_SUPPORT_RX_FISA
@@ -625,6 +680,14 @@ dp_update_mem_size_by_ring_type(struct wlan_dp_prealloc_cfg *cfg,
 	case REO_EXCEPTION:
 		*mem_size = (sizeof(struct reo_destination_ring)) *
 			    cfg->num_reo_exception_ring_entries;
+		return;
+	case REO_DST:
+		*mem_size = (sizeof(struct reo_destination_ring)) *
+			    cfg->num_reo_dst_ring_entries;
+		return;
+	case RXDMA_BUF:
+		*mem_size = (sizeof(struct wbm_buffer_ring)) *
+			    cfg->num_rxdma_buf_ring_entries;
 		return;
 	default:
 		return;

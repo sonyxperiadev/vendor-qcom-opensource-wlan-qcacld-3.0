@@ -363,7 +363,7 @@ QDF_STATUS policy_mgr_update_connection_info(struct wlan_objmgr_psoc *psoc,
 		/* err msg */
 		policy_mgr_err("can't find vdev_id %d in pm_conc_connection_list",
 			vdev_id);
-		return status;
+		return QDF_STATUS_NOT_INITIALIZED;
 	}
 	if (pm_ctx->wma_cbacks.wma_get_connection_info) {
 		status = pm_ctx->wma_cbacks.wma_get_connection_info(
@@ -2989,6 +2989,14 @@ QDF_STATUS policy_mgr_reset_connection_update(struct wlan_objmgr_psoc *psoc)
 	}
 
 	return QDF_STATUS_SUCCESS;
+}
+
+void policy_mgr_reset_hw_mode_change(struct wlan_objmgr_psoc *psoc)
+{
+	policy_mgr_err("Clear hw mode change and connection update evt");
+	policy_mgr_set_hw_mode_change_in_progress(
+			psoc, POLICY_MGR_HW_MODE_NOT_IN_PROGRESS);
+	policy_mgr_reset_connection_update(psoc);
 }
 
 QDF_STATUS policy_mgr_set_connection_update(struct wlan_objmgr_psoc *psoc)
