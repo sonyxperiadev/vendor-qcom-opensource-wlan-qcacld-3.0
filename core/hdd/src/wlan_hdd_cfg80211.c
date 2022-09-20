@@ -3292,6 +3292,116 @@ static uint16_t wlan_hdd_update_bw_from_mlme(struct hdd_context *hdd_ctx,
 }
 
 /**
+ *  wlan_hdd_check_is_acs_request_same() - API to compare ongoing ACS and
+ *					current received ACS request
+ * @adapter: hdd adapter
+ * @data: ACS data
+ * @data_len: ACS data length
+ *
+ * This function is used to compare ongoing ACS params with current received
+ * ACS request on same interface.
+ *
+ * Return: true only if ACS request received is same as ongoing ACS
+ */
+static bool wlan_hdd_check_is_acs_request_same(struct hdd_adapter *adapter,
+					       const void *data, int data_len)
+{
+	struct nlattr *tb[QCA_WLAN_VENDOR_ATTR_ACS_MAX + 1];
+	uint8_t hw_mode, ht_enabled, ht40_enabled, vht_enabled, eht_enabled;
+	struct sap_config *sap_config;
+	uint32_t last_scan_ageout_time;
+	uint8_t ch_list_count;
+	uint16_t ch_width;
+	int ret, i, j;
+
+	ret = wlan_cfg80211_nla_parse(tb, QCA_WLAN_VENDOR_ATTR_ACS_MAX, data,
+				      data_len,
+				      wlan_hdd_cfg80211_do_acs_policy);
+	if (ret) {
+		hdd_err("Invalid ATTR");
+		return false;
+	}
+
+	if (!tb[QCA_WLAN_VENDOR_ATTR_ACS_HW_MODE])
+		return false;
+
+	sap_config = &adapter->session.ap.sap_config;
+
+	hw_mode = nla_get_u8(tb[QCA_WLAN_VENDOR_ATTR_ACS_HW_MODE]);
+	if (sap_config->acs_cfg.master_acs_cfg.hw_mode != hw_mode)
+		return false;
+
+	ht_enabled = nla_get_flag(tb[QCA_WLAN_VENDOR_ATTR_ACS_HT_ENABLED]);
+	if (sap_config->acs_cfg.master_acs_cfg.ht != ht_enabled)
+		return false;
+
+	ht40_enabled = nla_get_flag(tb[QCA_WLAN_VENDOR_ATTR_ACS_HT40_ENABLED]);
+	if (sap_config->acs_cfg.master_acs_cfg.ht40 != ht40_enabled)
+		return false;
+
+	vht_enabled = nla_get_flag(tb[QCA_WLAN_VENDOR_ATTR_ACS_VHT_ENABLED]);
+	if (sap_config->acs_cfg.master_acs_cfg.vht != vht_enabled)
+		return false;
+
+	eht_enabled = nla_get_flag(tb[QCA_WLAN_VENDOR_ATTR_ACS_EHT_ENABLED]);
+	if (sap_config->acs_cfg.master_acs_cfg.eht != eht_enabled)
+		return false;
+
+	if (tb[QCA_WLAN_VENDOR_ATTR_ACS_CHWIDTH])
+		ch_width = nla_get_u16(tb[QCA_WLAN_VENDOR_ATTR_ACS_CHWIDTH]);
+	else
+		ch_width = 0;
+	if (sap_config->acs_cfg.master_acs_cfg.ch_width != ch_width)
+		return false;
+
+	if (nla_get_u32(tb[QCA_WLAN_VENDOR_ATTR_ACS_LAST_SCAN_AGEOUT_TIME]))
+		last_scan_ageout_time =
+		nla_get_u32(tb[QCA_WLAN_VENDOR_ATTR_ACS_LAST_SCAN_AGEOUT_TIME]);
+	else
+		last_scan_ageout_time = 0;
+	if (sap_config->acs_cfg.last_scan_ageout_time != last_scan_ageout_time)
+		return false;
+
+	if (tb[QCA_WLAN_VENDOR_ATTR_ACS_FREQ_LIST]) {
+		uint32_t *freq =
+			nla_data(tb[QCA_WLAN_VENDOR_ATTR_ACS_FREQ_LIST]);
+
+		ch_list_count = nla_len(
+				tb[QCA_WLAN_VENDOR_ATTR_ACS_FREQ_LIST]) /
+				sizeof(uint32_t);
+		if (sap_config->acs_cfg.master_ch_list_count != ch_list_count)
+			return false;
+		for (i = 0; i < ch_list_count; i++) {
+			j = 0;
+			while (j < ch_list_count && freq[i] !=
+			       sap_config->acs_cfg.master_freq_list[j])
+				j++;
+			if (j == ch_list_count)
+				return false;
+		}
+	} else if (tb[QCA_WLAN_VENDOR_ATTR_ACS_CH_LIST]) {
+		uint8_t *tmp = nla_data(tb[QCA_WLAN_VENDOR_ATTR_ACS_CH_LIST]);
+
+		ch_list_count = nla_len(
+					tb[QCA_WLAN_VENDOR_ATTR_ACS_CH_LIST]);
+		if (sap_config->acs_cfg.master_ch_list_count != ch_list_count)
+			return false;
+		for (i = 0; i < ch_list_count; i++) {
+			j = 0;
+			while (j < ch_list_count &&
+			       wlan_reg_legacy_chan_to_freq(
+			       adapter->hdd_ctx->pdev, tmp[i]) !=
+			       sap_config->acs_cfg.master_freq_list[j])
+				j++;
+			if (j == ch_list_count)
+				return false;
+		}
+	}
+
+	return true;
+}
+
+/**
  * __wlan_hdd_cfg80211_do_acs(): CFG80211 handler function for DO_ACS Vendor CMD
  * @wiphy:  Linux wiphy struct pointer
  * @wdev:   Linux wireless device struct pointer
@@ -3366,7 +3476,13 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 	}
 
 	if (qdf_atomic_read(&adapter->session.ap.acs_in_progress) > 0) {
-		hdd_err("ACS rejected as previous req already in progress");
+		if (wlan_hdd_check_is_acs_request_same(adapter,
+						       data, data_len)) {
+			hdd_debug("Same ACS req as ongoing is received, return success");
+			ret = 0;
+			goto out;
+		}
+		hdd_err("ACS rejected as previous ACS req already in progress");
 		return -EINVAL;
 	} else {
 		qdf_atomic_set(&adapter->session.ap.acs_in_progress, 1);
@@ -3388,14 +3504,27 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 		ret = -EINVAL;
 		goto out;
 	}
-	hw_mode = nla_get_u8(tb[QCA_WLAN_VENDOR_ATTR_ACS_HW_MODE]);
 
+	sap_config = &adapter->session.ap.sap_config;
+
+	/* Check and free if memory is already allocated for acs channel list */
+	wlan_hdd_undo_acs(adapter);
+
+	qdf_mem_zero(&sap_config->acs_cfg, sizeof(struct sap_acs_cfg));
+
+	hw_mode = nla_get_u8(tb[QCA_WLAN_VENDOR_ATTR_ACS_HW_MODE]);
 	hdd_nofl_info("ACS request vid %d hw mode %d", adapter->vdev_id,
 		      hw_mode);
 	ht_enabled = nla_get_flag(tb[QCA_WLAN_VENDOR_ATTR_ACS_HT_ENABLED]);
 	ht40_enabled = nla_get_flag(tb[QCA_WLAN_VENDOR_ATTR_ACS_HT40_ENABLED]);
 	vht_enabled = nla_get_flag(tb[QCA_WLAN_VENDOR_ATTR_ACS_VHT_ENABLED]);
 	eht_enabled = nla_get_flag(tb[QCA_WLAN_VENDOR_ATTR_ACS_EHT_ENABLED]);
+
+	sap_config->acs_cfg.master_acs_cfg.hw_mode = hw_mode;
+	sap_config->acs_cfg.master_acs_cfg.ht = ht_enabled;
+	sap_config->acs_cfg.master_acs_cfg.ht40 = ht40_enabled;
+	sap_config->acs_cfg.master_acs_cfg.vht = vht_enabled;
+	sap_config->acs_cfg.master_acs_cfg.eht = eht_enabled;
 
 	if (((adapter->device_mode == QDF_SAP_MODE) &&
 	      sap_force_11n_for_11ac) ||
@@ -3407,11 +3536,13 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 
 	if (tb[QCA_WLAN_VENDOR_ATTR_ACS_CHWIDTH]) {
 		ch_width = nla_get_u16(tb[QCA_WLAN_VENDOR_ATTR_ACS_CHWIDTH]);
+		sap_config->acs_cfg.master_acs_cfg.ch_width = ch_width;
 	} else {
 		if (ht_enabled && ht40_enabled)
 			ch_width = 40;
 		else
 			ch_width = 20;
+		sap_config->acs_cfg.master_acs_cfg.ch_width = 0;
 	}
 
 	if (tb[QCA_WLAN_VENDOR_ATTR_ACS_EHT_ENABLED])
@@ -3438,13 +3569,6 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 		nla_get_u32(tb[QCA_WLAN_VENDOR_ATTR_ACS_LAST_SCAN_AGEOUT_TIME]);
 	else
 		last_scan_ageout_time = 0;
-
-	sap_config = &adapter->session.ap.sap_config;
-
-	/* Check and free if memory is already allocated for acs channel list */
-	wlan_hdd_undo_acs(adapter);
-
-	qdf_mem_zero(&sap_config->acs_cfg, sizeof(struct sap_acs_cfg));
 
 	if (ch_width == 320)
 		wlan_hdd_set_sap_acs_ch_width_320(sap_config);
