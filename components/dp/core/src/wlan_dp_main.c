@@ -842,6 +842,7 @@ dp_peer_obj_create_notification(struct wlan_objmgr_peer *peer, void *arg)
 	if (QDF_IS_STATUS_ERROR(status)) {
 		dp_err("DP peer attach failed");
 		qdf_mem_free(sta_info);
+		return status;
 	}
 
 	qdf_mem_copy(sta_info->sta_mac.bytes, peer->macaddr,
