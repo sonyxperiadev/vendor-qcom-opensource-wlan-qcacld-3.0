@@ -2348,7 +2348,10 @@ mlme_init_wifi_pos_11az_config(struct wlan_objmgr_psoc *psoc,
 {
 	bool rsta_sec_ltf_enabled =
 			cfg_get(psoc, CFG_RESPONDER_SECURE_LTF_SUPPORT);
+	bool rsta_11az_ranging_enabled = cfg_get(psoc,
+						 CFG_RESPONDER_11AZ_SUPPORT);
 
+	wifi_pos_set_rsta_11az_ranging_cap(rsta_11az_ranging_enabled);
 	wifi_pos_set_rsta_sec_ltf_cap(rsta_sec_ltf_enabled);
 }
 #else
