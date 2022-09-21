@@ -1719,6 +1719,7 @@ static int wma_get_obj_mgr_peer_type(tp_wma_handle wma, uint8_t vdev_id,
 	uint32_t obj_peer_type = 0;
 	struct wlan_objmgr_vdev *vdev;
 	uint8_t *addr;
+	uint8_t *mld_addr;
 
 	vdev = wma->interfaces[vdev_id].vdev;
 	if (!vdev) {
@@ -1726,6 +1727,7 @@ static int wma_get_obj_mgr_peer_type(tp_wma_handle wma, uint8_t vdev_id,
 		return obj_peer_type;
 	}
 	addr = wlan_vdev_mlme_get_macaddr(vdev);
+	mld_addr = wlan_vdev_mlme_get_mldaddr(vdev);
 
 	if (wma_peer_type == WMI_PEER_TYPE_TDLS)
 		return WLAN_PEER_TDLS;
@@ -1733,7 +1735,8 @@ static int wma_get_obj_mgr_peer_type(tp_wma_handle wma, uint8_t vdev_id,
 	if (wma_peer_type == WMI_PEER_TYPE_PASN)
 		return WLAN_PEER_RTT_PASN;
 
-	if (!qdf_mem_cmp(addr, peer_addr, QDF_MAC_ADDR_SIZE)) {
+	if (!qdf_mem_cmp(addr, peer_addr, QDF_MAC_ADDR_SIZE) ||
+	    !qdf_mem_cmp(mld_addr, peer_addr, QDF_MAC_ADDR_SIZE)) {
 		obj_peer_type = WLAN_PEER_SELF;
 	} else if (wma->interfaces[vdev_id].type == WMI_VDEV_TYPE_STA) {
 		if (wma->interfaces[vdev_id].sub_type ==
