@@ -20125,36 +20125,55 @@ static bool hdd_is_btk_enc_type(uint32_t cipher_type)
 #ifdef WLAN_FEATURE_11BE_MLO
 static inline
 struct wlan_objmgr_vdev *wlan_key_get_link_vdev(struct hdd_adapter *adapter,
+						wlan_objmgr_ref_dbgid id,
 						int link_id)
 {
-	if (!wlan_vdev_mlme_is_mlo_vdev(adapter->vdev))
-		return adapter->vdev;
+	struct wlan_objmgr_vdev *vdev, *link_vdev;
 
-	if (wlan_vdev_get_link_id(adapter->vdev) == link_id)
-		return adapter->vdev;
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, id);
+	if (!vdev)
+		return NULL;
 
-	return mlo_get_vdev_by_link_id(adapter->vdev, link_id);
+	if (!wlan_vdev_mlme_is_mlo_vdev(vdev))
+		return vdev;
+
+	link_vdev = mlo_get_vdev_by_link_id(vdev, link_id);
+	hdd_objmgr_put_vdev_by_user(vdev, id);
+
+	return link_vdev;
 }
 
 static inline
-void wlan_key_put_link_vdev(struct wlan_objmgr_vdev *link_vdev)
+void wlan_key_put_link_vdev(struct wlan_objmgr_vdev *link_vdev,
+			    wlan_objmgr_ref_dbgid id)
 {
-	if (!wlan_vdev_mlme_is_mlo_vdev(link_vdev))
+	if (!wlan_vdev_mlme_is_mlo_vdev(link_vdev)) {
+		hdd_objmgr_put_vdev_by_user(link_vdev, id);
 		return;
+	}
 
 	mlo_release_vdev_ref(link_vdev);
 }
 #else
 static inline
 struct wlan_objmgr_vdev *wlan_key_get_link_vdev(struct hdd_adapter *adapter,
+						wlan_objmgr_ref_dbgid id,
 						int link_id)
 {
-	return adapter->vdev;
+	struct wlan_objmgr_vdev *vdev;
+
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, id);
+	if (!vdev)
+		return NULL;
+
+	return vdev;
 }
 
 static inline
-void wlan_key_put_link_vdev(struct wlan_objmgr_vdev *link_vdev)
+void wlan_key_put_link_vdev(struct wlan_objmgr_vdev *link_vdev,
+			    wlan_objmgr_ref_dbgid id)
 {
+	hdd_objmgr_put_vdev_by_user(link_vdev, id);
 }
 #endif
 
@@ -20402,7 +20421,7 @@ static int wlan_hdd_add_key_mlo_vdev(mac_handle_t mac_handle,
 					     link_id, adapter);
 	}
 
-	link_vdev = wlan_key_get_link_vdev(adapter, link_id);
+	link_vdev = wlan_key_get_link_vdev(adapter, WLAN_MLO_MGR_ID, link_id);
 	if (!link_vdev) {
 		hdd_err("couldn't get vdev for link_id :%d", link_id);
 		return -EINVAL;
@@ -20421,7 +20440,7 @@ static int wlan_hdd_add_key_mlo_vdev(mac_handle_t mac_handle,
 				      link_id, link_adapter);
 
 release_ref:
-	wlan_key_put_link_vdev(link_vdev);
+	wlan_key_put_link_vdev(link_vdev, WLAN_MLO_MGR_ID);
 	return errno;
 }
 #elif defined(CFG80211_KEY_INSTALL_SUPPORT_ON_WDEV)
@@ -20644,7 +20663,7 @@ static int __wlan_hdd_cfg80211_get_key(struct wiphy *wiphy,
 		return -EINVAL;
 	}
 
-	link_vdev = wlan_key_get_link_vdev(adapter, link_id);
+	link_vdev = wlan_key_get_link_vdev(adapter, WLAN_OSIF_ID, link_id);
 	if (!link_vdev) {
 		hdd_err("Invalid vdev for link_id :%d", link_id);
 		return -EINVAL;
@@ -20699,7 +20718,7 @@ static int __wlan_hdd_cfg80211_get_key(struct wiphy *wiphy,
 	params.key = NULL;
 	callback(cookie, &params);
 
-	wlan_key_put_link_vdev(link_vdev);
+	wlan_key_put_link_vdev(link_vdev, WLAN_OSIF_ID);
 	hdd_exit();
 	return 0;
 }
@@ -20985,9 +21004,8 @@ static int __wlan_hdd_cfg80211_set_default_key(struct wiphy *wiphy,
 	if (0 != ret)
 		return ret;
 
-	vdev = wlan_key_get_link_vdev(adapter, link_id);
-	status = wlan_objmgr_vdev_try_get_ref(vdev, WLAN_OSIF_ID);
-	if (QDF_IS_STATUS_ERROR(status))
+	vdev = wlan_key_get_link_vdev(adapter, WLAN_OSIF_ID, link_id);
+	if (!vdev)
 		return -EINVAL;
 
 	crypto_key = wlan_crypto_get_key(vdev, key_index);
@@ -21029,8 +21047,7 @@ static int __wlan_hdd_cfg80211_set_default_key(struct wiphy *wiphy,
 	}
 
 out:
-	wlan_key_put_link_vdev(vdev);
-	wlan_objmgr_vdev_release_ref(vdev, WLAN_OSIF_ID);
+	wlan_key_put_link_vdev(vdev, WLAN_OSIF_ID);
 	return ret;
 }
 
@@ -24463,7 +24480,8 @@ bool hdd_is_legacy_connection(struct hdd_adapter *adapter)
 
 static int __wlan_hdd_cfg80211_get_channel(struct wiphy *wiphy,
 					   struct wireless_dev *wdev,
-					   struct cfg80211_chan_def *chandef)
+					   struct cfg80211_chan_def *chandef,
+					   int link_id)
 {
 	struct net_device *dev = wdev->netdev;
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
@@ -24518,7 +24536,7 @@ static int __wlan_hdd_cfg80211_get_channel(struct wiphy *wiphy,
 		return -EINVAL;
 	}
 
-	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_ID);
+	vdev = wlan_key_get_link_vdev(adapter, WLAN_OSIF_ID, link_id);
 	if (!vdev)
 		return -EINVAL;
 
@@ -24562,7 +24580,8 @@ static int __wlan_hdd_cfg80211_get_channel(struct wiphy *wiphy,
 
 	wlan_hdd_set_chandef(vdev, chandef);
 
-	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_ID);
+	wlan_key_put_link_vdev(vdev, WLAN_OSIF_ID);
+
 	hdd_debug("primary_freq:%d, ch_width:%d, center_freq1:%d, center_freq2:%d",
 		  chan_freq, chandef->width, chandef->center_freq1,
 		  chandef->center_freq2);
@@ -24582,11 +24601,6 @@ static int wlan_hdd_cfg80211_get_channel(struct wiphy *wiphy,
 					 struct wireless_dev *wdev,
 					 unsigned int link_id,
 					 struct cfg80211_chan_def *chandef)
-#else
-static int wlan_hdd_cfg80211_get_channel(struct wiphy *wiphy,
-					 struct wireless_dev *wdev,
-					 struct cfg80211_chan_def *chandef)
-#endif
 {
 	int errno;
 	struct osif_vdev_sync *vdev_sync;
@@ -24595,12 +24609,33 @@ static int wlan_hdd_cfg80211_get_channel(struct wiphy *wiphy,
 	if (errno)
 		return errno;
 
-	errno = __wlan_hdd_cfg80211_get_channel(wiphy, wdev, chandef);
+	errno = __wlan_hdd_cfg80211_get_channel(wiphy, wdev, chandef, link_id);
 
 	osif_vdev_sync_op_stop(vdev_sync);
 
 	return errno;
 }
+#else
+static int wlan_hdd_cfg80211_get_channel(struct wiphy *wiphy,
+					 struct wireless_dev *wdev,
+					 struct cfg80211_chan_def *chandef)
+{
+	int errno;
+	struct osif_vdev_sync *vdev_sync;
+	/* Legacy purposes */
+	int link_id = -1;
+
+	errno = osif_vdev_sync_op_start(wdev->netdev, &vdev_sync);
+	if (errno)
+		return errno;
+
+	errno = __wlan_hdd_cfg80211_get_channel(wiphy, wdev, chandef, link_id);
+
+	osif_vdev_sync_op_stop(vdev_sync);
+
+	return errno;
+}
+#endif
 
 static bool hdd_check_bitmask_for_single_rate(enum nl80211_band band,
 				const struct cfg80211_bitrate_mask *mask)
