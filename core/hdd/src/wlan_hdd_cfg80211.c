@@ -2204,7 +2204,11 @@ int wlan_hdd_cfg80211_start_acs(struct hdd_adapter *adapter)
 	if (sap_is_auto_channel_select(WLAN_HDD_GET_SAP_CTX_PTR(adapter)))
 		sap_config->acs_cfg.acs_mode = true;
 
-	qdf_atomic_set(&adapter->session.ap.acs_in_progress, 1);
+	/* If ACS scan is skipped then ACS request would be completed by now,
+	 * so no need to set acs in progress
+	 */
+	if (!sap_config->acs_cfg.skip_acs_scan)
+		qdf_atomic_set(&adapter->session.ap.acs_in_progress, 1);
 
 	return 0;
 }
