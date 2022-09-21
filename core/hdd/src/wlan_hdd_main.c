@@ -2666,8 +2666,8 @@ bool hdd_dfs_indicate_radar(struct hdd_context *hdd_ctx)
 
 		if ((QDF_SAP_MODE == adapter->device_mode ||
 		    QDF_P2P_GO_MODE == adapter->device_mode) &&
-		    (wlan_reg_is_passive_or_disable_for_freq(hdd_ctx->pdev,
-		     ap_ctx->operating_chan_freq))) {
+		    (wlan_reg_is_passive_or_disable_for_pwrmode(hdd_ctx->pdev,
+		     ap_ctx->operating_chan_freq, REG_CURRENT_PWR_MODE))) {
 			WLAN_HDD_GET_AP_CTX_PTR(adapter)->dfs_cac_block_tx =
 				true;
 			hdd_info("tx blocked for vdev: %d",

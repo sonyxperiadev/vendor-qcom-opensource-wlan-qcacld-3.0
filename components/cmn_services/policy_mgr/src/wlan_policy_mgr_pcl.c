@@ -602,8 +602,9 @@ static QDF_STATUS policy_mgr_modify_pcl_based_on_enabled_channels(
 	uint32_t i, pcl_len = 0;
 
 	for (i = 0; i < *pcl_len_org; i++) {
-		if (!wlan_reg_is_passive_or_disable_for_freq(
-			pm_ctx->pdev, pcl_list_org[i])) {
+		if (!wlan_reg_is_passive_or_disable_for_pwrmode(
+			pm_ctx->pdev, pcl_list_org[i],
+			REG_CURRENT_PWR_MODE)) {
 			pcl_list_org[pcl_len] = pcl_list_org[i];
 			weight_list_org[pcl_len++] = weight_list_org[i];
 		}
