@@ -13053,6 +13053,46 @@ static inline void wlan_hdd_get_host_driver_port_id(uint32_t *port_id)
 {
 }
 #endif
+
+static void
+hdd_adapter_set_wlm_client_latency_level(struct hdd_adapter *adapter)
+{
+	QDF_STATUS status;
+	bool reset;
+	uint32_t port_id;
+	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+
+	if (!hdd_ctx)
+		return;
+
+	status = ucfg_mlme_cfg_get_wlm_reset(hdd_ctx->psoc, &reset);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		hdd_err("could not get the wlm reset flag");
+		reset = false;
+	}
+
+	if (reset)
+		goto out;
+
+	if (hdd_get_multi_client_ll_support(adapter)) {
+		wlan_hdd_get_host_driver_port_id(&port_id);
+		status = wlan_hdd_set_wlm_client_latency_level(
+						adapter, port_id,
+						adapter->latency_level);
+		if (QDF_IS_STATUS_ERROR(status))
+			hdd_warn("Fail to set latency level:%u", status);
+	} else {
+		status = sme_set_wlm_latency_level(hdd_ctx->mac_handle,
+						   adapter->vdev_id,
+						   adapter->latency_level,
+						   0, false);
+		if (QDF_IS_STATUS_ERROR(status))
+			hdd_warn("set wlm mode failed, %u", status);
+	}
+out:
+	hdd_debug("wlm initial mode %u", adapter->latency_level);
+}
+
 /**
  * hdd_start_station_adapter()- Start the Station Adapter
  * @adapter: HDD adapter
@@ -13064,10 +13104,7 @@ static inline void wlan_hdd_get_host_driver_port_id(uint32_t *port_id)
 int hdd_start_station_adapter(struct hdd_adapter *adapter)
 {
 	QDF_STATUS status;
-	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	int ret;
-	bool reset;
-	uint32_t port_id;
 
 	hdd_enter_dev(adapter->dev);
 	if (test_bit(SME_SESSION_OPENED, &adapter->event_flags)) {
@@ -13096,33 +13133,10 @@ int hdd_start_station_adapter(struct hdd_adapter *adapter)
 	hdd_register_hl_netdev_fc_timer(adapter,
 					hdd_tx_resume_timer_expired_handler);
 
-	status = ucfg_mlme_cfg_get_wlm_reset(hdd_ctx->psoc, &reset);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		hdd_err("could not get the wlm reset flag");
-		reset = false;
-	}
-
 	if (hdd_get_multi_client_ll_support(adapter))
 		wlan_hdd_init_multi_client_info_table(adapter);
 
-	if (!reset) {
-		if (hdd_get_multi_client_ll_support(adapter)) {
-			wlan_hdd_get_host_driver_port_id(&port_id);
-			status = wlan_hdd_set_wlm_client_latency_level(adapter,
-					port_id, adapter->latency_level);
-			if (QDF_IS_STATUS_ERROR(status))
-				hdd_warn("Fail to set latency level:%u",
-					status);
-		} else {
-			status = sme_set_wlm_latency_level(hdd_ctx->mac_handle,
-							adapter->vdev_id,
-							adapter->latency_level,
-							0, false);
-			if (QDF_IS_STATUS_ERROR(status))
-				hdd_warn("set wlm mode failed, %u", status);
-		}
-	}
-	hdd_debug("wlm initial mode %u", adapter->latency_level);
+	hdd_adapter_set_wlm_client_latency_level(adapter);
 
 	hdd_exit();
 
