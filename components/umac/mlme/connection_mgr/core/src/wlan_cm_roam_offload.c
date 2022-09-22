@@ -6759,6 +6759,11 @@ cm_roam_mgmt_frame_event(struct roam_frame_info *frame_data,
 					 !frame_data->is_rsp);
 		diag_event = EVENT_WLAN_MGMT;
 	}
+
+	if (wlan_diag_event.subtype > WLAN_CONN_DIAG_REASSOC_RESP_EVENT &&
+	    wlan_diag_event.subtype < WLAN_CONN_DIAG_BMISS_EVENT)
+		wlan_diag_event.reason = frame_data->status_code;
+
 	WLAN_HOST_DIAG_EVENT_REPORT(&wlan_diag_event, diag_event);
 
 	return status;
