@@ -1653,6 +1653,9 @@ QDF_STATUS dp_rx_packet_cbk(void *dp_intf_context,
 		} else if (qdf_nbuf_is_ipv4_eapol_pkt(nbuf)) {
 			subtype = qdf_nbuf_get_eapol_subtype(nbuf);
 			send_over_nl = true;
+
+			/* Mac address check between RX packet DA and dp_intf's */
+			dp_rx_pkt_da_check(dp_intf, nbuf);
 			if (subtype == QDF_PROTO_EAPOL_M1) {
 				++dp_intf->dp_stats.eapol_stats.
 						eapol_m1_count;

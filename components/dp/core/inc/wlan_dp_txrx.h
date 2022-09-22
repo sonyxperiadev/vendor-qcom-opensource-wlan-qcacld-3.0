@@ -637,4 +637,28 @@ dp_rx_ol_init(struct wlan_dp_psoc_context *dp_ctx,
 }
 #endif
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static inline
+void dp_rx_pkt_da_check(struct wlan_dp_intf *dp_intf, qdf_nbuf_t nbuf)
+{
+	/* only do DA check for RX frame from non-regular path */
+	if (!qdf_nbuf_is_exc_frame(nbuf))
+		return;
+
+	if (qdf_mem_cmp(qdf_nbuf_data(nbuf), dp_intf->mac_addr.bytes,
+			ETH_ALEN)) {
+		dp_info("da mac:" QDF_MAC_ADDR_FMT "intf_mac:" QDF_MAC_ADDR_FMT,
+			QDF_MAC_ADDR_REF(qdf_nbuf_data(nbuf)),
+			QDF_MAC_ADDR_REF(dp_intf->mac_addr.bytes));
+		qdf_mem_copy(qdf_nbuf_data(nbuf), dp_intf->mac_addr.bytes,
+			     ETH_ALEN);
+	}
+}
+#else
+static inline
+void dp_rx_pkt_da_check(struct wlan_dp_intf *dp_intf, qdf_nbuf_t nbuf)
+{
+}
+#endif
+
 #endif
