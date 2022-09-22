@@ -5330,6 +5330,13 @@ sir_convert_beacon_frame2_struct(struct mac_context *mac,
 			     sizeof(tDot11fIEhe_op));
 	}
 
+	if (pBeacon->eht_cap.present)
+		qdf_mem_copy(&pBeaconStruct->eht_cap, &pBeacon->eht_cap,
+			     sizeof(tDot11fIEeht_cap));
+	if (pBeacon->eht_op.present)
+		qdf_mem_copy(&pBeaconStruct->eht_op, &pBeacon->eht_op,
+			    sizeof(tDot11fIEeht_op));
+
 	pBeaconStruct->num_transmit_power_env = pBeacon->num_transmit_power_env;
 	if (pBeacon->num_transmit_power_env) {
 		qdf_mem_copy(pBeaconStruct->transmit_power_env,
