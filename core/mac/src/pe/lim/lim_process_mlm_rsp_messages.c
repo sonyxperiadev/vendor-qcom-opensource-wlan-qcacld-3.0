@@ -2814,7 +2814,7 @@ lim_process_switch_channel_join_mlo(struct pe_session *session_entry,
 			pe_debug("MLO: process assoc rsp for link vdev");
 			lim_process_assoc_rsp_frame(mac_ctx,
 						    link_assoc_rsp.ptr,
-						    link_assoc_rsp.len,
+						    (link_assoc_rsp.len - SIR_MAC_HDR_LEN_3A),
 						    LIM_ASSOC,
 						    session_entry);
 			qdf_mem_free(link_assoc_rsp.ptr);

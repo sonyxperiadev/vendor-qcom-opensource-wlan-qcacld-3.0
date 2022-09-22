@@ -1934,7 +1934,7 @@ lim_roam_gen_mbssid_beacon(struct mac_context *mac,
 			   uint8_t **ie, uint32_t *ie_len)
 {
 	qdf_list_t *scan_list;
-	struct mgmt_rx_event_params rx_param;
+	struct mgmt_rx_event_params rx_param = {0};
 	uint8_t list_count = 0, i;
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
 	qdf_list_node_t *next_node = NULL, *cur_node = NULL;
@@ -1952,6 +1952,10 @@ lim_roam_gen_mbssid_beacon(struct mac_context *mac,
 	rx_param.chan_freq = roam_ind->chan_freq;
 	rx_param.pdev_id = wlan_objmgr_pdev_get_pdev_id(mac->pdev);
 	rx_param.rssi = roam_ind->rssi;
+
+	/* Set all per chain rssi as invalid */
+	for (i = 0; i < WLAN_MGMT_TXRX_HOST_MAX_ANTENNA; i++)
+		rx_param.rssi_ctl[i] = WLAN_INVALID_PER_CHAIN_RSSI;
 
 	scan_list = util_scan_unpack_beacon_frame(mac->pdev, bcn_prb_ptr,
 						  roam_ind->beaconProbeRespLength,
@@ -2606,7 +2610,7 @@ lim_gen_link_specific_assoc_rsp(struct mac_context *mac_ctx,
 	}
 
 	lim_process_assoc_rsp_frame(mac_ctx, link_reassoc_rsp.ptr,
-				    link_reassoc_rsp.len,
+				    link_reassoc_rsp.len - SIR_MAC_HDR_LEN_3A,
 				    LIM_REASSOC, session_entry);
 end:
 	qdf_mem_free(link_reassoc_rsp.ptr);
@@ -2802,7 +2806,7 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 	}
 	else
 		lim_process_assoc_rsp_frame(mac_ctx, reassoc_resp,
-					    roam_sync_ind_ptr->reassocRespLength,
+					    roam_sync_ind_ptr->reassocRespLength - SIR_MAC_HDR_LEN_3A,
 					    LIM_REASSOC, ft_session_ptr);
 
 	lim_check_ft_initial_im_association(roam_sync_ind_ptr, ft_session_ptr);

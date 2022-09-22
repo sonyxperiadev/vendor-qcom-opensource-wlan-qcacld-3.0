@@ -2649,7 +2649,10 @@ extract_roam_sync_frame_event_tlv(wmi_unified_t wmi_handle, void *event,
 	    synch_frame_event->reassoc_req_len >
 	    param_buf->num_reassoc_req_frame ||
 	    synch_frame_event->reassoc_rsp_len >
-	    param_buf->num_reassoc_rsp_frame) {
+	    param_buf->num_reassoc_rsp_frame ||
+	    synch_frame_event->bcn_probe_rsp_len < sizeof(struct wlan_frame_hdr) ||
+	    synch_frame_event->reassoc_req_len < sizeof(struct wlan_frame_hdr) ||
+	    synch_frame_event->reassoc_rsp_len < sizeof(struct wlan_frame_hdr)) {
 		wmi_err("fixed/actual len err: bcn:%d/%d req:%d/%d rsp:%d/%d",
 			synch_frame_event->bcn_probe_rsp_len,
 			param_buf->num_bcn_probe_rsp_frame,

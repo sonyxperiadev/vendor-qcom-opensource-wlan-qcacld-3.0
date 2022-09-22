@@ -581,7 +581,6 @@ QDF_STATUS lim_send_mlm_assoc_ind(struct mac_context *mac,
 				  tpDphHashNode sta,
 				  struct pe_session *pe_session);
 
-#define ASSOC_FRAME_LEN 0
 /**
  * lim_process_assoc_rsp_frame() - Processes assoc response
  * @mac_ctx:              Pointer to Global MAC structure
