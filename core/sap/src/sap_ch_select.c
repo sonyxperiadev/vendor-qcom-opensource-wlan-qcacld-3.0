@@ -614,6 +614,7 @@ static struct channel_status *sap_get_channel_status
 	return ucfg_mc_cp_stats_get_channel_status(p_mac->pdev, chan_freq);
 }
 
+#ifndef WLAN_FEATURE_SAP_ACS_OPTIMIZE
 /**
  * sap_clear_channel_status() - clear chan info
  * @p_mac: Pointer to Global MAC structure
@@ -627,6 +628,12 @@ static void sap_clear_channel_status(struct mac_context *p_mac)
 
 	ucfg_mc_cp_stats_clear_channel_status(p_mac->pdev);
 }
+#else
+static void sap_clear_channel_status(struct mac_context *p_mac)
+{
+}
+#endif
+
 /**
  * sap_weight_channel_noise_floor() - compute noise floor weight
  * @sap_ctx:  sap context
