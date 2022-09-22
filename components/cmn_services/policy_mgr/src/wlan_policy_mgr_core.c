@@ -202,6 +202,21 @@ uint32_t policy_mgr_get_mcc_to_scc_switch_mode(
 	return pm_ctx->cfg.mcc_to_scc_switch;
 }
 
+#ifdef WLAN_FEATURE_SR
+bool policy_mgr_get_same_mac_conc_sr_status(struct wlan_objmgr_psoc *psoc)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return 0;
+	}
+
+	return pm_ctx->cfg.sr_in_same_mac_conc;
+}
+#endif
+
 /**
  * policy_mgr_get_dbs_config() - Get DBS bit
  *
