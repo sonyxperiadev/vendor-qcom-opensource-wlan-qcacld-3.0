@@ -6395,6 +6395,23 @@ static void hdd_store_vdev_info(struct hdd_adapter *adapter,
 	qdf_spin_unlock_bh(&adapter->vdev_lock);
 }
 
+static void hdd_vdev_set_ht_vht_ies(mac_handle_t mac_handle,
+				    struct wlan_objmgr_vdev *vdev)
+{
+	QDF_STATUS status;
+	struct wlan_objmgr_psoc *psoc;
+	bool bval = false;
+
+	psoc = wlan_vdev_get_psoc(vdev);
+	status = ucfg_mlme_get_vht_enable2x2(psoc, &bval);
+	if (QDF_IS_STATUS_ERROR(status))
+		hdd_err("unable to get vht_enable2x2");
+
+	sme_set_pdev_ht_vht_ies(mac_handle, bval);
+	sme_set_vdev_ies_per_band(mac_handle, wlan_vdev_get_id(vdev),
+				  wlan_vdev_mlme_get_opmode(vdev));
+}
+
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(CFG80211_11BE_BASIC)
 static void
 hdd_populate_vdev_create_params(struct hdd_adapter *adapter,
@@ -6564,21 +6581,18 @@ QDF_STATUS hdd_init_station_mode(struct hdd_adapter *adapter)
 	QDF_STATUS status;
 	int ret_val;
 	mac_handle_t mac_handle;
-	bool bval = false;
 	uint8_t enable_sifs_burst = 0;
 	uint32_t fine_time_meas_cap = 0, roam_triggers;
 	struct wlan_objmgr_vdev *vdev;
 
 	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	mac_handle = hdd_ctx->mac_handle;
-	status = ucfg_mlme_get_vht_enable2x2(hdd_ctx->psoc, &bval);
-	if (!QDF_IS_STATUS_SUCCESS(status))
-		hdd_err("unable to get vht_enable2x2");
-	sme_set_pdev_ht_vht_ies(mac_handle, bval);
 
-	sme_set_vdev_ies_per_band(mac_handle, adapter->vdev_id,
-				  adapter->device_mode);
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_INIT_DEINIT_ID);
+	if (!vdev)
+		return QDF_STATUS_E_NULL_VALUE;
 
+	hdd_vdev_set_ht_vht_ies(mac_handle, vdev);
 	hdd_roam_profile_init(adapter);
 	hdd_register_wext(adapter->dev);
 
@@ -6596,15 +6610,8 @@ QDF_STATUS hdd_init_station_mode(struct hdd_adapter *adapter)
 	/* Make the default Auth Type as OPEN */
 	sta_ctx->conn_info.auth_type = eCSR_AUTH_TYPE_OPEN_SYSTEM;
 
-	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_DP_ID);
-	if (!vdev) {
-		status = QDF_STATUS_E_INVAL;
-		goto error_init_txrx;
-	}
-
 	status = ucfg_dp_init_txrx(vdev);
 	if (QDF_STATUS_SUCCESS != status) {
-		hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 		hdd_err("ucfg_dp_init_txrx() failed, status code %d", status);
 		goto error_init_txrx;
 	}
@@ -6654,14 +6661,14 @@ QDF_STATUS hdd_init_station_mode(struct hdd_adapter *adapter)
 			VDEV_CMD);
 	}
 
-	hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_INIT_DEINIT_ID);
 	return QDF_STATUS_SUCCESS;
 
 error_wmm_init:
 	clear_bit(INIT_TX_RX_SUCCESS, &adapter->event_flags);
 	ucfg_dp_deinit_txrx(vdev);
-	hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 error_init_txrx:
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_INIT_DEINIT_ID);
 	hdd_unregister_wext(adapter->dev);
 	QDF_BUG(!hdd_vdev_destroy(adapter));
 
