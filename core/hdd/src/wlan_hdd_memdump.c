@@ -45,6 +45,14 @@
 #define PROCFS_DRIVER_DUMP_NAME "driverdump"
 #define PROCFS_DRIVER_DUMP_PERM 0444
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 17, 0))
+/*
+ * Commit 359745d78351 ("proc: remove PDE_DATA() completely")
+ * Replaced PDE_DATA() with pde_data()
+ */
+#define pde_data(inode) PDE_DATA(inode)
+#endif
+
 static struct proc_dir_entry *proc_file_driver, *proc_dir_driver;
 
 /** memdump_get_file_data() - get data available in proc file
@@ -60,7 +68,7 @@ static void *memdump_get_file_data(struct file *file)
 {
 	void *hdd_ctx;
 
-	hdd_ctx = PDE_DATA(file_inode(file));
+	hdd_ctx = pde_data(file_inode(file));
 	return hdd_ctx;
 }
 
