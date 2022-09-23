@@ -751,3 +751,6 @@ CONFIG_WLAN_SYSFS_MEM_STATS := y
 
 #Enable PCI low power interrupt register mask configuration
 CONFIG_PCI_LOW_POWER_INT_REG := y
+
+#Enable Usable channel feature
+CONFIG_WLAN_FEATURE_GET_USABLE_CHAN_LIST := y
