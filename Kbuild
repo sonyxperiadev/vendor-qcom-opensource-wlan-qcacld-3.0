@@ -2629,6 +2629,7 @@ endif
 $(call add-wlan-objs,coex,$(COEX_OBJS))
 
 ###### COAP ########
+ifeq ($(CONFIG_WLAN_FEATURE_COAP), y)
 COAP_HDD_SRC := core/hdd/src
 COAP_OS_IF_SRC := os_if/coap/src
 COAP_TGT_SRC := components/target_if/coap/src
@@ -2642,7 +2643,6 @@ COAP_DISPATCHER_INC := -I$(WLAN_ROOT)/components/coap/dispatcher/inc
 COAP_CORE_INC := -I$(WLAN_ROOT)/components/coap/core/inc
 COAP_WMI_INC := -I$(WLAN_ROOT)/components/wmi/inc
 
-ifeq ($(CONFIG_WLAN_FEATURE_COAP), y)
 COAP_OBJS := \
 	$(COAP_HDD_SRC)/wlan_hdd_coap.o \
 	$(COAP_OS_IF_SRC)/wlan_cfg80211_coap.o \
@@ -2651,9 +2651,8 @@ COAP_OBJS := \
 	$(COAP_DISPATCHER_SRC)/wlan_coap_tgt_api.o \
 	$(COAP_DISPATCHER_SRC)/wlan_coap_ucfg_api.o \
 	$(COAP_WMI_SRC)/wmi_unified_coap_tlv.o
-endif
-
 $(call add-wlan-objs,coap,$(COAP_OBJS))
+endif
 
 ############## HTC ##########
 HTC_DIR := htc
