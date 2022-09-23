@@ -17,7 +17,6 @@
 /**
  * DOC : contains interface prototypes for OS_IF layer
  */
-
 #include <qdf_trace.h>
 #include <spatial_reuse_ucfg_api.h>
 #include <spatial_reuse_api.h>
@@ -59,4 +58,28 @@ void ucfg_spatial_reuse_send_sr_config(struct wlan_objmgr_vdev *vdev,
 					      non_srg_max_pd_offset);
 		wlan_vdev_mlme_set_he_spr_enabled(vdev, false);
 	}
+}
+
+void ucfg_spatial_reuse_set_sr_enable(struct wlan_objmgr_vdev *vdev,
+				      bool enable)
+{
+	 wlan_vdev_mlme_set_he_spr_enabled(vdev, enable);
+}
+
+void ucfg_spatial_reuse_send_sr_prohibit(struct wlan_objmgr_vdev *vdev,
+					 bool enable_he_siga_val15_prohibit)
+{
+	bool sr_enabled = wlan_vdev_mlme_get_he_spr_enabled(vdev);
+
+	if (sr_enabled)
+		wlan_spatial_reuse_he_siga_val15_allowed_set(
+					vdev, enable_he_siga_val15_prohibit);
+}
+
+QDF_STATUS
+ucfg_spatial_reuse_setup_req(struct wlan_objmgr_vdev *vdev,
+			     struct wlan_objmgr_pdev *pdev,
+			     bool is_sr_enable, int32_t pd_threshold)
+{
+	return wlan_sr_setup_req(vdev, pdev, is_sr_enable, pd_threshold);
 }

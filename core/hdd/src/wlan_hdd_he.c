@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -30,6 +30,34 @@
 #include "wma_he.h"
 #include "wlan_utility.h"
 #include "wlan_mlme_ucfg_api.h"
+#include "spatial_reuse_ucfg_api.h"
+
+const struct nla_policy
+wlan_hdd_sr_policy[QCA_WLAN_VENDOR_ATTR_SR_MAX + 1] = {
+	[QCA_WLAN_VENDOR_ATTR_SR_OPERATION] = {.type = NLA_U8},
+	[QCA_WLAN_VENDOR_ATTR_SR_PARAMS] = {.type = NLA_NESTED},
+	[QCA_WLAN_VENDOR_ATTR_SR_STATS] = {.type = NLA_NESTED},
+};
+
+static const struct nla_policy
+qca_wlan_vendor_srp_param_policy[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_MAX + 1] = {
+	[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_HESIGA_VAL15_ENABLE] = {
+							.type = NLA_FLAG},
+	[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_NON_SRG_OBSS_PD_DISALLOW] = {
+							.type = NLA_FLAG},
+	[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_SRG_OBSS_PD_MIN_OFFSET] = {
+							.type = NLA_U8},
+	[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_SRG_OBSS_PD_MAX_OFFSET] = {
+							.type = NLA_U8},
+	[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_NON_SRG_OBSS_PD_MAX_OFFSET] = {
+							.type = NLA_U8},
+	[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_SRG_PD_THRESHOLD] = {
+							.type = NLA_S32},
+	[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_NON_SRG_PD_THRESHOLD] = {
+							.type = NLA_S32},
+	[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_REASON_CODE] = {.type = NLA_U32},
+
+};
 
 void hdd_update_tgt_he_cap(struct hdd_context *hdd_ctx,
 			   struct wma_tgt_cfg *cfg)
@@ -216,3 +244,166 @@ int wlan_hdd_cfg80211_get_he_cap(struct wiphy *wiphy,
 
 	return errno;
 }
+
+/**
+ * __wlan_hdd_cfg80211_sr_operations: To handle SR operation
+ *
+ * @wiphy: wiphy structure
+ * @wdev: wireless dev
+ * @data: vendor command data
+ * @data_len: data len
+ *
+ * return: success/failure code
+ */
+#ifdef WLAN_FEATURE_SR
+static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
+					     struct wireless_dev *wdev,
+					     const void *data, int data_len)
+{
+	QDF_STATUS status;
+	uint32_t id;
+	bool is_sr_enable = false;
+	int32_t pd_threshold = 0;
+	uint8_t sr_he_siga_val15_allowed = true;
+	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
+	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(wdev->netdev);
+	struct nlattr *tb[QCA_WLAN_VENDOR_ATTR_SR_MAX + 1];
+	struct nlattr *tb2[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_MAX + 1];
+	enum qca_wlan_sr_operation sr_oper;
+	struct nlattr *sr_oper_attr;
+	struct nlattr *sr_param_attr;
+	uint8_t sr_ctrl, non_srg_max_pd_offset;
+	int ret = 0;
+
+	hdd_enter_dev(wdev->netdev);
+	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam() ||
+	    QDF_GLOBAL_MONITOR_MODE == hdd_get_conparam()) {
+		hdd_err("Command not allowed in FTM or Monitor mode");
+		return -EPERM;
+	}
+
+	ret = wlan_hdd_validate_context(hdd_ctx);
+	if (0 != ret)
+		return ret;
+	if (hdd_ctx->driver_status == DRIVER_MODULES_CLOSED) {
+		hdd_err("Driver Modules are closed");
+		return -EINVAL;
+	}
+	if (!sme_is_feature_supported_by_fw(DOT11AX)) {
+		hdd_err("11AX is not supported");
+		return -EINVAL;
+	}
+	if (wlan_cfg80211_nla_parse(tb, QCA_WLAN_VENDOR_ATTR_SR_MAX, data,
+				    data_len, wlan_hdd_sr_policy)) {
+		hdd_err("invalid attr");
+		return -EINVAL;
+	}
+	id = QCA_WLAN_VENDOR_ATTR_SR_OPERATION;
+	sr_oper_attr = tb[id];
+
+	if (!sr_oper_attr) {
+		hdd_err("SR operation not specified");
+		return -EINVAL;
+	}
+
+	sr_oper = nla_get_u8(sr_oper_attr);
+	hdd_debug("SR Operation 0x%x", sr_oper);
+
+	ucfg_spatial_reuse_get_sr_config(adapter->vdev, &sr_ctrl,
+					 &non_srg_max_pd_offset, &is_sr_enable);
+
+	if (sr_oper != QCA_WLAN_SR_OPERATION_SR_ENABLE && !is_sr_enable) {
+		hdd_err("SR operation not allowed");
+		return -EINVAL;
+	}
+
+	id = QCA_WLAN_VENDOR_ATTR_SR_PARAMS;
+	sr_param_attr = tb[id];
+	if (sr_param_attr)
+		ret = wlan_cfg80211_nla_parse_nested(
+				tb2, QCA_WLAN_VENDOR_ATTR_SR_PARAMS_MAX,
+				sr_param_attr,
+				qca_wlan_vendor_srp_param_policy);
+	switch (sr_oper) {
+	case QCA_WLAN_SR_OPERATION_SR_ENABLE:
+	case QCA_WLAN_SR_OPERATION_SR_DISABLE:
+		if (sr_oper == QCA_WLAN_SR_OPERATION_SR_ENABLE)
+			is_sr_enable = 1;
+		else
+			is_sr_enable = 0;
+		/**
+		 * As per currenct implementation from userspace same
+		 * PD threshold value is configured for both SRG and
+		 * NON-SRG and fw will decide further based on BSS color
+		 * So only SRG param is parsed and set as pd threshold
+		 */
+		if (is_sr_enable &&
+		    tb2[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_SRG_PD_THRESHOLD]) {
+			pd_threshold =
+			nla_get_s32(
+			tb2[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_SRG_PD_THRESHOLD]);
+		}
+		hdd_debug("setting sr enable %d with pd threshold %d",
+			  is_sr_enable, pd_threshold);
+		/* Set the variables */
+		ucfg_spatial_reuse_set_sr_enable(adapter->vdev, is_sr_enable);
+		status = ucfg_spatial_reuse_setup_req(adapter->vdev,
+						      hdd_ctx->pdev,
+						      is_sr_enable,
+						      pd_threshold);
+		if (status != QDF_STATUS_SUCCESS) {
+			hdd_err("failed to enable Spatial Reuse feature");
+			return -EINVAL;
+		}
+
+		break;
+	case QCA_WLAN_SR_OPERATION_GET_STATS:
+		break;
+	case QCA_WLAN_SR_OPERATION_CLEAR_STATS:
+		break;
+	case QCA_WLAN_SR_OPERATION_PSR_AND_NON_SRG_OBSS_PD_PROHIBIT:
+		if (tb2[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_HESIGA_VAL15_ENABLE])
+			sr_he_siga_val15_allowed = nla_get_u8(
+			tb2[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_HESIGA_VAL15_ENABLE]
+			);
+		if (!sr_he_siga_val15_allowed) {
+			hdd_err("invalid sr_he_siga_val15_enable param");
+			return -EINVAL;
+		}
+		ucfg_spatial_reuse_send_sr_prohibit(adapter->vdev,
+						    sr_he_siga_val15_allowed);
+		break;
+	case QCA_WLAN_SR_OPERATION_PSR_AND_NON_SRG_OBSS_PD_ALLOW:
+		ucfg_spatial_reuse_send_sr_prohibit(adapter->vdev, false);
+		break;
+	case QCA_WLAN_SR_OPERATION_GET_PARAMS:
+		break;
+	default:
+		hdd_err("Invalid SR Operation");
+		ret = -EINVAL;
+		break;
+	}
+
+	hdd_exit();
+
+	return ret;
+}
+
+int wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
+				    struct wireless_dev *wdev,
+				    const void *data, int data_len)
+{
+	struct osif_psoc_sync *psoc_sync;
+	int errno;
+
+	errno = osif_psoc_sync_op_start(wiphy_dev(wiphy), &psoc_sync);
+	if (errno)
+		return errno;
+
+	errno = __wlan_hdd_cfg80211_sr_operations(wiphy, wdev, data, data_len);
+
+	osif_psoc_sync_op_stop(psoc_sync);
+
+	return errno;
+}
+#endif

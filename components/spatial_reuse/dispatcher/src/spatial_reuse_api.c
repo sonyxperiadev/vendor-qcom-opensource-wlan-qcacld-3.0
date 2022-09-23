@@ -17,7 +17,6 @@
 /**
  * DOC : contains interface prototypes for spatial_reuse api
  */
-
 #include <spatial_reuse_api.h>
 
 QDF_STATUS wlan_spatial_reuse_config_set(struct wlan_objmgr_vdev *vdev,
@@ -39,4 +38,42 @@ QDF_STATUS wlan_spatial_reuse_config_set(struct wlan_objmgr_vdev *vdev,
 							non_srg_max_pd_offset);
 
 	return QDF_STATUS_E_NULL_VALUE;
+}
+
+QDF_STATUS wlan_spatial_reuse_he_siga_val15_allowed_set(
+					struct wlan_objmgr_vdev *vdev,
+					bool he_siga_va15_allowed)
+{
+	struct wlan_lmac_if_tx_ops *tx_ops;
+	struct wlan_objmgr_psoc *psoc = wlan_vdev_get_psoc(vdev);
+
+	if (!psoc)
+		return QDF_STATUS_E_NULL_VALUE;
+
+	tx_ops = wlan_psoc_get_lmac_if_txops(psoc);
+	if (!tx_ops)
+		return QDF_STATUS_E_NULL_VALUE;
+
+	if (tx_ops->spatial_reuse_tx_ops.send_sr_prohibit_cfg)
+		return tx_ops->spatial_reuse_tx_ops.send_sr_prohibit_cfg(
+							vdev,
+							he_siga_va15_allowed);
+	return QDF_STATUS_E_NULL_VALUE;
+}
+
+QDF_STATUS
+wlan_sr_setup_req(struct wlan_objmgr_vdev *vdev, struct wlan_objmgr_pdev *pdev,
+		  bool is_sr_enable, int32_t pd_threshold) {
+	struct wlan_lmac_if_tx_ops *tx_ops;
+	QDF_STATUS status = QDF_STATUS_E_FAILURE;
+
+	tx_ops = wlan_psoc_get_lmac_if_txops(wlan_pdev_get_psoc(pdev));
+	if (tx_ops &&
+	    tx_ops->spatial_reuse_tx_ops.target_if_set_sr_enable_disable) {
+		status =
+		tx_ops->spatial_reuse_tx_ops.target_if_set_sr_enable_disable(
+					vdev, pdev, is_sr_enable, pd_threshold);
+		return status;
+	}
+	return status;
 }

@@ -37,4 +37,30 @@ QDF_STATUS wlan_spatial_reuse_config_set(struct wlan_objmgr_vdev *vdev,
 					 uint8_t sr_ctrl,
 					 uint8_t non_srg_max_pd_offset);
 
+/**
+ * wlan_spatial_reuse_he_siga_val15_allowed_set() - Set spatial reuse config
+ *						    he_siga_val15_allowed
+ * @vdev: objmgr manager vdev
+ * @he_siga_va15_allowed: enable/disable he_siga_val15_allowed
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS wlan_spatial_reuse_he_siga_val15_allowed_set(
+					struct wlan_objmgr_vdev *vdev,
+					bool he_siga_va15_allowed);
+
+/**
+ * wlan_sr_setup_req() - Enable SR with provided pd threshold
+ *
+ * @vdev: objmgr vdev
+ * @pdev: objmgr pdev
+ * @is_sr_enable: sr enable/disable
+ * @pd_threshold: pd threshold
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_sr_setup_req(struct wlan_objmgr_vdev *vdev,
+		  struct wlan_objmgr_pdev *pdev, bool is_sr_enable,
+		  int32_t pd_threshold);
 #endif

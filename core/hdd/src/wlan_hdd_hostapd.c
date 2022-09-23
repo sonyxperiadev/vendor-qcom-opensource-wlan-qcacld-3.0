@@ -7369,7 +7369,7 @@ wlan_util_get_centre_freq(struct wireless_dev *wdev, unsigned int link_id)
 }
 #endif
 
-#if defined WLAN_FEATURE_11AX
+#ifdef WLAN_FEATURE_SR
 void hdd_update_he_obss_pd(struct hdd_adapter *adapter,
 			   struct cfg80211_ap_settings *params,
 			   bool iface_start)
@@ -7412,7 +7412,6 @@ void hdd_update_he_obss_pd(struct hdd_adapter *adapter,
 							WLAN_HDD_ID_OBJ_MGR);
 		if (!conc_vdev)
 			goto release_ref;
-
 		if (iface_start) {
 			ucfg_spatial_reuse_send_sr_config(conc_vdev, false);
 			hdd_debug("disable obss pd for vdev:%d", conc_vdev_id);
