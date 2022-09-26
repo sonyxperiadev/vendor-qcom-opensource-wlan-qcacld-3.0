@@ -81,7 +81,7 @@ uint8_t *wlan_hdd_get_mld_addr(struct hdd_context *hdd_ctx, uint8_t device_mode)
 	return mac_info->mld_mac_list[i].mld_addr.bytes;
 }
 
-#ifndef CFG80211_SINGLE_NETDEV_MULTI_LINK_SUPPORT
+#ifdef CFG80211_IFTYPE_MLO_LINK_SUPPORT
 static
 void wlan_hdd_register_ml_link(struct hdd_adapter *sta_adapter,
 			       struct hdd_adapter *link_adapter)
@@ -294,7 +294,7 @@ QDF_STATUS hdd_check_for_existing_mldaddr(struct hdd_context *hdd_ctx,
 	return QDF_STATUS_SUCCESS;
 }
 
-#ifndef CFG80211_SINGLE_NETDEV_MULTI_LINK_SUPPORT
+#ifdef CFG80211_MLD_MAC_IN_WDEV
 static inline
 void wlan_hdd_populate_mld_address(struct hdd_adapter *adapter,
 				   uint8_t *mld_addr)
