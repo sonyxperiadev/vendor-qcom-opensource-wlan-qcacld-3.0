@@ -3360,15 +3360,13 @@ static QDF_STATUS lim_auth_tx_complete_cnf(void *context,
 }
 
 #ifdef WLAN_FEATURE_11BE_MLO
-static uint32_t lim_populate_auth_mlo_ie(struct mac_context *mac_ctx,
-					 struct pe_session *session,
-					 tSirMacAddr peer_addr,
-					 uint8_t *mlo_ie_buf)
+static uint32_t lim_calculate_auth_mlo_ie_len(struct mac_context *mac_ctx,
+					      struct pe_session *session,
+					      tSirMacAddr peer_addr)
 {
 	struct wlan_mlo_ie *mlo_ie;
 	uint32_t mlo_ie_len = 0;
 	struct tLimPreAuthNode *auth_node;
-	QDF_STATUS status;
 
 	mlo_ie = &session->mlo_ie;
 	if (wlan_vdev_mlme_is_mlo_vdev(session->vdev)) {
@@ -3378,10 +3376,6 @@ static uint32_t lim_populate_auth_mlo_ie(struct mac_context *mac_ctx,
 		if (LIM_IS_STA_ROLE(session)) {
 			populate_dot11f_auth_mlo_ie(mac_ctx, session, mlo_ie);
 			mlo_ie_len = lim_caculate_mlo_ie_length(mlo_ie);
-			status = lim_fill_complete_mlo_ie(session, mlo_ie_len,
-							  mlo_ie_buf);
-			if (QDF_IS_STATUS_ERROR(status))
-				mlo_ie_len = 0;
 		} else if (LIM_IS_AP_ROLE(session)) {
 			auth_node = lim_search_pre_auth_list(mac_ctx, peer_addr);
 			if (!auth_node) {
@@ -3396,25 +3390,20 @@ static uint32_t lim_populate_auth_mlo_ie(struct mac_context *mac_ctx,
 			 */
 			if (auth_node && auth_node->is_mlo_ie_present) {
 				populate_dot11f_auth_mlo_ie(mac_ctx, session,
-							    mlo_ie);
+							   mlo_ie);
 				mlo_ie_len = lim_caculate_mlo_ie_length(mlo_ie);
-				status = lim_fill_complete_mlo_ie(session,
-								  mlo_ie_len,
-								  mlo_ie_buf);
-				if (QDF_IS_STATUS_ERROR(status))
-					mlo_ie_len = 0;
 			}
 		}
 	}
 
 	return mlo_ie_len;
 }
+
 #else
 static inline
-uint32_t lim_populate_auth_mlo_ie(struct mac_context *mac_ctx,
-				  struct pe_session *session,
-				  tSirMacAddr peer_addr,
-				  uint8_t *mlo_ie_buf)
+uint32_t lim_calculate_auth_mlo_ie_len(struct mac_context *mac_ctx,
+				       struct pe_session *session,
+				       tSirMacAddr peer_addr)
 {
 	return 0;
 }
@@ -3453,7 +3442,7 @@ lim_send_auth_mgmt_frame(struct mac_context *mac_ctx,
 	enum rateid min_rid = RATEID_DEFAULT;
 	uint16_t ch_freq_tx_frame = 0;
 	int8_t peer_rssi = 0;
-	uint8_t mlo_ie_buf[DOT11F_EID_MLO_IE];
+	uint8_t *mlo_ie_buf;
 	uint32_t mlo_ie_len = 0;
 
 	if (!session) {
@@ -3583,12 +3572,22 @@ lim_send_auth_mgmt_frame(struct mac_context *mac_ctx,
 		return;
 	} /* switch (auth_frame->authTransactionSeqNumber) */
 
-	qdf_mem_zero(&mlo_ie_buf, sizeof(mlo_ie_buf));
+	mlo_ie_len = lim_calculate_auth_mlo_ie_len(mac_ctx, session, peer_addr);
 
-	mlo_ie_len =  lim_populate_auth_mlo_ie(mac_ctx, session, peer_addr,
-					       mlo_ie_buf);
-	frame_len += mlo_ie_len;
+	if (mlo_ie_len) {
+		mlo_ie_buf = qdf_mem_malloc(mlo_ie_len);
+		if (mlo_ie_buf) {
+			qdf_status = lim_fill_complete_mlo_ie(session,
+							      mlo_ie_len,
+							      mlo_ie_buf);
+			if (QDF_IS_STATUS_ERROR(qdf_status)) {
+				mlo_ie_len = 0;
+				qdf_mem_free(mlo_ie_buf);
+			}
 
+			frame_len += mlo_ie_len;
+		}
+	}
 alloc_packet:
 	qdf_status = cds_packet_alloc((uint16_t) frame_len, (void **)&frame,
 				 (void **)&packet);
@@ -3703,8 +3702,10 @@ alloc_packet:
 		}
 	}
 
-	if (mlo_ie_len)
-		qdf_mem_copy(body, &mlo_ie_buf, mlo_ie_len);
+	if (mlo_ie_len && mlo_ie_buf) {
+		qdf_mem_copy(body, mlo_ie_buf, mlo_ie_len);
+		qdf_mem_free(mlo_ie_buf);
+	}
 
 	pe_nofl_info("Auth TX: vdev %d seq %d seq num %d status %d WEP %d to " QDF_MAC_ADDR_FMT,
 		     vdev_id, auth_frame->authTransactionSeqNumber,
