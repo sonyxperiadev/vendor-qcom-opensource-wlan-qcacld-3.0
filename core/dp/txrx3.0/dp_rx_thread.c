@@ -675,7 +675,6 @@ static int dp_rx_thread_loop(void *arg)
 	dp_info("exiting (%s) id %d pid %d", qdf_get_current_comm(),
 		rx_thread->id, qdf_get_current_pid());
 	qdf_event_set(&rx_thread->shutdown_event);
-	qdf_exit_thread(QDF_STATUS_SUCCESS);
 
 	return 0;
 }
@@ -753,7 +752,6 @@ static int dp_rx_refill_thread_loop(void *arg)
 	dp_info("exiting (%s) pid %d", qdf_get_current_comm(),
 		qdf_get_current_pid());
 	qdf_event_set(&rx_thread->shutdown_event);
-	qdf_exit_thread(QDF_STATUS_SUCCESS);
 
 	return 0;
 }
