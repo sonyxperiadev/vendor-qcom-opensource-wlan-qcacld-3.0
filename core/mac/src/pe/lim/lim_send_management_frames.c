@@ -4312,7 +4312,7 @@ lim_send_disassoc_mgmt_frame(struct mac_context *mac,
  * \param nReason Indicates the reason that need to be sent in the
  * Deauthenticate frame
  *
- * \param peeer address of the STA to which the frame is to be sent
+ * \param peer address of the STA to which the frame is to be sent
  *
  *
  */
@@ -4364,6 +4364,17 @@ lim_send_deauth_mgmt_frame(struct mac_context *mac,
 				lim_send_deauth_cnf(mac);
 			return;
 		}
+	} else if (lim_is_ml_peer_state_disconn(mac, pe_session, peer)) {
+		/**
+		 * Check if deauth is already sent on link vdev and ML peer
+		 * state is moved to ML_PEER_DISCONN_INITIATED. In which case,
+		 * do not send deauth on assoc vdev as well. Issue deauth only
+		 * if this check fails.
+		 */
+		pe_debug("Deauth tx not required for vdev id %d",
+			 pe_session->vdev_id);
+		lim_send_deauth_cnf(mac);
+		return;
 	}
 	smeSessionId = pe_session->smeSessionId;
 
