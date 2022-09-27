@@ -1306,6 +1306,8 @@ void hdd_enable_arp_offload(struct hdd_adapter *adapter,
 	struct in_ifaddr *ifa;
 	struct wlan_objmgr_vdev *vdev;
 
+	hdd_enter();
+
 	arp_req = qdf_mem_malloc(sizeof(*arp_req));
 	if (!arp_req)
 		return;
@@ -1523,6 +1525,8 @@ void hdd_disable_arp_offload(struct hdd_adapter *adapter,
 	QDF_STATUS status;
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	struct wlan_objmgr_vdev *vdev;
+
+	hdd_enter();
 
 	status = ucfg_pmo_check_arp_offload(hdd_ctx->psoc, trigger,
 					    adapter->vdev_id);
