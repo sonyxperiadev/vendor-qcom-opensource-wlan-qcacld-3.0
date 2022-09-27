@@ -8963,6 +8963,23 @@ void lim_update_stads_eht_bw_320mhz(struct pe_session *session,
 #endif
 
 #ifdef WLAN_FEATURE_11BE_MLO
+void lim_extract_per_link_id(struct pe_session *session,
+			     struct bss_params *add_bss,
+			     tpSirAssocRsp assoc_rsp)
+{
+	uint8_t vdev_id = wlan_vdev_get_id(session->vdev);
+
+	if (!wlan_vdev_mlme_is_mlo_link_vdev(session->vdev) &&
+	    assoc_rsp->mlo_ie.mlo_ie.link_id_info_present)
+		add_bss->staContext.link_id =
+				assoc_rsp->mlo_ie.mlo_ie.link_id;
+	else
+		add_bss->staContext.link_id =
+				wlan_vdev_get_link_id(session->vdev);
+
+	pe_debug("vdev: %d, link id: %d", vdev_id, add_bss->staContext.link_id);
+}
+
 void lim_intersect_ap_emlsr_caps(struct mac_context *mac_ctx,
 				 struct pe_session *session,
 				 struct bss_params *add_bss,
@@ -8996,14 +9013,10 @@ void lim_intersect_ap_emlsr_caps(struct mac_context *mac_ctx,
 				mlo_peer_ctx->mlpeer_emlcap.emlsr_supp;
 		add_bss->staContext.emlsr_trans_timeout =
 				mlo_peer_ctx->mlpeer_emlcap.trans_timeout;
-		add_bss->staContext.link_id =
-				wlan_vdev_get_link_id(session->vdev);
 	} else {
 		add_bss->staContext.emlsr_support = true;
 		add_bss->staContext.emlsr_trans_timeout =
 			assoc_rsp->mlo_ie.mlo_ie.eml_capabilities_info.transition_timeout;
-		add_bss->staContext.link_id =
-				assoc_rsp->mlo_ie.mlo_ie.link_id;
 
 		mlo_peer_ctx->mlpeer_emlcap.emlsr_supp =
 				add_bss->staContext.emlsr_support;
@@ -9012,8 +9025,8 @@ void lim_intersect_ap_emlsr_caps(struct mac_context *mac_ctx,
 	}
 
 	wlan_objmgr_peer_release_ref(peer, WLAN_LEGACY_MAC_ID);
-	pe_debug("emlsr support: %d, link id: %d, transition timeout:%d",
-		 add_bss->staContext.emlsr_support, add_bss->staContext.link_id,
+	pe_debug("emlsr support: %d, transition timeout:%d",
+		 add_bss->staContext.emlsr_support,
 		 add_bss->staContext.emlsr_trans_timeout);
 }
 

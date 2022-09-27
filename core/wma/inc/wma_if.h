@@ -185,6 +185,10 @@ struct med_sync_delay {
  * @eht_op: EHT operation
  * @mld_mac_addr: mld mac address
  * @is_assoc_peer: is assoc peer or not
+ * @emlsr_support: is EMLSR mode supported or not
+ * @msd_caps_present: is MSD capability present in MLO IE or not
+ * @link_id: per link id
+ * @emlsr_trans_timeout: EMLSR transition timeout value
  *
  * This structure contains parameter required for
  * add sta request of upper layer.
