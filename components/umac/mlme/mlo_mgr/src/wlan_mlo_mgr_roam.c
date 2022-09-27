@@ -70,13 +70,11 @@ mlo_update_for_multi_link_roam(struct wlan_objmgr_psoc *psoc,
 	}
 
 	if (vdev_id == ml_link_vdev_id) {
-		wlan_vdev_mlme_feat_ext2_cap_set(vdev,
-						 WLAN_VDEV_FEXT2_MLO);
+		wlan_vdev_mlme_set_mlo_vdev(vdev);
 		goto end;
 	}
 
-	wlan_vdev_mlme_feat_ext2_cap_set(vdev,
-					 WLAN_VDEV_FEXT2_MLO);
+	wlan_vdev_mlme_set_mlo_vdev(vdev);
 	wlan_vdev_mlme_feat_ext2_cap_set(vdev,
 					 WLAN_VDEV_FEXT2_MLO_STA_LINK);
 
@@ -90,7 +88,7 @@ static void
 mlo_cleanup_link(struct wlan_objmgr_vdev *vdev, bool is_legacy)
 {
 	if (is_legacy || wlan_vdev_mlme_is_mlo_link_vdev(vdev))
-		wlan_vdev_mlme_feat_ext2_cap_clear(vdev, WLAN_VDEV_FEXT2_MLO);
+		wlan_vdev_mlme_clear_mlo_vdev(vdev);
 
 	if (wlan_vdev_mlme_is_mlo_link_vdev(vdev)) {
 		cm_cleanup_mlo_link(vdev);
@@ -145,8 +143,7 @@ mlo_clear_link_bmap(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
 	}
 
 	mlo_clear_connect_req_links_bmap(vdev);
-	wlan_vdev_mlme_feat_ext2_cap_clear(vdev,
-					   WLAN_VDEV_FEXT2_MLO);
+	wlan_vdev_mlme_clear_mlo_vdev(vdev);
 	if (wlan_vdev_mlme_is_mlo_link_vdev(vdev))
 		wlan_vdev_mlme_feat_ext2_cap_clear(vdev,
 				WLAN_VDEV_FEXT2_MLO_STA_LINK);
