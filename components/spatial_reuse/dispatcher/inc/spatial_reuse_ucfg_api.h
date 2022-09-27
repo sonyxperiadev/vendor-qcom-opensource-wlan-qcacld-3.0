@@ -50,6 +50,28 @@ void ucfg_spatial_reuse_get_sr_config(struct wlan_objmgr_vdev *vdev,
 void ucfg_spatial_reuse_set_sr_config(struct wlan_objmgr_vdev *vdev,
 				      uint8_t sr_ctrl,
 				      uint8_t non_srg_max_pd_offset);
+
+/**
+ * ucfg_spatial_reuse_is_sr_disabled_due_conc() - Spatial reuse get concurrency
+ *						  status
+ *
+ * @vdev: object manager vdev
+ *
+ * Return: True when SR is disabled due to concurrency or else False
+ */
+bool ucfg_spatial_reuse_is_sr_disabled_due_conc(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_spatial_reuse_set_sr_conc_stat() - Spatial reuse disable config set
+ *
+ * @vdev: object manager vdev
+ * @sr_conc_disabled: spatial reuse disabled due to concurrency
+ *
+ * Return: void
+ */
+void ucfg_spatial_reuse_set_sr_conc_stat(struct wlan_objmgr_vdev *vdev,
+					 bool sr_conc_disabled);
+
 /**
  * ucfg_spatial_reuse_send_sr_config() - Send spatial reuse config to fw
  *

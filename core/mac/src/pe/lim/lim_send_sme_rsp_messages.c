@@ -2339,9 +2339,17 @@ lim_update_spatial_reuse(struct pe_session *session)
 								    vdev_id,
 								    mac_id);
 		if (conc_vdev_id == WLAN_INVALID_VDEV_ID ||
-		    policy_mgr_sr_same_mac_conc_enabled(psoc))
+		    policy_mgr_sr_same_mac_conc_enabled(psoc)) {
+			wlan_vdev_mlme_set_sr_disable_due_conc(session->vdev,
+							       false);
 			wlan_spatial_reuse_config_set(session->vdev, sr_ctrl,
 						      non_srg_pd_max_offset);
+		} else {
+			wlan_vdev_mlme_set_sr_disable_due_conc(session->vdev,
+							       true);
+			wlan_spatial_reuse_config_set(session->vdev, sr_ctrl,
+						      0x80);
+		}
 	}
 }
 #else

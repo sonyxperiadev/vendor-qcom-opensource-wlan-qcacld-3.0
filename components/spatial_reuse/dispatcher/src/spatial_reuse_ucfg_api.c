@@ -39,6 +39,17 @@ void ucfg_spatial_reuse_set_sr_config(struct wlan_objmgr_vdev *vdev,
 	wlan_vdev_mlme_set_pd_offset(vdev, non_srg_max_pd_offset);
 }
 
+bool ucfg_spatial_reuse_is_sr_disabled_due_conc(struct wlan_objmgr_vdev *vdev)
+{
+	return wlan_vdev_mlme_is_sr_disable_due_conc(vdev);
+}
+
+void ucfg_spatial_reuse_set_sr_conc_stat(struct wlan_objmgr_vdev *vdev,
+					 bool sr_conc_disabled)
+{
+	wlan_vdev_mlme_set_sr_disable_due_conc(vdev, sr_conc_disabled);
+}
+
 void ucfg_spatial_reuse_send_sr_config(struct wlan_objmgr_vdev *vdev,
 				       bool enable)
 {
@@ -48,6 +59,9 @@ void ucfg_spatial_reuse_send_sr_config(struct wlan_objmgr_vdev *vdev,
 
 	/* SR feature itself is disabled by user */
 	if (!wlan_vdev_mlme_get_he_spr_enabled(vdev))
+		return;
+	/* SR is disabled due to conccurrency */
+	if (ucfg_spatial_reuse_is_sr_disabled_due_conc(vdev))
 		return;
 
 	if (enable) {
