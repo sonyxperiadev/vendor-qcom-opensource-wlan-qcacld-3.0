@@ -4000,7 +4000,7 @@ static void lim_fill_ml_info(struct cm_vdev_join_req *req,
 		qdf_copy_macaddr(
 			&partner_info->partner_link_info[idx].link_addr,
 			&req->partner_info.partner_link_info[idx].link_addr);
-		pe_debug("MLO: link_id:%d" QDF_MAC_ADDR_FMT,
+		pe_debug("MLO: link_id:%d " QDF_MAC_ADDR_FMT,
 			 partner_info->partner_link_info[idx].link_id,
 			 QDF_MAC_ADDR_REF(partner_info->partner_link_info[idx].
 					  link_addr.bytes));

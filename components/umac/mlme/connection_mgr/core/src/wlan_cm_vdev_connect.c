@@ -1102,9 +1102,11 @@ cm_get_ml_partner_info(struct scan_cache_entry *scan_entry,
 	 * entry should be cleared to not affect next connect request.
 	 */
 	for (i = 0; i < scan_entry->ml_info.num_links; i++) {
-		mlme_debug("freq: %d, link id: %d",
-			   partner_info->partner_link_info[i].chan_freq,
-			   scan_entry->ml_info.link_info[i].link_id);
+		mlme_debug("freq: %d, link id: %d "QDF_MAC_ADDR_FMT,
+			   scan_entry->ml_info.link_info[i].freq,
+			   scan_entry->ml_info.link_info[i].link_id,
+			   QDF_MAC_ADDR_REF(
+			   scan_entry->ml_info.link_info[i].link_addr.bytes));
 		if (j >= mlo_support_link_num - 1)
 			break;
 		if (scan_entry->ml_info.link_info[i].is_valid_link) {
@@ -1112,6 +1114,8 @@ cm_get_ml_partner_info(struct scan_cache_entry *scan_entry,
 				scan_entry->ml_info.link_info[i].link_addr;
 			partner_info->partner_link_info[j].link_id =
 				scan_entry->ml_info.link_info[i].link_id;
+			partner_info->partner_link_info[j].chan_freq =
+				scan_entry->ml_info.link_info[i].freq;
 			j++;
 		} else {
 			scan_entry->ml_info.link_info[i].is_valid_link = false;
