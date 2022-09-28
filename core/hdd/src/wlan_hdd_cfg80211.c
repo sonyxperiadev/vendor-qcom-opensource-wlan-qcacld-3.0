@@ -624,6 +624,7 @@ static const struct ieee80211_iface_limit
 	},
 };
 
+#ifndef WLAN_FEATURE_NO_P2P_CONCURRENCY
 /* P2P limit */
 static const struct ieee80211_iface_limit
 	wlan_hdd_p2p_iface_limit[] = {
@@ -639,7 +640,7 @@ static const struct ieee80211_iface_limit
 
 /* STA + P2P + P2P combination */
 static const struct ieee80211_iface_limit
-	wlan_hdd_sta_p2p_iface_limit[] = {
+	wlan_hdd_sta_p2p_p2p_iface_limit[] = {
 	{
 		.max = 1,
 		.types = BIT(NL80211_IFTYPE_STATION)
@@ -698,11 +699,40 @@ wlan_hdd_p2p_p2p_iface_limit[] = {
 	   .types = BIT(NL80211_IFTYPE_P2P_GO) | BIT(NL80211_IFTYPE_P2P_CLIENT)
 	},
 };
+#endif
 
+/* STA + AP combination */
+static const struct ieee80211_iface_limit
+wlan_hdd_sta_ap_iface_limit[] = {
+	{
+	   .max = 1,
+	   .types = BIT(NL80211_IFTYPE_STATION)
+	},
+	{
+	   .max = 1,
+	   .types = BIT(NL80211_IFTYPE_AP)
+	},
+};
+
+/* STA + P2P combination */
+static const struct ieee80211_iface_limit
+	wlan_hdd_sta_p2p_iface_limit[] = {
+	{
+		.max = 1,
+		.types = BIT(NL80211_IFTYPE_STATION)
+	},
+	{
+		/* Support for either (GO or CLI) */
+		.max = 1,
+		.types = BIT(NL80211_IFTYPE_P2P_GO) | BIT(NL80211_IFTYPE_P2P_CLIENT),
+	},
+};
+
+/* Monitor interface */
 static const struct ieee80211_iface_limit
 	wlan_hdd_mon_iface_limit[] = {
 	{
-		.max = 3,       /* Monitor interface */
+		.max = 3,
 		.types = BIT(NL80211_IFTYPE_MONITOR),
 	},
 };
@@ -722,6 +752,7 @@ static const struct ieee80211_iface_limit
 	},
 };
 
+#ifndef WLAN_FEATURE_NO_SAP_NAN_CONCURRENCY
 /* SAP + NAN disc combination */
 static const struct ieee80211_iface_limit
 	wlan_hdd_sap_nan_iface_limit[] = {
@@ -736,6 +767,7 @@ static const struct ieee80211_iface_limit
 		.types = BIT(NL80211_IFTYPE_NAN),
 	},
 };
+#endif
 
 static struct ieee80211_iface_combination
 	wlan_hdd_iface_combination[] = {
@@ -757,6 +789,7 @@ static struct ieee80211_iface_combination
 		.beacon_int_min_gcd = 1,
 #endif
 	},
+#ifndef WLAN_FEATURE_NO_P2P_CONCURRENCY
 	/* P2P */
 	{
 		.limits = wlan_hdd_p2p_iface_limit,
@@ -766,10 +799,10 @@ static struct ieee80211_iface_combination
 	},
 	/* STA + P2P + P2P */
 	{
-		.limits = wlan_hdd_sta_p2p_iface_limit,
+		.limits = wlan_hdd_sta_p2p_p2p_iface_limit,
 		.num_different_channels = 2,
 		.max_interfaces = 3,
-		.n_limits = ARRAY_SIZE(wlan_hdd_sta_p2p_iface_limit),
+		.n_limits = ARRAY_SIZE(wlan_hdd_sta_p2p_p2p_iface_limit),
 		.beacon_int_infra_match = true,
 	},
 	/* STA + P2P + SAP */
@@ -801,6 +834,23 @@ static struct ieee80211_iface_combination
 		.n_limits = ARRAY_SIZE(wlan_hdd_p2p_p2p_iface_limit),
 		.beacon_int_infra_match = true,
 	},
+#endif
+	/* STA + P2P */
+	{
+		.limits = wlan_hdd_sta_p2p_iface_limit,
+		.num_different_channels = 2,
+		.max_interfaces = 2,
+		.n_limits = ARRAY_SIZE(wlan_hdd_sta_p2p_iface_limit),
+		.beacon_int_infra_match = true,
+	},
+	/* STA + SAP */
+	{
+		.limits = wlan_hdd_sta_ap_iface_limit,
+		.num_different_channels = 2,
+		.max_interfaces = 2,
+		.n_limits = ARRAY_SIZE(wlan_hdd_sta_ap_iface_limit),
+		.beacon_int_infra_match = true,
+	},
 	/* Monitor */
 	{
 		.limits = wlan_hdd_mon_iface_limit,
@@ -815,6 +865,7 @@ static struct ieee80211_iface_combination
 		.num_different_channels = 2,
 		.n_limits = ARRAY_SIZE(wlan_hdd_sta_nan_iface_limit),
 	},
+#ifndef WLAN_FEATURE_NO_SAP_NAN_CONCURRENCY
 	/* NAN + SAP */
 	{
 		.limits = wlan_hdd_sap_nan_iface_limit,
@@ -823,6 +874,7 @@ static struct ieee80211_iface_combination
 		.n_limits = ARRAY_SIZE(wlan_hdd_sap_nan_iface_limit),
 		.beacon_int_infra_match = true,
 	},
+#endif
 };
 
 static struct cfg80211_ops wlan_hdd_cfg80211_ops;
