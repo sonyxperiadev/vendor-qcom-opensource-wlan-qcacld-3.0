@@ -459,6 +459,17 @@ osif_twt_ack_wait_response(struct wlan_objmgr_psoc *psoc,
 	return QDF_STATUS_SUCCESS;
 }
 
+static void
+osif_send_twt_delete_cmd(struct wlan_objmgr_vdev *vdev,
+			 struct qdf_mac_addr *peer_mac, uint8_t dialog_id)
+{
+	uint32_t twt_next_action = HOST_TWT_SEND_DELETE_CMD;
+
+	ucfg_twt_set_work_params(vdev, peer_mac,
+				 dialog_id, twt_next_action);
+	qdf_sched_work(0, &vdev->twt_work);
+}
+
 static int
 osif_send_twt_setup_req(struct wlan_objmgr_vdev *vdev,
 			struct wlan_objmgr_psoc *psoc,
@@ -508,8 +519,22 @@ osif_send_twt_setup_req(struct wlan_objmgr_vdev *vdev,
 	if (ack_priv->status) {
 		osif_err("Received TWT ack error: %d. Reset twt command",
 			 ack_priv->status);
-		ucfg_twt_init_context(psoc, &twt_params->peer_macaddr,
-				      twt_params->dialog_id);
+
+		if (ucfg_twt_is_setup_done(psoc,
+					   &twt_params->peer_macaddr,
+					   twt_params->dialog_id)) {
+			/* If TWT setup is already done then this is
+			 * renegotiation failure scenario.
+			 * Terminate TWT session on renegotiation failure.
+			 */
+			osif_debug("setup_done set, renego failure");
+			osif_send_twt_delete_cmd(vdev,
+						 &twt_params->peer_macaddr,
+						 twt_params->dialog_id);
+		} else {
+			ucfg_twt_init_context(psoc, &twt_params->peer_macaddr,
+					      twt_params->dialog_id);
+		}
 
 		switch (ack_priv->status) {
 		case HOST_ADD_TWT_STATUS_INVALID_PARAM:
@@ -1073,7 +1098,6 @@ osif_twt_handle_renego_failure(struct wlan_objmgr_psoc *psoc,
 	struct wlan_objmgr_pdev *pdev;
 	struct wlan_objmgr_vdev *vdev;
 	uint32_t vdev_id;
-	uint32_t twt_next_action = 0;
 
 	if (!event)
 		return;
@@ -1099,9 +1123,8 @@ osif_twt_handle_renego_failure(struct wlan_objmgr_psoc *psoc,
 		goto end;
 	}
 
-	twt_next_action = HOST_TWT_SEND_DELETE_CMD;
-	ucfg_twt_set_work_params(vdev, &event->params, twt_next_action);
-	qdf_sched_work(0, &vdev->twt_work);
+	osif_send_twt_delete_cmd(vdev, &event->params.peer_macaddr,
+				 event->params.dialog_id);
 
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_TWT_ID);
 
