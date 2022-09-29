@@ -105,7 +105,7 @@ enum hdd_wmm_linuxac {
  * struct hdd_wmm_qos_context - HDD WMM QoS Context
  *
  * This structure holds the context for a single flow which has either
- * been confgured explicitly from userspace or implicitly via the
+ * been configured explicitly from userspace or implicitly via the
  * Implicit QoS feature.
  *
  * @node: list node which can be used to put the context into a list

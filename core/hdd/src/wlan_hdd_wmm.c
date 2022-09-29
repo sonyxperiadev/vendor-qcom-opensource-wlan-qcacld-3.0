@@ -1510,7 +1510,7 @@ static void __hdd_wmm_do_implicit_qos(struct hdd_wmm_qos_context *qos_context)
 }
 
 /**
- * hdd_wmm_do_implicit_qos() - SSR wraper function for hdd_wmm_do_implicit_qos
+ * hdd_wmm_do_implicit_qos() - SSR wrapper function for hdd_wmm_do_implicit_qos
  * @work: pointer to work_struct
  *
  * Return: none
@@ -2733,7 +2733,7 @@ hdd_wlan_wmm_status_e hdd_wmm_addts(struct hdd_adapter *adapter,
 		hdd_wmm_disable_inactivity_timer(qos_context);
 		/* we can't tell the difference between when a request
 		 * fails because AP rejected it versus when SME
-		 * encounterd an internal error
+		 * encountered an internal error
 		 */
 		hdd_wmm_free_context(qos_context);
 		return HDD_WLAN_WMM_STATUS_SETUP_FAILED;

@@ -1204,7 +1204,7 @@ hdd_cm_connect_success_pre_user_update(struct wlan_objmgr_vdev *vdev,
 	sta_ctx->reg_phymode = csr_convert_from_reg_phy_mode(phymode);
 
 	if (hdd_add_beacon_filter(adapter) != 0)
-		hdd_err("add beacon fileter failed");
+		hdd_err("add beacon filter failed");
 
 	adapter->wapi_info.is_wapi_sta = hdd_cm_is_wapi_sta(
 						sta_ctx->conn_info.auth_type);
@@ -1633,7 +1633,7 @@ static void hdd_update_hlp_info(struct net_device *dev,
 	/*
 	 * adapter->vdev is directly dereferenced because in per packet
 	 * path usage of hdd_get_vdev_by_user is costly operation as it
-	 * involves lock access. And it is guranteed during TX/RX operations
+	 * involves lock access. And it is guaranteed during TX/RX operations
 	 * vdev will be active will not deleted.
 	 */
 	status = ucfg_dp_rx_packet_cbk(adapter->vdev, (qdf_nbuf_t)skb);

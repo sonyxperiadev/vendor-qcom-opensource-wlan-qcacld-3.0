@@ -4281,7 +4281,7 @@ int hdd_wlan_start_modules(struct hdd_context *hdd_ctx, bool reinit)
 			goto deregister_cb;
 
 		/*
-		 * NAN compoenet requires certian operations like, open adapter,
+		 * NAN compoenet requires certain operations like, open adapter,
 		 * close adapter, etc. to be initiated by HDD, for those
 		 * register HDD callbacks with UMAC's NAN componenet.
 		 */
@@ -4378,7 +4378,7 @@ int hdd_wlan_start_modules(struct hdd_context *hdd_ctx, bool reinit)
 
 	return 0;
 /*
- * Disable scheduler 1st so that scheduler thread dosent send messages to fw
+ * Disable scheduler 1st so that scheduler thread doesn't send messages to fw
  * in parallel to the cleanup
  */
 sched_disable:
@@ -5386,7 +5386,7 @@ hdd_set_derived_multicast_list(struct wlan_objmgr_psoc *psoc,
  * @dev:	Pointer to the WLAN device.
  * @skb:	Pointer to OS packet (sk_buff).
  *
- * This funciton sets the multicast address list.
+ * This function sets the multicast address list.
  *
  * Return: None
  */
@@ -5706,7 +5706,7 @@ static const struct net_device_ops wlan_drv_ops = {
 };
 
 #ifdef FEATURE_MONITOR_MODE_SUPPORT
-/* Monitor mode net_device_ops, doesnot Tx and most of operations. */
+/* Monitor mode net_device_ops, does not Tx and most of operations. */
 static const struct net_device_ops wlan_mon_drv_ops = {
 	.ndo_open = hdd_mon_open,
 	.ndo_stop = hdd_stop,
@@ -5762,7 +5762,7 @@ static void hdd_set_mon_ops(struct net_device *dev)
 #endif
 
 #ifdef WLAN_FEATURE_PKT_CAPTURE
-/* Packet Capture mode net_device_ops, doesnot Tx and most of operations. */
+/* Packet Capture mode net_device_ops, does not Tx and most of operations. */
 static const struct net_device_ops wlan_pktcapture_drv_ops = {
 	.ndo_open = hdd_pktcapture_open,
 	.ndo_stop = hdd_stop,
@@ -10695,7 +10695,7 @@ static void hdd_dp_register_callbacks(struct hdd_context *hdd_ctx)
  * @adapter: pointer to adapter structure
  *
  * This function assumes that the adapter pointer is always valid.
- * So the caller shoudl always validate adapter pointer before calling
+ * So the caller should always validate adapter pointer before calling
  * this function
  *
  * Returns: None
@@ -11890,7 +11890,7 @@ void hdd_acs_response_timeout_handler(void *context)
 
 	hdd_enter();
 	if (!timer_context) {
-		hdd_err("invlaid timer context");
+		hdd_err("invalid timer context");
 		return;
 	}
 	adapter = timer_context->adapter;
@@ -12545,7 +12545,7 @@ static void hdd_init_cpu_cxpc_threshold_cfg(struct hdd_config *config,
 #endif
 
 /**
- * hdd_cfg_params_init() - Initialize hdd params in hdd_config strucuture
+ * hdd_cfg_params_init() - Initialize hdd params in hdd_config structure
  * @hdd_ctx - Pointer to HDD context
  *
  * Return: None
@@ -13483,7 +13483,7 @@ int hdd_process_pktlog_command(struct hdd_context *hdd_ctx, uint32_t set_value,
 	/*
 	 * set_value = 0 then disable packetlog
 	 * set_value = 1 enable packetlog forcefully
-	 * set_vlaue = 2 then disable packetlog if disabled through ini or
+	 * set_value = 2 then disable packetlog if disabled through ini or
 	 *                     enable packetlog with AUTO type.
 	 */
 	enable = ((set_value > 0) && cds_is_packet_log_enabled()) ?
@@ -16567,7 +16567,7 @@ static void __hdd_op_unprotect_cb(void *sync, const char *func)
 /**
  * hdd_init() - Initialize Driver
  *
- * This function initilizes CDS global context with the help of cds_init. This
+ * This function initializes CDS global context with the help of cds_init. This
  * has to be the first function called after probe to get a valid global
  * context.
  *

@@ -283,7 +283,7 @@ static void hdd_driver_memdump_procfs_remove(void)
 }
 
 /**
- * hdd_driver_memdump_init() - Intialization function for driver
+ * hdd_driver_memdump_init() - Initialization function for driver
  * memory dump feature
  *
  * This function creates proc file for driver memdump feature

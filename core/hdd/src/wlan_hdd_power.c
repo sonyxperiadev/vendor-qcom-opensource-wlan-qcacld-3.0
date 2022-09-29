@@ -713,7 +713,7 @@ static void hdd_send_ps_config_to_fw(struct hdd_adapter *adapter)
  * __hdd_ipv6_notifier_work_queue() - IPv6 notification work function
  * @adapter: adapter whose IP address changed
  *
- * This function performs the work initially trigged by a callback
+ * This function performs the work initially triggered by a callback
  * from the IPv6 netdev notifier.  Since this means there has been a
  * change in IPv6 state for the interface, the NS offload is
  * reconfigured.
@@ -1056,7 +1056,7 @@ int hdd_set_grat_arp_keepalive(struct hdd_adapter *adapter)
  * __hdd_ipv4_notifier_work_queue() - IPv4 notification work function
  * @adapter: adapter whose IP address changed
  *
- * This function performs the work initially trigged by a callback
+ * This function performs the work initially triggered by a callback
  * from the IPv4 netdev notifier.  Since this means there has been a
  * change in IPv4 state for the interface, the ARP offload is
  * reconfigured. Also, Updates the HLP IE info with IP address info
@@ -1267,7 +1267,7 @@ bool wlan_hdd_is_cpu_pm_qos_in_progress(struct hdd_context *hdd_ctx)
 #endif
 
 /**
- * hdd_get_ipv4_local_interface() - get ipv4 local interafce from iface list
+ * hdd_get_ipv4_local_interface() - get ipv4 local interface from iface list
  * @adapter: Adapter context for which ARP offload is to be configured
  *
  * Return:

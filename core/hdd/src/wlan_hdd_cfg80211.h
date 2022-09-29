@@ -743,7 +743,7 @@ int wlan_hdd_restore_channels(struct hdd_context *hdd_ctx);
  * event to user space in case of SAP
  * @adapter: Pointer to the adapter
  * @hdd_ctx: HDD Context
- * @mac_addr: MAC address of the STA for whic the Authorized event needs to
+ * @mac_addr: MAC address of the STA for which the Authorized event needs to
  * be sent
  * This api is used to send station authorized event to user space
  */

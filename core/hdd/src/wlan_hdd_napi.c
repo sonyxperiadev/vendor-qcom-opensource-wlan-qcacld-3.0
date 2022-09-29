@@ -477,7 +477,7 @@ int hdd_display_napi_stats(void)
 	 * Expecting each NAPI bucket item to need at max 5 numerals + space for
 	 * formatting. For example "10000 " Thus the array needs to have
 	 * (5 + 1) * QCA_NAPI_NUM_BUCKETS bytes of space. Leaving one space at
-	 * the end of the "buf" arrary for end of string char.
+	 * the end of the "buf" array for end of string char.
 	 */
 	char buf[6 * QCA_NAPI_NUM_BUCKETS + 1] = {'\0'};
 

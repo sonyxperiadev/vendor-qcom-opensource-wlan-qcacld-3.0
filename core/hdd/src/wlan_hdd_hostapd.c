@@ -1220,7 +1220,7 @@ static int get_max_rate_vht(int nss, int ch_width, int sgi, int vht_mcs_map)
 }
 
 /**
- * calculate_max_phy_rate() - calcuate maximum phy rate (100kbps)
+ * calculate_max_phy_rate() - calculate maximum phy rate (100kbps)
  * @mode: phymode: Legacy, 11a/b/g, HT, VHT
  * @nss: num of stream (maximum num is 2)
  * @ch_width: channel width
@@ -1232,7 +1232,7 @@ static int get_max_rate_vht(int nss, int ch_width, int sgi, int vht_mcs_map)
  *
  * return: maximum phy rate in 100kbps
  */
-static int calcuate_max_phy_rate(int mode, int nss, int ch_width,
+static int calculate_max_phy_rate(int mode, int nss, int ch_width,
 				 int sgi, int supp_idx, int ext_idx,
 				 int ht_mcs_idx, int vht_mcs_map)
 {
@@ -1420,14 +1420,14 @@ static void hdd_fill_station_info(struct hdd_adapter *adapter,
 	stainfo->tx_mcs_map = event->tx_mcs_map;
 	stainfo->assoc_ts = qdf_system_ticks();
 	stainfo->max_phy_rate =
-		calcuate_max_phy_rate(stainfo->mode,
-				      stainfo->nss,
-				      stainfo->ch_width,
-				      stainfo->sgi_enable,
-				      stainfo->max_supp_idx,
-				      stainfo->max_ext_idx,
-				      stainfo->max_mcs_idx,
-				      stainfo->rx_mcs_map);
+		calculate_max_phy_rate(stainfo->mode,
+				       stainfo->nss,
+				       stainfo->ch_width,
+				       stainfo->sgi_enable,
+				       stainfo->max_supp_idx,
+				       stainfo->max_ext_idx,
+				       stainfo->max_mcs_idx,
+				       stainfo->rx_mcs_map);
 	/* expect max_phy_rate report in kbps */
 	stainfo->max_phy_rate *= 100;
 
@@ -5630,7 +5630,7 @@ int wlan_hdd_restore_channels(struct hdd_context *hdd_ctx)
 		if (!wiphy_channel)
 			continue;
 		/*
-		 * Restore the orginal states of the channels
+		 * Restore the original states of the channels
 		 * only if we have cached non zero values
 		 */
 		wiphy_channel->flags =
@@ -7205,7 +7205,7 @@ wlan_hdd_is_ap_ap_force_scc_override(struct hdd_adapter *adapter,
 	ieee_chan = ieee80211_get_channel(hdd_ctx->wiphy,
 					  con_freq);
 	if (!ieee_chan) {
-		hdd_err("channel converion failed");
+		hdd_err("channel conversion failed");
 		return false;
 	}
 

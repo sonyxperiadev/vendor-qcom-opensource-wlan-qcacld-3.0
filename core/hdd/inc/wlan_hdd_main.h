@@ -2221,7 +2221,7 @@ QDF_STATUS hdd_get_next_adapter(struct hdd_context *hdd_ctx,
 
 /**
  * hdd_get_front_adapter_no_lock() - Get the first adapter from the adapter list
- * This API doesnot use any lock in it's implementation. It is the caller's
+ * This API does not use any lock in it's implementation. It is the caller's
  * directive to ensure concurrency safety.
  * @hdd_ctx: pointer to the HDD context
  * @out_adapter: double pointer to pass the next adapter
@@ -2233,7 +2233,7 @@ QDF_STATUS hdd_get_front_adapter_no_lock(struct hdd_context *hdd_ctx,
 
 /**
  * hdd_get_next_adapter_no_lock() - Get the next adapter from the adapter list
- * This API doesnot use any lock in it's implementation. It is the caller's
+ * This API does not use any lock in it's implementation. It is the caller's
  * directive to ensure concurrency safety.
  * @hdd_ctx: pointer to the HDD context
  * @current_adapter: pointer to the current adapter

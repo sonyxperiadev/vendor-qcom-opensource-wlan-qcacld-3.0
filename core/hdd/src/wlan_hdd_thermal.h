@@ -81,7 +81,7 @@ bool wlan_hdd_thermal_config_support(void);
  * hdd_restore_thermal_mitigation_config - Restore the saved thermal config
  * @hdd_ctx: HDD context
  *
- * Restore the thermal mitigation config afetr SSR.
+ * Restore the thermal mitigation config after SSR.
  *
  * Return: QDF_STATUS
  */
@@ -163,7 +163,7 @@ hdd_send_thermal_mitigation_val(struct hdd_context *hdd_ctx, uint32_t level,
 #ifdef FEATURE_WPSS_THERMAL_MITIGATION
 /**
  * hdd_thermal_fill_clientid_priority() - fill the client id/priority
- * @hdd_ctx: pointer to hdd contex structure
+ * @hdd_ctx: pointer to hdd context structure
  * @mon_id: Thermal monitor id ie.. apps or wpss
  * @priority_apps: Priority of the apps client to be considered
  * @priority_wpps: Priority of the wpps client to be considered

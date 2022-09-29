@@ -360,7 +360,7 @@ void hdd_take_sta_info_ref(struct hdd_sta_info_obj *sta_info_container,
 
 /**
  * hdd_get_front_sta_info_no_lock() - Get the first sta_info from the sta list
- * This API doesnot use any lock in it's implementation. It is the caller's
+ * This API does not use any lock in it's implementation. It is the caller's
  * directive to ensure concurrency safety.
  *
  * @sta_info_container: The station info container obj that stores and maintains
@@ -375,7 +375,7 @@ hdd_get_front_sta_info_no_lock(struct hdd_sta_info_obj *sta_info_container,
 
 /**
  * hdd_get_next_sta_info_no_lock() - Get the next sta_info from the sta list
- * This API doesnot use any lock in it's implementation. It is the caller's
+ * This API does not use any lock in it's implementation. It is the caller's
  * directive to ensure concurrency safety.
  *
  * @sta_info_container: The station info container obj that stores and maintains
@@ -505,7 +505,7 @@ hdd_get_next_sta_info_no_lock(struct hdd_sta_info_obj *sta_info_container,
  * @sta_info_container: The station info container obj that stores and maintains
  *                      the sta_info obj.
  * @sta_info: The station info structure that acts as the iterator object.
- * @next_sta_info: A temporary node for maintaing del safe.
+ * @next_sta_info: A temporary node for maintaining del safe.
  * @sta_info_dbgid: Debug ID of the caller API
  *
  * The sta_info will contain the structure that is fetched for that particular

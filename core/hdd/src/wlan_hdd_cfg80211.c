@@ -2304,7 +2304,7 @@ static void hdd_update_vendor_pcl_list(struct hdd_context *hdd_ctx,
 }
 
 /**
- * hdd_update_reg_chan_info : This API contructs channel info
+ * hdd_update_reg_chan_info : This API constructs channel info
  * for all the given channel
  * @adapter: pointer to SAP adapter struct
  * @channel_count: channel count
@@ -3159,7 +3159,7 @@ void wlan_hdd_handle_zero_acs_list(struct hdd_context *hdd_ctx,
 
 	acs_freq_list[0] = acs_chan_default;
 	*acs_ch_list_count = 1;
-	hdd_debug("retore acs chan list to single freq %d", acs_chan_default);
+	hdd_debug("restore acs chan list to single freq %d", acs_chan_default);
 }
 
 /**
@@ -3499,7 +3499,7 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 	 * ACS operation is not synchronouse and ACS for Second AP may come when
 	 * ACS operation for first AP is going on. So only do_acs is split to
 	 * separate start_acs routine. Also SME-PMAC struct that is used to
-	 * pass paremeters from HDD to SAP is global. Thus All ACS related SME
+	 * pass parameters from HDD to SAP is global. Thus All ACS related SME
 	 * config shall be set only from start_acs.
 	 */
 
@@ -16552,7 +16552,7 @@ hdd_fill_usable_channels_data(struct sk_buff *skb, struct nlattr **tb,
 		    nla_put_u32(skb,
 				QCA_WLAN_VENDOR_ATTR_CHAN_INFO_IFACE_MODE_MASK,
 				res_msg[i].iface_mode_mask)) {
-			hdd_err("nla put failre");
+			hdd_err("nla put failure");
 			return -EINVAL;
 		}
 
@@ -16563,7 +16563,7 @@ hdd_fill_usable_channels_data(struct sk_buff *skb, struct nlattr **tb,
 }
 
 /**
- * hdd_get_usable_cahnnel_len() - calculate the length required by skb
+ * hdd_get_usable_channel_len() - calculate the length required by skb
  * @count: number of usable channels
  *
  * Find the required length to send usable channel data to upper layer
@@ -16571,7 +16571,7 @@ hdd_fill_usable_channels_data(struct sk_buff *skb, struct nlattr **tb,
  * Return: required len
  */
 static uint32_t
-hdd_get_usable_cahnnel_len(uint32_t count)
+hdd_get_usable_channel_len(uint32_t count)
 {
 	uint32_t len = 0;
 	struct get_usable_chan_res_params res_msg;
@@ -16606,7 +16606,7 @@ hdd_send_usable_channel(struct hdd_context *hdd_ctx,
 	uint32_t skb_len;
 	int status;
 
-	skb_len = hdd_get_usable_cahnnel_len(count);
+	skb_len = hdd_get_usable_channel_len(count);
 	if (!skb_len) {
 		hdd_err("No data requested");
 		return -EINVAL;
@@ -20169,7 +20169,7 @@ static int wlan_hdd_add_key_sap(struct hdd_adapter *adapter,
 
 	/* Do not send install key when sap restart is in progress. If there is
 	 * critical channel request handling going on, fw will stop that request
-	 * and will not send restart resposne
+	 * and will not send restart response
 	 */
 	if (wlan_vdev_is_restart_progress(vdev) == QDF_STATUS_SUCCESS) {
 		hdd_err("vdev: %d restart in progress", wlan_vdev_get_id(vdev));
@@ -20793,7 +20793,7 @@ static int wlan_hdd_cfg80211_get_key(struct wiphy *wiphy,
  * only for PASN peers.
  * For other peers, it is automatically deleted when the peer is
  * removed. Hence this function currently does nothing.
- * Future implementation may interprete delete key operation to
+ * Future implementation may interpret delete key operation to
  * replacing the key with a random junk value, effectively making it
  * useless.
  *
@@ -21520,13 +21520,13 @@ static int wlan_hdd_set_default_mgmt_key(struct wiphy *wiphy,
 #endif
 
 /**
- * Default val of cwmin, this value is used to overide the
+ * Default val of cwmin, this value is used to override the
  * incorrect user set value
  */
 #define DEFAULT_CWMIN 15
 
 /**
- * Default val of cwmax, this value is used to overide the
+ * Default val of cwmax, this value is used to override the
  * incorrect user set value
  */
 #define DEFAULT_CWMAX 1023
@@ -22169,7 +22169,7 @@ static inline bool wlan_hdd_is_pmksa_valid(struct cfg80211_pmksa *pmksa)
 /*
  * hdd_fill_pmksa_info: API to update tPmkidCacheInfo from cfg80211_pmksa
  * @adapter: Pointer to hdd adapter
- * @pmk_cache: pmk that needs to be udated
+ * @pmk_cache: pmk that needs to be updated
  * @pmksa: pmk from supplicant
  * @is_delete: Bool to decide set or delete PMK
  * Return: None
