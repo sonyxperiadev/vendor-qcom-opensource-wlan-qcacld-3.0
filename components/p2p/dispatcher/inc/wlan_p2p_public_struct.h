@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2019, 2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -17,7 +18,7 @@
  */
 
 /**
- * DOC: Contains p2p public data structure definations
+ * DOC: Contains p2p public data structure definitions
  */
 
 #ifndef _WLAN_P2P_PUBLIC_STRUCT_H_

@@ -334,7 +334,7 @@ static QDF_STATUS p2p_destroy_roc_ctx(struct p2p_roc_context *roc_ctx,
  * @roc_ctx: remain on channel request
  *
  * This function stop roc timer, abort scan and unregister mgmt rx
- * callbak.
+ * callback.
  *
  * Return: QDF_STATUS_SUCCESS - in case of success
  */
@@ -412,7 +412,7 @@ static void p2p_roc_timeout(void *pdata)
  * @roc_ctx: remain on channel request
  *
  * This function init roc timer, start scan and register mgmt rx
- * callbak.
+ * callback.
  *
  * Return: QDF_STATUS_SUCCESS - in case of success
  */

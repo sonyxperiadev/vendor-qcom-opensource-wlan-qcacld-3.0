@@ -2918,11 +2918,11 @@ p2p_set_rand_mac(struct wlan_objmgr_psoc *soc, uint32_t vdev_id,
 	status = p2p_set_mac_filter(soc, vdev_id, mac, freq, true,
 				    p2p_set_mac_filter_callback, req_cookie);
 	if (status != QDF_STATUS_SUCCESS) {
-		p2p_err("random_mac:set mac fitler failure %d", status);
+		p2p_err("random_mac:set mac filter failure %d", status);
 	} else {
 		err = osif_request_wait_for_response(request);
 		if (err) {
-			p2p_err("random_mac:timeout for set mac fitler %d",
+			p2p_err("random_mac:timeout for set mac filter %d",
 				err);
 		} else {
 			priv = osif_request_priv(request);
@@ -3167,7 +3167,7 @@ QDF_STATUS p2p_process_mgmt_tx(struct tx_action_context *tx_ctx)
 	status = p2p_get_frame_info(tx_ctx->buf, tx_ctx->buf_len,
 			&(tx_ctx->frame_info));
 	if (status != QDF_STATUS_SUCCESS) {
-		p2p_err("unsupport frame");
+		p2p_err("unsupported frame");
 		status = QDF_STATUS_E_INVAL;
 		goto fail;
 	}
