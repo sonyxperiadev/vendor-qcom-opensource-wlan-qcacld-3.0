@@ -1185,7 +1185,7 @@ QDF_STATUS dp_rx_tm_flush_by_vdev_id(struct dp_rx_tm_handle *rx_tm_hdl,
 							   wait_timeout);
 
 		/* if one thread timeout happened, shrink timeout value
-		 * to 1/4 of origional value
+		 * to 1/4 of original value
 		 */
 		if (qdf_status == QDF_STATUS_E_TIMEOUT)
 			wait_timeout = DP_RX_THREAD_WAIT_TIMEOUT / 4;
