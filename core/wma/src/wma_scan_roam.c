@@ -94,7 +94,7 @@
 #define WMA_EXTSCAN_CYCLE_WAKE_LOCK_DURATION WAKELOCK_DURATION_RECOMMENDED
 
 /*
- * Maximum number of entires that could be present in the
+ * Maximum number of entries that could be present in the
  * WMI_EXTSCAN_HOTLIST_MATCH_EVENT buffer from the firmware
  */
 #define WMA_EXTSCAN_MAX_HOTLIST_ENTRIES 10
@@ -2834,7 +2834,7 @@ QDF_STATUS wma_set_gateway_params(tp_wma_handle wma,
 
 /**
  * wma_ht40_stop_obss_scan() - ht40 obss stop scan
- * @wma: WMA handel
+ * @wma: WMA handle
  * @vdev_id: vdev identifier
  *
  * Return: Return QDF_STATUS, otherwise appropriate failure code
@@ -2869,7 +2869,7 @@ QDF_STATUS wma_ht40_stop_obss_scan(tp_wma_handle wma, int32_t vdev_id)
 
 /**
  * wma_send_ht40_obss_scanind() - ht40 obss start scan indication
- * @wma: WMA handel
+ * @wma: WMA handle
  * @req: start scan request
  *
  * Return: Return QDF_STATUS, otherwise appropriate failure code

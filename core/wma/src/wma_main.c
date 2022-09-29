@@ -505,7 +505,7 @@ static void wma_send_feature_set_cmd(tp_wma_handle wma_handle)
  * wma_is_feature_set_supported() - Check if feaure set is supported or not
  * @wma_handle: WMA handle
  *
- * Return: True, if feature set is supporte lese return false
+ * Return: True, if feature set is supported else return false
  */
 static bool wma_is_feature_set_supported(tp_wma_handle wma_handle)
 {
@@ -2070,7 +2070,7 @@ wma_cleanup_vdev_resp_and_hold_req(struct scheduler_msg *msg)
  * @msg :scheduler msg
  *
  * As passed msg->bodyptr is wma in this case this is dummy flush cb so that
- * driver doesnt try to free msg->bodyptr when this msg is flushed.
+ * driver doesn't try to free msg->bodyptr when this msg is flushed.
  *
  * Return: QDF_STATUS
  */
@@ -2081,7 +2081,7 @@ wma_cleanup_vdev_resp_and_hold_req_flush_cb(struct scheduler_msg *msg)
 }
 
 /**
- * wma_shutdown_notifier_cb - Shutdown notifer call back
+ * wma_shutdown_notifier_cb - Shutdown notifier call back
  * @priv : WMA handle
  *
  * During recovery, WMA may wait for resume to complete if the crash happens
@@ -5727,7 +5727,7 @@ static void wma_update_obss_color_collision_support(tp_wma_handle wh,
 }
 
 /**
- * wma_update_restricted_80p80_bw_support() - update restricted 80+80 supprot
+ * wma_update_restricted_80p80_bw_support() - update restricted 80+80 support
  * @wh: wma handle
  * @tgt_cfg: target configuration to be updated
  *
@@ -6289,7 +6289,7 @@ static QDF_STATUS wma_register_gtk_offload_event(tp_wma_handle wma_handle)
 
 /**
  * wma_rx_service_ready_event() - event handler to process
- *                                wmi rx sevice ready event.
+ *                                wmi rx service ready event.
  * @handle: wma handle
  * @cmd_param_info: command params info
  *
@@ -6470,7 +6470,7 @@ int wma_rx_service_ready_event(void *handle, uint8_t *cmd_param_info,
 		}
 
 	} else {
-		wma_err("FW doesnot support WMI_SERVICE_MGMT_TX_WMI, Use HTT interface for Management Tx");
+		wma_err("FW does not support WMI_SERVICE_MGMT_TX_WMI, Use HTT interface for Management Tx");
 	}
 
 	status = wma_register_gtk_offload_event(wma_handle);
@@ -7091,7 +7091,7 @@ int wma_rx_service_ready_ext2_event(void *handle, uint8_t *ev, uint32_t len)
 }
 
 /**
- * wma_rx_service_ready_ext_event() - evt handler for sevice ready ext event.
+ * wma_rx_service_ready_ext_event() - evt handler for service ready ext event.
  * @handle: wma handle
  * @event: params of the service ready extended event
  * @length: param length
@@ -7588,7 +7588,7 @@ static void wma_enable_specific_fw_logs(tp_wma_handle wma_handle,
 /**
  * wma_set_wifi_start_packet_stats() - Start/stop packet stats
  * @wma_handle: WMA handle
- * @start_log: Struture containing the start wifi logger params
+ * @start_log: Structure containing the start wifi logger params
  *
  * This function is used to send the WMA commands to start/stop logging
  * of per packet statistics
@@ -8339,7 +8339,7 @@ static QDF_STATUS wma_roam_scan_send_hlp(tp_wma_handle wma_handle,
 #endif
 
 /**
- * wma_process_set_limit_off_chan() - set limit off chanel parameters
+ * wma_process_set_limit_off_chan() - set limit off channel parameters
  * @wma_handle: pointer to wma handle
  * @param: pointer to sir_limit_off_chan
  *
@@ -9720,7 +9720,7 @@ QDF_STATUS wma_send_pdev_set_dual_mac_config(tp_wma_handle wma_handle,
 	}
 
 	/*
-	 * aquire the wake lock here and release it in response handler function
+	 * acquire the wake lock here and release it in response handler function
 	 * In error condition, release the wake lock right away
 	 */
 	wma_acquire_wakelock(&wma_handle->wmi_cmd_rsp_wake_lock,

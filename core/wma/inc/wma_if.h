@@ -317,7 +317,7 @@ typedef struct {
  *
  * This is used by PE to configure the key information on a given station.
  * When the secType is WEP40 or WEP104, the defWEPIdx is used to locate
- * a preconfigured key from a BSS the station assoicated with; otherwise
+ * a preconfigured key from a BSS the station associated with; otherwise
  * a new key descriptor is created based on the key field.
  */
 typedef struct {
@@ -383,7 +383,7 @@ struct bss_params {
 	uint8_t rmfEnabled;
 	tAddStaParams staContext;
 	/* HAL should update the existing BSS entry, if this flag is set.
-	 * PE will set this flag in case of reassoc, where we want to resue the
+	 * PE will set this flag in case of reassoc, where we want to reuse the
 	 * the old bssID and still return success.
 	 */
 	uint8_t updateBss;
@@ -601,7 +601,7 @@ typedef struct {
 } tUpdateRxNss, *tpUpdateRxNss;
 
 /**
- * struct tUpdateMembership - update membership parmaters
+ * struct tUpdateMembership - update membership parameters
  * @membership: membership value
  * @staId: station id
  * @smesessionId: SME session id
@@ -614,7 +614,7 @@ typedef struct {
 } tUpdateMembership, *tpUpdateMembership;
 
 /**
- * struct tUpdateUserPos - update user position parmeters
+ * struct tUpdateUserPos - update user position parameters
  * @userPos: user position
  * @staId: station id
  * @smesessionId: sme session id

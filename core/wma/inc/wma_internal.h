@@ -26,7 +26,7 @@
 
 /* ################### defines ################### */
 /*
- * TODO: Following constant should be shared by firwmare in
+ * TODO: Following constant should be shared by firmware in
  * wmi_unified.h. This will be done once wmi_unified.h is updated.
  */
 #define WMI_PEER_STATE_AUTHORIZED 0x2
@@ -1208,7 +1208,7 @@ void wma_del_ts_req(tp_wma_handle wma, struct del_ts_params *msg);
  * @pAggrQosRspMsg - combined struct for all ADD_TS requests.
  *
  * A function to handle WMA_AGGR_QOS_REQ. This will send out
- * ADD_TS requestes to firmware in loop for all the ACs with
+ * ADD_TS requests to firmware in loop for all the ACs with
  * active flow.
  *
  * Return: none

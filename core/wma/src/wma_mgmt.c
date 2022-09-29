@@ -2137,7 +2137,7 @@ QDF_STATUS wma_process_update_edca_param_req(WMA_HANDLE handle,
 	return QDF_STATUS_SUCCESS;
 
 fail:
-	wma_err("Failed to set WMM Paremeters");
+	wma_err("Failed to set WMM Parameters");
 	return QDF_STATUS_E_FAILURE;
 }
 
@@ -2482,7 +2482,7 @@ static int wma_p2p_go_set_beacon_ie(t_wma_handle *wma_handle,
  * @wma: wma handle
  * @probe_rsp_info: probe response info
  *
- * This funciton sends probe response template to fw which
+ * This function sends probe response template to fw which
  * firmware will use in case of probe response offload.
  *
  * Return: none
@@ -2553,7 +2553,7 @@ QDF_STATUS wma_set_ap_vdev_up(tp_wma_handle wma, uint8_t vdev_id)
  * @wma: wma handle
  * @bcn_info: beacon info
  *
- * This funciton store beacon template locally and
+ * This function store beacon template locally and
  * update keep alive parameters
  *
  * Return: none
@@ -3564,7 +3564,7 @@ wma_check_and_process_rmf_frame(tp_wma_handle wma_handle,
 }
 
 /**
- * wma_is_pkt_drop_candidate() - check if the mgmt frame should be droppped
+ * wma_is_pkt_drop_candidate() - check if the mgmt frame should be dropped
  * @wma_handle: wma handle
  * @peer_addr: peer MAC address
  * @bssid: BSSID Address
@@ -3573,7 +3573,7 @@ wma_check_and_process_rmf_frame(tp_wma_handle wma_handle,
  * This function is used to decide if a particular management frame should be
  * dropped to prevent DOS attack. Timestamp is used to decide the DOS attack.
  *
- * Return: true if the packet should be dropped and false oterwise
+ * Return: true if the packet should be dropped and false otherwise
  */
 static bool wma_is_pkt_drop_candidate(tp_wma_handle wma_handle,
 				      uint8_t *peer_addr, uint8_t *bssid,

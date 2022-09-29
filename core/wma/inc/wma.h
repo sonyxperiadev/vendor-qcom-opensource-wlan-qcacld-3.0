@@ -829,7 +829,7 @@ struct wma_wlm_stats_data {
  * @reg_cap: regulatory capabilities
  * @scan_id: scan id
  * @interfaces: txrx nodes(per vdev)
- * @pdevconfig: pdev related configrations
+ * @pdevconfig: pdev related configurations
  * @wma_hold_req_queue: Queue use to serialize requests to firmware
  * @wma_hold_req_q_lock: Mutex for @wma_hold_req_queue
  * @vht_supp_mcs: VHT supported MCS
@@ -1167,8 +1167,8 @@ struct wma_set_key_params {
 
 /**
  * struct t_thermal_cmd_params - thermal command parameters
- * @minTemp: minimum temprature
- * @maxTemp: maximum temprature
+ * @minTemp: minimum temperature
+ * @maxTemp: maximum temperature
  * @thermalEnable: thermal enable
  * @thermal_action: thermal action
  */
@@ -2378,7 +2378,7 @@ bool wma_is_roam_in_progress(uint32_t vdev_id);
 struct wlan_objmgr_psoc *wma_get_psoc_from_scn_handle(void *scn_handle);
 
 /**
- * wma_set_peer_ucast_cipher() - Update unicast cipher fof the peer
+ * wma_set_peer_ucast_cipher() - Update unicast cipher of the peer
  * @mac_addr: peer mac address
  * @cipher: peer cipher bits
  * @cipher_cap: cipher cap
@@ -2429,7 +2429,7 @@ int wma_motion_det_base_line_host_event_handler(void *handle, u_int8_t *event,
 #endif /* WLAN_FEATURE_MOTION_DETECTION */
 
 /**
- * wma_add_bss_peer_sta() - creat bss peer when sta connect
+ * wma_add_bss_peer_sta() - create bss peer when sta connect
  * @vdev_id: vdev id
  * @bssid: AP bssid
  * @roam_sync: if roam sync is in progress

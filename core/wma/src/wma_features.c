@@ -2525,8 +2525,8 @@ static void wma_wow_dump_mgmt_buffer(uint8_t *wow_packet_buffer,
 }
 
 /**
- * wma_acquire_wakelock() - conditionally aquires a wakelock base on wake reason
- * @wma: the wma handle with the wakelocks to aquire
+ * wma_acquire_wakelock() - conditionally acquires a wakelock base on wake reason
+ * @wma: the wma handle with the wakelocks to acquire
  * @wake_reason: wow wakeup reason
  *
  * Return: None
@@ -4219,7 +4219,7 @@ wma_send_apf_write_work_memory_cmd(WMA_HANDLE handle,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	wma_debug("Sent APF wite mem on vdevid: %d", write_params->vdev_id);
+	wma_debug("Sent APF write mem on vdevid: %d", write_params->vdev_id);
 	return status;
 }
 
