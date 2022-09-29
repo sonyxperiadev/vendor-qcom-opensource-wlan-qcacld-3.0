@@ -331,7 +331,7 @@ uint32_t policy_mgr_get_connected_vdev_band_mask(struct wlan_objmgr_vdev *vdev);
 
 /**
  * policy_mgr_get_dfs_master_dynamic_enabled() - support dfs master or not
- * on AP interafce when STA+SAP(GO) concurrency
+ * on AP interface when STA+SAP(GO) concurrency
  * @psoc: pointer to psoc
  * @vdev_id: sap vdev id
  *
@@ -681,7 +681,7 @@ static inline void policy_mgr_check_concurrent_intf_and_restart_sap(
  * @vdev_id: vdev id
  * @mac_id: mac id
  *
- * This function is used to get the conncurrent vdev on same mac
+ * This function is used to get the concurrent vdev on same mac
  *
  * Return: vdev id of the concurrent interface running on same mac
  *
@@ -1452,9 +1452,9 @@ policy_mgr_current_connections_update(struct wlan_objmgr_psoc *psoc,
 /**
  * policy_mgr_change_hw_mode_sta_connect() - Change HW mode for STA connect
  * @psoc: psoc object
- * @scan_list: candidates for conenction
+ * @scan_list: candidates for connection
  * @vdev_id: vdev id for STA/CLI
- * @connect_id: connect id of the conenct request
+ * @connect_id: connect id of the connect request
  *
  * When a new connection is about to come up, change hw mode for STA/CLI
  * based upon the scan results and hw type.
@@ -2171,7 +2171,7 @@ QDF_STATUS policy_mgr_restart_opportunistic_timer(
  * @psoc: PSOC object information
  * @pcl_list_org: Pointer to the preferred channel freq list to be trimmed
  * @weight_list_org: Pointer to the weights of the preferred channel list
- * @pcl_len_org: Pointer to the length of the preferred chanel list
+ * @pcl_len_org: Pointer to the length of the preferred channel list
  *
  * Modifies the preferred channel list of SAP based on the mandatory channel
  *
@@ -2592,7 +2592,7 @@ QDF_STATUS policy_mgr_check_conn_with_mode_and_vdev_id(
  * @new_hw_mode_index: New HW mode index
  * @num_vdev_mac_entries: Number of vdev-mac id mapping that follows
  * @vdev_mac_map: vdev-mac id map. This memory will be freed by the caller.
- * @num_mac_freq: Number of pdev freq maping that follows
+ * @num_mac_freq: Number of pdev freq mapping that follows
  * @mac_freq_range: mac_freq_range mapping
  * So, make local copy if needed.
  *
@@ -3931,7 +3931,7 @@ bool policy_mgr_sta_sap_scc_on_lte_coex_chan(
 /**
  * policy_mgr_valid_channel_for_channel_switch() - check for valid channel for
  * channel switch.
- * @psoc: poniter to psoc
+ * @psoc: pointer to psoc
  * @ch_freq: channel frequency to be validated.
  * This function validates whether the given channel is valid for channel
  * switch.
@@ -3955,7 +3955,7 @@ qdf_freq_t policy_mgr_get_user_config_sap_freq(struct wlan_objmgr_psoc *psoc,
 /**
  * policy_mgr_nan_sap_post_enable_conc_check() - Do concurrency operations
  *                                               post nan/sap enable
- * @psoc: poniter to psoc
+ * @psoc: pointer to psoc
  *
  * Return: void
  **/
@@ -3964,7 +3964,7 @@ void policy_mgr_nan_sap_post_enable_conc_check(struct wlan_objmgr_psoc *psoc);
 /**
  * policy_mgr_nan_sap_post_disable_conc_check() - Do concurrency related
  *                                                operation post nan/sap disable
- * @psoc: poniter to psoc
+ * @psoc: pointer to psoc
  *
  * Return: void
  **/
@@ -3991,7 +3991,7 @@ bool policy_mgr_is_sap_restart_required_after_sta_disconnect(
 /**
  * policy_mgr_is_sta_sap_scc() - check whether SAP is doing SCC with
  * STA
- * @psoc: poniter to psoc
+ * @psoc: pointer to psoc
  * @sap_ch_freq: operating channel frequency of SAP interface
  * This function checks whether SAP is doing SCC with STA
  *
@@ -4003,7 +4003,7 @@ bool policy_mgr_is_sta_sap_scc(struct wlan_objmgr_psoc *psoc,
 /**
  * policy_mgr_nan_sap_scc_on_unsafe_ch_chk() - check whether SAP is doing SCC
  *                                             with NAN
- * @psoc: poniter to psoc
+ * @psoc: pointer to psoc
  * @sap_freq: operating channel frequency of SAP interface
  *
  * Return: true or false
@@ -4338,7 +4338,7 @@ bool policy_mgr_is_mlo_sta_present(struct wlan_objmgr_psoc *psoc);
  * links on 5/6 ghz band)
  * @psoc: PSOC object information
  * @mode: mlo mode to check
- * @mlo_vdev_lst: Pointer to mlo vdev list, this function wil fill this with
+ * @mlo_vdev_lst: Pointer to mlo vdev list, this function will fill this with
  *                list of mlo vdev
  * @num_mlo: Pointer to number of mlo link, this function will fill this with
  *           number of mlo links
@@ -4353,7 +4353,7 @@ bool policy_mgr_is_mlo_in_mode_sbs(struct wlan_objmgr_psoc *psoc,
  * policy_mgr_is_mlo_in_mode_dbs() - Check whether MLO present is DBS
  * @psoc: PSOC object information
  * @mode: mlo mode to check
- * @mlo_vdev_lst: Pointer to mlo vdev list, this function wil fill this with
+ * @mlo_vdev_lst: Pointer to mlo vdev list, this function will fill this with
  *                list of mlo vdev
  * @num_mlo: Pointer to number of mlo link, this function will fill this with
  *           number of mlo links
@@ -4368,7 +4368,7 @@ bool policy_mgr_is_mlo_in_mode_dbs(struct wlan_objmgr_psoc *psoc,
 /**
  * policy_mgr_is_mlo_in_mode_emlsr() - Check whether current connection is eMLSR
  * @psoc: PSOC object information
- * @mlo_vdev_lst: Pointer to mlo vdev list, this function wil fill this with
+ * @mlo_vdev_lst: Pointer to mlo vdev list, this function will fill this with
  *                list of mlo vdev
  * @num_mlo: Pointer to number of mlo link, this function will fill this with
  *           number of mlo links

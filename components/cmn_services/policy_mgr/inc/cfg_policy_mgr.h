@@ -38,7 +38,7 @@
  * If gWlainMccToSccSwitchMode = 5: Force switch without SAP restart.MCC allowed
  *					in exceptional cases.
  * If gWlainMccToSccSwitchMode = 6: Force Switch without SAP restart only in
-					user preffered band.
+					user preferred band.
  * Related: None.
  *
  * Supported Feature: Concurrency

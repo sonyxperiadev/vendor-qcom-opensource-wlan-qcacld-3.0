@@ -453,7 +453,7 @@ struct wlan_diag_packet_info {
  * Table 12-10—Integrity and key wrap algorithms.
  * @grp_cipher: Group cipher suite value as defined in
  * Table 12-10—Integrity and key wrap algorithm in IEEE 802.11 2020.
- * grp_mgmt: Group manangement cipher suite as defined in
+ * grp_mgmt: Group management cipher suite as defined in
  * Table 12-10—Integrity and key wrap algorithms in IEEE 802.11 2020.
  */
 struct wlan_diag_connect {
@@ -638,7 +638,7 @@ struct wlan_packet_info {
  * Table 12-10—Integrity and key wrap algorithms.
  * @group: Group cipher suite value as defined in
  * Table 12-10—Integrity and key wrap algorithms.
- * @group_mgmt: Group manangement cipher suite as defined in
+ * @group_mgmt: Group management cipher suite as defined in
  * Table 12-10—Integrity and key wrap algorithms.
  * @auth_type: Authentication algorithm number field as defined in
  * IEEE 802.11 - 2020 standard section 9.4.1.1
@@ -667,7 +667,7 @@ struct wlan_connect_info {
 #define MAX_RECORD_IN_SINGLE_EVT 5
 
 /**
- * struct wlan_log_record  - Structure for indvidual records in the ring
+ * struct wlan_log_record  - Structure for individual records in the ring
  * buffer
  * @timestamp_us: Timestamp(time of the day) in microseconds
  * @fw_timestamp_us: timestamp at which roam scan was triggered

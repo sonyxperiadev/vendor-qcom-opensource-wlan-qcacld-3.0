@@ -667,7 +667,7 @@ void policy_mgr_update_conc_list(struct wlan_objmgr_psoc *psoc,
  * policy_mgr_store_and_del_conn_info() - Store and del a connection info
  * @mode: Mode whose entry has to be deleted
  * @all_matching_cxn_to_del: All the specified mode entries should be deleted
- * @info: Struture array pointer where the connection info will be saved
+ * @info: Structure array pointer where the connection info will be saved
  * @num_cxn_del: Number of connection which are going to be deleted
  *
  * Saves the connection info corresponding to the provided mode
@@ -1413,7 +1413,7 @@ policy_mgr_dump_dual_mac_concurrency(struct policy_mgr_psoc_priv_obj *pm_ctx,
 	}
 
 	for (i = 0; i < MAX_NUMBER_OF_CONC_CONNECTIONS; i++) {
-		/* in_use flag is required to be checked becuse vdev bit
+		/* in_use flag is required to be checked because vdev bit
 		 * mask will be 0 for 4th bit if only 3 port concurrency is
 		 * present on a hardware that can support 4 port concurrency
 		 */
@@ -3180,7 +3180,7 @@ QDF_STATUS policy_mgr_get_channel_list(struct wlan_objmgr_psoc *psoc,
 
 			channel_list_5[chan_index_5++] = channel_list[i];
 		} else if (wlan_reg_is_6ghz_chan_freq(channel_list[i])) {
-			/* Add to 5G list untill 6G conc support is enabled */
+			/* Add to 5G list until 6G conc support is enabled */
 			channel_list_6[chan_index_6++] = channel_list[i];
 		}
 	}
@@ -3708,7 +3708,7 @@ QDF_STATUS policy_mgr_get_channel_list(struct wlan_objmgr_psoc *psoc,
 				      channel_list_6, chan_index_6,
 				      POLICY_MGR_PCL_ORDER_SCC_5G_LOW_5G_LOW);
 		/*
-		 * If no 2.4 GHZ connetcion is present and If 2.4 GHZ is shared
+		 * If no 2.4 GHZ connection is present and If 2.4 GHZ is shared
 		 * with 5 GHz low freq then 2.4 GHz can be added as well
 		 */
 		if (!policy_mgr_2ghz_connection_present(pm_ctx) &&
@@ -3729,7 +3729,7 @@ QDF_STATUS policy_mgr_get_channel_list(struct wlan_objmgr_psoc *psoc,
 				      channel_list_6, chan_index_6,
 				      POLICY_MGR_PCL_ORDER_SCC_5G_HIGH_5G_HIGH);
 		/*
-		 * If no 2.4 GHZ connetcion is present and if 2.4 GHZ is shared
+		 * If no 2.4 GHZ connection is present and if 2.4 GHZ is shared
 		 * with 5 GHz High freq then 2.4 GHz can be added as well
 		 */
 		if (!policy_mgr_2ghz_connection_present(pm_ctx) &&
@@ -4126,7 +4126,7 @@ policy_mgr_get_pref_force_scc_freq(struct wlan_objmgr_psoc *psoc,
  * @vdev_id: vdev id of SAP/GO
  * @intf_ch_freq: interference channel frequency
  * @sap_ch_freq: SAP/GO current home channel frequency
- * @acs_band: acs band perference
+ * @acs_band: acs band preference
  * @allow_6ghz: interface supports 6Ghz band
  *
  * This function gets the force SCC channel in 3 connections case.
@@ -4174,7 +4174,7 @@ policy_mgr_check_force_scc_two_connection(struct wlan_objmgr_psoc *psoc,
 	 * 5Ghz    5Ghz(SBS)      5Ghz           Force SCC to one of 5Ghz
 	 * 5Ghz    5Ghz(SMM)      2Ghz           Start on 2.4Ghz
 	 * 5Ghz    5Ghz(SMM)      5Ghz           Allow SAP on sap_ch_freq if all
-	 *                                       3, 5Ghz freq does't end up
+	 *                                       3, 5Ghz freq doesn't end up
 	 *                                       on same mac, ie 2 of them lead
 	 *                                       to SBS. Else force SCC on
 	 *                                       one of the freq (3 home channel
@@ -4276,7 +4276,7 @@ policy_mgr_check_force_scc_two_connection(struct wlan_objmgr_psoc *psoc,
 		 * -------------------------------------------------
 		 * 5Ghz    5Ghz(SMM)      5Ghz          Allow SAP on sap_ch_freq
 		 *                                      if all 3, 5Ghz freq
-		 *                                      does't end up, on same
+		 *                                      doesn't end up, on same
 		 *                                      mac, ie 2 of them lead
 		 *                                      to SBS, ie at least one
 		 *                                      of them is high 5Ghz and

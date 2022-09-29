@@ -3588,7 +3588,7 @@ policy_mgr_ml_link_vdev_need_to_be_disabled(struct wlan_objmgr_psoc *psoc,
 
 	conc_ext_flags.value = policy_mgr_get_conc_ext_flags(vdev, false);
 	/*
-	 * For non-assoc link vdev set link as disabled if concurency is
+	 * For non-assoc link vdev set link as disabled if concurrency is
 	 * not allowed
 	 */
 	return !policy_mgr_is_concurrency_allowed(psoc, PM_STA_MODE,
@@ -3787,7 +3787,7 @@ void policy_mgr_incr_active_session(struct wlan_objmgr_psoc *psoc,
 	}
 
 	/*
-	 * Need to aquire mutex as entire functionality in this function
+	 * Need to acquire mutex as entire functionality in this function
 	 * is in critical section
 	 */
 	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
@@ -5314,7 +5314,7 @@ policy_mgr_get_concurrent_num_links(struct wlan_objmgr_vdev *vdev,
 }
 
 static void
-policy_mgr_ml_sta_concurency_on_connect(struct wlan_objmgr_psoc *psoc,
+policy_mgr_ml_sta_concurrency_on_connect(struct wlan_objmgr_psoc *psoc,
 				    struct wlan_objmgr_vdev *vdev,
 				    uint8_t num_ml, uint8_t *ml_idx,
 				    uint8_t num_non_ml, uint8_t *non_ml_idx,
@@ -5481,10 +5481,10 @@ policy_mgr_handle_ml_sta_link_concurrency(struct wlan_objmgr_psoc *psoc,
 	 * secondary STA switch happens to a new channel due to CSA
 	 */
 
-	policy_mgr_ml_sta_concurency_on_connect(psoc, vdev, num_ml,
-						ml_idx, num_non_ml,
-						non_ml_idx, freq_list,
-						vdev_id_list);
+	policy_mgr_ml_sta_concurrency_on_connect(psoc, vdev, num_ml,
+						 ml_idx, num_non_ml,
+						 non_ml_idx, freq_list,
+						 vdev_id_list);
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -5549,7 +5549,7 @@ policy_mgr_get_affected_links_for_go_sap_cli(struct wlan_objmgr_psoc *psoc,
 			/* Continue if SCC */
 			if (ml_freq_lst[i] == p2p_sap_freq_lst[k])
 				continue;
-			/* Continue if high tput ot low latency is not set */
+			/* Continue if high tput or low latency is not set */
 			if (!policy_mgr_is_vdev_high_tput_or_low_latency(psoc,
 			    p2p_sap_vdev_lst[k]))
 				continue;
@@ -5946,7 +5946,7 @@ policy_mgr_handle_ml_sta_link_enable_on_sta_down(struct wlan_objmgr_psoc *psoc,
 						  num_ml_sta, ml_freq_lst,
 						  ml_sta_vdev_lst)) {
 		if (num_disabled_ml_sta)
-			policy_mgr_debug("Not reenabled due to disallowed concurrency");
+			policy_mgr_debug("Not re-enabled due to disallowed concurrency");
 		goto done;
 	}
 
@@ -7086,7 +7086,7 @@ bool policy_mgr_scan_trim_5g_chnls_for_dfs_ap(struct wlan_objmgr_psoc *psoc)
 	}
 
 	/*
-	 * 1) if agile & DFS scans are supportet
+	 * 1) if agile & DFS scans are supported
 	 * 2) if hardware is DBS capable
 	 * 3) if current hw mode is non-dbs
 	 * if all above 3 conditions are true then don't skip any
@@ -8538,7 +8538,7 @@ bool policy_mgr_is_restart_sap_required(struct wlan_objmgr_psoc *psoc,
 		 * STA moves back to 5 GHZ non indoor/non DFS channel
 		 *
 		 * Now SAP has to move to STA 5 GHz channel if SAP
-		 * was started on 5 GHz channel initialy.
+		 * was started on 5 GHz channel initially.
 		 */
 		user_config_freq =
 			policy_mgr_get_user_config_sap_freq(psoc, vdev_id);

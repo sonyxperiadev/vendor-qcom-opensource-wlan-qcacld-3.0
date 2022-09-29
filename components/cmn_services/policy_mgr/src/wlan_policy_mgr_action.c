@@ -1332,7 +1332,7 @@ QDF_STATUS policy_mgr_next_actions(
 	case PM_DOWNGRADE:
 		/*
 		 * check if we have a beaconing entity that advertised 2x2
-		 * intially. If yes, update the beacon template & notify FW.
+		 * initially. If yes, update the beacon template & notify FW.
 		 */
 		status = policy_mgr_nss_update(psoc, POLICY_MGR_RX_NSS_1,
 					PM_NOP, POLICY_MGR_ANY, reason,
@@ -1341,7 +1341,7 @@ QDF_STATUS policy_mgr_next_actions(
 	case PM_UPGRADE:
 		/*
 		 * check if we have a beaconing entity that advertised 2x2
-		 * intially. If yes, update the beacon template & notify FW.
+		 * initially. If yes, update the beacon template & notify FW.
 		 */
 		status = policy_mgr_nss_update(psoc, POLICY_MGR_RX_NSS_2,
 					PM_NOP, POLICY_MGR_ANY, reason,
