@@ -387,7 +387,7 @@ static void mlme_init_ratemask_cfg(struct wlan_objmgr_psoc *psoc,
 					&len);
 
 	if (status != QDF_STATUS_SUCCESS || len != CFG_MLME_RATE_MASK_LEN) {
-		/* Do not enable ratemaks if config is invalid */
+		/* Do not enable ratemask if config is invalid */
 		ratemask_cfg->type = WLAN_MLME_RATEMASK_TYPE_NO_MASK;
 		mlme_legacy_err("Failed to parse ratemask");
 		return;
@@ -2923,7 +2923,7 @@ mlme_init_iot_cfg(struct wlan_objmgr_psoc *psoc,
 }
 
 /**
- * mlme_init_dual_sta_config - Initialize dual sta configuratons
+ * mlme_init_dual_sta_config - Initialize dual sta configurations
  * @gen: Generic CFG config items
  *
  * Return: None

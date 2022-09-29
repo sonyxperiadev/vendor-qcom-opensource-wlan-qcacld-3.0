@@ -391,7 +391,7 @@ enum debug_packet_log_type {
  * @Default: 0 (disabled)
  *
  * This INI item is used to control subsystem restart(SSR) test framework
- * Set it's value to 1 to enable APPS trigerred SSR testing
+ * Set it's value to 1 to enable APPS triggered SSR testing
  *
  * Related: None
  *

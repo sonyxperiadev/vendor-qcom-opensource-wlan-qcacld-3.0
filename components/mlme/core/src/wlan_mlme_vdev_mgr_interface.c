@@ -173,12 +173,12 @@ static QDF_STATUS sta_mlme_vdev_start_send(struct vdev_mlme_obj *vdev_mlme,
 }
 
 /**
- * sta_mlme_start_continue() - vdev start rsp calback
+ * sta_mlme_start_continue() - vdev start rsp callback
  * @vdev_mlme: vdev mlme object
  * @data_len: event data length
  * @data: event data
  *
- * This function is called to handle the VDEV START/RESTART calback
+ * This function is called to handle the VDEV START/RESTART callback
  *
  * Return: QDF_STATUS
  */
@@ -408,12 +408,12 @@ static QDF_STATUS ap_mlme_vdev_start_send(struct vdev_mlme_obj *vdev_mlme,
 }
 
 /**
- * ap_start_continue () - vdev start rsp calback
+ * ap_start_continue () - vdev start rsp callback
  * @vdev_mlme: vdev mlme object
  * @data_len: event data length
  * @data: event data
  *
- * This function is called to handle the VDEV START/RESTART calback
+ * This function is called to handle the VDEV START/RESTART callback
  *
  * Return: QDF_STATUS
  */
@@ -1506,12 +1506,12 @@ static QDF_STATUS mon_mlme_vdev_start_restart_send(
 }
 
 /**
- * mon_start_continue () - vdev start rsp calback
+ * mon_start_continue () - vdev start rsp callback
  * @vdev_mlme: vdev mlme object
  * @data_len: event data length
  * @data: event data
  *
- * This function is called to handle the VDEV START/RESTART calback
+ * This function is called to handle the VDEV START/RESTART callback
  *
  * Return: QDF_STATUS
  */
@@ -1811,7 +1811,7 @@ void mlme_vdev_self_peer_delete_resp(struct del_vdev_params *param)
 					QDF_MODULE_ID_SME,
 					QDF_MODULE_ID_SME, &peer_del_rsp);
 	if (!QDF_IS_STATUS_SUCCESS(status)) {
-		/* In the error cases release the final sme referene */
+		/* In the error cases release the final sme reference */
 		wlan_objmgr_vdev_release_ref(param->vdev, WLAN_LEGACY_SME_ID);
 		qdf_mem_free(param);
 	}
@@ -1875,7 +1875,7 @@ static QDF_STATUS ap_mlme_vdev_csa_complete(struct vdev_mlme_obj *vdev_mlme)
 }
 
 /**
- * struct sta_mlme_ops - VDEV MLME operation callbacks strucutre for sta
+ * struct sta_mlme_ops - VDEV MLME operation callbacks structure for sta
  * @mlme_vdev_start_send:               callback to initiate actions of VDEV
  *                                      MLME start operation
  * @mlme_vdev_restart_send:             callback to initiate actions of VDEV
@@ -1927,7 +1927,7 @@ static struct vdev_mlme_ops sta_mlme_ops = {
 };
 
 /**
- * struct ap_mlme_ops - VDEV MLME operation callbacks strucutre for beaconing
+ * struct ap_mlme_ops - VDEV MLME operation callbacks structure for beaconing
  *                      interface
  * @mlme_vdev_start_send:               callback to initiate actions of VDEV
  *                                      MLME start operation

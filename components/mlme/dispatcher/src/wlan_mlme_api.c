@@ -4287,7 +4287,7 @@ char *mlme_get_roam_trigger_str(uint32_t roam_scan_trigger)
 	case WMI_ROAM_TRIGGER_REASON_BTM:
 		return "BTM TRIGGER";
 	case WMI_ROAM_TRIGGER_REASON_UNIT_TEST:
-		return "TEST COMMMAND";
+		return "TEST COMMAND";
 	case WMI_ROAM_TRIGGER_REASON_BSS_LOAD:
 		return "HIGH BSS LOAD";
 	case WMI_ROAM_TRIGGER_REASON_DEAUTH:

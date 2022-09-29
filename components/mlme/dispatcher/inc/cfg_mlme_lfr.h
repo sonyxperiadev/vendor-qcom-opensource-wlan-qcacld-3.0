@@ -1366,7 +1366,7 @@
  * This INI is used to set the value of rssi threshold to trigger roaming
  * after background scan. To trigger roam after bg scan, value of rssi of
  * candidate AP should be higher by this threshold than the rssi of the
- * currrently associated AP.
+ * currently associated AP.
  *
  * Related: RoamRssiDiff
  *
@@ -1461,7 +1461,7 @@
  * @Default: 100
  *
  * This ini is used to set the timer period in secs after
- * which neighbor scan is trigerred.
+ * which neighbor scan is triggered.
  *
  * Related: None
  *
@@ -2132,7 +2132,7 @@
  * @Max: 100
  * @Default: 70
  *
- * When the bss laod value that is sampled exceeds this threshold, firmware
+ * When the bss load value that is sampled exceeds this threshold, firmware
  * will trigger roaming if bss load trigger is enabled.
  *
  * Related: None
@@ -2563,7 +2563,7 @@
 
 /*
  * <ini>
- * idle_roam_inactive_time - Time duration in millseconds for which the
+ * idle_roam_inactive_time - Time duration in milliseconds for which the
  * connection is idle.
  * @Min: 0
  * @Max: 0xFFFFFFFF
