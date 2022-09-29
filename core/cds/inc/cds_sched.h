@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -89,7 +90,7 @@ struct cds_ol_rx_pkt {
 ** CDS Scheduler context
 ** The scheduler context contains the following:
 **   ** the messages queues
-**   ** the handle to the tread
+**   ** the handle to the thread
 **   ** pointer to the events that gracefully shutdown the MC and Tx threads
 **
 */
@@ -144,7 +145,7 @@ typedef struct _cds_sched_context {
 	/* high throughput required */
 	bool high_throughput_required;
 
-	/* affinity requied during uplink traffic*/
+	/* affinity required during uplink traffic*/
 	bool rx_affinity_required;
 	uint8_t conf_rx_thread_ul_affinity;
 
@@ -227,7 +228,7 @@ struct cds_context {
 };
 
 /*---------------------------------------------------------------------------
-   Function declarations and documenation
+   Function declarations and documentation
    ---------------------------------------------------------------------------*/
 #ifdef QCA_CONFIG_SMP
 int cds_sched_handle_cpu_hot_plug(void);
