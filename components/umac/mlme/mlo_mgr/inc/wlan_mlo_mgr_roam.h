@@ -216,7 +216,7 @@ mlo_roam_get_bssid_chan_for_link(uint8_t vdev_id,
  * @event: event ptr
  * @event_data_len: event data len
  *
- * This api will be called from connection manger to mlo
+ * This api will be called from connection manager to mlo
  * manager to start roam sync request on link vdev's.
  *
  * Return: qdf status

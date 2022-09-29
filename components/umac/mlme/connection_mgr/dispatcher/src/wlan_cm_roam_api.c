@@ -502,7 +502,7 @@ wlan_cm_dual_sta_roam_update_connect_channels(struct wlan_objmgr_psoc *psoc,
 							   vdev_id_list,
 							   PM_STA_MODE);
 
-	/* No need to fill freq list, if no other STA is in conencted state */
+	/* No need to fill freq list, if no other STA is in connected state */
 	if (!sta_count)
 		return;
 
@@ -558,7 +558,7 @@ wlan_cm_dual_sta_roam_update_connect_channels(struct wlan_objmgr_psoc *psoc,
 	channel_list = mlme_cfg->reg.valid_channel_freq_list;
 
 	/*
-	 * Buffer of (num channl * 5) + 1  to consider the 4 char freq,
+	 * Buffer of (num channel * 5) + 1  to consider the 4 char freq,
 	 * 1 space after it for each channel and 1 to end the string
 	 * with NULL.
 	 */
@@ -1682,7 +1682,7 @@ bool cm_is_fast_roam_enabled(struct wlan_objmgr_psoc *psoc)
 
 	if (mlme_obj->cfg.lfr.enable_fast_roam_in_concurrency)
 		return true;
-	/* return true if no concurency */
+	/* return true if no concurrency */
 	if (policy_mgr_get_connection_count(psoc) < 2)
 		return true;
 
@@ -1986,7 +1986,7 @@ wlan_cm_update_mlme_fils_info(struct wlan_objmgr_vdev *vdev,
 
 	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
 	if (!mlme_priv) {
-		mlme_err("vdev legacy private object is NULL fro vdev %d",
+		mlme_err("vdev legacy private object is NULL for vdev %d",
 			 vdev_id);
 		return QDF_STATUS_E_FAILURE;
 	}
@@ -2759,7 +2759,7 @@ cm_roam_stats_get_trigger_detail_str(struct wmi_roam_trigger_info *ptr,
 	case ROAM_TRIGGER_REASON_PERIODIC:
 		/*
 		 * Use ptr->current_rssi get the RSSI of current AP after
-		 * roam scan is triggered. This avoids discrepency with the
+		 * roam scan is triggered. This avoids discrepancy with the
 		 * next rssi threshold value printed in roam scan details.
 		 * ptr->rssi_trig_data.threshold gives the rssi threshold
 		 * for the Low Rssi/Periodic scan trigger.
@@ -2876,7 +2876,7 @@ cm_roam_stats_print_btm_rsp_info(struct wmi_roam_trigger_info *trigger_info,
  * @vdev_id: vdev id
  *
  * Prints the vdev, roam_full_scan_count, channel and rssi
- * utilization threhold and timer
+ * utilization threshold and timer
  *
  * Return: None
  */
@@ -3032,7 +3032,7 @@ cm_roam_stats_print_scan_info(struct wlan_objmgr_psoc *psoc,
 /**
  * cm_roam_stats_print_roam_result()  - Print roam result related info
  * @psoc: Pointer to psoc object
- * @res:     Roam result strucure pointer
+ * @res:     Roam result structure pointer
  * @vdev_id: Vdev id
  *
  * Print roam result and failure reason if roaming failed.

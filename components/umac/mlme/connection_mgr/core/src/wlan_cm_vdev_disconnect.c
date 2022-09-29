@@ -16,7 +16,7 @@
  */
 
 /**
- * DOC: Implements leagcy disconnect connect specific APIs of
+ * DOC: Implements legacy disconnect connect specific APIs of
  * connection mgr to initiate vdev manager operations
  */
 

@@ -62,7 +62,7 @@ QDF_STATUS cm_fw_roam_sync_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 	}
 
 	if (cm_is_vdev_connecting(vdev) || cm_is_vdev_disconnecting(vdev)) {
-		mlme_err("vdev %d Roam sync not handled in conneting/disconneting state",
+		mlme_err("vdev %d Roam sync not handled in connecting/disconnecting state",
 			 vdev_id);
 		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_SB_ID);
 		return cm_roam_stop_req(psoc, vdev_id,
@@ -880,7 +880,7 @@ cm_fw_roam_sync_propagation(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 
 	cm_process_roam_keys(vdev, rsp, cm_id);
 	/*
-	 * Re-enable the disabled link on roaming as desision
+	 * Re-enable the disabled link on roaming as decision
 	 * will be taken again to disable the link on roam sync completion.
 	 */
 	if (wlan_vdev_mlme_is_mlo_vdev(vdev))

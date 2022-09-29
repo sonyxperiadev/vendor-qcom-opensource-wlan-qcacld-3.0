@@ -486,7 +486,7 @@ struct owe_transition_mode_info {
  * ROAM_TRIGGER_REASON_PER, ROAM_TRIGGER_REASON_BMISS
  * @cfg_param: per vdev config params
  * @assoc_ie: assoc IE
- * @prev_ap_bcn_ie: last connetced AP ie
+ * @prev_ap_bcn_ie: last connected AP ie
  * @occupied_chan_lst: occupied channel list
  * @roam_candidate_count: candidate count
  * @is_ese_assoc: is ese assoc
@@ -575,7 +575,7 @@ enum sta_roam_policy_dfs_mode {
  * struct rso_roam_policy_params - sta roam policy params for station
  * @dfs_mode: tell is DFS channels needs to be skipped while scanning
  * @skip_unsafe_channels: tells if unsafe channels needs to be skip in scanning
- * @sap_operating_band: Opearting band for SAP
+ * @sap_operating_band: Operating band for SAP
  */
 struct rso_roam_policy_params {
 	enum sta_roam_policy_dfs_mode dfs_mode;
@@ -644,7 +644,7 @@ struct rso_config_params {
  * @NEIGHBOR_SCAN_PERIOD: neighbour scan period
  * @ROAM_CONFIG_ENABLE: Roam config enable
  * @ROAM_PREFERRED_CHAN: preferred channel list
- * @ROAM_SPECIFIC_CHAN: spedific channel list
+ * @ROAM_SPECIFIC_CHAN: specific channel list
  * @ROAM_RSSI_DIFF: rssi diff
  * @NEIGHBOUR_LOOKUP_THRESHOLD: lookup threshold
  * @SCAN_N_PROBE: scan n probe
@@ -693,7 +693,7 @@ enum roam_cfg_param {
 
 /**
  * enum roam_offload_init_flags  - Flags sent in Roam offload initialization.
- * @WLAN_ROAM_FW_OFFLOAD_ENABLE: Init roaming module at firwmare
+ * @WLAN_ROAM_FW_OFFLOAD_ENABLE: Init roaming module at firmware
  * @WLAN_ROAM_BMISS_FINAL_SCAN_ENABLE: Enable partial scan after final beacon
  * miss event at firmware
  * @WLAN_ROAM_SKIP_EAPOL_4WAY_HANDSHAKE: Disable 4 Way-HS offload to firmware
@@ -753,8 +753,8 @@ struct wlan_cm_roam_vendor_btm_params {
  * struct ap_profile - Structure ap profile to match candidate
  * @flags: flags
  * @rssi_threshold: the value of the the candidate AP should higher by this
- *                  threshold than the rssi of the currrently associated AP
- * @ssid: ssid vlaue to be matched
+ *                  threshold than the rssi of the currently associated AP
+ * @ssid: ssid value to be matched
  * @rsn_authmode: security params to be matched
  * @rsn_ucastcipherset: unicast cipher set
  * @rsn_mcastcipherset: mcast/group cipher set
@@ -1314,11 +1314,11 @@ struct wlan_roam_fils_params {
  * one VDEV is active
  * @max_rest_time: max rest time in msec on the BSS channel,only valid if
  * at least one VDEV is active
- * @probe_spacing_time: time in msec between 2 consequetive probe requests with
+ * @probe_spacing_time: time in msec between 2 consecutive probe requests with
  * in a set
  * @probe_delay: delay in msec before sending first probe request after
  * switching to a channel
- * @repeat_probe_time: time in msec between 2 consequetive probe requests within
+ * @repeat_probe_time: time in msec between 2 consecutive probe requests within
  * a set
  * @max_scan_time: maximum time in msec allowed for scan
  * @idle_time: data inactivity time in msec on bss channel that will be used by
@@ -1918,8 +1918,8 @@ struct roam_btm_response_data {
  *  struct roam_initial_data - Roam initial related data
  *  @present:                Flag to check if the roam btm_rsp tlv is present
  *  @roam_full_scan_count:   Roam full scan count
- *  @rssi_th:                RSSI threhold
- *  @cu_th:                  Channel utilization threhold
+ *  @rssi_th:                RSSI threshold
+ *  @cu_th:                  Channel utilization threshold
  *  @fw_cancel_timer_bitmap: FW timers, which are getting cancelled
  */
 struct roam_initial_data {
@@ -2052,7 +2052,7 @@ struct set_pcl_req {
  * @target_bssid: target mac address
  * @ch_freq: channel frequency
  * @frame_len: frame length, includs mac header, fixed params and ies
- * @frame_buf: buffer contaning probe response or beacon
+ * @frame_buf: buffer containing probe response or beacon
  * @is_same_bssid: flag to indicate if roaming is requested for same bssid
  * @forced_roaming: Roam to any bssid in any ch (here bssid & ch is not given)
  */
@@ -2296,8 +2296,8 @@ struct roam_stats_event {
 /*
  * struct auth_offload_event - offload data carried by roam event
  * @vdev_id: vdev id
- * @ap_bssid: SAE authentication offload AP MAC Addess
- * @ta: SAE authentication offload Tx MAC Addess
+ * @ap_bssid: SAE authentication offload AP MAC Address
+ * @ta: SAE authentication offload Tx MAC Address
  */
 struct auth_offload_event {
 	uint8_t vdev_id;
@@ -2400,7 +2400,7 @@ enum roam_scan_freq_scheme {
  * struct wlan_cm_vendor_handoff_param - vendor handoff configuration
  * structure
  * @vendor_handoff_context_cb: vendor handoff context
- * @req_in_progress: to check whether vendor handoff reqest in progress or not
+ * @req_in_progress: to check whether vendor handoff request in progress or not
  */
 struct wlan_cm_vendor_handoff_param {
 	void *vendor_handoff_context;
@@ -2450,7 +2450,7 @@ struct cm_roam_values_copy {
 #define MAX_PN_LEN 8
 #define MAX_KEY_LEN 32
 
-/* MAX_FREQ_RANGE_NUM shouldn't exceed as only in case od SBS there will be 3
+/* MAX_FREQ_RANGE_NUM shouldn't exceed as only in case of SBS there will be 3
  * frequency ranges, For DBS, it will be 2. For SMM, it will be 1
  */
 #define MAX_FREQ_RANGE_NUM 3
