@@ -1298,7 +1298,7 @@ static int __wlan_hdd_bus_suspend(struct wow_enable_params wow_params,
 
 	if (hif_try_prevent_ep_vote_access(hif_ctx)) {
 		hdd_debug("Prevent suspend, ep work pending");
-		err = QDF_STATUS_E_BUSY;
+		err = -EBUSY;
 		goto resume_txrx;
 	}
 
