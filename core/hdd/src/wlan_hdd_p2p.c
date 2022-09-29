@@ -949,8 +949,8 @@ int __wlan_hdd_del_virtual_intf(struct wiphy *wiphy, struct wireless_dev *wdev)
 
 	if (adapter->device_mode == QDF_SAP_MODE &&
 	    ucfg_pre_cac_is_active(hdd_ctx->psoc)) {
-		hdd_clean_up_interface(hdd_ctx, adapter);
 		ucfg_pre_cac_clean_up(hdd_ctx->psoc);
+		hdd_clean_up_interface(hdd_ctx, adapter);
 	} else if (wlan_hdd_is_session_type_monitor(
 					adapter->device_mode) &&
 		   ucfg_pkt_capture_get_mode(hdd_ctx->psoc) !=

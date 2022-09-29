@@ -116,6 +116,7 @@ void hdd_close_pre_cac_adapter(struct hdd_context *hdd_ctx)
 	if (!pre_cac_adapter)
 		return;
 
+	ucfg_pre_cac_clear_work(hdd_ctx->psoc);
 	errno = osif_vdev_sync_trans_start_wait(pre_cac_adapter->dev,
 						&vdev_sync);
 	if (errno)
