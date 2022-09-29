@@ -697,6 +697,31 @@ cm_connect_success_diag(struct wlan_mlme_psoc_ext_obj *mlme_obj,
 	WLAN_HOST_DIAG_EVENT_REPORT(&connect_status, EVENT_WLAN_STATUS_V2);
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static void cm_print_mlo_info(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_objmgr_peer *peer;
+	struct qdf_mac_addr *mld_addr;
+
+	if (!wlan_vdev_mlme_is_mlo_vdev(vdev))
+		return;
+
+	mld_addr = (struct qdf_mac_addr *)wlan_vdev_mlme_get_mldaddr(vdev);
+	peer = wlan_vdev_get_bsspeer(vdev);
+	if (!peer)
+		return;
+
+	mlme_nofl_debug("self_mld_addr:" QDF_MAC_ADDR_FMT,
+			QDF_MAC_ADDR_REF(mld_addr->bytes));
+	mlme_nofl_debug("peer_mld_mac:" QDF_MAC_ADDR_FMT,
+			QDF_MAC_ADDR_REF(peer->mldaddr));
+}
+#else
+static void cm_print_mlo_info(struct wlan_objmgr_vdev *vdev)
+{
+}
+#endif
+
 void cm_connect_info(struct wlan_objmgr_vdev *vdev, bool connect_success,
 		     struct qdf_mac_addr *bssid, struct wlan_ssid *ssid,
 		     qdf_freq_t freq)
@@ -800,6 +825,7 @@ void cm_connect_info(struct wlan_objmgr_vdev *vdev, bool connect_success,
 	mlme_nofl_debug("Qos enable: %d | Associated: %s",
 			conn_stats.qos_capability,
 			(conn_stats.result_code ? "yes" : "no"));
+	cm_print_mlo_info(vdev);
 	mlme_nofl_debug("+---------CONNECTION INFO END------------+");
 
 	WLAN_HOST_DIAG_EVENT_REPORT(&conn_stats, EVENT_WLAN_CONN_STATS_V2);
