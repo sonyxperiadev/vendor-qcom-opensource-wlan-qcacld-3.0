@@ -4635,7 +4635,7 @@ endif
 #
 # If DYNAMIC_SINGLE_CHIP & MULTI_IF_NAME defined, which means there are
 # multiple possible drivers, we also can load multiple drivers together.
-# And we can use DYNAMIC_SINGLE_CHIP to distingush the ko name, and use
+# And we can use DYNAMIC_SINGLE_CHIP to distinguish the ko name, and use
 # MULTI_IF_NAME to make cnss2 platform driver to figure out which wlanhost
 # driver attached. Moreover, as the first priority, host driver will only
 # append DYNAMIC_SINGLE_CHIP to the path of firmware/mac/ini file.
