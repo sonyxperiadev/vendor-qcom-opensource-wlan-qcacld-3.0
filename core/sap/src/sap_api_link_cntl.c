@@ -291,7 +291,7 @@ wlansap_filter_unsafe_ch(struct wlan_objmgr_psoc *psoc,
 	 * would contain the channels in acs cfg. Now since the scan takes time
 	 * there could be channels present in acs cfg that could become unsafe
 	 * in the mean time, so it is better to filter out those channels from
-	 * the acs channel list before chosing one of them as a default channel
+	 * the acs channel list before choosing one of them as a default channel
 	 */
 	for (i = 0; i < sap_ctx->acs_cfg->ch_list_count; i++) {
 		freq = sap_ctx->acs_cfg->freq_list[i];

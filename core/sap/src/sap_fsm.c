@@ -239,7 +239,7 @@ static qdf_freq_t sap_random_channel_sel(struct sap_context *sap_ctx)
 		flag |= DFS_RANDOM_CH_FLAG_NO_LOWER_5G_CH;
 
 	/*
-	 * Dont choose 6ghz channel currently as legacy clients wont be able to
+	 * Dont choose 6ghz channel currently as legacy clients won't be able to
 	 * scan them. In future create an ini if any customer wants 6ghz freq
 	 * to be prioritize over 5ghz/2.4ghz.
 	 * Currently for SAP there is a high chance of 6ghz being selected as
@@ -2006,7 +2006,7 @@ bool find_ch_freq_in_radar_hist(struct dfs_radar_history *radar_result,
  * sap_append_cac_history() - Add CAC history to list
  * @radar_result: radar history buffer
  * @idx: current radar history element number
- * @max_elems: max elements nummber of radar history buffer.
+ * @max_elems: max elements number of radar history buffer.
  *
  * This function is to add the CAC history to radar history list.
  *
@@ -2894,7 +2894,7 @@ QDF_STATUS sap_cac_end_notify(mac_handle_t mac_handle,
 	 * All APs are done with CAC timer, all APs should start beaconing.
 	 * Lets assume AP1 and AP2 started beaconing on DFS channel, Now lets
 	 * say AP1 goes down and comes back on same DFS channel. In this case
-	 * AP1 shouldn't start CAC timer and start beacon immediately beacause
+	 * AP1 shouldn't start CAC timer and start beacon immediately because
 	 * AP2 is already beaconing on this channel. This case will be handled
 	 * by checking against eSAP_DFS_SKIP_CAC while starting the timer.
 	 */
@@ -3400,7 +3400,7 @@ static QDF_STATUS sap_fsm_handle_start_failure(struct sap_context *sap_ctx,
 		/*
 		 * Stop the CAC timer only in following conditions
 		 * single AP: if there is a single AP then stop timer
-		 * mulitple APs: incase of multiple APs, make sure that
+		 * multiple APs: incase of multiple APs, make sure that
 		 * all APs are down.
 		 */
 		if (!sap_find_valid_concurrent_session(mac_handle)) {
@@ -3999,7 +3999,7 @@ void sap_remove_mac_from_acl(struct qdf_mac_addr *macList,
 		qdf_mem_copy((macList + i)->bytes, (macList + i + 1)->bytes,
 			     QDF_MAC_ADDR_SIZE);
 	}
-	/* The last space should be made empty since all mac addesses moved one step up */
+	/* The last space should be made empty since all mac addresses moved one step up */
 	qdf_mem_zero((macList + (*size) - 1)->bytes, QDF_MAC_ADDR_SIZE);
 	/* reduce the list size by 1 */
 	(*size)--;
@@ -4073,7 +4073,7 @@ void sap_dump_acs_channel(struct sap_acs_cfg *acs_cfg)
 	uint8_t *chan_buff = NULL;
 
 	/*
-	 * Buffer of (num channl * 5) + 1  to consider the 4 char freq
+	 * Buffer of (num channel * 5) + 1  to consider the 4 char freq
 	 * and 1 space after it for each channel and 1 to end the string
 	 * with NULL.
 	 */
@@ -4661,7 +4661,7 @@ bool is_concurrent_sap_ready_for_channel_change(mac_handle_t mac_handle,
  * check if other beaconing entity's channel is same DFS channel. If they are
  * same then concurrent sap is doing SCC DFS.
  *
- * Return: true if two or more beaconing entitity doing SCC DFS else false
+ * Return: true if two or more beaconing entities doing SCC DFS else false
  */
 bool sap_is_conc_sap_doing_scc_dfs(mac_handle_t mac_handle,
 				   struct sap_context *given_sapctx)

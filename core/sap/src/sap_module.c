@@ -742,7 +742,7 @@ QDF_STATUS wlansap_start_bss(struct sap_context *sap_ctx,
 		     config->self_macaddr.bytes, QDF_MAC_ADDR_SIZE);
 	/*
 	 * Set the DFS Test Mode setting
-	 * Set beacon channel count before chanel switch
+	 * Set beacon channel count before channel switch
 	 */
 	qdf_status = ucfg_mlme_get_sap_chn_switch_bcn_count(
 						pmac->psoc,
@@ -970,7 +970,7 @@ QDF_STATUS wlansap_modify_acl(struct sap_context *sap_ctx,
 	sap_print_acl(sap_ctx->denyMacList, sap_ctx->nDenyMac);
 
 	/* the expectation is a mac addr will not be in both the lists
-	 * at the same time. It is the responsiblity of userspace to
+	 * at the same time. It is the responsibility of userspace to
 	 * ensure this
 	 */
 	sta_allow_list =
@@ -2510,7 +2510,7 @@ void wlansap_extend_to_acs_range(mac_handle_t mac_handle,
 	*end_ch_freq = tmp_end_ch_freq;
 	/* Note if the ACS range include only DFS channels, do not cross range
 	* Active scanning in adjacent non DFS channels results in transmission
-	* spikes in DFS specturm channels which is due to emission spill.
+	* spikes in DFS spectrum channels which is due to emission spill.
 	* Remove the active channels from extend ACS range for DFS only range
 	*/
 	if (wlan_reg_is_dfs_for_freq(mac_ctx->pdev, *start_ch_freq)) {
@@ -2577,7 +2577,7 @@ QDF_STATUS wlansap_set_dfs_nol(struct sap_context *sap_ctx,
 		sap_err("Randomize the DFS NOL");
 
 	} else {
-		sap_err("unsupport type %d", conf);
+		sap_err("unsupported type %d", conf);
 	}
 
 	return QDF_STATUS_SUCCESS;
