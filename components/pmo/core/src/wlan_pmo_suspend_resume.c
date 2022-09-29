@@ -496,7 +496,7 @@ static QDF_STATUS pmo_core_psoc_configure_suspend(struct wlan_objmgr_psoc *psoc,
 		pmo_core_apply_lphb(psoc);
 		/*
 		 * Dynamic wake events should not be needed for runtime PM.
-		 * Any wake events can be configed by default if they are
+		 * Any wake events can be configured by default if they are
 		 * really needed for runtime PM. In fact, most of them are
 		 * only needed for system suspend.
 		 */

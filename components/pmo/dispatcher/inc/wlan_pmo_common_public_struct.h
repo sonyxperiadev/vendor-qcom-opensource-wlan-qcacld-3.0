@@ -20,7 +20,7 @@
  * DOC: Declare various struct, macros which are common for
  * various pmo related features.
  *
- * Note: This file shall not contain public API's prototype/declartions.
+ * Note: This file shall not contain public API's prototype/declarations.
  *
  */
 
