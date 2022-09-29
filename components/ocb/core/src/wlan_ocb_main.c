@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -185,7 +186,7 @@ exit:
 
 /**
  * ocb_tsf_timer() - Process get TSF timer response
- * @evt: repsonse event
+ * @evt: response event
  *
  * Return: QDF_STATUS_SUCCESS on success
  */
@@ -224,7 +225,7 @@ static QDF_STATUS ocb_tsf_timer(struct ocb_rx_event *evt)
 
 /**
  * ocb_dcc_stats_response() - Process get DCC stats response
- * @evt: repsonse event
+ * @evt: response event
  *
  * Return: QDF_STATUS_SUCCESS on success
  */
@@ -262,7 +263,7 @@ static QDF_STATUS ocb_dcc_stats_response(struct ocb_rx_event *evt)
 
 /**
  * ocb_ndl_response() - Process NDL update response
- * @evt: repsonse event
+ * @evt: response event
  *
  * Return: QDF_STATUS_SUCCESS on success
  */
@@ -299,7 +300,7 @@ static QDF_STATUS ocb_ndl_response(struct ocb_rx_event *evt)
 
 /**
  * ocb_dcc_indication() - Process DCC stats indication
- * @evt: repsonse event
+ * @evt: response event
  *
  * Return: QDF_STATUS_SUCCESS on success
  */

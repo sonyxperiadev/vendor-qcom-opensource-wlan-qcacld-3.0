@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -84,8 +85,8 @@ enum ocb_southbound_event {
  * @dp_soc: psoc data path handle
  * @dp_pdev_id: pdev data path ID
  * @ocb_cbs: legacy callback functions
- * @ocb_txops: tx opertions for target interface
- * @ocb_rxops: rx opertions for target interface
+ * @ocb_txops: tx operations for target interface
+ * @ocb_rxops: rx operations for target interface
  */
 struct ocb_pdev_obj {
 	struct wlan_objmgr_pdev *pdev;
