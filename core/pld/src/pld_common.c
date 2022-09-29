@@ -1822,7 +1822,7 @@ int pld_power_on(struct device *dev)
 	switch (pld_get_bus_type(dev)) {
 	case PLD_BUS_TYPE_PCIE:
 		/* cnss platform driver handles PCIe SoC
-		 * power on/off seqeunce so let CNSS driver
+		 * power on/off sequence so let CNSS driver
 		 * handle the power on sequence for PCIe SoC
 		 */
 		break;
@@ -1858,7 +1858,7 @@ int pld_power_off(struct device *dev)
 	switch (pld_get_bus_type(dev)) {
 	case PLD_BUS_TYPE_PCIE:
 		/* cnss platform driver handles PCIe SoC
-		 * power on/off seqeunce so let CNSS driver
+		 * power on/off sequence so let CNSS driver
 		 * handle the power off sequence for PCIe SoC
 		 */
 		break;
