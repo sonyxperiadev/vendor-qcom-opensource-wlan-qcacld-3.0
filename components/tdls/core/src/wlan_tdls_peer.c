@@ -164,7 +164,7 @@ qdf_freq_t tdls_get_offchan_freq(struct wlan_objmgr_vdev *vdev,
 	pref_non6g_ch = soc_obj->tdls_configs.tdls_pre_off_chan_num;
 
 	/*
-	 * Fill preffered offchannel frequency here. If TDLS on 6 GHz is
+	 * Fill preferred offchannel frequency here. If TDLS on 6 GHz is
 	 * allowed then fill pref 6 GHz frequency
 	 * Otherwise, fill 5 GHz preferred frequency
 	 */
@@ -856,10 +856,10 @@ static void tdls_update_off_chan_peer_caps(struct tdls_vdev_priv_obj *vdev_obj,
 	 * Update Pref Offcahnnel BW such that:
 	 * 1. If 6 GHz is supported then select the ini preferred 6 GHz channel
 	 *    frequency.
-	 * 2. If 6 GHz is supported and peer doesn't support the ini preffered
+	 * 2. If 6 GHz is supported and peer doesn't support the ini preferred
 	 *    channel frequency then select the very first 6 GHz channel which
 	 *    peer supports as prefferd offchannel.
-	 * 3. If peer doesn't support 6 GHz, then select ini preffered 5 GHz
+	 * 3. If peer doesn't support 6 GHz, then select ini preferred 5 GHz
 	 *    off channel frequency, given that peer should also support it
 	 * 4. If peer doesn support 6 GHz and also doesn't support ini preferred
 	 *    5 GHz offcahnnel, then select the very first 5 GHz channel it
