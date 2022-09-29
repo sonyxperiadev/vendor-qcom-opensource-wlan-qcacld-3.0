@@ -114,7 +114,7 @@
 				      SIR_DELETE_STA_TIMEOUT + 1000)
 #define SME_CMD_STOP_BSS_TIMEOUT (SME_CMD_STOP_BSS_CMD_TIMEOUT + 1000)
 
-/* Peer disconenct timeout = peer delete + 1 sec */
+/* Peer disconnect timeout = peer delete + 1 sec */
 #define SME_CMD_PEER_DISCONNECT_TIMEOUT (SIR_DELETE_STA_TIMEOUT + 1000)
 #define SME_PEER_DISCONNECT_TIMEOUT (SME_CMD_PEER_DISCONNECT_TIMEOUT + 1000)
 
@@ -246,7 +246,7 @@ enum {
 };
 
 /*-------------------------------------------------------------------------
-  Function declarations and documenation
+  Function declarations and documentation
   ------------------------------------------------------------------------*/
 QDF_STATUS sme_open(mac_handle_t mac_handle);
 QDF_STATUS sme_init_chan_list(mac_handle_t mac_handle, uint8_t *alpha2,
@@ -393,11 +393,11 @@ struct wlan_objmgr_vdev *sme_vdev_create(mac_handle_t mac_handle,
 /**
  * sme_vdev_post_vdev_create_setup() - setup the lower layers for the new vdev
  * @mac_handle: The handle returned by mac_open
- * @vdev: Object manger vdev
+ * @vdev: Object manager vdev
  *
  * This api will setup the csr/mlme/wma layer for the newly created vdev.
  *
- * If the post vdev setup is successfull, we will have following vdev refs
+ * If the post vdev setup is successful, we will have following vdev refs
  * 1) WLAN_OBJMGR_ID  for self peer
  * 2) WLAN_LEGACY_WMA_ID for vdev
  *
@@ -408,7 +408,7 @@ QDF_STATUS sme_vdev_post_vdev_create_setup(mac_handle_t mac_handle,
 
 /**
  * sme_vdev_set_data_tx_callback() - Set dp vdev tx callback
- * @vdev: Object manger vdev
+ * @vdev: Object manager vdev
  *
  * This api will setup the dp vdev tx data callbaack.
  *
@@ -881,7 +881,7 @@ QDF_STATUS sme_configure_app_type2_params(mac_handle_t mac_handle,
  *
  * This routine will return operating channel of active AP/GO channel
  * and will skip the channel of vdev_id_to_skip.
- * If other no reqested mode is active it will return 0
+ * If other no requested mode is active it will return 0
  *
  * Return: uint32_t
  */
@@ -2275,7 +2275,7 @@ QDF_STATUS sme_fips_request(mac_handle_t mac_handle, struct fips_params *param,
 #endif /* WLAN_FEATURE_FIPS */
 
 /**
- * sme_set_cts2self_for_p2p_go() - sme function to set ini parms to FW.
+ * sme_set_cts2self_for_p2p_go() - sme function to set ini params to FW.
  * @mac_handle: Opaque handle to the global MAC context
  *
  * Return: QDF_STATUS
@@ -2883,7 +2883,7 @@ QDF_STATUS sme_set_he_bss_color(mac_handle_t mac_handle, uint8_t session_id,
 bool sme_is_conn_state_connected(mac_handle_t mac_handle, uint8_t session_id);
 
 /**
- * sme_get_bss_transition_status() - get bss transition status all cadidates
+ * sme_get_bss_transition_status() - get bss transition status all candidates
  * @mac_handle: handle returned by mac_open
  * @transition_reason : Transition reason
  * @bssid: bssid to get BSS transition status

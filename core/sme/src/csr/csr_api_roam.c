@@ -1165,7 +1165,7 @@ QDF_STATUS csr_stop(struct mac_context *mac)
 	wlan_scan_psoc_set_disable(mac->psoc, REASON_SYSTEM_DOWN);
 
 	/*
-	 * purge all serialization commnad if there are any pending to make
+	 * purge all serialization command if there are any pending to make
 	 * sure memory and vdev ref are freed.
 	 */
 	csr_purge_pdev_all_ser_cmd_list(mac);
@@ -1358,7 +1358,7 @@ static QDF_STATUS csr_roam_close(struct mac_context *mac)
 	struct csr_roam_session *session;
 
 	/*
-	 * purge all serialization commnad if there are any pending to make
+	 * purge all serialization command if there are any pending to make
 	 * sure memory and vdev ref are freed.
 	 */
 	csr_purge_pdev_all_ser_cmd_list(mac);
@@ -3113,7 +3113,7 @@ csr_roam_send_disconnect_done_indication(struct mac_context *mac_ctx,
  * @msg_buf:    message buffer
  *
  * We need to be careful on whether to cast msg_buf (pSmeRsp) to other type of
- * strucutres. It depends on how the message is constructed. If the message is
+ * structures. It depends on how the message is constructed. If the message is
  * sent by lim_send_sme_rsp, the msg_buf is only a generic response and can only
  * be used as pointer to tSirSmeRsp. For the messages where sender allocates
  * memory for specific structures, then it can be cast accordingly.
@@ -3867,7 +3867,7 @@ csr_roam_chk_lnk_assoc_ind_upper_layer(
 	 *in the lim_assoc_rsp_tx_complete -> lim_fill_sme_assoc_ind_params
 	 *and then assoc_ind will pass here, so after using it
 	 *in the csr_send_assoc_ind_to_upper_layer_cnf_msg and
-	 *then free the memroy here.
+	 *then free the memory here.
 	 */
 free_mem:
 	if (assoc_ind->assocReqLength != 0 && assoc_ind->assocReqPtr)

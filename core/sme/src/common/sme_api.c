@@ -791,7 +791,7 @@ sme_register_vdev_delete_callback(struct mac_context *mac)
 /* Global APIs */
 
 /**
- * sme_open() - Initialze all SME modules and put them at idle state
+ * sme_open() - Initialize all SME modules and put them at idle state
  * @mac_handle:       The handle returned by mac_open
  *
  * The function initializes each module inside SME, PMC, CSR, etc. Upon
@@ -938,7 +938,7 @@ void sme_update_fine_time_measurement_capab(mac_handle_t mac_handle,
 }
 
 /*
- * sme_update_config() - Change configurations for all SME moduels
+ * sme_update_config() - Change configurations for all SME modules
  * The function updates some configuration for modules in SME, CSR, etc
  *  during SMEs close open sequence.
  * Modules inside SME apply the new configuration at the next transaction.
@@ -3084,7 +3084,7 @@ static QDF_STATUS sme_process_nss_update_resp(struct mac_context *mac, uint8_t *
 				command->u.nss_update_cmd.original_vdev_id,
 				command->u.nss_update_cmd.request_id);
 	} else {
-		sme_err("Callback does not exisit");
+		sme_err("Callback does not exist");
 	}
 
 	found = csr_nonscan_active_ll_remove_entry(mac, entry, LL_ACCESS_LOCK);
@@ -5683,7 +5683,7 @@ static bool sme_search_in_base_ch_freq_lst(
  * @reason: Mac Disconnect reason code as per @enum wlan_reason_code
  *
  * If new country code does not support the channel on which STA/P2P client
- * is connetced, it sends the disconnect to the AP/P2P GO
+ * is connected, it sends the disconnect to the AP/P2P GO
  *
  * Return: void
  */
@@ -7227,7 +7227,7 @@ QDF_STATUS sme_get_roam_scan_channel_list(mac_handle_t mac_handle,
 
 /*
  * sme_get_is_ese_feature_enabled() - get ESE feature enabled or not
- *  This is a synchronuous call
+ *  This is a synchronous call
  *
  * mac_handle - The handle returned by mac_open.
  * Return true (1) - if the ESE feature is enabled
@@ -7260,7 +7260,7 @@ bool sme_get_wes_mode(mac_handle_t mac_handle)
 
 /*
  * sme_get_is_lfr_feature_enabled() - get LFR feature enabled or not
- *  This is a synchronuous call
+ *  This is a synchronous call
  * mac_handle - The handle returned by mac_open.
  * Return true (1) - if the feature is enabled
  *	  false (0) - if feature is disabled (compile or runtime)
@@ -7274,7 +7274,7 @@ bool sme_get_is_lfr_feature_enabled(mac_handle_t mac_handle)
 
 /*
  * sme_get_is_ft_feature_enabled() - get FT feature enabled or not
- *  This is a synchronuous call
+ *  This is a synchronous call
  *
  * mac_handle - The handle returned by mac_open.
  * Return true (1) - if the feature is enabled
@@ -12094,7 +12094,7 @@ QDF_STATUS sme_set_fw_test(struct set_fwtest_params *fw_test)
 
 /**
  * sme_ht40_stop_obss_scan() - ht40 obss stop scan
- * @mac_handle: mac handel
+ * @mac_handle: mac handle
  * @vdev_id: vdev identifier
  *
  * Return: Return QDF_STATUS, otherwise appropriate failure code
@@ -14168,7 +14168,7 @@ void sme_display_disconnect_stats(mac_handle_t mac_handle, uint8_t session_id)
 	sme_nofl_info("Total No. of Disconnections: %d",
 		      session->disconnect_stats.disconnection_cnt);
 
-	sme_nofl_info("No. of Diconnects Triggered by Application: %d",
+	sme_nofl_info("No. of Disconnects Triggered by Application: %d",
 		      session->disconnect_stats.disconnection_by_app);
 
 	sme_nofl_info("No. of Disassoc Sent by Peer: %d",
@@ -14187,7 +14187,7 @@ void sme_display_disconnect_stats(mac_handle_t mac_handle, uint8_t session_id)
 #ifdef FEATURE_WLAN_DYNAMIC_CVM
  /**
  * sme_set_vc_mode_config() - Set voltage corner config to FW
- * @bitmap:	Bitmap that referes to voltage corner config with
+ * @bitmap:	Bitmap that refers to voltage corner config with
  * different phymode and bw configuration
  *
  * Return: QDF_STATUS
