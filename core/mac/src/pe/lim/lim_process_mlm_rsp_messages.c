@@ -965,7 +965,7 @@ void lim_process_mlm_disassoc_cnf(struct mac_context *mac_ctx,
 			eLIM_SME_WT_DEAUTH_STATE)) {
 			/*
 			 * Should not have received
-			 * Disassocate confirm
+			 * Disassociate confirm
 			 * from MLM in other states.Log error
 			 */
 			pe_err("received MLM_DISASSOC_CNF in state %X",
@@ -1428,7 +1428,7 @@ void lim_process_mlm_add_sta_rsp(struct mac_context *mac,
 {
 	/* we need to process the deferred message since the initiating req. there might be nested request. */
 	/* in the case of nested request the new request initiated from the response will take care of resetting */
-	/* the deffered flag. */
+	/* the deferred flag. */
 	SET_LIM_PROCESS_DEFD_MESGS(mac, true);
 	if (LIM_IS_AP_ROLE(pe_session)) {
 		lim_process_ap_mlm_add_sta_rsp(mac, limMsgQ, pe_session);
@@ -1598,7 +1598,7 @@ void lim_process_mlm_del_bss_rsp(struct mac_context *mac,
 {
 	/* we need to process the deferred message since the initiating req. there might be nested request. */
 	/* in the case of nested request the new request initiated from the response will take care of resetting */
-	/* the deffered flag. */
+	/* the deferred flag. */
 	SET_LIM_PROCESS_DEFD_MESGS(mac, true);
 	mac->sys.gSysFrameCount[SIR_MAC_MGMT_FRAME][SIR_MAC_MGMT_DEAUTH] = 0;
 
@@ -1776,7 +1776,7 @@ void lim_process_mlm_del_sta_rsp(struct mac_context *mac_ctx,
 	 * initiating req. there might be nested request
 	 * in the case of nested request the new request
 	 * initiated from the response will take care of resetting
-	 * the deffered flag.
+	 * the deferred flag.
 	 */
 	struct pe_session *session_entry;
 	tpDeleteStaParams del_sta_params;
@@ -2365,7 +2365,7 @@ void lim_handle_add_bss_rsp(struct mac_context *mac_ctx,
 	 * we need to process the deferred message since the
 	 * initiating req.there might be nested request.
 	 * in the case of nested request the new request initiated
-	 * from the response will take care of resetting the deffered
+	 * from the response will take care of resetting the deferred
 	 * flag.
 	 */
 	SET_LIM_PROCESS_DEFD_MESGS(mac_ctx, true);
@@ -2751,7 +2751,7 @@ end:
 	}
 
 	mlmReassocCnf.protStatusCode = STATUS_UNSPECIFIED_FAILURE;
-	/* Update PE sessio Id */
+	/* Update PE session Id */
 	mlmReassocCnf.sessionId = pe_session->peSessionId;
 
 	lim_post_sme_message(mac, LIM_MLM_REASSOC_CNF,
@@ -3116,7 +3116,7 @@ void lim_process_switch_channel_rsp(struct mac_context *mac,
 	struct wlan_channel *vdev_chan;
 	/* we need to process the deferred message since the initiating req. there might be nested request. */
 	/* in the case of nested request the new request initiated from the response will take care of resetting */
-	/* the deffered flag. */
+	/* the deferred flag. */
 	SET_LIM_PROCESS_DEFD_MESGS(mac, true);
 	status = rsp->status;
 
@@ -3165,7 +3165,7 @@ void lim_process_switch_channel_rsp(struct mac_context *mac,
 							  gpchangeChannelData,
 							  pe_session);
 
-		/* If MCC upgrade/DBS downgrade happended during channel switch,
+		/* If MCC upgrade/DBS downgrade happened during channel switch,
 		 * the policy manager connection table needs to be updated.
 		 */
 		policy_mgr_update_connection_info(mac->psoc,
@@ -3188,7 +3188,7 @@ void lim_process_switch_channel_rsp(struct mac_context *mac,
 		 * SAP.
 		 */
 		lim_send_sme_ap_channel_switch_resp(mac, pe_session, rsp);
-		/* If MCC upgrade/DBS downgrade happended during channel switch,
+		/* If MCC upgrade/DBS downgrade happened during channel switch,
 		 * the policy manager connection table needs to be updated.
 		 */
 		policy_mgr_update_connection_info(mac->psoc,
@@ -3198,7 +3198,7 @@ void lim_process_switch_channel_rsp(struct mac_context *mac,
 	case LIM_SWITCH_CHANNEL_MONITOR:
 		lim_handle_mon_switch_channel_rsp(pe_session, status);
 		/*
-		 * If MCC upgrade/DBS downgrade happended during channel switch,
+		 * If MCC upgrade/DBS downgrade happened during channel switch,
 		 * the policy manager connection table needs to be updated.
 		 */
 		policy_mgr_update_connection_info(mac->psoc,

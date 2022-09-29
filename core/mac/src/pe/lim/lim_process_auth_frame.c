@@ -102,7 +102,7 @@ static inline unsigned int is_auth_valid(struct mac_context *mac,
  * @wep_params: pointer to wlan_mlme_wep_cfg
  * @key_id: key id
  * @default_key: output of the key
- * @key_len: output of ket length
+ * @key_len: output of key length
  *
  * Return: QDF_STATUS
  */
@@ -377,7 +377,7 @@ void lim_sae_auth_cleanup_retry(struct mac_context *mac_ctx,
  * @q_len: length of queued sae auth retry frame
  * @rx_pkt_info: Rx packet
  *
- * Return: True if SAE auth seq is mached else false
+ * Return: True if SAE auth seq is matched else false
  */
 static bool lim_is_sae_auth_algo_match(uint8_t *queued_frame, uint16_t q_len,
 				       uint8_t *rx_pkt_info)
@@ -1182,7 +1182,7 @@ static void lim_process_auth_frame_type3(struct mac_context *mac_ctx,
 					auth_node->challengeText,
 					SIR_MAC_SAP_AUTH_CHALLENGE_LENGTH)) {
 			/*
-			 * Challenge match. STA is autheticated
+			 * Challenge match. STA is authenticated
 			 * Delete Authentication response timer if running
 			 */
 			lim_deactivate_and_change_per_sta_id_timer(mac_ctx,
@@ -1343,7 +1343,7 @@ static void lim_process_auth_frame_type4(struct mac_context *mac_ctx,
  * NOTE:
  * 1. Authentication failures are reported to SME with same status code
  *    received from the peer MAC entity.
- * 2. Authentication frame2/4 received with alogirthm number other than
+ * 2. Authentication frame2/4 received with algorithm number other than
  *    one requested in frame1/3 are logged with an error and auth confirm
  *    will be sent to SME only after auth failure timeout.
  * 3. Inconsistency in the spec:

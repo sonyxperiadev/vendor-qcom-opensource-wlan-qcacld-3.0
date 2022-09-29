@@ -1467,7 +1467,7 @@ lim_enc_type_matched(struct mac_context *mac_ctx,
 	 * check for security type in case
 	 * OSEN session.
 	 * For WPS registration session no need to detect
-	 * detect security mismatch as it wont match and
+	 * detect security mismatch as it won't match and
 	 * driver may end up sending probe request without
 	 * WPS IE during WPS registration process.
 	 */
@@ -2202,7 +2202,7 @@ lim_roam_fill_bss_descr(struct mac_context *mac,
 	}
 
 	/*
-	 * Length of BSS desription is without length of
+	 * Length of BSS description is without length of
 	 * length itself and length of pointer
 	 * that holds ieFields
 	 *
@@ -2887,7 +2887,7 @@ static bool lim_is_beacon_miss_scenario(struct mac_context *mac,
 
    This function is called before enqueuing the frame to PE queue for further processing.
    This prevents unnecessary frames getting into PE Queue and drops them right away.
-   Frames will be droped in the following scenarios:
+   Frames will be dropped in the following scenarios:
 
    - In Scan State, drop the frames which are not marked as scan frames
    - In non-Scan state, drop the frames which are marked as scan frames.
@@ -2939,7 +2939,7 @@ tMgmtFrmDropReason lim_is_pkt_candidate_for_drop(struct mac_context *mac,
 			return eMGMT_DROP_NO_DROP;
 
 		/* Drop INFRA Beacons and Probe Responses in IBSS Mode */
-		/* This can be enhanced to even check the SSID before deciding to enque the frame. */
+		/* This can be enhanced to even check the SSID before deciding to enqueue the frame. */
 		if (capabilityInfo.ess)
 			return eMGMT_DROP_INFRA_BCN_IN_IBSS;
 

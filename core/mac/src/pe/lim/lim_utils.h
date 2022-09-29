@@ -500,7 +500,7 @@ uint8_t lim_is_null_ssid(tSirMacSSid *pSsid);
 void lim_stop_tx_and_switch_channel(struct mac_context *mac, uint8_t sessionId);
 
 /**
- * lim_process_channel_switch() - Process chanel switch
+ * lim_process_channel_switch() - Process channel switch
  * @mac: pointer to Global MAC structure
  * @vdev_id: Vdev on which CSA is happening
  *
@@ -1035,7 +1035,7 @@ QDF_STATUS lim_send_ext_cap_ie(struct mac_context *mac_ctx, uint32_t session_id,
  * @dot11_mode: vdev dot11 mode
  * @device_mode: device mode
  *
- * This funciton gets ht and vht capability and send to firmware via wma
+ * This function gets ht and vht capability and send to firmware via wma
  *
  * Return: status of operation
  */
@@ -2580,7 +2580,7 @@ void lim_req_send_delba_ind_process(struct mac_context *mac_ctx,
 void lim_send_beacon(struct mac_context *mac_ctx, struct pe_session *session);
 
 /**
- * lim_ndi_mlme_vdev_up_transition() - Send event to transistion NDI VDEV to UP
+ * lim_ndi_mlme_vdev_up_transition() - Send event to transition NDI VDEV to UP
  * @session: session pointer
  *
  * Return: None

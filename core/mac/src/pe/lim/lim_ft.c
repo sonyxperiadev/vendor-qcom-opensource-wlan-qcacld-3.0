@@ -395,7 +395,7 @@ static uint8_t lim_convert_phymode_to_dot11mode(enum wlan_phymode phymode)
  * @bcn: beacon structure
  * @band: reg_wifi_band
  *
- * The function is to calculate dot11 mode in case fw doen't send phy mode.
+ * The function is to calculate dot11 mode in case fw doesn't send phy mode.
  *
  * Return: dot11mode.
  */

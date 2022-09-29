@@ -4301,7 +4301,7 @@ QDF_STATUS lim_sta_send_add_bss_pre_assoc(struct mac_context *mac,
 					      pe_session, retCode);
 	qdf_mem_free(pAddBssParams);
 	/*
-	 * Set retCode sucess as lim_process_sta_add_bss_rsp_pre_assoc take
+	 * Set retCode success as lim_process_sta_add_bss_rsp_pre_assoc take
 	 * care of failure
 	 */
 	retCode = QDF_STATUS_SUCCESS;
@@ -4450,7 +4450,7 @@ void lim_init_pre_auth_timer_table(struct mac_context *mac,
 
 /** -------------------------------------------------------------
    \fn lim_acquire_free_pre_auth_node
-   \brief Retrives a free Pre Auth node from Pre Auth Table.
+   \brief Retrieves a free Pre Auth node from Pre Auth Table.
    \param     struct mac_context *   mac
    \param     tpLimPreAuthTable pPreAuthTimerTable
    \return none

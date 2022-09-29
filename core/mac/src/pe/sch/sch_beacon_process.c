@@ -1387,7 +1387,7 @@ QDF_STATUS lim_obss_send_detection_cfg(struct mac_context *mac_ctx,
 			return status;
 		}
 	} else {
-		pe_debug("Skiping WMA_OBSS_DETECTION_REQ, force = %d", force);
+		pe_debug("Skipping WMA_OBSS_DETECTION_REQ, force = %d", force);
 	}
 
 	return status;

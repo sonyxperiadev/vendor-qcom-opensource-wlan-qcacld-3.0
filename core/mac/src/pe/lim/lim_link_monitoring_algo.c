@@ -51,7 +51,7 @@
  * lim_delete_sta_util - utility function for deleting station context
  *
  * @mac_ctx: global MAC context
- * @msg: pointer to delte station context
+ * @msg: pointer to delete station context
  * @session_entry: PE session entry
  *
  * utility function called to clear up station context.

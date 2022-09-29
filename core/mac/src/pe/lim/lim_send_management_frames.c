@@ -348,7 +348,7 @@ lim_send_probe_req_mgmt_frame(struct mac_context *mac_ctx,
 		p2pie = limGetP2pIEPtr(mac_ctx, additional_ie, addn_ielen);
 
 	/*
-	 * Don't include 11b rate if it is a P2P serach or probe request is
+	 * Don't include 11b rate if it is a P2P search or probe request is
 	 * sent by P2P Client
 	 */
 	if ((MLME_DOT11_MODE_11B != dot11mode) && (p2pie) &&
@@ -394,7 +394,7 @@ lim_send_probe_req_mgmt_frame(struct mac_context *mac_ctx,
 	}
 
 	/*
-	 * Set channelbonding information as "disabled" when tunned to a
+	 * Set channelbonding information as "disabled" when tuned to a
 	 * 2.4 GHz channel
 	 */
 	if (wlan_reg_is_24ghz_ch_freq(chan_freq)) {
@@ -687,10 +687,10 @@ static QDF_STATUS lim_get_addn_ie_for_probe_resp(struct mac_context *mac,
  * lim_add_additional_ie() - Add additional IE to management frame
  * @frame:          pointer to frame
  * @frame_offset:   current offset of frame
- * @add_ie:         pointer to addtional ie
- * @add_ie_len:     length of addtional ie
+ * @add_ie:         pointer to additional ie
+ * @add_ie_len:     length of additional ie
  * @p2p_ie:         pointer to p2p ie
- * @noa_ie:         pointer to noa ie, this is seperate p2p ie
+ * @noa_ie:         pointer to noa ie, this is separate p2p ie
  * @noa_ie_len:     length of noa ie
  * @noa_stream:     pointer to noa stream, this is noa attribute only
  * @noa_stream_len: length of noa stream
@@ -707,7 +707,7 @@ static void lim_add_additional_ie(uint8_t *frame, uint32_t frame_offset,
 	uint16_t p2p_ie_offset;
 
 	if (!add_ie_len || !add_ie) {
-		pe_debug("no valid addtional ie");
+		pe_debug("no valid additional ie");
 		return;
 	}
 
@@ -2358,7 +2358,7 @@ static QDF_STATUS lim_assoc_tx_complete_cnf(void *context,
 
 #ifdef WLAN_ADAPTIVE_11R
 /**
- * lim_fill_adaptive_11r_ie() - Populate the Vendor secific adaptive 11r
+ * lim_fill_adaptive_11r_ie() - Populate the Vendor specific adaptive 11r
  * IE to association request frame
  * @pe_session: pointer to PE session
  * @ie_buf: buffer to which Adaptive 11r IE will be copied
@@ -2497,7 +2497,7 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 
 	vdev_id = pe_session->vdev_id;
 
-	/* check this early to avoid unncessary operation */
+	/* check this early to avoid unnecessary operation */
 	if (!pe_session->lim_join_req) {
 		pe_err("pe_session->lim_join_req is NULL");
 		qdf_mem_free(mlm_assoc_req);

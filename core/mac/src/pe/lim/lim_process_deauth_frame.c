@@ -324,7 +324,7 @@ lim_process_deauth_frame(struct mac_context *mac, uint8_t *pRxPacketInfo,
 
 #ifdef WLAN_FEATURE_SAE
 /*
- * lim_process_sae_auth_msg() - Process auth msg after recieving deauth
+ * lim_process_sae_auth_msg() - Process auth msg after receiving deauth
  * @mac_ctx: Global MAC context
  * @pe_session: PE session entry pointer
  * @addr: peer address/ source address
@@ -446,7 +446,7 @@ void lim_perform_deauth(struct mac_context *mac_ctx, struct pe_session *pe_sessi
 				 pe_session->peSessionId,
 				 pe_session->limMlmState));
 
-			/* Deactive Association response timeout */
+			/* Deactivate Association response timeout */
 			lim_deactivate_and_change_timer(mac_ctx,
 					eLIM_ASSOC_FAIL_TIMER);
 

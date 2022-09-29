@@ -763,7 +763,7 @@ lim_update_iot_aggr_sz(struct mac_context *mac_ctx, uint8_t *ie_ptr,
 
 /**
  * hdd_cm_update_mcs_rate_set() - Update MCS rate set from HT capability
- * @vdev: Pointer to vdev boject
+ * @vdev: Pointer to vdev object
  * @ht_cap: pointer to parsed HT capability
  *
  * Return: None.
@@ -1222,7 +1222,7 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 	 */
 	if (!lim_verify_fils_params_assoc_rsp(mac_ctx, session_entry,
 						assoc_rsp, &assoc_cnf)) {
-		pe_err("FILS params doesnot match");
+		pe_err("FILS params does not match");
 		assoc_cnf.resultCode = eSIR_SME_INVALID_ASSOC_RSP_RXED;
 		assoc_cnf.protStatusCode = STATUS_UNSPECIFIED_FAILURE;
 		/* Send advisory Disassociation frame to AP */

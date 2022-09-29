@@ -52,11 +52,11 @@
 #include <wlan_cmn_ieee80211.h>
 #include <wlan_mgmt_txrx_utils_api.h>
 
-/* Fils Dicovery Frame */
+/* Fils Discovery Frame */
 /**
  * struct fd_action_header - FILS Discovery Action frame header
  * @action_header: WLAN Action frame header
- * @fd_frame_cntl: FILS Disovery Frame Control
+ * @fd_frame_cntl: FILS Discovery Frame Control
  * @timestamp:     Time stamp
  * @bcn_interval:  Beacon Interval
  * @elem:          variable len sub element fields

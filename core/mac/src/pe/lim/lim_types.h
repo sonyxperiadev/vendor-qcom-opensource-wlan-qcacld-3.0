@@ -93,7 +93,7 @@ enum mlmmsgtype {
 
 #define LIM_DECRYPT_ICV_FAIL    1
 
-/* / Definitions to distinquish between Association/Reassociaton */
+/* / Definitions to distinguish between Association/Reassociaton */
 #define LIM_ASSOC    0
 #define LIM_REASSOC  1
 

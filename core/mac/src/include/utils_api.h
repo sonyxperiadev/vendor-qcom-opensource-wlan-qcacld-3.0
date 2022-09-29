@@ -54,7 +54,7 @@ static inline uint16_t sir_swap_u16(uint16_t val)
  *
  * FUNCTION:
  * This function is called to swap two U8s of an uint16_t value depending
- * on endiannes of the target processor/compiler the software is
+ * on endianness of the target processor/compiler the software is
  * running on
  *
  * LOGIC:
@@ -106,7 +106,7 @@ static inline uint32_t sir_swap_u32(uint32_t val)
  *
  * FUNCTION:
  * This function is called to swap U8s of an uint32_t value depending
- * on endiannes of the target processor/compiler the software is
+ * on endianness of the target processor/compiler the software is
  * running on
  *
  * LOGIC:

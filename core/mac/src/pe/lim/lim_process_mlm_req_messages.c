@@ -549,8 +549,7 @@ static bool lim_is_auth_req_expected(struct mac_context *mac_ctx,
 }
 
 /**
- * lim_is_preauth_ctx_exisits() - check if preauth context exists
- *
+ * lim_is_preauth_ctx_exists() - check if preauth context exists
  * @mac_ctx:          global MAC context
  * @session:          PE session entry
  * @preauth_node_ptr: pointer to preauth node pointer

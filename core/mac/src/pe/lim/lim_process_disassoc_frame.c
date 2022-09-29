@@ -20,7 +20,7 @@
 /*
  *
  * This file lim_process_disassoc_frame.cc contains the code
- * for processing Disassocation Frame.
+ * for processing Disassociation Frame.
  * Author:        Chandra Modumudi
  * Date:          03/24/02
  * History:-
