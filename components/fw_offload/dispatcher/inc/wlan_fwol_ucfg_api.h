@@ -78,7 +78,7 @@ QDF_STATUS ucfg_fwol_init(void);
 /**
  * ucfg_fwol_deinit() - De initialize fwol_ctx context.
  *
- * This function De initializes fwol contex.
+ * This function De initializes fwol context.
  *
  * Return: QDF_STATUS_SUCCESS - in case of success else return error
  */
