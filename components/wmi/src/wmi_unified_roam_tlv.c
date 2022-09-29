@@ -165,7 +165,7 @@ void wmi_rssi_monitor_attach_tlv(struct wmi_unified *wmi_handle)
 
 /**
  * send_roam_scan_offload_rssi_thresh_cmd_tlv() - set scan offload
- *                                                rssi threashold
+ *                                                rssi threshold
  * @wmi_handle: wmi handle
  * @roam_req:   Roaming request buffer
  *
@@ -375,7 +375,7 @@ send_roam_scan_offload_scan_period_cmd_tlv(
 			param->roam_inactive_data_packet_count;
 	scan_period_fp->roam_scan_period_after_inactivity =
 			param->roam_scan_period_after_inactivity;
-	/* Firmware expects the full scan preriod in msec whereas host
+	/* Firmware expects the full scan period in msec whereas host
 	 * provides the same in seconds.
 	 * Convert it to msec and send to firmware
 	 */
@@ -5271,7 +5271,7 @@ static QDF_STATUS send_btm_config_cmd_tlv(wmi_unified_t wmi_handle,
 /**
  * send_roam_bss_load_config_tlv() - send roam load bss trigger configuration
  * @wmi_handle: wmi handle
- * @parms: pointer to wlan_roam_bss_load_config
+ * @params: pointer to wlan_roam_bss_load_config
  *
  * This function sends the roam load bss trigger configuration to fw.
  * the bss_load_threshold parameter is used to configure the maximum
