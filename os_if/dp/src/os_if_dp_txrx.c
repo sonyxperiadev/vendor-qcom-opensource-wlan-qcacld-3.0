@@ -129,7 +129,7 @@ void osif_dp_mark_pkt_type(struct sk_buff *skb)
 	struct ethhdr *eh = (struct ethhdr *)skb->data;
 
 	/*
-	 * Zero out CB before accessing it. Expection is that cb is accessed
+	 * Zero out CB before accessing it. Expectation is that cb is accessed
 	 * for the first time here on TX path in hard_start_xmit.
 	 */
 	qdf_mem_zero(skb->cb, sizeof(skb->cb));
