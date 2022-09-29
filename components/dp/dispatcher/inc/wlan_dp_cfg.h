@@ -992,7 +992,7 @@
  * <ini>
  *
  * Enable/disable DPTRACE
- * Enabling this might have performace impact.
+ * Enabling this might have performance impact.
  *
  * Config DPTRACE
  * The sequence of params is important. If some param is missing, defaults are

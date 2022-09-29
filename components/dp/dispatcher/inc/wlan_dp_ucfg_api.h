@@ -54,7 +54,7 @@ ucfg_dp_is_roam_after_nud_enabled(struct wlan_objmgr_psoc *psoc)
 /**
  * ucfg_dp_create_intf() - update DP interface MAC address
  * @psoc: psoc handle
- * @cur_mac: Curent MAC address
+ * @cur_mac: Current MAC address
  * @new_mac: new MAC address
  *
  */

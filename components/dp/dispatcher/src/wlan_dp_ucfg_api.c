@@ -312,7 +312,7 @@ QDF_STATUS ucfg_dp_deinit(void)
 }
 
 /**
- * ucfg_dp_suspend_handler() - suspend handler regsitered with PMO component
+ * ucfg_dp_suspend_handler() - suspend handler registered with PMO component
  * @psoc: psoc handle
  * @arg: Arguments passed by the suspend handler.
  *
@@ -342,7 +342,7 @@ ucfg_dp_suspend_handler(struct wlan_objmgr_psoc *psoc, void *arg)
 }
 
 /**
- * ucfg_dp_resume_handler() - resume handler regsitered with PMO component
+ * ucfg_dp_resume_handler() - resume handler registered with PMO component
  * @psoc: psoc handle
  * @arg: Arguments passed by the resume handler.
  *

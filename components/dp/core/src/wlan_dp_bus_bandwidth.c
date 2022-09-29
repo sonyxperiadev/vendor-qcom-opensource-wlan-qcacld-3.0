@@ -45,7 +45,7 @@
 #ifdef FEATURE_BUS_BANDWIDTH_MGR
 /**
  * bus_bw_table_default - default table which provides bus bandwidth level
- *  corresonding to a given connection mode and throughput level.
+ *  corresponding to a given connection mode and throughput level.
  */
 static bus_bw_table_type bus_bw_table_default = {
 	[QCA_WLAN_802_11_MODE_11B] = {BUS_BW_LEVEL_NONE, BUS_BW_LEVEL_1,
@@ -80,7 +80,7 @@ static bus_bw_table_type bus_bw_table_default = {
 
 /**
  * bus_bw_table_low_latency - table which provides bus bandwidth level
- *  corresonding to a given connection mode and throughput level in low
+ *  corresponding to a given connection mode and throughput level in low
  *  latency setting.
  */
 static bus_bw_table_type bus_bw_table_low_latency = {

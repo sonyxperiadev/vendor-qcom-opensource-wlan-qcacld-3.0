@@ -450,7 +450,7 @@ dp_rx_fisa_setup_cmem_fse(struct dp_rx_fst *fisa_hdl, uint32_t hashed_flow_idx,
 
 /**
  * dp_rx_fisa_update_sw_ft_entry() - Helper function to update few SW FT entry
- * @sw_ft_entry: Pointer to softerware flow tabel entry
+ * @sw_ft_entry: Pointer to softerware flow table entry
  * @flow_hash: flow_hash for the flow
  * @vdev: Saving dp_vdev in FT later used in the flushing the flow
  * @flow_id: Flow ID of the flow
