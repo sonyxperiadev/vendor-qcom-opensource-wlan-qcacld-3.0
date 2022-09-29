@@ -1784,10 +1784,10 @@ end:
 }
 
 /**
- * target_if_cm_roam_register_rso_req_ops() - Register rso req tx ops fucntions
+ * target_if_cm_roam_register_rso_req_ops() - Register rso req tx ops functions
  * @tx_ops: tx ops
  *
- * This function is used to register rso req tx ops fucntions
+ * This function is used to register rso req tx ops functions
  *
  * Return: none
  */

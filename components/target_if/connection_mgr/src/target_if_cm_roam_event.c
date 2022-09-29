@@ -160,7 +160,7 @@ target_if_roam_register_common_events(struct wlan_objmgr_psoc *psoc)
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	/* Register for LFR2/3 commmon roam event */
+	/* Register for LFR2/3 common roam event */
 	ret = wmi_unified_register_event_handler(handle, wmi_roam_event_id,
 						 target_if_cm_roam_event,
 						 WMI_RX_SERIALIZER_CTX);
@@ -410,7 +410,7 @@ target_if_cm_roam_vdev_disconnect_event_handler(ol_scn_t scn, uint8_t *event,
 	/**
 	 * This can be called from IRQ context for WOW events. There is no
 	 * issue currently as this event is posted to scheduler thread from
-	 * wma_handle_disconnect_reason(). Avoid aquiring mutex/sleep in this
+	 * wma_handle_disconnect_reason(). Avoid acquiring mutex/sleep in this
 	 * context in future and post a message to scheduler thread if needed.
 	 */
 	qdf_status = roam_rx_ops->vdev_disconnect_event(data);
