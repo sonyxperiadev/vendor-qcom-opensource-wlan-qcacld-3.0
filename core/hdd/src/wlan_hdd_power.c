@@ -1758,6 +1758,7 @@ static int hdd_resume_wlan(void)
 		if (adapter->device_mode == QDF_STA_MODE)
 			status = hdd_disable_default_pkt_filters(adapter);
 
+		hdd_restart_tsf_sync_post_wlan_resume(adapter);
 		hdd_adapter_dev_put_debug(adapter, NET_DEV_HOLD_RESUME_WLAN);
 	}
 

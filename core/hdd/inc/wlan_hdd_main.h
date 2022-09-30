@@ -998,6 +998,7 @@ struct wlm_multi_client_info_table {
  * @vdev_id: Unique identifier assigned to the vdev
  * @event_flags: a bitmap of hdd_adapter_flags
  * @enable_dynamic_tsf_sync: Enable/Disable TSF sync through NL interface
+ * @host_target_sync_force: Force update host to TSF mapping
  * @dynamic_tsf_sync_interval: TSF sync interval configure through NL interface
  * @gpio_tsf_sync_work: work to sync send TSF CAP WMI command
  * @cache_sta_count: number of currently cached stations
@@ -1170,6 +1171,7 @@ struct hdd_adapter {
 	qdf_spinlock_t host_target_sync_lock;
 	qdf_mc_timer_t host_target_sync_timer;
 	bool enable_dynamic_tsf_sync;
+	bool host_target_sync_force;
 	uint32_t dynamic_tsf_sync_interval;
 	uint64_t cur_host_time;
 	uint64_t last_host_time;
