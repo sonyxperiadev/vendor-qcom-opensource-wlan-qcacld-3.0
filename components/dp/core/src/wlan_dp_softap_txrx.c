@@ -216,7 +216,7 @@ int dp_post_dhcp_ind(struct wlan_dp_intf *dp_intf, uint8_t *mac_addr,
 		     bool dhcp_start)
 {
 	struct dp_dhcp_ind msg;
-	struct wlan_dp_psoc_sb_ops *sb_ops = &dp_intf->dp_ctx->sb_ops;
+	struct wlan_dp_psoc_sb_ops *sb_ops;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 
 	dp_info("Post DHCP indication,sta_mac=" QDF_MAC_ADDR_FMT
@@ -227,6 +227,7 @@ int dp_post_dhcp_ind(struct wlan_dp_intf *dp_intf, uint8_t *mac_addr,
 		return QDF_STATUS_E_INVAL;
 	}
 
+	sb_ops = &dp_intf->dp_ctx->sb_ops;
 	msg.dhcp_start = dhcp_start;
 	msg.device_mode = dp_intf->device_mode;
 	qdf_mem_copy(msg.intf_mac_addr.bytes,

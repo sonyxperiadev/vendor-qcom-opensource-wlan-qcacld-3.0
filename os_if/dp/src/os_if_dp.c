@@ -1069,17 +1069,18 @@ int osif_dp_get_nud_stats(struct wiphy *wiphy,
 		goto exit;
 	}
 
+	arp_stats = ucfg_dp_get_arp_stats(vdev);
+	if (!arp_stats) {
+		dp_err("Unable to get ARP stats");
+		err = -EINVAL;
+		goto exit;
+	}
+
 	skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy,
 						  WLAN_NUD_STATS_LEN);
 	if (!skb) {
 		dp_err("cfg80211_vendor_cmd_alloc_reply_skb failed");
 		err = -ENOMEM;
-		goto exit;
-	}
-	arp_stats = ucfg_dp_get_arp_stats(vdev);
-	if (!arp_stats) {
-		dp_err("Unable to get ARP stats");
-		err = -EINVAL;
 		goto exit;
 	}
 

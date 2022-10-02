@@ -51,11 +51,6 @@
 #include <net/tcp.h>
 
 #include "dp_txrx.h"
-#if defined(WLAN_SUPPORT_RX_FISA)
-#include "dp_fisa_rx.h"
-#else
-#include <net/ieee80211_radiotap.h>
-#endif
 #include <ol_defines.h>
 #include "cfg_ucfg_api.h"
 #include "target_type.h"

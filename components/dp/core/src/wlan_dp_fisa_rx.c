@@ -18,12 +18,10 @@
  */
 
 #include <dp_types.h>
-#include <dp_fisa_rx.h>
+#include <wlan_dp_fisa_rx.h>
 #include "hal_rx_flow.h"
 #include "dp_htt.h"
 #include "dp_internal.h"
-#include <enet.h>
-#include <linux/skbuff.h>
 #include "hif.h"
 
 static void dp_rx_fisa_flush_flow_wrap(struct dp_fisa_rx_sw_ft *sw_ft);
@@ -54,13 +52,13 @@ static void hex_dump_skb_data(qdf_nbuf_t nbuf, bool dump)
 		return;
 
 	dp_fisa_debug("%ps: skb: %pK skb->next:%pK frag_list %pK skb->data:%pK len %d data_len %d",
-		      (void *)_RET_IP_, nbuf, qdf_nbuf_next(nbuf),
-		      skb_shinfo(nbuf)->frag_list, qdf_nbuf_data(nbuf),
-		      nbuf->len, nbuf->data_len);
+		      (void *)QDF_RET_IP, nbuf, qdf_nbuf_next(nbuf),
+		      qdf_nbuf_get_ext_list(nbuf), qdf_nbuf_data(nbuf),
+		      qdf_nbuf_len(nbuf), qdf_nbuf_get_only_data_len(nbuf));
 	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_INFO_HIGH,
 			   nbuf->data, 64);
 
-	next_nbuf = skb_shinfo(nbuf)->frag_list;
+	next_nbuf = qdf_nbuf_get_ext_list(nbuf);
 	while (next_nbuf) {
 		dp_fisa_debug("%d nbuf:%pK nbuf->next:%pK nbuf->data:%pK len %d",
 			      i, next_nbuf, qdf_nbuf_next(next_nbuf),
@@ -98,8 +96,8 @@ static void dump_tlvs(hal_soc_handle_t hal_soc_hdl, uint8_t *buf,
 	cumulat_ip_len = hal_rx_get_fisa_cumulative_ip_length(hal_soc_hdl, buf);
 
 	dp_fisa_debug("flow_aggr_cont %d, fisa_timeout %d, fisa_aggr_count %d, cumulat_l4_csum %d, cumulat_ip_len %d",
-	       flow_aggr_cont, fisa_timeout, fisa_aggr_count, cumulat_l4_csum,
-	       cumulat_ip_len);
+		      flow_aggr_cont, fisa_timeout, fisa_aggr_count,
+		      cumulat_l4_csum, cumulat_ip_len);
 }
 #else
 static void hex_dump_skb_data(qdf_nbuf_t nbuf, bool dump)
@@ -179,7 +177,6 @@ void print_flow_tuple(struct cdp_rx_flow_tuple_info *flow_tuple, char *str,
 		      flow_tuple->src_ip_31_0,
 		      flow_tuple->src_port,
 		      flow_tuple->l4_protocol);
-
 }
 
 static bool
@@ -218,8 +215,8 @@ get_flow_tuple_from_nbuf(struct dp_soc *soc,
 			 struct cdp_rx_flow_tuple_info *flow_tuple_info,
 			 qdf_nbuf_t nbuf, uint8_t *rx_tlv_hdr)
 {
-	struct iphdr *iph;
-	struct tcphdr *tcph;
+	qdf_net_iphdr_t *iph;
+	qdf_net_tcphdr_t *tcph;
 	uint32_t ip_hdr_offset;
 	uint32_t tcp_hdr_offset;
 	uint32_t l2_hdr_offset =
@@ -232,17 +229,17 @@ get_flow_tuple_from_nbuf(struct dp_soc *soc,
 
 	qdf_nbuf_pull_head(nbuf, soc->rx_pkt_tlv_size + l2_hdr_offset);
 
-	iph = (struct iphdr *)(qdf_nbuf_data(nbuf) + ip_hdr_offset);
-	tcph = (struct tcphdr *)(qdf_nbuf_data(nbuf) + ip_hdr_offset +
+	iph = (qdf_net_iphdr_t *)(qdf_nbuf_data(nbuf) + ip_hdr_offset);
+	tcph = (qdf_net_tcphdr_t *)(qdf_nbuf_data(nbuf) + ip_hdr_offset +
 						tcp_hdr_offset);
 
-	flow_tuple_info->dest_ip_31_0 = qdf_ntohl(iph->daddr);
+	flow_tuple_info->dest_ip_31_0 = qdf_ntohl(iph->ip_daddr);
 	flow_tuple_info->dest_ip_63_32 = 0;
 	flow_tuple_info->dest_ip_95_64 = 0;
 	flow_tuple_info->dest_ip_127_96 =
 		HAL_IP_DA_SA_PREFIX_IPV4_COMPATIBLE_IPV6;
 
-	flow_tuple_info->src_ip_31_0 = qdf_ntohl(iph->saddr);
+	flow_tuple_info->src_ip_31_0 = qdf_ntohl(iph->ip_saddr);
 	flow_tuple_info->src_ip_63_32 = 0;
 	flow_tuple_info->src_ip_95_64 = 0;
 	flow_tuple_info->src_ip_127_96 =
@@ -255,16 +252,17 @@ get_flow_tuple_from_nbuf(struct dp_soc *soc,
 	else
 		flow_tuple_info->is_exception = 0;
 
-	flow_tuple_info->bypass_fisa = dp_rx_fisa_should_bypass(flow_tuple_info);
+	flow_tuple_info->bypass_fisa =
+		dp_rx_fisa_should_bypass(flow_tuple_info);
 
-	flow_tuple_info->l4_protocol = iph->protocol;
+	flow_tuple_info->l4_protocol = iph->ip_proto;
 	dp_fisa_debug("l4_protocol %d", flow_tuple_info->l4_protocol);
 
 	qdf_nbuf_push_head(nbuf, soc->rx_pkt_tlv_size + l2_hdr_offset);
 
 	dp_fisa_debug("head_skb: %pK head_skb->next:%pK head_skb->data:%pK len %d data_len %d",
-		      nbuf, qdf_nbuf_next(nbuf), qdf_nbuf_data(nbuf), nbuf->len,
-		      nbuf->data_len);
+		      nbuf, qdf_nbuf_next(nbuf), qdf_nbuf_data(nbuf),
+		      qdf_nbuf_len(nbuf), qdf_nbuf_get_only_data_len(nbuf));
 }
 
 /**
@@ -609,7 +607,8 @@ dp_rx_fisa_add_ft_entry(struct dp_vdev *vdev,
 		}
 		/* else */
 		/* hash collision move to the next FT entry */
-		dp_fisa_debug("Hash collision %d", fisa_hdl->hash_collision_cnt);
+		dp_fisa_debug("Hash collision %d",
+			      fisa_hdl->hash_collision_cnt);
 		fisa_hdl->hash_collision_cnt++;
 #ifdef NOT_YET /* assist Flow eviction algorithm */
 	/* uint32_t lru_ft_entry_time = 0xffffffff, lru_ft_entry_idx = 0; */
@@ -648,7 +647,6 @@ dp_rx_fisa_add_ft_entry(struct dp_vdev *vdev,
 		 */
 		qdf_timer_start(&fisa_hdl->fse_cache_flush_timer,
 				FSE_CACHE_FLUSH_TIME_OUT);
-
 	}
 	dp_fisa_debug("sw_ft_entry %pK", sw_ft_entry);
 	return sw_ft_entry;
@@ -741,7 +739,7 @@ dp_fisa_rx_delete_flow(struct dp_rx_fst *fisa_hdl,
 
 	dp_rx_fisa_save_pkt_hist(sw_ft_entry, &pkt_hist);
 	/* Clear the sw_ft_entry */
-	memset(sw_ft_entry, 0, sizeof(*sw_ft_entry));
+	qdf_mem_zero(sw_ft_entry, sizeof(*sw_ft_entry));
 	dp_rx_fisa_restore_pkt_hist(sw_ft_entry, &pkt_hist);
 
 	dp_rx_fisa_update_sw_ft_entry(sw_ft_entry, elem->flow_idx, elem->vdev,
@@ -1217,7 +1215,7 @@ static enum fisa_aggr_ret
 dp_rx_fisa_aggr_tcp(struct dp_fisa_rx_sw_ft *fisa_flow,	qdf_nbuf_t nbuf)
 {
 	qdf_nbuf_t head_skb = fisa_flow->head_skb;
-	struct iphdr *iph;
+	qdf_net_iphdr_t *iph;
 	uint32_t tcp_data_len;
 
 	fisa_flow->bytes_aggregated += qdf_nbuf_len(nbuf);
@@ -1228,9 +1226,9 @@ dp_rx_fisa_aggr_tcp(struct dp_fisa_rx_sw_ft *fisa_flow,	qdf_nbuf_t nbuf)
 		return FISA_AGGR_DONE;
 	}
 
-	tcp_data_len = (ntohs(iph->tot_len) - sizeof(struct iphdr) -
-			sizeof(struct tcphdr));
-	qdf_nbuf_pull_head(nbuf, (nbuf->len - tcp_data_len));
+	tcp_data_len = (qdf_ntohs(iph->ip_len) - sizeof(qdf_net_iphdr_t) -
+			sizeof(qdf_net_tcphdr_t));
+	qdf_nbuf_pull_head(nbuf, (qdf_nbuf_len(nbuf) - tcp_data_len));
 
 	if (qdf_nbuf_get_ext_list(head_skb)) {
 		/* this is 3rd skb after head skb, 2nd skb */
@@ -1269,7 +1267,7 @@ static inline int get_transport_payload_offset(struct dp_rx_fst *fisa_hdl,
 					       uint32_t l4_hdr_offset)
 {
 	/* ETHERNET_HDR_LEN + ip_hdr_len + UDP/TCP; */
-	return (l3_hdr_offset + l4_hdr_offset + sizeof(struct udphdr));
+	return (l3_hdr_offset + l4_hdr_offset + sizeof(qdf_net_udphdr_t));
 }
 
 /**
@@ -1305,7 +1303,7 @@ dp_rx_fisa_aggr_udp(struct dp_rx_fst *fisa_hdl,
 	uint32_t l2_hdr_offset =
 		hal_rx_msdu_end_l3_hdr_padding_get(fisa_hdl->soc_hdl->hal_soc,
 						   rx_tlv_hdr);
-	struct udphdr *udp_hdr;
+	qdf_net_udphdr_t *udp_hdr;
 	uint32_t udp_len;
 	uint32_t transport_payload_offset;
 	uint32_t l3_hdr_offset, l4_hdr_offset;
@@ -1315,21 +1313,21 @@ dp_rx_fisa_aggr_udp(struct dp_rx_fst *fisa_hdl,
 
 	hal_rx_get_l3_l4_offsets(fisa_hdl->soc_hdl->hal_soc, rx_tlv_hdr,
 				 &l3_hdr_offset, &l4_hdr_offset);
-	udp_hdr = (struct udphdr *)(qdf_nbuf_data(nbuf) +
+	udp_hdr = (qdf_net_udphdr_t *)(qdf_nbuf_data(nbuf) +
 			get_transport_header_offset(fisa_flow, l3_hdr_offset,
 						    l4_hdr_offset));
 
-	udp_len = qdf_ntohs(udp_hdr->len);
+	udp_len = qdf_ntohs(udp_hdr->udp_len);
 
 	/**
 	 * Incoming nbuf is of size greater than ongoing aggregation
 	 * then flush the aggregate and start new aggregation for nbuf
 	 */
 	if (head_skb &&
-	    (udp_len > qdf_ntohs(fisa_flow->head_skb_udp_hdr->len))) {
+	    (udp_len > qdf_ntohs(fisa_flow->head_skb_udp_hdr->udp_len))) {
 		/* current msdu should not take into account for flushing */
 		fisa_flow->adjusted_cumulative_ip_length -=
-			(udp_len - sizeof(struct udphdr));
+					(udp_len - sizeof(qdf_net_udphdr_t));
 		fisa_flow->cur_aggr--;
 		dp_rx_fisa_flush_flow_wrap(fisa_flow);
 		/* napi_flush_cumulative_ip_length  not include current msdu */
@@ -1342,7 +1340,8 @@ dp_rx_fisa_aggr_udp(struct dp_rx_fst *fisa_hdl,
 		/* First nbuf for the flow */
 		fisa_flow->head_skb = nbuf;
 		fisa_flow->head_skb_udp_hdr = udp_hdr;
-		fisa_flow->cur_aggr_gso_size = udp_len - sizeof(struct udphdr);
+		fisa_flow->cur_aggr_gso_size = udp_len -
+						sizeof(qdf_net_udphdr_t);
 		fisa_flow->adjusted_cumulative_ip_length = udp_len;
 		fisa_flow->head_skb_ip_hdr_offset = l3_hdr_offset;
 		fisa_flow->head_skb_l4_hdr_offset = l4_hdr_offset;
@@ -1362,7 +1361,8 @@ dp_rx_fisa_aggr_udp(struct dp_rx_fst *fisa_hdl,
 
 	fisa_flow->bytes_aggregated += qdf_nbuf_len(nbuf);
 
-	fisa_flow->frags_cumulative_len += (udp_len - sizeof(struct udphdr));
+	fisa_flow->frags_cumulative_len += (udp_len -
+						sizeof(qdf_net_udphdr_t));
 
 	if (qdf_nbuf_get_ext_list(head_skb)) {
 		/*
@@ -1379,7 +1379,7 @@ dp_rx_fisa_aggr_udp(struct dp_rx_fst *fisa_hdl,
 		/* 1st skb after head skb
 		 * implement qdf wrapper set_ext_list
 		 */
-		skb_shinfo(head_skb)->frag_list = nbuf;
+		qdf_nbuf_append_ext_list(head_skb, nbuf, 0);
 		qdf_nbuf_set_is_frag(nbuf, 1);
 	}
 
@@ -1393,11 +1393,12 @@ dp_rx_fisa_aggr_udp(struct dp_rx_fst *fisa_hdl,
 	 * Incoming nbuf is of size less than ongoing aggregation
 	 * then flush the aggregate
 	 */
-	if (udp_len < qdf_ntohs(fisa_flow->head_skb_udp_hdr->len))
+	if (udp_len < qdf_ntohs(fisa_flow->head_skb_udp_hdr->udp_len))
 		dp_rx_fisa_flush_flow_wrap(fisa_flow);
 
 	return FISA_AGGR_DONE;
 }
+
 /**
  * dp_fisa_rx_linear_skb() - Linearize fraglist skb to linear skb
  * @vdev: handle to DP vdev
@@ -1409,47 +1410,6 @@ dp_rx_fisa_aggr_udp(struct dp_rx_fst *fisa_hdl,
 static qdf_nbuf_t dp_fisa_rx_linear_skb(struct dp_vdev *vdev,
 					qdf_nbuf_t head_skb, uint32_t size)
 {
-#if 0
-	qdf_nbuf_t linear_skb, ext_skb, next_skb;
-
-	linear_skb = qdf_nbuf_alloc(vdev->osdev, size, 0, 0, FALSE);
-	if (!linear_skb)
-		return NULL;
-
-	dp_fisa_debug("head %pK data %pK tail %pK\n", head_skb->head,
-		      head_skb->data, head_skb->tail);
-	ext_skb = skb_shinfo(head_skb)->frag_list;
-	if (ext_skb) {
-		skb_put_data(linear_skb, head_skb->data, 1512);
-		dp_fisa_debug("%d: len %d\n", __LINE__, ext_skb->len);
-		skb_put_data(linear_skb, ext_skb->data, ext_skb->len);
-	} else {
-		dp_fisa_debug("%d: len %d\n", __LINE__, head_skb->len);
-		skb_put_data(linear_skb, head_skb->data, head_skb->len);
-		goto done;
-	}
-
-	next_skb = ext_skb->next;
-	while (next_skb) {
-		dp_fisa_debug("%d: len %d\n", __LINE__, next_skb->len);
-		skb_put_data(linear_skb, next_skb->data, next_skb->len);
-		next_skb = next_skb->next;
-	}
-
-done:
-	skb_copy_header(linear_skb, head_skb);
-	skb_reset_transport_header(linear_skb);
-	skb_reset_network_header(linear_skb);
-	linear_skb->pkt_type = PACKET_HOST;
-	skb_set_mac_header(linear_skb, 0);
-	linear_skb->ip_summed = CHECKSUM_PARTIAL;
-	dp_fisa_debug("linear skb %pK len %d gso_size %d mac_len %d net_header %d mac_header %d",
-		      linear_skb, linear_skb->len,
-		      skb_shinfo(linear_skb)->gso_size,	linear_skb->mac_len,
-		      linear_skb->network_header, linear_skb->mac_header);
-
-	return linear_skb;
-#endif
 	return NULL;
 }
 
@@ -1465,9 +1425,9 @@ dp_rx_fisa_flush_udp_flow(struct dp_vdev *vdev,
 			  struct dp_fisa_rx_sw_ft *fisa_flow)
 {
 	qdf_nbuf_t head_skb = fisa_flow->head_skb;
-	struct iphdr *head_skb_iph;
-	struct udphdr *head_skb_udp_hdr;
-	struct skb_shared_info *shinfo;
+	qdf_net_iphdr_t *head_skb_iph;
+	qdf_net_udphdr_t *head_skb_udp_hdr;
+	qdf_nbuf_shared_info_t shinfo;
 	qdf_nbuf_t linear_skb;
 	struct dp_vdev *fisa_flow_vdev;
 
@@ -1479,16 +1439,16 @@ dp_rx_fisa_flush_udp_flow(struct dp_vdev *vdev,
 		return;
 	}
 
-	head_skb->hash = QDF_NBUF_CB_RX_FLOW_ID(head_skb);
+	qdf_nbuf_set_hash(head_skb, QDF_NBUF_CB_RX_FLOW_ID(head_skb));
 	head_skb->sw_hash = 1;
 	if (qdf_nbuf_get_ext_list(head_skb)) {
 		__sum16 pseudo;
 
-		shinfo = skb_shinfo(head_skb);
+		shinfo = qdf_nbuf_get_shinfo(head_skb);
 		/* Update the head_skb before flush */
 		dp_fisa_debug("cumu ip length host order 0x%x",
 			      fisa_flow->adjusted_cumulative_ip_length);
-		head_skb_iph = (struct iphdr *)(qdf_nbuf_data(head_skb) +
+		head_skb_iph = (qdf_net_iphdr_t *)(qdf_nbuf_data(head_skb) +
 					fisa_flow->head_skb_ip_hdr_offset);
 		dp_fisa_debug("iph ptr %pK", head_skb_iph);
 
@@ -1496,43 +1456,47 @@ dp_rx_fisa_flush_udp_flow(struct dp_vdev *vdev,
 
 		dp_fisa_debug("udph ptr %pK", head_skb_udp_hdr);
 
-		dp_fisa_debug("tot_len 0x%x", qdf_ntohs(head_skb_iph->tot_len));
+		dp_fisa_debug("ip_len 0x%x", qdf_ntohs(head_skb_iph->ip_len));
 
 		/* data_len is total length of non head_skb,
 		 * cumulative ip length is including head_skb ip length also
 		 */
-		head_skb->data_len =
-			(fisa_flow->adjusted_cumulative_ip_length) -
-			qdf_ntohs(head_skb_udp_hdr->len);
+		qdf_nbuf_set_data_len(head_skb,
+			      ((fisa_flow->adjusted_cumulative_ip_length) -
+				      qdf_ntohs(head_skb_udp_hdr->udp_len)));
 
-		head_skb->len += head_skb->data_len;
+		qdf_nbuf_set_len(head_skb, (qdf_nbuf_len(head_skb) +
+				 qdf_nbuf_get_only_data_len(head_skb)));
 
-		head_skb_iph->tot_len =
+		head_skb_iph->ip_len =
 			qdf_htons((fisa_flow->adjusted_cumulative_ip_length)
 			+ /* IP hdr len */
 			fisa_flow->head_skb_l4_hdr_offset);
-		pseudo = ~csum_tcpudp_magic(head_skb_iph->saddr,
-				head_skb_iph->daddr,
+		pseudo = ~qdf_csum_tcpudp_magic(head_skb_iph->ip_saddr,
+				head_skb_iph->ip_daddr,
 				fisa_flow->adjusted_cumulative_ip_length,
-				head_skb_iph->protocol, 0);
+				head_skb_iph->ip_proto, 0);
 
-		head_skb_iph->check = 0;
-		head_skb_iph->check = ip_fast_csum((u8 *)head_skb_iph,
-						   head_skb_iph->ihl);
+		head_skb_iph->ip_check = 0;
+		head_skb_iph->ip_check = qdf_ip_fast_csum(head_skb_iph,
+							  head_skb_iph->ip_hl);
 
-		head_skb_udp_hdr->len =
-			qdf_htons(qdf_ntohs(head_skb_iph->tot_len) -
+		head_skb_udp_hdr->udp_len =
+			qdf_htons(qdf_ntohs(head_skb_iph->ip_len) -
 				  fisa_flow->head_skb_l4_hdr_offset);
-		head_skb_udp_hdr->check = pseudo;
-		head_skb->csum_start = (u8 *)head_skb_udp_hdr - head_skb->head;
-		head_skb->csum_offset = offsetof(struct udphdr, check);
+		head_skb_udp_hdr->udp_cksum = pseudo;
+		qdf_nbuf_set_csum_start(head_skb, ((u8 *)head_skb_udp_hdr -
+					qdf_nbuf_head(head_skb)));
+		qdf_nbuf_set_csum_offset(head_skb,
+					 offsetof(qdf_net_udphdr_t, udp_cksum));
 
-		shinfo->gso_size = fisa_flow->cur_aggr_gso_size;
-		dp_fisa_debug("gso_size %d, udp_len %d\n", shinfo->gso_size,
-			      qdf_ntohs(head_skb_udp_hdr->len));
-		shinfo->gso_segs = fisa_flow->cur_aggr;
-		shinfo->gso_type = SKB_GSO_UDP_L4;
-		head_skb->ip_summed = CHECKSUM_PARTIAL;
+		qdf_nbuf_set_gso_size(head_skb, fisa_flow->cur_aggr_gso_size);
+		dp_fisa_debug("gso_size %d, udp_len %d\n",
+			      qdf_nbuf_get_gso_size(head_skb),
+			      qdf_ntohs(head_skb_udp_hdr->udp_len));
+		qdf_nbuf_set_gso_segs(head_skb, fisa_flow->cur_aggr);
+		qdf_nbuf_set_gso_type_udp_l4(head_skb);
+		qdf_nbuf_set_ip_summed_partial(head_skb);
 	}
 
 	qdf_nbuf_set_next(fisa_flow->head_skb, NULL);
@@ -1547,7 +1511,7 @@ dp_rx_fisa_flush_udp_flow(struct dp_vdev *vdev,
 				QDF_NBUF_CB_RX_VDEV_ID(fisa_flow->head_skb),
 				DP_MOD_ID_RX);
 	if (qdf_unlikely(!fisa_flow_vdev ||
-					(fisa_flow_vdev != fisa_flow->vdev))) {
+			 (fisa_flow_vdev != fisa_flow->vdev))) {
 		qdf_nbuf_free(fisa_flow->head_skb);
 		goto out;
 	}
@@ -1565,7 +1529,7 @@ dp_rx_fisa_flush_udp_flow(struct dp_vdev *vdev,
 		 * all fragments length
 		 */
 		if (qdf_unlikely(fisa_flow->frags_cumulative_len !=
-				 fisa_flow->head_skb->data_len)) {
+				 qdf_nbuf_get_only_data_len(fisa_flow->head_skb))) {
 			qdf_assert(0);
 			/* Drop the aggregate */
 			qdf_nbuf_free(fisa_flow->head_skb);
@@ -1600,27 +1564,27 @@ dp_rx_fisa_flush_tcp_flow(struct dp_vdev *vdev,
 			  struct dp_fisa_rx_sw_ft *fisa_flow)
 {
 	qdf_nbuf_t head_skb = fisa_flow->head_skb;
-	struct iphdr *head_skb_iph;
-	struct skb_shared_info *shinfo;
+	qdf_net_iphdr_t *head_skb_iph;
+	qdf_nbuf_shared_info_t shinfo;
 
 	if (!head_skb) {
 		dp_fisa_debug("Already flushed");
 		return;
 	}
 
-	shinfo = skb_shinfo(head_skb);
+	shinfo = qdf_nbuf_get_shinfo(head_skb);
 
 	/* Update the head_skb before flush */
 	head_skb->hash = fisa_flow->flow_hash;
 	head_skb->sw_hash = 1;
 	shinfo->gso_type = SKB_GSO_UDP_L4;
 
-	head_skb_iph = (struct iphdr *)(qdf_nbuf_data(head_skb) +
+	head_skb_iph = (qdf_net_iphdr_t *)(qdf_nbuf_data(head_skb) +
 					fisa_flow->head_skb_ip_hdr_offset);
 
-	head_skb_iph->tot_len = fisa_flow->adjusted_cumulative_ip_length;
-	head_skb_iph->check = ip_fast_csum((u8 *)head_skb_iph,
-					   head_skb_iph->ihl);
+	head_skb_iph->ip_len = fisa_flow->adjusted_cumulative_ip_length;
+	head_skb_iph->ip_check = ip_fast_csum((u8 *)head_skb_iph,
+					      head_skb_iph->ip_hl);
 
 	qdf_nbuf_set_next(fisa_flow->head_skb, NULL);
 	if (fisa_flow->last_skb)
@@ -1720,8 +1684,8 @@ static int dp_add_nbuf_to_fisa_flow(struct dp_rx_fst *fisa_hdl,
 
 	dump_tlvs(hal_soc_hdl, rx_tlv_hdr, QDF_TRACE_LEVEL_INFO_HIGH);
 	dp_fisa_debug("nbuf: %pK nbuf->next:%pK nbuf->data:%pK len %d data_len %d",
-		      nbuf, qdf_nbuf_next(nbuf), qdf_nbuf_data(nbuf), nbuf->len,
-		      nbuf->data_len);
+		      nbuf, qdf_nbuf_next(nbuf), qdf_nbuf_data(nbuf),
+		      qdf_nbuf_len(nbuf), qdf_nbuf_get_only_data_len(nbuf));
 
 	dp_rx_fisa_acquire_ft_lock(fisa_hdl, napi_id);
 	/* Packets of the flow are arriving on a different REO than
@@ -1839,7 +1803,7 @@ static int dp_add_nbuf_to_fisa_flow(struct dp_rx_fst *fisa_hdl,
 		 * Aggr UDP msdu has one UDP header len
 		 */
 		(hal_cumulative_ip_len -
-		(fisa_flow->cur_aggr * sizeof(struct udphdr))) -
+		(fisa_flow->cur_aggr * sizeof(qdf_net_udphdr_t))) -
 		fisa_flow->napi_flush_cumulative_ip_length;
 
 	/**

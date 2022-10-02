@@ -66,6 +66,26 @@ QDF_STATUS
 wlan_twt_cfg_get_support_requestor(struct wlan_objmgr_psoc *psoc,
 				   bool *val);
 
+/**
+ * wlan_twt_get_requestor_cfg() - Get requestor TWT configuration
+ * @psoc: Pointer to psoc object
+ * @val: Pointer to value
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_twt_get_requestor_cfg(struct wlan_objmgr_psoc *psoc, bool *val);
+
+/**
+ * wlan_twt_get_responder_cfg() - Get TWT responder configuration
+ * @psoc: Pointer to PSOC object
+ * @val: Pointer to value
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_twt_get_responder_cfg(struct wlan_objmgr_psoc *psoc, bool *val);
+
 #ifdef FEATURE_SET
 /**
  * wlan_twt_get_feature_info() - Get TWT feature set information
@@ -101,6 +121,18 @@ wlan_twt_cfg_get_support_in_11n(struct wlan_objmgr_psoc *psoc,
 static inline QDF_STATUS
 wlan_twt_cfg_get_support_requestor(struct wlan_objmgr_psoc *psoc,
 				   bool *val)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+wlan_twt_get_requestor_cfg(struct wlan_objmgr_psoc *psoc, bool *val)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+wlan_twt_get_responder_cfg(struct wlan_objmgr_psoc *psoc, bool *val)
 {
 	return QDF_STATUS_SUCCESS;
 }

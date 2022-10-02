@@ -8419,6 +8419,9 @@ lim_revise_req_eht_cap_per_band(struct mlme_legacy_priv *mlme_priv,
 	if (wlan_reg_is_24ghz_ch_freq(session->curr_op_freq)) {
 		mlme_priv->eht_config = mac->eht_cap_2g;
 		pe_debug("revise 2G eht cap");
+	} else {
+		mlme_priv->eht_config = mac->eht_cap_5g;
+		pe_debug("revise 5G eht cap");
 	}
 }
 

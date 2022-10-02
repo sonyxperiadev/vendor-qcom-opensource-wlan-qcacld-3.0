@@ -1614,6 +1614,7 @@ static int hdd_get_peer_stats(struct hdd_adapter *adapter,
 {
 	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
 	struct cdp_peer_stats *peer_stats;
+	struct cds_vdev_dp_stats dp_stats;
 	struct stats_event *stats;
 	QDF_STATUS status;
 	int i, ret = 0;
@@ -1650,8 +1651,12 @@ static int hdd_get_peer_stats(struct hdd_adapter *adapter,
 		return -EINVAL;
 	}
 
-	stainfo->tx_retry_succeed = stats->peer_stats_info_ext->tx_retries -
-				    stats->peer_stats_info_ext->tx_failed;
+	if (cds_dp_get_vdev_stats(adapter->vdev_id, &dp_stats))
+		stainfo->tx_retry_succeed =
+					dp_stats.tx_mpdu_success_with_retries;
+	else
+		hdd_err("failed to get dp vdev stats");
+
 	/* This host counter is not supported
 	 * since currently tx retry is not done in host side
 	 */
@@ -1659,6 +1664,33 @@ static int hdd_get_peer_stats(struct hdd_adapter *adapter,
 	stainfo->tx_total_fw = stats->peer_stats_info_ext->tx_packets;
 	stainfo->tx_retry_fw = stats->peer_stats_info_ext->tx_retries;
 	stainfo->tx_retry_exhaust_fw = stats->peer_stats_info_ext->tx_failed;
+
+	if (stats->peer_stats_info_ext->num_tx_rate_counts) {
+		stainfo->tx_pkt_per_mcs = qdf_mem_malloc(
+				stats->peer_stats_info_ext->num_tx_rate_counts *
+				sizeof(uint32_t));
+		if (stainfo->tx_pkt_per_mcs) {
+			stainfo->num_tx_rate_count =
+				stats->peer_stats_info_ext->num_tx_rate_counts;
+			qdf_mem_copy(
+				stainfo->tx_pkt_per_mcs,
+				stats->peer_stats_info_ext->tx_pkt_per_mcs,
+				stainfo->num_tx_rate_count * sizeof(uint32_t));
+		}
+	}
+	if (stats->peer_stats_info_ext->num_rx_rate_counts) {
+		stainfo->rx_pkt_per_mcs = qdf_mem_malloc(
+				stats->peer_stats_info_ext->num_rx_rate_counts *
+				sizeof(uint32_t));
+		if (stainfo->rx_pkt_per_mcs) {
+			stainfo->num_rx_rate_count =
+				stats->peer_stats_info_ext->num_rx_rate_counts;
+			qdf_mem_copy(
+				stainfo->rx_pkt_per_mcs,
+				stats->peer_stats_info_ext->rx_pkt_per_mcs,
+				stainfo->num_rx_rate_count * sizeof(uint32_t));
+		}
+	}
 
 	/* Optional, just print logs here */
 	if (!stats->num_peer_adv_stats) {
@@ -1682,6 +1714,25 @@ static int hdd_get_peer_stats(struct hdd_adapter *adapter,
 }
 
 /**
+ * hdd_free_tx_rx_pkts_per_mcs - Free memory for tx packets per MCS and
+ * rx packets per MCS
+ * @stainfo: station information
+ *
+ * Return: None
+ */
+static void hdd_free_tx_rx_pkts_per_mcs(struct hdd_station_info *stainfo)
+{
+	if (stainfo->tx_pkt_per_mcs) {
+		qdf_mem_free(stainfo->tx_pkt_per_mcs);
+		stainfo->tx_pkt_per_mcs = NULL;
+	}
+	if (stainfo->rx_pkt_per_mcs) {
+		qdf_mem_free(stainfo->rx_pkt_per_mcs);
+		stainfo->rx_pkt_per_mcs = NULL;
+	}
+}
+
+/**
  * hdd_add_peer_stats_get_len - get data length used in
  * hdd_add_peer_stats()
  * @stainfo: station information
@@ -1694,6 +1745,15 @@ static int hdd_get_peer_stats(struct hdd_adapter *adapter,
 static uint32_t
 hdd_add_peer_stats_get_len(struct hdd_station_info *stainfo)
 {
+	uint32_t tx_count_size = 0;
+	uint32_t rx_count_size = 0;
+	uint16_t i;
+
+	for (i = 0; i < stainfo->num_tx_rate_count; i++)
+		tx_count_size += nla_attr_size(sizeof(uint32_t));
+	for (i = 0; i < stainfo->num_rx_rate_count; i++)
+		rx_count_size += nla_attr_size(sizeof(uint32_t));
+
 	return (nla_attr_size(sizeof(stainfo->rx_retry_cnt)) +
 		nla_attr_size(sizeof(stainfo->rx_mc_bc_cnt)) +
 		nla_attr_size(sizeof(stainfo->tx_retry_succeed)) +
@@ -1701,7 +1761,8 @@ hdd_add_peer_stats_get_len(struct hdd_station_info *stainfo)
 		nla_attr_size(sizeof(stainfo->tx_total_fw)) +
 		nla_attr_size(sizeof(stainfo->tx_retry_fw)) +
 		nla_attr_size(sizeof(stainfo->tx_retry_exhaust_fw)) +
-		nla_attr_size(sizeof(stainfo->rx_fcs_count)));
+		nla_attr_size(sizeof(stainfo->rx_fcs_count)) +
+		tx_count_size + rx_count_size);
 }
 
 /**
@@ -1969,6 +2030,9 @@ static int hdd_add_connect_fail_reason_code(struct sk_buff *skb,
 static int hdd_add_peer_stats(struct sk_buff *skb,
 			      struct hdd_station_info *stainfo)
 {
+	struct nlattr *nla_attr;
+	uint8_t i;
+
 	if (nla_put_u32(skb, QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_RX_RETRY_COUNT,
 			stainfo->rx_retry_cnt)) {
 		hdd_err("Failed to put rx_retry_cnt");
@@ -2020,8 +2084,42 @@ static int hdd_add_peer_stats(struct sk_buff *skb,
 		goto fail;
 	}
 
+	nla_attr = nla_nest_start(skb,
+			QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_PER_MCS_TX_PACKETS);
+	if (!nla_attr) {
+		hdd_err("nla nest start for tx packets fail");
+		goto fail;
+	}
+
+	for (i = 0; i < stainfo->num_tx_rate_count; i++)
+		if (nla_put_u32(skb,
+			QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_PER_MCS_TX_PACKETS,
+			stainfo->tx_pkt_per_mcs[i])) {
+			hdd_err("Failed to put tx_rate_count for MCS[%d]", i);
+			goto fail;
+		}
+	nla_nest_end(skb, nla_attr);
+
+	nla_attr = nla_nest_start(skb,
+			QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_PER_MCS_RX_PACKETS);
+	if (!nla_attr) {
+		hdd_err("nla nest start for rx packets fail");
+		goto fail;
+	}
+
+	for (i = 0; i < stainfo->num_rx_rate_count; i++)
+		if (nla_put_u32(skb,
+			QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_PER_MCS_TX_PACKETS,
+			stainfo->rx_pkt_per_mcs[i])) {
+			hdd_err("Failed to put rx_rate_count for MCS[%d]", i);
+			goto fail;
+		}
+	nla_nest_end(skb, nla_attr);
+
+	hdd_free_tx_rx_pkts_per_mcs(stainfo);
 	return 0;
 fail:
+	hdd_free_tx_rx_pkts_per_mcs(stainfo);
 	return -EINVAL;
 }
 
@@ -2291,6 +2389,7 @@ static int hdd_get_station_info_ex(struct hdd_context *hdd_ctx,
 	if (connect_fail_rsn_len) {
 		if (hdd_add_connect_fail_reason_code(skb, adapter)) {
 			hdd_err_rl("hdd_add_connect_fail_reason_code fail");
+			kfree_skb(skb);
 			return -ENOMEM;
 		}
 	}

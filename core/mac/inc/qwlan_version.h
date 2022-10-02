@@ -33,8 +33,8 @@
 #define QWLAN_VERSION_MINOR            2
 #define QWLAN_VERSION_PATCH            1
 #define QWLAN_VERSION_EXTRA            "D"
-#define QWLAN_VERSION_BUILD            37
+#define QWLAN_VERSION_BUILD            39
 
-#define QWLAN_VERSIONSTR               "5.2.1.37D"
+#define QWLAN_VERSIONSTR               "5.2.1.39D"
 
 #endif /* QWLAN_VERSION_H */

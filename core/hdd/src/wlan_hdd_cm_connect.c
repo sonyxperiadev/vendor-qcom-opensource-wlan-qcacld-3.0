@@ -54,6 +54,7 @@
 #include "wlan_osif_features.h"
 #include "wlan_osif_request_manager.h"
 #include <wlan_dp_ucfg_api.h>
+#include "wlan_psoc_mlme_ucfg_api.h"
 
 bool hdd_cm_is_vdev_associated(struct hdd_adapter *adapter)
 {
@@ -151,29 +152,6 @@ bool hdd_cm_is_disconnected(struct hdd_adapter *adapter)
 	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_CM_ID);
 
 	return is_vdev_disconnected;
-}
-
-bool hdd_cm_is_disconnecting(struct hdd_adapter *adapter)
-{
-	struct wlan_objmgr_vdev *vdev;
-	bool is_vdev_disconnecting;
-	enum QDF_OPMODE opmode;
-
-	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_CM_ID);
-
-	if (!vdev)
-		return false;
-
-	opmode = wlan_vdev_mlme_get_opmode(vdev);
-	if (opmode != QDF_STA_MODE && opmode != QDF_P2P_CLIENT_MODE) {
-		hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_CM_ID);
-		return false;
-	}
-	is_vdev_disconnecting = ucfg_cm_is_vdev_disconnecting(vdev);
-
-	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_CM_ID);
-
-	return is_vdev_disconnecting;
 }
 
 bool hdd_cm_is_vdev_roaming(struct hdd_adapter *adapter)
@@ -1141,6 +1119,12 @@ static
 struct hdd_adapter *hdd_get_assoc_link_adapter(struct hdd_adapter *ml_adapter)
 {
 	int i;
+	bool eht_capab;
+	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(ml_adapter);
+
+	ucfg_psoc_mlme_get_11be_capab(hdd_ctx->psoc, &eht_capab);
+	if (!eht_capab)
+		return ml_adapter;
 
 	for (i = 0; i < WLAN_MAX_MLD; i++) {
 		if (hdd_adapter_is_associated_with_ml_adapter(

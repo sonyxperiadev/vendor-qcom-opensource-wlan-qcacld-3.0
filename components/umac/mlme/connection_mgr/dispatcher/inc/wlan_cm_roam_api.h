@@ -363,7 +363,7 @@ void wlan_cm_set_ese_assoc(struct wlan_objmgr_pdev *pdev,
  */
 bool wlan_cm_get_ese_assoc(struct wlan_objmgr_pdev *pdev,
 			   uint8_t vdev_id);
-void wlan_cm_ese_populate_addtional_ies(struct wlan_objmgr_pdev *pdev,
+void wlan_cm_ese_populate_additional_ies(struct wlan_objmgr_pdev *pdev,
 			struct wlan_mlme_psoc_ext_obj *mlme_obj,
 			uint8_t vdev_id,
 			struct wlan_roam_scan_offload_params *rso_mode_cfg);
@@ -376,7 +376,7 @@ bool wlan_cm_get_ese_assoc(struct wlan_objmgr_pdev *pdev,
 {
 	return false;
 }
-static inline void wlan_cm_ese_populate_addtional_ies(
+static inline void wlan_cm_ese_populate_additional_ies(
 		struct wlan_objmgr_pdev *pdev,
 		struct wlan_mlme_psoc_ext_obj *mlme_obj,
 		uint8_t vdev_id,
@@ -1672,4 +1672,28 @@ bool wlan_cm_same_band_sta_allowed(struct wlan_objmgr_psoc *psoc);
 QDF_STATUS cm_cleanup_mlo_link(struct wlan_objmgr_vdev *vdev);
 
 bool wlan_is_roaming_enabled(struct wlan_objmgr_pdev *pdev, uint8_t vdev_id);
+
+/**
+ * wlan_cm_set_sae_auth_ta() - Set SAE auth tx address
+ * @vdev_id : Vdev id
+ * @sae_auth_ta: SAE auth tx address
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_cm_set_sae_auth_ta(struct wlan_objmgr_pdev *pdev,
+			uint8_t vdev_id,
+			struct qdf_mac_addr sae_auth_ta);
+
+/**
+ * wlan_cm_get_sae_auth_ta() - Get SAE auth tx address
+ * @vdev_id: Vdev id
+ * @sae_auth_ta: SAE auth tx address
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_cm_get_sae_auth_ta(struct wlan_objmgr_pdev *pdev,
+			uint8_t vdev_id,
+			struct qdf_mac_addr *sae_auth_ta);
 #endif  /* WLAN_CM_ROAM_API_H__ */

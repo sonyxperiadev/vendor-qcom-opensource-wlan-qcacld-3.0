@@ -499,7 +499,7 @@ bool mlme_is_twt_enabled(struct wlan_objmgr_psoc *psoc)
 	return mlme_obj->cfg.twt_cfg.is_twt_enabled;
 }
 
-#ifdef WLAN_FEATURE_11AX
+#if defined(WLAN_FEATURE_11AX) && defined(WLAN_SUPPORT_TWT)
 bool mlme_is_flexible_twt_enabled(struct wlan_objmgr_psoc *psoc)
 {
 	struct wlan_mlme_psoc_ext_obj *mlme_obj;

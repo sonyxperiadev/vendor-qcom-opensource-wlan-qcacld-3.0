@@ -399,6 +399,7 @@ struct pld_dev_mem_info {
 };
 
 #define PLD_MAX_TIMESTAMP_LEN 32
+#define PLD_WLFW_MAX_BUILD_ID_LEN 128
 #define PLD_MAX_DEV_MEM_NUM 4
 
 /**
@@ -427,6 +428,7 @@ struct pld_soc_info {
 	char fw_build_timestamp[PLD_MAX_TIMESTAMP_LEN + 1];
 	struct pld_device_version device_version;
 	struct pld_dev_mem_info dev_mem_info[PLD_MAX_DEV_MEM_NUM];
+	char fw_build_id[PLD_WLFW_MAX_BUILD_ID_LEN + 1];
 };
 
 /**
@@ -854,8 +856,6 @@ int pld_get_mhi_state(struct device *dev);
 int pld_is_pci_ep_awake(struct device *dev);
 int pld_get_ce_id(struct device *dev, int irq);
 int pld_get_irq(struct device *dev, int ce_id);
-void pld_lock_pm_sem(struct device *dev);
-void pld_release_pm_sem(struct device *dev);
 void pld_lock_reg_window(struct device *dev, unsigned long *flags);
 void pld_unlock_reg_window(struct device *dev, unsigned long *flags);
 int pld_get_pci_slot(struct device *dev);

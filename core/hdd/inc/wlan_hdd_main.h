@@ -1155,6 +1155,14 @@ struct hdd_adapter {
 	uint64_t cur_target_global_tsf_time;
 	uint64_t last_target_global_tsf_time;
 	qdf_mc_timer_t host_capture_req_timer;
+#ifdef QCA_GET_TSF_VIA_REG
+	/* TSF id as obtained from FW report */
+	int tsf_id;
+	/* mac_id as obtained from FW report */
+	int tsf_mac_id;
+	/* flag indicating whether tsf details are valid */
+	qdf_atomic_t tsf_details_valid;
+#endif
 #ifdef WLAN_FEATURE_TSF_PLUS
 	/* spin lock for read/write timestamps */
 	qdf_spinlock_t host_target_sync_lock;
@@ -1670,6 +1678,8 @@ enum wlan_state_ctrl_str_id {
 	WLAN_FORCE_DISABLE_STR
 };
 
+#define MAX_TGT_HW_NAME_LEN 32
+
 /**
  * struct hdd_context - hdd shared driver and psoc/device context
  * @psoc: object manager psoc context
@@ -1700,6 +1710,7 @@ enum wlan_state_ctrl_str_id {
  * @dump_in_progress: Stores value of dump in progress
  * @hdd_dual_sta_policy: Concurrent STA policy configuration
  * @is_wlan_disabled: if wlan is disabled by userspace
+ * @pm_notifier: PM notifier of hdd modules
  */
 struct hdd_context {
 	struct wlan_objmgr_psoc *psoc;
@@ -1788,7 +1799,7 @@ struct hdd_context {
 	/* defining the chip/rom revision */
 	uint32_t target_hw_revision;
 	/* chip/rom name */
-	char *target_hw_name;
+	char target_hw_name[MAX_TGT_HW_NAME_LEN];
 	struct regulatory reg;
 #ifdef FEATURE_WLAN_CH_AVOID
 	uint16_t unsafe_channel_count;
@@ -1879,6 +1890,7 @@ struct hdd_context {
 	/* Present state of driver cds modules */
 	enum driver_modules_status driver_status;
 	struct qdf_delayed_work psoc_idle_timeout_work;
+	struct notifier_block pm_notifier;
 	struct acs_dfs_policy acs_policy;
 	uint16_t wmi_max_len;
 	struct suspend_resume_stats suspend_resume_stats;
@@ -2555,7 +2567,18 @@ bool hdd_is_vdev_in_conn_state(struct hdd_adapter *adapter);
  */
 int hdd_vdev_create(struct hdd_adapter *adapter);
 int hdd_vdev_destroy(struct hdd_adapter *adapter);
-int hdd_vdev_ready(struct hdd_adapter *adapter);
+
+/**
+ * hdd_vdev_ready() - Configure FW post VDEV create
+ * @vdev: VDEV object.
+ *
+ * The function is used send configuration to the FW
+ * post VDEV creation.
+ * The caller to ensure to hold the VDEV reference
+ *
+ * Return: 0 on success, negative value on failure.
+ */
+int hdd_vdev_ready(struct wlan_objmgr_vdev *vdev);
 
 QDF_STATUS hdd_init_station_mode(struct hdd_adapter *adapter);
 struct hdd_adapter *hdd_get_adapter(struct hdd_context *hdd_ctx,

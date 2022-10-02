@@ -2676,7 +2676,7 @@ QDF_STATUS wma_tx_packet(void *wma_context, void *tx_frame, uint16_t frmLen,
 	mgmt_param.use_6mbps = use_6mbps;
 	mgmt_param.tx_type = tx_frm_index;
 	mgmt_param.peer_rssi = peer_rssi;
-	if (wlan_vdev_mlme_get_opmode(iface->vdev) == QDF_STA_MODE &&
+	if (iface && wlan_vdev_mlme_get_opmode(iface->vdev) == QDF_STA_MODE &&
 	    wlan_vdev_mlme_is_mlo_vdev(iface->vdev) &&
 	    frmType == TXRX_FRM_802_11_MGMT &&
 	    pFc->subType != SIR_MAC_MGMT_PROBE_REQ &&
@@ -2728,21 +2728,23 @@ QDF_STATUS wma_tx_packet(void *wma_context, void *tx_frame, uint16_t frmLen,
 				cds_packet_free((void *)tx_frame);
 				goto error;
 			}
-			if (wlan_vdev_mlme_is_mlo_vdev(vdev)) {
-				mld_addr = wlan_vdev_mlme_get_mldaddr(vdev);
-				if (!mld_addr) {
-					wma_err("mld addr is null");
-					wlan_objmgr_vdev_release_ref(vdev, WLAN_MGMT_NB_ID);
-					cds_packet_free((void *)tx_frame);
-					goto error;
-				}
-				peer = wlan_objmgr_get_peer(psoc, pdev_id,
-							    mld_addr,
-							    WLAN_MGMT_NB_ID);
-				wma_debug("mld mac addr " QDF_MAC_ADDR_FMT,
-					  QDF_MAC_ADDR_REF(mld_addr));
-			}
+			mld_addr = wlan_vdev_mlme_get_mldaddr(vdev);
 			wlan_objmgr_vdev_release_ref(vdev, WLAN_MGMT_NB_ID);
+			if (!mld_addr) {
+				wma_err("mld addr is null");
+				cds_packet_free((void *)tx_frame);
+				goto error;
+			}
+			wma_debug("mld mac addr " QDF_MAC_ADDR_FMT,
+				  QDF_MAC_ADDR_REF(mld_addr));
+			peer = wlan_objmgr_get_peer(psoc, pdev_id,
+						    mld_addr,
+						    WLAN_MGMT_NB_ID);
+			if (!peer) {
+				wma_err("peer is null");
+				cds_packet_free((void *)tx_frame);
+				goto error;
+			}
 		}
 	}
 

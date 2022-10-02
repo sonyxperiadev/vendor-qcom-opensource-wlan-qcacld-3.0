@@ -542,6 +542,10 @@ wlan_connectivity_mgmt_event(struct wlan_objmgr_psoc *psoc,
 	wlan_diag_event.auth_seq_num = auth_seq;
 	wlan_diag_event.assoc_id = aid;
 
+	if (wlan_diag_event.subtype > WLAN_CONN_DIAG_REASSOC_RESP_EVENT &&
+	    wlan_diag_event.subtype < WLAN_CONN_DIAG_BMISS_EVENT)
+		wlan_diag_event.reason = status_code;
+
 	wlan_diag_event.is_retry_frame =
 			(mac_hdr->i_fc[1] & IEEE80211_FC1_RETRY);
 	is_auth_frame_caching_required =

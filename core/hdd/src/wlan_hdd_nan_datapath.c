@@ -610,6 +610,7 @@ int hdd_init_nan_data_mode(struct hdd_adapter *adapter)
 	bool bval = false;
 	uint8_t enable_sifs_burst = 0;
 	struct wlan_objmgr_vdev *vdev;
+	uint16_t rts_profile = 0;
 
 	ret_val = hdd_vdev_create(adapter);
 	if (ret_val) {
@@ -620,8 +621,6 @@ int hdd_init_nan_data_mode(struct hdd_adapter *adapter)
 	mac_handle = hdd_ctx->mac_handle;
 
 	/* Configure self HT/VHT capabilities */
-	sme_set_curr_device_mode(mac_handle, adapter->device_mode);
-
 	status = ucfg_mlme_get_vht_enable2x2(hdd_ctx->psoc, &bval);
 	if (!QDF_IS_STATUS_SUCCESS(status))
 		hdd_err("unable to get vht_enable2x2");
@@ -658,6 +657,7 @@ int hdd_init_nan_data_mode(struct hdd_adapter *adapter)
 
 	set_bit(WMM_INIT_DONE, &adapter->event_flags);
 
+	/* ENABLE SIFS BURST */
 	status = ucfg_get_enable_sifs_burst(hdd_ctx->psoc, &enable_sifs_burst);
 	if (!QDF_IS_STATUS_SUCCESS(status))
 		hdd_err("Failed to get sifs burst value, use default");
@@ -668,6 +668,17 @@ int hdd_init_nan_data_mode(struct hdd_adapter *adapter)
 				      PDEV_CMD);
 	if (0 != ret_val)
 		hdd_err("WMI_PDEV_PARAM_BURST_ENABLE set failed %d", ret_val);
+
+	/* RTS CTS PARAM  */
+	status = ucfg_fwol_get_rts_profile(hdd_ctx->psoc, &rts_profile);
+	if (QDF_IS_STATUS_ERROR(status))
+		hdd_err("FAILED TO GET RTSCTS Profile status:%d", status);
+
+	ret_val = sme_cli_set_command(adapter->vdev_id,
+				      WMI_VDEV_PARAM_ENABLE_RTSCTS, rts_profile,
+				      VDEV_CMD);
+	if (ret_val)
+		hdd_err("FAILED TO SET RTSCTS Profile ret:%d", ret_val);
 
 	hdd_set_netdev_flags(adapter);
 

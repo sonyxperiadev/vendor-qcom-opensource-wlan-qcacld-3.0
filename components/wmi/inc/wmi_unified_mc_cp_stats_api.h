@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -97,6 +98,36 @@ QDF_STATUS
 wmi_extract_peer_stats_info(wmi_unified_t wmi_handle, void *evt_buf,
 			    uint32_t index,
 			    wmi_host_peer_stats_info *peer_stats_info);
+
+/**
+ * wmi_extract_peer_tx_pkt_per_mcs() - extract peer tx packets per MCS
+ * from event
+ * @wmi_handle: wmi handle
+ * @evt_buf: pointer to event buffer
+ * @index: Index to tx packets per MCS for current peer
+ * @peer_stats_info: Pointer to hold peer stats info
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS
+wmi_extract_peer_tx_pkt_per_mcs(wmi_unified_t wmi_handle, void *evt_buf,
+				uint32_t index,
+				wmi_host_peer_stats_info *peer_stats_info);
+
+/**
+ * wmi_extract_peer_rx_pkt_per_mcs() - extract peer rx packets per MCS
+ * from event
+ * @wmi_handle: wmi handle
+ * @evt_buf: pointer to event buffer
+ * @index: Index to tx rate count for current peer
+ * @peer_stats_info: Pointer to hold peer stats info
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS
+wmi_extract_peer_rx_pkt_per_mcs(wmi_unified_t wmi_handle, void *evt_buf,
+				uint32_t index,
+				wmi_host_peer_stats_info *peer_stats_info);
 
 #ifdef WLAN_FEATURE_BIG_DATA_STATS
 /**

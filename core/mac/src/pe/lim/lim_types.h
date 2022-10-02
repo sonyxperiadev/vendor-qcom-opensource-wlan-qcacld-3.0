@@ -426,6 +426,27 @@ void lim_cleanup_mlm(struct mac_context *);
 
 /* Management frame handling functions */
 
+#ifdef WLAN_FEATURE_11BE
+/**
+ * lim_process_beacon_eht() - process beacon 11be IE
+ * @mac_ctx: global mac context
+ * @session: pe session
+ * @bcn_ptr: pointer to tSchBeaconStruct
+ *
+ * Return none
+ */
+void lim_process_beacon_eht(struct mac_context *mac_ctx,
+			    struct pe_session *session,
+			    tSchBeaconStruct *bcn_ptr);
+#else
+static inline
+void lim_process_beacon_eht(struct mac_context *mac_ctx,
+			    struct pe_session *session,
+			    tSchBeaconStruct *bcn_ptr)
+{
+}
+#endif
+
 #ifdef WLAN_FEATURE_11BE_MLO
 /**
  * lim_process_beacon_mlo() - process beacon mlo IE

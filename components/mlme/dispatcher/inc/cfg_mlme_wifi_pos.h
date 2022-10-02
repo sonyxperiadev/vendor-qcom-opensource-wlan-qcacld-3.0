@@ -116,9 +116,33 @@
 		false, \
 		"enable Responder secure LTF support")
 
+/*
+ * <ini>
+ * enable_responder_11az_support - R-STA 11az ranging support
+ * @Min: false
+ * @Max: true
+ * @Default: false
+ *
+ * This ini is used to enable R-STA advertising 11az ranging
+ * capabilities.
+ *
+ * Related: None
+ *
+ * Supported Feature: WIFI POS
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+#define CFG_RESPONDER_11AZ_SUPPORT CFG_INI_BOOL( \
+		"enable_responder_11az_support", \
+		false, \
+		"enable Responder 11az support")
+
 #define CFG_WIFI_POS_ALL \
 	CFG(CFG_FINE_TIME_MEAS_CAPABILITY) \
 	CFG(CFG_OEM_SIXG_SUPPORT_DISABLE) \
-	CFG(CFG_RESPONDER_SECURE_LTF_SUPPORT)
+	CFG(CFG_RESPONDER_SECURE_LTF_SUPPORT) \
+	CFG(CFG_RESPONDER_11AZ_SUPPORT)
 
 #endif /* __CFG_MLME_WIFI_POS_H */

@@ -393,7 +393,6 @@ struct sme_context {
 	/* following pointer contains array of pointers for tSmeCmd* */
 	void **sme_cmd_buf_addr;
 	tDblLinkList sme_cmd_freelist;    /* preallocated roam cmd list */
-	enum QDF_OPMODE curr_device_mode;
 	void *ll_stats_context;
 	link_layer_stats_cb link_layer_stats_cb;
 	void (*link_layer_stats_ext_cb)(hdd_handle_t callback_ctx,

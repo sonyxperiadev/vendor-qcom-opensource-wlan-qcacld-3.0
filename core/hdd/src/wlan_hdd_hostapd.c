@@ -114,6 +114,8 @@
 #include "wlan_osif_features.h"
 #include "wlan_pre_cac_ucfg_api.h"
 #include <wlan_dp_ucfg_api.h>
+#include "wlan_twt_ucfg_ext_api.h"
+#include "wlan_twt_ucfg_api.h"
 
 #define ACS_SCAN_EXPIRY_TIMEOUT_S 4
 
@@ -4048,7 +4050,6 @@ QDF_STATUS hdd_init_ap_mode(struct hdd_adapter *adapter, bool reinit)
 	ap_pwr_type = wlan_reg_decide_6g_ap_pwr_type(hdd_ctx->pdev);
 	hdd_debug("selecting AP power type %d", ap_pwr_type);
 
-	sme_set_curr_device_mode(hdd_ctx->mac_handle, adapter->device_mode);
 	/* Zero the memory.  This zeros the profile structure. */
 	memset(phostapdBuf, 0, sizeof(struct hdd_hostapd_state));
 
@@ -4881,6 +4882,8 @@ int wlan_hdd_cfg80211_update_apies(struct hdd_adapter *adapter)
 				      WLAN_ELEMID_WAPI);
 	}
 #endif
+	/* extract and add rrm ie from hostapd */
+	wlan_hdd_add_extra_ie(adapter, genie, &total_ielen, WLAN_ELEMID_RRM);
 
 	wlan_hdd_add_hostapd_conf_vsie(adapter, genie,
 				       &total_ielen);
@@ -7282,6 +7285,29 @@ hdd_sap_nan_check_and_disable_unsupported_ndi(struct wlan_objmgr_psoc *psoc,
 #if defined(WLAN_SUPPORT_TWT) && \
 	((LINUX_VERSION_CODE >= KERNEL_VERSION(5, 3, 0)) || \
 	  defined(CFG80211_TWT_RESPONDER_SUPPORT))
+#ifdef WLAN_TWT_CONV_SUPPORTED
+static void
+wlan_hdd_update_twt_responder(struct hdd_context *hdd_ctx,
+			      struct cfg80211_ap_settings *params)
+{
+	bool twt_res_svc_cap, enable_twt;
+	uint32_t reason;
+
+	enable_twt = ucfg_twt_cfg_is_twt_enabled(hdd_ctx->psoc);
+	ucfg_twt_get_responder(hdd_ctx->psoc, &twt_res_svc_cap);
+	ucfg_twt_cfg_set_responder(hdd_ctx->psoc,
+				   QDF_MIN(twt_res_svc_cap,
+					   (enable_twt &&
+					    params->twt_responder)));
+	hdd_debug("cfg80211 TWT responder:%d", params->twt_responder);
+	if (enable_twt && params->twt_responder) {
+		hdd_send_twt_responder_enable_cmd(hdd_ctx);
+	} else {
+		reason = HOST_TWT_DISABLE_REASON_NONE;
+		hdd_send_twt_responder_disable_cmd(hdd_ctx, reason);
+	}
+}
+#else
 static void
 wlan_hdd_update_twt_responder(struct hdd_context *hdd_ctx,
 			      struct cfg80211_ap_settings *params)
@@ -7291,9 +7317,9 @@ wlan_hdd_update_twt_responder(struct hdd_context *hdd_ctx,
 
 	enable_twt = ucfg_mlme_is_twt_enabled(hdd_ctx->psoc);
 	ucfg_mlme_get_twt_res_service_cap(hdd_ctx->psoc, &twt_res_svc_cap);
-	ucfg_mlme_set_twt_responder(hdd_ctx->psoc, QDF_MIN(
-					twt_res_svc_cap,
-					(enable_twt && params->twt_responder)));
+	ucfg_mlme_set_twt_responder(hdd_ctx->psoc,
+				    QDF_MIN(twt_res_svc_cap,
+					    (enable_twt && params->twt_responder)));
 	hdd_debug("cfg80211 TWT responder:%d", params->twt_responder);
 	if (enable_twt && params->twt_responder) {
 		hdd_send_twt_responder_enable_cmd(hdd_ctx);
@@ -7302,6 +7328,7 @@ wlan_hdd_update_twt_responder(struct hdd_context *hdd_ctx,
 		hdd_send_twt_responder_disable_cmd(hdd_ctx, reason);
 	}
 }
+#endif
 #else
 static inline void
 wlan_hdd_update_twt_responder(struct hdd_context *hdd_ctx,

@@ -49,6 +49,7 @@
 #include "wlan_reg_services_api.h"
 #include "wlan_cm_roam_api.h"
 #include "wlan_mlo_mgr_sta.h"
+#include "wlan_twt_cfg_ext_api.h"
 #include <wlan_cmn_ieee80211.h>
 #ifdef WLAN_FEATURE_11BE_MLO
 #include <lim_mlo.h>
@@ -5329,6 +5330,13 @@ sir_convert_beacon_frame2_struct(struct mac_context *mac,
 			     sizeof(tDot11fIEhe_op));
 	}
 
+	if (pBeacon->eht_cap.present)
+		qdf_mem_copy(&pBeaconStruct->eht_cap, &pBeacon->eht_cap,
+			     sizeof(tDot11fIEeht_cap));
+	if (pBeacon->eht_op.present)
+		qdf_mem_copy(&pBeaconStruct->eht_op, &pBeacon->eht_op,
+			    sizeof(tDot11fIEeht_op));
+
 	pBeaconStruct->num_transmit_power_env = pBeacon->num_transmit_power_env;
 	if (pBeacon->num_transmit_power_env) {
 		qdf_mem_copy(pBeaconStruct->transmit_power_env,
@@ -8828,6 +8836,7 @@ populate_dot11f_eht_caps_by_band(struct mac_context *mac_ctx,
 				 bool is_2g,
 				 tDot11fIEeht_cap *eht_cap)
 {
+	pe_debug("is_2g %d", is_2g);
 	if (is_2g)
 		qdf_mem_copy(eht_cap,
 			     &mac_ctx->eht_cap_2g,
@@ -10045,6 +10054,8 @@ QDF_STATUS populate_dot11f_twt_extended_caps(struct mac_context *mac_ctx,
 					     tDot11fIEExtCap *dot11f)
 {
 	struct s_ext_cap *p_ext_cap;
+	bool twt_responder = false;
+	bool twt_requestor = false;
 
 	if (pe_session->opmode == QDF_STA_MODE &&
 	    !pe_session->enable_session_twt_support) {
@@ -10055,15 +10066,17 @@ QDF_STATUS populate_dot11f_twt_extended_caps(struct mac_context *mac_ctx,
 	p_ext_cap = (struct s_ext_cap *)dot11f->bytes;
 	dot11f->present = 1;
 
-	if (pe_session->opmode == QDF_STA_MODE)
+	if (pe_session->opmode == QDF_STA_MODE) {
+		wlan_twt_get_requestor_cfg(mac_ctx->psoc, &twt_requestor);
 		p_ext_cap->twt_requestor_support =
-			mac_ctx->mlme_cfg->he_caps.dot11_he_cap.twt_request &&
-			twt_get_requestor_flag(mac_ctx);
+			twt_requestor && twt_get_requestor_flag(mac_ctx);
+	}
 
-	if (pe_session->opmode == QDF_SAP_MODE)
+	if (pe_session->opmode == QDF_SAP_MODE) {
+		wlan_twt_get_responder_cfg(mac_ctx->psoc, &twt_responder);
 		p_ext_cap->twt_responder_support =
-			mac_ctx->mlme_cfg->he_caps.dot11_he_cap.twt_responder &&
-			twt_get_responder_flag(mac_ctx);
+			twt_responder && twt_get_responder_flag(mac_ctx);
+	}
 
 	dot11f->num_bytes = lim_compute_ext_cap_ie_length(dot11f);
 	if (!dot11f->num_bytes) {
@@ -11023,6 +11036,9 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 	struct wlan_mlo_eml_cap eml_cap;
 	uint16_t presence_bitmap = 0;
 	bool is_2g;
+	uint32_t value = 0;
+	uint8_t *ppet;
+	uint8_t *eht_cap_ie = NULL;
 
 	if (!mac_ctx || !pe_session || !frm)
 		return QDF_STATUS_E_NULL_VALUE;
@@ -11393,6 +11409,23 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 		}
 
 		populate_dot11f_he_caps_by_band(mac_ctx, is_2g, &he_caps);
+		if (he_caps.ppet_present) {
+			value = WNI_CFG_HE_PPET_LEN;
+			if (!is_2g)
+				qdf_mem_copy(he_caps.ppet.ppe_threshold.ppe_th,
+					mac_ctx->mlme_cfg->he_caps.he_ppet_5g,
+					value);
+			else
+				qdf_mem_copy(he_caps.ppet.ppe_threshold.ppe_th,
+					mac_ctx->mlme_cfg->he_caps.he_ppet_2g,
+					value);
+
+			ppet = he_caps.ppet.ppe_threshold.ppe_th;
+			he_caps.ppet.ppe_threshold.num_ppe_th =
+				lim_truncate_ppet(ppet, value);
+		} else {
+			he_caps.ppet.ppe_threshold.num_ppe_th = 0;
+		}
 		if ((he_caps.present && frm->he_cap.present &&
 		     qdf_mem_cmp(&he_caps, &frm->he_cap, sizeof(he_caps))) ||
 		     (he_caps.present && !frm->he_cap.present)) {
@@ -11430,14 +11463,27 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 		if ((eht_caps.present && frm->eht_cap.present &&
 		     qdf_mem_cmp(&eht_caps, &frm->eht_cap, sizeof(eht_caps))) ||
 		     (eht_caps.present && !frm->eht_cap.present)) {
-			len_consumed = 0;
-			dot11f_pack_ie_eht_cap(mac_ctx, &eht_caps, p_sta_prof,
-					       len_remaining, &len_consumed);
-			p_sta_prof += len_consumed;
-			len_remaining -= len_consumed;
+			eht_cap_ie = qdf_mem_malloc(WLAN_MAX_IE_LEN + 2);
+			if (eht_cap_ie) {
+				len_consumed = 0;
+				lim_ieee80211_pack_ehtcap(eht_cap_ie, eht_caps,
+							  he_caps, is_2g);
+				len_consumed = eht_cap_ie[1] + 2;
+
+				qdf_mem_copy(p_sta_prof, eht_cap_ie,
+					     len_consumed);
+				qdf_mem_free(eht_cap_ie);
+				p_sta_prof += len_consumed;
+				len_remaining -= len_consumed;
+			} else {
+				pe_err("malloc failed for eht_cap_ie");
+			}
 		} else if (frm->eht_cap.present && !eht_caps.present) {
+			pe_debug("eht non inher");
 			non_inher_ext_ie_lists[non_inher_ext_len++] =
 						WLAN_EXTN_ELEMID_EHTCAP;
+		} else {
+			pe_debug("eht ie not included");
 		}
 
 		populate_dot11f_non_inheritance(

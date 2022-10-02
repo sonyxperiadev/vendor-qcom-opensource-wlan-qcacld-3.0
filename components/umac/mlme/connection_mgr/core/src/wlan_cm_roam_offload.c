@@ -2653,8 +2653,8 @@ static void cm_update_driver_assoc_ies(struct wlan_objmgr_psoc *psoc,
 						  power_cap_ie_data);
 	}
 
-	wlan_cm_ese_populate_addtional_ies(pdev, mlme_obj, vdev_id,
-					  rso_mode_cfg);
+	wlan_cm_ese_populate_additional_ies(pdev, mlme_obj, vdev_id,
+					    rso_mode_cfg);
 
 	/* Append QCN IE if g_support_qcn_ie INI is enabled */
 	if (mlme_obj->cfg.sta.qcn_ie_support)
@@ -6773,6 +6773,11 @@ cm_roam_mgmt_frame_event(struct roam_frame_info *frame_data,
 					 !frame_data->is_rsp);
 		diag_event = EVENT_WLAN_MGMT;
 	}
+
+	if (wlan_diag_event.subtype > WLAN_CONN_DIAG_REASSOC_RESP_EVENT &&
+	    wlan_diag_event.subtype < WLAN_CONN_DIAG_BMISS_EVENT)
+		wlan_diag_event.reason = frame_data->status_code;
+
 	WLAN_HOST_DIAG_EVENT_REPORT(&wlan_diag_event, diag_event);
 
 	return status;

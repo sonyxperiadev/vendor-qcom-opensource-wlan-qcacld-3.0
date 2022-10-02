@@ -1698,7 +1698,7 @@ void policy_mgr_dump_current_concurrency(struct wlan_objmgr_psoc *psoc)
 			policy_mgr_debug("%s", cc_mode);
 			break;
 		}
-		/* fallthrough */
+	fallthrough;
 	default:
 		policy_mgr_debug("unexpected num_connections value %d",
 				 num_connections);

@@ -425,6 +425,24 @@ typedef struct sap_SSIDInfo {
 	uint8_t ssidHidden;
 } qdf_packed tSap_SSIDInfo_t;
 
+/**
+ * struct master_acs - acs attributes received from userspace
+ * @hw_mode: hw mode
+ * @ht: ht flag
+ * @ht40: ht40 flag
+ * @vht: vht flag
+ * @eht: eht flag
+ * @ch_width: channel bandwidth
+ */
+struct master_acs {
+	uint8_t    hw_mode;
+	uint8_t    ht;
+	uint8_t    ht40;
+	uint8_t    vht;
+	uint8_t    eht;
+	uint16_t   ch_width;
+};
+
 struct sap_acs_cfg {
 	/* ACS Algo Input */
 	uint8_t    acs_mode;
@@ -459,7 +477,9 @@ struct sap_acs_cfg {
 	bool       is_eht_enabled;
 	uint16_t   acs_puncture_bitmap;
 #endif
+	bool       skip_acs_scan;
 	uint32_t   last_scan_ageout_time;
+	struct master_acs master_acs_cfg;
 };
 
 /*

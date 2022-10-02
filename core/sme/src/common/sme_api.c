@@ -83,6 +83,7 @@
 #include "wlan_policy_mgr_ucfg.h"
 #include "wlan_wifi_pos_interface.h"
 #include "wlan_cp_stats_mc_ucfg_api.h"
+#include "wlan_psoc_mlme_ucfg_api.h"
 
 static QDF_STATUS init_sme_cmd_list(struct mac_context *mac);
 
@@ -807,7 +808,6 @@ QDF_STATUS sme_open(mac_handle_t mac_handle)
 	struct mac_context *mac = MAC_CONTEXT(mac_handle);
 
 	mac->sme.state = SME_STATE_STOP;
-	mac->sme.curr_device_mode = QDF_STA_MODE;
 	if (!QDF_IS_STATUS_SUCCESS(qdf_mutex_create(
 					&mac->sme.sme_global_lock))) {
 		sme_err("Init lock failed");
@@ -7361,14 +7361,6 @@ QDF_STATUS sme_get_isolation(mac_handle_t mac_handle, void *context,
 ePhyChanBondState sme_get_cb_phy_state_from_cb_ini_value(uint32_t cb_ini_value)
 {
 	return csr_convert_cb_ini_value_to_phy_cb_state(cb_ini_value);
-}
-
-void sme_set_curr_device_mode(mac_handle_t mac_handle,
-			      enum QDF_OPMODE curr_device_mode)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-
-	mac->sme.curr_device_mode = curr_device_mode;
 }
 
 /**
@@ -15302,6 +15294,10 @@ void sme_update_score_config(mac_handle_t mac_handle, eCsrPhyMode phy_mode,
 	uint32_t channel_bonding_mode;
 	QDF_STATUS status;
 	struct psoc_phy_config config = {0};
+	bool eht_cap;
+
+	ucfg_psoc_mlme_get_11be_capab(mac_ctx->psoc, &eht_cap);
+	config.eht_cap = eht_cap;
 
 	qdf_mem_zero(&vdev_ini_cfg, sizeof(struct wlan_mlme_nss_chains));
 	/* Populate the nss chain params from ini for this vdev type */
@@ -15310,9 +15306,6 @@ void sme_update_score_config(mac_handle_t mac_handle, eCsrPhyMode phy_mode,
 
 	config.vdev_nss_24g = vdev_ini_cfg.rx_nss[NSS_CHAINS_BAND_2GHZ];
 	config.vdev_nss_5g = vdev_ini_cfg.rx_nss[NSS_CHAINS_BAND_5GHZ];
-
-	if (sme_is_phy_mode_11be(phy_mode))
-		config.eht_cap = 1;
 
 	if (config.eht_cap ||
 	    phy_mode == eCSR_DOT11_MODE_AUTO ||
@@ -15328,9 +15321,6 @@ void sme_update_score_config(mac_handle_t mac_handle, eCsrPhyMode phy_mode,
 	if (config.vht_cap || phy_mode == eCSR_DOT11_MODE_11n ||
 	    phy_mode == eCSR_DOT11_MODE_11n_ONLY)
 		config.ht_cap = 1;
-
-	if (!IS_FEATURE_11BE_SUPPORTED_BY_FW)
-		config.eht_cap = 0;
 
 	if (!IS_FEATURE_SUPPORTED_BY_FW(DOT11AX))
 		config.he_cap = 0;
@@ -16199,14 +16189,9 @@ QDF_STATUS sme_switch_channel(mac_handle_t mac_handle,
 #ifdef WLAN_FEATURE_DYNAMIC_MAC_ADDR_UPDATE
 
 #ifdef WLAN_FEATURE_11BE
-static inline bool sme_is_11be_capable(void)
+bool sme_is_11be_capable(void)
 {
 	return sme_is_feature_supported_by_fw(DOT11BE);
-}
-#else
-static inline bool sme_is_11be_capable(void)
-{
-	return false;
 }
 #endif
 

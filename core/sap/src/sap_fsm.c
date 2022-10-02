@@ -1398,6 +1398,7 @@ QDF_STATUS sap_channel_sel(struct sap_context *sap_context)
 
 		if (!req->scan_req.chan_list.num_chan) {
 			sap_info("## SKIPPED ACS SCAN");
+			sap_context->acs_cfg->skip_acs_scan = true;
 			wlansap_pre_start_bss_acs_scan_callback(
 				mac_handle, sap_context, sap_context->sessionId,
 				0, eCSR_SCAN_SUCCESS);

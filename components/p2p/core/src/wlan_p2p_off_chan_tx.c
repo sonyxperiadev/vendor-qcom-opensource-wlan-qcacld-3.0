@@ -770,6 +770,10 @@ static char *p2p_get_frame_type_str(struct p2p_frame_info *frame_info)
 		return "GAS come back response";
 	case P2P_PUBLIC_ACTION_WNM_BTM_REQ:
 		return "BTM request";
+	case P2P_PUBLIC_ACTION_RRM_BEACON_REQ:
+		return "BEACON request";
+	case P2P_PUBLIC_ACTION_RRM_NEIGHBOR_RSP:
+		return "NEIGHBOR response";
 	default:
 		return "Other frame";
 	}
@@ -852,6 +856,17 @@ static QDF_STATUS p2p_get_frame_info(uint8_t *data_buf, uint32_t length,
 				action_type = buf[0];
 				frame_info->public_action_type =
 					P2P_PUBLIC_ACTION_WNM_BTM_REQ;
+			}
+			break;
+		case RRM_ACTION_FRAME:
+			if (buf[1] == RRM_RADIO_MEASURE_REQ) {
+				action_type = buf[0];
+				frame_info->public_action_type =
+					P2P_PUBLIC_ACTION_RRM_BEACON_REQ;
+			} else if (buf[1] == RRM_NEIGHBOR_RPT) {
+				action_type = buf[0];
+				frame_info->public_action_type =
+					P2P_PUBLIC_ACTION_RRM_NEIGHBOR_RSP;
 			}
 			break;
 		default:
@@ -1173,7 +1188,6 @@ static QDF_STATUS p2p_mgmt_tx(struct tx_action_context *tx_ctx,
 	void *mac_addr;
 	uint8_t pdev_id;
 	struct wlan_objmgr_vdev *vdev;
-	struct wlan_objmgr_pdev *pdev;
 	enum QDF_OPMODE opmode;
 
 	psoc = tx_ctx->p2p_soc_obj->soc;
@@ -1181,24 +1195,10 @@ static QDF_STATUS p2p_mgmt_tx(struct tx_action_context *tx_ctx,
 	mgmt_param.frm_len = buf_len;
 	mgmt_param.vdev_id = tx_ctx->vdev_id;
 	mgmt_param.pdata = frame;
-
-	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, tx_ctx->vdev_id,
-						    WLAN_P2P_ID);
-	if (!vdev)
-		return QDF_STATUS_E_INVAL;
-
-	pdev = wlan_vdev_get_pdev(vdev);
-	if (!pdev) {
-		wlan_objmgr_vdev_release_ref(vdev, WLAN_P2P_ID);
-		return QDF_STATUS_E_INVAL;
-	}
-
 	mgmt_param.chanfreq = tx_ctx->chan_freq;
-
 	mgmt_param.qdf_ctx = wlan_psoc_get_qdf_dev(psoc);
 	if (!(mgmt_param.qdf_ctx)) {
 		p2p_err("qdf ctx is null");
-		wlan_objmgr_vdev_release_ref(vdev, WLAN_P2P_ID);
 		return QDF_STATUS_E_INVAL;
 	}
 	p2p_mgmt_set_hw_retry_count(psoc, tx_ctx, &mgmt_param);
@@ -1214,6 +1214,9 @@ static QDF_STATUS p2p_mgmt_tx(struct tx_action_context *tx_ctx,
 					    WLAN_P2P_ID);
 	}
 	if (!peer) {
+		vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc,
+							    tx_ctx->vdev_id,
+							    WLAN_P2P_ID);
 		if (vdev) {
 			opmode = wlan_vdev_mlme_get_opmode(vdev);
 			/*
@@ -1223,15 +1226,20 @@ static QDF_STATUS p2p_mgmt_tx(struct tx_action_context *tx_ctx,
 			 */
 			if (opmode == QDF_NAN_DISC_MODE ||
 			    tx_ctx->rand_mac_tx) {
-				mac_addr = wlan_vdev_mlme_get_macaddr(vdev);
+				mac_addr = wlan_vdev_mlme_get_mldaddr(vdev);
+				/* for non-MLO case, mld address will zero */
+				if (qdf_is_macaddr_zero(
+					(struct qdf_mac_addr *)mac_addr))
+					mac_addr =
+					wlan_vdev_mlme_get_macaddr(vdev);
+
 				peer = wlan_objmgr_get_peer(psoc, pdev_id,
 							    mac_addr,
 							    WLAN_P2P_ID);
 			}
+			wlan_objmgr_vdev_release_ref(vdev, WLAN_P2P_ID);
 		}
 	}
-	wlan_objmgr_vdev_release_ref(vdev, WLAN_P2P_ID);
-
 	if (!peer) {
 		p2p_err("no valid peer");
 		return QDF_STATUS_E_INVAL;

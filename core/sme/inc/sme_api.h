@@ -444,13 +444,6 @@ QDF_STATUS sme_vdev_delete(mac_handle_t mac_handle,
 void sme_cleanup_session(mac_handle_t mac_handle, uint8_t vdev_id);
 
 /**
- * sme_set_curr_device_mode() - Sets the current operating device mode.
- * @mac_handle: The handle returned by mac_open.
- * @curr_device_mode: Current operating device mode.
- */
-void sme_set_curr_device_mode(mac_handle_t mac_handle,
-			      enum QDF_OPMODE curr_device_mode);
-/**
  * sme_update_roam_params() - Store/Update the roaming params
  * @mac_handle: Opaque handle to the global MAC context
  * @vdev_id:                  vdev ID
@@ -4521,10 +4514,22 @@ enum csr_cfgdot11mode sme_phy_mode_to_dot11mode(enum wlan_phymode phy_mode);
  * Return: Max EHT channel width supported by FW (eg. 80, 160, 320)
  */
 uint32_t sme_get_eht_ch_width(void);
+
+/**
+ * sme_is_11be_capable() - Check if 11 be is supported or not
+ *
+ * Return: True if 11be is supported
+ */
+bool sme_is_11be_capable(void);
 #else /* !WLAN_FEATURE_11BE */
 static inline uint32_t sme_get_eht_ch_width(void)
 {
 	return 0;
+}
+
+static inline bool sme_is_11be_capable(void)
+{
+	return false;
 }
 #endif /* WLAN_FEATURE_11BE */
 

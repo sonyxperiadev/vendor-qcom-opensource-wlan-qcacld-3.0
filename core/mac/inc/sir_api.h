@@ -3882,8 +3882,10 @@ struct sir_sme_ext_cng_chan_ind {
  * @global_tsf_high: high 32bits of tsf64
  * @mac_id: MAC identifier
  * @mac_id_valid: Indicate if mac_id is valid or not
+ * @tsf_id: TSF-ID corresponding to the TSF value
+ * @tsf_id_valid: flag indicating whether TSD-ID is valid
  *
- * driver use this struct to store the tsf info
+ * Driver uses this structure to store the tsf information.
  */
 struct stsf {
 	uint32_t vdev_id;
@@ -3893,10 +3895,10 @@ struct stsf {
 	uint32_t soc_timer_high;
 	uint32_t global_tsf_low;
 	uint32_t global_tsf_high;
-#ifdef WLAN_FEATURE_TSF_UPLINK_DELAY
 	uint32_t mac_id;
 	uint32_t mac_id_valid;
-#endif
+	uint32_t tsf_id;
+	uint32_t tsf_id_valid;
 };
 
 #define SIR_BCN_FLT_MAX_ELEMS_IE_LIST 8

@@ -94,6 +94,8 @@
 #define HDD_LINK_STATS_MAX		5
 #define HDD_MAX_ALLOWED_LL_STATS_FAILURE	5
 
+#define INVALID_PREAMBLE 0xFF
+
 /* 11B, 11G Rate table include Basic rate and Extended rate
  * The IDX field is the rate index
  * The HI field is the rate when RSSI is strong or being ignored
@@ -6034,11 +6036,6 @@ wlan_hdd_refill_actual_rate(struct rate_info *os_rate,
 	os_rate->nss = nss;
 	if (preamble == DOT11_A || preamble == DOT11_B) {
 		os_rate->legacy = rate;
-		/*
-		 * Clear os rate flags set by hdd_report_actual_rate(),
-		 * otherwise, kernel will not display legacy rate
-		 */
-		os_rate->flags = 0;
 		hdd_debug("Reporting legacy rate %d", os_rate->legacy);
 		return;
 	}
@@ -6265,24 +6262,41 @@ static int wlan_hdd_get_sta_stats(struct wiphy *wiphy,
 						   rx_nss_max);
 
 		if (!tx_rate_calc || !rx_rate_calc) {
-			hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_STATS_ID);
-			/* Keep GUI happy */
-			return 0;
+			hdd_report_actual_rate(tx_rate_flags, my_tx_rate,
+					       &sinfo->txrate, tx_mcs_index,
+					       tx_nss, tx_dcm, tx_gi);
+
+			hdd_report_actual_rate(rx_rate_flags, my_rx_rate,
+					       &sinfo->rxrate, rx_mcs_index,
+					       rx_nss, rx_dcm, rx_gi);
 		}
 	} else {
+		uint8_t rx_nss_max, rx_preamble;
 
 		/* Fill TX stats */
 		hdd_report_actual_rate(tx_rate_flags, my_tx_rate,
 				       &sinfo->txrate, tx_mcs_index,
 				       tx_nss, tx_dcm, tx_gi);
 
-
 		/* Fill RX stats */
-		hdd_report_actual_rate(rx_rate_flags, my_rx_rate,
-				       &sinfo->rxrate, rx_mcs_index,
-				       rx_nss, rx_dcm, rx_gi);
+		rx_nss_max = wlan_vdev_mlme_get_nss(vdev);
+		rx_preamble = adapter->hdd_stats.class_a_stat.rx_preamble;
 
-		wlan_hdd_refill_actual_rate(&sinfo->rxrate, adapter);
+		/*
+		 * If rx_preamble has been marked invalid, it means that DP
+		 * has not received a data frame since assoc or roaming so
+		 * that the rates info has not been updated, report max rate.
+		 */
+		if (qdf_unlikely(rx_preamble == INVALID_PREAMBLE))
+			hdd_report_max_rate(adapter, mac_handle,
+					    &sinfo->rxrate,
+					    sinfo->signal,
+					    rx_rate_flags,
+					    rx_mcs_index,
+					    my_rx_rate,
+					    rx_nss_max);
+		else
+			wlan_hdd_refill_actual_rate(&sinfo->rxrate, adapter);
 	}
 
 	wlan_hdd_fill_summary_stats(&adapter->hdd_stats.summary_stat,
@@ -7424,7 +7438,26 @@ void wlan_hdd_get_peer_rx_rate_stats(struct hdd_adapter *adapter)
 					 peer_stats);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		qdf_mem_free(peer_stats);
+		adapter->hdd_stats.class_a_stat.rx_preamble = INVALID_PREAMBLE;
 		osif_err("cdp_host_get_peer_stats failed. error: %d", status);
+		return;
+	}
+
+	if (qdf_unlikely(peer_stats->rx.last_rx_rate == 0)) {
+		hdd_debug("No rates, mcs=%d, nss=%d, gi=%d, preamble=%d, bw=%d",
+			  peer_stats->rx.mcs_info,
+			  peer_stats->rx.nss_info,
+			  peer_stats->rx.gi_info,
+			  peer_stats->rx.preamble_info,
+			  peer_stats->rx.bw_info);
+
+		/*
+		 * Assign preamble an invalid value used to determine
+		 * whether driver fills in actual rates or max rates
+		 */
+		adapter->hdd_stats.class_a_stat.rx_preamble = INVALID_PREAMBLE;
+
+		qdf_mem_free(peer_stats);
 		return;
 	}
 

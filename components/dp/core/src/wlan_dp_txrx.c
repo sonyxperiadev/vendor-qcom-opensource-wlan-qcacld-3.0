@@ -32,7 +32,7 @@
 #include <cdp_txrx_flow_ctrl_v2.h>
 #include "dp_txrx.h"
 #if defined(WLAN_SUPPORT_RX_FISA)
-#include "dp_fisa_rx.h"
+#include "wlan_dp_fisa_rx.h"
 #endif
 #include "nan_public_structs.h"
 #include "nan_ucfg_api.h"
@@ -55,6 +55,15 @@ uint32_t wlan_dp_intf_get_pkt_type_bitmap_value(void *intf_ctx)
 
 	return dp_intf->pkt_type_bitmap;
 }
+
+#if defined(WLAN_SUPPORT_RX_FISA)
+void dp_rx_skip_fisa(struct cdp_soc_t *cdp_soc, uint32_t value)
+{
+	struct dp_soc *soc = (struct dp_soc *)cdp_soc;
+
+	qdf_atomic_set(&soc->skip_fisa_param.skip_fisa, !value);
+}
+#endif
 
 #ifdef QCA_LL_LEGACY_TX_FLOW_CONTROL
 void dp_get_tx_resource(struct wlan_dp_intf *dp_intf,
@@ -1653,6 +1662,9 @@ QDF_STATUS dp_rx_packet_cbk(void *dp_intf_context,
 		} else if (qdf_nbuf_is_ipv4_eapol_pkt(nbuf)) {
 			subtype = qdf_nbuf_get_eapol_subtype(nbuf);
 			send_over_nl = true;
+
+			/* Mac address check between RX packet DA and dp_intf's */
+			dp_rx_pkt_da_check(dp_intf, nbuf);
 			if (subtype == QDF_PROTO_EAPOL_M1) {
 				++dp_intf->dp_stats.eapol_stats.
 						eapol_m1_count;

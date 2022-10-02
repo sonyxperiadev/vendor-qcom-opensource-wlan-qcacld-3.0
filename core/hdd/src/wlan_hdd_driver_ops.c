@@ -119,8 +119,8 @@ void *hdd_get_consistent_mem_unaligned(size_t size,
 				       qdf_dma_addr_t *paddr,
 				       uint32_t ring_type)
 {
-	return dp_prealloc_get_consistent_mem_unaligned(size, paddr,
-							ring_type);
+	return ucfg_dp_prealloc_get_consistent_mem_unaligned(size, paddr,
+							     ring_type);
 }
 
 /**
@@ -132,7 +132,7 @@ void *hdd_get_consistent_mem_unaligned(size_t size,
 static
 void hdd_put_consistent_mem_unaligned(void *vaddr)
 {
-	dp_prealloc_put_consistent_mem_unaligned(vaddr);
+	ucfg_dp_prealloc_put_consistent_mem_unaligned(vaddr);
 }
 
 #else
@@ -649,7 +649,8 @@ static int __hdd_soc_probe(struct device *dev,
 		goto assert_fail_count;
 	}
 
-	status = dp_prealloc_init((struct cdp_ctrl_objmgr_psoc *)hdd_ctx->psoc);
+	status = ucfg_dp_prealloc_init((struct cdp_ctrl_objmgr_psoc *)
+					hdd_ctx->psoc);
 
 	if (status != QDF_STATUS_SUCCESS) {
 		errno = qdf_status_to_os_return(status);
@@ -680,7 +681,7 @@ wlan_exit:
 	hdd_wlan_exit(hdd_ctx);
 
 hdd_context_destroy:
-	dp_prealloc_deinit();
+	ucfg_dp_prealloc_deinit();
 
 dp_prealloc_fail:
 	hdd_context_destroy(hdd_ctx);
@@ -872,7 +873,7 @@ static void __hdd_soc_remove(struct device *dev)
 	cds_set_driver_in_bad_state(false);
 	cds_set_unload_in_progress(false);
 
-	dp_prealloc_deinit();
+	ucfg_dp_prealloc_deinit();
 
 	pr_info("%s: Driver De-initialized\n", WLAN_MODULE_NAME);
 }
@@ -1297,7 +1298,7 @@ static int __wlan_hdd_bus_suspend(struct wow_enable_params wow_params,
 
 	if (hif_try_prevent_ep_vote_access(hif_ctx)) {
 		hdd_debug("Prevent suspend, ep work pending");
-		err = QDF_STATUS_E_BUSY;
+		err = -EBUSY;
 		goto resume_txrx;
 	}
 

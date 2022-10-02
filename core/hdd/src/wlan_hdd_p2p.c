@@ -57,6 +57,7 @@
 #include "wlan_hdd_pre_cac.h"
 #include "wlan_pre_cac_ucfg_api.h"
 #include "wlan_dp_ucfg_api.h"
+#include "wlan_psoc_mlme_ucfg_api.h"
 
 /* Ms to Time Unit Micro Sec */
 #define MS_TO_TU_MUS(x)   ((x) * 1024)
@@ -1062,6 +1063,7 @@ __hdd_indicate_mgmt_frame_to_user(struct hdd_adapter *adapter,
 	enum nl80211_rxmgmt_flags nl80211_flag = 0;
 	bool is_pasn_auth_frame = false;
 	struct hdd_adapter *assoc_adapter;
+	bool eht_capab;
 
 	hdd_debug("Frame Type = %d Frame Length = %d freq = %d",
 		  frame_type, frm_len, rx_freq);
@@ -1151,8 +1153,8 @@ __hdd_indicate_mgmt_frame_to_user(struct hdd_adapter *adapter,
 					      adapter->vdev_id);
 
 	assoc_adapter = adapter;
-
-	if (hdd_adapter_is_link_adapter(adapter)) {
+	ucfg_psoc_mlme_get_11be_capab(hdd_ctx->psoc, &eht_capab);
+	if (hdd_adapter_is_link_adapter(adapter) && eht_capab) {
 		hdd_debug("adapter is not ml adapter move to ml adapter");
 		assoc_adapter = hdd_adapter_get_mlo_adapter_from_link(adapter);
 		if (!assoc_adapter) {

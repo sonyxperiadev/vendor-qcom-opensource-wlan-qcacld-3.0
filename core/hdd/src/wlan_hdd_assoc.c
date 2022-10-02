@@ -219,9 +219,22 @@ static const int beacon_filter_table[] = {
 #if defined (CFG80211_SAE_AUTH_TA_ADDR_SUPPORT)
 static inline
 void wlan_hdd_sae_copy_ta_addr(struct cfg80211_external_auth_params *params,
-			       struct hdd_adapter *adapter)
+			       struct hdd_adapter *adapter,
+			       struct sir_sae_info *sae_info)
 {
-	if (wlan_vdev_mlme_is_mlo_vdev(adapter->vdev)) {
+	struct qdf_mac_addr ta = QDF_MAC_ADDR_ZERO_INIT;
+	bool roaming;
+
+	roaming = wlan_cm_roaming_in_progress(adapter->hdd_ctx->pdev,
+					      sae_info->vdev_id);
+	if (roaming) {
+		ucfg_cm_get_sae_auth_ta(adapter->hdd_ctx->pdev,
+					sae_info->vdev_id,
+					&ta);
+		qdf_mem_copy(params->tx_addr, ta.bytes, QDF_MAC_ADDR_SIZE);
+		hdd_debug("ta:" QDF_MAC_ADDR_FMT,
+			  QDF_MAC_ADDR_REF(params->tx_addr));
+	} else if (wlan_vdev_mlme_is_mlo_vdev(adapter->vdev)) {
 		qdf_mem_copy(params->tx_addr,
 			     wlan_vdev_mlme_get_linkaddr(adapter->vdev),
 			     QDF_MAC_ADDR_SIZE);
@@ -230,7 +243,8 @@ void wlan_hdd_sae_copy_ta_addr(struct cfg80211_external_auth_params *params,
 #else
 static inline
 void wlan_hdd_sae_copy_ta_addr(struct cfg80211_external_auth_params *params,
-			       struct hdd_adapter *adapter)
+			       struct hdd_adapter *adapter,
+			       struct sir_sae_info *sae_info)
 {
 }
 #endif
@@ -269,8 +283,7 @@ static void wlan_hdd_sae_callback(struct hdd_adapter *adapter,
 	params.action = NL80211_EXTERNAL_AUTH_START;
 	qdf_mem_copy(params.bssid, sae_info->peer_mac_addr.bytes,
 		     QDF_MAC_ADDR_SIZE);
-
-	wlan_hdd_sae_copy_ta_addr(&params, adapter);
+	wlan_hdd_sae_copy_ta_addr(&params, adapter, sae_info);
 
 	qdf_mem_copy(params.ssid.ssid, sae_info->ssid.ssId,
 		     sae_info->ssid.length);

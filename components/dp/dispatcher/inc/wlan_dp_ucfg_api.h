@@ -1232,6 +1232,22 @@ void
 dp_ucfg_disable_link_monitoring(struct wlan_objmgr_psoc *psoc,
 				struct wlan_objmgr_vdev *vdev);
 
+#if defined(WLAN_SUPPORT_RX_FISA)
+/**
+ * ucfg_dp_rx_skip_fisa() - Set flags to skip fisa aggregation
+ * @value: allow or skip fisa
+ *
+ * Return: None
+ */
+void ucfg_dp_rx_skip_fisa(uint32_t value);
+
+#else
+static inline
+void ucfg_dp_rx_skip_fisa(uint32_t value)
+{
+}
+#endif
+
 #ifdef DP_TRAFFIC_END_INDICATION
 /**
  * ucfg_dp_traffic_end_indication_get() - Get data end indication info
@@ -1286,4 +1302,43 @@ ucfg_dp_traffic_end_indication_update_dscp(struct wlan_objmgr_psoc *psoc,
 					   unsigned char *dscp)
 {}
 #endif
-#endif /* _WLAN_DP_UCFG_API_H_ */
+
+/*
+ * ucfg_dp_prealloc_init() - Pre-allocate DP memory
+ * @ctrl_psoc: objmgr psoc
+ *
+ * Return: QDF_STATUS_SUCCESS on success, error qdf status on failure
+ */
+QDF_STATUS ucfg_dp_prealloc_init(struct cdp_ctrl_objmgr_psoc *ctrl_psoc);
+
+/*
+ * ucfg_dp_prealloc_deinit() - Free pre-alloced DP memory
+ *
+ * Return: None
+ */
+void ucfg_dp_prealloc_deinit(void);
+
+#ifdef DP_MEM_PRE_ALLOC
+/**
+ * ucfg_dp_prealloc_get_consistent_mem_unaligned() - gets pre-alloc unaligned
+ *						     consistent memory
+ * @size: total memory size
+ * @base_addr: pointer to dma address
+ * @ring_type: HAL ring type that requires memory
+ *
+ * Return: memory virtual address pointer on success, NULL on failure
+ */
+void *ucfg_dp_prealloc_get_consistent_mem_unaligned(qdf_size_t size,
+						    qdf_dma_addr_t *base_addr,
+						    uint32_t ring_type);
+
+/**
+ * ucfg_dp_prealloc_put_consistent_mem_unaligned() - puts back pre-alloc
+ * unaligned consistent memory
+ * @va_unaligned: memory virtual address pointer
+ *
+ * Return: None
+ */
+void ucfg_dp_prealloc_put_consistent_mem_unaligned(void *va_unaligned);
+#endif
+#endif /* _WLAN_DP_UCFGi_API_H_ */

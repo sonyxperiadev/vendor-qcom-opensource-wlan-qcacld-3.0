@@ -1595,6 +1595,13 @@ static bool lim_check_valid_mcs_for_nss(struct pe_session *session,
 		mcs_count--;
 	} while (mcs_count);
 
+	if ((session->ch_width == CH_WIDTH_160MHZ ||
+	     lim_is_session_chwidth_320mhz(session)) &&
+	     !he_caps->chan_width_2) {
+		pe_err("session BW 160/320 MHz but peer BW less than 160 MHz");
+		return false;
+	}
+
 	return true;
 
 }
@@ -1869,7 +1876,7 @@ QDF_STATUS lim_populate_matching_rate_set(struct mac_context *mac_ctx,
 					  tDot11fIEeht_cap *eht_caps)
 {
 	tSirMacRateSet temp_rate_set;
-	tSirMacRateSet temp_rate_set2;
+	tSirMacRateSet temp_rate_set2 = {0};
 	uint32_t i, j, val, min, is_arate;
 	uint32_t phy_mode;
 	uint8_t mcs_set[SIZE_OF_SUPPORTED_MCS_SET];
@@ -1893,8 +1900,6 @@ QDF_STATUS lim_populate_matching_rate_set(struct mac_context *mac_ctx,
 			     session_entry->extRateSet.numRates);
 		temp_rate_set2.numRates =
 			(uint8_t) session_entry->extRateSet.numRates;
-	} else {
-		temp_rate_set2.numRates = 0;
 	}
 
 	lim_remove_membership_selectors(&temp_rate_set);

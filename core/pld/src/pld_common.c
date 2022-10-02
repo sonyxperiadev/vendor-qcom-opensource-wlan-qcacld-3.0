@@ -1718,62 +1718,6 @@ int pld_get_irq(struct device *dev, int ce_id)
 }
 
 /**
- * pld_lock_pm_sem() - Lock PM semaphore
- * @dev: device
- *
- * Return: void
- */
-void pld_lock_pm_sem(struct device *dev)
-{
-	switch (pld_get_bus_type(dev)) {
-	case PLD_BUS_TYPE_PCIE:
-		pld_pcie_lock_pm_sem(dev);
-		break;
-	case PLD_BUS_TYPE_PCIE_FW_SIM:
-	case PLD_BUS_TYPE_IPCI_FW_SIM:
-	case PLD_BUS_TYPE_SNOC_FW_SIM:
-	case PLD_BUS_TYPE_SNOC:
-	case PLD_BUS_TYPE_IPCI:
-		break;
-	case PLD_BUS_TYPE_SDIO:
-		break;
-	case PLD_BUS_TYPE_USB:
-		break;
-	default:
-		pr_err("Invalid device type\n");
-		break;
-	}
-}
-
-/**
- * pld_release_pm_sem() - Release PM semaphore
- * @dev: device
- *
- * Return: void
- */
-void pld_release_pm_sem(struct device *dev)
-{
-	switch (pld_get_bus_type(dev)) {
-	case PLD_BUS_TYPE_PCIE:
-		pld_pcie_release_pm_sem(dev);
-		break;
-	case PLD_BUS_TYPE_PCIE_FW_SIM:
-	case PLD_BUS_TYPE_IPCI_FW_SIM:
-	case PLD_BUS_TYPE_SNOC_FW_SIM:
-	case PLD_BUS_TYPE_SNOC:
-	case PLD_BUS_TYPE_IPCI:
-		break;
-	case PLD_BUS_TYPE_SDIO:
-		break;
-	case PLD_BUS_TYPE_USB:
-		break;
-	default:
-		pr_err("Invalid device type\n");
-		break;
-	}
-}
-
-/**
  * pld_lock_reg_window() - Lock register window spinlock
  * @dev: device pointer
  * @flags: variable pointer to save CPU states

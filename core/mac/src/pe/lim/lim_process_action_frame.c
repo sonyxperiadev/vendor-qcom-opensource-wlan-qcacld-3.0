@@ -1908,6 +1908,25 @@ void lim_process_action_frame(struct mac_context *mac_ctx,
 				break;
 
 			}
+		} else if (LIM_IS_AP_ROLE(session)) {
+			switch (action_hdr->actionID) {
+			case RRM_NEIGHBOR_REQ:
+			case RRM_RADIO_MEASURE_RPT:
+				rssi = WMA_GET_RX_RSSI_NORMALIZED(rx_pkt_info);
+				mac_hdr = WMA_GET_RX_MAC_HEADER(rx_pkt_info);
+				lim_send_sme_mgmt_frame_ind(mac_ctx,
+						mac_hdr->fc.subType,
+						(uint8_t *)mac_hdr,
+						frame_len + sizeof(tSirMacMgmtHdr),
+						session->smeSessionId,
+						WMA_GET_RX_FREQ(rx_pkt_info),
+						rssi, RXMGMT_FLAG_NONE);
+				break;
+			default:
+				pe_warn("Action ID: %d not handled in RRM",
+					action_hdr->actionID);
+				break;
+			}
 		} else {
 			/* Else we will just ignore the RRM messages. */
 			pe_debug("RRM frm ignored, it is disabled in cfg: %d or DHCP not completed: %d",

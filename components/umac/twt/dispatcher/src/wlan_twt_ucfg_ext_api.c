@@ -48,6 +48,12 @@ ucfg_twt_cfg_get_responder(struct wlan_objmgr_psoc *psoc, bool *val)
 }
 
 QDF_STATUS
+ucfg_twt_cfg_set_responder(struct wlan_objmgr_psoc *psoc, bool val)
+{
+	return wlan_twt_cfg_set_responder(psoc, val);
+}
+
+QDF_STATUS
 ucfg_twt_setup_req(struct wlan_objmgr_psoc *psoc,
 		   struct twt_add_dialog_param *params,
 		   void *context)
@@ -105,6 +111,11 @@ bool ucfg_twt_is_setup_in_progress(struct wlan_objmgr_psoc *psoc,
 				   uint8_t dialog_id)
 {
 	return wlan_twt_is_setup_in_progress(psoc, peer_mac, dialog_id);
+}
+
+bool ucfg_twt_cfg_is_twt_enabled(struct wlan_objmgr_psoc *psoc)
+{
+	return wlan_twt_cfg_is_twt_enabled(psoc);
 }
 
 QDF_STATUS

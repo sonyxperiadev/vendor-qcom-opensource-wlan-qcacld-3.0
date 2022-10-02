@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -75,6 +76,30 @@ wmi_extract_peer_stats_param(wmi_unified_t wmi_handle, void *evt_buf,
 	if (wmi_handle->ops->extract_peer_stats_count)
 		return wmi_handle->ops->extract_peer_stats_count(wmi_handle,
 			evt_buf, stats_param);
+
+	return QDF_STATUS_E_FAILURE;
+}
+
+QDF_STATUS
+wmi_extract_peer_tx_pkt_per_mcs(wmi_unified_t wmi_handle, void *evt_buf,
+				uint32_t index,
+				wmi_host_peer_stats_info *peer_stats_info)
+{
+	if (wmi_handle->ops->extract_peer_tx_pkt_per_mcs)
+		return wmi_handle->ops->extract_peer_tx_pkt_per_mcs(wmi_handle,
+				evt_buf, index, peer_stats_info);
+
+	return QDF_STATUS_E_FAILURE;
+}
+
+QDF_STATUS
+wmi_extract_peer_rx_pkt_per_mcs(wmi_unified_t wmi_handle, void *evt_buf,
+				uint32_t index,
+				wmi_host_peer_stats_info *peer_stats_info)
+{
+	if (wmi_handle->ops->extract_peer_rx_pkt_per_mcs)
+		return wmi_handle->ops->extract_peer_rx_pkt_per_mcs(wmi_handle,
+				evt_buf, index, peer_stats_info);
 
 	return QDF_STATUS_E_FAILURE;
 }

@@ -401,4 +401,18 @@ ucfg_cm_roam_is_vendor_handoff_control_enable(struct wlan_objmgr_psoc *psoc)
 }
 #endif
 
+/**
+ * ucfg_cm_get_sae_auth_ta() - Get SAE auth tx address
+ * @vdev_id: Vdev id
+ * @sae_auth_ta: SAE auth tx address
+ *
+ * Return: QDF_STATUS
+ */
+static inline QDF_STATUS
+ucfg_cm_get_sae_auth_ta(struct wlan_objmgr_pdev *pdev,
+			uint8_t vdev_id,
+			struct qdf_mac_addr *sae_auth_ta)
+{
+	return wlan_cm_get_sae_auth_ta(pdev, vdev_id, sae_auth_ta);
+}
 #endif /* _WLAN_CM_ROAM_UCFG_API_H_ */
