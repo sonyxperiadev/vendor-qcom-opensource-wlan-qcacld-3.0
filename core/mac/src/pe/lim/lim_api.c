@@ -3579,6 +3579,24 @@ lim_validate_probe_rsp_link_info(struct pe_session *session_entry,
 		}
 	}
 
+	/* WAR: currently util_gen_link_reqrsp_cmn generates only the first
+	 * partner link and DUT only 2 mlo link is supported, so let's just
+	 * comparing the first partner info to check whether mlo is possible.
+	 */
+	if (ml_partner_info.num_partner_links == 1) {
+		if (partner_info.partner_link_info[0].link_id ==
+		    ml_partner_info.partner_link_info[0].link_id &&
+		    (qdf_is_macaddr_equal(&ml_partner_info.partner_link_info[0].link_addr,
+					  &partner_info.partner_link_info[0].link_addr)))
+			status = QDF_STATUS_SUCCESS;
+		else
+			status = QDF_STATUS_E_PROTO;
+
+		pe_debug("DUT num partner: %d, AP num partner: %d, status: %d",
+			 ml_partner_info.num_partner_links,
+			 partner_info.num_partner_links, status);
+	}
+
 	return status;
 }
 
