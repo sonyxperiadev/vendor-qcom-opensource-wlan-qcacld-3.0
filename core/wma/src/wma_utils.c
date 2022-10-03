@@ -5039,11 +5039,26 @@ int wma_oem_event_handler(void *wma_ctx, uint8_t *event_buff, uint32_t len)
 		oem_event_data.file_name_len = param_buf->num_file_name;
 	}
 
-	if (pmac->sme.oem_data_event_handler_cb)
-		pmac->sme.oem_data_event_handler_cb(&oem_event_data,
-						    pmac->sme.oem_data_vdev_id);
-	else if (pmac->sme.oem_data_async_event_handler_cb)
-		pmac->sme.oem_data_async_event_handler_cb(&oem_event_data);
+	if (event->event_cause == WMI_OEM_DATA_EVT_CAUSE_UNSPECIFIED) {
+		if (pmac->sme.oem_data_event_handler_cb)
+			pmac->sme.oem_data_event_handler_cb(
+					&oem_event_data,
+					pmac->sme.oem_data_vdev_id);
+		else if (pmac->sme.oem_data_async_event_handler_cb)
+			pmac->sme.oem_data_async_event_handler_cb(
+					&oem_event_data);
+	} else if (event->event_cause == WMI_OEM_DATA_EVT_CAUSE_CMD_REQ) {
+		if (pmac->sme.oem_data_event_handler_cb)
+			pmac->sme.oem_data_event_handler_cb(
+					&oem_event_data,
+					pmac->sme.oem_data_vdev_id);
+	} else if (event->event_cause == WMI_OEM_DATA_EVT_CAUSE_ASYNC) {
+		if (pmac->sme.oem_data_async_event_handler_cb)
+			pmac->sme.oem_data_async_event_handler_cb(
+					&oem_event_data);
+	} else {
+		return QDF_STATUS_E_FAILURE;
+	}
 
 	return QDF_STATUS_SUCCESS;
 }
