@@ -5514,6 +5514,81 @@ policy_mgr_is_vdev_high_tput_or_low_latency(struct wlan_objmgr_psoc *psoc,
 	return is_vdev_ll_ht;
 }
 
+static bool policy_mgr_is_acs_2ghz_only_sap(struct wlan_objmgr_psoc *psoc,
+					    uint8_t sap_vdev_id)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	uint32_t acs_band = QCA_ACS_MODE_IEEE80211ANY;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return false;
+	}
+
+	if (pm_ctx->hdd_cbacks.wlan_get_sap_acs_band)
+		pm_ctx->hdd_cbacks.wlan_get_sap_acs_band(psoc,
+							 sap_vdev_id,
+							 &acs_band);
+
+	if (acs_band == QCA_ACS_MODE_IEEE80211B ||
+	    acs_band == QCA_ACS_MODE_IEEE80211G)
+		return true;
+
+	return false;
+}
+
+static bool
+policy_mgr_check_2ghz_only_sap_affected_link(
+			struct wlan_objmgr_psoc *psoc,
+			uint8_t sap_vdev_id,
+			qdf_freq_t sap_ch_freq,
+			uint8_t ml_ch_freq_num,
+			qdf_freq_t *ml_freq_lst)
+{
+	uint8_t i;
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	struct wlan_objmgr_vdev *vdev;
+	enum QDF_OPMODE op_mode;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return false;
+	}
+
+	if (!WLAN_REG_IS_24GHZ_CH_FREQ(sap_ch_freq))
+		return false;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(
+				psoc, sap_vdev_id,
+				WLAN_POLICY_MGR_ID);
+	if (!vdev) {
+		policy_mgr_debug("vdev is null %d", sap_vdev_id);
+		return false;
+	}
+	op_mode = wlan_vdev_mlme_get_opmode(vdev);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
+	if (op_mode != QDF_SAP_MODE)
+		return false;
+
+	if (!policy_mgr_is_acs_2ghz_only_sap(psoc, sap_vdev_id))
+		return false;
+
+	/* If 2G ml STA exist, force scc will happen, no link
+	 * to get affected.
+	 */
+	for (i = 0; i < ml_ch_freq_num; i++)
+		if (WLAN_REG_IS_24GHZ_CH_FREQ(ml_freq_lst[i]))
+			return false;
+
+	/* If All ml STA are 5/6 band, force SCC will not happen
+	 * for 2G only SAP, so return true to indicate one
+	 * link get affected.
+	 */
+	return true;
+}
+
 /*
  * policy_mgr_get_affected_links_for_go_sap_cli() - Check if any of the P2P OR
  * SAP is causing MCC with a ML link and also is configured high tput or low
@@ -5549,10 +5624,28 @@ policy_mgr_get_affected_links_for_go_sap_cli(struct wlan_objmgr_psoc *psoc,
 			/* Continue if SCC */
 			if (ml_freq_lst[i] == p2p_sap_freq_lst[k])
 				continue;
-			/* Continue if high tput or low latency is not set */
-			if (!policy_mgr_is_vdev_high_tput_or_low_latency(psoc,
-			    p2p_sap_vdev_lst[k]))
+
+			/* SAP MCC with MLO STA link is not preferred.
+			 * If SAP is 2Ghz only by ACS and two ML link are
+			 * 5/6 band, then force SCC may not happen. In such
+			 * case inactive one link.
+			 */
+			if (policy_mgr_check_2ghz_only_sap_affected_link(
+					psoc, p2p_sap_vdev_lst[k],
+					p2p_sap_freq_lst[k],
+					num_ml_sta, ml_freq_lst)) {
+				policy_mgr_debug("2G only SAP vdev %d ch freq %d is not SCC with any MLO STA link",
+						 p2p_sap_vdev_lst[k],
+						 p2p_sap_freq_lst[k]);
+				num_affected_links++;
 				continue;
+			}
+
+			/* Continue if high tput or low latency is not set */
+			if (!policy_mgr_is_vdev_high_tput_or_low_latency(
+						psoc, p2p_sap_vdev_lst[k]))
+				continue;
+
 			/* If both freq are on same mac then its MCC */
 			if (policy_mgr_are_2_freq_on_same_mac(psoc,
 							ml_freq_lst[i],
