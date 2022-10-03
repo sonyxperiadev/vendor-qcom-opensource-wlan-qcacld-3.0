@@ -3160,4 +3160,16 @@ bool
 lim_is_power_change_required_for_sta(struct mac_context *mac_ctx,
 				     struct pe_session *sta_session,
 				     struct pe_session *sap_session);
+
+/**
+ * lim_update_tx_pwr_on_ctry_change_cb() - Callback to be invoked by regulatory
+ * module when country code changes (without channel change) OR if fcc
+ * constraint is set to true.
+ * This API calls TPC calculation API to recalculate and update the TX power.
+ * @vdev_id: vdev id
+ *
+ * Return: None
+ */
+void
+lim_update_tx_pwr_on_ctry_change_cb(uint8_t vdev_id);
 #endif /* __LIM_UTILS_H */

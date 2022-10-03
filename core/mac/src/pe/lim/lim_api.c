@@ -851,6 +851,10 @@ QDF_STATUS pe_open(struct mac_context *mac, struct cds_config_info *cds_cfg)
 	lim_nan_register_callbacks(mac);
 	p2p_register_callbacks(mac);
 	lim_register_sap_bcn_callback(mac);
+	wlan_reg_register_ctry_change_callback(
+					mac->psoc,
+					lim_update_tx_pwr_on_ctry_change_cb);
+
 	if (mac->mlme_cfg->edca_params.enable_edca_params)
 		lim_register_policy_mgr_callback(mac->psoc);
 
@@ -893,6 +897,9 @@ QDF_STATUS pe_close(struct mac_context *mac)
 	qdf_hang_event_unregister_notifier(&pe_hang_event_notifier);
 	lim_cleanup(mac);
 	lim_unregister_sap_bcn_callback(mac);
+	wlan_reg_unregister_ctry_change_callback(
+					mac->psoc,
+					lim_update_tx_pwr_on_ctry_change_cb);
 
 	if (mac->lim.limDisassocDeauthCnfReq.pMlmDeauthReq) {
 		qdf_mem_free(mac->lim.limDisassocDeauthCnfReq.pMlmDeauthReq);

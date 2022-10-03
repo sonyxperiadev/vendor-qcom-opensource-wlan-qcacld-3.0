@@ -10959,3 +10959,24 @@ lim_cleanup_power_change(struct mac_context *mac_ctx,
 
 	wlan_set_tpc_update_required_for_sta(sap_session->vdev, false);
 }
+
+void
+lim_update_tx_pwr_on_ctry_change_cb(uint8_t vdev_id)
+{
+	struct mac_context *mac_ctx;
+	struct pe_session *session;
+
+	mac_ctx = cds_get_context(QDF_MODULE_ID_PE);
+	if (!mac_ctx) {
+		pe_err("mac ctx is null");
+		return;
+	}
+
+	session = pe_find_session_by_vdev_id(mac_ctx, vdev_id);
+	if (!session) {
+		pe_err("Unable to find session");
+		return;
+	}
+
+	lim_set_tpc_power(mac_ctx, session);
+}
