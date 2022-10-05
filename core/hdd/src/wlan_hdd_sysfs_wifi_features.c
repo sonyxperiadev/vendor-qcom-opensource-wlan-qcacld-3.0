@@ -32,11 +32,21 @@ static ssize_t  __hdd_sysfs_feature_set_show(struct hdd_context *hdd_ctx,
 					     char *buf)
 {
 	ssize_t ret_val = 0;
-	uint8_t i;
+	uint8_t i = 0;
+	char const *solution_provider = "QCT";
 
-	for (i = 0; i < hdd_ctx->oem_data_len; i++)
+	for (i = 0; i < hdd_ctx->oem_data_len; i++) {
+		/* The Solution Provider Info is from index 2 to 4 */
+		if (i == 2) {
+			ret_val += scnprintf(buf + ret_val, PAGE_SIZE - ret_val,
+					     "%s", solution_provider);
+			i = i + 2;
+			continue;
+		}
 		ret_val += scnprintf(buf + ret_val, PAGE_SIZE - ret_val, "%.2x",
 				     hdd_ctx->oem_data[i]);
+	}
+
 	buf[ret_val] = '\n';
 
 	return ret_val;
