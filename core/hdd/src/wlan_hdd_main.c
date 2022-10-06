@@ -6215,6 +6215,29 @@ static void hdd_check_wait_for_hw_mode_completion(struct hdd_context *hdd_ctx)
 	}
 }
 
+static void hdd_stop_last_active_connection(struct hdd_context *hdd_ctx,
+					    struct wlan_objmgr_vdev *vdev)
+{
+	enum policy_mgr_con_mode mode;
+	struct wlan_objmgr_psoc *psoc;
+
+	/* If this is the last active connection check
+	 * and stop the opportunistic timer.
+	 */
+	psoc = wlan_vdev_get_psoc(vdev);
+	mode = policy_mgr_convert_device_mode_to_qdf_type(
+					wlan_vdev_mlme_get_opmode(vdev));
+	if ((policy_mgr_get_connection_count(psoc) == 1 &&
+	     policy_mgr_mode_specific_connection_count(psoc,
+						       mode, NULL) == 1) ||
+	     (!policy_mgr_get_connection_count(psoc) &&
+	     !hdd_is_any_sta_connecting(hdd_ctx))) {
+		policy_mgr_check_and_stop_opportunistic_timer(
+						psoc,
+						wlan_vdev_get_id(vdev));
+	}
+}
+
 int hdd_vdev_destroy(struct hdd_adapter *adapter)
 {
 	QDF_STATUS status;
@@ -6234,25 +6257,12 @@ int hdd_vdev_destroy(struct hdd_adapter *adapter)
 
 	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 
-	/*
-	 * if this is the last active connection check & stop the
-	 * opportunistic timer first
-	 */
-	if ((policy_mgr_get_connection_count(hdd_ctx->psoc) == 1 &&
-	     policy_mgr_mode_specific_connection_count(hdd_ctx->psoc,
-		policy_mgr_convert_device_mode_to_qdf_type(
-			adapter->device_mode), NULL) == 1) ||
-	    (!policy_mgr_get_connection_count(hdd_ctx->psoc) &&
-	     !hdd_is_any_sta_connecting(hdd_ctx)))
-		policy_mgr_check_and_stop_opportunistic_timer(hdd_ctx->psoc,
-							      adapter->vdev_id);
-	/* Check and wait for hw mode response */
-	hdd_check_wait_for_hw_mode_completion(hdd_ctx);
-
 	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_ID);
 	if (!vdev)
 		return -EINVAL;
 
+	hdd_stop_last_active_connection(hdd_ctx, vdev);
+	hdd_check_wait_for_hw_mode_completion(hdd_ctx);
 	ucfg_pmo_del_wow_pattern(vdev);
 	status = ucfg_reg_11d_vdev_delete_update(vdev);
 	ucfg_scan_vdev_set_disable(vdev, REASON_VDEV_DOWN);
