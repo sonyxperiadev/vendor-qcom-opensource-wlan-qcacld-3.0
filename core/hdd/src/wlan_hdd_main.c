@@ -6240,13 +6240,51 @@ static void hdd_stop_last_active_connection(struct hdd_context *hdd_ctx,
 	}
 }
 
+static int hdd_vdev_destroy_event_wait(struct hdd_context *hdd_ctx,
+				       struct wlan_objmgr_vdev *vdev)
+{
+	long rc;
+	QDF_STATUS status;
+	uint8_t vdev_id;
+	struct hdd_adapter *adapter;
+
+	vdev_id = wlan_vdev_get_id(vdev);
+	adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
+	/* close sme session (destroy vdev in firmware via legacy API) */
+	INIT_COMPLETION(adapter->vdev_destroy_event);
+	status = sme_vdev_delete(hdd_ctx->mac_handle, vdev);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		hdd_err("vdev %d: failed to delete with status:%d",
+			vdev_id, status);
+		return -EAGAIN;
+	}
+
+	/* block on a completion variable until sme session is closed */
+	rc = wait_for_completion_timeout(
+			&adapter->vdev_destroy_event,
+			msecs_to_jiffies(SME_CMD_VDEV_CREATE_DELETE_TIMEOUT));
+	if (!rc) {
+		hdd_err("vdev %d: timed out waiting for delete", vdev_id);
+		clear_bit(SME_SESSION_OPENED, &adapter->event_flags);
+		sme_cleanup_session(hdd_ctx->mac_handle, vdev_id);
+		cds_flush_logs(WLAN_LOG_TYPE_FATAL,
+			       WLAN_LOG_INDICATOR_HOST_DRIVER,
+			       WLAN_LOG_REASON_VDEV_DELETE_RSP_TIMED_OUT,
+			       true, true);
+		return -EINVAL;
+	}
+
+	hdd_nofl_debug("vdev %d destroyed successfully", vdev_id);
+	return 0;
+}
+
 int hdd_vdev_destroy(struct hdd_adapter *adapter)
 {
+	int ret;
+	uint8_t vdev_id;
 	QDF_STATUS status;
 	struct hdd_context *hdd_ctx;
-	uint8_t vdev_id;
 	struct wlan_objmgr_vdev *vdev;
-	long rc;
 
 	vdev_id = adapter->vdev_id;
 	hdd_nofl_debug("destroying vdev %d", vdev_id);
@@ -6283,33 +6321,8 @@ int hdd_vdev_destroy(struct hdd_adapter *adapter)
 	/* Release the hdd reference */
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_HDD_ID_OBJ_MGR);
 
-	/* close sme session (destroy vdev in firmware via legacy API) */
-	INIT_COMPLETION(adapter->vdev_destroy_event);
-	status = sme_vdev_delete(hdd_ctx->mac_handle, vdev);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		hdd_err("vdev %d: failed to delete with status:%d",
-			vdev_id, status);
-		goto send_status;
-	}
-
-	/* block on a completion variable until sme session is closed */
-	rc = wait_for_completion_timeout(
-			&adapter->vdev_destroy_event,
-			msecs_to_jiffies(SME_CMD_VDEV_CREATE_DELETE_TIMEOUT));
-	if (!rc) {
-		hdd_err("vdev %d: timed out waiting for delete", vdev_id);
-		clear_bit(SME_SESSION_OPENED, &adapter->event_flags);
-		sme_cleanup_session(hdd_ctx->mac_handle, vdev_id);
-		cds_flush_logs(WLAN_LOG_TYPE_FATAL,
-			       WLAN_LOG_INDICATOR_HOST_DRIVER,
-			       WLAN_LOG_REASON_VDEV_DELETE_RSP_TIMED_OUT,
-			       true, true);
-	}
-
-	hdd_nofl_debug("vdev %d destroyed successfully", vdev_id);
-
-send_status:
-	return qdf_status_to_os_return(status);
+	ret = hdd_vdev_destroy_event_wait(hdd_ctx, vdev);
+	return ret;
 }
 
 void
