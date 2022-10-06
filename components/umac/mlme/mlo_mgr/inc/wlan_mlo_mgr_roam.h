@@ -229,16 +229,17 @@ void mlo_cm_roam_sync_cb(struct wlan_objmgr_vdev *vdev,
  * wlan_mlo_roam_abort_on_link - Abort roam on link
  *
  * @psoc: psoc pointer
- * @sync_ind: Roam sync indication
+ * @event: Roam sync indication event pointer
+ * @vdev_id: vdev id value
  *
- * Abort roaming on all the links except the primary. Roam abort on primary
- * link would be taken care in legacy path.
+ * Abort roaming on all the links except the vdev id passed.
+ * Roam abort on vdev id link would be taken care in legacy path.
  *
  * Return: QDF_STATUS
  */
 QDF_STATUS
 wlan_mlo_roam_abort_on_link(struct wlan_objmgr_psoc *psoc,
-			    struct roam_offload_synch_ind *sync_ind);
+			    uint8_t *event, uint8_t vdev_id);
 
 #else /* WLAN_FEATURE_11BE_MLO */
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
@@ -308,7 +309,7 @@ mlo_roam_update_connected_links(struct wlan_objmgr_vdev *vdev,
 
 static inline QDF_STATUS
 wlan_mlo_roam_abort_on_link(struct wlan_objmgr_psoc *psoc,
-			    struct roam_offload_synch_ind *sync_ind)
+			    uint8_t *event, uint8_t vdev_id)
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }

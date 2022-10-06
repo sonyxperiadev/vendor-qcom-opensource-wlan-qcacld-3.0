@@ -150,6 +150,27 @@ mlo_clear_link_bmap(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
 
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_SB_ID);
 }
+
+static QDF_STATUS
+mlo_roam_abort_req(struct wlan_objmgr_psoc *psoc,
+		   uint8_t *event, uint8_t vdev_id)
+{
+	struct roam_offload_synch_ind *sync_ind = NULL;
+
+	sync_ind = (struct roam_offload_synch_ind *)event;
+
+	if (!sync_ind) {
+		mlme_err("Roam Sync ind ptr is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	wlan_mlo_roam_abort_on_link(psoc, event, vdev_id);
+	cm_roam_stop_req(psoc, sync_ind->roamed_vdev_id,
+			 REASON_ROAM_SYNCH_FAILED,
+			 NULL, false);
+
+	return QDF_STATUS_SUCCESS;
+}
 #else
 static inline void
 mlo_clear_link_bmap(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
@@ -174,6 +195,13 @@ static inline bool
 mlo_check_connect_req_bmap(struct wlan_objmgr_vdev *vdev)
 {
 	return false;
+}
+
+static inline QDF_STATUS
+mlo_roam_abort_req(struct wlan_objmgr_psoc *psoc,
+		   uint8_t *event, uint8_t vdev_id)
+{
+	return QDF_STATUS_E_NOSUPPORT;
 }
 #endif
 QDF_STATUS mlo_fw_roam_sync_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
@@ -249,6 +277,8 @@ void mlo_cm_roam_sync_cb(struct wlan_objmgr_vdev *vdev,
 						     event, event_data_len);
 			if (QDF_IS_STATUS_ERROR(status)) {
 				mlo_clear_connect_req_links_bmap(link_vdev);
+				mlo_roam_abort_req(psoc, event,
+						   sync_ind->ml_link[i].vdev_id);
 				wlan_objmgr_vdev_release_ref(link_vdev,
 							     WLAN_MLME_SB_ID);
 				return;
@@ -441,19 +471,29 @@ mlo_roam_update_connected_links(struct wlan_objmgr_vdev *vdev,
 
 QDF_STATUS
 wlan_mlo_roam_abort_on_link(struct wlan_objmgr_psoc *psoc,
-			    struct roam_offload_synch_ind *sync_ind)
+			    uint8_t *event, uint8_t vdev_id)
 {
 	uint8_t i;
 	QDF_STATUS status;
+	struct roam_offload_synch_ind *sync_ind = NULL;
 
-	for (i = 0; i < sync_ind->num_setup_links; i++)
-		if (sync_ind->ml_link[i].vdev_id != sync_ind->roamed_vdev_id) {
+	sync_ind = (struct roam_offload_synch_ind *)event;
+
+	if (!sync_ind) {
+		mlo_err("Roam Sync ind ptr is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	for (i = 0; i < sync_ind->num_setup_links; i++) {
+		if (sync_ind->ml_link[i].vdev_id != vdev_id) {
 			status = cm_fw_roam_abort_req(psoc,
-						      sync_ind->roamed_vdev_id);
-			if (QDF_IS_STATUS_ERROR(status))
-				mlme_err("LFR3: Fail to abort roam on vdev: %u",
-					 sync_ind->ml_link[i].vdev_id);
+						      sync_ind->ml_link[i].vdev_id);
+			if (QDF_IS_STATUS_ERROR(status)) {
+				mlo_err("LFR3: Fail to abort roam on vdev: %u",
+					sync_ind->ml_link[i].vdev_id);
+			}
 		}
+	}
 
 	return QDF_STATUS_SUCCESS;
 }
