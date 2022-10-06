@@ -1807,7 +1807,7 @@
  * trigger timeout
  * @Min: 0
  * @Max: 20
- * @Default: 6
+ * @Default: 3
  *
  * This ini is used to control the beacon miss timeout when the system is awake.
  * On the timeout, BMISS event will be triggered by FW.
@@ -1823,7 +1823,7 @@
 	"ConBeaconLoss_TimeoutOnWakeUp", \
 	0, \
 	20, \
-	6, \
+	3, \
 	CFG_VALUE_OR_DEFAULT, \
 	"ConBeaconloss timeout on wakeup")
 
@@ -1833,7 +1833,7 @@
  * trigger timeout
  * @Min: 0
  * @Max: 20
- * @Default: 10
+ * @Default: 5
  *
  * This ini is used to control the beacon miss timeout
  * when the system is in sleep.
@@ -1850,7 +1850,7 @@
 	"ConBeaconLoss_TimeoutOnSleep", \
 	0, \
 	20, \
-	10, \
+	5, \
 	CFG_VALUE_OR_DEFAULT, \
 	"ConBeaconloss timeout on sleep")
 
