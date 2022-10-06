@@ -2719,7 +2719,7 @@ p2p_process_set_rand_mac(struct p2p_set_mac_filter_req *set_filter_req)
 	struct wlan_objmgr_psoc *soc;
 	struct wlan_lmac_if_p2p_tx_ops *p2p_ops;
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
-	struct p2p_set_mac_filter param;
+	struct set_rx_mac_filter param;
 	struct p2p_vdev_priv_obj *p2p_vdev_obj;
 	struct wlan_objmgr_vdev *vdev;
 
