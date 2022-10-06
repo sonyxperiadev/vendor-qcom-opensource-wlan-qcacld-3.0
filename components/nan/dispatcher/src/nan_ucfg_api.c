@@ -734,7 +734,8 @@ QDF_STATUS ucfg_nan_discovery_req(void *in_req, uint32_t req_type)
 		.priv_size = 0,
 		.timeout_ms = 4000,
 	};
-	int err;
+	int err = 0;
+	bool recovery;
 
 	if (!in_req) {
 		nan_alert("NAN Discovery req is null");
@@ -869,10 +870,12 @@ post_msg:
 	}
 
 	if (req_type != NAN_GENERIC_REQ) {
-		err = osif_request_wait_for_response(request);
-		if (err) {
-			nan_debug("NAN request: %u timed out: %d",
-				  req_type, err);
+		recovery = cds_is_driver_recovering();
+		if (!recovery)
+			err = osif_request_wait_for_response(request);
+		if (recovery || err) {
+			nan_debug("NAN request: %u recovery %d or timed out %d",
+				  req_type, recovery, err);
 
 			if (req_type == NAN_ENABLE_REQ) {
 				nan_set_discovery_state(psoc,
