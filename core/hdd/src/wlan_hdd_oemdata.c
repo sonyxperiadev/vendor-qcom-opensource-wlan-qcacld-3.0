@@ -1173,18 +1173,6 @@ static void hdd_copy_file_name_and_oem_data(
 	}
 }
 
-/**
- * hdd_create_wifi_feature_interface() - Create wifi feature interface
- * @hdd_ctx: pointer to hdd context
- *
- * Return: none
- */
-static void hdd_create_wifi_feature_interface(struct hdd_context *hdd_ctx)
-{
-	hdd_sysfs_create_wifi_root_obj(hdd_ctx);
-	hdd_create_wifi_feature_interface_sysfs_file();
-}
-
 void hdd_oem_event_async_cb(const struct oem_data *oem_event_data)
 {
 	struct sk_buff *vendor_event;
@@ -1201,7 +1189,7 @@ void hdd_oem_event_async_cb(const struct oem_data *oem_event_data)
 
 	if (oem_event_data->file_name) {
 		hdd_copy_file_name_and_oem_data(hdd_ctx, oem_event_data);
-		return hdd_create_wifi_feature_interface(hdd_ctx);
+		return;
 	}
 
 	adapter = hdd_get_adapter_by_vdev(hdd_ctx, oem_event_data->vdev_id);

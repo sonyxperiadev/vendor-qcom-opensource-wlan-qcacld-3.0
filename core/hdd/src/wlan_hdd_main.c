@@ -17970,6 +17970,17 @@ static int hdd_register_driver_retry(void)
 	return errno;
 }
 
+/**
+ * hdd_create_wifi_feature_interface() - Create wifi feature interface
+ *
+ * Return: none
+ */
+static void hdd_create_wifi_feature_interface(void)
+{
+	hdd_sysfs_create_wifi_root_obj();
+	hdd_create_wifi_feature_interface_sysfs_file();
+}
+
 int hdd_driver_load(void)
 {
 	struct osif_driver_sync *driver_sync;
@@ -18062,6 +18073,7 @@ int hdd_driver_load(void)
 		hdd_err("Failed to create ctrl param; errno:%d", errno);
 		goto unregister_driver;
 	}
+	hdd_create_wifi_feature_interface();
 out:
 	hdd_debug("%s: driver loaded", WLAN_MODULE_NAME);
 	hdd_place_marker(NULL, "DRIVER LOADED", NULL);
@@ -18106,6 +18118,17 @@ exit:
 #ifdef FEATURE_WLAN_RESIDENT_DRIVER
 EXPORT_SYMBOL(hdd_driver_load);
 #endif
+
+/**
+ * hdd_distroy_wifi_feature_interface() - Distroy wifi feature interface
+ *
+ * Return: none
+ */
+static void hdd_distroy_wifi_feature_interface(void)
+{
+	hdd_destroy_wifi_feature_interface_sysfs_file();
+	hdd_sysfs_destroy_wifi_root_obj();
+}
 
 void hdd_driver_unload(void)
 {
@@ -18169,6 +18192,7 @@ void hdd_driver_unload(void)
 	 */
 	osif_driver_sync_trans_stop(driver_sync);
 
+	hdd_distroy_wifi_feature_interface();
 	if (!soft_unload)
 		wlan_hdd_state_ctrl_param_destroy();
 
