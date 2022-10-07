@@ -466,8 +466,8 @@ struct wlan_diag_connect {
 	char ssid[WLAN_SSID_MAX_LEN];
 	uint8_t bssid_hint[6];
 	uint16_t reason;
-	uint16_t akm;
-	uint16_t subtype;
+	uint32_t akm;
+	uint32_t subtype;
 	uint32_t freq;
 	uint32_t freq_hint;
 	uint32_t pairwise_cipher;
