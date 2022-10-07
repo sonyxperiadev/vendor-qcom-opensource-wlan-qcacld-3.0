@@ -247,6 +247,164 @@ int wlan_hdd_cfg80211_get_he_cap(struct wiphy *wiphy,
 }
 
 #ifdef WLAN_FEATURE_SR
+static QDF_STATUS
+hdd_sr_event_convert_reason_code(enum sr_osif_reason_code sr_osif_rc,
+				 enum qca_wlan_sr_reason_code *sr_nl_rc)
+{
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+
+	switch (sr_osif_rc) {
+	case SR_REASON_CODE_ROAMING:
+		*sr_nl_rc = QCA_WLAN_SR_REASON_CODE_ROAMING;
+		break;
+	case SR_REASON_CODE_CONCURRENCY:
+		*sr_nl_rc = QCA_WLAN_SR_REASON_CODE_CONCURRENCY;
+		break;
+	default:
+		status = QDF_STATUS_E_INVAL;
+	}
+
+	return status;
+}
+
+static QDF_STATUS
+hdd_sr_event_convert_operation(enum sr_osif_operation sr_osif_oper,
+			       enum qca_wlan_sr_operation *sr_nl_oper)
+{
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+
+	switch (sr_osif_oper) {
+	case SR_OPERATION_SUSPEND:
+		*sr_nl_oper = QCA_WLAN_SR_OPERATION_SR_SUSPEND;
+		break;
+	case SR_OPERATION_RESUME:
+		*sr_nl_oper = QCA_WLAN_SR_OPERATION_SR_RESUME;
+		break;
+	case SR_OPERATION_UPDATE_PARAMS:
+		*sr_nl_oper = QCA_WLAN_SR_OPERATION_UPDATE_PARAMS;
+		break;
+	default:
+		status = QDF_STATUS_E_INVAL;
+	}
+
+	return status;
+}
+
+static QDF_STATUS hdd_sr_pack_conc_event(struct sk_buff *skb,
+					 enum qca_wlan_sr_operation sr_nl_oper,
+					 enum qca_wlan_sr_reason_code sr_nl_rc)
+{
+	struct nlattr *attr;
+	QDF_STATUS status = QDF_STATUS_E_FAULT;
+
+	if (sr_nl_rc != QCA_WLAN_SR_REASON_CODE_CONCURRENCY ||
+	    (sr_nl_oper != QCA_WLAN_SR_OPERATION_SR_SUSPEND &&
+	     sr_nl_oper != QCA_WLAN_SR_OPERATION_SR_RESUME)) {
+		hdd_err("SR concurrency operation is invalid");
+		status = QDF_STATUS_E_INVAL;
+		goto sr_events_end;
+	}
+
+	if (nla_put_u8(skb, QCA_WLAN_VENDOR_ATTR_SR_OPERATION, sr_nl_oper)) {
+		hdd_err("failed to put attr SR Operation");
+		goto sr_events_end;
+	}
+
+	attr = nla_nest_start(skb, QCA_WLAN_VENDOR_ATTR_SR_PARAMS);
+	if (!attr) {
+		hdd_err("nesting failed");
+		goto sr_events_end;
+	}
+
+	if (nla_put_u32(skb, QCA_WLAN_VENDOR_ATTR_SR_PARAMS_REASON_CODE,
+			sr_nl_rc)) {
+		hdd_err("failed to put attr SR Reascon Code");
+		goto sr_events_end;
+	}
+	status = QDF_STATUS_SUCCESS;
+	nla_nest_end(skb, attr);
+
+sr_events_end:
+	return status;
+}
+
+static void hdd_sr_osif_events(struct wlan_objmgr_vdev *vdev,
+			       enum sr_osif_operation sr_osif_oper,
+			       enum sr_osif_reason_code sr_osif_rc)
+{
+	struct hdd_adapter *adapter;
+	struct wireless_dev *wdev;
+	struct wiphy *wiphy;
+	struct sk_buff *skb;
+	uint32_t idx = QCA_NL80211_VENDOR_SUBCMD_SR_INDEX;
+	uint32_t len = NLMSG_HDRLEN;
+	QDF_STATUS status;
+	enum qca_wlan_sr_operation sr_nl_oper;
+	enum qca_wlan_sr_reason_code sr_nl_rc;
+
+	if (!vdev) {
+		hdd_err("Null VDEV");
+		return;
+	}
+
+	adapter = wlan_hdd_get_adapter_from_objmgr(vdev);
+	if (!adapter) {
+		hdd_err("Null adapter");
+		return;
+	}
+
+	status = hdd_sr_event_convert_operation(sr_osif_oper, &sr_nl_oper);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		hdd_err("Invalid SR Operation: %d", sr_osif_oper);
+		return;
+	}
+	status = hdd_sr_event_convert_reason_code(sr_osif_rc, &sr_nl_rc);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		hdd_err("Invalid SR Reason Code: %d", sr_osif_rc);
+		return;
+	}
+
+	hdd_debug("SR Operation: %u SR Reason Code: %u",
+		  sr_nl_oper, sr_nl_rc);
+	switch (sr_nl_oper) {
+	case QCA_WLAN_SR_OPERATION_SR_SUSPEND:
+	case QCA_WLAN_SR_OPERATION_SR_RESUME:
+		if (sr_nl_rc == QCA_WLAN_SR_REASON_CODE_CONCURRENCY) {
+			wiphy = adapter->hdd_ctx->wiphy;
+			wdev = &adapter->wdev;
+			len += nla_total_size(sizeof(uint8_t)) +
+			       nla_total_size(sizeof(uint32_t));
+			skb = wlan_cfg80211_vendor_event_alloc(wiphy, wdev,
+							       len, idx,
+							       GFP_KERNEL);
+			if (!skb) {
+				hdd_err("cfg80211_vendor_event_alloc failed");
+				return;
+			}
+			status = hdd_sr_pack_conc_event(skb, sr_nl_oper,
+							sr_nl_rc);
+			if (QDF_IS_STATUS_ERROR(status)) {
+				kfree_skb(skb);
+				return;
+			}
+
+			wlan_cfg80211_vendor_event(skb, GFP_KERNEL);
+			hdd_debug("SR cfg80211 event is sent");
+		} else {
+			hdd_debug("SR Reason code not supported");
+		}
+		break;
+	default:
+		hdd_debug("SR Operation not supported");
+		break;
+	}
+}
+
+void hdd_sr_register_callbacks(struct hdd_context *hdd_ctx)
+{
+	ucfg_spatial_reuse_register_cb(hdd_ctx->psoc, hdd_sr_osif_events);
+}
+
 static int hdd_get_srp_stats_len(void)
 {
 	struct cdp_pdev_obss_pd_stats_tlv stats;

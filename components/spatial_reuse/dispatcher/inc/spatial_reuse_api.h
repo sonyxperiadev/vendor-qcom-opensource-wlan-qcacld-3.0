@@ -25,6 +25,43 @@
 #include <qdf_trace.h>
 #include <wlan_objmgr_vdev_obj.h>
 
+/**
+ * enum sr_osif_operation - Spatial Reuse operation
+ * @SR_OPERATION_SUSPEND: Spatial Reuse suspend indication
+ * @SR_OPERATION_RESUME: Spatial Reuse resume indication
+ * @SR_OPERATION_UPDATE_PARAMS: Spatial Reuse parameters are updated
+ */
+enum sr_osif_operation {
+	SR_OPERATION_SUSPEND = 0,
+	SR_OPERATION_RESUME = 1,
+	SR_OPERATION_UPDATE_PARAMS = 2,
+};
+
+/**
+ * enum sr_osif_reason_code - Spatial Reuse reason codes
+ * @SR_REASON_CODE_ROAMING: Spatial Reuse reason code is Roaming will be
+ *			     set when SR is suspended / resumed due to roaming
+ * @SR_REASON_CODE_CONCURRENCY: Spatial Reuse reason code is concurrency
+ *				 will be set when SR is suspended / resumed
+ *				 due to concurrency
+ */
+enum sr_osif_reason_code {
+	SR_REASON_CODE_ROAMING = 0,
+	SR_REASON_CODE_CONCURRENCY = 1,
+};
+
+/**
+ * sr_osif_event_cb() - CB to deliver SR events
+ * @vdev: objmgr manager vdev
+ * @sr_osif_oper: SR Operation like suspend / resume
+ * @sr_osif_rc: Event reason code
+ *
+ * Return: void
+ */
+typedef void (*sr_osif_event_cb)(struct wlan_objmgr_vdev *vdev,
+				 enum sr_osif_operation sr_osif_oper,
+				 enum sr_osif_reason_code sr_osif_rc);
+
 #ifdef WLAN_FEATURE_SR
 /**
  * wlan_spatial_reuse_config_set() - Set spatial reuse config
@@ -47,6 +84,28 @@ QDF_STATUS wlan_spatial_reuse_config_set(struct wlan_objmgr_vdev *vdev,
  * Return: QDF_STATUS
  */
 QDF_STATUS wlan_spatial_reuse_pdev_init(struct wlan_objmgr_pdev *pdev);
+
+/**
+ * wlan_sr_register_callback() - registers SR osif events
+ * @psoc: pointer to psoc
+ * @cb: Callback to be registered
+ *
+ * Return: void
+ */
+void wlan_sr_register_callback(struct wlan_objmgr_psoc *psoc,
+			       sr_osif_event_cb cb);
+
+/**
+ * wlan_spatial_reuse_osif_event() - Send SR asynchronous events
+ * @vdev: objmgr manager vdev
+ * @sr_osif_oper: SR Operation like suspend / resume
+ * @sr_osif_rc: Event reason code
+ *
+ * Return: void
+ */
+void wlan_spatial_reuse_osif_event(struct wlan_objmgr_vdev *vdev,
+				   enum sr_osif_operation sr_osif_oper,
+				   enum sr_osif_reason_code sr_osif_rc);
 #else
 static inline
 QDF_STATUS wlan_spatial_reuse_config_set(struct wlan_objmgr_vdev *vdev,
@@ -60,6 +119,13 @@ static inline
 QDF_STATUS wlan_spatial_reuse_pdev_init(struct wlan_objmgr_pdev *pdev)
 {
 	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+void wlan_spatial_reuse_osif_event(struct wlan_objmgr_vdev *vdev,
+				   enum sr_osif_operation sr_osif_oper,
+				   enum sr_osif_reason_code sr_osif_rc)
+{
 }
 #endif
 

@@ -20,9 +20,21 @@
 #ifndef _SPATIAL_REUSE_UCFG_API_H_
 #define _SPATIAL_REUSE_UCFG_API_H_
 
-#ifdef WLAN_FEATURE_SR
 #include <qdf_trace.h>
 #include <wlan_objmgr_vdev_obj.h>
+#include <spatial_reuse_api.h>
+
+#ifdef WLAN_FEATURE_SR
+/**
+ * ucfg_spatial_reuse_register_cb() - Registers CB for SR
+ * @psoc: pointer to psoc
+ * @cb: SR osif event callback
+ *
+ * Return: void
+ */
+void ucfg_spatial_reuse_register_cb(struct wlan_objmgr_psoc *psoc,
+				    sr_osif_event_cb cb);
+
 /**
  * ucfg_spatial_reuse_get_sr_config() - Spatial reuse config get
  *
@@ -120,5 +132,11 @@ QDF_STATUS ucfg_spatial_reuse_setup_req(struct wlan_objmgr_vdev *vdev,
 					struct wlan_objmgr_pdev *pdev,
 					bool is_sr_enable,
 					int32_t pd_threshold);
+#else
+static inline
+void ucfg_spatial_reuse_register_cb(struct wlan_objmgr_psoc *psoc,
+				    sr_osif_event_cb cb)
+{
+}
 #endif
 #endif

@@ -1839,6 +1839,12 @@ static const struct nl80211_vendor_cmd_info wlan_hdd_cfg80211_vendor_events[] = 
 		.subcmd = QCA_NL80211_VENDOR_SUBCMD_DRIVER_READY,
 	},
 	FEATURE_WIFI_POS_11AZ_AUTH_EVENTS
+#ifdef WLAN_FEATURE_SR
+	[QCA_NL80211_VENDOR_SUBCMD_SR_INDEX] = {
+		.vendor_id = QCA_NL80211_VENDOR_ID,
+		.subcmd = QCA_NL80211_VENDOR_SUBCMD_SR,
+	},
+#endif
 };
 
 /**

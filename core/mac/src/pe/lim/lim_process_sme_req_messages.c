@@ -9527,8 +9527,6 @@ void lim_process_set_he_bss_color(struct mac_context *mac_ctx, uint32_t *msg_buf
 	struct sir_set_he_bss_color *bss_color;
 	struct pe_session *session_entry = NULL;
 	tUpdateBeaconParams beacon_params;
-	/* PD threshold -128 to disable SR */
-	uint8_t non_srg_pd_threshold_disabled = 0x80;
 
 	if (!msg_buf) {
 		pe_err("Buffer is Pointing to NULL");
@@ -9566,8 +9564,7 @@ void lim_process_set_he_bss_color(struct mac_context *mac_ctx, uint32_t *msg_buf
 
 	if (wlan_vdev_mlme_get_he_spr_enabled(session_entry->vdev))
 		/* Disable spatial reuse during BSS color change */
-		wlan_spatial_reuse_config_set(session_entry->vdev, 0,
-					      non_srg_pd_threshold_disabled);
+		wlan_spatial_reuse_config_set(session_entry->vdev, 0, 0);
 
 	if (sch_set_fixed_beacon_fields(mac_ctx, session_entry) !=
 			QDF_STATUS_SUCCESS) {

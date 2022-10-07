@@ -20,6 +20,10 @@
 #include <spatial_reuse_api.h>
 #include <target_if_spatial_reuse.h>
 
+struct sr_cb {
+	sr_osif_event_cb send_osif_event;
+} sr_cb;
+
 QDF_STATUS wlan_spatial_reuse_config_set(struct wlan_objmgr_vdev *vdev,
 					 uint8_t sr_ctrl,
 					 uint8_t non_srg_max_pd_offset)
@@ -113,4 +117,20 @@ QDF_STATUS wlan_spatial_reuse_pdev_init(struct wlan_objmgr_pdev *pdev)
 
 	return wmi_unified_pdev_param_send(wmi_handle, &pparam,
 					   WILDCARD_PDEV_ID);
+}
+
+void wlan_sr_register_callback(struct wlan_objmgr_psoc *psoc,
+			       sr_osif_event_cb cb)
+{
+	if (!psoc)
+		return;
+	sr_cb.send_osif_event = cb;
+}
+
+void wlan_spatial_reuse_osif_event(struct wlan_objmgr_vdev *vdev,
+				   enum sr_osif_operation sr_osif_oper,
+				   enum sr_osif_reason_code sr_osif_rc)
+{
+	if (sr_cb.send_osif_event)
+		sr_cb.send_osif_event(vdev, sr_osif_oper, sr_osif_rc);
 }

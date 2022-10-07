@@ -134,6 +134,15 @@ int wlan_hdd_cfg80211_get_he_cap(struct wiphy *wiphy,
 int wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 				    struct wireless_dev *wdev,
 				    const void *data, int data_len);
+
+/**
+ * hdd_sr_register_callbacks() - register hdd callback for sr
+ * @hdd_ctx: hdd context
+ *
+ * Return: void
+ */
+void hdd_sr_register_callbacks(struct hdd_context *hdd_ctx);
+
 #else
 static inline
 int wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
@@ -141,6 +150,10 @@ int wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 				    const void *data, int data_len)
 {
 	return 0;
+}
+
+static inline void hdd_sr_register_callbacks(struct hdd_context *hdd_ctx)
+{
 }
 #endif
 
@@ -178,6 +191,10 @@ static inline void wlan_hdd_check_11ax_support(struct hdd_beacon_data *beacon,
 static inline int hdd_update_he_cap_in_cfg(struct hdd_context *hdd_ctx)
 {
 	return 0;
+}
+
+static inline void hdd_sr_register_callbacks(struct hdd_context *hdd_ctx)
+{
 }
 
 /* dummy definition */

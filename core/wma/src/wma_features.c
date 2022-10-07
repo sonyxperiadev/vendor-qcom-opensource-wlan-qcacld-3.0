@@ -69,6 +69,7 @@
 #include "target_if_nan.h"
 #endif
 #include "wlan_scan_api.h"
+#include "spatial_reuse_api.h"
 #include "wlan_cm_api.h"
 #include <wlan_crypto_global_api.h>
 #include "cdp_txrx_host_stats.h"
@@ -683,6 +684,9 @@ static void wma_sr_handle_conc(tp_wma_handle wma,
 			return;
 
 		wma_sr_send_pd_threshold(wma, conc_vdev_id, val);
+		wlan_spatial_reuse_osif_event(conc_vdev,
+					      SR_OPERATION_SUSPEND,
+					      SR_REASON_CODE_CONCURRENCY);
 	} else if (wlan_vdev_mlme_is_sr_disable_due_conc(conc_vdev)) {
 		wlan_vdev_mlme_set_sr_disable_due_conc(conc_vdev, false);
 		if (!wlan_vdev_mlme_get_he_spr_enabled(conc_vdev))
@@ -694,6 +698,9 @@ static void wma_sr_handle_conc(tp_wma_handle wma,
 		    (sr_ctrl & SRG_INFO_PRESENT)) {
 			wlan_mlme_update_sr_data(conc_vdev, &val, 0, true);
 			wma_sr_send_pd_threshold(wma, conc_vdev_id, val);
+			wlan_spatial_reuse_osif_event(conc_vdev,
+						      SR_OPERATION_RESUME,
+						      SR_REASON_CODE_CONCURRENCY);
 		} else {
 			wma_debug("SR Disabled in SR Control");
 		}

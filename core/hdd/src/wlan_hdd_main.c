@@ -4289,6 +4289,8 @@ int hdd_wlan_start_modules(struct hdd_context *hdd_ctx, bool reinit)
 
 		hdd_son_register_callbacks(hdd_ctx);
 
+		hdd_sr_register_callbacks(hdd_ctx);
+
 		wlan_hdd_register_btc_chain_mode_handler(hdd_ctx->psoc);
 
 		status = cds_pre_enable();

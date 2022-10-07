@@ -2344,11 +2344,17 @@ lim_update_spatial_reuse(struct pe_session *session)
 							       false);
 			wlan_spatial_reuse_config_set(session->vdev, sr_ctrl,
 						      non_srg_pd_max_offset);
+			wlan_spatial_reuse_osif_event(session->vdev,
+						      SR_OPERATION_RESUME,
+						      SR_REASON_CODE_CONCURRENCY);
 		} else {
 			wlan_vdev_mlme_set_sr_disable_due_conc(session->vdev,
 							       true);
 			wlan_spatial_reuse_config_set(session->vdev, sr_ctrl,
-						      0x80);
+						 NON_SR_PD_THRESHOLD_DISABLED);
+			wlan_spatial_reuse_osif_event(session->vdev,
+						      SR_OPERATION_SUSPEND,
+						      SR_REASON_CODE_CONCURRENCY);
 		}
 	}
 }

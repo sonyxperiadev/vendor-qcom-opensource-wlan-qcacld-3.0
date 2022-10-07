@@ -21,6 +21,12 @@
 #include <spatial_reuse_ucfg_api.h>
 #include <spatial_reuse_api.h>
 
+void ucfg_spatial_reuse_register_cb(struct wlan_objmgr_psoc *psoc,
+				    sr_osif_event_cb cb)
+{
+	wlan_sr_register_callback(psoc, cb);
+}
+
 void ucfg_spatial_reuse_get_sr_config(struct wlan_objmgr_vdev *vdev,
 				      uint8_t *sr_ctrl,
 				      uint8_t *non_srg_max_pd_offset,
