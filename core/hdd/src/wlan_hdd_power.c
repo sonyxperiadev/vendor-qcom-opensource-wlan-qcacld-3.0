@@ -2873,7 +2873,7 @@ static int wlan_hdd_set_mlo_ps(struct wlan_objmgr_psoc *psoc,
 {
 	struct hdd_adapter *link_adapter;
 	struct hdd_mlo_adapter_info *mlo_adapter_info;
-	int i, status;
+	int i, status = -EINVAL;
 
 	mlo_adapter_info = &adapter->mlo_adapter_info;
 	for (i = 0; i < WLAN_MAX_MLD; i++) {
