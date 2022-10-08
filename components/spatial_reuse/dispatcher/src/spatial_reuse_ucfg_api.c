@@ -91,11 +91,25 @@ void ucfg_spatial_reuse_set_sr_enable(struct wlan_objmgr_vdev *vdev,
 void ucfg_spatial_reuse_send_sr_prohibit(struct wlan_objmgr_vdev *vdev,
 					 bool enable_he_siga_val15_prohibit)
 {
+	QDF_STATUS status;
 	bool sr_enabled = wlan_vdev_mlme_get_he_spr_enabled(vdev);
+	bool sr_prohibited = wlan_vdev_mlme_is_sr_prohibit_en(vdev);
+	uint8_t sr_ctrl = wlan_vdev_mlme_get_sr_ctrl(vdev);
 
-	if (sr_enabled)
-		wlan_spatial_reuse_he_siga_val15_allowed_set(
-					vdev, enable_he_siga_val15_prohibit);
+	/* Enable PD prohibit only when it is allowed by the AP,
+	 * Check if it is not enabled already, then only enable it
+	 */
+	if (sr_enabled && (sr_ctrl & WLAN_HE_SIGA_SR_VAL15_ALLOWED) &&
+	    sr_prohibited != enable_he_siga_val15_prohibit) {
+		status = wlan_spatial_reuse_he_siga_val15_allowed_set
+					(vdev,
+					 enable_he_siga_val15_prohibit);
+
+		if (QDF_IS_STATUS_SUCCESS(status))
+			wlan_vdev_mlme_set_sr_prohibit_en
+					(vdev,
+					 enable_he_siga_val15_prohibit);
+	}
 }
 
 QDF_STATUS
