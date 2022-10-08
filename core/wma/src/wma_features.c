@@ -5114,6 +5114,13 @@ int wma_chan_info_event_handler(void *handle, uint8_t *event_buf,
 		mac->chan_info_cb(&buf);
 	}
 
+	/* Ignore the last channel event data whose command flag is set to 1.
+	 * It’s basically an event with empty data only to indicate scan event
+	 * completion.
+	 */
+	if (event->cmd_flags == WMI_CHAN_INFO_END_RESP)
+		return 0;
+
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(wma->psoc, event->vdev_id,
 						    WLAN_LEGACY_WMA_ID);
 
