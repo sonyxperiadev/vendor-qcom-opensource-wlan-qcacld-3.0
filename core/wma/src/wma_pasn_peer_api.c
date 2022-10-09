@@ -49,13 +49,14 @@ wma_pasn_peer_remove(struct wlan_objmgr_psoc *psoc,
 
 	if (!wma_objmgr_peer_exist(wma, peer_addr->bytes, &peer_vdev_id)) {
 		wma_err("peer doesn't exist peer_addr " QDF_MAC_ADDR_FMT " vdevid %d",
-			QDF_MAC_ADDR_REF(peer_addr), vdev_id);
+			QDF_MAC_ADDR_REF(peer_addr->bytes), vdev_id);
 		return QDF_STATUS_E_INVAL;
 	}
 
 	if (peer_vdev_id != vdev_id) {
 		wma_err("peer " QDF_MAC_ADDR_FMT " is on vdev id %d but delete req on vdevid %d",
-			QDF_MAC_ADDR_REF(peer_addr), peer_vdev_id, vdev_id);
+			QDF_MAC_ADDR_REF(peer_addr->bytes),
+			peer_vdev_id, vdev_id);
 		return QDF_STATUS_E_INVAL;
 	}
 

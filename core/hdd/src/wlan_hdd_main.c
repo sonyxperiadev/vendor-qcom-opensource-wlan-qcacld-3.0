@@ -4881,7 +4881,7 @@ hdd_get_netdev_by_vdev_mac(struct qdf_mac_addr *mac_addr)
 	adapter = hdd_get_adapter_by_macaddr(hdd_ctx, mac_addr->bytes);
 	if (!adapter) {
 		hdd_err("Adapter not foud for MAC " QDF_MAC_ADDR_FMT "",
-			QDF_MAC_ADDR_REF(mac_addr));
+			QDF_MAC_ADDR_REF(mac_addr->bytes));
 		return NULL;
 	}
 
@@ -4915,7 +4915,7 @@ hdd_get_netdev_by_vdev_mac(struct qdf_mac_addr *mac_addr)
 	adapter = hdd_get_adapter_by_macaddr(hdd_ctx, mac_addr->bytes);
 	if (!adapter) {
 		hdd_err("Adapter not foud for MAC " QDF_MAC_ADDR_FMT "",
-			QDF_MAC_ADDR_REF(mac_addr));
+			QDF_MAC_ADDR_REF(mac_addr->bytes));
 		return NULL;
 	}
 

@@ -852,7 +852,7 @@ dp_peer_obj_create_notification(struct wlan_objmgr_peer *peer, void *arg)
 	sta_info->dhcp_nego_status = DHCP_NEGO_STOP;
 
 	dp_info("sta info created mac:" QDF_MAC_ADDR_FMT,
-		QDF_MAC_ADDR_REF(&sta_info->sta_mac));
+		QDF_MAC_ADDR_REF(sta_info->sta_mac.bytes));
 
 	return status;
 }
@@ -903,7 +903,7 @@ dp_vdev_obj_create_notification(struct wlan_objmgr_vdev *vdev, void *arg)
 	dev = dp_ctx->dp_ops.dp_get_netdev_by_vdev_mac(mac_addr);
 	if (!dev) {
 		dp_err("Failed to get intf mac:" QDF_MAC_ADDR_FMT,
-		       QDF_MAC_ADDR_REF(mac_addr));
+		       QDF_MAC_ADDR_REF(mac_addr->bytes));
 		return QDF_STATUS_E_INVAL;
 	}
 

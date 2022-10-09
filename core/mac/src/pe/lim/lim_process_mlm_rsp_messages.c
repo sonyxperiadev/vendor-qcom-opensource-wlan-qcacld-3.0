@@ -2768,8 +2768,6 @@ lim_process_switch_channel_join_mlo(struct pe_session *session_entry,
 	struct element_info assoc_rsp;
 	struct qdf_mac_addr sta_link_addr;
 
-	pe_err("sta_link_addr" QDF_MAC_ADDR_FMT,
-	       QDF_MAC_ADDR_REF(&sta_link_addr));
 	assoc_rsp.len = 0;
 	mlo_get_assoc_rsp(session_entry->vdev, &assoc_rsp);
 
