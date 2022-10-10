@@ -2024,9 +2024,6 @@ struct hdd_context {
 	bool is_wifi3_0_target;
 	bool dump_in_progress;
 	struct hdd_dual_sta_policy dual_sta_policy;
-#if defined(WLAN_FEATURE_11BE_MLO) && defined(CFG80211_11BE_BASIC)
-	struct hdd_mld_mac_info mld_mac_info;
-#endif
 #ifdef THERMAL_STATS_SUPPORT
 	bool is_therm_stats_in_progress;
 #endif

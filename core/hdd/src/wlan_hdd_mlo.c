@@ -30,57 +30,6 @@
 #include "wlan_psoc_mlme_ucfg_api.h"
 
 #if defined(CFG80211_11BE_BASIC)
-void hdd_update_mld_mac_addr(struct hdd_context *hdd_ctx,
-			     struct qdf_mac_addr hw_macaddr)
-{
-	uint8_t i;
-	struct hdd_mld_mac_info *mac_info;
-	struct qdf_mac_addr temp_addr;
-
-	qdf_mem_copy(temp_addr.bytes, hw_macaddr.bytes,
-		     sizeof(struct qdf_mac_addr));
-
-	mac_info = &hdd_ctx->mld_mac_info;
-	for (i = 0; i < WLAN_MAX_MLD; i++) {
-		eth_random_addr(temp_addr.bytes);
-		qdf_mem_copy(mac_info->mld_mac_list[i].mld_addr.bytes,
-			     temp_addr.bytes, QDF_MAC_ADDR_SIZE);
-
-		hdd_debug("mld addr[%d]: " QDF_MAC_ADDR_FMT, i,
-		    QDF_MAC_ADDR_REF(mac_info->mld_mac_list[i].mld_addr.bytes));
-
-		mac_info->mld_mac_list[i].device_mode = QDF_MAX_NO_OF_MODE;
-		mac_info->num_mld_addr++;
-
-		hdd_debug("num_mld_addr: %d", mac_info->num_mld_addr);
-	};
-}
-
-uint8_t *wlan_hdd_get_mld_addr(struct hdd_context *hdd_ctx, uint8_t device_mode)
-{
-	int i;
-	struct hdd_mld_mac_info *mac_info;
-
-	if (device_mode != QDF_STA_MODE && device_mode != QDF_SAP_MODE)
-		return NULL;
-
-	mac_info = &hdd_ctx->mld_mac_info;
-	for (i = 0; i <  mac_info->num_mld_addr; i++) {
-		if (mac_info->mld_mac_list[i].device_mode == device_mode)
-			return mac_info->mld_mac_list[i].mld_addr.bytes;
-	}
-
-	i = qdf_ffz(mac_info->mld_intf_addr_mask);
-	if (i < 0 || i >= mac_info->num_mld_addr)
-		return NULL;
-	qdf_atomic_set_bit(i, &mac_info->mld_intf_addr_mask);
-	hdd_nofl_debug("Assigning MLD MAC from derived list " QDF_MAC_ADDR_FMT,
-		    QDF_MAC_ADDR_REF(mac_info->mld_mac_list[i].mld_addr.bytes));
-
-	mac_info->mld_mac_list[i].device_mode = device_mode;
-	return mac_info->mld_mac_list[i].mld_addr.bytes;
-}
-
 #ifdef CFG80211_IFTYPE_MLO_LINK_SUPPORT
 static
 void wlan_hdd_register_ml_link(struct hdd_adapter *sta_adapter,
@@ -239,61 +188,6 @@ void hdd_wlan_register_mlo_interfaces(struct hdd_context *hdd_ctx)
 	}
 }
 
-void hdd_update_dynamic_mld_mac_addr(struct hdd_context *hdd_ctx,
-				     struct qdf_mac_addr *curr_mac_addr,
-				     struct qdf_mac_addr *new_mac_addr,
-				     uint8_t device_mode)
-{
-	uint8_t i;
-	struct hdd_mld_mac_info *mac_info;
-
-	hdd_enter();
-
-	mac_info = &hdd_ctx->mld_mac_info;
-	for (i = 0; i < WLAN_MAX_MLD; i++) {
-		if (device_mode != QDF_STA_MODE)
-			continue;
-		if (!qdf_mem_cmp(curr_mac_addr->bytes,
-				 mac_info->mld_mac_list[i].mld_addr.bytes,
-				 sizeof(struct qdf_mac_addr))) {
-			qdf_mem_copy(mac_info->mld_mac_list[i].mld_addr.bytes,
-				     new_mac_addr->bytes,
-				     sizeof(struct qdf_mac_addr));
-			break;
-		}
-	}
-	hdd_exit();
-}
-
-/**
- * MLD address can be shared with the same device mode but should be different
- * across device modes. Return error if the macaddress is currently held by a
- * different device mode.
- */
-static
-QDF_STATUS hdd_check_for_existing_mldaddr(struct hdd_context *hdd_ctx,
-					  uint8_t *mac_addr,
-					  uint32_t device_mode)
-{
-	struct hdd_adapter *adapter, *next_adapter = NULL;
-	wlan_net_dev_ref_dbgid dbgid = NET_DEV_HOLD_CHECK_FOR_EXISTING_MACADDR;
-
-	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter,
-					   dbgid) {
-		if (adapter->device_mode != device_mode &&
-		    !qdf_mem_cmp(adapter->mac_addr.bytes, mac_addr,
-		    sizeof(struct qdf_mac_addr))) {
-			hdd_adapter_dev_put_debug(adapter, dbgid);
-			if (next_adapter)
-				hdd_adapter_dev_put_debug(next_adapter, dbgid);
-			return QDF_STATUS_E_FAILURE;
-		}
-		hdd_adapter_dev_put_debug(adapter, dbgid);
-	}
-
-	return QDF_STATUS_SUCCESS;
-}
-
 #ifdef CFG80211_MLD_MAC_IN_WDEV
 static inline
 void wlan_hdd_populate_mld_address(struct hdd_adapter *adapter,
@@ -309,43 +203,6 @@ void wlan_hdd_populate_mld_address(struct hdd_adapter *adapter,
 {
 }
 #endif
-void
-hdd_populate_mld_vdev_params(struct hdd_adapter *adapter,
-			     struct wlan_vdev_create_params *vdev_params)
-{
-	uint8_t *mld_addr;
-	QDF_STATUS qdf_status;
-	uint8_t device_mode = adapter->device_mode;
-
-	if (device_mode != QDF_SAP_MODE &&
-	    !adapter->mlo_adapter_info.is_ml_adapter &&
-	    !adapter->mlo_adapter_info.is_link_adapter)
-		return;
-
-	mld_addr = wlan_hdd_get_mld_addr(adapter->hdd_ctx,
-					 adapter->device_mode);
-	if (mld_addr) {
-		/**
-		 * Check if this mld address is getting used by any other
-		 * device mode netdev
-		 */
-		qdf_status = hdd_check_for_existing_mldaddr(adapter->hdd_ctx,
-							    mld_addr,
-							    device_mode);
-		if (QDF_IS_STATUS_ERROR(qdf_status)) {
-			qdf_mem_copy(vdev_params->mldaddr,
-				     adapter->mac_addr.bytes,
-				     QDF_MAC_ADDR_SIZE);
-			return;
-		}
-		qdf_mem_copy(vdev_params->mldaddr, mld_addr,
-			     QDF_NET_MAC_ADDR_MAX_LEN);
-		qdf_mem_copy(adapter->mld_addr.bytes, mld_addr,
-			     QDF_NET_MAC_ADDR_MAX_LEN);
-		wlan_hdd_populate_mld_address(adapter, mld_addr);
-	}
-}
-
 void
 hdd_adapter_set_ml_adapter(struct hdd_adapter *adapter)
 {

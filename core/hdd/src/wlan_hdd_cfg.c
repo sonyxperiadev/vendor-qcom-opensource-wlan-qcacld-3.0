@@ -318,8 +318,7 @@ QDF_STATUS hdd_update_mac_config(struct hdd_context *hdd_ctx)
 			     &hdd_ctx->derived_mac_addr[0].bytes[0],
 			     sizeof(custom_mac_addr));
 
-	hdd_update_mld_mac_addr(hdd_ctx, custom_mac_addr);
-	sme_set_custom_mac_addr(custom_mac_addr.bytes);
+	qdf_status = sme_set_custom_mac_addr(custom_mac_addr.bytes);
 
 config_exit:
 	qdf_mem_free(temp);

@@ -57,27 +57,6 @@ struct hdd_adapter_create_param {
 #endif
 
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(CFG80211_11BE_BASIC)
-/**
- * struct hdd_mld_mac - hdd structure to hold mld address
- * @mld_mac: mld addr
- * @device_mode: Device mode for mld address
- */
-struct hdd_mld_mac {
-	struct qdf_mac_addr mld_addr;
-	uint8_t device_mode;
-};
-
-/**
- * struct hdd_mld_mac_info - HDD structure to hold mld mac address information
- * @num_mld_addr: Number of mld address supported
- * @mld_intf_addr_mask: mask to dervice the multiple mld address
- * @mld_mac_list: Mac address assigned for device mode
- */
-struct hdd_mld_mac_info {
-	uint8_t num_mld_addr;
-	unsigned long mld_intf_addr_mask;
-	struct hdd_mld_mac mld_mac_list[WLAN_MAX_MLD];
-};
 
 /**
  * struct hdd_mlo_adapter_info - Mlo specific adapter information
@@ -98,29 +77,6 @@ struct hdd_mlo_adapter_info {
 	struct hdd_adapter *ml_adapter;
 	struct hdd_adapter *link_adapter[WLAN_MAX_MLD];
 };
-
-/**
- * hdd_update_mld_mac_addr() - Derive mld mac address
- * @hdd_context: Global hdd context
- * @hw_macaddr: Hardware mac address
- *
- * This function derives mld mac address based on the input hardware mac address
- *
- * Return: none
- */
-void hdd_update_mld_mac_addr(struct hdd_context *hdd_ctx,
-			     struct qdf_mac_addr hw_macaddr);
-
-/**
- * wlan_hdd_get_mld_addr() - Function to get MLD address
- * @hdd_ctx: hdd_context pointer
- * @device_mode: QDF_DEVICE_MODE
- *
- * Function returns the mld address for device mode
- * Return: MLD address for success, NULL failure
- */
-uint8_t *wlan_hdd_get_mld_addr(struct hdd_context *hdd_ctx,
-			       uint8_t device_mode);
 
 /**
  * hdd_register_wdev() - Function to register only wdev
@@ -156,36 +112,6 @@ QDF_STATUS hdd_wlan_unregister_mlo_interfaces(struct hdd_adapter *adapter,
 void hdd_wlan_register_mlo_interfaces(struct hdd_context *hdd_ctx);
 
 /**
- * hdd_update_dynamic_mld_mac_addr() - Updates the dynamic MLD MAC list
- * @hdd_ctx: Pointer to HDD context
- * @curr_mac_addr: Current interface mac address
- * @new_mac_addr: New mac address which needs to be updated
- *
- * This function updates newly configured MAC address to the
- * dynamic MLD MAC address list corresponding to the current
- * adapter MLD MAC address
- *
- * Return: None
- */
-void hdd_update_dynamic_mld_mac_addr(struct hdd_context *hdd_ctx,
-				     struct qdf_mac_addr *curr_mac_addr,
-				     struct qdf_mac_addr *new_mac_addr,
-				     uint8_t device_mode);
-
-/**
- * hdd_populate_mld_vdev_params() - populates vdev object mld params
- * @adapter: HDD adapter
- * @vdev_params: vdev create parameters
- *
- * This function populates the mld params in the vdev create params
- *
- * Return: None
- */
-void
-hdd_populate_mld_vdev_params(struct hdd_adapter *adapter,
-			     struct wlan_vdev_create_params *vdev_params);
-
-/**
  * hdd_adapter_set_ml_adapter() - set adapter as ml adapter
  * @adapter: HDD adapter
  *
@@ -204,19 +130,6 @@ void hdd_adapter_set_ml_adapter(struct hdd_adapter *adapter);
 struct hdd_adapter *hdd_get_ml_adater(struct hdd_context *hdd_ctx);
 #else
 static inline
-void hdd_update_mld_mac_addr(struct hdd_context *hdd_ctx,
-			     struct qdf_mac_addr hw_macaddr)
-{
-}
-
-static inline
-uint8_t *wlan_hdd_get_mld_addr(struct hdd_context *hdd_ctx,
-			       uint8_t device_mode)
-{
-	return NULL;
-}
-
-static inline
 QDF_STATUS hdd_wlan_unregister_mlo_interfaces(struct hdd_adapter *adapter,
 					      bool rtnl_held)
 {
@@ -232,14 +145,6 @@ void hdd_register_wdev(struct hdd_adapter *sta_adapter,
 
 static inline
 void hdd_wlan_register_mlo_interfaces(struct hdd_context *hdd_ctx)
-{
-}
-
-static inline
-void hdd_update_dynamic_mld_mac_addr(struct hdd_context *hdd_ctx,
-				     struct qdf_mac_addr *curr_mac_addr,
-				     struct qdf_mac_addr *new_macaddr,
-				     uint8_t device_mode)
 {
 }
 

@@ -1323,7 +1323,6 @@ void hdd_update_macaddr(struct hdd_context *hdd_ctx,
 			QDF_MAC_ADDR_REF(hdd_ctx->derived_mac_addr[i].bytes));
 		hdd_ctx->num_derived_addr++;
 	}
-	hdd_update_mld_mac_addr(hdd_ctx, hw_macaddr);
 }
 
 #ifdef FEATURE_WLAN_TDLS
@@ -4839,15 +4838,22 @@ static void
 hdd_set_mld_address(struct hdd_adapter *adapter, struct hdd_context *hdd_ctx,
 		    struct qdf_mac_addr *mac_addr)
 {
+	int i;
 	bool eht_capab;
+	struct hdd_adapter *link_adapter;
+	struct hdd_mlo_adapter_info *mlo_adapter_info;
 
 	ucfg_psoc_mlme_get_11be_capab(hdd_ctx->psoc, &eht_capab);
 	if (adapter->device_mode == QDF_STA_MODE &&
 	    adapter->mlo_adapter_info.is_ml_adapter && eht_capab) {
-		hdd_update_dynamic_mld_mac_addr(hdd_ctx, &adapter->mld_addr,
-						mac_addr,
-						adapter->device_mode);
-		memcpy(&adapter->mld_addr, mac_addr, ETH_ALEN);
+		mlo_adapter_info = &adapter->mlo_adapter_info;
+		for (i = 0; i < WLAN_MAX_MLD; i++) {
+			link_adapter = mlo_adapter_info->link_adapter[i];
+			if (link_adapter)
+				qdf_copy_macaddr(&link_adapter->mld_addr,
+						 mac_addr);
+		}
+		qdf_copy_macaddr(&adapter->mld_addr, mac_addr);
 	}
 }
 
@@ -5171,8 +5177,8 @@ static int __hdd_set_mac_address(struct net_device *dev, void *addr)
 	ucfg_psoc_mlme_get_11be_capab(hdd_ctx->psoc, &eht_capab);
 	if (hdd_adapter_is_ml_adapter(adapter) && eht_capab)
 		hdd_set_mld_address(adapter, hdd_ctx, &mac_addr);
-	else
-		hdd_update_dynamic_mac(hdd_ctx, &adapter->mac_addr, &mac_addr);
+
+	hdd_update_dynamic_mac(hdd_ctx, &adapter->mac_addr, &mac_addr);
 
 	ucfg_dp_update_inf_mac(hdd_ctx->psoc, &adapter->mac_addr, &mac_addr);
 	memcpy(&adapter->mac_addr, psta_mac_addr->sa_data, ETH_ALEN);
@@ -6254,8 +6260,10 @@ hdd_populate_vdev_create_params(struct hdd_adapter *adapter,
 
 	vdev_params->opmode = adapter->device_mode;
 
-	if (eht_capab)
-		hdd_populate_mld_vdev_params(adapter, vdev_params);
+	if (eht_capab) {
+		qdf_mem_copy(vdev_params->mldaddr, adapter->mld_addr.bytes,
+			     QDF_MAC_ADDR_SIZE);
+	}
 
 	vdev_params->size_vdev_priv = sizeof(struct vdev_osif_priv);
 	hdd_exit();
@@ -13650,7 +13658,6 @@ static int hdd_platform_wlan_mac(struct hdd_context *hdd_ctx)
 	struct device *dev = hdd_ctx->parent_dev;
 	tSirMacAddr mac_addr;
 	QDF_STATUS status;
-	struct qdf_mac_addr hw_macaddr;
 
 	addr = hdd_get_platform_wlan_mac_buff(dev, &no_of_mac_addr);
 
@@ -13671,12 +13678,7 @@ static int hdd_platform_wlan_mac(struct hdd_context *hdd_ctx)
 		qdf_mem_copy(buf, addr, QDF_MAC_ADDR_SIZE);
 		hdd_info("provisioned MAC Addr [%d] "QDF_MAC_ADDR_FMT, iter,
 			 QDF_MAC_ADDR_REF(buf));
-		if (iter == 0) {
-			qdf_mem_copy(&hw_macaddr.bytes, buf, QDF_MAC_ADDR_SIZE);
-			hdd_update_mld_mac_addr(hdd_ctx, hw_macaddr);
-		}
 	}
-
 
 	hdd_ctx->num_provisioned_addr = no_of_mac_addr;
 
@@ -13697,11 +13699,6 @@ static int hdd_platform_wlan_mac(struct hdd_context *hdd_ctx)
 			qdf_mem_copy(buf, addr, QDF_MAC_ADDR_SIZE);
 			hdd_debug("derived MAC Addr [%d] "QDF_MAC_ADDR_FMT, iter,
 				  QDF_MAC_ADDR_REF(buf));
-			if (iter == 0) {
-				qdf_mem_copy(&hw_macaddr.bytes, buf,
-					     QDF_MAC_ADDR_SIZE);
-				hdd_update_mld_mac_addr(hdd_ctx, hw_macaddr);
-			}
 		}
 		hdd_ctx->num_derived_addr = no_of_mac_addr;
 	}
@@ -13762,7 +13759,6 @@ static int hdd_initialize_mac_address(struct hdd_context *hdd_ctx)
 {
 	QDF_STATUS status;
 	int ret;
-	bool update_mac_addr_to_fw = true;
 
 	ret = hdd_platform_wlan_mac(hdd_ctx);
 	if (!ret) {
@@ -13784,7 +13780,6 @@ static int hdd_initialize_mac_address(struct hdd_context *hdd_ctx)
 	/* Use fw provided MAC */
 	if (!qdf_is_macaddr_zero(&hdd_ctx->hw_macaddr)) {
 		hdd_update_macaddr(hdd_ctx, hdd_ctx->hw_macaddr, false);
-		update_mac_addr_to_fw = false;
 		return 0;
 	} else if (hdd_generate_macaddr_auto(hdd_ctx) != 0) {
 		struct qdf_mac_addr mac_addr;
@@ -13799,11 +13794,9 @@ static int hdd_initialize_mac_address(struct hdd_context *hdd_ctx)
 		hdd_update_macaddr(hdd_ctx, mac_addr, true);
 	}
 
-	if (update_mac_addr_to_fw) {
-		ret = hdd_update_mac_addr_to_fw(hdd_ctx);
-		if (ret)
-			hdd_err("MAC address out-of-sync, ret:%d", ret);
-	}
+	ret = hdd_update_mac_addr_to_fw(hdd_ctx);
+	if (ret)
+		hdd_err("MAC address out-of-sync, ret:%d", ret);
 	return ret;
 }
 
@@ -15200,28 +15193,6 @@ destroy_sync:
 	return status;
 }
 
-#if defined(WLAN_FEATURE_11BE_MLO) && defined(CFG80211_11BE_BASIC)
-static
-uint8_t *wlan_hdd_get_mlo_intf_addr(struct hdd_context *hdd_ctx,
-				    enum QDF_OPMODE interface_type)
-{
-		bool eht_capab;
-
-		ucfg_psoc_mlme_get_11be_capab(hdd_ctx->psoc, &eht_capab);
-		if (eht_capab)
-			return wlan_hdd_get_mld_addr(hdd_ctx, QDF_STA_MODE);
-		else
-			return wlan_hdd_get_intf_addr(hdd_ctx, QDF_STA_MODE);
-}
-#else
-static inline
-uint8_t *wlan_hdd_get_mlo_intf_addr(struct hdd_context *hdd_ctx,
-				    enum QDF_OPMODE interface_type)
-{
-		return wlan_hdd_get_intf_addr(hdd_ctx, QDF_STA_MODE);
-}
-#endif
-
 #ifdef WLAN_OPEN_P2P_INTERFACE
 /**
  * hdd_open_p2p_interface - Open P2P interface
@@ -15362,7 +15333,7 @@ hdd_open_adapters_for_mission_mode(struct hdd_context *hdd_ctx)
 	if (dot11p_mode == CFG_11P_STANDALONE)
 		return hdd_open_ocb_interface(hdd_ctx);
 
-	mac_addr = wlan_hdd_get_mlo_intf_addr(hdd_ctx, QDF_STA_MODE);
+	mac_addr = wlan_hdd_get_intf_addr(hdd_ctx, QDF_STA_MODE);
 	if (!mac_addr)
 		return QDF_STATUS_E_INVAL;
 
@@ -15387,6 +15358,7 @@ hdd_open_adapters_for_mission_mode(struct hdd_context *hdd_ctx)
 	 * should go on this new interface.
 	 */
 	if (wlan_hdd_is_vdev_creation_allowed(hdd_ctx->psoc)) {
+		qdf_mem_zero(&params, sizeof(params));
 		mac_addr = wlan_hdd_get_intf_addr(hdd_ctx, QDF_NAN_DISC_MODE);
 		if (!mac_addr)
 			goto err_close_adapters;
