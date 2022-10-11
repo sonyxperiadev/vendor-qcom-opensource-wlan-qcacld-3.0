@@ -48,7 +48,7 @@ static ssize_t  __hdd_sysfs_feature_set_show(struct hdd_context *hdd_ctx,
 			i = i + 2;
 			continue;
 		}
-		ret_val += scnprintf(buf + ret_val, PAGE_SIZE - ret_val, "%.2x",
+		ret_val += scnprintf(buf + ret_val, PAGE_SIZE - ret_val, "%.2X",
 				     hdd_ctx->oem_data[i]);
 	}
 
