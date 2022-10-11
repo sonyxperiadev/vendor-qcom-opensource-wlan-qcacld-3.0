@@ -433,7 +433,6 @@ endif
 ifeq ($(CONFIG_WLAN_FREQ_LIST), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_get_freq_for_pwr.o
 endif
-endif
 ifeq ($(CONFIG_WLAN_SYSFS_DP_STATS), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_txrx_stats_console.o
 endif
@@ -445,6 +444,15 @@ endif
 ifeq ($(CONFIG_DP_TRAFFIC_END_INDICATION), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_dp_traffic_end_indication.o
 endif
+
+ifeq ($(CONFIG_DP_HW_TX_DELAY_STATS_ENABLE), y)
+HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_dp_tx_delay_stats.o
+endif
+
+ifeq ($(CONFIG_WLAN_SYSFS_EHT_RATE), y)
+HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_eht_rate.o
+endif
+endif # CONFIG_WLAN_SYSFS
 
 ifeq ($(CONFIG_QCACLD_FEATURE_FW_STATE), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_fw_state.o
@@ -531,10 +539,6 @@ endif
 
 ifeq ($(CONFIG_FEATURE_WDS), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_wds.o
-endif
-
-ifeq ($(CONFIG_DP_HW_TX_DELAY_STATS_ENABLE), y)
-HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_dp_tx_delay_stats.o
 endif
 
 ifeq ($(CONFIG_WLAN_FEATURE_PEER_TXQ_FLUSH_CONF), y)
@@ -3580,6 +3584,7 @@ cppflags-$(CONFIG_WLAN_SYSFS_CHANNEL) += -DWLAN_SYSFS_CHANNEL
 cppflags-$(CONFIG_FEATURE_BECN_STATS) += -DWLAN_FEATURE_BEACON_RECEPTION_STATS
 
 cppflags-$(CONFIG_WLAN_SYSFS_CONNECT_INFO) += -DWLAN_SYSFS_CONNECT_INFO
+cppflags-$(CONFIG_WLAN_SYSFS_EHT_RATE) += -DWLAN_SYSFS_EHT_RATE
 
 #Set RX_PERFORMANCE
 cppflags-$(CONFIG_RX_PERFORMANCE) += -DRX_PERFORMANCE

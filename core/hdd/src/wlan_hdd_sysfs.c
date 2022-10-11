@@ -87,6 +87,7 @@
 #include <wlan_hdd_sysfs_dp_tx_delay_stats.h>
 #include <wlan_hdd_sysfs_wifi_features.h>
 #include <wlan_hdd_sysfs_dp_traffic_end_indication.h>
+#include <wlan_hdd_sysfs_eht_rate.h>
 
 #define MAX_PSOC_ID_SIZE 10
 
