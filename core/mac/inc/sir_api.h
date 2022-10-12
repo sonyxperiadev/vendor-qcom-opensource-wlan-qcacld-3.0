@@ -3916,7 +3916,8 @@ struct stsf {
 	uint32_t tsf_id_valid;
 };
 
-#define SIR_BCN_FLT_MAX_ELEMS_IE_LIST 8
+/* ie + extn ie */
+#define SIR_BCN_FLT_MAX_ELEMS_IE_LIST (8 + 8)
 /**
  * struct beacon_filter_param - parameters for beacon filtering
  * @vdev_id: vdev id

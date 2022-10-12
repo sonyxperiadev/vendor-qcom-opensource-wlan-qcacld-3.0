@@ -1060,7 +1060,11 @@ QDF_STATUS wma_add_beacon_filter(WMA_HANDLE handle,
 	int len = sizeof(wmi_add_bcn_filter_cmd_fixed_param);
 
 	len += WMI_TLV_HDR_SIZE;
-	len += BCN_FLT_MAX_ELEMS_IE_LIST*sizeof(A_UINT32);
+	len += BCN_FLT_MAX_ELEMS_IE_LIST * sizeof(A_UINT32);
+
+	/* for ext ie map */
+	len += WMI_TLV_HDR_SIZE;
+	len += BCN_FLT_MAX_ELEMS_IE_LIST * sizeof(A_UINT32);
 
 	if (wma_validate_handle(wma))
 		return QDF_STATUS_E_INVAL;
@@ -1098,6 +1102,21 @@ QDF_STATUS wma_add_beacon_filter(WMA_HANDLE handle,
 		ie_map[i] = filter_params->ie_map[i];
 
 	wma_debug("Beacon filter ie map Hex dump:");
+	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_DEBUG,
+			   (uint8_t *)ie_map,
+			   BCN_FLT_MAX_ELEMS_IE_LIST * sizeof(u_int32_t));
+
+	buf += WMI_TLV_HDR_SIZE;
+	buf += BCN_FLT_MAX_ELEMS_IE_LIST * sizeof(A_UINT32);
+
+	WMITLV_SET_HDR(buf, WMITLV_TAG_ARRAY_UINT32,
+		       (BCN_FLT_MAX_ELEMS_IE_LIST * sizeof(u_int32_t)));
+
+	ie_map = (A_UINT32 *)(buf + WMI_TLV_HDR_SIZE);
+	for (i = 0; i < BCN_FLT_MAX_ELEMS_IE_LIST; i++)
+		ie_map[i] = filter_params->ie_map[i + 8];
+
+	wma_debug("Beacon filter ext ie map Hex dump:");
 	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_DEBUG,
 			   (uint8_t *)ie_map,
 			   BCN_FLT_MAX_ELEMS_IE_LIST * sizeof(u_int32_t));

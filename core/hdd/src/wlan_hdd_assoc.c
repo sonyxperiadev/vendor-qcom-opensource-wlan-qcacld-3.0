@@ -187,6 +187,8 @@ static const int beacon_filter_table[] = {
 	WLAN_ELEMID_HTINFO_ANA,
 	WLAN_ELEMID_OP_MODE_NOTIFY,
 	WLAN_ELEMID_VHTOP,
+	WLAN_ELEMID_QUIET_CHANNEL,
+	WLAN_ELEMID_TWT,
 #ifdef WLAN_FEATURE_11AX_BSS_COLOR
 	/*
 	 * EID: 221 vendor IE is being used temporarily by 11AX
@@ -195,6 +197,18 @@ static const int beacon_filter_table[] = {
 	 * number.
 	 */
 	WLAN_ELEMID_VENDOR,
+#endif
+};
+
+/**
+ * beacon_filter_extn_table - table of extn IEs used for beacon filtering
+ */
+static const int beacon_filter_extn_table[] = {
+	WLAN_EXTN_ELEMID_HEOP,
+	WLAN_EXTN_ELEMID_UORA,
+	WLAN_EXTN_ELEMID_MUEDCA,
+#ifdef WLAN_FEATURE_11BE
+	WLAN_EXTN_ELEMID_EHTOP,
 #endif
 };
 
@@ -525,8 +539,12 @@ int hdd_add_beacon_filter(struct hdd_adapter *adapter)
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 
 	for (i = 0; i < ARRAY_SIZE(beacon_filter_table); i++)
-		qdf_set_bit((beacon_filter_table[i]),
-				(unsigned long int *)ie_map);
+		qdf_set_bit(beacon_filter_table[i],
+			    (unsigned long *)ie_map);
+
+	for (i = 0; i < ARRAY_SIZE(beacon_filter_extn_table); i++)
+		qdf_set_bit(beacon_filter_extn_table[i] + WLAN_ELEMID_EXTN_ELEM,
+			    (unsigned long *)ie_map);
 
 	status = sme_add_beacon_filter(hdd_ctx->mac_handle,
 				       adapter->vdev_id, ie_map);
