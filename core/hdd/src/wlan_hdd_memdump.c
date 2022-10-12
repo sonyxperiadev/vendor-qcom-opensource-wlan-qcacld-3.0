@@ -34,9 +34,9 @@
 #include <wlan_hdd_includes.h>
 
 #if defined(DYNAMIC_SINGLE_CHIP)
-#define PREFIX DYNAMIC_SINGLE_CHIP "/"
+#define PREFIX DYNAMIC_SINGLE_CHIP "_"
 #elif defined(MULTI_IF_NAME)
-#define PREFIX MULTI_IF_NAME "/"
+#define PREFIX MULTI_IF_NAME "_"
 #else
 #define PREFIX ""
 #endif
