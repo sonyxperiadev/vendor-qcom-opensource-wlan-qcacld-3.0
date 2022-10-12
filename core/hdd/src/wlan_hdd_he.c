@@ -31,6 +31,7 @@
 #include "wlan_utility.h"
 #include "wlan_mlme_ucfg_api.h"
 #include "spatial_reuse_ucfg_api.h"
+#include "cdp_txrx_host_stats.h"
 
 const struct nla_policy
 wlan_hdd_sr_policy[QCA_WLAN_VENDOR_ATTR_SR_MAX + 1] = {
@@ -245,6 +246,99 @@ int wlan_hdd_cfg80211_get_he_cap(struct wiphy *wiphy,
 	return errno;
 }
 
+#ifdef WLAN_FEATURE_SR
+static int hdd_get_srp_stats_len(void)
+{
+	struct cdp_pdev_obss_pd_stats_tlv stats;
+	uint32_t len = NLMSG_HDRLEN;
+
+	len += nla_total_size(sizeof(stats.num_srg_ppdu_success)) +
+		nla_total_size(sizeof(stats.num_srg_ppdu_tried)) +
+		nla_total_size(sizeof(stats.num_srg_opportunities)) +
+		nla_total_size(sizeof(stats.num_non_srg_ppdu_success)) +
+		nla_total_size(sizeof(stats.num_non_srg_ppdu_tried)) +
+		nla_total_size(sizeof(stats.num_non_srg_opportunities));
+
+	return len;
+}
+
+static int
+hdd_add_stats_info(struct sk_buff *skb,
+		   struct cdp_pdev_obss_pd_stats_tlv *stats)
+{
+	struct nlattr *nla_attr;
+
+	nla_attr = nla_nest_start(skb, QCA_WLAN_VENDOR_ATTR_SR_STATS);
+	if (!nla_attr)
+		goto fail;
+
+	if (nla_put_u32(skb,
+			QCA_WLAN_VENDOR_ATTR_SR_STATS_SRG_TX_PPDU_SUCCESS_COUNT,
+			stats->num_srg_ppdu_success)) {
+		hdd_err("num_srg_ppdu_success put fail");
+		goto fail;
+	}
+	if (nla_put_u32(skb,
+			QCA_WLAN_VENDOR_ATTR_SR_STATS_SRG_TX_PPDU_TRIED_COUNT,
+			stats->num_srg_ppdu_tried)) {
+		hdd_err("num_srg_ppdu_tried put fail");
+		goto fail;
+	}
+	if (nla_put_u32(
+		skb,
+		QCA_WLAN_VENDOR_ATTR_SR_STATS_SRG_TX_OPPORTUNITIES_COUNT,
+		stats->num_srg_opportunities)) {
+		hdd_err("num_srg_opportunities put fail");
+		goto fail;
+	}
+	if (nla_put_u32(
+		skb,
+		QCA_WLAN_VENDOR_ATTR_SR_STATS_NON_SRG_TX_PPDU_SUCCESS_COUNT,
+		stats->num_non_srg_ppdu_success)) {
+		hdd_err("num_non_srg_ppdu_success put fail");
+		goto fail;
+	}
+	if (nla_put_u32(
+		skb,
+		QCA_WLAN_VENDOR_ATTR_SR_STATS_NON_SRG_TX_PPDU_TRIED_COUNT,
+		stats->num_non_srg_ppdu_tried)) {
+		hdd_err("num_non_srg_ppdu_tried put fail");
+		goto fail;
+	}
+	if (nla_put_u32(
+		skb,
+		QCA_WLAN_VENDOR_ATTR_SR_STATS_NON_SRG_TX_OPPORTUNITIES_COUNT,
+		stats->num_non_srg_opportunities)) {
+		hdd_err("num_non_srg_opportunities put fail");
+		goto fail;
+	}
+	nla_nest_end(skb, nla_attr);
+	return 0;
+fail:
+	return -EINVAL;
+}
+
+static int hdd_get_sr_stats(struct hdd_context *hdd_ctx,
+			    struct cdp_pdev_obss_pd_stats_tlv *stats)
+{
+	ol_txrx_soc_handle soc;
+	uint8_t pdev_id;
+
+	soc = cds_get_context(QDF_MODULE_ID_SOC);
+	if (!soc) {
+		hdd_err("invalid soc");
+		return -EINVAL;
+	}
+
+	pdev_id = wlan_objmgr_pdev_get_pdev_id(hdd_ctx->pdev);
+	cdp_get_pdev_obss_pd_stats(soc, pdev_id, stats);
+	if (!stats) {
+		hdd_err("invalid stats");
+		return -EINVAL;
+	}
+	return 0;
+}
+
 /**
  * __wlan_hdd_cfg80211_sr_operations: To handle SR operation
  *
@@ -255,7 +349,6 @@ int wlan_hdd_cfg80211_get_he_cap(struct wiphy *wiphy,
  *
  * return: success/failure code
  */
-#ifdef WLAN_FEATURE_SR
 static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 					     struct wireless_dev *wdev,
 					     const void *data, int data_len)
@@ -265,6 +358,9 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 	bool is_sr_enable = false;
 	int32_t pd_threshold = 0;
 	uint8_t sr_he_siga_val15_allowed = true;
+	uint8_t pdev_id, sr_ctrl, non_srg_max_pd_offset;
+	uint32_t nl_buf_len;
+	int ret;
 	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(wdev->netdev);
 	struct nlattr *tb[QCA_WLAN_VENDOR_ATTR_SR_MAX + 1];
@@ -272,8 +368,9 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 	enum qca_wlan_sr_operation sr_oper;
 	struct nlattr *sr_oper_attr;
 	struct nlattr *sr_param_attr;
-	uint8_t sr_ctrl, non_srg_max_pd_offset;
-	int ret = 0;
+	struct sk_buff *skb;
+	struct cdp_pdev_obss_pd_stats_tlv stats;
+	ol_txrx_soc_handle soc;
 
 	hdd_enter_dev(wdev->netdev);
 	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam() ||
@@ -358,8 +455,27 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 
 		break;
 	case QCA_WLAN_SR_OPERATION_GET_STATS:
+		if (hdd_get_sr_stats(hdd_ctx, &stats))
+			return -EINVAL;
+		nl_buf_len = hdd_get_srp_stats_len();
+		skb = cfg80211_vendor_cmd_alloc_reply_skb(hdd_ctx->wiphy,
+							  nl_buf_len);
+		if (!skb) {
+			hdd_err("cfg80211_vendor_cmd_alloc_reply_skb failed");
+			return -ENOMEM;
+		}
+		if (hdd_add_stats_info(skb, &stats))
+			return -EINVAL;
+		ret = cfg80211_vendor_cmd_reply(skb);
 		break;
 	case QCA_WLAN_SR_OPERATION_CLEAR_STATS:
+		soc = cds_get_context(QDF_MODULE_ID_SOC);
+		if (!soc) {
+			hdd_err("invalid soc");
+			return -EINVAL;
+		}
+		pdev_id = wlan_objmgr_pdev_get_pdev_id(hdd_ctx->pdev);
+		cdp_clear_pdev_obss_pd_stats(soc, pdev_id);
 		break;
 	case QCA_WLAN_SR_OPERATION_PSR_AND_NON_SRG_OBSS_PD_PROHIBIT:
 		if (tb2[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_HESIGA_VAL15_ENABLE])
