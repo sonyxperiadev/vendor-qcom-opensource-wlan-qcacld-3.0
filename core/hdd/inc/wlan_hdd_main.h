@@ -132,6 +132,8 @@ static qdf_atomic_t dp_protect_entry_count;
 #define MAX_SSR_WAIT_ITERATIONS 100
 #define MAX_SSR_PROTECT_LOG (16)
 
+#define HDD_MAX_OEM_DATA_LEN 1024
+#define HDD_MAX_FILE_NAME_LEN 64
 #ifdef FEATURE_WLAN_APF
 /**
  * struct hdd_apf_context - hdd Context for apf
@@ -2035,9 +2037,9 @@ struct hdd_context {
 #endif
 	bool is_wlan_disabled;
 
-	uint8_t *oem_data;
+	uint8_t oem_data[HDD_MAX_OEM_DATA_LEN];
 	uint8_t oem_data_len;
-	uint8_t *file_name;
+	uint8_t file_name[HDD_MAX_FILE_NAME_LEN];
 	qdf_mutex_t wifi_kobj_lock;
 #ifdef WLAN_FEATURE_DBAM_CONFIG
 	enum coex_dbam_config_mode dbam_mode;

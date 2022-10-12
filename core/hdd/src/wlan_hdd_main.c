@@ -14835,24 +14835,6 @@ static void hdd_deregister_policy_manager_callback(
 }
 #endif
 
-/**
- * wlan_hdd_free_file_name_and_oem_data() -Free file name and oem data memory
- * @hdd_ctx: pointer to hdd context
- *
- * Return: none
- */
-static void wlan_hdd_free_file_name_and_oem_data(struct hdd_context *hdd_ctx)
-{
-	if (hdd_ctx->file_name) {
-		qdf_mem_free(hdd_ctx->file_name);
-		hdd_ctx->file_name = NULL;
-	}
-	if (hdd_ctx->oem_data) {
-		qdf_mem_free(hdd_ctx->oem_data);
-		hdd_ctx->oem_data = NULL;
-	}
-}
-
 int hdd_wlan_stop_modules(struct hdd_context *hdd_ctx, bool ftm_mode)
 {
 	void *hif_ctx;
@@ -15012,7 +14994,6 @@ int hdd_wlan_stop_modules(struct hdd_context *hdd_ctx, bool ftm_mode)
 
 	/* Free the cache channels of the command SET_DISABLE_CHANNEL_LIST */
 	wlan_hdd_free_cache_channels(hdd_ctx);
-	wlan_hdd_free_file_name_and_oem_data(hdd_ctx);
 	hdd_driver_mem_cleanup();
 
 	/* Free the resources allocated while storing SAR config. These needs

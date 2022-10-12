@@ -1152,25 +1152,22 @@ static void hdd_copy_file_name_and_oem_data(
 		return;
 	}
 
-	if (hdd_ctx->oem_data || hdd_ctx->file_name) {
-		hdd_err("OEM data or file name already present");
+	if (oem_event_data->data_len > HDD_MAX_OEM_DATA_LEN ||
+	    oem_event_data->file_name_len > HDD_MAX_FILE_NAME_LEN) {
+		hdd_err("Invalid oem data len %zu or file name len %d",
+			oem_event_data->data_len,
+			oem_event_data->file_name_len);
 		return;
 	}
+	qdf_mem_zero(hdd_ctx->oem_data, HDD_MAX_OEM_DATA_LEN);
+	qdf_mem_zero(hdd_ctx->file_name, HDD_MAX_FILE_NAME_LEN);
 
-	hdd_ctx->oem_data = qdf_mem_malloc(oem_event_data->data_len);
-	if (hdd_ctx->oem_data) {
-		hdd_ctx->oem_data_len = oem_event_data->data_len;
-		qdf_mem_copy(hdd_ctx->oem_data, oem_event_data->data,
-			     oem_event_data->data_len);
-		hdd_ctx->file_name = qdf_mem_malloc(
-					oem_event_data->file_name_len);
-		if (hdd_ctx->file_name)
-			qdf_mem_copy(hdd_ctx->file_name,
-				     oem_event_data->file_name,
-				     oem_event_data->file_name_len);
-		else
-			qdf_mem_free(hdd_ctx->oem_data);
-	}
+	qdf_mem_copy(hdd_ctx->oem_data, oem_event_data->data,
+		     oem_event_data->data_len);
+	hdd_ctx->oem_data_len = oem_event_data->data_len;
+
+	qdf_mem_copy(hdd_ctx->file_name, oem_event_data->file_name,
+		     oem_event_data->file_name_len);
 }
 
 void hdd_oem_event_async_cb(const struct oem_data *oem_event_data)
