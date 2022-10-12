@@ -9565,17 +9565,6 @@ static void wlan_hdd_cache_chann_mutex_destroy(struct hdd_context *hdd_ctx)
 }
 #endif
 
-/**
- * wlan_hdd_wifi_kobj_lock_destroy() - Destroy wifi kobj lock
- * @hdd_ctx: pointer to hdd context
- *
- * Return: none
- */
-static void wlan_hdd_wifi_kobj_lock_destroy(struct hdd_context *hdd_ctx)
-{
-	qdf_mutex_destroy(&hdd_ctx->wifi_kobj_lock);
-}
-
 void hdd_wlan_exit(struct hdd_context *hdd_ctx)
 {
 	struct wiphy *wiphy = hdd_ctx->wiphy;
@@ -9641,7 +9630,6 @@ void hdd_wlan_exit(struct hdd_context *hdd_ctx)
 
 	qdf_spinlock_destroy(&hdd_ctx->hdd_adapter_lock);
 	qdf_spinlock_destroy(&hdd_ctx->connection_status_lock);
-	wlan_hdd_wifi_kobj_lock_destroy(hdd_ctx);
 	wlan_hdd_cache_chann_mutex_destroy(hdd_ctx);
 
 	osif_request_manager_deinit();
@@ -15458,17 +15446,6 @@ static QDF_STATUS hdd_open_adapters_for_mode(struct hdd_context *hdd_ctx,
 	return status;
 }
 
-/**
- * wlan_hdd_wifi_kobj_lock_create() - Create wifi kobj lock
- * @hdd_ctx: pointer to hdd context
- *
- * Return: none
- */
-static QDF_STATUS wlan_hdd_wifi_kobj_lock_create(struct hdd_context *hdd_ctx)
-{
-	return qdf_mutex_create(&hdd_ctx->wifi_kobj_lock);
-}
-
 int hdd_wlan_startup(struct hdd_context *hdd_ctx)
 {
 	QDF_STATUS status;
@@ -15480,10 +15457,6 @@ int hdd_wlan_startup(struct hdd_context *hdd_ctx)
 	qdf_nbuf_init_replenish_timer();
 
 	status = wlan_hdd_cache_chann_mutex_create(hdd_ctx);
-	if (QDF_IS_STATUS_ERROR(status))
-		return qdf_status_to_os_return(status);
-
-	status = wlan_hdd_wifi_kobj_lock_create(hdd_ctx);
 	if (QDF_IS_STATUS_ERROR(status))
 		return qdf_status_to_os_return(status);
 
