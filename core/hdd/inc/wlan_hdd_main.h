@@ -2906,6 +2906,19 @@ static inline bool hdd_roaming_supported(struct hdd_context *hdd_ctx)
 	return val;
 }
 
+#ifdef WLAN_NS_OFFLOAD
+static inline void
+hdd_adapter_flush_ipv6_notifier_work(struct hdd_adapter *adapter)
+{
+	flush_work(&adapter->ipv6_notifier_work);
+}
+#else
+static inline void
+hdd_adapter_flush_ipv6_notifier_work(struct hdd_adapter *adapter)
+{
+}
+#endif
+
 #ifdef CFG80211_SCAN_RANDOM_MAC_ADDR
 static inline bool hdd_scan_random_mac_addr_supported(void)
 {
