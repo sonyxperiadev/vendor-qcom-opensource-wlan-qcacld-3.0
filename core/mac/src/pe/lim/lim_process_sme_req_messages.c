@@ -4022,6 +4022,8 @@ static void lim_fill_ml_info(struct cm_vdev_join_req *req,
 			 partner_info->partner_link_info[idx].link_id,
 			 QDF_MAC_ADDR_REF(partner_info->partner_link_info[idx].
 					  link_addr.bytes));
+		partner_info->partner_link_info[idx].chan_freq =
+			req->partner_info.partner_link_info[idx].chan_freq;
 	}
 	pe_join_req->assoc_link_id = req->assoc_link_id;
 }
@@ -4029,7 +4031,7 @@ static void lim_fill_ml_info(struct cm_vdev_join_req *req,
 static void lim_set_emlsr_caps(struct mac_context *mac_ctx,
 			       struct pe_session *session)
 {
-	bool emlsr_cap, emlsr_allowed, emlsr_enabled = false;
+	bool emlsr_cap, emlsr_allowed, emlsr_band_check, emlsr_enabled = false;
 
 	/* Check if HW supports eMLSR mode */
 	emlsr_cap = policy_mgr_is_hw_emlsr_capable(mac_ctx->psoc);
@@ -4039,7 +4041,10 @@ static void lim_set_emlsr_caps(struct mac_context *mac_ctx,
 	/* Check if vendor command chooses eMLSR mode */
 	wlan_mlme_get_emlsr_mode_enabled(mac_ctx->psoc, &emlsr_enabled);
 
-	emlsr_allowed = emlsr_cap && emlsr_enabled;
+	/* Check if ML links are in 5 GHz + 6 GHz combination */
+	emlsr_band_check = lim_is_emlsr_band_supported(session);
+
+	emlsr_allowed = emlsr_cap && emlsr_enabled && emlsr_band_check;
 
 	if (emlsr_allowed) {
 		wlan_vdev_obj_lock(session->vdev);
