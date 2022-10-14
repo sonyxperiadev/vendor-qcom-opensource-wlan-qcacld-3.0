@@ -985,6 +985,7 @@ static void hdd_cm_save_connect_info(struct hdd_adapter *adapter,
 	tDot11fBeaconIEs *bcn_ie;
 	struct s_ext_cap *p_ext_cap = NULL;
 	mac_handle_t mac_handle = hdd_adapter_get_mac_handle(adapter);
+	uint32_t phymode;
 
 	sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
 	bcn_ie = qdf_mem_malloc(sizeof(*bcn_ie));
@@ -997,6 +998,13 @@ static void hdd_cm_save_connect_info(struct hdd_adapter *adapter,
 		ucfg_dp_conn_info_set_bssid(vdev, &rsp->bssid);
 		hdd_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 	}
+
+	phymode = wlan_reg_get_max_phymode(adapter->hdd_ctx->pdev,
+					   REG_PHYMODE_MAX,
+					   rsp->freq);
+
+	sta_ctx->reg_phymode = csr_convert_from_reg_phy_mode(phymode);
+
 	sta_ctx->conn_info.assoc_status_code = rsp->status_code;
 
 	crypto_params = wlan_crypto_vdev_get_crypto_params(adapter->vdev);
@@ -1160,7 +1168,6 @@ hdd_cm_connect_success_pre_user_update(struct wlan_objmgr_vdev *vdev,
 	bool is_roam = rsp->is_reassoc;
 	ol_txrx_soc_handle soc = cds_get_context(QDF_MODULE_ID_SOC);
 	uint8_t uapsd_mask = 0;
-	uint32_t phymode;
 	uint32_t time_buffer_size;
 	struct hdd_adapter *assoc_link_adapter;
 
@@ -1199,10 +1206,6 @@ hdd_cm_connect_success_pre_user_update(struct wlan_objmgr_vdev *vdev,
 		if (assoc_link_adapter)
 			hdd_cm_save_connect_info(assoc_link_adapter, rsp);
 	}
-	phymode = wlan_reg_get_max_phymode(hdd_ctx->pdev, REG_PHYMODE_MAX,
-					   rsp->freq);
-	sta_ctx->reg_phymode = csr_convert_from_reg_phy_mode(phymode);
-
 	if (hdd_add_beacon_filter(adapter) != 0)
 		hdd_err("add beacon filter failed");
 
