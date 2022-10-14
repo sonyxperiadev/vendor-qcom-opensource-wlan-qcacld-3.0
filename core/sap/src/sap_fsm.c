@@ -2838,7 +2838,7 @@ static void wlansap_pre_cac_end_notify(struct sap_context *sap_context,
 				       uint8_t intf)
 {
 	sap_context->isCacEndNotified = true;
-	mac->sap.SapDfsInfo.sap_radar_found_status = false;
+	sap_context->sap_radar_found_status = false;
 	sap_context->fsm_state = SAP_STARTED;
 
 	sap_warn("pre cac end notify on %d: move to state SAP_STARTED", intf);
@@ -2899,7 +2899,7 @@ QDF_STATUS sap_cac_end_notify(mac_handle_t mac_handle,
 				return qdf_status;
 			}
 			sap_context->isCacEndNotified = true;
-			mac->sap.SapDfsInfo.sap_radar_found_status = false;
+			sap_context->sap_radar_found_status = false;
 			sap_debug("sapdfs: Start beacon request on sapctx[%pK]",
 				  sap_context);
 
@@ -3272,7 +3272,7 @@ static QDF_STATUS sap_goto_starting(struct sap_context *sap_ctx,
 	/* Reset radar found flag before start sap, the flag will
 	 * be set when radar found in CAC wait.
 	 */
-	mac_ctx->sap.SapDfsInfo.sap_radar_found_status = false;
+	sap_ctx->sap_radar_found_status = false;
 
 	sap_debug("session: %d", sap_ctx->sessionId);
 
@@ -3641,7 +3641,7 @@ static QDF_STATUS sap_fsm_state_starting(struct sap_context *sap_ctx,
 							       mac_handle);
 			} else {
 				sap_debug("skip cac timer");
-				mac_ctx->sap.SapDfsInfo.sap_radar_found_status = false;
+				sap_ctx->sap_radar_found_status = false;
 				/*
 				 * If hostapd starts AP on dfs channel,
 				 * hostapd will wait for CAC START/CAC END
@@ -4420,7 +4420,7 @@ qdf_freq_t sap_indicate_radar(struct sap_context *sap_ctx)
 		return sap_ctx->chan_freq;
 
 	/* set the Radar Found flag in SapDfsInfo */
-	mac->sap.SapDfsInfo.sap_radar_found_status = true;
+	sap_ctx->sap_radar_found_status = true;
 
 	chan_freq = wlan_pre_cac_get_freq_before_pre_cac(sap_ctx->vdev);
 	if (chan_freq) {
