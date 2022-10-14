@@ -1269,7 +1269,7 @@ static void mlme_init_he_cap_in_cfg(struct wlan_objmgr_psoc *psoc,
 	he_caps->dot11_he_cap.ht_vht_trg_frm_rx_supp =
 			cfg_default(CFG_HE_HT_VHT_TRG_FRM_RX);
 	he_caps->dot11_he_cap.rx_pream_puncturing =
-			cfg_default(CFG_HE_RX_PREAM_PUNC);
+			cfg_get(psoc, CFG_HE_RX_PREAM_PUNC);
 	he_caps->dot11_he_cap.device_class =
 			cfg_default(CFG_HE_CLASS_OF_DEVICE);
 	he_caps->dot11_he_cap.ldpc_coding = cfg_default(CFG_HE_LDPC);

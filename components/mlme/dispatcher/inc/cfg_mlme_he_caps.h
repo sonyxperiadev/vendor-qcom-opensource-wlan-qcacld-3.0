@@ -221,7 +221,7 @@
 				CFG_VALUE_OR_DEFAULT, \
 				"He Chan Width")
 
-#define CFG_HE_RX_PREAM_PUNC CFG_UINT( \
+#define CFG_HE_RX_PREAM_PUNC CFG_INI_UINT( \
 				"he_rx_pream_punc", \
 				0, \
 				0xF, \

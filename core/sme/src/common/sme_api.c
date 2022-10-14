@@ -10722,6 +10722,22 @@ void sme_update_tgt_he_cap(mac_handle_t mac_handle,
 		     &cfg->he_cap_5g,
 		     sizeof(tDot11fIEhe_cap));
 
+	if (!mac_ctx->mlme_cfg->he_caps.dot11_he_cap.rx_pream_puncturing) {
+		sme_debug("feature is disabled via INI, FW caps 2G:%d, 5G:%d",
+			  mac_ctx->he_cap_2g.rx_pream_puncturing,
+			  mac_ctx->he_cap_5g.rx_pream_puncturing);
+
+		mac_ctx->he_cap_2g.rx_pream_puncturing = 0;
+		mac_ctx->he_cap_5g.rx_pream_puncturing = 0;
+	}
+
+	if (!mac_ctx->mlme_cfg->he_caps.enable_ul_mimo) {
+		sme_debug("feature is disabled via INI, FW caps 2G:%d, 5G:%d",
+			  mac_ctx->he_cap_2g.ul_mu, mac_ctx->he_cap_5g.ul_mu);
+		mac_ctx->he_cap_2g.ul_mu = 0;
+		mac_ctx->he_cap_5g.ul_mu = 0;
+	}
+
 	/* modify HE Caps field according to INI setting */
 	mac_ctx->he_cap_2g.bfee_sts_lt_80 =
 			QDF_MIN(cfg->he_cap_2g.bfee_sts_lt_80,
