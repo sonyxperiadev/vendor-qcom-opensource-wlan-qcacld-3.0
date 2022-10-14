@@ -688,6 +688,27 @@ CFG_INI_BOOL("g_enable_sr_in_same_mac_conc", 1, \
 #define CFG_SPATIAL_REUSE
 #endif
 
+/*
+ * <ini>
+ * g_use_original_bw_for_sap_restart - Set sap default BW when do restart
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This ini is used to set sap default BW when do restart.
+ * 0 - Use maximum BW as default BW
+ * 1 - Use sap original BW as default BW
+ *
+ * Supported Feature: SAP
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_SAP_DEFAULT_BW_FOR_RESTART \
+CFG_INI_BOOL("g_use_original_bw_for_sap_restart", 0, \
+	     "Use SAP original bandwidth when do restart")
+
 #define CFG_POLICY_MGR_ALL \
 		CFG(CFG_MCC_TO_SCC_SWITCH) \
 		CFG(CFG_CONC_SYS_PREF) \
@@ -712,5 +733,6 @@ CFG_INI_BOOL("g_enable_sr_in_same_mac_conc", 1, \
 		CFG(CFG_P2P_GO_ENABLE_FORCE_SCC) \
 		CFG(CFG_PCL_BAND_PRIORITY) \
 		CFG(CFG_MULTI_SAP_ALLOWED_ON_SAME_BAND) \
-		CFG_SPATIAL_REUSE
+		CFG_SPATIAL_REUSE \
+		CFG(CFG_SAP_DEFAULT_BW_FOR_RESTART)
 #endif

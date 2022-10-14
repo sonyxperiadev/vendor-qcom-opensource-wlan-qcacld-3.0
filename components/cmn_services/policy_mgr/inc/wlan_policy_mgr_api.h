@@ -318,6 +318,33 @@ QDF_STATUS
 policy_mgr_get_multi_sap_allowed_on_same_band(struct wlan_objmgr_psoc *psoc,
 				bool *multi_sap_allowed_on_same_band);
 
+/**
+ * policy_mgr_set_original_bw_for_sap_restart() - to set use_sap_original_bw
+ * @psoc: pointer to psoc
+ * @use_sap_original_bw: value to be set
+ *
+ * This API is used to set use_sap_original_bw
+ *
+ * Return: QDF_STATUS_SUCCESS up on success and any other status for failure.
+ */
+QDF_STATUS
+policy_mgr_set_original_bw_for_sap_restart(struct wlan_objmgr_psoc *psoc,
+					   bool use_sap_original_bw);
+
+/**
+ * policy_mgr_get_original_bw_for_sap_restart() - to find out if sap original
+ * bw is used as default BW when do sap restart
+ * @psoc: pointer to psoc
+ * @use_sap_original_bw: value to be filled
+ *
+ * This API is used to find out whether sap original BW is used as default BW
+ *
+ * Return: QDF_STATUS_SUCCESS up on success and any other status for failure.
+ */
+QDF_STATUS
+policy_mgr_get_original_bw_for_sap_restart(struct wlan_objmgr_psoc *psoc,
+					   bool *use_sap_original_bw);
+
 /*
  * policy_mgr_get_connected_vdev_band_mask() - to get the connected vdev band
  * mask
