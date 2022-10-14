@@ -437,6 +437,23 @@ hdd_update_action_oui_for_connect(struct hdd_context *hdd_ctx,
 }
 #endif
 
+#ifdef WLAN_FEATURE_11BE
+static inline bool
+hdd_config_is_dot11mode_11be_only(struct hdd_config *config)
+{
+	if (config->dot11Mode == eHDD_DOT11_MODE_11be_ONLY)
+		return true;
+	else
+		return false;
+}
+#else
+static inline bool
+hdd_config_is_dot11mode_11be_only(struct hdd_config *config)
+{
+	return false;
+}
+#endif
+
 /**
  * hdd_get_dot11mode_filter() - Get dot11 mode filter
  * @hdd_ctx: HDD context
@@ -457,6 +474,8 @@ hdd_get_dot11mode_filter(struct hdd_context *hdd_ctx)
 		return ALLOW_11AC_ONLY;
 	else if (config->dot11Mode == eHDD_DOT11_MODE_11ax_ONLY)
 		return ALLOW_11AX_ONLY;
+	else if (hdd_config_is_dot11mode_11be_only(config))
+		return ALLOW_11BE_ONLY;
 	else
 		return ALLOW_ALL;
 }

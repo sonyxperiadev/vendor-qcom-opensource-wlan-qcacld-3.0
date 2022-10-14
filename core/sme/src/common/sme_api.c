@@ -4767,6 +4767,9 @@ QDF_STATUS sme_vdev_post_vdev_create_setup(mac_handle_t mac_handle,
 		goto cleanup_wma;
 	}
 
+	wlan_vdev_set_dot11mode(mac_ctx->mlme_cfg, vdev->vdev_mlme.vdev_opmode,
+				vdev_mlme);
+
 	status = mlme_vdev_self_peer_create(vdev);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		sme_err("Failed to create vdev selfpeer for vdev:%d", vdev_id);
@@ -12612,7 +12615,7 @@ void sme_set_vdev_ies_per_band(mac_handle_t mac_handle, uint8_t vdev_id,
 
 	p_msg->vdev_id = vdev_id;
 	p_msg->device_mode = device_mode;
-	p_msg->dot11_mode = csr_get_vdev_dot11_mode(mac_ctx, device_mode,
+	p_msg->dot11_mode = csr_get_vdev_dot11_mode(mac_ctx, vdev_id,
 						    curr_dot11_mode);
 	p_msg->msg_type = eWNI_SME_SET_VDEV_IES_PER_BAND;
 	p_msg->len = sizeof(*p_msg);

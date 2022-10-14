@@ -5749,7 +5749,9 @@ static bool is_dot11mode_support_ht_cap(enum csr_cfgdot11mode dot11mode)
 	    (dot11mode == eCSR_CFG_DOT11_MODE_11N_ONLY) ||
 	    (dot11mode == eCSR_CFG_DOT11_MODE_11AC_ONLY) ||
 	    (dot11mode == eCSR_CFG_DOT11_MODE_11AX) ||
-	    (dot11mode == eCSR_CFG_DOT11_MODE_11AX_ONLY)) {
+	    (dot11mode == eCSR_CFG_DOT11_MODE_11AX_ONLY) ||
+	    (dot11mode == eCSR_CFG_DOT11_MODE_11BE) ||
+	    (dot11mode == eCSR_CFG_DOT11_MODE_11BE_ONLY)) {
 		return true;
 	}
 
@@ -5770,7 +5772,9 @@ static bool is_dot11mode_support_vht_cap(enum csr_cfgdot11mode dot11mode)
 	    (dot11mode == eCSR_CFG_DOT11_MODE_11AC) ||
 	    (dot11mode == eCSR_CFG_DOT11_MODE_11AC_ONLY) ||
 	    (dot11mode == eCSR_CFG_DOT11_MODE_11AX) ||
-	    (dot11mode == eCSR_CFG_DOT11_MODE_11AX_ONLY)) {
+	    (dot11mode == eCSR_CFG_DOT11_MODE_11AX_ONLY) ||
+	    (dot11mode == eCSR_CFG_DOT11_MODE_11BE) ||
+	    (dot11mode == eCSR_CFG_DOT11_MODE_11BE_ONLY)) {
 		return true;
 	}
 
@@ -5789,7 +5793,9 @@ static bool is_dot11mode_support_he_cap(enum csr_cfgdot11mode dot11mode)
 {
 	if ((dot11mode == eCSR_CFG_DOT11_MODE_AUTO) ||
 	    (dot11mode == eCSR_CFG_DOT11_MODE_11AX) ||
-	    (dot11mode == eCSR_CFG_DOT11_MODE_11AX_ONLY)) {
+	    (dot11mode == eCSR_CFG_DOT11_MODE_11AX_ONLY) ||
+	    (dot11mode == eCSR_CFG_DOT11_MODE_11BE) ||
+	    (dot11mode == eCSR_CFG_DOT11_MODE_11BE_ONLY)) {
 		return true;
 	}
 

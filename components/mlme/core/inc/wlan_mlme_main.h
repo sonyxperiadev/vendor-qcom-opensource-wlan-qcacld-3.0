@@ -852,6 +852,22 @@ enum QDF_OPMODE wlan_get_opmode_vdev_id(struct wlan_objmgr_pdev *pdev,
 					uint8_t vdev_id);
 
 /**
+ * wlan_vdev_set_dot11mode - Set the dot11mode of the vdev
+ * @mac_mlme_cfg: MAC's MLME config pointer
+ * @device_mode: OPMODE of the vdev
+ * @vdev_mlme: MLME component of the vdev
+ *
+ * Use this API to set the dot11mode of the vdev.
+ * For non-ML type vdev, this API restricts the connection
+ * of vdev to 11ax on 11be capable operation.
+ *
+ * Return: void
+ */
+void wlan_vdev_set_dot11mode(struct wlan_mlme_cfg *mac_mlme_cfg,
+			     enum QDF_OPMODE device_mode,
+			     struct vdev_mlme_obj *vdev_mlme);
+
+/**
  * wlan_is_open_wep_cipher() - check if cipher is open or WEP
  * @pdev: Pointer to pdev
  * @vdev_id: vdev id

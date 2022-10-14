@@ -3449,6 +3449,52 @@ enum QDF_OPMODE wlan_get_opmode_vdev_id(struct wlan_objmgr_pdev *pdev,
 	return opmode;
 }
 
+void wlan_vdev_set_dot11mode(struct wlan_mlme_cfg *mac_mlme_cfg,
+			     enum QDF_OPMODE device_mode,
+			     struct vdev_mlme_obj *vdev_mlme)
+{
+	uint8_t dot11_mode_indx;
+	uint8_t *mld_addr;
+	enum mlme_vdev_dot11_mode vdev_dot11_mode;
+	uint32_t mac_dot11_mode =
+			mac_mlme_cfg->dot11_mode.vdev_type_dot11_mode;
+
+	switch (device_mode) {
+	default:
+	case QDF_STA_MODE:
+		dot11_mode_indx = STA_DOT11_MODE_INDX;
+		break;
+	case QDF_P2P_CLIENT_MODE:
+	case QDF_P2P_DEVICE_MODE:
+		dot11_mode_indx = P2P_DEV_DOT11_MODE_INDX;
+		break;
+	case QDF_TDLS_MODE:
+		dot11_mode_indx = TDLS_DOT11_MODE_INDX;
+		break;
+	case QDF_NAN_DISC_MODE:
+		dot11_mode_indx = NAN_DISC_DOT11_MODE_INDX;
+		break;
+	case QDF_NDI_MODE:
+		dot11_mode_indx = NDI_DOT11_MODE_INDX;
+		break;
+	case QDF_OCB_MODE:
+		dot11_mode_indx = OCB_DOT11_MODE_INDX;
+		break;
+	}
+
+	vdev_dot11_mode = QDF_GET_BITS(mac_dot11_mode, dot11_mode_indx, 4);
+	if (vdev_dot11_mode == MLME_VDEV_DOT11_MODE_AUTO ||
+	    vdev_dot11_mode == MLME_VDEV_DOT11_MODE_11BE) {
+		mld_addr = wlan_vdev_mlme_get_mldaddr(vdev_mlme->vdev);
+		if (qdf_is_macaddr_zero((struct qdf_mac_addr *)mld_addr)) {
+			vdev_dot11_mode = MLME_VDEV_DOT11_MODE_11AX;
+			vdev_mlme->proto.vdev_dot11_mode = vdev_dot11_mode;
+		}
+	}
+	mlme_debug("vdev%d: dot11_mode %d", wlan_vdev_get_id(vdev_mlme->vdev),
+		   vdev_dot11_mode);
+}
+
 bool wlan_is_open_wep_cipher(struct wlan_objmgr_pdev *pdev, uint8_t vdev_id)
 {
 	struct wlan_objmgr_vdev *vdev;

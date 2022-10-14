@@ -252,21 +252,6 @@ enum mlme_dot11_mode {
 };
 
 /**
- * enum mlme_vdev_dot11_mode - Dot11 mode of the vdev
- * MLME_VDEV_DOT11_MODE_AUTO: vdev uses mlme_dot11_mode
- * MLME_VDEV_DOT11_MODE_11N: vdev supports 11N mode
- * MLME_VDEV_DOT11_MODE_11AC: vdev supports 11AC mode
- * MLME_VDEV_DOT11_MODE_11AX: vdev supports 11AX mode
- */
-enum mlme_vdev_dot11_mode {
-	MLME_VDEV_DOT11_MODE_AUTO,
-	MLME_VDEV_DOT11_MODE_11N,
-	MLME_VDEV_DOT11_MODE_11AC,
-	MLME_VDEV_DOT11_MODE_11AX,
-	MLME_VDEV_DOT11_MODE_11BE,
-};
-
-/**
  * struct wlan_mlme_dot11_mode - dot11 mode
  *
  * @dot11_mode: dot11 mode supported

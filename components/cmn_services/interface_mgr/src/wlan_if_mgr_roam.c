@@ -736,6 +736,16 @@ static inline uint32_t
 if_mgr_get_conc_ext_flags(struct wlan_objmgr_vdev *vdev,
 			  struct validate_bss_data *candidate_info)
 {
+	struct qdf_mac_addr *mld_addr;
+
+	/* If connection is happening on non-ML VDEV
+	 * force the ML AP candidate as non-MLO to
+	 * downgrade connection to 11ax.
+	 */
+	mld_addr = (struct qdf_mac_addr *)wlan_vdev_mlme_get_mldaddr(vdev);
+	if (qdf_is_macaddr_zero(mld_addr))
+		return policy_mgr_get_conc_ext_flags(vdev, false);
+
 	return policy_mgr_get_conc_ext_flags(vdev, candidate_info->is_mlo);
 }
 

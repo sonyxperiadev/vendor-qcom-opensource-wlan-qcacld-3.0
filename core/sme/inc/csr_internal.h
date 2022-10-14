@@ -407,7 +407,7 @@ struct csr_roamstruct {
 /**
  * csr_get_vdev_dot11_mode() - get the supported dot11mode by vdev
  * @mac_ctx:  pointer to global mac structure
- * @device_mode: vdev mode
+ * @vdev_id: vdev id
  * @curr_dot11_mode: Current dot11 mode
  *
  * The function return the min of supported dot11 mode and vdev type dot11mode
@@ -417,7 +417,7 @@ struct csr_roamstruct {
  */
 enum csr_cfgdot11mode
 csr_get_vdev_dot11_mode(struct mac_context *mac,
-			enum QDF_OPMODE device_mode,
+			uint8_t vdev_id,
 			enum csr_cfgdot11mode curr_dot11_mode);
 
 QDF_STATUS csr_get_channel_and_power_list(struct mac_context *mac);

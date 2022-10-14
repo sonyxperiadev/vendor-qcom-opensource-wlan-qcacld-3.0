@@ -1931,28 +1931,31 @@ static void lim_check_oui_and_update_session(struct mac_context *mac_ctx,
 }
 
 static enum mlme_dot11_mode
-lim_get_self_dot11_mode(struct mac_context *mac_ctx, enum QDF_OPMODE opmode)
+lim_get_self_dot11_mode(struct mac_context *mac_ctx, enum QDF_OPMODE opmode,
+			uint8_t vdev_id)
 {
+	struct wlan_objmgr_vdev *vdev;
+	struct vdev_mlme_obj *vdev_mlme;
+	enum mlme_vdev_dot11_mode vdev_dot11_mode;
 	enum mlme_dot11_mode self_dot11_mode =
 				mac_ctx->mlme_cfg->dot11_mode.dot11_mode;
-	enum mlme_vdev_dot11_mode vdev_dot11_mode;
-	uint8_t dot11_mode_indx;
-	uint32_t vdev_type_dot11_mode =
-			mac_ctx->mlme_cfg->dot11_mode.vdev_type_dot11_mode;
 
 	switch (opmode) {
 	case QDF_STA_MODE:
-		dot11_mode_indx = STA_DOT11_MODE_INDX;
-		break;
 	case QDF_P2P_CLIENT_MODE:
-		dot11_mode_indx = P2P_DEV_DOT11_MODE_INDX;
 		break;
 	default:
 		return self_dot11_mode;
 	}
 
-	vdev_dot11_mode = QDF_GET_BITS(vdev_type_dot11_mode, dot11_mode_indx,
-				       4);
+	vdev = wlan_objmgr_get_vdev_by_id_from_pdev(mac_ctx->pdev, vdev_id,
+						    WLAN_MLME_OBJMGR_ID);
+	if (!vdev)
+		return self_dot11_mode;
+
+	vdev_mlme = wlan_vdev_mlme_get_cmpt_obj(vdev);
+	vdev_dot11_mode = vdev_mlme->proto.vdev_dot11_mode;
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
 
 	pe_debug("self_dot11_mode %d, vdev_dot11 %d, dev_mode %d",
 		  self_dot11_mode, vdev_dot11_mode, opmode);
@@ -1971,6 +1974,10 @@ lim_get_self_dot11_mode(struct mac_context *mac_ctx, enum QDF_OPMODE opmode)
 	if (IS_DOT11_MODE_HE(self_dot11_mode) &&
 	    vdev_dot11_mode == MLME_VDEV_DOT11_MODE_11AX)
 		return MLME_DOT11_MODE_11AX;
+
+	if (IS_DOT11_MODE_EHT(self_dot11_mode) &&
+	    vdev_dot11_mode == MLME_VDEV_DOT11_MODE_11BE)
+		return MLME_DOT11_MODE_11BE;
 
 	return self_dot11_mode;
 }
@@ -2613,7 +2620,8 @@ lim_fill_dot11_mode(struct mac_context *mac_ctx, struct pe_session *session,
 	enum mlme_dot11_mode bss_dot11_mode;
 	enum mlme_dot11_mode intersected_mode;
 
-	self_dot11_mode = lim_get_self_dot11_mode(mac_ctx, session->opmode);
+	self_dot11_mode = lim_get_self_dot11_mode(mac_ctx, session->opmode,
+						  session->vdev_id);
 	bss_dot11_mode = lim_get_bss_dot11_mode(mac_ctx, bss_desc, ie_struct);
 
 	pe_debug("vdev id %d opmode %d self dot11mode %d bss_dot11 mode %d",
@@ -5012,7 +5020,8 @@ QDF_STATUS cm_process_reassoc_req(struct scheduler_msg *msg)
 
 static QDF_STATUS
 lim_fill_preauth_req_dot11_mode(struct mac_context *mac_ctx,
-				tpSirFTPreAuthReq req)
+				tpSirFTPreAuthReq req,
+				uint8_t vdev_id)
 {
 	QDF_STATUS status;
 	tDot11fBeaconIEs *ie_struct;
@@ -5028,7 +5037,8 @@ lim_fill_preauth_req_dot11_mode(struct mac_context *mac_ctx,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	self_dot11_mode = lim_get_self_dot11_mode(mac_ctx, QDF_STA_MODE);
+	self_dot11_mode = lim_get_self_dot11_mode(mac_ctx, QDF_STA_MODE,
+						  vdev_id);
 	bss_dot11_mode = lim_get_bss_dot11_mode(mac_ctx, bss_desc, ie_struct);
 
 	status = lim_get_intersected_dot11_mode_sta_ap(mac_ctx, self_dot11_mode,
@@ -5090,14 +5100,14 @@ static QDF_STATUS lim_cm_handle_preauth_req(struct wlan_preauth_req *req)
 		goto end;
 	}
 
+	vdev_id = req->vdev_id;
 	preauth_req->pbssDescription = bss_desc;
-	status = lim_fill_preauth_req_dot11_mode(mac_ctx, preauth_req);
+	status = lim_fill_preauth_req_dot11_mode(mac_ctx, preauth_req, vdev_id);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		pe_err("dot11mode doesn't get proper filling");
 		goto end;
 	}
 
-	vdev_id = req->vdev_id;
 	vdev = wlan_objmgr_get_vdev_by_id_from_pdev(mac_ctx->pdev, vdev_id,
 						    WLAN_MLME_CM_ID);
 	if (!vdev) {
