@@ -548,7 +548,8 @@ hdd_convert_sarv1_to_sarv2(struct hdd_context *hdd_ctx,
 	struct sar_limit_cmd_row *row;
 
 	hdd_enter();
-	if (hdd_ctx->sar_version != SAR_VERSION_2) {
+	if (hdd_ctx->sar_version != SAR_VERSION_2 &&
+	    hdd_ctx->sar_version != SAR_VERSION_3) {
 		hdd_debug("SAR version: %d", hdd_ctx->sar_version);
 		return false;
 	}
@@ -772,13 +773,14 @@ static int __wlan_hdd_set_sar_power_limits(struct wiphy *wiphy,
 			QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_BDF0 &&
 		     sar_enable <=
 			QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_BDF4) &&
-		     hdd_ctx->sar_version == SAR_VERSION_2 &&
+		     (hdd_ctx->sar_version == SAR_VERSION_2 ||
+		      hdd_ctx->sar_version == SAR_VERSION_3) &&
 		     !hdd_ctx->config->enable_sar_conversion) {
 			hdd_err("SARV1 to SARV2 is disabled from ini");
 			return -EINVAL;
 		} else if (sar_enable ==
 				QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_V2_0 &&
-			   hdd_ctx->sar_version == SAR_VERSION_1) {
+				hdd_ctx->sar_version == SAR_VERSION_1) {
 			hdd_err("FW expects SARV1 given command is SARV2");
 			return -EINVAL;
 		}
