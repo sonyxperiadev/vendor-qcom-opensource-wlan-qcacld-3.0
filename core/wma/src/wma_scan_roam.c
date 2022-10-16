@@ -2766,11 +2766,6 @@ void cm_handle_roam_reason_deauth(uint8_t vdev_id, uint32_t notif_params,
 				  uint8_t *deauth_disassoc_frame,
 				  uint32_t frame_len)
 {
-	if (!deauth_disassoc_frame) {
-		wma_debug("deauth_disassoc_frame is NULL");
-		return;
-	}
-
 	wma_handle_roam_reason_deauth(vdev_id, notif_params, frame_len,
 				      deauth_disassoc_frame);
 }

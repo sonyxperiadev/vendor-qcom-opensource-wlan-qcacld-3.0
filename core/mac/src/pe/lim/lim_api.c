@@ -2442,9 +2442,13 @@ pe_disconnect_callback(struct mac_context *mac, uint8_t vdev_id,
 	if (!lim_is_sb_disconnect_allowed(session))
 		return QDF_STATUS_SUCCESS;
 
-	if (!(deauth_disassoc_frame ||
-	      deauth_disassoc_frame_len > SIR_MAC_MIN_IE_LEN))
+	if (!deauth_disassoc_frame ||
+	    deauth_disassoc_frame_len <
+	    (sizeof(struct wlan_frame_hdr) + sizeof(reason_code))) {
+		pe_err_rl("Discard invalid disconnect evt. frame len:%d",
+			  deauth_disassoc_frame_len);
 		goto end;
+	}
 
 	/*
 	 * Use vdev pmf status instead of peer pmf capability as
