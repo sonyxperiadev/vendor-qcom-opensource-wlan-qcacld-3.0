@@ -253,6 +253,20 @@ wlan_mlo_roam_abort_on_link(struct wlan_objmgr_psoc *psoc,
 bool
 mlo_check_if_all_links_up(struct wlan_objmgr_vdev *vdev);
 
+/**
+ * mlo_roam_set_link_id - set link id post roaming
+ *
+ * @vdev: vdev pointer
+ * @sync_ind: roam sync indication pointer
+ *
+ * This api will be called to set link id post roaming
+ *
+ * Return: none
+ */
+void
+mlo_roam_set_link_id(struct wlan_objmgr_vdev *vdev,
+		     struct roam_offload_synch_ind *sync_ind);
+
 #else /* WLAN_FEATURE_11BE_MLO */
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 static inline
@@ -354,5 +368,10 @@ mlo_check_if_all_links_up(struct wlan_objmgr_vdev *vdev)
 {
 	return false;
 }
+
+static inline void
+mlo_roam_set_link_id(struct wlan_objmgr_vdev *vdev,
+		     struct roam_offload_synch_ind *sync_ind)
+{}
 #endif /* WLAN_FEATURE_11BE_MLO */
 #endif

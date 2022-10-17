@@ -615,3 +615,19 @@ mlo_check_if_all_links_up(struct wlan_objmgr_vdev *vdev)
 	return false;
 }
 
+void
+mlo_roam_set_link_id(struct wlan_objmgr_vdev *vdev,
+		     struct roam_offload_synch_ind *sync_ind)
+{
+	uint8_t i;
+
+	for (i = 0; i < sync_ind->num_setup_links; i++) {
+		if (sync_ind->ml_link[i].vdev_id == wlan_vdev_get_id(vdev)) {
+			wlan_vdev_set_link_id(vdev,
+					      sync_ind->ml_link[i].link_id);
+			mlme_debug("Set link for vdev id %d link id %d",
+				   wlan_vdev_get_id(vdev),
+				   sync_ind->ml_link[i].link_id);
+		}
+	}
+}
