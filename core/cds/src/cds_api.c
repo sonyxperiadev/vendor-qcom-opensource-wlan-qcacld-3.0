@@ -2103,7 +2103,7 @@ void cds_set_wakelock_logging(bool value)
 
 	p_cds_context = cds_get_global_context();
 	if (!p_cds_context) {
-		cds_err("cds context is Invald");
+		cds_err("cds context is Invalid");
 		return;
 	}
 	p_cds_context->is_wakelock_log_enabled = value;
@@ -2123,7 +2123,7 @@ bool cds_is_wakelock_enabled(void)
 
 	p_cds_context = cds_get_global_context();
 	if (!p_cds_context) {
-		cds_err("cds context is Invald");
+		cds_err("cds context is Invalid");
 		return false;
 	}
 	return p_cds_context->is_wakelock_log_enabled;
@@ -2132,7 +2132,7 @@ bool cds_is_wakelock_enabled(void)
 /**
  * cds_set_ring_log_level() - Sets the log level of a particular ring
  * @ring_id: ring_id
- * @log_levelvalue: Log level specificed
+ * @log_levelvalue: Log level specified
  *
  * This function converts HLOS values to driver log levels and sets the log
  * level of a particular ring accordingly.
@@ -2146,7 +2146,7 @@ void cds_set_ring_log_level(uint32_t ring_id, uint32_t log_level)
 
 	p_cds_context = cds_get_global_context();
 	if (!p_cds_context) {
-		cds_err("cds context is Invald");
+		cds_err("cds context is Invalid");
 		return;
 	}
 
@@ -2198,7 +2198,7 @@ enum wifi_driver_log_level cds_get_ring_log_level(uint32_t ring_id)
 
 	p_cds_context = cds_get_global_context();
 	if (!p_cds_context) {
-		cds_err("cds context is Invald");
+		cds_err("cds context is Invalid");
 		return WLAN_LOG_LEVEL_OFF;
 	}
 
@@ -2272,7 +2272,7 @@ void cds_init_log_completion(void)
 /**
  * cds_set_log_completion() - Store the logging params
  * @is_fatal: Indicates if the event triggering bug report is fatal or not
- * @indicator: Source which trigerred the bug report
+ * @indicator: Source which triggered the bug report
  * @reason_code: Reason for triggering bug report
  * @recovery_needed: If recovery is needed after bug report
  *
@@ -2310,7 +2310,7 @@ QDF_STATUS cds_set_log_completion(uint32_t is_fatal,
 /**
  * cds_get_and_reset_log_completion() - Get and reset logging related params
  * @is_fatal: Indicates if the event triggering bug report is fatal or not
- * @indicator: Source which trigerred the bug report
+ * @indicator: Source which triggered the bug report
  * @reason_code: Reason for triggering bug report
  * @recovery_needed: If recovery is needed after bug report
  *
@@ -2473,7 +2473,7 @@ void cds_wlan_flush_host_logs_for_fatal(void)
 /**
  * cds_flush_logs() - Report fatal event to userspace
  * @is_fatal: Indicates if the event triggering bug report is fatal or not
- * @indicator: Source which trigerred the bug report
+ * @indicator: Source which triggered the bug report
  * @reason_code: Reason for triggering bug report
  * @dump_mac_trace: If mac trace are needed in logs.
  * @recovery_needed: If recovery is needed after bug report

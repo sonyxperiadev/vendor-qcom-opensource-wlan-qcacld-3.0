@@ -394,7 +394,7 @@ static QDF_STATUS hdd_sta_info_re_attach(
 
 	if (sta_info->is_attached) {
 		qdf_spin_unlock_bh(&sta_info_container->sta_obj_lock);
-		hdd_err("sta info is alredy attached");
+		hdd_err("sta info is already attached");
 		return QDF_STATUS_SUCCESS;
 	}
 

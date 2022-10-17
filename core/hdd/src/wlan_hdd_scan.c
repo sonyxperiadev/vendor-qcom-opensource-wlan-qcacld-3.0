@@ -134,7 +134,7 @@ static void hdd_vendor_scan_callback(struct hdd_adapter *adapter,
 	scan_status = (aborted == true) ? VENDOR_SCAN_STATUS_ABORTED :
 		VENDOR_SCAN_STATUS_NEW_RESULTS;
 	if (nla_put_u8(skb, QCA_WLAN_VENDOR_ATTR_SCAN_STATUS, scan_status)) {
-		hdd_err("Failed to add scan staus");
+		hdd_err("Failed to add scan status");
 		goto nla_put_failure;
 	}
 	cfg80211_vendor_event(skb, GFP_KERNEL);

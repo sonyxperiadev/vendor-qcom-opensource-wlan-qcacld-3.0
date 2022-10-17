@@ -2024,9 +2024,6 @@ struct hdd_context {
 	bool is_wifi3_0_target;
 	bool dump_in_progress;
 	struct hdd_dual_sta_policy dual_sta_policy;
-#if defined(WLAN_FEATURE_11BE_MLO) && defined(CFG80211_11BE_BASIC)
-	struct hdd_mld_mac_info mld_mac_info;
-#endif
 #ifdef THERMAL_STATS_SUPPORT
 	bool is_therm_stats_in_progress;
 #endif
@@ -2221,7 +2218,7 @@ QDF_STATUS hdd_get_next_adapter(struct hdd_context *hdd_ctx,
 
 /**
  * hdd_get_front_adapter_no_lock() - Get the first adapter from the adapter list
- * This API doesnot use any lock in it's implementation. It is the caller's
+ * This API does not use any lock in it's implementation. It is the caller's
  * directive to ensure concurrency safety.
  * @hdd_ctx: pointer to the HDD context
  * @out_adapter: double pointer to pass the next adapter
@@ -2233,7 +2230,7 @@ QDF_STATUS hdd_get_front_adapter_no_lock(struct hdd_context *hdd_ctx,
 
 /**
  * hdd_get_next_adapter_no_lock() - Get the next adapter from the adapter list
- * This API doesnot use any lock in it's implementation. It is the caller's
+ * This API does not use any lock in it's implementation. It is the caller's
  * directive to ensure concurrency safety.
  * @hdd_ctx: pointer to the HDD context
  * @current_adapter: pointer to the current adapter

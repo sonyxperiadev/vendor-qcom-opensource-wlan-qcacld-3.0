@@ -322,6 +322,19 @@ uint16_t lim_get_frame_mlo_ie_len(struct pe_session *session);
 QDF_STATUS lim_store_mlo_ie_raw_info(uint8_t *ie, uint8_t *sta_prof_ie,
 				     uint32_t total_len,
 				     struct wlan_mlo_ie *mlo_ie);
+
+/**
+ * lim_is_ml_peer_state_disconn() - Check if ML peer state is
+ * ML_PEER_DISCONN_INITIATED
+ * @mac_ctx: pointer to mac_context
+ * @session: pointer to pe_session
+ * @mac_addr: peer mac address
+ *
+ * Return: True if state is ML_PEER_DISCONN_INITIATED, else False
+ */
+bool lim_is_ml_peer_state_disconn(struct mac_context *mac_ctx,
+				  struct pe_session *session,
+				  uint8_t *mac_addr);
 #else
 static inline void lim_mlo_notify_peer_disconn(struct pe_session *pe_session,
 					       tpDphHashNode sta_ds)
@@ -432,6 +445,14 @@ static inline
 uint16_t lim_get_frame_mlo_ie_len(struct pe_session *session)
 {
 	return 0;
+}
+
+static inline
+bool lim_is_ml_peer_state_disconn(struct mac_context *mac_ctx,
+				  struct pe_session *session,
+				  uint8_t *mac_addr)
+{
+	return false;
 }
 #endif
 #endif

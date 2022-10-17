@@ -2031,6 +2031,8 @@ WMI_OBJS += $(WMI_OBJ_DIR)/wmi_unified_wds_api.o
 WMI_OBJS += $(WMI_OBJ_DIR)/wmi_unified_wds_tlv.o
 endif
 
+cppflags-y += -DSERIALIZE_WMI_RX_EXECUTION_CTX
+
 $(call add-wlan-objs,wmi,$(WMI_OBJS))
 
 ########### FWLOG ###########
@@ -2627,6 +2629,7 @@ endif
 $(call add-wlan-objs,coex,$(COEX_OBJS))
 
 ###### COAP ########
+ifeq ($(CONFIG_WLAN_FEATURE_COAP), y)
 COAP_HDD_SRC := core/hdd/src
 COAP_OS_IF_SRC := os_if/coap/src
 COAP_TGT_SRC := components/target_if/coap/src
@@ -2640,7 +2643,6 @@ COAP_DISPATCHER_INC := -I$(WLAN_ROOT)/components/coap/dispatcher/inc
 COAP_CORE_INC := -I$(WLAN_ROOT)/components/coap/core/inc
 COAP_WMI_INC := -I$(WLAN_ROOT)/components/wmi/inc
 
-ifeq ($(CONFIG_WLAN_FEATURE_COAP), y)
 COAP_OBJS := \
 	$(COAP_HDD_SRC)/wlan_hdd_coap.o \
 	$(COAP_OS_IF_SRC)/wlan_cfg80211_coap.o \
@@ -2649,9 +2651,8 @@ COAP_OBJS := \
 	$(COAP_DISPATCHER_SRC)/wlan_coap_tgt_api.o \
 	$(COAP_DISPATCHER_SRC)/wlan_coap_ucfg_api.o \
 	$(COAP_WMI_SRC)/wmi_unified_coap_tlv.o
-endif
-
 $(call add-wlan-objs,coap,$(COAP_OBJS))
+endif
 
 ############## HTC ##########
 HTC_DIR := htc
@@ -3324,6 +3325,7 @@ cppflags-y += -DFEATURE_MONITOR_MODE_SUPPORT
 cppflags-$(CONFIG_DP_CON_MON_MSI_ENABLED) += -DDP_CON_MON_MSI_ENABLED
 cppflags-$(CONFIG_WLAN_RX_MON_PARSE_CMN_USER_INFO) += -DWLAN_RX_MON_PARSE_CMN_USER_INFO
 cppflags-$(CONFIG_DP_CON_MON_MSI_SKIP_SET) += -DDP_CON_MON_MSI_SKIP_SET
+cppflags-$(CONFIG_QCA_WIFI_MONITOR_MODE_NO_MSDU_START_TLV_SUPPORT) += -DQCA_WIFI_MONITOR_MODE_NO_MSDU_START_TLV_SUPPORT
 else
 cppflags-y += -DDISABLE_MON_CONFIG
 endif
@@ -3620,6 +3622,9 @@ cppflags-$(CONFIG_HL_DP_SUPPORT) += -DQCA_COMPUTE_TX_DELAY_PER_TID
 cppflags-$(CONFIG_LL_DP_SUPPORT) += -DCONFIG_LL_DP_SUPPORT
 cppflags-$(CONFIG_LL_DP_SUPPORT) += -DWLAN_FULL_REORDER_OFFLOAD
 cppflags-$(CONFIG_WLAN_FEATURE_BIG_DATA_STATS) += -DWLAN_FEATURE_BIG_DATA_STATS
+ifeq ($(CONFIG_WLAN_FEATURE_11AX), y)
+cppflags-$(CONFIG_WLAN_FEATURE_SR) += -DWLAN_FEATURE_SR
+endif
 cppflags-$(CONFIG_WLAN_FEATURE_IGMP_OFFLOAD) += -DWLAN_FEATURE_IGMP_OFFLOAD
 cppflags-$(CONFIG_WLAN_FEATURE_GET_USABLE_CHAN_LIST) += -DWLAN_FEATURE_GET_USABLE_CHAN_LIST
 
@@ -4631,7 +4636,7 @@ endif
 #
 # If DYNAMIC_SINGLE_CHIP & MULTI_IF_NAME defined, which means there are
 # multiple possible drivers, we also can load multiple drivers together.
-# And we can use DYNAMIC_SINGLE_CHIP to distingush the ko name, and use
+# And we can use DYNAMIC_SINGLE_CHIP to distinguish the ko name, and use
 # MULTI_IF_NAME to make cnss2 platform driver to figure out which wlanhost
 # driver attached. Moreover, as the first priority, host driver will only
 # append DYNAMIC_SINGLE_CHIP to the path of firmware/mac/ini file.

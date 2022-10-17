@@ -16,7 +16,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 /**
- * DOC: Contains DP public data structure definations.
+ * DOC: Contains DP public data structure definitions.
  *
  */
 
@@ -721,7 +721,7 @@ struct wlan_dp_user_config {
 };
 
 /**
- * struct dp_traffic_end_indication - Trafic end indication
+ * struct dp_traffic_end_indication - Traffic end indication
  * @enabled: Feature enabled/disabled config
  * @def_dscp: Default DSCP value in regular packets in traffic
  * @spl_dscp: Special DSCP value to be used by packet to mark

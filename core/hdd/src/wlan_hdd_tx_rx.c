@@ -460,7 +460,7 @@ int hdd_set_udp_qos_upgrade_config(struct hdd_adapter *adapter,
 	}
 
 	if (priority >= QCA_WLAN_AC_ALL) {
-		hdd_err_rl("Invlid data priority: %d", priority);
+		hdd_err_rl("Invalid data priority: %d", priority);
 		return -EINVAL;
 	}
 
@@ -545,7 +545,7 @@ static void __hdd_hard_start_xmit(struct sk_buff *skb,
 	/*
 	 * Make sure we already have access to this access category
 	 * or it is EAPOL or WAPI frame during initial authentication which
-	 * can have artifically boosted higher qos priority.
+	 * can have artificially boosted higher qos priority.
 	 */
 
 	if (((adapter->psb_changed & (1 << ac)) &&

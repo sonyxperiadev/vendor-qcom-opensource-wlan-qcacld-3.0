@@ -1467,7 +1467,7 @@ lim_enc_type_matched(struct mac_context *mac_ctx,
 	 * check for security type in case
 	 * OSEN session.
 	 * For WPS registration session no need to detect
-	 * detect security mismatch as it wont match and
+	 * detect security mismatch as it won't match and
 	 * driver may end up sending probe request without
 	 * WPS IE during WPS registration process.
 	 */
@@ -1934,7 +1934,7 @@ lim_roam_gen_mbssid_beacon(struct mac_context *mac,
 			   uint8_t **ie, uint32_t *ie_len)
 {
 	qdf_list_t *scan_list;
-	struct mgmt_rx_event_params rx_param;
+	struct mgmt_rx_event_params rx_param = {0};
 	uint8_t list_count = 0, i;
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
 	qdf_list_node_t *next_node = NULL, *cur_node = NULL;
@@ -1952,6 +1952,10 @@ lim_roam_gen_mbssid_beacon(struct mac_context *mac,
 	rx_param.chan_freq = roam_ind->chan_freq;
 	rx_param.pdev_id = wlan_objmgr_pdev_get_pdev_id(mac->pdev);
 	rx_param.rssi = roam_ind->rssi;
+
+	/* Set all per chain rssi as invalid */
+	for (i = 0; i < WLAN_MGMT_TXRX_HOST_MAX_ANTENNA; i++)
+		rx_param.rssi_ctl[i] = WLAN_INVALID_PER_CHAIN_RSSI;
 
 	scan_list = util_scan_unpack_beacon_frame(mac->pdev, bcn_prb_ptr,
 						  roam_ind->beaconProbeRespLength,
@@ -2198,7 +2202,7 @@ lim_roam_fill_bss_descr(struct mac_context *mac,
 	}
 
 	/*
-	 * Length of BSS desription is without length of
+	 * Length of BSS description is without length of
 	 * length itself and length of pointer
 	 * that holds ieFields
 	 *
@@ -2606,7 +2610,7 @@ lim_gen_link_specific_assoc_rsp(struct mac_context *mac_ctx,
 	}
 
 	lim_process_assoc_rsp_frame(mac_ctx, link_reassoc_rsp.ptr,
-				    link_reassoc_rsp.len,
+				    link_reassoc_rsp.len - SIR_MAC_HDR_LEN_3A,
 				    LIM_REASSOC, session_entry);
 end:
 	qdf_mem_free(link_reassoc_rsp.ptr);
@@ -2802,7 +2806,7 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 	}
 	else
 		lim_process_assoc_rsp_frame(mac_ctx, reassoc_resp,
-					    roam_sync_ind_ptr->reassocRespLength,
+					    roam_sync_ind_ptr->reassocRespLength - SIR_MAC_HDR_LEN_3A,
 					    LIM_REASSOC, ft_session_ptr);
 
 	lim_check_ft_initial_im_association(roam_sync_ind_ptr, ft_session_ptr);
@@ -2883,7 +2887,7 @@ static bool lim_is_beacon_miss_scenario(struct mac_context *mac,
 
    This function is called before enqueuing the frame to PE queue for further processing.
    This prevents unnecessary frames getting into PE Queue and drops them right away.
-   Frames will be droped in the following scenarios:
+   Frames will be dropped in the following scenarios:
 
    - In Scan State, drop the frames which are not marked as scan frames
    - In non-Scan state, drop the frames which are marked as scan frames.
@@ -2935,7 +2939,7 @@ tMgmtFrmDropReason lim_is_pkt_candidate_for_drop(struct mac_context *mac,
 			return eMGMT_DROP_NO_DROP;
 
 		/* Drop INFRA Beacons and Probe Responses in IBSS Mode */
-		/* This can be enhanced to even check the SSID before deciding to enque the frame. */
+		/* This can be enhanced to even check the SSID before deciding to enqueue the frame. */
 		if (capabilityInfo.ess)
 			return eMGMT_DROP_INFRA_BCN_IN_IBSS;
 
@@ -3303,8 +3307,10 @@ lim_cm_fill_link_session(struct mac_context *mac_ctx,
 		pe_session->limMlmState = eLIM_MLM_WT_REASSOC_RSP_STATE;
 	}
 end:
-	if (QDF_IS_STATUS_ERROR(status))
+	if (QDF_IS_STATUS_ERROR(status)) {
 		qdf_mem_free(pe_session->lim_join_req);
+		pe_session->lim_join_req = NULL;
+	}
 	return status;
 }
 
@@ -3573,6 +3579,24 @@ lim_validate_probe_rsp_link_info(struct pe_session *session_entry,
 			pe_err("Prb req link info does not match prb resp link info");
 			return QDF_STATUS_E_PROTO;
 		}
+	}
+
+	/* WAR: currently util_gen_link_reqrsp_cmn generates only the first
+	 * partner link and DUT only 2 mlo link is supported, so let's just
+	 * comparing the first partner info to check whether mlo is possible.
+	 */
+	if (ml_partner_info.num_partner_links == 1) {
+		if (partner_info.partner_link_info[0].link_id ==
+		    ml_partner_info.partner_link_info[0].link_id &&
+		    (qdf_is_macaddr_equal(&ml_partner_info.partner_link_info[0].link_addr,
+					  &partner_info.partner_link_info[0].link_addr)))
+			status = QDF_STATUS_SUCCESS;
+		else
+			status = QDF_STATUS_E_PROTO;
+
+		pe_debug("DUT num partner: %d, AP num partner: %d, status: %d",
+			 ml_partner_info.num_partner_links,
+			 partner_info.num_partner_links, status);
 	}
 
 	return status;

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -85,7 +86,7 @@ lim_collect_bss_description(struct mac_context *mac,
 	rfBand = WMA_GET_RX_RFBAND(pRxPacketInfo);
 
 	/**
-	 * Length of BSS desription is without length of
+	 * Length of BSS description is without length of
 	 * length itself and length of pointer that holds ieFields.
 	 *
 	 * struct bss_description

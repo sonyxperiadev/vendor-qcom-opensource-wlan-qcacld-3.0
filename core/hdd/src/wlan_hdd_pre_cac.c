@@ -116,6 +116,7 @@ void hdd_close_pre_cac_adapter(struct hdd_context *hdd_ctx)
 	if (!pre_cac_adapter)
 		return;
 
+	ucfg_pre_cac_clear_work(hdd_ctx->psoc);
 	errno = osif_vdev_sync_trans_start_wait(pre_cac_adapter->dev,
 						&vdev_sync);
 	if (errno)
@@ -144,7 +145,7 @@ static int wlan_set_def_pre_cac_chan(struct hdd_context *hdd_ctx,
 	ieee_chan = ieee80211_get_channel(hdd_ctx->wiphy,
 					  pre_cac_ch_freq);
 	if (!ieee_chan) {
-		hdd_err("channel converion failed %d", pre_cac_ch_freq);
+		hdd_err("channel conversion failed %d", pre_cac_ch_freq);
 		return -EINVAL;
 	}
 	ch_params.ch_width = *ch_width;
@@ -351,7 +352,7 @@ static int __wlan_hdd_request_pre_cac(struct hdd_context *hdd_ctx,
 	pre_cac_adapter->session.ap.sap_config.authType =
 			ap_adapter->session.ap.sap_config.authType;
 
-	/* The orginal premise is that on moving from 2.4GHz to 5GHz, the SAP
+	/* The original premise is that on moving from 2.4GHz to 5GHz, the SAP
 	 * will continue to operate on the same bandwidth as that of the 2.4GHz
 	 * operations. Only bandwidths 20MHz/40MHz are possible on 2.4GHz band.
 	 * Now some customer request to start AP on higher BW such as 80Mhz.

@@ -93,7 +93,7 @@ enum mlmmsgtype {
 
 #define LIM_DECRYPT_ICV_FAIL    1
 
-/* / Definitions to distinquish between Association/Reassociaton */
+/* / Definitions to distinguish between Association/Reassociaton */
 #define LIM_ASSOC    0
 #define LIM_REASSOC  1
 
@@ -581,7 +581,6 @@ QDF_STATUS lim_send_mlm_assoc_ind(struct mac_context *mac,
 				  tpDphHashNode sta,
 				  struct pe_session *pe_session);
 
-#define ASSOC_FRAME_LEN 0
 /**
  * lim_process_assoc_rsp_frame() - Processes assoc response
  * @mac_ctx:              Pointer to Global MAC structure

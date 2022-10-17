@@ -2539,8 +2539,9 @@ static int hdd_extscan_start_fill_bucket_channel_spec(
 
 				channel->channel = chan_list[j];
 				channel->channel_class = 0;
-				if ((wlan_reg_get_channel_state_for_freq(
-				     hdd_ctx->pdev, chan_list[j])) !=
+				if ((wlan_reg_get_channel_state_for_pwrmode(
+				     hdd_ctx->pdev, chan_list[j],
+				     REG_CURRENT_PWR_MODE)) !=
 				    CHANNEL_STATE_ENABLE) {
 					channel->passive = 1;
 					channel->dwell_time_ms =
@@ -2677,8 +2678,9 @@ static int hdd_extscan_start_fill_bucket_channel_spec(
 				hdd_debug("WiFi band is unspecified, dwellTime:%d",
 						channel->dwell_time_ms);
 
-				if ((wlan_reg_get_channel_state_for_freq(
-				     hdd_ctx->pdev, channel->channel)) !=
+				if ((wlan_reg_get_channel_state_for_pwrmode(
+				     hdd_ctx->pdev, channel->channel,
+				     REG_CURRENT_PWR_MODE)) !=
 				    CHANNEL_STATE_ENABLE) {
 					channel->dwell_time_ms =
 						max_dwell_time_passive_bucket;
@@ -2691,8 +2693,9 @@ static int hdd_extscan_start_fill_bucket_channel_spec(
 			hdd_debug("New Dwell time %u ms",
 				channel->dwell_time_ms);
 
-			if ((wlan_reg_get_channel_state_for_freq(
-			     hdd_ctx->pdev, channel->channel)) !=
+			if ((wlan_reg_get_channel_state_for_pwrmode(
+			     hdd_ctx->pdev, channel->channel,
+			     REG_CURRENT_PWR_MODE)) !=
 			    CHANNEL_STATE_ENABLE) {
 				if (min_dwell_time_passive_bucket >
 						channel->dwell_time_ms) {
@@ -2729,9 +2732,10 @@ static int hdd_extscan_start_fill_bucket_channel_spec(
 			hdd_debug("Chnl spec passive %u",
 				channel->passive);
 			/* Override scan type if required */
-			if ((wlan_reg_get_channel_state_for_freq(
+			if ((wlan_reg_get_channel_state_for_pwrmode(
 							hdd_ctx->pdev,
-							channel->channel))
+							channel->channel,
+							REG_CURRENT_PWR_MODE))
 			    != CHANNEL_STATE_ENABLE) {
 				channel->passive = true;
 			} else {

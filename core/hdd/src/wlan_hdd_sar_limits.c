@@ -656,7 +656,7 @@ static int wlan_hdd_cfg80211_sar_convert_modulation(u32 nl80211_value,
 
 /**
  * hdd_extract_sar_nested_attrs() - Extract nested SAR attribute
- * @spec: nested nla attribue
+ * @spec: nested nla attribute
  * @row: output to hold extract nested attribute
  *
  * This function extracts nested SAR attribute one at a time which means

@@ -48,7 +48,7 @@
 
 /* Type declarations */
 
-/* Function definitions and documenation */
+/* Function definitions and documentation */
 #ifdef QCA_DP_SAP_DUMP_SK_BUFF
 /**
  * dp_softap_dump_nbuf() - Dump an nbuf

@@ -1158,3 +1158,37 @@ lim_get_frame_mlo_ie_len(struct pe_session *session)
 	else
 		return 0;
 }
+
+bool
+lim_is_ml_peer_state_disconn(struct mac_context *mac_ctx,
+			     struct pe_session *session,
+			     uint8_t *mac_addr)
+{
+	struct wlan_objmgr_peer *peer;
+	struct wlan_mlo_peer_context *ml_peer = NULL;
+	bool is_ml_peer_disconn = false;
+
+	peer = wlan_objmgr_get_peer_by_mac(mac_ctx->psoc, mac_addr,
+					   WLAN_LEGACY_MAC_ID);
+
+	if (!peer) {
+		pe_err("peer is NULL");
+		return is_ml_peer_disconn;
+	}
+
+	if ((session->opmode == QDF_STA_MODE) &&
+	     wlan_vdev_mlme_is_mlo_vdev(session->vdev))
+		ml_peer = peer->mlo_peer_ctx;
+
+	if (!ml_peer) {
+		pe_err("ML peer ctx not found");
+		goto end;
+	}
+
+	if (QDF_IS_STATUS_SUCCESS(wlan_mlo_peer_is_disconnect_progress(ml_peer)))
+		is_ml_peer_disconn = true;
+
+end:
+	wlan_objmgr_peer_release_ref(peer, WLAN_LEGACY_MAC_ID);
+	return is_ml_peer_disconn;
+}

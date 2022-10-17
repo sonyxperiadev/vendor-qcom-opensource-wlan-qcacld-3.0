@@ -97,7 +97,7 @@ void sch_edca_profile_update_all(struct mac_context *pmac)
 
 /**
  * sch_get_params() - get the local or broadcast parameters based on the profile
- * sepcified in the config params are delivered in this order: BE, BK, VI, VO
+ * specified in the config params are delivered in this order: BE, BK, VI, VO
  */
 static QDF_STATUS
 sch_get_params(struct mac_context *mac,

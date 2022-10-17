@@ -32,7 +32,7 @@
  * @hdd_ctx: Pointer to HDD context
  *
  * This function checks the state of the sar unsolicited timer, if the
- * sar_unsolicited_timer is not runnig, it starts the timer.
+ * sar_unsolicited_timer is not running, it starts the timer.
  *
  * Return: None
  */
@@ -43,7 +43,7 @@ void wlan_hdd_sar_unsolicited_timer_start(struct hdd_context *hdd_ctx);
  * @hdd_ctx: Pointer to HDD context
  *
  * This function checks the state of the sar safety timer, if the
- * sar_safety_timer is not runnig, it starts the timer else it stops
+ * sar_safety_timer is not running, it starts the timer else it stops
  * the timer and start the timer again.
  *
  * Return: None

@@ -147,7 +147,7 @@ struct sae_auth_retry {
 
 /**
  * struct peer_mlme_priv_obj - peer MLME component object
- * @last_pn_valid if last PN is valid
+ * @last_pn_valid: if last PN is valid
  * @last_pn: last pn received
  * @rmf_pn_replays: rmf pn replay count
  * @is_pmf_enabled: True if PMF is enabled
@@ -193,7 +193,7 @@ enum vdev_assoc_type {
 };
 
 /**
- * wlan_mlme_roam_state_info - Structure containing roaming
+ * struct wlan_mlme_roam_state_info - Structure containing roaming
  * state related details
  * @state: Roaming module state.
  * @mlme_operations_bitmap: Bitmap containing what mlme operations are in
@@ -220,7 +220,7 @@ struct wlan_mlme_roaming_config {
  * struct wlan_mlme_roam - Roam structure containing roam state and
  *  roam config info
  * @roam_sm: Structure containing roaming state related details
- * @roam_config: Roaming configurations structure
+ * @roam_cfg: Roaming configurations structure
  * @sae_single_pmk: Details for sae roaming using single pmk
  * @set_pmk_pending: RSO update status of PMK from set_key
  * @sae_auth_ta: SAE pre-auth tx address
@@ -321,14 +321,14 @@ enum ft_ie_state {
 
 /**
  * struct ft_context - ft related information
- * @r0kh_id_len: rokh id len
- * @r0kh_id: rokh id
+ * @r0kh_id_len: r0kh id len
+ * @r0kh_id: r0kh id
  * @auth_ft_ie: auth ft ies received during preauth phase
- * @auth_ie_len: auth ie lengt
- * @reassoc_ft_ie: reassoc ft ies received during reassoc phas
+ * @auth_ie_len: auth ie length
+ * @reassoc_ft_ie: reassoc ft ies received during reassoc phase
  * @reassoc_ie_len: reassoc ie length
- * ric_ies: ric ie
- * ric_ies_length: ric ie len
+ * @ric_ies: ric ie
+ * @ric_ies_length: ric ie len
  * @set_ft_preauth_state: preauth state
  * @ft_state: ft state
  * @add_mdie: add mdie in assoc req
@@ -354,7 +354,7 @@ struct ft_context {
 /**
  * struct mlme_connect_info - mlme connect information
  * @timing_meas_cap: Timing meas cap
- * @oem_channel_info: oem channel info
+ * @chan_info: oem channel info
  * @tdls_chan_swit_prohibited: if tdls chan switch is prohobited by AP
  * @tdls_prohibited: if tdls is prohobited by AP
  * @uapsd_per_ac_bitmask: Used on STA, this is a static UAPSD mask setting
@@ -431,15 +431,15 @@ struct mlme_ap_config {
  * @assoc_type: vdev associate/reassociate type
  * @dynamic_cfg: current configuration of nss, chains for vdev.
  * @ini_cfg: Max configuration of nss, chains supported for vdev.
- * @sta_dynamic_oce_value: Dyanmic oce flags value for sta
+ * @sta_dynamic_oce_value: Dynamic oce flags value for sta
  * @disconnect_info: Disconnection information
  * @vdev_stop_type: vdev stop type request
- * @roam_off_state: Roam offload state
+ * @mlme_roam: Roam offload state
  * @cm_roam: Roaming configuration
  * @auth_log: Cached log records for SAE authentication frame
  * related information.
  * @bigtk_vdev_support: BIGTK feature support for this vdev (SAP)
- * @sae_auth_retry: SAE auth retry information
+ * @sae_retry: SAE auth retry information
  * @roam_reason_better_ap: roam due to better AP found
  * @hb_failure_rssi: heartbeat failure AP RSSI
  * @opr_rate_set: operational rates set
@@ -774,7 +774,7 @@ bool mlme_get_peer_pmf_status(struct wlan_objmgr_peer *peer);
 
 /**
  * wlan_get_opmode_from_vdev_id() - Get opmode from vdevid
- * @psoc: PSOC pointer
+ * @pdev: pdev pointer
  * @vdev_id: vdev id
  *
  * Return: opmode
@@ -799,7 +799,7 @@ QDF_STATUS wlan_mlme_get_bssid_vdev_id(struct wlan_objmgr_pdev *pdev,
 				       struct qdf_mac_addr *bss_peer_mac);
 
 /**
- * csr_get_operation_chan_freq() - get operating chan freq of
+ * wlan_get_operation_chan_freq() - get operating chan freq of
  * given vdev
  * @vdev: vdev
  *
@@ -887,6 +887,7 @@ wlan_get_op_chan_freq_info_vdev_id(struct wlan_objmgr_pdev *pdev,
  * @oui: if present matches OUI also
  * @oui_length: if previous present, this is length of oui
  * @extracted_ie: if not NULL, copy the stripped IE to this buffer
+ * @eid_max_len: maximum length of IE @eid
  *
  * This utility function is used to strip of the requested IE if present
  * in IE buffer.

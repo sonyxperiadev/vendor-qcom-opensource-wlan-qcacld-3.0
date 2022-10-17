@@ -31,7 +31,7 @@
 
 #if defined(FEATURE_LRO)
 /**
- * osif_dp_lro_rx() - Handle Rx procesing via LRO
+ * osif_dp_lro_rx() - Handle Rx processing via LRO
  * @vdev: Vdev obj mgr
  * @nbuf: network buffer
  *

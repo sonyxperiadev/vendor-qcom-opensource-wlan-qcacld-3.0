@@ -67,6 +67,7 @@
 #include "qdf_str.h"
 #include "qdf_types.h"
 #include "qdf_trace.h"
+#include "qdf_net_if.h"
 #include "wlan_hdd_cfg.h"
 #include "wlan_policy_mgr_api.h"
 #include "wlan_hdd_tsf.h"
@@ -792,7 +793,8 @@ static int __hdd_hostapd_set_mac_address(struct net_device *dev, void *addr)
 	hdd_update_dynamic_mac(hdd_ctx, &adapter->mac_addr, &mac_addr);
 	ucfg_dp_update_inf_mac(hdd_ctx->psoc, &adapter->mac_addr, &mac_addr);
 	memcpy(&adapter->mac_addr, psta_mac_addr->sa_data, ETH_ALEN);
-	memcpy(dev->dev_addr, psta_mac_addr->sa_data, ETH_ALEN);
+	qdf_net_update_net_device_dev_addr(dev, psta_mac_addr->sa_data,
+					   ETH_ALEN);
 	hdd_exit();
 	return 0;
 }
@@ -1220,7 +1222,7 @@ static int get_max_rate_vht(int nss, int ch_width, int sgi, int vht_mcs_map)
 }
 
 /**
- * calculate_max_phy_rate() - calcuate maximum phy rate (100kbps)
+ * calculate_max_phy_rate() - calculate maximum phy rate (100kbps)
  * @mode: phymode: Legacy, 11a/b/g, HT, VHT
  * @nss: num of stream (maximum num is 2)
  * @ch_width: channel width
@@ -1232,7 +1234,7 @@ static int get_max_rate_vht(int nss, int ch_width, int sgi, int vht_mcs_map)
  *
  * return: maximum phy rate in 100kbps
  */
-static int calcuate_max_phy_rate(int mode, int nss, int ch_width,
+static int calculate_max_phy_rate(int mode, int nss, int ch_width,
 				 int sgi, int supp_idx, int ext_idx,
 				 int ht_mcs_idx, int vht_mcs_map)
 {
@@ -1257,6 +1259,10 @@ static int calcuate_max_phy_rate(int mode, int nss, int ch_width,
 	if (mode == SIR_SME_PHY_MODE_HT) {
 		/* check for HT Mode */
 		maxidx = ht_mcs_idx;
+		if (maxidx > 7) {
+			hdd_err("ht_mcs_idx %d is incorrect", ht_mcs_idx);
+			return maxrate;
+		}
 		if (nss == 1) {
 			supported_mcs_rate = supported_mcs_rate_nss1;
 		} else if (nss == 2) {
@@ -1416,14 +1422,14 @@ static void hdd_fill_station_info(struct hdd_adapter *adapter,
 	stainfo->tx_mcs_map = event->tx_mcs_map;
 	stainfo->assoc_ts = qdf_system_ticks();
 	stainfo->max_phy_rate =
-		calcuate_max_phy_rate(stainfo->mode,
-				      stainfo->nss,
-				      stainfo->ch_width,
-				      stainfo->sgi_enable,
-				      stainfo->max_supp_idx,
-				      stainfo->max_ext_idx,
-				      stainfo->max_mcs_idx,
-				      stainfo->rx_mcs_map);
+		calculate_max_phy_rate(stainfo->mode,
+				       stainfo->nss,
+				       stainfo->ch_width,
+				       stainfo->sgi_enable,
+				       stainfo->max_supp_idx,
+				       stainfo->max_ext_idx,
+				       stainfo->max_mcs_idx,
+				       stainfo->rx_mcs_map);
 	/* expect max_phy_rate report in kbps */
 	stainfo->max_phy_rate *= 100;
 
@@ -4242,7 +4248,7 @@ struct hdd_adapter *hdd_wlan_create_ap_dev(struct hdd_context *hdd_ctx,
 	dev->mtu = HDD_DEFAULT_MTU;
 	dev->tx_queue_len = HDD_NETDEV_TX_QUEUE_LEN;
 
-	qdf_mem_copy(dev->dev_addr, mac_addr, sizeof(tSirMacAddr));
+	qdf_net_update_net_device_dev_addr(dev, mac_addr, sizeof(tSirMacAddr));
 	qdf_mem_copy(adapter->mac_addr.bytes, mac_addr, sizeof(tSirMacAddr));
 
 	hdd_update_dynamic_tsf_sync(adapter);
@@ -5626,7 +5632,7 @@ int wlan_hdd_restore_channels(struct hdd_context *hdd_ctx)
 		if (!wiphy_channel)
 			continue;
 		/*
-		 * Restore the orginal states of the channels
+		 * Restore the original states of the channels
 		 * only if we have cached non zero values
 		 */
 		wiphy_channel->flags =
@@ -7201,7 +7207,7 @@ wlan_hdd_is_ap_ap_force_scc_override(struct hdd_adapter *adapter,
 	ieee_chan = ieee80211_get_channel(hdd_ctx->wiphy,
 					  con_freq);
 	if (!ieee_chan) {
-		hdd_err("channel converion failed");
+		hdd_err("channel conversion failed");
 		return false;
 	}
 

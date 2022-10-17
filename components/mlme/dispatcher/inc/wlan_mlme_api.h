@@ -3126,7 +3126,7 @@ wlan_mlme_get_dual_sta_roaming_enabled(struct wlan_objmgr_psoc *psoc)
  * @chan_list: Source channel list pointer
  *
  * Currently the channel list is saved to wma_handle to be updated in the
- * PCL command. This cannot be accesed at target_if while sending vdev
+ * PCL command. This cannot be accessed at target_if while sending vdev
  * set pcl command. So save the channel list to mlme.
  *
  * Return: QDF_STATUS
@@ -3466,7 +3466,7 @@ bool wlan_mlme_is_sta_mon_conc_supported(struct wlan_objmgr_psoc *psoc);
  * wlan_mlme_get_wds_mode() - Check wds mode supported
  * @psoc: pointer to psoc object
  *
- * Return: supprted wds mode
+ * Return: supported wds mode
  */
 enum wlan_wds_mode
 wlan_mlme_get_wds_mode(struct wlan_objmgr_psoc *psoc);

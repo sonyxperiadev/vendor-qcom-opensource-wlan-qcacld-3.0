@@ -78,12 +78,26 @@ void hdd_destroy_adapter_sysfs_files(struct hdd_adapter *adapter);
 void hdd_create_wifi_feature_interface_sysfs_file(void);
 
 /**
- * hdd_sysfs_create_wifi_root_obj() - create wifi root kobj
- * @hdd_ctx: pointer to hdd context
+ * hdd_destroy_wifi_feature_interface_sysfs_file - Destroy wifi feature
+ * interface sysfs file
  *
  * Return: none
  */
-void hdd_sysfs_create_wifi_root_obj(struct hdd_context *hdd_ctx);
+void hdd_destroy_wifi_feature_interface_sysfs_file(void);
+
+/**
+ * hdd_sysfs_create_wifi_root_obj() - create wifi root kobj
+ *
+ * Return: none
+ */
+void hdd_sysfs_create_wifi_root_obj(void);
+
+/**
+ * hdd_sysfs_destroy_wifi_root_obj() - Destroy wifi root kobj
+ *
+ * Return: none
+ */
+void hdd_sysfs_destroy_wifi_root_obj(void);
 
 #else
 static inline int
@@ -123,7 +137,15 @@ static inline void hdd_create_wifi_feature_interface_sysfs_file(void)
 {
 }
 
-static inline void hdd_sysfs_create_wifi_root_obj(struct hdd_context *hdd_ctx)
+static inline void hdd_destroy_wifi_feature_interface_sysfs_file(void)
+{
+}
+
+static inline void hdd_sysfs_create_wifi_root_obj(void)
+{
+}
+
+static inline void hdd_sysfs_destroy_wifi_root_obj(void)
 {
 }
 #endif /* End of WLAN SYSFS*/

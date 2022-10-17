@@ -408,7 +408,7 @@ static bool lim_chk_rates(struct mac_context *mac_ctx, tSirMacAddr sa,
 	if (lim_check_rx_basic_rates(mac_ctx, basic_rates, session) == true)
 		return true;
 
-	pe_warn("Assoc Req rejected: unsupported rates, soruce addr: %s"
+	pe_warn("Assoc Req rejected: unsupported rates, source addr: %s"
 			QDF_MAC_ADDR_FMT,
 		(LIM_ASSOC == sub_type) ? "Assoc" : "ReAssoc",
 		QDF_MAC_ADDR_REF(sa));
@@ -2702,7 +2702,7 @@ void lim_process_assoc_req_frame(struct mac_context *mac_ctx,
 			return;
 		} else if (sta_ds->rmfEnabled && !sta_ds->is_key_installed) {
 			/* When PMF enabled, SA Query will be triggered
-			 * unexpectly if duplicated assoc_req received -
+			 * unexpectedly if duplicated assoc_req received -
 			 * 1) after pre_auth node deleted and
 			 * 2) before key installed.
 			 * Here drop such duplicated assoc_req frame.

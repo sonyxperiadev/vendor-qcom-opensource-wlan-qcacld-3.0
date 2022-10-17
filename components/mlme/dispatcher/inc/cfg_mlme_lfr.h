@@ -40,9 +40,9 @@
 # define RoamScan_AwayTime_min 0
 # define RoamScan_AwayTime_max 200
 # define RoamScan_AwayTime_default 100
-# define RoamRSSI_Trigger_min 50
-# define RoamRSSI_Trigger_max 100
-# define RoamRSSI_Trigger_default 75
+# define RoamRSSI_Trigger_min -100
+# define RoamRSSI_Trigger_max -50
+# define RoamRSSI_Trigger_default -75
 # define RoamCU_Trigger_min 60
 # define RoamCU_Trigger_max 90
 # define RoamCU_Trigger_default 70
@@ -80,9 +80,9 @@
 # define RoamScan_AwayTime_min 0
 # define RoamScan_AwayTime_max 300
 # define RoamScan_AwayTime_default 0
-# define RoamRSSI_Trigger_min 50
-# define RoamRSSI_Trigger_max 100
-# define RoamRSSI_Trigger_default 78
+# define RoamRSSI_Trigger_min -100
+# define RoamRSSI_Trigger_max -50
+# define RoamRSSI_Trigger_default -78
 # define RoamCU_Trigger_min 0
 # define RoamCU_Trigger_max 100
 # define RoamCU_Trigger_default 70
@@ -1366,7 +1366,7 @@
  * This INI is used to set the value of rssi threshold to trigger roaming
  * after background scan. To trigger roam after bg scan, value of rssi of
  * candidate AP should be higher by this threshold than the rssi of the
- * currrently associated AP.
+ * currently associated AP.
  *
  * Related: RoamRssiDiff
  *
@@ -1461,7 +1461,7 @@
  * @Default: 100
  *
  * This ini is used to set the timer period in secs after
- * which neighbor scan is trigerred.
+ * which neighbor scan is triggered.
  *
  * Related: None
  *
@@ -1807,7 +1807,7 @@
  * trigger timeout
  * @Min: 0
  * @Max: 20
- * @Default: 6
+ * @Default: 3
  *
  * This ini is used to control the beacon miss timeout when the system is awake.
  * On the timeout, BMISS event will be triggered by FW.
@@ -1823,7 +1823,7 @@
 	"ConBeaconLoss_TimeoutOnWakeUp", \
 	0, \
 	20, \
-	6, \
+	3, \
 	CFG_VALUE_OR_DEFAULT, \
 	"ConBeaconloss timeout on wakeup")
 
@@ -1833,7 +1833,7 @@
  * trigger timeout
  * @Min: 0
  * @Max: 20
- * @Default: 10
+ * @Default: 5
  *
  * This ini is used to control the beacon miss timeout
  * when the system is in sleep.
@@ -1850,7 +1850,7 @@
 	"ConBeaconLoss_TimeoutOnSleep", \
 	0, \
 	20, \
-	10, \
+	5, \
 	CFG_VALUE_OR_DEFAULT, \
 	"ConBeaconloss timeout on sleep")
 
@@ -2132,7 +2132,7 @@
  * @Max: 100
  * @Default: 70
  *
- * When the bss laod value that is sampled exceeds this threshold, firmware
+ * When the bss load value that is sampled exceeds this threshold, firmware
  * will trigger roaming if bss load trigger is enabled.
  *
  * Related: None
@@ -2563,7 +2563,7 @@
 
 /*
  * <ini>
- * idle_roam_inactive_time - Time duration in millseconds for which the
+ * idle_roam_inactive_time - Time duration in milliseconds for which the
  * connection is idle.
  * @Min: 0
  * @Max: 0xFFFFFFFF

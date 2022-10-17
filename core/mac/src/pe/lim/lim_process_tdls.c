@@ -435,7 +435,7 @@ static uint32_t lim_prepare_tdls_frame_header(struct mac_context *mac, uint8_t *
 
 	/*
 	 * if TDLS frame goes through the AP link, it follows normal address
-	 * pattern, if TDLS frame goes thorugh the direct link, then
+	 * pattern, if TDLS frame goes through the direct link, then
 	 * A1--> Peer STA addr, A2-->Self STA address, A3--> BSSID
 	 */
 	(tdlsLinkType == TDLS_LINK_AP) ? ((addr1 = (link_iden->bssid)),
@@ -537,7 +537,7 @@ static QDF_STATUS lim_mgmt_tdls_tx_complete(void *context,
 
 /*
  * This function can be used for bacst or unicast discovery request
- * We are not differentiating it here, it will all depnds on peer MAC address,
+ * We are not differentiating it here, it will all depend on peer MAC address,
  */
 static QDF_STATUS lim_send_tdls_dis_req_frame(struct mac_context *mac,
 					      struct qdf_mac_addr peer_mac,
@@ -3889,7 +3889,7 @@ void lim_update_tdls_2g_bw(struct pe_session *session)
 	 * For 2.4 GHz band, if AP switches its BW from 40 MHz to 20 Mhz, it
 	 * changes its beacon respectivily with ch_width 20 Mhz without STA
 	 * disconnection.
-	 * This will result in TDLS remaining on 40 MHz and not follwoing APs BW
+	 * This will result in TDLS remaining on 40 MHz and not following APs BW
 	 * on 2.4 GHz.
 	 * Better Teardown the link here and with traffic going on between peers
 	 * the tdls connection will again be restablished with the new BW

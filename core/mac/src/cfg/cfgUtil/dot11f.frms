@@ -1202,7 +1202,7 @@ TLV VendorExtension ( TLV_VENDOR_EXTENSION ) ( 2 : 2 ) MSB
     vendorId[ 3 ];
 
     /**
-     * \breif Version2
+     * \brief Version2
      *
      * The Version2 field specifies the version Wi-Fi Simple
      * Configuration implemented by the device sending this attribute.
@@ -3609,7 +3609,7 @@ MULTIIE WscProbeReq ( EID_VENDOR_SPECIFIC ) OUI( 0x00, 0x50, 0xF2, 0x04 )
 
     OPTIONALTLV  RequestDeviceType;              // When a device receives a Probe
                                                  // Request containing this type,
-                                                 // It will only reponse if Primary
+                                                 // It will only respond if Primary
                                                  // or Secondary Device Type matches.
 
 } // End Multi-IE WscProbeReq.

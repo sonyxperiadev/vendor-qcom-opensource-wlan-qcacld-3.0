@@ -32,6 +32,7 @@
 #include <target_if_vdev_mgr_tx_ops.h>
 #include "target_if_cm_roam_event.h"
 #include <target_if_psoc_wake_lock.h>
+#include "wlan_psoc_mlme_api.h"
 
 static struct wmi_unified
 *target_if_cm_roam_get_wmi_handle_from_vdev(struct wlan_objmgr_vdev *vdev)
@@ -1172,6 +1173,7 @@ target_if_cm_roam_send_start(struct wlan_objmgr_vdev *vdev,
 	struct wlan_objmgr_psoc *psoc;
 	uint8_t vdev_id;
 	bool bss_load_enabled;
+	bool eht_capab = false;
 
 	wmi_handle = target_if_cm_roam_get_wmi_handle_from_vdev(vdev);
 	if (!wmi_handle)
@@ -1299,8 +1301,9 @@ target_if_cm_roam_send_start(struct wlan_objmgr_vdev *vdev,
 
 	target_if_cm_roam_idle_params(wmi_handle, ROAM_SCAN_OFFLOAD_START,
 				      &req->idle_params);
-
-	target_if_cm_roam_send_mlo_config(vdev, &req->roam_mlo_params);
+	wlan_psoc_mlme_get_11be_capab(psoc, &eht_capab);
+	if (eht_capab)
+		target_if_cm_roam_send_mlo_config(vdev, &req->roam_mlo_params);
 
 	vdev_id = wlan_vdev_get_id(vdev);
 	if (req->wlan_roam_rt_stats_config)
@@ -1781,10 +1784,10 @@ end:
 }
 
 /**
- * target_if_cm_roam_register_rso_req_ops() - Register rso req tx ops fucntions
+ * target_if_cm_roam_register_rso_req_ops() - Register rso req tx ops functions
  * @tx_ops: tx ops
  *
- * This function is used to register rso req tx ops fucntions
+ * This function is used to register rso req tx ops functions
  *
  * Return: none
  */

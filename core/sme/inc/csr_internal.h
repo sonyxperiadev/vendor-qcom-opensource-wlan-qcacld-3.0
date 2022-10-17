@@ -479,7 +479,7 @@ uint32_t csr_get_concurrent_operation_freq(struct mac_context *mac_ctx);
  *
  * This routine will return operating channel of active AP/GO channel
  * and will skip the channel of vdev_id_to_skip.
- * If other no reqested mode is active it will return 0
+ * If other no requested mode is active it will return 0
  *
  * Return: uint32_t
  */

@@ -145,7 +145,7 @@
 
 /*
  * MSB of rx_mc_bc_cnt indicates whether FW supports rx_mc_bc_cnt
- * feature or not, if first bit is 1 it indictes that FW supports this
+ * feature or not, if first bit is 1 it indicates that FW supports this
  * feature, if it is 0 it indicates FW doesn't support this feature
  */
 #define HDD_STATION_INFO_RX_MC_BC_COUNT (1 << 31)
@@ -829,7 +829,7 @@ static int hdd_get_station_info(struct hdd_context *hdd_ctx,
 
 	if (nla_put_u32(skb, DISCONNECT_REASON,
 			adapter->last_disconnect_reason)) {
-		hdd_err("Failed to put disconect reason");
+		hdd_err("Failed to put disconnect reason");
 		goto fail;
 	}
 
@@ -1037,12 +1037,12 @@ static uint32_t hdd_add_link_standard_info_sap_get_len(void)
 }
 
 /**
- * hdd_add_link_standard_info_sap - add add link info attribut
+ * hdd_add_link_standard_info_sap - add add link info attribute
  * @skb: pointer to response skb buffer
  * @stainfo: station information
  * @idx: attribute type index for nla_next_start()
  *
- * This function adds link info attribut to response skb buffer
+ * This function adds link info attribute to response skb buffer
  *
  * Return : 0 on success and errno on failure
  */

@@ -282,7 +282,7 @@ static QDF_STATUS lim_get_key_from_prf(uint8_t *type, uint8_t *secret,
 	uint16_t key_bit_length = keylen * 8;
 	uint8_t key_length[2];
 	uint32_t i = 0, remain_len;
-	uint16_t interation;
+	uint16_t iteration;
 	uint8_t crypto_digest_len = lim_get_crypto_digest_len(type);
 	uint8_t tmp_hash[SHA384_DIGEST_SIZE] = {0};
 
@@ -304,9 +304,9 @@ static QDF_STATUS lim_get_key_from_prf(uint8_t *type, uint8_t *secret,
 	addr[3] = key_length;
 	len[3] = sizeof(key_length);
 
-	for (interation = 1; i < keylen; interation++) {
+	for (iteration = 1; i < keylen; iteration++) {
 		remain_len = keylen - i;
-		qdf_mem_copy(count, &interation, sizeof(interation));
+		qdf_mem_copy(count, &iteration, sizeof(iteration));
 
 		if (remain_len >= crypto_digest_len)
 			remain_len = crypto_digest_len;

@@ -1393,7 +1393,7 @@ lim_handle80211_frames(struct mac_context *mac, struct scheduler_msg *limMsg,
 
 		case SIR_MAC_MGMT_ASSOC_RSP:
 			lim_process_assoc_rsp_frame(mac, pRxPacketInfo,
-						    ASSOC_FRAME_LEN,
+						    WMA_GET_RX_PAYLOAD_LEN(pRxPacketInfo),
 						    LIM_ASSOC,
 						    pe_session);
 			break;
@@ -1415,7 +1415,7 @@ lim_handle80211_frames(struct mac_context *mac, struct scheduler_msg *limMsg,
 
 		case SIR_MAC_MGMT_REASSOC_RSP:
 			lim_process_assoc_rsp_frame(mac, pRxPacketInfo,
-						    ASSOC_FRAME_LEN,
+						    WMA_GET_RX_PAYLOAD_LEN(pRxPacketInfo),
 						    LIM_REASSOC,
 						    pe_session);
 			break;
@@ -1685,7 +1685,7 @@ static void lim_process_messages(struct mac_context *mac_ctx,
 			}
 		} else {
 			/* PE is not deferring this 802.11 frame so we need to
-			 * call cds_pkt_return. Asumption here is when Rx mgmt
+			 * call cds_pkt_return. Assumption here is when Rx mgmt
 			 * frame processing is done, cds packet could be
 			 * freed here.
 			 */
@@ -1929,7 +1929,7 @@ static void lim_process_messages(struct mac_context *mac_ctx,
 				(uint8_t)msg->bodyval;
 			/*
 			 * if message comes for DFS channel, no need to update:
-			 * 1) We wont have MCC with DFS channels. so no need to
+			 * 1) We won't have MCC with DFS channels. so no need to
 			 *    add Q2Q IE
 			 * 2) We cannot end up in DFS channel SCC by channel
 			 *    switch from non DFS MCC scenario, so no need to
@@ -1939,9 +1939,10 @@ static void lim_process_messages(struct mac_context *mac_ctx,
 			 *    restart, in such a case, beacon params will be
 			 *    reset and thus will not contain Q2Q IE, by default
 			 */
-			if (wlan_reg_get_channel_state_for_freq(
+			if (wlan_reg_get_channel_state_for_pwrmode(
 				mac_ctx->pdev,
-				session_entry->curr_op_freq) !=
+				session_entry->curr_op_freq,
+				REG_CURRENT_PWR_MODE) !=
 				CHANNEL_STATE_DFS) {
 				beacon_params.bss_idx = session_entry->vdev_id;
 				beacon_params.beaconInterval =
@@ -2179,7 +2180,7 @@ static void lim_process_normal_hdd_msg(struct mac_context *mac_ctx,
 		 * 1. If we are in learn mode and we receive any of these
 		 * messages, you have to come out of scan and process the
 		 * message, hence dont defer the message here. In handler,
-		 * these message could be defered till we actually come out of
+		 * these message could be deferred till we actually come out of
 		 * scan mode.
 		 * 2. If radar is detected, you might have to defer all of
 		 * these messages except Stop BSS request/ Switch channel
@@ -2211,7 +2212,7 @@ static void lim_process_normal_hdd_msg(struct mac_context *mac_ctx,
 	} else {
 		/*
 		 * These messages are from HDD.Since these requests may also be
-		 * generated internally within LIM module, need to distinquish
+		 * generated internally within LIM module, need to distinguish
 		 * and send response to host
 		 */
 		if (rsp_reqd)

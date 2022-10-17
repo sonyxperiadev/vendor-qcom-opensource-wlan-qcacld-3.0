@@ -251,7 +251,7 @@ static inline void hdd_update_channel_bw_info(struct hdd_context *hdd_ctx,
 #endif /* FEATURE_OEM_DATA_SUPPORT */
 
 #ifdef FEATURE_OEM_DATA
-#define OEM_DATA_MAX_SIZE 1024
+#define OEM_DATA_MAX_SIZE 1500
 /**
  * wlan_hdd_cfg80211_oem_data_handler() - the handler for oem data
  * @wiphy: wiphy structure pointer

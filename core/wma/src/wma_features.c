@@ -2525,8 +2525,8 @@ static void wma_wow_dump_mgmt_buffer(uint8_t *wow_packet_buffer,
 }
 
 /**
- * wma_acquire_wakelock() - conditionally aquires a wakelock base on wake reason
- * @wma: the wma handle with the wakelocks to aquire
+ * wma_acquire_wakelock() - conditionally acquires a wakelock base on wake reason
+ * @wma: the wma handle with the wakelocks to acquire
  * @wake_reason: wow wakeup reason
  *
  * Return: None
@@ -4219,7 +4219,7 @@ wma_send_apf_write_work_memory_cmd(WMA_HANDLE handle,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	wma_debug("Sent APF wite mem on vdevid: %d", write_params->vdev_id);
+	wma_debug("Sent APF write mem on vdevid: %d", write_params->vdev_id);
 	return status;
 }
 
@@ -5113,6 +5113,13 @@ int wma_chan_info_event_handler(void *handle, uint8_t *event_buf,
 		buf.rx_clear_count = event->rx_clear_count;
 		mac->chan_info_cb(&buf);
 	}
+
+	/* Ignore the last channel event data whose command flag is set to 1.
+	 * It’s basically an event with empty data only to indicate scan event
+	 * completion.
+	 */
+	if (event->cmd_flags == WMI_CHAN_INFO_END_RESP)
+		return 0;
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(wma->psoc, event->vdev_id,
 						    WLAN_LEGACY_WMA_ID);

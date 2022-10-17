@@ -563,7 +563,7 @@ QDF_STATUS hdd_cm_napi_serialize_control(bool action)
 
 	hdd_napi_serialize(action);
 
-	/* reinit scan reject parms for napi off (roam abort/ho fail) */
+	/* reinit scan reject params for napi off (roam abort/ho fail) */
 	if (!action)
 		hdd_init_scan_reject_params(hdd_ctx);
 

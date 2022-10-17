@@ -51,13 +51,14 @@ void ucfg_dp_update_inf_mac(struct wlan_objmgr_psoc *psoc,
 	dp_intf = dp_get_intf_by_macaddr(dp_ctx, cur_mac);
 	if (!dp_intf) {
 		dp_err("DP interface not found addr:" QDF_MAC_ADDR_FMT,
-		       QDF_MAC_ADDR_REF(cur_mac));
+		       QDF_MAC_ADDR_REF(cur_mac->bytes));
 		QDF_BUG(0);
 		return;
 	}
 
 	dp_info("MAC update from " QDF_MAC_ADDR_FMT " to " QDF_MAC_ADDR_FMT "",
-		QDF_MAC_ADDR_REF(cur_mac), QDF_MAC_ADDR_REF(new_mac));
+		QDF_MAC_ADDR_REF(cur_mac->bytes),
+		QDF_MAC_ADDR_REF(new_mac->bytes));
 
 	qdf_copy_macaddr(&dp_intf->mac_addr, new_mac);
 }
@@ -73,12 +74,12 @@ ucfg_dp_create_intf(struct wlan_objmgr_psoc *psoc,
 	dp_ctx =  dp_get_context();
 
 	dp_info("DP interface create addr:" QDF_MAC_ADDR_FMT,
-		QDF_MAC_ADDR_REF(intf_addr));
+		QDF_MAC_ADDR_REF(intf_addr->bytes));
 
 	dp_intf = __qdf_mem_malloc(sizeof(*dp_intf), __func__, __LINE__);
 	if (!dp_intf) {
 		dp_err("DP intf memory alloc failed addr:" QDF_MAC_ADDR_FMT,
-		       QDF_MAC_ADDR_REF(intf_addr));
+		       QDF_MAC_ADDR_REF(intf_addr->bytes));
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -112,12 +113,12 @@ ucfg_dp_destroy_intf(struct wlan_objmgr_psoc *psoc,
 	dp_ctx =  dp_get_context();
 
 	dp_info("DP interface destroy addr:" QDF_MAC_ADDR_FMT,
-		QDF_MAC_ADDR_REF(intf_addr));
+		QDF_MAC_ADDR_REF(intf_addr->bytes));
 
 	dp_intf = dp_get_intf_by_macaddr(dp_ctx, intf_addr);
 	if (!dp_intf) {
 		dp_err("DP interface not found addr:" QDF_MAC_ADDR_FMT,
-		       QDF_MAC_ADDR_REF(intf_addr));
+		       QDF_MAC_ADDR_REF(intf_addr->bytes));
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -312,7 +313,7 @@ QDF_STATUS ucfg_dp_deinit(void)
 }
 
 /**
- * ucfg_dp_suspend_handler() - suspend handler regsitered with PMO component
+ * ucfg_dp_suspend_handler() - suspend handler registered with PMO component
  * @psoc: psoc handle
  * @arg: Arguments passed by the suspend handler.
  *
@@ -342,7 +343,7 @@ ucfg_dp_suspend_handler(struct wlan_objmgr_psoc *psoc, void *arg)
 }
 
 /**
- * ucfg_dp_resume_handler() - resume handler regsitered with PMO component
+ * ucfg_dp_resume_handler() - resume handler registered with PMO component
  * @psoc: psoc handle
  * @arg: Arguments passed by the resume handler.
  *
@@ -603,7 +604,7 @@ void ucfg_dp_update_dhcp_state_on_disassoc(struct wlan_objmgr_vdev *vdev,
 					   WLAN_DP_ID);
 	if (!peer) {
 		dp_err("Peer object not found mac:" QDF_MAC_ADDR_FMT,
-		       QDF_MAC_ADDR_REF(mac_addr));
+		       QDF_MAC_ADDR_REF(mac_addr->bytes));
 		return;
 	}
 

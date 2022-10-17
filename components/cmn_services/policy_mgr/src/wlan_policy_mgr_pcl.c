@@ -416,8 +416,9 @@ policy_mgr_update_valid_ch_freq_list(struct policy_mgr_psoc_priv_obj *pm_ctx,
 	for (i = 0; i < NUM_CHANNELS; i++) {
 		ch_freq = reg_ch_list[i].center_freq;
 		if (is_client)
-			state = wlan_reg_get_channel_state_for_freq(
-							pm_ctx->pdev, ch_freq);
+			state = wlan_reg_get_channel_state_for_pwrmode(
+							pm_ctx->pdev, ch_freq,
+							REG_CURRENT_PWR_MODE);
 		else
 			state =
 			wlan_reg_get_channel_state_from_secondary_list_for_freq(
@@ -474,7 +475,7 @@ policy_mgr_reg_chan_change_callback(struct wlan_objmgr_psoc *psoc,
 	}
 
 	/*
-	 * The ch_list buffer can accomadate a maximum of
+	 * The ch_list buffer can accommodate a maximum of
 	 * NUM_CHANNELS and hence the ch_cnt should also not
 	 * exceed NUM_CHANNELS.
 	 */
@@ -573,7 +574,7 @@ void policy_mgr_update_with_safe_channel_list(struct wlan_objmgr_psoc *psoc,
 		}
 		if (is_unsafe && scc_on_lte_coex &&
 		    policy_mgr_is_sta_sap_scc(psoc, current_channel_list[i])) {
-			policy_mgr_debug("CH %d unsafe ingored when STA present on it",
+			policy_mgr_debug("CH %d unsafe ignored when STA present on it",
 					 current_channel_list[i]);
 			is_unsafe = 0;
 		}
@@ -913,7 +914,7 @@ policy_mgr_modify_pcl_based_on_indoor(struct wlan_objmgr_psoc *psoc,
 		include_indoor_channel = true;
 
 	if (include_indoor_channel) {
-		policy_mgr_debug("Indoor channels allowed. PCL not modifed for indoor channels");
+		policy_mgr_debug("Indoor channels allowed. PCL not modified for indoor channels");
 		return QDF_STATUS_SUCCESS;
 	}
 
@@ -2593,7 +2594,7 @@ static void policy_mgr_get_index_for_3_given_freq_sbs(
 	if (policy_mgr_2_freq_same_mac_in_sbs(pm_ctx, freq1, freq2)) {
 		/*
 		 * If freq1 is 2.4 GHZ that mean freq2 is 5 / 6 GHZ.
-		 * so take desision using freq2.
+		 * so take decision using freq2.
 		 */
 		if (WLAN_REG_IS_24GHZ_CH_FREQ(freq1))
 			shared_5_ghz_freq = freq2;
@@ -2603,7 +2604,7 @@ static void policy_mgr_get_index_for_3_given_freq_sbs(
 	} else if (policy_mgr_2_freq_same_mac_in_sbs(pm_ctx, freq2, freq3)) {
 		/*
 		 * If freq2 is 2.4 GHZ that mean freq3 is 5 / 6 GHZ.
-		 * so take desision using freq3.
+		 * so take decision using freq3.
 		 */
 		if (WLAN_REG_IS_24GHZ_CH_FREQ(freq2))
 			shared_5_ghz_freq = freq3;
@@ -2613,7 +2614,7 @@ static void policy_mgr_get_index_for_3_given_freq_sbs(
 	} else if (policy_mgr_2_freq_same_mac_in_sbs(pm_ctx, freq3, freq1)) {
 		/*
 		 * If freq1 is 2.4 GHZ that mean freq3 is 5 / 6 GHZ.
-		 * so take desision using freq3.
+		 * so take decision using freq3.
 		 */
 		if (WLAN_REG_IS_24GHZ_CH_FREQ(freq1))
 			shared_5_ghz_freq = freq3;

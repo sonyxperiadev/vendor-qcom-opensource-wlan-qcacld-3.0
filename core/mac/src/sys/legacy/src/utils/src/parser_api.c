@@ -2089,7 +2089,7 @@ populate_dot11f_supp_rates(struct mac_context *mac,
 /**
  * populate_dot11f_rates_tdls() - populate supported rates and
  *                                extended supported rates IE.
- * @p_mac gloabl - header.
+ * @p_mac global - header.
  * @p_supp_rates - pointer to supported rates IE
  * @p_ext_supp_rates - pointer to extended supported rates IE
  * @curr_oper_channel - current operating channel
@@ -3175,7 +3175,7 @@ sir_convert_assoc_req_frame2_struct(struct mac_context *mac,
 		qdf_mem_free(ar);
 		return QDF_STATUS_E_FAILURE;
 	} else if (DOT11F_WARNED(status)) {
-		pe_debug("There were warnings while unpacking an Assoication Request (0x%08x, %d bytes):",
+		pe_debug("There were warnings while unpacking an Association Request (0x%08x, %d bytes):",
 			status, nFrame);
 	}
 	/* & "transliterate" from a 'tDot11fAssocRequest' to a 'tSirAssocReq'... */
@@ -3728,7 +3728,7 @@ sir_convert_assoc_resp_frame2_struct(struct mac_context *mac,
 	/*
 	 * decrypt the cipher text using AEAD decryption, if association
 	 * response status code is successful, else the don't do AEAD decryption
-	 * since AP doesn't inlude FILS session IE when association reject is
+	 * since AP doesn't include FILS session IE when association reject is
 	 * sent
 	 */
 	if (lim_is_fils_connection(session_entry) && !status_code) {
@@ -5821,7 +5821,7 @@ sir_convert_tpc_req_frame2_struct(struct mac_context *mac,
 		pTpcReqFrame->type = DOT11F_EID_TPCREQUEST;
 		pTpcReqFrame->length = 0;
 	} else {
-		pe_warn("!!!Rcv TPC Req of inalid type!");
+		pe_warn("!!!Rcv TPC Req of invalid type!");
 		return QDF_STATUS_E_FAILURE;
 	}
 	return QDF_STATUS_SUCCESS;
@@ -10832,7 +10832,7 @@ wlan_get_ielen_from_bss_description(struct bss_description *bss_desc)
 	}
 
 	/*
-	 * Length of BSS desription is without length of
+	 * Length of BSS description is without length of
 	 * length itself and length of pointer
 	 * that holds ieFields
 	 *

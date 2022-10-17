@@ -32,11 +32,26 @@ static ssize_t  __hdd_sysfs_feature_set_show(struct hdd_context *hdd_ctx,
 					     char *buf)
 {
 	ssize_t ret_val = 0;
-	uint8_t i;
+	uint8_t i = 0;
+	char const *solution_provider = "QCT";
 
-	for (i = 0; i < hdd_ctx->oem_data_len; i++)
-		ret_val += scnprintf(buf + ret_val, PAGE_SIZE - ret_val, "%.2x",
+	if (!hdd_ctx->oem_data) {
+		hdd_debug("Feature info is not available");
+		return 0;
+	}
+
+	for (i = 0; i < hdd_ctx->oem_data_len; i++) {
+		/* The Solution Provider Info is from index 2 to 4 */
+		if (i == 2) {
+			ret_val += scnprintf(buf + ret_val, PAGE_SIZE - ret_val,
+					     "%s", solution_provider);
+			i = i + 2;
+			continue;
+		}
+		ret_val += scnprintf(buf + ret_val, PAGE_SIZE - ret_val, "%.2X",
 				     hdd_ctx->oem_data[i]);
+	}
+
 	buf[ret_val] = '\n';
 
 	return ret_val;
@@ -67,28 +82,17 @@ static ssize_t hdd_sysfs_feature_set_show(struct kobject *kobj,
 	return errno_size;
 }
 
-static struct kobj_attribute feature_set_attribute;
+static struct kobj_attribute feature_set_attribute =
+	__ATTR(feature, 0660, hdd_sysfs_feature_set_show, NULL);
 
 void hdd_sysfs_create_wifi_feature_interface(struct kobject *wifi_kobject)
 {
-	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
 	int error;
 
-	if (!hdd_ctx)
-		return;
-
-	if (!hdd_ctx->oem_data_len || !hdd_ctx->file_name) {
-		hdd_err("Invalid oem data length or file name");
-		return;
-	}
 	if (!wifi_kobject) {
 		hdd_err("could not get wifi kobject!");
 		return;
 	}
-	feature_set_attribute.attr.name = hdd_ctx->file_name;
-	feature_set_attribute.attr.mode = VERIFY_OCTAL_PERMISSIONS(0660);
-	feature_set_attribute.show = hdd_sysfs_feature_set_show;
-	feature_set_attribute.store = NULL;
 
 	error = sysfs_create_file(wifi_kobject,
 				  &feature_set_attribute.attr);
@@ -98,18 +102,6 @@ void hdd_sysfs_create_wifi_feature_interface(struct kobject *wifi_kobject)
 
 void hdd_sysfs_destroy_wifi_feature_interface(struct kobject *wifi_kobject)
 {
-	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
-
-	if (!hdd_ctx) {
-		hdd_err("HDD context is NULL");
-		return;
-	}
-
-	if (!hdd_ctx->file_name) {
-		hdd_debug("file name is NULL");
-		return;
-	}
-
 	if (!wifi_kobject) {
 		hdd_err("could not get wifi kobject!");
 		return;

@@ -63,7 +63,7 @@ int hdd_softap_set_channel_change(struct net_device *dev,
 					bool forced);
 /**
  * hdd_stop_sap_set_tx_power() - Function to set tx power
- * for unsafe chanel if restriction bit mask is set else stop the SAP.
+ * for unsafe channel if restriction bit mask is set else stop the SAP.
  *
  * @psoc: PSOC object information
  * @vdev_id: vdev id
@@ -166,7 +166,7 @@ wlan_get_sap_acs_band(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
  * @ch_params: output channel parameters
  *
  * This function is used to get prefer sap target channel bw during sap force
- * scc CSA. The new bw will not exceed the orginal bw during start ap
+ * scc CSA. The new bw will not exceed the original bw during start ap
  * request.
  *
  * Return: QDF_STATUS_SUCCESS if successfully

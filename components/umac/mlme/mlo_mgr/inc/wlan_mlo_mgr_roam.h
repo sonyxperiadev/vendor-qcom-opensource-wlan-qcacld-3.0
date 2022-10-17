@@ -216,7 +216,7 @@ mlo_roam_get_bssid_chan_for_link(uint8_t vdev_id,
  * @event: event ptr
  * @event_data_len: event data len
  *
- * This api will be called from connection manger to mlo
+ * This api will be called from connection manager to mlo
  * manager to start roam sync request on link vdev's.
  *
  * Return: qdf status
@@ -229,16 +229,29 @@ void mlo_cm_roam_sync_cb(struct wlan_objmgr_vdev *vdev,
  * wlan_mlo_roam_abort_on_link - Abort roam on link
  *
  * @psoc: psoc pointer
- * @sync_ind: Roam sync indication
+ * @event: Roam sync indication event pointer
+ * @vdev_id: vdev id value
  *
- * Abort roaming on all the links except the primary. Roam abort on primary
- * link would be taken care in legacy path.
+ * Abort roaming on all the links except the vdev id passed.
+ * Roam abort on vdev id link would be taken care in legacy path.
  *
  * Return: QDF_STATUS
  */
 QDF_STATUS
 wlan_mlo_roam_abort_on_link(struct wlan_objmgr_psoc *psoc,
-			    struct roam_offload_synch_ind *sync_ind);
+			    uint8_t *event, uint8_t vdev_id);
+
+/**
+ * mlo_check_if_all_links_up - Check if all links are up
+ * @vdev: vdev pointer
+ *
+ * This api will check if all the requested links are  in CM connected
+ * state.
+ *
+ * Return: QDF_STATUS
+ */
+bool
+mlo_check_if_all_links_up(struct wlan_objmgr_vdev *vdev);
 
 #else /* WLAN_FEATURE_11BE_MLO */
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
@@ -308,7 +321,7 @@ mlo_roam_update_connected_links(struct wlan_objmgr_vdev *vdev,
 
 static inline QDF_STATUS
 wlan_mlo_roam_abort_on_link(struct wlan_objmgr_psoc *psoc,
-			    struct roam_offload_synch_ind *sync_ind)
+			    uint8_t *event, uint8_t vdev_id)
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }
@@ -334,6 +347,12 @@ mlo_roam_get_bssid_chan_for_link(uint8_t vdev_id,
 				 wmi_channel *chan)
 {
 	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline bool
+mlo_check_if_all_links_up(struct wlan_objmgr_vdev *vdev)
+{
+	return false;
 }
 #endif /* WLAN_FEATURE_11BE_MLO */
 #endif

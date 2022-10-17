@@ -42,7 +42,7 @@
  *
  * This function adds dummy blocking command with high priority to avoid
  * any other vdev command till roam is completed.Any NB operations will be
- * blocked in serailization until roam logic completes execution.
+ * blocked in serialization until roam logic completes execution.
  *
  * Return: QDF_STATUS
  */

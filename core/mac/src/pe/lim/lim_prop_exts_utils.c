@@ -248,7 +248,7 @@ void lim_update_he_bw_cap_mcs(struct pe_session *session,
 				STA_PREFER_BW_80MHZ) {
 			is_80mhz = 1;
 			if (session->ch_width == CH_WIDTH_160MHZ) {
-				pe_debug("STA prferred HE80 over HE160, falling back to 80MHz");
+				pe_debug("STA preferred HE80 over HE160, falling back to 80MHz");
 				session->ch_width = CH_WIDTH_80MHZ;
 			}
 		} else {

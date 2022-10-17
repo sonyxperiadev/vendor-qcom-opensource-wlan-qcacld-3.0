@@ -570,7 +570,7 @@ sch_set_fixed_beacon_fields(struct mac_context *mac_ctx, struct pe_session *sess
 	populate_dot11f_capabilities(mac_ctx, &bcn_1->Capabilities, session);
 	if (session->ssidHidden) {
 		bcn_1->SSID.present = 1;
-		/* rest of the fileds are 0 for hidden ssid */
+		/* rest of the fields are 0 for hidden ssid */
 		if ((session->ssId.length) &&
 		    (session->ssidHidden == eHIDDEN_SSID_ZERO_CONTENTS))
 			bcn_1->SSID.num_ssid = session->ssId.length;

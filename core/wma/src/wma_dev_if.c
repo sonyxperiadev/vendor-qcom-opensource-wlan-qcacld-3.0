@@ -918,7 +918,7 @@ static void wma_find_mcc_ap(tp_wma_handle wma, uint8_t vdev_id, bool add)
 /**
  * wma_handle_hidden_ssid_restart() - handle hidden ssid restart
  * @wma: wma handle
- * @iface: interfcae pointer
+ * @iface: interface pointer
  *
  * Return: none
  */
@@ -1723,7 +1723,7 @@ static int wma_get_obj_mgr_peer_type(tp_wma_handle wma, uint8_t vdev_id,
 
 	vdev = wma->interfaces[vdev_id].vdev;
 	if (!vdev) {
-		wma_err("Couldnt find vdev for VDEV_%d", vdev_id);
+		wma_err("Couldn't find vdev for VDEV_%d", vdev_id);
 		return obj_peer_type;
 	}
 	addr = wlan_vdev_mlme_get_macaddr(vdev);
@@ -1751,7 +1751,7 @@ static int wma_get_obj_mgr_peer_type(tp_wma_handle wma, uint8_t vdev_id,
 	} else if (wma->interfaces[vdev_id].type == WMI_VDEV_TYPE_NDI) {
 		obj_peer_type = WLAN_PEER_NDP;
 	} else {
-		wma_err("Couldnt find peertype for type %d and sub type %d",
+		wma_err("Couldn't find peertype for type %d and sub type %d",
 			 wma->interfaces[vdev_id].type,
 			 wma->interfaces[vdev_id].sub_type);
 	}
@@ -5021,7 +5021,7 @@ static void wma_add_sta_req_sta_mode(tp_wma_handle wma, tpAddStaParams params)
 	/* Sta is now associated, configure various params */
 
 	/* Send SMPS force command to FW to send the required
-	 * action frame only when SM power save is enbaled in
+	 * action frame only when SM power save is enabled in
 	 * from INI. In case dynamic antenna selection, the
 	 * action frames are sent by the chain mask manager
 	 * In addition to the action frames, The SM power save is

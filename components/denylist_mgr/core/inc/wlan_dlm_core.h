@@ -238,7 +238,7 @@ dlm_add_userspace_deny_list(struct wlan_objmgr_pdev *pdev,
  * with the current AP.
  * @pdev: pdev object
  * @bssid: BSSID of the AP
- * @con_state: Connection stae (connected/disconnected)
+ * @con_state: Connection state (connected/disconnected)
  *
  * This API will inform the DLM about the state with the AP so that if the AP
  * is selected, and the connection went through, and the connection did not
@@ -296,7 +296,7 @@ void dlm_dump_denylist_bssid(struct wlan_objmgr_pdev *pdev);
  *
  * This API will get the RSSI denylist threshold info.
  *
- * Return: rssi theshold value
+ * Return: rssi threshold value
  */
 int32_t
 dlm_get_rssi_denylist_threshold(struct wlan_objmgr_pdev *pdev);

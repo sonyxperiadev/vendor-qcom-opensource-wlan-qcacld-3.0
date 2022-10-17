@@ -1458,7 +1458,7 @@ int wmi_twt_add_cmd_to_vendor_twt_resp_type(enum WMI_HOST_TWT_COMMAND type)
  * WMI_HOST_DEL_TWT_STATUS to qca_wlan_vendor_twt_status
  * @status: WMI_HOST_DEL_TWT_STATUS value from firmware
  *
- * Return: qca_wlan_vendor_twt_status values corresponsing
+ * Return: qca_wlan_vendor_twt_status values corresponding
  * to the firmware failure status
  */
 static
@@ -1733,7 +1733,7 @@ hdd_twt_setup_pack_resp_nlmsg(struct sk_buff *reply_skb,
 
 /**
  * hdd_send_twt_setup_response  - Send TWT setup response to userspace
- * @hdd_adapter: Pointer to HDD adapter. This pointer is expeceted to
+ * @hdd_adapter: Pointer to HDD adapter. This pointer is expected to
  * be validated by the caller.
  * @add_dialog_comp_ev_params: Add dialog completion event structure
  *

@@ -2515,6 +2515,7 @@ struct osif_cm_ops osif_ops = {
 #ifdef WLAN_VENDOR_HANDOFF_CONTROL
 	.vendor_handoff_params_cb = hdd_cm_get_vendor_handoff_params,
 #endif
+	.send_vdev_keys_cb = hdd_cm_send_vdev_keys,
 };
 
 QDF_STATUS hdd_cm_register_cb(void)

@@ -763,7 +763,7 @@ lim_update_iot_aggr_sz(struct mac_context *mac_ctx, uint8_t *ie_ptr,
 
 /**
  * hdd_cm_update_mcs_rate_set() - Update MCS rate set from HT capability
- * @vdev: Pointer to vdev boject
+ * @vdev: Pointer to vdev object
  * @ht_cap: pointer to parsed HT capability
  *
  * Return: None.
@@ -915,8 +915,7 @@ lim_update_vdev_rate_set(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
  * lim_process_assoc_rsp_frame() - Processes assoc response
  * @mac_ctx: Pointer to Global MAC structure
  * @rx_packet_info    - A pointer to Rx packet info structure
- * @reassoc_frame_length - Valid frame length if its a reassoc response frame
- * else 0
+ * @frame_body_length - frame body length of reassoc/assoc response frame
  * @sub_type - Indicates whether it is Association Response (=0) or
  *                   Reassociation Response (=1) frame
  *
@@ -927,12 +926,11 @@ lim_update_vdev_rate_set(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
  */
 void
 lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
-			    uint32_t reassoc_frame_len,
+			    uint32_t frame_body_len,
 			    uint8_t subtype, struct pe_session *session_entry)
 {
 	uint8_t *body, *ie;
 	uint16_t caps, ie_len;
-	uint32_t frame_len;
 	tSirMacAddr current_bssid;
 	tpSirMacMgmtHdr hdr = NULL;
 	tSirMacCapabilityInfo mac_capab;
@@ -965,11 +963,9 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 	if (lim_is_roam_synch_in_progress(mac_ctx->psoc, session_entry) ||
 	    wlan_vdev_mlme_is_mlo_link_vdev(session_entry->vdev)) {
 		hdr = (tpSirMacMgmtHdr)rx_pkt_info;
-		frame_len = reassoc_frame_len - SIR_MAC_HDR_LEN_3A;
 		rssi = 0;
 	} else {
 		hdr = WMA_GET_RX_MAC_HEADER(rx_pkt_info);
-		frame_len = WMA_GET_RX_PAYLOAD_LEN(rx_pkt_info);
 		rssi = WMA_GET_RX_RSSI_NORMALIZED(rx_pkt_info);
 	}
 
@@ -1056,18 +1052,30 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 		body = WMA_GET_RX_MPDU_DATA(rx_pkt_info);
 	/* parse Re/Association Response frame. */
 	if (sir_convert_assoc_resp_frame2_struct(mac_ctx, session_entry, body,
-		frame_len, assoc_rsp) == QDF_STATUS_E_FAILURE) {
+		frame_body_len, assoc_rsp) == QDF_STATUS_E_FAILURE) {
 		qdf_mem_free(assoc_rsp);
 		pe_err("Parse error Assoc resp subtype: %d" "length: %d",
-			frame_len, subtype);
+			frame_body_len, subtype);
 		qdf_mem_free(beacon);
 		return;
 	}
 
 	if (lim_is_session_eht_capable(session_entry)) {
+		uint8_t ies_offset;
+
+		if (subtype == LIM_ASSOC)
+			ies_offset = WLAN_ASSOC_RSP_IES_OFFSET;
+		else
+			ies_offset = WLAN_REASSOC_REQ_IES_OFFSET;
+
+		if (frame_body_len < ies_offset) {
+			pe_err("frame body length is < ies_offset");
+			return;
+		}
+
 		status = lim_strip_and_decode_eht_op(
-					body + WLAN_ASSOC_RSP_IES_OFFSET,
-					frame_len - WLAN_ASSOC_RSP_IES_OFFSET,
+					body + ies_offset,
+					frame_body_len - ies_offset,
 					&assoc_rsp->eht_op,
 					assoc_rsp->VHTOperation,
 					assoc_rsp->he_op,
@@ -1079,8 +1087,8 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 		}
 
 		status = lim_strip_and_decode_eht_cap(
-					body + WLAN_ASSOC_RSP_IES_OFFSET,
-					frame_len - WLAN_ASSOC_RSP_IES_OFFSET,
+					body + ies_offset,
+					frame_body_len - ies_offset,
 					&assoc_rsp->eht_cap,
 					assoc_rsp->he_cap,
 					session_entry->curr_op_freq);
@@ -1105,15 +1113,15 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 		session_entry->assocRspLen = 0;
 	}
 
-	if (frame_len) {
-		session_entry->assocRsp = qdf_mem_malloc(frame_len);
+	if (frame_body_len) {
+		session_entry->assocRsp = qdf_mem_malloc(frame_body_len);
 		if (session_entry->assocRsp) {
 			/*
 			 * Store the Assoc response. This is sent
 			 * to csr/hdd in join cnf response.
 			 */
-			qdf_mem_copy(session_entry->assocRsp, body, frame_len);
-			session_entry->assocRspLen = frame_len;
+			qdf_mem_copy(session_entry->assocRsp, body, frame_body_len);
+			session_entry->assocRspLen = frame_body_len;
 		}
 	}
 
@@ -1214,7 +1222,7 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 	 */
 	if (!lim_verify_fils_params_assoc_rsp(mac_ctx, session_entry,
 						assoc_rsp, &assoc_cnf)) {
-		pe_err("FILS params doesnot match");
+		pe_err("FILS params does not match");
 		assoc_cnf.resultCode = eSIR_SME_INVALID_ASSOC_RSP_RXED;
 		assoc_cnf.protStatusCode = STATUS_UNSPECIFIED_FAILURE;
 		/* Send advisory Disassociation frame to AP */

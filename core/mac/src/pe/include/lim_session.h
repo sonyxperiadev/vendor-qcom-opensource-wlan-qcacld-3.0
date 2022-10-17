@@ -409,7 +409,7 @@ struct pe_session {
 	ePhyChanBondState htSecondaryChannelOffset;
 	enum reg_wifi_band limRFBand;
 
-	/* These global varibales moved to session Table to support BT-AMP : Oct 9th review */
+	/* These global variables moved to session Table to support BT-AMP : Oct 9th review */
 	tAniAuthType limCurrentAuthType;
 	uint16_t limCurrentBssCaps;
 	uint8_t limCurrentBssQosCaps;
@@ -419,7 +419,7 @@ struct pe_session {
 	/* Parameters  For Reassociation */
 	tSirMacAddr limReAssocbssId;
 	uint32_t lim_reassoc_chan_freq;
-	/* CB paramaters required/duplicated for Reassoc since re-assoc mantains its own params in lim */
+	/* CB parameters required/duplicated for Reassoc since re-assoc maintains its own params in lim */
 	uint8_t reAssocHtSupportedChannelWidthSet;
 	uint8_t reAssocHtRecommendedTxWidthSet;
 	ePhyChanBondState reAssocHtSecondaryChannelOffset;
@@ -703,7 +703,7 @@ struct pe_session {
 	bool isNonRoamReassoc;
 	qdf_mc_timer_t pmf_retry_timer;
 	struct comeback_timer_info pmf_retry_timer_info;
-	/* timer for resetting protection fileds at regular intervals */
+	/* timer for resetting protection fields at regular intervals */
 	qdf_mc_timer_t protection_fields_reset_timer;
 	/* timer to decrement CSA/ECSA count */
 	qdf_mc_timer_t ap_ecsa_timer;
@@ -818,7 +818,7 @@ struct pe_session {
 };
 
 /*-------------------------------------------------------------------------
-   Function declarations and documenation
+   Function declarations and documentation
    ------------------------------------------------------------------------*/
 
 #ifdef WLAN_ALLOCATE_GLOBAL_BUFFERS_DYNAMICALLY

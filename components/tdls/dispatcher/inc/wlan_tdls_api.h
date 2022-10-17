@@ -89,6 +89,15 @@ wlan_tdls_notify_sta_connect(uint8_t vdev_id,
 			     struct wlan_objmgr_vdev *vdev);
 
 #else
+
+#ifdef FEATURE_SET
+static inline
+void wlan_tdls_get_features_info(struct wlan_objmgr_psoc *psoc,
+				 struct wlan_tdls_features *tdls_feature_set)
+{
+}
+#endif
+
 static inline QDF_STATUS wlan_tdls_teardown_links(struct wlan_objmgr_psoc *psoc)
 {
 	return QDF_STATUS_SUCCESS;

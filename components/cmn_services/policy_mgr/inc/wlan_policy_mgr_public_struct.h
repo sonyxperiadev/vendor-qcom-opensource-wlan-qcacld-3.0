@@ -94,7 +94,7 @@ typedef int (*send_mode_change_event_cb)(void);
  * @CSA_REASON_CHAN_DISABLED: channel is disabled
  * @CSA_REASON_CHAN_PASSIVE: channel is passive
  * @CSA_REASON_GO_BSS_STARED: P2P go started
- * @CSA_REASON_SAP_ACS: 2.4 GHz perferred SAP ACS starting
+ * @CSA_REASON_SAP_ACS: 2.4 GHz preferred SAP ACS starting
  * @CSA_REASON_SAP_FIX_CH_CONC_WITH_GO: SAP fix channel start
  *  and move GO to other band
  */

@@ -62,7 +62,7 @@ QDF_STATUS cm_fw_roam_sync_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 	}
 
 	if (cm_is_vdev_connecting(vdev) || cm_is_vdev_disconnecting(vdev)) {
-		mlme_err("vdev %d Roam sync not handled in conneting/disconneting state",
+		mlme_err("vdev %d Roam sync not handled in connecting/disconnecting state",
 			 vdev_id);
 		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_SB_ID);
 		return cm_roam_stop_req(psoc, vdev_id,
@@ -880,7 +880,7 @@ cm_fw_roam_sync_propagation(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 
 	cm_process_roam_keys(vdev, rsp, cm_id);
 	/*
-	 * Re-enable the disabled link on roaming as desision
+	 * Re-enable the disabled link on roaming as decision
 	 * will be taken again to disable the link on roam sync completion.
 	 */
 	if (wlan_vdev_mlme_is_mlo_vdev(vdev))
@@ -928,8 +928,7 @@ cm_fw_roam_sync_propagation(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 	mlme_cm_osif_connect_complete(vdev, connect_rsp);
 	mlme_cm_osif_roam_complete(vdev);
 	mlme_debug(CM_PREFIX_FMT, CM_PREFIX_REF(vdev_id, cm_id));
-	if (!wlan_vdev_mlme_is_mlo_link_vdev(vdev))
-		cm_remove_cmd(cm_ctx, &cm_id);
+	cm_remove_cmd(cm_ctx, &cm_id);
 	status = QDF_STATUS_SUCCESS;
 error:
 	if (rsp)
@@ -1005,7 +1004,8 @@ QDF_STATUS cm_fw_roam_complete(struct cnx_mgr *cm_ctx, void *data)
 	 * roam sync to make sure the new AP is not on disable freq
 	 * or disconnect the AP.
 	 */
-	if (wlan_reg_is_disable_for_freq(pdev, roam_synch_data->chan_freq)) {
+	if (wlan_reg_is_disable_for_pwrmode(pdev, roam_synch_data->chan_freq,
+					    REG_CURRENT_PWR_MODE)) {
 		mlo_disconnect(cm_ctx->vdev, CM_ROAM_DISCONNECT,
 			       REASON_OPER_CHANNEL_BAND_CHANGE, NULL);
 		status = QDF_STATUS_E_FAILURE;

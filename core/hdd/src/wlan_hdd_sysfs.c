@@ -690,36 +690,25 @@ static void hdd_sysfs_destroy_driver_root_obj(void)
 	}
 }
 
-void hdd_sysfs_create_wifi_root_obj(struct hdd_context *hdd_ctx)
+void hdd_sysfs_create_wifi_root_obj(void)
 {
-	qdf_mutex_acquire(&hdd_ctx->wifi_kobj_lock);
 	if (wifi_kobject) {
 		hdd_debug("wifi kobj already created");
-		goto wifi_kobj_created;
+		return;
 	}
-	wifi_kobject = pld_get_wifi_kobj(hdd_ctx->parent_dev);
+	wifi_kobject = pld_get_wifi_kobj(NULL);
 	if (wifi_kobject) {
 		hdd_debug("wifi_kobject created by platform");
-		goto wifi_kobj_created;
+		return;
 	}
 	wifi_kobject = kobject_create_and_add("wifi", NULL);
 	if (!wifi_kobject)
 		hdd_err("could not allocate wifi kobject");
-
-wifi_kobj_created:
-	qdf_mutex_release(&hdd_ctx->wifi_kobj_lock);
-
 }
 
-static void hdd_sysfs_destroy_wifi_root_obj(void)
+void hdd_sysfs_destroy_wifi_root_obj(void)
 {
-	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
-
-	if (!hdd_ctx) {
-		hdd_err("hdd context is NULL");
-		return;
-	}
-	if (pld_get_wifi_kobj(hdd_ctx->parent_dev)) {
+	if (pld_get_wifi_kobj(NULL)) {
 		hdd_debug("wifi_kobject created by platform");
 		wifi_kobject = NULL;
 		return;
@@ -736,6 +725,11 @@ static void hdd_sysfs_destroy_wifi_root_obj(void)
 void hdd_create_wifi_feature_interface_sysfs_file(void)
 {
 	hdd_sysfs_create_wifi_feature_interface(wifi_kobject);
+}
+
+void hdd_destroy_wifi_feature_interface_sysfs_file(void)
+{
+	hdd_sysfs_destroy_wifi_feature_interface(wifi_kobject);
 }
 
 #ifdef WLAN_FEATURE_BEACON_RECEPTION_STATS
@@ -896,9 +890,7 @@ void hdd_create_sysfs_files(struct hdd_context *hdd_ctx)
 	hdd_sysfs_create_driver_root_obj();
 	hdd_sysfs_create_version_interface(hdd_ctx->psoc);
 	hdd_sysfs_mem_stats_create(wlan_kobject);
-	hdd_sysfs_create_wifi_root_obj(hdd_ctx);
 	if  (QDF_GLOBAL_MISSION_MODE == hdd_get_conparam()) {
-		hdd_create_wifi_feature_interface_sysfs_file();
 		hdd_sysfs_create_powerstats_interface();
 		hdd_sysfs_create_dump_in_progress_interface(wifi_kobject);
 		hdd_sysfs_fw_mode_config_create(driver_kobject);
@@ -941,9 +933,7 @@ void hdd_destroy_sysfs_files(void)
 		hdd_sysfs_fw_mode_config_destroy(driver_kobject);
 		hdd_sysfs_destroy_dump_in_progress_interface(wifi_kobject);
 		hdd_sysfs_destroy_powerstats_interface();
-		hdd_sysfs_destroy_wifi_feature_interface(wifi_kobject);
 	}
-	hdd_sysfs_destroy_wifi_root_obj();
 	hdd_sysfs_mem_stats_destroy(wlan_kobject);
 	hdd_sysfs_destroy_version_interface();
 	hdd_sysfs_destroy_driver_root_obj();

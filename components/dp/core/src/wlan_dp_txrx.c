@@ -143,7 +143,7 @@ static int dp_intf_is_tx_allowed(qdf_nbuf_t nbuf,
  * name or not
  *
  * @nbuf: Network buffer pointer
- * @dp_intf: DP interface poniter
+ * @dp_intf: DP interface pointer
  *
  * Returns: true if matches else false
  */

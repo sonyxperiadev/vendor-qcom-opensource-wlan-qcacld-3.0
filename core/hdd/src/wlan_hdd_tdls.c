@@ -690,7 +690,7 @@ hdd_check_and_set_tdls_conn_params(struct wlan_objmgr_vdev *vdev)
 	 * selfdot11Mode is either 11ax, 11ac or 11n, TDLS connection can be
 	 * made upto supporting selfdot11mode. Since, TDLS shares same netdev
 	 * that of STA, checksum/TSO will be disabled during STA connection.
-	 * For better TDLS thorughput, enable checksum/TSO which were already
+	 * For better TDLS throughput, enable checksum/TSO which were already
 	 * disabled during STA connection.
 	 */
 	if (selfdot11mode == eHDD_DOT11_MODE_AUTO ||
@@ -927,7 +927,7 @@ int hdd_set_tdls_scan_type(struct hdd_context *hdd_ctx, int val)
 /**
  * wlan_hdd_tdls_antenna_switch() - Dynamic TDLS antenna  switch 1x1 <-> 2x2
  * antenna mode in standalone station
- * @hdd_ctx: Pointer to hdd contex
+ * @hdd_ctx: Pointer to hdd context
  * @adapter: Pointer to hdd adapter
  *
  * Return: 0 if success else non zero

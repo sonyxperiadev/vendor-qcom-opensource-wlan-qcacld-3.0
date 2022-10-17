@@ -158,9 +158,9 @@ enum txrate_gi {
  * @mgmt_assoc_resp: association response management frame
  * @mgmt_reassoc: reassociate request management frame
  * @mgmt_reassoc_resp: reassociate response management frame
- * @mgmt_auth: authentication managament frame
+ * @mgmt_auth: authentication management frame
  * @mgmt_deauth: deauthentication management frame
- * @mgmt_action: action managament frame
+ * @mgmt_action: action management frame
  */
 struct wake_lock_stats {
 	uint32_t ucast_wake_up_count;
@@ -535,8 +535,8 @@ struct dot11_counters {
 
 /**
  * struct dot11_mac_statistics - mib stats information on the operation of MAC
- * @retry_cnt: retries done by mac for successful transmition
- * @multi_retry_cnt: multiple retries done before successful transmition
+ * @retry_cnt: retries done by mac for successful transmission
+ * @multi_retry_cnt: multiple retries done before successful transmission
  * @frame_dup_cnt: duplicate no of frames
  * @rts_success_cnt: number of CTS received (in response to RTS)
  * @rts_fail_cnt: number of CTS not received (in response to RTS)

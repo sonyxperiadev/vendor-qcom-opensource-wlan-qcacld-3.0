@@ -900,7 +900,7 @@ QDF_STATUS ol_txrx_ipa_setup_iface(char *ifname, uint8_t *mac_addr,
 	ret = qdf_ipa_wdi_reg_intf(&in);
 	if (ret) {
 		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
-			  "%s: ipa_wdi_reg_intf falied: ret=%d", __func__, ret);
+			  "%s: ipa_wdi_reg_intf failed: ret=%d", __func__, ret);
 	}
 
 	return ret;

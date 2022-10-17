@@ -532,7 +532,8 @@ QDF_STATUS cm_roam_sync_event_handler_cb(struct wlan_objmgr_vdev *vdev,
 
 err:
 	if (QDF_IS_STATUS_ERROR(status)) {
-		wlan_mlo_roam_abort_on_link(psoc, sync_ind);
+		wlan_mlo_roam_abort_on_link(psoc, event,
+					    sync_ind->roamed_vdev_id);
 		cm_fw_roam_abort_req(psoc, sync_ind->roamed_vdev_id);
 		cm_roam_stop_req(psoc, sync_ind->roamed_vdev_id,
 				 REASON_ROAM_SYNCH_FAILED,

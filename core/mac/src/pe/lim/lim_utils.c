@@ -1002,7 +1002,7 @@ uint8_t lim_is_null_ssid(tSirMacSSid *ssid)
 		fnull_ssid = true;
 		return fnull_ssid;
 	}
-	/* If the first charactes is space, then check if all
+	/* If the first characters is space, then check if all
 	 * characters in SSID are spaces to consider it as NULL SSID
 	 */
 	if ((ASCII_SPACE_CHARACTER == ssid->ssId[0]) &&
@@ -1010,7 +1010,7 @@ uint8_t lim_is_null_ssid(tSirMacSSid *ssid)
 			fnull_ssid = true;
 			return fnull_ssid;
 	} else {
-		/* check if all the charactes in SSID are NULL */
+		/* check if all the characters in SSID are NULL */
 		ssid_len = ssid->length;
 		ssid_str = ssid->ssId;
 
@@ -2273,7 +2273,7 @@ uint8_t lim_get_ht_capability(struct mac_context *mac,
 	/* accessed */
 	/* */
 	if (htCap >= eHT_ANTENNA_SELECTION && htCap < eHT_SI_GRANULARITY) {
-		/* Get Antenna Seletion HT Capabilities */
+		/* Get Antenna Selection HT Capabilities */
 		ptr = (uint8_t *) &macASCapabilityInfo;
 		*((uint8_t *)ptr) = (uint8_t)(vht_cap_info->as_cap & 0xff);
 	} else if (htCap >= eHT_TX_BEAMFORMING &&
@@ -3837,7 +3837,7 @@ void lim_update_sta_run_time_ht_switch_chnl_params(struct mac_context *mac,
 	/* If channel mismatch the CSA will take care of this change */
 	if (pHTInfo->primaryChannel != wlan_reg_freq_to_chan(
 			mac->pdev, pe_session->curr_op_freq)) {
-		pe_debug("Current channel doesnt match HT info ignore");
+		pe_debug("Current channel doesn't match HT info ignore");
 		return;
 	}
 
@@ -5317,7 +5317,7 @@ static void lim_check_conc_and_send_edca(struct mac_context *mac,
 			sch_qos_update_broadcast(mac, sap_session);
 
 	/*
-	 * In case of mcc, where cb can come from scc to mcc swtich where we
+	 * In case of mcc, where cb can come from scc to mcc switch where we
 	 * need to restore the default parameters
 	 */
 			if (sta_session) {
@@ -5431,7 +5431,7 @@ void lim_check_and_reset_protection_params(struct mac_context *mac_ctx)
  * @ext_cap: Pointer to extended capability
  * @mac_ctx: global MAC context
  *
- * This funciton update hash node's RTT capability based on received
+ * This function update hash node's RTT capability based on received
  * Extended capability IE.
  *
  * Return: None
@@ -5479,7 +5479,7 @@ void lim_set_peer_twt_cap(struct pe_session *session, struct s_ext_cap *ext_cap)
  * @buf: buffer containing IE
  * @len: length of buffer
  *
- * This funciton sends the IE data to WMA.
+ * This function sends the IE data to WMA.
  *
  * Return: status of operation
  */
@@ -6389,7 +6389,7 @@ const char *lim_bss_type_to_string(const uint16_t bss_type)
 
 /**
  * lim_init_obss_params(): Initializes the OBSS Scan Parameters
- * @sesssion: LIM session
+ * @session: LIM session
  * @mac_ctx: Mac context
  *
  * Return: None
@@ -6429,7 +6429,7 @@ void lim_init_obss_params(struct mac_context *mac_ctx, struct pe_session *sessio
 
 /**
  * lim_update_obss_scanparams(): Updates OBSS SCAN IE parameters to session
- * @sesssion: LIM session
+ * @session: LIM session
  * @scan_params: Scan parameters
  *
  * Return: None
@@ -6522,7 +6522,7 @@ uint8_t lim_compute_ext_cap_ie_length(tDot11fIEExtCap *ext_cap)
  *
  * Update the capability info in Assoc/Reassoc request frames and reset
  * the spectrum management, short preamble, immediate block ack bits
- * if the BSS doesnot support it
+ * if the BSS does not support it
  *
  * Return: None
  */
@@ -6548,7 +6548,7 @@ void lim_update_caps_info_for_bss(struct mac_context *mac_ctx,
  * lim_send_set_dtim_period(): Send SIR_HAL_SET_DTIM_PERIOD message
  * to set dtim period.
  *
- * @sesssion: LIM session
+ * @session: LIM session
  * @dtim_period: dtim value
  * @mac_ctx: Mac context
  * @return None
@@ -7287,7 +7287,7 @@ void lim_log_he_cap(struct mac_context *mac, tDot11fIEhe_cap *he_cap)
 		      he_cap->twt_responder, he_cap->fragmentation,
 		      he_cap->max_num_frag_msdu_amsdu_exp,
 		      he_cap->min_frag_size);
-	pe_nofl_debug("\ttrig frm mac pad 0x%x multi tid aggr supp 0x%x link adaptaion 0x%x all ack 0x%x trigd_rsp_sched 0x%x a_bsr 0x%x",
+	pe_nofl_debug("\ttrig frm mac pad 0x%x multi tid aggr supp 0x%x link adaptation 0x%x all ack 0x%x trigd_rsp_sched 0x%x a_bsr 0x%x",
 		      he_cap->trigger_frm_mac_pad,
 		      he_cap->multi_tid_aggr_rx_supp,
 		      he_cap->he_link_adaptation, he_cap->all_ack,
@@ -8575,7 +8575,7 @@ void lim_update_session_eht_capable_chan_switch(struct mac_context *mac,
 {
 	session->eht_capable = true;
 	session->he_capable = true;
-	/* TODO: Updat*/
+	/* TODO: Update */
 	if (wlan_reg_is_6ghz_chan_freq(session->curr_op_freq) &&
 	    !wlan_reg_is_6ghz_chan_freq(new_chan_freq)) {
 		session->htCapability = 1;
@@ -9103,7 +9103,7 @@ QDF_STATUS lim_send_he_6g_band_caps_ie(struct mac_context *mac_ctx,
 						 sizeof(he_6g_band_caps_ie),
 						 &size);
 	if (result != DOT11F_PARSE_SUCCESS) {
-		pe_err("pack erro for HE 6g band cap for vdev %d", vdev_id);
+		pe_err("pack error for HE 6g band cap for vdev %d", vdev_id);
 		return QDF_STATUS_E_FAILURE;
 	}
 	pe_debug("send HE 6ghz band cap: 0x%01x 0x%01x for vdev %d",

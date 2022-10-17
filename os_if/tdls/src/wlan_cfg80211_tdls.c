@@ -407,7 +407,7 @@ wlan_cfg80211_tdls_extract_params(struct wlan_objmgr_vdev *vdev,
 	req_info->supported_rates_len = params->supported_rates_len;
 
 	/* Note : The Maximum sizeof supported_rates sent by the Supplicant is
-	 * 32. The supported_rates array , for all the structures propogating
+	 * 32. The supported_rates array , for all the structures propagating
 	 * till Add Sta to the firmware has to be modified , if the supplicant
 	 * (ieee80211) is modified to send more rates.
 	 */

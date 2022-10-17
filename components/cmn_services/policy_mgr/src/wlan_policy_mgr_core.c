@@ -202,6 +202,21 @@ uint32_t policy_mgr_get_mcc_to_scc_switch_mode(
 	return pm_ctx->cfg.mcc_to_scc_switch;
 }
 
+#ifdef WLAN_FEATURE_SR
+bool policy_mgr_get_same_mac_conc_sr_status(struct wlan_objmgr_psoc *psoc)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return 0;
+	}
+
+	return pm_ctx->cfg.sr_in_same_mac_conc;
+}
+#endif
+
 /**
  * policy_mgr_get_dbs_config() - Get DBS bit
  *
@@ -667,7 +682,7 @@ void policy_mgr_update_conc_list(struct wlan_objmgr_psoc *psoc,
  * policy_mgr_store_and_del_conn_info() - Store and del a connection info
  * @mode: Mode whose entry has to be deleted
  * @all_matching_cxn_to_del: All the specified mode entries should be deleted
- * @info: Struture array pointer where the connection info will be saved
+ * @info: Structure array pointer where the connection info will be saved
  * @num_cxn_del: Number of connection which are going to be deleted
  *
  * Saves the connection info corresponding to the provided mode
@@ -1413,7 +1428,7 @@ policy_mgr_dump_dual_mac_concurrency(struct policy_mgr_psoc_priv_obj *pm_ctx,
 	}
 
 	for (i = 0; i < MAX_NUMBER_OF_CONC_CONNECTIONS; i++) {
-		/* in_use flag is required to be checked becuse vdev bit
+		/* in_use flag is required to be checked because vdev bit
 		 * mask will be 0 for 4th bit if only 3 port concurrency is
 		 * present on a hardware that can support 4 port concurrency
 		 */
@@ -2905,8 +2920,9 @@ void policy_mgr_set_weight_of_dfs_passive_channels_to_zero(
 	policy_mgr_debug("Set weight of DFS/passive channels to 0");
 
 	for (i = 0; i < orig_channel_count; i++) {
-		channel_state = wlan_reg_get_channel_state_for_freq(
-						pm_ctx->pdev, pcl_channels[i]);
+		channel_state = wlan_reg_get_channel_state_for_pwrmode(
+						pm_ctx->pdev, pcl_channels[i],
+						REG_CURRENT_PWR_MODE);
 		if ((channel_state == CHANNEL_STATE_DISABLE) ||
 				(channel_state == CHANNEL_STATE_INVALID))
 			/* Set weight of inactive channels to 0 */
@@ -3180,7 +3196,7 @@ QDF_STATUS policy_mgr_get_channel_list(struct wlan_objmgr_psoc *psoc,
 
 			channel_list_5[chan_index_5++] = channel_list[i];
 		} else if (wlan_reg_is_6ghz_chan_freq(channel_list[i])) {
-			/* Add to 5G list untill 6G conc support is enabled */
+			/* Add to 5G list until 6G conc support is enabled */
 			channel_list_6[chan_index_6++] = channel_list[i];
 		}
 	}
@@ -3708,7 +3724,7 @@ QDF_STATUS policy_mgr_get_channel_list(struct wlan_objmgr_psoc *psoc,
 				      channel_list_6, chan_index_6,
 				      POLICY_MGR_PCL_ORDER_SCC_5G_LOW_5G_LOW);
 		/*
-		 * If no 2.4 GHZ connetcion is present and If 2.4 GHZ is shared
+		 * If no 2.4 GHZ connection is present and If 2.4 GHZ is shared
 		 * with 5 GHz low freq then 2.4 GHz can be added as well
 		 */
 		if (!policy_mgr_2ghz_connection_present(pm_ctx) &&
@@ -3729,7 +3745,7 @@ QDF_STATUS policy_mgr_get_channel_list(struct wlan_objmgr_psoc *psoc,
 				      channel_list_6, chan_index_6,
 				      POLICY_MGR_PCL_ORDER_SCC_5G_HIGH_5G_HIGH);
 		/*
-		 * If no 2.4 GHZ connetcion is present and if 2.4 GHZ is shared
+		 * If no 2.4 GHZ connection is present and if 2.4 GHZ is shared
 		 * with 5 GHz High freq then 2.4 GHz can be added as well
 		 */
 		if (!policy_mgr_2ghz_connection_present(pm_ctx) &&
@@ -4126,7 +4142,7 @@ policy_mgr_get_pref_force_scc_freq(struct wlan_objmgr_psoc *psoc,
  * @vdev_id: vdev id of SAP/GO
  * @intf_ch_freq: interference channel frequency
  * @sap_ch_freq: SAP/GO current home channel frequency
- * @acs_band: acs band perference
+ * @acs_band: acs band preference
  * @allow_6ghz: interface supports 6Ghz band
  *
  * This function gets the force SCC channel in 3 connections case.
@@ -4174,7 +4190,7 @@ policy_mgr_check_force_scc_two_connection(struct wlan_objmgr_psoc *psoc,
 	 * 5Ghz    5Ghz(SBS)      5Ghz           Force SCC to one of 5Ghz
 	 * 5Ghz    5Ghz(SMM)      2Ghz           Start on 2.4Ghz
 	 * 5Ghz    5Ghz(SMM)      5Ghz           Allow SAP on sap_ch_freq if all
-	 *                                       3, 5Ghz freq does't end up
+	 *                                       3, 5Ghz freq doesn't end up
 	 *                                       on same mac, ie 2 of them lead
 	 *                                       to SBS. Else force SCC on
 	 *                                       one of the freq (3 home channel
@@ -4276,7 +4292,7 @@ policy_mgr_check_force_scc_two_connection(struct wlan_objmgr_psoc *psoc,
 		 * -------------------------------------------------
 		 * 5Ghz    5Ghz(SMM)      5Ghz          Allow SAP on sap_ch_freq
 		 *                                      if all 3, 5Ghz freq
-		 *                                      does't end up, on same
+		 *                                      doesn't end up, on same
 		 *                                      mac, ie 2 of them lead
 		 *                                      to SBS, ie at least one
 		 *                                      of them is high 5Ghz and
@@ -4445,8 +4461,10 @@ void policy_mgr_check_scc_sbs_channel(struct wlan_objmgr_psoc *psoc,
 		if (WLAN_REG_IS_24GHZ_CH_FREQ(sap_ch_freq) &&
 		    user_config_freq &&
 		    !WLAN_REG_IS_24GHZ_CH_FREQ(user_config_freq) &&
-		    (wlan_reg_get_channel_state_for_freq(pm_ctx->pdev,
-							 *intf_ch_freq) == CHANNEL_STATE_ENABLE)) {
+		    (wlan_reg_get_channel_state_for_pwrmode(
+			pm_ctx->pdev,
+			*intf_ch_freq,
+			REG_CURRENT_PWR_MODE) == CHANNEL_STATE_ENABLE)) {
 			status = policy_mgr_get_sap_mandatory_channel(
 							psoc, sap_ch_freq,
 							intf_ch_freq, vdev_id);

@@ -49,13 +49,14 @@ wma_pasn_peer_remove(struct wlan_objmgr_psoc *psoc,
 
 	if (!wma_objmgr_peer_exist(wma, peer_addr->bytes, &peer_vdev_id)) {
 		wma_err("peer doesn't exist peer_addr " QDF_MAC_ADDR_FMT " vdevid %d",
-			QDF_MAC_ADDR_REF(peer_addr), vdev_id);
+			QDF_MAC_ADDR_REF(peer_addr->bytes), vdev_id);
 		return QDF_STATUS_E_INVAL;
 	}
 
 	if (peer_vdev_id != vdev_id) {
 		wma_err("peer " QDF_MAC_ADDR_FMT " is on vdev id %d but delete req on vdevid %d",
-			QDF_MAC_ADDR_REF(peer_addr), peer_vdev_id, vdev_id);
+			QDF_MAC_ADDR_REF(peer_addr->bytes),
+			peer_vdev_id, vdev_id);
 		return QDF_STATUS_E_INVAL;
 	}
 
@@ -273,13 +274,13 @@ wma_pasn_peer_delete_all_complete(struct wlan_objmgr_vdev *vdev)
 QDF_STATUS
 wma_delete_all_pasn_peers(tp_wma_handle wma, struct wlan_objmgr_vdev *vdev)
 {
-	struct wlan_lmac_if_wifi_pos_tx_ops *tx_ops;
+	struct wlan_lmac_if_wifi_pos_rx_ops *rx_ops;
 	struct wma_target_req *msg;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	uint8_t vdev_id = wlan_vdev_get_id(vdev);
 
-	tx_ops = wifi_pos_get_tx_ops(wma->psoc);
-	if (!tx_ops || !tx_ops->wifi_pos_vdev_delete_all_ranging_peers_cb) {
+	rx_ops = wifi_pos_get_rx_ops(wma->psoc);
+	if (!rx_ops || !rx_ops->wifi_pos_vdev_delete_all_ranging_peers_cb) {
 		wma_err("rx_ops is NULL");
 		return QDF_STATUS_E_INVAL;
 	}
@@ -288,7 +289,7 @@ wma_delete_all_pasn_peers(tp_wma_handle wma, struct wlan_objmgr_vdev *vdev)
 			     WMA_PEER_DELETE_RESPONSE_TIMEOUT);
 	wma_err("Delete all ranging peers vdev:%d",
 		wlan_vdev_get_id(vdev));
-	status = tx_ops->wifi_pos_vdev_delete_all_ranging_peers_cb(vdev);
+	status = rx_ops->wifi_pos_vdev_delete_all_ranging_peers_cb(vdev);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		wma_release_wakelock(&wma->wmi_cmd_rsp_wake_lock);
 		wma_err("Delete all ranging peers failed");

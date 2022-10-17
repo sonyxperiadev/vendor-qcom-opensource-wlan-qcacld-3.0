@@ -43,7 +43,7 @@ QDF_STATUS ucfg_mlme_init(void);
 /**
  * ucfg_mlme_deinit() - De initialize mlme_ctx context.
  *
- * This function De initializes mlme contex.
+ * This function De initializes mlme context.
  *
  * Return: QDF_STATUS_SUCCESS - in case of success else return error
  */
@@ -53,7 +53,7 @@ QDF_STATUS ucfg_mlme_deinit(void);
  * ucfg_mlme_psoc_open() - MLME component Open
  * @psoc: pointer to psoc object
  *
- * Open the MLME component and initialize the MLME strucutre
+ * Open the MLME component and initialize the MLME structure
  *
  * Return: QDF Status
  */
@@ -73,7 +73,7 @@ void ucfg_mlme_psoc_close(struct wlan_objmgr_psoc *psoc);
  * ucfg_mlme_pdev_open() - MLME component pdev Open
  * @pdev: pointer to pdev object
  *
- * Open the MLME component and initialize the MLME pdev strucutre
+ * Open the MLME component and initialize the MLME pdev structure
  *
  * Return: QDF Status
  */

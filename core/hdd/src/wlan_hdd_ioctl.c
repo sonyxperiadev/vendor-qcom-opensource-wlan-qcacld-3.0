@@ -5296,8 +5296,10 @@ static int drv_cmd_tdls_off_channel(struct hdd_adapter *adapter,
 		return -EINVAL;
 
 	ch_freq = wlan_reg_legacy_chan_to_freq(hdd_ctx->pdev, channel);
-	reg_state = wlan_reg_get_channel_state_for_freq(hdd_ctx->pdev,
-							ch_freq);
+	reg_state = wlan_reg_get_channel_state_for_pwrmode(
+							hdd_ctx->pdev,
+							ch_freq,
+							REG_CURRENT_PWR_MODE);
 
 	if (reg_state == CHANNEL_STATE_DFS ||
 		reg_state == CHANNEL_STATE_DISABLE ||
@@ -5644,7 +5646,7 @@ static int hdd_parse_setantennamode_command(const uint8_t *value)
 /**
  * hdd_is_supported_chain_mask_2x2() - Verify if supported chain
  * mask is 2x2 mode
- * @hdd_ctx: Pointer to hdd contex
+ * @hdd_ctx: Pointer to hdd context
  *
  * Return: true if supported chain mask 2x2 else false
  */
@@ -5669,7 +5671,7 @@ static bool hdd_is_supported_chain_mask_2x2(struct hdd_context *hdd_ctx)
 /**
  * hdd_is_supported_chain_mask_1x1() - Verify if the supported
  * chain mask is 1x1
- * @hdd_ctx: Pointer to hdd contex
+ * @hdd_ctx: Pointer to hdd context
  *
  * Return: true if supported chain mask 1x1 else false
  */
@@ -6321,8 +6323,8 @@ static void disconnect_sta_and_restart_sap(struct hdd_context *hdd_ctx,
  * SET_DISABLE_CHANNEL_LIST <num of channels>
  * <channels separated by spaces>.
  * If the command comes multiple times than this function will compare
- * the channels received in the command with the channles cached in the
- * first command, if the channel list matches with the cached channles,
+ * the channels received in the command with the channels cached in the
+ * first command, if the channel list matches with the cached channels,
  * it returns success otherwise returns failure.
  *
  * Return: 0 on success, Error code on failure
@@ -6462,7 +6464,7 @@ static int hdd_parse_disable_chan_cmd(struct hdd_adapter *adapter, uint8_t *ptr)
 	 * If command is received first time, cache the channels to
 	 * be disabled else compare the channels received in the
 	 * command with the cached channels, if channel list matches
-	 * return success otherewise return failure.
+	 * return success otherwise return failure.
 	 */
 	if (!is_command_repeated) {
 		for (j = 0; j < num_channels; j++)

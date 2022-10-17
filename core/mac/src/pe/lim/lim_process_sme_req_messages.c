@@ -1545,7 +1545,7 @@ static bool lim_is_fast_roam_enabled(struct mac_context *mac_ctx,
 
 	/*
 	 * If fast roam in concurrency is disabled and there are concurrent
-	 * sessions runnig return false.
+	 * sessions running return false.
 	 */
 	if (policy_mgr_get_connection_count(mac_ctx->psoc))
 		return false;
@@ -2578,7 +2578,7 @@ lim_verify_dot11_mode_with_crypto(struct pe_session *session)
 	else
 		session->dot11mode = MLME_DOT11_MODE_11A;
 
-	pe_info("HT not supported with TKIP/WEP overiding dot11mode to %d",
+	pe_info("HT not supported with TKIP/WEP overriding dot11mode to %d",
 		session->dot11mode);
 
 	session->he_with_wep_tkip =
@@ -4000,7 +4000,7 @@ static void lim_fill_ml_info(struct cm_vdev_join_req *req,
 		qdf_copy_macaddr(
 			&partner_info->partner_link_info[idx].link_addr,
 			&req->partner_info.partner_link_info[idx].link_addr);
-		pe_debug("MLO: link_id:%d" QDF_MAC_ADDR_FMT,
+		pe_debug("MLO: link_id:%d " QDF_MAC_ADDR_FMT,
 			 partner_info->partner_link_info[idx].link_id,
 			 QDF_MAC_ADDR_REF(partner_info->partner_link_info[idx].
 					  link_addr.bytes));
@@ -4458,7 +4458,7 @@ struct pe_session *lim_get_disconnect_session(struct mac_context *mac_ctx,
 	 * NB disconnect is received before reassoc can start OR reassoc failure
 	 * lead to disconnect, new AP's session will be idle in wait reassoc
 	 * state and vdev in INIT state, so cleanup the session and send
-	 * responce of disconnect complete.
+	 * response of disconnect complete.
 	 */
 	if (session &&
 	    QDF_IS_STATUS_SUCCESS(wlan_vdev_mlme_is_init_state(session->vdev))) {
@@ -6587,7 +6587,7 @@ void __lim_process_sme_assoc_cnf_new(struct mac_context *mac_ctx, uint32_t msg_t
 		goto end;
 	}
 	/*
-	 * Deactivate/delet CNF_WAIT timer since ASSOC_CNF
+	 * Deactivate/delete CNF_WAIT timer since ASSOC_CNF
 	 * has been received
 	 */
 	pe_debug("Received SME_ASSOC_CNF. Delete Timer");
@@ -8825,7 +8825,7 @@ static void lim_process_update_add_ies(struct mac_context *mac_ctx,
 			qdf_mem_free(addn_ie->probeRespData_buff);
 			/* adjust length accordingly */
 			addn_ie->probeRespDataLen = new_length;
-			/* save refernece of local buffer in PE session */
+			/* save reference of local buffer in PE session */
 			addn_ie->probeRespData_buff = new_ptr;
 			goto end;
 		}
@@ -9098,7 +9098,7 @@ skip_vht:
 	 * interval until switchCount become 0 and bcn template with new
 	 * switchCount will be sent to firmware.
 	 * OR
-	 * If no tx complete for beacon is recived till this timer expire
+	 * If no tx complete for beacon is received till this timer expire
 	 * this will be restarted for every beacon interval until switchCount
 	 * become 0 and bcn template with new switchCount will be sent to
 	 * firmware.
@@ -9678,7 +9678,7 @@ void lim_process_obss_color_collision_info(struct mac_context *mac_ctx,
 
 		if (session->obss_color_collision_dec_evt !=
 		    obss_color_info->evt_type) {
-			pe_debug("%d: Wrong event: %d, skiping",
+			pe_debug("%d: Wrong event: %d, skipping",
 				 obss_color_info->vdev_id,
 				 obss_color_info->evt_type);
 			return;

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -291,7 +292,7 @@ wlan_cfg80211_cfr_set_config(struct wlan_objmgr_vdev *vdev,
 				(uint32_t)(ul_mu_user_mask & 0xffffffff);
 		params.ul_mu_user_mask_lower =
 				(uint32_t)(ul_mu_user_mask >> 32);
-		hdd_debug("set ul mu user maks");
+		hdd_debug("set ul mu user mask");
 		ucfg_cfr_set_ul_mu_user_mask(vdev, &params);
 	}
 

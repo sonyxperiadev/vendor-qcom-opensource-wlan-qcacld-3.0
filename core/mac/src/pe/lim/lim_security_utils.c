@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -289,7 +290,7 @@ void lim_add_pre_auth_node(struct mac_context *mac, struct tLimPreAuthNode *pAut
  * lim_release_pre_auth_node
  *
  ***FUNCTION:
- * This function is called to realease the acquired
+ * This function is called to release the acquired
  * pre auth node from list.
  *
  ***LOGIC:

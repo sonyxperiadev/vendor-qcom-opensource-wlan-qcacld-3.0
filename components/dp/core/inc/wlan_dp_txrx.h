@@ -613,7 +613,7 @@ void wlan_dp_pkt_add_timestamp(struct wlan_dp_intf *dp_intf,
 #if defined(FEATURE_LRO)
 /**
  * dp_lro_set_reset() - API for Disable/Enable LRO
- * @dp_intf: DP inerface pointer
+ * @dp_intf: DP interface pointer
  * @enable_flag: enable or disable LRO.
  *
  * Return: 0 on success and non zero on failure.

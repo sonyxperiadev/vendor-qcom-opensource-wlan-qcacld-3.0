@@ -78,7 +78,7 @@ struct mac_context;
 
 typedef uint8_t tSirIpv4Addr[QDF_IPV4_ADDR_SIZE];
 
-#define SIR_VERSION_STRING_LEN 64
+#define SIR_VERSION_STRING_LEN 1024
 typedef uint8_t tSirVersionString[SIR_VERSION_STRING_LEN];
 
 /* Periodic Tx pattern offload feature */
@@ -1275,7 +1275,7 @@ struct switch_channel_ind {
 
 /* / Definition for MIC failure indication */
 /* / MAC ---> */
-/* / MAC reports this each time a MIC failure occures on Rx TKIP packet */
+/* / MAC reports this each time a MIC failure occurs on Rx TKIP packet */
 struct mic_failure_ind {
 	uint16_t messageType;   /* eWNI_SME_MIC_FAILURE_IND */
 	uint16_t length;
@@ -1584,7 +1584,7 @@ typedef struct sSirWPSProbeRspIE {
 	 */
 	uint32_t DeviceSubCategory;
 	tSirText DeviceName;
-	uint16_t ConfigMethod;  /* Configuaration method */
+	uint16_t ConfigMethod;  /* Configuration method */
 	uint8_t RFBand;         /* RF bands available on the AP */
 } tSirWPSProbeRspIE;
 
@@ -1616,7 +1616,7 @@ typedef struct sSirWPSBeaconIE {
 } tSirWPSBeaconIE;
 
 typedef struct sSirAPWPSIEs {
-	tSirWPSProbeRspIE SirWPSProbeRspIE;     /*WPS Set Probe Respose IE */
+	tSirWPSProbeRspIE SirWPSProbeRspIE;     /*WPS Set Probe Response IE */
 	tSirWPSBeaconIE SirWPSBeaconIE; /*WPS Set Beacon IE */
 } tSirAPWPSIEs, *tpSiriAPWPSIEs;
 
@@ -3242,7 +3242,7 @@ struct sir_wifi_peer_signal_stats {
  * @aggr_len: length of the MPDU aggregation size buffer
  * @mpdu_aggr_size: histogram of MPDU aggregation size
  * @success_mcs_len: length of success mcs buffer
- * @success_mcs: histogram of successed received MPDUs encoding rate
+ * @success_mcs: histogram of successful received MPDUs encoding rate
  * @fail_mcs_len: length of failed mcs buffer
  * @fail_mcs: histogram of failed received MPDUs encoding rate
  * @delay_len: length of the delay histofram buffer
@@ -3358,7 +3358,7 @@ struct sir_wifi_ll_ext_peer_stats {
  * @cca: physical channel CCA stats
  * @stats: pointer to stats data buffer.
  *
- * Structure of the whole statictics is like this:
+ * Structure of the whole statistics is like this:
  *     ---------------------------------
  *     |      trigger_cond_i           |
  *     +-------------------------------+
@@ -3537,7 +3537,7 @@ struct sir_rx_threshold {
 /**
  * struct sir_wifi_ll_ext_stats_threshold - Threshold for stats update
  * @period: MAC counter indication period (unit in ms)
- * @enable: if threshold mechnism is enabled or disabled
+ * @enable: if threshold mechanism is enabled or disabled
  * @enable_bitmap: whether dedicated threshold is enabed.
  *     Every MAC counter has a dedicated threshold. If the dedicated
  *     threshold is not set in the bitmap, global threshold will take
@@ -3593,7 +3593,7 @@ struct sir_rx_threshold {
  * @rx_thresh: RX threshold
  *
  * Generally, Link layer statistics is reported periodically. But if the
- * variation of one stats of compared to the pervious notification exceeds
+ * variation of one stats of compared to the previous notification exceeds
  * a threshold, FW will report the new stats immediately.
  * This structure contains threshold for different counters.
  */
@@ -4587,7 +4587,7 @@ struct sme_tx_fail_cnt_threshold {
 /**
  * struct sme_short_retry_limit - transmission retry limit for short frames.
  * @session_id: Session id
- * @short_retry_limit: tranmission retry limit for short frame.
+ * @short_retry_limit: transmission retry limit for short frame.
  *
  */
 struct sme_short_retry_limit {
@@ -4596,9 +4596,9 @@ struct sme_short_retry_limit {
 };
 
 /**
- * struct sme_long_retry_limit - tranmission retry limit for long frames
+ * struct sme_long_retry_limit - transmission retry limit for long frames
  * @session_id: Session id
- * @short_retry_limit: tranmission retry limit for long frames.
+ * @short_retry_limit: transmission retry limit for long frames.
  *
  */
 struct sme_long_retry_limit {
@@ -5045,7 +5045,7 @@ struct sir_peer_set_rx_blocksize {
  * @node: Node pointer
  * @bssid: BSSID of the AP
  * @retry_delay: Retry delay received during last rejection in ms
- * @ expected_rssi: RSSI at which STA can initate
+ * @ expected_rssi: RSSI at which STA can initiate
  * @time_during_rejection: Timestamp during last rejection in millisec
  * @reject_reason: reason to add the BSSID to DLM
  * @source: Source of adding the BSSID to DLM

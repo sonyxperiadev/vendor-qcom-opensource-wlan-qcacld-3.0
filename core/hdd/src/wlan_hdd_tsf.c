@@ -362,7 +362,7 @@ hdd_wlan_retry_tsf_cap(struct hdd_adapter *adapter)
 
 	hddctx = WLAN_HDD_GET_CTX(adapter);
 	if (count == MAX_CONTINUOUS_RETRY_CNT) {
-		hdd_debug("Max retry countr reached");
+		hdd_debug("Max retry count reached");
 		return 0;
 	}
 	qdf_atomic_set(&hddctx->cap_tsf_flag, 0);
@@ -838,7 +838,7 @@ static enum hdd_tsf_op_result hdd_indicate_tsf_internal(
 #define MAX_ALLOWED_DEVIATION_NS (100 * NSEC_PER_USEC)
 #define MAX_CONTINUOUS_ERROR_CNT 3
 
-/* to distinguish 32-bit overflow case, this inverval should:
+/* to distinguish 32-bit overflow case, this interval should:
  * equal or less than (1/2 * OVERFLOW_INDICATOR32 us)
  */
 #if defined(WLAN_FEATURE_TSF_PLUS_EXT_GPIO_IRQ) || \
@@ -2532,7 +2532,7 @@ end:
 
 /**
  * wlan_hdd_phc_init() - phc init
- * @hdd_ctx: pointer to the hdd_contex.
+ * @hdd_ctx: pointer to the hdd_context.
  *
  * Return: NULL
  */
@@ -2546,7 +2546,7 @@ static void wlan_hdd_phc_init(struct hdd_context *hdd_ctx)
 
 /**
  * wlan_hdd_phc_deinit() - phc deinit
- * @hdd_ctx: pointer to the hdd_contex.
+ * @hdd_ctx: pointer to the hdd_context.
  *
  * Return: NULL
  */
@@ -2752,7 +2752,7 @@ static inline QDF_STATUS hdd_set_delta_tsf(struct hdd_adapter *adapter,
  *
  * This function handle the event that reported by firmware at first.
  * The event contains the vdev_id, current tsf value of this vdev,
- * tsf value is 64bits, discripted in two varaible tsf_low and tsf_high.
+ * tsf value is 64bits, discripted in two variable tsf_low and tsf_high.
  * These two values each is uint32.
  *
  * Return: 0 for success or non-zero negative failure code

@@ -189,7 +189,7 @@ bool wlan_cfg80211_tdls_is_fw_6ghz_capable(struct wlan_objmgr_vdev *vdev);
  * @peer: MAC address of the TDLS peer
  * @action_code: type of TDLS mgmt frame to be sent
  * @dialog_token: dialog token used in the frame
- * @status_code: status to be incuded in the frame
+ * @status_code: status to be included in the frame
  * @peer_capability: peer capability information
  * @buf: additional IEs to be included
  * @len: length of additional Ies

@@ -58,11 +58,11 @@ QDF_STATUS pmo_core_del_wow_pattern(struct wlan_objmgr_vdev *vdev)
 
 	vdev_ctx = pmo_vdev_get_priv(vdev);
 	pattern_count = pmo_get_wow_default_ptrn(vdev_ctx);
-	/* clear all default patterns cofigured by pmo */
+	/* clear all default patterns configured by pmo */
 	for (id = 0; id < pattern_count; id++)
 		status = pmo_tgt_del_wow_pattern(vdev, id, false);
 
-	/* clear all user patterns cofigured by pmo */
+	/* clear all user patterns configured by pmo */
 	pattern_count = pmo_get_wow_user_ptrn(vdev_ctx);
 	for (id = 0; id < pattern_count; id++)
 		status = pmo_tgt_del_wow_pattern(vdev, id, true);
@@ -87,7 +87,7 @@ QDF_STATUS pmo_core_add_wow_user_pattern(struct wlan_objmgr_vdev *vdev,
 
 	vdev_ctx = pmo_vdev_get_priv(vdev);
 
-	/* clear all default patterns cofigured by pmo */
+	/* clear all default patterns configured by pmo */
 	for (id = 0; id < pmo_get_wow_default_ptrn(vdev_ctx); id++)
 		pmo_tgt_del_wow_pattern(vdev, id, false);
 

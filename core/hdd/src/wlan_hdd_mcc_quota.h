@@ -81,7 +81,7 @@ int wlan_hdd_cfg80211_set_mcc_quota(struct wiphy *wiphy,
  * wlan_hdd_apply_user_mcc_quota() - Apply the user MCC quota to the target
  * @adapter: pointer to HDD adapter object
  *
- * Return: 0 on succcess, errno for error
+ * Return: 0 on success, errno for error
  */
 int wlan_hdd_apply_user_mcc_quota(struct hdd_adapter *adapter);
 

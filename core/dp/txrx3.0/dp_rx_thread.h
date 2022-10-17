@@ -244,7 +244,7 @@ QDF_STATUS dp_rx_tm_enqueue_pkt(struct dp_rx_tm_handle *rx_tm_hdl,
 /**
  * dp_rx_tm_gro_flush_ind() - flush GRO packets for a RX Context Id
  * @rx_tm_hdl: dp_rx_tm_handle containing the overall thread infrastructure
- * @rx_ctx_id: RX Thread Contex Id for which GRO flush needs to be done
+ * @rx_ctx_id: RX Thread Context Id for which GRO flush needs to be done
  * @flush_code: flush code to differentiate low TPUT flush
  *
  * Return: QDF_STATUS_SUCCESS

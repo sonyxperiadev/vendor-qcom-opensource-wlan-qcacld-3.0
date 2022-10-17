@@ -127,7 +127,7 @@ void tdls_update_6g_power(struct wlan_objmgr_vdev *vdev,
 	/*
 	 * Since, 8 TDLS peers can be connected. If connected peer already
 	 * exist then no need to set the power again.
-	 * Similarily, for disconnection case, this function is called after
+	 * Similarly, for disconnection case, this function is called after
 	 * just after connected peer count is decreased. If connected peer
 	 * count exist after decrement of peer count that mean another peer
 	 * exist and then no need to reset the BSS power.
@@ -218,7 +218,7 @@ void tdls_decrement_peer_count(struct wlan_objmgr_vdev *vdev,
 	 * Offchannel is allowed only when TDLS is connected with one peer.
 	 * If more than one peer is connected then Offchannel is disabled by
 	 * WMI_TDLS_SET_OFFCHAN_MODE_CMDID with DISABLE_CHANSWITCH.
-	 * Hence, re-enable offchannel when only one conencted peer is left.
+	 * Hence, re-enable offchannel when only one connected peer is left.
 	 */
 	if (soc_obj->connected_peer_count == 1)
 		tdls_set_tdls_offchannelmode(vdev, ENABLE_CHANSWITCH);
@@ -1812,7 +1812,7 @@ QDF_STATUS tdls_process_enable_link(struct tdls_oper_request *req)
 	 * WMI_TDLS_SET_OFFCHAN_MODE_CMDID with DISABLE_CHANSWITCH.
 	 * So, basically when the 2nd peer enable_link is there, offchannel
 	 * should be disabled and will remain disabled for all subsequent
-	 * TDLS peer conenction.
+	 * TDLS peer connection.
 	 * Offchannel will be re-enabled when connected peer count again
 	 * becomes 1.
 	 */

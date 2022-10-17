@@ -212,7 +212,7 @@ struct sap_context {
 	/*
 	 * sap_state, sap_status are created
 	 * to inform upper layers about ACS scan status.
-	 * Don't use these members for anyother purposes.
+	 * Don't use these members for any other purposes.
 	 */
 	eSapHddEvent sap_state;
 	eSapStatus sap_status;
