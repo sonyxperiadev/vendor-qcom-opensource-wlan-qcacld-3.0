@@ -4438,7 +4438,8 @@ void policy_mgr_check_scc_sbs_channel(struct wlan_objmgr_psoc *psoc,
 		sta_sap_scc_on_indoor_channel_allowed =
 			policy_mgr_get_sta_sap_scc_allowed_on_indoor_chnl(psoc);
 
-		if (sta_count &&
+		if (sta_count && cc_mode ==
+				QDF_MCC_TO_SCC_SWITCH_WITH_FAVORITE_CHANNEL &&
 		    sta_sap_scc_on_indoor_channel_allowed &&
 		    ((wlan_reg_is_freq_indoor(pm_ctx->pdev, sap_ch_freq) &&
 		    WLAN_REG_IS_24GHZ_CH_FREQ(*intf_ch_freq)) ||
@@ -4458,7 +4459,9 @@ void policy_mgr_check_scc_sbs_channel(struct wlan_objmgr_psoc *psoc,
 		user_config_freq =
 			policy_mgr_get_user_config_sap_freq(psoc, vdev_id);
 
-		if (WLAN_REG_IS_24GHZ_CH_FREQ(sap_ch_freq) &&
+		if (sta_count && cc_mode ==
+				QDF_MCC_TO_SCC_SWITCH_WITH_FAVORITE_CHANNEL &&
+			WLAN_REG_IS_24GHZ_CH_FREQ(sap_ch_freq) &&
 		    user_config_freq &&
 		    !WLAN_REG_IS_24GHZ_CH_FREQ(user_config_freq) &&
 		    (wlan_reg_get_channel_state_for_pwrmode(

@@ -3277,9 +3277,22 @@ policy_mgr_get_sap_mandatory_channel(struct wlan_objmgr_psoc *psoc,
 	struct policy_mgr_pcl_list pcl;
 	uint32_t i;
 	uint32_t sap_new_freq;
+	uint8_t mcc_to_scc_switch;
+	uint8_t sta_count;
 	qdf_freq_t user_config_freq = 0;
 	bool sta_sap_scc_on_indoor_channel =
 		 policy_mgr_get_sta_sap_scc_allowed_on_indoor_chnl(psoc);
+
+	mcc_to_scc_switch =
+		policy_mgr_get_mcc_to_scc_switch_mode(psoc);
+
+	sta_count =
+		policy_mgr_mode_specific_connection_count(psoc, PM_STA_MODE,
+							  NULL);
+
+	if (!sta_count || mcc_to_scc_switch !=
+			QDF_MCC_TO_SCC_SWITCH_WITH_FAVORITE_CHANNEL)
+		return QDF_STATUS_E_FAILURE;
 
 	pm_ctx = policy_mgr_get_context(psoc);
 	if (!pm_ctx) {
