@@ -1527,13 +1527,17 @@ QDF_STATUS policy_mgr_update_hw_mode_list(struct wlan_objmgr_psoc *psoc,
 		/* Update for MAC0 */
 		tmp = &info->mac_phy_cap[j++];
 		policy_mgr_get_hw_mode_params(tmp, &mac0_ss_bw_info);
-		hw_config_type = tmp->hw_mode_config_type;
 		dbs_mode = HW_MODE_DBS_NONE;
 		sbs_mode = HW_MODE_SBS_NONE;
 		emlsr_mode = HW_MODE_EMLSR_NONE;
 		mac1_ss_bw_info.mac_tx_stream = 0;
 		mac1_ss_bw_info.mac_rx_stream = 0;
 		mac1_ss_bw_info.mac_bw = 0;
+
+		hw_config_type = tmp->hw_mode_config_type;
+		if (WMI_BECAP_PHY_GET_HW_MODE_CFG(hw_config_type) ==
+		    WMI_HW_MODE_EMLSR)
+			hw_config_type = WMI_HW_MODE_EMLSR;
 
 		policy_mgr_update_mac_freq_info(psoc, pm_ctx,
 						hw_config_type,
@@ -1558,11 +1562,8 @@ QDF_STATUS policy_mgr_update_hw_mode_list(struct wlan_objmgr_psoc *psoc,
 			    (hw_config_type == WMI_HW_MODE_SBS) ||
 			    (hw_config_type == WMI_HW_MODE_DBS_OR_SBS)))
 				sbs_mode = HW_MODE_SBS;
-		}
-		/* eMLSR mode */
-		if (WMI_BECAP_PHY_GET_HW_MODE_CFG(hw_config_type) ==
-				WMI_HW_MODE_EMLSR) {
-			hw_config_type = WMI_HW_MODE_EMLSR;
+		} else if (hw_config_type == WMI_HW_MODE_EMLSR) {
+			/* eMLSR mode */
 			tmp = &info->mac_phy_cap[j++];
 			cap = &info->mac_phy_caps_ext2[i];
 			wlan_mlme_set_eml_params(psoc, cap);
