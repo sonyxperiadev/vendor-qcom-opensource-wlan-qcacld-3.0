@@ -1242,18 +1242,22 @@ struct hdd_adapter *hdd_get_assoc_link_adapter(struct hdd_adapter *ml_adapter)
 {
 	int i;
 	bool eht_capab;
+	struct hdd_adapter *link_adapter;
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(ml_adapter);
 
 	ucfg_psoc_mlme_get_11be_capab(hdd_ctx->psoc, &eht_capab);
-	if (!eht_capab)
+	if (!eht_capab || hdd_adapter_is_sl_ml_adapter(ml_adapter))
 		return ml_adapter;
 
 	for (i = 0; i < WLAN_MAX_MLD; i++) {
-		if (hdd_adapter_is_associated_with_ml_adapter(
-		    ml_adapter->mlo_adapter_info.link_adapter[i])) {
-			return ml_adapter->mlo_adapter_info.link_adapter[i];
+		link_adapter = ml_adapter->mlo_adapter_info.link_adapter[i];
+		if (link_adapter) {
+			if (hdd_adapter_is_associated_with_ml_adapter(
+								link_adapter))
+				return link_adapter;
 		}
 	}
+
 	return NULL;
 }
 #endif

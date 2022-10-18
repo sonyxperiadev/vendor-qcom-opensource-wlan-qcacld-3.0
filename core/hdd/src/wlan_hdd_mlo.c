@@ -209,6 +209,12 @@ hdd_adapter_set_ml_adapter(struct hdd_adapter *adapter)
 	adapter->mlo_adapter_info.is_ml_adapter = true;
 }
 
+void
+hdd_adapter_set_sl_ml_adapter(struct hdd_adapter *adapter)
+{
+	adapter->mlo_adapter_info.is_single_link_ml = true;
+}
+
 struct hdd_adapter *hdd_get_ml_adater(struct hdd_context *hdd_ctx)
 {
 	struct hdd_adapter *adapter, *next_adapter = NULL;
@@ -241,6 +247,11 @@ int hdd_update_vdev_mac_address(struct hdd_context *hdd_ctx,
 
 	ucfg_psoc_mlme_get_11be_capab(hdd_ctx->psoc, &eht_capab);
 	if (hdd_adapter_is_ml_adapter(adapter) && eht_capab) {
+		if (hdd_adapter_is_sl_ml_adapter(adapter)) {
+			ret = hdd_dynamic_mac_address_set(hdd_ctx, adapter,
+							  mac_addr);
+			return ret;
+		}
 		mlo_adapter_info = &adapter->mlo_adapter_info;
 
 		for (i = 0; i < WLAN_MAX_MLD; i++) {

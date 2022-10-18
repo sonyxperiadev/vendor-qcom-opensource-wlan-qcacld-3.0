@@ -16217,12 +16217,14 @@ QDF_STATUS sme_send_set_mac_addr(struct qdf_mac_addr mac_addr,
 			return qdf_ret_status;
 	}
 
-	if (vdev_opmode == QDF_STA_MODE &&
-	    sme_is_11be_capable() && update_mld_addr) {
+	if (sme_is_11be_capable() && update_mld_addr) {
 		/* Set new MAC addr as MLD address incase of MLO */
 		mld_addr = mac_addr;
-		qdf_mem_copy(&vdev_mac_addr, wlan_vdev_mlme_get_linkaddr(vdev),
-			     sizeof(struct qdf_mac_addr));
+		if (vdev_opmode == QDF_STA_MODE) {
+			qdf_mem_copy(&vdev_mac_addr,
+				     wlan_vdev_mlme_get_linkaddr(vdev),
+				     sizeof(struct qdf_mac_addr));
+		}
 	}
 
 	qdf_ret_status = wlan_vdev_mlme_send_set_mac_addr(vdev_mac_addr,
@@ -16275,7 +16277,7 @@ QDF_STATUS sme_update_vdev_mac_addr(struct wlan_objmgr_psoc *psoc,
 	if (req_status)
 		goto p2p_self_peer_create;
 
-	if ((vdev_opmode == QDF_STA_MODE) && update_sta_self_peer) {
+	if (vdev_opmode == QDF_STA_MODE && update_sta_self_peer) {
 		if (sme_is_11be_capable() && update_mld_addr)
 			old_mac_addr_bytes = wlan_vdev_mlme_get_mldaddr(vdev);
 		else
@@ -16302,9 +16304,8 @@ QDF_STATUS sme_update_vdev_mac_addr(struct wlan_objmgr_psoc *psoc,
 	}
 
 	/* Update VDEV MAC address */
-	if (vdev_opmode == QDF_STA_MODE &&
-	    sme_is_11be_capable() && update_mld_addr) {
-		if (update_sta_self_peer) {
+	if (sme_is_11be_capable() && update_mld_addr) {
+		if (update_sta_self_peer || vdev_opmode == QDF_SAP_MODE) {
 			qdf_ret_status = wlan_mlo_mgr_update_mld_addr(
 					    (struct qdf_mac_addr *)
 					       wlan_vdev_mlme_get_mldaddr(vdev),
@@ -16313,6 +16314,13 @@ QDF_STATUS sme_update_vdev_mac_addr(struct wlan_objmgr_psoc *psoc,
 				return qdf_ret_status;
 		}
 		wlan_vdev_mlme_set_mldaddr(vdev, mac_addr.bytes);
+		/* Currently the design is to use same MAC for
+		 * MLD and Link for SAP so update link and MAC addr.
+		 */
+		if (vdev_opmode == QDF_SAP_MODE) {
+			wlan_vdev_mlme_set_macaddr(vdev, mac_addr.bytes);
+			wlan_vdev_mlme_set_linkaddr(vdev, mac_addr.bytes);
+		}
 	} else {
 		wlan_vdev_mlme_set_macaddr(vdev, mac_addr.bytes);
 		wlan_vdev_mlme_set_linkaddr(vdev, mac_addr.bytes);

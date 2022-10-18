@@ -5114,6 +5114,12 @@ int hdd_dynamic_mac_address_set(struct hdd_context *hdd_ctx,
 		update_self_peer =
 			hdd_adapter_is_associated_with_ml_adapter(adapter);
 		update_mld_addr = true;
+	} else if (hdd_adapter_is_sl_ml_adapter(adapter)) {
+		update_mld_addr = true;
+		if (adapter->device_mode == QDF_SAP_MODE)
+			update_self_peer = false;
+		else
+			update_self_peer = true;
 	} else {
 		update_self_peer = true;
 		update_mld_addr = false;
@@ -5229,7 +5235,6 @@ static int __hdd_set_mac_address(struct net_device *dev, void *addr)
 	int ret;
 	struct qdf_mac_addr mac_addr;
 	bool net_if_running = netif_running(dev);
-	bool eht_capab;
 
 	hdd_enter_dev(dev);
 
@@ -6319,8 +6324,7 @@ static void
 hdd_populate_vdev_create_params(struct hdd_adapter *adapter,
 				struct wlan_vdev_create_params *vdev_params)
 {
-	int i;
-	struct hdd_mlo_adapter_info *mlo_adapter_info, *link_mlo_adapter_info;
+	struct hdd_mlo_adapter_info *mlo_adapter_info;
 	struct hdd_adapter *link_adapter;
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	bool eht_capab;
@@ -6329,19 +6333,12 @@ hdd_populate_vdev_create_params(struct hdd_adapter *adapter,
 	mlo_adapter_info = &adapter->mlo_adapter_info;
 
 	ucfg_psoc_mlme_get_11be_capab(hdd_ctx->psoc, &eht_capab);
-	if (mlo_adapter_info->is_ml_adapter &&
-	    adapter->device_mode == QDF_STA_MODE && eht_capab) {
-		for (i = 0; i < WLAN_MAX_MLD; i++) {
-			link_adapter = mlo_adapter_info->link_adapter[i];
-			if (!link_adapter)
-				continue;
-			link_mlo_adapter_info = &link_adapter->mlo_adapter_info;
-			if (link_mlo_adapter_info->associate_with_ml_adapter) {
-				qdf_mem_copy(vdev_params->macaddr,
-					     link_adapter->mac_addr.bytes,
-					     QDF_MAC_ADDR_SIZE);
-				break;
-			}
+	if (mlo_adapter_info->is_ml_adapter && eht_capab) {
+		link_adapter = hdd_get_assoc_link_adapter(adapter);
+		if (link_adapter) {
+			qdf_mem_copy(vdev_params->macaddr,
+				     link_adapter->mac_addr.bytes,
+				     QDF_MAC_ADDR_SIZE);
 		}
 	} else {
 		qdf_mem_copy(vdev_params->macaddr, adapter->mac_addr.bytes,
@@ -7650,11 +7647,15 @@ struct hdd_adapter *hdd_open_adapter(struct hdd_context *hdd_ctx,
 	if (params->is_ml_adapter) {
 		hdd_adapter_set_ml_adapter(adapter);
 		ucfg_psoc_mlme_get_11be_capab(hdd_ctx->psoc, &eht_capab);
-		if (eht_capab)
+		if (eht_capab) {
 			qdf_mem_copy(adapter->mld_addr.bytes,
 				     adapter->mac_addr.bytes,
 				     QDF_MAC_ADDR_SIZE);
+			if (params->is_single_link)
+				hdd_adapter_set_sl_ml_adapter(adapter);
+		}
 	}
+
 	status = hdd_adapter_feature_update_work_init(adapter);
 	if (QDF_IS_STATUS_ERROR(status))
 		goto err_cleanup_adapter;
@@ -9168,6 +9169,15 @@ struct hdd_adapter *hdd_get_adapter_by_macaddr(struct hdd_context *hdd_ctx,
 			if (next_adapter)
 				hdd_adapter_dev_put_debug(next_adapter,
 							  dbgid);
+			return adapter;
+		}
+
+		if (hdd_adapter_is_sl_ml_adapter(adapter) &&
+		    !qdf_mem_cmp(adapter->mld_addr.bytes,
+				 mac_addr, sizeof(tSirMacAddr))) {
+			hdd_adapter_dev_put_debug(adapter, dbgid);
+			if (next_adapter)
+				hdd_adapter_dev_put_debug(next_adapter, dbgid);
 			return adapter;
 		}
 		hdd_adapter_dev_put_debug(adapter, dbgid);

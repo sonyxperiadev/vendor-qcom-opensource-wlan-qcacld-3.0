@@ -33,18 +33,22 @@
  * @associate_with_ml_adapter: Vdev points to the same netdev adapter
  * @is_ml_adapter: is a ml adapter with associated netdev
  * @is_add_virtual_iface: is netdev create request from add virtual interface
+ * @is_single_link: Is the adapter single link ML
  */
 struct hdd_adapter_create_param {
 	uint32_t only_wdev_register:1,
 		 associate_with_ml_adapter:1,
 		 is_ml_adapter:1,
 		 is_add_virtual_iface:1,
-		 unused:28;
+		 is_single_link:1,
+		 unused:27;
 };
 
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(CFG80211_11BE_BASIC)
 #define hdd_adapter_is_link_adapter(x) ((x)->mlo_adapter_info.is_link_adapter)
 #define hdd_adapter_is_ml_adapter(x)   ((x)->mlo_adapter_info.is_ml_adapter)
+#define hdd_adapter_is_sl_ml_adapter(x) \
+			   ((x)->mlo_adapter_info.is_single_link_ml)
 #define hdd_adapter_is_associated_with_ml_adapter(x) \
 			   ((x)->mlo_adapter_info.associate_with_ml_adapter)
 #define hdd_adapter_get_mlo_adapter_from_link(x) \
@@ -52,6 +56,7 @@ struct hdd_adapter_create_param {
 #else
 #define hdd_adapter_is_link_adapter(x) (0)
 #define hdd_adapter_is_ml_adapter(x)   (0)
+#define hdd_adapter_is_sl_ml_adapter(x) (0)
 #define hdd_adapter_is_associated_with_ml_adapter(x) (0)
 #define hdd_adapter_get_mlo_adapter_from_link(x) (NULL)
 #endif
@@ -64,7 +69,8 @@ struct hdd_adapter_create_param {
  * @is_link_adapter: Whether this a link adapter without netdev
  * @associate_with_ml_adapter: adapter which shares the vdev object with the ml
  * adapter
- * num_of_vdev_links: Num of vdevs/links part of the association
+ * @num_of_vdev_links: Num of vdevs/links part of the association
+ * @is_single_link_ml: Is the adapter a single link ML adapter
  * @ml_adapter: ML adapter backpointer
  * @link_adapter: backpointers to link adapters part of association
  */
@@ -73,7 +79,8 @@ struct hdd_mlo_adapter_info {
 		 is_link_adapter:1,
 		 associate_with_ml_adapter:1,
 		 num_of_vdev_links:2,
-		 unused:27;
+		 is_single_link_ml:1,
+		 unused:26;
 	struct hdd_adapter *ml_adapter;
 	struct hdd_adapter *link_adapter[WLAN_MAX_MLD];
 };
@@ -121,6 +128,15 @@ void hdd_wlan_register_mlo_interfaces(struct hdd_context *hdd_ctx);
 void hdd_adapter_set_ml_adapter(struct hdd_adapter *adapter);
 
 /**
+ * hdd_adapter_set_sl_ml_adapter() - Set adapter as sl ml adapter
+ * @adapter: HDD adapter
+ *
+ * This function sets adapter as single link ML adapter
+ * Return: None
+ */
+void hdd_adapter_set_sl_ml_adapter(struct hdd_adapter *adapter);
+
+/**
  * hdd_get_ml_adater() - get an ml adapter
  * @adapter: HDD adapter
  *
@@ -133,7 +149,10 @@ struct hdd_adapter *hdd_get_ml_adater(struct hdd_context *hdd_ctx);
  * hdd_get_assoc_link_adapter() - get assoc link adapter
  * @ml_adapter: ML adapter
  *
- * This function returns assoc link adapter
+ * This function returns assoc link adapter.
+ * For single link ML adapter, function returns
+ * same adapter pointer.
+ *
  * Return: adapter or NULL
  */
 struct hdd_adapter *hdd_get_assoc_link_adapter(struct hdd_adapter *ml_adapter);
@@ -159,6 +178,11 @@ void hdd_wlan_register_mlo_interfaces(struct hdd_context *hdd_ctx)
 
 static inline void
 hdd_adapter_set_ml_adapter(struct hdd_adapter *adapter)
+{
+}
+
+static inline void
+hdd_adapter_set_sl_ml_adapter(struct hdd_adapter *adapter)
 {
 }
 
