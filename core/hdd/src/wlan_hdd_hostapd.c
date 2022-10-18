@@ -3656,6 +3656,18 @@ QDF_STATUS wlan_hdd_get_channel_for_sap_restart(
 		hdd_debug("p2p go no scc required");
 		return QDF_STATUS_E_FAILURE;
 	}
+	/*
+	 * If liberal mode is enabled. If P2P-Cli is not yet connected
+	 * Skipping CSA as this is done as part of set_key
+	 */
+
+	if (ap_adapter->device_mode == QDF_P2P_GO_MODE &&
+	    policy_mgr_go_scc_enforced(psoc) &&
+	    !policy_mgr_is_go_scc_strict(psoc) &&
+	    (wlan_vdev_get_peer_count(sap_context->vdev) == 1)) {
+		hdd_debug("p2p go liberal mode enabled. Skipping CSA");
+		return QDF_STATUS_E_FAILURE;
+	}
 
 	ucfg_policy_mgr_get_mcc_scc_switch(hdd_ctx->psoc,
 					   &mcc_to_scc_switch);
