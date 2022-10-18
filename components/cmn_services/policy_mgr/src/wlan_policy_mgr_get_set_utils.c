@@ -6267,6 +6267,65 @@ void policy_mgr_handle_ml_sta_links_on_vdev_down(struct wlan_objmgr_psoc *psoc,
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
 }
 
+/**
+ * policy_mgr_is_restart_sap_required_with_mlo_sta() - Check SAP required to
+ * restart for force SCC with MLO STA
+ * @psoc: PSOC object information
+ * @sap_vdev_id: sap vdev id
+ * @sap_ch_freq: sap channel frequency
+ *
+ * For MLO STA+SAP case, mlo link maybe in inactive state after connected
+ * and the hw mode maybe not updated, check MCC/SCC by
+ * policy_mgr_are_2_freq_on_same_mac may not match MCC/SCC state
+ * after the link is activated by target later. So to check frequency match
+ * or not to decide SAP do force SCC or not if MLO STA 2 links are present.
+ *
+ * Return: true if SAP is required to force SCC with MLO STA
+ */
+static bool
+policy_mgr_is_restart_sap_required_with_mlo_sta(struct wlan_objmgr_psoc *psoc,
+						uint8_t sap_vdev_id,
+						qdf_freq_t sap_ch_freq)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	uint32_t i;
+	bool same_freq_with_mlo_sta = false;
+	bool restart_required = false;
+	uint8_t num_ml_sta = 0, num_disabled_ml_sta = 0, num_ml_active_sta = 0;
+	uint8_t ml_sta_vdev_lst[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
+	qdf_freq_t ml_freq_lst[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return false;
+	}
+
+	policy_mgr_get_ml_sta_info(pm_ctx, &num_ml_sta, &num_disabled_ml_sta,
+				   ml_sta_vdev_lst, ml_freq_lst,
+				   NULL, NULL, NULL);
+	if (num_ml_sta > MAX_NUMBER_OF_CONC_CONNECTIONS) {
+		policy_mgr_debug("unexpected num_ml_sta %d ", num_ml_sta);
+		return false;
+	}
+
+	num_ml_active_sta = num_ml_sta;
+	if (num_ml_sta >= num_disabled_ml_sta)
+		num_ml_active_sta = num_ml_sta - num_disabled_ml_sta;
+	for (i = 0; i < num_ml_active_sta; i++) {
+		if (ml_freq_lst[i] == sap_ch_freq) {
+			same_freq_with_mlo_sta = true;
+			break;
+		}
+	}
+
+	if (num_ml_active_sta >= 2 && !same_freq_with_mlo_sta) {
+		policy_mgr_debug("SAP is not SCC with any of active MLO STA link, restart SAP");
+		restart_required = true;
+	}
+
+	return restart_required;
+}
 #else
 static bool
 policy_mgr_allow_sta_concurrency(struct wlan_objmgr_psoc *psoc,
@@ -6291,6 +6350,14 @@ policy_mgr_allow_sta_concurrency(struct wlan_objmgr_psoc *psoc,
 	}
 
 	return true;
+}
+
+static bool
+policy_mgr_is_restart_sap_required_with_mlo_sta(struct wlan_objmgr_psoc *psoc,
+						uint8_t sap_vdev_id,
+						qdf_freq_t sap_ch_freq)
+{
+	return false;
 }
 #endif
 
@@ -8816,6 +8883,11 @@ bool policy_mgr_is_restart_sap_required(struct wlan_objmgr_psoc *psoc,
 			restart_required = true;
 		}
 	}
+
+	if (!restart_required &&
+	    policy_mgr_is_restart_sap_required_with_mlo_sta(
+					psoc, vdev_id, freq))
+		restart_required = true;
 
 	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
 
