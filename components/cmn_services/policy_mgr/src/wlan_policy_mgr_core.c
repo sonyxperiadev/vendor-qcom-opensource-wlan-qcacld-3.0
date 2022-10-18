@@ -3806,7 +3806,7 @@ bool policy_mgr_disallow_mcc(struct wlan_objmgr_psoc *psoc,
 				match = true;
 				break;
 			}
-		} else if (WLAN_REG_IS_5GHZ_CH_FREQ
+		} else if (!WLAN_REG_IS_24GHZ_CH_FREQ
 			(pm_conc_connection_list[index].freq)) {
 			if (pm_conc_connection_list[index].freq != ch_freq &&
 			    !policy_mgr_are_sbs_chan(psoc, ch_freq,
