@@ -691,8 +691,9 @@ static __iw_softap_setparam(struct net_device *dev,
 		struct sap_config *config =
 			&adapter->session.ap.sap_config;
 
-		if (config->SapHw_mode != eCSR_DOT11_MODE_11ac &&
-		    config->SapHw_mode != eCSR_DOT11_MODE_11ac_ONLY) {
+		if (config->SapHw_mode < eCSR_DOT11_MODE_11ac ||
+		    config->SapHw_mode == eCSR_DOT11_MODE_11ax_ONLY ||
+		    config->SapHw_mode == eCSR_DOT11_MODE_11be_ONLY) {
 			hdd_err("SET_VHT_RATE: SapHw_mode= 0x%x, ch_freq: %d",
 			       config->SapHw_mode, config->chan_freq);
 			ret = -EIO;
