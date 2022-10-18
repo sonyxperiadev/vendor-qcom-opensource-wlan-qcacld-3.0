@@ -24999,7 +24999,15 @@ static int _wlan_hdd_cfg80211_tx_control_port(struct wiphy *wiphy,
 }
 
 #if defined(CFG80211_CTRL_FRAME_SRC_ADDR_TA_ADDR)
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
+static int wlan_hdd_cfg80211_tx_control_port(struct wiphy *wiphy,
+					     struct net_device *dev,
+					     const u8 *buf,
+					     size_t len,
+					     const u8 *dest, const __be16 proto,
+					     bool unencrypted, int link_id,
+					     u64 *cookie)
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0))
 static int wlan_hdd_cfg80211_tx_control_port(struct wiphy *wiphy,
 					     struct net_device *dev,
 					     const u8 *buf,
@@ -25020,7 +25028,15 @@ static int wlan_hdd_cfg80211_tx_control_port(struct wiphy *wiphy,
 }
 
 #else
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
+static int wlan_hdd_cfg80211_tx_control_port(struct wiphy *wiphy,
+					     struct net_device *dev,
+					     const u8 *buf,
+					     size_t len,
+					     const u8 *dest, const __be16 proto,
+					     bool unencrypted, int link_id,
+					     u64 *cookie)
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0))
 static int wlan_hdd_cfg80211_tx_control_port(struct wiphy *wiphy,
 					     struct net_device *dev,
 					     const u8 *buf, size_t len,
