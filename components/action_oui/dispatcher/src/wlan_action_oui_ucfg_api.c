@@ -80,6 +80,16 @@ void ucfg_action_oui_deinit(void)
 	ACTION_OUI_EXIT();
 }
 
+void ucfg_action_oui_psoc_enable(struct wlan_objmgr_psoc *psoc)
+{
+	action_oui_psoc_enable(psoc);
+}
+
+void ucfg_action_oui_psoc_disable(struct wlan_objmgr_psoc *psoc)
+{
+	action_oui_psoc_disable(psoc);
+}
+
 QDF_STATUS
 ucfg_action_oui_parse(struct wlan_objmgr_psoc *psoc,
 		      const uint8_t *in_str,
@@ -134,6 +144,37 @@ exit:
 	return status;
 }
 
+QDF_STATUS
+ucfg_action_oui_cleanup(struct wlan_objmgr_psoc *psoc,
+			enum action_oui_id action_id)
+{
+	struct action_oui_psoc_priv *psoc_priv;
+	QDF_STATUS status = QDF_STATUS_E_INVAL;
+
+	ACTION_OUI_ENTER();
+
+	if (action_id >= ACTION_OUI_MAXIMUM_ID) {
+		action_oui_err("Invalid action_oui id: %u", action_id);
+		goto exit;
+	}
+
+	if (!psoc) {
+		action_oui_err("psoc is NULL");
+		goto exit;
+	}
+
+	psoc_priv = action_oui_psoc_get_priv(psoc);
+	if (!psoc_priv) {
+		action_oui_err("psoc priv is NULL");
+		goto exit;
+	}
+
+	status = wlan_action_oui_cleanup(psoc_priv, action_id);
+exit:
+	ACTION_OUI_EXIT();
+	return status;
+}
+
 QDF_STATUS ucfg_action_oui_send(struct wlan_objmgr_psoc *psoc)
 {
 	struct action_oui_psoc_priv *psoc_priv;
@@ -160,6 +201,39 @@ QDF_STATUS ucfg_action_oui_send(struct wlan_objmgr_psoc *psoc)
 	}
 
 exit:
+	return status;
+}
+
+QDF_STATUS ucfg_action_oui_send_by_id(struct wlan_objmgr_psoc *psoc,
+				      enum action_oui_id id)
+{
+	struct action_oui_psoc_priv *psoc_priv;
+	QDF_STATUS status = QDF_STATUS_E_INVAL;
+
+	ACTION_OUI_ENTER();
+
+	if (!psoc) {
+		action_oui_err("psoc is NULL");
+		goto exit;
+	}
+
+	psoc_priv = action_oui_psoc_get_priv(psoc);
+	if (!psoc_priv) {
+		action_oui_err("psoc priv is NULL");
+		goto exit;
+	}
+
+	if (id >= ACTION_OUI_HOST_ONLY) {
+		action_oui_err("id %d not for firmware", id);
+		status = QDF_STATUS_SUCCESS;
+		goto exit;
+	}
+
+	status = action_oui_send(psoc_priv, id);
+	if (!QDF_IS_STATUS_SUCCESS(status))
+		action_oui_debug("Failed to send: %u", id);
+exit:
+	ACTION_OUI_EXIT();
 
 	return status;
 }

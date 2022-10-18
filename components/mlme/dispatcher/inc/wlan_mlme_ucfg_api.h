@@ -3557,6 +3557,44 @@ ucfg_mlme_update_tgt_eht_cap(struct wlan_objmgr_psoc *psoc,
 {
 	return mlme_update_tgt_eht_caps_in_cfg(psoc, cfg);
 }
+
+/**
+ * ucfg_mlme_get_usr_disable_sta_eht() - Get user disable sta eht flag
+ * @psoc: psoc object
+ *
+ * Return: true if user has disabled eht in connect request
+ */
+static inline
+bool ucfg_mlme_get_usr_disable_sta_eht(struct wlan_objmgr_psoc *psoc)
+{
+	return wlan_mlme_get_usr_disable_sta_eht(psoc);
+}
+
+/**
+ * ucfg_mlme_set_usr_disable_sta_eht() - Set user disable sta eht flag
+ * @psoc: psoc object
+ * @disable: eht disable flag
+ *
+ * Return: void
+ */
+static inline
+void ucfg_mlme_set_usr_disable_sta_eht(struct wlan_objmgr_psoc *psoc,
+				       bool disable)
+{
+	wlan_mlme_set_usr_disable_sta_eht(psoc, disable);
+}
+#else
+static inline
+bool ucfg_mlme_get_usr_disable_sta_eht(struct wlan_objmgr_psoc *psoc)
+{
+	return true;
+}
+
+static inline
+void ucfg_mlme_set_usr_disable_sta_eht(struct wlan_objmgr_psoc *psoc,
+				       bool disable)
+{
+}
 #endif
 
 /**

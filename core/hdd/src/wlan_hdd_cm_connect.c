@@ -55,6 +55,7 @@
 #include "wlan_osif_request_manager.h"
 #include <wlan_dp_ucfg_api.h>
 #include "wlan_psoc_mlme_ucfg_api.h"
+#include "wlan_action_oui_ucfg_api.h"
 
 bool hdd_cm_is_vdev_associated(struct hdd_adapter *adapter)
 {
@@ -343,6 +344,99 @@ static void hdd_update_scan_ie_for_connect(struct hdd_adapter *adapter,
 	}
 }
 
+#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)) || \
+	defined(CFG80211_11BE_BASIC)) && \
+	defined(WLAN_FEATURE_11BE)
+/**
+ * hdd_update_action_oui_for_connect() - Update Action OUI for 802.11be AP
+ * @hdd_ctx: hdd context
+ * @req: connect request parameter
+ *
+ * If user sets flag ASSOC_REQ_DISABLE_EHT in connect request, driver
+ * will send action oui "ffffff 00 01" to host mlme and also firmware
+ * for action id ACTION_OUI_11BE_OUI_ALLOW, so that all the AP will
+ * be not matched with this OUI and 802.11be mode will not be allowed,
+ * possibly downgrade to 11ax will happen.
+ * If user doesn't set ASSOC_REQ_DISABLE_EHT, driver/firmware will
+ * recover to default INI setting.
+ *
+ * Returns: void
+ */
+static void
+hdd_update_action_oui_for_connect(struct hdd_context *hdd_ctx,
+				  struct cfg80211_connect_params *req)
+{
+	QDF_STATUS status;
+	uint8_t *str;
+	bool usr_disable_eht;
+
+	if (!hdd_ctx->config->action_oui_enable)
+		return;
+
+	usr_disable_eht = ucfg_mlme_get_usr_disable_sta_eht(hdd_ctx->psoc);
+	if (req->flags & ASSOC_REQ_DISABLE_EHT) {
+		if (usr_disable_eht) {
+			hdd_debug("user eht is disabled already");
+			return;
+		}
+		status = ucfg_action_oui_cleanup(
+				hdd_ctx->psoc, ACTION_OUI_11BE_OUI_ALLOW);
+		if (!QDF_IS_STATUS_SUCCESS(status)) {
+			hdd_err("Failed to cleanup oui id %d",
+				ACTION_OUI_11BE_OUI_ALLOW);
+			return;
+		}
+		status = ucfg_action_oui_parse(hdd_ctx->psoc,
+					       ACTION_OUI_INVALID,
+					       ACTION_OUI_11BE_OUI_ALLOW);
+		if (!QDF_IS_STATUS_SUCCESS(status)) {
+			hdd_err("Failed to parse action_oui str for id %d",
+				ACTION_OUI_11BE_OUI_ALLOW);
+			return;
+		}
+	} else {
+		if (!usr_disable_eht) {
+			hdd_debug("user eht is enabled already");
+			return;
+		}
+		status = ucfg_action_oui_cleanup(hdd_ctx->psoc,
+						 ACTION_OUI_11BE_OUI_ALLOW);
+		if (!QDF_IS_STATUS_SUCCESS(status)) {
+			hdd_err("Failed to cleanup oui id %d",
+				ACTION_OUI_11BE_OUI_ALLOW);
+			return;
+		}
+		str =
+		hdd_ctx->config->action_oui_str[ACTION_OUI_11BE_OUI_ALLOW];
+		if (!qdf_str_len(str))
+			goto send_oui;
+
+		status = ucfg_action_oui_parse(hdd_ctx->psoc,
+					       str, ACTION_OUI_11BE_OUI_ALLOW);
+		if (!QDF_IS_STATUS_SUCCESS(status)) {
+			hdd_err("Failed to parse action_oui str for id %d",
+				ACTION_OUI_11BE_OUI_ALLOW);
+			return;
+		}
+	}
+
+send_oui:
+	status = ucfg_action_oui_send_by_id(hdd_ctx->psoc,
+					    ACTION_OUI_11BE_OUI_ALLOW);
+	if (!QDF_IS_STATUS_SUCCESS(status)) {
+		hdd_err("Failed to send oui id %d", ACTION_OUI_11BE_OUI_ALLOW);
+		return;
+	}
+	ucfg_mlme_set_usr_disable_sta_eht(hdd_ctx->psoc, !usr_disable_eht);
+}
+#else
+static void
+hdd_update_action_oui_for_connect(struct hdd_context *hdd_ctx,
+				  struct cfg80211_connect_params *req)
+{
+}
+#endif
+
 /**
  * hdd_get_dot11mode_filter() - Get dot11 mode filter
  * @hdd_ctx: HDD context
@@ -624,6 +718,7 @@ int wlan_hdd_cm_connect(struct wiphy *wiphy,
 	params.dot11mode_filter = hdd_get_dot11mode_filter(hdd_ctx);
 
 	hdd_update_scan_ie_for_connect(adapter, &params);
+	hdd_update_action_oui_for_connect(hdd_ctx, req);
 
 	wlan_hdd_connectivity_event_connecting(hdd_ctx, req, adapter->vdev_id);
 	status = osif_cm_connect(ndev, vdev, req, &params);

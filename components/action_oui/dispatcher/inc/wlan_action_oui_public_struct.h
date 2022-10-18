@@ -80,6 +80,9 @@
 #define ACTION_CAPABILITY_5G_BAND_MASK 0x80
 #define ACTION_CAPABILITY_5G_BAND_OFFSET 7
 
+/* Invalid OUI ID action */
+#define ACTION_OUI_INVALID "ffffff 00 01"
+
 /**
  * enum action_oui_id - to identify type of action oui
  * @ACTION_OUI_CONNECT_1X1: for 1x1 connection only

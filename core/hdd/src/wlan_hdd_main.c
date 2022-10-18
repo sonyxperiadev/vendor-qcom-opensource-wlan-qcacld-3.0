@@ -14560,6 +14560,7 @@ static void hdd_action_oui_send(struct hdd_context *hdd_ctx)
 	status = ucfg_action_oui_send(hdd_ctx->psoc);
 	if (!QDF_IS_STATUS_SUCCESS(status))
 		hdd_err("Failed to send one or all action_ouis");
+	ucfg_mlme_set_usr_disable_sta_eht(hdd_ctx->psoc, false);
 }
 
 static void hdd_hastings_bt_war_initialize(struct hdd_context *hdd_ctx)
@@ -14598,7 +14599,6 @@ int hdd_configure_cds(struct hdd_context *hdd_ctx)
 
 	mac_handle = hdd_ctx->mac_handle;
 
-	hdd_action_oui_send(hdd_ctx);
 	status = ucfg_policy_mgr_get_force_1x1(hdd_ctx->psoc, &is_force_1x1);
 	if (status != QDF_STATUS_SUCCESS) {
 		hdd_err("Failed to get force 1x1 value");
@@ -14751,6 +14751,8 @@ int hdd_configure_cds(struct hdd_context *hdd_ctx)
 		hdd_debug("Failed to register mode change cb with Policy Manager");
 		goto cds_disable;
 	}
+	hdd_action_oui_config(hdd_ctx);
+	hdd_action_oui_send(hdd_ctx);
 
 	if (hdd_green_ap_enable_egap(hdd_ctx))
 		hdd_debug("enhance green ap is not enabled");
@@ -15474,8 +15476,6 @@ int hdd_wlan_startup(struct hdd_context *hdd_ctx)
 	bool is_imps_enabled;
 
 	hdd_enter();
-
-	hdd_action_oui_config(hdd_ctx);
 
 	qdf_nbuf_init_replenish_timer();
 
@@ -17431,10 +17431,12 @@ void hdd_component_psoc_enable(struct wlan_objmgr_psoc *psoc)
 	policy_mgr_psoc_enable(psoc);
 	ucfg_tdls_psoc_enable(psoc);
 	ucfg_fwol_psoc_enable(psoc);
+	ucfg_action_oui_psoc_enable(psoc);
 }
 
 void hdd_component_psoc_disable(struct wlan_objmgr_psoc *psoc)
 {
+	ucfg_action_oui_psoc_disable(psoc);
 	ucfg_fwol_psoc_disable(psoc);
 	ucfg_tdls_psoc_disable(psoc);
 	policy_mgr_psoc_disable(psoc);

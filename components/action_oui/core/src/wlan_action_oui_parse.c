@@ -689,10 +689,6 @@ QDF_STATUS action_oui_send(struct action_oui_psoc_priv *psoc_priv,
 
 	extension_list = &oui_priv->extension_list;
 	qdf_mutex_acquire(&oui_priv->extension_lock);
-	if (qdf_list_empty(extension_list)) {
-		qdf_mutex_release(&oui_priv->extension_lock);
-		return QDF_STATUS_SUCCESS;
-	}
 
 	no_oui_extensions = qdf_list_size(extension_list);
 	len = sizeof(*req) + no_oui_extensions * sizeof(*extension);

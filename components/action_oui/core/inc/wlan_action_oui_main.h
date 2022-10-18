@@ -105,6 +105,37 @@ bool wlan_action_oui_search(struct wlan_objmgr_psoc *psoc,
  */
 bool wlan_action_oui_is_empty(struct wlan_objmgr_psoc *psoc,
 			      enum action_oui_id action_id);
+
+/**
+ * wlan_action_oui_cleanup() - Remove all of existing oui entry.
+ * @psoc: objmgr psoc object
+ * @action_id: type of action to be removed
+ *
+ * This is a wrapper function which invokes internal function to remove
+ * all of existing oui entry.
+ *
+ * Return: QDF_STATUS_SUCCESS If remove is successful.
+ */
+QDF_STATUS
+wlan_action_oui_cleanup(struct action_oui_psoc_priv *psoc_priv,
+			enum action_oui_id action_id);
+
+/**
+ * action_oui_psoc_disable() - Notify action OUI psoc enable
+ * @psoc: objmgr psoc object
+ *
+ * Return: void
+ */
+void action_oui_psoc_enable(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * action_oui_psoc_disable() - Notify action OUI psoc disable
+ * @psoc: objmgr psoc object
+ *
+ * Return: void
+ */
+void action_oui_psoc_disable(struct wlan_objmgr_psoc *psoc);
+
 #else
 static inline
 bool wlan_action_oui_search(struct wlan_objmgr_psoc *psoc,
@@ -120,5 +151,23 @@ bool wlan_action_oui_is_empty(struct wlan_objmgr_psoc *psoc,
 {
 	return true;
 }
+
+static inline QDF_STATUS
+wlan_action_oui_cleanup(struct action_oui_psoc_priv *psoc_priv,
+			enum action_oui_id action_id)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+void action_oui_psoc_enable(struct wlan_objmgr_psoc *psoc)
+{
+}
+
+static inline
+void action_oui_psoc_disable(struct wlan_objmgr_psoc *psoc)
+{
+}
+
 #endif
 #endif /* end  of _WLAN_ACTION_OUI_MAIN_H_ */
