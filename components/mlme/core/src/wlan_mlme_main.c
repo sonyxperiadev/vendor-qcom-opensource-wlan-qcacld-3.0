@@ -1795,6 +1795,7 @@ static void mlme_init_sta_cfg(struct wlan_objmgr_psoc *psoc,
 		cfg_get(psoc, CFG_MAX_LI_MODULATED_DTIM_MS);
 
 	mlme_init_sta_mlo_cfg(psoc, sta);
+	wlan_mlme_set_usr_disable_sta_eht(psoc, false);
 }
 
 static void mlme_init_stats_cfg(struct wlan_objmgr_psoc *psoc,

@@ -535,6 +535,11 @@ action_oui_parse(struct action_oui_psoc_priv *psoc_priv,
 		return QDF_STATUS_E_INVAL;
 	}
 
+	if (!psoc_priv->action_oui_enable) {
+		action_oui_debug("action_oui is not enable");
+		return QDF_STATUS_SUCCESS;
+	}
+
 	str1 = qdf_str_trim((char *)oui_string);
 
 	while (str1) {
@@ -669,6 +674,60 @@ action_oui_parse(struct action_oui_psoc_priv *psoc_priv,
 	return QDF_STATUS_SUCCESS;
 }
 
+QDF_STATUS
+action_oui_parse_string(struct wlan_objmgr_psoc *psoc,
+			const uint8_t *in_str,
+			enum action_oui_id action_id)
+{
+	struct action_oui_psoc_priv *psoc_priv;
+	QDF_STATUS status = QDF_STATUS_E_INVAL;
+	uint8_t *oui_str;
+	int len;
+
+	ACTION_OUI_ENTER();
+
+	if (!psoc) {
+		action_oui_err("psoc is NULL");
+		goto exit;
+	}
+
+	if (action_id >= ACTION_OUI_MAXIMUM_ID) {
+		action_oui_err("Invalid action_oui id: %u", action_id);
+		goto exit;
+	}
+
+	psoc_priv = action_oui_psoc_get_priv(psoc);
+	if (!psoc_priv) {
+		action_oui_err("psoc priv is NULL");
+		goto exit;
+	}
+
+	len = qdf_str_len(in_str);
+	if (len <= 0 || len > ACTION_OUI_MAX_STR_LEN - 1) {
+		action_oui_err("Invalid string length: %u", action_id);
+		goto exit;
+	}
+
+	oui_str = qdf_mem_malloc(len + 1);
+	if (!oui_str) {
+		status = QDF_STATUS_E_NOMEM;
+		goto exit;
+	}
+
+	qdf_mem_copy(oui_str, in_str, len);
+	oui_str[len] = '\0';
+
+	status = action_oui_parse(psoc_priv, oui_str, action_id);
+	if (!QDF_IS_STATUS_SUCCESS(status))
+		action_oui_err("Failed to parse: %u", action_id);
+
+	qdf_mem_free(oui_str);
+
+exit:
+	ACTION_OUI_EXIT();
+	return status;
+}
+
 QDF_STATUS action_oui_send(struct action_oui_psoc_priv *psoc_priv,
 			enum action_oui_id action_id)
 {
@@ -686,6 +745,11 @@ QDF_STATUS action_oui_send(struct action_oui_psoc_priv *psoc_priv,
 	oui_priv = psoc_priv->oui_priv[action_id];
 	if (!oui_priv)
 		return QDF_STATUS_SUCCESS;
+
+	if (!psoc_priv->action_oui_enable) {
+		action_oui_debug("action_oui is not enable");
+		return QDF_STATUS_SUCCESS;
+	}
 
 	extension_list = &oui_priv->extension_list;
 	qdf_mutex_acquire(&oui_priv->extension_lock);

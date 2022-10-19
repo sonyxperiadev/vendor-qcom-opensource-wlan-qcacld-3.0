@@ -12156,11 +12156,6 @@ static void hdd_override_ini_config(struct hdd_context *hdd_ctx)
 		if (!QDF_IS_STATUS_SUCCESS(status))
 			hdd_err("Failed to set 11d_enable flag");
 	}
-
-	if (hdd_ctx->config->action_oui_enable && !ucfg_action_oui_enabled()) {
-		hdd_ctx->config->action_oui_enable = 0;
-		hdd_err("Ignore action oui ini, since no action_oui component");
-	}
 }
 
 #ifdef ENABLE_MTRACE_LOG
@@ -12786,57 +12781,9 @@ static void hdd_cfg_params_init(struct hdd_context *hdd_ctx)
 	config->provisioned_intf_pool =
 				cfg_get(psoc, CFG_PROVISION_INTERFACE_POOL);
 	config->derived_intf_pool = cfg_get(psoc, CFG_DERIVED_INTERFACE_POOL);
-	config->action_oui_enable = cfg_get(psoc, CFG_ENABLE_ACTION_OUI);
 	config->advertise_concurrent_operation =
 				cfg_get(psoc,
 					CFG_ADVERTISE_CONCURRENT_OPERATION);
-	qdf_str_lcopy(config->action_oui_str[ACTION_OUI_CONNECT_1X1],
-		      cfg_get(psoc, CFG_ACTION_OUI_CONNECT_1X1),
-		      ACTION_OUI_MAX_STR_LEN);
-	qdf_str_lcopy(config->action_oui_str[ACTION_OUI_ITO_EXTENSION],
-		      cfg_get(psoc, CFG_ACTION_OUI_ITO_EXTENSION),
-		      ACTION_OUI_MAX_STR_LEN);
-	qdf_str_lcopy(config->action_oui_str[ACTION_OUI_CCKM_1X1],
-		      cfg_get(psoc, CFG_ACTION_OUI_CCKM_1X1),
-		      ACTION_OUI_MAX_STR_LEN);
-	qdf_str_lcopy(config->action_oui_str[ACTION_OUI_ITO_ALTERNATE],
-		      cfg_get(psoc, CFG_ACTION_OUI_ITO_ALTERNATE),
-		      ACTION_OUI_MAX_STR_LEN);
-	qdf_str_lcopy(config->action_oui_str[ACTION_OUI_SWITCH_TO_11N_MODE],
-		      cfg_get(psoc, CFG_ACTION_OUI_SWITCH_TO_11N_MODE),
-		      ACTION_OUI_MAX_STR_LEN);
-	qdf_str_lcopy(config->action_oui_str[ACTION_OUI_CONNECT_1X1_WITH_1_CHAIN],
-		      cfg_get(psoc,
-			      CFG_ACTION_OUI_CONNECT_1X1_WITH_1_CHAIN),
-		      ACTION_OUI_MAX_STR_LEN);
-	qdf_str_lcopy(config->action_oui_str[ACTION_OUI_DISABLE_AGGRESSIVE_TX],
-		      cfg_get(psoc,
-			      CFG_ACTION_OUI_DISABLE_AGGRESSIVE_TX),
-		      ACTION_OUI_MAX_STR_LEN);
-	qdf_str_lcopy(config->action_oui_str[ACTION_OUI_FORCE_MAX_NSS],
-		      cfg_get(psoc, CFG_ACTION_OUI_FORCE_MAX_NSS),
-		      ACTION_OUI_MAX_STR_LEN);
-	qdf_str_lcopy(config->action_oui_str
-					  [ACTION_OUI_DISABLE_AGGRESSIVE_EDCA],
-		      cfg_get(psoc,
-			      CFG_ACTION_OUI_DISABLE_AGGRESSIVE_EDCA),
-		      ACTION_OUI_MAX_STR_LEN);
-	qdf_str_lcopy(config->action_oui_str[ACTION_OUI_EXTEND_WOW_ITO],
-		      cfg_get(psoc, CFG_ACTION_OUI_EXTEND_WOW_ITO),
-		      ACTION_OUI_MAX_STR_LEN);
-	qdf_str_lcopy(config->action_oui_str[ACTION_OUI_DISABLE_TWT],
-		      cfg_get(psoc, CFG_ACTION_OUI_DISABLE_TWT),
-		      ACTION_OUI_MAX_STR_LEN);
-	qdf_str_lcopy(config->action_oui_str[ACTION_OUI_HOST_RECONN],
-		      cfg_get(psoc, CFG_ACTION_OUI_RECONN_ASSOCTIMEOUT),
-		      ACTION_OUI_MAX_STR_LEN);
-	qdf_str_lcopy(config->action_oui_str[ACTION_OUI_TAKE_ALL_BAND_INFO],
-		      cfg_get(psoc, CFG_ACTION_OUI_TAKE_ALL_BAND_INFO),
-		      ACTION_OUI_MAX_STR_LEN);
-	qdf_str_lcopy(config->action_oui_str[ACTION_OUI_11BE_OUI_ALLOW],
-		      cfg_get(psoc, CFG_ACTION_11BE_OUI_ALLOW_LIST),
-		      ACTION_OUI_MAX_STR_LEN);
-
 	config->is_unit_test_framework_enabled =
 			cfg_get(psoc, CFG_ENABLE_UNIT_TEST_FRAMEWORK);
 	config->disable_channel = cfg_get(psoc, CFG_ENABLE_DISABLE_CHANNEL);
@@ -14685,57 +14632,6 @@ static void hdd_v2_flow_pool_unmap(int vdev_id)
 			    OL_TXRX_PDEV_ID, vdev_id);
 }
 
-/**
- * hdd_action_oui_config() - Configure action_oui strings
- * @hdd_ctx: pointer to hdd context
- *
- * This is a HDD wrapper function which invokes ucfg api
- * of action_oui component to parse action oui strings.
- *
- * Return: None
- */
-static void hdd_action_oui_config(struct hdd_context *hdd_ctx)
-{
-	QDF_STATUS status;
-	uint32_t id;
-	uint8_t *str;
-
-	if (!hdd_ctx->config->action_oui_enable)
-		return;
-
-	for (id = 0; id < ACTION_OUI_MAXIMUM_ID; id++) {
-		str = hdd_ctx->config->action_oui_str[id];
-		if (!qdf_str_len(str))
-			continue;
-
-		status = ucfg_action_oui_parse(hdd_ctx->psoc, str, id);
-		if (!QDF_IS_STATUS_SUCCESS(status))
-			hdd_err("Failed to parse action_oui str: %u", id);
-	}
-}
-
-/**
- * hdd_action_oui_send() - Send action_oui extensions to firmware
- * @hdd_ctx: pointer to hdd context
- *
- * This is a HDD wrapper function which invokes ucfg api
- * of action_oui component to send action oui extensions to firmware.
- *
- * Return: None
- */
-static void hdd_action_oui_send(struct hdd_context *hdd_ctx)
-{
-	QDF_STATUS status;
-
-	if (!hdd_ctx->config->action_oui_enable)
-		return;
-
-	status = ucfg_action_oui_send(hdd_ctx->psoc);
-	if (!QDF_IS_STATUS_SUCCESS(status))
-		hdd_err("Failed to send one or all action_ouis");
-	ucfg_mlme_set_usr_disable_sta_eht(hdd_ctx->psoc, false);
-}
-
 static void hdd_hastings_bt_war_initialize(struct hdd_context *hdd_ctx)
 {
 	if (hdd_ctx->config->iface_change_wait_time)
@@ -14923,8 +14819,6 @@ int hdd_configure_cds(struct hdd_context *hdd_ctx)
 		hdd_debug("Failed to register mode change cb with Policy Manager");
 		goto cds_disable;
 	}
-	hdd_action_oui_config(hdd_ctx);
-	hdd_action_oui_send(hdd_ctx);
 
 	if (hdd_green_ap_enable_egap(hdd_ctx))
 		hdd_debug("enhance green ap is not enabled");

@@ -1101,6 +1101,18 @@ bool wlan_mlme_get_usr_disable_sta_eht(struct wlan_objmgr_psoc *psoc);
  */
 void wlan_mlme_set_usr_disable_sta_eht(struct wlan_objmgr_psoc *psoc,
 				       bool disable);
+#else
+static inline
+bool wlan_mlme_get_usr_disable_sta_eht(struct wlan_objmgr_psoc *psoc)
+{
+	return true;
+}
+
+static inline
+void wlan_mlme_set_usr_disable_sta_eht(struct wlan_objmgr_psoc *psoc,
+				       bool disable)
+{
+}
 #endif
 
 /**
