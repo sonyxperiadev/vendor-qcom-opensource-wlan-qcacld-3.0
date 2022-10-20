@@ -5827,6 +5827,87 @@ policy_mgr_get_ml_sta_and_p2p_cli_go_sap_info(
 }
 
 /*
+ * policy_mgr_is_ml_sta_links_in_mcc() - Check ML links are in MCC or not
+ * @psoc: psoc ctx
+ * @ml_freq_lst: ML STA freq list
+ * @ml_vdev_lst: ML STA vdev id list
+ * @num_ml_sta: Number of total ML STA links
+ *
+ * Return: true if ML link in MCC else false
+ */
+static bool
+policy_mgr_is_ml_sta_links_in_mcc(struct wlan_objmgr_psoc *psoc,
+				  qdf_freq_t *ml_freq_lst,
+				  uint8_t *ml_vdev_lst,
+				  uint8_t num_ml_sta)
+{
+	uint8_t i, j;
+
+	for (i = 0; i < num_ml_sta; i++) {
+		for (j = i + 1; j < num_ml_sta; j++) {
+			if (ml_freq_lst[i] != ml_freq_lst[j] &&
+			    policy_mgr_2_freq_always_on_same_mac(
+					psoc, ml_freq_lst[i], ml_freq_lst[j])) {
+				policy_mgr_debug("vdev %d and %d are in MCC with freq %d and freq %d",
+						 ml_vdev_lst[i], ml_vdev_lst[j],
+						 ml_freq_lst[i],
+						 ml_freq_lst[j]);
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+/*
+ * policy_mgr_handle_mcc_ml_sta() - disables one ML STA link if causing MCC
+ * DBS - if ML STA links on 5 GHz + 6 GHz
+ * SBS - if both ML STA links on 5 GHz high/5 GHz low
+ * non-SBS - any combo (5/6 GHz + 5/6 GHz OR 2 GHz + 5/6 GHz)
+ * @psoc: psoc ctx
+ *
+ * Return: Success if MCC link is disabled else failure
+ */
+static QDF_STATUS
+policy_mgr_handle_mcc_ml_sta(struct wlan_objmgr_psoc *psoc,
+			     struct wlan_objmgr_vdev *vdev)
+{
+	uint8_t num_ml_sta = 0, num_disabled_ml_sta = 0;
+	uint8_t ml_sta_vdev_lst[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
+	qdf_freq_t ml_freq_lst[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+
+	if ((wlan_vdev_mlme_get_opmode(vdev) != QDF_STA_MODE))
+		return QDF_STATUS_E_FAILURE;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	policy_mgr_get_ml_sta_info(pm_ctx, &num_ml_sta, &num_disabled_ml_sta,
+				   ml_sta_vdev_lst, ml_freq_lst,
+				   NULL, NULL, NULL);
+	if (num_ml_sta < 2 || num_ml_sta > MAX_NUMBER_OF_CONC_CONNECTIONS ||
+	    num_disabled_ml_sta) {
+		policy_mgr_debug("num_ml_sta invalid %d or link already disabled%d",
+				 num_ml_sta, num_disabled_ml_sta);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!policy_mgr_is_ml_sta_links_in_mcc(psoc, ml_freq_lst,
+					       ml_sta_vdev_lst, num_ml_sta))
+		return QDF_STATUS_E_FAILURE;
+
+	policy_mgr_mlo_sta_set_link(psoc, MLO_LINK_FORCE_REASON_CONNECT,
+				    MLO_LINK_FORCE_MODE_ACTIVE_NUM,
+				    num_ml_sta, ml_sta_vdev_lst);
+	return QDF_STATUS_SUCCESS;
+}
+
+/*
  * policy_mgr_sta_ml_link_enable_allowed() - Check with given ML links and
  * existing concurrencies, a disabled ml link can be enabled back.
  * @psoc: psoc ctx
@@ -5852,7 +5933,9 @@ policy_mgr_sta_ml_link_enable_allowed(struct wlan_objmgr_psoc *psoc,
 	/* If no link is disabled nothing to do */
 	if (!num_disabled_ml_sta || num_ml_sta < 2)
 		return false;
-
+	if (policy_mgr_is_ml_sta_links_in_mcc(psoc, ml_freq_lst, ml_vdev_lst,
+					      num_ml_sta))
+		return false;
 	/* Disabled link is at the last index */
 	disabled_link_vdev_id = ml_vdev_lst[num_ml_sta - 1];
 	disabled_link_freq = ml_freq_lst[num_ml_sta - 1];
@@ -5902,6 +5985,9 @@ policy_mgr_handle_sap_cli_go_ml_sta_up_csa(struct wlan_objmgr_psoc *psoc,
 		policy_mgr_err("Invalid Context");
 		return;
 	}
+
+	if (QDF_IS_STATUS_SUCCESS(policy_mgr_handle_mcc_ml_sta(psoc, vdev)))
+		return;
 
 	status = policy_mgr_handle_ml_sta_link_concurrency(psoc, vdev);
 	if (QDF_IS_STATUS_SUCCESS(status))
