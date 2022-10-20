@@ -1159,6 +1159,7 @@ static void dp_display_periodic_stats(struct wlan_dp_psoc_context *dp_ctx,
 
 	if (counter * dp_ctx->dp_cfg.bus_bw_compute_interval >=
 		periodic_stats_disp_time * 1000) {
+		hif_rtpm_display_last_busy_hist(cds_get_context(QDF_MODULE_ID_HIF));
 		if (data_in_time_period) {
 			wlan_dp_display_txrx_stats(dp_ctx);
 			dp_txrx_ext_dump_stats(soc, CDP_DP_RX_THREAD_STATS);
