@@ -165,6 +165,8 @@ void __hdd_cm_disconnect_handler_post_user_update(struct hdd_adapter *adapter,
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	struct hdd_station_ctx *sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
 	mac_handle_t mac_handle;
+	struct hdd_adapter *link_adapter;
+	struct hdd_station_ctx *link_sta_ctx;
 
 	mac_handle = hdd_ctx->mac_handle;
 
@@ -188,6 +190,16 @@ void __hdd_cm_disconnect_handler_post_user_update(struct hdd_adapter *adapter,
 						 SCAN_EVENT_TYPE_MAX, true);
 	}
 
+	if (adapter->device_mode == QDF_STA_MODE &&
+	    hdd_adapter_is_ml_adapter(adapter)) {
+		/* Clear connection info in assoc link adapter as well */
+		link_adapter = hdd_get_assoc_link_adapter(adapter);
+		if (link_adapter) {
+			link_sta_ctx =
+				WLAN_HDD_GET_STATION_CTX_PTR(link_adapter);
+			hdd_conn_remove_connect_info(link_sta_ctx);
+		}
+	}
 	/* Clear saved connection information in HDD */
 	hdd_conn_remove_connect_info(sta_ctx);
 
