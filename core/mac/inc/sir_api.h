@@ -2085,7 +2085,7 @@ typedef struct sAniHandoffReq {
  * @SIR_SCAN_EVENT_STARTED - scan command accepted by FW
  * @SIR_SCAN_EVENT_COMPLETED - scan has been completed by FW
  * @SIR_SCAN_EVENT_BSS_CHANNEL - FW is going to move to HOME channel
- * @SIR_SCAN_EVENT_FOREIGN_CHANNEL - FW is going to move to FORIEGN channel
+ * @SIR_SCAN_EVENT_FOREIGN_CHANNEL - FW is going to move to FOREIGN channel
  * @SIR_SCAN_EVENT_DEQUEUED - scan request got dequeued
  * @SIR_SCAN_EVENT_PREEMPTED - preempted by other high priority scan
  * @SIR_SCAN_EVENT_START_FAILED - scan start failed
