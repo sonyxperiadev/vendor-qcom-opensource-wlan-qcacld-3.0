@@ -568,21 +568,21 @@ static QDF_STATUS sme_rrm_send_scan_result(struct mac_context *mac_ctx,
 					 sizeof(next_result));
 	if (!scanresults_arr) {
 		status = QDF_STATUS_E_NOMEM;
-		goto rrm_send_scan_results_done;
+		goto send_scan_results;
 	}
 
 	status = wlan_mlme_get_bssid_vdev_id(mac_ctx->pdev, session_id,
 					     &bss_peer_mac);
 	if (QDF_IS_STATUS_ERROR(status)) {
-		sme_err("Invalid session %d", session_id);
+		sme_err("BSSID not found for vdev: %d", session_id);
 		status = QDF_STATUS_E_FAILURE;
-		goto rrm_send_scan_results_done;
+		goto send_scan_results;
 	}
 
 	if (!cm_is_vdevid_connected(mac_ctx->pdev, session_id)) {
-		sme_err("Invalid session");
+		sme_err("vdev:%d is not connected", session_id);
 		status = QDF_STATUS_E_FAILURE;
-		goto rrm_send_scan_results_done;
+		goto send_scan_results;
 	}
 
 	while (scan_results) {
@@ -623,6 +623,8 @@ static QDF_STATUS sme_rrm_send_scan_result(struct mac_context *mac_ctx,
 		if (counter >= num_scan_results)
 			break;
 	}
+
+send_scan_results:
 	/*
 	 * The beacon report should be sent whether the counter is zero or
 	 * non-zero. There might be a few scan results in the cache but not
