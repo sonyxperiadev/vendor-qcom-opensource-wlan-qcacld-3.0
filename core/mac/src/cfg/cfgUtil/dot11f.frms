@@ -3892,7 +3892,7 @@ FRAME Beacon                              // C.f. Sec. 7.2.3.1
     OPTIE  eht_cap;
     OPTIE  eht_op;
     OPTIE  mlo_ie;
-    OPTIE  t2lm_ie;
+    OPTIE  t2lm_ie[0..2];
 
     OPTIE  WPA;
     OPTIE  WMMInfoAp;
@@ -3998,7 +3998,7 @@ FRAME Beacon2
     OPTIE  eht_cap;
     OPTIE  eht_op;
     OPTIE  mlo_ie;
-    OPTIE  t2lm_ie;
+    OPTIE  t2lm_ie[0..2];
 
     OPTIE  WPA;
     OPTIE  WMMInfoAp;
@@ -4078,7 +4078,7 @@ FRAME BeaconIEs
     OPTIE  eht_cap;
     OPTIE  eht_op;
     OPTIE  mlo_ie;
-    OPTIE  t2lm_ie;
+    OPTIE  t2lm_ie[0..2];
 
     OPTIE  WPA;
     OPTIE  WMMInfoAp;
@@ -4385,7 +4385,7 @@ FRAME ProbeResponse                       // 7.2.3.9
     OPTIE  eht_cap;
     OPTIE  eht_op;
     OPTIE  mlo_ie;
-    OPTIE  t2lm_ie;
+    OPTIE  t2lm_ie[0..2];
 
     OPTIE  WPA;
     OPTIE  WMMInfoAp;
