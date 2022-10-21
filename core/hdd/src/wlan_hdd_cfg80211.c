@@ -194,6 +194,7 @@
 #include "wlan_mlo_mgr_sta.h"
 #include "wlan_hdd_coap.h"
 #include "wlan_hdd_tdls.h"
+#include "wlan_psoc_mlme_api.h"
 
 /*
  * A value of 100 (milliseconds) can be sent to FW.
@@ -19162,6 +19163,27 @@ static void wlan_hdd_update_ap_sme_cap_wiphy(struct hdd_context *hdd_ctx)
 }
 #endif
 
+#ifdef CFG80211_SINGLE_NETDEV_MULTI_LINK_SUPPORT
+static inline
+void wlan_hdd_set_mlo_wiphy_ext_feature(struct wiphy *wiphy,
+					struct hdd_context *hdd_ctx)
+{
+	bool eht_capab;
+
+	wlan_psoc_mlme_get_11be_capab(hdd_ctx->psoc, &eht_capab);
+	if (!eht_capab)
+		return;
+
+	wiphy->flags |= WIPHY_FLAG_SUPPORTS_MLO;
+}
+#else
+static inline
+void wlan_hdd_set_mlo_wiphy_ext_feature(struct wiphy *wiphy,
+					struct hdd_context *hdd_ctx)
+{
+}
+#endif
+
 /*
  * In this function, wiphy structure is updated after QDF
  * initialization. In wlan_hdd_cfg80211_init, only the
@@ -19255,6 +19277,7 @@ void wlan_hdd_update_wiphy(struct hdd_context *hdd_ctx)
 		wlan_hdd_cfg80211_scan_randomization_init(wiphy);
 
 	wlan_wifi_pos_cfg80211_set_wiphy_ext_feature(wiphy, hdd_ctx->psoc);
+	wlan_hdd_set_mlo_wiphy_ext_feature(wiphy, hdd_ctx);
 }
 
 /**
@@ -25178,6 +25201,21 @@ bool wlan_hdd_cfg80211_rx_control_port(struct net_device *dev,
 }
 #endif
 
+#ifdef CFG80211_SINGLE_NETDEV_MULTI_LINK_SUPPORT
+static int
+wlan_hdd_cfg80211_add_intf_link(struct wiphy *wiphy, struct wireless_dev *wdev,
+				unsigned int link_id)
+{
+	return 0;
+}
+
+static void
+wlan_hdd_cfg80211_del_intf_link(struct wiphy *wiphy, struct wireless_dev *wdev,
+				unsigned int link_id)
+{
+}
+#endif
+
 /**
  * struct cfg80211_ops - cfg80211_ops
  *
@@ -25328,4 +25366,8 @@ static struct cfg80211_ops wlan_hdd_cfg80211_ops = {
 	.get_channel = wlan_hdd_cfg80211_get_channel,
 	.set_bitrate_mask = wlan_hdd_cfg80211_set_bitrate_mask,
 	.tx_control_port = wlan_hdd_cfg80211_tx_control_port,
+#ifdef CFG80211_SINGLE_NETDEV_MULTI_LINK_SUPPORT
+	.add_intf_link = wlan_hdd_cfg80211_add_intf_link,
+	.del_intf_link = wlan_hdd_cfg80211_del_intf_link,
+#endif
 };
