@@ -744,7 +744,7 @@ static void if_mgr_update_candidate(struct wlan_objmgr_psoc *psoc,
 {
 	struct scan_cache_entry *scan_entry = candidate_info->scan_entry;
 
-	if (!(scan_entry->ie_list.multi_link || scan_entry->ie_list.ehtcap ||
+	if (!(scan_entry->ie_list.multi_link_bv || scan_entry->ie_list.ehtcap ||
 	      scan_entry->ie_list.ehtop))
 		return;
 
@@ -752,7 +752,7 @@ static void if_mgr_update_candidate(struct wlan_objmgr_psoc *psoc,
 				      util_scan_entry_ie_data(scan_entry),
 				      util_scan_entry_ie_len(scan_entry)))
 		return;
-	scan_entry->ie_list.multi_link = NULL;
+	scan_entry->ie_list.multi_link_bv = NULL;
 	scan_entry->ie_list.ehtcap = NULL;
 	scan_entry->ie_list.ehtop = NULL;
 	qdf_mem_zero(&scan_entry->ml_info, sizeof(scan_entry->ml_info));
