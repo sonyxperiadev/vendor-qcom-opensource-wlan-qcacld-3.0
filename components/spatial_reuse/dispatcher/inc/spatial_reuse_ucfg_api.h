@@ -108,7 +108,7 @@ void ucfg_spatial_reuse_set_sr_enable(struct wlan_objmgr_vdev *vdev,
 
 /**
  * ucfg_spatial_reuse_send_sr_prohibit() - Send spatial reuse config to enable
- *					   or disbale he_siga_val15_allowed
+ *					   or disable he_siga_val15_allowed
  *
  * @vdev: object manager vdev
  * @enable_he_siga_val15_prohibit: enable/disable he_siga_val15_allowed
