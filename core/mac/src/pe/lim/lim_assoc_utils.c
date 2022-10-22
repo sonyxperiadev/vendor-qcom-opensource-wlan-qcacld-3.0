@@ -61,12 +61,6 @@
 #include <cdp_txrx_cmn.h>
 #include <lim_mlo.h>
 
-#ifdef FEATURE_WLAN_TDLS
-#define IS_TDLS_PEER(type)  ((type) == STA_ENTRY_TDLS_PEER)
-#else
-#define IS_TDLS_PEER(type) 0
-#endif
-
 /**
  * lim_cmp_ssid() - utility function to compare SSIDs
  * @rx_ssid: Received SSID
