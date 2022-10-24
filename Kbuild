@@ -2574,6 +2574,10 @@ WLAN_DP_COMP_OBJS += $(DP_COMP_CORE_DIR)/wlan_dp_fisa_rx.o
 WLAN_DP_COMP_OBJS += $(DP_COMP_CORE_DIR)/wlan_dp_rx_fst.o
 endif
 
+ifeq ($(CONFIG_FEATURE_DIRECT_LINK), y)
+WLAN_DP_COMP_OBJS += $(DP_COMP_CORE_DIR)/wlan_dp_wfds.o
+endif
+
 $(call add-wlan-objs,dp_comp,$(WLAN_DP_COMP_OBJS))
 
 #######################################################

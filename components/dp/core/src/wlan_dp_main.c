@@ -1693,6 +1693,14 @@ QDF_STATUS dp_direct_link_init(struct wlan_dp_psoc_context *dp_ctx)
 		return status;
 	}
 
+	status = dp_wfds_init(dp_direct_link_ctx);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		dp_err("Failed to initialize QMI for Direct Link");
+		dp_direct_link_refill_ring_deinit(dp_ctx->dp_direct_link_ctx);
+		qdf_mem_free(dp_direct_link_ctx);
+		return status;
+	}
+
 	dp_ctx->dp_direct_link_ctx = dp_direct_link_ctx;
 
 	return status;
@@ -1706,6 +1714,7 @@ void dp_direct_link_deinit(struct wlan_dp_psoc_context *dp_ctx)
 	if (!dp_ctx->dp_direct_link_ctx)
 		return;
 
+	dp_wfds_deinit(dp_ctx->dp_direct_link_ctx);
 	dp_direct_link_refill_ring_deinit(dp_ctx->dp_direct_link_ctx);
 
 	qdf_mem_free(dp_ctx->dp_direct_link_ctx);

@@ -18,6 +18,7 @@
 #include "os_if_qmi_wifi_driver_service_v01.h"
 #include <qdf_util.h>
 #include "wlan_qmi_public_struct.h"
+#include "wlan_dp_ucfg_api.h"
 
 static struct qmi_handle qmi_wfds;
 
@@ -363,6 +364,8 @@ static void os_if_qmi_wfds_request_mem_ind_cb(struct qmi_handle *qmi_hdl,
 		mem_ind_msg.mem_arena_info[i].num_entries =
 				src_info->mem_arena_info[i].num_entries;
 	}
+
+	ucfg_dp_wfds_handle_request_mem_ind(&mem_ind_msg);
 }
 
 /*
@@ -403,6 +406,8 @@ static void os_if_wfds_ipcc_map_n_cfg_ind_cb(struct qmi_handle *qmi_hdl,
 		ipcc_ind_msg.ipcc_ce_info[i].ipcc_trig_data =
 				src_info->ipcc_ce_info[i].ipcc_trig_data;
 	}
+
+	ucfg_dp_wfds_handle_ipcc_map_n_cfg_ind(&ipcc_ind_msg);
 }
 
 /**
@@ -425,6 +430,8 @@ os_if_qmi_wfds_new_server(struct qmi_handle *qmi_hdl,
 		return qdf_status_to_os_return(status);
 	}
 
+	status = ucfg_dp_wfds_new_server();
+
 	return qdf_status_to_os_return(status);
 }
 
@@ -440,6 +447,7 @@ static void
 os_if_qmi_wfds_del_server(struct qmi_handle *qmi_hdl,
 			  struct qmi_service *qmi_svc)
 {
+	ucfg_dp_wfds_del_server();
 }
 
 static struct qmi_msg_handler qmi_wfds_msg_handler[] = {

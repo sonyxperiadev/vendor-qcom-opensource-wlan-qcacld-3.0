@@ -2350,4 +2350,26 @@ void ucfg_dp_direct_link_deinit(struct wlan_objmgr_psoc *psoc)
 
 	dp_direct_link_deinit(dp_ctx);
 }
+
+void
+ucfg_dp_wfds_handle_request_mem_ind(struct wlan_qmi_wfds_mem_ind_msg *mem_msg)
+{
+	dp_wfds_handle_request_mem_ind(mem_msg);
+}
+
+void
+ucfg_dp_wfds_handle_ipcc_map_n_cfg_ind(struct wlan_qmi_wfds_ipcc_map_n_cfg_ind_msg *ipcc_msg)
+{
+	dp_wfds_handle_ipcc_map_n_cfg_ind(ipcc_msg);
+}
+
+QDF_STATUS ucfg_dp_wfds_new_server(void)
+{
+	return dp_wfds_new_server();
+}
+
+void ucfg_dp_wfds_del_server(void)
+{
+	dp_wfds_del_server();
+}
 #endif

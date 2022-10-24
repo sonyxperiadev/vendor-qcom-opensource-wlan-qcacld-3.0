@@ -34,6 +34,7 @@
 #include <wlan_dp_public_struct.h>
 #include <cdp_txrx_misc.h>
 #include "wlan_dp_objmgr.h"
+#include "wlan_qmi_public_struct.h"
 
 #define DP_IGNORE_NUD_FAIL                      0
 #define DP_DISCONNECT_AFTER_NUD_FAIL            1
@@ -1358,6 +1359,42 @@ QDF_STATUS ucfg_dp_direct_link_init(struct wlan_objmgr_psoc *psoc);
  * Return: None
  */
 void ucfg_dp_direct_link_deinit(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_dp_wfds_handle_request_mem_ind() - Process request memory indication
+ *  received from QMI server
+ * @mem_msg: pointer to memory request indication message
+ *
+ * Return: None
+ */
+void
+ucfg_dp_wfds_handle_request_mem_ind(struct wlan_qmi_wfds_mem_ind_msg *mem_msg);
+
+/**
+ * ucfg_dp_wfds_handle_ipcc_map_n_cfg_ind() - Process IPCC map and configure
+ *  indication received from QMI server
+ * @ipcc_msg: pointer to IPCC map and configure indication message
+ *
+ * Return: None
+ */
+void
+ucfg_dp_wfds_handle_ipcc_map_n_cfg_ind(struct wlan_qmi_wfds_ipcc_map_n_cfg_ind_msg *ipcc_msg);
+
+/**
+ * ucfg_dp_wfds_new_server() - New server callback triggered when service is up.
+ *  Connect to the service as part of this call.
+ *
+ * Return: QDF status
+ */
+QDF_STATUS ucfg_dp_wfds_new_server(void);
+
+/**
+ * ucfg_dp_wfds_del_server() - Del server callback triggered when service is
+ *  down.
+ *
+ * Return: None
+ */
+void ucfg_dp_wfds_del_server(void);
 #else
 static inline
 QDF_STATUS ucfg_dp_direct_link_init(struct wlan_objmgr_psoc *psoc)
@@ -1369,5 +1406,26 @@ static inline
 void ucfg_dp_direct_link_deinit(struct wlan_objmgr_psoc *psoc)
 {
 }
+
+#ifdef QMI_WFDS
+static inline void
+ucfg_dp_wfds_handle_request_mem_ind(struct wlan_qmi_wfds_mem_ind_msg *mem_msg)
+{
+}
+
+static inline void
+ucfg_dp_wfds_handle_ipcc_map_n_cfg_ind(struct wlan_qmi_wfds_ipcc_map_n_cfg_ind_msg *ipcc_msg)
+{
+}
+
+static inline QDF_STATUS ucfg_dp_wfds_new_server(void)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline void ucfg_dp_wfds_del_server(void)
+{
+}
+#endif
 #endif
 #endif /* _WLAN_DP_UCFG_API_H_ */

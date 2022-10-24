@@ -38,6 +38,7 @@
 #include <i_qdf_net_stats.h>
 #include <qdf_types.h>
 #include "htc_api.h"
+#include "wlan_dp_wfds.h"
 
 #ifndef NUM_TX_RX_HISTOGRAM
 #define NUM_TX_RX_HISTOGRAM 128
@@ -367,11 +368,13 @@ enum RX_OFFLOAD {
  * @dp_ctx: pointer to DP psoc priv context
  * @lpass_ep_id: LPASS data msg service endpoint id
  * @direct_link_refill_ring_hdl: Direct Link refill ring handle
+ * @dl_wfds: pointer to direct link WFDS context
  */
 struct dp_direct_link_context {
 	struct wlan_dp_psoc_context *dp_ctx;
 	HTC_ENDPOINT_ID lpass_ep_id;
 	struct dp_srng *direct_link_refill_ring_hdl;
+	struct dp_direct_link_wfds_context *dl_wfds;
 };
 #endif
 
