@@ -1550,6 +1550,23 @@ hdd_set_dynamic_macaddr_update_capability(struct hdd_context *hdd_ctx,
 }
 #endif
 
+#ifdef WLAN_FEATURE_11BE
+static bool hdd_dot11Mode_support_11be(enum hdd_dot11_mode dot11Mode)
+{
+	if (dot11Mode != eHDD_DOT11_MODE_AUTO &&
+	    dot11Mode < eHDD_DOT11_MODE_11be)
+		return false;
+
+	return true;
+}
+#else
+static bool hdd_dot11Mode_support_11be(enum hdd_dot11_mode dot11Mode)
+{
+	return false;
+}
+#endif
+
+
 static void hdd_update_tgt_services(struct hdd_context *hdd_ctx,
 				    struct wma_tgt_services *cfg)
 {
@@ -1576,6 +1593,13 @@ static void hdd_update_tgt_services(struct hdd_context *hdd_ctx,
 	if ((config->dot11Mode == eHDD_DOT11_MODE_11ac ||
 	     config->dot11Mode == eHDD_DOT11_MODE_11ac_ONLY) && !cfg->en_11ac)
 		config->dot11Mode = eHDD_DOT11_MODE_AUTO;
+	/* 11BE mode support */
+	if (!hdd_dot11Mode_support_11be(config->dot11Mode) &&
+	    cfg->en_11be) {
+		hdd_debug("dot11Mode %d override target en_11be to false",
+			  config->dot11Mode);
+		cfg->en_11be = false;
+	}
 
 	/* ARP offload: override user setting if invalid  */
 	arp_offload_enable =
