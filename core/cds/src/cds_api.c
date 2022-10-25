@@ -65,7 +65,7 @@
 #include "target_type.h"
 #include "wlan_ocb_ucfg_api.h"
 #include "wlan_ipa_ucfg_api.h"
-#include "dp_txrx.h"
+
 #ifdef ENABLE_SMMU_S1_TRANSLATION
 #include "pld_common.h"
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0))
@@ -237,7 +237,7 @@ static QDF_STATUS cds_wmi_send_recv_qmi(void *buf, uint32_t len, void * cb_ctx,
 
 /**
  * cds_update_recovery_reason() - update the recovery reason code
- * @reason: recovery reason
+ * @recovery_reason: recovery reason
  *
  * Return: None
  */
@@ -352,7 +352,7 @@ void cds_tdls_tx_rx_mgmt_event(uint8_t event_id, uint8_t tx_rx,
 /**
  * cds_cfg_update_ac_specs_params() - update ac_specs params
  * @olcfg: cfg handle
- * @mac_params: mac params
+ * @cds_cfg: pointer to cds config
  *
  * Return: none
  */
@@ -438,7 +438,7 @@ cds_cdp_update_bundle_params(struct wlan_objmgr_psoc *psoc,
 
 /**
  * cds_cdp_cfg_attach() - attach data path config module
- * @cds_cfg: generic platform level config instance
+ * @psoc: psoc handle
  *
  * Return: none
  */
@@ -567,7 +567,6 @@ static QDF_STATUS cds_deregister_all_modules(void)
 /**
  * cds_set_ac_specs_params() - set ac_specs params in cds_config_info
  * @cds_cfg: Pointer to cds_config_info
- * @hdd_ctx: Pointer to hdd context
  *
  * Return: none
  */
@@ -648,6 +647,7 @@ static qdf_notif_block cds_hang_event_notifier = {
  *
  * - All the WLAN SW components should have been opened. This includes
  * SYS, MAC, SME, WMA and TL.
+ * @psoc: psoc handle
  *
  * Return: QDF status
  */
@@ -988,9 +988,9 @@ QDF_STATUS cds_dp_open(struct wlan_objmgr_psoc *psoc)
 		(cds_get_conparam() == QDF_GLOBAL_MONITOR_MODE) ?
 		false : gp_cds_context->cds_cfg->enable_dp_rx_threads;
 
-	qdf_status = dp_txrx_init(cds_get_context(QDF_MODULE_ID_SOC),
-				  OL_TXRX_PDEV_ID,
-				  &dp_config);
+	qdf_status = ucfg_dp_txrx_init(cds_get_context(QDF_MODULE_ID_SOC),
+				       OL_TXRX_PDEV_ID,
+				       &dp_config);
 
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status))
 		goto intr_close;
@@ -1463,7 +1463,7 @@ QDF_STATUS cds_dp_close(struct wlan_objmgr_psoc *psoc)
 
 	qdf_nbuf_stop_replenish_timer();
 
-	dp_txrx_deinit(cds_get_context(QDF_MODULE_ID_SOC));
+	ucfg_dp_txrx_deinit(cds_get_context(QDF_MODULE_ID_SOC));
 
 	cdp_pdev_deinit(cds_get_context(QDF_MODULE_ID_SOC), OL_TXRX_PDEV_ID, 1);
 
@@ -1651,7 +1651,7 @@ void cds_clear_driver_state(enum cds_driver_state state)
  * @module_context: pointer to location where the pointer to the
  *	allocated context is returned. Note this output pointer
  *	is valid only if the API returns QDF_STATUS_SUCCESS
- * @param size: size of the context area to be allocated.
+ * @size: size of the context area to be allocated.
  *
  * This API allows any user to allocate a user context area within the
  * CDS Global Context.
@@ -2112,7 +2112,6 @@ void cds_set_wakelock_logging(bool value)
 
 /**
  * cds_is_wakelock_enabled() - Check if logging of wakelock is enabled/disabled
- * @value: Boolean value
  *
  * This function is used to check whether logging of wakelock is enabled or not
  *
@@ -2133,7 +2132,7 @@ bool cds_is_wakelock_enabled(void)
 /**
  * cds_set_ring_log_level() - Sets the log level of a particular ring
  * @ring_id: ring_id
- * @log_levelvalue: Log level specified
+ * @log_level: Log level specified
  *
  * This function converts HLOS values to driver log levels and sets the log
  * level of a particular ring accordingly.
