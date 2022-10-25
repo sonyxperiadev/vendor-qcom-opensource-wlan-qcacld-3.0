@@ -53,7 +53,7 @@ ucfg_dp_is_roam_after_nud_enabled(struct wlan_objmgr_psoc *psoc)
 #endif
 
 /**
- * ucfg_dp_create_intf() - update DP interface MAC address
+ * ucfg_dp_update_inf_mac() - update DP interface MAC address
  * @psoc: psoc handle
  * @cur_mac: Current MAC address
  * @new_mac: new MAC address
@@ -180,7 +180,7 @@ void ucfg_dp_conn_info_set_arp_service(struct wlan_objmgr_vdev *vdev,
 /**
  * ucfg_dp_conn_info_set_peer_authenticate() - set Peer authenticated state
  * @vdev: vdev mapped to STA DP interface
- * is_authenticated: Peer authenticated info
+ * @is_authenticated: Peer authenticated info
  *
  * Return: None
  */
@@ -190,7 +190,7 @@ void ucfg_dp_conn_info_set_peer_authenticate(struct wlan_objmgr_vdev *vdev,
 /**
  * ucfg_dp_conn_info_set_peer_mac() - set peer mac info in DP intf
  * @vdev: vdev mapped to STA DP interface
- * peer_mac: Peer MAC information
+ * @peer_mac: Peer MAC information
  *
  * Return: None
  */
@@ -200,7 +200,7 @@ void ucfg_dp_conn_info_set_peer_mac(struct wlan_objmgr_vdev *vdev,
 /**
  * ucfg_dp_softap_check_wait_for_tx_eap_pkt() - wait for TX EAP pkt in SAP
  * @vdev: vdev mapped to SAP DP interface
- * mac_addr: Peer MAC address info
+ * @mac_addr: Peer MAC address info
  *
  * Return: None
  */
@@ -210,7 +210,7 @@ void ucfg_dp_softap_check_wait_for_tx_eap_pkt(struct wlan_objmgr_vdev *vdev,
 /**
  * ucfg_dp_update_dhcp_state_on_disassoc() - update DHCP during disassoc
  * @vdev: vdev mapped to SAP DP interface
- * mac_addr: Peer MAC address info
+ * @mac_addr: Peer MAC address info
  *
  * Return: None
  */
@@ -220,7 +220,7 @@ void ucfg_dp_update_dhcp_state_on_disassoc(struct wlan_objmgr_vdev *vdev,
 /**
  * ucfg_dp_set_dfs_cac_tx() - update DFS CAC TX block info
  * @vdev: vdev mapped to SAP DP interface
- * tx_block: true if TX need to be blocked
+ * @tx_block: true if TX need to be blocked
  *
  * Return: None
  */
@@ -230,7 +230,7 @@ void ucfg_dp_set_dfs_cac_tx(struct wlan_objmgr_vdev *vdev,
 /**
  * ucfg_dp_set_bss_state_start() - update BSS state for SAP intf
  * @vdev: vdev mapped to SAP DP interface
- * start: true if BSS state is started
+ * @start: true if BSS state is started
  *
  * Return: None
  */
@@ -239,7 +239,7 @@ void ucfg_dp_set_bss_state_start(struct wlan_objmgr_vdev *vdev, bool start);
 /**
  * ucfg_dp_lro_set_reset() - LRO set/reset in DP
  * @vdev: vdev mapped to DP interface
- * enable_flag: Enable/disable LRO feature
+ * @enable_flag: Enable/disable LRO feature
  *
  * Return: 0 on success and non zero on failure.
  */
@@ -288,6 +288,7 @@ bool ucfg_dp_is_rx_threads_enabled(struct wlan_objmgr_psoc *psoc);
 /**
  * ucfg_dp_rx_ol_init() - Initialize Rx offload mode (LRO or GRO)
  * @psoc: PSOC mapped to DP context
+ * @is_wifi3_0_target: true if it wifi3.0 target
  *
  * Return: 0 on success and non zero on failure.
  */
@@ -383,7 +384,8 @@ qdf_net_dev_stats *ucfg_dp_get_dev_stats(qdf_netdev_t dev);
 /**
  * ucfg_dp_inc_rx_pkt_stats() - DP increment RX pkt stats
  * @vdev: VDEV mapped to DP interface
- * pkt_len: packet length to be incremented in stats
+ * @pkt_len: packet length to be incremented in stats
+ * @delivered: pkts delivered or not
  *
  * Return: None
  */
@@ -457,6 +459,7 @@ QDF_STATUS ucfg_dp_mon_register_txrx_ops(struct wlan_objmgr_vdev *vdev)
 /**
  * ucfg_dp_softap_register_txrx_ops() - Register ops for TX/RX operations
  * @vdev: vdev mapped to SAP mode DP interface
+ * @txrx_ops: Tx and Rx data transfer ops
  *
  * Return: 0 on success and non zero on failure.
  */
@@ -504,7 +507,7 @@ void ucfg_dp_bbm_apply_independent_policy(struct wlan_objmgr_psoc *psoc,
 
 /**
  * ucfg_dp_periodic_sta_stats_start() - Start displaying periodic stats for STA
- * @adapter: Pointer to the station adapter
+ * @vdev: Pointer to the vdev
  *
  * Return: none
  */
@@ -512,7 +515,7 @@ void ucfg_dp_periodic_sta_stats_start(struct wlan_objmgr_vdev *vdev);
 
 /**
  * ucfg_dp_periodic_sta_stats_stop() - Stop displaying periodic stats for STA
- * @adapter: Pointer to the station adapter
+ * @vdev: Pointer to the vdev
  *
  * Return: none
  */
@@ -542,8 +545,7 @@ void ucfg_dp_try_send_rps_ind(struct wlan_objmgr_vdev *vdev);
 
 /**
  * ucfg_dp_reg_ipa_rsp_ind() - Resiter RSP IND cb with IPA component
- * @psoc: psoc handle
- * @cb_obj: Callback object
+ * @pdev: pdev handle
  *
  * Returns: None
  */
@@ -710,7 +712,7 @@ void ucfg_dp_nud_set_gateway_addr(struct wlan_objmgr_vdev *vdev,
 
 /**
  * ucfg_dp_nud_event() - netevent callback
- * @netdev_addr: netdev_addr
+ * @netdev_mac_addr: netdev MAC addr
  * @gw_mac_addr: Gateway MAC address
  * @nud_state : NUD State
  *
@@ -809,6 +811,7 @@ void ucfg_dp_clear_dns_payload_value(struct wlan_objmgr_vdev *vdev);
 /**
  * ucfg_dp_set_pkt_type_bitmap_value() - Set Packet type bitmap value
  * @vdev: vdev context
+ * @value: bitmap value
  *
  * Return: None
  */
@@ -826,6 +829,7 @@ uint32_t ucfg_dp_intf_get_pkt_type_bitmap_value(void *intf_ctx);
 /**
  * ucfg_dp_set_track_dest_ipv4_value() - Set track_dest_ipv4 value
  * @vdev: vdev context
+ * @value: dest ipv4 value
  *
  * Return: None
  */
@@ -835,6 +839,7 @@ void ucfg_dp_set_track_dest_ipv4_value(struct wlan_objmgr_vdev *vdev,
 /**
  * ucfg_dp_set_track_dest_port_value() - Set track_dest_port value
  * @vdev: vdev context
+ * @value: dest port value
  *
  * Return: None
  */
@@ -844,6 +849,7 @@ void ucfg_dp_set_track_dest_port_value(struct wlan_objmgr_vdev *vdev,
 /**
  * ucfg_dp_set_track_src_port_value() - Set track_dest_port value
  * @vdev: vdev context
+ * @value: src port value
  *
  * Return: None
  */
@@ -853,6 +859,7 @@ void ucfg_dp_set_track_src_port_value(struct wlan_objmgr_vdev *vdev,
 /**
  * ucfg_dp_set_track_dns_domain_len_value() - Set track_dns_domain_len value
  * @vdev: vdev context
+ * @value: dns domain len value
  *
  * Return: None
  */
@@ -862,6 +869,7 @@ void ucfg_dp_set_track_dns_domain_len_value(struct wlan_objmgr_vdev *vdev,
 /**
  * ucfg_dp_set_track_arp_ip_value() - Set track_arp_ip value
  * @vdev: vdev context
+ * @value: ARP IP value
  *
  * Return: None
  */
@@ -880,6 +888,7 @@ uint32_t ucfg_dp_get_pkt_type_bitmap_value(struct wlan_objmgr_vdev *vdev);
  * ucfg_dp_get_dns_payload_value() - Get dns_payload value
  * @vdev: vdev context
  * @dns_query : DNS query pointer
+ *
  * Return: None
  */
 void ucfg_dp_get_dns_payload_value(struct wlan_objmgr_vdev *vdev,
@@ -1150,7 +1159,7 @@ void ucfg_dp_set_tc_based_dyn_gro(struct wlan_objmgr_psoc *psoc, bool value);
 
 /**
  * ucfg_dp_runtime_disable_rx_thread() - Disable rx thread
- * @psoc: psoc handle
+ * @vdev: vdev handle
  * @value : value to be set (true/false)
  *
  * Return: None
@@ -1203,7 +1212,6 @@ uint32_t ucfg_dp_get_bus_bw_high_threshold(struct wlan_objmgr_psoc *psoc);
  * ucfg_dp_event_eapol_log() - send event to wlan diag
  * @nbuf: Network buffer ptr
  * @dir: direction
- * @eapol_key_info: eapol key info
  *
  * Return: None
  */
@@ -1448,4 +1456,43 @@ QDF_STATUS ucfg_dp_config_direct_link(struct wlan_objmgr_vdev *vdev,
 	return QDF_STATUS_SUCCESS;
 }
 #endif
-#endif /* _WLAN_DP_UCFG_API_H_ */
+
+/**
+ * ucfg_dp_txrx_init() - initialize DP TXRX module
+ * @soc: ol_txrx_soc_handle
+ * @pdev_id: id of dp pdev handle
+ * @config: configuration for DP TXRX modules
+ *
+ * Return: QDF_STATUS_SUCCESS on success, error qdf status on failure
+ */
+QDF_STATUS ucfg_dp_txrx_init(ol_txrx_soc_handle soc, uint8_t pdev_id,
+			     struct dp_txrx_config *config);
+
+/**
+ * ucfg_dp_txrx_deinit() - de-initialize DP TXRX module
+ * @soc: ol_txrx_soc_handle
+ *
+ * Return: QDF_STATUS_SUCCESS on success, error qdf status on failure
+ */
+QDF_STATUS ucfg_dp_txrx_deinit(ol_txrx_soc_handle soc);
+
+/**
+ * ucfg_dp_txrx_ext_dump_stats() - dump txrx external module stats
+ * @soc: ol_txrx_soc_handle object
+ * @stats_id: id  for the module whose stats are needed
+ *
+ * Return: QDF_STATUS_SUCCESS on success, error qdf status on failure
+ */
+QDF_STATUS ucfg_dp_txrx_ext_dump_stats(ol_txrx_soc_handle soc,
+				       uint8_t stats_id);
+/**
+ * ucfg_dp_txrx_set_cpu_mask() - set CPU mask for RX threads
+ * @soc: ol_txrx_soc_handle object
+ * @new_mask: New CPU mask pointer
+ *
+ * Return: QDF_STATUS_SUCCESS on success, error qdf status on failure
+ */
+QDF_STATUS ucfg_dp_txrx_set_cpu_mask(ol_txrx_soc_handle soc,
+				     qdf_cpu_mask *new_mask);
+
+#endif /* _WLAN_DP_UCFGi_API_H_ */

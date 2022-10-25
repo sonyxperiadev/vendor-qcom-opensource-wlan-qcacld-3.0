@@ -29,7 +29,7 @@
 #include "cds_api.h"
 #include <wlan_nlink_common.h>
 #include "wlan_ipa_ucfg_api.h"
-#include "dp_txrx.h"
+#include "wlan_dp_rx_thread.h"
 #include "wlan_mlme_vdev_mgr_interface.h"
 #include "hif.h"
 #include "qdf_trace.h"
@@ -43,9 +43,10 @@
 #include "wlan_cm_roam_api.h"
 
 #ifdef FEATURE_BUS_BANDWIDTH_MGR
-/**
- * bus_bw_table_default - default table which provides bus bandwidth level
- *  corresponding to a given connection mode and throughput level.
+/*
+ * bus_bw_table_default: default table which provides bus
+ * bandwidth level corresponding to a given connection mode and throughput
+ * level.
  */
 static bus_bw_table_type bus_bw_table_default = {
 	[QCA_WLAN_802_11_MODE_11B] = {BUS_BW_LEVEL_NONE, BUS_BW_LEVEL_1,
@@ -78,10 +79,10 @@ static bus_bw_table_type bus_bw_table_default = {
 				       BUS_BW_LEVEL_7, BUS_BW_LEVEL_8},
 };
 
-/**
- * bus_bw_table_low_latency - table which provides bus bandwidth level
- *  corresponding to a given connection mode and throughput level in low
- *  latency setting.
+/*
+ * bus_bw_table_low_latency: table which provides bus
+ * bandwidth level corresponding to a given connection mode and throughput
+ * level in low latency setting.
  */
 static bus_bw_table_type bus_bw_table_low_latency = {
 	[QCA_WLAN_802_11_MODE_11B] = {BUS_BW_LEVEL_NONE, BUS_BW_LEVEL_8,
@@ -1127,8 +1128,8 @@ static void wlan_dp_display_txrx_stats(struct wlan_dp_psoc_context *dp_ctx)
 
 /**
  * dp_display_periodic_stats() - Function to display periodic stats
- * @dp_ctx - handle to dp context
- * @bool data_in_interval - true, if data detected in bw time interval
+ * @dp_ctx: handle to dp context
+ * @data_in_interval: true, if data detected in bw time interval
  *
  * The periodicity is determined by dp_ctx->dp_cfg->periodic_stats_disp_time.
  * Stats show up in wlan driver logs.

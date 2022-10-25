@@ -17,7 +17,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <dp_txrx.h>
+#include <wlan_dp_rx_thread.h>
 #include "dp_peer.h"
 #include "dp_internal.h"
 #include "dp_types.h"
@@ -25,6 +25,14 @@
 #include <cdp_txrx_peer_ops.h>
 #include <cds_sched.h>
 #include "dp_rx.h"
+#include "wlan_dp_ucfg_api.h"
+#include "wlan_dp_prealloc.h"
+#include "wlan_dp_main.h"
+#include "wlan_dp_public_struct.h"
+#include "wlan_dp_ucfg_api.h"
+#include "qdf_nbuf.h"
+#include "qdf_threads.h"
+#include "qdf_net_if.h"
 
 /* Timeout in ms to wait for a DP rx thread */
 #ifdef HAL_CONFIG_SLUB_DEBUG_ON
@@ -42,7 +50,7 @@
 #if DP_RX_TM_DEBUG
 /**
  * dp_rx_tm_walk_skb_list() - Walk skb list and print members
- * @nbuf_list - nbuf list to print
+ * @nbuf_list: nbuf list to print
  *
  * Returns: None
  */
@@ -88,7 +96,7 @@ dp_rx_refill_thread_set_affinity(struct dp_rx_refill_thread *refill_thread)
 
 	qdf_thread_set_cpus_allowed_mask(refill_thread->task, &new_mask);
 
-	cpumap_print_to_pagebuf(false, new_mask_str, &new_mask);
+	qdf_thread_cpumap_print_to_pagebuf(false, new_mask_str, &new_mask);
 	dp_debug("Refill Thread CPU mask  %s", new_mask_str);
 }
 #else
@@ -99,12 +107,12 @@ dp_rx_refill_thread_set_affinity(struct dp_rx_refill_thread *refill_thread)
 #endif
 /**
  * dp_rx_tm_get_soc_handle() - get soc handle from struct dp_rx_tm_handle_cmn
- * @rx_tm_handle_cmn - rx thread manager cmn handle
+ * @rx_tm_handle_cmn: rx thread manager cmn handle
  *
  * Returns: ol_txrx_soc_handle on success, NULL on failure.
  */
-static inline
-ol_txrx_soc_handle dp_rx_tm_get_soc_handle(struct dp_rx_tm_handle_cmn *rx_tm_handle_cmn)
+static inline ol_txrx_soc_handle
+dp_rx_tm_get_soc_handle(struct dp_rx_tm_handle_cmn *rx_tm_handle_cmn)
 {
 	struct dp_txrx_handle_cmn *txrx_handle_cmn;
 	ol_txrx_soc_handle soc;
@@ -118,7 +126,7 @@ ol_txrx_soc_handle dp_rx_tm_get_soc_handle(struct dp_rx_tm_handle_cmn *rx_tm_han
 
 /**
  * dp_rx_tm_thread_dump_stats() - display stats for a rx_thread
- * @rx_thread - rx_thread pointer for which the stats need to be
+ * @rx_thread: rx_thread pointer for which the stats need to be
  *            displayed
  *
  * Returns: None
@@ -182,7 +190,7 @@ QDF_STATUS dp_rx_tm_dump_stats(struct dp_rx_tm_handle *rx_tm_hdl)
 #ifdef FEATURE_ALLOW_PKT_DROPPING
 /*
  * dp_check_and_update_pending() - Check and Set RX Pending flag
- * @tm_handle_cmn - DP thread pointer
+ * @tm_handle_cmn: DP thread pointer
  *
  * Returns: QDF_STATUS_SUCCESS on success or qdf error code on
  * failure
@@ -258,8 +266,8 @@ QDF_STATUS dp_check_and_update_pending(struct dp_rx_tm_handle_cmn
 
 /**
  * dp_rx_tm_thread_enqueue() - enqueue nbuf list into rx_thread
- * @rx_thread - rx_thread in which the nbuf needs to be queued
- * @nbuf_list - list of packets to be queued into the thread
+ * @rx_thread: rx_thread in which the nbuf needs to be queued
+ * @nbuf_list: list of packets to be queued into the thread
  *
  * Enqueue packet into rx_thread and wake it up. The function
  * moves the next pointer of the nbuf_list into the ext list of
@@ -395,7 +403,7 @@ dp_rx_tm_thread_gro_flush_ind(struct dp_rx_thread *rx_thread,
 
 /**
  * dp_rx_thread_adjust_nbuf_list() - create an nbuf list from the frag list
- * @head - nbuf list to be created
+ * @head: nbuf list to be created
  *
  * Returns: void
  */
@@ -415,7 +423,7 @@ static void dp_rx_thread_adjust_nbuf_list(qdf_nbuf_t head)
 
 /**
  * dp_rx_tm_thread_dequeue() - dequeue nbuf list from rx_thread
- * @rx_thread - rx_thread from which the nbuf needs to be dequeued
+ * @rx_thread: rx_thread from which the nbuf needs to be dequeued
  *
  * Returns: nbuf or nbuf_list dequeued from rx_thread
  */
@@ -433,7 +441,8 @@ static qdf_nbuf_t dp_rx_tm_thread_dequeue(struct dp_rx_thread *rx_thread)
 #ifdef CONFIG_SLUB_DEBUG_ON
 /**
  * dp_rx_thread_should_yield() - check whether rx loop should yield
- * @iter - iteration of packets received
+ * @iter: iteration of packets received
+ * @rx_thread: rx_thread which should yield
  *
  * Returns: should yield or not
  */
@@ -455,7 +464,7 @@ static inline bool dp_rx_thread_should_yield(struct dp_rx_thread *rx_thread,
 
 /**
  * dp_rx_thread_process_nbufq() - process nbuf queue of a thread
- * @rx_thread - rx_thread whose nbuf queue needs to be processed
+ * @rx_thread: rx_thread whose nbuf queue needs to be processed
  *
  * Returns: 0 on success, error code on failure
  */
@@ -531,12 +540,18 @@ static int dp_rx_thread_process_nbufq(struct dp_rx_thread *rx_thread)
 static void dp_rx_thread_gro_flush(struct dp_rx_thread *rx_thread,
 				   enum dp_rx_gro_flush_code gro_flush_code)
 {
+	struct wlan_dp_psoc_context *dp_ctx;
+
+	dp_ctx =  dp_get_context();
+	if (!dp_ctx) {
+		dp_err("DP context is NULL");
+		return;
+	}
 	dp_debug("flushing packets for thread %u", rx_thread->id);
-
-	local_bh_disable();
-	dp_rx_napi_gro_flush(&rx_thread->napi, gro_flush_code);
-	local_bh_enable();
-
+	qdf_local_bh_disable();
+	dp_ctx->dp_ops.dp_rx_thread_napi_gro_flush(&rx_thread->napi,
+						   gro_flush_code);
+	qdf_local_bh_enable();
 	rx_thread->stats.gro_flushes++;
 }
 
@@ -560,8 +575,8 @@ dp_rx_should_flush(struct dp_rx_thread *rx_thread)
 
 /**
  * dp_rx_thread_sub_loop() - rx thread subloop
- * @rx_thread - rx_thread to be processed
- * @shutdown - pointer to shutdown variable
+ * @rx_thread: rx_thread to be processed
+ * @shutdown: pointer to shutdown variable
  *
  * The function handles shutdown and suspend events from other
  * threads and processes nbuf queue of a rx thread. In case a
@@ -634,6 +649,7 @@ static int dp_rx_thread_loop(void *arg)
 	struct dp_rx_thread *rx_thread = arg;
 	bool shutdown = false;
 	int status;
+	QDF_STATUS status_intr;
 	struct dp_rx_tm_handle_cmn *tm_handle_cmn;
 
 	if (!arg) {
@@ -662,8 +678,8 @@ static int dp_rx_thread_loop(void *arg)
 				 qdf_atomic_test_bit(RX_VDEV_DEL_EVENT,
 						     &rx_thread->event_flag));
 		dp_debug("woken up");
-
-		if (status == -ERESTARTSYS) {
+		status_intr = qdf_status_from_os_return(status);
+		if (status_intr == QDF_STATUS_E_RESTART) {
 			QDF_DEBUG_PANIC("wait_event_interruptible returned -ERESTARTSYS");
 			break;
 		}
@@ -718,6 +734,7 @@ static int dp_rx_refill_thread_loop(void *arg)
 	struct dp_rx_refill_thread *rx_thread = arg;
 	bool shutdown = false;
 	int status;
+	QDF_STATUS status_intr;
 
 	if (!arg) {
 		dp_err("bad Args passed");
@@ -740,12 +757,14 @@ static int dp_rx_refill_thread_loop(void *arg)
 				 qdf_atomic_test_bit(RX_REFILL_SUSPEND_EVENT,
 						     &rx_thread->event_flag));
 
-		if (status == -ERESTARTSYS) {
+		status_intr = qdf_status_from_os_return(status);
+		if (status_intr == QDF_STATUS_E_RESTART) {
 			QDF_DEBUG_PANIC("wait_event_interruptible returned -ERESTARTSYS");
 			break;
 		}
 		dp_rx_refill_thread_sub_loop(rx_thread, &shutdown);
-		qdf_atomic_clear_bit(RX_REFILL_POST_EVENT, &rx_thread->event_flag);
+		qdf_atomic_clear_bit(RX_REFILL_POST_EVENT,
+				     &rx_thread->event_flag);
 	}
 
 	/* If we get here the scheduler thread must exit */
@@ -763,7 +782,7 @@ static int dp_rx_refill_thread_loop(void *arg)
  *
  * Return: 0 as it is not supposed to be polled at all as it is not scheduled.
  */
-static int dp_rx_tm_thread_napi_poll(struct napi_struct *napi, int budget)
+static int dp_rx_tm_thread_napi_poll(qdf_napi_struct *napi, int budget)
 {
 	QDF_DEBUG_PANIC("this napi_poll should not be polled as we don't schedule it");
 
@@ -779,10 +798,10 @@ static int dp_rx_tm_thread_napi_poll(struct napi_struct *napi, int budget)
 static void dp_rx_tm_thread_napi_init(struct dp_rx_thread *rx_thread)
 {
 	/* Todo - optimize to use only one dummy netdev for all thread napis */
-	init_dummy_netdev(&rx_thread->netdev);
-	netif_napi_add(&rx_thread->netdev, &rx_thread->napi,
-		       dp_rx_tm_thread_napi_poll, 64);
-	napi_enable(&rx_thread->napi);
+	qdf_net_if_create_dummy_if((struct qdf_net_if *)&rx_thread->netdev);
+	qdf_netif_napi_add(&rx_thread->netdev, &rx_thread->napi,
+			   dp_rx_tm_thread_napi_poll, 64);
+	qdf_napi_enable(&rx_thread->napi);
 }
 
 /**
@@ -793,7 +812,7 @@ static void dp_rx_tm_thread_napi_init(struct dp_rx_thread *rx_thread)
  */
 static void dp_rx_tm_thread_napi_deinit(struct dp_rx_thread *rx_thread)
 {
-	netif_napi_del(&rx_thread->napi);
+	qdf_netif_napi_del(&rx_thread->napi);
 }
 
 /*
@@ -980,7 +999,7 @@ ret:
 }
 
 /**
- * dp_rx_tm_resume() - suspend DP RX threads
+ * dp_rx_tm_suspend() - suspend DP RX threads
  * @rx_tm_hdl: dp_rx_tm_handle containing the overall thread
  *            infrastructure
  *
@@ -1082,9 +1101,9 @@ suspend_fail:
 
 /**
  * dp_rx_thread_flush_by_vdev_id() - flush rx packets by vdev_id in
-				     a particular rx thread queue
- * @rx_thread - rx_thread pointer of the queue from which packets are
- *              to be flushed out
+ * a particular rx thread queue
+ * @rx_thread: rx_thread pointer of the queue from which packets are
+ * to be flushed out
  * @vdev_id: vdev id for which packets are to be flushed
  * @wait_timeout: wait time value for rx thread to complete flush
  *
@@ -1117,7 +1136,7 @@ QDF_STATUS dp_rx_thread_flush_by_vdev_id(struct dp_rx_thread *rx_thread,
 	qdf_nbuf_queue_head_unlock(&rx_thread->nbuf_queue);
 	unlock_time = qdf_get_log_timestamp();
 	dp_info("Lock held time: %llu us",
-			qdf_log_timestamp_to_usecs(unlock_time - lock_time));
+		qdf_log_timestamp_to_usecs(unlock_time - lock_time));
 
 	while (nbuf_list_head) {
 		nbuf_list_next = qdf_nbuf_queue_next(nbuf_list_head);
@@ -1135,7 +1154,7 @@ QDF_STATUS dp_rx_thread_flush_by_vdev_id(struct dp_rx_thread *rx_thread,
 	qdf_wake_up_interruptible(&rx_thread->wait_q);
 
 	qdf_status = qdf_wait_single_event(&rx_thread->vdev_del_event,
-					    wait_timeout);
+					   wait_timeout);
 
 	if (QDF_IS_STATUS_SUCCESS(qdf_status))
 		dp_debug("thread:%d napi gro flush successfully",
@@ -1159,9 +1178,9 @@ QDF_STATUS dp_rx_thread_flush_by_vdev_id(struct dp_rx_thread *rx_thread,
 
 /**
  * dp_rx_tm_flush_by_vdev_id() - flush rx packets by vdev_id in all
-				 rx thread queues
+ * rx thread queues
  * @rx_tm_hdl: dp_rx_tm_handle containing the overall thread
- *             infrastructure
+ * infrastructure
  * @vdev_id: vdev id for which packets are to be flushed
  *
  * Return: QDF_STATUS_SUCCESS
@@ -1217,7 +1236,7 @@ QDF_STATUS dp_rx_tm_flush_by_vdev_id(struct dp_rx_tm_handle *rx_tm_hdl,
 /**
  * dp_rx_tm_resume() - resume DP RX threads
  * @rx_tm_hdl: dp_rx_tm_handle containing the overall thread
- *            infrastructure
+ * infrastructure
  *
  * Return: QDF_STATUS_SUCCESS on resume success. QDF error otherwise.
  */
@@ -1299,7 +1318,6 @@ static QDF_STATUS dp_rx_tm_shutdown(struct dp_rx_tm_handle *rx_tm_hdl)
 		qdf_wake_up_interruptible(&rx_tm_hdl->rx_thread[i]->wait_q);
 	}
 
-
 	for (i = 0; i < rx_tm_hdl->num_dp_rx_threads; i++) {
 		if (!rx_tm_hdl->rx_thread[i] ||
 		    rx_tm_hdl->state == DP_RX_THREADS_INVALID)
@@ -1315,13 +1333,14 @@ static QDF_STATUS dp_rx_tm_shutdown(struct dp_rx_tm_handle *rx_tm_hdl)
 /**
  * dp_rx_tm_deinit() - de-initialize RX thread infrastructure
  * @rx_tm_hdl: dp_rx_tm_handle containing the overall thread
- *            infrastructure
+ * infrastructure
  *
  * Return: QDF_STATUS_SUCCESS
  */
 QDF_STATUS dp_rx_tm_deinit(struct dp_rx_tm_handle *rx_tm_hdl)
 {
 	int i = 0;
+
 	if (!rx_tm_hdl->rx_thread) {
 		dp_err("rx_tm_hdl->rx_thread not initialized!");
 		return QDF_STATUS_SUCCESS;
@@ -1346,7 +1365,7 @@ QDF_STATUS dp_rx_tm_deinit(struct dp_rx_tm_handle *rx_tm_hdl)
 /**
  * dp_rx_tm_select_thread() - select a DP RX thread for a nbuf
  * @rx_tm_hdl: dp_rx_tm_handle containing the overall thread
- *            infrastructure
+ * infrastructure
  * @reo_ring_num: REO ring number corresponding to the thread
  *
  * The function relies on the presence of QDF_NBUF_CB_RX_CTX_ID passed to it
@@ -1394,8 +1413,8 @@ dp_rx_tm_gro_flush_ind(struct dp_rx_tm_handle *rx_tm_hdl, int rx_ctx_id,
 	return QDF_STATUS_SUCCESS;
 }
 
-struct napi_struct *dp_rx_tm_get_napi_context(struct dp_rx_tm_handle *rx_tm_hdl,
-					      uint8_t rx_ctx_id)
+qdf_napi_struct *dp_rx_tm_get_napi_context(struct dp_rx_tm_handle *rx_tm_hdl,
+					   uint8_t rx_ctx_id)
 {
 	uint8_t selected_thread_id;
 
@@ -1417,3 +1436,177 @@ QDF_STATUS dp_rx_tm_set_cpu_mask(struct dp_rx_tm_handle *rx_tm_hdl,
 	}
 	return QDF_STATUS_SUCCESS;
 }
+
+/**
+ * dp_rx_refill_thread_schedule() - Schedule rx refill thread
+ * @soc: ol_txrx_soc_handle object
+ *
+ */
+#ifdef WLAN_FEATURE_RX_PREALLOC_BUFFER_POOL
+static void dp_rx_refill_thread_schedule(ol_txrx_soc_handle soc)
+{
+	struct dp_rx_refill_thread *rx_thread;
+	struct dp_txrx_handle *dp_ext_hdl;
+
+	if (!soc)
+		return;
+
+	dp_ext_hdl = cdp_soc_get_dp_txrx_handle(soc);
+	if (!dp_ext_hdl)
+		return;
+
+	rx_thread = &dp_ext_hdl->refill_thread;
+	qdf_set_bit(RX_REFILL_POST_EVENT, &rx_thread->event_flag);
+	qdf_wake_up_interruptible(&rx_thread->wait_q);
+}
+#else
+static void dp_rx_refill_thread_schedule(ol_txrx_soc_handle soc)
+{
+}
+#endif
+
+/**
+ * dp_get_rx_threads_num() - Get number of threads in use
+ * @soc: ol_txrx_soc_handle object
+ *
+ * Return: number of threads
+ */
+static uint8_t dp_get_rx_threads_num(ol_txrx_soc_handle soc)
+{
+	return cdp_get_num_rx_contexts(soc);
+}
+
+QDF_STATUS dp_txrx_init(ol_txrx_soc_handle soc, uint8_t pdev_id,
+			struct dp_txrx_config *config)
+{
+	struct dp_txrx_handle *dp_ext_hdl;
+	QDF_STATUS qdf_status = QDF_STATUS_SUCCESS;
+	uint8_t num_dp_rx_threads;
+	struct dp_pdev *pdev;
+	struct dp_soc *dp_soc;
+
+	if (qdf_unlikely(!soc)) {
+		dp_err("soc is NULL");
+		return 0;
+	}
+
+	pdev = dp_get_pdev_from_soc_pdev_id_wifi3(cdp_soc_t_to_dp_soc(soc),
+						  pdev_id);
+	if (!pdev) {
+		dp_err("pdev is NULL");
+		return 0;
+	}
+
+	dp_ext_hdl = qdf_mem_malloc(sizeof(*dp_ext_hdl));
+	if (!dp_ext_hdl) {
+		QDF_ASSERT(0);
+		return QDF_STATUS_E_NOMEM;
+	}
+
+	dp_info("dp_txrx_handle allocated");
+	dp_ext_hdl->soc = soc;
+	dp_ext_hdl->pdev = dp_pdev_to_cdp_pdev(pdev);
+	cdp_soc_set_dp_txrx_handle(soc, dp_ext_hdl);
+	qdf_mem_copy(&dp_ext_hdl->config, config, sizeof(*config));
+	dp_ext_hdl->rx_tm_hdl.txrx_handle_cmn =
+				dp_txrx_get_cmn_hdl_frm_ext_hdl(dp_ext_hdl);
+
+	dp_soc = cdp_soc_t_to_dp_soc(soc);
+	if (wlan_cfg_is_rx_refill_buffer_pool_enabled(dp_soc->wlan_cfg_ctx)) {
+		dp_ext_hdl->refill_thread.soc = soc;
+		dp_ext_hdl->refill_thread.enabled = true;
+		qdf_status =
+			dp_rx_refill_thread_init(&dp_ext_hdl->refill_thread);
+		if (qdf_status != QDF_STATUS_SUCCESS) {
+			dp_err("Failed to initialize RX refill thread status:%d",
+			       qdf_status);
+			return qdf_status;
+		}
+		cdp_register_rx_refill_thread_sched_handler(soc,
+							    dp_rx_refill_thread_schedule);
+	}
+
+	num_dp_rx_threads = dp_get_rx_threads_num(soc);
+	dp_info("%d RX threads in use", num_dp_rx_threads);
+
+	if (dp_ext_hdl->config.enable_rx_threads) {
+		qdf_status = dp_rx_tm_init(&dp_ext_hdl->rx_tm_hdl,
+					   num_dp_rx_threads);
+	}
+
+	return qdf_status;
+}
+
+QDF_STATUS dp_txrx_deinit(ol_txrx_soc_handle soc)
+{
+	struct dp_txrx_handle *dp_ext_hdl;
+	struct dp_soc *dp_soc;
+
+	if (!soc)
+		return QDF_STATUS_E_INVAL;
+
+	dp_ext_hdl = cdp_soc_get_dp_txrx_handle(soc);
+	if (!dp_ext_hdl)
+		return QDF_STATUS_E_FAULT;
+
+	dp_soc = cdp_soc_t_to_dp_soc(soc);
+	if (wlan_cfg_is_rx_refill_buffer_pool_enabled(dp_soc->wlan_cfg_ctx)) {
+		dp_rx_refill_thread_deinit(&dp_ext_hdl->refill_thread);
+		dp_ext_hdl->refill_thread.soc = NULL;
+		dp_ext_hdl->refill_thread.enabled = false;
+	}
+
+	if (dp_ext_hdl->config.enable_rx_threads)
+		dp_rx_tm_deinit(&dp_ext_hdl->rx_tm_hdl);
+
+	qdf_mem_free(dp_ext_hdl);
+	dp_info("dp_txrx_handle_t de-allocated");
+
+	cdp_soc_set_dp_txrx_handle(soc, NULL);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * dp_rx_tm_get_pending() - get number of frame in thread
+ * nbuf queue pending
+ * @soc: ol_txrx_soc_handle object
+ *
+ * Return: number of frames
+ */
+#ifdef FEATURE_WLAN_DP_RX_THREADS
+int dp_rx_tm_get_pending(ol_txrx_soc_handle soc)
+{
+	int i;
+	int num_pending = 0;
+	struct dp_rx_thread *rx_thread;
+	struct dp_txrx_handle *dp_ext_hdl;
+	struct dp_rx_tm_handle *rx_tm_hdl;
+
+	if (!soc)
+		return 0;
+
+	dp_ext_hdl = cdp_soc_get_dp_txrx_handle(soc);
+	if (!dp_ext_hdl)
+		return 0;
+
+	rx_tm_hdl = &dp_ext_hdl->rx_tm_hdl;
+
+	for (i = 0; i < rx_tm_hdl->num_dp_rx_threads; i++) {
+		rx_thread = rx_tm_hdl->rx_thread[i];
+		if (!rx_thread)
+			continue;
+		num_pending += qdf_nbuf_queue_head_qlen(&rx_thread->nbuf_queue);
+	}
+
+	if (num_pending)
+		dp_debug("pending frames in thread queue %d", num_pending);
+
+	return num_pending;
+}
+#else
+int dp_rx_tm_get_pending(ol_txrx_soc_handle soc)
+{
+	return 0;
+}
+#endif

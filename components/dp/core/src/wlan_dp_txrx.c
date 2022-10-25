@@ -30,7 +30,7 @@
 #include <cdp_txrx_peer_ops.h>
 #include <cdp_txrx_misc.h>
 #include <cdp_txrx_flow_ctrl_v2.h>
-#include "dp_txrx.h"
+#include "wlan_dp_rx_thread.h"
 #if defined(WLAN_SUPPORT_RX_FISA)
 #include "wlan_dp_fisa_rx.h"
 #endif
@@ -81,7 +81,6 @@ void dp_get_tx_resource(struct wlan_dp_intf *dp_intf,
  * dp_event_eapol_log() - send event to wlan diag
  * @nbuf: Network buffer ptr
  * @dir: direction
- * @eapol_key_info: eapol key info
  *
  * Return: None
  */
@@ -951,6 +950,7 @@ static void dp_resolve_rx_ol_mode(struct wlan_dp_psoc_context *dp_ctx)
 #ifdef WLAN_FEATURE_DYNAMIC_RX_AGGREGATION
 /**
  * dp_gro_rx_bh_disable() - GRO RX/flush function.
+ * @dp_intf: DP interface pointer
  * @napi_to_use: napi to be used to give packets to the stack, gro flush
  * @nbuf: pointer to n/w buff
  *
@@ -999,6 +999,7 @@ static QDF_STATUS dp_gro_rx_bh_disable(struct wlan_dp_intf *dp_intf,
 
 /**
  * dp_gro_rx_bh_disable() - GRO RX/flush function.
+ * @dp_intf: DP interface pointer
  * @napi_to_use: napi to be used to give packets to the stack, gro flush
  * @nbuf: pointer to nbuff
  *
@@ -1178,8 +1179,8 @@ out:
 }
 
 /**
- * dp_register_rx_ol() - Register LRO/GRO rx processing callbacks
- * @hdd_ctx: pointer to hdd_ctx
+ * dp_register_rx_ol_cb() - Register LRO/GRO rx processing callbacks
+ * @dp_ctx: pointer to dp_ctx
  * @wifi3_0_target: whether its a lithium/beryllium arch based target or not
  *
  * Return: none

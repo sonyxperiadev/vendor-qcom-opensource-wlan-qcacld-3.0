@@ -31,7 +31,7 @@
 #include <cdp_txrx_peer_ops.h>
 #include <cdp_txrx_misc.h>
 #include <cdp_txrx_flow_ctrl_v2.h>
-#include "dp_txrx.h"
+#include "wlan_dp_rx_thread.h"
 #include "nan_public_structs.h"
 #include "nan_ucfg_api.h"
 #include <wlan_cm_ucfg_api.h>
@@ -207,8 +207,8 @@ void dp_softap_check_wait_for_tx_eap_pkt(struct wlan_dp_intf *dp_intf,
 /**
  * dp_post_dhcp_ind() - Send DHCP START/STOP indication to FW
  * @dp_intf: pointer to DP interface
- * @sta_id: peer station ID
- * @type: WMA message type
+ * @mac_addr: mac address
+ * @dhcp_start: dhcp start
  *
  * Return: error number
  */
@@ -250,8 +250,8 @@ int dp_post_dhcp_ind(struct wlan_dp_intf *dp_intf, uint8_t *mac_addr,
 
 /**
  * dp_softap_notify_dhcp_ind() - Notify SAP for DHCP indication for tx desc
- * @context: pointer to DP interface context
- * @netbuf: pointer to OS packet (sk_buff)
+ * @intf_context: pointer to DP interface context
+ * @nbuf: pointer to OS packet (sk_buff)
  *
  * Return: None
  */
@@ -744,8 +744,8 @@ void dp_softap_tx_timeout(struct wlan_dp_intf *dp_intf)
 /**
  * dp_softap_notify_tx_compl_cbk() - callback to notify tx completion
  * @nbuf: pointer to n/w buffer
- * @dp_intf: pointer to DP interface
- * @flags: tx status flag
+ * @context: pointer to DP interface
+ * @flag: tx status flag
  *
  * Return: None
  */

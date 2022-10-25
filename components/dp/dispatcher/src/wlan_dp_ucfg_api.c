@@ -38,6 +38,7 @@
 #include <cdp_txrx_ctrl.h>
 #include <qdf_net_stats.h>
 #include "wlan_dp_prealloc.h"
+#include "wlan_dp_rx_thread.h"
 
 void ucfg_dp_update_inf_mac(struct wlan_objmgr_psoc *psoc,
 			    struct qdf_mac_addr *cur_mac,
@@ -330,7 +331,7 @@ ucfg_dp_suspend_handler(struct wlan_objmgr_psoc *psoc, void *arg)
 	struct wlan_dp_psoc_context *dp_ctx;
 	struct wlan_dp_intf *dp_intf, *dp_intf_next = NULL;
 	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
-
+	QDF_STATUS status;
 	dp_ctx = dp_psoc_get_priv(psoc);
 	if (!dp_ctx) {
 		dp_err("DP context not found");
@@ -341,6 +342,15 @@ ucfg_dp_suspend_handler(struct wlan_objmgr_psoc *psoc, void *arg)
 	cdp_set_tx_pause(soc, true);
 	dp_for_each_intf_held_safe(dp_ctx, dp_intf, dp_intf_next) {
 		dp_intf->sap_tx_block_mask |= WLAN_DP_SUSPEND;
+	}
+	if (dp_ctx->enable_dp_rx_threads) {
+		status = dp_txrx_suspend(cds_get_context(QDF_MODULE_ID_SOC));
+
+		if (status != QDF_STATUS_SUCCESS) {
+			dp_intf->sap_tx_block_mask &= ~WLAN_DP_SUSPEND;
+			dp_txrx_resume(cds_get_context(QDF_MODULE_ID_SOC));
+			return status;
+			}
 	}
 	return QDF_STATUS_SUCCESS;
 }
@@ -372,6 +382,8 @@ ucfg_dp_resume_handler(struct wlan_objmgr_psoc *psoc, void *arg)
 	dp_for_each_intf_held_safe(dp_ctx, dp_intf, dp_intf_next) {
 		dp_intf->sap_tx_block_mask &= ~WLAN_DP_SUSPEND;
 	}
+	if (dp_ctx->enable_dp_rx_threads)
+		dp_txrx_resume(cds_get_context(QDF_MODULE_ID_SOC));
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -885,8 +897,6 @@ ucfg_dp_get_rx_softirq_yield_duration(struct wlan_objmgr_psoc *psoc)
 /**
  * dp_rx_register_fisa_ops() - FISA callback functions
  * @txrx_ops: operations handle holding callback functions
- * @dp_rx_fisa_cbk: callback for fisa aggregation handle function
- * @dp_rx_fisa_flush: callback function to flush fisa aggregation
  *
  * Return: None
  */
@@ -1931,6 +1941,8 @@ void ucfg_dp_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 
 	dp_ctx->dp_ops.dp_nbuf_push_pkt = cb_obj->dp_nbuf_push_pkt;
 	dp_ctx->dp_ops.dp_rx_napi_gro_flush = cb_obj->dp_rx_napi_gro_flush;
+	dp_ctx->dp_ops.dp_rx_thread_napi_gro_flush =
+	    cb_obj->dp_rx_thread_napi_gro_flush;
 	dp_ctx->dp_ops.dp_rx_napi_gro_receive = cb_obj->dp_rx_napi_gro_receive;
 	dp_ctx->dp_ops.dp_lro_rx_cb = cb_obj->dp_lro_rx_cb;
 	dp_ctx->dp_ops.dp_register_rx_offld_flush_cb =
@@ -2391,3 +2403,26 @@ QDF_STATUS ucfg_dp_config_direct_link(struct wlan_objmgr_vdev *vdev,
 				     enable_low_latency);
 }
 #endif
+
+QDF_STATUS ucfg_dp_txrx_init(ol_txrx_soc_handle soc, uint8_t pdev_id,
+			     struct dp_txrx_config *config)
+{
+	return dp_txrx_init(soc, pdev_id, config);
+}
+
+QDF_STATUS ucfg_dp_txrx_deinit(ol_txrx_soc_handle soc)
+{
+	return dp_txrx_deinit(soc);
+}
+
+QDF_STATUS ucfg_dp_txrx_ext_dump_stats(ol_txrx_soc_handle soc,
+				       uint8_t stats_id)
+{
+	return dp_txrx_ext_dump_stats(soc, stats_id);
+}
+
+QDF_STATUS ucfg_dp_txrx_set_cpu_mask(ol_txrx_soc_handle soc,
+				     qdf_cpu_mask *new_mask)
+{
+	return dp_txrx_set_cpu_mask(soc, new_mask);
+}

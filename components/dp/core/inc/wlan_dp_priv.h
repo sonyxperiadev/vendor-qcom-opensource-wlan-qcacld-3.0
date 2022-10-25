@@ -30,7 +30,7 @@
 #include "wlan_dp_cfg.h"
 #include "wlan_dp_objmgr.h"
 #include <cdp_txrx_misc.h>
-#include <dp_rx_thread.h>
+#include <wlan_dp_rx_thread.h>
 #include "qdf_periodic_work.h"
 #include <cds_api.h>
 #include "pld_common.h"
@@ -49,9 +49,9 @@
 #if defined(WLAN_FEATURE_DP_BUS_BANDWIDTH) && defined(FEATURE_RUNTIME_PM)
 /**
  * enum dp_rtpm_tput_policy_state - states to track runtime_pm tput policy
- * @RTPM_TPUT_POLICY_STATE_INVALID: invalid state
- * @RTPM_TPUT_POLICY_STATE_REQUIRED: state indicating runtime_pm is required
- * @RTPM_TPUT_POLICY_STATE_NOT_REQUIRED: state indicating runtime_pm is NOT
+ * @DP_RTPM_TPUT_POLICY_STATE_INVALID: invalid state
+ * @DP_RTPM_TPUT_POLICY_STATE_REQUIRED: state indicating runtime_pm is required
+ * @DP_RTPM_TPUT_POLICY_STATE_NOT_REQUIRED: state indicating runtime_pm is NOT
  * required
  */
 enum dp_rtpm_tput_policy_state {
@@ -77,6 +77,62 @@ struct dp_rtpm_tput_policy_context {
 
 /**
  * struct wlan_dp_psoc_cfg - DP configuration parameters.
+ * @tx_orphan_enable: Enable/Disable tx orphan
+ * @rx_mode: rx mode for packet processing
+ * @tx_comp_loop_pkt_limit: max # of packets to be processed
+ * @rx_reap_loop_pkt_limit: max # of packets to be reaped
+ * @rx_hp_oos_update_limit: max # of HP OOS (out of sync)
+ * @rx_softirq_max_yield_duration_ns: max duration for RX softirq
+ * @periodic_stats_timer_interval: Print selective stats on this specified
+ * interval
+ * @periodic_stats_timer_duration: duration for which periodic timer should run
+ * @bus_bw_super_high_threshold: bus bandwidth super high threshold
+ * @bus_bw_ultra_high_threshold: bus bandwidth ultra high threshold
+ * @bus_bw_very_high_threshold: bus bandwidth very high threshold
+ * @bus_bw_dbs_threshold: bus bandwidth for DBS mode threshold
+ * @bus_bw_high_threshold: bus bandwidth high threshold
+ * @bus_bw_medium_threshold: bandwidth threshold for medium bandwidth
+ * @bus_bw_low_threshold: bandwidth threshold for low bandwidth
+ * @bus_bw_compute_interval: bus bandwidth compute interval
+ * @enable_tcp_delack: enable Dynamic Configuration of Tcp Delayed Ack
+ * @enable_tcp_limit_output: enable TCP limit output
+ * @enable_tcp_adv_win_scale: enable  TCP adv window scaling
+ * @tcp_delack_thres_high: High Threshold inorder to trigger TCP Del Ack
+ * indication
+ * @tcp_delack_thres_low: Low Threshold inorder to trigger TCP Del Ack
+ * indication
+ * @tcp_tx_high_tput_thres: High Threshold inorder to trigger High Tx
+ * Throughput requirement.
+ * @tcp_delack_timer_count: Del Ack Timer Count inorder to trigger TCP Del Ack
+ * indication
+ * @enable_tcp_param_update: enable tcp parameter update
+ * @bus_low_cnt_threshold: Threshold count to trigger low Tput GRO flush skip
+ * @enable_latency_crit_clients: Enable the handling of latency critical clients
+ * * @del_ack_enable: enable Dynamic Configuration of Tcp Delayed Ack
+ * @del_ack_threshold_high: High Threshold inorder to trigger TCP delay ack
+ * @del_ack_threshold_low: Low Threshold inorder to trigger TCP delay ack
+ * @del_ack_timer_value: Timeout value (ms) to send out all TCP del ack frames
+ * @del_ack_pkt_count: The maximum number of TCP delay ack frames
+ * @rx_thread_ul_affinity_mask: CPU mask to affine Rx_thread
+ * @rx_thread_affinity_mask: CPU mask to affine Rx_thread
+ * @cpu_map_list: RPS map for different RX queues
+ * @multicast_replay_filter: enable filtering of replayed multicast packets
+ * @rx_wakelock_timeout: Amount of time to hold wakelock for RX unicast packets
+ * @num_dp_rx_threads: number of dp rx threads
+ * @enable_dp_trace: Enable/Disable DP trace
+ * @dp_trace_config: DP trace configuration
+ * @enable_nud_tracking: Enable/Disable nud tracking
+ * @pkt_bundle_threshold_high: tx bundle high threshold
+ * @pkt_bundle_threshold_low: tx bundle low threshold
+ * @pkt_bundle_timer_value: tx bundle timer value in ms
+ * @pkt_bundle_size: tx bundle size
+ * @dp_proto_event_bitmap: Control for which protocol type diag log should be
+ * sent
+ * @fisa_enable: Enable/Disable FISA
+ * @icmp_req_to_fw_mark_interval: Interval to mark the ICMP Request packet to
+ * be sent to FW.
+ * @lro_enable: Enable/Disable lro
+ * @gro_enable: Enable/Disable gro
  */
 struct wlan_dp_psoc_cfg {
 	bool tx_orphan_enable;
@@ -156,7 +212,7 @@ struct wlan_dp_psoc_cfg {
 };
 
 /**
- * struct tx_rx_histogram - structure to keep track of tx and rx packets
+ * struct tx_rx_histogram: structure to keep track of tx and rx packets
  *				received over 100ms intervals
  * @interval_rx:	# of rx packets received in the last 100ms interval
  * @interval_tx:	# of tx packets received in the last 100ms interval
@@ -169,9 +225,9 @@ struct wlan_dp_psoc_cfg {
  * @next_tx_level:	pld_bus_width_type voting level (high or low)
  *			determined on the basis of tx packets received in the
  *			last 100ms interval
- * @is_rx_pm_qos_high	Capture rx_pm_qos voting
- * @is_tx_pm_qos_high	Capture tx_pm_qos voting
- * @qtime		timestamp when the record is added
+ * @is_rx_pm_qos_high: Capture rx_pm_qos voting
+ * @is_tx_pm_qos_high: Capture tx_pm_qos voting
+ * @qtime: timestamp when the record is added
  *
  * The structure keeps track of throughput requirements of wlan driver.
  * An entry is added if either of next_vote_level, next_rx_level or
@@ -191,6 +247,12 @@ struct tx_rx_histogram {
 /**
  * struct dp_stats - DP stats
  * @tx_rx_stats : Tx/Rx debug stats
+ * @arp_stats: arp debug stats
+ * @dns_stats: dns debug stats
+ * @tcp_stats: tcp debug stats
+ * @icmpv4_stats: icmpv4 debug stats
+ * @dhcp_stats: dhcp debug stats
+ * @eapol_stats: eapol debug stats
  */
 struct dp_stats {
 	struct dp_tx_rx_stats tx_rx_stats;
@@ -203,7 +265,7 @@ struct dp_stats {
 };
 
 /**
- * struct dhcp_phase - Per Peer DHCP Phases
+ * enum dhcp_phase - Per Peer DHCP Phases
  * @DHCP_PHASE_ACK: upon receiving DHCP_ACK/NAK message in REQUEST phase or
  *         DHCP_DELINE message in OFFER phase
  * @DHCP_PHASE_DISCOVER: upon receiving DHCP_DISCOVER message in ACK phase
@@ -219,7 +281,7 @@ enum dhcp_phase {
 };
 
 /**
- * struct dhcp_nego_status - Per Peer DHCP Negotiation Status
+ * enum dhcp_nego_status - Per Peer DHCP Negotiation Status
  * @DHCP_NEGO_STOP: when the peer is in ACK phase or client disassociated
  * @DHCP_NEGO_IN_PROGRESS: when the peer is in DISCOVER or REQUEST
  *         (Renewal process) phase
@@ -229,7 +291,7 @@ enum dhcp_nego_status {
 	DHCP_NEGO_IN_PROGRESS
 };
 
-/**
+/*
  * Pending frame type of EAP_FAILURE, bit number used in "pending_eap_frm_type"
  * of sta_info.
  */
@@ -258,7 +320,7 @@ struct wlan_dp_conn_info {
  * struct link_monitoring - link speed monitoring related info
  * @enabled: Is link speed monitoring feature enabled
  * @rx_linkspeed_threshold: link speed good/bad threshold
- * @is_link_speed_good: true means link speed good, false means bad
+ * @is_rx_linkspeed_good: true means rx link speed good, false means bad
  */
 struct link_monitoring {
 	uint8_t enabled;
@@ -280,8 +342,30 @@ struct direct_link_info {
  * @intf_id: Interface ID
  * @node: list node for membership in the interface list
  * @vdev: object manager vdev context
+ * @vdev_lock: vdev spin lock
  * @dev: netdev reference
- * @stats: Netdev stats
+ * @dp_stats: Device TX/RX statistics
+ * @is_sta_periodic_stats_enabled: Indicate whether to display sta periodic
+ * stats
+ * @periodic_stats_timer_count: count of periodic stats timer
+ * @periodic_stats_timer_counter: periodic stats timer counter
+ * @sta_periodic_stats_lock: sta periodic stats lock
+ * @stats: netdev stats
+ * @con_status: con_status value
+ * @dad: dad value
+ * @pkt_type_bitmap: packet type bitmap value
+ * @track_arp_ip: track ARP ip
+ * @dns_payload: dns payload
+ * @track_dns_domain_len: dns domain length
+ * @track_src_port: track source port value
+ * @track_dest_port: track destination port value
+ * @track_dest_ipv4: track destination ipv4 value
+ * @prev_rx_packets: Rx packets received N/W interface
+ * @prev_tx_packets: Tx packets transmitted on N/W interface
+ * @prev_tx_bytes: Tx bytes transmitted on N/W interface
+ * @prev_fwd_tx_packets: forwarded tx packets count
+ * @prev_fwd_rx_packets: forwarded rx packets count
+ * @nud_tracking: NUD tracking
  * @mic_work: Work to handle MIC error
  * @num_active_task: Active task count
  * @sap_tx_block_mask: SAP TX block mask
@@ -388,20 +472,54 @@ struct dp_direct_link_context {
 
 /**
  * struct wlan_dp_psoc_context - psoc related data required for DP
+ * @psoc: object manager psoc context
  * @pdev: object manager pdev context
+ * @qdf_dev: qdf device
  * @dp_cfg: place holder for DP configuration
+ * @intf_list_lock: DP interfaces list lock
  * @intf_list: DP interfaces list
- * @cb_obj: DP callbacks registered from other modules
+ * @rps: rps
+ * @dynamic_rps: dynamic rps
+ * @enable_rxthread: Enable/Disable rx thread
+ * @enable_dp_rx_threads: Enable/Disable DP rx threads
+ * @napi_enable: Enable/Disable napi
+ * @dp_ops: DP callbacks registered from other modules
  * @sb_ops: South bound direction call backs registered in DP
  * @nb_ops: North bound direction call backs registered in DP
+ * @en_tcp_delack_no_lro: Enable/Disable tcp delack no lro
+ * @no_rx_offload_pkt_cnt: no of rx offload packet count
+ * @no_tx_offload_pkt_cnt: no of tx offload packet count
+ * @is_suspend: to check whether syetem suspend or not
+ * @is_wiphy_suspended: to check whether wiphy suspend or not
+ * @num_latency_critical_clients: num latency critical clients
+ * @high_bus_bw_request: high bus bandwidth request
+ * @bw_vote_time: bus bandwidth vote time
  * @bus_bw_work: work for periodically computing DDR bus bandwidth requirements
  * @cur_vote_level: Current vote level
+ * @prev_no_rx_offload_pkts: no of previous rx offload packets
+ * @prev_rx_offload_pkts: previous rx offload packets
+ * @prev_no_tx_offload_pkts: no of previous tx offload packets
+ * @prev_tx_offload_pkts: previous tx offload packets
+ * @cur_tx_level: Current Tx level
+ * @prev_tx: previous tx
+ * @low_tput_gro_enable: Enable/Disable low tput gro
  * @bus_bw_lock: Bus bandwidth work lock
  * @cur_rx_level: Current Rx level
+ * @bus_low_vote_cnt: bus low level count
+ * @disable_rx_ol_in_concurrency: disable RX offload in concurrency scenarios
+ * @disable_rx_ol_in_low_tput: disable RX offload in tput scenarios
+ * @txrx_hist_idx: txrx histogram index
+ * @rx_high_ind_cnt: rx high_ind count
+ * @receive_offload_cb: receive offload cb
+ * @dp_agg_param: DP aggregation parameter
  * @rtpm_tput_policy_ctx: Runtime Tput policy context
  * @txrx_hist: TxRx histogram
  * @bbm_ctx: bus bandwidth manager context
  * @dp_direct_link_ctx: DP Direct Link context
+ * @rx_skip_qdisc_chk_conc:rx skip qdisc check connection
+ * @arp_connectivity_map: ARP connectiviy map
+ * @rx_wake_lock: rx wake lock
+ * @ol_enable: Enable/Disable offload
  */
 struct wlan_dp_psoc_context {
 	struct wlan_objmgr_psoc *psoc;

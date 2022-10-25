@@ -2120,21 +2120,6 @@ endif #LITHIUM/BERYLLIUM
 
 $(call add-wlan-objs,txrx,$(TXRX_OBJS))
 
-############ TXRX 3.0 ############
-TXRX3.0_DIR :=     core/dp/txrx3.0
-TXRX3.0_INC :=     -I$(WLAN_ROOT)/$(TXRX3.0_DIR)
-
-ifeq (y,$(filter y,$(CONFIG_LITHIUM) $(CONFIG_BERYLLIUM)))
-TXRX3.0_OBJS := $(TXRX3.0_DIR)/dp_txrx.o
-
-ifeq ($(CONFIG_WLAN_FEATURE_DP_RX_THREADS), y)
-TXRX3.0_OBJS += $(TXRX3.0_DIR)/dp_rx_thread.o
-endif
-
-endif #LITHIUM
-
-$(call add-wlan-objs,txrx30,$(TXRX3.0_OBJS))
-
 ifeq (y,$(filter y,$(CONFIG_LITHIUM) $(CONFIG_BERYLLIUM)))
 ############ DP 3.0 ############
 DP_INC := -I$(WLAN_COMMON_INC)/dp/inc \
@@ -2568,6 +2553,10 @@ endif
 
 ifeq (y,$(filter y,$(CONFIG_LITHIUM) $(CONFIG_BERYLLIUM)))
 WLAN_DP_COMP_OBJS += $(DP_COMP_CORE_DIR)/wlan_dp_prealloc.o
+endif
+
+ifeq ($(CONFIG_WLAN_FEATURE_DP_RX_THREADS), y)
+WLAN_DP_COMP_OBJS += $(DP_COMP_CORE_DIR)/wlan_dp_rx_thread.o
 endif
 
 ifeq ($(CONFIG_RX_FISA), y)
@@ -3120,8 +3109,7 @@ INCS +=		$(WMA_INC) \
 		$(REGULATORY_INC) \
 		$(HTC_INC) \
 		$(DFS_INC) \
-		$(WCFG_INC) \
-		$(TXRX3.0_INC)
+		$(WCFG_INC)
 
 INCS +=		$(HIF_INC) \
 		$(BMI_INC) \
