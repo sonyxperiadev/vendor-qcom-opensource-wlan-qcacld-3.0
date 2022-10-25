@@ -209,37 +209,24 @@ lim_get_update_eht_bw_puncture_allow(struct pe_session *session,
 	return QDF_STATUS_SUCCESS;
 }
 
-void lim_process_beacon_eht(struct mac_context *mac_ctx,
-			    struct pe_session *session,
-			    tSchBeaconStruct *bcn_ptr)
+void lim_process_beacon_eht_op(struct pe_session *session,
+			       tDot11fIEeht_op *eht_op)
 {
-	struct wlan_objmgr_vdev *vdev;
-	struct wlan_channel *des_chan;
 	uint16_t ori_punc = 0;
 	enum phy_ch_width ori_bw = CH_WIDTH_INVALID;
 	uint8_t cb_mode;
 	enum phy_ch_width new_bw;
 	bool update_allow;
 	QDF_STATUS status;
+	struct mac_context *mac_ctx;
+	struct wlan_objmgr_vdev *vdev;
 
-	if (!session || !bcn_ptr || !mac_ctx) {
+	if (!session || !eht_op || !session->mac_ctx || !session->vdev) {
 		pe_err("invalid input parameters");
 		return;
 	}
+	mac_ctx = session->mac_ctx;
 	vdev = session->vdev;
-	if (!vdev || wlan_vdev_mlme_get_opmode(vdev) != QDF_STA_MODE ||
-	    !qdf_is_macaddr_equal((struct qdf_mac_addr *)session->bssId,
-				  (struct qdf_mac_addr *)bcn_ptr->bssid))
-		return;
-	des_chan = wlan_vdev_mlme_get_des_chan(vdev);
-	if (!des_chan || !IS_WLAN_PHYMODE_EHT(des_chan->ch_phymode))
-		return;
-
-	if (mlo_is_mld_sta(vdev)) {
-		/* handle beacon IE for 11be mlo case */
-		lim_process_beacon_mlo(mac_ctx, session, bcn_ptr);
-		return;
-	}
 
 	if (wlan_reg_is_24ghz_ch_freq(session->curr_op_freq)) {
 		if (session->force_24ghz_in_ht20)
@@ -261,15 +248,15 @@ void lim_process_beacon_eht(struct mac_context *mac_ctx,
 		return;
 	}
 	/* handle beacon IE for 11be non-mlo case */
-	if (bcn_ptr->eht_op.disabled_sub_chan_bitmap_present) {
+	if (eht_op->disabled_sub_chan_bitmap_present) {
 		ori_punc = QDF_GET_BITS(
-		    bcn_ptr->eht_op.disabled_sub_chan_bitmap[0][0], 0, 8);
+		    eht_op->disabled_sub_chan_bitmap[0][0], 0, 8);
 		ori_punc |= QDF_GET_BITS(
-		    bcn_ptr->eht_op.disabled_sub_chan_bitmap[0][1], 0, 8) << 8;
+		    eht_op->disabled_sub_chan_bitmap[0][1], 0, 8) << 8;
 	}
-	if (bcn_ptr->eht_op.eht_op_information_present) {
+	if (eht_op->eht_op_information_present) {
 		ori_bw = wlan_mlme_convert_eht_op_bw_to_phy_ch_width(
-						bcn_ptr->eht_op.channel_width);
+						eht_op->channel_width);
 		status = lim_get_update_eht_bw_puncture_allow(session, ori_bw,
 							      &new_bw,
 							      &update_allow);
@@ -278,10 +265,37 @@ void lim_process_beacon_eht(struct mac_context *mac_ctx,
 		if (update_allow)
 			wlan_cm_sta_update_bw_puncture(vdev, session->bssId,
 						       ori_punc, ori_bw,
-						       bcn_ptr->eht_op.ccfs0,
-						       bcn_ptr->eht_op.ccfs1,
+						       eht_op->ccfs0,
+						       eht_op->ccfs1,
 						       new_bw);
 	}
+}
+
+void lim_process_beacon_eht(struct mac_context *mac_ctx,
+			    struct pe_session *session,
+			    tSchBeaconStruct *bcn_ptr)
+{
+	struct wlan_objmgr_vdev *vdev;
+	struct wlan_channel *des_chan;
+
+	if (!session || !bcn_ptr || !mac_ctx) {
+		pe_err("invalid input parameters");
+		return;
+	}
+	vdev = session->vdev;
+	if (!vdev || wlan_vdev_mlme_get_opmode(vdev) != QDF_STA_MODE ||
+	    !qdf_is_macaddr_equal((struct qdf_mac_addr *)session->bssId,
+				  (struct qdf_mac_addr *)bcn_ptr->bssid))
+		return;
+	des_chan = wlan_vdev_mlme_get_des_chan(vdev);
+	if (!des_chan || !IS_WLAN_PHYMODE_EHT(des_chan->ch_phymode))
+		return;
+
+	lim_process_beacon_eht_op(session, &bcn_ptr->eht_op);
+
+	if (mlo_is_mld_sta(vdev))
+		/* handle beacon IE for 802.11be mlo case */
+		lim_process_beacon_mlo(mac_ctx, session, bcn_ptr);
 }
 #endif
 

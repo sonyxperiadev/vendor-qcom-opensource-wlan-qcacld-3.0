@@ -438,11 +438,27 @@ void lim_cleanup_mlm(struct mac_context *);
 void lim_process_beacon_eht(struct mac_context *mac_ctx,
 			    struct pe_session *session,
 			    tSchBeaconStruct *bcn_ptr);
+
+/**
+ * lim_process_beacon_eht_op() - process beacon 11be eht op IE
+ * @session: pe session
+ * @eht_op: pointer to eht op IE
+ *
+ * Return none
+ */
+void lim_process_beacon_eht_op(struct pe_session *session,
+			       tDot11fIEeht_op *eht_op);
 #else
 static inline
 void lim_process_beacon_eht(struct mac_context *mac_ctx,
 			    struct pe_session *session,
 			    tSchBeaconStruct *bcn_ptr)
+{
+}
+
+static inline
+void lim_process_beacon_eht_op(struct pe_session *session,
+			       tDot11fIEeht_op *eht_op)
 {
 }
 #endif
