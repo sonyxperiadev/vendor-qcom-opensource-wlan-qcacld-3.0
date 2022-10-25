@@ -108,7 +108,7 @@
 #include "cfg_mlme_threshold.h"
 #include "wlan_pmo_cfg.h"
 #include "wlan_pmo_ucfg_api.h"
-#include "dp_txrx.h"
+#include "wlan_dp_rx_thread.h"
 #include "wlan_fwol_ucfg_api.h"
 #include "wlan_hdd_unit_test.h"
 #include "wlan_hdd_thermal.h"

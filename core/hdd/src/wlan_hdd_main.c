@@ -141,8 +141,6 @@
 #include "sme_power_save_api.h"
 #include "enet.h"
 #include <cdp_txrx_cmn_struct.h>
-#include <dp_txrx.h>
-#include <dp_rx_thread.h>
 #include "wlan_hdd_sysfs.h"
 #include "wlan_disa_ucfg_api.h"
 #include "wlan_disa_obj_mgmt_api.h"
@@ -11045,8 +11043,8 @@ int hdd_wlan_dump_stats(struct hdd_adapter *adapter, int stats_id)
 		}
 		break;
 	case CDP_DP_RX_THREAD_STATS:
-		dp_txrx_ext_dump_stats(cds_get_context(QDF_MODULE_ID_SOC),
-				       CDP_DP_RX_THREAD_STATS);
+		ucfg_dp_txrx_ext_dump_stats(cds_get_context(QDF_MODULE_ID_SOC),
+					    CDP_DP_RX_THREAD_STATS);
 		break;
 	case CDP_DISCONNECT_STATS:
 		sme_display_disconnect_stats(hdd_ctx->mac_handle,

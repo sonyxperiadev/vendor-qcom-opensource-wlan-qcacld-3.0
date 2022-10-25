@@ -104,7 +104,6 @@
 #include "wma_sar_public_structs.h"
 #include "wlan_mlme_ucfg_api.h"
 #include "pld_common.h"
-#include <dp_txrx.h>
 #include "wlan_cm_roam_public_struct.h"
 
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
@@ -1156,7 +1155,7 @@ enum udp_qos_upgrade {
  * @motion_det_in_progress:
  * @motion_det_baseline_value:
  * @last_disconnect_reason: Last disconnected internal reason code
- *                          as per enum qca_disconnect_reason_codes
+ * as per enum qca_disconnect_reason_codes
  * @connect_req_status: Last disconnected internal status code
  *                          as per enum qca_sta_connect_fail_reason_codes
  * @peer_cleanup_done:
@@ -1168,12 +1167,12 @@ enum udp_qos_upgrade {
  * @tso_csum_feature_enabled: Indicate if TSO and checksum offload features
  *                            are enabled or not
  * @netdev_features_update_work: work for handling the netdev features update
- *				 for the adapter.
+ * for the adapter.
  * @netdev_features_update_work_status: status for netdev_features_update_work
  * @net_dev_hold_ref_count:
  * @delete_in_progress: Flag to indicate that the adapter delete is in
- *			progress, and any operation using rtnl lock inside
- *			the driver can be avoided/skipped.
+ * progress, and any operation using rtnl lock inside
+ * the driver can be avoided/skipped.
  * @is_virtual_iface: Indicates that netdev is called from virtual interface
  * @big_data_stats:
  * @mon_adapter: hdd_adapter of monitor mode.
@@ -1199,7 +1198,7 @@ struct hdd_adapter {
 
 	struct work_struct ipv4_notifier_work;
 #ifdef WLAN_NS_OFFLOAD
-	/** IPv6 notifier callback for handling NS offload on change in IP */
+	/* IPv6 notifier callback for handling NS offload on change in IP */
 	struct work_struct ipv6_notifier_work;
 #endif
 

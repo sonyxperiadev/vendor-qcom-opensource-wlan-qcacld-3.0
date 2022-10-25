@@ -76,7 +76,6 @@
 #include "cds_utils.h"
 #include "wlan_hdd_packet_filter_api.h"
 #include "wlan_cfg80211_scan.h"
-#include <dp_txrx.h>
 #include "wlan_ipa_ucfg_api.h"
 #include <wlan_cfg80211_mc_cp_stats.h>
 #include "wlan_p2p_ucfg_api.h"
@@ -1866,8 +1865,6 @@ QDF_STATUS hdd_wlan_shutdown(void)
 
 	wlan_hdd_rx_thread_resume(hdd_ctx);
 
-	dp_txrx_resume(cds_get_context(QDF_MODULE_ID_SOC));
-
 	if (ucfg_pkt_capture_get_mode(hdd_ctx->psoc) !=
 						PACKET_CAPTURE_MODE_DISABLE) {
 		adapter = hdd_get_adapter(hdd_ctx, QDF_MONITOR_MODE);
@@ -2302,9 +2299,6 @@ static int __wlan_hdd_cfg80211_resume_wlan(struct wiphy *wiphy)
 	if (ucfg_dp_is_rx_common_thread_enabled(hdd_ctx->psoc))
 		wlan_hdd_rx_thread_resume(hdd_ctx);
 
-	if (ucfg_dp_is_rx_threads_enabled(hdd_ctx->psoc))
-		dp_txrx_resume(cds_get_context(QDF_MODULE_ID_SOC));
-
 	if (ucfg_pkt_capture_get_mode(hdd_ctx->psoc) !=
 						PACKET_CAPTURE_MODE_DISABLE) {
 		adapter = hdd_get_adapter(hdd_ctx, QDF_MONITOR_MODE);
@@ -2610,11 +2604,6 @@ static int __wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
 			goto resume_ol_rx;
 	}
 
-	if (ucfg_dp_is_rx_threads_enabled(hdd_ctx->psoc)) {
-		if (dp_txrx_suspend(cds_get_context(QDF_MODULE_ID_SOC)))
-			goto resume_ol_rx;
-	}
-
 	if (ucfg_pkt_capture_get_mode(hdd_ctx->psoc) !=
 						PACKET_CAPTURE_MODE_DISABLE) {
 		adapter = hdd_get_adapter(hdd_ctx, QDF_MONITOR_MODE);
@@ -2649,9 +2638,6 @@ static int __wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
 	return 0;
 
 resume_dp_thread:
-	if (ucfg_dp_is_rx_threads_enabled(hdd_ctx->psoc))
-		dp_txrx_resume(cds_get_context(QDF_MODULE_ID_SOC));
-
 	/* Resume packet capture MON thread */
 	if (ucfg_pkt_capture_get_mode(hdd_ctx->psoc) !=
 						PACKET_CAPTURE_MODE_DISABLE) {
