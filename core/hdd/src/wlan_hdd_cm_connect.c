@@ -525,6 +525,8 @@ bool wlan_hdd_cm_handle_sap_sta_dfs_conc(struct hdd_context *hdd_ctx,
 	struct hdd_hostapd_state *hostapd_state;
 	QDF_STATUS status;
 	qdf_freq_t ch_freq = 0;
+	enum phy_ch_width ch_bw;
+	enum channel_state ch_state;
 	struct scan_filter *scan_filter;
 	qdf_list_t *list = NULL;
 	qdf_list_node_t *cur_lst = NULL;
@@ -606,10 +608,29 @@ def_chan:
 	 * better move SAP to STA's channel to make scc, so we have room
 	 * for 3port MCC scenario.
 	 */
+	ch_bw = hdd_ap_ctx->sap_config.ch_width_orig;
 	if (!ch_freq || wlan_reg_is_dfs_for_freq(hdd_ctx->pdev, ch_freq) ||
-	    !policy_mgr_is_safe_channel(hdd_ctx->psoc, ch_freq))
+	    !policy_mgr_is_safe_channel(hdd_ctx->psoc, ch_freq)) {
 		ch_freq = policy_mgr_get_nondfs_preferred_channel(
 			hdd_ctx->psoc, PM_SAP_MODE, true);
+		if (WLAN_REG_IS_5GHZ_CH_FREQ(ch_freq) &&
+		    ch_bw > CH_WIDTH_20MHZ) {
+			ch_state =
+				wlan_reg_get_5g_bonded_channel_state_for_freq(
+					hdd_ctx->pdev, ch_freq, ch_bw);
+			while (ch_bw > CH_WIDTH_20MHZ &&
+			       ch_state != CHANNEL_STATE_ENABLE) {
+				ch_bw =
+				wlan_reg_get_next_lower_bandwidth(ch_bw);
+				ch_state =
+				wlan_reg_get_5g_bonded_channel_state_for_freq(
+					hdd_ctx->pdev, ch_freq, ch_bw);
+			}
+			hdd_debug("bw change from %d to %d",
+				  hdd_ap_ctx->sap_config.ch_width_orig,
+				  ch_bw);
+		}
+	}
 
 	hostapd_state = WLAN_HDD_GET_HOSTAP_STATE_PTR(ap_adapter);
 	qdf_event_reset(&hostapd_state->qdf_event);
@@ -618,7 +639,7 @@ def_chan:
 
 	status = wlansap_set_channel_change_with_csa(
 			WLAN_HDD_GET_SAP_CTX_PTR(ap_adapter), ch_freq,
-			hdd_ap_ctx->sap_config.ch_width_orig, false);
+			ch_bw, false);
 
 	if (QDF_STATUS_SUCCESS != status) {
 		hdd_err("Set channel with CSA IE failed, can't allow STA");
