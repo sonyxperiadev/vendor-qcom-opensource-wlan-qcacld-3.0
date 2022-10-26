@@ -2268,6 +2268,110 @@ policy_mgr_get_index_for_ml_sta_sap_dbs(
 
 /**
  * policy_mgr_get_index_for_ml_sta_sap_sbs() - Find the index for next
+ * connection for ML STA + SAP, in case current HW mode is SBS but ML STA is
+ * with 2 GHz + 5/6 GHz.
+ * @pm_ctx: policy manager context
+ * @index: Index to return for next connection
+ * @sap_freq: SAP freq
+ * @sta_freq_list: STA freq list
+ * @ml_sta_idx: ML STA index in freq_list
+ *
+ * This function finds the index for next connection for ML STA + SAP,
+ * in case current HW mode is SBS but ML STA is with 2 GHz + 5/6 GHz.
+ *
+ * Return: none
+ */
+static void policy_mgr_get_index_for_ml_sta_sap_hwmode_sbs(
+	struct policy_mgr_psoc_priv_obj *pm_ctx,
+	enum policy_mgr_three_connection_mode *index, qdf_freq_t sap_freq,
+	qdf_freq_t *sta_freq_list, uint8_t *ml_sta_idx)
+{
+	bool sbs_24_shared_high_support =
+		policy_mgr_sbs_24_shared_with_high_5(pm_ctx);
+	bool sbs_24_shared_low_support =
+		policy_mgr_sbs_24_shared_with_low_5(pm_ctx);
+	qdf_freq_t sbs_cut_off_freq, ml_sta_5g_freq;
+	bool ml_sta_5g_low;
+
+	/* HW supports sbs but ml sta 2 home channels are not in sbs frequency
+	 * separation by check policy_mgr_are_sbs_chan.
+	 * It means one ml sta is 2.4 GHz, the other is 5/6 GHz.
+	 * The combinations handled by this API:
+	 * 2.4 GHz band    |  5 GHz low band  | 5/6 GHz high band |   PCL list
+	 * ----------------------------------------------------------------------
+	 * ML STA          |  ML STA+SAP      |               |   5 GHz High + 2.4 GHz
+	 * ML STA          |  ML STA+SAP      |               |   2.4 GHz(nhss)
+	 * ML STA          |  ML STA          | SAP           |   5 GHz Low + 2.4 GHz
+	 * ML STA          |  ML STA          | SAP           |   2.4 GHz (nhss)
+	 * ML STA          |  SAP             | ML STA        |   5 GHz High+ 2.4 GHz
+	 * ML STA          |  SAP             | ML STA        |   2.4 GHz (nlss)
+	 * ML STA          |                  | ML STA+SAP    |   5 GHz Low + 2.4 GHz
+	 * ML STA          |                  | ML STA+SAP    |   2.4 GHz (nlss)
+	 * ML STA+SAP      |  ML STA          |               |   5 GHz Low+5 GHz High
+	 * ML STA+SAP      |                  | ML STA        |   5 GHz Low+5 GHz High
+	 *
+	 * nhss: no high share supported
+	 * nlss: no low share supported
+	 */
+
+	if (!WLAN_REG_IS_24GHZ_CH_FREQ(sta_freq_list[ml_sta_idx[0]]) &&
+	    !WLAN_REG_IS_24GHZ_CH_FREQ(sta_freq_list[ml_sta_idx[1]])) {
+		policy_mgr_err("unexpected ml sta home freq to handle (%d %d)",
+			       sta_freq_list[ml_sta_idx[0]],
+			       sta_freq_list[ml_sta_idx[1]]);
+		return;
+	}
+	if (!sbs_24_shared_high_support && !sbs_24_shared_high_support) {
+		policy_mgr_err("unexpected sbs mode: low share %d high share %d",
+			       sbs_24_shared_low_support,
+			       sbs_24_shared_high_support);
+		return;
+	}
+	sbs_cut_off_freq =  policy_mgr_get_sbs_cut_off_freq(pm_ctx->psoc);
+	if (!sbs_cut_off_freq) {
+		policy_mgr_err("Invalid cutoff freq");
+		return;
+	}
+
+	if (!WLAN_REG_IS_24GHZ_CH_FREQ(sta_freq_list[ml_sta_idx[0]]))
+		ml_sta_5g_freq = sta_freq_list[ml_sta_idx[0]];
+	else
+		ml_sta_5g_freq = sta_freq_list[ml_sta_idx[1]];
+	if (ml_sta_5g_freq < sbs_cut_off_freq)
+		ml_sta_5g_low = true;
+	else
+		ml_sta_5g_low = false;
+
+	if (WLAN_REG_IS_24GHZ_CH_FREQ(sap_freq)) {
+		/* pcl 5 GHz Low+5 GHz High - PM_SCC_ON_5_CH_5G */
+		*index = PM_24_5_PLUS_5_LOW_N_HIGH_SHARE_SBS;
+	} else if (sap_freq < sbs_cut_off_freq) {
+		if ((ml_sta_5g_low && sbs_24_shared_high_support) ||
+		    (!ml_sta_5g_low && sbs_24_shared_low_support))
+			/* pcl 5 GHz High + 2.4 GHz -
+			 * PM_SCC_ON_5G_HIGH_5G_HIGH_PLUS_SHARED_2G
+			 */
+			*index = PM_STA_24_STA_5_MCC_SAP_5_LOW_SBS;
+		else
+			*index = PM_24_5_PLUS_5_LOW_OR_HIGH_SHARE_SBS;
+	} else {
+		if ((ml_sta_5g_low && sbs_24_shared_high_support) ||
+		    (!ml_sta_5g_low && sbs_24_shared_low_support))
+			/* pcl 5 GHz Low + 2.4 GHz -
+			 * PM_SCC_ON_5G_LOW_5G_LOW_PLUS_SHARED_2G
+			 */
+			*index = PM_STA_24_STA_5_MCC_SAP_5_HIGH_SBS;
+		else
+			*index = PM_24_5_PLUS_5_LOW_OR_HIGH_SHARE_SBS;
+	}
+	policy_mgr_debug("4th index %d sap freq %d ml sta 5g %d sbs_cut_off_freq %d support high share %d low share %d",
+			 *index, sap_freq, ml_sta_5g_freq, sbs_cut_off_freq,
+			 sbs_24_shared_high_support,
+			 sbs_24_shared_low_support);
+}
+
+/**
+ * policy_mgr_get_index_for_ml_sta_sap_sbs() - Find the index for next
  * connection for ML STA + SAP, in case current HW mode is SBS or ML STA is
  * with 5 GHZ + 5 GHZ/6 GHZ SBS separation.
  * @pm_ctx: policy manager context
@@ -2302,6 +2406,12 @@ static void policy_mgr_get_index_for_ml_sta_sap_sbs(
 				     sta_freq_list[ml_sta_idx[0]]) &&
 	    !policy_mgr_are_sbs_chan(pm_ctx->psoc, sap_freq,
 				     sta_freq_list[ml_sta_idx[1]])) {
+		if (policy_mgr_is_current_hwmode_sbs(pm_ctx->psoc)) {
+			policy_mgr_get_index_for_ml_sta_sap_hwmode_sbs(
+				pm_ctx, index, sap_freq, sta_freq_list,
+				ml_sta_idx);
+			return;
+		}
 		policy_mgr_err("SAP freq (%d) and ML STA freq %d and %d, none of the 2 connections/3 vdevs are leading to SBS",
 			       sap_freq,
 			       sta_freq_list[ml_sta_idx[0]],
@@ -3812,6 +3922,7 @@ bool policy_mgr_is_3rd_conn_on_same_band_allowed(struct wlan_objmgr_psoc *psoc,
 	case PM_SCC_ON_5_5G_SCC_ON_24G:
 	case PM_SCC_ON_24_SCC_ON_5_24G:
 	case PM_SCC_ON_24_SCC_ON_5_5G:
+	case PM_SCC_ON_24_CH_24G:
 	case PM_SCC_ON_5_SCC_ON_24:
 	case PM_SCC_ON_24_SCC_ON_5:
 	case PM_24G_SCC_CH_SBS_CH:

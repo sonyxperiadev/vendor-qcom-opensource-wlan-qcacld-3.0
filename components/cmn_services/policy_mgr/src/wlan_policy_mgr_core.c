@@ -2465,7 +2465,9 @@ get_sub_channels(struct wlan_objmgr_psoc *psoc,
  * @chlist_len_5: 5g channel list length
  * @chlist_6: 6g channel list
  * @chlist_len_6: 6g channel list length
- * order: pcl order
+ * @order: pcl order
+ * @high_5_band_scc_present: 5 GHz high band connection present
+ * @low_5_band_scc_present: 5 GHz low band connection present
  *
  * Get the pcl list based on current sbs concurrency
  *
@@ -2478,7 +2480,9 @@ add_sbs_chlist_to_pcl(struct wlan_objmgr_psoc *psoc,
 		      bool skip_dfs_channel, bool skip_6gh_channel,
 		      const uint32_t *chlist_5, uint8_t chlist_len_5,
 		      const uint32_t *chlist_6, uint8_t chlist_len_6,
-		      enum policy_mgr_pcl_channel_order order)
+		      enum policy_mgr_pcl_channel_order order,
+		      bool *high_5_band_scc_present,
+		      bool *low_5_band_scc_present)
 {
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
 	qdf_freq_t sbs_cut_off_freq;
@@ -2513,6 +2517,7 @@ add_sbs_chlist_to_pcl(struct wlan_objmgr_psoc *psoc,
 				pcl_weights[*index] =
 						WEIGHT_OF_GROUP1_PCL_CHANNELS;
 				(*index)++;
+				*low_5_band_scc_present = true;
 				break;
 			}
 
@@ -2565,6 +2570,7 @@ add_sbs_chlist_to_pcl(struct wlan_objmgr_psoc *psoc,
 				pcl_weights[*index] =
 					WEIGHT_OF_GROUP1_PCL_CHANNELS;
 				(*index)++;
+				*high_5_band_scc_present = true;
 				break;
 			}
 
@@ -3134,6 +3140,8 @@ QDF_STATUS policy_mgr_get_channel_list(struct wlan_objmgr_psoc *psoc,
 	uint32_t *channel_list, *channel_list_24, *channel_list_5,
 		 *sbs_freqs, *channel_list_6, *scc_freqs, *rest_freqs;
 	uint32_t sbs_num, scc_num, rest_num;
+	bool high_5_band_scc_present = false;
+	bool low_5_band_scc_present = false;
 
 	pm_ctx = policy_mgr_get_context(psoc);
 	if (!pm_ctx) {
@@ -3366,6 +3374,18 @@ QDF_STATUS policy_mgr_get_channel_list(struct wlan_objmgr_psoc *psoc,
 					 POLICY_MGR_PCL_GROUP_ID3_ID4,
 					 channel_list_5, chan_index_5,
 					 channel_list_6, chan_index_6);
+		status = QDF_STATUS_SUCCESS;
+		break;
+	case PM_SCC_ON_24_CH_24G:
+		policy_mgr_get_connection_channels(psoc, mode,
+						   POLICY_MGR_PCL_ORDER_2G,
+						   true,
+						   POLICY_MGR_PCL_GROUP_ID1_ID2,
+						   pcl_channels, pcl_weights,
+						   pcl_sz, len);
+		policy_mgr_add_24g_to_pcl(pcl_channels, pcl_weights, pcl_sz,
+					  len, WEIGHT_OF_GROUP3_PCL_CHANNELS,
+					  channel_list_24, chan_index_24);
 		status = QDF_STATUS_SUCCESS;
 		break;
 	case PM_SCC_ON_5_CH_5G:
@@ -3722,12 +3742,17 @@ QDF_STATUS policy_mgr_get_channel_list(struct wlan_objmgr_psoc *psoc,
 				      skip_6ghz_channel,
 				      channel_list_5, chan_index_5,
 				      channel_list_6, chan_index_6,
-				      POLICY_MGR_PCL_ORDER_SCC_5G_LOW_5G_LOW);
+				      POLICY_MGR_PCL_ORDER_SCC_5G_LOW_5G_LOW,
+				      &high_5_band_scc_present,
+				      &low_5_band_scc_present);
+
 		/*
 		 * If no 2.4 GHZ connection is present and If 2.4 GHZ is shared
-		 * with 5 GHz low freq then 2.4 GHz can be added as well
+		 * with 5 GHz low freq then 2.4 GHz can be added as well.
+		 * If no 5 GHz low band connection, 2.4 GHz can be added.
 		 */
-		if (!policy_mgr_2ghz_connection_present(pm_ctx) &&
+		if ((!policy_mgr_2ghz_connection_present(pm_ctx) ||
+		     !low_5_band_scc_present) &&
 		    policy_mgr_sbs_24_shared_with_low_5(pm_ctx))
 			add_chlist_to_pcl(pm_ctx->pdev,
 					  pcl_channels, pcl_weights, pcl_sz,
@@ -3743,12 +3768,16 @@ QDF_STATUS policy_mgr_get_channel_list(struct wlan_objmgr_psoc *psoc,
 				      skip_6ghz_channel,
 				      channel_list_5, chan_index_5,
 				      channel_list_6, chan_index_6,
-				      POLICY_MGR_PCL_ORDER_SCC_5G_HIGH_5G_HIGH);
+				      POLICY_MGR_PCL_ORDER_SCC_5G_HIGH_5G_HIGH,
+				      &high_5_band_scc_present,
+				      &low_5_band_scc_present);
 		/*
 		 * If no 2.4 GHZ connection is present and if 2.4 GHZ is shared
 		 * with 5 GHz High freq then 2.4 GHz can be added as well
+		 * If no 5 GHz high band connection, 2.4 GHz can be added.
 		 */
-		if (!policy_mgr_2ghz_connection_present(pm_ctx) &&
+		if ((!policy_mgr_2ghz_connection_present(pm_ctx) ||
+		     !high_5_band_scc_present) &&
 		    policy_mgr_sbs_24_shared_with_high_5(pm_ctx))
 			add_chlist_to_pcl(pm_ctx->pdev,
 					  pcl_channels, pcl_weights, pcl_sz,

@@ -2021,6 +2021,11 @@ fourth_connection_pcl_dbs_sbs_table
 			 PM_SCC_ON_5_CH_5G},
 	[PM_SAP_MODE] = {PM_SCC_ON_5_CH_5G, PM_SCC_ON_5_CH_5G,
 			 PM_SCC_ON_5_CH_5G} },
+	[PM_24_5_PLUS_5_LOW_OR_HIGH_SHARE_SBS] = {
+	[PM_STA_MODE] = {PM_SCC_ON_24_CH_24G, PM_SCC_ON_24_CH_24G,
+			PM_SCC_ON_24_CH_24G},
+	[PM_SAP_MODE] = {PM_SCC_ON_24_CH_24G, PM_SCC_ON_24_CH_24G,
+			PM_SCC_ON_24_CH_24G} },
 };
 #endif
 #endif
