@@ -5556,6 +5556,12 @@ void lim_calculate_tpc(struct mac_context *mac,
 		num_pwr_levels = mlme_obj->reg_tpc_obj.num_pwr_levels;
 		is_psd_power = mlme_obj->reg_tpc_obj.is_psd_power;
 	} else {
+		/**
+		 * Set is_psd_power based on reg channel list if it is a 6 GHz
+		 * channel and TPE IE is absent.
+		 */
+		if (is_6ghz_freq)
+			is_psd_power = wlan_reg_is_6g_psd_power(mac->pdev);
 		num_pwr_levels = lim_get_num_pwr_levels(is_psd_power,
 							session->ch_width);
 	}
@@ -5590,14 +5596,8 @@ void lim_calculate_tpc(struct mac_context *mac,
 				mlme_obj->reg_tpc_obj.frequency[i] =
 						start_freq + (20 * i);
 			} else {
-				wlan_reg_set_channel_params_for_pwrmode(
-					mac->pdev, oper_freq, 0, &ch_params,
-					REG_CURRENT_PWR_MODE);
-				mlme_obj->reg_tpc_obj.frequency[i] =
-					ch_params.mhz_freq_seg0;
-				if (ch_params.ch_width != CH_WIDTH_INVALID)
-					ch_params.ch_width =
-						get_next_higher_bw[ch_params.ch_width];
+				/* Use operating frequency to fetch EIRP pwr */
+				mlme_obj->reg_tpc_obj.frequency[i] = oper_freq;
 			}
 			if (is_6ghz_freq) {
 				if (LIM_IS_STA_ROLE(session)) {
@@ -5616,7 +5616,19 @@ void lim_calculate_tpc(struct mac_context *mac,
 				}
 			}
 		}
-		mlme_obj->reg_tpc_obj.reg_max[i] = reg_max;
+		/* Check for regulatory channel power. If it is zero due to
+		 * invalid frequency or other inputs, then assign the regulatory
+		 * power of operating frequency to reg_max.
+		 */
+		if (reg_max) {
+			mlme_obj->reg_tpc_obj.reg_max[i] = reg_max;
+		} else {
+			pe_debug("Reg power due to invalid freq: %d",
+				 mlme_obj->reg_tpc_obj.frequency[i]);
+			reg_max = mlme_obj->reg_tpc_obj.reg_max[0];
+			mlme_obj->reg_tpc_obj.reg_max[i] = reg_max;
+		}
+
 		mlme_obj->reg_tpc_obj.chan_power_info[i].chan_cfreq =
 					mlme_obj->reg_tpc_obj.frequency[i];
 
@@ -5665,8 +5677,9 @@ void lim_calculate_tpc(struct mac_context *mac,
 		mlme_obj->reg_tpc_obj.chan_power_info[i].tx_power =
 						(uint8_t)max_tx_power;
 
-		pe_debug("freq: %d max_tx_power: %d",
-			 mlme_obj->reg_tpc_obj.frequency[i], max_tx_power);
+		pe_debug("freq: %d reg power: %d, max_tx_power: %d",
+			 mlme_obj->reg_tpc_obj.frequency[i], reg_max,
+			 max_tx_power);
 	}
 
 	mlme_obj->reg_tpc_obj.num_pwr_levels = num_pwr_levels;
