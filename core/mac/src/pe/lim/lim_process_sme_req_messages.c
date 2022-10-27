@@ -5662,18 +5662,6 @@ void lim_calculate_tpc(struct mac_context *mac,
 			max_tx_power = QDF_MIN(max_tx_power, tpe_power);
 			pe_debug("TPE: %d", tpe_power);
 		}
-
-		/** If firmware updated max tx power is non zero,
-		 * then allocate the min of firmware updated ap tx
-		 * power and max power derived from above mentioned
-		 * parameters.
-		 */
-		if (mlme_obj->mgmt.generic.tx_pwrlimit)
-			max_tx_power =
-				QDF_MIN(max_tx_power, (int8_t)
-					mlme_obj->mgmt.generic.tx_pwrlimit);
-		else
-			pe_err("HW power limit from FW is zero");
 		mlme_obj->reg_tpc_obj.chan_power_info[i].tx_power =
 						(uint8_t)max_tx_power;
 
@@ -5686,9 +5674,8 @@ void lim_calculate_tpc(struct mac_context *mac,
 	mlme_obj->reg_tpc_obj.eirp_power = reg_max;
 	mlme_obj->reg_tpc_obj.power_type_6g = ap_power_type_6g;
 
-	pe_debug("num_pwr_levels: %d, is_psd_power: %d, total eirp_power: %d, ap_pwr_type: %d tx_pwrlimit: %d",
-		 num_pwr_levels, is_psd_power, reg_max, ap_power_type_6g,
-		 mlme_obj->mgmt.generic.tx_pwrlimit);
+	pe_debug("num_pwr_levels: %d, is_psd_power: %d, total eirp_power: %d, ap_pwr_type: %d",
+		 num_pwr_levels, is_psd_power, reg_max, ap_power_type_6g);
 }
 
 bool send_disassoc_frame = 1;
