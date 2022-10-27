@@ -4934,8 +4934,8 @@ void hdd_update_dynamic_mac(struct hdd_context *hdd_ctx,
 }
 
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(CFG80211_11BE_BASIC)
-static void
-hdd_set_mld_address(struct hdd_adapter *adapter, struct hdd_context *hdd_ctx,
+void
+hdd_set_mld_address(struct hdd_adapter *adapter,
 		    struct qdf_mac_addr *mac_addr)
 {
 	int i;
@@ -4943,9 +4943,8 @@ hdd_set_mld_address(struct hdd_adapter *adapter, struct hdd_context *hdd_ctx,
 	struct hdd_adapter *link_adapter;
 	struct hdd_mlo_adapter_info *mlo_adapter_info;
 
-	ucfg_psoc_mlme_get_11be_capab(hdd_ctx->psoc, &eht_capab);
-	if (adapter->device_mode == QDF_STA_MODE &&
-	    adapter->mlo_adapter_info.is_ml_adapter && eht_capab) {
+	ucfg_psoc_mlme_get_11be_capab(adapter->hdd_ctx->psoc, &eht_capab);
+	if (adapter->mlo_adapter_info.is_ml_adapter && eht_capab) {
 		mlo_adapter_info = &adapter->mlo_adapter_info;
 		for (i = 0; i < WLAN_MAX_MLD; i++) {
 			link_adapter = mlo_adapter_info->link_adapter[i];
@@ -4994,12 +4993,6 @@ hdd_get_netdev_by_vdev_mac(struct qdf_mac_addr *mac_addr)
 	return adapter->dev;
 }
 #else
-static void
-hdd_set_mld_address(struct hdd_adapter *adapter, struct hdd_context *hdd_ctx,
-		    struct qdf_mac_addr *mac_addr)
-{
-}
-
 static qdf_netdev_t
 hdd_get_netdev_by_vdev_mac(struct qdf_mac_addr *mac_addr)
 {
@@ -5274,12 +5267,9 @@ static int __hdd_set_mac_address(struct net_device *dev, void *addr)
 			return ret;
 	}
 
-	ucfg_psoc_mlme_get_11be_capab(hdd_ctx->psoc, &eht_capab);
-	if (hdd_adapter_is_ml_adapter(adapter) && eht_capab)
-		hdd_set_mld_address(adapter, hdd_ctx, &mac_addr);
+	hdd_set_mld_address(adapter, &mac_addr);
 
 	hdd_update_dynamic_mac(hdd_ctx, &adapter->mac_addr, &mac_addr);
-
 	ucfg_dp_update_inf_mac(hdd_ctx->psoc, &adapter->mac_addr, &mac_addr);
 	memcpy(&adapter->mac_addr, psta_mac_addr->sa_data, ETH_ALEN);
 	qdf_net_update_net_device_dev_addr(dev, psta_mac_addr->sa_data,

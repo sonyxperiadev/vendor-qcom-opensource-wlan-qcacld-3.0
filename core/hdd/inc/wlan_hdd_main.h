@@ -4081,6 +4081,31 @@ int wlan_hdd_set_mon_chan(struct hdd_adapter *adapter, qdf_freq_t freq,
 }
 #endif
 
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(CFG80211_11BE_BASIC)
+/**
+ *  hdd_set_mld_address() - Set the MLD address of the adapter
+ *  @adapter: Handle to adapter
+ *  @mac_addr: MAC address to be copied
+ *
+ *  The function copies the MAC address sent in @mac_addr to
+ *  the adapter's MLD address and the MLD address of each
+ *  link adapter mapped of the @adapter.
+ *  The mode of operation must be 11be capable and @adapter
+ *  has to be ML type.
+ *
+ *  Return: void
+ */
+void
+hdd_set_mld_address(struct hdd_adapter *adapter,
+		    struct qdf_mac_addr *mac_addr);
+#else
+static inline void
+hdd_set_mld_address(struct hdd_adapter *adapter,
+		    struct qdf_mac_addr *mac_addr)
+{
+}
+#endif
+
 /**
  * hdd_wlan_get_version() - Get version information
  * @hdd_ctx: Global HDD context
