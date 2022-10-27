@@ -2433,6 +2433,15 @@ static int _wlan_hdd_cfg80211_resume_wlan(struct wiphy *wiphy)
 		return 0;
 	}
 
+	/**
+	 * Return success if recovery is in progress, otherwise, linux kernel
+	 * will shutdown all interfaces in wiphy_resume.
+	 */
+	if (cds_is_driver_recovering()) {
+		hdd_debug("Recovery in progress");
+		return 0;
+	}
+
 	errno = wlan_hdd_validate_context(hdd_ctx);
 	if (errno)
 		return errno;
