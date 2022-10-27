@@ -192,6 +192,7 @@
 #include "os_if_dp.h"
 #include "os_if_dp_lro.h"
 #include "wlan_mlo_mgr_sta.h"
+#include <wlan_mlo_mgr_peer.h>
 #include "wlan_hdd_coap.h"
 #include "wlan_hdd_tdls.h"
 #include "wlan_psoc_mlme_api.h"
@@ -20562,6 +20563,74 @@ QDF_STATUS wlan_hdd_send_key_vdev(struct wlan_objmgr_vdev *vdev,
 
 #if defined(WLAN_FEATURE_11BE_MLO) && \
 defined(CFG80211_SINGLE_NETDEV_MULTI_LINK_SUPPORT)
+static struct wlan_objmgr_peer *
+wlan_hdd_ml_sap_get_peer(struct wlan_objmgr_vdev *vdev,
+			 uint8_t *peer_mld)
+{
+	struct wlan_mlo_dev_context *ap_mlo_dev_ctx;
+	struct wlan_mlo_peer_list *mlo_peer_list;
+	struct wlan_mlo_peer_context *ml_peer;
+	struct wlan_mlo_link_peer_entry *peer_entry;
+	int i, pdev_id;
+	uint8_t *peer_mac;
+	struct wlan_objmgr_pdev *pdev;
+	struct wlan_objmgr_psoc *psoc;
+	struct wlan_objmgr_peer *peer = NULL;
+
+	if (!vdev)
+		return NULL;
+
+	pdev = wlan_vdev_get_pdev(vdev);
+
+	if (!pdev)
+		return NULL;
+
+	psoc = wlan_pdev_get_psoc(pdev);
+
+	if (!psoc)
+		return NULL;
+
+	pdev_id = wlan_objmgr_pdev_get_pdev_id(pdev);
+
+	ap_mlo_dev_ctx = vdev->mlo_dev_ctx;
+	mlo_dev_lock_acquire(ap_mlo_dev_ctx);
+	mlo_peer_list = &ap_mlo_dev_ctx->mlo_peer_list;
+	ml_peerlist_lock_acquire(mlo_peer_list);
+	ml_peer = mlo_get_mlpeer(ap_mlo_dev_ctx,
+				 (struct qdf_mac_addr *)peer_mld);
+	if (!ml_peer) {
+		/* Peer is a legacy STA client, check peer list.
+		 * Treat the MLD address as legacy MAC address
+		 */
+		peer = wlan_objmgr_get_peer(psoc, pdev_id,
+					    peer_mld, WLAN_OSIF_ID);
+		goto out;
+	}
+
+	mlo_peer_lock_acquire(ml_peer);
+	for (i = 0; i < MAX_MLO_LINK_PEERS; i++) {
+		peer_entry = &ml_peer->peer_list[i];
+		if (!peer_entry)
+			continue;
+		/* Checking for VDEV match which will
+		 * be used for multiple VDEV case.
+		 */
+		if (vdev == wlan_peer_get_vdev(peer_entry->link_peer)) {
+			peer_mac = &peer_entry->link_peer->macaddr[0];
+			peer = wlan_objmgr_get_peer(psoc, pdev_id, peer_mac,
+						    WLAN_OSIF_ID);
+			break;
+		}
+	}
+	mlo_peer_lock_release(ml_peer);
+
+out:
+	ml_peerlist_lock_release(mlo_peer_list);
+	mlo_dev_lock_release(ap_mlo_dev_ctx);
+
+	return peer;
+}
+
 static int wlan_hdd_add_key_all_mlo_vdev(mac_handle_t mac_handle,
 					 struct wlan_objmgr_vdev *vdev,
 					 u8 key_index, bool pairwise,
@@ -20573,42 +20642,59 @@ static int wlan_hdd_add_key_all_mlo_vdev(mac_handle_t mac_handle,
 	struct hdd_context *hdd_ctx;
 	struct wlan_objmgr_vdev *wlan_vdev_list[WLAN_UMAC_MLO_MAX_VDEVS];
 	struct wlan_objmgr_peer *peer;
+	struct wlan_objmgr_vdev *link_vdev;
 	struct qdf_mac_addr peer_mac;
 	int errno = 0;
 	uint16_t link, vdev_count = 0;
-	uint8_t vdev_id;
+
 
 	/* if vdev mlme is mlo & pairwaise is set to true set same info for
 	 * both the links.
 	 */
 	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	/* This is to avoid const qualifier voilation
+	 * while using the mac_addr received from kernel
+	 * to fetch peer
+	 */
+	qdf_mem_copy(&peer_mac.bytes[0], mac_addr, QDF_MAC_ADDR_SIZE);
 	mlo_sta_get_vdev_list(vdev, &vdev_count, wlan_vdev_list);
 	for (link = 0; link < vdev_count; link++) {
-		vdev_id = wlan_vdev_get_id(wlan_vdev_list[link]);
+		link_vdev = wlan_vdev_list[link];
 
-		link_adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
+		link_adapter = hdd_get_adapter_by_vdev(
+						hdd_ctx,
+						wlan_vdev_get_id(link_vdev));
 		if (!link_adapter) {
-			mlo_release_vdev_ref(wlan_vdev_list[link]);
+			mlo_release_vdev_ref(link_vdev);
 			continue;
 		}
+		switch (adapter->device_mode) {
+		case QDF_SAP_MODE:
+			if (wlan_vdev_mlme_is_mlo_vdev(link_vdev))
+				peer = wlan_hdd_ml_sap_get_peer(
+						link_vdev,
+						peer_mac.bytes);
+			break;
+		case QDF_STA_MODE:
+		default:
+			peer = wlan_objmgr_vdev_try_get_bsspeer(link_vdev,
+								WLAN_OSIF_ID);
+			break;
+		}
 
-		peer = wlan_objmgr_vdev_try_get_bsspeer(wlan_vdev_list[link],
-							WLAN_OSIF_ID);
 		if (!peer) {
 			hdd_err("Peer is null");
-			mlo_release_vdev_ref(wlan_vdev_list[link]);
+			mlo_release_vdev_ref(link_vdev);
 			continue;
 		}
 		qdf_mem_copy(peer_mac.bytes,
 			     wlan_peer_get_macaddr(peer), QDF_MAC_ADDR_SIZE);
 		wlan_objmgr_peer_release_ref(peer, WLAN_OSIF_ID);
 
-		errno = wlan_hdd_add_key_vdev(mac_handle,
-					      wlan_vdev_list[link],
-					      key_index, pairwise,
-					      peer_mac.bytes, params, link_id,
-					      link_adapter);
-		mlo_release_vdev_ref(wlan_vdev_list[link]);
+		errno = wlan_hdd_add_key_vdev(mac_handle, link_vdev, key_index,
+					      pairwise, peer_mac.bytes,
+					      params, link_id, link_adapter);
+		mlo_release_vdev_ref(link_vdev);
 	}
 
 	return errno;
