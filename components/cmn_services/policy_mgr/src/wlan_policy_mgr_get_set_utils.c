@@ -4692,6 +4692,164 @@ policy_mgr_fill_ml_active_link_vdev_bitmap(struct mlo_link_set_active_req *req,
 			 req->param.vdev_bitmap[1]);
 }
 
+/*
+ * policy_mgr_get_ml_sta_info() - Get number of ML STA vdev ids and freq list
+ * @pm_ctx: pm_ctx ctx
+ * @num_ml_sta: Return number of ML STA present
+ * @num_disabled_ml_sta: Return number of disabled ML STA links
+ * @ml_vdev_lst: Return ML STA vdev id list
+ * @ml_freq_lst: Return ML STA freq list
+ * @num_non_ml: Return number of non-ML STA present
+ * @non_ml_vdev_lst: Return non-ML STA vdev id list
+ * @non_ml_freq_lst: Return non-ML STA freq list
+ *
+ * Return: void
+ */
+static void
+policy_mgr_get_ml_sta_info(struct policy_mgr_psoc_priv_obj *pm_ctx,
+			   uint8_t *num_ml_sta,
+			   uint8_t *num_disabled_ml_sta,
+			   uint8_t *ml_vdev_lst,
+			   qdf_freq_t *ml_freq_lst,
+			   uint8_t *num_non_ml,
+			   uint8_t *non_ml_vdev_lst,
+			   qdf_freq_t *non_ml_freq_lst)
+{
+	struct wlan_objmgr_vdev *vdev;
+	uint8_t vdev_id, conn_index;
+	qdf_freq_t freq;
+
+	*num_ml_sta = 0;
+	*num_disabled_ml_sta = 0;
+	if (num_non_ml)
+		*num_non_ml = 0;
+
+	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
+	for (conn_index = 0; conn_index < MAX_NUMBER_OF_CONC_CONNECTIONS;
+	     conn_index++) {
+		if (!pm_conc_connection_list[conn_index].in_use)
+			continue;
+		if (pm_conc_connection_list[conn_index].mode != PM_STA_MODE)
+			continue;
+		vdev_id = pm_conc_connection_list[conn_index].vdev_id;
+		freq = pm_conc_connection_list[conn_index].freq;
+
+		/* add ml sta vdev and freq list */
+		vdev = wlan_objmgr_get_vdev_by_id_from_psoc(pm_ctx->psoc,
+							    vdev_id,
+							    WLAN_POLICY_MGR_ID);
+		if (!vdev) {
+			policy_mgr_err("invalid vdev for id %d", vdev_id);
+			continue;
+		}
+
+		if (wlan_vdev_mlme_is_mlo_vdev(vdev)) {
+			ml_vdev_lst[*num_ml_sta] = vdev_id;
+			ml_freq_lst[(*num_ml_sta)++] = freq;
+		} else if (num_non_ml) {
+			if (non_ml_vdev_lst)
+				non_ml_vdev_lst[*num_non_ml] = vdev_id;
+			if (non_ml_freq_lst)
+				non_ml_freq_lst[*num_non_ml] = freq;
+			(*num_non_ml)++;
+		}
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
+	}
+	/* Get disabled link info as well and keep it at last */
+	for (conn_index = 0; conn_index < MAX_NUMBER_OF_DISABLE_LINK;
+	     conn_index++) {
+		if (!pm_disabled_ml_links[conn_index].in_use)
+			continue;
+		if (pm_disabled_ml_links[conn_index].mode != PM_STA_MODE)
+			continue;
+		ml_vdev_lst[*num_ml_sta] =
+				pm_disabled_ml_links[conn_index].vdev_id;
+		ml_freq_lst[(*num_ml_sta)++] =
+			pm_disabled_ml_links[conn_index].freq;
+		(*num_disabled_ml_sta)++;
+	}
+	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+}
+
+/*
+ * policy_mgr_handle_ml_sta_link_state_allowed() - Check ml sta connection to
+ * allow link state change.
+ * @psoc: psoc object
+ *
+ * If ml sta is not "connected" state, no need to do link state handling.
+ * After disconnected, target will clear the force active/inactive state
+ * and host will remove the connection entry finally.
+ * After roaming done, active/inactive will be re-calculated.
+ *
+ * Return: QDF_STATUS_SUCCESS if link state is allowed to change
+ */
+static QDF_STATUS
+policy_mgr_handle_ml_sta_link_state_allowed(struct wlan_objmgr_psoc *psoc)
+{
+	uint8_t num_ml_sta = 0, num_disabled_ml_sta = 0, num_non_ml = 0;
+	uint8_t ml_sta_vdev_lst[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
+	qdf_freq_t ml_freq_lst[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	struct wlan_objmgr_vdev *vdev;
+	bool ml_sta_is_not_connected = false;
+	uint8_t i;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	policy_mgr_get_ml_sta_info(pm_ctx, &num_ml_sta, &num_disabled_ml_sta,
+				   ml_sta_vdev_lst, ml_freq_lst, &num_non_ml,
+				   NULL, NULL);
+	if (!num_ml_sta) {
+		policy_mgr_debug("ml sta num is zero");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	for (i = 0; i < num_ml_sta; i++) {
+		vdev = wlan_objmgr_get_vdev_by_id_from_psoc(pm_ctx->psoc,
+							    ml_sta_vdev_lst[i],
+							    WLAN_POLICY_MGR_ID);
+		if (!vdev) {
+			policy_mgr_err("invalid vdev for id %d",
+				       ml_sta_vdev_lst[i]);
+			continue;
+		}
+		if (!wlan_cm_is_vdev_connected(vdev)) {
+			policy_mgr_debug("ml sta vdev %d is not connected state",
+					 ml_sta_vdev_lst[i]);
+			ml_sta_is_not_connected = true;
+		}
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
+	}
+
+	if (ml_sta_is_not_connected)
+		status = QDF_STATUS_E_FAILURE;
+
+	return status;
+}
+
+/*
+ * policy_mgr_validate_set_mlo_link_cb() - Callback to check whether
+ * it is allowed to set mlo sta link state.
+ * @psoc: psoc object
+ * @param: set mlo link parameter
+ *
+ * This api will be used as callback to be called by mlo_link_set_active
+ * in serialization context.
+ *
+ * Return: QDF_STATUS_SUCCESS if set mlo link is allowed
+ */
+static QDF_STATUS
+policy_mgr_validate_set_mlo_link_cb(struct wlan_objmgr_psoc *psoc,
+				    struct mlo_link_set_active_param *param)
+{
+	return policy_mgr_handle_ml_sta_link_state_allowed(psoc);
+}
+
 /**
  * policy_mgr_mlo_sta_set_link() - Set links for MLO STA
  *
@@ -4752,6 +4910,8 @@ policy_mgr_mlo_sta_set_link(struct wlan_objmgr_psoc *psoc,
 	req->param.reason = reason;
 	req->param.force_mode = mode;
 	req->ctx.set_mlo_link_cb = policy_mgr_handle_link_enable_disable_resp;
+	req->ctx.validate_set_mlo_link_cb =
+		policy_mgr_validate_set_mlo_link_cb;
 	req->ctx.cb_arg = req;
 
 	/* set MLO vdev bit mask for all case */
@@ -5697,85 +5857,6 @@ policy_mgr_get_affected_links_for_go_sap_cli(struct wlan_objmgr_psoc *psoc,
 }
 
 /*
- * policy_mgr_get_ml_sta_info() - Get number of ML STA vdev ids and freq list
- * @pm_ctx: pm_ctx ctx
- * @num_ml_sta: Return number of ML STA present
- * @num_disabled_ml_sta: Return number of disabled ML STA links
- * @ml_vdev_lst: Return ML STA vdev id list
- * @ml_freq_lst: Return ML STA freq list
- * @num_non_ml: Return number of non-ML STA present
- * @non_ml_vdev_lst: Return non-ML STA vdev id list
- * @non_ml_freq_lst: Return non-ML STA freq list
- *
- * Return: void
- */
-static void
-policy_mgr_get_ml_sta_info(struct policy_mgr_psoc_priv_obj *pm_ctx,
-			   uint8_t *num_ml_sta,
-			   uint8_t *num_disabled_ml_sta,
-			   uint8_t *ml_vdev_lst,
-			   qdf_freq_t *ml_freq_lst,
-			   uint8_t *num_non_ml,
-			   uint8_t *non_ml_vdev_lst,
-			   qdf_freq_t *non_ml_freq_lst)
-{
-	struct wlan_objmgr_vdev *vdev;
-	uint8_t vdev_id, conn_index;
-	qdf_freq_t freq;
-
-	*num_ml_sta = 0;
-	*num_disabled_ml_sta = 0;
-	if (num_non_ml)
-		*num_non_ml = 0;
-
-	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
-	for (conn_index = 0; conn_index < MAX_NUMBER_OF_CONC_CONNECTIONS;
-	     conn_index++) {
-		if (!pm_conc_connection_list[conn_index].in_use)
-			continue;
-		if (pm_conc_connection_list[conn_index].mode != PM_STA_MODE)
-			continue;
-		vdev_id = pm_conc_connection_list[conn_index].vdev_id;
-		freq = pm_conc_connection_list[conn_index].freq;
-
-		/* add ml sta vdev and freq list */
-		vdev = wlan_objmgr_get_vdev_by_id_from_psoc(pm_ctx->psoc,
-							    vdev_id,
-							    WLAN_POLICY_MGR_ID);
-		if (!vdev) {
-			policy_mgr_err("invalid vdev for id %d", vdev_id);
-			continue;
-		}
-
-		if (wlan_vdev_mlme_is_mlo_vdev(vdev)) {
-			ml_vdev_lst[*num_ml_sta] = vdev_id;
-			ml_freq_lst[(*num_ml_sta)++] = freq;
-		} else if (num_non_ml) {
-			if (non_ml_vdev_lst)
-				non_ml_vdev_lst[*num_non_ml] = vdev_id;
-			if (non_ml_freq_lst)
-				non_ml_freq_lst[*num_non_ml] = freq;
-			(*num_non_ml)++;
-		}
-		wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
-	}
-	/* Get disabled link info as well and keep it at last */
-	for (conn_index = 0; conn_index < MAX_NUMBER_OF_DISABLE_LINK;
-	     conn_index++) {
-		if (!pm_disabled_ml_links[conn_index].in_use)
-			continue;
-		if (pm_disabled_ml_links[conn_index].mode != PM_STA_MODE)
-			continue;
-		ml_vdev_lst[*num_ml_sta] =
-				pm_disabled_ml_links[conn_index].vdev_id;
-		ml_freq_lst[(*num_ml_sta)++] =
-			pm_disabled_ml_links[conn_index].freq;
-		(*num_disabled_ml_sta)++;
-	}
-	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
-}
-
-/*
  * policy_mgr_get_ml_sta_and_p2p_cli_go_sap_info() - Get number of ML STA,
  * P2P and SAP interfaces and their vdev ids and freq list
  * @pm_ctx: pm_ctx ctx
@@ -5986,6 +6067,9 @@ policy_mgr_handle_sap_cli_go_ml_sta_up_csa(struct wlan_objmgr_psoc *psoc,
 		return;
 	}
 
+	status = policy_mgr_handle_ml_sta_link_state_allowed(psoc);
+	if (QDF_IS_STATUS_ERROR(status))
+		return;
 	if (QDF_IS_STATUS_SUCCESS(policy_mgr_handle_mcc_ml_sta(psoc, vdev)))
 		return;
 
@@ -6192,6 +6276,10 @@ policy_mgr_re_enable_ml_sta_on_p2p_sap_sta_down(struct wlan_objmgr_psoc *psoc,
 	uint8_t vdev_id = wlan_vdev_get_id(vdev);
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
 	QDF_STATUS status;
+
+	status = policy_mgr_handle_ml_sta_link_state_allowed(psoc);
+	if (QDF_IS_STATUS_ERROR(status))
+		return;
 
 	status = policy_mgr_handle_ml_sta_link_enable_on_sta_down(psoc, vdev);
 	if (QDF_IS_STATUS_SUCCESS(status))
