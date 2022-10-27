@@ -416,6 +416,8 @@ cm_roam_sync_frame_event_handler(struct wlan_objmgr_psoc *psoc,
 			sync_frame_ind->bcn_probe_rsp_len;
 		roam_synch_frame_ind->is_beacon =
 			sync_frame_ind->is_beacon;
+		if (roam_synch_frame_ind->bcn_probe_rsp)
+			qdf_mem_free(roam_synch_frame_ind->bcn_probe_rsp);
 		roam_synch_frame_ind->bcn_probe_rsp =
 			sync_frame_ind->bcn_probe_rsp;
 	}
@@ -423,6 +425,8 @@ cm_roam_sync_frame_event_handler(struct wlan_objmgr_psoc *psoc,
 	if (sync_frame_ind->reassoc_req_len) {
 		roam_synch_frame_ind->reassoc_req_len =
 				sync_frame_ind->reassoc_req_len;
+		if (roam_synch_frame_ind->reassoc_req)
+			qdf_mem_free(roam_synch_frame_ind->reassoc_req);
 		roam_synch_frame_ind->reassoc_req =
 			sync_frame_ind->reassoc_req;
 	}
@@ -430,6 +434,8 @@ cm_roam_sync_frame_event_handler(struct wlan_objmgr_psoc *psoc,
 	if (sync_frame_ind->reassoc_rsp_len) {
 		roam_synch_frame_ind->reassoc_rsp_len =
 				sync_frame_ind->reassoc_rsp_len;
+		if (roam_synch_frame_ind->reassoc_rsp)
+			qdf_mem_free(roam_synch_frame_ind->reassoc_rsp);
 		roam_synch_frame_ind->reassoc_rsp =
 			sync_frame_ind->reassoc_rsp;
 	}

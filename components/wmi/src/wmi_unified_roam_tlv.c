@@ -2707,9 +2707,6 @@ extract_roam_sync_frame_event_tlv(wmi_unified_t wmi_handle, void *event,
 		roam_sync_frame_ind->is_beacon =
 			synch_frame_event->is_beacon;
 
-		if (roam_sync_frame_ind->bcn_probe_rsp)
-			qdf_mem_free(roam_sync_frame_ind->bcn_probe_rsp);
-
 		roam_sync_frame_ind->bcn_probe_rsp =
 			qdf_mem_malloc(roam_sync_frame_ind->bcn_probe_rsp_len);
 		if (!roam_sync_frame_ind->bcn_probe_rsp) {
@@ -2725,8 +2722,6 @@ extract_roam_sync_frame_event_tlv(wmi_unified_t wmi_handle, void *event,
 		roam_sync_frame_ind->reassoc_req_len =
 				synch_frame_event->reassoc_req_len;
 
-		if (roam_sync_frame_ind->reassoc_req)
-			qdf_mem_free(roam_sync_frame_ind->reassoc_req);
 		roam_sync_frame_ind->reassoc_req =
 			qdf_mem_malloc(roam_sync_frame_ind->reassoc_req_len);
 		if (!roam_sync_frame_ind->reassoc_req) {
@@ -2741,9 +2736,6 @@ extract_roam_sync_frame_event_tlv(wmi_unified_t wmi_handle, void *event,
 	if (synch_frame_event->reassoc_rsp_len) {
 		roam_sync_frame_ind->reassoc_rsp_len =
 				synch_frame_event->reassoc_rsp_len;
-
-		if (roam_sync_frame_ind->reassoc_rsp)
-			qdf_mem_free(roam_sync_frame_ind->reassoc_rsp);
 
 		roam_sync_frame_ind->reassoc_rsp =
 			qdf_mem_malloc(roam_sync_frame_ind->reassoc_rsp_len);
