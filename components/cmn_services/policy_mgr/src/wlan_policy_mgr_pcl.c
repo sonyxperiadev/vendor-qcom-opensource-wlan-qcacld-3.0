@@ -4044,9 +4044,9 @@ bool policy_mgr_is_sta_chan_valid_for_connect_and_roam(
 }
 
 bool
-policy_mgr_is_ll_sap_present_in_current_mode(struct wlan_objmgr_psoc *psoc,
-					     enum policy_mgr_con_mode curr_mode,
-					     uint32_t vdev_id)
+policy_mgr_is_ll_sap_present(struct wlan_objmgr_psoc *psoc,
+			     enum policy_mgr_con_mode curr_mode,
+			     uint32_t vdev_id)
 {
 	struct wlan_objmgr_vdev *vdev;
 	bool is_ll_sap = false;
@@ -4073,9 +4073,8 @@ policy_mgr_is_ll_sap_present_in_current_mode(struct wlan_objmgr_psoc *psoc,
 
 QDF_STATUS
 policy_mgr_get_pcl_chlist_for_ll_sap(struct wlan_objmgr_psoc *psoc,
-				     enum policy_mgr_con_mode curr_mode,
-				     uint32_t vdev_id, uint32_t *pcl_channels,
-				     uint8_t *pcl_weight, uint32_t *len)
+				     uint32_t *len, uint32_t *pcl_channels,
+				     uint8_t *pcl_weight)
 {
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
 	uint32_t pcl_len = 0, i, conn_idx = 0;
@@ -4089,15 +4088,8 @@ policy_mgr_get_pcl_chlist_for_ll_sap(struct wlan_objmgr_psoc *psoc,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	if (!policy_mgr_is_ll_sap_present_in_current_mode(psoc, curr_mode,
-							  vdev_id)) {
-		policy_mgr_debug("LL SAP is not present in current mode %d",
-				 curr_mode);
-		return QDF_STATUS_SUCCESS;
-	}
-
 	total_connection = policy_mgr_get_connection_count(psoc);
-	if (!total_connection && curr_mode == PM_SAP_MODE) {
+	if (!total_connection) {
 		for (i = 0; i < *len; i++) {
 			if (WLAN_REG_IS_24GHZ_CH_FREQ(pcl_channels[i]))
 				continue;
@@ -4139,6 +4131,91 @@ policy_mgr_get_pcl_chlist_for_ll_sap(struct wlan_objmgr_psoc *psoc,
 	qdf_mem_zero(pcl_weight, *len * sizeof(*pcl_weight));
 	qdf_mem_copy(pcl_weight, weight_list, pcl_len);
 	*len = pcl_len;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+policy_mgr_get_pcl_ch_for_sap_go_with_ll_sap_present(
+					struct wlan_objmgr_psoc *psoc,
+					uint32_t *len, uint32_t *pcl_channels,
+					uint8_t *pcl_weight)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	uint32_t pcl_len = 0, i, conn_idx = 0;
+	uint32_t pcl_list[NUM_CHANNELS];
+	uint8_t weight_list[NUM_CHANNELS];
+	qdf_freq_t freq;
+	uint32_t vdev_id;
+	enum policy_mgr_con_mode mode;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("pm_ctx is null");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
+	for (conn_idx = 0; conn_idx < MAX_NUMBER_OF_CONC_CONNECTIONS;
+	     conn_idx++) {
+		if (!pm_conc_connection_list[conn_idx].in_use)
+			continue;
+
+		freq = pm_conc_connection_list[conn_idx].freq;
+		vdev_id = pm_conc_connection_list[conn_idx].vdev_id;
+		mode = pm_conc_connection_list[conn_idx].mode;
+		if (!policy_mgr_is_ll_sap_present(psoc, mode, vdev_id))
+			continue;
+
+		for (i = 0; i < *len; i++) {
+			if (policy_mgr_2_freq_always_on_same_mac(
+								psoc,
+								pcl_channels[i],
+								freq))
+				continue;
+			pcl_list[pcl_len] = pcl_channels[i];
+			weight_list[pcl_len++] = pcl_weight[i];
+		}
+		*len = pcl_len;
+		qdf_mem_zero(pcl_channels,
+			     *len * sizeof(*pcl_channels));
+		qdf_mem_copy(pcl_channels, pcl_list,
+			     pcl_len * sizeof(*pcl_channels));
+	}
+	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+
+	qdf_mem_zero(pcl_weight, *len * sizeof(*pcl_weight));
+	qdf_mem_copy(pcl_weight, weight_list, pcl_len);
+	*len = pcl_len;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+policy_mgr_get_pcl_channel_for_ll_sap_concurrency(
+					struct wlan_objmgr_psoc *psoc,
+					enum policy_mgr_con_mode curr_mode,
+					uint32_t vdev_id,
+					uint32_t *pcl_channels,
+					uint8_t *pcl_weight, uint32_t *len)
+{
+	if (policy_mgr_is_ll_sap_present(psoc, curr_mode, vdev_id)) {
+		/* Scenario: If there is some existing interface present and
+		 * LL SAP is coming up.
+		 * Filter pcl channel for LL SAP
+		 */
+		policy_mgr_get_pcl_chlist_for_ll_sap(psoc, len, pcl_channels,
+						     pcl_weight);
+	} else {
+		/* Scenario: If there is LL SAP and GO/SAP is coming up.
+		 * Filter pcl channel for GO/SAP
+		 */
+		policy_mgr_get_pcl_ch_for_sap_go_with_ll_sap_present(
+								psoc,
+								len,
+								pcl_channels,
+								pcl_weight);
+	}
 
 	return QDF_STATUS_SUCCESS;
 }

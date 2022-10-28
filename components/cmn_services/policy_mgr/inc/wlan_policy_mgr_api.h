@@ -1533,11 +1533,9 @@ bool policy_mgr_is_dbs_allowed_for_concurrency(
 /**
  * policy_mgr_get_pcl_chlist_for_ll_sap() - Get pcl channel list for LL SAP
  * @psoc: PSOC object information
- * @mode: Device mode
- * @vdev_id: Vdev id
+ * @len: length of the PCL
  * @pcl_channels: Preferred channel freq list
  * @pcl_weight: Weights of the PCL
- * @len: length of the PCL
  *
  * This function provides the preferred channel list on which the ll sap
  * can come.
@@ -1546,13 +1544,52 @@ bool policy_mgr_is_dbs_allowed_for_concurrency(
  */
 QDF_STATUS
 policy_mgr_get_pcl_chlist_for_ll_sap(struct wlan_objmgr_psoc *psoc,
-				     enum policy_mgr_con_mode mode,
-				     uint32_t vdev_id, uint32_t *pcl_channels,
-				     uint8_t *pcl_weight, uint32_t *len);
+				     uint32_t *len, uint32_t *pcl_channels,
+				     uint8_t *pcl_weight);
 
 /**
- * policy_mgr_is_ll_sap_present_in_current_mode() - Check whether LL SAP is
- * present in current mode or not.
+ * policy_mgr_get_pcl_ch_for_sap_go_with_ll_sap_present() - Get pcl channel
+ * list for SAP/GO when LL SAP is present
+ * @psoc: PSOC object information
+ * @len: length of the PCL
+ * @pcl_channels: Preferred channel freq list
+ * @pcl_weight: Weights of the PCL
+ *
+ * This function provides the preferred channel list for SAP/GO when LL SAP
+ * is present
+ *
+ * Return: QDF_STATUS
+ */
+
+QDF_STATUS
+policy_mgr_get_pcl_ch_for_sap_go_with_ll_sap_present(
+					struct wlan_objmgr_psoc *psoc,
+					uint32_t *len, uint32_t *pcl_channels,
+					uint8_t *pcl_weight);
+
+/**
+ * policy_mgr_get_pcl_channel_for_ll_sap_concurrency() - Get pcl channel list
+ * for LL SAP concurrency
+ * @psoc: PSOC object information
+ * @mode: Device mode
+ * @vdev_id: Vdev id
+ * @pcl_channels: Preferred channel freq list
+ * @pcl_weight: Weights of the PCL
+ * @len: length of the PCL
+ *
+ * Return: QDF_STATUS
+ */
+
+QDF_STATUS
+policy_mgr_get_pcl_channel_for_ll_sap_concurrency(
+					struct wlan_objmgr_psoc *psoc,
+					enum policy_mgr_con_mode curr_mode,
+					uint32_t vdev_id,
+					uint32_t *pcl_channels,
+					uint8_t *pcl_weight, uint32_t *len);
+
+/**
+ * policy_mgr_is_ll_sap_present() - Check whether LL SAP is present or not
  * @psoc: psoc object
  * @mode: device mode
  * @vdev_id: vdev id
@@ -1560,9 +1597,9 @@ policy_mgr_get_pcl_chlist_for_ll_sap(struct wlan_objmgr_psoc *psoc,
  * Return: true if it's present otherwise false
  */
 bool
-policy_mgr_is_ll_sap_present_in_current_mode(struct wlan_objmgr_psoc *psoc,
-					     enum policy_mgr_con_mode mode,
-					     uint32_t vdev_id);
+policy_mgr_is_ll_sap_present(struct wlan_objmgr_psoc *psoc,
+			     enum policy_mgr_con_mode mode,
+			     uint32_t vdev_id);
 
 /**
  * policy_mgr_get_preferred_dbs_action_table() - get dbs action table type
