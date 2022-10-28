@@ -555,7 +555,7 @@ QDF_STATUS ocb_pdev_obj_destroy_notification(struct wlan_objmgr_pdev *pdev,
 						       WLAN_UMAC_COMP_OCB,
 						       ocb_obj);
 	if (QDF_IS_STATUS_ERROR(status))
-		ocb_err("Failed to detatch ocb pdev object");
+		ocb_err("Failed to detach ocb pdev object");
 
 	qdf_mem_free(ocb_obj);
 
