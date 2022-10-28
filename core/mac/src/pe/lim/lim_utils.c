@@ -10736,8 +10736,9 @@ lim_set_tpc_power(struct mac_context *mac_ctx, struct pe_session *session)
 	if (!mlme_obj)
 		return false;
 
-	if (session->opmode == QDF_STA_MODE ||
-	    session->opmode == QDF_P2P_CLIENT_MODE)
+	if ((session->opmode == QDF_STA_MODE ||
+	     session->opmode == QDF_P2P_CLIENT_MODE) &&
+	    session->lim_join_req)
 		lim_process_tpe_ie_from_beacon(mac_ctx, session,
 				       &session->lim_join_req->bssDescription,
 				       &tpe_change);
