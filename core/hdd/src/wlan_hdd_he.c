@@ -32,6 +32,7 @@
 #include "wlan_mlme_ucfg_api.h"
 #include "spatial_reuse_ucfg_api.h"
 #include "cdp_txrx_host_stats.h"
+#include "wlan_policy_mgr_i.h"
 
 const struct nla_policy
 wlan_hdd_sr_policy[QCA_WLAN_VENDOR_ATTR_SR_MAX + 1] = {
@@ -601,12 +602,23 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 	struct sk_buff *skb;
 	struct cdp_pdev_obss_pd_stats_tlv stats;
 	ol_txrx_soc_handle soc;
+	uint8_t sr_device_modes;
 
 	hdd_enter_dev(wdev->netdev);
 	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam() ||
 	    QDF_GLOBAL_MONITOR_MODE == hdd_get_conparam()) {
 		hdd_err("Command not allowed in FTM or Monitor mode");
 		return -EPERM;
+	}
+	/**
+	 * Reject command if SR concurrency is not allowed and
+	 * only STA mode is set in ini to enable SR.
+	 **/
+	ucfg_mlme_get_sr_enable_modes(hdd_ctx->psoc, &sr_device_modes);
+	if (!(sr_device_modes & (1 << adapter->device_mode))) {
+		hdd_debug("SR operation not allowed for mode %d",
+			  adapter->device_mode);
+		return -EINVAL;
 	}
 
 	ret = wlan_hdd_validate_context(hdd_ctx);

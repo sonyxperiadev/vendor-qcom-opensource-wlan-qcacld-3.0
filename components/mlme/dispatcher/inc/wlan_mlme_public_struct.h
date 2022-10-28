@@ -1362,6 +1362,7 @@ struct wlan_user_mcc_quota {
  * @enable_emlsr_mode: 11BE eMLSR mode support
  * @safe_mode_enable: safe mode to bypass some strict 6 GHz checks for
  * connection, bypass strict power levels
+ * @sr_enable_modes: modes for which SR(Spatial Reuse) is enabled
  */
 struct wlan_mlme_generic {
 	uint32_t band_capability;
@@ -1420,6 +1421,9 @@ struct wlan_mlme_generic {
 	struct wlan_user_mcc_quota user_mcc_quota;
 #endif
 	bool safe_mode_enable;
+#if defined(WLAN_FEATURE_SR)
+	uint32_t sr_enable_modes;
+#endif
 };
 
 /*

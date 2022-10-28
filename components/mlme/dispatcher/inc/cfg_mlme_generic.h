@@ -1023,6 +1023,41 @@ enum debug_packet_log_type {
 		"", \
 		"Set mgmt action frame hw tx retry count")
 
+#if defined(WLAN_FEATURE_SR)
+/*
+ * <ini>
+ * sr_enable_modes - Modes for which SR(Spatial Reuse) feature can be enabled
+ * @Min: 0x00
+ * @Max: 0xf
+ * @Default: 0x1
+ *
+ * This ini is used to check for which mode SR feature is enabled
+ *
+ * Bit 0: Enable/Disable SR feature for STA
+ * Bit 1: Enable/Disable SR feature for SAP
+ * Bit 2: Enable/Disable SR feature for P2P CLI
+ * Bit 3: Enable/Disable SR feature for P2P GO
+ *
+ * Related: None
+ *
+ * Supported Feature: STA/SAP
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_SR_ENABLE_MODES CFG_INI_UINT( \
+		"sr_enable_modes",\
+		0x0,\
+		0xf,\
+		0x1,\
+		CFG_VALUE_OR_DEFAULT, \
+		"To decide for which mode SR feature is enabled")
+#define CFG_SR_ENABLE_MODES_ALL CFG(CFG_SR_ENABLE_MODES)
+#else
+#define CFG_SR_ENABLE_MODES_ALL
+#endif
+
 #define CFG_GENERIC_ALL \
 	CFG(CFG_ENABLE_DEBUG_PACKET_LOG) \
 	CFG(CFG_PMF_SA_QUERY_MAX_RETRIES) \
@@ -1062,5 +1097,6 @@ enum debug_packet_log_type {
 	CFG(CFG_TX_RETRY_MULTIPLIER) \
 	CFG(CFG_MGMT_FRAME_HW_TX_RETRY_COUNT) \
 	CFG_RELAX_6GHZ_CONN_POLICY \
-	CFG_EMLSR_MODE_ENABLED
+	CFG_EMLSR_MODE_ENABLED \
+	CFG_SR_ENABLE_MODES_ALL
 #endif /* __CFG_MLME_GENERIC_H */

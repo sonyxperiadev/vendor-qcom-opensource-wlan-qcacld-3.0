@@ -3984,4 +3984,17 @@ wlan_mlme_get_ch_width_from_phymode(enum wlan_phymode phy_mode);
  */
 enum phy_ch_width
 wlan_mlme_get_peer_ch_width(struct wlan_objmgr_psoc *psoc, uint8_t *mac);
+
+#if defined(WLAN_FEATURE_SR)
+/**
+ * wlan_mlme_get_sr_enable_modes() - get mode for which SR is enabled
+ *
+ * @psoc: psoc context
+ * @val: pointer to hold the value of SR(Spatial Reuse) enable modes
+ *
+ * Return: void
+ */
+void
+wlan_mlme_get_sr_enable_modes(struct wlan_objmgr_psoc *psoc, uint8_t *val);
+#endif
 #endif /* _WLAN_MLME_API_H_ */

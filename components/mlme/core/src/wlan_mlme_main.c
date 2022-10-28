@@ -533,6 +533,25 @@ static void mlme_init_emlsr_mode(struct wlan_objmgr_psoc *psoc,
 }
 #endif
 
+#if defined(WLAN_FEATURE_SR)
+/**
+ * mlme_init_sr_ini_cfg() - initialize SR(Spatial Reuse) ini
+ * @psoc: Pointer to PSOC
+ * @gen: pointer to generic CFG items
+ *
+ * Return: None
+ */
+static void mlme_init_sr_ini_cfg(struct wlan_objmgr_psoc *psoc,
+				 struct wlan_mlme_generic *gen)
+{
+	gen->sr_enable_modes = cfg_get(psoc, CFG_SR_ENABLE_MODES);
+}
+#else
+static void mlme_init_sr_ini_cfg(struct wlan_objmgr_psoc *psoc,
+				 struct wlan_mlme_generic *gen)
+{}
+#endif
+
 static void mlme_init_generic_cfg(struct wlan_objmgr_psoc *psoc,
 				  struct wlan_mlme_generic *gen)
 {
@@ -597,6 +616,7 @@ static void mlme_init_generic_cfg(struct wlan_objmgr_psoc *psoc,
 	gen->tx_retry_multiplier = cfg_get(psoc, CFG_TX_RETRY_MULTIPLIER);
 	gen->enable_he_mcs0_for_6ghz_mgmt =
 		cfg_get(psoc, CFG_ENABLE_HE_MCS0_MGMT_6GHZ);
+	mlme_init_sr_ini_cfg(psoc, gen);
 	mlme_init_wds_config_cfg(psoc, gen);
 	mlme_init_mgmt_hw_tx_retry_count_cfg(psoc, gen);
 	mlme_init_relaxed_6ghz_conn_policy(psoc, gen);

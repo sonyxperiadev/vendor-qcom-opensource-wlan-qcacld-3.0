@@ -1051,6 +1051,19 @@ QDF_STATUS mlme_update_tgt_he_caps_in_cfg(struct wlan_objmgr_psoc *psoc,
 
 	return status;
 }
+#ifdef WLAN_FEATURE_SR
+void
+wlan_mlme_get_sr_enable_modes(struct wlan_objmgr_psoc *psoc, uint8_t *val)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj = mlme_get_psoc_ext_obj(psoc);
+
+	if (!mlme_obj) {
+		*val = cfg_default(CFG_SR_ENABLE_MODES);
+		return;
+	}
+	*val = mlme_obj->cfg.gen.sr_enable_modes;
+}
+#endif
 #endif
 
 #ifdef WLAN_FEATURE_11BE
