@@ -69,6 +69,7 @@
 #include "target_if_nan.h"
 #endif
 #include "wlan_scan_api.h"
+#include "spatial_reuse_api.h"
 #include "wlan_cm_api.h"
 #include <wlan_crypto_global_api.h>
 #include "cdp_txrx_host_stats.h"
@@ -645,25 +646,75 @@ QDF_STATUS wma_process_dhcp_ind(WMA_HANDLE handle,
 					    &peer_set_param_fp);
 }
 
-#if defined WLAN_FEATURE_11AX
+#ifdef WLAN_FEATURE_SR
 
-#define NON_SRG_PD_SR_DISALLOWED 0x02
-#define NON_SRG_OFFSET_PRESENT 0x04
-#define NON_SRG_SPR_ENABLE_POS 24
-#define NON_SRG_PARAM_VAL_DBM_UNIT 0x20
-#define NON_SRG_SPR_ENABLE 0x80
-
-QDF_STATUS wma_spr_update(tp_wma_handle wma,
-			  uint8_t vdev_id,
-			  bool enable)
+static void wma_sr_send_pd_threshold(tp_wma_handle wma,
+				     uint8_t vdev_id,
+				     uint32_t val)
 {
-	struct pdev_params pparam;
-	uint32_t val = 0;
+	struct vdev_set_params vparam;
 	wmi_unified_t wmi_handle = wma->wmi_handle;
+	bool sr_supported =
+		wmi_service_enabled(wmi_handle,
+				    wmi_service_srg_srp_spatial_reuse_support);
+
+	if (sr_supported) {
+		vparam.vdev_id = vdev_id;
+		vparam.param_id = WMI_VDEV_PARAM_SET_CMD_OBSS_PD_THRESHOLD;
+		vparam.param_value = val;
+		wmi_unified_vdev_set_param_send(wmi_handle, &vparam);
+	} else {
+		wma_debug("Target doesn't support SR operations");
+	}
+}
+
+static void wma_sr_handle_conc(tp_wma_handle wma,
+			       struct wlan_objmgr_vdev *vdev,
+			       struct wlan_objmgr_vdev *conc_vdev,
+			       bool en_sr_curr_vdev)
+{
+	uint32_t val = 0;
+	uint8_t sr_ctrl;
+	uint8_t conc_vdev_id = wlan_vdev_get_id(conc_vdev);
+
+	if (en_sr_curr_vdev) {
+		wlan_vdev_mlme_set_sr_disable_due_conc(vdev, true);
+		wlan_vdev_mlme_set_sr_disable_due_conc(conc_vdev, true);
+		if (!wlan_vdev_mlme_get_he_spr_enabled(conc_vdev))
+			return;
+
+		wma_sr_send_pd_threshold(wma, conc_vdev_id, val);
+		wlan_spatial_reuse_osif_event(conc_vdev,
+					      SR_OPERATION_SUSPEND,
+					      SR_REASON_CODE_CONCURRENCY);
+	} else if (wlan_vdev_mlme_is_sr_disable_due_conc(conc_vdev)) {
+		wlan_vdev_mlme_set_sr_disable_due_conc(conc_vdev, false);
+		if (!wlan_vdev_mlme_get_he_spr_enabled(conc_vdev))
+			return;
+
+		sr_ctrl = wlan_vdev_mlme_get_sr_ctrl(conc_vdev);
+		if ((!(sr_ctrl & NON_SRG_PD_SR_DISALLOWED) &&
+		     (sr_ctrl & NON_SRG_OFFSET_PRESENT)) ||
+		    (sr_ctrl & SRG_INFO_PRESENT)) {
+			wlan_mlme_update_sr_data(conc_vdev, &val, 0, true);
+			wma_sr_send_pd_threshold(wma, conc_vdev_id, val);
+			wlan_spatial_reuse_osif_event(conc_vdev,
+						      SR_OPERATION_RESUME,
+						      SR_REASON_CODE_CONCURRENCY);
+		} else {
+			wma_debug("SR Disabled in SR Control");
+		}
+	}
+}
+
+QDF_STATUS wma_sr_update(tp_wma_handle wma, uint8_t vdev_id, bool enable)
+{
+	uint32_t val = 0;
 	uint8_t mac_id;
 	uint32_t conc_vdev_id;
-	struct wlan_objmgr_vdev *vdev;
-	uint8_t sr_ctrl, non_srg_pd_max_offset;
+	struct wlan_objmgr_vdev *vdev, *conc_vdev;
+	uint8_t sr_ctrl;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(wma->psoc, vdev_id,
 						    WLAN_LEGACY_WMA_ID);
@@ -671,48 +722,58 @@ QDF_STATUS wma_spr_update(tp_wma_handle wma,
 		wma_err("Can't get vdev by vdev_id:%d", vdev_id);
 		return QDF_STATUS_E_INVAL;
 	}
-
-	sr_ctrl = wlan_vdev_mlme_get_sr_ctrl(vdev);
-	non_srg_pd_max_offset = wlan_vdev_mlme_get_pd_offset(vdev);
-	if (!(sr_ctrl & NON_SRG_PD_SR_DISALLOWED) &&
-	    (sr_ctrl & NON_SRG_OFFSET_PRESENT)) {
-		policy_mgr_get_mac_id_by_session_id(wma->psoc,
-						    vdev_id,
-						    &mac_id);
-		conc_vdev_id =
-			policy_mgr_get_conc_vdev_on_same_mac(wma->psoc,
-							     vdev_id,
-							     mac_id);
-		if (conc_vdev_id != WLAN_INVALID_VDEV_ID) {
-			wma_debug("Concurrent intf present,SR PD not enabled");
+	policy_mgr_get_mac_id_by_session_id(wma->psoc, vdev_id, &mac_id);
+	conc_vdev_id = policy_mgr_get_conc_vdev_on_same_mac(wma->psoc, vdev_id,
+							    mac_id);
+	if (conc_vdev_id != WLAN_INVALID_VDEV_ID &&
+	    !policy_mgr_sr_same_mac_conc_enabled(wma->psoc)) {
+		/*
+		 * Single MAC concurrency is not supoprted for SR,
+		 * Disable SR if it is enable on other VDEV and enable
+		 * it back once the once the concurrent vdev is down.
+		 */
+		wma_debug("SR with concurrency is not allowed");
+		conc_vdev =
+		wlan_objmgr_get_vdev_by_id_from_psoc(wma->psoc, conc_vdev_id,
+						     WLAN_LEGACY_WMA_ID);
+		if (!conc_vdev) {
+			wma_err("Can't get vdev by vdev_id:%d", conc_vdev_id);
+		} else {
+			wma_sr_handle_conc(wma, vdev, conc_vdev, enable);
+			wlan_objmgr_vdev_release_ref(conc_vdev,
+						     WLAN_LEGACY_WMA_ID);
 			goto release_ref;
 		}
-		qdf_mem_zero(&pparam, sizeof(pparam));
-		pparam.param_id = WMI_PDEV_PARAM_SET_CMD_OBSS_PD_THRESHOLD;
+	}
+
+	if (!wlan_vdev_mlme_get_he_spr_enabled(vdev)) {
+		wma_err("Spatial Reuse disabled for vdev_id: %u", vdev_id);
+		status = QDF_STATUS_E_NOSUPPORT;
+		goto release_ref;
+	}
+
+	sr_ctrl = wlan_vdev_mlme_get_sr_ctrl(vdev);
+	wma_debug("SR Control: %x", sr_ctrl);
+	if ((!(sr_ctrl & NON_SRG_PD_SR_DISALLOWED) &&
+	     (sr_ctrl & NON_SRG_OFFSET_PRESENT)) ||
+	    (sr_ctrl & SRG_INFO_PRESENT)) {
 		if (enable) {
-			val = NON_SRG_SPR_ENABLE;
-			val |= NON_SRG_PARAM_VAL_DBM_UNIT;
-			val = val << NON_SRG_SPR_ENABLE_POS;
-			val |= non_srg_pd_max_offset;
-			wlan_vdev_mlme_set_he_spr_enabled(vdev, true);
+			wlan_mlme_update_sr_data(vdev, &val, 0, true);
 		} else {
-			wlan_vdev_mlme_set_he_spr_enabled(vdev, false);
+			/* VDEV down, disable SR */
+			wlan_vdev_mlme_set_sr_ctrl(vdev, 0);
+			wlan_vdev_mlme_set_pd_offset(vdev, 0);
 		}
 
-		pparam.param_value = val;
-
-		wma_debug("non-srg param val: %u, enable: %d",
-			  pparam.param_value, enable);
-
-		wmi_unified_pdev_param_send(wmi_handle, &pparam,
-					    WMA_WILDCARD_PDEV_ID);
+		wma_debug("SR param val: %x, Enable: %x", val, enable);
+		wma_sr_send_pd_threshold(wma, vdev_id, val);
 	} else {
-		wma_debug("Spatial reuse not enabled");
+		wma_debug("Spatial reuse is disabled in ctrl");
 	}
 
 release_ref:
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_WMA_ID);
-	return QDF_STATUS_SUCCESS;
+	return status;
 }
 #endif
 
@@ -999,7 +1060,11 @@ QDF_STATUS wma_add_beacon_filter(WMA_HANDLE handle,
 	int len = sizeof(wmi_add_bcn_filter_cmd_fixed_param);
 
 	len += WMI_TLV_HDR_SIZE;
-	len += BCN_FLT_MAX_ELEMS_IE_LIST*sizeof(A_UINT32);
+	len += BCN_FLT_MAX_ELEMS_IE_LIST * sizeof(A_UINT32);
+
+	/* for ext ie map */
+	len += WMI_TLV_HDR_SIZE;
+	len += BCN_FLT_MAX_ELEMS_IE_LIST * sizeof(A_UINT32);
 
 	if (wma_validate_handle(wma))
 		return QDF_STATUS_E_INVAL;
@@ -1037,6 +1102,21 @@ QDF_STATUS wma_add_beacon_filter(WMA_HANDLE handle,
 		ie_map[i] = filter_params->ie_map[i];
 
 	wma_debug("Beacon filter ie map Hex dump:");
+	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_DEBUG,
+			   (uint8_t *)ie_map,
+			   BCN_FLT_MAX_ELEMS_IE_LIST * sizeof(u_int32_t));
+
+	buf += WMI_TLV_HDR_SIZE;
+	buf += BCN_FLT_MAX_ELEMS_IE_LIST * sizeof(A_UINT32);
+
+	WMITLV_SET_HDR(buf, WMITLV_TAG_ARRAY_UINT32,
+		       (BCN_FLT_MAX_ELEMS_IE_LIST * sizeof(u_int32_t)));
+
+	ie_map = (A_UINT32 *)(buf + WMI_TLV_HDR_SIZE);
+	for (i = 0; i < BCN_FLT_MAX_ELEMS_IE_LIST; i++)
+		ie_map[i] = filter_params->ie_map[i + 8];
+
+	wma_debug("Beacon filter ext ie map Hex dump:");
 	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_WMA, QDF_TRACE_LEVEL_DEBUG,
 			   (uint8_t *)ie_map,
 			   BCN_FLT_MAX_ELEMS_IE_LIST * sizeof(u_int32_t));

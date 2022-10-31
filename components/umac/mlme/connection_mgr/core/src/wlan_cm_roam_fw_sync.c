@@ -887,6 +887,7 @@ cm_fw_roam_sync_propagation(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 		policy_mgr_move_vdev_from_disabled_to_connection_tbl(psoc,
 								     vdev_id);
 	mlo_roam_copy_partner_info(connect_rsp, roam_synch_data);
+	mlo_roam_set_link_id(vdev, roam_synch_data);
 
 	/**
 	 * Don't send roam_sync complete for MLO link vdevs.
@@ -909,7 +910,6 @@ cm_fw_roam_sync_propagation(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 			cm_roam_start_init_on_connect(pdev, vdev_id);
 		}
 		wlan_cm_tgt_send_roam_sync_complete_cmd(psoc, vdev_id);
-
 		mlo_roam_update_connected_links(vdev, connect_rsp);
 		mlo_set_single_link_ml_roaming(psoc, vdev_id,
 					       roam_synch_data, false);
@@ -1036,10 +1036,13 @@ QDF_STATUS cm_fw_roam_complete(struct cnx_mgr *cm_ctx, void *data)
 		roam_synch_data->hw_mode_trans_ind.vdev_mac_map,
 		0, NULL, psoc);
 
-	if (roam_synch_data->pmk_len)
+	if (roam_synch_data->pmk_len) {
+		mlme_debug("Received pmk in roam sync. Length: %d",
+			   roam_synch_data->pmk_len);
 		cm_check_and_set_sae_single_pmk_cap(psoc, vdev_id,
 						    roam_synch_data->pmk,
 						    roam_synch_data->pmk_len);
+	}
 
 	cm_csr_send_set_ie(cm_ctx->vdev);
 

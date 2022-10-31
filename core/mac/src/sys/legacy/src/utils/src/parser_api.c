@@ -3700,6 +3700,20 @@ sir_convert_assoc_resp_frame2_mlo_struct(struct mac_context *mac,
 	return QDF_STATUS_SUCCESS;
 }
 #endif
+#ifdef WLAN_FEATURE_SR
+static void sir_convert_assoc_resp_frame2_sr(tpSirAssocRsp pAssocRsp,
+					     tDot11fAssocResponse *ar)
+{
+	if (ar->spatial_reuse.present)
+		qdf_mem_copy(&pAssocRsp->srp_ie, &ar->spatial_reuse,
+			     sizeof(tDot11fIEspatial_reuse));
+}
+#else
+static inline void sir_convert_assoc_resp_frame2_sr(tpSirAssocRsp pAssocRsp,
+						    tDot11fAssocResponse *ar)
+{
+}
+#endif
 
 QDF_STATUS
 sir_convert_assoc_resp_frame2_struct(struct mac_context *mac,
@@ -3965,6 +3979,8 @@ sir_convert_assoc_resp_frame2_struct(struct mac_context *mac,
 	if (ar->he_op.present)
 		qdf_mem_copy(&pAssocRsp->he_op, &ar->he_op,
 			     sizeof(tDot11fIEhe_op));
+
+	sir_convert_assoc_resp_frame2_sr(pAssocRsp, ar);
 
 	if (ar->he_6ghz_band_cap.present)
 		qdf_mem_copy(&pAssocRsp->he_6ghz_band_cap,
@@ -7138,8 +7154,10 @@ populate_dot11f_sr_info(struct mac_context *mac_ctx,
 	uint8_t non_srg_pd_offset;
 	uint8_t sr_ctrl = wlan_vdev_mlme_get_sr_ctrl(session->vdev);
 	bool sr_enabled = wlan_vdev_mlme_get_he_spr_enabled(session->vdev);
+	bool sr_disabled_due_conc =
+		wlan_vdev_mlme_is_sr_disable_due_conc(session->vdev);
 
-	if (!sr_enabled || !sr_ctrl ||
+	if (!sr_enabled || !sr_ctrl || sr_disabled_due_conc ||
 	    (sr_ctrl & WLAN_HE_NON_SRG_PD_SR_DISALLOWED) ||
 	    !(sr_ctrl & WLAN_HE_NON_SRG_OFFSET_PRESENT))
 		return QDF_STATUS_SUCCESS;
@@ -7151,6 +7169,8 @@ populate_dot11f_sr_info(struct mac_context *mac_ctx,
 	sr_info->srg_info_present = 0;
 	sr_info->non_srg_offset_present = 1;
 	sr_info->srg_info_present = 0;
+	if (sr_ctrl & WLAN_HE_SIGA_SR_VAL15_ALLOWED)
+		sr_info->sr_value15_allow = 1;
 	sr_info->non_srg_offset.info.non_srg_pd_max_offset = non_srg_pd_offset;
 
 	return QDF_STATUS_SUCCESS;

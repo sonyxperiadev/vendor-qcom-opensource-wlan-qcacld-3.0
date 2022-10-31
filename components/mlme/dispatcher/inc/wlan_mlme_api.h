@@ -291,6 +291,26 @@ wlan_mlme_get_wlm_multi_client_ll_caps(struct wlan_objmgr_psoc *psoc)
 }
 #endif
 
+#ifdef FEATURE_WLAN_CH_AVOID_EXT
+/**
+ * wlan_mlme_get_coex_unsafe_chan_nb_user_prefer() - get coex unsafe nb
+ * support
+ * @psoc:   pointer to psoc object
+ * @value:  pointer to the value which will be filled for the caller
+ *
+ * Return: coex_unsafe_chan_nb_user_prefer
+ */
+bool wlan_mlme_get_coex_unsafe_chan_nb_user_prefer(
+		struct wlan_objmgr_psoc *psoc);
+#else
+static inline
+bool wlan_mlme_get_coex_unsafe_chan_nb_user_prefer(
+		struct wlan_objmgr_psoc *psoc)
+{
+	return false;
+}
+#endif
+
 /**
  * wlan_mlme_set_band_capability() - Set the Band capability config
  * @psoc: pointer to psoc object
@@ -337,6 +357,37 @@ QDF_STATUS wlan_mlme_set_dual_sta_policy(struct wlan_objmgr_psoc *psoc,
  */
 QDF_STATUS wlan_mlme_get_dual_sta_policy(struct wlan_objmgr_psoc *psoc,
 					 uint8_t *dual_sta_config);
+
+/**
+ * wlan_mlme_convert_ap_policy_config() - Convert vendor attr ap policy
+ * config to host enum
+ * @ap_config: Value to convert
+ *
+ * Return: enum host_concurrent_ap_policy
+ */
+enum host_concurrent_ap_policy
+wlan_mlme_convert_ap_policy_config(
+		enum qca_wlan_concurrent_ap_policy_config ap_config);
+
+/**
+ * wlan_mlme_set_ap_policy() - Set ap config policy value
+ * @vdev: pointer to vdev object
+ * @ap_cfg_policy: Value to be set from the caller
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+wlan_mlme_set_ap_policy(struct wlan_objmgr_vdev *vdev,
+			enum host_concurrent_ap_policy ap_cfg_policy);
+
+/**
+ * wlan_mlme_get_ap_policy() - Get ap config policy value
+ * @vdev: pointer to vdev object
+ *
+ * Return: enum host_concurrent_ap_policy
+ */
+enum host_concurrent_ap_policy
+wlan_mlme_get_ap_policy(struct wlan_objmgr_vdev *vdev);
 
 /**
  * wlan_mlme_get_prevent_link_down() - Get the prevent link down config
@@ -1021,6 +1072,24 @@ QDF_STATUS mlme_update_tgt_eht_caps_in_cfg(struct wlan_objmgr_psoc *psoc,
  */
 enum phy_ch_width wlan_mlme_convert_eht_op_bw_to_phy_ch_width(
 						uint8_t channel_width);
+
+/**
+ * wlan_mlme_get_usr_disable_sta_eht() - Get user disable sta eht flag
+ * @psoc: psoc object
+ *
+ * Return: true if user has disabled eht in connect request
+ */
+bool wlan_mlme_get_usr_disable_sta_eht(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * wlan_mlme_set_usr_disable_sta_eht() - Set user disable sta eht flag
+ * @psoc: psoc object
+ * @disable: eht disable flag
+ *
+ * Return: void
+ */
+void wlan_mlme_set_usr_disable_sta_eht(struct wlan_objmgr_psoc *psoc,
+				       bool disable);
 #endif
 
 /**
@@ -2223,6 +2292,31 @@ mlme_update_vht_cap(struct wlan_objmgr_psoc *psoc, struct wma_tgt_vht_cap *cfg);
  * Return: QDF_STATUS
  */
 QDF_STATUS mlme_update_nss_vht_cap(struct wlan_objmgr_psoc *psoc);
+
+#ifdef WLAN_FEATURE_11BE
+/**
+ * mlme_get_bss_11be_allowed() - Check BSS allowed in 11be mode
+ * @psoc: psoc context
+ * @bssid: bssid
+ * @ie_date: ie data
+ * @ie_length: ie data length
+ *
+ * Return: true if AP in 11be oui allow list
+ */
+bool mlme_get_bss_11be_allowed(struct wlan_objmgr_psoc *psoc,
+			       struct qdf_mac_addr *bssid,
+			       uint8_t *ie_data,
+			       uint32_t ie_length);
+#else
+static inline
+bool mlme_get_bss_11be_allowed(struct wlan_objmgr_psoc *psoc,
+			       struct qdf_mac_addr *bssid,
+			       uint8_t *ie_data,
+			       uint32_t ie_length)
+{
+	return false;
+}
+#endif
 
 /**
  * wlan_mlme_is_sap_uapsd_enabled() - Get if SAP UAPSD is enabled/disabled

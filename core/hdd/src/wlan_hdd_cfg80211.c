@@ -1839,6 +1839,12 @@ static const struct nl80211_vendor_cmd_info wlan_hdd_cfg80211_vendor_events[] = 
 		.subcmd = QCA_NL80211_VENDOR_SUBCMD_DRIVER_READY,
 	},
 	FEATURE_WIFI_POS_11AZ_AUTH_EVENTS
+#ifdef WLAN_FEATURE_SR
+	[QCA_NL80211_VENDOR_SUBCMD_SR_INDEX] = {
+		.vendor_id = QCA_NL80211_VENDOR_ID,
+		.subcmd = QCA_NL80211_VENDOR_SUBCMD_SR,
+	},
+#endif
 };
 
 /**
@@ -3722,6 +3728,12 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 					pcl_channels_weight_list,
 					NUM_CHANNELS);
 
+	policy_mgr_get_pcl_chlist_for_ll_sap(
+				hdd_ctx->psoc, pm_mode, adapter->vdev_id,
+				sap_config->acs_cfg.pcl_chan_freq,
+				sap_config->acs_cfg.pcl_channels_weight_list,
+				&sap_config->acs_cfg.pcl_ch_count);
+
 	sap_config->acs_cfg.band = hw_mode;
 
 	qdf_status = ucfg_mlme_get_external_acs_policy(hdd_ctx->psoc,
@@ -3746,7 +3758,11 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 					&sap_config->acs_cfg.ch_list_count);
 		if (!sap_config->acs_cfg.ch_list_count &&
 		    sap_config->acs_cfg.master_ch_list_count &&
-		    !is_vendor_unsafe_ch_present)
+		    !is_vendor_unsafe_ch_present &&
+		    !policy_mgr_is_ll_sap_present_in_current_mode(
+							hdd_ctx->psoc,
+							pm_mode,
+							adapter->vdev_id))
 			wlan_hdd_handle_zero_acs_list(
 				hdd_ctx,
 				sap_config->acs_cfg.freq_list,
@@ -4810,6 +4826,7 @@ static int hdd_set_allow_list(struct hdd_context *hdd_ctx,
 	struct nlattr *tb2[MAX_ROAMING_PARAM + 1];
 	struct nlattr *curr_attr = NULL;
 	mac_handle_t mac_handle;
+	struct wlan_ssid *ssid;
 
 	i = 0;
 	if (tb[PARAM_NUM_NW]) {
@@ -4847,20 +4864,19 @@ static int hdd_set_allow_list(struct hdd_context *hdd_ctx,
 			 * the NULL termination character to the driver
 			 * buffer.
 			 */
-			if (buf_len > 1 &&
-			    ((buf_len - 1) <= WLAN_SSID_MAX_LEN)) {
-				nla_memcpy(rso_config->ssid_allowed_list[i].ssid,
-					tb2[PARAM_LIST_SSID], buf_len - 1);
-				rso_config->ssid_allowed_list[i].length = buf_len - 1;
-				hdd_debug("SSID[%d]: %.*s,length = %d",
-					i,
-					rso_config->ssid_allowed_list[i].length,
-					rso_config->ssid_allowed_list[i].ssid,
-					rso_config->ssid_allowed_list[i].length);
-					i++;
-			} else {
+			if (buf_len <= 1 || (buf_len - 1) > WLAN_SSID_MAX_LEN) {
 				hdd_err("Invalid buffer length");
+				continue;
 			}
+
+			ssid = &rso_config->ssid_allowed_list[i];
+			nla_memcpy(ssid->ssid,
+				   tb2[PARAM_LIST_SSID], buf_len - 1);
+			ssid->length = buf_len - 1;
+			hdd_debug("SSID[%d]: " QDF_SSID_FMT ",length = %d", i,
+				  QDF_SSID_REF(ssid->length, ssid->ssid),
+				  rso_config->ssid_allowed_list[i].length);
+			i++;
 		}
 	}
 
@@ -14100,59 +14116,31 @@ wlan_hdd_cfg80211_sta_roam_policy(struct wiphy *wiphy,
 }
 
 const struct nla_policy
-wlan_hdd_set_dual_sta_policy[
-QCA_WLAN_VENDOR_ATTR_CONCURRENT_STA_POLICY_MAX + 1] = {
-	[QCA_WLAN_VENDOR_ATTR_CONCURRENT_STA_POLICY_CONFIG] = {.type = NLA_U8 },
+wlan_hdd_set_concurrent_session_policy[
+QCA_WLAN_VENDOR_ATTR_CONCURRENT_POLICY_MAX + 1] = {
+	[QCA_WLAN_VENDOR_ATTR_CONCURRENT_POLICY_STA_CONFIG] = {.type = NLA_U8 },
+	[QCA_WLAN_VENDOR_ATTR_CONCURRENT_POLICY_AP_CONFIG] = {.type = NLA_U8 },
 };
 
 /**
  * __wlan_hdd_cfg80211_dual_sta_policy() - Wrapper to configure the concurrent
  * session policies
- * @wiphy:    wiphy structure pointer
- * @wdev:     Wireless device structure pointer
- * @data:     Pointer to the data received
- * @data_len: Length of @data
+ * @hdd_ctx: Pointer to HDD context
+ * @tb: parsed attribute array
  *
  * Configure the concurrent session policies when multiple STA ifaces are
  * (getting) active.
  * Return: 0 on success; errno on failure
  */
-static int __wlan_hdd_cfg80211_dual_sta_policy(struct wiphy *wiphy,
-					       struct wireless_dev *wdev,
-					       const void *data, int data_len)
+static int __wlan_hdd_cfg80211_dual_sta_policy(struct hdd_context *hdd_ctx,
+					       struct nlattr **tb)
 {
-	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
-	struct nlattr *tb[
-		QCA_WLAN_VENDOR_ATTR_CONCURRENT_STA_POLICY_MAX + 1];
 	QDF_STATUS status;
 	uint8_t dual_sta_config =
 		QCA_WLAN_CONCURRENT_STA_POLICY_UNBIASED;
 
-	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
-		hdd_err("Command not allowed in FTM mode");
-		return -EPERM;
-	}
-
-	if (wlan_hdd_validate_context(hdd_ctx)) {
-		hdd_err("Invalid hdd context");
-		return -EINVAL;
-	}
-
-	if (wlan_cfg80211_nla_parse(tb,
-			       QCA_WLAN_VENDOR_ATTR_CONCURRENT_STA_POLICY_MAX,
-			       data, data_len,
-			       wlan_hdd_set_dual_sta_policy)) {
-		hdd_err("nla_parse failed");
-		return -EINVAL;
-	}
-
-	if (!tb[QCA_WLAN_VENDOR_ATTR_CONCURRENT_STA_POLICY_CONFIG]) {
-		hdd_err("sta policy config attribute not present");
-		return -EINVAL;
-	}
-
 	dual_sta_config = nla_get_u8(
-			tb[QCA_WLAN_VENDOR_ATTR_CONCURRENT_STA_POLICY_CONFIG]);
+			tb[QCA_WLAN_VENDOR_ATTR_CONCURRENT_POLICY_STA_CONFIG]);
 	hdd_debug("Concurrent STA policy : %d", dual_sta_config);
 
 	if (dual_sta_config > QCA_WLAN_CONCURRENT_STA_POLICY_UNBIASED)
@@ -14175,8 +14163,105 @@ static int __wlan_hdd_cfg80211_dual_sta_policy(struct wiphy *wiphy,
 }
 
 /**
- * wlan_hdd_cfg80211_dual_sta_policy() - Wrapper to configure the concurrent
+ * __wlan_hdd_cfg80211_ap_policy() - Wrapper to configure the concurrent
  * session policies
+ * @vdev: pointer to vdev
+ * @tb: parsed attribute array
+ *
+ * Configure the concurrent session policies when multiple STA ifaces are
+ * (getting) active.
+ * Return: 0 on success; errno on failure
+ */
+static int __wlan_hdd_cfg80211_ap_policy(struct wlan_objmgr_vdev *vdev,
+					 struct nlattr **tb)
+{
+	QDF_STATUS status;
+	uint8_t ap_cfg_policy;
+	uint8_t ap_config =
+			QCA_WLAN_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING;
+
+	ap_config = nla_get_u8(
+		tb[QCA_WLAN_VENDOR_ATTR_CONCURRENT_POLICY_AP_CONFIG]);
+	hdd_debug("AP policy : %d", ap_config);
+
+	if (ap_config > QCA_WLAN_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING) {
+		hdd_err_rl("Invalid concurrent policy ap config %d", ap_config);
+		return -EINVAL;
+	}
+
+	ap_cfg_policy = wlan_mlme_convert_ap_policy_config(ap_config);
+	status = ucfg_mlme_set_ap_policy(vdev, ap_cfg_policy);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		hdd_err("failed to set MLME ap config");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+/**
+ * __wlan_hdd_cfg80211_concurrent_session_policy() - Wrapper to configure the
+ * concurrent session policies
+ * @wiphy:    wiphy structure pointer
+ * @wdev:     Wireless device structure pointer
+ * @data:     Pointer to the data received
+ * @data_len: Length of @data
+ *
+ * Configure the concurrent session policies when low latency SAP or multiple
+ * STA ifaces are (getting) active.
+ * Return: 0 on success; errno on failure
+ */
+static int __wlan_hdd_cfg80211_concurrent_session_policy(
+						struct wiphy *wiphy,
+						struct wireless_dev *wdev,
+						const void *data, int data_len)
+{
+	struct net_device *ndev = wdev->netdev;
+	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(ndev);
+	struct nlattr *tb[QCA_WLAN_VENDOR_ATTR_CONCURRENT_POLICY_MAX + 1];
+
+	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
+		hdd_err_rl("Command not allowed in FTM mode");
+		return -EPERM;
+	}
+
+	if (hdd_validate_adapter(adapter)) {
+		hdd_err_rl("Invalid adapter");
+		return -EINVAL;
+	}
+
+	if (wlan_hdd_validate_context(adapter->hdd_ctx)) {
+		hdd_err_rl("Invalid hdd context");
+		return -EINVAL;
+	}
+
+	if (wlan_cfg80211_nla_parse(
+				tb,
+				QCA_WLAN_VENDOR_ATTR_CONCURRENT_POLICY_MAX,
+				data, data_len,
+				wlan_hdd_set_concurrent_session_policy)) {
+		hdd_err_rl("nla_parse failed");
+		return -EINVAL;
+	}
+
+	if (!tb[QCA_WLAN_VENDOR_ATTR_CONCURRENT_POLICY_STA_CONFIG] &&
+	    !tb[QCA_WLAN_VENDOR_ATTR_CONCURRENT_POLICY_AP_CONFIG]) {
+		hdd_err_rl("concurrent session policy attr not present");
+		return -EINVAL;
+	}
+
+	if (tb[QCA_WLAN_VENDOR_ATTR_CONCURRENT_POLICY_STA_CONFIG])
+		__wlan_hdd_cfg80211_dual_sta_policy(adapter->hdd_ctx, tb);
+
+	if (tb[QCA_WLAN_VENDOR_ATTR_CONCURRENT_POLICY_AP_CONFIG])
+		__wlan_hdd_cfg80211_ap_policy(adapter->vdev, tb);
+
+	return 0;
+}
+
+/**
+ * wlan_hdd_cfg80211_concurrent_session_policy() -  Wrapper to configure the
+ * concurrent session policies
  * @wiphy:    wiphy structure pointer
  * @wdev:     Wireless device structure pointer
  * @data:     Pointer to the data received
@@ -14186,9 +14271,11 @@ static int __wlan_hdd_cfg80211_dual_sta_policy(struct wiphy *wiphy,
  * (getting) active.
  * Return: 0 on success; errno on failure
  */
-static int wlan_hdd_cfg80211_dual_sta_policy(struct wiphy *wiphy,
-					     struct wireless_dev *wdev,
-					     const void *data, int data_len)
+static int wlan_hdd_cfg80211_concurrent_session_policy(
+						struct wiphy *wiphy,
+						struct wireless_dev *wdev,
+						const void *data,
+						int data_len)
 {
 	int errno;
 	struct osif_vdev_sync *vdev_sync;
@@ -14197,8 +14284,10 @@ static int wlan_hdd_cfg80211_dual_sta_policy(struct wiphy *wiphy,
 	if (errno)
 		return errno;
 
-	errno = __wlan_hdd_cfg80211_dual_sta_policy(wiphy, wdev, data,
-						    data_len);
+	errno = __wlan_hdd_cfg80211_concurrent_session_policy(
+						wiphy, wdev, data,
+						data_len);
+
 
 	osif_vdev_sync_op_stop(vdev_sync);
 
@@ -17991,13 +18080,14 @@ const struct wiphy_vendor_command hdd_wiphy_vendor_commands[] = {
 	{
 		.info.vendor_id = QCA_NL80211_VENDOR_ID,
 		.info.subcmd =
-			QCA_NL80211_VENDOR_SUBCMD_CONCURRENT_MULTI_STA_POLICY,
+			QCA_NL80211_VENDOR_SUBCMD_CONCURRENT_POLICY,
 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
-			WIPHY_VENDOR_CMD_NEED_NETDEV,
-		.doit = wlan_hdd_cfg80211_dual_sta_policy,
+			WIPHY_VENDOR_CMD_NEED_NETDEV |
+			WIPHY_VENDOR_CMD_NEED_RUNNING,
+		.doit = wlan_hdd_cfg80211_concurrent_session_policy,
 		vendor_command_policy(
-			wlan_hdd_set_dual_sta_policy,
-			QCA_WLAN_VENDOR_ATTR_CONCURRENT_STA_POLICY_MAX)
+			wlan_hdd_set_concurrent_session_policy,
+			QCA_WLAN_VENDOR_ATTR_CONCURRENT_POLICY_MAX)
 	},
 
 #ifdef FEATURE_WLAN_CH_AVOID
@@ -20298,6 +20388,7 @@ static int wlan_hdd_add_key_vdev(mac_handle_t mac_handle,
 	int errno;
 	enum wlan_crypto_cipher_type cipher;
 	bool ft_mode = false;
+	struct hdd_ap_ctx *hdd_ap_ctx;
 
 	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 
@@ -20349,6 +20440,11 @@ static int wlan_hdd_add_key_vdev(mac_handle_t mac_handle,
 	switch (adapter->device_mode) {
 	case QDF_SAP_MODE:
 	case QDF_P2P_GO_MODE:
+		hdd_ap_ctx = WLAN_HDD_GET_AP_CTX_PTR(adapter);
+		if (hdd_ap_ctx->during_auth_offload) {
+			hdd_err("don't need install key during auth");
+			return -EINVAL;
+		}
 		errno = wlan_hdd_add_key_sap(adapter, pairwise,
 					     key_index, cipher);
 		break;
@@ -22309,10 +22405,10 @@ static void hdd_fill_pmksa_info(struct hdd_adapter *adapter,
 		qdf_mem_copy(pmk_cache->cache_id, pmksa->cache_id,
 			     CACHE_ID_LEN);
 		pmk_cache->ssid_len = pmksa->ssid_len;
-		hdd_debug("%s PMKSA for ssid %*.*s cache_id %x %x",
+		hdd_debug("%s PMKSA for ssid " QDF_SSID_FMT " cache_id %x %x",
 			  is_delete ? "Delete" : "Set",
-			  pmk_cache->ssid_len, pmk_cache->ssid_len,
-			  pmk_cache->ssid, pmk_cache->cache_id[0],
+			  QDF_SSID_REF(pmk_cache->ssid_len, pmk_cache->ssid),
+			  pmk_cache->cache_id[0],
 			  pmk_cache->cache_id[1]);
 	}
 
@@ -24987,7 +25083,15 @@ static int _wlan_hdd_cfg80211_tx_control_port(struct wiphy *wiphy,
 }
 
 #if defined(CFG80211_CTRL_FRAME_SRC_ADDR_TA_ADDR)
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
+static int wlan_hdd_cfg80211_tx_control_port(struct wiphy *wiphy,
+					     struct net_device *dev,
+					     const u8 *buf,
+					     size_t len,
+					     const u8 *dest, const __be16 proto,
+					     bool unencrypted, int link_id,
+					     u64 *cookie)
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0))
 static int wlan_hdd_cfg80211_tx_control_port(struct wiphy *wiphy,
 					     struct net_device *dev,
 					     const u8 *buf,
@@ -25008,7 +25112,15 @@ static int wlan_hdd_cfg80211_tx_control_port(struct wiphy *wiphy,
 }
 
 #else
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
+static int wlan_hdd_cfg80211_tx_control_port(struct wiphy *wiphy,
+					     struct net_device *dev,
+					     const u8 *buf,
+					     size_t len,
+					     const u8 *dest, const __be16 proto,
+					     bool unencrypted, int link_id,
+					     u64 *cookie)
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0))
 static int wlan_hdd_cfg80211_tx_control_port(struct wiphy *wiphy,
 					     struct net_device *dev,
 					     const u8 *buf, size_t len,

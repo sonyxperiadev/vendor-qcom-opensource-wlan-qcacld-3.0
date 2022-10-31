@@ -1502,6 +1502,20 @@ QDF_STATUS wlansap_update_owe_info(struct sap_context *sap_ctx,
 				   uint32_t ie_len, uint16_t owe_status);
 
 /**
+ * wlansap_update_ft_info() - Update FT info
+ * @sap_ctx: sap context
+ * @peer: peer mac
+ * @ie: IE from hostapd
+ * @ie_len: IE length
+ * @ft_status: wlan status codes
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS wlansap_update_ft_info(struct sap_context *sap_ctx,
+				  uint8_t *peer, const uint8_t *ie,
+				  uint32_t ie_len, uint16_t ft_status);
+
+/**
  * wlansap_filter_ch_based_acs() -filter out channel based on acs
  * @sap_ctx: sap context
  * @ch_freq_list: pointer to channel frequency list

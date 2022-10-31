@@ -1425,18 +1425,20 @@ QDF_STATUS vdevmgr_mlme_ext_hdl_create(struct vdev_mlme_obj *vdev_mlme)
 	return status;
 }
 
-static void
+static QDF_STATUS
 mlme_wma_vdev_detach_post_cb(struct scheduler_msg *msg)
 {
 	struct vdev_delete_response rsp = {0};
 
 	if (!msg) {
 		mlme_err("Msg is NULL");
-		return;
+		return QDF_STATUS_E_INVAL;
 	}
 
 	rsp.vdev_id = msg->bodyval;
 	wma_vdev_detach_callback(&rsp);
+
+	return QDF_STATUS_SUCCESS;
 }
 
 static void mlme_wma_vdev_detach_handler(uint8_t vdev_id)
@@ -1445,8 +1447,7 @@ static void mlme_wma_vdev_detach_handler(uint8_t vdev_id)
 
 	msg.bodyptr = NULL;
 	msg.bodyval = vdev_id;
-	msg.callback = (scheduler_msg_process_fn_t)
-			mlme_wma_vdev_detach_post_cb;
+	msg.callback = mlme_wma_vdev_detach_post_cb;
 
 	if (scheduler_post_message(QDF_MODULE_ID_MLME,
 				   QDF_MODULE_ID_TARGET_IF,

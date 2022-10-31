@@ -626,11 +626,13 @@ rrm_process_beacon_report_req(struct mac_context *mac,
 
 	measDuration = pBeaconReq->measurement_request.Beacon.meas_duration;
 
-	pe_nofl_info("RX: [802.11 BCN_RPT] seq:%d SSID:%.*s BSSID:"QDF_MAC_ADDR_FMT" Token:%d op_class:%d ch:%d meas_mode:%d meas_duration:%d max_dur: %d sign: %d max_meas_dur: %d",
+	pe_nofl_info("RX: [802.11 BCN_RPT] seq:%d SSID:" QDF_SSID_FMT " BSSID:" QDF_MAC_ADDR_FMT " Token:%d op_class:%d ch:%d meas_mode:%d meas_duration:%d max_dur: %d sign: %d max_meas_dur: %d",
 		     mac->rrm.rrmPEContext.prev_rrm_report_seq_num,
-		     pBeaconReq->measurement_request.Beacon.SSID.num_ssid,
-		     pBeaconReq->measurement_request.Beacon.SSID.ssid,
-		     QDF_MAC_ADDR_REF(pBeaconReq->measurement_request.Beacon.BSSID),
+		     QDF_SSID_REF(
+			pBeaconReq->measurement_request.Beacon.SSID.num_ssid,
+			pBeaconReq->measurement_request.Beacon.SSID.ssid),
+		     QDF_MAC_ADDR_REF(
+			pBeaconReq->measurement_request.Beacon.BSSID),
 		     pBeaconReq->measurement_token,
 		     pBeaconReq->measurement_request.Beacon.regClass,
 		     pBeaconReq->measurement_request.Beacon.channel,

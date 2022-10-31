@@ -236,6 +236,16 @@ bool hdd_tsf_is_dbg_fs_set(struct hdd_context *hdd);
 int hdd_start_tsf_sync(struct hdd_adapter *adapter);
 
 /**
+ * hdd_restart_tsf_sync_post_wlan_resume() - restart host TSF sync
+ * @adapter: pointer to adapter
+ *
+ * This function restarts host TSF sync immediately after wlan resume
+ *
+ * Return: none
+ */
+void hdd_restart_tsf_sync_post_wlan_resume(struct hdd_adapter *adapter);
+
+/**
  * hdd_stop_tsf_sync() - stop tsf sync
  * @adapter: pointer to adapter
  *
@@ -324,6 +334,11 @@ bool hdd_tsf_is_tsf64_tx_set(struct hdd_context *hdd)
 
 static inline
 void hdd_update_dynamic_tsf_sync(struct hdd_adapter *adapter)
+{
+}
+
+static inline
+void hdd_restart_tsf_sync_post_wlan_resume(struct hdd_adapter *adapter)
 {
 }
 

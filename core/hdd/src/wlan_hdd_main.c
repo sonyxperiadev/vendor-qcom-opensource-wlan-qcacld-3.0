@@ -2666,8 +2666,8 @@ bool hdd_dfs_indicate_radar(struct hdd_context *hdd_ctx)
 
 		if ((QDF_SAP_MODE == adapter->device_mode ||
 		    QDF_P2P_GO_MODE == adapter->device_mode) &&
-		    (wlan_reg_is_passive_or_disable_for_freq(hdd_ctx->pdev,
-		     ap_ctx->operating_chan_freq))) {
+		    (wlan_reg_is_passive_or_disable_for_pwrmode(hdd_ctx->pdev,
+		     ap_ctx->operating_chan_freq, REG_CURRENT_PWR_MODE))) {
 			WLAN_HDD_GET_AP_CTX_PTR(adapter)->dfs_cac_block_tx =
 				true;
 			hdd_info("tx blocked for vdev: %d",
@@ -3690,6 +3690,8 @@ static void hdd_check_for_objmgr_leaks(struct hdd_context *hdd_ctx)
 	if (!psoc)
 		return;
 
+	wlan_psoc_obj_lock(psoc);
+
 	hdd_check_for_objmgr_peer_leaks(psoc);
 
 	wlan_objmgr_for_each_psoc_vdev(psoc, vdev_id, vdev) {
@@ -3712,6 +3714,7 @@ static void hdd_check_for_objmgr_leaks(struct hdd_context *hdd_ctx)
 		wlan_objmgr_for_each_refs(ref_id_dbg, ref_id, refs)
 			wlan_objmgr_pdev_release_ref(pdev, ref_id);
 	}
+	wlan_psoc_obj_unlock(psoc);
 }
 
 static void hdd_check_for_leaks(struct hdd_context *hdd_ctx, bool is_ssr)
@@ -4288,6 +4291,8 @@ int hdd_wlan_start_modules(struct hdd_context *hdd_ctx, bool reinit)
 		hdd_nan_register_callbacks(hdd_ctx);
 
 		hdd_son_register_callbacks(hdd_ctx);
+
+		hdd_sr_register_callbacks(hdd_ctx);
 
 		wlan_hdd_register_btc_chain_mode_handler(hdd_ctx->psoc);
 
@@ -9560,17 +9565,6 @@ static void wlan_hdd_cache_chann_mutex_destroy(struct hdd_context *hdd_ctx)
 }
 #endif
 
-/**
- * wlan_hdd_wifi_kobj_lock_destroy() - Destroy wifi kobj lock
- * @hdd_ctx: pointer to hdd context
- *
- * Return: none
- */
-static void wlan_hdd_wifi_kobj_lock_destroy(struct hdd_context *hdd_ctx)
-{
-	qdf_mutex_destroy(&hdd_ctx->wifi_kobj_lock);
-}
-
 void hdd_wlan_exit(struct hdd_context *hdd_ctx)
 {
 	struct wiphy *wiphy = hdd_ctx->wiphy;
@@ -9636,7 +9630,6 @@ void hdd_wlan_exit(struct hdd_context *hdd_ctx)
 
 	qdf_spinlock_destroy(&hdd_ctx->hdd_adapter_lock);
 	qdf_spinlock_destroy(&hdd_ctx->connection_status_lock);
-	wlan_hdd_wifi_kobj_lock_destroy(hdd_ctx);
 	wlan_hdd_cache_chann_mutex_destroy(hdd_ctx);
 
 	osif_request_manager_deinit();
@@ -12652,6 +12645,9 @@ static void hdd_cfg_params_init(struct hdd_context *hdd_ctx)
 	qdf_str_lcopy(config->action_oui_str[ACTION_OUI_TAKE_ALL_BAND_INFO],
 		      cfg_get(psoc, CFG_ACTION_OUI_TAKE_ALL_BAND_INFO),
 		      ACTION_OUI_MAX_STR_LEN);
+	qdf_str_lcopy(config->action_oui_str[ACTION_OUI_11BE_OUI_ALLOW],
+		      cfg_get(psoc, CFG_ACTION_11BE_OUI_ALLOW_LIST),
+		      ACTION_OUI_MAX_STR_LEN);
 
 	config->is_unit_test_framework_enabled =
 			cfg_get(psoc, CFG_ENABLE_UNIT_TEST_FRAMEWORK);
@@ -14552,6 +14548,7 @@ static void hdd_action_oui_send(struct hdd_context *hdd_ctx)
 	status = ucfg_action_oui_send(hdd_ctx->psoc);
 	if (!QDF_IS_STATUS_SUCCESS(status))
 		hdd_err("Failed to send one or all action_ouis");
+	ucfg_mlme_set_usr_disable_sta_eht(hdd_ctx->psoc, false);
 }
 
 static void hdd_hastings_bt_war_initialize(struct hdd_context *hdd_ctx)
@@ -14590,7 +14587,6 @@ int hdd_configure_cds(struct hdd_context *hdd_ctx)
 
 	mac_handle = hdd_ctx->mac_handle;
 
-	hdd_action_oui_send(hdd_ctx);
 	status = ucfg_policy_mgr_get_force_1x1(hdd_ctx->psoc, &is_force_1x1);
 	if (status != QDF_STATUS_SUCCESS) {
 		hdd_err("Failed to get force 1x1 value");
@@ -14743,6 +14739,8 @@ int hdd_configure_cds(struct hdd_context *hdd_ctx)
 		hdd_debug("Failed to register mode change cb with Policy Manager");
 		goto cds_disable;
 	}
+	hdd_action_oui_config(hdd_ctx);
+	hdd_action_oui_send(hdd_ctx);
 
 	if (hdd_green_ap_enable_egap(hdd_ctx))
 		hdd_debug("enhance green ap is not enabled");
@@ -14834,24 +14832,6 @@ static void hdd_deregister_policy_manager_callback(
 {
 }
 #endif
-
-/**
- * wlan_hdd_free_file_name_and_oem_data() -Free file name and oem data memory
- * @hdd_ctx: pointer to hdd context
- *
- * Return: none
- */
-static void wlan_hdd_free_file_name_and_oem_data(struct hdd_context *hdd_ctx)
-{
-	if (hdd_ctx->file_name) {
-		qdf_mem_free(hdd_ctx->file_name);
-		hdd_ctx->file_name = NULL;
-	}
-	if (hdd_ctx->oem_data) {
-		qdf_mem_free(hdd_ctx->oem_data);
-		hdd_ctx->oem_data = NULL;
-	}
-}
 
 int hdd_wlan_stop_modules(struct hdd_context *hdd_ctx, bool ftm_mode)
 {
@@ -15012,7 +14992,6 @@ int hdd_wlan_stop_modules(struct hdd_context *hdd_ctx, bool ftm_mode)
 
 	/* Free the cache channels of the command SET_DISABLE_CHANNEL_LIST */
 	wlan_hdd_free_cache_channels(hdd_ctx);
-	wlan_hdd_free_file_name_and_oem_data(hdd_ctx);
 	hdd_driver_mem_cleanup();
 
 	/* Free the resources allocated while storing SAR config. These needs
@@ -15467,17 +15446,6 @@ static QDF_STATUS hdd_open_adapters_for_mode(struct hdd_context *hdd_ctx,
 	return status;
 }
 
-/**
- * wlan_hdd_wifi_kobj_lock_create() - Create wifi kobj lock
- * @hdd_ctx: pointer to hdd context
- *
- * Return: none
- */
-static QDF_STATUS wlan_hdd_wifi_kobj_lock_create(struct hdd_context *hdd_ctx)
-{
-	return qdf_mutex_create(&hdd_ctx->wifi_kobj_lock);
-}
-
 int hdd_wlan_startup(struct hdd_context *hdd_ctx)
 {
 	QDF_STATUS status;
@@ -15486,15 +15454,9 @@ int hdd_wlan_startup(struct hdd_context *hdd_ctx)
 
 	hdd_enter();
 
-	hdd_action_oui_config(hdd_ctx);
-
 	qdf_nbuf_init_replenish_timer();
 
 	status = wlan_hdd_cache_chann_mutex_create(hdd_ctx);
-	if (QDF_IS_STATUS_ERROR(status))
-		return qdf_status_to_os_return(status);
-
-	status = wlan_hdd_wifi_kobj_lock_create(hdd_ctx);
 	if (QDF_IS_STATUS_ERROR(status))
 		return qdf_status_to_os_return(status);
 
@@ -17442,10 +17404,12 @@ void hdd_component_psoc_enable(struct wlan_objmgr_psoc *psoc)
 	policy_mgr_psoc_enable(psoc);
 	ucfg_tdls_psoc_enable(psoc);
 	ucfg_fwol_psoc_enable(psoc);
+	ucfg_action_oui_psoc_enable(psoc);
 }
 
 void hdd_component_psoc_disable(struct wlan_objmgr_psoc *psoc)
 {
+	ucfg_action_oui_psoc_disable(psoc);
 	ucfg_fwol_psoc_disable(psoc);
 	ucfg_tdls_psoc_disable(psoc);
 	policy_mgr_psoc_disable(psoc);

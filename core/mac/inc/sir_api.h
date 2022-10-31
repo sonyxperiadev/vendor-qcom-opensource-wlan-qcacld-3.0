@@ -1085,6 +1085,9 @@ struct assoc_ind {
 	const uint8_t *owe_ie;
 	uint32_t owe_ie_len;
 	uint16_t owe_status;
+	const uint8_t *ft_ie;
+	uint32_t ft_ie_len;
+	uint16_t ft_status;
 	bool need_assoc_rsp_tx_cb;
 	tSirMacAddr peer_mld_addr;
 };
@@ -1095,6 +1098,16 @@ struct assoc_ind {
  * @assoc_ind: pointer to assoc ind
  */
 struct owe_assoc_ind {
+	qdf_list_node_t node;
+	struct assoc_ind *assoc_ind;
+};
+
+/**
+ * struct ft_assoc_ind - ft association indication
+ * @node: List entry element
+ * @assoc_ind: pointer to assoc ind
+ */
+struct ft_assoc_ind {
 	qdf_list_node_t node;
 	struct assoc_ind *assoc_ind;
 };
@@ -1111,6 +1124,8 @@ struct assoc_cnf {
 	enum wlan_status_code mac_status_code;
 	uint8_t *owe_ie;
 	uint32_t owe_ie_len;
+	uint8_t *ft_ie;
+	uint32_t ft_ie_len;
 	bool need_assoc_rsp_tx_cb;
 };
 
@@ -2070,7 +2085,7 @@ typedef struct sAniHandoffReq {
  * @SIR_SCAN_EVENT_STARTED - scan command accepted by FW
  * @SIR_SCAN_EVENT_COMPLETED - scan has been completed by FW
  * @SIR_SCAN_EVENT_BSS_CHANNEL - FW is going to move to HOME channel
- * @SIR_SCAN_EVENT_FOREIGN_CHANNEL - FW is going to move to FORIEGN channel
+ * @SIR_SCAN_EVENT_FOREIGN_CHANNEL - FW is going to move to FOREIGN channel
  * @SIR_SCAN_EVENT_DEQUEUED - scan request got dequeued
  * @SIR_SCAN_EVENT_PREEMPTED - preempted by other high priority scan
  * @SIR_SCAN_EVENT_START_FAILED - scan start failed
@@ -3901,7 +3916,8 @@ struct stsf {
 	uint32_t tsf_id_valid;
 };
 
-#define SIR_BCN_FLT_MAX_ELEMS_IE_LIST 8
+/* ie + extn ie */
+#define SIR_BCN_FLT_MAX_ELEMS_IE_LIST (8 + 8)
 /**
  * struct beacon_filter_param - parameters for beacon filtering
  * @vdev_id: vdev id

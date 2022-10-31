@@ -160,6 +160,7 @@ enum wlan_main_tag {
  * @WLAN_CONN_DIAG_EAP_SUCC_EVENT: EAP success
  * @WLAN_CONN_DIAG_EAP_FAIL_EVENT: EAP failure
  * @WLAN_CONN_DIAG_CUSTOM_EVENT: Additional WLAN logs
+ * @WLAN_CONN_DIAG_EAP_START_EVENT: EAPOL start frame
  * @WLAN_CONN_DIAG_MAX: MAX tag
  */
 enum qca_conn_diag_log_event_type {
@@ -203,6 +204,7 @@ enum qca_conn_diag_log_event_type {
 	WLAN_CONN_DIAG_EAP_SUCC_EVENT,
 	WLAN_CONN_DIAG_EAP_FAIL_EVENT,
 	WLAN_CONN_DIAG_CUSTOM_EVENT,
+	WLAN_CONN_DIAG_EAP_START_EVENT,
 	WLAN_CONN_DIAG_MAX
 };
 
@@ -466,8 +468,8 @@ struct wlan_diag_connect {
 	char ssid[WLAN_SSID_MAX_LEN];
 	uint8_t bssid_hint[6];
 	uint16_t reason;
-	uint16_t akm;
-	uint16_t subtype;
+	uint32_t akm;
+	uint32_t subtype;
 	uint32_t freq;
 	uint32_t freq_hint;
 	uint32_t pairwise_cipher;

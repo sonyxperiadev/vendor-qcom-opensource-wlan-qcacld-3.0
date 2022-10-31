@@ -591,8 +591,8 @@ cm_roam_candidate_event_handler(struct wlan_objmgr_psoc *psoc,
 							   ie_ptr, ie_len);
 	if (extracted_ie && extracted_ie[0] == WLAN_ELEMID_SSID &&
 	    extracted_ie[1] > MIN_IE_LEN) {
-		mlme_debug("SSID of the candidate is %.*s", extracted_ie[1],
-			   &extracted_ie[2]);
+		mlme_debug("SSID of the candidate is " QDF_SSID_FMT,
+			   QDF_SSID_REF(extracted_ie[1], &extracted_ie[2]));
 		wlan_cm_set_roam_offload_ssid(vdev, extracted_ie);
 	}
 

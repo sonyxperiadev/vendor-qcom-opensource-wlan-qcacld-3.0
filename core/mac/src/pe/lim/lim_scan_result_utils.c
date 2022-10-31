@@ -152,12 +152,13 @@ lim_collect_bss_description(struct mac_context *mac,
 	pBssDescr->tsf_delta = WMA_GET_RX_TSF_DELTA(pRxPacketInfo);
 	pBssDescr->seq_ctrl = pHdr->seqControl;
 
-	pe_debug("Received %s from BSSID: "QDF_MAC_ADDR_FMT" tsf_delta = %u Seq Num: %x ssid:%.*s, rssi: %d",
+	pe_debug("Received %s from BSSID: " QDF_MAC_ADDR_FMT " tsf_delta = %u Seq Num: %x ssid:" QDF_SSID_FMT ", rssi: %d",
 		 pBssDescr->fProbeRsp ? "Probe Rsp" : "Beacon",
 		 QDF_MAC_ADDR_REF(pHdr->bssId),
 		 pBssDescr->tsf_delta, ((pHdr->seqControl.seqNumHi <<
 		 HIGH_SEQ_NUM_OFFSET) | pHdr->seqControl.seqNumLo),
-		 pBPR->ssId.length, pBPR->ssId.ssId, pBssDescr->rssi_raw);
+		 QDF_SSID_REF(pBPR->ssId.length, pBPR->ssId.ssId),
+		 pBssDescr->rssi_raw);
 
 	if (fScanning) {
 		rrm_get_start_tsf(mac, pBssDescr->startTSF);

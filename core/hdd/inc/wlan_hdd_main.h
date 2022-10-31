@@ -132,6 +132,8 @@ static qdf_atomic_t dp_protect_entry_count;
 #define MAX_SSR_WAIT_ITERATIONS 100
 #define MAX_SSR_PROTECT_LOG (16)
 
+#define HDD_MAX_OEM_DATA_LEN 1024
+#define HDD_MAX_FILE_NAME_LEN 64
 #ifdef FEATURE_WLAN_APF
 /**
  * struct hdd_apf_context - hdd Context for apf
@@ -833,6 +835,7 @@ struct hdd_fw_txrx_stats {
  * @acs_in_progress: In progress acs flag for an adapter
  * @client_count: client count per dot11_mode
  * @country_ie_updated: country ie is updated or not by hdd hostapd
+ * @during_auth_offload: auth mgmt frame is offloading to hostapd
  */
 struct hdd_ap_ctx {
 	struct hdd_hostapd_state hostapd_state;
@@ -853,6 +856,7 @@ struct hdd_ap_ctx {
 	qdf_atomic_t acs_in_progress;
 	uint16_t client_count[QCA_WLAN_802_11_MODE_INVALID];
 	bool country_ie_updated;
+	bool during_auth_offload;
 };
 
 /**
@@ -996,6 +1000,7 @@ struct wlm_multi_client_info_table {
  * @vdev_id: Unique identifier assigned to the vdev
  * @event_flags: a bitmap of hdd_adapter_flags
  * @enable_dynamic_tsf_sync: Enable/Disable TSF sync through NL interface
+ * @host_target_sync_force: Force update host to TSF mapping
  * @dynamic_tsf_sync_interval: TSF sync interval configure through NL interface
  * @gpio_tsf_sync_work: work to sync send TSF CAP WMI command
  * @cache_sta_count: number of currently cached stations
@@ -1168,6 +1173,7 @@ struct hdd_adapter {
 	qdf_spinlock_t host_target_sync_lock;
 	qdf_mc_timer_t host_target_sync_timer;
 	bool enable_dynamic_tsf_sync;
+	bool host_target_sync_force;
 	uint32_t dynamic_tsf_sync_interval;
 	uint64_t cur_host_time;
 	uint64_t last_host_time;
@@ -2035,10 +2041,9 @@ struct hdd_context {
 #endif
 	bool is_wlan_disabled;
 
-	uint8_t *oem_data;
+	uint8_t oem_data[HDD_MAX_OEM_DATA_LEN];
 	uint8_t oem_data_len;
-	uint8_t *file_name;
-	qdf_mutex_t wifi_kobj_lock;
+	uint8_t file_name[HDD_MAX_FILE_NAME_LEN];
 #ifdef WLAN_FEATURE_DBAM_CONFIG
 	enum coex_dbam_config_mode dbam_mode;
 #endif
@@ -2903,6 +2908,19 @@ static inline bool hdd_roaming_supported(struct hdd_context *hdd_ctx)
 
 	return val;
 }
+
+#ifdef WLAN_NS_OFFLOAD
+static inline void
+hdd_adapter_flush_ipv6_notifier_work(struct hdd_adapter *adapter)
+{
+	flush_work(&adapter->ipv6_notifier_work);
+}
+#else
+static inline void
+hdd_adapter_flush_ipv6_notifier_work(struct hdd_adapter *adapter)
+{
+}
+#endif
 
 #ifdef CFG80211_SCAN_RANDOM_MAC_ADDR
 static inline bool hdd_scan_random_mac_addr_supported(void)

@@ -689,10 +689,6 @@ QDF_STATUS action_oui_send(struct action_oui_psoc_priv *psoc_priv,
 
 	extension_list = &oui_priv->extension_list;
 	qdf_mutex_acquire(&oui_priv->extension_lock);
-	if (qdf_list_empty(extension_list)) {
-		qdf_mutex_release(&oui_priv->extension_lock);
-		return QDF_STATUS_SUCCESS;
-	}
 
 	no_oui_extensions = qdf_list_size(extension_list);
 	len = sizeof(*req) + no_oui_extensions * sizeof(*extension);
@@ -866,6 +862,33 @@ action_oui_get_oui_ptr(struct action_oui_extension *extension,
 					       extension->oui_length,
 					       attr->ie_data,
 					       attr->ie_length);
+}
+
+bool
+action_oui_is_empty(struct action_oui_psoc_priv *psoc_priv,
+		    enum action_oui_id action_id)
+{
+	struct action_oui_priv *oui_priv;
+	qdf_list_t *extension_list;
+
+	oui_priv = psoc_priv->oui_priv[action_id];
+	if (!oui_priv) {
+		action_oui_debug("action oui for id %d is empty",
+				 action_id);
+		return true;
+	}
+
+	extension_list = &oui_priv->extension_list;
+	qdf_mutex_acquire(&oui_priv->extension_lock);
+	if (qdf_list_empty(extension_list)) {
+		qdf_mutex_release(&oui_priv->extension_lock);
+		action_oui_debug("action oui for id %d list is empty",
+				 action_id);
+		return true;
+	}
+	qdf_mutex_release(&oui_priv->extension_lock);
+
+	return false;
 }
 
 bool

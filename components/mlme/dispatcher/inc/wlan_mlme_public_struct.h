@@ -1672,6 +1672,7 @@ enum station_prefer_bw {
  * @mlo_support_link_num:           max number of links that sta mlo supports
  * @mlo_support_link_band:          band bitmap that sta mlo supports
  * @mlo_max_simultaneous_links      number of simultaneous links
+ * @usr_disable_eht                 user disable the eht for STA
  */
 struct wlan_mlme_sta_cfg {
 	uint32_t sta_keep_alive_period;
@@ -1703,6 +1704,9 @@ struct wlan_mlme_sta_cfg {
 	uint8_t mlo_support_link_num;
 	uint8_t mlo_support_link_band;
 	uint8_t mlo_max_simultaneous_links;
+#endif
+#ifdef WLAN_FEATURE_11BE
+	bool usr_disable_eht;
 #endif
 };
 
@@ -2809,4 +2813,17 @@ struct wlan_mlme_features {
 	bool enable2x2;
 };
 #endif
+
+/**
+ * host_concurrent_ap_policy - Host concurrent AP policy value
+ * @HOST_CONCURRENT_AP_POLICY_UNSPECIFIED: Unspecified concurrent policy value
+ * @HOST_CONCURRENT_AP_POLICY_GAMING_AUDIO: Gaming audio concurrent policy value
+ * @HOST_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING: Lossless audio
+ * concurrent streaming policy value
+ */
+enum host_concurrent_ap_policy {
+	HOST_CONCURRENT_AP_POLICY_UNSPECIFIED = 0,
+	HOST_CONCURRENT_AP_POLICY_GAMING_AUDIO = 1,
+	HOST_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING = 2
+};
 #endif

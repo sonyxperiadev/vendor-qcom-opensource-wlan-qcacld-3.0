@@ -295,6 +295,9 @@ typedef struct sSirProbeRespBeacon {
 	tDot11fIEqcn_ie qcn_ie;
 	tDot11fIEhe_cap he_cap;
 	tDot11fIEhe_op he_op;
+#ifdef WLAN_FEATURE_SR
+	tDot11fIEspatial_reuse srp_ie;
+#endif
 	tDot11fIEeht_cap eht_cap;
 	tDot11fIEeht_op eht_op;
 #ifdef WLAN_FEATURE_11AX_BSS_COLOR
@@ -488,6 +491,9 @@ typedef struct sSirAssocRsp {
 	tDot11fIEqcn_ie qcn_ie;
 	tDot11fIEhe_cap he_cap;
 	tDot11fIEhe_op he_op;
+#ifdef WLAN_FEATURE_SR
+	tDot11fIEspatial_reuse srp_ie;
+#endif
 	tDot11fIEhe_6ghz_band_cap he_6ghz_band_cap;
 	tDot11fIEeht_cap eht_cap;
 	tDot11fIEeht_op eht_op;

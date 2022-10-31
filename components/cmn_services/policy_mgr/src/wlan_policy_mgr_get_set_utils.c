@@ -254,6 +254,38 @@ policy_mgr_get_multi_sap_allowed_on_same_band(struct wlan_objmgr_psoc *psoc,
 	return QDF_STATUS_SUCCESS;
 }
 
+QDF_STATUS
+policy_mgr_set_original_bw_for_sap_restart(struct wlan_objmgr_psoc *psoc,
+					   bool use_sap_original_bw)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("pm_ctx is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+	pm_ctx->cfg.use_sap_original_bw = use_sap_original_bw;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+policy_mgr_get_original_bw_for_sap_restart(struct wlan_objmgr_psoc *psoc,
+					   bool *use_sap_original_bw)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("pm_ctx is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+	*use_sap_original_bw = pm_ctx->cfg.use_sap_original_bw;
+
+	return QDF_STATUS_SUCCESS;
+}
+
 static bool
 policy_mgr_update_dfs_master_dynamic_enabled(
 	struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
@@ -5514,6 +5546,81 @@ policy_mgr_is_vdev_high_tput_or_low_latency(struct wlan_objmgr_psoc *psoc,
 	return is_vdev_ll_ht;
 }
 
+static bool policy_mgr_is_acs_2ghz_only_sap(struct wlan_objmgr_psoc *psoc,
+					    uint8_t sap_vdev_id)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	uint32_t acs_band = QCA_ACS_MODE_IEEE80211ANY;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return false;
+	}
+
+	if (pm_ctx->hdd_cbacks.wlan_get_sap_acs_band)
+		pm_ctx->hdd_cbacks.wlan_get_sap_acs_band(psoc,
+							 sap_vdev_id,
+							 &acs_band);
+
+	if (acs_band == QCA_ACS_MODE_IEEE80211B ||
+	    acs_band == QCA_ACS_MODE_IEEE80211G)
+		return true;
+
+	return false;
+}
+
+static bool
+policy_mgr_check_2ghz_only_sap_affected_link(
+			struct wlan_objmgr_psoc *psoc,
+			uint8_t sap_vdev_id,
+			qdf_freq_t sap_ch_freq,
+			uint8_t ml_ch_freq_num,
+			qdf_freq_t *ml_freq_lst)
+{
+	uint8_t i;
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	struct wlan_objmgr_vdev *vdev;
+	enum QDF_OPMODE op_mode;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return false;
+	}
+
+	if (!WLAN_REG_IS_24GHZ_CH_FREQ(sap_ch_freq))
+		return false;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(
+				psoc, sap_vdev_id,
+				WLAN_POLICY_MGR_ID);
+	if (!vdev) {
+		policy_mgr_debug("vdev is null %d", sap_vdev_id);
+		return false;
+	}
+	op_mode = wlan_vdev_mlme_get_opmode(vdev);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
+	if (op_mode != QDF_SAP_MODE)
+		return false;
+
+	if (!policy_mgr_is_acs_2ghz_only_sap(psoc, sap_vdev_id))
+		return false;
+
+	/* If 2G ml STA exist, force scc will happen, no link
+	 * to get affected.
+	 */
+	for (i = 0; i < ml_ch_freq_num; i++)
+		if (WLAN_REG_IS_24GHZ_CH_FREQ(ml_freq_lst[i]))
+			return false;
+
+	/* If All ml STA are 5/6 band, force SCC will not happen
+	 * for 2G only SAP, so return true to indicate one
+	 * link get affected.
+	 */
+	return true;
+}
+
 /*
  * policy_mgr_get_affected_links_for_go_sap_cli() - Check if any of the P2P OR
  * SAP is causing MCC with a ML link and also is configured high tput or low
@@ -5549,10 +5656,28 @@ policy_mgr_get_affected_links_for_go_sap_cli(struct wlan_objmgr_psoc *psoc,
 			/* Continue if SCC */
 			if (ml_freq_lst[i] == p2p_sap_freq_lst[k])
 				continue;
-			/* Continue if high tput or low latency is not set */
-			if (!policy_mgr_is_vdev_high_tput_or_low_latency(psoc,
-			    p2p_sap_vdev_lst[k]))
+
+			/* SAP MCC with MLO STA link is not preferred.
+			 * If SAP is 2Ghz only by ACS and two ML link are
+			 * 5/6 band, then force SCC may not happen. In such
+			 * case inactive one link.
+			 */
+			if (policy_mgr_check_2ghz_only_sap_affected_link(
+					psoc, p2p_sap_vdev_lst[k],
+					p2p_sap_freq_lst[k],
+					num_ml_sta, ml_freq_lst)) {
+				policy_mgr_debug("2G only SAP vdev %d ch freq %d is not SCC with any MLO STA link",
+						 p2p_sap_vdev_lst[k],
+						 p2p_sap_freq_lst[k]);
+				num_affected_links++;
 				continue;
+			}
+
+			/* Continue if high tput or low latency is not set */
+			if (!policy_mgr_is_vdev_high_tput_or_low_latency(
+						psoc, p2p_sap_vdev_lst[k]))
+				continue;
+
 			/* If both freq are on same mac then its MCC */
 			if (policy_mgr_are_2_freq_on_same_mac(psoc,
 							ml_freq_lst[i],
@@ -6155,6 +6280,25 @@ static bool policy_mgr_is_third_conn_sta_p2p_p2p_valid(
 
 	return true;
 }
+
+static bool policy_mgr_is_sap_go_allowed_with_ll_sap(
+					struct wlan_objmgr_psoc *psoc,
+					qdf_freq_t freq,
+					enum policy_mgr_con_mode mode)
+{
+	/**
+	 * Scenario: When ll SAP(whose profile is set as gaming or
+	 * lossless audio) is present on 5GHz channel and SAP/GO
+	 * is trying to come up.
+	 * Validate the ch_freq of SAP/GO for both DBS and SBS case
+	 */
+	if ((mode == PM_SAP_MODE || mode == PM_P2P_GO_MODE) &&
+	    !policy_mgr_is_ll_sap_concurrency_valid(psoc, freq, mode))
+		return false;
+
+	return true;
+}
+
 bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 				       enum policy_mgr_con_mode mode,
 				       uint32_t ch_freq,
@@ -6301,6 +6445,11 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 		return status;
 	}
 
+	/* Validate ll sap + sap/go concurrency */
+	if (!policy_mgr_is_sap_go_allowed_with_ll_sap(psoc, ch_freq, mode)) {
+		policy_mgr_err("LL SAP concurrency is not valid");
+		return status;
+	}
 	status = true;
 
 	return status;
@@ -8838,4 +8987,116 @@ QDF_STATUS policy_mgr_get_sbs_cfg(struct wlan_objmgr_psoc *psoc, bool *sbs)
 	*sbs = pm_ctx->cfg.sbs_enable;
 
 	return QDF_STATUS_SUCCESS;
+}
+
+#ifdef WLAN_FEATURE_SR
+bool policy_mgr_sr_same_mac_conc_enabled(struct wlan_objmgr_psoc *psoc)
+{
+	struct wmi_unified *wmi_handle;
+	bool sr_conc_enabled;
+
+	if (!psoc) {
+		mlme_err("PSOC is NULL");
+		return false;
+	}
+
+	wmi_handle = get_wmi_unified_hdl_from_psoc(psoc);
+	if (!wmi_handle) {
+		mlme_err("wmi_handle is null");
+		return false;
+	}
+
+	sr_conc_enabled = policy_mgr_get_same_mac_conc_sr_status(psoc);
+
+	return (sr_conc_enabled &&
+		wmi_service_enabled(wmi_handle,
+				    wmi_service_obss_per_packet_sr_support));
+}
+#endif
+
+qdf_freq_t policy_mgr_get_ll_sap_freq(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_objmgr_vdev *sap_vdev;
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	uint32_t conn_idx = 0, vdev_id;
+	bool is_ll_sap_present = false;
+	qdf_freq_t freq = 0;
+	enum host_concurrent_ap_policy profile =
+					HOST_CONCURRENT_AP_POLICY_UNSPECIFIED;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("pm_ctx is NULL");
+		return 0;
+	}
+
+	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
+	for (conn_idx = 0; conn_idx < MAX_NUMBER_OF_CONC_CONNECTIONS;
+	     conn_idx++) {
+		if (!(pm_conc_connection_list[conn_idx].mode == PM_SAP_MODE &&
+		    pm_conc_connection_list[conn_idx].in_use))
+			continue;
+
+		vdev_id = pm_conc_connection_list[conn_idx].vdev_id;
+		freq = pm_conc_connection_list[conn_idx].freq;
+
+		sap_vdev = wlan_objmgr_get_vdev_by_id_from_psoc(
+							psoc,
+							vdev_id,
+							WLAN_POLICY_MGR_ID);
+
+		if (!sap_vdev) {
+			policy_mgr_err("vdev %d: invalid vdev", vdev_id);
+			continue;
+		}
+
+		profile = wlan_mlme_get_ap_policy(sap_vdev);
+		wlan_objmgr_vdev_release_ref(sap_vdev, WLAN_POLICY_MGR_ID);
+
+		if (profile == HOST_CONCURRENT_AP_POLICY_GAMING_AUDIO ||
+		    profile == HOST_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING) {
+			is_ll_sap_present = true;
+			break;
+		}
+	}
+	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+
+	if (!is_ll_sap_present) {
+		policy_mgr_debug("LL SAP not present");
+		return 0;
+	}
+
+	policy_mgr_debug("LL SAP present with vdev_id %d and freq %d",
+			 vdev_id, freq);
+
+	return freq;
+}
+
+bool policy_mgr_is_ll_sap_concurrency_valid(struct wlan_objmgr_psoc *psoc,
+					    qdf_freq_t freq,
+					    enum policy_mgr_con_mode mode)
+{
+	qdf_freq_t ll_sap_freq;
+
+	ll_sap_freq = policy_mgr_get_ll_sap_freq(psoc);
+	if (!ll_sap_freq)
+		return true;
+
+	/*
+	 * Scenario: When low latency SAP with 5GHz channel(whose
+	 * profile is set as gaming or lossless audio) is present
+	 * on SBS/DBS hardware and the other interface like
+	 * STA/SAP/GC/GO trying to form connection.
+	 * Allow connection on those freq which are mutually exclusive
+	 * to LL SAP mac
+	 */
+
+	if (policy_mgr_2_freq_always_on_same_mac(psoc, ll_sap_freq,
+						 freq)) {
+		policy_mgr_debug("Invalid LL-SAP concurrency for SBS/DBS hw, ll-sap freq %d, conc_freq %d, conc_mode %d",
+				 ll_sap_freq, freq, mode);
+		return false;
+	}
+
+	return true;
 }

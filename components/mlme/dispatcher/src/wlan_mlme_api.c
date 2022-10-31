@@ -33,6 +33,7 @@
 #include "wlan_vdev_mgr_utils_api.h"
 #include <../../core/src/wlan_cm_vdev_api.h>
 #include "wlan_psoc_mlme_api.h"
+#include "wlan_action_oui_main.h"
 
 /* quota in milliseconds */
 #define MCC_DUTY_CYCLE 70
@@ -215,6 +216,21 @@ bool wlan_mlme_get_wlm_multi_client_ll_caps(struct wlan_objmgr_psoc *psoc)
 }
 #endif
 
+#ifdef FEATURE_WLAN_CH_AVOID_EXT
+bool wlan_mlme_get_coex_unsafe_chan_nb_user_prefer(
+		struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj) {
+		mlme_legacy_err("Failed to get MLME Obj");
+		return cfg_default(CFG_COEX_UNSAFE_CHAN_NB_USER_PREFER);
+	}
+	return mlme_obj->cfg.reg.coex_unsafe_chan_nb_user_prefer;
+}
+#endif
+
 QDF_STATUS wlan_mlme_get_band_capability(struct wlan_objmgr_psoc *psoc,
 					 uint32_t *band_capability)
 {
@@ -283,6 +299,56 @@ QDF_STATUS wlan_mlme_get_dual_sta_policy(struct wlan_objmgr_psoc *psoc,
 		mlme_obj->cfg.gen.dual_sta_policy.concurrent_sta_policy;
 
 	return QDF_STATUS_SUCCESS;
+}
+
+enum host_concurrent_ap_policy
+wlan_mlme_convert_ap_policy_config(
+		enum qca_wlan_concurrent_ap_policy_config ap_config)
+{
+	switch (ap_config) {
+	case QCA_WLAN_CONCURRENT_AP_POLICY_UNSPECIFIED:
+		return HOST_CONCURRENT_AP_POLICY_UNSPECIFIED;
+	case QCA_WLAN_CONCURRENT_AP_POLICY_GAMING_AUDIO:
+		return HOST_CONCURRENT_AP_POLICY_GAMING_AUDIO;
+	case QCA_WLAN_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING:
+		return HOST_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING;
+	default:
+		return HOST_CONCURRENT_AP_POLICY_UNSPECIFIED;
+	}
+}
+
+QDF_STATUS wlan_mlme_set_ap_policy(struct wlan_objmgr_vdev *vdev,
+				   enum host_concurrent_ap_policy ap_cfg_policy)
+
+{
+	struct mlme_legacy_priv *mlme_priv;
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_legacy_err("vdev legacy private object is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	mlme_priv->mlme_ap.ap_policy = ap_cfg_policy;
+	mlme_debug("Set ap_cfg_policy to :%d", mlme_priv->mlme_ap.ap_policy);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+enum host_concurrent_ap_policy
+wlan_mlme_get_ap_policy(struct wlan_objmgr_vdev *vdev)
+{
+	struct mlme_legacy_priv *mlme_priv;
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_legacy_err("vdev legacy private object is NULL");
+		return HOST_CONCURRENT_AP_POLICY_UNSPECIFIED;
+	}
+
+	mlme_debug("Get ap_cfg_policy to :%d", mlme_priv->mlme_ap.ap_policy);
+
+	return mlme_priv->mlme_ap.ap_policy;
 }
 
 QDF_STATUS wlan_mlme_get_prevent_link_down(struct wlan_objmgr_psoc *psoc,
@@ -1077,6 +1143,30 @@ enum phy_ch_width wlan_mlme_convert_eht_op_bw_to_phy_ch_width(
 
 	return phy_bw;
 }
+
+bool wlan_mlme_get_usr_disable_sta_eht(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj = mlme_get_psoc_ext_obj(psoc);
+
+	if (!mlme_obj)
+		return true;
+
+	return mlme_obj->cfg.sta.usr_disable_eht;
+}
+
+void wlan_mlme_set_usr_disable_sta_eht(struct wlan_objmgr_psoc *psoc,
+				       bool disable)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj = mlme_get_psoc_ext_obj(psoc);
+
+	if (!mlme_obj)
+		return;
+
+	mlme_debug("set usr_disable_eht from %d to %d",
+		   mlme_obj->cfg.sta.usr_disable_eht, disable);
+	mlme_obj->cfg.sta.usr_disable_eht = disable;
+}
+
 #endif
 
 #ifdef WLAN_FEATURE_11BE_MLO
@@ -3975,6 +4065,31 @@ QDF_STATUS mlme_update_nss_vht_cap(struct wlan_objmgr_psoc *psoc)
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef WLAN_FEATURE_11BE
+bool mlme_get_bss_11be_allowed(struct wlan_objmgr_psoc *psoc,
+			       struct qdf_mac_addr *bssid,
+			       uint8_t *ie_data,
+			       uint32_t ie_length)
+{
+	struct action_oui_search_attr search_attr;
+
+	if (wlan_action_oui_is_empty(psoc, ACTION_OUI_11BE_OUI_ALLOW))
+		return true;
+
+	qdf_mem_zero(&search_attr, sizeof(search_attr));
+	search_attr.ie_data = ie_data;
+	search_attr.ie_length = ie_length;
+	if (wlan_action_oui_search(psoc, &search_attr,
+				   ACTION_OUI_11BE_OUI_ALLOW))
+		return true;
+
+	mlme_legacy_debug("AP not in 11be oui allow list "QDF_MAC_ADDR_FMT,
+			  QDF_MAC_ADDR_REF(bssid->bytes));
+
+	return false;
+}
+#endif
+
 QDF_STATUS wlan_mlme_is_sap_uapsd_enabled(struct wlan_objmgr_psoc *psoc,
 					  bool *value)
 {
@@ -6192,7 +6307,7 @@ void wlan_mlme_get_feature_info(struct wlan_objmgr_psoc *psoc,
 	wlan_mlme_get_sap_max_peers(psoc, &sap_max_num_clients);
 	mlme_feature_set->sap_max_num_clients = sap_max_num_clients;
 	mlme_feature_set->vendor_req_1_version =
-					WMI_HOST_VENDOR1_REQ1_VERSION_3_20;
+					WMI_HOST_VENDOR1_REQ1_VERSION_3_30;
 	roam_triggers = wlan_mlme_get_roaming_triggers(psoc);
 
 	wlan_mlme_get_bss_load_enabled(psoc, &is_bss_load_enabled);

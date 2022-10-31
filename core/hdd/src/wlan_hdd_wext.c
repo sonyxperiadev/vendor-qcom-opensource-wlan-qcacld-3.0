@@ -8131,10 +8131,9 @@ static int __iw_set_pno(struct net_device *dev,
 			goto exit;
 		}
 
-		hdd_debug("PNO len %d ssid %.*s auth %d encry %d channel count %d offset %d",
-			  req.networks_list[i].ssid.length,
-			  req.networks_list[i].ssid.length,
-			  req.networks_list[i].ssid.ssid,
+		hdd_debug("PNO ssid " QDF_SSID_FMT " auth %d encry %d channel count %d offset %d",
+			  QDF_SSID_REF(req.networks_list[i].ssid.length,
+				       req.networks_list[i].ssid.ssid),
 			  req.networks_list[i].authentication,
 			  req.networks_list[i].encryption,
 			  req.networks_list[i].pno_chan_list.num_chan, offset);

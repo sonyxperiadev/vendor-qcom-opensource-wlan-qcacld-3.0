@@ -851,6 +851,10 @@ QDF_STATUS pe_open(struct mac_context *mac, struct cds_config_info *cds_cfg)
 	lim_nan_register_callbacks(mac);
 	p2p_register_callbacks(mac);
 	lim_register_sap_bcn_callback(mac);
+	wlan_reg_register_ctry_change_callback(
+					mac->psoc,
+					lim_update_tx_pwr_on_ctry_change_cb);
+
 	if (mac->mlme_cfg->edca_params.enable_edca_params)
 		lim_register_policy_mgr_callback(mac->psoc);
 
@@ -893,6 +897,9 @@ QDF_STATUS pe_close(struct mac_context *mac)
 	qdf_hang_event_unregister_notifier(&pe_hang_event_notifier);
 	lim_cleanup(mac);
 	lim_unregister_sap_bcn_callback(mac);
+	wlan_reg_unregister_ctry_change_callback(
+					mac->psoc,
+					lim_update_tx_pwr_on_ctry_change_cb);
 
 	if (mac->lim.limDisassocDeauthCnfReq.pMlmDeauthReq) {
 		qdf_mem_free(mac->lim.limDisassocDeauthCnfReq.pMlmDeauthReq);
@@ -1895,11 +1902,18 @@ static void pe_update_crypto_params(struct mac_context *mac_ctx,
 		pe_err("crypto params is null");
 		return;
 	}
-	pe_nofl_debug("vdev %d roam auth 0x%x akm 0x%0x rsn_caps 0x%x",
+
+	ft_session->connected_akm =
+		lim_get_connected_akm(ft_session, crypto_params->ucastcipherset,
+				      crypto_params->authmodeset,
+				      crypto_params->key_mgmt);
+	pe_nofl_debug("vdev %d roam auth 0x%x akm 0x%0x rsn_caps 0x%x ucastcipher 0x%x akm %d",
 		      ft_session->vdev_id,
 		      crypto_params->authmodeset,
 		      crypto_params->key_mgmt,
-		      crypto_params->rsn_caps);
+		      crypto_params->rsn_caps,
+		      crypto_params->ucastcipherset,
+		      ft_session->connected_akm);
 }
 
 /**
@@ -2435,9 +2449,13 @@ pe_disconnect_callback(struct mac_context *mac, uint8_t vdev_id,
 	if (!lim_is_sb_disconnect_allowed(session))
 		return QDF_STATUS_SUCCESS;
 
-	if (!(deauth_disassoc_frame ||
-	      deauth_disassoc_frame_len > SIR_MAC_MIN_IE_LEN))
+	if (!deauth_disassoc_frame ||
+	    deauth_disassoc_frame_len <
+	    (sizeof(struct wlan_frame_hdr) + sizeof(reason_code))) {
+		pe_err_rl("Discard invalid disconnect evt. frame len:%d",
+			  deauth_disassoc_frame_len);
 		goto end;
+	}
 
 	/*
 	 * Use vdev pmf status instead of peer pmf capability as
@@ -2749,6 +2767,10 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 	qdf_mem_copy(roam_sync_ind_ptr->ssid.ssid, ft_session_ptr->ssId.ssId,
 		     roam_sync_ind_ptr->ssid.length);
 	pe_update_crypto_params(mac_ctx, ft_session_ptr, roam_sync_ind_ptr);
+
+	/* Reset the SPMK global cache */
+	wlan_mlme_set_sae_single_pmk_bss_cap(mac_ctx->psoc, vdev_id, false);
+
 	/* Next routine may update nss based on dot11Mode */
 
 	lim_ft_prepare_add_bss_req(mac_ctx, ft_session_ptr, bss_desc);
@@ -3739,5 +3761,34 @@ end:
 		qdf_mem_free(link_probe_rsp.ptr);
 	link_probe_rsp.len = 0;
 	return status;
+}
+#endif
+
+#ifdef WLAN_FEATURE_SR
+void lim_update_vdev_sr_elements(struct pe_session *session_entry,
+				 tpDphHashNode sta_ds)
+{
+	uint8_t sr_ctrl;
+	uint8_t non_srg_max_pd_offset, srg_min_pd_offset, srg_max_pd_offset;
+	tDot11fIEspatial_reuse *srp_ie = &sta_ds->parsed_ies.srp_ie;
+
+	sr_ctrl = srp_ie->sr_value15_allow << 4 |
+		  srp_ie->srg_info_present << 3 |
+		  srp_ie->non_srg_offset_present << 2 |
+		  srp_ie->non_srg_pd_sr_disallow << 1 |
+		  srp_ie->psr_disallow;
+	non_srg_max_pd_offset =
+		srp_ie->non_srg_offset.info.non_srg_pd_max_offset;
+	srg_min_pd_offset = srp_ie->srg_info.info.srg_pd_min_offset;
+	srg_max_pd_offset = srp_ie->srg_info.info.srg_pd_max_offset;
+	pe_debug("Spatial Reuse Control field: %x Non-SRG Max PD Offset: %x SRG range %d - %d",
+		 sr_ctrl, non_srg_max_pd_offset, srg_min_pd_offset,
+		 srg_max_pd_offset);
+
+	wlan_vdev_mlme_set_sr_ctrl(session_entry->vdev, sr_ctrl);
+	wlan_vdev_mlme_set_pd_offset(session_entry->vdev,
+				     non_srg_max_pd_offset);
+	wlan_vdev_mlme_set_srg_pd_offset(session_entry->vdev, srg_max_pd_offset,
+					 srg_min_pd_offset);
 }
 #endif

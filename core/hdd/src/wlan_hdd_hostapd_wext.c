@@ -149,7 +149,7 @@ static int __iw_softap_set_two_ints_getnone(struct net_device *dev,
 	struct hdd_context *hdd_ctx;
 	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
 	struct cdp_txrx_stats_req req = {0};
-	struct hdd_station_info *sta_info;
+	struct hdd_station_info *sta_info, *tmp = NULL;
 
 	hdd_enter_dev(dev);
 
@@ -180,8 +180,8 @@ static int __iw_softap_set_two_ints_getnone(struct net_device *dev,
 			ret = cdp_txrx_stats_request(soc, adapter->vdev_id,
 						     &req);
 
-			hdd_for_each_sta_ref(
-					adapter->sta_info_list, sta_info,
+			hdd_for_each_sta_ref_safe(
+					adapter->sta_info_list, sta_info, tmp,
 					STA_INFO_SAP_SET_TWO_INTS_GETNONE) {
 				hdd_debug("bss_id: " QDF_MAC_ADDR_FMT,
 					  QDF_MAC_ADDR_REF(
@@ -691,8 +691,9 @@ static __iw_softap_setparam(struct net_device *dev,
 		struct sap_config *config =
 			&adapter->session.ap.sap_config;
 
-		if (config->SapHw_mode != eCSR_DOT11_MODE_11ac &&
-		    config->SapHw_mode != eCSR_DOT11_MODE_11ac_ONLY) {
+		if (config->SapHw_mode < eCSR_DOT11_MODE_11ac ||
+		    config->SapHw_mode == eCSR_DOT11_MODE_11ax_ONLY ||
+		    config->SapHw_mode == eCSR_DOT11_MODE_11be_ONLY) {
 			hdd_err("SET_VHT_RATE: SapHw_mode= 0x%x, ch_freq: %d",
 			       config->SapHw_mode, config->chan_freq);
 			ret = -EIO;
@@ -1699,7 +1700,7 @@ static __iw_softap_getassoc_stamacaddr(struct net_device *dev,
 				       union iwreq_data *wrqu, char *extra)
 {
 	struct hdd_adapter *adapter = (netdev_priv(dev));
-	struct hdd_station_info *sta_info;
+	struct hdd_station_info *sta_info, *tmp = NULL;
 	struct hdd_context *hdd_ctx;
 	char *buf;
 	int left;
@@ -1748,8 +1749,8 @@ static __iw_softap_getassoc_stamacaddr(struct net_device *dev,
 	maclist_index = sizeof(maclist_index);
 	left = wrqu->data.length - maclist_index;
 
-	hdd_for_each_sta_ref(adapter->sta_info_list, sta_info,
-			     STA_INFO_SAP_GETASSOC_STAMACADDR) {
+	hdd_for_each_sta_ref_safe(adapter->sta_info_list, sta_info, tmp,
+				  STA_INFO_SAP_GETASSOC_STAMACADDR) {
 		if (!qdf_is_macaddr_broadcast(&sta_info->sta_mac)) {
 			memcpy(&buf[maclist_index], &sta_info->sta_mac,
 			       QDF_MAC_ADDR_SIZE);
@@ -2236,18 +2237,22 @@ static int hdd_softap_get_sta_info(struct hdd_adapter *adapter,
 				   int size)
 {
 	int written;
-	struct hdd_station_info *sta;
+	struct hdd_station_info *sta, *tmp = NULL;
 
 	hdd_enter();
 
 	written = scnprintf(buf, size, "\nstaId staAddress\n");
 
-	hdd_for_each_sta_ref(adapter->sta_info_list, sta,
-			     STA_INFO_SOFTAP_GET_STA_INFO) {
+	hdd_for_each_sta_ref_safe(adapter->sta_info_list, sta, tmp,
+				  STA_INFO_SOFTAP_GET_STA_INFO) {
 		if (written >= size - 1) {
 			hdd_put_sta_info_ref(&adapter->sta_info_list,
 					     &sta, true,
 					     STA_INFO_SOFTAP_GET_STA_INFO);
+			if (tmp)
+				hdd_put_sta_info_ref(&adapter->sta_info_list,
+						&tmp, true,
+						STA_INFO_SOFTAP_GET_STA_INFO);
 			break;
 		}
 
@@ -2505,10 +2510,10 @@ int __iw_get_softap_linkspeed(struct net_device *dev,
 	 * link speed for first connected client will be returned.
 	 */
 	if (wrqu->data.length < 17 || !QDF_IS_STATUS_SUCCESS(status)) {
-		struct hdd_station_info *sta_info;
+		struct hdd_station_info *sta_info, *tmp = NULL;
 
-		hdd_for_each_sta_ref(adapter->sta_info_list, sta_info,
-				     STA_INFO_GET_SOFTAP_LINKSPEED) {
+		hdd_for_each_sta_ref_safe(adapter->sta_info_list, sta_info, tmp,
+					  STA_INFO_GET_SOFTAP_LINKSPEED) {
 			if (!qdf_is_macaddr_broadcast(&sta_info->sta_mac)) {
 				qdf_copy_macaddr(&mac_address,
 						 &sta_info->sta_mac);
@@ -2516,6 +2521,11 @@ int __iw_get_softap_linkspeed(struct net_device *dev,
 				hdd_put_sta_info_ref(
 						&adapter->sta_info_list,
 						&sta_info, true,
+						STA_INFO_GET_SOFTAP_LINKSPEED);
+				if (tmp)
+					hdd_put_sta_info_ref(
+						&adapter->sta_info_list,
+						&tmp, true,
 						STA_INFO_GET_SOFTAP_LINKSPEED);
 				break;
 			}

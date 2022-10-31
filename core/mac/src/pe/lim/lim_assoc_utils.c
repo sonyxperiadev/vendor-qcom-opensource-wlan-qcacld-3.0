@@ -2252,6 +2252,34 @@ lim_update_peer_twt_caps(tpAddStaParams add_sta_params,
 {}
 #endif
 
+#ifdef WLAN_FEATURE_SR
+/**
+ * lim_update_srp_ie() - Updates SRP IE to STA node
+ * @bp_rsp: pointer to probe response / beacon frame
+ * @sta_ds: STA Node
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS lim_update_srp_ie(tSirProbeRespBeacon *bp_rsp,
+				    tpDphHashNode sta_ds)
+{
+	QDF_STATUS status = QDF_STATUS_E_NOSUPPORT;
+
+	if (bp_rsp->srp_ie.present) {
+		sta_ds->parsed_ies.srp_ie = bp_rsp->srp_ie;
+		status = QDF_STATUS_SUCCESS;
+	}
+
+	return status;
+}
+#else
+static QDF_STATUS lim_update_srp_ie(tSirProbeRespBeacon *bp_rsp,
+				    tpDphHashNode sta_ds)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 /**
  * lim_add_sta()- called to add an STA context at hardware
  * @mac_ctx: pointer to global mac structure
@@ -3153,11 +3181,13 @@ lim_check_and_announce_join_success(struct mac_context *mac_ctx,
 {
 	tSirMacSSid current_ssid;
 	tLimMlmJoinCnf mlm_join_cnf;
+	tpDphHashNode sta_ds = NULL;
 	uint32_t val;
 	uint32_t *noa_duration_from_beacon = NULL;
 	uint32_t *noa2_duration_from_beacon = NULL;
 	uint32_t noa;
 	uint32_t total_num_noa_desc = 0;
+	uint16_t aid;
 	bool check_assoc_disallowed;
 
 	qdf_mem_copy(current_ssid.ssId,
@@ -3316,6 +3346,17 @@ lim_check_and_announce_join_success(struct mac_context *mac_ctx,
 			qdf_mem_copy(&session_entry->hs20vendor_ie.hs_id,
 				&beacon_probe_rsp->hs20vendor_ie.hs_id,
 				sizeof(beacon_probe_rsp->hs20vendor_ie.hs_id));
+	}
+
+	sta_ds =  dph_lookup_hash_entry(mac_ctx, session_entry->self_mac_addr,
+					&aid,
+					&session_entry->dph.dphHashTable);
+
+	if (QDF_IS_STATUS_SUCCESS(lim_update_srp_ie(beacon_probe_rsp,
+						    sta_ds))) {
+		/* update the SR parameters */
+		lim_update_vdev_sr_elements(session_entry, sta_ds);
+		/* TODO: Need to send SRP IE update event to userspace */
 	}
 }
 
@@ -3907,6 +3948,7 @@ QDF_STATUS lim_sta_send_add_bss(struct mac_context *mac, tpSirAssocRsp pAssocRsp
 		}
 	}
 
+	lim_extract_per_link_id(pe_session, pAddBssParams, pAssocRsp);
 	lim_intersect_ap_emlsr_caps(mac, pe_session, pAddBssParams, pAssocRsp);
 	lim_extract_msd_caps(mac, pe_session, pAddBssParams, pAssocRsp);
 

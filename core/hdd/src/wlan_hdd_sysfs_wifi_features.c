@@ -35,7 +35,7 @@ static ssize_t  __hdd_sysfs_feature_set_show(struct hdd_context *hdd_ctx,
 	uint8_t i = 0;
 	char const *solution_provider = "QCT";
 
-	if (!hdd_ctx->oem_data) {
+	if (!hdd_ctx->oem_data_len) {
 		hdd_debug("Feature info is not available");
 		return 0;
 	}

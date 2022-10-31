@@ -1515,6 +1515,32 @@ struct dhcp_server {
 	"0017f2 01 0a 80 01", \
 	"Used to specify action OUIs to control country ie")
 
+/*
+ * <ini>
+ * g11be_oui_allow_list - Used to specify 802.11be allowed ap oui list
+ *
+ * This ini is used to specify AP OUIs for which station can connect
+ * in 802.11be mode with the 802.11be AP.
+ * If no OUI set, then allow STA to connect to All 802.11be AP in 802.11be
+ * mode.
+ * If INI is set to "ffffff 00 01", then STA is not allowed to connect to
+ * any AP in 802.11be mode.
+ *
+ * Related: None
+ *
+ * Supported Feature: Action OUIs
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_ACTION_11BE_OUI_ALLOW_LIST CFG_INI_STRING( \
+	"g11be_oui_allow_list", \
+	0, \
+	ACTION_OUI_MAX_STR_LEN, \
+	"", \
+	"Used to specify 11be allowed ap oui list")
+
 /* End of action oui inis */
 
 #ifdef ENABLE_MTRACE_LOG
@@ -1938,6 +1964,7 @@ enum host_log_level {
 	CFG(CFG_ACTION_OUI_RECONN_ASSOCTIMEOUT) \
 	CFG(CFG_ACTION_OUI_DISABLE_TWT) \
 	CFG(CFG_ACTION_OUI_TAKE_ALL_BAND_INFO) \
+	CFG(CFG_ACTION_11BE_OUI_ALLOW_LIST) \
 	CFG(CFG_ADVERTISE_CONCURRENT_OPERATION) \
 	CFG(CFG_BUG_ON_REINIT_FAILURE) \
 	CFG(CFG_DBS_SCAN_SELECTION) \

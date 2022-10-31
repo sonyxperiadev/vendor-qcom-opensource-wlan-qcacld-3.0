@@ -2728,10 +2728,8 @@ static int drv_cmd_set_roam_trigger(struct hdd_adapter *adapter,
 		goto exit;
 	}
 
-	lookup_threshold = abs(rssi);
-
 	if (!cfg_in_range(CFG_LFR_NEIGHBOR_LOOKUP_RSSI_THRESHOLD,
-			  lookup_threshold)) {
+			  rssi)) {
 		hdd_err("Neighbor lookup threshold value %d is out of range (Min: %d Max: %d)",
 			  lookup_threshold,
 			  cfg_min(CFG_LFR_NEIGHBOR_LOOKUP_RSSI_THRESHOLD),
@@ -2740,11 +2738,13 @@ static int drv_cmd_set_roam_trigger(struct hdd_adapter *adapter,
 		goto exit;
 	}
 
+	lookup_threshold = abs(rssi);
+
 	qdf_mtrace(QDF_MODULE_ID_HDD, QDF_MODULE_ID_HDD,
 		   TRACE_CODE_HDD_SETROAMTRIGGER_IOCTL,
 		   adapter->vdev_id, lookup_threshold);
 
-	hdd_debug("Received Command to Set Roam trigger (Neighbor lookup threshold) = %d",
+	hdd_debug("Set Roam trigger: Neighbor lookup threshold = %d",
 		  lookup_threshold);
 
 	status = sme_set_neighbor_lookup_rssi_threshold(hdd_ctx->mac_handle,

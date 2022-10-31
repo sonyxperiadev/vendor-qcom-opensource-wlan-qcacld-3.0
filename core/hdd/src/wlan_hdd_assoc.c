@@ -187,6 +187,8 @@ static const int beacon_filter_table[] = {
 	WLAN_ELEMID_HTINFO_ANA,
 	WLAN_ELEMID_OP_MODE_NOTIFY,
 	WLAN_ELEMID_VHTOP,
+	WLAN_ELEMID_QUIET_CHANNEL,
+	WLAN_ELEMID_TWT,
 #ifdef WLAN_FEATURE_11AX_BSS_COLOR
 	/*
 	 * EID: 221 vendor IE is being used temporarily by 11AX
@@ -195,6 +197,18 @@ static const int beacon_filter_table[] = {
 	 * number.
 	 */
 	WLAN_ELEMID_VENDOR,
+#endif
+};
+
+/**
+ * beacon_filter_extn_table - table of extn IEs used for beacon filtering
+ */
+static const int beacon_filter_extn_table[] = {
+	WLAN_EXTN_ELEMID_HEOP,
+	WLAN_EXTN_ELEMID_UORA,
+	WLAN_EXTN_ELEMID_MUEDCA,
+#ifdef WLAN_FEATURE_11BE
+	WLAN_EXTN_ELEMID_EHTOP,
 #endif
 };
 
@@ -525,8 +539,12 @@ int hdd_add_beacon_filter(struct hdd_adapter *adapter)
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 
 	for (i = 0; i < ARRAY_SIZE(beacon_filter_table); i++)
-		qdf_set_bit((beacon_filter_table[i]),
-				(unsigned long int *)ie_map);
+		qdf_set_bit(beacon_filter_table[i],
+			    (unsigned long *)ie_map);
+
+	for (i = 0; i < ARRAY_SIZE(beacon_filter_extn_table); i++)
+		qdf_set_bit(beacon_filter_extn_table[i] + WLAN_ELEMID_EXTN_ELEM,
+			    (unsigned long *)ie_map);
 
 	status = sme_add_beacon_filter(hdd_ctx->mac_handle,
 				       adapter->vdev_id, ie_map);
@@ -2091,7 +2109,6 @@ static void hdd_roam_channel_switch_handler(struct hdd_adapter *adapter,
 
 	policy_mgr_check_concurrent_intf_and_restart_sap(hdd_ctx->psoc);
 	wlan_twt_concurrency_update(hdd_ctx);
-	hdd_update_he_obss_pd(adapter, NULL, true);
 }
 
 #ifdef WLAN_FEATURE_HOST_ROAM
@@ -2244,6 +2261,50 @@ static inline void hdd_translate_sae_rsn_to_csr_auth(int8_t auth_suite[4],
 {
 }
 #endif
+
+void *hdd_filter_ft_info(const uint8_t *frame, size_t len,
+			 uint32_t *ft_info_len)
+{
+	uint32_t ft_ie_len, md_ie_len, rsn_ie_len, ie_len;
+	const uint8_t *rsn_ie, *md_ie, *ft_ie;
+	void *ft_info;
+
+	ft_ie_len = 0;
+	md_ie_len = 0;
+	rsn_ie_len = 0;
+	ie_len = len - DOT11F_FF_CAPABILITIES_LEN - DOT11F_FF_STATUS_LEN
+			   - DOT11F_IE_AID_MAX_LEN - sizeof(tSirMacMgmtHdr);
+	rsn_ie = wlan_get_ie_ptr_from_eid(DOT11F_EID_RSN, frame, ie_len);
+
+	if (rsn_ie) {
+		rsn_ie_len = rsn_ie[1] + 2;
+		QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_HDD, QDF_TRACE_LEVEL_DEBUG,
+			(void *)rsn_ie, rsn_ie_len);
+	}
+	md_ie = wlan_get_ie_ptr_from_eid(DOT11F_EID_MOBILITYDOMAIN,
+					 frame, ie_len);
+	if (md_ie) {
+		md_ie_len = md_ie[1] + 2;
+		QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_HDD, QDF_TRACE_LEVEL_DEBUG,
+			(void *)md_ie, md_ie_len);
+	}
+	ft_ie = wlan_get_ie_ptr_from_eid(DOT11F_EID_FTINFO, frame, ie_len);
+	if (ft_ie)
+		ft_ie_len = ft_ie[1] + 2;
+
+	*ft_info_len = rsn_ie_len + md_ie_len + ft_ie_len;
+	ft_info = qdf_mem_malloc(*ft_info_len);
+	if (!ft_info)
+		return NULL;
+	if (rsn_ie_len)
+		qdf_mem_copy(ft_info, rsn_ie, rsn_ie_len);
+	if (md_ie_len)
+		qdf_mem_copy(ft_info + rsn_ie_len, md_ie, md_ie_len);
+	if (ft_ie_len)
+		qdf_mem_copy(ft_info + rsn_ie_len + md_ie_len,
+			     ft_ie, ft_ie_len);
+	return ft_info;
+}
 
 /**
  * hdd_translate_rsn_to_csr_auth_type() - Translate RSN to CSR auth type

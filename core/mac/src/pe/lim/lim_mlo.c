@@ -1192,3 +1192,29 @@ end:
 	wlan_objmgr_peer_release_ref(peer, WLAN_LEGACY_MAC_ID);
 	return is_ml_peer_disconn;
 }
+
+bool lim_is_emlsr_band_supported(struct pe_session *session)
+{
+	uint8_t i;
+	uint32_t freq;
+	struct mlo_partner_info *partner_info;
+
+	partner_info = &session->lim_join_req->partner_info;
+
+	if (wlan_reg_is_24ghz_ch_freq(session->curr_op_freq)) {
+		pe_debug("Pri link freq: %d, EMLSR mode not allowed",
+			 session->curr_op_freq);
+		return false;
+	}
+
+	for (i = 0; i < partner_info->num_partner_links; i++) {
+		freq = partner_info->partner_link_info[i].chan_freq;
+		if (wlan_reg_is_24ghz_ch_freq(freq)) {
+			pe_debug("Partner link freq: %d, EMLSR mode not allwed",
+				 freq);
+			return false;
+		}
+	}
+
+	return true;
+}

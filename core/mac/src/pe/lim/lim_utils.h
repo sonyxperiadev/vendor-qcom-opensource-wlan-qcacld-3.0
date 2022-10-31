@@ -2254,7 +2254,19 @@ lim_is_session_chwidth_320mhz(struct pe_session *session)
 
 #ifdef WLAN_FEATURE_11BE_MLO
 /**
- * lim_intersect_ap_emlsr_caps() - Intersect AP and self STA EHT capabilities
+ * lim_extract_per_link_id() - Extract Link ID per vdev and share with FW
+ * @session: pointer to PE session
+ * @add_bss: pointer to ADD BSS params
+ * @assoc_rsp: pointer to assoc response
+ *
+ * Return: None
+ */
+void lim_extract_per_link_id(struct pe_session *session,
+			     struct bss_params *add_bss,
+			     tpSirAssocRsp assoc_rsp);
+
+/**
+ * lim_intersect_ap_emlsr_caps() - Intersect AP and self STA EML capabilities
  * @mac_ctx: Global MAC context
  * @session: pointer to PE session
  * @add_bss: pointer to ADD BSS params
@@ -2282,6 +2294,13 @@ void lim_extract_msd_caps(struct mac_context *mac_ctx,
 			  struct bss_params *add_bss,
 			  tpSirAssocRsp assoc_rsp);
 #else
+static inline void
+lim_extract_per_link_id(struct pe_session *session,
+			struct bss_params *add_bss,
+			tpSirAssocRsp assoc_rsp)
+{
+}
+
 static inline void
 lim_intersect_ap_emlsr_caps(struct mac_context *mac_ctx,
 			    struct pe_session *session,
@@ -3160,4 +3179,16 @@ bool
 lim_is_power_change_required_for_sta(struct mac_context *mac_ctx,
 				     struct pe_session *sta_session,
 				     struct pe_session *sap_session);
+
+/**
+ * lim_update_tx_pwr_on_ctry_change_cb() - Callback to be invoked by regulatory
+ * module when country code changes (without channel change) OR if fcc
+ * constraint is set to true.
+ * This API calls TPC calculation API to recalculate and update the TX power.
+ * @vdev_id: vdev id
+ *
+ * Return: None
+ */
+void
+lim_update_tx_pwr_on_ctry_change_cb(uint8_t vdev_id);
 #endif /* __LIM_UTILS_H */

@@ -10722,6 +10722,22 @@ void sme_update_tgt_he_cap(mac_handle_t mac_handle,
 		     &cfg->he_cap_5g,
 		     sizeof(tDot11fIEhe_cap));
 
+	if (!mac_ctx->mlme_cfg->he_caps.dot11_he_cap.rx_pream_puncturing) {
+		sme_debug("feature is disabled via INI, FW caps 2G:%d, 5G:%d",
+			  mac_ctx->he_cap_2g.rx_pream_puncturing,
+			  mac_ctx->he_cap_5g.rx_pream_puncturing);
+
+		mac_ctx->he_cap_2g.rx_pream_puncturing = 0;
+		mac_ctx->he_cap_5g.rx_pream_puncturing = 0;
+	}
+
+	if (!mac_ctx->mlme_cfg->he_caps.enable_ul_mimo) {
+		sme_debug("feature is disabled via INI, FW caps 2G:%d, 5G:%d",
+			  mac_ctx->he_cap_2g.ul_mu, mac_ctx->he_cap_5g.ul_mu);
+		mac_ctx->he_cap_2g.ul_mu = 0;
+		mac_ctx->he_cap_5g.ul_mu = 0;
+	}
+
 	/* modify HE Caps field according to INI setting */
 	mac_ctx->he_cap_2g.bfee_sts_lt_80 =
 			QDF_MIN(cfg->he_cap_2g.bfee_sts_lt_80,
@@ -12259,7 +12275,7 @@ QDF_STATUS sme_add_beacon_filter(mac_handle_t mac_handle,
 	filter_param->vdev_id = session_id;
 
 	qdf_mem_copy(filter_param->ie_map, ie_map,
-			BCN_FLT_MAX_ELEMS_IE_LIST * sizeof(uint32_t));
+			SIR_BCN_FLT_MAX_ELEMS_IE_LIST * sizeof(uint32_t));
 
 	message.type = WMA_ADD_BCN_FILTER_CMDID;
 	message.bodyptr = filter_param;
@@ -15743,6 +15759,20 @@ QDF_STATUS sme_update_owe_info(struct mac_context *mac,
 	status = sme_acquire_global_lock(&mac->sme);
 	if (QDF_IS_STATUS_SUCCESS(status)) {
 		status = csr_update_owe_info(mac, assoc_ind);
+		sme_release_global_lock(&mac->sme);
+	}
+
+	return status;
+}
+
+QDF_STATUS sme_update_ft_info(struct mac_context *mac,
+			      struct assoc_ind *assoc_ind)
+{
+	QDF_STATUS status;
+
+	status = sme_acquire_global_lock(&mac->sme);
+	if (QDF_IS_STATUS_SUCCESS(status)) {
+		status = csr_update_ft_info(mac, assoc_ind);
 		sme_release_global_lock(&mac->sme);
 	}
 

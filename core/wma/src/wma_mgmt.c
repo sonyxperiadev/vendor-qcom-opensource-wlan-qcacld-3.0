@@ -1380,8 +1380,8 @@ static void wma_set_mlo_capability(tp_wma_handle wma,
 			  QDF_MAC_ADDR_REF(peer->mldaddr),
 			  req->mlo_params.mlo_force_link_inactive);
 		req->mlo_params.emlsr_support = params->emlsr_support;
+		req->mlo_params.ieee_link_id = params->link_id;
 		if (req->mlo_params.emlsr_support) {
-			req->mlo_params.ieee_link_id = params->link_id;
 			req->mlo_params.trans_timeout_us =
 					params->emlsr_trans_timeout;
 		}
@@ -2544,6 +2544,7 @@ QDF_STATUS wma_set_ap_vdev_up(tp_wma_handle wma, uint8_t vdev_id)
 	}
 	wma_set_sap_keepalive(wma, vdev_id);
 	wma_set_vdev_mgmt_rate(wma, vdev_id);
+	wma_sr_update(wma, vdev_id, true);
 
 	return status;
 }

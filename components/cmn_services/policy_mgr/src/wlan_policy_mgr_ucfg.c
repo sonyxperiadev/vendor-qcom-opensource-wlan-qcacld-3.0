@@ -125,6 +125,8 @@ static QDF_STATUS policy_mgr_init_cfg(struct wlan_objmgr_psoc *psoc)
 	cfg->multi_sap_allowed_on_same_band =
 		cfg_get(psoc, CFG_MULTI_SAP_ALLOWED_ON_SAME_BAND);
 	policy_mgr_init_same_mac_conc_sr_status(psoc);
+	cfg->use_sap_original_bw =
+		cfg_get(psoc, CFG_SAP_DEFAULT_BW_FOR_RESTART);
 
 	return QDF_STATUS_SUCCESS;
 }

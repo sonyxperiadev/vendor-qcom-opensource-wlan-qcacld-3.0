@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -144,4 +145,16 @@ action_oui_search(struct action_oui_psoc_priv *psoc_priv,
 		  struct action_oui_search_attr *attr,
 		  enum action_oui_id action_id);
 
+/**
+ * action_oui_is_empty() - Check action oui present or not
+ * @psoc_priv: action psoc private object
+ * @action_id: action oui id
+ *
+ * This function will check action oui present or not for specific action type.
+ *
+ * Return: True if no action oui for the action type.
+ */
+bool
+action_oui_is_empty(struct action_oui_psoc_priv *psoc_priv,
+		    enum action_oui_id action_id);
 #endif /* End  of _WLAN_ACTION_OUI_PRIV_STRUCT_H_ */

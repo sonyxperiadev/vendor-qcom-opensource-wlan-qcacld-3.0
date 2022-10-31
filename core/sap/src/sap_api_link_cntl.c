@@ -1183,9 +1183,10 @@ QDF_STATUS wlansap_roam_callback(void *ctx,
 			    NULL) {
 				sap_context =
 				    mac_ctx->sap.sapCtxList[intf].sap_context;
-				if (!wlan_reg_is_passive_or_disable_for_freq(
+				if (!wlan_reg_is_passive_or_disable_for_pwrmode(
 						mac_ctx->pdev,
-						sap_context->chan_freq))
+						sap_context->chan_freq,
+						REG_CURRENT_PWR_MODE))
 					continue;
 				sap_debug("Vdev %d no channel available , stop bss",
 					  sap_context->sessionId);

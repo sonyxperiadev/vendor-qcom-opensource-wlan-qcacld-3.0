@@ -335,6 +335,8 @@ QDF_STATUS lim_store_mlo_ie_raw_info(uint8_t *ie, uint8_t *sta_prof_ie,
 bool lim_is_ml_peer_state_disconn(struct mac_context *mac_ctx,
 				  struct pe_session *session,
 				  uint8_t *mac_addr);
+
+bool lim_is_emlsr_band_supported(struct pe_session *session);
 #else
 static inline void lim_mlo_notify_peer_disconn(struct pe_session *pe_session,
 					       tpDphHashNode sta_ds)
@@ -451,6 +453,12 @@ static inline
 bool lim_is_ml_peer_state_disconn(struct mac_context *mac_ctx,
 				  struct pe_session *session,
 				  uint8_t *mac_addr)
+{
+	return false;
+}
+
+static inline
+bool lim_is_emlsr_band_supported(struct pe_session *session)
 {
 	return false;
 }

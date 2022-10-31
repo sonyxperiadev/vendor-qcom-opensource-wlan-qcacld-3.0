@@ -322,6 +322,8 @@ static u32 hdd_to_nl_sar_version(enum sar_version hdd_sar_version)
 		return QCA_WLAN_VENDOR_SAR_VERSION_1;
 	case (SAR_VERSION_2):
 		return QCA_WLAN_VENDOR_SAR_VERSION_2;
+	case (SAR_VERSION_3):
+		return QCA_WLAN_VENDOR_SAR_VERSION_3;
 	default:
 		return QCA_WLAN_VENDOR_SAR_VERSION_INVALID;
 	}
@@ -345,6 +347,9 @@ static int hdd_sar_fill_capability_response(struct sk_buff *skb,
 
 	attr = QCA_WLAN_VENDOR_ATTR_SAR_CAPABILITY_VERSION;
 	value = hdd_to_nl_sar_version(hdd_ctx->sar_version);
+
+	hdd_debug("SAR Version = %u", value);
+
 	errno = nla_put_u32(skb, attr, value);
 
 	return errno;
@@ -543,7 +548,8 @@ hdd_convert_sarv1_to_sarv2(struct hdd_context *hdd_ctx,
 	struct sar_limit_cmd_row *row;
 
 	hdd_enter();
-	if (hdd_ctx->sar_version != SAR_VERSION_2) {
+	if (hdd_ctx->sar_version != SAR_VERSION_2 &&
+	    hdd_ctx->sar_version != SAR_VERSION_3) {
 		hdd_debug("SAR version: %d", hdd_ctx->sar_version);
 		return false;
 	}
@@ -767,13 +773,14 @@ static int __wlan_hdd_set_sar_power_limits(struct wiphy *wiphy,
 			QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_BDF0 &&
 		     sar_enable <=
 			QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_BDF4) &&
-		     hdd_ctx->sar_version == SAR_VERSION_2 &&
+		     (hdd_ctx->sar_version == SAR_VERSION_2 ||
+		      hdd_ctx->sar_version == SAR_VERSION_3) &&
 		     !hdd_ctx->config->enable_sar_conversion) {
 			hdd_err("SARV1 to SARV2 is disabled from ini");
 			return -EINVAL;
 		} else if (sar_enable ==
 				QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_V2_0 &&
-			   hdd_ctx->sar_version == SAR_VERSION_1) {
+				hdd_ctx->sar_version == SAR_VERSION_1) {
 			hdd_err("FW expects SARV1 given command is SARV2");
 			return -EINVAL;
 		}

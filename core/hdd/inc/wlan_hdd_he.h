@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -66,6 +67,10 @@ enum qca_wlan_vendor_attr_get_he_capabilities {
 	QCA_WLAN_VENDOR_ATTR_HE_CAPABILITIES_AFTER_LAST - 1,
 };
 
+/* QCA_NL80211_VENDOR_SUBCMD_SR policy*/
+extern const struct nla_policy
+wlan_hdd_sr_policy[QCA_WLAN_VENDOR_ATTR_SR_MAX + 1];
+
 /**
  * hdd_update_tgt_he_cap() - Update HE related capabilities
  * @hdd_ctx: HDD context
@@ -116,6 +121,42 @@ int hdd_update_he_cap_in_cfg(struct hdd_context *hdd_ctx);
 int wlan_hdd_cfg80211_get_he_cap(struct wiphy *wiphy,
 				 struct wireless_dev *wdev, const void *data,
 				 int data_len);
+#ifdef WLAN_FEATURE_SR
+/**
+ * wlan_hdd_cfg80211_sr_operations() - Spatial Reuse Operations
+ * @wiphy:   pointer to wireless wiphy structure.
+ * @wdev:    pointer to wireless_dev structure.
+ * @data:    Pointer to the data to be passed via vendor interface
+ * @data_len:Length of the data to be passed
+ *
+ * Return:   Return the Success or Failure code.
+ */
+int wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
+				    struct wireless_dev *wdev,
+				    const void *data, int data_len);
+
+/**
+ * hdd_sr_register_callbacks() - register hdd callback for sr
+ * @hdd_ctx: hdd context
+ *
+ * Return: void
+ */
+void hdd_sr_register_callbacks(struct hdd_context *hdd_ctx);
+
+#else
+static inline
+int wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
+				    struct wireless_dev *wdev,
+				    const void *data, int data_len)
+{
+	return 0;
+}
+
+static inline void hdd_sr_register_callbacks(struct hdd_context *hdd_ctx)
+{
+}
+#endif
+
 #define FEATURE_11AX_VENDOR_COMMANDS                                    \
 {                                                                       \
 	.info.vendor_id = QCA_NL80211_VENDOR_ID,                        \
@@ -124,6 +165,16 @@ int wlan_hdd_cfg80211_get_he_cap(struct wiphy *wiphy,
 		 WIPHY_VENDOR_CMD_NEED_NETDEV,                          \
 	.doit = wlan_hdd_cfg80211_get_he_cap,                           \
 	vendor_command_policy(VENDOR_CMD_RAW_DATA, 0)                   \
+},									\
+{                                                                       \
+	.info.vendor_id = QCA_NL80211_VENDOR_ID,                        \
+	.info.subcmd = QCA_NL80211_VENDOR_SUBCMD_SR,			\
+	.flags = WIPHY_VENDOR_CMD_NEED_WDEV |                           \
+		 WIPHY_VENDOR_CMD_NEED_NETDEV |                         \
+		 WIPHY_VENDOR_CMD_NEED_RUNNING,				\
+	.doit = wlan_hdd_cfg80211_sr_operations,			\
+	vendor_command_policy(wlan_hdd_sr_policy,			\
+			      QCA_WLAN_VENDOR_ATTR_SR_MAX)		\
 },
 
 #else
@@ -140,6 +191,10 @@ static inline void wlan_hdd_check_11ax_support(struct hdd_beacon_data *beacon,
 static inline int hdd_update_he_cap_in_cfg(struct hdd_context *hdd_ctx)
 {
 	return 0;
+}
+
+static inline void hdd_sr_register_callbacks(struct hdd_context *hdd_ctx)
+{
 }
 
 /* dummy definition */

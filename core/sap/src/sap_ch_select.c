@@ -2224,7 +2224,7 @@ static void sap_sort_chl_weight_ht40_24_g(struct mac_context *mac_ctx,
 			continue;
 		}
 		/*
-		 * check if there is another channel combination possiblity
+		 * check if there is another channel combination possibility
 		 * e.g., {1, 5} & {5, 9}
 		 */
 		if ((pSpectInfo[j + 4].chan_freq + 20) ==

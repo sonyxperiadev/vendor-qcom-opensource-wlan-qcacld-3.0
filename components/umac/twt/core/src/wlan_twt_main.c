@@ -2150,7 +2150,8 @@ QDF_STATUS wlan_twt_update_beacon_template(void)
 
 void wlan_twt_set_work_params(
 			struct wlan_objmgr_vdev *vdev,
-			struct twt_add_dialog_complete_event_param *params,
+			struct qdf_mac_addr *peer_mac,
+			uint8_t dialog_id,
 			uint32_t twt_next_action)
 {
 	struct twt_vdev_priv_obj *twt_vdev_priv;
@@ -2163,8 +2164,8 @@ void wlan_twt_set_work_params(
 		return;
 	}
 
-	qdf_copy_macaddr(&twt_vdev_priv->peer_macaddr, &params->peer_macaddr);
-	twt_vdev_priv->dialog_id = params->dialog_id;
+	qdf_copy_macaddr(&twt_vdev_priv->peer_macaddr, peer_mac);
+	twt_vdev_priv->dialog_id = dialog_id;
 	twt_vdev_priv->next_action = twt_next_action;
 
 	twt_debug("renego: twt_terminate: dialog_id:%d next_action:%d peer mac_addr  "

@@ -4236,6 +4236,17 @@ QDF_STATUS sme_update_hidden_ssid_status_cb(mac_handle_t mac_handle,
 QDF_STATUS sme_update_owe_info(struct mac_context *mac,
 			       struct assoc_ind *assoc_ind);
 
+/**
+ * sme_update_ft_info() - Update FT info
+ * @mac: mac context
+ * @assoc_ind: assoc ind
+ *
+ * Return: QDF_STATUS
+ */
+
+QDF_STATUS sme_update_ft_info(struct mac_context *mac,
+			      struct assoc_ind *assoc_ind);
+
 #ifdef WLAN_MWS_INFO_DEBUGFS
 /**
  * sme_get_mws_coex_info() - SME API to get the coex information

@@ -1323,19 +1323,19 @@ static inline QDF_STATUS wma_set_tsf_gpio_pin(WMA_HANDLE handle, uint32_t pin)
 }
 #endif
 
-#ifdef WLAN_FEATURE_11AX
+#ifdef WLAN_FEATURE_SR
 /**
- * wma_spr_update() - enable/disable spatial reuse
+ * wma_sr_update() - enable/disable spatial reuse
  * @wma: wma handle
  * @vdev_id: vdev id
  * @enable: indicates spatial reuse enable/disable
  *
  * Return: QDF_STATUS_SUCCESS for success or error code
  */
-QDF_STATUS wma_spr_update(tp_wma_handle wma, uint8_t vdev_id, bool enable);
+QDF_STATUS wma_sr_update(tp_wma_handle wma, uint8_t vdev_id, bool enable);
 #else
-static inline QDF_STATUS wma_spr_update(tp_wma_handle wma, uint8_t vdev_id,
-					bool enable)
+static inline QDF_STATUS wma_sr_update(tp_wma_handle wma, uint8_t vdev_id,
+				       bool enable)
 {
 	return QDF_STATUS_SUCCESS;
 }

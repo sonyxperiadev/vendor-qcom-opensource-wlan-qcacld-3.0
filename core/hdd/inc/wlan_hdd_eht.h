@@ -102,22 +102,6 @@ void wlan_hdd_get_mlo_link_id(struct hdd_beacon_data *beacon,
 int hdd_set_11be_rate_code(struct hdd_adapter *adapter, uint16_t rate_code);
 
 /**
- * hdd_sysfs_11be_rate_create() - Create sysfs entry to configure 11be rate
- * @adapter: net device adapter
- *
- * Return: None
- */
-void hdd_sysfs_11be_rate_create(struct hdd_adapter *adapter);
-
-/**
- * hdd_sysfs_11be_rate_destroy() - Destroy sysfs entry to configure 11be rate
- * @adapter: net device adapter
- *
- * Return: None
- */
-void hdd_sysfs_11be_rate_destroy(struct hdd_adapter *adapter);
-
-/**
  * wlan_hdd_fill_os_eht_rateflags() - Fill EHT related rate_info
  * @os_rate: rate info for os
  * @rate_flags: rate flags
@@ -151,14 +135,6 @@ static inline int
 hdd_set_11be_rate_code(struct hdd_adapter *adapter, uint16_t rate_code)
 {
 	return 0;
-}
-
-static inline void hdd_sysfs_11be_rate_create(struct hdd_adapter *adapter)
-{
-}
-
-static inline void hdd_sysfs_11be_rate_destroy(struct hdd_adapter *adapter)
-{
 }
 
 static inline void wlan_hdd_get_mlo_link_id(struct hdd_beacon_data *beacon,

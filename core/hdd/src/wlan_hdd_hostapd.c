@@ -3593,6 +3593,7 @@ QDF_STATUS wlan_hdd_get_channel_for_sap_restart(
 	enum sap_csa_reason_code csa_reason =
 		CSA_REASON_CONCURRENT_STA_CHANGED_CHANNEL;
 	QDF_STATUS status;
+	bool use_sap_original_bw = false;
 
 	if (!ap_adapter) {
 		hdd_err("ap_adapter is NULL");
@@ -3632,8 +3633,12 @@ QDF_STATUS wlan_hdd_get_channel_for_sap_restart(
 	}
 	wlan_hdd_set_sap_csa_reason(psoc, vdev_id, csa_reason);
 
-	/* Initialized ch_width to CH_WIDTH_MAX */
-	ch_params.ch_width = CH_WIDTH_MAX;
+	policy_mgr_get_original_bw_for_sap_restart(psoc, &use_sap_original_bw);
+	if (use_sap_original_bw)
+		ch_params.ch_width = sap_context->ch_width_orig;
+	else
+		ch_params.ch_width = CH_WIDTH_MAX;
+
 	intf_ch_freq = wlansap_get_chan_band_restrict(sap_context, &csa_reason);
 	if (intf_ch_freq)
 		goto sap_restart;
@@ -3654,6 +3659,18 @@ QDF_STATUS wlan_hdd_get_channel_for_sap_restart(
 	    !policy_mgr_go_scc_enforced(psoc)) {
 		wlansap_context_put(sap_context);
 		hdd_debug("p2p go no scc required");
+		return QDF_STATUS_E_FAILURE;
+	}
+	/*
+	 * If liberal mode is enabled. If P2P-Cli is not yet connected
+	 * Skipping CSA as this is done as part of set_key
+	 */
+
+	if (ap_adapter->device_mode == QDF_P2P_GO_MODE &&
+	    policy_mgr_go_scc_enforced(psoc) &&
+	    !policy_mgr_is_go_scc_strict(psoc) &&
+	    (wlan_vdev_get_peer_count(sap_context->vdev) == 1)) {
+		hdd_debug("p2p go liberal mode enabled. Skipping CSA");
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -4880,8 +4897,9 @@ int wlan_hdd_cfg80211_update_apies(struct hdd_adapter *adapter)
 			      WLAN_EID_INTERWORKING);
 	wlan_hdd_add_extra_ie(adapter, genie, &total_ielen,
 			      WLAN_EID_ADVERTISEMENT_PROTOCOL);
-
 	wlan_hdd_add_extra_ie(adapter, genie, &total_ielen, WLAN_ELEMID_RSNXE);
+	wlan_hdd_add_extra_ie(adapter, genie, &total_ielen,
+			      WLAN_ELEMID_MOBILITY_DOMAIN);
 #ifdef FEATURE_WLAN_WAPI
 	if (QDF_SAP_MODE == adapter->device_mode) {
 		wlan_hdd_add_extra_ie(adapter, genie, &total_ielen,
@@ -4918,6 +4936,8 @@ int wlan_hdd_cfg80211_update_apies(struct hdd_adapter *adapter)
 				     &proberesp_ies_len);
 	wlan_hdd_add_extra_ie(adapter, proberesp_ies, &proberesp_ies_len,
 			      WLAN_ELEMID_RSNXE);
+	wlan_hdd_add_extra_ie(adapter, proberesp_ies, &proberesp_ies_len,
+			      WLAN_ELEMID_MOBILITY_DOMAIN);
 
 	if (test_bit(SOFTAP_BSS_STARTED, &adapter->event_flags)) {
 		update_ie.ieBufferlength = proberesp_ies_len;
@@ -6538,10 +6558,11 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 		goto error;
 	}
 
-	hdd_nofl_debug("SAP mac:" QDF_MAC_ADDR_FMT " SSID: %.*s BCNINTV:%d Freq:%d freq_seg0:%d freq_seg1:%d ch_width:%d HW mode:%d privacy:%d akm:%d acs_mode:%d acs_dfs_mode %d dtim period:%d MFPC %d, MFPR %d",
+	hdd_nofl_debug("SAP mac:" QDF_MAC_ADDR_FMT " SSID: " QDF_SSID_FMT " BCNINTV:%d Freq:%d freq_seg0:%d freq_seg1:%d ch_width:%d HW mode:%d privacy:%d akm:%d acs_mode:%d acs_dfs_mode %d dtim period:%d MFPC %d, MFPR %d",
 		       QDF_MAC_ADDR_REF(adapter->mac_addr.bytes),
-		       config->SSIDinfo.ssid.length,
-		       config->SSIDinfo.ssid.ssId, (int)config->beacon_int,
+		       QDF_SSID_REF(config->SSIDinfo.ssid.length,
+				    config->SSIDinfo.ssid.ssId),
+		       (int)config->beacon_int,
 		       config->chan_freq, config->ch_params.mhz_freq_seg0,
 		       config->ch_params.mhz_freq_seg1,
 		       config->ch_params.ch_width,
@@ -6687,7 +6708,6 @@ error:
 
 free:
 	wlan_twt_concurrency_update(hdd_ctx);
-	hdd_update_he_obss_pd(adapter, NULL, true);
 	if (deliver_start_evt) {
 		status = ucfg_if_mgr_deliver_event(
 					vdev,
@@ -6855,7 +6875,6 @@ static int __wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy,
 					    false);
 		wlan_twt_concurrency_update(hdd_ctx);
 		wlan_set_sap_user_config_freq(adapter->vdev, 0);
-		hdd_update_he_obss_pd(adapter, NULL, false);
 		status = ucfg_if_mgr_deliver_event(adapter->vdev,
 				WLAN_IF_MGR_EV_AP_STOP_BSS_COMPLETE,
 				NULL);
@@ -7368,62 +7387,44 @@ wlan_util_get_centre_freq(struct wireless_dev *wdev, unsigned int link_id)
 }
 #endif
 
-#if defined WLAN_FEATURE_11AX
-void hdd_update_he_obss_pd(struct hdd_adapter *adapter,
-			   struct cfg80211_ap_settings *params,
-			   bool iface_start)
+#if defined(WLAN_FEATURE_SR) && \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0))
+/**
+ * hdd_update_he_obss_pd() - Enable or disable spatial reuse
+ * based on user space input and concurrency combination.
+ * @adapter:  Pointer to hostapd adapter
+ * @params: Pointer to AP configuration from cfg80211
+ * @iface_start: Interface start or not
+ *
+ * Return: void
+ */
+static void hdd_update_he_obss_pd(struct hdd_adapter *adapter,
+				  struct cfg80211_ap_settings *params)
 {
-	struct wlan_objmgr_vdev *vdev, *conc_vdev;
-	uint8_t vdev_id = adapter->vdev_id;
-	uint8_t mac_id;
-	struct wlan_objmgr_psoc *psoc;
-	uint32_t conc_vdev_id;
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)) || \
-	defined(CFG80211_SPATIAL_REUSE_EXT_BACKPORT)
+	struct wlan_objmgr_vdev *vdev;
 	struct ieee80211_he_obss_pd *obss_pd;
-#endif
 
 	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_ID);
 	if (!vdev)
 		return;
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)) || \
-	defined(CFG80211_SPATIAL_REUSE_EXT_BACKPORT)
 	if (params && params->he_obss_pd.enable) {
 		obss_pd = &params->he_obss_pd;
 		ucfg_spatial_reuse_set_sr_config(vdev,
 						 obss_pd->sr_ctrl,
 						 obss_pd->non_srg_max_offset);
+		ucfg_spatial_reuse_set_sr_enable(vdev, obss_pd->enable);
 		hdd_debug("obss_pd_enable: %d, sr_ctrl: %d, non_srg_max_offset: %d",
 			  obss_pd->enable, obss_pd->sr_ctrl,
 			  obss_pd->non_srg_max_offset);
 	}
-#endif
-
-	psoc = wlan_vdev_get_psoc(vdev);
-	policy_mgr_get_mac_id_by_session_id(psoc, vdev_id, &mac_id);
-	conc_vdev_id = policy_mgr_get_conc_vdev_on_same_mac(psoc, vdev_id,
-							    mac_id);
-	if (conc_vdev_id != WLAN_INVALID_VDEV_ID) {
-		conc_vdev =
-			wlan_objmgr_get_vdev_by_id_from_psoc(
-							psoc, conc_vdev_id,
-							WLAN_HDD_ID_OBJ_MGR);
-		if (!conc_vdev)
-			goto release_ref;
-
-		if (iface_start) {
-			ucfg_spatial_reuse_send_sr_config(conc_vdev, false);
-			hdd_debug("disable obss pd for vdev:%d", conc_vdev_id);
-		} else {
-			ucfg_spatial_reuse_send_sr_config(conc_vdev, true);
-			hdd_debug("enable obss pd for vdev:%d", conc_vdev_id);
-		}
-		wlan_objmgr_vdev_release_ref(conc_vdev, WLAN_HDD_ID_OBJ_MGR);
-	}
-
-release_ref:
 	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_ID);
+}
+#else
+static inline
+void hdd_update_he_obss_pd(struct hdd_adapter *adapter,
+			   struct cfg80211_ap_settings *params)
+{
 }
 #endif
 
@@ -7742,7 +7743,7 @@ static int __wlan_hdd_cfg80211_start_ap(struct wiphy *wiphy,
 		wlan_hdd_update_twt_responder(hdd_ctx, params);
 
 		/* Enable/disable non-srg obss pd spatial reuse */
-		hdd_update_he_obss_pd(adapter, params, true);
+		hdd_update_he_obss_pd(adapter, params);
 
 		hdd_place_marker(adapter, "TRY TO START", NULL);
 		status =

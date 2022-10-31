@@ -1758,6 +1758,7 @@ static int hdd_resume_wlan(void)
 		if (adapter->device_mode == QDF_STA_MODE)
 			status = hdd_disable_default_pkt_filters(adapter);
 
+		hdd_restart_tsf_sync_post_wlan_resume(adapter);
 		hdd_adapter_dev_put_debug(adapter, NET_DEV_HOLD_RESUME_WLAN);
 	}
 
@@ -2958,6 +2959,13 @@ static int __wlan_hdd_cfg80211_set_power_mgmt(struct wiphy *wiphy,
 	is_mlo_vdev = wlan_vdev_mlme_is_mlo_vdev(vdev);
 
 	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_POWER_ID);
+
+	/* Flush any scheduled inet change notifier work
+	 * This is to make sure set power save request
+	 * sent to FW are serialized to avoid race condition
+	 */
+	flush_work(&adapter->ipv4_notifier_work);
+	hdd_adapter_flush_ipv6_notifier_work(adapter);
 
 	if (is_mlo_vdev) {
 		status = wlan_hdd_set_mlo_ps(hdd_ctx->psoc, adapter,

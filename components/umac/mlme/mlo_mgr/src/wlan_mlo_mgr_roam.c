@@ -75,8 +75,7 @@ mlo_update_for_multi_link_roam(struct wlan_objmgr_psoc *psoc,
 	}
 
 	wlan_vdev_mlme_set_mlo_vdev(vdev);
-	wlan_vdev_mlme_feat_ext2_cap_set(vdev,
-					 WLAN_VDEV_FEXT2_MLO_STA_LINK);
+	wlan_vdev_mlme_set_mlo_link_vdev(vdev);
 
 	mlo_update_connect_req_links(vdev, true);
 
@@ -92,8 +91,7 @@ mlo_cleanup_link(struct wlan_objmgr_vdev *vdev, bool is_legacy)
 
 	if (wlan_vdev_mlme_is_mlo_link_vdev(vdev)) {
 		cm_cleanup_mlo_link(vdev);
-		wlan_vdev_mlme_feat_ext2_cap_clear(vdev,
-						   WLAN_VDEV_FEXT2_MLO_STA_LINK);
+		wlan_vdev_mlme_clear_mlo_link_vdev(vdev);
 	}
 }
 
@@ -145,8 +143,7 @@ mlo_clear_link_bmap(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
 	mlo_clear_connect_req_links_bmap(vdev);
 	wlan_vdev_mlme_clear_mlo_vdev(vdev);
 	if (wlan_vdev_mlme_is_mlo_link_vdev(vdev))
-		wlan_vdev_mlme_feat_ext2_cap_clear(vdev,
-				WLAN_VDEV_FEXT2_MLO_STA_LINK);
+		wlan_vdev_mlme_clear_mlo_link_vdev(vdev);
 
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_SB_ID);
 }
@@ -465,6 +462,7 @@ void
 mlo_roam_update_connected_links(struct wlan_objmgr_vdev *vdev,
 				struct wlan_cm_connect_resp *connect_rsp)
 {
+	mlo_clear_connected_links_bmap(vdev);
 	mlo_update_connected_links_bmap(vdev->mlo_dev_ctx,
 					connect_rsp->ml_parnter_info);
 }
@@ -615,3 +613,19 @@ mlo_check_if_all_links_up(struct wlan_objmgr_vdev *vdev)
 	return false;
 }
 
+void
+mlo_roam_set_link_id(struct wlan_objmgr_vdev *vdev,
+		     struct roam_offload_synch_ind *sync_ind)
+{
+	uint8_t i;
+
+	for (i = 0; i < sync_ind->num_setup_links; i++) {
+		if (sync_ind->ml_link[i].vdev_id == wlan_vdev_get_id(vdev)) {
+			wlan_vdev_set_link_id(vdev,
+					      sync_ind->ml_link[i].link_id);
+			mlme_debug("Set link for vdev id %d link id %d",
+				   wlan_vdev_get_id(vdev),
+				   sync_ind->ml_link[i].link_id);
+		}
+	}
+}

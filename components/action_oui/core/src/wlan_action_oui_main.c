@@ -149,19 +149,8 @@ action_oui_psoc_create_notification(struct wlan_objmgr_psoc *psoc, void *arg)
 	target_if_action_oui_register_tx_ops(&psoc_priv->tx_ops);
 	psoc_priv->psoc = psoc;
 
-	status = action_oui_allocate(psoc_priv);
-	if (!QDF_IS_STATUS_SUCCESS(status)) {
-		action_oui_err("Failed to alloc action_oui");
-		goto detach_psoc_priv;
-	}
-
 	action_oui_debug("psoc priv attached");
 	goto exit;
-
-detach_psoc_priv:
-	wlan_objmgr_psoc_component_obj_detach(psoc,
-					      WLAN_UMAC_COMP_ACTION_OUI,
-					      (void *)psoc_priv);
 free_psoc_priv:
 	qdf_mem_free(psoc_priv);
 	status = QDF_STATUS_E_INVAL;
@@ -190,12 +179,50 @@ action_oui_psoc_destroy_notification(struct wlan_objmgr_psoc *psoc, void *arg)
 	if (!QDF_IS_STATUS_SUCCESS(status))
 		action_oui_err("Failed to detach priv with psoc");
 
-	action_oui_destroy(psoc_priv);
 	qdf_mem_free(psoc_priv);
 
 exit:
 	ACTION_OUI_EXIT();
 	return status;
+}
+
+void action_oui_psoc_enable(struct wlan_objmgr_psoc *psoc)
+{
+	struct action_oui_psoc_priv *psoc_priv;
+	QDF_STATUS status = QDF_STATUS_E_FAILURE;
+
+	ACTION_OUI_ENTER();
+
+	psoc_priv = action_oui_psoc_get_priv(psoc);
+	if (!psoc_priv) {
+		action_oui_err("psoc priv is NULL");
+		goto exit;
+	}
+
+	status = action_oui_allocate(psoc_priv);
+	if (!QDF_IS_STATUS_SUCCESS(status)) {
+		action_oui_err("Failed to alloc action_oui");
+		goto exit;
+	}
+exit:
+	ACTION_OUI_EXIT();
+}
+
+void action_oui_psoc_disable(struct wlan_objmgr_psoc *psoc)
+{
+	struct action_oui_psoc_priv *psoc_priv;
+
+	ACTION_OUI_ENTER();
+
+	psoc_priv = action_oui_psoc_get_priv(psoc);
+	if (!psoc_priv) {
+		action_oui_err("psoc priv is NULL");
+		goto exit;
+	}
+
+	action_oui_destroy(psoc_priv);
+exit:
+	ACTION_OUI_EXIT();
 }
 
 bool wlan_action_oui_search(struct wlan_objmgr_psoc *psoc,
@@ -224,7 +251,76 @@ bool wlan_action_oui_search(struct wlan_objmgr_psoc *psoc,
 	found = action_oui_search(psoc_priv, attr, action_id);
 
 exit:
-
 	return found;
+}
+
+QDF_STATUS
+wlan_action_oui_cleanup(struct action_oui_psoc_priv *psoc_priv,
+			enum action_oui_id action_id)
+{
+	struct action_oui_priv *oui_priv;
+	struct action_oui_extension_priv *ext_priv;
+	qdf_list_t *ext_list;
+	QDF_STATUS status;
+	qdf_list_node_t *node = NULL;
+
+	if (action_id >= ACTION_OUI_MAXIMUM_ID)
+		return QDF_STATUS_E_INVAL;
+
+	oui_priv = psoc_priv->oui_priv[action_id];
+	if (!oui_priv)
+		return QDF_STATUS_SUCCESS;
+
+	ext_list = &oui_priv->extension_list;
+	qdf_mutex_acquire(&oui_priv->extension_lock);
+	while (!qdf_list_empty(ext_list)) {
+		status = qdf_list_remove_front(ext_list, &node);
+		if (!QDF_IS_STATUS_SUCCESS(status)) {
+			action_oui_err("Invalid delete in action: %u",
+				       oui_priv->id);
+			break;
+		}
+		ext_priv = qdf_container_of(
+				node,
+				struct action_oui_extension_priv,
+				item);
+		qdf_mem_free(ext_priv);
+		ext_priv = NULL;
+		if (psoc_priv->total_extensions)
+			psoc_priv->total_extensions--;
+		else
+			action_oui_err("unexpected total_extensions 0");
+	}
+	qdf_mutex_release(&oui_priv->extension_lock);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+bool wlan_action_oui_is_empty(struct wlan_objmgr_psoc *psoc,
+			      enum action_oui_id action_id)
+{
+	struct action_oui_psoc_priv *psoc_priv;
+	bool empty = true;
+
+	if (!psoc) {
+		action_oui_err("Invalid psoc");
+		goto exit;
+	}
+
+	if (action_id >= ACTION_OUI_MAXIMUM_ID) {
+		action_oui_err("Invalid action_oui id: %u", action_id);
+		goto exit;
+	}
+
+	psoc_priv = action_oui_psoc_get_priv(psoc);
+	if (!psoc_priv) {
+		action_oui_err("psoc priv is NULL");
+		goto exit;
+	}
+
+	empty = action_oui_is_empty(psoc_priv, action_id);
+
+exit:
+	return empty;
 }
 
