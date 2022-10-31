@@ -589,11 +589,15 @@ bool wlan_hdd_cm_handle_sap_sta_dfs_conc(struct hdd_context *hdd_ctx,
 		qdf_mem_copy(scan_filter->bssid_list[0].bytes, req->bssid,
 			     QDF_MAC_ADDR_SIZE);
 	}
-	scan_filter->num_of_ssid = 1;
-	scan_filter->ssid_list[0].length =
-				QDF_MIN(req->ssid_len, QDF_MAC_ADDR_SIZE);
-	qdf_mem_copy(scan_filter->ssid_list[0].ssid, req->ssid,
-		     scan_filter->ssid_list[0].length);
+	if (req->ssid_len > WLAN_SSID_MAX_LEN) {
+		scan_filter->num_of_ssid = 0;
+		hdd_err("req ssid len invalid %zu", req->ssid_len);
+	} else {
+		scan_filter->num_of_ssid = 1;
+		scan_filter->ssid_list[0].length = req->ssid_len;
+		qdf_mem_copy(scan_filter->ssid_list[0].ssid, req->ssid,
+			     scan_filter->ssid_list[0].length);
+	}
 	scan_filter->ignore_auth_enc_type = true;
 	list = ucfg_scan_get_result(hdd_ctx->pdev, scan_filter);
 	qdf_mem_free(scan_filter);
