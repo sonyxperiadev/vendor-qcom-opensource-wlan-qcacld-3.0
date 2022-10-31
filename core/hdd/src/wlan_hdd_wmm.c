@@ -2598,27 +2598,27 @@ hdd_wlan_wmm_status_e hdd_wmm_addts(struct hdd_adapter *adapter,
 				    uint32_t handle,
 				    struct sme_qos_wmmtspecinfo *tspec)
 {
-	struct hdd_wmm_qos_context *qos_context;
+	struct hdd_wmm_qos_context *qos_context = NULL;
+	struct hdd_wmm_qos_context *cur_entry;
 	hdd_wlan_wmm_status_e status = HDD_WLAN_WMM_STATUS_SETUP_SUCCESS;
 #ifndef WLAN_MDM_CODE_REDUCTION_OPT
 	enum sme_qos_statustype sme_status;
 #endif
-	bool found = false;
 	mac_handle_t mac_handle = hdd_adapter_get_mac_handle(adapter);
 
 	hdd_debug("Entered with handle 0x%x", handle);
 
 	/* see if a context already exists with the given handle */
 	mutex_lock(&adapter->hdd_wmm_status.mutex);
-	list_for_each_entry(qos_context,
+	list_for_each_entry(cur_entry,
 			    &adapter->hdd_wmm_status.context_list, node) {
-		if (qos_context->handle == handle) {
-			found = true;
+		if (cur_entry->handle == handle) {
+			qos_context = cur_entry;
 			break;
 		}
 	}
 	mutex_unlock(&adapter->hdd_wmm_status.mutex);
-	if (found) {
+	if (qos_context) {
 		/* record with that handle already exists */
 		hdd_err("Record already exists with handle 0x%x", handle);
 
@@ -2776,8 +2776,8 @@ hdd_wlan_wmm_status_e hdd_wmm_addts(struct hdd_adapter *adapter,
 hdd_wlan_wmm_status_e hdd_wmm_delts(struct hdd_adapter *adapter,
 				    uint32_t handle)
 {
-	struct hdd_wmm_qos_context *qos_context;
-	bool found = false;
+	struct hdd_wmm_qos_context *qos_context = NULL;
+	struct hdd_wmm_qos_context *cur_entry;
 	sme_ac_enum_type ac_type = 0;
 	uint32_t flow_id = 0;
 	hdd_wlan_wmm_status_e status = HDD_WLAN_WMM_STATUS_SETUP_SUCCESS;
@@ -2790,25 +2790,26 @@ hdd_wlan_wmm_status_e hdd_wmm_delts(struct hdd_adapter *adapter,
 
 	/* locate the context with the given handle */
 	mutex_lock(&adapter->hdd_wmm_status.mutex);
-	list_for_each_entry(qos_context,
+	list_for_each_entry(cur_entry,
 			    &adapter->hdd_wmm_status.context_list, node) {
-		if (qos_context->handle == handle) {
-			found = true;
-			ac_type = qos_context->ac_type;
-			flow_id = qos_context->flow_id;
+		if (cur_entry->handle == handle) {
+			qos_context = cur_entry;
 			break;
 		}
 	}
 	mutex_unlock(&adapter->hdd_wmm_status.mutex);
 
-	if (false == found) {
+	if (!qos_context) {
 		/* we didn't find the handle */
 		hdd_info("handle 0x%x not found", handle);
 		return HDD_WLAN_WMM_STATUS_RELEASE_FAILED_BAD_PARAM;
 	}
 
-	hdd_debug("found handle 0x%x, flow %d, AC %d, context %pK",
-		 handle, flow_id, ac_type, qos_context);
+	ac_type = qos_context->ac_type;
+	flow_id = qos_context->flow_id;
+
+	hdd_debug("found handle 0x%x, flow %d, AC %d",
+		 handle, flow_id, ac_type);
 
 #ifndef WLAN_MDM_CODE_REDUCTION_OPT
 	sme_status = sme_qos_release_req(mac_handle, adapter->vdev_id,
