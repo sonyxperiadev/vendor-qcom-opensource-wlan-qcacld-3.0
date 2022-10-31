@@ -1455,7 +1455,9 @@ int wma_csa_offload_handler(void *handle, uint8_t *event, uint32_t len)
 	if (csa_event->ies_present_flag & WMI_WBW_IE_PRESENT) {
 		wb_ie = (struct ieee80211_ie_wide_bw_switch *)
 						(&csa_event->wb_ie[0]);
-		csa_offload_event->new_ch_width = wb_ie->new_ch_width;
+		csa_offload_event->new_ch_width =
+			wlan_mlme_convert_vht_op_bw_to_phy_ch_width(
+				wb_ie->new_ch_width);
 		csa_offload_event->new_ch_freq_seg1 = wb_ie->new_ch_freq_seg1;
 		csa_offload_event->new_ch_freq_seg2 = wb_ie->new_ch_freq_seg2;
 		csa_offload_event->ies_present_flag |= MLME_WBW_IE_PRESENT;
@@ -1466,7 +1468,9 @@ int wma_csa_offload_handler(void *handle, uint8_t *event, uint32_t len)
 				(uint8_t *)&csa_event->cswrap_ie_extended,
 				WLAN_ELEMID_WIDE_BAND_CHAN_SWITCH);
 		if (wb_ie) {
-			csa_offload_event->new_ch_width = wb_ie->new_ch_width;
+			csa_offload_event->new_ch_width =
+				wlan_mlme_convert_vht_op_bw_to_phy_ch_width(
+					wb_ie->new_ch_width);
 			csa_offload_event->new_ch_freq_seg1 =
 						wb_ie->new_ch_freq_seg1;
 			csa_offload_event->new_ch_freq_seg2 =

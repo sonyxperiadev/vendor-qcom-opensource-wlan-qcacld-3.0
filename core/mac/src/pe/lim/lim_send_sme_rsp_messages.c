@@ -1544,13 +1544,13 @@ static QDF_STATUS lim_process_csa_wbw_ie(struct mac_context *mac_ctx,
 		struct pe_session *session_entry)
 {
 	struct ch_params ch_params = {0};
-	uint8_t ap_new_ch_width;
+	enum phy_ch_width ap_new_ch_width;
 	uint8_t center_freq_diff;
 	uint32_t fw_vht_ch_wd = wma_get_vht_ch_width() + 1;
 	uint32_t cent_freq1, cent_freq2;
 	uint32_t csa_cent_freq, csa_cent_freq1 = 0, csa_cent_freq2 = 0;
 
-	ap_new_ch_width = csa_params->new_ch_width + 1;
+	ap_new_ch_width = csa_params->new_ch_width;
 
 	if (!csa_params->new_ch_freq_seg1 && !csa_params->new_ch_freq_seg2) {
 		pe_err("CSA wide BW IE has invalid center freq");

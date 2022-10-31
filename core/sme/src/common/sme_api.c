@@ -16158,7 +16158,7 @@ QDF_STATUS sme_switch_channel(mac_handle_t mac_handle,
 
 	qdf_copy_macaddr(&csa_offload_event->bssid, bssid);
 	csa_offload_event->csa_chan_freq = (uint32_t)chan_freq;
-	csa_offload_event->new_ch_width = (uint8_t)chan_width;
+	csa_offload_event->new_ch_width = chan_width;
 	csa_offload_event->channel =
 		wlan_reg_freq_to_chan(mac_ctx->pdev,
 				      csa_offload_event->csa_chan_freq);
