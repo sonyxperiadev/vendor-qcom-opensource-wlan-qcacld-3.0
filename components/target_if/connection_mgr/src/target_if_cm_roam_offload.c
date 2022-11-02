@@ -290,6 +290,38 @@ target_if_cm_roam_register_linkspeed_state(struct wlan_cm_roam_tx_ops *tx_ops)
 }
 #endif
 
+/**
+ * target_if_cm_roam_ho_delay_config() - Send roam HO delay value to wmi
+ * @vdev: vdev object
+ * @vdev_id: vdev id
+ * @roam_ho_delay: roam hand-off delay value
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+target_if_cm_roam_ho_delay_config(struct wlan_objmgr_vdev *vdev,
+				  uint8_t vdev_id, uint16_t roam_ho_delay)
+{
+	QDF_STATUS status = QDF_STATUS_E_FAILURE;
+	wmi_unified_t wmi_handle;
+
+	wmi_handle = target_if_cm_roam_get_wmi_handle_from_vdev(vdev);
+	if (!wmi_handle)
+		return status;
+
+	status = target_if_roam_set_param(
+				wmi_handle,
+				vdev_id,
+				WMI_ROAM_PARAM_ROAM_HO_DELAY_RUNTIME_CONFIG,
+				roam_ho_delay);
+
+	if (QDF_IS_STATUS_ERROR(status))
+		target_if_err("Failed to set "
+			      "WMI_ROAM_PARAM_ROAM_HO_DELAY_RUNTIME_CONFIG");
+
+	return status;
+}
+
 static void
 target_if_cm_roam_register_lfr3_ops(struct wlan_cm_roam_tx_ops *tx_ops)
 {
@@ -297,6 +329,7 @@ target_if_cm_roam_register_lfr3_ops(struct wlan_cm_roam_tx_ops *tx_ops)
 	tx_ops->send_roam_invoke_cmd = target_if_cm_roam_send_roam_invoke_cmd;
 	tx_ops->send_roam_sync_complete_cmd = target_if_cm_roam_send_roam_sync_complete;
 	tx_ops->send_roam_rt_stats_config = target_if_cm_roam_rt_stats_config;
+	tx_ops->send_roam_ho_delay_config = target_if_cm_roam_ho_delay_config;
 	target_if_cm_roam_register_vendor_handoff_ops(tx_ops);
 	target_if_cm_roam_register_linkspeed_state(tx_ops);
 }
@@ -308,6 +341,13 @@ target_if_cm_roam_register_lfr3_ops(struct wlan_cm_roam_tx_ops *tx_ops)
 static QDF_STATUS
 target_if_cm_roam_rt_stats_config(struct wlan_objmgr_vdev *vdev,
 				  uint8_t vdev_id, uint8_t rstats_config)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static QDF_STATUS
+target_if_cm_roam_ho_delay_config(struct wlan_objmgr_vdev *vdev,
+				  uint8_t vdev_id, uint16_t roam_ho_delay)
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }
@@ -1309,6 +1349,10 @@ target_if_cm_roam_send_start(struct wlan_objmgr_vdev *vdev,
 	if (req->wlan_roam_rt_stats_config)
 		target_if_cm_roam_rt_stats_config(vdev, vdev_id,
 						req->wlan_roam_rt_stats_config);
+
+	if (req->wlan_roam_ho_delay_config)
+		target_if_cm_roam_ho_delay_config(
+				vdev, vdev_id, req->wlan_roam_ho_delay_config);
 	/* add other wmi commands */
 end:
 	return status;
@@ -1687,6 +1731,11 @@ target_if_cm_roam_send_update_config(struct wlan_objmgr_vdev *vdev,
 			target_if_cm_roam_rt_stats_config(
 						vdev, vdev_id,
 						req->wlan_roam_rt_stats_config);
+
+		if (req->wlan_roam_ho_delay_config)
+			target_if_cm_roam_ho_delay_config(
+						vdev, vdev_id,
+						req->wlan_roam_ho_delay_config);
 	}
 end:
 	return status;

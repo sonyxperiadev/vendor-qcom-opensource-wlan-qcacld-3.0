@@ -487,6 +487,15 @@ ucfg_cm_roam_send_rt_stats_config(struct wlan_objmgr_pdev *pdev,
 	return cm_roam_send_rt_stats_config(psoc, vdev_id, param_value);
 }
 
+QDF_STATUS
+ucfg_cm_roam_send_ho_delay_config(struct wlan_objmgr_pdev *pdev,
+				  uint8_t vdev_id, uint16_t param_value)
+{
+	struct wlan_objmgr_psoc *psoc = wlan_pdev_get_psoc(pdev);
+
+	return cm_roam_send_ho_delay_config(psoc, vdev_id, param_value);
+}
+
 #ifdef WLAN_VENDOR_HANDOFF_CONTROL
 QDF_STATUS
 ucfg_cm_roam_send_vendor_handoff_param_req(struct wlan_objmgr_psoc *psoc,

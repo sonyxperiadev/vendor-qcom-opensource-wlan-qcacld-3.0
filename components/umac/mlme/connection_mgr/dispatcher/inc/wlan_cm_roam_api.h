@@ -1149,6 +1149,26 @@ void
 wlan_cm_get_roam_offload_ssid(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 			      uint8_t *ssid, uint8_t *len);
 
+/**
+ * wlan_cm_roam_set_ho_delay_config() - Set roam hand-off delay
+ * @psoc: PSOC pointer
+ * @roam_ho_delay: vendor configured roam HO delay value
+ *
+ * Return: none
+ */
+void
+wlan_cm_roam_set_ho_delay_config(struct wlan_objmgr_psoc *psoc,
+				 uint16_t roam_ho_delay);
+
+/**
+ * wlan_cm_roam_get_ho_delay_config() - Get roam hand-off delay
+ * @psoc: PSOC pointer
+ *
+ * Return: Roam HO delay value
+ */
+uint16_t
+wlan_cm_roam_get_ho_delay_config(struct wlan_objmgr_psoc *psoc);
+
 #else
 static inline
 void wlan_cm_roam_activate_pcl_per_vdev(struct wlan_objmgr_psoc *psoc,
@@ -1347,6 +1367,12 @@ static inline void
 wlan_cm_get_roam_offload_ssid(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 			      uint8_t *ssid, uint8_t *len)
 {
+}
+
+static inline uint16_t
+wlan_cm_roam_get_ho_delay_config(struct wlan_objmgr_psoc *psoc)
+{
+	return 0;
 }
 
 #endif /* WLAN_FEATURE_ROAM_OFFLOAD */

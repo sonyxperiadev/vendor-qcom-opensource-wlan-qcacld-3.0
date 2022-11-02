@@ -71,6 +71,19 @@ wlan_cm_roam_send_set_vdev_pcl(struct wlan_objmgr_psoc *psoc,
 QDF_STATUS wlan_cm_tgt_send_roam_rt_stats_config(struct wlan_objmgr_psoc *psoc,
 						 struct roam_disable_cfg *req);
 
+/**
+ * wlan_cm_tgt_send_roam_ho_delay_config() - Send roam HO delay config command
+ * to FW
+ * @psoc: psoc pointer
+ * @vdev_id: vdev id
+ * @roam_ho_delay: roam hand-off delay value
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS wlan_cm_tgt_send_roam_ho_delay_config(struct wlan_objmgr_psoc *psoc,
+						 uint8_t vdev_id,
+						 uint16_t roam_ho_delay);
+
 #ifdef FEATURE_RX_LINKSPEED_ROAM_TRIGGER
 /**
  * wlan_cm_tgt_send_roam_linkspeed_state() - Send roam link speed state
@@ -104,6 +117,13 @@ QDF_STATUS wlan_cm_tgt_send_roam_mlo_config(struct wlan_objmgr_psoc *psoc,
 					    struct wlan_roam_mlo_config *req)
 {
 	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+wlan_cm_tgt_send_roam_ho_delay_config(struct wlan_objmgr_psoc *psoc,
+				      uint8_t vdev_id, uint16_t roam_ho_delay)
+{
+	return QDF_STATUS_E_FAILURE;
 }
 #endif /* WLAN_FEATURE_ROAM_OFFLOAD */
 
