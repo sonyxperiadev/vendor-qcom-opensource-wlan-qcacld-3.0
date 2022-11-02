@@ -578,6 +578,9 @@ struct pe_session {
 	/* center freq number as advertized OTA */
 	uint8_t ch_center_freq_seg0;
 	enum phy_ch_width ch_width;
+#ifdef WLAN_FEATURE_11BE
+	uint16_t puncture_bitmap;
+#endif
 	uint8_t ch_center_freq_seg1;
 	uint8_t enableVhtpAid;
 	uint8_t enableVhtGid;

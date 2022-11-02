@@ -1924,11 +1924,7 @@ static void __lim_process_channel_switch_timeout(struct pe_session *pe_session)
 			eLIM_CHANNEL_SWITCH_IDLE;
 		break;
 	case eLIM_CHANNEL_SWITCH_PRIMARY_AND_SECONDARY:
-		lim_switch_primary_secondary_channel(mac, pe_session,
-			pe_session->gLimChannelSwitch.sw_target_freq,
-			pe_session->gLimChannelSwitch.ch_center_freq_seg0,
-			pe_session->gLimChannelSwitch.ch_center_freq_seg1,
-			pe_session->gLimChannelSwitch.ch_width);
+		lim_switch_primary_secondary_channel(mac, pe_session);
 		pe_session->gLimChannelSwitch.state =
 			eLIM_CHANNEL_SWITCH_IDLE;
 		break;
@@ -2180,13 +2176,39 @@ void lim_switch_primary_channel(struct mac_context *mac,
 	return;
 }
 
-void lim_switch_primary_secondary_channel(struct mac_context *mac,
-					  struct pe_session *pe_session,
-					  uint32_t new_channel_freq,
-					  uint8_t ch_center_freq_seg0,
-					  uint8_t ch_center_freq_seg1,
-					  enum phy_ch_width ch_width)
+#ifdef WLAN_FEATURE_11BE
+/**
+ * lim_set_puncture_from_chan_switch_to_session() - set puncture from channel
+ *                                                  switch to pe session
+ * @pe_session: pointer to pe session
+ *
+ * Return: void
+ */
+static void
+lim_set_puncture_from_chan_switch_to_session(struct pe_session *pe_session)
 {
+	pe_session->puncture_bitmap =
+			pe_session->gLimChannelSwitch.puncture_bitmap;
+}
+#else
+static void
+lim_set_puncture_from_chan_switch_to_session(struct pe_session *pe_session)
+{
+}
+#endif
+
+void lim_switch_primary_secondary_channel(struct mac_context *mac,
+					  struct pe_session *pe_session)
+{
+	uint32_t new_channel_freq;
+	uint8_t ch_center_freq_seg0;
+	uint8_t ch_center_freq_seg1;
+	enum phy_ch_width ch_width;
+
+	new_channel_freq = pe_session->gLimChannelSwitch.sw_target_freq,
+	ch_center_freq_seg0 = pe_session->gLimChannelSwitch.ch_center_freq_seg0,
+	ch_center_freq_seg1 = pe_session->gLimChannelSwitch.ch_center_freq_seg1,
+	ch_width = pe_session->gLimChannelSwitch.ch_width;
 
 	/* Assign the callback to resume TX once channel is changed. */
 	pe_session->curr_req_chan_freq = new_channel_freq;
@@ -2223,6 +2245,7 @@ void lim_switch_primary_secondary_channel(struct mac_context *mac,
 	pe_session->ch_center_freq_seg0 = ch_center_freq_seg0;
 	pe_session->ch_center_freq_seg1 = ch_center_freq_seg1;
 	pe_session->ch_width = ch_width;
+	lim_set_puncture_from_chan_switch_to_session(pe_session);
 
 	lim_send_switch_chnl_params(mac, pe_session);
 
@@ -10397,6 +10420,30 @@ static void lim_update_des_chan_puncture(struct wlan_channel *des_chan,
 {
 	des_chan->puncture_bitmap = ch_params->reg_punc_bitmap;
 }
+
+/**
+ * lim_overwrite_sta_puncture() - overwrite STA puncture with AP puncture
+ * @session: session
+ * @@ch_param: pointer to ch_params
+ *
+ * Return: void
+ */
+static void lim_overwrite_sta_puncture(struct pe_session *session,
+				       struct ch_params *ch_param)
+{
+	uint16_t new_punc = 0;
+
+	wlan_reg_extract_puncture_by_bw(session->ch_width,
+					session->puncture_bitmap,
+					session->curr_op_freq,
+					ch_param->mhz_freq_seg1,
+					ch_param->ch_width,
+					&new_punc);
+
+	ch_param->reg_punc_bitmap = new_punc;
+	session->puncture_bitmap = new_punc;
+}
+
 #else
 static void lim_update_ap_puncture(struct pe_session *session,
 				   struct ch_params *ch_params)
@@ -10405,6 +10452,11 @@ static void lim_update_ap_puncture(struct pe_session *session,
 
 static void lim_update_des_chan_puncture(struct wlan_channel *des_chan,
 					 struct ch_params *ch_params)
+{
+}
+
+static void lim_overwrite_sta_puncture(struct pe_session *session,
+				       struct ch_params *ch_params)
 {
 }
 #endif
@@ -10467,6 +10519,9 @@ QDF_STATUS lim_pre_vdev_start(struct mac_context *mac,
 		pe_debug("abort vdev start invalid chan parameters");
 		return QDF_STATUS_E_INVAL;
 	}
+
+	if (LIM_IS_STA_ROLE(session))
+		lim_overwrite_sta_puncture(session, &ch_params);
 
 	des_chan = mlme_obj->vdev->vdev_mlme.des_chan;
 	des_chan->ch_freq = session->curr_op_freq;

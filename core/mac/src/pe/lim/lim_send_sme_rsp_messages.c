@@ -1718,15 +1718,64 @@ static bool lim_is_csa_channel_allowed(struct mac_context *mac_ctx,
 	return is_allowed;
 }
 
+#ifdef WLAN_FEATURE_11BE
 /**
- * lim_handle_sta_csa_param() - Handle CSA offload param
- * @mac_ctx: pointer to global adapter context
- * @csa_params: csa parameters.
+ * lim_set_csa_chan_param_11be() - set csa chan params for 11be
+ * @session: pointer to pe session
+ * @csa_param: pointer to csa_offload_params
+ * @ch_param: channel parameters to get
  *
- * Return: None
+ * Return: void
  */
-static void lim_handle_sta_csa_param(struct mac_context *mac_ctx,
-				     struct csa_offload_params *csa_params)
+static void lim_set_csa_chan_param_11be(struct pe_session *session,
+					struct csa_offload_params *csa_param,
+					struct ch_params *ch_param)
+{
+	if (!session || !csa_param || !ch_param || !session->vdev) {
+		pe_err("invalid input parameter");
+		return;
+	}
+
+	if (csa_param->new_ch_width == CH_WIDTH_320MHZ &&
+	    !session->eht_config.support_320mhz_6ghz)
+		ch_param->ch_width = CH_WIDTH_160MHZ;
+
+	wlan_cm_sta_set_chan_param(session->vdev,
+				   csa_param->csa_chan_freq,
+				   csa_param->new_ch_width,
+				   csa_param->new_punct_bitmap,
+				   csa_param->new_ch_freq_seg1,
+				   csa_param->new_ch_freq_seg2,
+				   ch_param);
+}
+
+/**
+ * lim_set_chan_sw_puncture() - set puncture to channel switch info
+ * @lim_ch_switch: pointer to tLimChannelSwitchInfo
+ * @ch_param: pointer to ch_params
+ *
+ * Return: void
+ */
+static void lim_set_chan_sw_puncture(tLimChannelSwitchInfo *lim_ch_switch,
+				     struct ch_params *ch_param)
+{
+	lim_ch_switch->puncture_bitmap = ch_param->reg_punc_bitmap;
+}
+#else
+static void lim_set_csa_chan_param_11be(struct pe_session *session,
+					struct csa_offload_params *csa_param,
+					struct ch_params *ch_param)
+{
+}
+
+static void lim_set_chan_sw_puncture(tLimChannelSwitchInfo *lim_ch_switch,
+				     struct ch_params *ch_param)
+{
+}
+#endif
+
+void lim_handle_sta_csa_param(struct mac_context *mac_ctx,
+			      struct csa_offload_params *csa_params)
 {
 	struct pe_session *session_entry;
 	tpDphHashNode sta_ds = NULL;
@@ -1819,7 +1868,11 @@ static void lim_handle_sta_csa_param(struct mac_context *mac_ctx,
 		pe_debug("new freq: %u, width: %d", csa_params->csa_chan_freq,
 			 csa_params->new_ch_width);
 		ch_params.ch_width = csa_params->new_ch_width;
-		wlan_reg_set_channel_params_for_pwrmode(
+		if (IS_DOT11_MODE_EHT(session_entry->dot11mode))
+			lim_set_csa_chan_param_11be(session_entry, csa_params,
+						    &ch_params);
+		else
+			wlan_reg_set_channel_params_for_pwrmode(
 						     mac_ctx->pdev,
 						     csa_params->csa_chan_freq,
 						     0, &ch_params,
@@ -1833,6 +1886,7 @@ static void lim_handle_sta_csa_param(struct mac_context *mac_ctx,
 		lim_ch_switch->ch_width = ch_params.ch_width;
 		lim_ch_switch->ch_center_freq_seg0 = ch_params.center_freq_seg0;
 		lim_ch_switch->ch_center_freq_seg1 = ch_params.center_freq_seg1;
+		lim_set_chan_sw_puncture(lim_ch_switch, &ch_params);
 
 		if (ch_params.ch_width == CH_WIDTH_20MHZ) {
 			lim_ch_switch->state = eLIM_CHANNEL_SWITCH_PRIMARY_ONLY;

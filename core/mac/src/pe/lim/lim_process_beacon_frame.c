@@ -220,6 +220,8 @@ void lim_process_beacon_eht_op(struct pe_session *session,
 	QDF_STATUS status;
 	struct mac_context *mac_ctx;
 	struct wlan_objmgr_vdev *vdev;
+	struct wlan_channel *des_chan;
+	struct csa_offload_params *csa_param;
 
 	if (!session || !eht_op || !session->mac_ctx || !session->vdev) {
 		pe_err("invalid input parameters");
@@ -262,12 +264,29 @@ void lim_process_beacon_eht_op(struct pe_session *session,
 							      &update_allow);
 		if (QDF_IS_STATUS_ERROR(status))
 			return;
-		if (update_allow)
+		if (update_allow) {
 			wlan_cm_sta_update_bw_puncture(vdev, session->bssId,
 						       ori_punc, ori_bw,
 						       eht_op->ccfs0,
 						       eht_op->ccfs1,
 						       new_bw);
+		} else {
+			csa_param = qdf_mem_malloc(sizeof(*csa_param));
+			if (!csa_param) {
+				pe_err("csa_param allocation fails");
+				return;
+			}
+			des_chan = wlan_vdev_mlme_get_des_chan(vdev);
+			csa_param->channel = des_chan->ch_ieee;
+			csa_param->csa_chan_freq = des_chan->ch_freq;
+			csa_param->new_ch_width = ori_bw;
+			csa_param->new_punct_bitmap = ori_punc;
+			csa_param->new_ch_freq_seg1 = eht_op->ccfs0;
+			csa_param->new_ch_freq_seg2 = eht_op->ccfs1;
+			qdf_copy_macaddr(&csa_param->bssid,
+					 (struct qdf_mac_addr *)session->bssId);
+			lim_handle_sta_csa_param(session->mac_ctx, csa_param);
+		}
 	}
 }
 
