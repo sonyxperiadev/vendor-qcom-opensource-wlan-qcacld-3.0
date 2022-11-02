@@ -548,11 +548,12 @@ fail:
 	return -EINVAL;
 }
 
-static int hdd_get_sr_stats(struct hdd_context *hdd_ctx,
+static int hdd_get_sr_stats(struct hdd_context *hdd_ctx, uint8_t mac_id,
 			    struct cdp_pdev_obss_pd_stats_tlv *stats)
 {
 	ol_txrx_soc_handle soc;
 	uint8_t pdev_id;
+	struct cdp_txrx_stats_req req = {0};
 
 	soc = cds_get_context(QDF_MODULE_ID_SOC);
 	if (!soc) {
@@ -560,8 +561,9 @@ static int hdd_get_sr_stats(struct hdd_context *hdd_ctx,
 		return -EINVAL;
 	}
 
+	req.mac_id = mac_id;
 	pdev_id = wlan_objmgr_pdev_get_pdev_id(hdd_ctx->pdev);
-	cdp_get_pdev_obss_pd_stats(soc, pdev_id, stats);
+	cdp_get_pdev_obss_pd_stats(soc, pdev_id, stats, &req);
 	if (!stats) {
 		hdd_err("invalid stats");
 		return -EINVAL;
@@ -588,7 +590,7 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 	bool is_sr_enable = false;
 	int32_t pd_threshold = 0;
 	uint8_t sr_he_siga_val15_allowed = true;
-	uint8_t pdev_id, sr_ctrl, non_srg_max_pd_offset;
+	uint8_t pdev_id, mac_id, sr_ctrl, non_srg_max_pd_offset;
 	uint8_t srg_min_pd_offset = 0, srg_max_pd_offset = 0;
 	uint32_t nl_buf_len;
 	int ret;
@@ -707,7 +709,15 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 
 		break;
 	case QCA_WLAN_SR_OPERATION_GET_STATS:
-		if (hdd_get_sr_stats(hdd_ctx, &stats))
+		status = policy_mgr_get_mac_id_by_session_id(hdd_ctx->psoc,
+							     adapter->vdev_id,
+							     &mac_id);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			hdd_err("Failed to get mac_id for vdev_id: %u",
+				adapter->vdev_id);
+			return -EAGAIN;
+		}
+		if (hdd_get_sr_stats(hdd_ctx, mac_id, &stats))
 			return -EINVAL;
 		nl_buf_len = hdd_get_srp_stats_len();
 		skb = cfg80211_vendor_cmd_alloc_reply_skb(hdd_ctx->wiphy,
