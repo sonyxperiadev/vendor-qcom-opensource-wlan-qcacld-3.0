@@ -7789,6 +7789,8 @@ const struct nla_policy wlan_hdd_wifi_config_policy[
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_FT_OVER_DS] = {.type = NLA_U8 },
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_ARP_NS_OFFLOAD] = {.type = NLA_U8 },
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_DBAM] = {.type = NLA_U8 },
+	[QCA_WLAN_VENDOR_ATTR_CONFIG_UDP_QOS_UPGRADE_FOR_BE_BK] = {
+		.type = NLA_U8 },
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_BEAMFORMER_PERIODIC_SOUNDING] = {
 		.type = NLA_U8 },
 };
@@ -8893,6 +8895,22 @@ static int hdd_config_scan_enable(struct hdd_adapter *adapter,
 }
 
 /**
+ * hdd_config_udp_qos_upgrade_be_bk() - Set UDP QoS threshold for BE/BK AC.
+ * @adapter: adapter for which this configuration is to be applied
+ * @attr: NL attribute
+ *
+ * Returns: 0 on success, -EINVAL on failure
+ */
+static int hdd_config_udp_qos_upgrade_be_bk(struct hdd_adapter *adapter,
+					    const struct nlattr *attr)
+{
+	uint8_t priority = nla_get_u8(attr);
+
+	adapter->udp_qos_upgrade_type = UDP_QOS_UPGRADE_BK_BE;
+	return hdd_set_udp_qos_upgrade_config(adapter, priority);
+}
+
+/**
  * hdd_config_udp_qos_upgrade_threshold() - NL attribute handler to parse
  *					    priority upgrade threshold value.
  * @adapter: adapter for which this configuration is to be applied
@@ -8905,6 +8923,7 @@ static int hdd_config_udp_qos_upgrade_threshold(struct hdd_adapter *adapter,
 {
 	uint8_t priority = nla_get_u8(attr);
 
+	adapter->udp_qos_upgrade_type = UDP_QOS_UPGRADE_ALL;
 	return hdd_set_udp_qos_upgrade_config(adapter, priority);
 }
 
@@ -10484,6 +10503,8 @@ static const struct independent_setters independent_setters[] = {
 	{QCA_WLAN_VENDOR_ATTR_CONFIG_DBAM,
 	 hdd_set_dbam_config},
 #endif
+	{QCA_WLAN_VENDOR_ATTR_CONFIG_UDP_QOS_UPGRADE_FOR_BE_BK,
+	 hdd_config_udp_qos_upgrade_be_bk},
 	{QCA_WLAN_VENDOR_ATTR_CONFIG_BEAMFORMER_PERIODIC_SOUNDING,
 	 hdd_set_beamformer_periodic_sounding},
 };

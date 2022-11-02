@@ -1000,6 +1000,21 @@ struct wlm_multi_client_info_table {
 #endif
 
 /**
+ * enum udp_qos_upgrade - Enumeration of the various User priority (UP) types
+ *			  UDP QoS upgrade request
+ * @UDP_QOS_UPGRADE_NONE: Do not upgrade UDP QoS AC
+ * @UDP_QOS_UPGRADE_BK_BE: Upgrade UDP QoS for BK/BE only
+ * @UDP_QOS_UPGRADE_ALL: Upgrade UDP QoS for all packets
+ * @UDP_QOS_UPGRADE_MAX: Max enum limit, not to add new beyond this
+ */
+enum udp_qos_upgrade {
+	UDP_QOS_UPGRADE_NONE,
+	UDP_QOS_UPGRADE_BK_BE,
+	UDP_QOS_UPGRADE_ALL,
+	UDP_QOS_UPGRADE_MAX
+};
+
+/**
  * struct hdd_adapter - hdd vdev/net_device context
  * @vdev: object manager vdev context
  * @vdev_lock: lock to protect vdev context access
@@ -1026,6 +1041,7 @@ struct wlm_multi_client_info_table {
  *                          as per enum qca_sta_connect_fail_reason_codes
  * @upgrade_udp_qos_threshold: The threshold for user priority upgrade for
 			       any UDP packet.
+ * @udp_qos_upgrade_type: UDP QoS packet upgrade request type
  * @handle_feature_update: Handle feature update only if it is triggered
  *			   by hdd_netdev_feature_update
  * @netdev_features_update_work: work for handling the netdev features update
@@ -1244,6 +1260,7 @@ struct hdd_adapter {
 #endif
 	uint8_t link_status;
 	uint8_t upgrade_udp_qos_threshold;
+	enum udp_qos_upgrade udp_qos_upgrade_type;
 
 	/* variable for temperature in Celsius */
 	int temperature;
@@ -2303,7 +2320,7 @@ QDF_STATUS hdd_add_adapter_front(struct hdd_context *hdd_ctx,
 				 struct hdd_adapter *adapter);
 
 /**
- * typedef hdd_adapter_iterate_cb() – Iteration callback function
+ * typedef hdd_adapter_iterate_cb() - Iteration callback function
  * @adapter: current adapter of interest
  * @context: user context supplied to the iterator
  *
@@ -2318,7 +2335,7 @@ typedef QDF_STATUS (*hdd_adapter_iterate_cb)(struct hdd_adapter *adapter,
 					     void *context);
 
 /**
- * hdd_adapter_iterate() – Safely iterate over all adapters
+ * hdd_adapter_iterate() - Safely iterate over all adapters
  * @cb: callback function to invoke for each adapter
  * @context: user-supplied context to pass to @cb
  *

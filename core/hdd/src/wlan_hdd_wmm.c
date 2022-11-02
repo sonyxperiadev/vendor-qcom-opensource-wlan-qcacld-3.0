@@ -1761,6 +1761,41 @@ QDF_STATUS hdd_wmm_adapter_close(struct hdd_adapter *adapter)
 }
 
 /**
+ * hdd_check_upgrade_vo_vi_qos() - Check and upgrade QOS for UDP packets
+ *				   based on request type received
+ * @adapter: [in] pointer to the adapter context (Should not be invalid)
+ * @user_pri: [out] priority set for this packet
+ *
+ * This function checks for the request type and upgrade based on request type
+ *
+ * UDP_QOS_UPGRADE_ALL: Upgrade QoS of all UDP packets if the current set
+ *	priority is below the pre-configured threshold for upgrade.
+ *
+ * UDP_QOS_UPGRADE_BK_BE: Upgrade QoS of all UDP packets if the current set
+ *	priority is below the AC VI.
+ */
+static inline void
+hdd_check_upgrade_vo_vi_qos(struct hdd_adapter *adapter,
+			    enum sme_qos_wmmuptype *user_pri)
+{
+	switch (adapter->udp_qos_upgrade_type) {
+	case UDP_QOS_UPGRADE_ALL:
+		if (*user_pri <
+		    qca_wlan_ac_to_sme_qos(adapter->upgrade_udp_qos_threshold))
+			*user_pri = qca_wlan_ac_to_sme_qos(
+					adapter->upgrade_udp_qos_threshold);
+		break;
+	case UDP_QOS_UPGRADE_BK_BE:
+		if (*user_pri < qca_wlan_ac_to_sme_qos(QCA_WLAN_AC_VI))
+			*user_pri = qca_wlan_ac_to_sme_qos(
+					adapter->upgrade_udp_qos_threshold);
+		break;
+	default:
+		break;
+	}
+}
+
+/**
  * hdd_check_and_upgrade_udp_qos() - Check and upgrade the qos for UDP packets
  *				     if the current set priority is below the
  *				     pre-configured threshold for upgrade.
@@ -1794,11 +1829,7 @@ hdd_check_and_upgrade_udp_qos(struct hdd_adapter *adapter,
 		break;
 	case QCA_WLAN_AC_VI:
 	case QCA_WLAN_AC_VO:
-		if (*user_pri <
-		    qca_wlan_ac_to_sme_qos(adapter->upgrade_udp_qos_threshold))
-			*user_pri = qca_wlan_ac_to_sme_qos(
-					adapter->upgrade_udp_qos_threshold);
-
+		hdd_check_upgrade_vo_vi_qos(adapter, user_pri);
 		break;
 	default:
 		break;
