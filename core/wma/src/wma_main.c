@@ -8775,8 +8775,8 @@ static QDF_STATUS wma_mc_process_msg(struct scheduler_msg *msg)
 		goto end;
 	}
 
-	wma_debug("msg->type = %x %s", msg->type,
-		 mac_trace_get_wma_msg_string(msg->type));
+	wma_nofl_debug("Handle msg %s(0x%x)",
+		       mac_trace_get_wma_msg_string(msg->type), msg->type);
 
 	wma_handle = cds_get_context(QDF_MODULE_ID_WMA);
 	if (!wma_handle) {
