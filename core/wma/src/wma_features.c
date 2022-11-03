@@ -696,7 +696,7 @@ static void wma_sr_handle_conc(tp_wma_handle wma,
 		if ((!(sr_ctrl & NON_SRG_PD_SR_DISALLOWED) &&
 		     (sr_ctrl & NON_SRG_OFFSET_PRESENT)) ||
 		    (sr_ctrl & SRG_INFO_PRESENT)) {
-			wlan_mlme_update_sr_data(conc_vdev, &val, 0, true);
+			wlan_mlme_update_sr_data(conc_vdev, &val, 0, 0, true);
 			wma_sr_send_pd_threshold(wma, conc_vdev_id, val);
 			wlan_spatial_reuse_osif_event(conc_vdev,
 						      SR_OPERATION_RESUME,
@@ -758,7 +758,7 @@ QDF_STATUS wma_sr_update(tp_wma_handle wma, uint8_t vdev_id, bool enable)
 	     (sr_ctrl & NON_SRG_OFFSET_PRESENT)) ||
 	    (sr_ctrl & SRG_INFO_PRESENT)) {
 		if (enable) {
-			wlan_mlme_update_sr_data(vdev, &val, 0, true);
+			wlan_mlme_update_sr_data(vdev, &val, 0, 0, true);
 		} else {
 			/* VDEV down, disable SR */
 			wlan_vdev_mlme_set_sr_ctrl(vdev, 0);

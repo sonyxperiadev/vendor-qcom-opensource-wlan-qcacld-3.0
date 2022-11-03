@@ -68,7 +68,8 @@ QDF_STATUS wlan_spatial_reuse_he_siga_val15_allowed_set(
 
 QDF_STATUS
 wlan_sr_setup_req(struct wlan_objmgr_vdev *vdev, struct wlan_objmgr_pdev *pdev,
-		  bool is_sr_enable, int32_t pd_threshold) {
+		  bool is_sr_enable, int32_t srg_pd_threshold,
+		  int32_t non_srg_pd_threshold) {
 	struct wlan_lmac_if_tx_ops *tx_ops;
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
 
@@ -77,7 +78,8 @@ wlan_sr_setup_req(struct wlan_objmgr_vdev *vdev, struct wlan_objmgr_pdev *pdev,
 	    tx_ops->spatial_reuse_tx_ops.target_if_set_sr_enable_disable) {
 		status =
 		tx_ops->spatial_reuse_tx_ops.target_if_set_sr_enable_disable(
-					vdev, pdev, is_sr_enable, pd_threshold);
+					vdev, pdev, is_sr_enable,
+					srg_pd_threshold, non_srg_pd_threshold);
 		return status;
 	}
 	return status;

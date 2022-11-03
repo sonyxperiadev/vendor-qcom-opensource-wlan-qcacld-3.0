@@ -588,7 +588,8 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 	QDF_STATUS status;
 	uint32_t id;
 	bool is_sr_enable = false;
-	int32_t pd_threshold = 0;
+	int32_t srg_pd_threshold = 0;
+	int32_t non_srg_pd_threshold = 0;
 	uint8_t sr_he_siga_val15_allowed = true;
 	uint8_t pdev_id, mac_id, sr_ctrl, non_srg_max_pd_offset;
 	uint8_t srg_min_pd_offset = 0, srg_max_pd_offset = 0;
@@ -690,18 +691,25 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 		 */
 		if (is_sr_enable &&
 		    tb2[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_SRG_PD_THRESHOLD]) {
-			pd_threshold =
+			srg_pd_threshold =
 			nla_get_s32(
 			tb2[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_SRG_PD_THRESHOLD]);
 		}
-		hdd_debug("setting sr enable %d with pd threshold %d",
-			  is_sr_enable, pd_threshold);
+
+		if (is_sr_enable &&
+		    tb2[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_NON_SRG_PD_THRESHOLD]) {
+			non_srg_pd_threshold =
+			nla_get_s32(
+			tb2[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_NON_SRG_PD_THRESHOLD]
+			);
+		}
+		hdd_debug("setting sr enable %d with pd threshold srg: %d non srg: %d",
+			  is_sr_enable, srg_pd_threshold, non_srg_pd_threshold);
 		/* Set the variables */
 		ucfg_spatial_reuse_set_sr_enable(adapter->vdev, is_sr_enable);
-		status = ucfg_spatial_reuse_setup_req(adapter->vdev,
-						      hdd_ctx->pdev,
-						      is_sr_enable,
-						      pd_threshold);
+		status = ucfg_spatial_reuse_setup_req(
+				adapter->vdev, hdd_ctx->pdev, is_sr_enable,
+				srg_pd_threshold, non_srg_pd_threshold);
 		if (status != QDF_STATUS_SUCCESS) {
 			hdd_err("failed to enable Spatial Reuse feature");
 			return -EINVAL;
