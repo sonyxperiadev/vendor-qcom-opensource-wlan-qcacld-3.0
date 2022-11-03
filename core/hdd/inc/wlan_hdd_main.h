@@ -932,6 +932,7 @@ struct hdd_chan_change_params {
  * @monitor_mode: monitor mode context to prevent/allow runtime pm
  * @wow_unit_test: wow unit test mode context to prevent/allow runtime pm
  * @system_suspend: system suspend context to prevent/allow runtime pm
+ * @dyn_mac_addr_update: update mac addr context to prevent/allow runtime pm
  *
  * Runtime PM control for underlying activities
  */
@@ -943,6 +944,7 @@ struct hdd_runtime_pm_context {
 	qdf_runtime_lock_t monitor_mode;
 	qdf_runtime_lock_t wow_unit_test;
 	qdf_runtime_lock_t system_suspend;
+	qdf_runtime_lock_t dyn_mac_addr_update;
 };
 
 /*

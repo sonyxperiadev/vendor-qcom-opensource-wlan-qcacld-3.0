@@ -1231,6 +1231,7 @@ static void hdd_runtime_suspend_context_init(struct hdd_context *hdd_ctx)
 	qdf_runtime_lock_init(&ctx->monitor_mode);
 	qdf_runtime_lock_init(&ctx->wow_unit_test);
 	qdf_runtime_lock_init(&ctx->system_suspend);
+	qdf_runtime_lock_init(&ctx->dyn_mac_addr_update);
 
 	qdf_rtpm_register(QDF_RTPM_ID_WIPHY_SUSPEND, NULL);
 	qdf_rtpm_register(QDF_RTPM_ID_PM_QOS_NOTIFY, NULL);
@@ -1253,6 +1254,7 @@ static void hdd_runtime_suspend_context_deinit(struct hdd_context *hdd_ctx)
 	if (ctx->is_user_wakelock_acquired)
 		qdf_runtime_pm_allow_suspend(&ctx->user);
 
+	qdf_runtime_lock_deinit(&ctx->dyn_mac_addr_update);
 	qdf_runtime_lock_deinit(&ctx->wow_unit_test);
 	qdf_runtime_lock_deinit(&ctx->monitor_mode);
 	qdf_runtime_lock_deinit(&ctx->user);
@@ -5124,6 +5126,12 @@ int hdd_dynamic_mac_address_set(struct hdd_context *hdd_ctx,
 		update_self_peer = true;
 		update_mld_addr = false;
 	}
+	/* Host should hold a wake lock until the FW event response is received
+	 * the WMI event would not be a wake up event.
+	 */
+	qdf_runtime_pm_prevent_suspend(
+			&hdd_ctx->runtime_context.dyn_mac_addr_update);
+	hdd_prevent_suspend(WIFI_POWER_EVENT_WAKELOCK_DYN_MAC_ADDR_UPDATE);
 
 	cookie = osif_request_cookie(request);
 	hdd_update_set_mac_addr_req_ctx(adapter, cookie);
@@ -5164,6 +5172,10 @@ int hdd_dynamic_mac_address_set(struct hdd_context *hdd_ctx,
 status_ret:
 	qdf_ret_status = ucfg_vdev_mgr_cdp_vdev_attach(adapter->vdev);
 	if (QDF_IS_STATUS_ERROR(qdf_ret_status)) {
+		hdd_allow_suspend(
+			WIFI_POWER_EVENT_WAKELOCK_DYN_MAC_ADDR_UPDATE);
+		qdf_runtime_pm_allow_suspend(
+				&hdd_ctx->runtime_context.dyn_mac_addr_update);
 		hdd_err("Failed to attach CDP vdev. status:%d", qdf_ret_status);
 		return qdf_status_to_os_return(qdf_ret_status);
 	}
@@ -5172,6 +5184,10 @@ status_ret:
 	/* Update FW WoW pattern with new MAC address */
 	ucfg_pmo_del_wow_pattern(adapter->vdev);
 	ucfg_pmo_register_wow_default_patterns(adapter->vdev);
+
+	hdd_allow_suspend(WIFI_POWER_EVENT_WAKELOCK_DYN_MAC_ADDR_UPDATE);
+	qdf_runtime_pm_allow_suspend(
+			&hdd_ctx->runtime_context.dyn_mac_addr_update);
 
 	return ret;
 }
