@@ -6035,13 +6035,6 @@ wlan_hdd_refill_actual_rate(struct rate_info *os_rate,
 	mcs_index = adapter->hdd_stats.class_a_stat.rx_mcs_index;
 	nss = adapter->hdd_stats.class_a_stat.rx_nss;
 
-	/*
-	 *  If througput is high, do not get rx rate
-	 *  info to avoid the performance penalty
-	 */
-	if (cdp_get_bus_lvl_high(soc))
-		return;
-
 	os_rate->nss = nss;
 	if (preamble == DOT11_A || preamble == DOT11_B) {
 		os_rate->legacy = rate;
