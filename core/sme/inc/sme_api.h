@@ -2861,10 +2861,30 @@ QDF_STATUS sme_send_rso_connect_params(mac_handle_t mac_handle,
  */
 QDF_STATUS sme_set_he_bss_color(mac_handle_t mac_handle, uint8_t session_id,
 				uint8_t bss_color);
+/**
+ * sme_reconfig_obss_scan_param() - reconfig obss scan param
+ *
+ * @mac_handle: The handle returned by mac_open
+ * @session_id: session_id of the request
+ * @is_scan_reconfig: true if modify OBSS scan periodicity, otherwise false
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS sme_reconfig_obss_scan_param(mac_handle_t mac_handle,
+					uint8_t session_id,
+					bool is_scan_reconfig);
 #else
 static inline
 QDF_STATUS sme_set_he_bss_color(mac_handle_t mac_handle, uint8_t session_id,
 				uint8_t bss_color)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+QDF_STATUS sme_reconfig_obss_scan_param(mac_handle_t mac_handle,
+					uint8_t session_id,
+					bool is_scan_reconfig)
 {
 	return QDF_STATUS_SUCCESS;
 }

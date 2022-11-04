@@ -1682,6 +1682,20 @@ struct sir_set_he_bss_color {
 };
 
 /**
+ * struct sir_cfg_obss_scan
+ * @message_type: SME message type
+ * @length: size of struct sir_cfg_obss_scan
+ * @vdev_id: vdev ID
+ * @is_scan_reconfig: true for NDP session
+ */
+struct sir_cfg_obss_scan {
+	uint16_t message_type;
+	uint16_t length;
+	uint8_t vdev_id;
+	bool is_scan_reconfig;
+};
+
+/**
  * struct sir_create_session - Used for creating session in monitor mode
  * @type: SME host message type.
  * @msg_len: Length of the message.

@@ -269,6 +269,17 @@ void hdd_abort_ongoing_sta_connection(struct hdd_context *hdd_ctx);
 bool hdd_is_any_sta_connected(struct hdd_context *hdd_ctx);
 
 /**
+ * hdd_get_first_connected_sta_vdev_id() - check if any sta in connected state
+ * and exteact the vdev id of connected STA.
+ * @hdd_ctx: hdd context
+ * @vdev_id: pointer to vdev id
+ *
+ * Return: QDF_STATUS enumeration
+ */
+QDF_STATUS hdd_get_first_connected_sta_vdev_id(struct hdd_context *hdd_ctx,
+					       uint32_t *vdev_id);
+
+/**
  * hdd_sme_roam_callback() - hdd sme roam callback
  * @context: pointer to adapter context
  * @roam_info: pointer to roam info

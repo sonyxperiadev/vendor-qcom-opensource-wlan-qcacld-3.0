@@ -89,6 +89,11 @@ struct reassoc_params {
 #define BSS_COLOR_SWITCH_COUNTDOWN 5
 #define OBSS_COLOR_COLLISION_DETECTION_STA_PERIOD_MS 120000
 #define OBSS_COLOR_COLLISION_DETECTION_AP_PERIOD_MS 120000
+/*
+ * Have OBSS scan duration as 1200 seconds(20 minutes) when there is an active
+ * NDP to avoid glitches during NDP traffic due the scan.
+ */
+#define OBSS_COLOR_COLLISION_DETECTION_NDP_PERIOD_MS 1200000
 #define OBSS_COLOR_COLLISION_SCAN_PERIOD_MS 200
 #define OBSS_COLOR_COLLISION_FREE_SLOT_EXPIRY_MS 50000
 struct bss_color_info {

@@ -9626,6 +9626,75 @@ void lim_process_set_he_bss_color(struct mac_context *mac_ctx, uint32_t *msg_buf
 			OBSS_COLOR_COLLISION_DETECTION_DISABLE);
 }
 
+void lim_reconfig_obss_scan_param(struct mac_context *mac_ctx,
+				  uint32_t *msg_buf)
+{
+	struct sir_cfg_obss_scan *obss_scan_param;
+	struct pe_session *session = NULL;
+	struct wmi_obss_color_collision_cfg_param *cfg_param;
+	struct scheduler_msg msg = {0};
+
+	if (!msg_buf) {
+		pe_err("Buffer is Pointing to NULL");
+		return;
+	}
+
+	obss_scan_param = (struct sir_cfg_obss_scan *)msg_buf;
+	session = pe_find_session_by_vdev_id(mac_ctx, obss_scan_param->vdev_id);
+	if (!session) {
+		pe_err("Session not found for given vdev_id %d",
+		       obss_scan_param->vdev_id);
+		return;
+	}
+
+	if (!session->he_capable ||
+	    !session->is_session_obss_color_collision_det_enabled ||
+	    session->obss_color_collision_dec_evt ==
+				OBSS_COLOR_COLLISION_DETECTION_DISABLE) {
+		pe_debug("%d: obss color det not enabled, he_cap:%d, sup:%d:%d event_type:%d",
+			 session->smeSessionId, session->he_capable,
+			 session->is_session_obss_color_collision_det_enabled,
+			 mac_ctx->mlme_cfg->obss_ht40.obss_color_collision_offload_enabled,
+			 session->obss_color_collision_dec_evt);
+		return;
+	}
+
+	cfg_param = qdf_mem_malloc(sizeof(*cfg_param));
+	if (!cfg_param)
+		return;
+
+	pe_debug("vdev_id %d: sending event:%d scan_reconfig:%d",
+		 session->smeSessionId, session->obss_color_collision_dec_evt,
+		 obss_scan_param->is_scan_reconfig);
+	cfg_param->vdev_id = session->smeSessionId;
+	cfg_param->evt_type = session->obss_color_collision_dec_evt;
+	cfg_param->current_bss_color = session->he_op.bss_color;
+
+	if (obss_scan_param->is_scan_reconfig)
+		cfg_param->detection_period_ms =
+				OBSS_COLOR_COLLISION_DETECTION_NDP_PERIOD_MS;
+	else
+		cfg_param->detection_period_ms =
+				OBSS_COLOR_COLLISION_DETECTION_STA_PERIOD_MS;
+	cfg_param->scan_period_ms = OBSS_COLOR_COLLISION_SCAN_PERIOD_MS;
+
+	if (session->obss_color_collision_dec_evt ==
+	    OBSS_COLOR_FREE_SLOT_TIMER_EXPIRY)
+		cfg_param->free_slot_expiry_time_ms =
+			OBSS_COLOR_COLLISION_FREE_SLOT_EXPIRY_MS;
+
+	msg.type = WMA_OBSS_COLOR_COLLISION_REQ;
+	msg.bodyptr = cfg_param;
+	msg.reserved = 0;
+
+	if (QDF_IS_STATUS_ERROR(scheduler_post_message(QDF_MODULE_ID_PE,
+						       QDF_MODULE_ID_WMA,
+						       QDF_MODULE_ID_WMA,
+						       &msg))) {
+		qdf_mem_free(cfg_param);
+	}
+}
+
 void lim_send_obss_color_collision_cfg(struct mac_context *mac_ctx,
 				       struct pe_session *session,
 				       enum wmi_obss_color_collision_evt_type

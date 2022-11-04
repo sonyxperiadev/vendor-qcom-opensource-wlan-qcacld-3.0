@@ -2636,6 +2636,21 @@ end:
 	return status;
 }
 
+#ifdef WLAN_FEATURE_11AX
+static void pe_roam_fill_obss_scan_param(struct pe_session *src_session,
+					 struct pe_session *dst_session)
+{
+	dst_session->obss_color_collision_dec_evt =
+				src_session->obss_color_collision_dec_evt;
+	dst_session->he_op.bss_color = src_session->he_op.bss_color;
+}
+#else
+static inline void pe_roam_fill_obss_scan_param(struct pe_session *src_session,
+						struct pe_session *dst_session)
+{
+}
+#endif
+
 QDF_STATUS
 pe_roam_synch_callback(struct mac_context *mac_ctx,
 		       uint8_t vdev_id,
@@ -2799,6 +2814,10 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 		lim_delete_dph_hash_entry(mac_ctx, curr_sta_ds->staAddr, aid,
 					  session_ptr);
 	}
+
+	/* update OBSS scan param */
+	pe_roam_fill_obss_scan_param(session_ptr, ft_session_ptr);
+
 	pe_delete_session(mac_ctx, session_ptr);
 	session_ptr = NULL;
 	curr_sta_ds = dph_add_hash_entry(mac_ctx,

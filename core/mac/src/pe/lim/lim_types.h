@@ -742,6 +742,17 @@ static inline void lim_process_rx_scan_handler(struct wlan_objmgr_vdev *vdev,
 void lim_process_set_he_bss_color(struct mac_context *mac_ctx, uint32_t *msg_buf);
 
 /**
+ * lim_reconfig_obss_scan_param() - reconfig the obss scan params
+ *
+ * @mac_ctx: global mac context pointer
+ * @msg_buf: message buffer pointer
+ *
+ * Return: void
+ */
+void lim_reconfig_obss_scan_param(struct mac_context *mac_ctx,
+				  uint32_t *msg_buf);
+
+/**
  * lim_process_obss_color_collision_info() - Process the obss color collision
  *  request.
  * @mac_ctx: global mac context pointer
@@ -768,6 +779,11 @@ void lim_send_obss_color_collision_cfg(struct mac_context *mac_ctx,
 static inline void lim_process_set_he_bss_color(struct mac_context *mac_ctx,
 		uint32_t *msg_buf)
 {}
+
+static inline void lim_reconfig_obss_scan_param(struct mac_context *mac_ctx,
+						uint32_t *msg_buf)
+{
+}
 static inline void lim_process_obss_color_collision_info(struct mac_context *mac_ctx,
 							 uint32_t *msg_buf)
 {}
