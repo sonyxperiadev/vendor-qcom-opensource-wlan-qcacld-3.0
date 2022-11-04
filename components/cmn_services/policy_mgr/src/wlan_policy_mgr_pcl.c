@@ -1631,6 +1631,56 @@ policy_mgr_check_and_get_third_connection_pcl_table_index_for_dbs(
 	return index;
 }
 
+/*
+ * policy_mgr_get_3rd_pcl_table_index_for_dbs_with_ml_sta() -
+ * Get third connection pcl table index when ML STA is present
+ * @sbs_5g_1x1: index of sbs_5g_1x1 for provided concurrency
+ * @sbs_5g_2x2: index of sbs_5g_2x2 for provided concurrency
+ * @dbs_1x1: index of dbs_1x1 for provided concurrency
+ * @dbs_2x2: index of dbs_2x2 for provided concurrency
+ *
+ * This function checks connection mode is in dbs or sbs when two ML STA links
+ * are active and returns index value based on mode and provided index inputs.
+ *
+ * Return: policy_mgr_two_connection_mode index
+ */
+static enum policy_mgr_two_connection_mode
+policy_mgr_get_3rd_pcl_table_index_for_dbs_with_ml_sta(
+			struct wlan_objmgr_psoc *psoc,
+			enum policy_mgr_two_connection_mode sbs_5g_1x1,
+			enum policy_mgr_two_connection_mode sbs_5g_2x2,
+			enum policy_mgr_two_connection_mode dbs_1x1,
+			enum policy_mgr_two_connection_mode dbs_2x2)
+{
+	enum policy_mgr_two_connection_mode index = PM_MAX_TWO_CONNECTION_MODE;
+
+	if (!policy_mgr_2_freq_always_on_same_mac(
+				psoc,
+				pm_conc_connection_list[0].freq,
+				pm_conc_connection_list[1].freq)) {
+		/* SBS */
+		if (!(WLAN_REG_IS_24GHZ_CH_FREQ(
+		    pm_conc_connection_list[0].freq)) &&
+		    !(WLAN_REG_IS_24GHZ_CH_FREQ(
+		    pm_conc_connection_list[1].freq))) {
+			if (POLICY_MGR_ONE_ONE ==
+				pm_conc_connection_list[0].chain_mask)
+				index = sbs_5g_1x1;
+			else
+				index = sbs_5g_2x2;
+		} else {
+		/* DBS */
+			if (POLICY_MGR_ONE_ONE ==
+				pm_conc_connection_list[0].chain_mask)
+				index = dbs_1x1;
+			else
+				index = dbs_2x2;
+		}
+	}
+
+	return index;
+}
+
 static enum policy_mgr_two_connection_mode
 policy_mgr_get_third_connection_pcl_table_index_cli_sap(
 					struct wlan_objmgr_psoc *psoc)
@@ -1896,6 +1946,20 @@ policy_mgr_get_third_connection_pcl_table_index_sta_sta(
 {
 	enum policy_mgr_two_connection_mode index;
 
+	if (policy_mgr_is_ml_vdev_id(psoc,
+				     pm_conc_connection_list[0].vdev_id) &&
+	    policy_mgr_is_ml_vdev_id(psoc,
+				     pm_conc_connection_list[1].vdev_id)) {
+		index =
+		policy_mgr_get_3rd_pcl_table_index_for_dbs_with_ml_sta(
+					psoc,
+					PM_STA_STA_SBS_5_1x1,
+					PM_STA_STA_SBS_5_2x2,
+					PM_STA_STA_DBS_1x1,
+					PM_STA_STA_DBS_2x2);
+		if (index != PM_MAX_TWO_CONNECTION_MODE)
+			return index;
+	}
 	index =
 	policy_mgr_check_and_get_third_connection_pcl_table_index_for_scc(
 					PM_STA_STA_SCC_24_1x1,
