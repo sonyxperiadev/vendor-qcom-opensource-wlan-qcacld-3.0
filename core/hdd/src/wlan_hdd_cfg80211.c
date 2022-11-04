@@ -7789,6 +7789,8 @@ const struct nla_policy wlan_hdd_wifi_config_policy[
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_FT_OVER_DS] = {.type = NLA_U8 },
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_ARP_NS_OFFLOAD] = {.type = NLA_U8 },
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_DBAM] = {.type = NLA_U8 },
+	[QCA_WLAN_VENDOR_ATTR_CONFIG_BEAMFORMER_PERIODIC_SOUNDING] = {
+		.type = NLA_U8 },
 };
 
 static const struct nla_policy
@@ -10339,6 +10341,28 @@ static int hdd_set_dbam_config(struct hdd_adapter *adapter,
 #endif
 
 /**
+ * hdd_set_beamformer_periodic_sounding() - enable/disable Tx Beamforming
+ * @adapter: hdd adapter
+ * @attr: pointer to nla attr
+ *
+ * Return: 0 on success, negative on failure
+ */
+static int hdd_set_beamformer_periodic_sounding(struct hdd_adapter *adapter,
+						const struct nlattr *attr)
+{
+	uint8_t cfg_val;
+	int set_val;
+
+	cfg_val = nla_get_u8(attr);
+
+	set_val = cfg_val ? TX_BFER_NDP_PERIODICITY : 0;
+
+	return wma_cli_set_command(adapter->vdev_id,
+				   WMI_PDEV_PARAM_TXBF_SOUND_PERIOD_CMDID,
+				   cfg_val, PDEV_CMD);
+}
+
+/**
  * typedef independent_setter_fn - independent attribute handler
  * @adapter: The adapter being configured
  * @attr: The nl80211 attribute being applied
@@ -10460,6 +10484,8 @@ static const struct independent_setters independent_setters[] = {
 	{QCA_WLAN_VENDOR_ATTR_CONFIG_DBAM,
 	 hdd_set_dbam_config},
 #endif
+	{QCA_WLAN_VENDOR_ATTR_CONFIG_BEAMFORMER_PERIODIC_SOUNDING,
+	 hdd_set_beamformer_periodic_sounding},
 };
 
 #ifdef WLAN_FEATURE_ELNA
