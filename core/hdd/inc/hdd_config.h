@@ -1637,7 +1637,7 @@ struct dhcp_server {
  *
  * @Min: 0
  * @Max: 1
- * Default: 0
+ * Default: 1
  *
  * If user space is using SARV1 and FW is using SARV2 in BDF in that case
  * this ini is used to enable conversion from user specified SARV1 command
@@ -1652,7 +1652,7 @@ struct dhcp_server {
  */
 #define CFG_SAR_CONVERSION  CFG_INI_BOOL( \
 			"gEnableSARV1toSARV2", \
-			0, \
+			1, \
 			"Enable/Disable conversion from SARV1 to SARV2")
 
 /*
