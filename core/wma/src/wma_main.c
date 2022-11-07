@@ -437,9 +437,9 @@ static void wma_set_feature_set_info(tp_wma_handle wma_handle,
 	feature_set->supported_dot11mode = feature_set->wifi_standard;
 	feature_set->sap_wpa3_support = true;
 	feature_set->assurance_disconnect_reason_api = true;
-	feature_set->frame_pcap_log_mgmt = true;
-	feature_set->frame_pcap_log_ctrl = true;
-	feature_set->frame_pcap_log_data = true;
+	feature_set->frame_pcap_log_mgmt = false;
+	feature_set->frame_pcap_log_ctrl = false;
+	feature_set->frame_pcap_log_data = false;
 
 	/*
 	 * This information is hardcoded based on hdd_sta_akm_suites,
