@@ -83,42 +83,6 @@ wlan_sr_setup_req(struct wlan_objmgr_vdev *vdev, struct wlan_objmgr_pdev *pdev,
 	return status;
 }
 
-QDF_STATUS wlan_spatial_reuse_pdev_init(struct wlan_objmgr_pdev *pdev)
-{
-	struct pdev_params pparam;
-	wmi_unified_t wmi_handle;
-	bool sr_supported;
-	bool sr_per_ppdu_supported;
-
-	wmi_handle = GET_WMI_HDL_FROM_PDEV(pdev);
-	if (!wmi_handle) {
-		mlme_err("Failed to get WMI handle!");
-		return QDF_STATUS_E_INVAL;
-	}
-	sr_supported =
-		wmi_service_enabled(wmi_handle,
-				    wmi_service_srg_srp_spatial_reuse_support);
-	sr_per_ppdu_supported =
-		wmi_service_enabled(wmi_handle,
-				    wmi_service_obss_per_packet_sr_support);
-	if (!sr_per_ppdu_supported && !sr_supported) {
-		mlme_err("FW doesn't support");
-		return QDF_STATUS_E_NOSUPPORT;
-	}
-
-	qdf_mem_zero(&pparam, sizeof(pparam));
-	pparam.param_id = WMI_PDEV_PARAM_SET_CMD_OBSS_PD_THRESHOLD;
-	QDF_SET_BITS(pparam.param_value, NON_SRG_SPR_ENABLE_POS,
-		     NON_SRG_SPR_ENABLE_SIZE, NON_SRG_SPR_ENABLE);
-	QDF_SET_BITS(pparam.param_value, SR_PARAM_VAL_DBM_POS,
-		     NON_SRG_PARAM_VAL_DBM_SIZE, SR_PARAM_VAL_DBM_UNIT);
-	QDF_SET_BITS(pparam.param_value, NON_SRG_MAX_PD_OFFSET_POS,
-		     NON_SRG_MAX_PD_OFFSET_SIZE, NON_SR_PD_THRESHOLD_DISABLED);
-
-	return wmi_unified_pdev_param_send(wmi_handle, &pparam,
-					   WILDCARD_PDEV_ID);
-}
-
 void wlan_sr_register_callback(struct wlan_objmgr_psoc *psoc,
 			       sr_osif_event_cb cb)
 {

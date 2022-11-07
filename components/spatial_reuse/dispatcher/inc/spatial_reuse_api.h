@@ -76,16 +76,6 @@ QDF_STATUS wlan_spatial_reuse_config_set(struct wlan_objmgr_vdev *vdev,
 					 uint8_t non_srg_max_pd_offset);
 
 /**
- * wlan_spatial_reuse_pdev_init() - Send PDEV command with disabled
- *				    PD threshold value to initialize HW
- *				    registers
- * @pdev: objmgr manager pdev
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS wlan_spatial_reuse_pdev_init(struct wlan_objmgr_pdev *pdev);
-
-/**
  * wlan_sr_register_callback() - registers SR osif events
  * @psoc: pointer to psoc
  * @cb: Callback to be registered
@@ -111,12 +101,6 @@ static inline
 QDF_STATUS wlan_spatial_reuse_config_set(struct wlan_objmgr_vdev *vdev,
 					 uint8_t sr_ctrl,
 					 uint8_t non_srg_max_pd_offset)
-{
-	return QDF_STATUS_SUCCESS;
-}
-
-static inline
-QDF_STATUS wlan_spatial_reuse_pdev_init(struct wlan_objmgr_pdev *pdev)
 {
 	return QDF_STATUS_SUCCESS;
 }
