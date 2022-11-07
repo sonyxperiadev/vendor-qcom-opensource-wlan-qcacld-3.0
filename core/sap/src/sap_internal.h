@@ -378,7 +378,7 @@ uint8_t sap_get_total_number_sap_intf(mac_handle_t mac_handle);
  *
  * Return: The QDF_STATUS code associated with performing the operation.
  */
-QDF_STATUS sap_channel_sel(struct sap_context *sap_ctx);
+QDF_STATUS sap_channel_sel(struct sap_context *sap_context);
 
 /**
  * sap_validate_chan - Function validate the channel and forces SCC
