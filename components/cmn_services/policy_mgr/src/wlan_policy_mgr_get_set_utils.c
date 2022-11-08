@@ -4978,7 +4978,7 @@ policy_mgr_allow_sta_concurrency(struct wlan_objmgr_psoc *psoc,
 	uint32_t conn_index = 0;
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
 	struct wlan_objmgr_vdev *vdev;
-	bool is_mlo, mlo_sap_present = false, mlo_sta_present = false;
+	bool is_mlo, mlo_sta_present = false;
 	uint8_t vdev_id, sta_cnt = 0;
 	enum policy_mgr_con_mode mode;
 	union conc_ext_flag conc_ext_flags;
@@ -4995,7 +4995,7 @@ policy_mgr_allow_sta_concurrency(struct wlan_objmgr_psoc *psoc,
 	for (conn_index = 0; conn_index < MAX_NUMBER_OF_CONC_CONNECTIONS;
 	     conn_index++) {
 		mode = pm_conc_connection_list[conn_index].mode;
-		if ((mode != PM_STA_MODE && mode != PM_SAP_MODE) ||
+		if (mode != PM_STA_MODE ||
 		    !pm_conc_connection_list[conn_index].in_use)
 			continue;
 
@@ -5006,12 +5006,6 @@ policy_mgr_allow_sta_concurrency(struct wlan_objmgr_psoc *psoc,
 			continue;
 
 		is_mlo = wlan_vdev_mlme_is_mlo_vdev(vdev);
-		if (mode == PM_SAP_MODE) {
-			if (is_mlo)
-				mlo_sap_present = true;
-
-			goto next;
-		}
 
 		/* Skip the link vdev for MLO STA */
 		if (wlan_vdev_mlme_is_mlo_link_vdev(vdev))
@@ -5039,8 +5033,8 @@ next:
 		return true;
 	}
 
-	if (conc_ext_flags.mlo && (mlo_sta_present || mlo_sap_present)) {
-		policy_mgr_rl_debug("Disallow ML STA when ML STA/SAP is present");
+	if (conc_ext_flags.mlo && mlo_sta_present) {
+		policy_mgr_rl_debug("Disallow ML STA when ML STA is present");
 		return false;
 	}
 
@@ -5102,7 +5096,7 @@ policy_mgr_is_mlo_sap_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 	else
 		non_mlo_sap_count++;
 
-	if (!mlo_sap_count || !non_mlo_sap_count)
+	if ((mlo_sap_count <= 1) || !non_mlo_sap_count)
 		ret = true;
 
 	return ret;
