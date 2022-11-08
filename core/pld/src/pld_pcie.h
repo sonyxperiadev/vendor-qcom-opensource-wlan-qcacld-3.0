@@ -433,6 +433,11 @@ static inline bool pld_pcie_platform_driver_support(void)
 {
 	return false;
 }
+
+static inline bool pld_pcie_is_direct_link_supported(struct device *dev)
+{
+	return false;
+}
 #else
 int pld_pcie_get_fw_files_for_target(struct device *dev,
 				     struct pld_fw_files *pfw_files,
@@ -735,5 +740,17 @@ static inline bool pld_pcie_platform_driver_support(void)
 {
 	return true;
 }
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0))
+static inline bool pld_pcie_is_direct_link_supported(struct device *dev)
+{
+	return cnss_get_fw_cap(dev, CNSS_FW_CAP_DIRECT_LINK_SUPPORT);
+}
+#else
+static inline bool pld_pcie_is_direct_link_supported(struct device *dev)
+{
+	return false;
+}
+#endif
 #endif
 #endif
