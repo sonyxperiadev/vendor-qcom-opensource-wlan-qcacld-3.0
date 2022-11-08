@@ -19776,6 +19776,70 @@ static bool hdd_is_ap_mode(enum QDF_OPMODE mode)
 }
 
 /**
+ * hdd_adapter_update_mac_on_mode_change() - Update mac address on mode change
+ * @adapter: HDD adapter
+ * get_new_addr: Get new address or release existing address
+ *
+ * If @get_new_addr is false, the function will release the MAC address
+ * in the adapter's mac_addr member and copy the MLD address into it.
+ *
+ * If @get_new_addr is true, the function will override MAC address
+ * in the adapter's mac_addr member and copy the new MAc address
+ * fetched from the MAC address pool.
+ *
+ * The MLD address is not changed in this function.
+ *
+ * Return: void
+ */
+static void
+hdd_adapter_update_mac_on_mode_change(struct hdd_adapter *adapter,
+				      bool get_new_addr)
+{
+	uint8_t *new_mac;
+	bool is_mac_equal;
+	struct hdd_adapter *assoc_adapter;
+
+	if (!adapter || !hdd_adapter_is_ml_adapter(adapter))
+		return;
+
+	assoc_adapter = hdd_get_assoc_link_adapter(adapter);
+	if (!assoc_adapter)
+		return;
+
+	is_mac_equal = qdf_is_macaddr_equal(&assoc_adapter->mac_addr,
+					    &assoc_adapter->mld_addr);
+
+	if (get_new_addr) {
+		/* If both address are already different
+		 * don't get new address
+		 */
+		if (!is_mac_equal)
+			goto out;
+
+		new_mac = wlan_hdd_get_intf_addr(adapter->hdd_ctx,
+						 QDF_STA_MODE);
+		if (new_mac) {
+			memcpy(assoc_adapter->mac_addr.bytes,
+			       new_mac, QDF_MAC_ADDR_SIZE);
+		}
+	} else {
+		/* If both address are already equal
+		 * don't release the address
+		 */
+		if (is_mac_equal)
+			goto out;
+
+		wlan_hdd_release_intf_addr(adapter->hdd_ctx,
+					   assoc_adapter->mac_addr.bytes);
+		qdf_copy_macaddr(&assoc_adapter->mac_addr, &adapter->mld_addr);
+	}
+out:
+	qdf_net_update_net_device_dev_addr(adapter->dev,
+					   adapter->mld_addr.bytes,
+					   QDF_MAC_ADDR_SIZE);
+}
+
+/**
  * __wlan_hdd_cfg80211_change_iface() - change interface cfg80211 op
  * @wiphy: Pointer to the wiphy structure
  * @ndev: Pointer to the net device
@@ -19899,7 +19963,7 @@ static int __wlan_hdd_cfg80211_change_iface(struct wiphy *wiphy,
 					QDF_MAC_ADDR_FMT "\n",
 					QDF_MAC_ADDR_REF(ndev->dev_addr));
 			}
-
+			hdd_adapter_update_mac_on_mode_change(adapter, false);
 			hdd_set_ap_ops(adapter->dev);
 		} else {
 			hdd_err("Changing to device mode '%s' is not supported",
@@ -19914,6 +19978,7 @@ static int __wlan_hdd_cfg80211_change_iface(struct wiphy *wiphy,
 				hdd_err("change mode fail %d", errno);
 				goto err;
 			}
+			hdd_adapter_update_mac_on_mode_change(adapter, true);
 		} else if (hdd_is_ap_mode(new_mode)) {
 			adapter->device_mode = new_mode;
 
