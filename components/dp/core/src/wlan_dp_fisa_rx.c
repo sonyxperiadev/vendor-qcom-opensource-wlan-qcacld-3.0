@@ -1653,6 +1653,10 @@ static bool dp_fisa_aggregation_should_stop(
 	l2_l3_hdr_len = l3_hdr_offset + l4_hdr_offset;
 
 	/**
+	 * kernel network panic if UDP data length < 12 bytes get aggregated,
+	 * no solid conclusion currently, as a SW WAR, only allow UDP
+	 * aggregation if UDP data length >= 16 bytes.
+	 *
 	 * current cumulative ip length should > last cumulative_ip_len
 	 * and <= last cumulative_ip_len + 1478, also current aggregate
 	 * count should be equal to last aggregate count + 1,
@@ -1661,6 +1665,7 @@ static bool dp_fisa_aggregation_should_stop(
 	 * otherwise, current fisa flow aggregation should be stopped.
 	 */
 	if (fisa_flow->do_not_aggregate ||
+	    msdu_len < (l2_l3_hdr_len + FISA_MIN_L4_AND_DATA_LEN) ||
 	    hal_cumulative_ip_len <= fisa_flow->hal_cumultive_ip_len ||
 	    cumulative_ip_len_delta > FISA_MAX_SINGLE_CUMULATIVE_IP_LEN ||
 	    (fisa_flow->last_hal_aggr_count + 1) != hal_aggr_count ||
