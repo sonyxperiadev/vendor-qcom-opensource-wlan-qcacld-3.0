@@ -4141,6 +4141,63 @@ static void hdd_set_fw_log_params(struct hdd_context *hdd_ctx, uint8_t vdev_id)
 
 #endif
 
+/**
+ * hdd_features_deinit() - Deinit features
+ * @hdd_ctx:	HDD context
+ *
+ * De-Initialize features and their feature context.
+ *
+ * Return: none.
+ */
+static void hdd_features_deinit(struct hdd_context *hdd_ctx)
+{
+	wlan_hdd_gpio_wakeup_deinit(hdd_ctx);
+	wlan_hdd_twt_deinit(hdd_ctx);
+	wlan_hdd_deinit_chan_info(hdd_ctx);
+	wlan_hdd_tsf_deinit(hdd_ctx);
+	if (cds_is_packet_log_enabled())
+		hdd_pktlog_enable_disable(hdd_ctx, false, 0, 0);
+}
+
+/**
+ * hdd_deconfigure_cds() -De-Configure cds
+ * @hdd_ctx:	HDD context
+ *
+ * Deconfigure Cds modules before WLAN firmware is down.
+ *
+ * Return: 0 on success and errno on failure.
+ */
+static int hdd_deconfigure_cds(struct hdd_context *hdd_ctx)
+{
+	QDF_STATUS qdf_status;
+	int ret = 0;
+
+	hdd_enter();
+
+	wlan_hdd_hang_event_notifier_unregister();
+	/* De-init features */
+	hdd_features_deinit(hdd_ctx);
+
+	qdf_status = policy_mgr_deregister_mode_change_cb(hdd_ctx->psoc);
+	if (!QDF_IS_STATUS_SUCCESS(qdf_status))
+		hdd_debug("Failed to deregister mode change cb with Policy Manager");
+
+	qdf_status = cds_disable(hdd_ctx->psoc);
+	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
+		hdd_err("Failed to Disable the CDS Modules! :%d",
+			qdf_status);
+		ret = -EINVAL;
+	}
+
+	if (ucfg_ipa_uc_ol_deinit(hdd_ctx->pdev) != QDF_STATUS_SUCCESS) {
+		hdd_err("Failed to disconnect pipes");
+		ret = -EINVAL;
+	}
+
+	hdd_exit();
+	return ret;
+}
+
 int hdd_wlan_start_modules(struct hdd_context *hdd_ctx, bool reinit)
 {
 	int ret = 0;
@@ -4150,6 +4207,7 @@ int hdd_wlan_start_modules(struct hdd_context *hdd_ctx, bool reinit)
 	void *hif_ctx;
 	struct target_psoc_info *tgt_hdl;
 	unsigned long thermal_state = 0;
+	bool is_sched_disabled = false;
 
 	hdd_enter();
 	qdf_dev = cds_get_context(QDF_MODULE_ID_QDF_DEVICE);
@@ -4359,6 +4417,15 @@ int hdd_wlan_start_modules(struct hdd_context *hdd_ctx, bool reinit)
 			goto sched_disable;
 		}
 
+		if (hdd_get_conparam() == QDF_GLOBAL_MISSION_MODE) {
+			status = ucfg_dp_direct_link_init(hdd_ctx->psoc);
+			if (QDF_IS_STATUS_ERROR(status)) {
+				cds_err("Failed to initialize Direct Link datapath");
+				ret = -EINVAL;
+				goto deconfigure_cds;
+			}
+		}
+
 		hdd_enable_power_management(hdd_ctx);
 
 		hdd_skip_acs_scan_timer_init(hdd_ctx);
@@ -4410,8 +4477,12 @@ int hdd_wlan_start_modules(struct hdd_context *hdd_ctx, bool reinit)
  * Disable scheduler 1st so that scheduler thread doesn't send messages to fw
  * in parallel to the cleanup
  */
+deconfigure_cds:
+	is_sched_disabled = !dispatcher_disable();
+	hdd_deconfigure_cds(hdd_ctx);
 sched_disable:
-	dispatcher_disable();
+	if (!is_sched_disabled)
+		dispatcher_disable();
 	hdd_destroy_sysfs_files();
 	cds_post_disable();
 unregister_notifiers:
@@ -14450,24 +14521,6 @@ static int hdd_features_init(struct hdd_context *hdd_ctx)
 }
 
 /**
- * hdd_features_deinit() - Deinit features
- * @hdd_ctx:	HDD context
- *
- * De-Initialize features and their feature context.
- *
- * Return: none.
- */
-static void hdd_features_deinit(struct hdd_context *hdd_ctx)
-{
-	wlan_hdd_gpio_wakeup_deinit(hdd_ctx);
-	wlan_hdd_twt_deinit(hdd_ctx);
-	wlan_hdd_deinit_chan_info(hdd_ctx);
-	wlan_hdd_tsf_deinit(hdd_ctx);
-	if (cds_is_packet_log_enabled())
-		hdd_pktlog_enable_disable(hdd_ctx, false, 0, 0);
-}
-
-/**
  * hdd_register_bcn_cb() - register scan beacon callback
  * @hdd_ctx - Pointer to the HDD context
  *
@@ -14813,45 +14866,6 @@ out:
 	return -EINVAL;
 }
 
-/**
- * hdd_deconfigure_cds() -De-Configure cds
- * @hdd_ctx:	HDD context
- *
- * Deconfigure Cds modules before WLAN firmware is down.
- *
- * Return: 0 on success and errno on failure.
- */
-static int hdd_deconfigure_cds(struct hdd_context *hdd_ctx)
-{
-	QDF_STATUS qdf_status;
-	int ret = 0;
-
-	hdd_enter();
-
-	wlan_hdd_hang_event_notifier_unregister();
-	/* De-init features */
-	hdd_features_deinit(hdd_ctx);
-
-	qdf_status = policy_mgr_deregister_mode_change_cb(hdd_ctx->psoc);
-	if (!QDF_IS_STATUS_SUCCESS(qdf_status))
-		hdd_debug("Failed to deregister mode change cb with Policy Manager");
-
-	qdf_status = cds_disable(hdd_ctx->psoc);
-	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
-		hdd_err("Failed to Disable the CDS Modules! :%d",
-			qdf_status);
-		ret = -EINVAL;
-	}
-
-	if (ucfg_ipa_uc_ol_deinit(hdd_ctx->pdev) != QDF_STATUS_SUCCESS) {
-		hdd_err("Failed to disconnect pipes");
-		ret = -EINVAL;
-	}
-
-	hdd_exit();
-	return ret;
-}
-
 #ifdef FEATURE_WLAN_MCC_TO_SCC_SWITCH
 static void hdd_deregister_policy_manager_callback(
 			struct wlan_objmgr_psoc *psoc)
@@ -14928,6 +14942,10 @@ int hdd_wlan_stop_modules(struct hdd_context *hdd_ctx, bool ftm_mode)
 		hdd_skip_acs_scan_timer_deinit(hdd_ctx);
 
 		hdd_disable_power_management(hdd_ctx);
+
+		if (hdd_get_conparam() == QDF_GLOBAL_MISSION_MODE)
+			ucfg_dp_direct_link_deinit(hdd_ctx->psoc);
+
 		if (hdd_deconfigure_cds(hdd_ctx)) {
 			hdd_err("Failed to de-configure CDS");
 			QDF_ASSERT(0);
