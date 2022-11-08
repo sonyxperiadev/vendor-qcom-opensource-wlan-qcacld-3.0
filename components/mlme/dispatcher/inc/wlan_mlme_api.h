@@ -2231,6 +2231,22 @@ wlan_mlme_get_enable_dynamic_nss_chains_cfg(struct wlan_objmgr_psoc *psoc,
 					    bool *value);
 
 /**
+ * wlan_mlme_get_restart_sap_on_dynamic_nss_chains_cfg() - API to get whether
+ * SAP needs to be restarted or not on dynamic nss chain config
+ * @psoc: psoc context
+ * @value: data to be set
+ *
+ * API to get whether SAP needs to be restarted or not on dynamic nss chain
+ * config
+ *
+ * Return: QDF_STATUS_SUCCESS or QDF_STATUS_FAILURE
+ */
+QDF_STATUS
+wlan_mlme_get_restart_sap_on_dynamic_nss_chains_cfg(
+						struct wlan_objmgr_psoc *psoc,
+						bool *value);
+
+/**
  * wlan_mlme_get_vht_enable2x2() - Enables/disables VHT Tx/Rx MCS values for 2x2
  * @psoc: psoc context
  * @value: data to be set

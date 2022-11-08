@@ -3843,6 +3843,23 @@ wlan_mlme_get_enable_dynamic_nss_chains_cfg(struct wlan_objmgr_psoc *psoc,
 }
 
 QDF_STATUS
+wlan_mlme_get_restart_sap_on_dynamic_nss_chains_cfg(
+						struct wlan_objmgr_psoc *psoc,
+						bool *value)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_FAILURE;
+
+	*value =
+	mlme_obj->cfg.nss_chains_ini_cfg.restart_sap_on_dyn_nss_chains_cfg;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
 wlan_mlme_get_vht_enable2x2(struct wlan_objmgr_psoc *psoc, bool *value)
 {
 	struct wlan_mlme_psoc_ext_obj *mlme_obj;

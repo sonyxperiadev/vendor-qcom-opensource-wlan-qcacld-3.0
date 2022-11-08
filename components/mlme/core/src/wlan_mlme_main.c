@@ -2348,6 +2348,9 @@ static void mlme_init_nss_chains(struct wlan_objmgr_psoc *psoc,
 					   cfg_get(psoc, CFG_DISABLE_TX_MRC_5G);
 	nss_chains->enable_dynamic_nss_chains_cfg =
 			cfg_get(psoc, CFG_ENABLE_DYNAMIC_NSS_CHAIN_CONFIG);
+	nss_chains->restart_sap_on_dyn_nss_chains_cfg =
+			cfg_get(psoc,
+				CFG_RESTART_SAP_ON_DYNAMIC_NSS_CHAINS_CONFIG);
 }
 
 static void mlme_init_wep_cfg(struct wlan_mlme_wep_cfg *wep_params)
