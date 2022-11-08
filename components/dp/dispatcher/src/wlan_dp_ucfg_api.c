@@ -2325,3 +2325,29 @@ void ucfg_dp_rx_skip_fisa(uint32_t value)
 		dp_rx_skip_fisa(dp_soc, value);
 }
 #endif
+
+#ifdef FEATURE_DIRECT_LINK
+QDF_STATUS ucfg_dp_direct_link_init(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
+
+	if (!dp_ctx) {
+		dp_err("DP context not found");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return dp_direct_link_init(dp_ctx);
+}
+
+void ucfg_dp_direct_link_deinit(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
+
+	if (!dp_ctx) {
+		dp_err("DP context not found");
+		return;
+	}
+
+	dp_direct_link_deinit(dp_ctx);
+}
+#endif

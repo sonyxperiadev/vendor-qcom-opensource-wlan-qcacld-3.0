@@ -1539,3 +1539,29 @@ bool dp_is_data_stall_event_enabled(uint32_t evt)
 
 	return false;
 }
+
+#ifdef FEATURE_DIRECT_LINK
+QDF_STATUS dp_direct_link_init(struct wlan_dp_psoc_context *dp_ctx)
+{
+	struct dp_direct_link_context *dp_direct_link_ctx;
+
+	/* ToDo: Check for FW direct_link capability */
+
+	dp_direct_link_ctx = qdf_mem_malloc(sizeof(*dp_direct_link_ctx));
+	if (!dp_direct_link_ctx) {
+		dp_err("Failed to allocate memory for DP Direct Link context");
+		return QDF_STATUS_E_NOMEM;
+	}
+
+	dp_ctx->dp_direct_link_ctx = dp_direct_link_ctx;
+	dp_direct_link_ctx->dp_ctx = dp_ctx;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+void dp_direct_link_deinit(struct wlan_dp_psoc_context *dp_ctx)
+{
+	qdf_mem_free(dp_ctx->dp_direct_link_ctx);
+	dp_ctx->dp_direct_link_ctx = NULL;
+}
+#endif
