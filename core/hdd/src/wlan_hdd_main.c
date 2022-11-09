@@ -573,11 +573,12 @@ int hdd_validate_channel_and_bandwidth(struct hdd_adapter *adapter,
 				       qdf_freq_t chan_freq,
 				       enum phy_ch_width chan_bw)
 {
-	mac_handle_t mac_handle;
+	struct ch_params ch_params = {0};
+	struct hdd_context *hdd_ctx;
 
-	mac_handle = hdd_adapter_get_mac_handle(adapter);
-	if (!mac_handle) {
-		hdd_err("Invalid MAC handle");
+	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	if (!hdd_ctx) {
+		hdd_err("hdd context is NULL");
 		return -EINVAL;
 	}
 
@@ -593,22 +594,33 @@ int hdd_validate_channel_and_bandwidth(struct hdd_adapter *adapter,
 		hdd_err("CH %d is not in 2.4GHz or 5GHz or 6GHz", chan_freq);
 		return -EINVAL;
 	}
-
+	ch_params.ch_width = CH_WIDTH_MAX;
+	wlan_reg_set_channel_params_for_pwrmode(hdd_ctx->pdev, chan_freq,
+						0, &ch_params,
+						REG_CURRENT_PWR_MODE);
+	if (ch_params.ch_width == CH_WIDTH_MAX) {
+		hdd_err("failed to get max bandwdith for %d", chan_freq);
+		return -EINVAL;
+	}
 	if (WLAN_REG_IS_24GHZ_CH_FREQ(chan_freq)) {
 		if (chan_bw == CH_WIDTH_80MHZ) {
 			hdd_err("BW80 not possible in 2.4GHz band");
 			return -EINVAL;
 		}
-		if ((chan_bw != CH_WIDTH_20MHZ) && (chan_freq == 2484) &&
-		    (chan_bw != CH_WIDTH_MAX)) {
+		if ((chan_bw != CH_WIDTH_20MHZ) &&
+		    (chan_freq == wlan_reg_ch_to_freq(CHAN_ENUM_2484)) &&
+		    (chan_bw != CH_WIDTH_MAX) &&
+		    (ch_params.ch_width == CH_WIDTH_20MHZ)) {
 			hdd_err("Only BW20 possible on channel freq 2484");
 			return -EINVAL;
 		}
 	}
 
 	if (WLAN_REG_IS_5GHZ_CH_FREQ(chan_freq)) {
-		if ((chan_bw != CH_WIDTH_20MHZ) && (chan_freq == 5825) &&
-		    (chan_bw != CH_WIDTH_MAX)) {
+		if ((chan_bw != CH_WIDTH_20MHZ) &&
+		    (chan_freq == wlan_reg_ch_to_freq(CHAN_ENUM_5825)) &&
+		    (chan_bw != CH_WIDTH_MAX) &&
+		    (ch_params.ch_width == CH_WIDTH_20MHZ)) {
 			hdd_err("Only BW20 possible on channel freq 5825");
 			return -EINVAL;
 		}
