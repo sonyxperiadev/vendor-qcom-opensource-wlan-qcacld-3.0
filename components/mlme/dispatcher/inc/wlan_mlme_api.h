@@ -2510,6 +2510,27 @@ wlan_mlme_set_relaxed_6ghz_conn_policy(struct wlan_objmgr_psoc *psoc,
 
 #ifdef WLAN_FEATURE_11BE_MLO
 /**
+ * wlan_mlme_get_eht_mode() - Get the EHT mode of operations
+ * @psoc: psoc context
+ * @value: EHT mode value ptr
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_mlme_get_eht_mode(struct wlan_objmgr_psoc *psoc,
+		       enum wlan_eht_mode *value);
+
+/**
+ * wlan_mlme_set_eht_mode() - Set the EHT mode of operation
+ * @psoc: psoc context
+ * @value: EHT mode value
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_mlme_set_eht_mode(struct wlan_objmgr_psoc *psoc, enum wlan_eht_mode value);
+
+/**
  * wlan_mlme_get_emlsr_mode_enabled() - Get the eMLSR mode flag
  * @psoc: psoc context
  * @value: Enable/Disable value ptr.
@@ -2574,6 +2595,19 @@ QDF_STATUS
 wlan_mlme_set_t2lm_negotiation_supported(struct wlan_objmgr_psoc *psoc,
 					 uint8_t value);
 #else
+static inline QDF_STATUS
+wlan_mlme_get_eht_mode(struct wlan_objmgr_psoc *psoc, enum wlan_eht_mode *value)
+{
+	*value = WLAN_EHT_MODE_DISABLED;
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+wlan_mlme_set_eht_mode(struct wlan_objmgr_psoc *psoc, enum wlan_eht_mode value)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
 static inline QDF_STATUS
 wlan_mlme_get_emlsr_mode_enabled(struct wlan_objmgr_psoc *psoc, bool *value)
 {

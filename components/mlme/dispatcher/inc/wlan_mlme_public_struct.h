@@ -1361,6 +1361,7 @@ struct wlan_user_mcc_quota {
  * @mgmt_hw_tx_retry_count: MGMT HW tx retry count for frames
  * @relaxed_6ghz_conn_policy: 6GHz relaxed connection policy
  * @std_6ghz_conn_policy: 6GHz standard connection policy
+ * @eht_mode: EHT mode of operation
  * @t2lm_negotiation_support: T2LM negotiation supported enum value
  * @enable_emlsr_mode: 11BE eMLSR mode support
  * @safe_mode_enable: safe mode to bypass some strict 6 GHz checks for
@@ -1419,6 +1420,7 @@ struct wlan_mlme_generic {
 	bool std_6ghz_conn_policy;
 #endif
 #ifdef WLAN_FEATURE_11BE_MLO
+	enum wlan_eht_mode eht_mode;
 	bool enable_emlsr_mode;
 	enum t2lm_negotiation_support t2lm_negotiation_support;
 #endif
