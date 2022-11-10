@@ -75,6 +75,7 @@
 #include "cdp_txrx_host_stats.h"
 #include "target_if_cm_roam_event.h"
 #include <wlan_mlo_mgr_cmn.h>
+#include "hif.h"
 
 /**
  * WMA_SET_VDEV_IE_SOURCE_HOST - Flag to identify the source of VDEV SET IE
@@ -3078,6 +3079,9 @@ int wma_wow_wakeup_host_event(void *handle, uint8_t *event, uint32_t len)
 	}
 
 	wma_wake_event_log_reason(wma, wake_info);
+
+	if (wake_info->wake_reason == WOW_REASON_LOCAL_DATA_UC_DROP)
+		hif_rtpm_set_autosuspend_delay(WOW_LARGE_RX_RTPM_DELAY);
 
 	ucfg_pmo_psoc_wakeup_host_event_received(wma->psoc);
 
