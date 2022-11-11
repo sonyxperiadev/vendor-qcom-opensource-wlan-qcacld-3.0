@@ -6736,7 +6736,7 @@ cm_roam_mgmt_frame_event(struct roam_frame_info *frame_data,
 	wlan_diag_event.version = DIAG_MGMT_VERSION;
 	wlan_diag_event.sn = frame_data->seq_num;
 	wlan_diag_event.auth_algo = frame_data->auth_algo;
-	wlan_diag_event.rssi = (-1) * frame_data->rssi;
+	wlan_diag_event.rssi = frame_data->rssi;
 	wlan_diag_event.tx_status =
 				wlan_get_diag_tx_status(frame_data->tx_status);
 	wlan_diag_event.status = frame_data->status_code;
@@ -7024,7 +7024,7 @@ cm_roam_mgmt_frame_event(struct roam_frame_info *frame_data,
 
 	log_record->pkt_info.seq_num = frame_data->seq_num;
 	log_record->pkt_info.auth_algo = frame_data->auth_algo;
-	log_record->pkt_info.rssi = (-1) * frame_data->rssi;
+	log_record->pkt_info.rssi = frame_data->rssi;
 	log_record->pkt_info.tx_status = frame_data->tx_status;
 	log_record->pkt_info.frame_status_code = frame_data->status_code;
 	log_record->pkt_info.assoc_id = frame_data->assoc_id;
