@@ -586,16 +586,17 @@ static inline int hdd_tsf_reg_is_details_valid(struct hdd_adapter *adapter)
 static inline void
 wlan_hdd_tsf_reg_update_details(struct hdd_adapter *adapter, struct stsf *ptsf)
 {
-	if (!qdf_atomic_read(&adapter->tsf_details_valid)) {
+	if (adapter->tsf_id != ptsf->tsf_id ||
+	    adapter->tsf_mac_id != ptsf->mac_id) {
 		if (ptsf->tsf_id_valid) {
 			adapter->tsf_id = ptsf->tsf_id;
 			adapter->tsf_mac_id = ptsf->mac_id;
 			qdf_atomic_set(&adapter->tsf_details_valid, 1);
 		}
 	}
-	hdd_info("tsf_id %u tsf_id_valid %u mac_id %u mac_id_valid %u",
-		 ptsf->tsf_id, ptsf->tsf_id_valid, ptsf->mac_id,
-		 ptsf->mac_id_valid);
+	hdd_info("vdev_id %u tsf_id %u tsf_id_valid %u mac_id %u",
+		 adapter->vdev_id, ptsf->tsf_id, ptsf->tsf_id_valid,
+		 ptsf->mac_id);
 }
 
 static inline
@@ -3162,6 +3163,8 @@ int hdd_get_tsf_cb(void *pcb_cxt, struct stsf *ptsf)
 	hdd_info("tsf cb handle event, device_mode is %d",
 		adapter->device_mode);
 
+	wlan_hdd_tsf_reg_update_details(adapter, ptsf);
+
 	capture_timer = &adapter->host_capture_req_timer;
 	capture_req_timer_status =
 		qdf_mc_timer_get_current_state(capture_timer);
@@ -3185,8 +3188,6 @@ int hdd_get_tsf_cb(void *pcb_cxt, struct stsf *ptsf)
 			ptsf->soc_timer_low);
 	adapter->cur_tsf_sync_soc_time =
 		hdd_convert_qtime_to_us(tsf_sync_soc_time) * NSEC_PER_USEC;
-
-	wlan_hdd_tsf_reg_update_details(adapter, ptsf);
 
 	qdf_event_set(&tsf_sync_get_completion_evt);
 	hdd_update_tsf(adapter, adapter->cur_target_time);
