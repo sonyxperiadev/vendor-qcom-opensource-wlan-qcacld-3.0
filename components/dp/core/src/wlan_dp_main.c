@@ -1667,7 +1667,10 @@ QDF_STATUS dp_direct_link_init(struct wlan_dp_psoc_context *dp_ctx)
 	struct dp_direct_link_context *dp_direct_link_ctx;
 	QDF_STATUS status;
 
-	/* ToDo: Check for FW direct_link capability */
+	if (!pld_is_direct_link_supported(dp_ctx->qdf_dev->dev)) {
+		dp_info("FW does not support Direct Link");
+		return QDF_STATUS_SUCCESS;
+	}
 
 	dp_direct_link_ctx = qdf_mem_malloc(sizeof(*dp_direct_link_ctx));
 	if (!dp_direct_link_ctx) {
@@ -1697,7 +1700,10 @@ QDF_STATUS dp_direct_link_init(struct wlan_dp_psoc_context *dp_ctx)
 
 void dp_direct_link_deinit(struct wlan_dp_psoc_context *dp_ctx)
 {
-	if (dp_ctx->dp_direct_link_ctx)
+	if (!pld_is_direct_link_supported(dp_ctx->qdf_dev->dev))
+		return;
+
+	if (!dp_ctx->dp_direct_link_ctx)
 		return;
 
 	dp_direct_link_refill_ring_deinit(dp_ctx->dp_direct_link_ctx);
