@@ -360,10 +360,10 @@ static const struct ieee80211_channel hdd_5dot9_ghz_ch[] = {
 #define band_2_ghz_channels_size sizeof(hdd_channels_2_4_ghz)
 
 #ifdef WLAN_FEATURE_DSRC
-#define band_5_ghz_chanenls_size (sizeof(hdd_channels_5_ghz) + \
+#define band_5_ghz_channels_size (sizeof(hdd_channels_5_ghz) + \
 	sizeof(hdd_channels_dot11p))
 #else
-#define band_5_ghz_chanenls_size (sizeof(hdd_channels_5_ghz) + \
+#define band_5_ghz_channels_size (sizeof(hdd_channels_5_ghz) + \
 	sizeof(hdd_5dot9_ghz_ch))
 #endif
 
@@ -18865,7 +18865,7 @@ int wlan_hdd_cfg80211_init(struct device *dev,
 	if (!hdd_ctx->channels_2ghz)
 		return -ENOMEM;
 
-	hdd_ctx->channels_5ghz = qdf_mem_malloc(band_5_ghz_chanenls_size);
+	hdd_ctx->channels_5ghz = qdf_mem_malloc(band_5_ghz_channels_size);
 	if (!hdd_ctx->channels_5ghz)
 		goto mem_fail_5g;
 
