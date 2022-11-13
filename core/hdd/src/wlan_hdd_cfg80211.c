@@ -1021,7 +1021,7 @@ static int __wlan_hdd_cfg80211_get_tdls_capabilities(struct wiphy *wiphy,
 		set = set | (tdls_external_control ?
 					WIFI_TDLS_EXTERNAL_CONTROL_SUPPORT : 0);
 		set = set | (tdls_off_channel ?
-					WIIF_TDLS_OFFCHANNEL_SUPPORT : 0);
+					WIFI_TDLS_OFFCHANNEL_SUPPORT : 0);
 		max_num_tdls_sta = cfg_tdls_get_max_peer_count(hdd_ctx->psoc);
 
 		hdd_debug("TDLS Feature supported value %x", set);

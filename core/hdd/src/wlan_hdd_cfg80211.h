@@ -270,7 +270,7 @@ typedef enum {
 /* Add more features here */
 #define WIFI_TDLS_SUPPORT			BIT(0)
 #define WIFI_TDLS_EXTERNAL_CONTROL_SUPPORT	BIT(1)
-#define WIIF_TDLS_OFFCHANNEL_SUPPORT		BIT(2)
+#define WIFI_TDLS_OFFCHANNEL_SUPPORT		BIT(2)
 
 #define CFG_NON_AGG_RETRY_MAX                  (64)
 #define CFG_AGG_RETRY_MAX                      (64)
