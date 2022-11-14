@@ -6084,19 +6084,6 @@ QDF_STATUS sme_get_roam_scan_n_probes(mac_handle_t mac_handle, uint8_t vdev_id,
 	return QDF_STATUS_SUCCESS;
 }
 
-QDF_STATUS sme_get_roam_scan_home_away_time(mac_handle_t mac_handle,
-					    uint8_t vdev_id,
-					    uint16_t *roam_scan_home_away_time)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-	struct cm_roam_values_copy temp;
-
-	wlan_cm_roam_cfg_get_value(mac->psoc, vdev_id, SCAN_HOME_AWAY, &temp);
-	*roam_scan_home_away_time = temp.uint_value;
-
-	return QDF_STATUS_SUCCESS;
-}
-
 QDF_STATUS sme_update_roam_rssi_diff(mac_handle_t mac_handle, uint8_t vdev_id,
 				     uint8_t roam_rssi_diff)
 {
@@ -6468,21 +6455,6 @@ QDF_STATUS sme_set_roam_opportunistic_scan_threshold_diff(
 		sme_release_global_lock(&mac->sme);
 	}
 	return status;
-}
-
-/*
- * sme_get_roam_opportunistic_scan_threshold_diff()
- * gets Opportunistic Scan threshold diff
- * This is a synchronous call
- *
- * mac_handle - The handle returned by mac_open
- * Return uint8_t - nOpportunisticThresholdDiff
- */
-uint8_t sme_get_roam_opportunistic_scan_threshold_diff(mac_handle_t mac_handle)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-
-	return mac->mlme_cfg->lfr.opportunistic_scan_threshold_diff;
 }
 
 /*

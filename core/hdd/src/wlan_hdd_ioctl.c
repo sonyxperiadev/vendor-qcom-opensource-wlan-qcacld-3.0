@@ -4020,9 +4020,9 @@ static int drv_cmd_get_scan_home_away_time(struct hdd_adapter *adapter,
 	uint8_t len = 0;
 	QDF_STATUS status;
 
-	status = sme_get_roam_scan_home_away_time(hdd_ctx->mac_handle,
-						  adapter->vdev_id,
-						  &val);
+	status = ucfg_cm_get_roam_scan_home_away_time(hdd_ctx->psoc,
+						      adapter->vdev_id,
+						      &val);
 	if (QDF_IS_STATUS_ERROR(status))
 		return qdf_status_to_os_return(status);
 
@@ -4149,11 +4149,11 @@ static int drv_cmd_get_opportunistic_rssi_diff(struct hdd_adapter *adapter,
 					       struct hdd_priv_data *priv_data)
 {
 	int ret = 0;
-	mac_handle_t mac_handle = hdd_ctx->mac_handle;
-	int8_t val = sme_get_roam_opportunistic_scan_threshold_diff(mac_handle);
+	int8_t val = 0;
 	char extra[32];
 	uint8_t len = 0;
 
+	ucfg_cm_get_roam_opportunistic_scan_threshold_diff(hdd_ctx->psoc, &val);
 	len = scnprintf(extra, sizeof(extra), "%s %d", command, val);
 	len = QDF_MIN(priv_data->total_len, len + 1);
 	if (copy_to_user(priv_data->buf, &extra, len)) {

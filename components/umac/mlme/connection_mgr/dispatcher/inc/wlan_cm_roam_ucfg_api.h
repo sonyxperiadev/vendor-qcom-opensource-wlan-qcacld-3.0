@@ -578,4 +578,31 @@ bool ucfg_cm_get_is_lfr_feature_enabled(struct wlan_objmgr_psoc *psoc);
  */
 bool ucfg_cm_get_is_ft_feature_enabled(struct wlan_objmgr_psoc *psoc);
 
+/**
+ * ucfg_cm_get_roam_scan_home_away_time() - Get Roam scan home away time
+ * @psoc: Pointer to psoc
+ * @vdev_id: vdev identifier
+ * @roam_scan_home_away_time: Buffer to fill the roam scan home away time.
+ *				Valid only if the return status is success.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+ucfg_cm_get_roam_scan_home_away_time(struct wlan_objmgr_psoc *psoc,
+				     uint8_t vdev_id,
+				     uint16_t *roam_scan_home_away_time);
+/**
+ * ucfg_cm_get_roam_opportunistic_scan_threshold_diff() -
+ * get Opportunistic Scan threshold diff.
+ * This is a synchronous call
+ * @psoc: Pointer to psoc
+ * @val: Opportunistic Scan threshold diff.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+ucfg_cm_get_roam_opportunistic_scan_threshold_diff(
+					struct wlan_objmgr_psoc *psoc,
+					int8_t *val);
+
 #endif /* _WLAN_CM_ROAM_UCFG_API_H_ */

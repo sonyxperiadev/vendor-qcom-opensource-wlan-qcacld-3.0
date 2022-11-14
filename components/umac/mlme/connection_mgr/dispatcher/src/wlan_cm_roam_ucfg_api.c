@@ -665,3 +665,33 @@ bool ucfg_cm_get_is_ft_feature_enabled(struct wlan_objmgr_psoc *psoc)
 
 	return mlme_obj->cfg.lfr.fast_transition_enabled;
 }
+
+QDF_STATUS
+ucfg_cm_get_roam_scan_home_away_time(struct wlan_objmgr_psoc *psoc,
+				     uint8_t vdev_id,
+				     uint16_t *roam_scan_home_away_time)
+{
+	struct cm_roam_values_copy temp;
+
+	wlan_cm_roam_cfg_get_value(psoc, vdev_id, SCAN_HOME_AWAY, &temp);
+
+	*roam_scan_home_away_time = temp.uint_value;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+ucfg_cm_get_roam_opportunistic_scan_threshold_diff(
+						struct wlan_objmgr_psoc *psoc,
+						int8_t *val)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_INVAL;
+
+	*val = mlme_obj->cfg.lfr.opportunistic_scan_threshold_diff;
+
+	return QDF_STATUS_SUCCESS;
+}

@@ -996,18 +996,6 @@ QDF_STATUS sme_get_roam_scan_n_probes(mac_handle_t mac_handle, uint8_t vdev_id,
 QDF_STATUS sme_update_roam_rssi_diff(mac_handle_t mac_handle, uint8_t vdev_id,
 				     uint8_t roam_rssi_diff);
 
-/**
- * sme_get_roam_scan_home_away_time() - get Roam scan home away time
- * @mac_handle: The handle returned by mac_open
- * @vdev_id: vdev identifier
- * @roam_scan_home_away_time: Buffer to fill the roam scan home away time.
- *			      Valid only if the return status is success.
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS sme_get_roam_scan_home_away_time(mac_handle_t mac_handle,
-					    uint8_t vdev_id,
-					    uint16_t *roam_scan_home_away_time);
 QDF_STATUS sme_update_wes_mode(mac_handle_t mac_handle, bool isWESModeEnabled,
 		uint8_t sessionId);
 
@@ -1046,7 +1034,6 @@ QDF_STATUS sme_set_roam_opportunistic_scan_threshold_diff(
 		mac_handle_t mac_handle,
 		uint8_t sessionId,
 		const uint8_t nOpportunisticThresholdDiff);
-uint8_t sme_get_roam_opportunistic_scan_threshold_diff(mac_handle_t mac_handle);
 
 /**
  * sme_set_neighbor_lookup_rssi_threshold() - update neighbor lookup rssi thr
