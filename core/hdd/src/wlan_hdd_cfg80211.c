@@ -5560,7 +5560,7 @@ hdd_send_roam_scan_period_to_sme(struct hdd_context *hdd_ctx,
 				 bool check_and_update)
 {
 	QDF_STATUS status;
-	uint16_t roam_scan_period_current, roam_scan_period_global;
+	uint16_t roam_scan_period_current, roam_scan_period_global = 0;
 
 	if (!ucfg_mlme_validate_scan_period(hdd_ctx->psoc,
 					    roam_scan_period * 1000))
@@ -5575,8 +5575,8 @@ hdd_send_roam_scan_period_to_sme(struct hdd_context *hdd_ctx,
 	if (QDF_IS_STATUS_ERROR(status))
 		return status;
 
-	roam_scan_period_global =
-		sme_get_empty_scan_refresh_period_global(hdd_ctx->mac_handle);
+	ucfg_cm_get_empty_scan_refresh_period_global(hdd_ctx->psoc,
+						     &roam_scan_period_global);
 	if (check_and_update &&
 	    roam_scan_period_current != roam_scan_period_global) {
 		hdd_debug("roam scan period is already updated, value: %u",

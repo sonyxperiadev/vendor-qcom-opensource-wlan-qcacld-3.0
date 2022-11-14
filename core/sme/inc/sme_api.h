@@ -1050,15 +1050,6 @@ sme_set_neighbor_lookup_rssi_threshold(mac_handle_t mac_handle,
 
 QDF_STATUS sme_set_neighbor_scan_refresh_period(mac_handle_t mac_handle,
 		uint8_t sessionId, uint16_t neighborScanResultsRefreshPeriod);
-uint16_t sme_get_neighbor_scan_refresh_period(mac_handle_t mac_handle);
-
-/**
- * sme_get_empty_scan_refresh_period_global() - get global scan refresh period
- * @mac_handle: The handle returned by mac_open
- *
- * Return: Empty scan refresh period configured through ini
- */
-uint16_t sme_get_empty_scan_refresh_period_global(mac_handle_t mac_handle);
 
 QDF_STATUS sme_update_empty_scan_refresh_period(mac_handle_t mac_handle,
 		uint8_t sessionId, uint16_t empty_scan_refresh_period);

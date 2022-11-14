@@ -2972,11 +2972,11 @@ static int drv_cmd_get_roam_scan_refresh_period(struct hdd_adapter *adapter,
 						struct hdd_priv_data *priv_data)
 {
 	int ret = 0;
-	uint16_t value =
-		sme_get_neighbor_scan_refresh_period(hdd_ctx->mac_handle);
+	uint16_t value = 0;
 	char extra[32];
 	uint8_t len;
 
+	ucfg_cm_get_neighbor_scan_refresh_period(hdd_ctx->psoc, &value);
 	len = scnprintf(extra, sizeof(extra), "%s %d",
 			"GETROAMSCANREFRESHPERIOD",
 			(value / 1000));

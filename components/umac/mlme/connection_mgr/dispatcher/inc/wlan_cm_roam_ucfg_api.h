@@ -605,4 +605,29 @@ ucfg_cm_get_roam_opportunistic_scan_threshold_diff(
 					struct wlan_objmgr_psoc *psoc,
 					int8_t *val);
 
+/**
+ * ucfg_cm_get_neighbor_scan_refresh_period() - Get neighbor scan results
+ * refresh period.
+ * This is a synchronous call
+ * @psoc: pointer to psoc object
+ * @value: value for scan results refresh period
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+ucfg_cm_get_neighbor_scan_refresh_period(struct wlan_objmgr_psoc *psoc,
+					 uint16_t *value);
+
+/**
+ * ucfg_cm_get_empty_scan_refresh_period_global() - Get global scan
+ * refresh period
+ * @psoc: pointer to psoc object
+ * @roam_scan_period_global: value for empty scan refresh period
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+ucfg_cm_get_empty_scan_refresh_period_global(struct wlan_objmgr_psoc *psoc,
+					     uint16_t *roam_scan_period_global);
+
 #endif /* _WLAN_CM_ROAM_UCFG_API_H_ */
