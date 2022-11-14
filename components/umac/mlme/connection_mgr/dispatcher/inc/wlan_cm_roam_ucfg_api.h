@@ -442,4 +442,29 @@ ucfg_cm_get_sae_auth_ta(struct wlan_objmgr_pdev *pdev,
  */
 QDF_STATUS
 ucfg_cm_get_roam_intra_band(struct wlan_objmgr_psoc *psoc, uint16_t *val);
+
+/**
+ * ucfg_cm_get_roam_rescan_rssi_diff() - gets roam rescan rssi diff
+ * @psoc: pointer to psoc object
+ * @val: value for rescan rssi diff
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+ucfg_cm_get_roam_rescan_rssi_diff(struct wlan_objmgr_psoc *psoc, uint8_t *val);
+
+/**
+ * ucfg_cm_get_neighbor_lookup_rssi_threshold() -
+ * get neighbor lookup rssi threshold
+ * @psoc: pointer to psoc object
+ * @vdev_id: vdev identifier
+ * @lookup_threshold: Buffer to fill the neighbor lookup threshold.
+ *			Valid only if the return status is success.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+ucfg_cm_get_neighbor_lookup_rssi_threshold(struct wlan_objmgr_psoc *psoc,
+					   uint8_t vdev_id,
+					   uint8_t *lookup_threshold);
 #endif /* _WLAN_CM_ROAM_UCFG_API_H_ */

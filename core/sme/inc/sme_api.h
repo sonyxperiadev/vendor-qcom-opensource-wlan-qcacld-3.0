@@ -1041,7 +1041,6 @@ QDF_STATUS sme_update_is_ese_feature_enabled(mac_handle_t mac_handle,
 QDF_STATUS sme_set_roam_rescan_rssi_diff(mac_handle_t mac_handle,
 		uint8_t sessionId,
 		const uint8_t nRoamRescanRssiDiff);
-uint8_t sme_get_roam_rescan_rssi_diff(mac_handle_t mac_handle);
 
 QDF_STATUS sme_set_roam_opportunistic_scan_threshold_diff(
 		mac_handle_t mac_handle,
@@ -1062,18 +1061,6 @@ sme_set_neighbor_lookup_rssi_threshold(mac_handle_t mac_handle,
 				       uint8_t vdev_id,
 				       uint8_t neighbor_lookup_rssi_threshold);
 
-/**
- * sme_get_neighbor_lookup_rssi_threshold() - get neighbor lookup rssi threshold
- * @mac_handle: The handle returned by mac_open
- * @vdev_id: vdev identifier
- * @lookup_threshold: Buffer to fill the neighbor lookup threshold.
- *		      Valid only if the return status is success.
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS sme_get_neighbor_lookup_rssi_threshold(mac_handle_t mac_handle,
-						  uint8_t vdev_id,
-						  uint8_t *lookup_threshold);
 QDF_STATUS sme_set_neighbor_scan_refresh_period(mac_handle_t mac_handle,
 		uint8_t sessionId, uint16_t neighborScanResultsRefreshPeriod);
 uint16_t sme_get_neighbor_scan_refresh_period(mac_handle_t mac_handle);

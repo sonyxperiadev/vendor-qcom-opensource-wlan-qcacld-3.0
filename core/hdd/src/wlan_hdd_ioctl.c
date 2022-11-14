@@ -2776,9 +2776,9 @@ static int drv_cmd_get_roam_trigger(struct hdd_adapter *adapter,
 	uint8_t len = 0;
 	QDF_STATUS status;
 
-	status = sme_get_neighbor_lookup_rssi_threshold(hdd_ctx->mac_handle,
-							adapter->vdev_id,
-							&lookup_threshold);
+	status = ucfg_cm_get_neighbor_lookup_rssi_threshold(hdd_ctx->psoc,
+							    adapter->vdev_id,
+							    &lookup_threshold);
 	if (QDF_IS_STATUS_ERROR(status))
 		return qdf_status_to_os_return(status);
 
@@ -4207,10 +4207,11 @@ static int drv_cmd_get_roam_rescan_rssi_diff(struct hdd_adapter *adapter,
 					     struct hdd_priv_data *priv_data)
 {
 	int ret = 0;
-	uint8_t val = sme_get_roam_rescan_rssi_diff(hdd_ctx->mac_handle);
+	uint8_t val = 0;
 	char extra[32];
 	uint8_t len = 0;
 
+	ucfg_cm_get_roam_rescan_rssi_diff(hdd_ctx->psoc, &val);
 	len = scnprintf(extra, sizeof(extra), "%s %d", command, val);
 	len = QDF_MIN(priv_data->total_len, len + 1);
 	if (copy_to_user(priv_data->buf, &extra, len)) {

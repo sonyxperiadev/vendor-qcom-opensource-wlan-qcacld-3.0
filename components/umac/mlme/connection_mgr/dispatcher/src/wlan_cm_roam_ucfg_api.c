@@ -529,3 +529,31 @@ ucfg_cm_get_roam_intra_band(struct wlan_objmgr_psoc *psoc, uint16_t *val)
 
 	return QDF_STATUS_SUCCESS;
 }
+
+QDF_STATUS
+ucfg_cm_get_roam_rescan_rssi_diff(struct wlan_objmgr_psoc *psoc, uint8_t *val)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_INVAL;
+
+	*val = mlme_obj->cfg.lfr.roam_rescan_rssi_diff;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+ucfg_cm_get_neighbor_lookup_rssi_threshold(struct wlan_objmgr_psoc *psoc,
+					   uint8_t vdev_id,
+					   uint8_t *lookup_threshold)
+{
+	struct cm_roam_values_copy temp;
+
+	wlan_cm_roam_cfg_get_value(psoc, vdev_id,
+				   NEIGHBOUR_LOOKUP_THRESHOLD, &temp);
+	*lookup_threshold = temp.uint_value;
+
+	return QDF_STATUS_SUCCESS;
+}

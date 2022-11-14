@@ -6519,21 +6519,6 @@ QDF_STATUS sme_set_roam_rescan_rssi_diff(mac_handle_t mac_handle,
 }
 
 /*
- * sme_get_roam_rescan_rssi_diff()
- * gets roam rescan rssi diff
- *	  This is a synchronous call
- *
- * mac_handle - The handle returned by mac_open
- * Return int8_t - nRoamRescanRssiDiff
- */
-uint8_t sme_get_roam_rescan_rssi_diff(mac_handle_t mac_handle)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-
-	return mac->mlme_cfg->lfr.roam_rescan_rssi_diff;
-}
-
-/*
  * sme_set_roam_bmiss_first_bcnt() -
  * Update Roam count for first beacon miss
  *	    This function is called through dynamic setConfig callback function
@@ -6620,20 +6605,6 @@ sme_set_neighbor_lookup_rssi_threshold(mac_handle_t mac_handle,
 					REASON_LOOKUP_THRESH_CHANGED);
 	sme_release_global_lock(&mac->sme);
 	return status;
-}
-
-QDF_STATUS sme_get_neighbor_lookup_rssi_threshold(mac_handle_t mac_handle,
-						  uint8_t vdev_id,
-						  uint8_t *lookup_threshold)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-	struct cm_roam_values_copy temp;
-
-	wlan_cm_roam_cfg_get_value(mac->psoc, vdev_id,
-				   NEIGHBOUR_LOOKUP_THRESHOLD, &temp);
-	*lookup_threshold = temp.uint_value;
-
-	return QDF_STATUS_SUCCESS;
 }
 
 /*
