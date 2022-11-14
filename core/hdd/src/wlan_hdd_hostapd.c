@@ -400,7 +400,7 @@ static void hdd_hostapd_channel_allow_suspend(struct hdd_adapter *adapter,
  * Called when, 1. bss started, 2. channel switch
  *
  * @adapter: pointer to hdd adapter
- * @chna_freq: current channel frequency
+ * @chan_freq: current channel frequency
  *
  * Return - None
  */
@@ -517,7 +517,7 @@ static int __hdd_hostapd_open(struct net_device *dev)
 
 /**
  * hdd_hostapd_open() - SSR wrapper for __hdd_hostapd_open
- * @dev: pointer to net device
+ * @net_dev: pointer to net device
  *
  * Return: 0 on success, error number otherwise
  */
@@ -580,7 +580,7 @@ int hdd_hostapd_stop_no_trans(struct net_device *dev)
 
 /**
  * hdd_hostapd_stop() - SSR wrapper for__hdd_hostapd_stop
- * @dev: pointer to net_device
+ * @net_dev: pointer to net_device
  *
  * This is called in response to ifconfig down
  *
@@ -1382,7 +1382,7 @@ enum qca_wlan_802_11_mode hdd_convert_dot11mode_from_phymode(int phymode)
 
 /**
  * hdd_fill_station_info() - fill stainfo once connected
- * @stainfo: peer stainfo associate to SAP
+ * @adapter: pointer to hdd adapter
  * @event: associate/reassociate event received
  *
  * The function is to update rate stats to stainfo
@@ -3399,7 +3399,7 @@ int hdd_softap_set_channel_change(struct net_device *dev, int target_chan_freq,
 /**
  * wlan_hdd_get_sap_restriction_mask() - get restriction mask for sap
  * after sap start
- * @hdd_context: hdd context
+ * @hdd_ctx: hdd context
  *
  * Return: Restriction mask
  */
@@ -4831,7 +4831,7 @@ static void wlan_hdd_add_sap_obss_scan_ie(
 #endif
 
 /**
- * wlan_hdd_cfg80211_update_apies() - update ap mode 11ax ies
+ * hdd_update_11ax_apies() - update ap mode 11ax ies
  * @adapter: Pointer to hostapd adapter
  * @genie: generic IE buffer
  * @total_ielen: out param to update total ielen
@@ -5359,7 +5359,7 @@ static int wlan_hdd_sap_p2p_11ac_overrides(struct hdd_adapter *ap_adapter)
 
 /**
  * wlan_hdd_setup_driver_overrides : Overrides SAP / P2P GO Params
- * @adapter: pointer to adapter struct
+ * @ap_adapter: pointer to adapter struct
  *
  * This function overrides SAP / P2P Go configuration based on driver INI
  * parameters for 11AC override and ACS. These overrides are done to support
@@ -5424,7 +5424,7 @@ hdd_check_and_disconnect_sta_on_invalid_channel(struct hdd_context *hdd_ctx,
  * hdd_handle_acs_2g_preferred_sap_conc() - Handle 2G pereferred SAP
  * concurrency with GO
  * @psoc: soc object
- * @sap_ctx: sap context
+ * @adapter: SAP adapter
  * @sap_config: sap config
  *
  * In SAP+GO concurrency, if GO is started on 2G and SAP is doing ACS
@@ -7439,7 +7439,6 @@ wlan_util_get_centre_freq(struct wireless_dev *wdev, unsigned int link_id)
  * based on user space input and concurrency combination.
  * @adapter:  Pointer to hostapd adapter
  * @params: Pointer to AP configuration from cfg80211
- * @iface_start: Interface start or not
  *
  * Return: void
  */
