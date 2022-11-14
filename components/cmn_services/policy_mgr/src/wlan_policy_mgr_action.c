@@ -333,7 +333,7 @@ QDF_STATUS policy_mgr_update_connection_info(struct wlan_objmgr_psoc *psoc,
 					uint32_t vdev_id)
 {
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
-	uint32_t conn_index = 0, ch_freq;
+	uint32_t conn_index = 0, ch_freq, cur_freq;
 	bool found = false;
 	struct policy_mgr_vdev_entry_info conn_table_entry;
 	enum policy_mgr_chain_mode chain_mask = POLICY_MGR_ONE_ONE;
@@ -380,6 +380,8 @@ QDF_STATUS policy_mgr_update_connection_info(struct wlan_objmgr_psoc *psoc,
 		return QDF_STATUS_E_FAILURE;
 	}
 
+	cur_freq = pm_conc_connection_list[conn_index].freq;
+
 	mode = policy_mgr_get_mode(conn_table_entry.type,
 					conn_table_entry.sub_type);
 	ch_freq = conn_table_entry.mhz;
@@ -410,6 +412,13 @@ QDF_STATUS policy_mgr_update_connection_info(struct wlan_objmgr_psoc *psoc,
 	policy_mgr_check_n_start_opportunistic_timer(psoc);
 	policy_mgr_handle_ml_sta_links_on_vdev_up_csa(psoc,
 				policy_mgr_get_qdf_mode_from_pm(mode), vdev_id);
+
+	if (policy_mgr_is_conc_sap_present_on_sta_freq(psoc, mode, cur_freq))
+		policy_mgr_update_indoor_concurrency(psoc, vdev_id, 0,
+						     SWITCH_WITH_CONCURRENCY);
+	else
+		policy_mgr_update_indoor_concurrency(psoc, vdev_id, cur_freq,
+						     SWITCH_WITHOUT_CONCURRENCY);
 
 	return QDF_STATUS_SUCCESS;
 }
