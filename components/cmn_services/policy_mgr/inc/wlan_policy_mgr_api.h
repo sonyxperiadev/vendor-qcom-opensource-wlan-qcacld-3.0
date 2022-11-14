@@ -3013,8 +3013,7 @@ policy_mgr_allow_4th_new_freq(struct wlan_objmgr_psoc *psoc,
  * policy_mgr_are_sbs_chan() - Function to check whether both the
  * input frequency are in SBS frequency range
  *
- * @pm_ctx: Policy Mgr context
- * @freq_range: freq range to check
+ * @psoc: Pointer to Psoc
  * @freq_1: Frequency 1 to check
  * @freq_2: Frequency 2 to check
  *
