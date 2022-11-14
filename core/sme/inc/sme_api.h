@@ -1139,13 +1139,9 @@ uint32_t sme_get_lim_sme_session_state(mac_handle_t mac_handle,
 				       uint8_t sessionId);
 uint32_t sme_get_lim_mlm_session_state(mac_handle_t mac_handle,
 				       uint8_t sessionId);
-uint16_t sme_get_neighbor_scan_max_chan_time(mac_handle_t mac_handle,
-					     uint8_t sessionId);
 QDF_STATUS sme_set_neighbor_scan_period(mac_handle_t mac_handle,
 		uint8_t sessionId,
 		const uint16_t nNeighborScanPeriod);
-uint16_t sme_get_neighbor_scan_period(mac_handle_t mac_handle,
-				      uint8_t sessionId);
 QDF_STATUS sme_set_roam_bmiss_first_bcnt(mac_handle_t mac_handle,
 		uint8_t sessionId, const uint8_t nRoamBmissFirstBcnt);
 QDF_STATUS sme_set_roam_bmiss_final_bcnt(mac_handle_t mac_handle,

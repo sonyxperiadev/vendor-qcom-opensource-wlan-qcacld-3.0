@@ -3716,8 +3716,9 @@ static int drv_cmd_get_scan_channel_time(struct hdd_adapter *adapter,
 					 struct hdd_priv_data *priv_data)
 {
 	int ret = 0;
-	uint16_t val = sme_get_neighbor_scan_max_chan_time(hdd_ctx->mac_handle,
-							   adapter->vdev_id);
+	uint16_t val = ucfg_cm_get_neighbor_scan_max_chan_time(
+							hdd_ctx->psoc,
+							adapter->vdev_id);
 	char extra[32];
 	uint8_t len = 0;
 
@@ -3789,8 +3790,8 @@ static int drv_cmd_get_scan_home_time(struct hdd_adapter *adapter,
 				      struct hdd_priv_data *priv_data)
 {
 	int ret = 0;
-	uint16_t val = sme_get_neighbor_scan_period(hdd_ctx->mac_handle,
-						    adapter->vdev_id);
+	uint16_t val = ucfg_cm_get_neighbor_scan_period(hdd_ctx->psoc,
+							adapter->vdev_id);
 	char extra[32];
 	uint8_t len = 0;
 

@@ -438,7 +438,7 @@ ucfg_cm_get_sae_auth_ta(struct wlan_objmgr_pdev *pdev,
  * @psoc: pointer to psoc object
  * @val:  Infra band value
  *
- * Return Success or failure
+ * Return: Success or failure
  */
 QDF_STATUS
 ucfg_cm_get_roam_intra_band(struct wlan_objmgr_psoc *psoc, uint16_t *val);
@@ -488,7 +488,7 @@ ucfg_cm_get_empty_scan_refresh_period(struct wlan_objmgr_psoc *psoc,
  * @psoc: pointer to psoc object
  * @session_id: session_id
  *
- * Return uint16_t - channel min time value
+ * Return: channel min time value
  */
 uint16_t
 ucfg_cm_get_neighbor_scan_min_chan_time(struct wlan_objmgr_psoc *psoc,
@@ -513,7 +513,7 @@ ucfg_cm_get_roam_rssi_diff(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
  * This is a synchronous call
  * @psoc: pointer to psoc object
  *
- * Return true (1) - if the ESE feature is enabled
+ * Return: true (1) - if the ESE feature is enabled
  *	false (0) - if feature is disabled (compile or runtime)
  */
 bool
@@ -526,4 +526,26 @@ ucfg_cm_get_is_ese_feature_enabled(struct wlan_objmgr_psoc *psoc)
 }
 #endif
 
+/**
+ * ucfg_cm_get_neighbor_scan_max_chan_time() - get neighbor
+ * scan max channel time
+ * @psoc: pointer to psoc object
+ * @vdev_id: vdev identifier
+ *
+ * Return: channel max time value
+ */
+uint16_t
+ucfg_cm_get_neighbor_scan_max_chan_time(struct wlan_objmgr_psoc *psoc,
+					uint8_t vdev_id);
+
+/**
+ * ucfg_cm_get_neighbor_scan_period() - get neighbor scan period
+ * @psoc: pointer to psoc object
+ * @vdev_id: vdev identifier
+ *
+ * Return: neighbor scan period
+ */
+uint16_t
+ucfg_cm_get_neighbor_scan_period(struct wlan_objmgr_psoc *psoc,
+				 uint8_t vdev_id);
 #endif /* _WLAN_CM_ROAM_UCFG_API_H_ */

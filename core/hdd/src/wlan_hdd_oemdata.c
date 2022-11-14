@@ -107,8 +107,8 @@ static int populate_oem_data_cap(struct hdd_adapter *adapter,
 		ucfg_cm_get_neighbor_scan_min_chan_time(hdd_ctx->psoc,
 							adapter->vdev_id);
 	data_cap->curr_dwell_time_max =
-		sme_get_neighbor_scan_max_chan_time(hdd_ctx->mac_handle,
-						    adapter->vdev_id);
+		ucfg_cm_get_neighbor_scan_max_chan_time(hdd_ctx->psoc,
+							adapter->vdev_id);
 	data_cap->supported_bands = band_capability;
 
 	/* request for max num of channels */

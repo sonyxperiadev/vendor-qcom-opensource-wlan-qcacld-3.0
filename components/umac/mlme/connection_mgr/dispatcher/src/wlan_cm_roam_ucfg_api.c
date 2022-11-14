@@ -609,3 +609,26 @@ bool ucfg_cm_get_is_ese_feature_enabled(struct wlan_objmgr_psoc *psoc)
 	return mlme_obj->cfg.lfr.ese_enabled;
 }
 #endif
+
+uint16_t
+ucfg_cm_get_neighbor_scan_max_chan_time(struct wlan_objmgr_psoc *psoc,
+					uint8_t vdev_id)
+{
+	struct cm_roam_values_copy temp;
+
+	wlan_cm_roam_cfg_get_value(psoc, vdev_id,
+				   SCAN_MAX_CHAN_TIME, &temp);
+
+	return temp.uint_value;
+}
+
+uint16_t
+ucfg_cm_get_neighbor_scan_period(struct wlan_objmgr_psoc *psoc,
+				 uint8_t vdev_id)
+{
+	struct cm_roam_values_copy temp;
+
+	wlan_cm_roam_cfg_get_value(psoc, vdev_id,
+				   NEIGHBOR_SCAN_PERIOD, &temp);
+	return temp.uint_value;
+}
