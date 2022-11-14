@@ -5569,8 +5569,9 @@ hdd_send_roam_scan_period_to_sme(struct hdd_context *hdd_ctx,
 	hdd_debug("Received Command to Set roam scan period (Empty Scan refresh period) = %d",
 		  roam_scan_period);
 
-	status = sme_get_empty_scan_refresh_period(hdd_ctx->mac_handle, vdev_id,
-						   &roam_scan_period_current);
+	status = ucfg_cm_get_empty_scan_refresh_period(
+						hdd_ctx->psoc, vdev_id,
+						&roam_scan_period_current);
 	if (QDF_IS_STATUS_ERROR(status))
 		return status;
 

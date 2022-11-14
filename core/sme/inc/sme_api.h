@@ -1073,18 +1073,6 @@ uint16_t sme_get_neighbor_scan_refresh_period(mac_handle_t mac_handle);
  */
 uint16_t sme_get_empty_scan_refresh_period_global(mac_handle_t mac_handle);
 
-/**
- * sme_get_empty_scan_refresh_period() - get empty scan refresh period
- * @mac_handle: The handle returned by mac_open.
- * @vdev_id: vdev identifier
- * @refresh_threshold: Buffer to fill the empty scan refresh period.
- *		       Valid only if the return status is success.
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS sme_get_empty_scan_refresh_period(mac_handle_t mac_handle,
-					     uint8_t vdev_id,
-					     uint16_t *refresh_threshold);
 QDF_STATUS sme_update_empty_scan_refresh_period(mac_handle_t mac_handle,
 		uint8_t sessionId, uint16_t empty_scan_refresh_period);
 /**
@@ -1141,8 +1129,6 @@ QDF_STATUS sme_set_neighbor_scan_min_chan_time(mac_handle_t mac_handle,
 QDF_STATUS sme_set_neighbor_scan_max_chan_time(mac_handle_t mac_handle,
 				uint8_t sessionId,
 				const uint16_t nNeighborScanMaxChanTime);
-uint16_t sme_get_neighbor_scan_min_chan_time(mac_handle_t mac_handle,
-					     uint8_t sessionId);
 uint32_t sme_get_current_roam_state(mac_handle_t mac_handle, uint8_t sessionId);
 uint32_t sme_get_current_roam_sub_state(mac_handle_t mac_handle,
 					uint8_t sessionId);

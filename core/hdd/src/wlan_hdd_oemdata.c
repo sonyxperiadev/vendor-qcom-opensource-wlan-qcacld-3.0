@@ -104,8 +104,8 @@ static int populate_oem_data_cap(struct hdd_adapter *adapter,
 	data_cap->allowed_dwell_time_min = neighbor_scan_min_chan_time;
 	data_cap->allowed_dwell_time_max = neighbor_scan_max_chan_time;
 	data_cap->curr_dwell_time_min =
-		sme_get_neighbor_scan_min_chan_time(hdd_ctx->mac_handle,
-						    adapter->vdev_id);
+		ucfg_cm_get_neighbor_scan_min_chan_time(hdd_ctx->psoc,
+							adapter->vdev_id);
 	data_cap->curr_dwell_time_max =
 		sme_get_neighbor_scan_max_chan_time(hdd_ctx->mac_handle,
 						    adapter->vdev_id);

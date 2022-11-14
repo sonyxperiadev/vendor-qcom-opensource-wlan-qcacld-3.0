@@ -2882,9 +2882,9 @@ static int drv_cmd_get_roam_scan_period(struct hdd_adapter *adapter,
 	uint8_t len;
 	QDF_STATUS status;
 
-	status = sme_get_empty_scan_refresh_period(hdd_ctx->mac_handle,
-						   adapter->vdev_id,
-						   &empty_scan_refresh_period);
+	status = ucfg_cm_get_empty_scan_refresh_period(
+						hdd_ctx->psoc, adapter->vdev_id,
+						&empty_scan_refresh_period);
 	if (QDF_IS_STATUS_ERROR(status))
 		return qdf_status_to_os_return(status);
 
@@ -3639,8 +3639,9 @@ static int drv_cmd_get_roam_scan_channel_min_time(struct hdd_adapter *adapter,
 						  struct hdd_priv_data *priv_data)
 {
 	int ret = 0;
-	uint16_t val = sme_get_neighbor_scan_min_chan_time(hdd_ctx->mac_handle,
-							   adapter->vdev_id);
+	uint16_t val = ucfg_cm_get_neighbor_scan_min_chan_time(
+							hdd_ctx->psoc,
+							adapter->vdev_id);
 	char extra[32];
 	uint8_t len = 0;
 

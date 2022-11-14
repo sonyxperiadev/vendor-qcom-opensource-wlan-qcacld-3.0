@@ -467,4 +467,30 @@ QDF_STATUS
 ucfg_cm_get_neighbor_lookup_rssi_threshold(struct wlan_objmgr_psoc *psoc,
 					   uint8_t vdev_id,
 					   uint8_t *lookup_threshold);
+
+/**
+ * ucfg_cm_get_empty_scan_refresh_period() - get empty scan refresh period
+ * @psoc: pointer to psoc object
+ * @vdev_id: Vdev id
+ * @refresh_threshold: Buffer to fill the empty scan refresh period.
+ *			Valid only if the return status is success.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+ucfg_cm_get_empty_scan_refresh_period(struct wlan_objmgr_psoc *psoc,
+				      uint8_t vdev_id,
+				      uint16_t *refresh_threshold);
+
+/**
+ * ucfg_cm_get_neighbor_scan_min_chan_time() -
+ * get neighbor scan min channel time
+ * @psoc: pointer to psoc object
+ * @session_id: session_id
+ *
+ * Return uint16_t - channel min time value
+ */
+uint16_t
+ucfg_cm_get_neighbor_scan_min_chan_time(struct wlan_objmgr_psoc *psoc,
+					uint8_t session_id);
 #endif /* _WLAN_CM_ROAM_UCFG_API_H_ */

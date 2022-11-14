@@ -6651,20 +6651,6 @@ uint16_t sme_get_empty_scan_refresh_period_global(mac_handle_t mac_handle)
 	return mac->mlme_cfg->lfr.empty_scan_refresh_period;
 }
 
-QDF_STATUS sme_get_empty_scan_refresh_period(mac_handle_t mac_handle,
-					     uint8_t vdev_id,
-					     uint16_t *refresh_threshold)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-	struct cm_roam_values_copy temp;
-
-	wlan_cm_roam_cfg_get_value(mac->psoc, vdev_id,
-				   EMPTY_SCAN_REFRESH_PERIOD, &temp);
-	*refresh_threshold = temp.uint_value;
-
-	return QDF_STATUS_SUCCESS;
-}
-
 /*
  * sme_update_empty_scan_refresh_period
  * Update empty_scan_refresh_period
@@ -6780,25 +6766,6 @@ QDF_STATUS sme_set_neighbor_scan_max_chan_time(mac_handle_t mac_handle,
 	src_config.uint_value = nNeighborScanMaxChanTime;
 	return wlan_cm_roam_cfg_set_value(mac->psoc, sessionId,
 					  SCAN_MAX_CHAN_TIME, &src_config);
-}
-
-/*
- * sme_get_neighbor_scan_min_chan_time() -
- * get neighbor scan min channel time
- *
- * mac_handle - The handle returned by mac_open.
- * sessionId - Session Identifier
- * Return uint16_t - channel min time value
- */
-uint16_t sme_get_neighbor_scan_min_chan_time(mac_handle_t mac_handle,
-					     uint8_t sessionId)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-	struct cm_roam_values_copy temp;
-
-	wlan_cm_roam_cfg_get_value(mac->psoc, sessionId,
-				   SCAN_MIN_CHAN_TIME, &temp);
-	return temp.uint_value;
 }
 
 /*

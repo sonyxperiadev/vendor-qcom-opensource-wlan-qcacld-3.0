@@ -557,3 +557,29 @@ ucfg_cm_get_neighbor_lookup_rssi_threshold(struct wlan_objmgr_psoc *psoc,
 
 	return QDF_STATUS_SUCCESS;
 }
+
+QDF_STATUS
+ucfg_cm_get_empty_scan_refresh_period(struct wlan_objmgr_psoc *psoc,
+				      uint8_t vdev_id,
+				      uint16_t *refresh_threshold)
+{
+	struct cm_roam_values_copy temp;
+
+	wlan_cm_roam_cfg_get_value(psoc, vdev_id,
+				   EMPTY_SCAN_REFRESH_PERIOD, &temp);
+	*refresh_threshold = temp.uint_value;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+uint16_t
+ucfg_cm_get_neighbor_scan_min_chan_time(struct wlan_objmgr_psoc *psoc,
+					uint8_t session_id)
+{
+	struct cm_roam_values_copy temp;
+
+	wlan_cm_roam_cfg_get_value(psoc, session_id,
+				   SCAN_MIN_CHAN_TIME, &temp);
+
+	return temp.uint_value;
+}
