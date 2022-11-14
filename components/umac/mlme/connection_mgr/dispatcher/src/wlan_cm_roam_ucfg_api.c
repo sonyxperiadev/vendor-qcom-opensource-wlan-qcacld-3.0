@@ -515,3 +515,17 @@ ucfg_cm_roam_is_vendor_handoff_control_enable(struct wlan_objmgr_psoc *psoc)
 
 #endif
 #endif /* WLAN_FEATURE_ROAM_OFFLOAD */
+
+QDF_STATUS
+ucfg_cm_get_roam_intra_band(struct wlan_objmgr_psoc *psoc, uint16_t *val)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_INVAL;
+
+	*val = mlme_obj->cfg.lfr.roam_intra_band;
+
+	return QDF_STATUS_SUCCESS;
+}

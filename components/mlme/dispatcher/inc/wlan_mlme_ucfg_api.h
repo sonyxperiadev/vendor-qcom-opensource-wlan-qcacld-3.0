@@ -4932,4 +4932,19 @@ ucfg_mlme_get_sr_enable_modes(struct wlan_objmgr_psoc *psoc,
 	*val = 0;
 }
 #endif
+
+/**
+ * ucfg_mlme_get_valid_channels  - get valid channels for
+ * current regulatory domain
+ * @psoc: pointer to psoc object
+ * @ch_freq_list: list of the valid channel frequencies
+ * @list_len: length of the channel list
+ *
+ * This function will get valid channels for current regulatory domain
+ *
+ * Return: QDF_STATUS_SUCCESS or non-zero on failure
+ */
+QDF_STATUS
+ucfg_mlme_get_valid_channels(struct wlan_objmgr_psoc *psoc,
+			     uint32_t *ch_freq_list, uint32_t *list_len);
 #endif /* _WLAN_MLME_UCFG_API_H_ */

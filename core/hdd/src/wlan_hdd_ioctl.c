@@ -3864,10 +3864,11 @@ static int drv_cmd_get_roam_intra_band(struct hdd_adapter *adapter,
 				       struct hdd_priv_data *priv_data)
 {
 	int ret = 0;
-	uint16_t val = sme_get_roam_intra_band(hdd_ctx->mac_handle);
+	uint16_t val = 0;
 	char extra[32];
 	uint8_t len = 0;
 
+	ucfg_cm_get_roam_intra_band(hdd_ctx->psoc, &val);
 	/* value is interms of msec */
 	len = scnprintf(extra, sizeof(extra), "%s %d",
 			"GETROAMINTRABAND", val);

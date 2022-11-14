@@ -432,4 +432,14 @@ ucfg_cm_get_sae_auth_ta(struct wlan_objmgr_pdev *pdev,
 {
 	return wlan_cm_get_sae_auth_ta(pdev, vdev_id, sae_auth_ta);
 }
+
+/*
+ * ucfg_cm_get_roam_intra_band() - get Intra band roaming
+ * @psoc: pointer to psoc object
+ * @val:  Infra band value
+ *
+ * Return Success or failure
+ */
+QDF_STATUS
+ucfg_cm_get_roam_intra_band(struct wlan_objmgr_psoc *psoc, uint16_t *val);
 #endif /* _WLAN_CM_ROAM_UCFG_API_H_ */

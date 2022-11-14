@@ -972,8 +972,6 @@ sme_update_roam_scan_home_away_time(mac_handle_t mac_handle, uint8_t vdev_id,
 				    const uint16_t roam_scan_home_away_time,
 				    const bool send_offload_cmd);
 
-bool sme_get_roam_intra_band(mac_handle_t mac_handle);
-
 /**
  * sme_get_roam_scan_n_probes() - get Roam scan number of probes
  * @mac_handle: The handle returned by mac_open
@@ -2693,19 +2691,6 @@ QDF_STATUS sme_get_fw_state(mac_handle_t mac_handle,
 			    fw_state_callback callback,
 			    void *context);
 #endif /* FEATURE_FW_STATE */
-
-/**
- * sme_get_valid_channels() - sme api to get valid channels for
- * current regulatory domain
- * @ch_freq_list: list of the valid channel frequencies
- * @list_len: length of the channel list
- *
- * This function will get valid channels for current regulatory
- * domain
- *
- * Return: QDF_STATUS_SUCCESS or non-zero on failure
- */
-QDF_STATUS sme_get_valid_channels(uint32_t *ch_freq_list, uint32_t *list_len);
 
 /**
  * sme_get_mac_context() - sme api to get the pmac context

@@ -13432,8 +13432,9 @@ static int __wlan_hdd_cfg80211_get_preferred_freq_list(struct wiphy *wiphy,
 	for (i = 0; i < pcl_len_legacy; i++)
 		freq_list_legacy[i] = chan_weights->pcl_list[i];
 	chan_weights->saved_num_chan = NUM_CHANNELS;
-	sme_get_valid_channels(chan_weights->saved_chan_list,
-			       &chan_weights->saved_num_chan);
+	ucfg_mlme_get_valid_channels(hdd_ctx->psoc,
+				     chan_weights->saved_chan_list,
+				     &chan_weights->saved_num_chan);
 	policy_mgr_get_valid_chan_weights(hdd_ctx->psoc, chan_weights,
 					  intf_mode,
 					  adapter->vdev);
