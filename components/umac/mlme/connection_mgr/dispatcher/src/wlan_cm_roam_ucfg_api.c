@@ -583,3 +583,29 @@ ucfg_cm_get_neighbor_scan_min_chan_time(struct wlan_objmgr_psoc *psoc,
 
 	return temp.uint_value;
 }
+
+QDF_STATUS
+ucfg_cm_get_roam_rssi_diff(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
+			   uint8_t *rssi_diff)
+{
+	struct cm_roam_values_copy temp;
+
+	wlan_cm_roam_cfg_get_value(psoc, vdev_id,
+				   ROAM_RSSI_DIFF, &temp);
+	*rssi_diff = temp.uint_value;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+#ifdef FEATURE_WLAN_ESE
+bool ucfg_cm_get_is_ese_feature_enabled(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return false;
+
+	return mlme_obj->cfg.lfr.ese_enabled;
+}
+#endif

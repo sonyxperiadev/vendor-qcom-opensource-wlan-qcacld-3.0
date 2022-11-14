@@ -6942,19 +6942,6 @@ uint16_t sme_get_neighbor_scan_period(mac_handle_t mac_handle,
 	return temp.uint_value;
 }
 
-QDF_STATUS sme_get_roam_rssi_diff(mac_handle_t mac_handle, uint8_t vdev_id,
-				  uint8_t *rssi_diff)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-	struct cm_roam_values_copy temp;
-
-	wlan_cm_roam_cfg_get_value(mac->psoc, vdev_id,
-				   ROAM_RSSI_DIFF, &temp);
-	*rssi_diff = temp.uint_value;
-
-	return QDF_STATUS_SUCCESS;
-}
-
 static bool sme_validate_freq_list(mac_handle_t mac_handle,
 				   uint32_t *freq_list,
 				   uint8_t num_channels)
@@ -7119,25 +7106,6 @@ QDF_STATUS sme_get_roam_scan_channel_list(mac_handle_t mac_handle,
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
 	sme_release_global_lock(&mac->sme);
 	return status;
-}
-
-/*
- * sme_get_is_ese_feature_enabled() - get ESE feature enabled or not
- *  This is a synchronous call
- *
- * mac_handle - The handle returned by mac_open.
- * Return true (1) - if the ESE feature is enabled
- *	  false (0) - if feature is disabled (compile or runtime)
- */
-bool sme_get_is_ese_feature_enabled(mac_handle_t mac_handle)
-{
-#ifdef FEATURE_WLAN_ESE
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-
-	return csr_roam_is_ese_ini_feature_enabled(mac);
-#else
-	return false;
-#endif
 }
 
 /*

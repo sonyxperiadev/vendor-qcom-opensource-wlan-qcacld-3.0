@@ -499,7 +499,6 @@ bool csr_roam_is11r_assoc(struct mac_context *mac, uint8_t sessionId);
 #ifdef FEATURE_WLAN_ESE
 /* Returns whether the current association is a ESE assoc or not */
 bool csr_roam_is_ese_assoc(struct mac_context *mac, uint32_t sessionId);
-bool csr_roam_is_ese_ini_feature_enabled(struct mac_context *mac);
 QDF_STATUS csr_get_tsm_stats(struct mac_context *mac,
 		tCsrTsmStatsCallback callback,
 		struct qdf_mac_addr bssId,

@@ -493,4 +493,37 @@ ucfg_cm_get_empty_scan_refresh_period(struct wlan_objmgr_psoc *psoc,
 uint16_t
 ucfg_cm_get_neighbor_scan_min_chan_time(struct wlan_objmgr_psoc *psoc,
 					uint8_t session_id);
+
+/**
+ * ucfg_cm_get_roam_rssi_diff() - Get Roam rssi diff
+ * @psoc: pointer to psoc object
+ * @vdev_id: vdev identifier
+ * @rssi_diff: Buffer to fill the roam RSSI diff.
+ *		Valid only if the return status is success.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+ucfg_cm_get_roam_rssi_diff(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
+			   uint8_t *rssi_diff);
+
+#ifdef FEATURE_WLAN_ESE
+/**
+ * ucfg_cm_get_is_ese_feature_enabled() - Get ESE feature enabled or not
+ * This is a synchronous call
+ * @psoc: pointer to psoc object
+ *
+ * Return true (1) - if the ESE feature is enabled
+ *	false (0) - if feature is disabled (compile or runtime)
+ */
+bool
+ucfg_cm_get_is_ese_feature_enabled(struct wlan_objmgr_psoc *psoc);
+#else
+static inline bool
+ucfg_cm_get_is_ese_feature_enabled(struct wlan_objmgr_psoc *psoc)
+{
+	return false;
+}
+#endif
+
 #endif /* _WLAN_CM_ROAM_UCFG_API_H_ */

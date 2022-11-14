@@ -1522,17 +1522,6 @@ bool csr_roam_is_ese_assoc(struct mac_context *mac_ctx, uint32_t session_id)
 
 
 /**
- * csr_roam_is_ese_ini_feature_enabled() - is ese feature enabled
- * @mac_ctx: Global MAC context
- *
- * Return: true if ese feature is enabled; false otherwise
- */
-bool csr_roam_is_ese_ini_feature_enabled(struct mac_context *mac)
-{
-	return mac->mlme_cfg->lfr.ese_enabled;
-}
-
-/**
  * csr_tsm_stats_rsp_processor() - tsm stats response processor
  * @mac: Global MAC context
  * @pMsg: Message pointer

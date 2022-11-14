@@ -3183,8 +3183,8 @@ static int drv_cmd_get_roam_delta(struct hdd_adapter *adapter,
 	uint8_t len;
 	QDF_STATUS status;
 
-	status = sme_get_roam_rssi_diff(hdd_ctx->mac_handle, adapter->vdev_id,
-					&rssi_diff);
+	status = ucfg_cm_get_roam_rssi_diff(hdd_ctx->psoc, adapter->vdev_id,
+					    &rssi_diff);
 	if (QDF_IS_STATUS_ERROR(status))
 		return qdf_status_to_os_return(status);
 
@@ -3455,7 +3455,7 @@ static int drv_cmd_get_ccx_mode(struct hdd_adapter *adapter,
 {
 	int ret = 0;
 	mac_handle_t mac_handle = hdd_ctx->mac_handle;
-	bool ese_mode = sme_get_is_ese_feature_enabled(mac_handle);
+	bool ese_mode = ucfg_cm_get_is_ese_feature_enabled(hdd_ctx->psoc);
 	char extra[32];
 	uint8_t len = 0;
 	struct pmkid_mode_bits pmkid_modes;
@@ -3504,7 +3504,7 @@ static int drv_cmd_get_okc_mode(struct hdd_adapter *adapter,
 	 * then this operation is not permitted (return FAILURE)
 	 */
 	if (pmkid_modes.fw_okc &&
-	    sme_get_is_ese_feature_enabled(mac_handle) &&
+	    ucfg_cm_get_is_ese_feature_enabled(hdd_ctx->psoc) &&
 	    sme_get_is_ft_feature_enabled(mac_handle)) {
 		hdd_warn("PMKID/ESE/11R are supported simultaneously hence this operation is not permitted!");
 		ret = -EPERM;
@@ -4361,7 +4361,7 @@ static int drv_cmd_set_okc_mode(struct hdd_adapter *adapter,
 	 * then this operation is not permitted (return FAILURE)
 	 */
 	mac_handle = hdd_ctx->mac_handle;
-	if (sme_get_is_ese_feature_enabled(mac_handle) &&
+	if (ucfg_cm_get_is_ese_feature_enabled(hdd_ctx->psoc) &&
 	    pmkid_modes.fw_okc &&
 	    sme_get_is_ft_feature_enabled(mac_handle)) {
 		hdd_warn("PMKID/ESE/11R are supported simultaneously hence this operation is not permitted!");
@@ -4922,7 +4922,7 @@ static int drv_cmd_set_ccx_mode(struct hdd_adapter *adapter,
 	 * Check if the features OKC/ESE/11R are supported simultaneously,
 	 * then this operation is not permitted (return FAILURE)
 	 */
-	if (sme_get_is_ese_feature_enabled(mac_handle) &&
+	if (ucfg_cm_get_is_ese_feature_enabled(hdd_ctx->psoc) &&
 	    pmkid_modes.fw_okc &&
 	    sme_get_is_ft_feature_enabled(mac_handle)) {
 		hdd_warn("OKC/ESE/11R are supported simultaneously hence this operation is not permitted!");

@@ -1151,17 +1151,6 @@ QDF_STATUS sme_set_roam_bmiss_first_bcnt(mac_handle_t mac_handle,
 QDF_STATUS sme_set_roam_bmiss_final_bcnt(mac_handle_t mac_handle,
 					 uint8_t sessionId,
 					 const uint8_t nRoamBmissFinalBcnt);
-/**
- * sme_get_roam_rssi_diff() - get Roam rssi diff
- * @mac_handle: The handle returned by mac_open
- * @vdev_id: vdev identifier
- * @rssi_diff: Buffer to fill the roam RSSI diff.
- *	       Valid only if the return status is success.
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS sme_get_roam_rssi_diff(mac_handle_t mac_handle, uint8_t vdev_id,
-				  uint8_t *rssi_diff);
 QDF_STATUS sme_change_roam_scan_channel_list(mac_handle_t mac_handle,
 					     uint8_t sessionId,
 					     uint32_t *channel_freq_list,
@@ -1189,7 +1178,6 @@ QDF_STATUS sme_get_roam_scan_channel_list(mac_handle_t mac_handle,
 					  uint8_t *pNumChannels,
 					  uint8_t sessionId);
 
-bool sme_get_is_ese_feature_enabled(mac_handle_t mac_handle);
 bool sme_get_wes_mode(mac_handle_t mac_handle);
 bool sme_get_is_lfr_feature_enabled(mac_handle_t mac_handle);
 bool sme_get_is_ft_feature_enabled(mac_handle_t mac_handle);
