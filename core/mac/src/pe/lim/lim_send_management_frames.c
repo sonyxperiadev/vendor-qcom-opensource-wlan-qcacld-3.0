@@ -1904,7 +1904,8 @@ lim_send_assoc_rsp_mgmt_frame(struct mac_context *mac_ctx,
 	if (sta && lim_is_sta_eht_capable(sta) &&
 	    lim_is_mlo_conn(pe_session, sta) &&
 	    lim_is_session_eht_capable(pe_session) &&
-	    wlan_vdev_mlme_is_mlo_ap(pe_session->vdev)) {
+	    wlan_vdev_mlme_is_mlo_ap(pe_session->vdev) &&
+	    (status_code != STATUS_ASSOC_REJECTED_TEMPORARILY)) {
 		pe_debug("Populate mlo IEs");
 		mlo_ie_len = lim_send_assoc_rsp_mgmt_frame_mlo(mac_ctx,
 							       pe_session,
