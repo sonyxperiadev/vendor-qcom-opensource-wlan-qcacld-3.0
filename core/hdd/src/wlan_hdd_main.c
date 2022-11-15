@@ -237,6 +237,8 @@
 #include "os_if_dp.h"
 #include <wlan_dp_ucfg_api.h>
 #include "wlan_psoc_mlme_ucfg_api.h"
+#include "os_if_qmi.h"
+#include "wlan_qmi_ucfg_api.h"
 
 #ifdef MULTI_CLIENT_LL_SUPPORT
 #define WLAM_WLM_HOST_DRIVER_PORT_ID 0xFFFFFF
@@ -4200,6 +4202,19 @@ static int hdd_deconfigure_cds(struct hdd_context *hdd_ctx)
 	return ret;
 }
 
+/**
+ * hdd_qmi_register_callbacks() - Register QMI callbacks
+ * @hdd_ctx: HDD context
+ *
+ * Return: None
+ */
+static inline void hdd_qmi_register_callbacks(struct hdd_context *hdd_ctx)
+{
+	struct wlan_qmi_psoc_callbacks cb_obj;
+
+	os_if_qmi_register_callbacks(hdd_ctx->psoc, &cb_obj);
+}
+
 int hdd_wlan_start_modules(struct hdd_context *hdd_ctx, bool reinit)
 {
 	int ret = 0;
@@ -4302,6 +4317,8 @@ int hdd_wlan_start_modules(struct hdd_context *hdd_ctx, bool reinit)
 		hdd_update_cds_ac_specs_params(hdd_ctx);
 
 		hdd_dp_register_callbacks(hdd_ctx);
+
+		hdd_qmi_register_callbacks(hdd_ctx);
 
 		status = hdd_component_psoc_open(hdd_ctx->psoc);
 		if (QDF_IS_STATUS_ERROR(status)) {
@@ -17301,8 +17318,14 @@ static QDF_STATUS hdd_component_init(void)
 	if (QDF_IS_STATUS_ERROR(status))
 		goto pre_cac_deinit;
 
+	status = ucfg_qmi_init();
+	if (QDF_IS_STATUS_ERROR(status))
+		goto dp_deinit;
+
 	return QDF_STATUS_SUCCESS;
 
+dp_deinit:
+	ucfg_dp_deinit();
 pre_cac_deinit:
 	ucfg_pre_cac_deinit();
 pkt_capture_deinit:
@@ -17351,6 +17374,7 @@ mlme_global_deinit:
 static void hdd_component_deinit(void)
 {
 	/* deinitialize non-converged components */
+	ucfg_qmi_deinit();
 	ucfg_dp_deinit();
 	ucfg_pre_cac_deinit();
 	ucfg_ftm_time_sync_deinit();
