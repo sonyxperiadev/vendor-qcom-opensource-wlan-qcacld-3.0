@@ -428,6 +428,19 @@ void lim_cleanup_mlm(struct mac_context *);
 
 #ifdef WLAN_FEATURE_11BE
 /**
+ * lim_process_bcn_prb_rsp_t2lm() - process beacon/probe response
+ * 11be t2lm IE
+ * @mac_ctx: global mac context
+ * @session: pe session
+ * @bcn_ptr: pointer to tpSirProbeRespBeacon
+ *
+ * Return none
+ */
+void lim_process_bcn_prb_rsp_t2lm(struct mac_context *mac_ctx,
+				  struct pe_session *session,
+				  tpSirProbeRespBeacon bcn_ptr);
+
+/**
  * lim_process_beacon_eht() - process beacon 11be IE
  * @mac_ctx: global mac context
  * @session: pe session
@@ -459,6 +472,13 @@ void lim_process_beacon_eht(struct mac_context *mac_ctx,
 static inline
 void lim_process_beacon_eht_op(struct pe_session *session,
 			       tDot11fIEeht_op *eht_op)
+{
+}
+
+static inline
+void lim_process_bcn_prb_rsp_t2lm(struct mac_context *mac_ctx,
+				  struct pe_session *session,
+				  tpSirProbeRespBeacon bcn_ptr)
 {
 }
 #endif

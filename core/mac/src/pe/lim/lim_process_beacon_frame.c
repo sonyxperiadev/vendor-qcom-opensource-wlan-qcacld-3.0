@@ -44,6 +44,40 @@
 #endif
 
 #ifdef WLAN_FEATURE_11BE_MLO
+void lim_process_bcn_prb_rsp_t2lm(struct mac_context *mac_ctx,
+				  struct pe_session *session,
+				  tpSirProbeRespBeacon bcn_ptr)
+{
+	struct wlan_objmgr_vdev *vdev;
+	struct wlan_mlo_dev_context *mlo_ctx;
+
+	if (!session || !bcn_ptr || !mac_ctx) {
+		pe_err("invalid input parameters");
+		return;
+	}
+
+	vdev = session->vdev;
+	if (!vdev || !wlan_vdev_mlme_is_mlo_vdev(vdev))
+		return;
+
+	mlo_ctx = vdev->mlo_dev_ctx;
+	if (!mlo_ctx) {
+		pe_err("null mlo_dev_ctx");
+		return;
+	}
+
+	if (!bcn_ptr->t2lm_ctx.num_of_t2lm_ie) {
+		pe_debug("tid to link mapping ie not present in beacon/prb rsp");
+		return;
+	}
+
+	mlo_ctx->t2lm_ctx.num_of_t2lm_ie = bcn_ptr->t2lm_ctx.num_of_t2lm_ie;
+	qdf_mem_copy(&mlo_ctx->t2lm_ctx.t2lm_ie,
+		     &bcn_ptr->t2lm_ctx.t2lm_ie,
+		     sizeof(struct wlan_mlo_t2lm_ie) *
+		     mlo_ctx->t2lm_ctx.num_of_t2lm_ie);
+}
+
 void lim_process_beacon_mlo(struct mac_context *mac_ctx,
 			    struct pe_session *session,
 			    tSchBeaconStruct *bcn_ptr)
@@ -391,6 +425,7 @@ lim_process_beacon_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 		goto end;
 
 	lim_process_beacon_eht(mac_ctx, session, bcn_ptr);
+	lim_process_bcn_prb_rsp_t2lm(mac_ctx, session, bcn_ptr);
 
 	/*
 	 * during scanning, when any session is active, and

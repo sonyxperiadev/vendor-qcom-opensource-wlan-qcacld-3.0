@@ -157,6 +157,7 @@ lim_process_probe_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_Packet_info
 	qdf_trace_hex_dump(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG, body,
 			   frame_len);
 
+	lim_process_bcn_prb_rsp_t2lm(mac_ctx, session_entry, probe_rsp);
 	lim_gen_link_specific_probe_rsp(mac_ctx, session_entry,
 					probe_rsp,
 					body,

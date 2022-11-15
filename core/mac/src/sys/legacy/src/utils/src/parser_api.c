@@ -55,6 +55,9 @@
 #include <lim_mlo.h>
 #include <utils_mlo.h>
 #endif
+#ifdef WLAN_FEATURE_11BE
+#include <wlan_mlo_t2lm.h>
+#endif
 
 #if defined(WLAN_SUPPORT_TWT) && defined(WLAN_FEATURE_11AX) && \
 	defined(WLAN_TWT_CONV_SUPPORTED)
@@ -2815,6 +2818,37 @@ sir_convert_probe_frame2_mlo_struct(uint8_t *pframe,
 }
 #endif
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static QDF_STATUS
+sir_convert_probe_frame2_t2lm_struct(tDot11fProbeResponse *pr,
+				     tpSirProbeRespBeacon bcn_struct)
+{
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	uint8_t i;
+
+	if (!pr->num_t2lm_ie) {
+		pe_debug("T2LM IEs not present");
+		return status;
+	}
+	bcn_struct->t2lm_ctx.num_of_t2lm_ie = pr->num_t2lm_ie;
+	pe_debug("Number of T2LM IEs in probe rsp %d", pr->num_t2lm_ie);
+	for (i = 0; i < pr->num_t2lm_ie; i++) {
+		status = wlan_mlo_parse_bcn_prbresp_t2lm_ie(&bcn_struct->t2lm_ctx,
+							    &pr->t2lm_ie[i].data[0]);
+		if (QDF_IS_STATUS_ERROR(status))
+			return status;
+	}
+	return status;
+}
+#else
+static inline QDF_STATUS
+sir_convert_probe_frame2_t2lm_struct(tDot11fProbeResponse *pr,
+				     tpSirProbeRespBeacon bcn_struct)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 QDF_STATUS sir_convert_probe_frame2_struct(struct mac_context *mac,
 					      uint8_t *pFrame,
 					      uint32_t nFrame,
@@ -3085,6 +3119,7 @@ QDF_STATUS sir_convert_probe_frame2_struct(struct mac_context *mac,
 	sir_convert_probe_frame2_eht_struct(pr, pProbeResp);
 	update_bss_color_change_ie_from_probe_rsp(pr, pProbeResp);
 	sir_convert_probe_frame2_mlo_struct(pFrame, nFrame, pr, pProbeResp);
+	sir_convert_probe_frame2_t2lm_struct(pr, pProbeResp);
 
 	qdf_mem_free(pr);
 	return QDF_STATUS_SUCCESS;
@@ -4929,6 +4964,38 @@ static inline void convert_bcon_bss_color_change_ie(tDot11fBeacon *bcn_frm,
 
 #ifdef WLAN_FEATURE_11BE_MLO
 static QDF_STATUS
+sir_convert_beacon_frame2_t2lm_struct(tDot11fBeacon *bcn_frm,
+				      tpSirProbeRespBeacon bcn_struct)
+{
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	uint8_t i;
+
+	if (!bcn_frm->num_t2lm_ie) {
+		pe_debug("T2LM IEs not present");
+		return status;
+	}
+
+	bcn_struct->t2lm_ctx.num_of_t2lm_ie = bcn_frm->num_t2lm_ie;
+	pe_debug("Number of T2LM IEs in probe rsp %d", bcn_frm->num_t2lm_ie);
+	for (i = 0; i < bcn_frm->num_t2lm_ie; i++) {
+		status = wlan_mlo_parse_bcn_prbresp_t2lm_ie(&bcn_struct->t2lm_ctx,
+							    &bcn_frm->t2lm_ie[i].data[0]);
+		if (QDF_IS_STATUS_ERROR(status))
+			return status;
+	}
+	return status;
+}
+#else
+static inline QDF_STATUS
+sir_convert_beacon_frame2_t2lm_struct(tDot11fBeacon *bcn_frm,
+				      tpSirProbeRespBeacon bcn_struct)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
+#ifdef WLAN_FEATURE_11BE_MLO
+static QDF_STATUS
 sir_convert_beacon_frame2_mlo_struct(uint8_t *pframe, uint32_t nframe,
 				     tDot11fBeacon *bcn_frm,
 				     tpSirProbeRespBeacon bcn_struct)
@@ -5230,7 +5297,6 @@ sir_convert_beacon_frame2_struct(struct mac_context *mac,
 								     MobilityDomain.
 								     resourceReqCap
 								     << 1));
-
 	}
 
 #ifdef FEATURE_WLAN_ESE
@@ -5365,6 +5431,7 @@ sir_convert_beacon_frame2_struct(struct mac_context *mac,
 	convert_bcon_bss_color_change_ie(pBeacon, pBeaconStruct);
 	sir_convert_beacon_frame2_mlo_struct(pPayload, nPayload, pBeacon,
 					     pBeaconStruct);
+	sir_convert_beacon_frame2_t2lm_struct(pBeacon, pBeaconStruct);
 
 	qdf_mem_free(pBeacon);
 	return QDF_STATUS_SUCCESS;

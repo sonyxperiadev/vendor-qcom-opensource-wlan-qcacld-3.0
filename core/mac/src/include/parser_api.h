@@ -311,6 +311,7 @@ typedef struct sSirProbeRespBeacon {
 	uint8_t ap_power_type;
 #ifdef WLAN_FEATURE_11BE_MLO
 	struct sir_multi_link_ie mlo_ie;
+	struct wlan_t2lm_context t2lm_ctx;
 #endif
 	tDot11fIEWMMParams wmm_params;
 } tSirProbeRespBeacon, *tpSirProbeRespBeacon;
