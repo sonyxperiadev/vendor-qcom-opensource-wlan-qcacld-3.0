@@ -14050,6 +14050,21 @@ uint8_t hdd_get_sap_operating_band(struct hdd_context *hdd_ctx)
 	return operating_band;
 }
 
+static inline
+QDF_STATUS wlan_hdd_config_dp_direct_link_profile(struct wlan_objmgr_vdev *vdev,
+						  uint8_t ap_config)
+{
+	switch (ap_config) {
+	case QCA_WLAN_CONCURRENT_AP_POLICY_GAMING_AUDIO:
+		return ucfg_dp_config_direct_link(vdev, true, true);
+	case QCA_WLAN_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING:
+		return ucfg_dp_config_direct_link(vdev, true, false);
+	case QCA_WLAN_CONCURRENT_AP_POLICY_UNSPECIFIED:
+	default:
+		return ucfg_dp_config_direct_link(vdev, false, false);
+	}
+}
+
 const struct nla_policy
 wlan_hdd_set_sta_roam_config_policy[
 QCA_WLAN_VENDOR_ATTR_STA_CONNECT_ROAM_POLICY_MAX + 1] = {
@@ -14240,6 +14255,12 @@ static int __wlan_hdd_cfg80211_ap_policy(struct wlan_objmgr_vdev *vdev,
 
 	if (ap_config > QCA_WLAN_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING) {
 		hdd_err_rl("Invalid concurrent policy ap config %d", ap_config);
+		return -EINVAL;
+	}
+
+	status = wlan_hdd_config_dp_direct_link_profile(vdev, ap_config);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		hdd_err("failed to set DP ap config");
 		return -EINVAL;
 	}
 
