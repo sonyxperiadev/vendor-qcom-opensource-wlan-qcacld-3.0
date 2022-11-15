@@ -6385,7 +6385,7 @@ void wlan_mlme_get_feature_info(struct wlan_objmgr_psoc *psoc,
 				struct wlan_mlme_features *mlme_feature_set)
 {
 	uint32_t roam_triggers;
-	int sap_max_num_clients;
+	int sap_max_num_clients = 0;
 	bool is_enable_idle_roam = false, is_bss_load_enabled = false;
 
 	wlan_mlme_get_latency_enable(psoc,

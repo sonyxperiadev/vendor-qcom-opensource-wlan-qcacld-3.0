@@ -206,7 +206,7 @@ ucfg_twt_get_all_peer_session_params(struct wlan_objmgr_psoc *psoc_obj,
 	struct peer_mc_cp_stats *mc_cp_stats;
 	int num_twt_session = 0;
 	enum QDF_OPMODE opmode;
-	int sap_max_peer;
+	int sap_max_peer = 0;
 
 	if (!psoc_obj) {
 		cp_stats_err("psoc is NULL");
