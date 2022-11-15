@@ -479,7 +479,7 @@ static void wma_set_feature_set_info(tp_wma_handle wma_handle,
 	feature_set->peer_bigdata_getbssinfo_support = true;
 	feature_set->peer_bigdata_assocreject_info_support = true;
 	feature_set->peer_getstainfo_support = true;
-	feature_set->feature_set_version = 1;
+	feature_set->feature_set_version = 2;
 }
 
 /**
