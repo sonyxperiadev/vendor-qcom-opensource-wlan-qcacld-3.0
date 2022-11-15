@@ -36,10 +36,10 @@
 #include "target_if_ocb.h"
 
 /**
- * ocb_get_cmd_type_str() - parse cmd to string
- * @cmd_type: ocb cmd type
+ * ocb_get_evt_type_str() - parse event to string
+ * @evt_type: ocb event type
  *
- * This function parse ocb cmd to string.
+ * This function parse ocb event to string.
  *
  * Return: command string
  */
