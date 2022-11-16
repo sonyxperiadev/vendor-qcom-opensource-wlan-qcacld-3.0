@@ -7640,7 +7640,7 @@ void wlan_hdd_display_tx_multiq_stats(hdd_cb_handle context, uint8_t vdev_id)
 	uint32_t total_qselect_existing_skb_hash = 0;
 	uint32_t total_qselect_sk_tx_map = 0;
 	uint32_t total_qselect_skb_hash = 0;
-	uint8_t i;
+	unsigned int i;
 
 	hdd_ctx = hdd_cb_handle_to_context(context);
 	if (!hdd_ctx) {

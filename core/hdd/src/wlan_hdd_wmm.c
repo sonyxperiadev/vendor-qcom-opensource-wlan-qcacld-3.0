@@ -392,7 +392,7 @@ static void hdd_wmm_inactivity_timer_cb(void *user_data)
 	QDF_STATUS qdf_status;
 	uint32_t traffic_count = 0;
 	sme_ac_enum_type ac_type;
-	uint8_t cpu;
+	unsigned int cpu;
 
 	if (!qos_context) {
 		hdd_err("invalid user data");
@@ -461,7 +461,7 @@ hdd_wmm_enable_inactivity_timer(struct hdd_wmm_qos_context *qos_context,
 	struct hdd_adapter *adapter = qos_context->adapter;
 	sme_ac_enum_type ac_type = qos_context->ac_type;
 	struct hdd_wmm_ac_status *ac;
-	uint8_t cpu;
+	unsigned int cpu;
 
 	adapter = qos_context->adapter;
 	ac = &adapter->hdd_wmm_status.ac_status[ac_type];

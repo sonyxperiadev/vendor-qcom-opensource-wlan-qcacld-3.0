@@ -10304,7 +10304,7 @@ void hdd_send_mscs_action_frame(struct hdd_context *hdd_ctx,
 {
 	uint64_t mscs_vo_pkt_delta;
 	unsigned long tx_vo_pkts = 0;
-	uint8_t cpu;
+	unsigned int cpu;
 	struct hdd_tx_rx_stats *stats = &adapter->hdd_stats.tx_rx_stats;
 	uint32_t bus_bw_compute_interval;
 
