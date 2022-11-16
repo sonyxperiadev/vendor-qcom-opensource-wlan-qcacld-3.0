@@ -288,7 +288,7 @@ static int __wlan_hdd_mgmt_tx(struct wiphy *wiphy, struct wireless_dev *wdev,
 	uint16_t auth_algo;
 	QDF_STATUS qdf_status;
 	int ret;
-	uint32_t ft_info_len = 0;
+	uint32_t assoc_resp_len, ft_info_len = 0;
 	const uint8_t  *assoc_resp;
 	void *ft_info;
 	struct hdd_ap_ctx *hdd_ap_ctx;
@@ -358,6 +358,13 @@ static int __wlan_hdd_mgmt_tx(struct wiphy *wiphy, struct wireless_dev *wdev,
 	    (sub_type == SIR_MAC_MGMT_ASSOC_RSP ||
 	     sub_type == SIR_MAC_MGMT_REASSOC_RSP)) {
 		assoc_resp = &((struct ieee80211_mgmt *)buf)->u.assoc_resp.variable[0];
+		assoc_resp_len = len - WLAN_ASSOC_RSP_IES_OFFSET
+			   - sizeof(struct wlan_frame_hdr);
+		if (!wlan_get_ie_ptr_from_eid(DOT11F_EID_FTINFO,
+					      assoc_resp, assoc_resp_len)) {
+			hdd_debug("No FT info in Assoc rsp, send it directly");
+			goto off_chan_tx;
+		}
 		ft_info = hdd_filter_ft_info(assoc_resp, len, &ft_info_len);
 		if (!ft_info || !ft_info_len)
 			return -EINVAL;
