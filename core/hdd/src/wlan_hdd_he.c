@@ -617,8 +617,9 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 	sr_ctrl = wlan_vdev_mlme_get_sr_ctrl(adapter->vdev);
 	if ((adapter->device_mode == QDF_STA_MODE) &&
 	    (!ucfg_cm_is_vdev_connected(adapter->vdev) ||
-	     !(sr_ctrl && ((sr_ctrl & NON_SRG_PD_SR_DISALLOWED) ||
-	     !(sr_ctrl & SRG_INFO_PRESENT))))) {
+	     !sr_ctrl ||
+	    ((sr_ctrl & NON_SRG_PD_SR_DISALLOWED) &&
+	    !(sr_ctrl & SRG_INFO_PRESENT)))) {
 		hdd_err("station is not connected to AP that supports SR");
 		return -EPERM;
 	}
