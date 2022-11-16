@@ -1395,6 +1395,18 @@ QDF_STATUS ucfg_dp_wfds_new_server(void);
  * Return: None
  */
 void ucfg_dp_wfds_del_server(void);
+
+/**
+ * ucfg_dp_config_direct_link() - Set direct link config for vdev
+ * @vdev: objmgr Vdev handle
+ * @config_direct_link: Flag to enable direct link path
+ * @enable_low_latency: Flag to enable low link latency
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS ucfg_dp_config_direct_link(struct wlan_objmgr_vdev *vdev,
+				      bool config_direct_link,
+				      bool enable_low_latency);
 #else
 static inline
 QDF_STATUS ucfg_dp_direct_link_init(struct wlan_objmgr_psoc *psoc)
@@ -1427,5 +1439,13 @@ static inline void ucfg_dp_wfds_del_server(void)
 {
 }
 #endif
+
+static inline
+QDF_STATUS ucfg_dp_config_direct_link(struct wlan_objmgr_vdev *vdev,
+				      bool enable_direct_link,
+				      bool enable_low_latency)
+{
+	return QDF_STATUS_SUCCESS;
+}
 #endif
 #endif /* _WLAN_DP_UCFG_API_H_ */

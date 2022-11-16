@@ -266,6 +266,11 @@ struct link_monitoring {
 	uint8_t is_rx_linkspeed_good;
 };
 
+struct direct_link_info {
+	bool config_set;
+	bool low_latency;
+};
+
 /**
  * struct wlan_dp_intf - DP interface object related info
  * @dp_ctx: DP context reference
@@ -350,6 +355,9 @@ struct wlan_dp_intf {
 	enum bss_intf_state bss_state;
 	qdf_event_t qdf_sta_eap_frm_done_event;
 	struct dp_traffic_end_indication traffic_end_ind;
+#ifdef FEATURE_DIRECT_LINK
+	struct direct_link_info direct_link_config;
+#endif
 };
 
 /**
