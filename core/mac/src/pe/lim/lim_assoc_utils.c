@@ -3347,8 +3347,8 @@ lim_check_and_announce_join_success(struct mac_context *mac_ctx,
 					&aid,
 					&session_entry->dph.dphHashTable);
 
-	if (QDF_IS_STATUS_SUCCESS(lim_update_srp_ie(beacon_probe_rsp,
-						    sta_ds))) {
+	if (sta_ds && QDF_IS_STATUS_SUCCESS(lim_update_srp_ie(beacon_probe_rsp,
+							      sta_ds))) {
 		/* update the SR parameters */
 		lim_update_vdev_sr_elements(session_entry, sta_ds);
 		/* TODO: Need to send SRP IE update event to userspace */
