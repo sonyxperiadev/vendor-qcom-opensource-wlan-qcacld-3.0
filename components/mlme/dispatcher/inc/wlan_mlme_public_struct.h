@@ -343,6 +343,7 @@ enum mlme_ts_info_ack_policy {
  * @mlme_edca_ac_vi: value for edca_ac_vi
  * @mlme_edca_ac_bk: value for edca_ac_bk
  * @mlme_edca_ac_be: value for edca_ac_be
+ * @edca_param_type: Edca param type
  */
 struct wlan_mlme_edca_params {
 	struct mlme_cfg_str ani_acbk_l;
@@ -378,6 +379,8 @@ struct wlan_mlme_edca_params {
 	struct mlme_edca_ac_vi edca_ac_vi;
 	struct mlme_edca_ac_bk edca_ac_bk;
 	struct mlme_edca_ac_be edca_ac_be;
+
+	uint8_t edca_param_type;
 };
 
 #define WLAN_CFG_MFR_NAME_LEN (63)
