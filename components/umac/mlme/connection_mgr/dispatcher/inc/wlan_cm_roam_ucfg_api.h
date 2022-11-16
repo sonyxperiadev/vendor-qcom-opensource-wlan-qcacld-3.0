@@ -486,13 +486,13 @@ ucfg_cm_get_empty_scan_refresh_period(struct wlan_objmgr_psoc *psoc,
  * ucfg_cm_get_neighbor_scan_min_chan_time() -
  * get neighbor scan min channel time
  * @psoc: pointer to psoc object
- * @session_id: session_id
+ * @vdev_id: vdev_id
  *
  * Return: channel min time value
  */
 uint16_t
 ucfg_cm_get_neighbor_scan_min_chan_time(struct wlan_objmgr_psoc *psoc,
-					uint8_t session_id);
+					uint8_t vdev_id);
 
 /**
  * ucfg_cm_get_roam_rssi_diff() - Get Roam rssi diff
@@ -548,4 +548,34 @@ ucfg_cm_get_neighbor_scan_max_chan_time(struct wlan_objmgr_psoc *psoc,
 uint16_t
 ucfg_cm_get_neighbor_scan_period(struct wlan_objmgr_psoc *psoc,
 				 uint8_t vdev_id);
+
+/**
+ * ucfg_cm_get_wes_mode() - Get WES Mode
+ * This is a synchronous call
+ * @psoc: pointer to psoc object
+ *
+ * Return: WES Mode Enabled(1)/Disabled(0)
+ */
+bool ucfg_cm_get_wes_mode(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_cm_get_is_lfr_feature_enabled() - Get LFR feature enabled or not
+ * This is a synchronous call
+ * @psoc: pointer to psoc object
+ *
+ * Return: true (1) - if the feature is enabled
+ *	false (0) - if feature is disabled (compile or runtime)
+ */
+bool ucfg_cm_get_is_lfr_feature_enabled(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_cm_get_is_ft_feature_enabled() - Get FT feature enabled or not
+ * This is a synchronous call
+ * @psoc: pointer to psoc object
+ *
+ * Return: true (1) - if the feature is enabled
+ *	false (0) - if feature is disabled (compile or runtime)
+ */
+bool ucfg_cm_get_is_ft_feature_enabled(struct wlan_objmgr_psoc *psoc);
+
 #endif /* _WLAN_CM_ROAM_UCFG_API_H_ */

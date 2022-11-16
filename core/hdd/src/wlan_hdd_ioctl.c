@@ -3102,7 +3102,7 @@ static int drv_cmd_get_roam_mode(struct hdd_adapter *adapter,
 				 struct hdd_priv_data *priv_data)
 {
 	int ret = 0;
-	bool roam_mode = sme_get_is_lfr_feature_enabled(hdd_ctx->mac_handle);
+	bool roam_mode = ucfg_cm_get_is_lfr_feature_enabled(hdd_ctx->psoc);
 	char extra[32];
 	uint8_t len;
 
@@ -3454,7 +3454,6 @@ static int drv_cmd_get_ccx_mode(struct hdd_adapter *adapter,
 				struct hdd_priv_data *priv_data)
 {
 	int ret = 0;
-	mac_handle_t mac_handle = hdd_ctx->mac_handle;
 	bool ese_mode = ucfg_cm_get_is_ese_feature_enabled(hdd_ctx->psoc);
 	char extra[32];
 	uint8_t len = 0;
@@ -3467,7 +3466,7 @@ static int drv_cmd_get_ccx_mode(struct hdd_adapter *adapter,
 	 */
 	if (ese_mode &&
 	    (pmkid_modes.fw_okc || pmkid_modes.fw_pmksa_cache) &&
-	    sme_get_is_ft_feature_enabled(mac_handle)) {
+	    ucfg_cm_get_is_ft_feature_enabled(hdd_ctx->psoc)) {
 		hdd_warn("PMKID/ESE/11R are supported simultaneously hence this operation is not permitted!");
 		ret = -EPERM;
 		goto exit;
@@ -3496,7 +3495,6 @@ static int drv_cmd_get_okc_mode(struct hdd_adapter *adapter,
 	struct pmkid_mode_bits pmkid_modes;
 	char extra[32];
 	uint8_t len = 0;
-	mac_handle_t mac_handle = hdd_ctx->mac_handle;
 
 	hdd_get_pmkid_modes(hdd_ctx, &pmkid_modes);
 	/*
@@ -3505,7 +3503,7 @@ static int drv_cmd_get_okc_mode(struct hdd_adapter *adapter,
 	 */
 	if (pmkid_modes.fw_okc &&
 	    ucfg_cm_get_is_ese_feature_enabled(hdd_ctx->psoc) &&
-	    sme_get_is_ft_feature_enabled(mac_handle)) {
+	    ucfg_cm_get_is_ft_feature_enabled(hdd_ctx->psoc)) {
 		hdd_warn("PMKID/ESE/11R are supported simultaneously hence this operation is not permitted!");
 		ret = -EPERM;
 		goto exit;
@@ -3532,7 +3530,7 @@ static int drv_cmd_get_fast_roam(struct hdd_adapter *adapter,
 				 struct hdd_priv_data *priv_data)
 {
 	int ret = 0;
-	bool lfr_mode = sme_get_is_lfr_feature_enabled(hdd_ctx->mac_handle);
+	bool lfr_mode = ucfg_cm_get_is_lfr_feature_enabled(hdd_ctx->psoc);
 	char extra[32];
 	uint8_t len = 0;
 
@@ -3555,7 +3553,7 @@ static int drv_cmd_get_fast_transition(struct hdd_adapter *adapter,
 				       struct hdd_priv_data *priv_data)
 {
 	int ret = 0;
-	bool ft = sme_get_is_ft_feature_enabled(hdd_ctx->mac_handle);
+	bool ft = ucfg_cm_get_is_ft_feature_enabled(hdd_ctx->psoc);
 	char extra[32];
 	uint8_t len = 0;
 
@@ -4093,7 +4091,7 @@ static int drv_cmd_get_wes_mode(struct hdd_adapter *adapter,
 				struct hdd_priv_data *priv_data)
 {
 	int ret = 0;
-	bool wes_mode = sme_get_wes_mode(hdd_ctx->mac_handle);
+	bool wes_mode = ucfg_cm_get_wes_mode(hdd_ctx->psoc);
 	char extra[32];
 	uint8_t len = 0;
 
@@ -4351,7 +4349,6 @@ static int drv_cmd_set_okc_mode(struct hdd_adapter *adapter,
 	uint8_t *value = command;
 	uint32_t okc_mode;
 	struct pmkid_mode_bits pmkid_modes;
-	mac_handle_t mac_handle;
 	uint32_t cur_pmkid_modes;
 	QDF_STATUS status;
 
@@ -4361,10 +4358,9 @@ static int drv_cmd_set_okc_mode(struct hdd_adapter *adapter,
 	 * Check if the features PMKID/ESE/11R are supported simultaneously,
 	 * then this operation is not permitted (return FAILURE)
 	 */
-	mac_handle = hdd_ctx->mac_handle;
 	if (ucfg_cm_get_is_ese_feature_enabled(hdd_ctx->psoc) &&
 	    pmkid_modes.fw_okc &&
-	    sme_get_is_ft_feature_enabled(mac_handle)) {
+	    ucfg_cm_get_is_ft_feature_enabled(hdd_ctx->psoc)) {
 		hdd_warn("PMKID/ESE/11R are supported simultaneously hence this operation is not permitted!");
 		ret = -EPERM;
 		goto exit;
@@ -4925,7 +4921,7 @@ static int drv_cmd_set_ccx_mode(struct hdd_adapter *adapter,
 	 */
 	if (ucfg_cm_get_is_ese_feature_enabled(hdd_ctx->psoc) &&
 	    pmkid_modes.fw_okc &&
-	    sme_get_is_ft_feature_enabled(mac_handle)) {
+	    ucfg_cm_get_is_ft_feature_enabled(hdd_ctx->psoc)) {
 		hdd_warn("OKC/ESE/11R are supported simultaneously hence this operation is not permitted!");
 		ret = -EPERM;
 		goto exit;

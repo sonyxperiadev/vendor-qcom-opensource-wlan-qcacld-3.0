@@ -574,11 +574,11 @@ ucfg_cm_get_empty_scan_refresh_period(struct wlan_objmgr_psoc *psoc,
 
 uint16_t
 ucfg_cm_get_neighbor_scan_min_chan_time(struct wlan_objmgr_psoc *psoc,
-					uint8_t session_id)
+					uint8_t vdev_id)
 {
 	struct cm_roam_values_copy temp;
 
-	wlan_cm_roam_cfg_get_value(psoc, session_id,
+	wlan_cm_roam_cfg_get_value(psoc, vdev_id,
 				   SCAN_MIN_CHAN_TIME, &temp);
 
 	return temp.uint_value;
@@ -631,4 +631,37 @@ ucfg_cm_get_neighbor_scan_period(struct wlan_objmgr_psoc *psoc,
 	wlan_cm_roam_cfg_get_value(psoc, vdev_id,
 				   NEIGHBOR_SCAN_PERIOD, &temp);
 	return temp.uint_value;
+}
+
+bool ucfg_cm_get_wes_mode(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return false;
+
+	return mlme_obj->cfg.lfr.wes_mode_enabled;
+}
+
+bool ucfg_cm_get_is_lfr_feature_enabled(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return false;
+
+	return mlme_obj->cfg.lfr.lfr_enabled;
+}
+
+bool ucfg_cm_get_is_ft_feature_enabled(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return false;
+
+	return mlme_obj->cfg.lfr.fast_transition_enabled;
 }
