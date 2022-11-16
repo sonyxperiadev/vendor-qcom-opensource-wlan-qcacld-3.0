@@ -262,7 +262,7 @@ dp_psoc_obj_create_notification(struct wlan_objmgr_psoc *psoc, void *arg);
 /**
  * dp_psoc_obj_destroy_notification() - Free psoc private object
  * @psoc: psoc context
- * @data: Pointer to data
+ * @arg: Pointer to arguments
  *
  * This function gets called from object manager when psoc is being
  * deleted and delete DP soc context.
@@ -273,7 +273,7 @@ QDF_STATUS
 dp_psoc_obj_destroy_notification(struct wlan_objmgr_psoc *psoc, void *arg);
 
 /**
- * dp_ttach_ctx() - Api to attach dp ctx
+ * dp_attach_ctx() - Api to attach dp ctx
  * @dp_ctx : DP Context
  *
  * Helper function to attach dp ctx
@@ -428,7 +428,7 @@ void dp_send_rps_disable_ind(struct wlan_dp_intf *dp_intf);
  */
 void dp_set_rps(uint8_t vdev_id, bool enable);
 #else
-void dp_set_rps(uint8_t vdev_id, bool enable)
+static inline void dp_set_rps(uint8_t vdev_id, bool enable)
 {
 }
 #endif
@@ -549,7 +549,7 @@ struct wlan_dp_psoc_nb_ops *dp_intf_get_rx_ops(struct wlan_objmgr_psoc *psoc)
 }
 
 /**
- * dp_intf_get_rx_ops: get ARP req context from the DP context
+ * dp_get_arp_request_ctx: get ARP req context from the DP context
  * @psoc: pointer to psoc object
  *
  * Return: pointer to ARP request ctx.
