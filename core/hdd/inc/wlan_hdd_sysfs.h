@@ -107,11 +107,11 @@ hdd_sysfs_validate_and_copy_buf(char *dest_buf, size_t dest_buf_size,
 	return -EPERM;
 }
 
-static void hdd_create_sysfs_files(struct hdd_context *hdd_ctx)
+static inline void hdd_create_sysfs_files(struct hdd_context *hdd_ctx)
 {
 }
 
-static void hdd_destroy_sysfs_files(void)
+static inline void hdd_destroy_sysfs_files(void)
 {
 }
 
@@ -125,11 +125,11 @@ void hdd_sysfs_destroy_adapter_root_obj(struct hdd_adapter *adapter)
 {
 }
 
-static void hdd_create_adapter_sysfs_files(struct hdd_adapter *adapter)
+static inline void hdd_create_adapter_sysfs_files(struct hdd_adapter *adapter)
 {
 }
 
-static void hdd_destroy_adapter_sysfs_files(struct hdd_adapter *adapter)
+static inline void hdd_destroy_adapter_sysfs_files(struct hdd_adapter *adapter)
 {
 }
 
