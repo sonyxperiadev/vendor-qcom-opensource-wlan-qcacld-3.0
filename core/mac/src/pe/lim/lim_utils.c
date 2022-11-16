@@ -580,8 +580,12 @@ lim_process_pasn_delete_all_peers(struct mac_context *mac,
 	tp_wma_handle wma = cds_get_context(QDF_MODULE_ID_WMA);
 	QDF_STATUS status;
 
+	if (!wma)
+		return QDF_STATUS_E_INVAL;
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac->psoc, msg->vdev_id,
 						    WLAN_WIFI_POS_CORE_ID);
+	if (!vdev)
+		return QDF_STATUS_E_INVAL;
 	status = wma_delete_all_pasn_peers(wma, vdev);
 	if (QDF_IS_STATUS_ERROR(status))
 		pe_err("Failed to delete all PASN peers");
