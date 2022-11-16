@@ -2374,6 +2374,8 @@ struct wlan_cm_roam_tx_ops {
 	QDF_STATUS (*send_roam_ho_delay_config)(struct wlan_objmgr_vdev *vdev,
 						uint8_t vdev_id,
 						uint16_t value);
+	QDF_STATUS (*send_roam_mcc_disallow)(struct wlan_objmgr_vdev *vdev,
+					     uint8_t vdev_id, uint8_t value);
 #ifdef FEATURE_RX_LINKSPEED_ROAM_TRIGGER
 	QDF_STATUS (*send_roam_linkspeed_state)(struct wlan_objmgr_vdev *vdev,
 						uint8_t vdev_id, bool value);

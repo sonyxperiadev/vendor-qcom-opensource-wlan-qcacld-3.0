@@ -3170,9 +3170,12 @@ void lim_process_switch_channel_rsp(struct mac_context *mac,
 
 		/* If MCC upgrade/DBS downgrade happened during channel switch,
 		 * the policy manager connection table needs to be updated.
+		 * STA PCL to F/W need update after sta channel switch.
 		 */
 		policy_mgr_update_connection_info(mac->psoc,
 			pe_session->smeSessionId);
+		wlan_cm_handle_sta_sta_roaming_enablement(mac->psoc,
+							  pe_session->smeSessionId);
 		if (pe_session->opmode == QDF_P2P_CLIENT_MODE) {
 			pe_debug("Send p2p operating channel change conf action frame once first beacon is received on new channel");
 			pe_session->send_p2p_conf_frame = true;

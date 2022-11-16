@@ -651,8 +651,11 @@ cm_roam_is_change_in_band_allowed(struct wlan_objmgr_psoc *psoc,
 				  uint8_t vdev_id, uint32_t roam_band_mask)
 {
 	struct wlan_objmgr_vdev *vdev;
-	bool concurrency_is_dbs;
+	bool sta_concurrency_is_with_different_mac;
 	struct wlan_channel *chan;
+
+	if (policy_mgr_is_hw_sbs_capable(psoc))
+		return true;
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
 						    WLAN_MLME_NB_ID);
@@ -668,11 +671,12 @@ cm_roam_is_change_in_band_allowed(struct wlan_objmgr_psoc *psoc,
 		return false;
 	}
 
-	concurrency_is_dbs = policy_mgr_concurrent_sta_doing_dbs(psoc);
-	if (!concurrency_is_dbs)
+	sta_concurrency_is_with_different_mac =
+		policy_mgr_concurrent_sta_on_different_mac(psoc);
+	if (!sta_concurrency_is_with_different_mac)
 		return true;
 
-	mlme_debug("STA + STA concurrency is in DBS. ch freq %d, roam band:%d",
+	mlme_debug("sta concurrency on different mac, ch freq %d, roam band:%d",
 		   chan->ch_freq, roam_band_mask);
 
 	if (wlan_reg_freq_to_band(chan->ch_freq) == REG_BAND_2G &&
@@ -3654,20 +3658,19 @@ void cm_handle_sta_sta_roaming_enablement(struct wlan_objmgr_psoc *psoc,
 		goto rel_ref;
 	}
 
-	if (policy_mgr_concurrent_sta_doing_dbs(psoc)) {
-		mlme_debug("After roam on vdev_id:%d, STA + STA concurrency is in DBS:%d",
+	if (policy_mgr_concurrent_sta_on_different_mac(psoc)) {
+		mlme_debug("After roam on vdev_id:%d, sta concurrency on different mac:%d",
 			   curr_vdev_id, sta_count);
 		for (conn_idx = 0; conn_idx < sta_count; conn_idx++) {
 			temp_vdev_id = vdev_id_list[conn_idx];
-			if (temp_vdev_id == curr_vdev_id) {
 				wlan_cm_roam_activate_pcl_per_vdev(psoc,
-								   curr_vdev_id,
+								   temp_vdev_id,
 								   true);
 				/* Set PCL after sending roam complete */
 				policy_mgr_set_pcl_for_existing_combo(psoc,
 								PM_STA_MODE,
-								curr_vdev_id);
-			} else {
+								temp_vdev_id);
+			if (temp_vdev_id != curr_vdev_id) {
 				/* Enable roaming on secondary vdev */
 				if_mgr_enable_roaming(pdev, vdev, RSO_SET_PCL);
 			}
@@ -3881,7 +3884,8 @@ cm_roam_switch_to_init(struct wlan_objmgr_pdev *pdev,
 	enum roam_offload_state cur_state;
 	uint8_t temp_vdev_id, roam_enabled_vdev_id;
 	uint32_t roaming_bitmap;
-	bool dual_sta_roam_active, usr_disabled_roaming, sta_concurrency_is_dbs;
+	bool dual_sta_roam_active, usr_disabled_roaming;
+	bool sta_concurrency_is_with_different_mac;
 	QDF_STATUS status;
 	struct wlan_objmgr_psoc *psoc = wlan_pdev_get_psoc(pdev);
 	struct wlan_mlme_psoc_ext_obj *mlme_obj;
@@ -3897,11 +3901,12 @@ cm_roam_switch_to_init(struct wlan_objmgr_pdev *pdev,
 
 	dual_sta_policy = &mlme_obj->cfg.gen.dual_sta_policy;
 	dual_sta_roam_active = wlan_mlme_get_dual_sta_roaming_enabled(psoc);
-	sta_concurrency_is_dbs = policy_mgr_concurrent_sta_doing_dbs(psoc);
+	sta_concurrency_is_with_different_mac =
+			policy_mgr_concurrent_sta_on_different_mac(psoc);
 	cur_state = mlme_get_roam_state(psoc, vdev_id);
 
-	mlme_info("dual_sta_roam_active:%d, is_dbs:%d, state:%d",
-		  dual_sta_roam_active, sta_concurrency_is_dbs,
+	mlme_info("dual_sta_roam_active:%d, sta concurrency on different mac:%d, state:%d",
+		  dual_sta_roam_active, sta_concurrency_is_with_different_mac,
 		  cur_state);
 
 	switch (cur_state) {
@@ -3915,10 +3920,11 @@ cm_roam_switch_to_init(struct wlan_objmgr_pdev *pdev,
 
 		/*
 		 * Enable roaming on other interface only if STA + STA
-		 * concurrency is in DBS.
+		 * concurrency on different mac.
 		 */
-		if (dual_sta_roam_active && sta_concurrency_is_dbs) {
-			mlme_info("STA + STA concurrency is in DBS");
+		if (dual_sta_roam_active &&
+		    sta_concurrency_is_with_different_mac) {
+			mlme_info("sta concurrency on different mac");
 			break;
 		}
 
@@ -4017,7 +4023,7 @@ cm_roam_switch_to_init(struct wlan_objmgr_pdev *pdev,
 	 * PCL type to vdev level
 	 */
 	if (roam_enabled_vdev_id != WLAN_UMAC_VDEV_ID_MAX &&
-	    dual_sta_roam_active && sta_concurrency_is_dbs)
+	    dual_sta_roam_active && sta_concurrency_is_with_different_mac)
 		wlan_cm_roam_activate_pcl_per_vdev(psoc, vdev_id, true);
 
 	/* Set PCL before sending RSO start */

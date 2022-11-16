@@ -4389,7 +4389,7 @@ void policy_mgr_get_ml_and_non_ml_sta_count(struct wlan_objmgr_psoc *psoc,
 	}
 }
 
-bool policy_mgr_concurrent_sta_doing_dbs(struct wlan_objmgr_psoc *psoc)
+bool policy_mgr_concurrent_sta_on_different_mac(struct wlan_objmgr_psoc *psoc)
 {
 	uint8_t num_ml = 0, num_non_ml = 0;
 	uint8_t ml_idx[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
@@ -4397,7 +4397,7 @@ bool policy_mgr_concurrent_sta_doing_dbs(struct wlan_objmgr_psoc *psoc)
 	qdf_freq_t freq_list[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
 	uint8_t vdev_id_list[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
-	bool doing_dbs = false, is_1st_non_ml_24ghz;
+	bool is_different_mac = false;
 	int i;
 
 	if (!policy_mgr_is_hw_dbs_capable(psoc))
@@ -4420,12 +4420,11 @@ bool policy_mgr_concurrent_sta_doing_dbs(struct wlan_objmgr_psoc *psoc)
 	 * If more than 1 Non-ML STA is present, check whether they are
 	 * within the same band.
 	 */
-	is_1st_non_ml_24ghz =
-		wlan_reg_is_24ghz_ch_freq(freq_list[non_ml_idx[0]]);
 	for (i = 1; i < num_non_ml; i++) {
-		if (wlan_reg_is_24ghz_ch_freq(freq_list[non_ml_idx[i]]) !=
-		    is_1st_non_ml_24ghz) {
-			doing_dbs = true;
+		if (!policy_mgr_2_freq_always_on_same_mac(psoc,
+							  freq_list[non_ml_idx[i]],
+							  freq_list[non_ml_idx[0]])) {
+			is_different_mac = true;
 			goto out;
 		}
 	}
@@ -4435,18 +4434,20 @@ bool policy_mgr_concurrent_sta_doing_dbs(struct wlan_objmgr_psoc *psoc)
 
 	/* ML STA + Non-ML STA */
 	for (i = 0; i < num_ml; i++) {
-		if (wlan_reg_is_24ghz_ch_freq(freq_list[ml_idx[i]]) !=
-		    is_1st_non_ml_24ghz) {
-			doing_dbs = true;
+		if (!policy_mgr_2_freq_always_on_same_mac(psoc,
+							  freq_list[ml_idx[i]],
+							  freq_list[non_ml_idx[0]])) {
+			is_different_mac = true;
 			goto out;
 		}
 	}
 
 out:
 	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
-	policy_mgr_debug("Non-ML STA count %d, ML STA count %d, doing dbs %d",
-			 num_non_ml, num_ml, doing_dbs);
-	return doing_dbs;
+	policy_mgr_debug("Non-ML STA count %d, ML STA count %d, sta concurrency on different mac %d",
+			 num_non_ml, num_ml, is_different_mac);
+
+	return is_different_mac;
 }
 
 bool policy_mgr_max_concurrent_connections_reached(

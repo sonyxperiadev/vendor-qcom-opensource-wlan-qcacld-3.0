@@ -938,8 +938,6 @@ cm_fw_roam_sync_propagation(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 	 * Send only for legacy STA/MLO STA vdev.
 	 */
 	if (!wlan_vdev_mlme_is_mlo_link_vdev(vdev)) {
-		cm_if_mgr_inform_connect_complete(cm_ctx->vdev,
-						  connect_rsp->connect_status);
 		cm_inform_dlm_connect_complete(cm_ctx->vdev, connect_rsp);
 		wlan_tdls_notify_sta_connect(vdev_id,
 					mlme_get_tdls_chan_switch_prohibited(vdev),

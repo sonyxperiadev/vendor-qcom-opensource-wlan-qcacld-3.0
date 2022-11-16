@@ -1800,7 +1800,7 @@ void policy_mgr_set_pcl_for_connected_vdev(struct wlan_objmgr_psoc *psoc,
 	struct policy_mgr_pcl_list msg = { {0} };
 	struct wlan_objmgr_vdev *vdev;
 	uint8_t roam_enabled_vdev_id;
-	bool sta_concurrency_is_dbs, dual_sta_roam_enabled;
+	bool sta_concurrency_is_with_different_mac, dual_sta_roam_enabled;
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
 						    WLAN_POLICY_MGR_ID);
@@ -1825,10 +1825,12 @@ void policy_mgr_set_pcl_for_connected_vdev(struct wlan_objmgr_psoc *psoc,
 	if (roam_enabled_vdev_id == WLAN_UMAC_VDEV_ID_MAX)
 		return;
 
-	sta_concurrency_is_dbs = policy_mgr_concurrent_sta_doing_dbs(psoc);
+	sta_concurrency_is_with_different_mac =
+		policy_mgr_concurrent_sta_on_different_mac(psoc);
 	dual_sta_roam_enabled = wlan_mlme_get_dual_sta_roaming_enabled(psoc);
-	policy_mgr_debug("dual_sta_roam:%d, is_dbs:%d, clear_pcl:%d",
-			 dual_sta_roam_enabled, sta_concurrency_is_dbs,
+	policy_mgr_debug("dual_sta_roam:%d, sta concurrency on different mac:%d, clear_pcl:%d",
+			 dual_sta_roam_enabled,
+			 sta_concurrency_is_with_different_mac,
 			 clear_pcl);
 
 	if (dual_sta_roam_enabled) {
@@ -1844,7 +1846,7 @@ void policy_mgr_set_pcl_for_connected_vdev(struct wlan_objmgr_psoc *psoc,
 			wlan_cm_roam_activate_pcl_per_vdev(psoc,
 							   roam_enabled_vdev_id,
 							   false);
-		} else if (sta_concurrency_is_dbs) {
+		} else if (sta_concurrency_is_with_different_mac) {
 			wlan_cm_roam_activate_pcl_per_vdev(psoc,
 							   roam_enabled_vdev_id,
 							   true);
@@ -1942,6 +1944,10 @@ policy_mgr_get_connected_roaming_vdev_band_mask(struct wlan_objmgr_psoc *psoc,
 	uint32_t band_mask = 0, roam_band_mask, band_mask_for_vdev;
 	struct wlan_objmgr_vdev *vdev;
 	bool dual_sta_roam_active, is_pcl_per_vdev;
+	bool is_sbs_capable = false;
+
+	is_sbs_capable =
+		policy_mgr_is_hw_sbs_capable(psoc);
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
 						    WLAN_POLICY_MGR_ID);
@@ -1950,6 +1956,16 @@ policy_mgr_get_connected_roaming_vdev_band_mask(struct wlan_objmgr_psoc *psoc,
 		return 0;
 	}
 
+	roam_band_mask = wlan_cm_get_roam_band_value(psoc, vdev);
+
+	/*
+	 * If sbs is enabled, just send PCL to F/W directly,  allow SBS<->DBS
+	 * roaming,  not just limit intra band.
+	 */
+	if (is_sbs_capable) {
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
+		return roam_band_mask;
+	}
 	band_mask_for_vdev = policy_mgr_get_connected_vdev_band_mask(vdev);
 
 	is_pcl_per_vdev = wlan_cm_roam_is_pcl_per_vdev_active(psoc, vdev_id);
@@ -1972,7 +1988,6 @@ policy_mgr_get_connected_roaming_vdev_band_mask(struct wlan_objmgr_psoc *psoc,
 	 * active connection band.
 	 */
 	ucfg_reg_get_band(wlan_vdev_get_pdev(vdev), &band_mask);
-	roam_band_mask = wlan_cm_get_roam_band_value(psoc, vdev);
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
 
 	if (roam_band_mask != band_mask) {

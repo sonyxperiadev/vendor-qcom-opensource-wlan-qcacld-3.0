@@ -3626,6 +3626,11 @@ QDF_STATUS policy_mgr_get_valid_chan_weights(struct wlan_objmgr_psoc *psoc,
 		 * allowing to detect the disallowed channels.
 		 */
 		if (mode == PM_STA_MODE) {
+			if (policy_mgr_concurrent_sta_on_different_mac(psoc) &&
+			    !wlan_cm_same_band_sta_allowed(psoc)) {
+				policy_mgr_debug("sta follow pcl strictly");
+				strict_follow_pcl = true;
+			}
 			if (vdev)
 				policy_mgr_store_and_del_conn_info_by_vdev_id(
 					psoc, wlan_vdev_get_id(vdev),
