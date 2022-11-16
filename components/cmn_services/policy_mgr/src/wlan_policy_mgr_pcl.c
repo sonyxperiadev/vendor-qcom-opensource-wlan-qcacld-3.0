@@ -2385,7 +2385,7 @@ static void policy_mgr_get_index_for_ml_sta_sap_hwmode_sbs(
 			       sta_freq_list[ml_sta_idx[1]]);
 		return;
 	}
-	if (!sbs_24_shared_high_support && !sbs_24_shared_high_support) {
+	if (!sbs_24_shared_low_support && !sbs_24_shared_high_support) {
 		policy_mgr_err("unexpected sbs mode: low share %d high share %d",
 			       sbs_24_shared_low_support,
 			       sbs_24_shared_high_support);
