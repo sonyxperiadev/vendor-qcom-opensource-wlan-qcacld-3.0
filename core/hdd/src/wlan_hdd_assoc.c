@@ -176,7 +176,7 @@ uint8_t ccp_wapi_oui02[HDD_WAPI_OUI_SIZE] = { 0x00, 0x14, 0x72, 0x02 };
 
 #define HDD_PEER_AUTHORIZE_WAIT 10
 
-/**
+/*
  * beacon_filter_table - table of IEs used for beacon filtering
  */
 static const int beacon_filter_table[] = {
@@ -200,7 +200,7 @@ static const int beacon_filter_table[] = {
 #endif
 };
 
-/**
+/*
  * beacon_filter_extn_table - table of extn IEs used for beacon filtering
  */
 static const int beacon_filter_extn_table[] = {
@@ -448,17 +448,6 @@ struct hdd_adapter *hdd_get_sta_connection_in_progress(
 		    (QDF_P2P_DEVICE_MODE == adapter->device_mode)) {
 			if (hdd_cm_is_connecting(adapter)) {
 				hdd_debug("vdev_id %d: Connection is in progress",
-					  adapter->vdev_id);
-				hdd_adapter_dev_put_debug(adapter, dbgid);
-				if (next_adapter)
-					hdd_adapter_dev_put_debug(next_adapter,
-								  dbgid);
-				return adapter;
-			} else if (hdd_cm_is_vdev_associated(adapter) &&
-				   sme_is_sta_key_exchange_in_progress(
-							hdd_ctx->mac_handle,
-							adapter->vdev_id)) {
-				hdd_debug("vdev_id %d: Key exchange is in progress",
 					  adapter->vdev_id);
 				hdd_adapter_dev_put_debug(adapter, dbgid);
 				if (next_adapter)
