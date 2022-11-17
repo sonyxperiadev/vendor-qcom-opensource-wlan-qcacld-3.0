@@ -3891,8 +3891,6 @@ lim_fill_rsn_ie(struct mac_context *mac_ctx, struct pe_session *session,
 		lim_update_pmksa_to_profile(session->vdev, pmksa_peer);
 	}
 
-	lim_strip_rsnx_ie(mac_ctx, session, req);
-
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -4000,6 +3998,8 @@ static void lim_fill_crypto_params(struct mac_context *mac_ctx,
 		lim_fill_wpa_ie(mac_ctx, session, req);
 	else if (lim_is_wapi_profile(session))
 		lim_fill_wapi_ie(mac_ctx, session, req);
+
+	lim_strip_rsnx_ie(mac_ctx, session, req);
 
 	lim_update_fils_config(mac_ctx, session, req);
 }
@@ -4722,6 +4722,8 @@ static void lim_handle_reassoc_req(struct cm_vdev_join_req *req)
 		lim_fill_wpa_ie(mac_ctx, session_entry, req);
 	else if (lim_is_wapi_profile(session_entry))
 		lim_fill_wapi_ie(mac_ctx, session_entry, req);
+
+	lim_strip_rsnx_ie(mac_ctx, session_entry, req);
 
 	if (lim_is_rsn_profile(session_entry) &&
 	    !util_scan_entry_rsnxe(req->entry)) {
