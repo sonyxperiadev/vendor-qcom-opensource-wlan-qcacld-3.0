@@ -1903,16 +1903,26 @@ static void hdd_regulatory_dyn_cbk(struct wlan_objmgr_psoc *psoc,
 	struct hdd_context *hdd_ctx;
 	enum country_src cc_src;
 	uint8_t alpha2[REG_ALPHA2_LEN + 1];
+	bool nb_flag;
+	bool reg_flag;
 
 	pdev_priv = wlan_pdev_get_ospriv(pdev);
 	wiphy = pdev_priv->wiphy;
 	hdd_ctx = wiphy_priv(wiphy);
+
+	nb_flag = ucfg_mlme_get_coex_unsafe_chan_nb_user_prefer(hdd_ctx->psoc);
+	reg_flag = ucfg_mlme_get_coex_unsafe_chan_reg_disable(hdd_ctx->psoc);
+
+	if (avoid_freq_ind && nb_flag && reg_flag)
+		goto sync_chanlist;
 
 	if (avoid_freq_ind) {
 		hdd_ch_avoid_ind(hdd_ctx, &avoid_freq_ind->chan_list,
 				 &avoid_freq_ind->freq_list);
 		return;
 	}
+
+sync_chanlist:
 
 	hdd_debug("process channel list update from regulatory");
 	hdd_regulatory_chanlist_dump(chan_list);
