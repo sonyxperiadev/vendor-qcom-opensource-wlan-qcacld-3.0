@@ -4744,9 +4744,6 @@ int hdd_stop_no_trans(struct net_device *dev)
 		return -ENODEV;
 	}
 
-	/* Make sure the interface is marked as closed */
-	clear_bit(DEVICE_IFACE_OPENED, &adapter->event_flags);
-
 	mac_handle = hdd_ctx->mac_handle;
 
 	if (!wlan_hdd_is_session_type_monitor(adapter->device_mode) &&
@@ -4781,7 +4778,7 @@ int hdd_stop_no_trans(struct net_device *dev)
 	 * interface (NDI).
 	 */
 	if (WLAN_HDD_IS_NDI(adapter))
-		return 0;
+		goto reset_iface_opened;
 
 	/*
 	 * The interface is marked as down for outside world (aka kernel)
@@ -4801,6 +4798,9 @@ int hdd_stop_no_trans(struct net_device *dev)
 	if (!hdd_is_any_interface_open(hdd_ctx))
 		hdd_psoc_idle_timer_start(hdd_ctx);
 
+reset_iface_opened:
+	/* Make sure the interface is marked as closed */
+	clear_bit(DEVICE_IFACE_OPENED, &adapter->event_flags);
 	hdd_exit();
 
 	return 0;
