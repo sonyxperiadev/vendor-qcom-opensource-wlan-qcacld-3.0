@@ -288,7 +288,7 @@ QDF_STATUS sme_ps_process_command(struct mac_context *mac_ctx, uint32_t session_
 		sme_err("Invalid Session_id: %d", session_id);
 		return QDF_STATUS_E_INVAL;
 	}
-	sme_debug("Power Save command %d", command);
+	sme_debug("Vdev id %d, Power Save command %d", session_id, command);
 	switch (command) {
 	case SME_PS_ENABLE:
 		status = sme_ps_enable_ps_req_params(mac_ctx, session_id);

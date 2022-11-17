@@ -2368,9 +2368,10 @@ hdd_update_reg_chan_info(struct hdd_adapter *adapter,
 				wlan_reg_set_create_punc_bitmap(&ch_params,
 								true);
 			ch_params.ch_width = sap_config->acs_cfg.ch_width;
-			wlan_reg_set_channel_params_for_freq(hdd_ctx->pdev,
-							     icv->freq,
-							     0, &ch_params);
+			wlan_reg_set_channel_params_for_pwrmode(hdd_ctx->pdev,
+								icv->freq,
+								0, &ch_params,
+								REG_CURRENT_PWR_MODE);
 			icv->vht_center_freq_seg0 = ch_params.center_freq_seg0;
 			icv->vht_center_freq_seg1 = ch_params.center_freq_seg1;
 		}
@@ -14495,10 +14496,11 @@ __wlan_hdd_cfg80211_sap_configuration_set(struct wiphy *wiphy,
 		if (sap_phymode_is_eht(ap_ctx->sap_config.SapHw_mode))
 			wlan_reg_set_create_punc_bitmap(
 				&ap_ctx->sap_config.ch_params, true);
-		wlan_reg_set_channel_params_for_freq(
+		wlan_reg_set_channel_params_for_pwrmode(
 				hdd_ctx->pdev, chan_freq,
 				ap_ctx->sap_config.sec_ch_freq,
-				&ap_ctx->sap_config.ch_params);
+				&ap_ctx->sap_config.ch_params,
+				REG_CURRENT_PWR_MODE);
 
 		hdd_restart_sap(hostapd_adapter);
 	}
@@ -21485,8 +21487,9 @@ void hdd_select_cbmode(struct hdd_adapter *adapter, qdf_freq_t oper_freq,
 	}
 
 	/* This call decides required channel bonding mode */
-	wlan_reg_set_channel_params_for_freq(hdd_ctx->pdev, oper_freq,
-					     sec_ch_freq, ch_params);
+	wlan_reg_set_channel_params_for_pwrmode(hdd_ctx->pdev, oper_freq,
+						sec_ch_freq, ch_params,
+						REG_CURRENT_PWR_MODE);
 
 	if (cds_get_conparam() == QDF_GLOBAL_MONITOR_MODE ||
 	    policy_mgr_is_sta_mon_concurrency(hdd_ctx->psoc))
@@ -21925,6 +21928,14 @@ QDF_STATUS hdd_softap_deauth_all_sta(struct hdd_adapter *adapter,
 		if (!sta_info->is_deauth_in_progress) {
 			hdd_debug("Delete STA with MAC:" QDF_MAC_ADDR_FMT,
 				  QDF_MAC_ADDR_REF(sta_info->sta_mac.bytes));
+
+			if (QDF_IS_ADDR_BROADCAST(sta_info->sta_mac.bytes)) {
+				hdd_put_sta_info_ref(&adapter->sta_info_list,
+						&sta_info, true,
+						STA_INFO_SOFTAP_DEAUTH_ALL_STA);
+				continue;
+			}
+
 			qdf_mem_copy(param->peerMacAddr.bytes,
 				     sta_info->sta_mac.bytes,
 				     QDF_MAC_ADDR_SIZE);
@@ -23753,9 +23764,10 @@ static int __wlan_hdd_cfg80211_set_mon_ch(struct wiphy *wiphy,
 		     QDF_MAC_ADDR_SIZE);
 
 	ch_params.ch_width = ch_width;
-	wlan_reg_set_channel_params_for_freq(hdd_ctx->pdev,
-					     chandef->chan->center_freq,
-					     sec_ch_2g_freq, &ch_params);
+	wlan_reg_set_channel_params_for_pwrmode(hdd_ctx->pdev,
+						chandef->chan->center_freq,
+						sec_ch_2g_freq, &ch_params,
+						REG_CURRENT_PWR_MODE);
 	if (wlan_hdd_change_hw_mode_for_given_chnl(adapter,
 						   chandef->chan->center_freq,
 						   POLICY_MGR_UPDATE_REASON_SET_OPER_CHAN)) {

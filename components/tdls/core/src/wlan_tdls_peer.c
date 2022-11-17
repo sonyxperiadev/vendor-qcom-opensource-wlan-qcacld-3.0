@@ -220,6 +220,38 @@ static void tdls_fill_pref_off_chan_info(struct tdls_vdev_priv_obj *vdev_obj,
 		   peer->pref_off_chan_freq, peer->pref_off_chan_width);
 }
 
+static QDF_STATUS
+tdls_remove_first_idle_peer(qdf_list_t *head) {
+	QDF_STATUS status;
+	qdf_list_node_t *p_node;
+	struct tdls_peer *peer;
+
+	status = qdf_list_peek_front(head, &p_node);
+	while (QDF_IS_STATUS_SUCCESS(status)) {
+		peer = qdf_container_of(p_node, struct tdls_peer, node);
+		if (peer && peer->link_status == TDLS_LINK_IDLE) {
+			if (peer->is_peer_idle_timer_initialised) {
+				tdls_debug(QDF_MAC_ADDR_FMT
+					": destroy  idle timer ",
+					QDF_MAC_ADDR_REF(
+					peer->peer_mac.bytes));
+				qdf_mc_timer_stop(&peer->peer_idle_timer);
+				qdf_mc_timer_destroy(&peer->peer_idle_timer);
+			}
+
+			tdls_debug(QDF_MAC_ADDR_FMT ": free peer",
+				   QDF_MAC_ADDR_REF(peer->peer_mac.bytes));
+			qdf_list_remove_node(head, p_node);
+			qdf_mem_free(peer);
+
+			return status;
+		}
+		status = qdf_list_peek_next(head, p_node, &p_node);
+	}
+
+	return QDF_STATUS_E_INVAL;
+}
+
 /**
  * tdls_add_peer() - add TDLS peer in TDLS vdev object
  * @vdev_obj: TDLS vdev object
@@ -262,6 +294,15 @@ static struct tdls_peer *tdls_add_peer(struct tdls_vdev_priv_obj *vdev_obj,
 				&reg_bw_offset);
 
 	peer->valid_entry = false;
+
+	if (qdf_list_size(head) >= qdf_list_max_size(head)) {
+		if (QDF_IS_STATUS_ERROR(tdls_remove_first_idle_peer(head))) {
+			tdls_err("list size exceed max and remove idle peer failed, key %d",
+				 key);
+			qdf_mem_free(peer);
+			return NULL;
+		}
+	}
 
 	qdf_list_insert_back(head, &peer->node);
 

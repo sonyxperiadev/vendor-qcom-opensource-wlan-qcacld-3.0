@@ -1165,14 +1165,28 @@ static void cm_fill_ml_info(struct cm_vdev_join_req *join_req)
 		mlme_debug("Assoc link ID:%d", join_req->assoc_link_id);
 	}
 }
+
+static void cm_copy_join_req_info_from_cm_connect_req(struct cm_vdev_join_req *join_req,
+						 struct wlan_cm_vdev_connect_req *req)
+{
+	qdf_mem_copy(&(join_req->partner_info), &(req->ml_parnter_info), sizeof(struct mlo_partner_info));
+	mlme_debug("Num of partner links %d", join_req->partner_info.num_partner_links);
+}
+
 #else
 static void cm_fill_ml_info(struct cm_vdev_join_req *join_req)
+{
+}
+
+static void cm_copy_join_req_info_from_cm_connect_req(struct cm_vdev_join_req *join_req,
+						 struct wlan_cm_vdev_connect_req *req)
 {
 }
 #endif
 
 static QDF_STATUS
-cm_copy_join_params(struct cm_vdev_join_req *join_req,
+cm_copy_join_params(struct wlan_objmgr_vdev *vdev,
+		    struct cm_vdev_join_req *join_req,
 		    struct wlan_cm_vdev_connect_req *req)
 {
 	if (req->assoc_ie.len) {
@@ -1195,7 +1209,11 @@ cm_copy_join_params(struct cm_vdev_join_req *join_req,
 	if (!join_req->entry)
 		return QDF_STATUS_E_NOMEM;
 
-	cm_fill_ml_info(join_req);
+	if (wlan_vdev_mlme_is_mlo_link_vdev(vdev)) {
+		cm_copy_join_req_info_from_cm_connect_req(join_req, req);
+	} else {
+		cm_fill_ml_info(join_req);
+	}
 
 	if (req->owe_trans_ssid.length)
 		join_req->owe_trans_ssid = req->owe_trans_ssid;
@@ -1311,7 +1329,7 @@ cm_handle_connect_req(struct wlan_objmgr_vdev *vdev,
 	if (!join_req)
 		return QDF_STATUS_E_NOMEM;
 
-	status = cm_copy_join_params(join_req, req);
+	status = cm_copy_join_params(vdev ,join_req, req);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		mlme_err(CM_PREFIX_FMT "Failed to copy join req",
 			 CM_PREFIX_REF(req->vdev_id, req->cm_id));

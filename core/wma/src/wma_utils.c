@@ -2865,9 +2865,10 @@ int wma_unified_link_iface_stats_event_handler(void *handle,
 		iface_link_stats->rssi_data += WMA_TGT_NOISE_FLOOR_DBM;
 		iface_link_stats->rssi_ack += WMA_TGT_NOISE_FLOOR_DBM;
 	}
-	wma_debug("db2dbm: %d, rssi_mgmt: %d, rssi_data: %d, rssi_ack: %d",
-		 db2dbm_enabled, iface_link_stats->rssi_mgmt,
-		 iface_link_stats->rssi_data, iface_link_stats->rssi_ack);
+	wma_debug("db2dbm: %d, rssi_mgmt: %d, rssi_data: %d, rssi_ack: %d, beacon_rx %u",
+		  db2dbm_enabled, iface_link_stats->rssi_mgmt,
+		  iface_link_stats->rssi_data, iface_link_stats->rssi_ack,
+		  iface_link_stats->beacon_rx);
 
 	/* Copy roaming state */
 	iface_stat->info.roaming = link_stats->roam_state;

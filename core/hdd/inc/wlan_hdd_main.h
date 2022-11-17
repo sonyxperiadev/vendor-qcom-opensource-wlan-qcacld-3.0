@@ -121,6 +121,10 @@
 #include "wlan_osif_features.h"
 #include "wlan_dp_public_struct.h"
 
+#ifdef WLAN_FEATURE_TSF_ACCURACY
+#include "qdf_hrtimer.h"
+#endif
+
 /*
  * Preprocessor definitions and constants
  */
@@ -1005,6 +1009,8 @@ struct wlm_multi_client_info_table {
  * @gpio_tsf_sync_work: work to sync send TSF CAP WMI command
  * @cache_sta_count: number of currently cached stations
  * @acs_complete_event: acs complete event
+ * @host_trigger_gpio_timer: A hrtimer used for TSF Accuracy Feature to
+ *                           indicate TSF cycle complete
  * @latency_level: 0 - normal, 1 - xr, 2 - low, 3 - ultralow
  * @multi_client_ll_support: to check multi client ll support in driver
  * @client_info: To store multi client id information
@@ -1172,6 +1178,9 @@ struct hdd_adapter {
 	/* spin lock for read/write timestamps */
 	qdf_spinlock_t host_target_sync_lock;
 	qdf_mc_timer_t host_target_sync_timer;
+#ifdef WLAN_FEATURE_TSF_ACCURACY
+	qdf_hrtimer_data_t host_trigger_gpio_timer;
+#endif
 	bool enable_dynamic_tsf_sync;
 	bool host_target_sync_force;
 	uint32_t dynamic_tsf_sync_interval;
@@ -1696,6 +1705,7 @@ enum wlan_state_ctrl_str_id {
  * @bus_bw_work: work for periodically computing DDR bus bandwidth requirements
  * @g_event_flags: a bitmap of hdd_driver_flags
  * @psoc_idle_timeout_work: delayed work for psoc idle shutdown
+ * @tsf_accuracy_context: Holds TSF Accuracy feature activated vdev adapter.
  * @dynamic_nss_chains_support: Per vdev dynamic nss chains update capability
  * @sar_cmd_params: SAR command params to be configured to the FW
  * @country_change_work: work for updating vdev when country changes
@@ -1928,6 +1938,9 @@ struct hdd_context {
 	qdf_atomic_t cap_tsf_flag;
 	/* the context that is capturing tsf */
 	struct hdd_adapter *cap_tsf_context;
+#ifdef WLAN_FEATURE_TSF_ACCURACY
+	struct hdd_adapter *tsf_accuracy_context;
+#endif
 #endif
 #ifdef WLAN_FEATURE_TSF_PTP
 	struct ptp_clock_info ptp_cinfo;

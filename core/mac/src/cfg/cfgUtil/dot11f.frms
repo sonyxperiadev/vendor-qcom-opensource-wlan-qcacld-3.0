@@ -3052,7 +3052,7 @@ IE mscs_status (EID_MSCS_STATUS)
      status_code,        1;
 }
 
-IE decriptor_element (EID_EXTN_ID_ELEMENT) OUI (0x58)
+IE descriptor_element (EID_EXTN_ID_ELEMENT) OUI (0x58)
 {
      request_type,                1;
      user_priority_control,       2;
@@ -3892,7 +3892,7 @@ FRAME Beacon                              // C.f. Sec. 7.2.3.1
     OPTIE  eht_cap;
     OPTIE  eht_op;
     OPTIE  mlo_ie;
-    OPTIE  t2lm_ie;
+    OPTIE  t2lm_ie[0..2];
 
     OPTIE  WPA;
     OPTIE  WMMInfoAp;
@@ -3998,7 +3998,7 @@ FRAME Beacon2
     OPTIE  eht_cap;
     OPTIE  eht_op;
     OPTIE  mlo_ie;
-    OPTIE  t2lm_ie;
+    OPTIE  t2lm_ie[0..2];
 
     OPTIE  WPA;
     OPTIE  WMMInfoAp;
@@ -4078,7 +4078,7 @@ FRAME BeaconIEs
     OPTIE  eht_cap;
     OPTIE  eht_op;
     OPTIE  mlo_ie;
-    OPTIE  t2lm_ie;
+    OPTIE  t2lm_ie[0..2];
 
     OPTIE  WPA;
     OPTIE  WMMInfoAp;
@@ -4385,7 +4385,7 @@ FRAME ProbeResponse                       // 7.2.3.9
     OPTIE  eht_cap;
     OPTIE  eht_op;
     OPTIE  mlo_ie;
-    OPTIE  t2lm_ie;
+    OPTIE  t2lm_ie[0..2];
 
     OPTIE  WPA;
     OPTIE  WMMInfoAp;
@@ -4874,7 +4874,7 @@ FRAME mscs_request_action_frame
     FF     Category;
     FF     Action;
     FF     DialogToken;
-    MANDIE decriptor_element;
+    MANDIE descriptor_element;
 }
 
 // Local Variables:

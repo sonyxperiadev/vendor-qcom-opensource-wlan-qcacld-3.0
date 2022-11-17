@@ -110,6 +110,10 @@ fwol_init_coex_config_in_cfg(struct wlan_objmgr_psoc *psoc,
 	fwol_three_way_coex_config_legacy_config_get(psoc, coex_config);
 	coex_config->ble_scan_coex_policy = cfg_get(psoc,
 						    CFG_BLE_SCAN_COEX_POLICY);
+#ifdef FEATURE_COEX_TPUT_SHAPING_CONFIG
+	coex_config->coex_tput_shaping_enable =
+				cfg_get(psoc, CFG_TPUT_SHAPING_ENABLE);
+#endif
 }
 
 #ifdef THERMAL_STATS_SUPPORT
@@ -450,11 +454,49 @@ static void ucfg_fwol_fetch_tsf_gpio_pin(struct wlan_objmgr_psoc *psoc,
  * Return: none
  */
 #if defined(WLAN_FEATURE_TSF) && defined(WLAN_FEATURE_TSF_PLUS)
+#ifdef WLAN_FEATURE_TSF_ACCURACY
+/**
+ * fwol_init_tsf_accuracy_configs: Populate the TSF Accuracy configs from cfg
+ * @psoc: The global psoc handler
+ * @fwol_cfg: The cfg structure
+ *
+ * Return: none
+ */
+static void fwol_init_tsf_accuracy_configs(struct wlan_objmgr_psoc *psoc,
+					   struct wlan_fwol_cfg *fwol_cfg)
+{
+	int32_t configs[CFG_TSF_ACCURACY_CONFIG_LEN] = { 0 };
+	int status;
+	qdf_size_t len;
+
+	status = qdf_int32_array_parse(cfg_get(psoc, CFG_TSF_ACCURACY_CONFIGS),
+				       configs,
+				       CFG_TSF_ACCURACY_CONFIG_LEN,
+				       &len);
+
+	if (status != QDF_STATUS_SUCCESS || len != CFG_TSF_ACCURACY_CONFIG_LEN) {
+		fwol_cfg->tsf_accuracy_configs.enable = 0;
+		fwol_err("Invalid parameters from INI");
+		return;
+	}
+
+	fwol_cfg->tsf_accuracy_configs.enable = configs[0];
+	fwol_cfg->tsf_accuracy_configs.sync_gpio = configs[1];
+	fwol_cfg->tsf_accuracy_configs.periodic_pulse_gpio = configs[2];
+	fwol_cfg->tsf_accuracy_configs.pulse_interval_ms = configs[3];
+}
+#else
+static void fwol_init_tsf_accuracy_configs(struct wlan_objmgr_psoc *psoc,
+					   struct wlan_fwol_cfg *fwol_cfg)
+{
+}
+#endif
 static void ucfg_fwol_init_tsf_ptp_options(struct wlan_objmgr_psoc *psoc,
 					   struct wlan_fwol_cfg *fwol_cfg)
 {
 	fwol_cfg->tsf_ptp_options = cfg_get(psoc, CFG_SET_TSF_PTP_OPT);
 	fwol_cfg->tsf_sync_enable = cfg_get(psoc, CFG_TSF_SYNC_ENABLE);
+	fwol_init_tsf_accuracy_configs(psoc, fwol_cfg);
 }
 #else
 static void ucfg_fwol_init_tsf_ptp_options(struct wlan_objmgr_psoc *psoc,

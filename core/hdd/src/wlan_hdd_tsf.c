@@ -29,7 +29,8 @@
 #include <qca_vendor.h>
 #include <linux/errqueue.h>
 #if defined(WLAN_FEATURE_TSF_PLUS_EXT_GPIO_IRQ) || \
-	defined(WLAN_FEATURE_TSF_PLUS_EXT_GPIO_SYNC)
+	defined(WLAN_FEATURE_TSF_PLUS_EXT_GPIO_SYNC) || \
+	defined(WLAN_FEATURE_TSF_ACCURACY)
 #include <linux/gpio.h>
 #endif
 
@@ -1257,6 +1258,325 @@ static void hdd_capture_tsf_timer_expired_handler(void *arg)
 	hdd_capture_tsf_internal(adapter, &tsf_op_resp, 1);
 }
 
+#ifdef WLAN_FEATURE_TSF_ACCURACY
+#define WLAN_HDD_TOGGLE_GPIO_BACKOFF_USEC 50
+#define WLAN_HDD_TOGGLE_GPIO_BACKOFF_MAX_USEC 200
+#define WLAN_HDD_PULSE_WIDTH_MSEC 1
+
+/**
+ * hdd_get_tsf_accuracy_context() - Return the TSF Accuracy config params
+ * @adapter: Pointer to adapter
+ *
+ * This function validates feature config parameters
+ *
+ * Return: Pointer to TSF Accuracy feature configs
+ */
+static struct wlan_fwol_tsf_accuracy_configs *
+hdd_get_tsf_accuracy_context(struct hdd_adapter *adapter)
+{
+	struct wlan_fwol_tsf_accuracy_configs *configs = NULL;
+	struct hdd_context *hddctx;
+	int status;
+
+	hddctx = WLAN_HDD_GET_CTX(adapter);
+	if (!hddctx) {
+		hdd_err("invalid hdd context");
+		return NULL;
+	}
+
+	if (hddctx->tsf_accuracy_context &&
+	    hddctx->tsf_accuracy_context != adapter)
+		return NULL;
+
+	status = ucfg_fwol_get_tsf_accuracy_configs(hddctx->psoc, &configs);
+	if (status == QDF_STATUS_E_FAILURE)
+		return NULL;
+
+	if (!configs || !configs->enable ||
+	    (configs->periodic_pulse_gpio == TSF_GPIO_PIN_INVALID &&
+	     configs->sync_gpio == TSF_GPIO_PIN_INVALID))
+		return NULL;
+
+	return configs;
+}
+
+/**
+ * hdd_tsf_gpio_pulse() - Raise pulse of WLAN_HDD_PULSE_WIDTH_MSEC on gpio
+ * @gpio_num: GPIO number
+ *
+ * Return: None
+ */
+static void hdd_tsf_gpio_pulse(uint32_t gpio_num)
+{
+	if (gpio_num == TSF_GPIO_PIN_INVALID)
+		return;
+
+	gpio_set_value(gpio_num, OUTPUT_HIGH);
+	udelay(WLAN_HDD_PULSE_WIDTH_MSEC * USEC_PER_MSEC);
+	gpio_set_value(gpio_num, OUTPUT_LOW);
+}
+
+/**
+ * hdd_tsf_gpio_timer_expired_handler() - Handle periodic TSF periodic expiry
+ * @arg: Pointer to qdf_hrtimer_data_t
+ *
+ * Raise GPIO pulse on TSF time cycle completion and schedules hrtimer for
+ * next cycle. Also, monitors drift between Host time and TSF time.
+ * This data will be used for scheduling hrtimer expiry.
+ *
+ * Return:
+ *      QDF_HRTIMER_RESTART - On completion of TSF cycle processing
+ *      QDF_HRTIMER_NORESTART - On error
+ */
+static enum qdf_hrtimer_restart_status
+hdd_tsf_gpio_timer_expired_handler(qdf_hrtimer_data_t *arg)
+{
+	struct hdd_adapter *adapter;
+	struct wlan_fwol_tsf_accuracy_configs *configs;
+	qdf_ktime_t cur_qtime, spin_until, next_ktime;
+	uint64_t qtime;
+	uint64_t tsf_time_us;
+	uint32_t elapsed_time_us;
+	uint32_t remaining_time_us;
+	uint32_t delta_interval_us;
+
+	adapter = container_of(arg, struct hdd_adapter,
+			       host_trigger_gpio_timer);
+
+	configs = hdd_get_tsf_accuracy_context(adapter);
+	if (!configs)
+		return QDF_HRTIMER_NORESTART;
+
+	/* Get current System and TSF mapping */
+	qtime = qdf_log_timestamp_to_usecs(qdf_get_log_timestamp());
+	hdd_get_tsftime_from_qtime(adapter, qtime, &tsf_time_us);
+	elapsed_time_us = (uint32_t)
+		(tsf_time_us % (configs->pulse_interval_ms * USEC_PER_MSEC));
+	remaining_time_us =
+		(configs->pulse_interval_ms * USEC_PER_MSEC) - elapsed_time_us;
+
+	/* Skip raising GPIO pulse in case of TSF cycle already completed */
+	if (elapsed_time_us < remaining_time_us) {
+		next_ktime = qdf_ns_to_ktime(NSEC_PER_USEC *
+			((configs->pulse_interval_ms * USEC_PER_MSEC) -
+			 WLAN_HDD_TOGGLE_GPIO_BACKOFF_USEC -
+			 elapsed_time_us));
+		hdd_debug("TSF_Accuracy: skip GPIO pulse tsf_time_us:%llu",
+			  tsf_time_us);
+		goto end;
+	}
+
+	if (remaining_time_us > WLAN_HDD_TOGGLE_GPIO_BACKOFF_MAX_USEC)
+		goto skip;
+	/*
+	 * Expect WLAN_HDD_TOGGLE_GPIO_BACKOFF_USEC seconds of backoff always
+	 * for TSF time to complete a cycle of given interval.
+	 * Hence run backoff busy wait and then trigger GPIO
+	 */
+	cur_qtime = qdf_ns_to_ktime(qtime * NSEC_PER_USEC);
+	spin_until = qdf_ktime_add(cur_qtime,
+				   qdf_ns_to_ktime(remaining_time_us *
+				    NSEC_PER_USEC));
+	do {
+		qtime = qdf_log_timestamp_to_usecs(qdf_get_log_timestamp());
+		cur_qtime = qdf_ns_to_ktime(qtime * NSEC_PER_USEC);
+	} while (ktime_compare(cur_qtime, spin_until) < 0);
+
+	/* Toggle GPIO */
+	hdd_tsf_gpio_pulse(configs->periodic_pulse_gpio);
+
+	/* Check current system and TSF mapping for logging */
+	hdd_get_tsftime_from_qtime(adapter, qtime, &tsf_time_us);
+
+	hdd_debug("TSF_Accuracy: GPIO toggled log_time_us:%llu, tsf_time_us:%llu, slept_us:%d",
+		  qtime, tsf_time_us, remaining_time_us);
+
+	/*
+	 *  Schedule next GPIO toggle by adding to last expiry. Monitor drift
+	 *  and adjust next expiry time based on system and TSF clock
+	 *  difference.
+	 */
+skip:
+	if (remaining_time_us > WLAN_HDD_TOGGLE_GPIO_BACKOFF_USEC) {
+		delta_interval_us = remaining_time_us -
+			WLAN_HDD_TOGGLE_GPIO_BACKOFF_USEC;
+		next_ktime = qdf_ns_to_ktime(NSEC_PER_USEC *
+					     ((configs->pulse_interval_ms *
+					       USEC_PER_MSEC) +
+					     delta_interval_us));
+	} else {
+		next_ktime = configs->pulse_interval_ms;
+	}
+end:
+	qdf_hrtimer_add_expires(&adapter->host_trigger_gpio_timer, next_ktime);
+
+	return QDF_HRTIMER_RESTART;
+}
+
+/**
+ * hdd_tsf_setup_gpio_toggle() - Schedules hrtimer for TSF periodic processing.
+ * @adapter: Pointer to adapter
+ *
+ * Schedule a TSF time domain periodic pulse handling and also indicate a
+ * TSF sync done by toggling GPIO.
+ *
+ * Return: None
+ */
+static void hdd_tsf_setup_gpio_toggle(struct hdd_adapter *adapter)
+{
+	static uint32_t gpio_state = OUTPUT_LOW;
+	uint64_t tsf_time_us;
+	uint64_t qtime;
+	uint32_t elapsed_time_us;
+	uint32_t remaining_time_us;
+	qdf_ktime_t cur_ktime, next_ktime;
+	struct wlan_fwol_tsf_accuracy_configs *configs;
+	qdf_hrtimer_data_t *gtimer;
+
+	configs = hdd_get_tsf_accuracy_context(adapter);
+	if (!configs)
+		return;
+
+	gtimer = &adapter->host_trigger_gpio_timer;
+
+	/* Get current System and TSF mapping */
+	cur_ktime = qdf_ktime_get();
+	qtime = qdf_log_timestamp_to_usecs(qdf_get_log_timestamp());
+	hdd_get_tsftime_from_qtime(adapter, qtime, &tsf_time_us);
+
+	if (configs->sync_gpio != TSF_GPIO_PIN_INVALID) {
+		if (gpio_state == OUTPUT_LOW)
+			gpio_state = OUTPUT_HIGH;
+		else
+			gpio_state = OUTPUT_LOW;
+		gpio_set_value(configs->sync_gpio, gpio_state);
+	}
+
+	hdd_debug("TSF_Accuracy: TSF sync done system_time_us:%llu, log_time_us:%llu, tsf_time_us:%llu",
+		  qdf_ktime_to_us(cur_ktime), qtime, tsf_time_us);
+
+	/* Start timer if it is not scheduled yet */
+	if (!(qdf_hrtimer_is_queued(gtimer) ||
+	      qdf_hrtimer_callback_running(gtimer))) {
+		/*
+		 * Take out WLAN_HDD_TOGGLE_GPIO_BACKOFF_USEC as backoff timer
+		 * which is taken care by hrtimer handler
+		 */
+		elapsed_time_us = (uint32_t)(tsf_time_us % USEC_PER_SEC);
+		remaining_time_us = USEC_PER_SEC - elapsed_time_us;
+		if (remaining_time_us <= WLAN_HDD_TOGGLE_GPIO_BACKOFF_USEC)
+			return;
+		next_ktime = qdf_ktime_add(cur_ktime,
+					   qdf_ns_to_ktime((remaining_time_us -
+			WLAN_HDD_TOGGLE_GPIO_BACKOFF_USEC) * NSEC_PER_USEC));
+		qdf_hrtimer_start(gtimer, next_ktime, QDF_HRTIMER_MODE_ABS);
+	}
+}
+
+/**
+ * hdd_tsf_regular_gpio_pulse_init() - Initialize TSF Accuracy feature
+ * @adapter: Pointer to adapter
+ *
+ * Return: None
+ */
+static void hdd_tsf_regular_gpio_pulse_init(struct hdd_adapter *adapter)
+{
+	struct wlan_fwol_tsf_accuracy_configs *configs;
+	struct hdd_context *hddctx;
+
+	hddctx = WLAN_HDD_GET_CTX(adapter);
+	if (!hddctx) {
+		hdd_err("invalid hdd context");
+		return;
+	}
+
+	configs = hdd_get_tsf_accuracy_context(adapter);
+	if (!configs)
+		goto fail;
+
+	qdf_hrtimer_init(&adapter->host_trigger_gpio_timer,
+			 hdd_tsf_gpio_timer_expired_handler,
+			 QDF_CLOCK_MONOTONIC, QDF_HRTIMER_MODE_ABS,
+			 QDF_CONTEXT_HARDWARE);
+
+	if (configs->periodic_pulse_gpio != TSF_GPIO_PIN_INVALID) {
+		if (gpio_request(configs->periodic_pulse_gpio,
+				 "tsf_periodic_pulse"))
+			goto fail;
+		if (gpio_direction_output(configs->periodic_pulse_gpio,
+					  OUTPUT_LOW))
+			goto fail_free_pulse_gpio;
+	}
+
+	if (configs->sync_gpio != TSF_GPIO_PIN_INVALID) {
+		if (gpio_request(configs->sync_gpio, "tsf_sync_toggle"))
+			goto fail_free_pulse_gpio;
+		if (gpio_direction_output(configs->sync_gpio, OUTPUT_LOW))
+			goto fail_free_gpio;
+	}
+
+	hddctx->tsf_accuracy_context = adapter;
+	hdd_debug("TSF_Accuracy: Feature initialization success");
+	return;
+
+fail_free_gpio:
+	gpio_free(configs->sync_gpio);
+fail_free_pulse_gpio:
+	if (configs->periodic_pulse_gpio != TSF_GPIO_PIN_INVALID)
+		gpio_free(configs->periodic_pulse_gpio);
+fail:
+	hdd_err("TSF_Accuracy: Feature init failed");
+}
+
+/**
+ * hdd_tsf_regular_gpio_pulse_deinit() - Deactivate TSF Accuracy feature
+ * @adapter: Pointer to adapter
+ *
+ * Return: None
+ */
+static void hdd_tsf_regular_gpio_pulse_deinit(struct hdd_adapter *adapter)
+{
+	struct wlan_fwol_tsf_accuracy_configs *configs = NULL;
+	struct hdd_context *hddctx;
+
+	hddctx = WLAN_HDD_GET_CTX(adapter);
+	if (!hddctx) {
+		hdd_err("invalid hdd context");
+		return;
+	}
+
+	if (hddctx->tsf_accuracy_context != adapter)
+		return;
+
+	configs = hdd_get_tsf_accuracy_context(adapter);
+	if (!configs)
+		return;
+
+	qdf_hrtimer_cancel(&adapter->host_trigger_gpio_timer);
+
+	if (configs->periodic_pulse_gpio != TSF_GPIO_PIN_INVALID)
+		gpio_free(configs->periodic_pulse_gpio);
+	if (configs->sync_gpio != TSF_GPIO_PIN_INVALID) {
+		gpio_set_value(configs->sync_gpio, OUTPUT_LOW);
+		gpio_free(configs->sync_gpio);
+	}
+
+	hddctx->tsf_accuracy_context = NULL;
+}
+#else
+static void hdd_tsf_setup_gpio_toggle(struct hdd_adapter *adapter)
+{
+}
+
+static void hdd_tsf_regular_gpio_pulse_init(struct hdd_adapter *adapter)
+{
+}
+
+static void hdd_tsf_regular_gpio_pulse_deinit(struct hdd_adapter *adapter)
+{
+}
+#endif
+
 #ifndef WLAN_FEATURE_TSF_PLUS_NOIRQ
 #if !defined(WLAN_FEATURE_TSF_PLUS_EXT_GPIO_SYNC) && \
 	!defined(WLAN_FEATURE_TSF_TIMER_SYNC)
@@ -1434,6 +1754,8 @@ static void hdd_update_timestamp(struct hdd_adapter *adapter)
 		break;
 	}
 	qdf_spin_unlock_bh(&adapter->host_target_sync_lock);
+
+	hdd_tsf_setup_gpio_toggle(adapter);
 
 	if (interval > 0)
 		qdf_mc_timer_start(&adapter->host_target_sync_timer, interval);
@@ -1725,6 +2047,8 @@ static enum hdd_tsf_op_result hdd_tsf_sync_init(struct hdd_adapter *adapter)
 		goto fail;
 	}
 
+	hdd_tsf_regular_gpio_pulse_init(adapter);
+
 	net_dev = adapter->dev;
 	if (net_dev && hdd_tsf_is_dbg_fs_set(hddctx))
 		device_create_file(&net_dev->dev, &dev_attr_tsf);
@@ -1757,6 +2081,9 @@ static enum hdd_tsf_op_result hdd_tsf_sync_deinit(struct hdd_adapter *adapter)
 		return HDD_TSF_OP_SUCC;
 
 	hdd_set_th_sync_status(adapter, false);
+
+	hdd_tsf_regular_gpio_pulse_deinit(adapter);
+
 	ret = qdf_mc_timer_destroy(&adapter->host_target_sync_timer);
 	if (ret != QDF_STATUS_SUCCESS)
 		hdd_err("Failed to destroy timer, ret: %d", ret);

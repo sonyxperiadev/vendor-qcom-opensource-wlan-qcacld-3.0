@@ -230,6 +230,16 @@ lim_populate_ml_probe_req(struct mac_context *mac,
 
 	return QDF_STATUS_SUCCESS;
 }
+
+static bool
+lim_check_join_req_and_num_of_partner_link(struct pe_session *session)
+{
+	if (session && session->lim_join_req &&
+	    session->lim_join_req->partner_info.num_partner_links)
+		return true;
+
+	return false;
+}
 #else
 static QDF_STATUS
 lim_populate_ml_probe_req(struct mac_context *mac,
@@ -238,6 +248,12 @@ lim_populate_ml_probe_req(struct mac_context *mac,
 			  uint16_t *ml_probe_req_len)
 {
 	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static bool
+lim_check_join_req_and_num_of_partner_link(struct pe_session *session)
+{
+	return false;
 }
 #endif
 
@@ -435,7 +451,8 @@ lim_send_probe_req_mgmt_frame(struct mac_context *mac_ctx,
 	populate_dot11f_he_6ghz_cap(mac_ctx, pesession,
 				    &pr->he_6ghz_band_cap);
 
-	if (IS_DOT11_MODE_EHT(dot11mode) && pesession) {
+	if (IS_DOT11_MODE_EHT(dot11mode) && pesession &&
+	    lim_check_join_req_and_num_of_partner_link(pesession)) {
 		lim_update_session_eht_capable(mac_ctx, pesession);
 		lim_populate_ml_probe_req(mac_ctx, pesession,
 					  &ml_probe_req_ie,

@@ -403,8 +403,8 @@ void hdd_update_channel_bw_info(struct hdd_context *hdd_ctx,
 	/* Passing CH_WIDTH_MAX will give the max bandwidth supported */
 	ch_params.ch_width = CH_WIDTH_MAX;
 
-	wlan_reg_set_channel_params_for_freq(
-		hdd_ctx->pdev, chan_freq, 0, &ch_params);
+	wlan_reg_set_channel_params_for_pwrmode(
+		hdd_ctx->pdev, chan_freq, 0, &ch_params, REG_CURRENT_PWR_MODE);
 	if (ch_params.center_freq_seg0)
 		hdd_chan_info->band_center_freq1 =
 			cds_chan_to_freq(ch_params.center_freq_seg0);

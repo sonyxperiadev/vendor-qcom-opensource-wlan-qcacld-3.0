@@ -681,6 +681,32 @@ out:
 
 }
 
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(CFG80211_11BE_BASIC)
+static void hdd_send_mlo_ps_to_fw(struct hdd_adapter *adapter,
+				  struct hdd_context *hdd_ctx,
+				  enum sme_ps_cmd command)
+{
+	struct hdd_adapter *link_adapter;
+	struct hdd_mlo_adapter_info *mlo_adapter_info;
+	int i;
+
+	mlo_adapter_info = &adapter->mlo_adapter_info;
+	for (i = 0; i < WLAN_MAX_MLD; i++) {
+		link_adapter = mlo_adapter_info->link_adapter[i];
+		if (!link_adapter)
+			continue;
+		sme_ps_enable_disable(hdd_ctx->mac_handle,
+				      link_adapter->vdev_id,
+				      command);
+	}
+}
+#else
+static void hdd_send_mlo_ps_to_fw(struct hdd_adapter *adapter,
+				  struct hdd_context *hdd_ctx,
+				  enum sme_ps_cmd command)
+{}
+#endif
+
 /**
  * hdd_send_ps_config_to_fw() - Check user pwr save config set/reset PS
  * @adapter: pointer to hdd adapter
@@ -694,19 +720,25 @@ static void hdd_send_ps_config_to_fw(struct hdd_adapter *adapter)
 {
 	struct hdd_context *hdd_ctx;
 	bool usr_ps_cfg;
+	enum sme_ps_cmd command;
+	bool is_mlo_vdev;
 
 	if (hdd_validate_adapter(adapter))
 		return;
 
 	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
-
 	usr_ps_cfg = ucfg_mlme_get_user_ps(hdd_ctx->psoc, adapter->vdev_id);
-	if (usr_ps_cfg)
+	command = usr_ps_cfg ? SME_PS_ENABLE : SME_PS_DISABLE;
+
+	is_mlo_vdev = wlan_vdev_mlme_is_mlo_vdev(adapter->vdev);
+
+	if (!is_mlo_vdev) {
 		sme_ps_enable_disable(hdd_ctx->mac_handle, adapter->vdev_id,
-				      SME_PS_ENABLE);
-	else
-		sme_ps_enable_disable(hdd_ctx->mac_handle, adapter->vdev_id,
-				      SME_PS_DISABLE);
+				      command);
+		return;
+	}
+
+	hdd_send_mlo_ps_to_fw(adapter, hdd_ctx, command);
 }
 
 /**
@@ -2398,6 +2430,15 @@ static int _wlan_hdd_cfg80211_resume_wlan(struct wiphy *wiphy)
 	/* If Wifi is off, return success for system resume */
 	if (hdd_ctx->driver_status != DRIVER_MODULES_ENABLED) {
 		hdd_debug("Driver Modules not Enabled ");
+		return 0;
+	}
+
+	/**
+	 * Return success if recovery is in progress, otherwise, linux kernel
+	 * will shutdown all interfaces in wiphy_resume.
+	 */
+	if (cds_is_driver_recovering()) {
+		hdd_debug("Recovery in progress");
 		return 0;
 	}
 

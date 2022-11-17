@@ -1050,7 +1050,7 @@ dp_pdev_obj_destroy_notification(struct wlan_objmgr_pdev *pdev, void *arg)
 						       WLAN_COMP_DP,
 						       dp_ctx);
 	if (QDF_IS_STATUS_ERROR(status)) {
-		dp_err("Failed to detatch dp_ctx from pdev");
+		dp_err("Failed to detach dp_ctx from pdev");
 		return status;
 	}
 	if (!dp_ctx->pdev)

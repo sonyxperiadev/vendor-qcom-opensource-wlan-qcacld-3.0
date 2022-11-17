@@ -108,7 +108,7 @@ bool wlan_action_oui_is_empty(struct wlan_objmgr_psoc *psoc,
 
 /**
  * wlan_action_oui_cleanup() - Remove all of existing oui entry.
- * @psoc: objmgr psoc object
+ * @psoc_priv: action oui objmgr private context
  * @action_id: type of action to be removed
  *
  * This is a wrapper function which invokes internal function to remove
@@ -121,7 +121,7 @@ wlan_action_oui_cleanup(struct action_oui_psoc_priv *psoc_priv,
 			enum action_oui_id action_id);
 
 /**
- * action_oui_psoc_disable() - Notify action OUI psoc enable
+ * action_oui_psoc_enable() - Notify action OUI psoc enable
  * @psoc: objmgr psoc object
  *
  * Return: void

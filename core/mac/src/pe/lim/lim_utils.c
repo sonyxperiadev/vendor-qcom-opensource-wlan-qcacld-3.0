@@ -10444,8 +10444,10 @@ QDF_STATUS lim_pre_vdev_start(struct mac_context *mac,
 	if (IS_DOT11_MODE_EHT(session->dot11mode))
 		wlan_reg_set_create_punc_bitmap(&ch_params, true);
 
-	wlan_reg_set_channel_params_for_freq(mac->pdev, session->curr_op_freq,
-					     sec_chan_freq, &ch_params);
+	wlan_reg_set_channel_params_for_pwrmode(mac->pdev,
+						session->curr_op_freq,
+						sec_chan_freq, &ch_params,
+						REG_CURRENT_PWR_MODE);
 
 	pe_debug("vdev id %d freq %d seg0 %d seg1 %d ch_width %d cac_duration_ms %d beacon_interval %d hidden_ssid: %d dtimPeriod %d slot_time %d bcn tx rate %d mhz seg0 %d mhz seg1 %d",
 		 session->vdev_id, session->curr_op_freq,
@@ -10736,8 +10738,9 @@ lim_set_tpc_power(struct mac_context *mac_ctx, struct pe_session *session)
 	if (!mlme_obj)
 		return false;
 
-	if (session->opmode == QDF_STA_MODE ||
-	    session->opmode == QDF_P2P_CLIENT_MODE)
+	if ((session->opmode == QDF_STA_MODE ||
+	     session->opmode == QDF_P2P_CLIENT_MODE) &&
+	    session->lim_join_req)
 		lim_process_tpe_ie_from_beacon(mac_ctx, session,
 				       &session->lim_join_req->bssDescription,
 				       &tpe_change);

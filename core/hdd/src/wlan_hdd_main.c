@@ -1550,6 +1550,23 @@ hdd_set_dynamic_macaddr_update_capability(struct hdd_context *hdd_ctx,
 }
 #endif
 
+#ifdef WLAN_FEATURE_11BE
+static bool hdd_dot11Mode_support_11be(enum hdd_dot11_mode dot11Mode)
+{
+	if (dot11Mode != eHDD_DOT11_MODE_AUTO &&
+	    dot11Mode < eHDD_DOT11_MODE_11be)
+		return false;
+
+	return true;
+}
+#else
+static bool hdd_dot11Mode_support_11be(enum hdd_dot11_mode dot11Mode)
+{
+	return false;
+}
+#endif
+
+
 static void hdd_update_tgt_services(struct hdd_context *hdd_ctx,
 				    struct wma_tgt_services *cfg)
 {
@@ -1576,6 +1593,13 @@ static void hdd_update_tgt_services(struct hdd_context *hdd_ctx,
 	if ((config->dot11Mode == eHDD_DOT11_MODE_11ac ||
 	     config->dot11Mode == eHDD_DOT11_MODE_11ac_ONLY) && !cfg->en_11ac)
 		config->dot11Mode = eHDD_DOT11_MODE_AUTO;
+	/* 11BE mode support */
+	if (!hdd_dot11Mode_support_11be(config->dot11Mode) &&
+	    cfg->en_11be) {
+		hdd_debug("dot11Mode %d override target en_11be to false",
+			  config->dot11Mode);
+		cfg->en_11be = false;
+	}
 
 	/* ARP offload: override user setting if invalid  */
 	arp_offload_enable =
@@ -7010,6 +7034,18 @@ static int hdd_send_coex_config_params(struct hdd_context *hdd_ctx,
 		goto err;
 	}
 
+#ifdef FEATURE_COEX_TPUT_SHAPING_CONFIG
+	coex_cfg_params.config_type =
+				WMI_COEX_CONFIG_ENABLE_TPUT_SHAPING;
+	coex_cfg_params.config_arg1 = config.coex_tput_shaping_enable;
+
+	status = sme_send_coex_config_cmd(&coex_cfg_params);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		hdd_err("Failed to send coex traffic shaping value %d",
+			coex_cfg_params.config_arg1);
+		goto err;
+	}
+#endif
 	return 0;
 err:
 	return -EINVAL;
@@ -8544,8 +8580,9 @@ int wlan_hdd_set_mon_chan(struct hdd_adapter *adapter, qdf_freq_t freq,
 		     QDF_MAC_ADDR_SIZE);
 
 	ch_params.ch_width = bandwidth;
-	wlan_reg_set_channel_params_for_freq(hdd_ctx->pdev, freq, 0,
-					     &ch_params);
+	wlan_reg_set_channel_params_for_pwrmode(hdd_ctx->pdev, freq, 0,
+						&ch_params,
+						REG_CURRENT_PWR_MODE);
 
 	if (ch_params.ch_width == CH_WIDTH_INVALID) {
 		hdd_err("Invalid capture channel or bandwidth for a country");
@@ -16397,10 +16434,11 @@ void wlan_hdd_start_sap(struct hdd_adapter *ap_adapter, bool reinit)
 		hdd_err("SAP Not able to set AP IEs");
 		goto end;
 	}
-	wlan_reg_set_channel_params_for_freq(
+	wlan_reg_set_channel_params_for_pwrmode(
 				hdd_ctx->pdev,
 				hdd_ap_ctx->sap_config.chan_freq,
-				0, &hdd_ap_ctx->sap_config.ch_params);
+				0, &hdd_ap_ctx->sap_config.ch_params,
+				REG_CURRENT_PWR_MODE);
 	if (QDF_IS_STATUS_ERROR(wlan_hdd_mlo_sap_reinit(hdd_ctx, sap_config,
 							ap_adapter))) {
 		hdd_err("SAP Not able to do mlo attach");
