@@ -282,7 +282,6 @@ void hdd_set_hif_init_phase(struct hif_opaque_softc *hif_ctx,
 #endif /* FORCE_WAKE */
 
 /**
-
  * hdd_hif_set_attribute() - API to set CE attribute if memory is limited
  * @hif_ctx: hif context
  *
@@ -313,7 +312,6 @@ hdd_hif_register_shutdown_notifier(struct hif_opaque_softc *hif_ctx)
 }
 
 /**
-
  * hdd_hif_set_ce_max_yield_time() - Wrapper API to set CE max yield time
  * @hif_ctx: hif context
  * @bus_type: underlying bus type
@@ -322,12 +320,13 @@ hdd_hif_register_shutdown_notifier(struct hif_opaque_softc *hif_ctx)
  * Return: None
  */
 #if defined(CONFIG_SLUB_DEBUG_ON)
-#define CE_SNOC_MAX_YIELD_TIME_US 2000
 
 static void hdd_hif_set_ce_max_yield_time(struct hif_opaque_softc *hif_ctx,
 					  enum qdf_bus_type bus_type,
 					  uint32_t ce_service_max_yield_time)
 {
+#define CE_SNOC_MAX_YIELD_TIME_US 2000
+
 	if (bus_type == QDF_BUS_TYPE_SNOC &&
 	    ce_service_max_yield_time < CE_SNOC_MAX_YIELD_TIME_US)
 		ce_service_max_yield_time = CE_SNOC_MAX_YIELD_TIME_US;
@@ -916,6 +915,7 @@ static inline void hdd_wlan_ssr_shutdown_event(void) { }
 /**
  * hdd_send_hang_data() - Send hang data to userspace
  * @data: Hang data
+ * @data_len: Length of @data
  *
  * Return: None
  */
@@ -1616,6 +1616,7 @@ static int hdd_pld_runtime_suspend_cb(void)
 
 /**
  * wlan_hdd_runtime_suspend() - suspend the wlan bus without apps suspend
+ * @dev: Driver device instance
  *
  * Each layer is responsible for its own suspend actions.  wma_runtime_suspend
  * takes care of the parts of the 802.11 suspend that we want to do for runtime
@@ -1701,6 +1702,7 @@ static int hdd_pld_runtime_resume_cb(void)
 
 /**
  * wlan_hdd_runtime_resume() - resume the wlan bus from runtime suspend
+ * @dev: Driver device instance
  *
  * Sets the runtime pm state and coordinates resume between hif wma and
  * ol_txrx.
@@ -1789,7 +1791,7 @@ static int wlan_hdd_pld_probe(struct device *dev,
 /**
  * wlan_hdd_pld_remove() - remove function registered to PLD
  * @dev: device to remove
- * @pld_bus_type: PLD bus type
+ * @bus_type: PLD bus type
  *
  * Return: void
  */
@@ -1818,7 +1820,7 @@ static void hdd_soc_idle_shutdown_unlock(void)
  * wlan_hdd_pld_idle_shutdown() - wifi module idle shutdown after interface
  *                                inactivity timeout has triggered idle shutdown
  * @dev: device to remove
- * @pld_bus_type: PLD bus type
+ * @bus_type: PLD bus type
  *
  * Return: 0 for success and negative error code for failure
  */
@@ -1839,7 +1841,7 @@ static int wlan_hdd_pld_idle_shutdown(struct device *dev,
 /**
  * wlan_hdd_pld_idle_restart() - wifi module idle restart after idle shutdown
  * @dev: device to remove
- * @pld_bus_type: PLD bus type
+ * @bus_type: PLD bus type
  *
  * Return: 0 for success and negative error code for failure
  */
@@ -1852,7 +1854,7 @@ static int wlan_hdd_pld_idle_restart(struct device *dev,
 /**
  * wlan_hdd_pld_shutdown() - shutdown function registered to PLD
  * @dev: device to shutdown
- * @pld_bus_type: PLD bus type
+ * @bus_type: PLD bus type
  *
  * Return: void
  */
@@ -1893,7 +1895,7 @@ static int wlan_hdd_pld_reinit(struct device *dev,
 /**
  * wlan_hdd_pld_crash_shutdown() - crash_shutdown function registered to PLD
  * @dev: device
- * @pld_bus_type: PLD bus type
+ * @bus_type: PLD bus type
  *
  * Return: void
  */
@@ -1906,7 +1908,7 @@ static void wlan_hdd_pld_crash_shutdown(struct device *dev,
 /**
  * wlan_hdd_pld_suspend() - suspend function registered to PLD
  * @dev: device
- * @pld_bus_type: PLD bus type
+ * @bus_type: PLD bus type
  * @state: PM state
  *
  * Return: 0 on success
@@ -1954,7 +1956,7 @@ static int wlan_hdd_pld_suspend(struct device *dev,
 /**
  * wlan_hdd_pld_resume() - resume function registered to PLD
  * @dev: device
- * @pld_bus_type: PLD bus type
+ * @bus_type: PLD bus type
  *
  * Return: 0 on success
  */
@@ -1978,7 +1980,7 @@ static int wlan_hdd_pld_resume(struct device *dev,
 /**
  * wlan_hdd_pld_suspend_noirq() - handle suspend no irq
  * @dev: device
- * @pld_bus_type: PLD bus type
+ * @bus_type: PLD bus type
  *
  * Complete the actions started by suspend().  Carry out any
  * additional operations required for suspending the device that might be
@@ -2008,7 +2010,7 @@ static int wlan_hdd_pld_suspend_noirq(struct device *dev,
 /**
  * wlan_hdd_pld_resume_noirq() - handle resume no irq
  * @dev: device
- * @pld_bus_type: PLD bus type
+ * @bus_type: PLD bus type
  *
  * Prepare for the execution of resume() by carrying out any
  * operations required for resuming the device that might be racing with
@@ -2038,7 +2040,7 @@ static int wlan_hdd_pld_resume_noirq(struct device *dev,
 /**
  * wlan_hdd_pld_reset_resume() - reset resume function registered to PLD
  * @dev: device
- * @pld_bus_type: PLD bus type
+ * @bus_type: PLD bus type
  *
  * Return: 0 on success
  */
@@ -2062,7 +2064,7 @@ static int wlan_hdd_pld_reset_resume(struct device *dev,
 /**
  * wlan_hdd_pld_notify_handler() - notify_handler function registered to PLD
  * @dev: device
- * @pld_bus_type: PLD bus type
+ * @bus_type: PLD bus type
  * @state: Modem power state
  *
  * Return: void
@@ -2169,7 +2171,7 @@ wlan_hdd_pld_uevent(struct device *dev, struct pld_uevent_data *event_data)
 /**
  * wlan_hdd_pld_runtime_suspend() - runtime suspend function registered to PLD
  * @dev: device
- * @pld_bus_type: PLD bus type
+ * @bus_type: PLD bus type
  *
  * Return: 0 on success
  */
@@ -2201,7 +2203,7 @@ out:
 /**
  * wlan_hdd_pld_runtime_resume() - runtime resume function registered to PLD
  * @dev: device
- * @pld_bus_type: PLD bus type
+ * @bus_type: PLD bus type
  *
  * Return: 0 on success
  */
