@@ -79,6 +79,36 @@ QDF_STATUS ucfg_qmi_deinit(void)
 	return status;
 }
 
+#ifdef QMI_WFDS
+/**
+ * ucfg_qmi_wfds_register_os_if_callbacks() - API to register wfds os if
+ *  callbacks with QMI component
+ * @qmi_ctx: QMI component context
+ * @cb_obj: callback object
+ *
+ * Return: None
+ */
+static void
+ucfg_qmi_wfds_register_os_if_callbacks(struct wlan_qmi_psoc_context *qmi_ctx,
+				       struct wlan_qmi_psoc_callbacks *cb_obj)
+{
+	qmi_ctx->qmi_cbs.qmi_wfds_init = cb_obj->qmi_wfds_init;
+	qmi_ctx->qmi_cbs.qmi_wfds_deinit = cb_obj->qmi_wfds_deinit;
+	qmi_ctx->qmi_cbs.qmi_wfds_send_config_msg =
+				cb_obj->qmi_wfds_send_config_msg;
+	qmi_ctx->qmi_cbs.qmi_wfds_send_req_mem_msg =
+				cb_obj->qmi_wfds_send_req_mem_msg;
+	qmi_ctx->qmi_cbs.qmi_wfds_send_ipcc_map_n_cfg_msg =
+				cb_obj->qmi_wfds_send_ipcc_map_n_cfg_msg;
+}
+#else
+static inline void
+ucfg_qmi_wfds_register_os_if_callbacks(struct wlan_qmi_psoc_context *qmi_ctx,
+				       struct wlan_qmi_psoc_callbacks *cb_obj)
+{
+}
+#endif
+
 void ucfg_qmi_register_os_if_callbacks(struct wlan_objmgr_psoc *psoc,
 				       struct wlan_qmi_psoc_callbacks *cb_obj)
 {
@@ -88,4 +118,6 @@ void ucfg_qmi_register_os_if_callbacks(struct wlan_objmgr_psoc *psoc,
 		qmi_err("QMI context is NULL");
 		return;
 	}
+
+	ucfg_qmi_wfds_register_os_if_callbacks(qmi_ctx, cb_obj);
 }

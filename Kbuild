@@ -2592,6 +2592,12 @@ ifeq ($(CONFIG_QMI_COMPONENT_ENABLE), y)
 WLAN_QMI_COMP_OBJS := $(QMI_COMP_CORE_DIR)/wlan_qmi_main.o \
 		 $(QMI_COMP_UCFG_DIR)/wlan_qmi_ucfg_api.o  \
 		 $(QMI_COMP_OS_IF_DIR)/os_if_qmi.o
+
+ifeq ($(CONFIG_QMI_WFDS), y)
+WLAN_QMI_COMP_OBJS += $(QMI_COMP_OS_IF_DIR)/os_if_qmi_wifi_driver_service_v01.o
+WLAN_QMI_COMP_OBJS += $(QMI_COMP_OS_IF_DIR)/os_if_qmi_wfds.o
+WLAN_QMI_COMP_OBJS += $(QMI_COMP_UCFG_DIR)/wlan_qmi_wfds_api.o
+endif
 endif
 
 $(call add-wlan-objs,qmi_comp,$(WLAN_QMI_COMP_OBJS))
@@ -4287,7 +4293,13 @@ cppflags-$(CONFIG_WLAN_TRACEPOINTS) += -DWLAN_TRACEPOINTS
 
 cppflags-$(CONFIG_QCACLD_FEATURE_SON) += -DFEATURE_PERPKT_INFO
 cppflags-$(CONFIG_QCACLD_FEATURE_SON) += -DQCA_ENHANCED_STATS_SUPPORT
-cppflags-$(CONFIG_QMI_COMPONENT_ENABLE) += -DQMI_COMPONENT_ENABLE
+
+ifeq ($(CONFIG_QMI_COMPONENT_ENABLE), y)
+cppflags-y += -DQMI_COMPONENT_ENABLE
+ifeq ($(CONFIG_QMI_WFDS), y)
+cppflags-y += -DQMI_WFDS
+endif
+endif
 
 ifdef CONFIG_MAX_LOGS_PER_SEC
 ccflags-y += -DWLAN_MAX_LOGS_PER_SEC=$(CONFIG_MAX_LOGS_PER_SEC)

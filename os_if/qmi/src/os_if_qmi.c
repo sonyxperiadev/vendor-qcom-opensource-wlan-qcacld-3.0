@@ -21,6 +21,7 @@
  */
 
 #include "os_if_qmi.h"
+#include "wlan_qmi_ucfg_api.h"
 
 QDF_STATUS os_if_qmi_handle_init(struct qmi_handle *qmi_hdl,
 				 qdf_size_t recv_buf_size,
@@ -130,4 +131,6 @@ void os_if_qmi_txn_cancel(struct qmi_txn *qmi_txn)
 void os_if_qmi_register_callbacks(struct wlan_objmgr_psoc *psoc,
 				  struct wlan_qmi_psoc_callbacks *cb_obj)
 {
+	os_if_qmi_wfds_register_callbacks(cb_obj);
+	ucfg_qmi_register_os_if_callbacks(psoc, cb_obj);
 }

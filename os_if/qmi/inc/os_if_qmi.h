@@ -30,6 +30,14 @@
 #include <linux/types.h>
 #include "wlan_cfg80211.h"
 #include "wlan_objmgr_psoc_obj.h"
+#include <qdf_time.h>
+
+#define QMI_WFDS_MAX_RECV_BUF_SIZE  4096
+#define QMI_WFDS_SERVICE_INS_ID_V01 0x0
+#define QMI_WFDS_TIMEOUT_MS         10000
+#define QMI_WFDS_TIMEOUT_JF         \
+	qdf_system_msecs_to_ticks(QMI_WFDS_TIMEOUT_MS)
+
 
 #ifdef QMI_COMPONENT_ENABLE
 /**
@@ -134,6 +142,21 @@ void os_if_qmi_txn_cancel(struct qmi_txn *qmi_txn);
  */
 void os_if_qmi_register_callbacks(struct wlan_objmgr_psoc *psoc,
 				  struct wlan_qmi_psoc_callbacks *cb_obj);
+
+#ifdef QMI_WFDS
+/**
+ * os_if_qmi_wfds_register_callbacks() - Register WFDS callback handlers
+ * @cb_obj: Callback object pointer
+ *
+ * Return: None
+ */
+void os_if_qmi_wfds_register_callbacks(struct wlan_qmi_psoc_callbacks *cb_obj);
+#else
+static inline
+void os_if_qmi_wfds_register_callbacks(struct wlan_qmi_psoc_callbacks *cb_obj)
+{
+}
+#endif
 #else
 static inline
 QDF_STATUS os_if_qmi_handle_init(struct qmi_handle *qmi_hdl,
