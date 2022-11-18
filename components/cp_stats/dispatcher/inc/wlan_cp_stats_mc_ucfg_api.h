@@ -47,7 +47,7 @@
  * If dialog_id is TWT_GET_ALL_PEER_PARAMS_DIALOG_ID retrieves twt session
  * parameters of all peers with valid twt session
  * @psoc_obj: psoc object
- * @params: array pointer to store peer twt session parameters, should contain
+ * @param: array pointer to store peer twt session parameters, should contain
  * mac_addr and dialog id of a peer for which twt session stats to be retrieved
  *
  * Return: total number of valid twt session
@@ -99,10 +99,11 @@ QDF_STATUS ucfg_mc_cp_stats_inc_wake_lock_stats_by_protocol(
 					enum qdf_proto_subtype protocol);
 
 /**
- * ucfg_mc_cp_stats_inc_wake_lock_stats_by_protocol() : API to increment wake
- * lock stats given destnation of packet that was received.
+ * ucfg_mc_cp_stats_inc_wake_lock_stats_by_dst_addr() : API to increment wake
+ * lock stats given destination of packet that was received.
  * @psoc: pointer to psoc object
- * @dest_mac: destinamtion mac address of packet that was received
+ * @vdev_id: vdev_id for which the packet was received
+ * @dest_mac: destination mac address of packet that was received
  *
  * Return : status of operation
  */
@@ -137,16 +138,17 @@ QDF_STATUS ucfg_mc_cp_stats_write_wow_stats(
 				char *buffer, uint16_t max_len, int *ret);
 
 /**
- * ucfg_mc_cp_stats_send_tx_power_request() - API to send tx_power request to
- * lmac
+ * ucfg_mc_cp_stats_send_stats_request() - API to send stats request to lmac
  * @vdev: pointer to vdev object
  * @type: request type
+ * @info: specific request information
  *
  * Return: status of operation
  */
 QDF_STATUS ucfg_mc_cp_stats_send_stats_request(struct wlan_objmgr_vdev *vdev,
 					       enum stats_req_type type,
 					       struct request_info *info);
+
 /**
  * wlan_cfg80211_mc_twt_clear_infra_cp_stats() - send request to reset
  * control path statistics
@@ -313,6 +315,7 @@ QDF_STATUS ucfg_send_big_data_stats_request(struct wlan_objmgr_vdev *vdev,
 /**
  * ucfg_mc_cp_set_big_data_fw_support() - set big data fw support
  * @psoc: PSOC object
+ * @enable: Set true if firmware supports big data, otherwise false
  *
  * API to set fw supports big data feature or not
  *
@@ -325,6 +328,7 @@ ucfg_mc_cp_set_big_data_fw_support(struct wlan_objmgr_psoc *psoc,
 /**
  * ucfg_mc_cp_get_big_data_fw_support() - get big data fw support
  * @psoc: PSOC object
+ * @enable: Set true if firmware supports big data, otherwise false
  *
  * API to get fw supports big data feature or not
  *
