@@ -4748,6 +4748,8 @@ ccflags-y += -DWLAN_OBJMGR_RATELIMIT_THRESH=0
 # WIN.
 ccflags-y += -DWLAN_SCHED_REDUCTION_LIMIT=0
 
+ccflags-y += -DIRQ_DISABLED_MAX_DURATION_NS=100000000
+
 # Determine if we are building against an arm architecture host
 ifeq ($(findstring arm, $(ARCH)),)
 	ccflags-y += -DWLAN_HOST_ARCH_ARM=0
