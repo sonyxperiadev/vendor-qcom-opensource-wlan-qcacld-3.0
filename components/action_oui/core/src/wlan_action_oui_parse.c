@@ -32,10 +32,10 @@
 
 /**
  * action_oui_string_to_hex() - convert string to uint8_t hex array
- * @token - string to be converted
- * @hex - output string to hold converted string
- * @no_of_lengths - count of possible lengths for input string
- * @possible_lengths - array holding possible lengths
+ * @token: string to be converted
+ * @hex: output string to hold converted string
+ * @no_of_lengths: count of possible lengths for input string
+ * @possible_lengths: array holding possible lengths
  *
  * This function converts the continuous input string of even length and
  * containing hexa decimal characters into hexa decimal array of uint8_t type.
@@ -80,7 +80,7 @@ static bool action_oui_string_to_hex(uint8_t *token, uint8_t *hex,
 
 /**
  * action_oui_token_string() - converts enum value to string
- * token_id: enum value to be converted to string
+ * @token_id: enum value to be converted to string
  *
  * This function converts the enum value of type action_oui_token_type
  * to string
@@ -471,7 +471,7 @@ validate_and_convert_capability(uint8_t *token,
 
 /**
  * action_oui_extension_store() - store action oui extension
- * @priv_obj: pointer to action_oui priv obj
+ * @psoc_priv: pointer to action_oui priv obj
  * @oui_priv: type of the action
  * @ext: oui extension to store in sme
  *

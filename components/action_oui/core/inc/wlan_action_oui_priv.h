@@ -103,7 +103,7 @@ struct action_oui_psoc_priv {
  * action_oui_parse() - Parse action oui string
  * @psoc_priv: pointer to action_oui psoc priv obj
  * @oui_string: string to be parsed
- * @ation_id: type of the action to be parsed
+ * @action_id: type of the action to be parsed
  *
  * This function parses the action oui string, extracts extensions and
  * stores them @action_oui_priv using list data structure.
@@ -118,7 +118,7 @@ action_oui_parse(struct action_oui_psoc_priv *psoc_priv,
 /**
  * action_oui_send() - Send action oui extensions to target_if.
  * @psoc_priv: pointer to action_oui psoc priv obj
- * @ation_id: type of the action to be send
+ * @action_id: type of the action to send
  *
  * This function sends action oui extensions to target_if.
  *
