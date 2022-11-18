@@ -5300,6 +5300,12 @@ static int __hdd_set_mac_address(struct net_device *dev, void *addr)
 		       QDF_MAC_ADDR_REF(mac_addr.bytes), dev->name);
 
 	if (net_if_running && adapter->vdev) {
+		if (ucfg_scan_get_vdev_status(adapter->vdev) !=
+						SCAN_NOT_IN_PROGRESS)
+			wlan_abort_scan(hdd_ctx->pdev, INVAL_PDEV_ID,
+					adapter->vdev_id,
+					INVALID_SCAN_ID, false);
+
 		ret = hdd_update_vdev_mac_address(hdd_ctx, adapter, mac_addr);
 		if (ret)
 			return ret;
