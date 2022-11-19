@@ -1082,8 +1082,7 @@ int osif_twt_setup_req(struct wlan_objmgr_vdev *vdev,
 
 /**
  * osif_twt_handle_renego_failure() - Upon re-nego failure send TWT teardown
- *
- * @adapter: Adapter pointer
+ * @psoc: Pointer to psoc object
  * @event: Pointer to Add dialog complete event structure
  *
  * Upon re-negotiation failure, this function constructs TWT teardown
@@ -2328,7 +2327,7 @@ enum twt_traffic_ac osif_twt_convert_ac_value(enum qca_wlan_ac_type ac_value)
 
 /**
  * osif_twt_add_ac_config() - pdev TWT param send
- * @psoc: Pointer to psoc object
+ * @vdev: Pointer to vdev object
  * @twt_ac: TWT access category
  *
  * Return: QDF Status

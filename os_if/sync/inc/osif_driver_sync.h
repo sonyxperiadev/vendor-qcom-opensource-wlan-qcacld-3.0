@@ -22,7 +22,7 @@
 
 #include "qdf_types.h"
 
-/**
+/*
  * struct osif_driver_sync - opaque synchronization handle for a driver
  */
 struct osif_driver_sync;

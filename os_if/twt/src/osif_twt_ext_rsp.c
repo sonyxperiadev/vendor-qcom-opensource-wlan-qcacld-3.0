@@ -280,7 +280,7 @@ twt_nudge_status_to_vendor_twt_status(enum HOST_TWT_NUDGE_STATUS status)
 /**
  * twt_add_cmd_to_vendor_twt_resp_type() - convert from
  * HOST_TWT_COMMAND to qca_wlan_vendor_twt_setup_resp_type
- * @status: HOST_TWT_COMMAND value from firmware
+ * @type: HOST_TWT_COMMAND value from firmware
  *
  * Return: qca_wlan_vendor_twt_setup_resp_type values for valid
  * HOST_TWT_COMMAND value and -EINVAL for invalid value

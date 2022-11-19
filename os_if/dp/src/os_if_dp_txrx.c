@@ -44,7 +44,7 @@
 
 /**
  * osif_dp_classify_pkt() - classify packet
- * @skb - sk buff
+ * @skb:  sk buff
  *
  * Return: none
  */
@@ -150,7 +150,7 @@ void osif_dp_mark_pkt_type(struct sk_buff *skb)
 		osif_dp_mark_non_critical_pkt(skb);
 }
 
-/**
+/*
  * When bus bandwidth is idle, if RX data is delivered with
  * napi_gro_receive, to reduce RX delay related with GRO,
  * check gro_result returned from napi_gro_receive to determine
@@ -363,6 +363,7 @@ __osif_check_for_prio_filter_in_clsact_qdisc(struct tcf_block *block,
  * osif_check_for_prio_filter_in_clsact_qdisc() - Check if priority 3 filter
  *  is configured in the ingress clsact qdisc
  * @qdisc: pointer to clsact qdisc
+ * @prio: traffic priority
  *
  * Return: qdisc filter status
  */
@@ -385,10 +386,10 @@ osif_check_for_prio_filter_in_clsact_qdisc(struct Qdisc *qdisc, uint32_t prio)
 }
 
 /**
- * osif_dp_rx_check_qdisc_for_configured() - Check if any ingress qdisc
- * configured for given adapter
- * @dp_intf: pointer to DP interface context
- * @rx_ctx_id: Rx context id
+ * osif_dp_rx_check_qdisc_configured() - Check if any ingress qdisc
+ * configured for given netdev
+ * @ndev: pointer to netdev
+ * @prio: traffic priority
  *
  * The function checks if ingress qdisc is registered for a given
  * net device.

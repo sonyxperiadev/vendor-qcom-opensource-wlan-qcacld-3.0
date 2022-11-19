@@ -683,7 +683,8 @@ static int os_if_nan_parse_security_params(struct nlattr **tb,
 
 /**
  * __os_if_nan_process_ndp_initiator_req() - NDP initiator request handler
- * @ctx: hdd context
+ * @psoc: psoc object
+ * @iface_name: interface name
  * @tb: parsed NL attribute list
  *
  * tb will contain following vendor attributes:
@@ -851,7 +852,7 @@ static int os_if_nan_process_ndp_initiator_req(struct wlan_objmgr_psoc *psoc,
 
 /**
  * __os_if_nan_process_ndp_responder_req() - NDP responder request handler
- * @nan_ctx: hdd context
+ * @psoc: psoc object
  * @tb: parsed NL attribute list
  *
  * tb includes following vendor attributes:
@@ -1230,7 +1231,7 @@ static inline uint32_t osif_ndp_get_ndp_initiator_rsp_len(void)
 /**
  * os_if_ndp_initiator_rsp_handler() - NDP initiator response handler
  * @vdev: pointer to vdev object
- * @rsp_params: response parameters
+ * @rsp: response parameters
  *
  * Following vendor event is sent to cfg80211:
  * QCA_WLAN_VENDOR_ATTR_NDP_SUBCMD =
@@ -1411,7 +1412,7 @@ static inline uint32_t osif_ndp_get_ndp_req_ind_len(
 /**
  * os_if_ndp_indication_handler() - NDP indication handler
  * @vdev: pointer to vdev object
- * @ind_params: indication parameters
+ * @event: indication parameters
  *
  * Following vendor event is sent to cfg80211:
  * QCA_WLAN_VENDOR_ATTR_NDP_SUBCMD =
@@ -1646,7 +1647,7 @@ static QDF_STATUS os_if_ndp_confirm_pack_ch_info(struct sk_buff *event,
 /**
  * os_if_ndp_confirm_ind_handler() - NDP confirm indication handler
  * @vdev: pointer to vdev object
- * @ind_params: indication parameters
+ * @ndp_confirm: indication parameters
  *
  * Following vendor event is sent to cfg80211:
  * QCA_WLAN_VENDOR_ATTR_NDP_SUBCMD =
@@ -1788,7 +1789,7 @@ static inline uint32_t osif_ndp_get_ndp_end_rsp_len(void)
 /**
  * os_if_ndp_end_rsp_handler() - NDP end response handler
  * @vdev: pointer to vdev object
- * @rsp_params: response parameters
+ * @rsp: response parameters
  *
  * Following vendor event is sent to cfg80211:
  * QCA_WLAN_VENDOR_ATTR_NDP_SUBCMD =
@@ -1865,7 +1866,7 @@ static inline uint32_t osif_ndp_get_ndp_end_ind_len(
 /**
  * os_if_ndp_end_ind_handler() - NDP end indication handler
  * @vdev: pointer to vdev object
- * @ind_params: indication parameters
+ * @end_ind: indication parameters
  *
  * Following vendor event is sent to cfg80211:
  * QCA_WLAN_VENDOR_ATTR_NDP_SUBCMD =
@@ -1927,8 +1928,8 @@ ndp_end_ind_nla_failed:
 
 /**
  * os_if_new_peer_ind_handler() - NDP new peer indication handler
- * @adapter: pointer to adapter context
- * @ind_params: indication parameters
+ * @vdev: vdev object
+ * @peer_ind: indication parameters
  *
  * Return: none
  */
@@ -1970,8 +1971,8 @@ static void os_if_new_peer_ind_handler(struct wlan_objmgr_vdev *vdev,
 
 /**
  * os_if_peer_departed_ind_handler() - Handle NDP peer departed indication
- * @adapter: pointer to adapter context
- * @ind_params: indication parameters
+ * @vdev: vdev object
+ * @peer_ind: indication parameters
  *
  * Return: none
  */
@@ -2021,7 +2022,8 @@ static inline uint32_t osif_ndp_get_ndi_create_rsp_len(void)
 
 /**
  * os_if_ndp_iface_create_rsp_handler() - NDP iface create response handler
- * @adapter: pointer to adapter context
+ * @psoc: soc object
+ * @vdev: vdev object
  * @rsp_params: response parameters
  *
  * The function is expected to send a response back to the user space
@@ -2137,7 +2139,8 @@ close_ndi:
 
 /**
  * os_if_ndp_iface_delete_rsp_handler() - NDP iface delete response handler
- * @adapter: pointer to adapter context
+ * @psoc: soc object
+ * @vdev: vdev object
  * @rsp_params: response parameters
  *
  * Return: none
