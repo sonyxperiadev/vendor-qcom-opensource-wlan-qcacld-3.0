@@ -2394,7 +2394,8 @@ lim_update_spatial_reuse(struct pe_session *session)
 	uint8_t vdev_id = session->vdev_id;
 
 	sr_ctrl = wlan_vdev_mlme_get_sr_ctrl(session->vdev);
-	non_srg_pd_max_offset = wlan_vdev_mlme_get_pd_offset(session->vdev);
+	non_srg_pd_max_offset =
+		wlan_vdev_mlme_get_non_srg_pd_offset(session->vdev);
 	if (non_srg_pd_max_offset && sr_ctrl &&
 	    wlan_vdev_mlme_get_he_spr_enabled(session->vdev)) {
 		psoc = wlan_vdev_get_psoc(session->vdev);

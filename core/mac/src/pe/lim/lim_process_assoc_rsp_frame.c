@@ -313,6 +313,8 @@ void lim_update_assoc_sta_datas(struct mac_context *mac_ctx,
 		 */
 		pe_debug("OMN IE is present in the assoc rsp, update NSS/Ch width");
 	}
+	if (lim_process_srp_ie(assoc_rsp, sta_ds) == QDF_STATUS_SUCCESS)
+		lim_update_vdev_sr_elements(session_entry, sta_ds);
 }
 
 /**
@@ -574,7 +576,7 @@ static inline void lim_process_he_info(tpSirProbeRespBeacon beacon,
 #endif
 
 #ifdef WLAN_FEATURE_SR
-static QDF_STATUS lim_process_srp_ie(tpSirAssocRsp ar, tpDphHashNode sta_ds)
+QDF_STATUS lim_process_srp_ie(tpSirAssocRsp ar, tpDphHashNode sta_ds)
 {
 	QDF_STATUS status = QDF_STATUS_E_NOSUPPORT;
 
@@ -584,12 +586,6 @@ static QDF_STATUS lim_process_srp_ie(tpSirAssocRsp ar, tpDphHashNode sta_ds)
 	}
 
 	return status;
-}
-#else
-static inline QDF_STATUS
-lim_process_srp_ie(tpSirAssocRsp ar, tpDphHashNode sta_ds)
-{
-	return QDF_STATUS_SUCCESS;
 }
 #endif
 

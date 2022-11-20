@@ -7163,7 +7163,7 @@ populate_dot11f_sr_info(struct mac_context *mac_ctx,
 	    !(sr_ctrl & WLAN_HE_NON_SRG_OFFSET_PRESENT))
 		return QDF_STATUS_SUCCESS;
 
-	non_srg_pd_offset = wlan_vdev_mlme_get_pd_offset(session->vdev);
+	non_srg_pd_offset = wlan_vdev_mlme_get_non_srg_pd_offset(session->vdev);
 	sr_info->present = 1;
 	sr_info->psr_disallow = 1;
 	sr_info->non_srg_pd_sr_disallow = 0;

@@ -763,7 +763,7 @@ QDF_STATUS wma_sr_update(tp_wma_handle wma, uint8_t vdev_id, bool enable)
 		} else {
 			/* VDEV down, disable SR */
 			wlan_vdev_mlme_set_sr_ctrl(vdev, 0);
-			wlan_vdev_mlme_set_pd_offset(vdev, 0);
+			wlan_vdev_mlme_set_non_srg_pd_offset(vdev, 0);
 		}
 
 		wma_debug("SR param val: %x, Enable: %x", val, enable);

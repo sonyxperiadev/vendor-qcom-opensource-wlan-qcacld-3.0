@@ -33,6 +33,7 @@
 #include "spatial_reuse_ucfg_api.h"
 #include "cdp_txrx_host_stats.h"
 #include "wlan_policy_mgr_i.h"
+#include "wlan_objmgr_vdev_obj.h"
 
 const struct nla_policy
 wlan_hdd_sr_policy[QCA_WLAN_VENDOR_ATTR_SR_MAX + 1] = {
@@ -291,17 +292,22 @@ hdd_sr_event_convert_operation(enum sr_osif_operation sr_osif_oper,
 	return status;
 }
 
-static QDF_STATUS hdd_sr_pack_conc_event(struct sk_buff *skb,
+static QDF_STATUS hdd_sr_pack_suspend_resume_event(
+					 struct sk_buff *skb,
 					 enum qca_wlan_sr_operation sr_nl_oper,
-					 enum qca_wlan_sr_reason_code sr_nl_rc)
+					 enum qca_wlan_sr_reason_code sr_nl_rc,
+					 uint8_t srg_max_pd_offset,
+					 uint8_t srg_min_pd_offset,
+					 uint8_t non_srg_max_pd_offset)
 {
 	struct nlattr *attr;
 	QDF_STATUS status = QDF_STATUS_E_FAULT;
 
-	if (sr_nl_rc != QCA_WLAN_SR_REASON_CODE_CONCURRENCY ||
-	    (sr_nl_oper != QCA_WLAN_SR_OPERATION_SR_SUSPEND &&
-	     sr_nl_oper != QCA_WLAN_SR_OPERATION_SR_RESUME)) {
-		hdd_err("SR concurrency operation is invalid");
+	if (((sr_nl_rc != QCA_WLAN_SR_REASON_CODE_CONCURRENCY) &&
+	     (sr_nl_rc != QCA_WLAN_SR_REASON_CODE_ROAMING)) ||
+	    ((sr_nl_oper != QCA_WLAN_SR_OPERATION_SR_SUSPEND) &&
+	     (sr_nl_oper != QCA_WLAN_SR_OPERATION_SR_RESUME))) {
+		hdd_err("SR operation is invalid");
 		status = QDF_STATUS_E_INVAL;
 		goto sr_events_end;
 	}
@@ -322,6 +328,30 @@ static QDF_STATUS hdd_sr_pack_conc_event(struct sk_buff *skb,
 		hdd_err("failed to put attr SR Reascon Code");
 		goto sr_events_end;
 	}
+	if (sr_nl_rc == QCA_WLAN_SR_REASON_CODE_ROAMING &&
+	    sr_nl_oper == QCA_WLAN_SR_OPERATION_SR_RESUME) {
+		if (nla_put_u32(
+			skb,
+			QCA_WLAN_VENDOR_ATTR_SR_PARAMS_SRG_OBSS_PD_MIN_OFFSET,
+			srg_min_pd_offset)) {
+			hdd_err("srg_pd_min_offset put fail");
+			goto sr_events_end;
+		}
+		if (nla_put_u32(
+			skb,
+			QCA_WLAN_VENDOR_ATTR_SR_PARAMS_SRG_OBSS_PD_MAX_OFFSET,
+			srg_max_pd_offset)) {
+			hdd_err("srg_pd_min_offset put fail");
+			goto sr_events_end;
+		}
+		if (nla_put_u32(
+		      skb,
+		      QCA_WLAN_VENDOR_ATTR_SR_PARAMS_NON_SRG_OBSS_PD_MAX_OFFSET,
+		      non_srg_max_pd_offset)) {
+			hdd_err("non_srg_pd_offset put fail");
+			goto sr_events_end;
+		}
+	}
 	status = QDF_STATUS_SUCCESS;
 	nla_nest_end(skb, attr);
 
@@ -339,6 +369,9 @@ static void hdd_sr_osif_events(struct wlan_objmgr_vdev *vdev,
 	struct sk_buff *skb;
 	uint32_t idx = QCA_NL80211_VENDOR_SUBCMD_SR_INDEX;
 	uint32_t len = NLMSG_HDRLEN;
+	uint8_t non_srg_max_pd_offset = 0;
+	uint8_t srg_max_pd_offset = 0;
+	uint8_t srg_min_pd_offset = 0;
 	QDF_STATUS status;
 	enum qca_wlan_sr_operation sr_nl_oper;
 	enum qca_wlan_sr_reason_code sr_nl_rc;
@@ -354,6 +387,9 @@ static void hdd_sr_osif_events(struct wlan_objmgr_vdev *vdev,
 		return;
 	}
 
+	wlan_vdev_mlme_get_srg_pd_offset(vdev, &srg_max_pd_offset,
+					 &srg_min_pd_offset);
+	non_srg_max_pd_offset = wlan_vdev_mlme_get_non_srg_pd_offset(vdev);
 	status = hdd_sr_event_convert_operation(sr_osif_oper, &sr_nl_oper);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		hdd_err("Invalid SR Operation: %d", sr_osif_oper);
@@ -370,11 +406,29 @@ static void hdd_sr_osif_events(struct wlan_objmgr_vdev *vdev,
 	switch (sr_nl_oper) {
 	case QCA_WLAN_SR_OPERATION_SR_SUSPEND:
 	case QCA_WLAN_SR_OPERATION_SR_RESUME:
-		if (sr_nl_rc == QCA_WLAN_SR_REASON_CODE_CONCURRENCY) {
+		if (sr_nl_rc == QCA_WLAN_SR_REASON_CODE_CONCURRENCY ||
+		    sr_nl_rc == QCA_WLAN_SR_REASON_CODE_ROAMING) {
 			wiphy = adapter->hdd_ctx->wiphy;
 			wdev = &adapter->wdev;
-			len += nla_total_size(sizeof(uint8_t)) +
-			       nla_total_size(sizeof(uint32_t));
+			/* QCA_WLAN_VENDOR_ATTR_SR_OPERATION */
+			len += nla_total_size(sizeof(uint8_t));
+			/* QCA_WLAN_VENDOR_ATTR_SR_PARAMS_REASON_CODE */
+			len += nla_total_size(sizeof(uint32_t));
+			/* QCA_WLAN_VENDOR_ATTR_SR_PARAMS */
+			len += nla_total_size(0);
+			/*
+			 * In case of resume due to roaming additional config
+			 * params are required to be sent.
+			 */
+			if (sr_nl_rc == QCA_WLAN_SR_REASON_CODE_ROAMING &&
+			    sr_nl_oper == QCA_WLAN_SR_OPERATION_SR_RESUME) {
+				/* SR_PARAMS_SRG_OBSS_PD_MIN_OFFSET */
+				len += nla_total_size(sizeof(int32_t));
+				/* SR_PARAMS_SRG_OBSS_PD_MAX_OFFSET */
+				len += nla_total_size(sizeof(int32_t));
+				/* SR_PARAMS_NON_SRG_OBSS_PD_MAX_OFFSET */
+				len += nla_total_size(sizeof(int32_t));
+			}
 			skb = wlan_cfg80211_vendor_event_alloc(wiphy, wdev,
 							       len, idx,
 							       GFP_KERNEL);
@@ -382,8 +436,10 @@ static void hdd_sr_osif_events(struct wlan_objmgr_vdev *vdev,
 				hdd_err("cfg80211_vendor_event_alloc failed");
 				return;
 			}
-			status = hdd_sr_pack_conc_event(skb, sr_nl_oper,
-							sr_nl_rc);
+			status = hdd_sr_pack_suspend_resume_event(
+					skb, sr_nl_oper, sr_nl_rc,
+					srg_max_pd_offset, srg_min_pd_offset,
+					non_srg_max_pd_offset);
 			if (QDF_IS_STATUS_ERROR(status)) {
 				kfree_skb(skb);
 				return;
@@ -598,7 +654,7 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(wdev->netdev);
 	struct nlattr *tb[QCA_WLAN_VENDOR_ATTR_SR_MAX + 1];
-	struct nlattr *tb2[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_MAX + 1];
+	struct nlattr *tb2[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_MAX + 1] = {0};
 	enum qca_wlan_sr_operation sr_oper;
 	struct nlattr *sr_oper_attr;
 	struct nlattr *sr_param_attr;
@@ -695,6 +751,8 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 			srg_pd_threshold =
 			nla_get_s32(
 			tb2[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_SRG_PD_THRESHOLD]);
+			wlan_vdev_mlme_set_pd_threshold_present(adapter->vdev,
+								true);
 		}
 
 		if (is_sr_enable &&
@@ -703,6 +761,8 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 			nla_get_s32(
 			tb2[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_NON_SRG_PD_THRESHOLD]
 			);
+			wlan_vdev_mlme_set_pd_threshold_present(adapter->vdev,
+								true);
 		}
 		hdd_debug("setting sr enable %d with pd threshold srg: %d non srg: %d",
 			  is_sr_enable, srg_pd_threshold, non_srg_pd_threshold);
@@ -768,7 +828,7 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 						 &srg_max_pd_offset,
 						 &srg_min_pd_offset);
 		non_srg_max_pd_offset =
-			wlan_vdev_mlme_get_pd_offset(adapter->vdev);
+			wlan_vdev_mlme_get_non_srg_pd_offset(adapter->vdev);
 		sr_ctrl = wlan_vdev_mlme_get_sr_ctrl(adapter->vdev);
 		nl_buf_len = hdd_get_srp_param_len();
 		skb = cfg80211_vendor_cmd_alloc_reply_skb(hdd_ctx->wiphy,

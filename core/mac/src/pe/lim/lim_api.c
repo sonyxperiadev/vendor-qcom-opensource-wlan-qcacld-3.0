@@ -86,6 +86,7 @@
 #include "wlan_mlo_mgr_sta.h"
 #include "wlan_mlo_mgr_peer.h"
 #include <wlan_twt_api.h>
+#include "spatial_reuse_api.h"
 
 struct pe_hang_event_fixed_param {
 	uint16_t tlv_header;
@@ -2700,6 +2701,110 @@ static inline void pe_roam_fill_obss_scan_param(struct pe_session *src_session,
 }
 #endif
 
+#ifdef WLAN_FEATURE_SR
+/**
+ * lim_handle_sr_cap() - To handle SR(Spatial Reuse) capability
+ * of roamed AP
+ * @vdev: objmgr vdev
+ *
+ * This function is to check and compare SR cap of previous and
+ * roamed AP and takes decision to send event to userspace.
+ *
+ * Return: None
+ */
+static void lim_handle_sr_cap(struct wlan_objmgr_vdev *vdev)
+{
+	int32_t non_srg_pd_threshold = 0;
+	int32_t srg_pd_threshold = 0;
+	uint8_t non_srg_pd_offset = 0;
+	uint8_t srg_max_pd_offset = 0;
+	uint8_t srg_min_pd_offset = 0;
+	uint8_t sr_ctrl;
+	bool is_pd_threshold_present = false;
+	struct wlan_objmgr_pdev *pdev;
+	enum sr_status_of_roamed_ap sr_status;
+
+	pdev = wlan_vdev_get_pdev(vdev);
+	if (!pdev) {
+		pe_err("invalid pdev");
+		return;
+	}
+	non_srg_pd_offset = wlan_vdev_mlme_get_non_srg_pd_offset(vdev);
+	wlan_vdev_mlme_get_srg_pd_offset(vdev, &srg_max_pd_offset,
+					 &srg_min_pd_offset);
+	wlan_vdev_mlme_get_current_non_srg_pd_threshold(vdev,
+							&non_srg_pd_threshold);
+	wlan_vdev_mlme_get_current_srg_pd_threshold(vdev,
+						    &srg_pd_threshold);
+
+	sr_ctrl = wlan_vdev_mlme_get_sr_ctrl(vdev);
+	if ((sr_ctrl & NON_SRG_PD_SR_DISALLOWED) &&
+	    (!(sr_ctrl & SRG_INFO_PRESENT))) {
+		sr_status = SR_DISALLOW;
+	} else {
+		if ((!(sr_ctrl & NON_SRG_PD_SR_DISALLOWED) &&
+		     (non_srg_pd_threshold > non_srg_pd_offset +
+		      SR_PD_THRESHOLD_MIN)) ||
+		     ((sr_ctrl & SRG_INFO_PRESENT) &&
+		      ((srg_pd_threshold > srg_max_pd_offset +
+		     SR_PD_THRESHOLD_MIN) ||
+		      (srg_pd_threshold < srg_min_pd_offset +
+		       SR_PD_THRESHOLD_MIN))))
+			sr_status = SR_THRESHOLD_NOT_IN_RANGE_OF_ROAMED_AP;
+		else
+			sr_status = SR_THRESHOLD_IN_RANGE_OF_ROAMED_AP;
+	}
+	pe_debug("sr status of roamed AP %d existing thresholds srg: %d non-srg: %d roamed AP sr offset srg: max %d min %d non-srg: %d",
+		 sr_status, srg_pd_threshold, non_srg_pd_threshold,
+		 srg_max_pd_offset, srg_min_pd_offset, non_srg_pd_offset);
+	switch (sr_status) {
+	case SR_DISALLOW:
+		/** clear thresholds set by previous AP **/
+		wlan_vdev_mlme_set_current_non_srg_pd_threshold(vdev, 0);
+		wlan_vdev_mlme_set_current_srg_pd_threshold(vdev, 0);
+		wlan_spatial_reuse_osif_event(vdev,
+					      SR_OPERATION_SUSPEND,
+					      SR_REASON_CODE_ROAMING);
+	break;
+	case SR_THRESHOLD_NOT_IN_RANGE_OF_ROAMED_AP:
+		wlan_vdev_mlme_get_pd_threshold_present(
+						vdev, &is_pd_threshold_present);
+		/*
+		 * if userspace gives pd threshold then check if its within
+		 * range of roamed AP's min and max thresholds, if not in
+		 * range disable and let userspace decide to re-enable.
+		 * if userspace dosesnt give PD threshold then always enable
+		 * SRG based on AP's recommendation of thresholds.
+		 */
+		if (is_pd_threshold_present) {
+			wlan_vdev_mlme_set_current_non_srg_pd_threshold(vdev,
+									0);
+			wlan_vdev_mlme_set_current_srg_pd_threshold(vdev, 0);
+			wlan_spatial_reuse_osif_event(vdev,
+						      SR_OPERATION_SUSPEND,
+						      SR_REASON_CODE_ROAMING);
+		} else {
+			wlan_sr_setup_req(
+				vdev, pdev, true,
+				srg_max_pd_offset + SR_PD_THRESHOLD_MIN,
+				non_srg_pd_threshold + SR_PD_THRESHOLD_MIN);
+			wlan_spatial_reuse_osif_event(vdev,
+						      SR_OPERATION_RESUME,
+						      SR_REASON_CODE_ROAMING);
+		}
+	break;
+	case SR_THRESHOLD_IN_RANGE_OF_ROAMED_AP:
+		/* Send enable command to fw, as fw disables SR on roaming */
+		wlan_sr_setup_req(vdev, pdev, true, srg_pd_threshold,
+				  non_srg_pd_threshold);
+	break;
+	}
+}
+#else
+static void lim_handle_sr_cap(struct wlan_objmgr_vdev *vdev)
+{}
+#endif
+
 QDF_STATUS
 pe_roam_synch_callback(struct mac_context *mac_ctx,
 		       uint8_t vdev_id,
@@ -2903,7 +3008,6 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 
 	lim_copy_and_free_hlp_data_from_session(ft_session_ptr,
 						roam_sync_ind_ptr);
-
 	roam_sync_ind_ptr->aid = ft_session_ptr->limAID;
 	curr_sta_ds->mlmStaContext.mlmState = eLIM_MLM_LINK_ESTABLISHED_STATE;
 	curr_sta_ds->nss = ft_session_ptr->nss;
@@ -2913,6 +3017,7 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 	lim_init_tdls_data(mac_ctx, ft_session_ptr);
 	ric_tspec_len = ft_session_ptr->RICDataLen;
 	pe_debug("LFR3: Session RicLength: %d", ft_session_ptr->RICDataLen);
+	lim_handle_sr_cap(ft_session_ptr->vdev);
 #ifdef FEATURE_WLAN_ESE
 	ric_tspec_len += ft_session_ptr->tspecLen;
 	pe_debug("LFR3: tspecLen: %d", ft_session_ptr->tspecLen);
@@ -2954,7 +3059,6 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 	ft_session_ptr->limSmeState = eLIM_SME_LINK_EST_STATE;
 	ft_session_ptr->limPrevSmeState = ft_session_ptr->limSmeState;
 	ft_session_ptr->bRoamSynchInProgress = false;
-
 	return QDF_STATUS_SUCCESS;
 }
 #endif
@@ -3943,8 +4047,8 @@ void lim_update_vdev_sr_elements(struct pe_session *session_entry,
 		 srg_max_pd_offset);
 
 	wlan_vdev_mlme_set_sr_ctrl(session_entry->vdev, sr_ctrl);
-	wlan_vdev_mlme_set_pd_offset(session_entry->vdev,
-				     non_srg_max_pd_offset);
+	wlan_vdev_mlme_set_non_srg_pd_offset(session_entry->vdev,
+					     non_srg_max_pd_offset);
 	wlan_vdev_mlme_set_srg_pd_offset(session_entry->vdev, srg_max_pd_offset,
 					 srg_min_pd_offset);
 }

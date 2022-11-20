@@ -69,6 +69,22 @@
 /*mac->lim.gLimProcessDefdMsgs*/
 #define GET_LIM_PROCESS_DEFD_MESGS(mac) (mac->lim.gLimProcessDefdMsgs)
 
+#ifdef WLAN_FEATURE_SR
+/**
+ * enum sr_status_of_roamed_ap - SR(Spatial Reuse) status of roamed AP
+ * SR_DISALLOW: SR not supported by roamed AP
+ * SR_THRESHOLD_IN_RANGE_OF_PREVIOUS_AP: SR supported by roamed AP
+ * and configured threshold is in range.
+ * SR_THRESHOLD_NOT_IN_RANGE_OF_PREVIOUS_AP: SR supported by roamed AP
+ * and configured threshold is not in range.
+ */
+enum sr_status_of_roamed_ap {
+	SR_DISALLOW,
+	SR_THRESHOLD_IN_RANGE_OF_ROAMED_AP,
+	SR_THRESHOLD_NOT_IN_RANGE_OF_ROAMED_AP,
+};
+#endif
+
 /**
  * lim_post_msg_api() - post normal priority PE message
  * @mac: mac context
@@ -647,11 +663,26 @@ lim_gen_link_probe_rsp_roam(struct mac_context *mac_ctx,
  */
 void lim_update_vdev_sr_elements(struct pe_session *session_entry,
 				 tpDphHashNode sta_ds);
+
+/**
+ * lim_process_srp_ie() - process srp ie during re/association
+ * @tpSirAssocRsp: assoc response
+ * @tpDphHashNode: sta node
+ *
+ * Return: success/failure
+ */
+QDF_STATUS lim_process_srp_ie(tpSirAssocRsp ar, tpDphHashNode sta_ds);
 #else
 static inline void
 lim_update_vdev_sr_elements(struct pe_session *session_entry,
 			    tpDphHashNode sta_ds)
 {
+}
+
+static inline
+QDF_STATUS lim_process_srp_ie(tpSirAssocRsp ar, tpDphHashNode sta_ds)
+{
+	return QDF_STATUS_SUCCESS;
 }
 #endif
 

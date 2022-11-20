@@ -33,7 +33,7 @@ void ucfg_spatial_reuse_get_sr_config(struct wlan_objmgr_vdev *vdev,
 				      bool *he_spr_enabled)
 {
 	*sr_ctrl = wlan_vdev_mlme_get_sr_ctrl(vdev);
-	*non_srg_max_pd_offset = wlan_vdev_mlme_get_pd_offset(vdev);
+	*non_srg_max_pd_offset = wlan_vdev_mlme_get_non_srg_pd_offset(vdev);
 	*he_spr_enabled = wlan_vdev_mlme_get_he_spr_enabled(vdev);
 }
 
@@ -42,7 +42,7 @@ void ucfg_spatial_reuse_set_sr_config(struct wlan_objmgr_vdev *vdev,
 				      uint8_t non_srg_max_pd_offset)
 {
 	wlan_vdev_mlme_set_sr_ctrl(vdev, sr_ctrl);
-	wlan_vdev_mlme_set_pd_offset(vdev, non_srg_max_pd_offset);
+	wlan_vdev_mlme_set_non_srg_pd_offset(vdev, non_srg_max_pd_offset);
 }
 
 bool ucfg_spatial_reuse_is_sr_disabled_due_conc(struct wlan_objmgr_vdev *vdev)
@@ -72,7 +72,8 @@ void ucfg_spatial_reuse_send_sr_config(struct wlan_objmgr_vdev *vdev,
 
 	if (enable) {
 		sr_ctrl = wlan_vdev_mlme_get_sr_ctrl(vdev);
-		non_srg_max_pd_offset = wlan_vdev_mlme_get_pd_offset(vdev);
+		non_srg_max_pd_offset =
+				wlan_vdev_mlme_get_non_srg_pd_offset(vdev);
 		if (sr_ctrl && non_srg_max_pd_offset)
 			wlan_spatial_reuse_config_set(vdev, sr_ctrl,
 						      non_srg_max_pd_offset);
