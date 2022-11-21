@@ -18,7 +18,7 @@
  */
 
 /**
- * DOC : wlan_hdd_stats.c
+ * DOC: wlan_hdd_stats.c
  *
  * WLAN Host Device Driver statistics related implementation
  *
@@ -457,8 +457,9 @@ int wlan_hdd_qmi_put_suspend(void)
  * @result_param_id: Received link layer stats ID
  * @result: received stats from FW
  * @more_data: if more stats are pending
- * @no_of_radios: no of radios
- * @no_of_peers: no of peers
+ * @stats_nradio_npeer: union of counts
+ * @stats_nradio_npeer.no_of_radios: no of radios
+ * @stats_nradio_npeer.no_of_peers: no of peers
  */
 struct hdd_ll_stats {
 	qdf_list_node_t ll_stats_node;
@@ -473,7 +474,7 @@ struct hdd_ll_stats {
 
 /**
  * struct hdd_ll_stats_priv - hdd link layer stats private
- * @ll_stats: head to different link layer stats received in scheduler
+ * @ll_stats_q: head to different link layer stats received in scheduler
  *            thread context
  * @request_id: userspace-assigned link layer stats request id
  * @request_bitmap: userspace-assigned link layer stats request bitmap
@@ -732,7 +733,7 @@ static bool put_wifi_interface_info(struct wifi_interface_info *stats,
 /**
  * put_wifi_iface_stats() - put wifi interface stats
  * @if_stat: Pointer to interface stats context
- * @num_peer: Number of peers
+ * @num_peers: Number of peers
  * @vendor_event: Pointer to vendor event
  *
  * Return: bool
@@ -1390,7 +1391,7 @@ failure:
  * @adapter: Pointer to device adapter
  * @more_data: More data
  * @radio_stat: Pointer to stats data
- * @num_radios: Number of radios
+ * @num_radio: Number of radios
  *
  * Receiving Link Layer Radio statistics from FW.This function converts
  * the firmware data to the NL data and sends the same to the kernel/upper
@@ -2807,7 +2808,7 @@ hdd_populate_tx_failure_info(struct sir_wifi_iface_tx_fail *tx_fail,
 
 /**
  * hdd_populate_wifi_channel_cca_info() - put channel cca info to vendor event
- * @info: cca info array for all channels
+ * @cca: cca info array for all channels
  * @vendor_event: vendor event buffer
  *
  * Return: 0 Success, EINVAL failure
@@ -2855,7 +2856,7 @@ hdd_populate_wifi_channel_cca_info(struct sir_wifi_chan_cca_stats *cca,
 
 /**
  * hdd_populate_wifi_signal_info - put chain signal info
- * @info: RF chain signal info
+ * @peer_signal: RF chain signal info
  * @skb: vendor event buffer
  *
  * Return: 0 Success, EINVAL failure
@@ -2924,7 +2925,7 @@ hdd_populate_wifi_signal_info(struct sir_wifi_peer_signal_stats *peer_signal,
 
 /**
  * hdd_populate_wifi_wmm_ac_tx_info() - put AC TX info
- * @info: tx info
+ * @tx_stats: tx info
  * @skb: vendor event buffer
  *
  * Return: 0 Success, EINVAL failure
@@ -3011,7 +3012,7 @@ put_attr_fail:
 
 /**
  * hdd_populate_wifi_wmm_ac_rx_info() - put AC RX info
- * @info: rx info
+ * @rx_stats: rx info
  * @skb: vendor event buffer
  *
  * Return: 0 Success, EINVAL failure
@@ -3079,7 +3080,7 @@ put_attr_fail:
 
 /**
  * hdd_populate_wifi_wmm_ac_info() - put WMM AC info
- * @info: per AC stats
+ * @ac_stats: per AC stats
  * @skb: vendor event buffer
  *
  * Return: 0 Success, EINVAL failure
@@ -3112,7 +3113,7 @@ put_attr_fail:
 
 /**
  * hdd_populate_wifi_ll_ext_peer_info() - put per peer info
- * @info: peer stats
+ * @peers: peer stats
  * @skb: vendor event buffer
  *
  * Return: 0 Success, EINVAL failure
@@ -3169,7 +3170,7 @@ hdd_populate_wifi_ll_ext_peer_info(struct sir_wifi_ll_ext_peer_stats *peers,
 
 /**
  * hdd_populate_wifi_ll_ext_stats() - put link layer extension stats
- * @info: link layer stats
+ * @stats: link layer stats
  * @skb: vendor event buffer
  *
  * Return: 0 Success, EINVAL failure
@@ -4113,8 +4114,8 @@ enum roam_event_rt_info_reset {
  * struct roam_ap - Roamed/Failed AP info
  * @num_cand: number of candidate APs
  * @bssid:    BSSID of roamed/failed AP
- * rssi:      RSSI of roamed/failed AP
- * freq:      Frequency of roamed/failed AP
+ * @rssi:     RSSI of roamed/failed AP
+ * @freq:     Frequency of roamed/failed AP
  */
 struct roam_ap {
 	uint32_t num_cand;
@@ -5117,6 +5118,7 @@ static void hdd_fill_rate_info(struct wlan_objmgr_psoc *psoc,
 /**
  * wlan_hdd_fill_station_info() - fill station_info struct
  * @psoc: psoc context
+ * @adapter: The HDD adapter structure
  * @sinfo: station_info struct pointer
  * @stainfo: stainfo pointer
  * @stats: fw txrx status pointer
@@ -5522,6 +5524,7 @@ static void wlan_hdd_fill_os_he_rateflags(struct rate_info *os_rate,
  * @legacy_rate: 802.11abg rate
  * @os_rate: rate info for os
  * @mcs_index: mcs
+ * @nss: number of spatial streams
  * @dcm: dcm from rate
  * @guard_interval: guard interval from rate
  *
@@ -6932,7 +6935,9 @@ static bool hdd_is_rcpi_applicable(struct hdd_adapter *adapter,
 /**
  * wlan_hdd_get_rcpi_cb() - callback function for rcpi response
  * @context: Pointer to rcpi context
- * @rcpi_req: Pointer to rcpi response
+ * @mac_addr: peer MAC address
+ * @rcpi: RCPI response
+ * @status: QDF_STATUS of the request
  *
  * Return: None
  */
@@ -7188,7 +7193,6 @@ struct snr_priv {
 /**
  * hdd_get_snr_cb() - "Get SNR" callback function
  * @snr: Current SNR of the station
- * @sta_id: ID of the station
  * @context: opaque context originally passed to SME.  HDD always passes
  *	a cookie for the request context
  *

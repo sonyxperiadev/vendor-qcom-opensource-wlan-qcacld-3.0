@@ -16,7 +16,7 @@
  */
 
 /**
- * DOC : wlan_hdd_mlo.c
+ * DOC: wlan_hdd_mlo.c
  *
  * WLAN Host Device Driver file for 802.11be (Extremely High Throughput)
  * support.

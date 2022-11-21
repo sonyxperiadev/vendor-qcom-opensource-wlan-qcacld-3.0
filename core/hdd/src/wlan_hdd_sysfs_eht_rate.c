@@ -16,7 +16,7 @@
  */
 
 /**
- * DOC : wlan_hdd_sysfs_eht_rate.c
+ * DOC: wlan_hdd_sysfs_eht_rate.c
  *
  * implementation for creating sysfs file 11be_rate
  *

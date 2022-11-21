@@ -2769,7 +2769,7 @@ static void hdd_mon_turn_off_ps_and_wow(struct hdd_context *hdd_ctx)
 }
 
 /**
- * __hdd__mon_open() - HDD Open function
+ * __hdd_mon_open() - HDD Open function
  * @dev: Pointer to net_device structure
  *
  * This is called in response to ifconfig up
@@ -2846,7 +2846,7 @@ static int __hdd_mon_open(struct net_device *dev)
 
 /**
  * hdd_mon_open() - Wrapper function for __hdd_mon_open to protect it from SSR
- * @dev:	Pointer to net_device structure
+ * @net_dev: Pointer to net_device structure
  *
  * This is called in response to ifconfig up
  *
@@ -2922,7 +2922,7 @@ static int __hdd_pktcapture_open(struct net_device *dev)
 /**
  * hdd_pktcapture_open() - Wrapper function for hdd_pktcapture_open to
  * protect it from SSR
- * @dev:	Pointer to net_device structure
+ * @net_dev: Pointer to net_device structure
  *
  * This is called in response to ifconfig up
  *
@@ -4001,6 +4001,7 @@ static void hdd_wlan_unregister_pm_qos_notifier(struct hdd_context *hdd_ctx)
 
 /**
  * hdd_enable_power_management() - API to Enable Power Management
+ * @hdd_ctx: HDD context
  *
  * API invokes Bus Interface Layer power management functionality
  *
@@ -4019,6 +4020,7 @@ static void hdd_enable_power_management(struct hdd_context *hdd_ctx)
 
 /**
  * hdd_disable_power_management() - API to disable Power Management
+ * @hdd_ctx: HDD context
  *
  * API disable Bus Interface Layer Power management functionality
  *
@@ -4825,7 +4827,7 @@ reset_iface_opened:
 
 /**
  * hdd_stop() - Wrapper function for __hdd_stop to protect it from SSR
- * @dev: pointer to net_device structure
+ * @net_dev: pointer to net_device structure
  *
  * This is called in response to ifconfig down
  *
@@ -5526,7 +5528,6 @@ hdd_set_derived_multicast_list(struct wlan_objmgr_psoc *psoc,
 /**
  * __hdd_set_multicast_list() - set the multicast address list
  * @dev:	Pointer to the WLAN device.
- * @skb:	Pointer to OS packet (sk_buff).
  *
  * This function sets the multicast address list.
  *
@@ -5925,7 +5926,7 @@ static void hdd_set_pktcapture_ops(struct net_device *dev)
 /**
  * hdd_set_multi_client_ll_support() - set multi client ll support flag in
  * allocated station hdd adapter
- * @@adapter: pointer to hdd adapter
+ * @adapter: pointer to hdd adapter
  *
  * Return: none
  */
@@ -5955,6 +5956,7 @@ hdd_set_multi_client_ll_support(struct hdd_adapter *adapter)
  * hdd_alloc_station_adapter() - allocate the station hdd adapter
  * @hdd_ctx: global hdd context
  * @mac_addr: mac address to assign to the interface
+ * @name_assign_type: name assignment type
  * @name: User-visible name of the interface
  * @session_type: interface type to be created
  *
@@ -8476,7 +8478,7 @@ static void hdd_reset_scan_operation(struct hdd_context *hdd_ctx,
 #ifdef QCA_LL_LEGACY_TX_FLOW_CONTROL
 /**
  * hdd_adapter_abort_tx_flow() - Abort the tx flow control
- * @pAdapter: pointer to hdd_adapter_t
+ * @adapter: pointer to hdd adapter
  *
  * Resume tx and stop the tx flow control timer if the tx is paused
  * and the flow control timer is running. This function is called by
@@ -9848,9 +9850,8 @@ int hdd_wlan_notify_modem_power_state(int state)
 }
 
 /**
- *
  * hdd_post_cds_enable_config() - HDD post cds start config helper
- * @adapter - Pointer to the HDD
+ * @hdd_ctx: Pointer to the HDD
  *
  * Return: None
  */
@@ -10478,7 +10479,7 @@ bool wlan_hdd_sta_ndi_connected(hdd_cb_handle context, uint8_t vdev_id)
 }
 
 /**
- * hdd_pktlog_enable_disable() - Enable/Disable packet logging
+ * wlan_hdd_pktlog_enable_disable() - Enable/Disable packet logging
  * @context: HDD context
  * @enable_disable_flag: Flag to enable/disable
  * @user_triggered: triggered through iwpriv
@@ -10639,7 +10640,7 @@ static inline bool hdd_any_adapter_connected(hdd_cb_handle context)
 
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
 /**
- * hdd_pld_remove_pm_qos() - Request PLD PM QoS request
+ * hdd_pld_request_pm_qos() - Request PLD PM QoS request
  * @context: HDD context
  *
  * Return: None
@@ -10660,7 +10661,7 @@ static inline void hdd_pld_request_pm_qos(hdd_cb_handle context)
 }
 
 /**
- * hdd_pld_request_pm_qos() - Remove PLD PM QoS request
+ * hdd_pld_remove_pm_qos() - Remove PLD PM QoS request
  * @context: HDD context
  *
  * Return: None
@@ -11076,7 +11077,6 @@ int hdd_wlan_clear_stats(struct hdd_adapter *adapter, int stats_id)
 #define ADAP_NETIFQ_LOG_LEN ((20 * WLAN_REASON_TYPE_MAX) + 50)
 
 /**
- *
  * hdd_display_netif_queue_history_compact() - display compact netifq history
  * @hdd_ctx: hdd context
  *
@@ -11257,6 +11257,7 @@ wlan_hdd_display_adapter_netif_queue_history(struct hdd_adapter *adapter)
 /**
  * wlan_hdd_display_netif_queue_history() - display netif queue history
  * @context: hdd context
+ * @verb_lvl: verbosity level
  *
  * Return: none
  */
@@ -11409,7 +11410,7 @@ static inline int wlan_hdd_set_wow_pulse(struct hdd_context *hdd_ctx, bool enabl
 
 /**
  * hdd_enable_fastpath() - Enable fastpath if enabled in config INI
- * @hdd_cfg: hdd config
+ * @hdd_ctx: hdd context
  * @context: lower layer context
  *
  * Return: none
@@ -11609,7 +11610,7 @@ hdd_store_sap_restart_channel(qdf_freq_t restart_chan, qdf_freq_t *restart_chan_
 
 /**
  * hdd_unsafe_channel_restart_sap() - restart sap if sap is on unsafe channel
- * @hdd_ctx: hdd context pointer
+ * @hdd_ctxt: hdd context pointer
  *
  * hdd_unsafe_channel_restart_sap check all unsafe channel list
  * and if ACS is enabled, driver will ask userspace to restart the
@@ -12197,7 +12198,7 @@ static uint32_t hdd_log_level_to_bitmask(enum host_log_level user_log_level)
 
 /**
  * hdd_set_trace_level_for_each - Set trace level for each INI config
- * @hdd_ctx - HDD context
+ * @hdd_ctx: HDD context
  *
  * Set trace level for each module based on INI config.
  *
@@ -12706,7 +12707,7 @@ static void hdd_init_cpu_cxpc_threshold_cfg(struct hdd_config *config,
 
 /**
  * hdd_cfg_params_init() - Initialize hdd params in hdd_config structure
- * @hdd_ctx - Pointer to HDD context
+ * @hdd_ctx: Pointer to HDD context
  *
  * Return: None
  */
@@ -13233,7 +13234,7 @@ static bool hdd_is_cfg_dot11_mode_11be(enum hdd_dot11_mode dot11_mode)
 }
 
 /**
- * hdd_is_host_11be_supported() - Check if 11 be is supported or not
+ * hdd_is_11be_supported() - Check if 11be is supported or not
  *
  * Return: True, if 11be is supported else return false
  */
@@ -13257,6 +13258,7 @@ static bool hdd_is_11be_supported(void)
 /**
  * hdd_get_wifi_standard() - Get wifi standard
  * @hdd_ctx: hdd context pointer
+ * @band_capability: band capability bitmap
  *
  * Return: WMI_HOST_WIFI_STANDARD
  */
@@ -14339,7 +14341,7 @@ static int hdd_set_auto_shutdown_cb(struct hdd_context *hdd_ctx)
 
 #ifdef MWS_COEX
 /**
- * hdd_set_mws_coex() - Set MWS coex configurations
+ * hdd_init_mws_coex() - Initialize MWS coex configurations
  * @hdd_ctx:   HDD context
  *
  * This function sends MWS-COEX 4G quick FTDM and
@@ -14571,7 +14573,7 @@ static int hdd_features_init(struct hdd_context *hdd_ctx)
 
 /**
  * hdd_register_bcn_cb() - register scan beacon callback
- * @hdd_ctx - Pointer to the HDD context
+ * @hdd_ctx: Pointer to the HDD context
  *
  * Return: QDF_STATUS
  */
@@ -14699,7 +14701,6 @@ static void hdd_hastings_bt_war_initialize(struct hdd_context *hdd_ctx)
 /**
  * hdd_configure_cds() - Configure cds modules
  * @hdd_ctx:	HDD context
- * @adapter:	Primary adapter context
  *
  * Enable Cds modules after WLAN firmware is up.
  *
@@ -15138,7 +15139,7 @@ done:
 #ifdef WLAN_FEATURE_MEMDUMP_ENABLE
 /**
  * hdd_state_info_dump() - prints state information of hdd layer
- * @buf: buffer pointer
+ * @buf_ptr: buffer pointer
  * @size: size of buffer to be filled
  *
  * This function is used to dump state information of hdd layer
@@ -16463,6 +16464,7 @@ static QDF_STATUS wlan_hdd_mlo_sap_reinit(struct hdd_context *hdd_ctx,
 /**
  * wlan_hdd_start_sap() - this function starts bss of SAP.
  * @ap_adapter: SAP adapter
+ * @reinit: true if this is a re-init, otherwise initial int
  *
  * This function will process the starting of sap adapter.
  *
@@ -17699,7 +17701,7 @@ static bool is_ftm_mode_supported(void)
 #endif
 
 /**
- * is_con_mode_valid() check con mode is valid or not
+ * is_con_mode_valid() - check con mode is valid or not
  * @mode: global con mode
  *
  * Return: TRUE on success FALSE on failure
@@ -18282,7 +18284,7 @@ EXPORT_SYMBOL(hdd_driver_unload);
  * wlan_boot_cb() - Wlan boot callback
  * @kobj:      object whose directory we're creating the link in.
  * @attr:      attribute the user is interacting with
- * @buff:      the buffer containing the user data
+ * @buf:       the buffer containing the user data
  * @count:     number of bytes in the buffer
  *
  * This callback is invoked when the fs is ready to start the
@@ -18881,7 +18883,7 @@ enum  sap_acs_dfs_mode wlan_hdd_get_dfs_mode(enum dfs_mode mode)
 
 /**
  * hdd_enable_disable_ca_event() - enable/disable channel avoidance event
- * @hddctx: pointer to hdd context
+ * @hdd_ctx: pointer to hdd context
  * @set_value: enable/disable
  *
  * When Host sends vendor command enable, FW will send *ONE* CA ind to
@@ -18945,6 +18947,7 @@ bool hdd_is_roaming_in_progress(struct hdd_context *hdd_ctx)
  * struct hdd_is_connection_in_progress_priv - adapter connection info
  * @out_vdev_id: id of vdev where connection is occurring
  * @out_reason: scan reject reason
+ * @connection_in_progress: true if connection is in progress
  */
 struct hdd_is_connection_in_progress_priv {
 	uint8_t out_vdev_id;
@@ -18956,7 +18959,7 @@ struct hdd_is_connection_in_progress_priv {
  * hdd_is_connection_in_progress_iterator() - Check adapter connection based
  * on device mode
  * @adapter: current adapter of interest
- * @context: user context supplied
+ * @ctx: user context supplied
  *
  * Check if connection is in progress for the current adapter according to the
  * device mode
@@ -19348,7 +19351,7 @@ int hdd_get_rssi_snr_by_bssid(struct hdd_adapter *adapter, const uint8_t *bssid,
 
 /**
  * hdd_reset_limit_off_chan() - reset limit off-channel command parameters
- * @adapter - HDD adapter
+ * @adapter: HDD adapter
  *
  * Return: 0 on success and non zero value on failure
  */

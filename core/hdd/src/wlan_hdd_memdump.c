@@ -18,7 +18,7 @@
  */
 
 /**
- * DOC : wlan_hdd_memdump.c
+ * DOC: wlan_hdd_memdump.c
  *
  * WLAN Host Device Driver file for dumping firmware memory
  *
@@ -82,10 +82,10 @@ void hdd_driver_mem_cleanup(void)
 /**
  * __hdd_driver_memdump_read() - perform read operation in driver
  * memory dump proc file
- * @file  - handle for the proc file.
- * @buf   - pointer to user space buffer.
- * @count - number of bytes to be read.
- * @pos   - offset in the from buffer.
+ * @file:  handle for the proc file.
+ * @buf:   pointer to user space buffer.
+ * @count: number of bytes to be read.
+ * @pos:   offset in the from buffer.
  *
  * This function performs read operation for the driver memory dump proc file.
  *
@@ -175,10 +175,10 @@ static ssize_t __hdd_driver_memdump_read(struct file *file, char __user *buf,
 /**
  * hdd_driver_memdump_read() - perform read operation in driver
  * memory dump proc file
- * @file  - handle for the proc file.
- * @buf   - pointer to user space buffer.
- * @count - number of bytes to be read.
- * @pos   - offset in the from buffer.
+ * @file:  handle for the proc file.
+ * @buf:   pointer to user space buffer.
+ * @count: number of bytes to be read.
+ * @pos:   offset in the from buffer.
  *
  * This function performs read operation for the driver memory dump proc file.
  *
@@ -203,13 +203,6 @@ static ssize_t hdd_driver_memdump_read(struct file *file, char __user *buf,
 	return err_size;
 }
 
-/**
- * struct driver_dump_fops - file operations for driver dump feature
- * @read - read function for driver dump operation.
- *
- * This structure initialize the file operation handle for memory
- * dump feature
- */
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
 static const struct proc_ops driver_dump_fops = {
 	.proc_read = hdd_driver_memdump_read,
@@ -223,7 +216,7 @@ static const struct file_operations driver_dump_fops = {
 
 /**
  * hdd_driver_memdump_procfs_init() - Initialize procfs for driver memory dump
- * @hdd_ctx Pointer to hdd context
+ * @hdd_ctx: Pointer to hdd context
  *
  * This function create file under proc file system to be used later for
  * processing driver memory dump

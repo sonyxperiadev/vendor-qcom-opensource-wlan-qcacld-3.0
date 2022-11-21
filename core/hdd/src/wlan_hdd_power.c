@@ -113,7 +113,7 @@ void hdd_wlan_suspend_resume_event(uint8_t state)
 }
 
 /**
- * hdd_wlan_offload_event()- send offloads event
+ * hdd_wlan_offload_event() - send offloads event
  * @type: offload type
  * @state: enabled or disabled
  *
@@ -443,7 +443,7 @@ int wlan_hdd_ipv6_changed(struct notifier_block *nb,
 /**
  * hdd_fill_ipv6_uc_addr() - fill IPv6 unicast addresses
  * @idev: pointer to net device
- * @ipv6addr: destination array to fill IPv6 addresses
+ * @ipv6_uc_addr: destination array to fill IPv6 addresses
  * @ipv6addr_type: IPv6 Address type
  * @scope_array: scope of ipv6 addr
  * @count: number of IPv6 addresses
@@ -496,7 +496,7 @@ static int hdd_fill_ipv6_uc_addr(struct inet6_dev *idev,
 /**
  * hdd_fill_ipv6_ac_addr() - fill IPv6 anycast addresses
  * @idev: pointer to net device
- * @ipv6addr: destination array to fill IPv6 addresses
+ * @ipv6_ac_addr: destination array to fill IPv6 addresses
  * @ipv6addr_type: IPv6 Address type
  * @scope_array: scope of ipv6 addr
  * @count: number of IPv6 addresses
@@ -1662,7 +1662,7 @@ flush_mc_list:
 }
 
 /**
- * hdd_update_conn_state_mask(): record info needed by wma_suspend_req
+ * hdd_update_conn_state_mask() - record info needed by wma_suspend_req
  * @adapter: adapter to get info from
  * @conn_state_mask: mask of connection info
  *
@@ -1677,8 +1677,6 @@ static void hdd_update_conn_state_mask(struct hdd_adapter *adapter,
 
 /**
  * hdd_suspend_wlan() - Driver suspend function
- * @callback: Callback function to invoke when driver is ready to suspend
- * @callbackContext: Context to pass back to @callback function
  *
  * Return: 0 on success else error code.
  */
@@ -1918,7 +1916,7 @@ QDF_STATUS hdd_wlan_shutdown(void)
 
 #ifdef FEATURE_WLAN_DIAG_SUPPORT
 /**
- * hdd_wlan_ssr_reinit_event()- send ssr reinit state
+ * hdd_wlan_ssr_reinit_event() - send ssr reinit state
  *
  * This Function send send ssr reinit state diag event
  *
@@ -1941,7 +1939,8 @@ static inline void hdd_wlan_ssr_reinit_event(void)
 
 #ifdef WLAN_FEATURE_DBAM_CONFIG
 /**
- * hdd_retore_dbam_config - restore and send dbam config to fw
+ * hdd_restore_dbam_config() - restore and send dbam config to fw
+ * @hdd_ctx: HDD context
  *
  * This function is used to send  store dbam config to fw
  * in case of wlan re-init
@@ -1998,7 +1997,8 @@ static void hdd_restore_dual_sta_config(struct hdd_context *hdd_ctx)
 }
 
 /**
- * hdd_send_default_scan_ies - send default scan ies to fw
+ * hdd_send_default_scan_ies() - send default scan ies to fw
+ * @hdd_ctx: HDD context
  *
  * This function is used to send default scan ies to fw
  * in case of wlan re-init
@@ -2026,7 +2026,7 @@ static void hdd_send_default_scan_ies(struct hdd_context *hdd_ctx)
 }
 
 /**
- * hdd_restore_sar_config - Restore the saved SAR config after SSR
+ * hdd_restore_sar_config() - Restore the saved SAR config after SSR
  * @hdd_ctx: HDD context
  *
  * Restore the SAR config that was lost during SSR.
@@ -2433,7 +2433,7 @@ static int _wlan_hdd_cfg80211_resume_wlan(struct wiphy *wiphy)
 		return 0;
 	}
 
-	/**
+	/*
 	 * Return success if recovery is in progress, otherwise, linux kernel
 	 * will shutdown all interfaces in wiphy_resume.
 	 */

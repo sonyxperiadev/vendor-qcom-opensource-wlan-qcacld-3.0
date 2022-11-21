@@ -385,7 +385,7 @@ static void hdd_disable_runtime_pm(struct hdd_config *cfg_ini)
 
 /**
  * hdd_restore_runtime_pm() - Restore runtime_pm configuration.
- * @cfg_ini: Handle to struct hdd_config
+ * @hdd_ctx: HDD context
  *
  * Return: None
  */
@@ -419,7 +419,7 @@ static void hdd_disable_auto_shutdown(struct hdd_config *cfg_ini)
 
 /**
  * hdd_restore_auto_shutdown() - Restore auto_shutdown configuration.
- * @cfg_ini: Handle to struct hdd_config
+ * @hdd_ctx: HDD context
  *
  * Return: None
  */
@@ -603,9 +603,9 @@ static void hdd_set_oem_6g_supported(struct hdd_context *hdd_ctx)
 }
 
 /**
- * hdd_convert_string_to_u8_array() - used to convert string into u8 array
+ * hdd_convert_string_to_array() - used to convert string into u8 array
  * @str: String to be converted
- * @hex_array: Array where converted value is stored
+ * @array: Array where converted value is stored
  * @len: Length of the populated array
  * @array_max_len: Maximum length of the array
  * @to_hex: true, if conversion required for hex string
@@ -1059,6 +1059,7 @@ void hdd_cfg_print_global_config(struct hdd_context *hdd_ctx)
 /**
  * hdd_get_pmkid_modes() - returns PMKID mode bits
  * @hdd_ctx: the pointer to hdd context
+ * @pmkid_modes: struct to update with current PMKID modes
  *
  * Return: value of pmkid_modes
  */
@@ -1560,15 +1561,16 @@ static QDF_STATUS hdd_get_sap_rx_nss(struct hdd_adapter *adapter,
 }
 
 /**
- * hdd_get_sta_tx_nss() - get the sta tx nss
+ * hdd_get_sta_rx_nss() - get the sta rx nss
  * @hdd_ctx: Pointer to hdd context
  * @adapter: Pointer to adapter
  * @vdev: Pointer to vdev
- * @tx_nss: pointer to tx_nss
+ * @rx_nss: pointer to rx_nss
  *
- * get the STA tx nss
+ * get the STA rx nss
  *
- * Return: None
+ * Return: QDF_STATUS_SUCCESS if the RX NSS is returned, otherwise a suitable
+ *         QDF_STATUS_E_* error code
  */
 static QDF_STATUS hdd_get_sta_rx_nss(struct hdd_adapter *adapter,
 				     struct hdd_context *hdd_ctx,

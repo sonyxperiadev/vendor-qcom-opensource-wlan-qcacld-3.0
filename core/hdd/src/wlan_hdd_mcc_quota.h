@@ -38,8 +38,8 @@ extern const struct nla_policy
 set_mcc_quota_policy[QCA_WLAN_VENDOR_ATTR_MCC_QUOTA_MAX + 1];
 
 /**
- * wlan_hdd_set_mcc_adaptive_sched: Enable or disable MCC adaptive scheduling
- * @hdd_ctx: HDD context
+ * wlan_hdd_set_mcc_adaptive_sched() - Enable or disable MCC adaptive scheduling
+ * @psoc: psoc context
  * @enable: Enable (true) or disable (false)
  *
  * Return: 0 for success, Non zero failure code for errors

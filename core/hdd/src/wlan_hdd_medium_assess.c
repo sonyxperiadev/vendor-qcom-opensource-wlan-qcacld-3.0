@@ -16,7 +16,7 @@
  */
 
 /**
- * DOC : wlan_hdd_medium_assess.c
+ * DOC: wlan_hdd_medium_assess.c
  *
  * WLAN Host Device Driver medium assess related implementation
  *
@@ -254,7 +254,7 @@ static int get_congestion_report_len(void)
 
 /**
  * hdd_congestion_reset_data() - reset/invalid the previous data
- * @vdev_id: vdev id
+ * @pdev_id: pdev id
  *
  * Return: None
  */

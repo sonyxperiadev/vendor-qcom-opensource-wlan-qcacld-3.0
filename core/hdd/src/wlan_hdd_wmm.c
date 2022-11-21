@@ -135,10 +135,6 @@ config_tspec_policy[QCA_WLAN_VENDOR_ATTR_CONFIG_TSPEC_MAX + 1] = {
 	[CONFIG_TSPEC_SURPLUS_BANDWIDTH_ALLOWANCE] = {.type = NLA_U16},
 };
 
-/**
- * enum hdd_wmm_linuxac: AC/Queue Index values for Linux Qdisc to
- * operate on different traffic.
- */
 #ifdef QCA_LL_TX_FLOW_CONTROL_V2
 void wlan_hdd_process_peer_unauthorised_pause(struct hdd_adapter *adapter)
 {
@@ -334,9 +330,9 @@ static void hdd_wmm_free_context(struct hdd_wmm_qos_context *qos_context)
  *
  * Return: None
  */
-#define MAX_NOTIFY_LEN 50
 static void hdd_wmm_notify_app(struct hdd_wmm_qos_context *qos_context)
 {
+#define MAX_NOTIFY_LEN 50
 	struct hdd_adapter *adapter;
 	union iwreq_data wrqu;
 	char buf[MAX_NOTIFY_LEN + 1];
@@ -1728,7 +1724,7 @@ QDF_STATUS hdd_wmm_adapter_clear(struct hdd_adapter *adapter)
 }
 
 /**
- * hdd_wmm_close() - WMM close function
+ * hdd_wmm_adapter_close() - WMM close function
  * @adapter: [in]  pointer to adapter context
  *
  * Function which will perform any necessary work to to clean up the
@@ -1849,7 +1845,7 @@ hdd_check_and_upgrade_udp_qos(struct hdd_adapter *adapter,
  * these critical packets. This is done as skb->cb amay be overwritten between
  * _select_queue and_hard_start_xmit functions. hdd_wmm_classify_critical_pkt
  * and wlan_hdd_mark_critical_pkt should be in sync w.r.t packet types.
-
+ *
  * Return: None
  */
 static

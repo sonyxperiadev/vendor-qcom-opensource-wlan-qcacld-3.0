@@ -16,7 +16,7 @@
  */
 
 /**
- * DOC : contains son hdd API implementation
+ * DOC: contains son hdd API implementation
  */
 
 #ifndef WLAN_HDD_SON_H

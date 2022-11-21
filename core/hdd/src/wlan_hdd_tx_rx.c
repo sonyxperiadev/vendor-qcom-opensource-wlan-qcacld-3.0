@@ -910,11 +910,12 @@ static void wlan_hdd_update_unpause_time(struct hdd_adapter *adapter)
 /**
  * wlan_hdd_update_pause_time() - update pause time
  * @adapter: adapter handle
+ * @temp_map: pause map
  *
  * Return: none
  */
 static void wlan_hdd_update_pause_time(struct hdd_adapter *adapter,
-	 uint32_t temp_map)
+				       uint32_t temp_map)
 {
 	qdf_time_t curr_time = qdf_system_ticks();
 	uint8_t i;
@@ -953,7 +954,8 @@ wlan_hdd_dump_queue_history_state(struct hdd_netif_queue_history *queue_history,
 
 /**
  * wlan_hdd_update_queue_history_state() - Save a copy of dev TX queues state
- * @adapter: adapter handle
+ * @dev: interface netdev
+ * @q_hist: adapter queue history
  *
  * Save netdev TX queues state into adapter queue history.
  *

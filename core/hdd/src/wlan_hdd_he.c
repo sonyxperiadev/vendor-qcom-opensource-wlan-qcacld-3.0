@@ -18,7 +18,7 @@
  */
 
 /**
- * DOC : wlan_hdd_he.c
+ * DOC: wlan_hdd_he.c
  *
  * WLAN Host Device Driver file for 802.11ax (High Efficiency) support.
  *

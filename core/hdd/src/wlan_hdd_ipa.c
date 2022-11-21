@@ -345,6 +345,7 @@ static uint32_t hdd_ipa_get_wake_up_idle(void)
 
 /**
  * hdd_ipa_set_wake_up_idle() - Set PF_WAKE_UP_IDLE flag in the task structure
+ * @wake_up_idle: Value to set PF_WAKE_UP_IDLE flag
  *
  * Set PF_WAKE_UP_IDLE flag in the task structure
  * This task and any task woken by this will be waken to idle CPU

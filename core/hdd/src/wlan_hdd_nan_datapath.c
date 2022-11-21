@@ -49,7 +49,7 @@
 /**
  * hdd_nan_datapath_target_config() - Configure NAN datapath features
  * @hdd_ctx: Pointer to HDD context
- * @cfg: Pointer to target device capability information
+ * @tgt_cfg: Pointer to target device capability information
  *
  * NAN datapath functionality is enabled if it is enabled in
  * .ini file and also supported on target device.
@@ -522,7 +522,7 @@ void hdd_ndp_event_handler(struct hdd_adapter *adapter,
 }
 
 /**
- * __wlan_hdd_cfg80211_process_ndp_cmds() - handle NDP request
+ * __wlan_hdd_cfg80211_process_ndp_cmd() - handle NDP request
  * @wiphy: pointer to wireless wiphy structure.
  * @wdev: pointer to wireless_dev structure.
  * @data: Pointer to the data to be passed via vendor interface

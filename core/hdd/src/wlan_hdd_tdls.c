@@ -316,7 +316,7 @@ int wlan_hdd_cfg80211_exttdls_get_status(struct wiphy *wiphy,
 /**
  * __wlan_hdd_cfg80211_exttdls_enable() - enable an externally controllable
  *                                      TDLS peer and set parameters
- * wiphy: wiphy
+ * @wiphy: pointer to wireless wiphy structure.
  * @wdev: wireless dev pointer
  * @data: netlink buffer with peer MAC address and configuration parameters
  * @data_len: size of data in bytes
@@ -367,7 +367,7 @@ int wlan_hdd_cfg80211_exttdls_enable(struct wiphy *wiphy,
 /**
  * __wlan_hdd_cfg80211_exttdls_disable() - disable an externally controllable
  *                                       TDLS peer
- * wiphy: wiphy
+ * @wiphy: wiphy
  * @wdev: wireless dev pointer
  * @data: netlink buffer with peer MAC address
  * @data_len: size of data in bytes
@@ -435,19 +435,6 @@ static int __wlan_hdd_cfg80211_tdls_mgmt(struct wiphy *wiphy,
 				u16 status_code, u32 peer_capability,
 				const u8 *buf, size_t len)
 #else
-/**
- * __wlan_hdd_cfg80211_tdls_mgmt() - handle management actions on a given peer
- * @wiphy: wiphy
- * @dev: net device
- * @peer: MAC address of the TDLS peer
- * @action_code: action code
- * @dialog_token: dialog token
- * @status_code: status code
- * @buf: additional IE to include
- * @len: length of buf in bytes
- *
- * Return: 0 if success; negative errno otherwise
- */
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 17, 0))
 static int __wlan_hdd_cfg80211_tdls_mgmt(struct wiphy *wiphy,
 				struct net_device *dev, const uint8_t *peer,
@@ -929,6 +916,7 @@ int hdd_set_tdls_scan_type(struct hdd_context *hdd_ctx, int val)
  * antenna mode in standalone station
  * @hdd_ctx: Pointer to hdd context
  * @adapter: Pointer to hdd adapter
+ * @mode: enum antenna_mode
  *
  * Return: 0 if success else non zero
  */

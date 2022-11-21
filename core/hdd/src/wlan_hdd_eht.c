@@ -16,7 +16,7 @@
  */
 
 /**
- * DOC : wlan_hdd_eht.c
+ * DOC: wlan_hdd_eht.c
  *
  * WLAN Host Device Driver file for 802.11be (Extremely High Throughput)
  * support.

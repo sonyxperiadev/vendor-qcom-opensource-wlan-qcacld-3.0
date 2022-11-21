@@ -308,9 +308,9 @@ static bool hdd_check_and_fill_freq(uint32_t in_chan, qdf_freq_t *freq,
 
 /**
  * _hdd_parse_bssid_and_chan() - helper function to parse bssid and channel
- * @data:            input data
- * @target_ap_bssid: pointer to bssid (output parameter)
- * @freq:         pointer to freq (output parameter)
+ * @data: input data
+ * @bssid: pointer to bssid (output parameter)
+ * @freq: pointer to freq (output parameter)
  * @pdev: pdev object
  *
  * Return: 0 if parsing is successful; -EINVAL otherwise
@@ -403,8 +403,8 @@ error:
 /**
  * hdd_parse_send_action_frame_v1_data() - HDD Parse send action frame data
  * @command: Pointer to input data
- * @bssid: Pointer to target Ap bssid
- * @channel: Pointer to the Target AP channel
+ * @bssid: Pointer to target AP BSSID
+ * @freq: Pointer to the Target AP channel frequency
  * @dwell_time: Pointer to the time to stay off-channel
  *              after transmitting action frame
  * @buf: Pointer to data
@@ -515,7 +515,7 @@ hdd_parse_send_action_frame_v1_data(const uint8_t *command,
 }
 
 /**
- * hdd_parse_reassoc_command_data() - HDD Parse reassoc command data
+ * hdd_parse_reassoc_command_v1_data() - HDD Parse reassoc command data
  * @command: Pointer to input data (its a NULL terminated string)
  * @bssid: Pointer to target Ap bssid
  * @freq: Pointer to the Target AP frequency
@@ -888,6 +888,7 @@ hdd_parse_sendactionframe_v1(struct hdd_adapter *adapter, const char *command)
  * @adapter:	Adapter upon which the command was received
  * @command:	Command that was received, ASCII command
  *		followed by binary data
+ * @total_len:  Length of @command
  *
  * This function parses the v2 SENDACTIONFRAME command with the format
  *
@@ -953,6 +954,7 @@ hdd_parse_sendactionframe_v2(struct hdd_adapter *adapter,
  * hdd_parse_sendactionframe() - parse the SENDACTIONFRAME command
  * @adapter:	Adapter upon which the command was received
  * @command:	Command that was received
+ * @total_len:  Length of @command
  *
  * There are two different versions of the SENDACTIONFRAME command.
  * Version 1 of the command contains a parameter list that is ASCII
@@ -2264,6 +2266,7 @@ static int wlan_hdd_get_link_status(struct hdd_adapter *adapter)
 #ifdef FEATURE_WLAN_ESE
 /**
  * hdd_parse_ese_beacon_req() - Parse ese beacon request
+ * @pdev: pdev object
  * @command: Pointer to data
  * @req:	Output pointer to store parsed ie information
  *
@@ -5589,13 +5592,11 @@ static int drv_cmd_rx_filter_add(struct hdd_adapter *adapter,
  * hdd_parse_setantennamode_command() - HDD Parse SETANTENNAMODE
  * command
  * @value: Pointer to SETANTENNAMODE command
- * @mode: Pointer to antenna mode
- * @reason: Pointer to reason for set antenna mode
  *
  * This function parses the SETANTENNAMODE command passed in the format
  * SETANTENNAMODE<space>mode
  *
- * Return: 0 for success non-zero for failure
+ * Return: parsed antenna mode
  */
 static int hdd_parse_setantennamode_command(const uint8_t *value)
 {

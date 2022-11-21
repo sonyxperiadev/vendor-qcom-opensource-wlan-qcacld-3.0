@@ -18,7 +18,7 @@
  */
 
 /**
- * wlan_hdd_tsf.c - WLAN Host Device Driver tsf related implementation
+ * DOC: wlan_hdd_tsf.c - WLAN Host Device Driver tsf related implementation
  */
 
 #include "osif_sync.h"
@@ -94,9 +94,8 @@ struct hdd_tsf_report {
 
 /**
  * enum hdd_tsf_op_result - result of tsf operation
- *
- * HDD_TSF_OP_SUCC:  succeed
- * HDD_TSF_OP_FAIL:  fail
+ * @HDD_TSF_OP_SUCC:  succeed
+ * @HDD_TSF_OP_FAIL:  fail
  */
 enum hdd_tsf_op_result {
 	HDD_TSF_OP_SUCC,
@@ -853,12 +852,10 @@ static enum hdd_tsf_op_result hdd_indicate_tsf_internal(
 #define CAP_TSF_TIMER_FIX_SEC 1
 
 /**
- * TS_STATUS - timestamp status
- *
- * HDD_TS_STATUS_WAITING:  one of the stamp-pair
- *    is not updated
- * HDD_TS_STATUS_READY:  valid tstamp-pair
- * HDD_TS_STATUS_INVALID: invalid tstamp-pair
+ * enum hdd_ts_status - timestamp status
+ * @HDD_TS_STATUS_WAITING:  one of the stamp-pair is not updated
+ * @HDD_TS_STATUS_READY:  valid tstamp-pair
+ * @HDD_TS_STATUS_INVALID: invalid tstamp-pair
  */
 enum hdd_ts_status {
 	HDD_TS_STATUS_WAITING,
@@ -2378,7 +2375,7 @@ enum hdd_tsf_op_result hdd_netbuf_timestamp(qdf_nbuf_t netbuf,
 
 /**
  * hdd_tx_timestamp() - time stamp TX netbuf
- *
+ * @status: TX status
  * @netbuf: pointer to a TX netbuf
  * @target_time: TX time for the netbuf
  *
