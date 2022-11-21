@@ -10383,7 +10383,7 @@ static int hdd_set_beamformer_periodic_sounding(struct hdd_adapter *adapter,
 
 	return wma_cli_set_command(adapter->vdev_id,
 				   WMI_PDEV_PARAM_TXBF_SOUND_PERIOD_CMDID,
-				   cfg_val, PDEV_CMD);
+				   set_val, PDEV_CMD);
 }
 
 /**
