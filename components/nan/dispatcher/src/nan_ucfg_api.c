@@ -594,6 +594,21 @@ static void ucfg_nan_request_process_cb(void *cookie)
 	}
 }
 
+#ifdef WLAN_FEATURE_SR
+static void
+nan_register_sr_concurrency_callback(struct nan_psoc_priv_obj *psoc_obj,
+				     struct nan_callbacks *cb_obj)
+{
+	psoc_obj->cb_obj.nan_sr_concurrency_update =
+				cb_obj->nan_sr_concurrency_update;
+}
+#else
+static inline void
+nan_register_sr_concurrency_callback(struct nan_psoc_priv_obj *psoc_obj,
+				     struct nan_callbacks *cb_obj)
+{}
+#endif
+
 int ucfg_nan_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 				    struct nan_callbacks *cb_obj)
 {
@@ -624,7 +639,7 @@ int ucfg_nan_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 				ucfg_nan_request_process_cb;
 	psoc_obj->cb_obj.nan_concurrency_update =
 				cb_obj->nan_concurrency_update;
-
+	nan_register_sr_concurrency_callback(psoc_obj, cb_obj);
 	return 0;
 }
 

@@ -2571,6 +2571,37 @@ failure:
 }
 
 /**
+ * os_if_nan_handle_sr_nan_concurrency() - Handle NAN concurrency for Spatial
+ * Reuse
+ * @nan_evt: NAN Event parameters
+ *
+ * Module calls callback to send SR event to userspace.
+ *
+ * Return: none
+ */
+#ifdef WLAN_FEATURE_SR
+static void
+os_if_nan_handle_sr_nan_concurrency(struct nan_event_params *nan_evt) {
+	void (*nan_sr_conc_callback)(struct nan_event_params *nan_evt);
+	struct nan_psoc_priv_obj *psoc_obj =
+				nan_get_psoc_priv_obj(nan_evt->psoc);
+
+	if (!psoc_obj) {
+		nan_err("nan psoc priv object is NULL");
+		return;
+	}
+
+	nan_sr_conc_callback = psoc_obj->cb_obj.nan_sr_concurrency_update;
+	if (nan_sr_conc_callback)
+		nan_sr_conc_callback(nan_evt);
+}
+#else
+static void
+os_if_nan_handle_sr_nan_concurrency(struct nan_event_params *nan_evt)
+{}
+#endif
+
+/**
  * os_if_nan_discovery_event_handler() - NAN Discovery Interface event handler
  * @nan_evt: NAN Event parameters
  *
@@ -2593,6 +2624,8 @@ static void os_if_nan_discovery_event_handler(struct nan_event_params *nan_evt)
 		osif_err("null pdev");
 		return;
 	}
+	os_if_nan_handle_sr_nan_concurrency(nan_evt);
+
 	os_priv = wlan_pdev_get_ospriv(pdev);
 
 	vendor_event =

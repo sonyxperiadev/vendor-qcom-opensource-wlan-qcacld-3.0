@@ -3647,6 +3647,15 @@ static void hdd_register_policy_manager_callback(
 #endif
 
 #ifdef WLAN_FEATURE_NAN
+#ifdef WLAN_FEATURE_SR
+static void hdd_register_sr_concurrency_cb(struct nan_callbacks *cb_obj)
+{
+	cb_obj->nan_sr_concurrency_update = hdd_nan_sr_concurrency_update;
+}
+#else
+static void hdd_register_sr_concurrency_cb(struct nan_callbacks *cb_obj)
+{}
+#endif
 static void hdd_nan_register_callbacks(struct hdd_context *hdd_ctx)
 {
 	struct nan_callbacks cb_obj = {0};
@@ -3663,6 +3672,7 @@ static void hdd_nan_register_callbacks(struct hdd_context *hdd_ctx)
 	cb_obj.peer_departed_ind = hdd_ndp_peer_departed_handler;
 
 	cb_obj.nan_concurrency_update = hdd_nan_concurrency_update;
+	hdd_register_sr_concurrency_cb(&cb_obj);
 
 	os_if_nan_register_hdd_callbacks(hdd_ctx->psoc, &cb_obj);
 }
