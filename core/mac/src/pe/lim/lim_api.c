@@ -3451,7 +3451,8 @@ lim_cm_fill_link_session(struct mac_context *mac_ctx,
 
 	if (!assoc_vdev) {
 		pe_err("Assoc vdev is NULL");
-		return QDF_STATUS_E_FAILURE;
+		status = QDF_STATUS_E_FAILURE;
+		goto end;
 	}
 
 	status = wlan_vdev_mlme_get_ssid(assoc_vdev,
@@ -3461,15 +3462,18 @@ lim_cm_fill_link_session(struct mac_context *mac_ctx,
 	if (QDF_IS_STATUS_ERROR(status)) {
 		pe_err("Failed to get ssid vdev id %d",
 		       vdev_id);
-		return QDF_STATUS_E_FAILURE;
+		status = QDF_STATUS_E_FAILURE;
+		goto end;
 	}
 
 	sir_copy_mac_addr(pe_session->bssId, sync_ind->bssid.bytes);
 
 	pe_session->lim_join_req =
 		qdf_mem_malloc(sizeof(*pe_session->lim_join_req) + bss_len);
-	if (!pe_session->lim_join_req)
-		return QDF_STATUS_E_NOMEM;
+	if (!pe_session->lim_join_req) {
+		status = QDF_STATUS_E_NOMEM;
+		goto end;
+	}
 
 	pe_join_req = pe_session->lim_join_req;
 	bss_desc = &pe_session->lim_join_req->bssDescription;
@@ -3506,6 +3510,8 @@ end:
 		qdf_mem_free(pe_session->lim_join_req);
 		pe_session->lim_join_req = NULL;
 	}
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
+
 	return status;
 }
 
@@ -3595,7 +3601,7 @@ void lim_roam_mlo_create_peer(struct mac_context *mac,
 		return;
 
 	if (!wlan_vdev_mlme_is_mlo_vdev(vdev))
-		return;
+		goto end;
 
 	link_id = mlo_roam_get_link_id(vdev_id, sync_ind);
 	/* currently only 2 link MLO supported */
