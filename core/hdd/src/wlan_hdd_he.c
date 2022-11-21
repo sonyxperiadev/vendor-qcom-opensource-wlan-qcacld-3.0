@@ -702,6 +702,12 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 		hdd_err("11AX is not supported");
 		return -EINVAL;
 	}
+	status = ucfg_spatial_reuse_operation_allowed(hdd_ctx->psoc,
+						      adapter->vdev);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		hdd_err("SR operations not allowed status: %u", status);
+		return qdf_status_to_os_return(status);
+	}
 	if (wlan_cfg80211_nla_parse(tb, QCA_WLAN_VENDOR_ATTR_SR_MAX, data,
 				    data_len, wlan_hdd_sr_policy)) {
 		hdd_err("invalid attr");

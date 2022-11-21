@@ -20,6 +20,7 @@
 #include <qdf_trace.h>
 #include <spatial_reuse_ucfg_api.h>
 #include <spatial_reuse_api.h>
+#include <wlan_policy_mgr_api.h>
 
 void ucfg_spatial_reuse_register_cb(struct wlan_objmgr_psoc *psoc,
 				    sr_osif_event_cb cb)
@@ -121,4 +122,27 @@ ucfg_spatial_reuse_setup_req(struct wlan_objmgr_vdev *vdev,
 {
 	return wlan_sr_setup_req(vdev, pdev, is_sr_enable,
 				 srg_pd_threshold, non_srg_pd_threshold);
+}
+
+QDF_STATUS ucfg_spatial_reuse_operation_allowed(struct wlan_objmgr_psoc *psoc,
+						struct wlan_objmgr_vdev *vdev)
+{
+	uint32_t conc_vdev_id;
+	uint8_t vdev_id, mac_id;
+	QDF_STATUS status;
+
+	if (!vdev || !psoc)
+		return QDF_STATUS_E_NULL_VALUE;
+
+	vdev_id = wlan_vdev_get_id(vdev);
+	status = policy_mgr_get_mac_id_by_session_id(psoc, vdev_id, &mac_id);
+	if (QDF_IS_STATUS_ERROR(status))
+		return status;
+	conc_vdev_id = policy_mgr_get_conc_vdev_on_same_mac(psoc, vdev_id,
+							    mac_id);
+	if (conc_vdev_id != WLAN_INVALID_VDEV_ID &&
+	    !policy_mgr_sr_same_mac_conc_enabled(psoc))
+		return QDF_STATUS_E_NOSUPPORT;
+
+	return status;
 }
