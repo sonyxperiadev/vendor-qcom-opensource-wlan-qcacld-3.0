@@ -1812,4 +1812,14 @@ void populate_dot11f_rnr_tbtt_info_7(struct mac_context *mac_ctx,
 				     struct pe_session *rnr_session,
 				     tDot11fIEreduced_neighbor_report *dot11f);
 
+/**
+ * populate_dot11f_edca_pifs_param_set() - populate edca/pifs param ie
+ * @mac: Mac context
+ * @qcn_ie: pointer to tDot11fIEqcn_ie
+ *
+ * Return: none
+ */
+void populate_dot11f_edca_pifs_param_set(
+				struct mac_context *mac,
+				tDot11fIEqcn_ie *qcn_ie);
 #endif /* __PARSE_H__ */

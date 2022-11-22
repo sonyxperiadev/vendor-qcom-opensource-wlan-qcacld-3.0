@@ -1248,6 +1248,15 @@ void lim_update_probe_rsp_template_ie_bitmap_beacon2(struct mac_context *mac,
 			     sizeof(beacon2->WMMCaps));
 	}
 
+	/* QCN IE - only for ll sap */
+	if (beacon2->qcn_ie.present) {
+		set_probe_rsp_ie_bitmap(DefProbeRspIeBitmap,
+					WLAN_ELEMID_VENDOR);
+		qdf_mem_copy((void *)&prb_rsp->qcn_ie,
+			     (void *)&beacon2->qcn_ie,
+			     sizeof(beacon2->qcn_ie));
+	}
+
 	/* Extended Capability */
 	if (beacon2->ExtCap.present) {
 		set_probe_rsp_ie_bitmap(DefProbeRspIeBitmap, DOT11F_EID_EXTCAP);

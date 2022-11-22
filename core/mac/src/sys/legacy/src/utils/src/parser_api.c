@@ -1672,6 +1672,34 @@ void populate_dot11f_bss_max_idle(struct mac_context *mac,
 	}
 }
 
+void populate_dot11f_edca_pifs_param_set(struct mac_context *mac,
+					 tDot11fIEqcn_ie *qcn_ie)
+{
+	struct wlan_edca_pifs_param_ie param = {0};
+	struct edca_param *eparam;
+	struct pifs_param *pparam;
+	uint8_t edca_param_type;
+
+	qcn_ie->present = 1;
+	qcn_ie->edca_pifs_param_attr.present = 1;
+
+	edca_param_type = mac->mlme_cfg->edca_params.edca_param_type;
+	wlan_mlme_set_edca_pifs_param(&param, edca_param_type);
+	qcn_ie->edca_pifs_param_attr.edca_param_type = edca_param_type;
+
+	if (edca_param_type == HOST_EDCA_PARAM_TYPE_AGGRESSIVE) {
+		qcn_ie->edca_pifs_param_attr.num_data = sizeof(*eparam);
+		eparam = (struct edca_param *)qcn_ie->edca_pifs_param_attr.data;
+		qdf_mem_copy(eparam, &param.edca_pifs_param.eparam,
+			     sizeof(*eparam));
+	} else if (edca_param_type == HOST_EDCA_PARAM_TYPE_PIFS) {
+		qcn_ie->edca_pifs_param_attr.num_data = sizeof(*pparam);
+		pparam = (struct pifs_param *)qcn_ie->edca_pifs_param_attr.data;
+		qdf_mem_copy(pparam, &param.edca_pifs_param.pparam,
+			     sizeof(*pparam));
+	}
+}
+
 void populate_dot11f_qcn_ie(struct mac_context *mac,
 			    struct pe_session *pe_session,
 			    tDot11fIEqcn_ie *qcn_ie,
@@ -1693,6 +1721,15 @@ void populate_dot11f_qcn_ie(struct mac_context *mac,
 	}
 
 	populate_dot11f_qcn_ie_he_params(mac, pe_session, qcn_ie, attr_id);
+	if (policy_mgr_is_ll_sap_present(
+				mac->psoc,
+				policy_mgr_convert_device_mode_to_qdf_type(
+				pe_session->opmode), pe_session->vdev_id)) {
+		pe_debug("Populate edca/pifs param ie for ll sap");
+		populate_dot11f_edca_pifs_param_set(
+					mac,
+					qcn_ie);
+	}
 }
 
 QDF_STATUS
