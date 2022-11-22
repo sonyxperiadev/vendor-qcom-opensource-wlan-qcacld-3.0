@@ -450,9 +450,11 @@ __wlan_hdd_cfg80211_set_secure_ranging_context(struct wiphy *wiphy,
 					       struct wireless_dev *wdev,
 					       const void *data, int data_len)
 {
+	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(wdev->netdev);
 	int errno = 0;
 	struct nlattr *tb[QCA_WLAN_VENDOR_ATTR_SECURE_RANGING_CTX_MAX + 1];
+	struct qdf_mac_addr peer_mac;
 
 	hdd_enter();
 
@@ -487,7 +489,22 @@ __wlan_hdd_cfg80211_set_secure_ranging_context(struct wiphy *wiphy,
 			if (errno)
 				return errno;
 		}
+	} else if (nla_get_u32(
+			tb[QCA_WLAN_VENDOR_ATTR_SECURE_RANGING_CTX_ACTION]) ==
+			QCA_WLAN_VENDOR_SECURE_RANGING_CTX_ACTION_DELETE) {
+		if (!tb[QCA_WLAN_VENDOR_ATTR_SECURE_RANGING_CTX_PEER_MAC_ADDR]) {
+			hdd_err_rl("Peer mac address attribute is missing");
+			return -EINVAL;
+		}
+
+		qdf_mem_copy(peer_mac.bytes,
+			     nla_data(tb[QCA_WLAN_VENDOR_ATTR_SECURE_RANGING_CTX_PEER_MAC_ADDR]),
+			     QDF_MAC_ADDR_SIZE);
+		hdd_debug("Delete PASN peer" QDF_MAC_ADDR_FMT,
+			  QDF_MAC_ADDR_REF(peer_mac.bytes));
+		wifi_pos_send_pasn_peer_deauth(hdd_ctx->psoc, &peer_mac);
 	}
+
 	hdd_exit();
 
 	return errno;
