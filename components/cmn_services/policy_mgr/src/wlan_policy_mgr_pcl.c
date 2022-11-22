@@ -4148,6 +4148,7 @@ policy_mgr_get_pcl_ch_for_sap_go_with_ll_sap_present(
 	qdf_freq_t freq;
 	uint32_t vdev_id;
 	enum policy_mgr_con_mode mode;
+	bool is_ll_sap = 0;
 
 	pm_ctx = policy_mgr_get_context(psoc);
 	if (!pm_ctx) {
@@ -4167,6 +4168,7 @@ policy_mgr_get_pcl_ch_for_sap_go_with_ll_sap_present(
 		if (!policy_mgr_is_ll_sap_present(psoc, mode, vdev_id))
 			continue;
 
+		is_ll_sap = 1;
 		for (i = 0; i < *len; i++) {
 			if (policy_mgr_2_freq_always_on_same_mac(
 								psoc,
@@ -4184,6 +4186,9 @@ policy_mgr_get_pcl_ch_for_sap_go_with_ll_sap_present(
 	}
 	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
 
+	if (!is_ll_sap)
+		return QDF_STATUS_SUCCESS;
+
 	qdf_mem_zero(pcl_weight, *len * sizeof(*pcl_weight));
 	qdf_mem_copy(pcl_weight, weight_list, pcl_len);
 	*len = pcl_len;
@@ -4199,6 +4204,8 @@ policy_mgr_get_pcl_channel_for_ll_sap_concurrency(
 					uint32_t *pcl_channels,
 					uint8_t *pcl_weight, uint32_t *len)
 {
+	uint32_t orig_len = *len;
+
 	if (policy_mgr_is_ll_sap_present(psoc, curr_mode, vdev_id)) {
 		/* Scenario: If there is some existing interface present and
 		 * LL SAP is coming up.
@@ -4215,6 +4222,11 @@ policy_mgr_get_pcl_channel_for_ll_sap_concurrency(
 								len,
 								pcl_channels,
 								pcl_weight);
+	}
+
+	if (orig_len != *len) {
+		policy_mgr_debug("PCL after ll sap modification");
+		policy_mgr_dump_channel_list(*len, pcl_channels, pcl_weight);
 	}
 
 	return QDF_STATUS_SUCCESS;
