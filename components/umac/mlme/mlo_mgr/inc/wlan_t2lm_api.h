@@ -26,7 +26,6 @@
 #include "parser_api.h"
 #include "lim_send_messages.h"
 
-#ifdef WLAN_FEATURE_11BE
 /**
  * struct t2lm_event_data - TID to Link mapping event data
  * @status: qdf status used to indicate if t2lm action frame status
@@ -45,6 +44,7 @@ struct t2lm_event_data {
  * @WLAN_T2LM_EV_ACTION_FRAME_RX_RESP:Handle T2LM response frame received from AP
  * @WLAN_T2LM_EV_ACTION_FRAME_RX_TEARDOWN:Handle received teardown frame event
  * @WLAN_T2LM_EV_ACTION_FRAME_TX_TEARDOWN:Handle sending teardown frame event
+ * @WLAN_T2LM_EV_ACTION_FRAME_MAX: Maximum T2LM action frame event value
  */
 enum wlan_t2lm_evt {
 	WLAN_T2LM_EV_ACTION_FRAME_RX_REQ = 0,
@@ -56,6 +56,7 @@ enum wlan_t2lm_evt {
 	WLAN_T2LM_EV_ACTION_FRAME_MAX = 6,
 };
 
+#ifdef WLAN_FEATURE_11BE_MLO
 /**
  * t2lm_deliver_event - Handler to deliver T2LM event
  * @vdev: vdev pointer
@@ -143,6 +144,21 @@ QDF_STATUS t2lm_handle_rx_teardown(struct wlan_objmgr_vdev *vdev,
 QDF_STATUS t2lm_handle_tx_teardown(struct wlan_objmgr_vdev *vdev,
 				   struct t2lm_event_data *event_data);
 
+/**
+ * wlan_t2lm_validate_candidate - Validate candidate based on T2LM IE
+ * @cm_ctx: connection manager context pointer
+ * @scan_entry: scan entry pointer
+ *
+ * This api will be called to validate candidate based on T2LM IE received
+ * in beacon or probe response
+ *
+ * Return: qdf_status
+ */
+
+QDF_STATUS
+wlan_t2lm_validate_candidate(struct cnx_mgr *cm_ctx,
+			     struct scan_cache_entry *scan_entry);
+
 #else
 static inline QDF_STATUS
 t2lm_deliver_event(struct wlan_objmgr_vdev *vdev,
@@ -167,29 +183,36 @@ t2lm_handle_tx_resp(struct wlan_objmgr_vdev *vdev,
 }
 
 static inline QDF_STATUS
-t2lm_handle_rx_req(struct wlan_objmgr_vdev *vdev,
-		   struct t2lm_mgr_event_data *event_data)
-{
-	return QDF_STATUS_E_NOSUPPORT;
-}
-
-static inline QDF_STATUS
-t2lm_handle_rx_req(struct wlan_objmgr_vdev *vdev,
+t2lm_handle_tx_req(struct wlan_objmgr_vdev *vdev,
 		   struct t2lm_event_data *event_data)
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }
 
 static inline QDF_STATUS
-t2lm_handle_rx_req(struct wlan_objmgr_vdev *vdev,
-		   struct t2lm_event_data *event_data)
+t2lm_handle_rx_resp(struct wlan_objmgr_vdev *vdev,
+		    struct t2lm_event_data *event_data)
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }
 
 static inline QDF_STATUS
-t2lm_handle_rx_req(struct wlan_objmgr_vdev *vdev,
-		   struct t2lm_event_data *event_data)
+t2lm_handle_rx_teardown(struct wlan_objmgr_vdev *vdev,
+			struct t2lm_event_data *event_data)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline QDF_STATUS
+t2lm_handle_tx_teardown(struct wlan_objmgr_vdev *vdev,
+			struct t2lm_event_data *event_data)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline QDF_STATUS
+wlan_t2lm_validate_candidate(struct cnx_mgr *cm_ctx,
+			     struct scan_cache_entry *scan_entry)
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }
