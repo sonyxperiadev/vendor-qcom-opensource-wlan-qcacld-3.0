@@ -137,13 +137,13 @@ void hdd_adapter_set_ml_adapter(struct hdd_adapter *adapter);
 void hdd_adapter_set_sl_ml_adapter(struct hdd_adapter *adapter);
 
 /**
- * hdd_get_ml_adater() - get an ml adapter
+ * hdd_get_ml_adapter() - get an ml adapter
  * @adapter: HDD adapter
  *
  * This function returns ml adapter from adapter list
  * Return: adapter or NULL
  */
-struct hdd_adapter *hdd_get_ml_adater(struct hdd_context *hdd_ctx);
+struct hdd_adapter *hdd_get_ml_adapter(struct hdd_context *hdd_ctx);
 
 /**
  * hdd_get_assoc_link_adapter() - get assoc link adapter
@@ -187,7 +187,7 @@ hdd_adapter_set_sl_ml_adapter(struct hdd_adapter *adapter)
 }
 
 static inline
-struct hdd_adapter *hdd_get_ml_adater(struct hdd_context *hdd_ctx)
+struct hdd_adapter *hdd_get_ml_adapter(struct hdd_context *hdd_ctx)
 {
 	return NULL;
 }

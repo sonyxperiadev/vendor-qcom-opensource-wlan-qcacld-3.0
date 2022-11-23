@@ -7517,7 +7517,7 @@ struct hdd_adapter *hdd_open_adapter(struct hdd_context *hdd_ctx,
 	}
 
 	if (params->only_wdev_register) {
-		sta_adapter = hdd_get_ml_adater(hdd_ctx);
+		sta_adapter = hdd_get_ml_adapter(hdd_ctx);
 		if (!sta_adapter) {
 			hdd_err("not able to find the sta adapter");
 			return NULL;
