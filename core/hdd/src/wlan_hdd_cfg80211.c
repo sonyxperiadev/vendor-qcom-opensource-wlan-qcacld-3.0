@@ -20822,6 +20822,7 @@ static int wlan_hdd_add_key_all_mlo_vdev(mac_handle_t mac_handle,
 			mlo_release_vdev_ref(link_vdev);
 			continue;
 		}
+		peer = NULL;
 		switch (adapter->device_mode) {
 		case QDF_SAP_MODE:
 			if (wlan_vdev_mlme_is_mlo_vdev(link_vdev))
