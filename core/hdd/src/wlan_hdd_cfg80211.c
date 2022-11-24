@@ -7276,7 +7276,7 @@ __wlan_hdd_cfg80211_get_wifi_info(struct wiphy *wiphy,
 	uint8_t *firmware_version = NULL;
 	int status;
 	struct sk_buff *reply_skb;
-	uint32_t skb_len = 0, count = 0;
+	uint32_t skb_len = 0;
 	struct pld_soc_info info;
 	bool stt_flag = false;
 
@@ -7301,8 +7301,7 @@ __wlan_hdd_cfg80211_get_wifi_info(struct wiphy *wiphy,
 
 	if (tb_vendor[QCA_WLAN_VENDOR_ATTR_WIFI_INFO_DRIVER_VERSION]) {
 		hdd_debug("Rcvd req for Driver version");
-		skb_len += strlen(QWLAN_VERSIONSTR) + 1;
-		count++;
+		skb_len += nla_total_size(strlen(QWLAN_VERSIONSTR) + 1);
 	}
 
 	if (tb_vendor[QCA_WLAN_VENDOR_ATTR_WIFI_INFO_FIRMWARE_VERSION]) {
@@ -7324,25 +7323,22 @@ __wlan_hdd_cfg80211_get_wifi_info(struct wiphy *wiphy,
 			 hdd_ctx->fw_version_info.sub_id,
 			 hdd_ctx->target_hw_name,
 			 (stt_flag ? info.fw_build_id : " "));
-		skb_len += strlen(firmware_version) + 1;
-		count++;
+		skb_len += nla_total_size(strlen(firmware_version) + 1);
 	}
 
 	if (tb_vendor[QCA_WLAN_VENDOR_ATTR_WIFI_INFO_RADIO_INDEX]) {
 		hdd_debug("Rcvd req for Radio index");
-		skb_len += sizeof(uint32_t);
-		count++;
+		skb_len += nla_total_size(sizeof(uint32_t));
 	}
 
-	if (count == 0) {
+	if (!skb_len) {
 		hdd_err("unknown attribute in get_wifi_info request");
 		qdf_mem_free(firmware_version);
 		return -EINVAL;
 	}
 
-	skb_len += (NLA_HDRLEN * count) + NLMSG_HDRLEN;
-	reply_skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy, skb_len);
-
+	skb_len += NLMSG_HDRLEN;
+	reply_skb = wlan_cfg80211_vendor_cmd_alloc_reply_skb(wiphy, skb_len);
 	if (!reply_skb) {
 		hdd_err("cfg80211_vendor_cmd_alloc_reply_skb failed");
 		qdf_mem_free(firmware_version);
