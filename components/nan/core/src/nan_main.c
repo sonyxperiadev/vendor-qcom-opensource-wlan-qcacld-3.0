@@ -867,7 +867,7 @@ static QDF_STATUS nan_handle_enable_rsp(struct nan_event_params *nan_event)
 			nan_debug("NAN vdev_id: %u", vdev_id);
 			policy_mgr_incr_active_session(psoc, QDF_NAN_DISC_MODE,
 						       vdev_id);
-			policy_mgr_nan_sap_post_enable_conc_check(psoc);
+			policy_mgr_process_force_scc_for_nan(psoc);
 
 		} else {
 			/*

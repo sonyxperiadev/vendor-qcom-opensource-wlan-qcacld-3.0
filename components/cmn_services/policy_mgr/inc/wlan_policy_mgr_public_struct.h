@@ -1642,11 +1642,13 @@ struct sap_plus_go_force_scc {
  * @go_plus_go_force_scc: structure to hold params of
  *			  curr and first p2p go ctx
  * @sap_plus_go_force_scc: sap p2p force SCC ctx
+ * @nan_force_scc_in_progress: NAN force scc in progress
  */
 struct sta_ap_intf_check_work_ctx {
 	struct wlan_objmgr_psoc *psoc;
 	struct go_plus_go_force_scc go_plus_go_force_scc;
 	struct sap_plus_go_force_scc sap_plus_go_force_scc;
+	uint8_t nan_force_scc_in_progress;
 };
 
 /**

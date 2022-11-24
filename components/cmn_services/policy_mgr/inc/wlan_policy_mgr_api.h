@@ -930,6 +930,15 @@ void policy_mgr_do_go_plus_go_force_scc(
 #endif
 
 /**
+ * policy_mgr_process_force_scc_for_nan () - force SAP scc on nan freq
+ *
+ * @psoc: PSOC object information
+ *
+ * Return: None
+ */
+void policy_mgr_process_force_scc_for_nan(struct wlan_objmgr_psoc *psoc);
+
+/**
  * policy_mgr_check_sap_go_force_scc() - Check SAP GO MCC and save interface
  * information
  * @psoc: pointer to psoc

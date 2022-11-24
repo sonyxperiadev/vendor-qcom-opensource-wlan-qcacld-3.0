@@ -6787,7 +6787,7 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 					    FTM_TIME_SYNC_BSS_STARTED);
 
 	hdd_set_connection_in_progress(false);
-	policy_mgr_nan_sap_post_enable_conc_check(hdd_ctx->psoc);
+	policy_mgr_process_force_scc_for_nan(hdd_ctx->psoc);
 	ret = 0;
 	goto free;
 
