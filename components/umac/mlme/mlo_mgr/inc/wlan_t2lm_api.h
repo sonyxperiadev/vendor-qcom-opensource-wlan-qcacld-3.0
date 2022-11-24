@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -60,21 +60,27 @@ enum wlan_t2lm_evt {
 /**
  * t2lm_deliver_event - Handler to deliver T2LM event
  * @vdev: vdev pointer
+ * @peer: pointer to peer
  * @event: T2LM event
  * @event_data: T2LM event data pointer
+ * @dialog_token: Dialog token
  *
  * This api will be called from lim  layers, to process T2LM event
  *
  * Return: qdf_status
  */
 QDF_STATUS t2lm_deliver_event(struct wlan_objmgr_vdev *vdev,
+			      struct wlan_objmgr_peer *peer,
 			      enum wlan_t2lm_evt event,
-			      struct t2lm_event_data *event_data);
+			      void *event_data,
+			      uint8_t *dialog_token);
 
 /**
  * t2lm_handle_rx_req - Handler for parsing T2LM action frame
  * @vdev: vdev pointer
+ * @peer: pointer to peer
  * @event_data: T2LM event data pointer
+ * @token: Dialog token
  *
  * This api will be called from lim  layers, after T2LM action frame
  * is received, the api will parse the T2LM request frame.
@@ -82,43 +88,47 @@ QDF_STATUS t2lm_deliver_event(struct wlan_objmgr_vdev *vdev,
  * Return: qdf_status
  */
 QDF_STATUS t2lm_handle_rx_req(struct wlan_objmgr_vdev *vdev,
-			      struct t2lm_event_data *event_data);
+			      struct wlan_objmgr_peer *peer,
+			      void *event_data, uint8_t *token);
 
 /**
  * t2lm_handle_tx_resp - Handler for populating T2LM action frame
  * @vdev: vdev pointer
  * @event_data: T2LM event data pointer
+ * @token: Dialog token
  *
  * This api will be called to populate T2LM response action frame.
  *
  * Return: qdf_status
  */
 QDF_STATUS t2lm_handle_tx_resp(struct wlan_objmgr_vdev *vdev,
-			       struct t2lm_event_data *event_data);
+			       void *event_data, uint8_t *token);
 
 /**
  * t2lm_handle_tx_req - Handler for populating T2LM action frame
  * @vdev: vdev pointer
  * @event_data: T2LM event data pointer
+ * @token: Dialog token
  *
  * This api will be called to populate T2LM request action frame.
  *
  * Return: qdf_status
  */
 QDF_STATUS t2lm_handle_tx_req(struct wlan_objmgr_vdev *vdev,
-			      struct t2lm_event_data *event_data);
+			      void *event_data, uint8_t *token);
 
 /**
  * t2lm_handle_rx_resp - Handler for parsing T2LM action frame
  * @vdev: vdev pointer
  * @event_data: T2LM event data pointer
+ * @token: Dialog token
  *
  * This api will be called to parsing T2LM response action frame.
  *
  * Return: qdf_status
  */
 QDF_STATUS t2lm_handle_rx_resp(struct wlan_objmgr_vdev *vdev,
-			       struct t2lm_event_data *event_data);
+			       void *event_data, uint8_t *token);
 
 /**
  * t2lm_handle_rx_teardown - Handler for parsing T2LM action frame
@@ -130,7 +140,7 @@ QDF_STATUS t2lm_handle_rx_resp(struct wlan_objmgr_vdev *vdev,
  * Return: qdf_status
  */
 QDF_STATUS t2lm_handle_rx_teardown(struct wlan_objmgr_vdev *vdev,
-				   struct t2lm_event_data *event_data);
+				   void *event_data);
 
 /**
  * t2lm_handle_tx_teardown - Handler for populating T2LM action frame
@@ -142,7 +152,7 @@ QDF_STATUS t2lm_handle_rx_teardown(struct wlan_objmgr_vdev *vdev,
  * Return: qdf_status
  */
 QDF_STATUS t2lm_handle_tx_teardown(struct wlan_objmgr_vdev *vdev,
-				   struct t2lm_event_data *event_data);
+				   void *event_data);
 
 /**
  * wlan_t2lm_validate_candidate - Validate candidate based on T2LM IE
@@ -158,54 +168,61 @@ QDF_STATUS t2lm_handle_tx_teardown(struct wlan_objmgr_vdev *vdev,
 QDF_STATUS
 wlan_t2lm_validate_candidate(struct cnx_mgr *cm_ctx,
 			     struct scan_cache_entry *scan_entry);
-
+/**
+ * wlan_t2lm_deliver_event() - TID-to-link-mapping event handler
+ * @vdev: vdev object
+ * @peer: pointer to peer
+ * @event: T2LM event
+ * @event_data: T2LM event data
+ * @dialog_token: Dialog token
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS wlan_t2lm_deliver_event(struct wlan_objmgr_vdev *vdev,
+				   struct wlan_objmgr_peer *peer,
+				   enum wlan_t2lm_evt event,
+				   void *event_data,
+				   uint8_t *dialog_token);
 #else
 static inline QDF_STATUS
-t2lm_deliver_event(struct wlan_objmgr_vdev *vdev,
-		   enum wlan_t2lm_evt event,
-		   struct t2lm_event_data *event_data)
-{
-	return QDF_STATUS_E_NOSUPPORT;
-}
-
-static inline QDF_STATUS
 t2lm_handle_rx_req(struct wlan_objmgr_vdev *vdev,
-		   struct t2lm_event_data *event_data)
+		   struct wlan_objmgr_peer *peer,
+		   void *event_data, uint8_t *token)
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }
 
 static inline QDF_STATUS
 t2lm_handle_tx_resp(struct wlan_objmgr_vdev *vdev,
-		    struct t2lm_event_data *event_data)
+		    void *event_data, uint8_t *token)
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }
 
 static inline QDF_STATUS
 t2lm_handle_tx_req(struct wlan_objmgr_vdev *vdev,
-		   struct t2lm_event_data *event_data)
+		   void *event_data, uint8_t *token)
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }
 
 static inline QDF_STATUS
 t2lm_handle_rx_resp(struct wlan_objmgr_vdev *vdev,
-		    struct t2lm_event_data *event_data)
+		    void *event_data, uint8_t *token)
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }
 
 static inline QDF_STATUS
 t2lm_handle_rx_teardown(struct wlan_objmgr_vdev *vdev,
-			struct t2lm_event_data *event_data)
+			void *event_data)
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }
 
 static inline QDF_STATUS
 t2lm_handle_tx_teardown(struct wlan_objmgr_vdev *vdev,
-			struct t2lm_event_data *event_data)
+			void *event_data)
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }
@@ -213,6 +230,16 @@ t2lm_handle_tx_teardown(struct wlan_objmgr_vdev *vdev,
 static inline QDF_STATUS
 wlan_t2lm_validate_candidate(struct cnx_mgr *cm_ctx,
 			     struct scan_cache_entry *scan_entry)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline
+QDF_STATUS wlan_t2lm_deliver_event(struct wlan_objmgr_vdev *vdev,
+				   struct wlan_objmgr_peer *peer,
+				   enum wlan_t2lm_evt event,
+				   void *event_data,
+				   uint8_t *dialog_token)
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }

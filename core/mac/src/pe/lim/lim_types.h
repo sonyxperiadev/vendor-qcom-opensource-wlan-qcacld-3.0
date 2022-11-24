@@ -1414,6 +1414,34 @@ QDF_STATUS lim_send_delba_action_frame(struct mac_context *mac_ctx,
 				       uint8_t *peer_macaddr, uint8_t tid,
 				       uint8_t reason_code);
 
+#ifdef WLAN_FEATURE_11BE_MLO
+/**
+ * lim_send_t2lm_action_rsp_frame() - Send T2LM negotiation response to peer
+ * @mac_ctx: mac context
+ * @peer_mac: Peer mac addr
+ * @session: PE session entry
+ * @token: Dialog token
+ * @status_code: T2LM negotiation response status code
+ *
+ * Return: 0 for success, non-zero for failure
+ */
+QDF_STATUS
+lim_send_t2lm_action_rsp_frame(struct mac_context *mac_ctx,
+			       tSirMacAddr peer_mac,
+			       struct pe_session *session,
+			       uint8_t token,
+			       enum wlan_t2lm_resp_frm_type status_code);
+#else
+static inline QDF_STATUS
+lim_send_t2lm_action_rsp_frame(struct mac_context *mac_ctx,
+			       tSirMacAddr peer_mac,
+			       struct pe_session *session, uint8_t token,
+			       enum wlan_t2lm_resp_frm_type status_code)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 /**
  * lim_process_join_failure_timeout() - This function is called to process
  * JoinFailureTimeout
