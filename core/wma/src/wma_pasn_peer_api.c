@@ -253,6 +253,11 @@ wma_pasn_peer_delete_all_complete(struct wlan_objmgr_vdev *vdev)
 	struct wma_target_req *req_msg;
 	uint8_t vdev_id = wlan_vdev_get_id(vdev);
 
+	if (!wma) {
+		wma_err("wma_handle is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
 	req_msg = wma_find_remove_req_msgtype(wma, vdev_id,
 					      WMA_PASN_PEER_DELETE_REQUEST);
 	if (!req_msg) {
