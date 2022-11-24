@@ -196,6 +196,7 @@
 #include "wlan_hdd_coap.h"
 #include "wlan_hdd_tdls.h"
 #include "wlan_psoc_mlme_api.h"
+#include <utils_mlo.h>
 
 /*
  * A value of 100 (milliseconds) can be sent to FW.
@@ -20593,12 +20594,94 @@ wlan_hdd_mlo_set_keys_saved(struct hdd_adapter *adapter,
 }
 #endif
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static QDF_STATUS
+wlan_hdd_mlo_copy_partner_addr_from_mlie(struct wlan_objmgr_vdev *vdev,
+					 struct qdf_mac_addr *partner_mac)
+{
+	int i;
+	QDF_STATUS status;
+	struct wlan_mlo_dev_context *mlo_dev_ctx;
+	struct wlan_mlo_sta *sta_ctx;
+	struct mlo_link_info *partner_link_info;
+	struct element_info *assoc_rsp;
+	const uint8_t *ie_data_ptr;
+	size_t ie_data_len, ml_ie_len = 0;
+	uint8_t *ml_ie = NULL;
+	bool found = false;
+	struct mlo_partner_info partner_info = {0};
+
+	if (!vdev)
+		return QDF_STATUS_E_NULL_VALUE;
+
+	mlo_dev_ctx = vdev->mlo_dev_ctx;
+	if (!mlo_dev_ctx)
+		return QDF_STATUS_E_INVAL;
+
+	sta_ctx = mlo_dev_ctx->sta_ctx;
+	if (!sta_ctx)
+		return QDF_STATUS_E_INVAL;
+
+	mlo_dev_lock_acquire(mlo_dev_ctx);
+	assoc_rsp = &sta_ctx->assoc_rsp;
+
+	if (!assoc_rsp->len || !assoc_rsp->ptr ||
+	    assoc_rsp->len <= WLAN_ASSOC_RSP_IES_OFFSET) {
+		mlo_dev_lock_release(mlo_dev_ctx);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	ie_data_len = assoc_rsp->len - WLAN_ASSOC_RSP_IES_OFFSET;
+	ie_data_ptr = assoc_rsp->ptr + WLAN_ASSOC_RSP_IES_OFFSET;
+	status = util_find_mlie((uint8_t *)ie_data_ptr, ie_data_len,
+				&ml_ie, &ml_ie_len);
+
+	if (QDF_IS_STATUS_ERROR(status) || !ml_ie) {
+		mlo_dev_lock_release(mlo_dev_ctx);
+		hdd_debug("ML IE not found %d", status);
+		return status;
+	}
+
+	status = util_get_bvmlie_persta_partner_info(ml_ie, ml_ie_len,
+						     &partner_info);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		mlo_dev_lock_release(mlo_dev_ctx);
+		hdd_err("Unable to find per-sta profile in ML IE");
+		return status;
+	}
+	mlo_dev_lock_release(mlo_dev_ctx);
+
+	for (i = 0; i < partner_info.num_partner_links; i++) {
+		partner_link_info = &partner_info.partner_link_info[i];
+		if (partner_link_info->link_id == vdev->vdev_mlme.mlo_link_id) {
+			qdf_copy_macaddr(partner_mac,
+					 &partner_link_info->link_addr);
+			found = true;
+			break;
+		}
+	}
+
+	if (!partner_info.num_partner_links || !found)
+		status = QDF_STATUS_E_NOENT;
+
+	return status;
+}
+#else
+static inline QDF_STATUS
+wlan_hdd_mlo_copy_partner_addr_from_mlie(struct wlan_objmgr_vdev *vdev,
+					 struct qdf_mac_addr *partner_mac)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+#endif
+
 static int wlan_hdd_add_key_vdev(mac_handle_t mac_handle,
 				 struct wlan_objmgr_vdev *vdev,
 				 u8 key_index, bool pairwise,
 				 const u8 *mac_addr, struct key_params *params,
 				 int link_id, struct hdd_adapter *adapter)
 {
+	QDF_STATUS status;
 	struct wlan_objmgr_peer *peer;
 	struct hdd_context *hdd_ctx;
 	struct qdf_mac_addr mac_address;
@@ -20620,13 +20703,30 @@ static int wlan_hdd_add_key_vdev(mac_handle_t mac_handle,
 	if (!pairwise && ((wlan_vdev_mlme_get_opmode(vdev) == QDF_STA_MODE) ||
 	   (wlan_vdev_mlme_get_opmode(vdev) == QDF_P2P_CLIENT_MODE))) {
 		peer = wlan_objmgr_vdev_try_get_bsspeer(vdev, WLAN_OSIF_ID);
-		if (!peer) {
+		if (peer) {
+			qdf_mem_copy(mac_address.bytes,
+				     wlan_peer_get_macaddr(peer),
+				     QDF_MAC_ADDR_SIZE);
+			wlan_objmgr_peer_release_ref(peer, WLAN_OSIF_ID);
+		} else if (wlan_vdev_mlme_is_mlo_link_vdev(vdev) &&
+			   adapter->device_mode == QDF_STA_MODE) {
+			status = wlan_objmgr_vdev_try_get_ref(vdev,
+							      WLAN_MLO_MGR_ID);
+			if (QDF_IS_STATUS_ERROR(status)) {
+				hdd_err("Failed to get vdev ref");
+				return qdf_status_to_os_return(status);
+			}
+			status = wlan_hdd_mlo_copy_partner_addr_from_mlie(
+							vdev, &mac_address);
+			mlo_release_vdev_ref(vdev);
+			if (QDF_IS_STATUS_ERROR(status)) {
+				hdd_err("Failed to get peer address from ML IEs");
+				return qdf_status_to_os_return(status);
+			}
+		} else {
 			hdd_err("Peer is null return");
 			return -EINVAL;
 		}
-		qdf_mem_copy(mac_address.bytes,
-			     wlan_peer_get_macaddr(peer), QDF_MAC_ADDR_SIZE);
-		wlan_objmgr_peer_release_ref(peer, WLAN_OSIF_ID);
 	} else {
 		if (mac_addr)
 			qdf_mem_copy(mac_address.bytes,
@@ -20824,6 +20924,7 @@ static int wlan_hdd_add_key_all_mlo_vdev(mac_handle_t mac_handle,
 					 struct key_params *params, int link_id,
 					 struct hdd_adapter *adapter)
 {
+	QDF_STATUS status;
 	struct hdd_adapter *link_adapter;
 	struct hdd_context *hdd_ctx;
 	struct wlan_objmgr_vdev *wlan_vdev_list[WLAN_UMAC_MLO_MAX_VDEVS];
@@ -20869,14 +20970,26 @@ static int wlan_hdd_add_key_all_mlo_vdev(mac_handle_t mac_handle,
 			break;
 		}
 
-		if (!peer) {
+		if (peer) {
+			qdf_mem_copy(peer_mac.bytes,
+				     wlan_peer_get_macaddr(peer),
+				     QDF_MAC_ADDR_SIZE);
+			wlan_objmgr_peer_release_ref(peer, WLAN_OSIF_ID);
+
+		} else if (wlan_vdev_mlme_is_mlo_link_vdev(link_vdev) &&
+			   adapter->device_mode == QDF_STA_MODE) {
+			status = wlan_hdd_mlo_copy_partner_addr_from_mlie(
+							link_vdev, &peer_mac);
+			if (QDF_IS_STATUS_ERROR(status)) {
+				hdd_err("Failed to get peer address from ML IEs");
+				mlo_release_vdev_ref(link_vdev);
+				continue;
+			}
+		} else {
 			hdd_err("Peer is null");
 			mlo_release_vdev_ref(link_vdev);
 			continue;
 		}
-		qdf_mem_copy(peer_mac.bytes,
-			     wlan_peer_get_macaddr(peer), QDF_MAC_ADDR_SIZE);
-		wlan_objmgr_peer_release_ref(peer, WLAN_OSIF_ID);
 
 		errno = wlan_hdd_add_key_vdev(mac_handle, link_vdev, key_index,
 					      pairwise, peer_mac.bytes,
