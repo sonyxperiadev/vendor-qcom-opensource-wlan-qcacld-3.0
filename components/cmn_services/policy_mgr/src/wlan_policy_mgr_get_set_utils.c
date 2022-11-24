@@ -5600,6 +5600,12 @@ policy_mgr_get_disabled_ml_sta_idx(struct wlan_objmgr_psoc *psoc,
 			continue;
 		if (pm_disabled_ml_links[conn_index].mode != PM_STA_MODE)
 			continue;
+		if ((fill_index >= MAX_NUMBER_OF_CONC_CONNECTIONS) ||
+		    (*ml_sta >= MAX_NUMBER_OF_CONC_CONNECTIONS)) {
+			policy_mgr_err("Invalid fill_index: %d or ml_sta: %d",
+				       fill_index, *ml_sta);
+			break;
+		}
 		vdev_id_list[fill_index] =
 				pm_disabled_ml_links[conn_index].vdev_id;
 		freq_list[fill_index] = pm_disabled_ml_links[conn_index].freq;
