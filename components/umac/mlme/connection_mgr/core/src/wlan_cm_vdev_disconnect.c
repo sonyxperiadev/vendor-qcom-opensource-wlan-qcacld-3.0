@@ -72,7 +72,7 @@ QDF_STATUS cm_disconnect_start_ind(struct wlan_objmgr_vdev *vdev,
 		mlme_err("vdev_id: %d psoc not found", req->vdev_id);
 		return QDF_STATUS_E_INVAL;
 	}
-
+	mlo_sta_stop_reconfig_timer(vdev);
 	if (cm_csr_is_ss_wait_for_key(req->vdev_id)) {
 		mlme_debug("Stop Wait for key timer");
 		cm_stop_wait_for_key_timer(psoc, req->vdev_id);
@@ -248,6 +248,7 @@ cm_disconnect_complete_ind(struct wlan_objmgr_vdev *vdev,
 	cm_disconnect_diag_event(vdev, rsp);
 	wlan_tdls_notify_sta_disconnect(vdev_id, false, false, vdev);
 	policy_mgr_decr_session_set_pcl(psoc, op_mode, vdev_id);
+	wlan_clear_mlo_sta_link_removed_flag(vdev);
 
 	return QDF_STATUS_SUCCESS;
 }

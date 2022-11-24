@@ -71,6 +71,8 @@ QDF_STATUS cm_fw_roam_sync_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 		return cm_roam_stop_req(psoc, vdev_id,
 					REASON_ROAM_SYNCH_FAILED, NULL, false);
 	}
+	mlo_sta_stop_reconfig_timer(vdev);
+	wlan_clear_mlo_sta_link_removed_flag(vdev);
 
 	status = cm_sm_deliver_event(vdev, WLAN_CM_SM_EV_ROAM_SYNC,
 				     event_data_len, event);

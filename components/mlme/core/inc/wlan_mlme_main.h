@@ -465,6 +465,7 @@ struct mlme_ap_config {
  * @connect_info: mlme connect information
  * @wait_key_timer: wait key timer
  * @eht_config: Eht capability configuration
+ * @is_mlo_sta_link_removed: link on vdev has been removed by AP
  * @last_delba_sent_time: Last delba sent time to handle back to back delba
  *			  requests from some IOT APs
  * @ba_2k_jump_iot_ap: This is set to true if connected to the ba 2k jump IOT AP
@@ -519,6 +520,9 @@ struct mlme_legacy_priv {
 	struct wait_for_key_timer wait_key_timer;
 #ifdef WLAN_FEATURE_11BE
 	tDot11fIEeht_cap eht_config;
+#endif
+#if defined(WLAN_FEATURE_11BE_MLO)
+	bool is_mlo_sta_link_removed;
 #endif
 	qdf_time_t last_delba_sent_time;
 	bool ba_2k_jump_iot_ap;
@@ -1235,6 +1239,76 @@ wlan_get_sap_user_config_freq(struct wlan_objmgr_vdev *vdev);
 QDF_STATUS
 wlan_set_sap_user_config_freq(struct wlan_objmgr_vdev *vdev,
 			      qdf_freq_t freq);
+
+#if defined(WLAN_FEATURE_11BE_MLO)
+/**
+ * wlan_clear_mlo_sta_link_removed_flag() - Clear link removal flag on all
+ * vdev of same ml dev
+ * @vdev: pointer to vdev
+ *
+ * Return: void
+ */
+void wlan_clear_mlo_sta_link_removed_flag(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * wlan_set_vdev_link_removed_flag_by_vdev_id() - Set link removal flag
+ * on vdev
+ * @psoc: psoc object
+ * @vdev_id: vdev id
+ * @removed: link removal flag
+ *
+ * Return: QDF_STATUS_SUCCESS if success, otherwise error code
+ */
+QDF_STATUS
+wlan_set_vdev_link_removed_flag_by_vdev_id(struct wlan_objmgr_psoc *psoc,
+					   uint8_t vdev_id, bool removed);
+
+/**
+ * wlan_get_vdev_link_removed_flag_by_vdev_id() - Get link removal flag
+ * of vdev
+ * @psoc: psoc object
+ * @vdev_id: vdev id
+ *
+ * Return: true if link is removed on vdev, otherwise false.
+ */
+bool
+wlan_get_vdev_link_removed_flag_by_vdev_id(struct wlan_objmgr_psoc *psoc,
+					   uint8_t vdev_id);
+
+/**
+ * wlan_drop_mgmt_frame_on_link_removal() - Check mgmt frame
+ * allow dropped due to link removal
+ * @vdev: pointer to vdev
+ *
+ * Return: true if frame can be dropped.
+ */
+bool wlan_drop_mgmt_frame_on_link_removal(struct wlan_objmgr_vdev *vdev);
+#else
+static inline void
+wlan_clear_mlo_sta_link_removed_flag(struct wlan_objmgr_vdev *vdev)
+{
+}
+
+static inline QDF_STATUS
+wlan_set_vdev_link_removed_flag_by_vdev_id(struct wlan_objmgr_psoc *psoc,
+					   uint8_t vdev_id, bool removed)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline bool
+wlan_get_vdev_link_removed_flag_by_vdev_id(struct wlan_objmgr_psoc *psoc,
+					   uint8_t vdev_id)
+{
+	return false;
+}
+
+static inline bool
+wlan_drop_mgmt_frame_on_link_removal(struct wlan_objmgr_vdev *vdev)
+{
+	return false;
+}
+#endif
 
 #ifdef CONFIG_BAND_6GHZ
 /**
