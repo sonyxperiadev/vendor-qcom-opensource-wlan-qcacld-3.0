@@ -41,7 +41,7 @@
 #include "wlan_cm_roam_api.h"
 #include "wlan_scan_api.h"
 
-/**
+/*
  * first_connection_pcl_table - table which provides PCL for the
  * very first connection in the system
  */
@@ -594,17 +594,50 @@ void policy_mgr_update_with_safe_channel_list(struct wlan_objmgr_psoc *psoc,
 }
 
 static QDF_STATUS policy_mgr_modify_pcl_based_on_enabled_channels(
-					struct policy_mgr_psoc_priv_obj *pm_ctx,
+					struct wlan_objmgr_psoc *psoc,
 					uint32_t *pcl_list_org,
 					uint8_t *weight_list_org,
 					uint32_t *pcl_len_org)
 {
 	uint32_t i, pcl_len = 0;
+	bool allow_go_scc_on_dfs_chn = false;
+	bool dfs_master_capable = false;
+	uint8_t sta_sap_scc_on_dfs_chnl = 0;
+	QDF_STATUS status = QDF_STATUS_E_FAILURE;
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("context is NULL");
+		return status;
+	}
+
+	status = ucfg_mlme_get_dfs_master_capability(psoc, &dfs_master_capable);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		policy_mgr_err("failed to get dfs master capable");
+		return status;
+	}
+
+	status = policy_mgr_get_sta_sap_scc_on_dfs_chnl(psoc,
+						&sta_sap_scc_on_dfs_chnl);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		policy_mgr_err("failed to get sta_sap_scc_on_dfs_chnl");
+		return status;
+	}
+
+	if (dfs_master_capable &&
+	    (sta_sap_scc_on_dfs_chnl == PM_STA_SAP_ON_DFS_MASTER_MODE_FLEX &&
+	     pm_ctx->cfg.go_force_scc == GO_FORCE_SCC_STRICT)) {
+		allow_go_scc_on_dfs_chn = true;
+	}
 
 	for (i = 0; i < *pcl_len_org; i++) {
-		if (!wlan_reg_is_passive_or_disable_for_pwrmode(
+		if ((!wlan_reg_is_passive_or_disable_for_pwrmode(
 			pm_ctx->pdev, pcl_list_org[i],
-			REG_CURRENT_PWR_MODE)) {
+			REG_CURRENT_PWR_MODE)) ||
+		    (allow_go_scc_on_dfs_chn &&
+		     policy_mgr_is_sta_sap_scc(psoc, pcl_list_org[i]) &&
+		     wlan_reg_is_dfs_for_freq(pm_ctx->pdev, pcl_list_org[i]))) {
 			pcl_list_org[pcl_len] = pcl_list_org[i];
 			weight_list_org[pcl_len++] = weight_list_org[i];
 		}
@@ -1136,17 +1169,10 @@ static QDF_STATUS policy_mgr_pcl_modification_for_p2p_go(
 			uint32_t *len)
 {
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
-	struct policy_mgr_psoc_priv_obj *pm_ctx;
 	bool srd_chan_enabled;
 
-	pm_ctx = policy_mgr_get_context(psoc);
-	if (!pm_ctx) {
-		policy_mgr_err("context is NULL");
-		return status;
-	}
-
 	status = policy_mgr_modify_pcl_based_on_enabled_channels(
-			pm_ctx, pcl_channels, pcl_weight, len);
+			psoc, pcl_channels, pcl_weight, len);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		policy_mgr_err("failed to get modified pcl for GO");
 		return status;
