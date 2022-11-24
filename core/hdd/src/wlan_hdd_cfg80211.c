@@ -19333,6 +19333,31 @@ void wlan_hdd_set_mlo_wiphy_ext_feature(struct wiphy *wiphy,
 }
 #endif
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0))
+static inline
+void wlan_hdd_set_ext_kek_kck_support(struct wiphy *wiphy)
+{
+	wiphy->flags |= WIPHY_FLAG_SUPPORTS_EXT_KEK_KCK;
+}
+#else
+static inline
+void wlan_hdd_set_ext_kek_kck_support(struct wiphy *wiphy)
+{
+}
+#endif
+
+#ifdef NL80211_KCK_EXT_LEN_32
+static inline
+void wlan_hdd_set_32bytes_kck_support(struct wiphy *wiphy)
+{
+	wiphy->flags |= WIPHY_FLAG_SUPPORTS_EXT_KCK_32;
+}
+#else
+static inline
+void wlan_hdd_set_32bytes_kck_support(struct wiphy *wiphy)
+{
+}
+#endif
 /*
  * In this function, wiphy structure is updated after QDF
  * initialization. In wlan_hdd_cfg80211_init, only the
@@ -19427,6 +19452,8 @@ void wlan_hdd_update_wiphy(struct hdd_context *hdd_ctx)
 
 	wlan_wifi_pos_cfg80211_set_wiphy_ext_feature(wiphy, hdd_ctx->psoc);
 	wlan_hdd_set_mlo_wiphy_ext_feature(wiphy, hdd_ctx);
+	wlan_hdd_set_ext_kek_kck_support(wiphy);
+	wlan_hdd_set_32bytes_kck_support(wiphy);
 }
 
 /**
@@ -23403,7 +23430,8 @@ out:
  *
  * Return: none
  */
-#ifdef CFG80211_REKEY_DATA_KEK_LEN
+#if (defined(CFG80211_REKEY_DATA_KEK_LEN) || \
+	LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0))
 static
 void wlan_hdd_copy_gtk_kek(struct pmo_gtk_req *gtk_req,
 			   struct cfg80211_gtk_rekey_data *data)
@@ -23421,6 +23449,30 @@ void wlan_hdd_copy_gtk_kek(struct pmo_gtk_req *gtk_req,
 }
 #endif
 
+/**
+ * wlan_hdd_copy_gtk_kck - Copy the KCK from GTK rekey data to GTK request
+ * @gtk_req: Pointer to GTK request
+ * @data: Pointer to rekey data
+ *
+ * Return: None
+ */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0)
+static
+void wlan_hdd_copy_gtk_kck(struct pmo_gtk_req *gtk_req,
+			   struct cfg80211_gtk_rekey_data *data)
+{
+	qdf_mem_copy(gtk_req->kck, data->kck, data->kck_len);
+	gtk_req->kck_len = data->kck_len;
+}
+#else
+static
+void wlan_hdd_copy_gtk_kck(struct pmo_gtk_req *gtk_req,
+			   struct cfg80211_gtk_rekey_data *data)
+{
+	qdf_mem_copy(gtk_req->kck, data->kck, NL80211_KCK_LEN);
+	gtk_req->kck_len = NL80211_KCK_LEN;
+}
+#endif
 /**
  * __wlan_hdd_cfg80211_set_rekey_data() - set rekey data
  * @wiphy: Pointer to wiphy
@@ -23480,10 +23532,8 @@ int __wlan_hdd_cfg80211_set_rekey_data(struct wiphy *wiphy,
 		gtk_req->replay_counter);
 
 	wlan_hdd_copy_gtk_kek(gtk_req, data);
-	if (data->kck) {
-		qdf_mem_copy(gtk_req->kck, data->kck, NL80211_KCK_LEN);
-		gtk_req->kck_len = NL80211_KCK_LEN;
-	}
+	wlan_hdd_copy_gtk_kck(gtk_req, data);
+
 	gtk_req->is_fils_connection = hdd_is_fils_connection(hdd_ctx, adapter);
 	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_POWER_ID);
 	if (!vdev) {
