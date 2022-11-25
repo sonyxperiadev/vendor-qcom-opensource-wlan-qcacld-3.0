@@ -3442,6 +3442,85 @@ bool policy_mgr_is_ml_vdev_id(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
 	return is_mlo;
 }
 
+/*
+ * policy_mgr_get_ml_sta_info() - Get number of ML STA vdev ids and freq list
+ * @pm_ctx: pm_ctx ctx
+ * @num_ml_sta: Return number of ML STA present
+ * @num_disabled_ml_sta: Return number of disabled ML STA links
+ * @ml_vdev_lst: Return ML STA vdev id list
+ * @ml_freq_lst: Return ML STA freq list
+ * @num_non_ml: Return number of non-ML STA present
+ * @non_ml_vdev_lst: Return non-ML STA vdev id list
+ * @non_ml_freq_lst: Return non-ML STA freq list
+ *
+ * Return: void
+ */
+static void
+policy_mgr_get_ml_sta_info(struct policy_mgr_psoc_priv_obj *pm_ctx,
+			   uint8_t *num_ml_sta,
+			   uint8_t *num_disabled_ml_sta,
+			   uint8_t *ml_vdev_lst,
+			   qdf_freq_t *ml_freq_lst,
+			   uint8_t *num_non_ml,
+			   uint8_t *non_ml_vdev_lst,
+			   qdf_freq_t *non_ml_freq_lst)
+{
+	struct wlan_objmgr_vdev *vdev;
+	uint8_t vdev_id, conn_index;
+	qdf_freq_t freq;
+
+	*num_ml_sta = 0;
+	*num_disabled_ml_sta = 0;
+	if (num_non_ml)
+		*num_non_ml = 0;
+
+	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
+	for (conn_index = 0; conn_index < MAX_NUMBER_OF_CONC_CONNECTIONS;
+	     conn_index++) {
+		if (!pm_conc_connection_list[conn_index].in_use)
+			continue;
+		if (pm_conc_connection_list[conn_index].mode != PM_STA_MODE)
+			continue;
+		vdev_id = pm_conc_connection_list[conn_index].vdev_id;
+		freq = pm_conc_connection_list[conn_index].freq;
+
+		/* add ml sta vdev and freq list */
+		vdev = wlan_objmgr_get_vdev_by_id_from_psoc(pm_ctx->psoc,
+							    vdev_id,
+							    WLAN_POLICY_MGR_ID);
+		if (!vdev) {
+			policy_mgr_err("invalid vdev for id %d", vdev_id);
+			continue;
+		}
+
+		if (wlan_vdev_mlme_is_mlo_vdev(vdev)) {
+			ml_vdev_lst[*num_ml_sta] = vdev_id;
+			ml_freq_lst[(*num_ml_sta)++] = freq;
+		} else if (num_non_ml) {
+			if (non_ml_vdev_lst)
+				non_ml_vdev_lst[*num_non_ml] = vdev_id;
+			if (non_ml_freq_lst)
+				non_ml_freq_lst[*num_non_ml] = freq;
+			(*num_non_ml)++;
+		}
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
+	}
+	/* Get disabled link info as well and keep it at last */
+	for (conn_index = 0; conn_index < MAX_NUMBER_OF_DISABLE_LINK;
+	     conn_index++) {
+		if (!pm_disabled_ml_links[conn_index].in_use)
+			continue;
+		if (pm_disabled_ml_links[conn_index].mode != PM_STA_MODE)
+			continue;
+		ml_vdev_lst[*num_ml_sta] =
+				pm_disabled_ml_links[conn_index].vdev_id;
+		ml_freq_lst[(*num_ml_sta)++] =
+			pm_disabled_ml_links[conn_index].freq;
+		(*num_disabled_ml_sta)++;
+	}
+	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
+}
+
 uint32_t policy_mgr_get_disabled_ml_links_count(struct wlan_objmgr_psoc *psoc)
 {
 	uint32_t i, count = 0;
@@ -3694,6 +3773,137 @@ policy_mgr_get_link_in_progress(struct policy_mgr_psoc_priv_obj *pm_ctx)
 	return value;
 }
 
+/*
+ * policy_mgr_trigger_roam_on_link_removal() - Trigger roam on link removal
+ * @vdev: vdev object
+ *
+ * In multilink ML STA, if one link is removed by AP, and no other active
+ * link, trigger roam by roaming invoke command.
+ *
+ * Return: void
+ */
+static void
+policy_mgr_trigger_roam_on_link_removal(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_objmgr_psoc *psoc;
+	struct wlan_objmgr_pdev *pdev;
+	struct wlan_objmgr_vdev *ml_vdev;
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+	uint8_t num_ml_sta = 0, num_disabled_ml_sta = 0;
+	uint8_t num_active_ml_sta;
+	uint8_t ml_sta_vdev_lst[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
+	qdf_freq_t ml_freq_lst[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
+	uint8_t vdev_id = wlan_vdev_get_id(vdev);
+	uint8_t assoc_vdev_id = WLAN_INVALID_VDEV_ID;
+	uint8_t removed_vdev_id = WLAN_INVALID_VDEV_ID;
+	struct qdf_mac_addr bssid;
+	QDF_STATUS status;
+	bool ml_sta_is_not_connected = false;
+	uint32_t i;
+
+	psoc = wlan_vdev_get_psoc(vdev);
+	if (!psoc) {
+		policy_mgr_err("Failed to get psoc");
+		return;
+	}
+	pdev = wlan_vdev_get_pdev(vdev);
+	if (!pdev) {
+		policy_mgr_err("Failed to get pdev");
+		return;
+	}
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return;
+	}
+
+	policy_mgr_get_ml_sta_info(pm_ctx, &num_ml_sta, &num_disabled_ml_sta,
+				   ml_sta_vdev_lst, ml_freq_lst,
+				   NULL, NULL, NULL);
+	if (!num_ml_sta) {
+		policy_mgr_debug("unexpected event, no ml sta");
+		return;
+	}
+	if (num_ml_sta > MAX_NUMBER_OF_CONC_CONNECTIONS ||
+	    num_disabled_ml_sta > MAX_NUMBER_OF_CONC_CONNECTIONS ||
+	    num_ml_sta <= num_disabled_ml_sta) {
+		policy_mgr_debug("unexpected ml sta num %d %d",
+				 num_ml_sta, num_disabled_ml_sta);
+		return;
+	}
+	num_active_ml_sta = num_ml_sta;
+	if (num_ml_sta >= num_disabled_ml_sta)
+		num_active_ml_sta = num_ml_sta - num_disabled_ml_sta;
+
+	for (i = 0; i < num_active_ml_sta; i++) {
+		if (!wlan_get_vdev_link_removed_flag_by_vdev_id(
+					psoc, ml_sta_vdev_lst[i]))
+			break;
+	}
+
+	/* After link removal, one link is still active, no need invoke
+	 * roaming.
+	 * For Single link MLO, FW will do roaming automatically.
+	 */
+	if (i < num_active_ml_sta || num_ml_sta < 2)
+		return;
+
+	/* For multi-link MLO STA, if one link is removed and no other active
+	 * link, then trigger roaming. the other link may have concurrency
+	 * limitation and can't be active.
+	 */
+	for (i = 0; i < num_ml_sta; i++) {
+		if (removed_vdev_id == WLAN_INVALID_VDEV_ID &&
+		    wlan_get_vdev_link_removed_flag_by_vdev_id(
+			psoc, ml_sta_vdev_lst[i])) {
+			policy_mgr_debug("removal link vdev %d is removed ",
+					 vdev_id);
+			removed_vdev_id = ml_sta_vdev_lst[i];
+		}
+		ml_vdev = wlan_objmgr_get_vdev_by_id_from_psoc(
+						pm_ctx->psoc,
+						ml_sta_vdev_lst[i],
+						WLAN_POLICY_MGR_ID);
+		if (!ml_vdev) {
+			policy_mgr_err("invalid vdev for id %d",
+				       ml_sta_vdev_lst[i]);
+			continue;
+		}
+		if (!wlan_cm_is_vdev_connected(ml_vdev)) {
+			policy_mgr_debug("ml sta vdev %d is not connected state",
+					 ml_sta_vdev_lst[i]);
+			ml_sta_is_not_connected = true;
+		}
+
+		wlan_objmgr_vdev_release_ref(ml_vdev, WLAN_POLICY_MGR_ID);
+
+		if (assoc_vdev_id == WLAN_INVALID_VDEV_ID &&
+		    !wlan_vdev_mlme_get_is_mlo_link(psoc,
+						    ml_sta_vdev_lst[i]))
+			assoc_vdev_id = ml_sta_vdev_lst[i];
+	}
+	if (removed_vdev_id == WLAN_INVALID_VDEV_ID) {
+		policy_mgr_debug("no link removed, unexpected");
+		return;
+	}
+	if (assoc_vdev_id == WLAN_INVALID_VDEV_ID) {
+		policy_mgr_debug("no find assoc vdev, unexpected");
+		return;
+	}
+	if (ml_sta_is_not_connected) {
+		policy_mgr_debug("ml sta is non-connected state, don't trigger roam");
+		return;
+	}
+	/* trigger roaming */
+	policy_mgr_debug("link removal detected, try roaming on vdev id: %d",
+			 assoc_vdev_id);
+	qdf_zero_macaddr(&bssid);
+	status = wlan_cm_roam_invoke(pdev, assoc_vdev_id, &bssid, 0,
+				     CM_ROAMING_LINK_REMOVAL);
+	if (QDF_IS_STATUS_ERROR(status))
+		policy_mgr_err("roam invoke failed");
+}
+
 static void
 policy_mgr_handle_link_enable_disable_resp(struct wlan_objmgr_vdev *vdev,
 					  void *arg,
@@ -3787,6 +3997,8 @@ policy_mgr_handle_link_enable_disable_resp(struct wlan_objmgr_vdev *vdev,
 			       req->param.force_mode);
 		break;
 	}
+	if (req->param.reason == MLO_LINK_FORCE_REASON_LINK_REMOVAL)
+		policy_mgr_trigger_roam_on_link_removal(vdev);
 
 complete_evnt:
 	policy_mgr_set_link_in_progress(pm_ctx, false);
@@ -4749,85 +4961,6 @@ policy_mgr_fill_ml_inactive_link_vdev_bitmap(
 			 req->param.num_inactive_vdev_bitmap,
 			 req->param.inactive_vdev_bitmap[0],
 			 req->param.inactive_vdev_bitmap[1]);
-}
-
-/*
- * policy_mgr_get_ml_sta_info() - Get number of ML STA vdev ids and freq list
- * @pm_ctx: pm_ctx ctx
- * @num_ml_sta: Return number of ML STA present
- * @num_disabled_ml_sta: Return number of disabled ML STA links
- * @ml_vdev_lst: Return ML STA vdev id list
- * @ml_freq_lst: Return ML STA freq list
- * @num_non_ml: Return number of non-ML STA present
- * @non_ml_vdev_lst: Return non-ML STA vdev id list
- * @non_ml_freq_lst: Return non-ML STA freq list
- *
- * Return: void
- */
-static void
-policy_mgr_get_ml_sta_info(struct policy_mgr_psoc_priv_obj *pm_ctx,
-			   uint8_t *num_ml_sta,
-			   uint8_t *num_disabled_ml_sta,
-			   uint8_t *ml_vdev_lst,
-			   qdf_freq_t *ml_freq_lst,
-			   uint8_t *num_non_ml,
-			   uint8_t *non_ml_vdev_lst,
-			   qdf_freq_t *non_ml_freq_lst)
-{
-	struct wlan_objmgr_vdev *vdev;
-	uint8_t vdev_id, conn_index;
-	qdf_freq_t freq;
-
-	*num_ml_sta = 0;
-	*num_disabled_ml_sta = 0;
-	if (num_non_ml)
-		*num_non_ml = 0;
-
-	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
-	for (conn_index = 0; conn_index < MAX_NUMBER_OF_CONC_CONNECTIONS;
-	     conn_index++) {
-		if (!pm_conc_connection_list[conn_index].in_use)
-			continue;
-		if (pm_conc_connection_list[conn_index].mode != PM_STA_MODE)
-			continue;
-		vdev_id = pm_conc_connection_list[conn_index].vdev_id;
-		freq = pm_conc_connection_list[conn_index].freq;
-
-		/* add ml sta vdev and freq list */
-		vdev = wlan_objmgr_get_vdev_by_id_from_psoc(pm_ctx->psoc,
-							    vdev_id,
-							    WLAN_POLICY_MGR_ID);
-		if (!vdev) {
-			policy_mgr_err("invalid vdev for id %d", vdev_id);
-			continue;
-		}
-
-		if (wlan_vdev_mlme_is_mlo_vdev(vdev)) {
-			ml_vdev_lst[*num_ml_sta] = vdev_id;
-			ml_freq_lst[(*num_ml_sta)++] = freq;
-		} else if (num_non_ml) {
-			if (non_ml_vdev_lst)
-				non_ml_vdev_lst[*num_non_ml] = vdev_id;
-			if (non_ml_freq_lst)
-				non_ml_freq_lst[*num_non_ml] = freq;
-			(*num_non_ml)++;
-		}
-		wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
-	}
-	/* Get disabled link info as well and keep it at last */
-	for (conn_index = 0; conn_index < MAX_NUMBER_OF_DISABLE_LINK;
-	     conn_index++) {
-		if (!pm_disabled_ml_links[conn_index].in_use)
-			continue;
-		if (pm_disabled_ml_links[conn_index].mode != PM_STA_MODE)
-			continue;
-		ml_vdev_lst[*num_ml_sta] =
-				pm_disabled_ml_links[conn_index].vdev_id;
-		ml_freq_lst[(*num_ml_sta)++] =
-			pm_disabled_ml_links[conn_index].freq;
-		(*num_disabled_ml_sta)++;
-	}
-	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
 }
 
 /*

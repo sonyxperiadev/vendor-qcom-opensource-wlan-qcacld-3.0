@@ -5650,6 +5650,10 @@ QDF_STATUS cm_start_roam_invoke(struct wlan_objmgr_psoc *psoc,
 	/* Ignore BSSID and channel validation for FW host roam */
 	if (source == CM_ROAMING_FW)
 		goto send_evt;
+	if (source == CM_ROAMING_LINK_REMOVAL) {
+		cm_req->roam_req.req.forced_roaming = true;
+		goto send_evt;
+	}
 
 	if (cm_dlm_is_bssid_in_reject_list(psoc, bssid, vdev_id)) {
 		mlme_debug("BSSID is in reject list, aborting roam invoke");
