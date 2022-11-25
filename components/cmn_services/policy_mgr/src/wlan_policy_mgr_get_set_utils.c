@@ -3774,6 +3774,14 @@ policy_mgr_handle_link_enable_disable_resp(struct wlan_objmgr_vdev *vdev,
 			policy_mgr_enable_disable_link_from_vdev_bitmask(psoc,
 					req->param.vdev_bitmap[i], 0, i * 32);
 		break;
+	case MLO_LINK_FORCE_MODE_ACTIVE_INACTIVE:
+		for (i = 0; i < resp->active_sz; i++)
+			policy_mgr_enable_disable_link_from_vdev_bitmask(
+					psoc, resp->active[i], 0, i * 32);
+		for (i = 0; i < resp->inactive_sz; i++)
+			policy_mgr_enable_disable_link_from_vdev_bitmask(
+					psoc, 0, resp->inactive[i], i * 32);
+		break;
 	default:
 		policy_mgr_err("Invalid request req mode %d",
 			       req->param.force_mode);
@@ -4711,6 +4719,38 @@ policy_mgr_fill_ml_active_link_vdev_bitmap(struct mlo_link_set_active_req *req,
 			 req->param.vdev_bitmap[1]);
 }
 
+static void
+policy_mgr_fill_ml_inactive_link_vdev_bitmap(
+				struct mlo_link_set_active_req *req,
+				uint8_t *mlo_inactive_vdev_lst,
+				uint32_t num_mlo_inactive_vdev)
+{
+	uint32_t entry_idx, entry_offset, vdev_idx;
+	uint8_t vdev_id;
+
+	for (vdev_idx = 0; vdev_idx < num_mlo_inactive_vdev; vdev_idx++) {
+		vdev_id = mlo_inactive_vdev_lst[vdev_idx];
+		entry_idx = vdev_id / 32;
+		entry_offset = vdev_id % 32;
+		if (entry_idx >= MLO_LINK_NUM_SZ) {
+			policy_mgr_err("Invalid entry_idx %d num_mlo_vdev %d vdev %d",
+				       entry_idx, num_mlo_inactive_vdev,
+				       vdev_id);
+			continue;
+		}
+		req->param.inactive_vdev_bitmap[entry_idx] |=
+							(1 << entry_offset);
+		/* update entry number if entry index changed */
+		if (req->param.num_inactive_vdev_bitmap < entry_idx + 1)
+			req->param.num_inactive_vdev_bitmap = entry_idx + 1;
+	}
+
+	policy_mgr_debug("num_vdev_bitmap %d inactive_vdev_bitmap[0] = 0x%x, inactive_vdev_bitmap[1] = 0x%x",
+			 req->param.num_inactive_vdev_bitmap,
+			 req->param.inactive_vdev_bitmap[0],
+			 req->param.inactive_vdev_bitmap[1]);
+}
+
 /*
  * policy_mgr_get_ml_sta_info() - Get number of ML STA vdev ids and freq list
  * @pm_ctx: pm_ctx ctx
@@ -4870,23 +4910,27 @@ policy_mgr_validate_set_mlo_link_cb(struct wlan_objmgr_psoc *psoc,
 }
 
 /**
- * policy_mgr_mlo_sta_set_link() - Set links for MLO STA
- *
+ * policy_mgr_mlo_sta_set_link_ext() - Set links for MLO STA
  * @psoc: psoc object
  * @reason: Reason for which link is forced
  * @mode: Force reason
  * @num_mlo_vdev: number of mlo vdev
  * @mlo_vdev_lst: MLO STA vdev list
-
- * Interface manager Set links for MLO STA
+ * @num_mlo_inactive_vdev: number of mlo vdev
+ * @mlo_inactive_vdev_lst: MLO STA vdev list
+ *
+ * Interface manager Set links for MLO STA. And it supports to
+ * add inactive vdev list.
  *
  * Return: void
  */
 static void
-policy_mgr_mlo_sta_set_link(struct wlan_objmgr_psoc *psoc,
-			    enum mlo_link_force_reason reason,
-			    enum mlo_link_force_mode mode,
-			    uint8_t num_mlo_vdev, uint8_t *mlo_vdev_lst)
+policy_mgr_mlo_sta_set_link_ext(struct wlan_objmgr_psoc *psoc,
+				enum mlo_link_force_reason reason,
+				enum mlo_link_force_mode mode,
+				uint8_t num_mlo_vdev, uint8_t *mlo_vdev_lst,
+				uint8_t num_mlo_inactive_vdev,
+				uint8_t *mlo_inactive_vdev_lst)
 {
 	struct mlo_link_set_active_req *req;
 	QDF_STATUS status;
@@ -4937,6 +4981,10 @@ policy_mgr_mlo_sta_set_link(struct wlan_objmgr_psoc *psoc,
 	policy_mgr_fill_ml_active_link_vdev_bitmap(req, mlo_vdev_lst,
 						   num_mlo_vdev);
 
+	if (mode == MLO_LINK_FORCE_MODE_ACTIVE_INACTIVE)
+		policy_mgr_fill_ml_inactive_link_vdev_bitmap(
+			req, mlo_inactive_vdev_lst, num_mlo_inactive_vdev);
+
 	/*
 	 * Fill number of links for MLO_LINK_FORCE_MODE_ACTIVE_NUM or
 	 * MLO_LINK_FORCE_MODE_INACTIVE_NUM mode.
@@ -4956,6 +5004,28 @@ policy_mgr_mlo_sta_set_link(struct wlan_objmgr_psoc *psoc,
 		policy_mgr_set_link_in_progress(pm_ctx, false);
 	}
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
+}
+
+/**
+ * policy_mgr_mlo_sta_set_link() - Set links for MLO STA
+ * @psoc: psoc object
+ * @reason: Reason for which link is forced
+ * @mode: Force reason
+ * @num_mlo_vdev: number of mlo vdev
+ * @mlo_vdev_lst: MLO STA vdev list
+ *
+ * Interface manager Set links for MLO STA
+ *
+ * Return: void
+ */
+static void
+policy_mgr_mlo_sta_set_link(struct wlan_objmgr_psoc *psoc,
+			    enum mlo_link_force_reason reason,
+			    enum mlo_link_force_mode mode,
+			    uint8_t num_mlo_vdev, uint8_t *mlo_vdev_lst)
+{
+	policy_mgr_mlo_sta_set_link_ext(psoc, reason, mode, num_mlo_vdev,
+					mlo_vdev_lst, 0, NULL);
 }
 
 uint32_t
