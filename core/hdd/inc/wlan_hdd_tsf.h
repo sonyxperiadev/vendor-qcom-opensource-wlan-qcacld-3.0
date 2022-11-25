@@ -31,7 +31,7 @@
  * @TSF_CAPTURE_FAIL:             capture fail
  * @TSF_GET_FAIL:                 get fail
  * @TSF_RESET_GPIO_FAIL:          GPIO reset fail
- * @TSF_SAP_NOT_STARTED_NO_TSF    SAP not started
+ * @TSF_SAP_NOT_STARTED_NO_TSF:   SAP not started
  * @TSF_NOT_READY: TSF module is not initialized or init failed
  * @TSF_DISABLED_BY_TSFPLUS: cap_tsf/get_tsf are disabled due to TSF_PLUS
  */

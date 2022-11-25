@@ -16,7 +16,7 @@
  */
 
 /**
- * DOC : wlan_hdd_mlo.h
+ * DOC: wlan_hdd_mlo.h
  *
  * WLAN Host Device Driver file for 802.11be (Extremely High Throughput)
  * support.
@@ -34,6 +34,7 @@
  * @is_ml_adapter: is a ml adapter with associated netdev
  * @is_add_virtual_iface: is netdev create request from add virtual interface
  * @is_single_link: Is the adapter single link ML
+ * @unused: Reserved spare bits
  */
 struct hdd_adapter_create_param {
 	uint32_t only_wdev_register:1,
@@ -71,6 +72,7 @@ struct hdd_adapter_create_param {
  * adapter
  * @num_of_vdev_links: Num of vdevs/links part of the association
  * @is_single_link_ml: Is the adapter a single link ML adapter
+ * @unused: Reserved spare bits
  * @ml_adapter: ML adapter backpointer
  * @link_adapter: backpointers to link adapters part of association
  */
@@ -138,7 +140,7 @@ void hdd_adapter_set_sl_ml_adapter(struct hdd_adapter *adapter);
 
 /**
  * hdd_get_ml_adapter() - get an ml adapter
- * @adapter: HDD adapter
+ * @hdd_ctx: HDD context
  *
  * This function returns ml adapter from adapter list
  * Return: adapter or NULL

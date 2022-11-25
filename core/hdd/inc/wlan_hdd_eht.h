@@ -16,7 +16,7 @@
  */
 
 /**
- * DOC : wlan_hdd_eht.h
+ * DOC: wlan_hdd_eht.h
  *
  * WLAN Host Device Driver file for 802.11be (Extremely High Throughput)
  * support.
@@ -36,7 +36,7 @@ struct sap_config;
 /**
  * hdd_update_tgt_eht_cap() - Update EHT related capabilities
  * @hdd_ctx: HDD context
- * @eht_cap: Target EHT capabilities
+ * @cfg: Target capabilities
  *
  * This function updates WNI CFG with Target capabilities received as part of
  * Default values present in WNI CFG are the values supported by FW/HW.

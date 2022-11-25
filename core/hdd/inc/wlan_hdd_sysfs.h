@@ -25,12 +25,12 @@
 #define MAX_SYSFS_USER_COMMAND_SIZE_LENGTH (32)
 
 /**
- * hdd_sys_validate_and_copy_buf() - validate sysfs input buf and copy into
- *                                   destination buffer
- * @dest_buf - pointer to destination buffer where data should be copied
- * @dest_buf_size - size of destination buffer
- * @src_buf - pointer to constant sysfs source buffer
- * @src_buf_size - size of source buffer
+ * hdd_sysfs_validate_and_copy_buf() - validate sysfs input buf and copy into
+ *                                     destination buffer
+ * @dest_buf: pointer to destination buffer where data should be copied
+ * @dest_buf_size: size of destination buffer
+ * @src_buf: pointer to constant sysfs source buffer
+ * @src_buf_size: size of source buffer
  *
  * Return: 0 for success and error code for failure
  */
