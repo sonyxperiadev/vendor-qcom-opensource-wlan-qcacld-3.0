@@ -1862,7 +1862,9 @@ bool policy_mgr_are_2_freq_on_same_mac(struct wlan_objmgr_psoc *psoc,
 	if (!policy_mgr_is_hw_dbs_capable(psoc))
 		return true;
 
-	policy_mgr_rl_debug("freq_1 %d freq_2 %d", freq_1, freq_2);
+	policy_mgr_rl_debug("freq_1 %d freq_2 %d old_hw_mode_index=%d, new_hw_mode_index=%d",
+			    freq_1, freq_2, pm_ctx->old_hw_mode_index,
+			    pm_ctx->new_hw_mode_index);
 
 	/* HW is DBS/SBS capable */
 	status = policy_mgr_get_current_hw_mode(psoc, &hw_mode);
@@ -2153,7 +2155,10 @@ void policy_mgr_init_dbs_hw_mode(struct wlan_objmgr_psoc *psoc,
 
 void policy_mgr_dump_dbs_hw_mode(struct wlan_objmgr_psoc *psoc)
 {
-	uint32_t i, param;
+	uint32_t i;
+	uint32_t param;
+	uint32_t param1;
+
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
 
 	pm_ctx = policy_mgr_get_context(psoc);
@@ -2161,9 +2166,13 @@ void policy_mgr_dump_dbs_hw_mode(struct wlan_objmgr_psoc *psoc)
 		policy_mgr_err("Invalid Context");
 		return;
 	}
+	policy_mgr_debug("old_hw_mode_index=%d, new_hw_mode_index=%d",
+			 pm_ctx->old_hw_mode_index, pm_ctx->new_hw_mode_index);
 
 	for (i = 0; i < pm_ctx->num_dbs_hw_modes; i++) {
 		param = pm_ctx->hw_mode.hw_mode_list[i];
+		param1 = pm_ctx->hw_mode.hw_mode_list[i] >> 32;
+		policy_mgr_debug("[%d] 0x%x 0x%x", i, param, param1);
 		policy_mgr_debug("[%d]-MAC0: tx_ss:%d rx_ss:%d bw_idx:%d band_cap:%d",
 				 i,
 				 POLICY_MGR_HW_MODE_MAC0_TX_STREAMS_GET(param),

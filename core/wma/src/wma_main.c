@@ -4174,8 +4174,8 @@ void wma_process_pdev_hw_mode_trans_ind(void *handle,
 		fixed_param->num_vdev_mac_entries);
 
 	if (!vdev_mac_entry) {
-		wma_err("Invalid vdev_mac_entry");
-		return;
+		wma_debug("null vdev_mac_entry");
+		goto update_hw_mode;
 	}
 
 	/* Store the vdev-mac map in WMA and send to policy manager */
@@ -4204,6 +4204,7 @@ void wma_process_pdev_hw_mode_trans_ind(void *handle,
 		wma_update_intf_hw_mode_params(vdev_id, mac_id,
 				fixed_param->new_hw_mode_index);
 	}
+update_hw_mode:
 	wma->old_hw_mode_index = fixed_param->old_hw_mode_index;
 	wma->new_hw_mode_index = fixed_param->new_hw_mode_index;
 	policy_mgr_update_new_hw_mode_index(wma->psoc,
