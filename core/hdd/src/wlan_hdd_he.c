@@ -627,6 +627,29 @@ static int hdd_get_sr_stats(struct hdd_context *hdd_ctx, uint8_t mac_id,
 	return 0;
 }
 
+static int hdd_clear_sr_stats(struct hdd_context *hdd_ctx, uint8_t mac_id)
+{
+	QDF_STATUS status;
+	ol_txrx_soc_handle soc;
+	uint8_t pdev_id;
+	struct cdp_txrx_stats_req req = {0};
+
+	soc = cds_get_context(QDF_MODULE_ID_SOC);
+	if (!soc) {
+		hdd_err("invalid soc");
+		return -EINVAL;
+	}
+
+	req.mac_id = mac_id;
+	pdev_id = wlan_objmgr_pdev_get_pdev_id(hdd_ctx->pdev);
+	status = cdp_clear_pdev_obss_pd_stats(soc, pdev_id, &req);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		hdd_err("Unable to clear stats");
+		return -EAGAIN;
+	}
+	return 0;
+}
+
 /**
  * __wlan_hdd_cfg80211_sr_operations: To handle SR operation
  *
@@ -647,7 +670,7 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 	int32_t srg_pd_threshold = 0;
 	int32_t non_srg_pd_threshold = 0;
 	uint8_t sr_he_siga_val15_allowed = true;
-	uint8_t pdev_id, mac_id, sr_ctrl, non_srg_max_pd_offset;
+	uint8_t mac_id, sr_ctrl, non_srg_max_pd_offset;
 	uint8_t srg_min_pd_offset = 0, srg_max_pd_offset = 0;
 	uint32_t nl_buf_len;
 	int ret;
@@ -660,7 +683,6 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 	struct nlattr *sr_param_attr;
 	struct sk_buff *skb;
 	struct cdp_pdev_obss_pd_stats_tlv stats;
-	ol_txrx_soc_handle soc;
 	uint8_t sr_device_modes;
 
 	hdd_enter_dev(wdev->netdev);
@@ -806,13 +828,16 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 		ret = cfg80211_vendor_cmd_reply(skb);
 		break;
 	case QCA_WLAN_SR_OPERATION_CLEAR_STATS:
-		soc = cds_get_context(QDF_MODULE_ID_SOC);
-		if (!soc) {
-			hdd_err("invalid soc");
-			return -EINVAL;
+		status = policy_mgr_get_mac_id_by_session_id(hdd_ctx->psoc,
+							     adapter->vdev_id,
+							     &mac_id);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			hdd_err("Failed to get mac_id for vdev_id: %u",
+				adapter->vdev_id);
+			return -EAGAIN;
 		}
-		pdev_id = wlan_objmgr_pdev_get_pdev_id(hdd_ctx->pdev);
-		cdp_clear_pdev_obss_pd_stats(soc, pdev_id);
+		if (hdd_clear_sr_stats(hdd_ctx, mac_id))
+			return -EAGAIN;
 		break;
 	case QCA_WLAN_SR_OPERATION_PSR_AND_NON_SRG_OBSS_PD_PROHIBIT:
 		if (tb2[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_HESIGA_VAL15_ENABLE])
