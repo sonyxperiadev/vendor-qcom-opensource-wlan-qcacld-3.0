@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -42,6 +42,7 @@
 #include <wlan_mlo_mgr_public_structs.h>
 #include <wlan_mlo_mgr_cmn.h>
 #include <lim_mlo.h>
+#include "wlan_mlo_mgr_sta.h"
 #endif
 
 static struct vdev_mlme_ops sta_mlme_ops;
@@ -1778,6 +1779,71 @@ vdevmgr_vdev_peer_delete_all_rsp_handle(struct vdev_mlme_obj *vdev_mlme,
 	return status;
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static QDF_STATUS vdevmgr_reconfig_req_cb(struct scheduler_msg *msg)
+{
+	struct wlan_objmgr_vdev *vdev = msg->bodyptr;
+
+	if (!vdev) {
+		mlme_err("vdev null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	policy_mgr_handle_link_removal_on_vdev(vdev);
+	mlo_sta_stop_reconfig_timer_by_vdev(vdev);
+
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_CM_ID);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+static QDF_STATUS vdevmgr_reconfig_req_flush_cb(struct scheduler_msg *msg)
+{
+	struct wlan_objmgr_vdev *vdev = msg->bodyptr;
+
+	if (!vdev) {
+		mlme_err("vdev null");
+		return QDF_STATUS_E_INVAL;
+	}
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_CM_ID);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+static void
+vdevmgr_vdev_reconfig_timer_complete(struct vdev_mlme_obj *vdev_mlme)
+{
+	struct wlan_objmgr_vdev *vdev = vdev_mlme->vdev;
+	struct scheduler_msg msg = {0};
+	QDF_STATUS ret;
+
+	if (!vdev) {
+		mlme_err("invalid vdev");
+		return;
+	}
+	mlme_debug("vdev %d link removal timed out", wlan_vdev_get_id(vdev));
+
+	msg.bodyptr = vdev;
+	msg.callback = vdevmgr_reconfig_req_cb;
+	msg.flush_callback = vdevmgr_reconfig_req_flush_cb;
+
+	ret = wlan_objmgr_vdev_try_get_ref(vdev, WLAN_MLME_CM_ID);
+	if (QDF_IS_STATUS_ERROR(ret))
+		return;
+
+	ret = scheduler_post_message(QDF_MODULE_ID_MLME,
+				     QDF_MODULE_ID_TARGET_IF,
+				     QDF_MODULE_ID_TARGET_IF, &msg);
+
+	if (QDF_IS_STATUS_ERROR(ret)) {
+		mlme_err("vdev %d failed to post scheduler_msg",
+			 wlan_vdev_get_id(vdev));
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_CM_ID);
+		return;
+	}
+}
+#endif
+
 QDF_STATUS mlme_vdev_self_peer_create(struct wlan_objmgr_vdev *vdev)
 {
 	struct vdev_mlme_obj *vdev_mlme;
@@ -1955,6 +2021,10 @@ static struct vdev_mlme_ops sta_mlme_ops = {
 	.mlme_vdev_sta_disconn_start = sta_mlme_vdev_sta_disconnect_start,
 	.mlme_vdev_ext_peer_delete_all_rsp =
 			vdevmgr_vdev_peer_delete_all_rsp_handle,
+#ifdef WLAN_FEATURE_11BE_MLO
+	.mlme_vdev_reconfig_timer_complete =
+			vdevmgr_vdev_reconfig_timer_complete,
+#endif
 };
 
 /**

@@ -4448,6 +4448,19 @@ bool policy_mgr_is_mlo_sta_disconnected(struct wlan_objmgr_psoc *psoc,
 
 #ifdef WLAN_FEATURE_11BE_MLO
 /**
+ * policy_mgr_handle_link_removal_on_vdev() - Handle AP link removal for
+ * MLO STA
+ * @vdev: objmgr vdev
+ *
+ * Handle link removal for STA vdev:
+ * Send force link command to target if MLO STA link number > 1.
+ * Select other inactive link to active if possible.
+ *
+ * Return: void
+ */
+void policy_mgr_handle_link_removal_on_vdev(struct wlan_objmgr_vdev *vdev);
+
+/**
  * policy_mgr_is_mlo_sap_concurrency_allowed() - Check for mlo sap allowed
  *                                               concurrency combination
  * @psoc: PSOC object information
