@@ -380,8 +380,19 @@ struct wlan_mlme_edca_params {
 	struct mlme_edca_ac_bk edca_ac_bk;
 	struct mlme_edca_ac_be edca_ac_be;
 
-	uint8_t edca_param_type;
+	enum host_edca_param_type edca_param_type;
 };
+
+/* To configure EDCA/PIFS param for LL SAP */
+#define CFG_EDCA_PARAM_ACM         0
+#define CFG_EDCA_PARAM_AIFSN       1
+#define CFG_EDCA_PARAM_ACI         3
+#define CFG_EDCA_PARAM_CWMIN       2
+#define CFG_EDCA_PARAM_CWMAX       3
+#define CFG_EDCA_PARAM_TXOP        47
+#define CFG_PIFS_PARAM_SAP_OFFSET  0
+#define CFG_PIFS_PARAM_LEB_OFFSET  1
+#define CFG_PIFS_PARAM_REB_OFFSET  2
 
 #define WLAN_CFG_MFR_NAME_LEN (63)
 #define WLAN_CFG_MODEL_NUMBER_LEN (31)

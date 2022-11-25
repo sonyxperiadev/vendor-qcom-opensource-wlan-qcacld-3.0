@@ -9410,6 +9410,12 @@ static QDF_STATUS wma_mc_process_msg(struct scheduler_msg *msg)
 		wma_twt_process_nudge_dialog(wma_handle, msg->bodyptr);
 		qdf_mem_free(msg->bodyptr);
 		break;
+	case WMA_UPDATE_EDCA_PIFS_PARAM_IND:
+		wma_update_edca_pifs_param(
+				wma_handle,
+				(struct edca_pifs_vparam *)msg->bodyptr);
+		qdf_mem_free(msg->bodyptr);
+		break;
 	default:
 		wma_debug("Unhandled WMA message of type %d", msg->type);
 		if (msg->bodyptr)

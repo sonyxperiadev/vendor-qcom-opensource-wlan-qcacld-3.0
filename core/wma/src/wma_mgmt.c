@@ -4170,4 +4170,20 @@ QDF_STATUS wma_mgmt_frame_fill_peer_cb(struct wlan_objmgr_peer *peer,
 
 	return QDF_STATUS_SUCCESS;
 }
+
+QDF_STATUS
+wma_update_edca_pifs_param(WMA_HANDLE handle,
+			   struct edca_pifs_vparam *edca_pifs_param)
+{
+	tp_wma_handle wma_handle = (tp_wma_handle) handle;
+	QDF_STATUS status;
+
+	status = wmi_unified_update_edca_pifs_param(wma_handle->wmi_handle,
+						    edca_pifs_param);
+
+	if (QDF_IS_STATUS_ERROR(status))
+		wma_err("Failed to set EDCA/PIFS Parameters");
+
+	return status;
+}
 #endif

@@ -4086,4 +4086,15 @@ wlan_mlme_get_peer_ch_width(struct wlan_objmgr_psoc *psoc, uint8_t *mac);
 void
 wlan_mlme_get_sr_enable_modes(struct wlan_objmgr_psoc *psoc, uint8_t *val);
 #endif
+
+/**
+ * wlan_mlme_set_edca_pifs_param() - set edca/pifs param for ll sap
+ * @ep: pointer to wlan_edca_pifs_param_ie
+ * @type: edca_param_type
+ *
+ * Return: None
+ */
+void
+wlan_mlme_set_edca_pifs_param(struct wlan_edca_pifs_param_ie *ep,
+			      enum host_edca_param_type type);
 #endif /* _WLAN_MLME_API_H_ */

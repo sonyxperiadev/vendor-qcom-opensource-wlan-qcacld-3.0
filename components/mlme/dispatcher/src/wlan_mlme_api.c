@@ -6447,3 +6447,26 @@ enum phy_ch_width wlan_mlme_convert_vht_op_bw_to_phy_ch_width(
 
 	return phy_bw;
 }
+
+void
+wlan_mlme_set_edca_pifs_param(struct wlan_edca_pifs_param_ie *ep,
+			      enum host_edca_param_type type)
+{
+	ep->edca_param_type = type;
+
+	if (type == HOST_EDCA_PARAM_TYPE_AGGRESSIVE) {
+		ep->edca_pifs_param.eparam.acvo_aifsn = CFG_EDCA_PARAM_AIFSN;
+		ep->edca_pifs_param.eparam.acvo_acm = CFG_EDCA_PARAM_ACM;
+		ep->edca_pifs_param.eparam.acvo_aci = CFG_EDCA_PARAM_ACI;
+		ep->edca_pifs_param.eparam.acvo_cwmin = CFG_EDCA_PARAM_CWMIN;
+		ep->edca_pifs_param.eparam.acvo_cwmax = CFG_EDCA_PARAM_CWMAX;
+		ep->edca_pifs_param.eparam.acvo_txoplimit = CFG_EDCA_PARAM_TXOP;
+	} else if (type == HOST_EDCA_PARAM_TYPE_PIFS) {
+		ep->edca_pifs_param.pparam.sap_pifs_offset =
+						CFG_PIFS_PARAM_SAP_OFFSET;
+		ep->edca_pifs_param.pparam.leb_pifs_offset =
+						CFG_PIFS_PARAM_LEB_OFFSET;
+		ep->edca_pifs_param.pparam.reb_pifs_offset =
+						CFG_PIFS_PARAM_REB_OFFSET;
+	}
+}
