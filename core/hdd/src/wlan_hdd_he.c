@@ -823,11 +823,19 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 			hdd_err("invalid sr_he_siga_val15_enable param");
 			return -EINVAL;
 		}
-		ucfg_spatial_reuse_send_sr_prohibit(adapter->vdev,
-						    sr_he_siga_val15_allowed);
+		if (!QDF_IS_STATUS_SUCCESS(ucfg_spatial_reuse_send_sr_prohibit(
+					  adapter->vdev,
+					  sr_he_siga_val15_allowed))) {
+			hdd_debug("Prohibit command can not be sent");
+			return -EINVAL;
+		}
 		break;
 	case QCA_WLAN_SR_OPERATION_PSR_AND_NON_SRG_OBSS_PD_ALLOW:
-		ucfg_spatial_reuse_send_sr_prohibit(adapter->vdev, false);
+		if (!QDF_IS_STATUS_SUCCESS(ucfg_spatial_reuse_send_sr_prohibit(
+					   adapter->vdev, false))) {
+			hdd_debug("Prohibit command can not be sent");
+			return -EINVAL;
+		}
 		break;
 	case QCA_WLAN_SR_OPERATION_GET_PARAMS:
 		wlan_vdev_mlme_get_srg_pd_offset(adapter->vdev,

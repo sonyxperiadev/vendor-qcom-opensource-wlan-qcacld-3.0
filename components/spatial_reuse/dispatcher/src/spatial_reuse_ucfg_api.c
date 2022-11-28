@@ -90,10 +90,11 @@ void ucfg_spatial_reuse_set_sr_enable(struct wlan_objmgr_vdev *vdev,
 	 wlan_vdev_mlme_set_he_spr_enabled(vdev, enable);
 }
 
-void ucfg_spatial_reuse_send_sr_prohibit(struct wlan_objmgr_vdev *vdev,
-					 bool enable_he_siga_val15_prohibit)
+QDF_STATUS ucfg_spatial_reuse_send_sr_prohibit(
+					struct wlan_objmgr_vdev *vdev,
+					bool enable_he_siga_val15_prohibit)
 {
-	QDF_STATUS status;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	bool sr_enabled = wlan_vdev_mlme_get_he_spr_enabled(vdev);
 	bool sr_prohibited = wlan_vdev_mlme_is_sr_prohibit_en(vdev);
 	uint8_t sr_ctrl = wlan_vdev_mlme_get_sr_ctrl(vdev);
@@ -111,7 +112,15 @@ void ucfg_spatial_reuse_send_sr_prohibit(struct wlan_objmgr_vdev *vdev,
 			wlan_vdev_mlme_set_sr_prohibit_en
 					(vdev,
 					 enable_he_siga_val15_prohibit);
+	} else {
+		mlme_debug("Prohibit command can not be sent sr_enabled %d, sr_ctrl %d , sr_prohibited %d",
+			   sr_enabled,
+			   sr_ctrl,
+			   sr_prohibited);
+
+		return QDF_STATUS_E_FAILURE;
 	}
+	return status;
 }
 
 QDF_STATUS

@@ -113,10 +113,11 @@ void ucfg_spatial_reuse_set_sr_enable(struct wlan_objmgr_vdev *vdev,
  * @vdev: object manager vdev
  * @enable_he_siga_val15_prohibit: enable/disable he_siga_val15_allowed
  *
- * Return: void
+ * Return: success/failure
  */
-void ucfg_spatial_reuse_send_sr_prohibit(struct wlan_objmgr_vdev *vdev,
-					 bool enable_he_siga_val15_prohibit);
+QDF_STATUS
+ucfg_spatial_reuse_send_sr_prohibit(struct wlan_objmgr_vdev *vdev,
+				    bool enable_he_siga_val15_prohibit);
 
 /**
  * ucfg_spatial_reuse_setup_req() - To enable/disable SR (Spatial Reuse)
