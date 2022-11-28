@@ -5588,6 +5588,16 @@ sir_convert_auth_frame2_struct(struct mac_context *mac,
 
 	/* Copy MLO IE presence flag to pAuth in case of ML connection */
 	pAuth->is_mlo_ie_present = auth.mlo_ie.present;
+	/* The minimum length is set to 9 based on below calculation
+	 * Multi-Link Control Field => 2 Bytes
+	 * Minimum CInfo Field => CInfo Length (1 Byte) + MLD Addr (6 Bytes)
+	 * min_len = 2 + 1 + 6
+	 * MLD Offset = min_len - (2 + 1)
+	 */
+	if (pAuth->is_mlo_ie_present && auth.mlo_ie.num_data >= 9) {
+		qdf_copy_macaddr(&pAuth->peer_mld,
+				 (struct qdf_mac_addr *)(auth.mlo_ie.data + 3));
+	}
 
 	sir_update_auth_frame2_struct_fils_conf(&auth, pAuth);
 
