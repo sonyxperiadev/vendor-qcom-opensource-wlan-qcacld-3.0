@@ -5528,6 +5528,43 @@ rel_vdev_ref:
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_CM_ID);
 }
 
+/**
+ * cm_dlm_is_bssid_in_reject_list() - Check whether a BSSID is present in
+ * reject list or not
+ * @psoc: psoc pointer
+ * @bssid: bssid to check
+ * @vdev_id: vdev id
+ *
+ * Return: true if BSSID is present in reject list
+ */
+static bool cm_dlm_is_bssid_in_reject_list(struct wlan_objmgr_psoc *psoc,
+					   struct qdf_mac_addr *bssid,
+					   uint8_t vdev_id)
+{
+	struct wlan_objmgr_vdev *vdev;
+	struct wlan_objmgr_pdev *pdev;
+	bool is_bssid_in_reject_list = false;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_MLME_CM_ID);
+	if (!vdev) {
+		mlme_err("vdev object is NULL for vdev %d", vdev_id);
+		return is_bssid_in_reject_list;
+	}
+
+	pdev = wlan_vdev_get_pdev(vdev);
+	if (!pdev)
+		goto rel_vdev_ref;
+
+	is_bssid_in_reject_list =
+			wlan_dlm_is_bssid_in_reject_list(pdev, bssid);
+
+rel_vdev_ref:
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_CM_ID);
+
+	return is_bssid_in_reject_list;
+}
+
 QDF_STATUS cm_start_roam_invoke(struct wlan_objmgr_psoc *psoc,
 				struct wlan_objmgr_vdev *vdev,
 				struct qdf_mac_addr *bssid,
@@ -5555,12 +5592,19 @@ QDF_STATUS cm_start_roam_invoke(struct wlan_objmgr_psoc *psoc,
 
 	if (wlan_vdev_mlme_get_is_mlo_link(psoc, vdev_id)) {
 		mlme_err("MLO ROAM: Invalid Roam req on link vdev %d", vdev_id);
+		qdf_mem_free(cm_req);
 		return QDF_STATUS_E_FAILURE;
 	}
 
 	/* Ignore BSSID and channel validation for FW host roam */
 	if (source == CM_ROAMING_FW)
 		goto send_evt;
+
+	if (cm_dlm_is_bssid_in_reject_list(psoc, bssid, vdev_id)) {
+		mlme_debug("BSSID is in reject list, aborting roam invoke");
+		qdf_mem_free(cm_req);
+		return QDF_STATUS_E_FAILURE;
+	}
 
 	if (qdf_is_macaddr_zero(bssid)) {
 		if (!wlan_mlme_is_data_stall_recovery_fw_supported(psoc)) {

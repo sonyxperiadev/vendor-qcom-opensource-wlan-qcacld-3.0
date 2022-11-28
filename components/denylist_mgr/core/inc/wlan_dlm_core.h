@@ -291,6 +291,17 @@ dlm_get_bssid_reject_list(struct wlan_objmgr_pdev *pdev,
 void dlm_dump_denylist_bssid(struct wlan_objmgr_pdev *pdev);
 
 /**
+ * dlm_is_bssid_in_reject_list - Check whether a BSSID is present in
+ * reject list or not.
+ * @pdev: pdev object
+ * @bssid: bssid to check
+ *
+ * Return: true if BSSID is present in reject list
+ */
+bool dlm_is_bssid_in_reject_list(struct wlan_objmgr_pdev *pdev,
+				 struct qdf_mac_addr *bssid);
+
+/**
  * dlm_get_rssi_denylist_threshold() - Get rssi denylist threshold value
  * @pdev: pdev object
  *

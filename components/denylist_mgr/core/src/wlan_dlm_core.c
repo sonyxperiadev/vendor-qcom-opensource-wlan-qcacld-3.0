@@ -791,6 +791,46 @@ dlm_get_reject_ap_type(struct dlm_reject_ap *dlm_entry)
 	return REJECT_REASON_UNKNOWN;
 }
 
+bool dlm_is_bssid_in_reject_list(struct wlan_objmgr_pdev *pdev,
+				 struct qdf_mac_addr *bssid)
+{
+	struct dlm_pdev_priv_obj *dlm_ctx;
+	struct dlm_reject_ap *dlm_entry = NULL;
+	qdf_list_node_t *cur_node = NULL, *next_node = NULL;
+	QDF_STATUS status;
+
+	dlm_ctx = dlm_get_pdev_obj(pdev);
+	if (!dlm_ctx) {
+		dlm_err("dlm_ctx is NULL");
+		return false;
+	}
+
+	status = qdf_mutex_acquire(&dlm_ctx->reject_ap_list_lock);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		dlm_err("failed to acquire reject_ap_list_lock");
+		return false;
+	}
+
+	qdf_list_peek_front(&dlm_ctx->reject_ap_list, &cur_node);
+	while (cur_node) {
+		qdf_list_peek_next(&dlm_ctx->reject_ap_list, cur_node,
+				   &next_node);
+		dlm_entry =
+			qdf_container_of(cur_node, struct dlm_reject_ap, node);
+		if (qdf_is_macaddr_equal(&dlm_entry->bssid, bssid)) {
+			dlm_debug("BSSID is present in reject_ap_list");
+			qdf_mutex_release(&dlm_ctx->reject_ap_list_lock);
+			return true;
+		}
+		cur_node = next_node;
+		next_node = NULL;
+	}
+
+	qdf_mutex_release(&dlm_ctx->reject_ap_list_lock);
+
+	return false;
+}
+
 /**
  * dlm_dump_denylist_bssid() - Function to dump denylisted bssid
  * @pdev:  pdev object
