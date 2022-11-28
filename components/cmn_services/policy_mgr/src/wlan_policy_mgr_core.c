@@ -1726,45 +1726,6 @@ void policy_mgr_dump_current_concurrency(struct wlan_objmgr_psoc *psoc)
 	return;
 }
 
-QDF_STATUS policy_mgr_pdev_get_pcl(struct wlan_objmgr_psoc *psoc,
-				   enum QDF_OPMODE mode,
-				   struct policy_mgr_pcl_list *pcl)
-{
-	QDF_STATUS status;
-	enum policy_mgr_con_mode con_mode;
-
-	pcl->pcl_len = 0;
-
-	switch (mode) {
-	case QDF_STA_MODE:
-		con_mode = PM_STA_MODE;
-		break;
-	case QDF_P2P_CLIENT_MODE:
-		con_mode = PM_P2P_CLIENT_MODE;
-		break;
-	case QDF_P2P_GO_MODE:
-		con_mode = PM_P2P_GO_MODE;
-		break;
-	case QDF_SAP_MODE:
-		con_mode = PM_SAP_MODE;
-		break;
-	default:
-		policy_mgr_err("Unable to set PCL to FW: %d", mode);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	policy_mgr_debug("get pcl to set it to the FW");
-
-	status = policy_mgr_get_pcl(psoc, con_mode,
-				    pcl->pcl_list, &pcl->pcl_len,
-				    pcl->weight_list,
-				    QDF_ARRAY_SIZE(pcl->weight_list));
-	if (status != QDF_STATUS_SUCCESS)
-		policy_mgr_err("Unable to set PCL to FW, Get PCL failed");
-
-	return status;
-}
-
 /**
  * policy_mgr_set_pcl_for_existing_combo() - Set PCL for existing connection
  * @mode: Connection mode of type 'policy_mgr_con_mode'
