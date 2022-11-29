@@ -84,6 +84,21 @@ QDF_STATUS wlan_cm_tgt_send_roam_ho_delay_config(struct wlan_objmgr_psoc *psoc,
 						 uint8_t vdev_id,
 						 uint16_t roam_ho_delay);
 
+/**
+ * wlan_cm_tgt_exclude_rm_partial_scan_freq() - Exclude the channels in roam
+ * full scan that are already scanned as part of partial scan.
+ * @psoc: psoc pointer
+ * @vdev_id: vdev id
+ * @exclude_rm_partial_scan_freq: Exclude the channels in roam full scan that
+ * are already scanned as part of partial scan.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_cm_tgt_exclude_rm_partial_scan_freq(struct wlan_objmgr_psoc *psoc,
+					 uint8_t vdev_id,
+					 uint8_t exclude_rm_partial_scan_freq);
+
 #ifdef FEATURE_RX_LINKSPEED_ROAM_TRIGGER
 /**
  * wlan_cm_tgt_send_roam_linkspeed_state() - Send roam link speed state
@@ -122,6 +137,14 @@ QDF_STATUS wlan_cm_tgt_send_roam_mlo_config(struct wlan_objmgr_psoc *psoc,
 static inline QDF_STATUS
 wlan_cm_tgt_send_roam_ho_delay_config(struct wlan_objmgr_psoc *psoc,
 				      uint8_t vdev_id, uint16_t roam_ho_delay)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+
+static inline QDF_STATUS
+wlan_cm_tgt_exclude_rm_partial_scan_freq(struct wlan_objmgr_psoc *psoc,
+					 uint8_t vdev_id,
+					 uint8_t exclude_rm_partial_scan_freq)
 {
 	return QDF_STATUS_E_FAILURE;
 }

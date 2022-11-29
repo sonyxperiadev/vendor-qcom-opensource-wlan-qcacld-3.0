@@ -1907,6 +1907,8 @@ struct fw_scan_channels {
  * @beaconloss_timeout_onsleep: time in sec to configure FW BMISS event
  * during sleep.
  * @roam_ho_delay_config: Roam HO delay value
+ * @exclude_rm_partial_scan_freq: Exclude the channels in roam full scan that
+ * are already scanned as part of partial scan.
  */
 struct wlan_mlme_lfr_cfg {
 	bool mawc_roam_enabled;
@@ -2030,6 +2032,7 @@ struct wlan_mlme_lfr_cfg {
 	uint8_t beaconloss_timeout_onwakeup;
 	uint8_t beaconloss_timeout_onsleep;
 	uint16_t roam_ho_delay_config;
+	uint8_t exclude_rm_partial_scan_freq;
 };
 
 /**
