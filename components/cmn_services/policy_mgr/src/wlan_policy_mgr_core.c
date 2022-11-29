@@ -4545,7 +4545,7 @@ void policy_mgr_check_scc_sbs_channel(struct wlan_objmgr_psoc *psoc,
 			*intf_ch_freq = 0;
 			return;
 		}
-	} else if (sta_count &&
+	} else if (sta_count && sta_count < 2 &&
 		   policy_mgr_is_hw_dbs_capable(psoc) &&
 		   cc_mode == QDF_MCC_TO_SCC_SWITCH_WITH_FAVORITE_CHANNEL) {
 		/* Same band with Fav channel if STA is present */
