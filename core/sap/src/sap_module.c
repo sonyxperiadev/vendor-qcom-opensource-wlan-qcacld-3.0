@@ -1875,7 +1875,7 @@ wlansap_fill_channel_change_request(struct sap_context *sap_ctx,
 	if (dot11_cfg.ext_rates.numRates) {
 		qdf_mem_copy(req->ext_rates.rate,
 			     dot11_cfg.ext_rates.rate,
-			     sizeof(dot11_cfg.ext_rates.numRates));
+			     dot11_cfg.ext_rates.numRates);
 		qdf_mem_copy(sap_ctx->sap_bss_cfg.extendedRateSet.rate,
 			     dot11_cfg.ext_rates.rate,
 			     dot11_cfg.ext_rates.numRates);
