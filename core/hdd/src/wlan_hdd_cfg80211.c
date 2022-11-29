@@ -199,6 +199,7 @@
 #include "wlan_hdd_tdls.h"
 #include "wlan_psoc_mlme_api.h"
 #include <utils_mlo.h>
+#include "wlan_mlo_mgr_roam.h"
 
 /*
  * A value of 100 (milliseconds) can be sent to FW.
@@ -20727,6 +20728,20 @@ static int wlan_hdd_add_key_sta(struct wlan_objmgr_pdev *pdev,
 }
 
 #ifdef WLAN_FEATURE_11BE_MLO
+static void
+wlan_hdd_mlo_link_free_keys(struct hdd_adapter *adapter,
+			    struct wlan_objmgr_vdev *vdev,
+			    bool pairwise)
+{
+	if (adapter->device_mode != QDF_STA_MODE)
+		return;
+
+	if (pairwise &&
+	    wlan_vdev_mlme_is_mlo_link_vdev(vdev) &&
+	    mlo_roam_is_auth_status_connected(adapter->hdd_ctx->psoc,
+					      wlan_vdev_get_id(vdev)))
+		wlan_crypto_free_vdev_key(vdev);
+}
 static bool
 wlan_hdd_mlo_set_keys_saved(struct hdd_adapter *adapter,
 			    struct wlan_objmgr_vdev *vdev,
@@ -20739,7 +20754,10 @@ wlan_hdd_mlo_set_keys_saved(struct hdd_adapter *adapter,
 		return false;
 
 	if ((adapter->device_mode == QDF_STA_MODE) &&
-	    (!wlan_cm_is_vdev_connected(vdev))) {
+	    ((!wlan_cm_is_vdev_connected(vdev)) ||
+	     (wlan_vdev_mlme_is_mlo_link_vdev(vdev) &&
+	      mlo_roam_is_auth_status_connected(adapter->hdd_ctx->psoc,
+						wlan_vdev_get_id(vdev))))) {
 		hdd_debug("MLO:Save keys for vdev %d", wlan_vdev_get_id(vdev));
 		mlo_set_keys_saved(vdev, mac_address, true);
 		return true;
@@ -20754,6 +20772,13 @@ wlan_hdd_mlo_set_keys_saved(struct hdd_adapter *adapter,
 			    struct qdf_mac_addr *mac_address)
 {
 	return false;
+}
+
+static void
+wlan_hdd_mlo_link_free_keys(struct hdd_adapter *adapter,
+			    struct wlan_objmgr_vdev *vdev,
+			    bool pairwise)
+{
 }
 #endif
 
@@ -20883,12 +20908,28 @@ static int wlan_hdd_add_key_vdev(mac_handle_t mac_handle,
 			hdd_err("Peer is null return");
 			return -EINVAL;
 		}
+
+		status = mlo_get_link_mac_addr_from_reassoc_rsp(vdev,
+								&mac_address);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			peer = wlan_objmgr_vdev_try_get_bsspeer(vdev,
+								WLAN_OSIF_ID);
+			if (!peer) {
+				hdd_err("Peer is null return");
+				return -EINVAL;
+			}
+			qdf_mem_copy(mac_address.bytes,
+				     wlan_peer_get_macaddr(peer), QDF_MAC_ADDR_SIZE);
+			wlan_objmgr_peer_release_ref(peer, WLAN_OSIF_ID);
+		}
 	} else {
 		if (mac_addr)
 			qdf_mem_copy(mac_address.bytes,
 				     mac_addr,
 				     QDF_MAC_ADDR_SIZE);
 	}
+
+	wlan_hdd_mlo_link_free_keys(adapter, vdev, pairwise);
 
 	errno = wlan_cfg80211_store_key(vdev, key_index,
 					(pairwise ?
@@ -21090,7 +21131,6 @@ static int wlan_hdd_add_key_all_mlo_vdev(mac_handle_t mac_handle,
 	int errno = 0;
 	uint16_t link, vdev_count = 0;
 
-
 	/* if vdev mlme is mlo & pairwaise is set to true set same info for
 	 * both the links.
 	 */
@@ -21121,8 +21161,11 @@ static int wlan_hdd_add_key_all_mlo_vdev(mac_handle_t mac_handle,
 			break;
 		case QDF_STA_MODE:
 		default:
-			peer = wlan_objmgr_vdev_try_get_bsspeer(link_vdev,
-								WLAN_OSIF_ID);
+			status = mlo_get_link_mac_addr_from_reassoc_rsp(link_vdev,
+									&peer_mac);
+			if (QDF_IS_STATUS_ERROR(status))
+				peer = wlan_objmgr_vdev_try_get_bsspeer(link_vdev,
+									WLAN_OSIF_ID);
 			break;
 		}
 
@@ -21146,7 +21189,6 @@ static int wlan_hdd_add_key_all_mlo_vdev(mac_handle_t mac_handle,
 			mlo_release_vdev_ref(link_vdev);
 			continue;
 		}
-
 		errno = wlan_hdd_add_key_vdev(mac_handle, link_vdev, key_index,
 					      pairwise, peer_mac.bytes,
 					      params, link_id, link_adapter);
@@ -21167,9 +21209,23 @@ static int wlan_hdd_add_key_mlo_vdev(mac_handle_t mac_handle,
 	struct wlan_objmgr_vdev *link_vdev;
 	struct hdd_adapter *link_adapter = NULL;
 	struct hdd_context *hdd_ctx;
+	uint8_t vdev_id;
+	QDF_STATUS status;
 
 	if (!wlan_vdev_mlme_is_mlo_vdev(vdev))
 		return errno;
+
+	vdev_id = wlan_vdev_get_id(vdev);
+	if (pairwise &&
+	    mlo_roam_is_auth_status_connected(adapter->hdd_ctx->psoc,
+					      vdev_id)) {
+		status = mlo_roam_link_connect_notify(adapter->hdd_ctx->psoc,
+						      vdev_id);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			hdd_err("Posting of link connect request failed");
+			return -EINVAL;
+		}
+	}
 
 	if (pairwise && link_id == -1)
 		return wlan_hdd_add_key_all_mlo_vdev(mac_handle, vdev,

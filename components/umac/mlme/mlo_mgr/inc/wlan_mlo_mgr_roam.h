@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -26,6 +26,7 @@
 #include <../../core/src/wlan_cm_roam_i.h>
 
 #ifdef WLAN_FEATURE_11BE_MLO
+
 /**
  * mlo_fw_roam_sync_req - Handler for roam sync event handling
  *
@@ -176,7 +177,6 @@ void mlo_roam_update_connected_links(struct wlan_objmgr_vdev *vdev,
  *
  * @psoc: psoc pointer
  * @vdev_id: vdev id
- * @sync_ind: roam synch indication
  * @is_single_link_ml_roaming: boolean flag
  *
  * This api will be called to set single link mlo roaming flag.
@@ -186,7 +186,6 @@ void mlo_roam_update_connected_links(struct wlan_objmgr_vdev *vdev,
 void
 mlo_set_single_link_ml_roaming(struct wlan_objmgr_psoc *psoc,
 			       uint8_t vdev_id,
-			       struct roam_offload_synch_ind *sync_ind,
 			       bool is_single_link_ml_roaming);
 
 /**
@@ -220,6 +219,79 @@ mlo_roam_get_bssid_chan_for_link(uint8_t vdev_id,
 				 struct roam_offload_synch_ind *sync_ind,
 				 struct qdf_mac_addr *bssid,
 				 wmi_channel *chan);
+
+/**
+ * mlo_get_link_mac_addr_from_reassoc_rsp - get link mac addr from reassoc rsp
+ * @vdev: vdev pointer
+ * @link_mac_addr: link mac address
+ *
+ * This api will be called to get link mac addr from stored reassoc rsp
+ * after roaming and vdev id.
+ *
+ * Return: qdf status
+ */
+QDF_STATUS
+mlo_get_link_mac_addr_from_reassoc_rsp(struct wlan_objmgr_vdev *vdev,
+				       struct qdf_mac_addr *link_mac_addr);
+
+/**
+ * mlo_roam_copy_reassoc_rsp - Copy cm vdev join rsp
+ *
+ * @vdev: vdev pointer
+ * @reassoc_rsp: cm vdev reassoc rsp pointer
+ *
+ * This api will be called to copy cm vdev reassoc rsp which will
+ * be used to later bring up link vdev/s.
+ *
+ * Return: qdf_status success or fail
+ */
+QDF_STATUS
+mlo_roam_copy_reassoc_rsp(struct wlan_objmgr_vdev *vdev,
+			  struct wlan_cm_connect_resp *reassoc_rsp);
+
+/**
+ * mlo_roam_link_connect_notify - Send connect req
+ * on link
+ * @psoc: psoc pointer
+ * @vdev_id: vdev id
+ *
+ * This api will be called to send connect req for link vdev.
+ *
+ * Return: qdf_status success or fail
+ */
+QDF_STATUS
+mlo_roam_link_connect_notify(struct wlan_objmgr_psoc *psoc,
+			     uint8_t vdev_id);
+
+/**
+ * mlo_roam_is_auth_status_connected - api to check roam auth status
+ * on link
+ * @psoc: psoc pointer
+ * @vdev_id: vdev id
+ *
+ * This api will be called to check if roam auth status is connected
+ *
+ * Return: boolean true or false
+ */
+bool
+mlo_roam_is_auth_status_connected(struct wlan_objmgr_psoc *psoc,
+				  uint8_t vdev_id);
+
+/**
+ * mlo_roam_connect_complete - roam connect complete api
+ * @psoc: psoc pointer
+ * @pdev: pdev pointer
+ * @vdev: vdev pointer
+ * @rsp: connect rsp pointer
+ *
+ * This api will be called after connect complete for roam 1x case.
+ *
+ * Return: none
+ */
+void mlo_roam_connect_complete(struct wlan_objmgr_psoc *psoc,
+			       struct wlan_objmgr_pdev *pdev,
+			       struct wlan_objmgr_vdev *vdev,
+			       struct wlan_cm_connect_resp *rsp);
 
 #ifdef WLAN_FEATURE_11BE_MLO_ADV_FEATURE
 /**
@@ -356,7 +428,6 @@ wlan_mlo_roam_abort_on_link(struct wlan_objmgr_psoc *psoc,
 static inline void
 mlo_set_single_link_ml_roaming(struct wlan_objmgr_psoc *psoc,
 			       uint8_t vdev_id,
-			       struct roam_offload_synch_ind *sync_ind,
 			       bool is_single_link_ml_roaming)
 {}
 
@@ -386,5 +457,40 @@ static inline void
 mlo_roam_set_link_id(struct wlan_objmgr_vdev *vdev,
 		     struct roam_offload_synch_ind *sync_ind)
 {}
+
+static inline QDF_STATUS
+mlo_roam_copy_reassoc_rsp(struct wlan_objmgr_vdev *vdev,
+			  struct wlan_cm_connect_resp *reassoc_rsp)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline QDF_STATUS
+mlo_roam_link_connect_notify(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline bool
+mlo_roam_is_auth_status_connected(struct wlan_objmgr_psoc *psoc,
+				  uint8_t vdev_id)
+{
+	return false;
+}
+
+static inline void
+mlo_roam_connect_complete(struct wlan_objmgr_psoc *psoc,
+			  struct wlan_objmgr_pdev *pdev,
+			  struct wlan_objmgr_vdev *vdev,
+			  struct wlan_cm_connect_resp *rsp)
+{}
+
+static inline QDF_STATUS
+mlo_get_link_mac_addr_from_reassoc_rsp(struct wlan_objmgr_vdev *vdev,
+				       struct qdf_mac_addr *link_mac_addr)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
 #endif /* WLAN_FEATURE_11BE_MLO */
 #endif
