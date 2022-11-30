@@ -3475,7 +3475,7 @@ int wma_process_rmf_frame(tp_wma_handle wma_handle,
 				return -EINVAL;
 			}
 		} else {
-			wma_err("Rx unprotected unicast mgmt frame");
+			wma_err_rl("Rx unprotected unicast mgmt frame");
 			rx_pkt->pkt_meta.dpuFeedback =
 				DPU_FEEDBACK_UNPROTECTED_ERROR;
 		}
