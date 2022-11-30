@@ -315,6 +315,8 @@ QDF_STATUS nan_scheduled_msg_handler(struct scheduler_msg *msg)
 	if (status != WLAN_SER_CMD_ACTIVE && status != WLAN_SER_CMD_PENDING) {
 		nan_err("unable to serialize command");
 		wlan_objmgr_vdev_release_ref(cmd.vdev, WLAN_NAN_ID);
+		qdf_mem_free(msg->bodyptr);
+		msg->bodyptr = NULL;
 		return QDF_STATUS_E_INVAL;
 	}
 	return QDF_STATUS_SUCCESS;
