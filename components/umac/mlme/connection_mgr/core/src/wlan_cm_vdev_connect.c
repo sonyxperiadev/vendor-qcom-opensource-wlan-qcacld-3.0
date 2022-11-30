@@ -1514,7 +1514,7 @@ cm_install_link_vdev_keys(struct wlan_objmgr_vdev *vdev)
 {
 	struct wlan_objmgr_peer *peer;
 	struct wlan_crypto_key *crypto_key;
-	enum QDF_OPMODE op_mode = wlan_vdev_mlme_get_opmode(vdev);
+	enum QDF_OPMODE op_mode;
 	uint16_t i;
 	bool pairwise;
 	uint8_t vdev_id;
@@ -1526,6 +1526,7 @@ cm_install_link_vdev_keys(struct wlan_objmgr_vdev *vdev)
 		return;
 
 	vdev_id = wlan_vdev_get_id(vdev);
+	op_mode = wlan_vdev_mlme_get_opmode(vdev);
 	if (op_mode != QDF_STA_MODE ||
 	    !wlan_vdev_mlme_is_mlo_link_vdev(vdev))
 		return;
