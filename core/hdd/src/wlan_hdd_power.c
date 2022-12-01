@@ -1698,13 +1698,6 @@ hdd_suspend_wlan(void)
 			continue;
 		}
 
-		/* stop all TX queues before suspend */
-		hdd_debug("Disabling queues for dev mode %s",
-			  qdf_opmode_str(adapter->device_mode));
-		wlan_hdd_netif_queue_control(adapter,
-					     WLAN_STOP_ALL_NETIF_QUEUE,
-					     WLAN_CONTROL_PATH);
-
 		if (adapter->device_mode == QDF_STA_MODE)
 			status = hdd_enable_default_pkt_filters(adapter);
 
@@ -1768,13 +1761,6 @@ static int hdd_resume_wlan(void)
 		/* Disable supported OffLoads */
 		hdd_disable_host_offloads(adapter, pmo_apps_resume);
 
-		/* wake the tx queues */
-		hdd_debug("Enabling queues for dev mode %s",
-			  qdf_opmode_str(adapter->device_mode));
-		wlan_hdd_netif_queue_control(adapter,
-					WLAN_WAKE_ALL_NETIF_QUEUE,
-					WLAN_CONTROL_PATH);
-
 		if (adapter->device_mode == QDF_STA_MODE)
 			status = hdd_disable_default_pkt_filters(adapter);
 
@@ -1794,6 +1780,84 @@ static int hdd_resume_wlan(void)
 	return 0;
 }
 
+/**
+ * hdd_pause_ns() - Network stack pause function
+ * @hdd_ctx:   hdd context
+ *
+ * Return: 0 on success else error code.
+ */
+static int hdd_pause_ns(struct hdd_context *hdd_ctx)
+{
+	struct hdd_adapter *adapter = NULL, *next_adapter = NULL;
+
+	hdd_debug("Pause NS");
+
+	if (cds_is_driver_recovering() || cds_is_driver_in_bad_state()) {
+		hdd_info("Recovery in Progress. State: 0x%x Ignore suspend!!!",
+			 cds_get_driver_state());
+		return -EINVAL;
+	}
+
+	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter,
+					   NET_DEV_HOLD_SUSPEND_WLAN) {
+		if (wlan_hdd_validate_vdev_id(adapter->vdev_id)) {
+			hdd_adapter_dev_put_debug(adapter,
+						  NET_DEV_HOLD_SUSPEND_WLAN);
+			continue;
+		}
+
+		/* stop all TX queues before suspend */
+		hdd_debug("Disabling queues for dev mode %s",
+			  qdf_opmode_str(adapter->device_mode));
+		wlan_hdd_netif_queue_control(adapter,
+					     WLAN_STOP_ALL_NETIF_QUEUE,
+					     WLAN_CONTROL_PATH);
+
+		hdd_adapter_dev_put_debug(adapter, NET_DEV_HOLD_SUSPEND_WLAN);
+	}
+
+	return 0;
+}
+
+/**
+ * hdd_unpause_ns() - Network stack unpause function
+ * @hdd_ctx:   hdd context
+ *
+ * Return: 0 on success else error code.
+ */
+static int hdd_unpause_ns(struct hdd_context *hdd_ctx)
+{
+	struct hdd_adapter *adapter, *next_adapter = NULL;
+
+	hdd_debug("Unpause NS");
+
+	if (cds_is_driver_recovering() || cds_is_driver_in_bad_state()) {
+		hdd_info("Recovery in Progress. State: 0x%x Ignore resume!!!",
+			 cds_get_driver_state());
+		return -EINVAL;
+	}
+
+	/*loop through all adapters. Concurrency */
+	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter,
+					   NET_DEV_HOLD_RESUME_WLAN) {
+		if (wlan_hdd_validate_vdev_id(adapter->vdev_id)) {
+			hdd_adapter_dev_put_debug(adapter,
+						  NET_DEV_HOLD_RESUME_WLAN);
+			continue;
+		}
+
+		/* wake the tx queues */
+		hdd_debug("Enabling queues for dev mode %s",
+			  qdf_opmode_str(adapter->device_mode));
+		wlan_hdd_netif_queue_control(adapter,
+					     WLAN_WAKE_ALL_NETIF_QUEUE,
+					     WLAN_CONTROL_PATH);
+
+		hdd_adapter_dev_put_debug(adapter, NET_DEV_HOLD_RESUME_WLAN);
+	}
+
+	return 0;
+}
 void hdd_svc_fw_shutdown_ind(struct device *dev)
 {
 	struct hdd_context *hdd_ctx;
@@ -2291,6 +2355,10 @@ static int __wlan_hdd_cfg80211_resume_wlan(struct wiphy *wiphy)
 	/* Resume all components registered to pmo */
 	status = ucfg_pmo_resume_all_components(hdd_ctx->psoc,
 						QDF_SYSTEM_SUSPEND);
+
+	/* Unpause NS no matter of the return value of pmo_resume */
+	hdd_unpause_ns(hdd_ctx);
+
 	if (status != QDF_STATUS_SUCCESS) {
 		exit_code = 0;
 		goto exit_with_code;
@@ -2564,6 +2632,8 @@ static int __wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
 		hdd_adapter_dev_put_debug(adapter, dbgid);
 	}
 
+	hdd_pause_ns(hdd_ctx);
+
 	/*
 	 * Suspend all components registered to pmo, abort ongoing scan and
 	 * don't allow new scan any more before scheduler thread suspended.
@@ -2664,6 +2734,7 @@ resume_tx:
 	hdd_resume_wlan();
 resume_all_components:
 	ucfg_pmo_resume_all_components(hdd_ctx->psoc, QDF_SYSTEM_SUSPEND);
+	hdd_unpause_ns(hdd_ctx);
 
 	return -ETIME;
 
