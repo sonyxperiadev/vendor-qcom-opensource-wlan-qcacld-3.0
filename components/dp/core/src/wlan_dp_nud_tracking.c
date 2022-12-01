@@ -28,7 +28,7 @@
 #include "wlan_cm_roam_ucfg_api.h"
 #include <wlan_cm_api.h>
 #include "wlan_dp_nud_tracking.h"
-#include "wlan_vdev_mgr_ucfg_api.h"
+#include "wlan_vdev_mgr_api.h"
 
 #ifdef WLAN_NUD_TRACKING
 /**
@@ -216,7 +216,7 @@ static bool dp_nud_honour_failure(struct wlan_dp_intf *dp_intf)
 	vdev = dp_objmgr_get_vdev_by_user(dp_intf, WLAN_DP_ID);
 	if (!vdev)
 		goto fail;
-	ucfg_wlan_vdev_mgr_get_param_bssid(vdev, bssid);
+	wlan_vdev_mgr_get_param_bssid(vdev, bssid);
 	dp_objmgr_put_vdev_by_user(vdev, WLAN_DP_ID);
 
 	tx_transmitted = nud_tracking->tx_rx_stats.post_tx_packets -

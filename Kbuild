@@ -1540,6 +1540,7 @@ UMAC_MLME_OBJS := $(WLAN_COMMON_ROOT)/umac/mlme/mlme_objmgr/dispatcher/src/wlan_
 		$(WLAN_COMMON_ROOT)/umac/mlme/vdev_mgr/dispatcher/src/wlan_vdev_mgr_tgt_if_rx_api.o \
 		$(WLAN_COMMON_ROOT)/umac/mlme/vdev_mgr/dispatcher/src/wlan_vdev_mgr_tgt_if_tx_api.o \
 		$(WLAN_COMMON_ROOT)/umac/mlme/vdev_mgr/dispatcher/src/wlan_vdev_mgr_ucfg_api.o \
+		$(WLAN_COMMON_ROOT)/umac/mlme/vdev_mgr/dispatcher/src/wlan_vdev_mgr_api.o \
 		$(WLAN_COMMON_ROOT)/umac/mlme/vdev_mgr/dispatcher/src/wlan_vdev_mgr_utils_api.o \
 		$(WLAN_COMMON_ROOT)/umac/mlme/mlme_objmgr/dispatcher/src/wlan_cmn_mlme_main.o \
 		$(WLAN_COMMON_ROOT)/umac/mlme/mlme_objmgr/dispatcher/src/wlan_pdev_mlme_main.o \
@@ -2515,6 +2516,7 @@ ifeq ($(CONFIG_QCACLD_FEATURE_NAN), y)
 WLAN_NAN_OBJS := $(NAN_CORE_DIR)/nan_main.o \
 		 $(NAN_CORE_DIR)/nan_api.o \
 		 $(NAN_UCFG_DIR)/nan_ucfg_api.o \
+		 $(NAN_UCFG_DIR)/wlan_nan_api.o \
 		 $(NAN_UCFG_DIR)/cfg_nan.o \
 		 $(NAN_TGT_DIR)/target_if_nan.o \
 		 $(NAN_OS_IF_DIR)/os_if_nan.o
