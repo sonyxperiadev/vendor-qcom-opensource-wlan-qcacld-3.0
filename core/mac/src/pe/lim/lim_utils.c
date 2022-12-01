@@ -8579,6 +8579,27 @@ lim_revise_req_eht_cap_per_band(struct mlme_legacy_priv *mlme_priv,
 	}
 }
 
+/**
+ * lim_revise_req_eht_cap_per_mode() - revise eht capabilities per device mode
+ * @mlme_legacy_priv: vdev mlme legacy priv object
+ * @session: pointer to session entry.
+ *
+ * Return: None
+ */
+static void lim_revise_req_eht_cap_per_mode(struct mlme_legacy_priv *mlme_priv,
+					    struct pe_session *session)
+{
+	if (session->opmode == QDF_SAP_MODE ||
+	    session->opmode == QDF_P2P_GO_MODE) {
+		pe_debug("Disable eht cap for SAP/GO");
+		mlme_priv->eht_config.tx_1024_4096_qam_lt_242_tone_ru = 0;
+		mlme_priv->eht_config.rx_1024_4096_qam_lt_242_tone_ru = 0;
+		mlme_priv->eht_config.non_ofdma_ul_mu_mimo_le_80mhz = 0;
+		mlme_priv->eht_config.non_ofdma_ul_mu_mimo_160mhz = 0;
+		mlme_priv->eht_config.non_ofdma_ul_mu_mimo_320mhz = 0;
+	}
+}
+
 void lim_copy_bss_eht_cap(struct pe_session *session)
 {
 	struct mlme_legacy_priv *mlme_priv;
@@ -8586,7 +8607,17 @@ void lim_copy_bss_eht_cap(struct pe_session *session)
 	mlme_priv = wlan_vdev_mlme_get_ext_hdl(session->vdev);
 	if (!mlme_priv)
 		return;
+
 	lim_revise_req_eht_cap_per_band(mlme_priv, session);
+
+	/*
+	 * As per firmware, SAP/GO doesn’t support some EHT capabilities. So if
+	 * unsupported capabilities are advertised in beacon, probe rsp  and
+	 * assoc rsp can cause IOT issues.
+	 * Disable unsupported capabilities per mode.
+	 */
+	lim_revise_req_eht_cap_per_mode(mlme_priv, session);
+
 	qdf_mem_copy(&session->eht_config, &mlme_priv->eht_config,
 		     sizeof(session->eht_config));
 }
