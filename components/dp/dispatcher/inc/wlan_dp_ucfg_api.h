@@ -1341,4 +1341,33 @@ void *ucfg_dp_prealloc_get_consistent_mem_unaligned(qdf_size_t size,
  */
 void ucfg_dp_prealloc_put_consistent_mem_unaligned(void *va_unaligned);
 #endif
-#endif /* _WLAN_DP_UCFGi_API_H_ */
+
+#ifdef FEATURE_DIRECT_LINK
+/**
+ * ucfg_dp_direct_link_init() - Initializes Direct Link datapath
+ * @psoc: psoc handle
+ *
+ * Return: QDF status
+ */
+QDF_STATUS ucfg_dp_direct_link_init(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_dp_direct_link_deinit() - De-initializes Direct Link datapath
+ * @psoc: psoc handle
+ *
+ * Return: None
+ */
+void ucfg_dp_direct_link_deinit(struct wlan_objmgr_psoc *psoc);
+#else
+static inline
+QDF_STATUS ucfg_dp_direct_link_init(struct wlan_objmgr_psoc *psoc)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+void ucfg_dp_direct_link_deinit(struct wlan_objmgr_psoc *psoc)
+{
+}
+#endif
+#endif /* _WLAN_DP_UCFG_API_H_ */

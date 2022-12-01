@@ -3672,7 +3672,7 @@ lim_gen_link_specific_probe_rsp(struct mac_context *mac_ctx,
 				uint32_t probe_rsp_len,
 				int32_t rssi)
 {
-	struct element_info link_probe_rsp;
+	struct element_info link_probe_rsp = {0};
 	struct qdf_mac_addr sta_link_addr;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	struct mlo_link_info *link_info = NULL;

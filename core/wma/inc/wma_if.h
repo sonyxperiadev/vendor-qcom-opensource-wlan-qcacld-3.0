@@ -59,6 +59,9 @@
 #define STA_ENTRY_PEER              STA_ENTRY_OTHER
 #ifdef FEATURE_WLAN_TDLS
 #define STA_ENTRY_TDLS_PEER         4
+#define IS_TDLS_PEER(type) ((type) == STA_ENTRY_TDLS_PEER)
+#else /* !FEATURE_WLAN_TDLS */
+#define IS_TDLS_PEER(type) false
 #endif /* FEATURE_WLAN_TDLS */
 #define STA_ENTRY_NDI_PEER          5
 

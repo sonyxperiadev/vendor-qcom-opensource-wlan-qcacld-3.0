@@ -223,7 +223,9 @@ static const struct index_vht_data_rate_type supported_vht_mcs_rate_nss1[] = {
 	{6,  {2633, 2925}, {1215, 1350}, {585,  650} },
 	{7,  {2925, 3250}, {1350, 1500}, {650,  722} },
 	{8,  {3510, 3900}, {1620, 1800}, {780,  867} },
-	{9,  {3900, 4333}, {1800, 2000}, {780,  867} }
+	{9,  {3900, 4333}, {1800, 2000}, {780,  867} },
+	{10, {4388, 4875}, {2025, 2250}, {975, 1083} },
+	{11, {4875, 5417}, {2250, 2500}, {1083, 1203} }
 };
 
 /*MCS parameters with Nss = 2*/
@@ -238,7 +240,9 @@ static const struct index_vht_data_rate_type supported_vht_mcs_rate_nss2[] = {
 	{6,  {5265, 5850}, {2430, 2700}, {1170, 1300} },
 	{7,  {5850, 6500}, {2700, 3000}, {1300, 1444} },
 	{8,  {7020, 7800}, {3240, 3600}, {1560, 1733} },
-	{9,  {7800, 8667}, {3600, 4000}, {1730, 1920} }
+	{9,  {7800, 8667}, {3600, 4000}, {1730, 1920} },
+	{10, {8775, 9750}, {4050, 4500}, {1950, 2167} },
+	{11, {9750, 10833}, {4500, 5000}, {2167, 2407} }
 };
 
 /* Function definitions */
@@ -790,6 +794,9 @@ static int __hdd_hostapd_set_mac_address(struct net_device *dev, void *addr)
 			return ret;
 	}
 
+	hdd_set_mld_address(adapter, &mac_addr);
+
+	/* Currently for SL-ML-SAP use same MAC for both MLD and link */
 	hdd_update_dynamic_mac(hdd_ctx, &adapter->mac_addr, &mac_addr);
 	ucfg_dp_update_inf_mac(hdd_ctx->psoc, &adapter->mac_addr, &mac_addr);
 	memcpy(&adapter->mac_addr, psta_mac_addr->sa_data, ETH_ALEN);
@@ -4858,6 +4865,32 @@ static int hdd_update_11ax_apies(struct hdd_adapter *adapter,
 }
 #endif
 
+#ifdef WLAN_FEATURE_11BE
+static int hdd_update_11be_apies(struct hdd_adapter *adapter,
+				 uint8_t *genie, uint16_t *total_ielen)
+{
+	if (wlan_hdd_add_extn_ie(adapter, genie, total_ielen,
+				 EHT_OP_OUI_TYPE, EHT_OP_OUI_SIZE)) {
+		hdd_err("Adding EHT Cap IE failed");
+		return -EINVAL;
+	}
+
+	if (wlan_hdd_add_extn_ie(adapter, genie, total_ielen,
+				 EHT_CAP_OUI_TYPE, EHT_CAP_OUI_SIZE)) {
+		hdd_err("Adding EHT Op IE failed");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+#else
+static int hdd_update_11be_apies(struct hdd_adapter *adapter,
+				 uint8_t *genie, uint16_t *total_ielen)
+{
+	return 0;
+}
+#endif
+
 /**
  * wlan_hdd_cfg80211_update_apies() - update ap mode ies
  * @adapter: Pointer to hostapd adapter
@@ -4913,6 +4946,10 @@ int wlan_hdd_cfg80211_update_apies(struct hdd_adapter *adapter)
 				       &total_ielen);
 
 	ret = hdd_update_11ax_apies(adapter, genie, &total_ielen);
+	if (ret)
+		goto done;
+
+	ret = hdd_update_11be_apies(adapter, genie, &total_ielen);
 	if (ret)
 		goto done;
 

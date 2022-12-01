@@ -1250,4 +1250,11 @@ static inline bool pld_get_enable_intx(struct device *dev)
 	return false;
 }
 
+/**
+ * pld_is_one_msi()- whether one MSI is used or not
+ * @dev: device structure
+ *
+ * Return: true if it is one MSI
+ */
+bool pld_is_one_msi(struct device *dev);
 #endif

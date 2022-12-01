@@ -32,6 +32,7 @@
 #include "wlan_mlme_ucfg_api.h"
 #include "spatial_reuse_ucfg_api.h"
 #include "cdp_txrx_host_stats.h"
+#include "wlan_policy_mgr_i.h"
 
 const struct nla_policy
 wlan_hdd_sr_policy[QCA_WLAN_VENDOR_ATTR_SR_MAX + 1] = {
@@ -547,11 +548,12 @@ fail:
 	return -EINVAL;
 }
 
-static int hdd_get_sr_stats(struct hdd_context *hdd_ctx,
+static int hdd_get_sr_stats(struct hdd_context *hdd_ctx, uint8_t mac_id,
 			    struct cdp_pdev_obss_pd_stats_tlv *stats)
 {
 	ol_txrx_soc_handle soc;
 	uint8_t pdev_id;
+	struct cdp_txrx_stats_req req = {0};
 
 	soc = cds_get_context(QDF_MODULE_ID_SOC);
 	if (!soc) {
@@ -559,8 +561,9 @@ static int hdd_get_sr_stats(struct hdd_context *hdd_ctx,
 		return -EINVAL;
 	}
 
+	req.mac_id = mac_id;
 	pdev_id = wlan_objmgr_pdev_get_pdev_id(hdd_ctx->pdev);
-	cdp_get_pdev_obss_pd_stats(soc, pdev_id, stats);
+	cdp_get_pdev_obss_pd_stats(soc, pdev_id, stats, &req);
 	if (!stats) {
 		hdd_err("invalid stats");
 		return -EINVAL;
@@ -585,9 +588,10 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 	QDF_STATUS status;
 	uint32_t id;
 	bool is_sr_enable = false;
-	int32_t pd_threshold = 0;
+	int32_t srg_pd_threshold = 0;
+	int32_t non_srg_pd_threshold = 0;
 	uint8_t sr_he_siga_val15_allowed = true;
-	uint8_t pdev_id, sr_ctrl, non_srg_max_pd_offset;
+	uint8_t pdev_id, mac_id, sr_ctrl, non_srg_max_pd_offset;
 	uint8_t srg_min_pd_offset = 0, srg_max_pd_offset = 0;
 	uint32_t nl_buf_len;
 	int ret;
@@ -601,12 +605,33 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 	struct sk_buff *skb;
 	struct cdp_pdev_obss_pd_stats_tlv stats;
 	ol_txrx_soc_handle soc;
+	uint8_t sr_device_modes;
 
 	hdd_enter_dev(wdev->netdev);
 	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam() ||
 	    QDF_GLOBAL_MONITOR_MODE == hdd_get_conparam()) {
 		hdd_err("Command not allowed in FTM or Monitor mode");
 		return -EPERM;
+	}
+
+	sr_ctrl = wlan_vdev_mlme_get_sr_ctrl(adapter->vdev);
+	if ((adapter->device_mode == QDF_STA_MODE) &&
+	    (!ucfg_cm_is_vdev_connected(adapter->vdev) ||
+	     !(sr_ctrl && ((sr_ctrl & NON_SRG_PD_SR_DISALLOWED) ||
+	     !(sr_ctrl & SRG_INFO_PRESENT))))) {
+		hdd_err("station is not connected to AP that supports SR");
+		return -EPERM;
+	}
+
+	/**
+	 * Reject command if SR concurrency is not allowed and
+	 * only STA mode is set in ini to enable SR.
+	 **/
+	ucfg_mlme_get_sr_enable_modes(hdd_ctx->psoc, &sr_device_modes);
+	if (!(sr_device_modes & (1 << adapter->device_mode))) {
+		hdd_debug("SR operation not allowed for mode %d",
+			  adapter->device_mode);
+		return -EINVAL;
 	}
 
 	ret = wlan_hdd_validate_context(hdd_ctx);
@@ -666,18 +691,25 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 		 */
 		if (is_sr_enable &&
 		    tb2[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_SRG_PD_THRESHOLD]) {
-			pd_threshold =
+			srg_pd_threshold =
 			nla_get_s32(
 			tb2[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_SRG_PD_THRESHOLD]);
 		}
-		hdd_debug("setting sr enable %d with pd threshold %d",
-			  is_sr_enable, pd_threshold);
+
+		if (is_sr_enable &&
+		    tb2[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_NON_SRG_PD_THRESHOLD]) {
+			non_srg_pd_threshold =
+			nla_get_s32(
+			tb2[QCA_WLAN_VENDOR_ATTR_SR_PARAMS_NON_SRG_PD_THRESHOLD]
+			);
+		}
+		hdd_debug("setting sr enable %d with pd threshold srg: %d non srg: %d",
+			  is_sr_enable, srg_pd_threshold, non_srg_pd_threshold);
 		/* Set the variables */
 		ucfg_spatial_reuse_set_sr_enable(adapter->vdev, is_sr_enable);
-		status = ucfg_spatial_reuse_setup_req(adapter->vdev,
-						      hdd_ctx->pdev,
-						      is_sr_enable,
-						      pd_threshold);
+		status = ucfg_spatial_reuse_setup_req(
+				adapter->vdev, hdd_ctx->pdev, is_sr_enable,
+				srg_pd_threshold, non_srg_pd_threshold);
 		if (status != QDF_STATUS_SUCCESS) {
 			hdd_err("failed to enable Spatial Reuse feature");
 			return -EINVAL;
@@ -685,7 +717,15 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 
 		break;
 	case QCA_WLAN_SR_OPERATION_GET_STATS:
-		if (hdd_get_sr_stats(hdd_ctx, &stats))
+		status = policy_mgr_get_mac_id_by_session_id(hdd_ctx->psoc,
+							     adapter->vdev_id,
+							     &mac_id);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			hdd_err("Failed to get mac_id for vdev_id: %u",
+				adapter->vdev_id);
+			return -EAGAIN;
+		}
+		if (hdd_get_sr_stats(hdd_ctx, mac_id, &stats))
 			return -EINVAL;
 		nl_buf_len = hdd_get_srp_stats_len();
 		skb = cfg80211_vendor_cmd_alloc_reply_skb(hdd_ctx->wiphy,

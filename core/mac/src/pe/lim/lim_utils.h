@@ -527,10 +527,6 @@ void lim_switch_primary_channel(struct mac_context *mac,
  * channel of session
  * @mac: Global MAC structure
  * @pe_session: session context
- * @new_channel_freq: new channel frequency (MHz)
- * @ch_center_freq_seg0: channel center freq seg0
- * @ch_center_freq_seg1: channel center freq seg1
- * @ch_width: ch width of enum phy_ch_width
  *
  *  This function changes the primary and secondary channel.
  *  If 11h is enabled and user provides a "new channel freq"
@@ -541,11 +537,7 @@ void lim_switch_primary_channel(struct mac_context *mac,
  * @return NONE
  */
 void lim_switch_primary_secondary_channel(struct mac_context *mac,
-					  struct pe_session *pe_session,
-					  uint32_t new_channel_freq,
-					  uint8_t ch_center_freq_seg0,
-					  uint8_t ch_center_freq_seg1,
-					  enum phy_ch_width ch_width);
+					  struct pe_session *pe_session);
 
 void lim_update_sta_run_time_ht_capability(struct mac_context *mac,
 		tDot11fIEHTCaps *pHTCaps);
@@ -1768,6 +1760,9 @@ lim_update_he_6ghz_band_caps(struct mac_context *mac,
 #ifdef WLAN_FEATURE_11BE
 static inline bool lim_is_session_eht_capable(struct pe_session *session)
 {
+	if (!session)
+		return false;
+
 	return session->eht_capable;
 }
 

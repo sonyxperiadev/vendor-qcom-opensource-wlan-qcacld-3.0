@@ -4798,4 +4798,28 @@ ucfg_mlme_get_peer_ch_width(struct wlan_objmgr_psoc *psoc, uint8_t *mac)
  */
 enum wlan_phymode
 ucfg_mlme_get_vdev_phy_mode(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id);
+
+#if defined(WLAN_FEATURE_SR)
+/**
+ * ucfg_mlme_get_sr_enable_modes() - check for which mode SR is enabled
+ *
+ * @psoc: pointer to psoc object
+ * @val: SR(Spatial Reuse) enable modes
+ *
+ * Return: void
+ */
+static inline void
+ucfg_mlme_get_sr_enable_modes(struct wlan_objmgr_psoc *psoc,
+			      uint8_t *val)
+{
+	wlan_mlme_get_sr_enable_modes(psoc, val);
+}
+#else
+static inline void
+ucfg_mlme_get_sr_enable_modes(struct wlan_objmgr_psoc *psoc,
+			      uint8_t *val)
+{
+	*val = 0;
+}
+#endif
 #endif /* _WLAN_MLME_UCFG_API_H_ */

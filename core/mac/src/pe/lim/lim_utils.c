@@ -1924,11 +1924,7 @@ static void __lim_process_channel_switch_timeout(struct pe_session *pe_session)
 			eLIM_CHANNEL_SWITCH_IDLE;
 		break;
 	case eLIM_CHANNEL_SWITCH_PRIMARY_AND_SECONDARY:
-		lim_switch_primary_secondary_channel(mac, pe_session,
-			pe_session->gLimChannelSwitch.sw_target_freq,
-			pe_session->gLimChannelSwitch.ch_center_freq_seg0,
-			pe_session->gLimChannelSwitch.ch_center_freq_seg1,
-			pe_session->gLimChannelSwitch.ch_width);
+		lim_switch_primary_secondary_channel(mac, pe_session);
 		pe_session->gLimChannelSwitch.state =
 			eLIM_CHANNEL_SWITCH_IDLE;
 		break;
@@ -2180,13 +2176,39 @@ void lim_switch_primary_channel(struct mac_context *mac,
 	return;
 }
 
-void lim_switch_primary_secondary_channel(struct mac_context *mac,
-					  struct pe_session *pe_session,
-					  uint32_t new_channel_freq,
-					  uint8_t ch_center_freq_seg0,
-					  uint8_t ch_center_freq_seg1,
-					  enum phy_ch_width ch_width)
+#ifdef WLAN_FEATURE_11BE
+/**
+ * lim_set_puncture_from_chan_switch_to_session() - set puncture from channel
+ *                                                  switch to pe session
+ * @pe_session: pointer to pe session
+ *
+ * Return: void
+ */
+static void
+lim_set_puncture_from_chan_switch_to_session(struct pe_session *pe_session)
 {
+	pe_session->puncture_bitmap =
+			pe_session->gLimChannelSwitch.puncture_bitmap;
+}
+#else
+static void
+lim_set_puncture_from_chan_switch_to_session(struct pe_session *pe_session)
+{
+}
+#endif
+
+void lim_switch_primary_secondary_channel(struct mac_context *mac,
+					  struct pe_session *pe_session)
+{
+	uint32_t new_channel_freq;
+	uint8_t ch_center_freq_seg0;
+	uint8_t ch_center_freq_seg1;
+	enum phy_ch_width ch_width;
+
+	new_channel_freq = pe_session->gLimChannelSwitch.sw_target_freq,
+	ch_center_freq_seg0 = pe_session->gLimChannelSwitch.ch_center_freq_seg0,
+	ch_center_freq_seg1 = pe_session->gLimChannelSwitch.ch_center_freq_seg1,
+	ch_width = pe_session->gLimChannelSwitch.ch_width;
 
 	/* Assign the callback to resume TX once channel is changed. */
 	pe_session->curr_req_chan_freq = new_channel_freq;
@@ -2223,6 +2245,7 @@ void lim_switch_primary_secondary_channel(struct mac_context *mac,
 	pe_session->ch_center_freq_seg0 = ch_center_freq_seg0;
 	pe_session->ch_center_freq_seg1 = ch_center_freq_seg1;
 	pe_session->ch_width = ch_width;
+	lim_set_puncture_from_chan_switch_to_session(pe_session);
 
 	lim_send_switch_chnl_params(mac, pe_session);
 
@@ -4827,18 +4850,95 @@ void lim_pmf_sa_query_timer_handler(void *pMacGlobal, uint32_t param)
 	}
 }
 
+/**
+ * lim_get_update_bw_allow() whether bw can be sent to target directly
+ * @session: pe session
+ * @new_bw: bandwdith to set
+ * @update_allow: return true if bw and puncture can be updated directly
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+lim_get_update_bw_allow(struct pe_session *session,
+			enum phy_ch_width new_bw,
+			bool *update_allow)
+{
+	enum phy_ch_width ch_width;
+	struct wlan_objmgr_psoc *psoc;
+	enum wlan_phymode phy_mode;
+	QDF_STATUS status = QDF_STATUS_E_INVAL;
+
+	*update_allow = false;
+
+	if (!session || !update_allow) {
+		pe_err("invalid input");
+		return status;
+	}
+	psoc = wlan_vdev_get_psoc(session->vdev);
+	if (!psoc) {
+		pe_err("psoc object invalid");
+		return status;
+	}
+	status = mlme_get_peer_phymode(psoc, session->bssId, &phy_mode);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		pe_err("failed to get phy_mode %d mac: " QDF_MAC_ADDR_FMT,
+		       status, QDF_MAC_ADDR_REF(session->bssId));
+		return status;
+	}
+	ch_width = wlan_mlme_get_ch_width_from_phymode(phy_mode);
+	if (new_bw <= ch_width)
+		*update_allow = true;
+
+	return status;
+}
+
 bool lim_check_vht_op_mode_change(struct mac_context *mac,
 				  struct pe_session *pe_session,
 				  uint8_t chanWidth, uint8_t *peerMac)
 {
-	tUpdateVHTOpMode tempParam;
+	QDF_STATUS status;
+	bool update_allow = false;
+	struct ch_params ch_params;
+	struct csa_offload_params *csa_param;
 
-	tempParam.opMode = chanWidth;
-	tempParam.smesessionId = pe_session->smeSessionId;
-	qdf_mem_copy(tempParam.peer_mac, peerMac, sizeof(tSirMacAddr));
+	status = lim_get_update_bw_allow(pe_session, chanWidth, &update_allow);
+	if (QDF_IS_STATUS_ERROR(status))
+		return false;
 
-	lim_send_mode_update(mac, &tempParam, pe_session);
-	lim_update_tdls_2g_bw(pe_session);
+	if (update_allow) {
+		tUpdateVHTOpMode tempParam;
+
+		tempParam.opMode = chanWidth;
+		tempParam.smesessionId = pe_session->smeSessionId;
+		qdf_mem_copy(tempParam.peer_mac, peerMac, sizeof(tSirMacAddr));
+
+		lim_send_mode_update(mac, &tempParam, pe_session);
+		lim_update_tdls_2g_bw(pe_session);
+
+		return true;
+	}
+
+	qdf_mem_zero(&ch_params, sizeof(ch_params));
+	ch_params.ch_width = chanWidth;
+	wlan_reg_set_channel_params_for_pwrmode(mac->pdev,
+						pe_session->curr_op_freq,
+						0, &ch_params,
+						REG_CURRENT_PWR_MODE);
+	csa_param = qdf_mem_malloc(sizeof(*csa_param));
+	if (!csa_param) {
+		pe_err("csa_param allocation fails");
+		return false;
+	}
+
+	csa_param->channel = wlan_reg_freq_to_chan(mac->pdev,
+						   pe_session->curr_op_freq);
+	csa_param->csa_chan_freq = pe_session->curr_op_freq;
+	csa_param->new_ch_width = ch_params.ch_width;
+	csa_param->new_ch_freq_seg1 = ch_params.center_freq_seg0;
+	csa_param->new_ch_freq_seg2 = ch_params.center_freq_seg1;
+	qdf_copy_macaddr(&csa_param->bssid,
+			 (struct qdf_mac_addr *)pe_session->bssId);
+	lim_handle_sta_csa_param(mac, csa_param);
 
 	return true;
 }
@@ -10397,6 +10497,30 @@ static void lim_update_des_chan_puncture(struct wlan_channel *des_chan,
 {
 	des_chan->puncture_bitmap = ch_params->reg_punc_bitmap;
 }
+
+/**
+ * lim_overwrite_sta_puncture() - overwrite STA puncture with AP puncture
+ * @session: session
+ * @@ch_param: pointer to ch_params
+ *
+ * Return: void
+ */
+static void lim_overwrite_sta_puncture(struct pe_session *session,
+				       struct ch_params *ch_param)
+{
+	uint16_t new_punc = 0;
+
+	wlan_reg_extract_puncture_by_bw(session->ch_width,
+					session->puncture_bitmap,
+					session->curr_op_freq,
+					ch_param->mhz_freq_seg1,
+					ch_param->ch_width,
+					&new_punc);
+
+	ch_param->reg_punc_bitmap = new_punc;
+	session->puncture_bitmap = new_punc;
+}
+
 #else
 static void lim_update_ap_puncture(struct pe_session *session,
 				   struct ch_params *ch_params)
@@ -10405,6 +10529,11 @@ static void lim_update_ap_puncture(struct pe_session *session,
 
 static void lim_update_des_chan_puncture(struct wlan_channel *des_chan,
 					 struct ch_params *ch_params)
+{
+}
+
+static void lim_overwrite_sta_puncture(struct pe_session *session,
+				       struct ch_params *ch_params)
 {
 }
 #endif
@@ -10467,6 +10596,9 @@ QDF_STATUS lim_pre_vdev_start(struct mac_context *mac,
 		pe_debug("abort vdev start invalid chan parameters");
 		return QDF_STATUS_E_INVAL;
 	}
+
+	if (LIM_IS_STA_ROLE(session))
+		lim_overwrite_sta_puncture(session, &ch_params);
 
 	des_chan = mlme_obj->vdev->vdev_mlme.des_chan;
 	des_chan->ch_freq = session->curr_op_freq;

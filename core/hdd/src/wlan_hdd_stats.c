@@ -123,7 +123,7 @@ static const struct index_data_rate_type supported_data_rate[] = {
 	{108, {540, 240, 120, 0} }
 };
 /* MCS Based rate table HT MCS parameters with Nss = 1 */
-static struct index_data_rate_type supported_mcs_rate_nss1[] = {
+static const struct index_data_rate_type supported_mcs_rate_nss1[] = {
 /* MCS  L20   L40   S20  S40 */
 	{0, {65, 135, 72, 150} },
 	{1, {130, 270, 144, 300} },
@@ -136,7 +136,7 @@ static struct index_data_rate_type supported_mcs_rate_nss1[] = {
 };
 
 /* HT MCS parameters with Nss = 2 */
-static struct index_data_rate_type supported_mcs_rate_nss2[] = {
+static const struct index_data_rate_type supported_mcs_rate_nss2[] = {
 /* MCS  L20    L40   S20   S40 */
 	{0, {130, 270, 144, 300} },
 	{1, {260, 540, 289, 600} },
@@ -149,7 +149,7 @@ static struct index_data_rate_type supported_mcs_rate_nss2[] = {
 };
 
 /* MCS Based VHT rate table MCS parameters with Nss = 1*/
-static struct index_vht_data_rate_type supported_vht_mcs_rate_nss1[] = {
+static const struct index_vht_data_rate_type supported_vht_mcs_rate_nss1[] = {
 /* MCS  L80    S80     L40   S40    L20   S40*/
 	{0, {293, 325}, {135, 150}, {65, 72} },
 	{1, {585, 650}, {270, 300}, {130, 144} },
@@ -160,11 +160,13 @@ static struct index_vht_data_rate_type supported_vht_mcs_rate_nss1[] = {
 	{6, {2633, 2925}, {1215, 1350}, {585, 650} },
 	{7, {2925, 3250}, {1350, 1500}, {650, 722} },
 	{8, {3510, 3900}, {1620, 1800}, {780, 867} },
-	{9, {3900, 4333}, {1800, 2000}, {780, 867} }
+	{9, {3900, 4333}, {1800, 2000}, {780, 867} },
+	{10, {4388, 4875}, {2025, 2250}, {975, 1083} },
+	{11, {4875, 5417}, {2250, 2500}, {1083, 1203} }
 };
 
 /*MCS parameters with Nss = 2*/
-static struct index_vht_data_rate_type supported_vht_mcs_rate_nss2[] = {
+static const struct index_vht_data_rate_type supported_vht_mcs_rate_nss2[] = {
 /* MCS  L80    S80     L40   S40    L20   S40*/
 	{0, {585, 650}, {270, 300}, {130, 144} },
 	{1, {1170, 1300}, {540, 600}, {260, 289} },
@@ -175,7 +177,9 @@ static struct index_vht_data_rate_type supported_vht_mcs_rate_nss2[] = {
 	{6, {5265, 5850}, {2430, 2700}, {1170, 1300} },
 	{7, {5850, 6500}, {2700, 3000}, {1300, 1444} },
 	{8, {7020, 7800}, {3240, 3600}, {1560, 1733} },
-	{9, {7800, 8667}, {3600, 4000}, {1730, 1920} }
+	{9, {7800, 8667}, {3600, 4000}, {1730, 1920} },
+	{10, {8775, 9750}, {4050, 4500}, {1950, 2167} },
+	{11, {9750, 10833}, {4500, 5000}, {2167, 2407} }
 };
 
 /*array index points to MCS and array value points respective rssi*/
@@ -2679,7 +2683,7 @@ void wlan_hdd_clear_link_layer_stats(struct hdd_adapter *adapter)
 	mac_handle_t mac_handle = adapter->hdd_ctx->mac_handle;
 
 	link_layer_stats_clear_req.statsClearReqMask = WIFI_STATS_IFACE_AC |
-		WIFI_STATS_IFACE_ALL_PEER;
+		WIFI_STATS_IFACE_ALL_PEER | WIFI_STATS_IFACE_CONTENTION;
 	link_layer_stats_clear_req.stopReq = 0;
 	link_layer_stats_clear_req.reqId = 1;
 	link_layer_stats_clear_req.staId = adapter->vdev_id;
@@ -5260,6 +5264,11 @@ static uint8_t hdd_get_rate_flags_vht(uint32_t rate,
 	struct index_vht_data_rate_type *mcs_rate;
 	uint8_t flags = 0;
 
+	if (mcs >= ARRAY_SIZE(supported_vht_mcs_rate_nss1)) {
+		hdd_err("Invalid mcs index %d", mcs);
+		return flags;
+	}
+
 	mcs_rate = (struct index_vht_data_rate_type *)
 		((nss == 1) ?
 		 &supported_vht_mcs_rate_nss1 :
@@ -6025,13 +6034,6 @@ wlan_hdd_refill_actual_rate(struct rate_info *os_rate,
 	bw = adapter->hdd_stats.class_a_stat.rx_bw;
 	mcs_index = adapter->hdd_stats.class_a_stat.rx_mcs_index;
 	nss = adapter->hdd_stats.class_a_stat.rx_nss;
-
-	/*
-	 *  If througput is high, do not get rx rate
-	 *  info to avoid the performance penalty
-	 */
-	if (cdp_get_bus_lvl_high(soc))
-		return;
 
 	os_rate->nss = nss;
 	if (preamble == DOT11_A || preamble == DOT11_B) {

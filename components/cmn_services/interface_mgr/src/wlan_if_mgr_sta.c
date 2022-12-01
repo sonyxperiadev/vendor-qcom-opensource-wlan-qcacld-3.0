@@ -210,7 +210,7 @@ QDF_STATUS if_mgr_disconnect_complete(struct wlan_objmgr_vdev *vdev,
 		wlan_handle_emlsr_sta_concurrency(vdev, false, false);
 
 	status = if_mgr_enable_roaming_after_p2p_disconnect(pdev, vdev,
-							RSO_INVALID_REQUESTOR);
+							    RSO_CONNECT_START);
 	if (status) {
 		ifmgr_err("Failed to enable roaming after p2p disconnect");
 		return status;

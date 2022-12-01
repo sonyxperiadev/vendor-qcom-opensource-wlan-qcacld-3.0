@@ -120,9 +120,6 @@ QDF_STATUS ucfg_mlme_pdev_open(struct wlan_objmgr_pdev *pdev)
 	}
 	pdev_mlme->mlme_register_ops = mlme_register_vdev_mgr_ops;
 
-	/* Initialize MAC0/1 SR registers */
-	wlan_spatial_reuse_pdev_init(pdev);
-
 	return QDF_STATUS_SUCCESS;
 }
 

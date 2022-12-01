@@ -34,6 +34,10 @@
 #include "target_if_dp_comp.h"
 #include "wlan_dp_txrx.h"
 
+#ifdef FEATURE_DIRECT_LINK
+#include "dp_internal.h"
+#endif
+
 /* Global DP context */
 static struct wlan_dp_psoc_context *gp_dp_ctx;
 
@@ -1539,3 +1543,172 @@ bool dp_is_data_stall_event_enabled(uint32_t evt)
 
 	return false;
 }
+
+#ifdef FEATURE_DIRECT_LINK
+/**
+ * dp_lpass_h2t_tx_complete() - Copy completion handler for LPASS data
+ * message service
+ * @ctx: DP Direct Link context
+ * @pkt: htc packet
+ *
+ * Return: None
+ */
+static void dp_lpass_h2t_tx_complete(void *ctx, HTC_PACKET *pkt)
+{
+	dp_info("Unexpected lpass tx complete trigger");
+	qdf_assert(0);
+}
+
+/**
+ * dp_lpass_t2h_msg_handler() - target to host message handler for LPASS data
+ * message service
+ * @ctx: DP Direct Link context
+ * @pkt: htc packet
+ *
+ * Return: None
+ */
+static void dp_lpass_t2h_msg_handler(void *ctx, HTC_PACKET *pkt)
+{
+	dp_info("Unexpected receive msg trigger for lpass service");
+	qdf_assert(0);
+}
+
+/**
+ * dp_lpass_connect_htc_service() - Connect lpass data message htc service
+ * @dp_direct_link_ctx: DP Direct Link context
+ *
+ * Return: QDF status
+ */
+static QDF_STATUS
+dp_lpass_connect_htc_service(struct dp_direct_link_context *dp_direct_link_ctx)
+{
+	struct htc_service_connect_req connect = {0};
+	struct htc_service_connect_resp response = {0};
+	HTC_HANDLE htc_handle = cds_get_context(QDF_MODULE_ID_HTC);
+	QDF_STATUS status;
+
+	if (!htc_handle)
+		return QDF_STATUS_E_FAILURE;
+
+	connect.EpCallbacks.pContext = dp_direct_link_ctx;
+	connect.EpCallbacks.EpTxComplete = dp_lpass_h2t_tx_complete;
+	connect.EpCallbacks.EpRecv = dp_lpass_t2h_msg_handler;
+
+	/* disable flow control for LPASS data message service */
+	connect.ConnectionFlags |= HTC_CONNECT_FLAGS_DISABLE_CREDIT_FLOW_CTRL;
+	connect.service_id = LPASS_DATA_MSG_SVC;
+
+	status = htc_connect_service(htc_handle, &connect, &response);
+
+	if (status != QDF_STATUS_SUCCESS) {
+		dp_err("LPASS_DATA_MSG connect service failed");
+		return status;
+	}
+
+	dp_direct_link_ctx->lpass_ep_id = response.Endpoint;
+
+	dp_err("LPASS_DATA_MSG connect service successful");
+
+	return status;
+}
+
+/**
+ * dp_direct_link_refill_ring_init() - Initialize refill ring that would be used
+ *  for Direct Link DP
+ * @direct_link_ctx: DP Direct Link context
+ *
+ * Return: QDF status
+ */
+static QDF_STATUS
+dp_direct_link_refill_ring_init(struct dp_direct_link_context *direct_link_ctx)
+{
+	struct cdp_soc_t *soc = cds_get_context(QDF_MODULE_ID_SOC);
+	uint8_t pdev_id;
+
+	if (!soc)
+		return QDF_STATUS_E_FAILURE;
+
+	pdev_id = wlan_objmgr_pdev_get_pdev_id(direct_link_ctx->dp_ctx->pdev);
+
+	direct_link_ctx->direct_link_refill_ring_hdl =
+				dp_setup_direct_link_refill_ring(soc,
+								 pdev_id);
+	if (!direct_link_ctx->direct_link_refill_ring_hdl) {
+		dp_err("Refill ring init for Direct Link failed");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * dp_direct_link_refill_ring_deinit() - De-initialize refill ring that would be
+ *  used for Direct Link DP
+ * @direct_link_ctx: DP Direct Link context
+ *
+ * Return: None
+ */
+static void
+dp_direct_link_refill_ring_deinit(struct dp_direct_link_context *dlink_ctx)
+{
+	struct cdp_soc_t *soc = cds_get_context(QDF_MODULE_ID_SOC);
+	uint8_t pdev_id;
+
+	if (!soc)
+		return;
+
+	pdev_id = wlan_objmgr_pdev_get_pdev_id(dlink_ctx->dp_ctx->pdev);
+	dp_destroy_direct_link_refill_ring(soc, pdev_id);
+	dlink_ctx->direct_link_refill_ring_hdl = NULL;
+}
+
+QDF_STATUS dp_direct_link_init(struct wlan_dp_psoc_context *dp_ctx)
+{
+	struct dp_direct_link_context *dp_direct_link_ctx;
+	QDF_STATUS status;
+
+	if (!pld_is_direct_link_supported(dp_ctx->qdf_dev->dev)) {
+		dp_info("FW does not support Direct Link");
+		return QDF_STATUS_SUCCESS;
+	}
+
+	dp_direct_link_ctx = qdf_mem_malloc(sizeof(*dp_direct_link_ctx));
+	if (!dp_direct_link_ctx) {
+		dp_err("Failed to allocate memory for DP Direct Link context");
+		return QDF_STATUS_E_NOMEM;
+	}
+
+	dp_direct_link_ctx->dp_ctx = dp_ctx;
+
+	status = dp_lpass_connect_htc_service(dp_direct_link_ctx);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		dp_err("Failed to connect to LPASS data msg service");
+		qdf_mem_free(dp_direct_link_ctx);
+		return status;
+	}
+
+	status = dp_direct_link_refill_ring_init(dp_direct_link_ctx);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		qdf_mem_free(dp_direct_link_ctx);
+		return status;
+	}
+
+	dp_ctx->dp_direct_link_ctx = dp_direct_link_ctx;
+
+	return status;
+}
+
+void dp_direct_link_deinit(struct wlan_dp_psoc_context *dp_ctx)
+{
+	if (!pld_is_direct_link_supported(dp_ctx->qdf_dev->dev))
+		return;
+
+	if (!dp_ctx->dp_direct_link_ctx)
+		return;
+
+	dp_direct_link_refill_ring_deinit(dp_ctx->dp_direct_link_ctx);
+
+	qdf_mem_free(dp_ctx->dp_direct_link_ctx);
+	dp_ctx->dp_direct_link_ctx = NULL;
+}
+#endif

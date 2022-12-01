@@ -698,6 +698,26 @@ int hdd_set_p2p_ps(struct net_device *dev, void *msgData)
 	return wlan_hdd_set_power_save(adapter, &noa);
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static inline void
+wlan_hdd_set_ml_capab_add_iface(struct hdd_adapter_create_param *create_params,
+				enum QDF_OPMODE mode)
+{
+	if (mode != QDF_SAP_MODE)
+		return;
+
+	create_params->is_single_link = true;
+	create_params->is_ml_adapter = true;
+}
+#else
+static inline void
+wlan_hdd_set_ml_capab_add_iface(struct hdd_adapter_create_param *create_params,
+				enum QDF_OPMODE mode)
+{
+}
+
+#endif
+
 /**
  * __wlan_hdd_add_virtual_intf() - Add virtual interface
  * @wiphy: wiphy pointer
@@ -724,6 +744,7 @@ struct wireless_dev *__wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
 	QDF_STATUS status;
 	struct wlan_objmgr_vdev *vdev;
 	int ret;
+	bool eht_capab;
 	struct hdd_adapter_create_param create_params = {0};
 
 	hdd_enter();
@@ -769,6 +790,11 @@ struct wireless_dev *__wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
 	}
 
 	create_params.is_add_virtual_iface = 1;
+
+	ucfg_psoc_mlme_get_11be_capab(hdd_ctx->psoc, &eht_capab);
+	if (eht_capab)
+		wlan_hdd_set_ml_capab_add_iface(&create_params, mode);
+
 	adapter = hdd_get_adapter(hdd_ctx, QDF_STA_MODE);
 	if (adapter && !wlan_hdd_validate_vdev_id(adapter->vdev_id)) {
 		vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_P2P_ID);

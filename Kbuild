@@ -1377,7 +1377,8 @@ UMAC_MLO_MGR_OBJS := $(UMAC_MLO_MGR_CMN_DIR)/src/wlan_mlo_mgr_main.o \
 			  $(UMAC_MLO_MGR_CMN_DIR)/src/wlan_mlo_mgr_msgq.o \
 			  $(UMAC_MLO_MGR_CMN_DIR)/src/wlan_mlo_mgr_primary_umac.o \
 			  $(MLO_MGR_TARGET_IF_DIR)/src/target_if_mlo_mgr.o \
-			  $(UMAC_MLO_MGR_CLD_DIR)/src/wlan_mlo_mgr_roam.o
+			  $(UMAC_MLO_MGR_CLD_DIR)/src/wlan_mlo_mgr_roam.o \
+			  $(UMAC_MLO_MGR_CLD_DIR)/src/wlan_t2lm_api.o \
 
 $(call add-wlan-objs,umac_mlomgr,$(UMAC_MLO_MGR_OBJS))
 endif
@@ -3318,6 +3319,7 @@ endif
 cppflags-$(CONFIG_PLD_PCIE_INIT_FLAG) += -DCONFIG_PLD_PCIE_INIT
 cppflags-$(CONFIG_WLAN_FEATURE_DP_RX_THREADS) += -DFEATURE_WLAN_DP_RX_THREADS
 cppflags-$(CONFIG_WLAN_FEATURE_RX_SOFTIRQ_TIME_LIMIT) += -DWLAN_FEATURE_RX_SOFTIRQ_TIME_LIMIT
+cppflags-$(CONFIG_FEATURE_HIF_LATENCY_PROFILE_ENABLE) += -DHIF_LATENCY_PROFILE_ENABLE
 cppflags-$(CONFIG_FEATURE_HAL_DELAYED_REG_WRITE) += -DFEATURE_HAL_DELAYED_REG_WRITE
 cppflags-$(CONFIG_FEATURE_HAL_RECORD_SUSPEND_WRITE) += -DFEATURE_HAL_RECORD_SUSPEND_WRITE
 cppflags-$(CONFIG_QCA_OL_DP_SRNG_LOCK_LESS_ACCESS) += -DQCA_OL_DP_SRNG_LOCK_LESS_ACCESS

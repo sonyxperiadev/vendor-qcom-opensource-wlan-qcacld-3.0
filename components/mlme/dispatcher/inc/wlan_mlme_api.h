@@ -1050,6 +1050,17 @@ QDF_STATUS mlme_update_tgt_he_caps_in_cfg(struct wlan_objmgr_psoc *psoc,
 					  struct wma_tgt_cfg *cfg);
 #endif
 
+/**
+ * wlan_mlme_convert_vht_op_bw_to_phy_ch_width() - convert channel width in VHT
+ *                                                 operation IE to phy_ch_width
+ * @channel_width: channel width in VHT operation IE. If it is 0, please use HT
+ *                 information IE to check whether it is 20MHz or 40MHz.
+ *
+ * Return: phy_ch_width
+ */
+enum phy_ch_width wlan_mlme_convert_vht_op_bw_to_phy_ch_width(
+						uint8_t channel_width);
+
 #ifdef WLAN_FEATURE_11BE
 /**
  * mlme_update_tgt_eht_caps_in_cfg() - Update tgt eht cap in mlme component
@@ -3984,4 +3995,17 @@ wlan_mlme_get_ch_width_from_phymode(enum wlan_phymode phy_mode);
  */
 enum phy_ch_width
 wlan_mlme_get_peer_ch_width(struct wlan_objmgr_psoc *psoc, uint8_t *mac);
+
+#if defined(WLAN_FEATURE_SR)
+/**
+ * wlan_mlme_get_sr_enable_modes() - get mode for which SR is enabled
+ *
+ * @psoc: psoc context
+ * @val: pointer to hold the value of SR(Spatial Reuse) enable modes
+ *
+ * Return: void
+ */
+void
+wlan_mlme_get_sr_enable_modes(struct wlan_objmgr_psoc *psoc, uint8_t *val);
+#endif
 #endif /* _WLAN_MLME_API_H_ */

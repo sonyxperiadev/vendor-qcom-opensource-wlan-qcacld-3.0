@@ -61,12 +61,6 @@
 #include <cdp_txrx_cmn.h>
 #include <lim_mlo.h>
 
-#ifdef FEATURE_WLAN_TDLS
-#define IS_TDLS_PEER(type)  ((type) == STA_ENTRY_TDLS_PEER)
-#else
-#define IS_TDLS_PEER(type) 0
-#endif
-
 /**
  * lim_cmp_ssid() - utility function to compare SSIDs
  * @rx_ssid: Received SSID
@@ -2781,6 +2775,7 @@ lim_del_sta(struct mac_context *mac,
 	 * link peer before post WMA_DELETE_STA_REQ, which will free
 	 * wlan_objmgr_peer of the link peer
 	 */
+	lim_mlo_notify_peer_disconn(pe_session, sta);
 	lim_mlo_delete_link_peer(pe_session, sta);
 	/* Update PE session ID */
 	pDelStaParams->sessionId = pe_session->peSessionId;

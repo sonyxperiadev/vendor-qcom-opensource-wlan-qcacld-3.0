@@ -357,6 +357,9 @@ typedef struct sLimChannelSwitchInfo {
 	uint8_t ch_center_freq_seg1;
 	uint8_t sec_ch_offset;
 	enum phy_ch_width ch_width;
+#ifdef WLAN_FEATURE_11BE
+	uint16_t puncture_bitmap;
+#endif
 	int8_t switchCount;
 	uint32_t switchTimeoutValue;
 	uint8_t switchMode;

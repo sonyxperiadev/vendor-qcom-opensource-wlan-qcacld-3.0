@@ -11506,6 +11506,11 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 		} else {
 			pe_debug("eht ie not included");
 		}
+		if (frm->OperatingMode.present) {
+			pe_info("opmode in assoc req, add to non inher list");
+			non_inher_ie_lists[non_inher_len++] =
+						DOT11F_EID_OPERATINGMODE;
+		}
 
 		populate_dot11f_non_inheritance(
 				mac_ctx, &sta_prof_non_inherit,

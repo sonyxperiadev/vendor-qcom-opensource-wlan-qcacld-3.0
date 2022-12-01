@@ -932,6 +932,7 @@ struct hdd_chan_change_params {
  * @monitor_mode: monitor mode context to prevent/allow runtime pm
  * @wow_unit_test: wow unit test mode context to prevent/allow runtime pm
  * @system_suspend: system suspend context to prevent/allow runtime pm
+ * @dyn_mac_addr_update: update mac addr context to prevent/allow runtime pm
  *
  * Runtime PM control for underlying activities
  */
@@ -943,6 +944,7 @@ struct hdd_runtime_pm_context {
 	qdf_runtime_lock_t monitor_mode;
 	qdf_runtime_lock_t wow_unit_test;
 	qdf_runtime_lock_t system_suspend;
+	qdf_runtime_lock_t dyn_mac_addr_update;
 };
 
 /*
@@ -4078,6 +4080,31 @@ int wlan_hdd_set_mon_chan(struct hdd_adapter *adapter, qdf_freq_t freq,
 			  uint32_t bandwidth)
 {
 	return 0;
+}
+#endif
+
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(CFG80211_11BE_BASIC)
+/**
+ *  hdd_set_mld_address() - Set the MLD address of the adapter
+ *  @adapter: Handle to adapter
+ *  @mac_addr: MAC address to be copied
+ *
+ *  The function copies the MAC address sent in @mac_addr to
+ *  the adapter's MLD address and the MLD address of each
+ *  link adapter mapped of the @adapter.
+ *  The mode of operation must be 11be capable and @adapter
+ *  has to be ML type.
+ *
+ *  Return: void
+ */
+void
+hdd_set_mld_address(struct hdd_adapter *adapter,
+		    struct qdf_mac_addr *mac_addr);
+#else
+static inline void
+hdd_set_mld_address(struct hdd_adapter *adapter,
+		    struct qdf_mac_addr *mac_addr)
+{
 }
 #endif
 

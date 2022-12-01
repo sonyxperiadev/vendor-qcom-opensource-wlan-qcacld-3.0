@@ -1649,6 +1649,7 @@ lim_send_assoc_rsp_mgmt_frame(struct mac_context *mac_ctx,
 	bool is_band_2g;
 	uint16_t ie_buf_size;
 	uint16_t mlo_ie_len = 0;
+	struct element_info ie;
 
 	if (!pe_session) {
 		pe_err("pe_session is NULL");
@@ -2075,6 +2076,11 @@ lim_send_assoc_rsp_mgmt_frame(struct mac_context *mac_ctx,
 	    pe_session->opmode == QDF_P2P_CLIENT_MODE ||
 	    pe_session->opmode == QDF_P2P_GO_MODE)
 		tx_flag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
+
+	ie.ptr = frame + sizeof(tSirMacMgmtHdr) + WLAN_ASSOC_RSP_IES_OFFSET;
+	ie.len = payload - WLAN_ASSOC_RSP_IES_OFFSET;
+
+	mlme_set_peer_assoc_rsp_ie(mac_ctx->psoc, peer_addr, &ie);
 
 	MTRACE(qdf_trace(QDF_MODULE_ID_PE, TRACE_CODE_TX_MGMT,
 			 pe_session->peSessionId, mac_hdr->fc.subType));
@@ -2699,7 +2705,8 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 		vht_enabled = true;
 		if (pe_session->gLimOperatingMode.present &&
 		    pe_session->ch_width == CH_WIDTH_20MHZ &&
-		    frm->VHTCaps.present) {
+		    frm->VHTCaps.present &&
+		    !IS_DOT11_MODE_HE(pe_session->dot11mode)) {
 			populate_dot11f_operating_mode(mac_ctx,
 					&frm->OperatingMode, pe_session);
 		}

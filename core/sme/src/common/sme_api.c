@@ -10705,6 +10705,33 @@ void sme_update_eht_cap_nss(mac_handle_t mac_handle, uint8_t session_id,
 			    uint8_t nss)
 {
 }
+
+void sme_set_eht_bw_cap(mac_handle_t mac_handle, uint8_t vdev_id,
+			enum eSirMacHTChannelWidth chwidth)
+{
+	struct mac_context *mac_ctx = MAC_CONTEXT(mac_handle);
+	struct csr_roam_session *session;
+
+	session = CSR_GET_SESSION(mac_ctx, vdev_id);
+	if (!session) {
+		sme_debug("No session for id %d", vdev_id);
+		return;
+	}
+	sme_debug("Config EHT caps for BW %d", chwidth);
+	mac_ctx->mlme_cfg->eht_caps.dot11_eht_cap.support_320mhz_6ghz = 0;
+
+	if (chwidth < eHT_CHANNEL_WIDTH_320MHZ) {
+		sme_debug("EHT caps config not required for bw: %d", chwidth);
+		return;
+	}
+
+	mac_ctx->mlme_cfg->eht_caps.dot11_eht_cap.support_320mhz_6ghz = 1;
+	qdf_mem_copy(&mac_ctx->eht_cap_5g,
+		     &mac_ctx->mlme_cfg->eht_caps.dot11_eht_cap,
+		     sizeof(tDot11fIEeht_cap));
+
+	csr_update_session_eht_cap(mac_ctx, session);
+}
 #endif
 
 #ifdef WLAN_FEATURE_11AX
@@ -14815,6 +14842,7 @@ void sme_set_he_bw_cap(mac_handle_t mac_handle, uint8_t vdev_id,
 			     sizeof(tDot11fIEhe_cap));
 		break;
 	case eHT_CHANNEL_WIDTH_160MHZ:
+	case eHT_CHANNEL_WIDTH_320MHZ:
 		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_1 = 1;
 		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_2 = 1;
 		*((uint16_t *)
@@ -16158,7 +16186,7 @@ QDF_STATUS sme_switch_channel(mac_handle_t mac_handle,
 
 	qdf_copy_macaddr(&csa_offload_event->bssid, bssid);
 	csa_offload_event->csa_chan_freq = (uint32_t)chan_freq;
-	csa_offload_event->new_ch_width = (uint8_t)chan_width;
+	csa_offload_event->new_ch_width = chan_width;
 	csa_offload_event->channel =
 		wlan_reg_freq_to_chan(mac_ctx->pdev,
 				      csa_offload_event->csa_chan_freq);
@@ -16217,12 +16245,14 @@ QDF_STATUS sme_send_set_mac_addr(struct qdf_mac_addr mac_addr,
 			return qdf_ret_status;
 	}
 
-	if (vdev_opmode == QDF_STA_MODE &&
-	    sme_is_11be_capable() && update_mld_addr) {
+	if (sme_is_11be_capable() && update_mld_addr) {
 		/* Set new MAC addr as MLD address incase of MLO */
 		mld_addr = mac_addr;
-		qdf_mem_copy(&vdev_mac_addr, wlan_vdev_mlme_get_linkaddr(vdev),
-			     sizeof(struct qdf_mac_addr));
+		if (vdev_opmode == QDF_STA_MODE) {
+			qdf_mem_copy(&vdev_mac_addr,
+				     wlan_vdev_mlme_get_linkaddr(vdev),
+				     sizeof(struct qdf_mac_addr));
+		}
 	}
 
 	qdf_ret_status = wlan_vdev_mlme_send_set_mac_addr(vdev_mac_addr,
@@ -16275,7 +16305,7 @@ QDF_STATUS sme_update_vdev_mac_addr(struct wlan_objmgr_psoc *psoc,
 	if (req_status)
 		goto p2p_self_peer_create;
 
-	if ((vdev_opmode == QDF_STA_MODE) && update_sta_self_peer) {
+	if (vdev_opmode == QDF_STA_MODE && update_sta_self_peer) {
 		if (sme_is_11be_capable() && update_mld_addr)
 			old_mac_addr_bytes = wlan_vdev_mlme_get_mldaddr(vdev);
 		else
@@ -16302,9 +16332,8 @@ QDF_STATUS sme_update_vdev_mac_addr(struct wlan_objmgr_psoc *psoc,
 	}
 
 	/* Update VDEV MAC address */
-	if (vdev_opmode == QDF_STA_MODE &&
-	    sme_is_11be_capable() && update_mld_addr) {
-		if (update_sta_self_peer) {
+	if (sme_is_11be_capable() && update_mld_addr) {
+		if (update_sta_self_peer || vdev_opmode == QDF_SAP_MODE) {
 			qdf_ret_status = wlan_mlo_mgr_update_mld_addr(
 					    (struct qdf_mac_addr *)
 					       wlan_vdev_mlme_get_mldaddr(vdev),
@@ -16313,6 +16342,13 @@ QDF_STATUS sme_update_vdev_mac_addr(struct wlan_objmgr_psoc *psoc,
 				return qdf_ret_status;
 		}
 		wlan_vdev_mlme_set_mldaddr(vdev, mac_addr.bytes);
+		/* Currently the design is to use same MAC for
+		 * MLD and Link for SAP so update link and MAC addr.
+		 */
+		if (vdev_opmode == QDF_SAP_MODE) {
+			wlan_vdev_mlme_set_macaddr(vdev, mac_addr.bytes);
+			wlan_vdev_mlme_set_linkaddr(vdev, mac_addr.bytes);
+		}
 	} else {
 		wlan_vdev_mlme_set_macaddr(vdev, mac_addr.bytes);
 		wlan_vdev_mlme_set_linkaddr(vdev, mac_addr.bytes);

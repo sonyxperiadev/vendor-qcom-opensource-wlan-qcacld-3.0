@@ -76,16 +76,6 @@ QDF_STATUS wlan_spatial_reuse_config_set(struct wlan_objmgr_vdev *vdev,
 					 uint8_t non_srg_max_pd_offset);
 
 /**
- * wlan_spatial_reuse_pdev_init() - Send PDEV command with disabled
- *				    PD threshold value to initialize HW
- *				    registers
- * @pdev: objmgr manager pdev
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS wlan_spatial_reuse_pdev_init(struct wlan_objmgr_pdev *pdev);
-
-/**
  * wlan_sr_register_callback() - registers SR osif events
  * @psoc: pointer to psoc
  * @cb: Callback to be registered
@@ -116,12 +106,6 @@ QDF_STATUS wlan_spatial_reuse_config_set(struct wlan_objmgr_vdev *vdev,
 }
 
 static inline
-QDF_STATUS wlan_spatial_reuse_pdev_init(struct wlan_objmgr_pdev *pdev)
-{
-	return QDF_STATUS_SUCCESS;
-}
-
-static inline
 void wlan_spatial_reuse_osif_event(struct wlan_objmgr_vdev *vdev,
 				   enum sr_osif_operation sr_osif_oper,
 				   enum sr_osif_reason_code sr_osif_rc)
@@ -143,16 +127,16 @@ QDF_STATUS wlan_spatial_reuse_he_siga_val15_allowed_set(
 
 /**
  * wlan_sr_setup_req() - Enable SR with provided pd threshold
- *
  * @vdev: objmgr vdev
  * @pdev: objmgr pdev
  * @is_sr_enable: sr enable/disable
- * @pd_threshold: pd threshold
+ * @srg_pd_threshold: SRG pd threshold
+ * @non_srg_pd_threshold: NON SRG PD threshold
  *
  * Return: QDF_STATUS
  */
 QDF_STATUS
 wlan_sr_setup_req(struct wlan_objmgr_vdev *vdev,
 		  struct wlan_objmgr_pdev *pdev, bool is_sr_enable,
-		  int32_t pd_threshold);
+		  int32_t srg_pd_threshold, int32_t non_srg_pd_threshold);
 #endif

@@ -696,7 +696,7 @@ static void wma_sr_handle_conc(tp_wma_handle wma,
 		if ((!(sr_ctrl & NON_SRG_PD_SR_DISALLOWED) &&
 		     (sr_ctrl & NON_SRG_OFFSET_PRESENT)) ||
 		    (sr_ctrl & SRG_INFO_PRESENT)) {
-			wlan_mlme_update_sr_data(conc_vdev, &val, 0, true);
+			wlan_mlme_update_sr_data(conc_vdev, &val, 0, 0, true);
 			wma_sr_send_pd_threshold(wma, conc_vdev_id, val);
 			wlan_spatial_reuse_osif_event(conc_vdev,
 						      SR_OPERATION_RESUME,
@@ -758,7 +758,7 @@ QDF_STATUS wma_sr_update(tp_wma_handle wma, uint8_t vdev_id, bool enable)
 	     (sr_ctrl & NON_SRG_OFFSET_PRESENT)) ||
 	    (sr_ctrl & SRG_INFO_PRESENT)) {
 		if (enable) {
-			wlan_mlme_update_sr_data(vdev, &val, 0, true);
+			wlan_mlme_update_sr_data(vdev, &val, 0, 0, true);
 		} else {
 			/* VDEV down, disable SR */
 			wlan_vdev_mlme_set_sr_ctrl(vdev, 0);
@@ -1455,7 +1455,9 @@ int wma_csa_offload_handler(void *handle, uint8_t *event, uint32_t len)
 	if (csa_event->ies_present_flag & WMI_WBW_IE_PRESENT) {
 		wb_ie = (struct ieee80211_ie_wide_bw_switch *)
 						(&csa_event->wb_ie[0]);
-		csa_offload_event->new_ch_width = wb_ie->new_ch_width;
+		csa_offload_event->new_ch_width =
+			wlan_mlme_convert_vht_op_bw_to_phy_ch_width(
+				wb_ie->new_ch_width);
 		csa_offload_event->new_ch_freq_seg1 = wb_ie->new_ch_freq_seg1;
 		csa_offload_event->new_ch_freq_seg2 = wb_ie->new_ch_freq_seg2;
 		csa_offload_event->ies_present_flag |= MLME_WBW_IE_PRESENT;
@@ -1466,7 +1468,9 @@ int wma_csa_offload_handler(void *handle, uint8_t *event, uint32_t len)
 				(uint8_t *)&csa_event->cswrap_ie_extended,
 				WLAN_ELEMID_WIDE_BAND_CHAN_SWITCH);
 		if (wb_ie) {
-			csa_offload_event->new_ch_width = wb_ie->new_ch_width;
+			csa_offload_event->new_ch_width =
+				wlan_mlme_convert_vht_op_bw_to_phy_ch_width(
+					wb_ie->new_ch_width);
 			csa_offload_event->new_ch_freq_seg1 =
 						wb_ie->new_ch_freq_seg1;
 			csa_offload_event->new_ch_freq_seg2 =

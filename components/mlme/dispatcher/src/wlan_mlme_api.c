@@ -1051,6 +1051,19 @@ QDF_STATUS mlme_update_tgt_he_caps_in_cfg(struct wlan_objmgr_psoc *psoc,
 
 	return status;
 }
+#ifdef WLAN_FEATURE_SR
+void
+wlan_mlme_get_sr_enable_modes(struct wlan_objmgr_psoc *psoc, uint8_t *val)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj = mlme_get_psoc_ext_obj(psoc);
+
+	if (!mlme_obj) {
+		*val = cfg_default(CFG_SR_ENABLE_MODES);
+		return;
+	}
+	*val = mlme_obj->cfg.gen.sr_enable_modes;
+}
+#endif
 #endif
 
 #ifdef WLAN_FEATURE_11BE
@@ -6346,3 +6359,18 @@ void wlan_mlme_get_feature_info(struct wlan_objmgr_psoc *psoc,
 	wlan_mlme_get_vht_enable2x2(psoc, &mlme_feature_set->enable2x2);
 }
 #endif
+
+enum phy_ch_width wlan_mlme_convert_vht_op_bw_to_phy_ch_width(
+						uint8_t channel_width)
+{
+	enum phy_ch_width phy_bw = CH_WIDTH_40MHZ;
+
+	if (channel_width == WLAN_VHTOP_CHWIDTH_80)
+		phy_bw = CH_WIDTH_80MHZ;
+	else if (channel_width == WLAN_VHTOP_CHWIDTH_160)
+		phy_bw = CH_WIDTH_160MHZ;
+	else if (channel_width == WLAN_VHTOP_CHWIDTH_80_80)
+		phy_bw = CH_WIDTH_80P80MHZ;
+
+	return phy_bw;
+}

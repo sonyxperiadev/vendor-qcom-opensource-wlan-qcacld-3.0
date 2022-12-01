@@ -115,7 +115,9 @@ void ucfg_spatial_reuse_send_sr_prohibit(struct wlan_objmgr_vdev *vdev,
 QDF_STATUS
 ucfg_spatial_reuse_setup_req(struct wlan_objmgr_vdev *vdev,
 			     struct wlan_objmgr_pdev *pdev,
-			     bool is_sr_enable, int32_t pd_threshold)
+			     bool is_sr_enable, int32_t srg_pd_threshold,
+			     int32_t non_srg_pd_threshold)
 {
-	return wlan_sr_setup_req(vdev, pdev, is_sr_enable, pd_threshold);
+	return wlan_sr_setup_req(vdev, pdev, is_sr_enable,
+				 srg_pd_threshold, non_srg_pd_threshold);
 }
