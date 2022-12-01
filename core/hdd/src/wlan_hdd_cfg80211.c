@@ -7397,12 +7397,12 @@ __wlan_hdd_cfg80211_get_wifi_info(struct wiphy *wiphy,
 	}
 
 	qdf_mem_free(firmware_version);
-	return cfg80211_vendor_cmd_reply(reply_skb);
+	return wlan_cfg80211_vendor_cmd_reply(reply_skb);
 
 error_nla_fail:
 	hdd_err("nla put fail");
 	qdf_mem_free(firmware_version);
-	kfree_skb(reply_skb);
+	wlan_cfg80211_vendor_free_skb(reply_skb);
 	return -EINVAL;
 }
 
@@ -14990,12 +14990,10 @@ __wlan_hdd_cfg80211_get_radio_combination_matrix(struct wiphy *wiphy,
 		nla_nest_end(reply_skb, combination);
 	}
 	nla_nest_end(reply_skb, combination_cfg);
-	ret = wlan_cfg80211_vendor_cmd_reply(reply_skb);
+	return wlan_cfg80211_vendor_cmd_reply(reply_skb);
 
-	return ret;
 err:
 	wlan_cfg80211_vendor_free_skb(reply_skb);
-
 	return ret;
 }
 

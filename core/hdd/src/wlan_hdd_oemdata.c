@@ -1448,7 +1448,7 @@ __wlan_hdd_cfg80211_oem_data_handler(struct wiphy *wiphy,
 		if (nla_put(skb, QCA_WLAN_VENDOR_ATTR_OEM_DATA_CMD_DATA,
 			    get_oem_data->data_len, get_oem_data->data)) {
 			hdd_err("nla put failure");
-			kfree_skb(skb);
+			wlan_cfg80211_vendor_free_skb(skb);
 			ret =  -EINVAL;
 			goto err;
 		}

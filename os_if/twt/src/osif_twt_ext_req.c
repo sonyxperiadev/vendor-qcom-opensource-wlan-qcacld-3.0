@@ -1921,12 +1921,12 @@ osif_twt_send_get_params_resp(struct wlan_objmgr_vdev *vdev,
 	if (QDF_IS_STATUS_ERROR(qdf_status))
 		goto fail;
 
-	if (cfg80211_vendor_cmd_reply(reply_skb))
+	if (wlan_cfg80211_vendor_cmd_reply(reply_skb))
 		qdf_status = QDF_STATUS_E_INVAL;
 
 	return qdf_status;
 fail:
-	kfree_skb(reply_skb);
+	wlan_cfg80211_vendor_free_skb(reply_skb);
 	return qdf_status;
 }
 

@@ -1000,12 +1000,12 @@ hdd_twt_pack_get_params_resp(struct hdd_context *hdd_ctx,
 	if (QDF_IS_STATUS_ERROR(qdf_status))
 		goto fail;
 
-	if (cfg80211_vendor_cmd_reply(reply_skb))
+	if (wlan_cfg80211_vendor_cmd_reply(reply_skb))
 		qdf_status = QDF_STATUS_E_INVAL;
-fail:
-	if (QDF_IS_STATUS_ERROR(qdf_status) && reply_skb)
-		kfree_skb(reply_skb);
+	return qdf_status;
 
+fail:
+	wlan_cfg80211_vendor_free_skb(reply_skb);
 	return qdf_status;
 }
 
@@ -3528,6 +3528,7 @@ hdd_twt_pack_get_capabilities_resp(struct hdd_adapter *adapter)
 	uint8_t peer_cap = 0, self_cap = 0;
 	bool twt_req = false, twt_bcast_req = false;
 	bool is_twt_24ghz_allowed = true;
+	int ret;
 
 	/*
 	 * Length of attribute QCA_WLAN_VENDOR_ATTR_TWT_CAPABILITIES_SELF &
@@ -3594,13 +3595,11 @@ hdd_twt_pack_get_capabilities_resp(struct hdd_adapter *adapter)
 
 	nla_nest_end(reply_skb, config_attr);
 
-	if (cfg80211_vendor_cmd_reply(reply_skb))
-		qdf_status = QDF_STATUS_E_INVAL;
+	ret = wlan_cfg80211_vendor_cmd_reply(reply_skb);
+	return qdf_status_from_os_return(ret);
 
 free_skb:
-	if (QDF_IS_STATUS_ERROR(qdf_status) && reply_skb)
-		kfree_skb(reply_skb);
-
+	wlan_cfg80211_vendor_free_skb(reply_skb);
 	return qdf_status;
 }
 
@@ -4003,7 +4002,7 @@ hdd_twt_request_session_traffic_stats(struct hdd_adapter *adapter,
 							peer_mac,
 							&errno);
 	if (!event)
-		return errno;
+		return qdf_status_from_os_return(errno);
 
 	skb_len = hdd_get_twt_get_stats_event_len();
 	reply_skb = wlan_cfg80211_vendor_cmd_alloc_reply_skb(
@@ -4011,7 +4010,7 @@ hdd_twt_request_session_traffic_stats(struct hdd_adapter *adapter,
 						skb_len);
 	if (!reply_skb) {
 		hdd_err("Get stats - alloc reply_skb failed");
-		errno = -ENOMEM;
+		status = QDF_STATUS_E_NOMEM;
 		goto free_event;
 	}
 
@@ -4022,14 +4021,14 @@ hdd_twt_request_session_traffic_stats(struct hdd_adapter *adapter,
 						event->num_twt_infra_cp_stats);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		hdd_err("Get stats - Failed to pack nl response");
-		errno = qdf_status_to_os_return(status);
 		goto free_skb;
 	}
 
 	qdf_mem_free(event->twt_infra_cp_stats);
 	qdf_mem_free(event);
 
-	return wlan_cfg80211_vendor_cmd_reply(reply_skb);
+	errno = wlan_cfg80211_vendor_cmd_reply(reply_skb);
+	return qdf_status_from_os_return(errno);
 
 free_skb:
 	wlan_cfg80211_vendor_free_skb(reply_skb);
@@ -4038,7 +4037,7 @@ free_event:
 	qdf_mem_free(event->twt_infra_cp_stats);
 	qdf_mem_free(event);
 
-	return errno;
+	return status;
 }
 
 /**

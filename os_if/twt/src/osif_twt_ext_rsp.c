@@ -802,13 +802,12 @@ osif_twt_send_get_capabilities_response(struct wlan_objmgr_psoc *psoc,
 
 	nla_nest_end(reply_skb, config_attr);
 
-	if (cfg80211_vendor_cmd_reply(reply_skb))
+	if (wlan_cfg80211_vendor_cmd_reply(reply_skb))
 		qdf_status = QDF_STATUS_E_INVAL;
+	return qdf_status;
 
 free_skb:
-	if (QDF_IS_STATUS_ERROR(qdf_status) && reply_skb)
-		kfree_skb(reply_skb);
-
+	wlan_cfg80211_vendor_free_skb(reply_skb);
 	return qdf_status;
 }
 
@@ -1555,6 +1554,7 @@ QDF_STATUS osif_twt_get_stats_response(struct wlan_objmgr_vdev *vdev,
 	struct wireless_dev *wdev;
 	QDF_STATUS status = QDF_STATUS_E_INVAL;
 	struct sk_buff *reply_skb;
+	int ret;
 
 	osif_priv = wlan_vdev_get_ospriv(vdev);
 	if (!osif_priv) {
@@ -1584,6 +1584,7 @@ QDF_STATUS osif_twt_get_stats_response(struct wlan_objmgr_vdev *vdev,
 		return qdf_status_to_os_return(status);
 	}
 
-	return wlan_cfg80211_vendor_cmd_reply(reply_skb);
+	ret = wlan_cfg80211_vendor_cmd_reply(reply_skb);
+	return qdf_status_from_os_return(ret);
 }
 
