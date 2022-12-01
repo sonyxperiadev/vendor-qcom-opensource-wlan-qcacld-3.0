@@ -36,11 +36,11 @@
 #endif
 #include "nan_public_structs.h"
 #include "nan_ucfg_api.h"
-#include <wlan_cm_ucfg_api.h>
+#include <wlan_cm_api.h>
 #include <enet.h>
 #include <cds_utils.h>
 #include <wlan_dp_bus_bandwidth.h>
-#include <wlan_tdls_ucfg_api.h>
+#include "wlan_tdls_api.h"
 #include <qdf_trace.h>
 #include <qdf_net_stats.h>
 
@@ -440,7 +440,7 @@ void dp_get_transmit_mac_addr(struct wlan_dp_intf *dp_intf,
 		break;
 	case QDF_STA_MODE:
 	case QDF_P2P_CLIENT_MODE:
-		if (ucfg_cm_is_vdev_active(dp_intf->vdev))
+		if (wlan_cm_is_vdev_active(dp_intf->vdev))
 			qdf_copy_macaddr(mac_addr_tx_allowed,
 					 &dp_intf->conn_info.bssid);
 		break;
@@ -815,7 +815,7 @@ void dp_sta_notify_tx_comp_cb(qdf_nbuf_t nbuf, void *ctx, uint16_t flag)
 	/* Since it is TDLS call took TDLS vdev ref*/
 	status = wlan_objmgr_vdev_try_get_ref(dp_intf->vdev, WLAN_TDLS_SB_ID);
 	if (QDF_IS_STATUS_SUCCESS(status)) {
-		ucfg_tdls_update_tx_pkt_cnt(dp_intf->vdev, dest_mac_addr);
+		wlan_tdls_update_tx_pkt_cnt(dp_intf->vdev, dest_mac_addr);
 		wlan_objmgr_vdev_release_ref(dp_intf->vdev, WLAN_TDLS_SB_ID);
 	}
 }
@@ -1729,7 +1729,7 @@ QDF_STATUS dp_rx_packet_cbk(void *dp_intf_context,
 		status = wlan_objmgr_vdev_try_get_ref(dp_intf->vdev,
 						      WLAN_TDLS_SB_ID);
 		if (QDF_IS_STATUS_SUCCESS(status)) {
-			ucfg_tdls_update_rx_pkt_cnt(dp_intf->vdev, mac_addr,
+			wlan_tdls_update_rx_pkt_cnt(dp_intf->vdev, mac_addr,
 						    dest_mac_addr);
 			wlan_objmgr_vdev_release_ref(dp_intf->vdev,
 						     WLAN_TDLS_SB_ID);

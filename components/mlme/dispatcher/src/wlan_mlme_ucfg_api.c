@@ -1182,19 +1182,8 @@ QDF_STATUS
 ucfg_mlme_stats_get_periodic_display_time(struct wlan_objmgr_psoc *psoc,
 					  uint32_t *periodic_display_time)
 {
-	struct wlan_mlme_psoc_ext_obj *mlme_obj;
-
-	mlme_obj = mlme_get_psoc_ext_obj(psoc);
-	if (!mlme_obj) {
-		*periodic_display_time =
-			cfg_default(CFG_PERIODIC_STATS_DISPLAY_TIME);
-		return QDF_STATUS_E_INVAL;
-	}
-
-	*periodic_display_time =
-		mlme_obj->cfg.stats.stats_periodic_display_time;
-
-	return QDF_STATUS_SUCCESS;
+	return wlan_mlme_stats_get_periodic_display_time(psoc,
+							 periodic_display_time);
 }
 
 QDF_STATUS
