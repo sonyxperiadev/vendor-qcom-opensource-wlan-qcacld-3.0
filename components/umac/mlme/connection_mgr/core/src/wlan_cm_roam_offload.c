@@ -4200,6 +4200,9 @@ cm_roam_switch_to_roam_start(struct wlan_objmgr_pdev *pdev,
 	enum roam_offload_state cur_state =
 				mlme_get_roam_state(psoc, vdev_id);
 	switch (cur_state) {
+	case WLAN_ROAMING_IN_PROG:
+		mlme_debug("Roam started already on vdev[%d]", vdev_id);
+		break;
 	case WLAN_ROAM_RSO_ENABLED:
 		mlme_set_roam_state(psoc, vdev_id, WLAN_ROAMING_IN_PROG);
 		break;
