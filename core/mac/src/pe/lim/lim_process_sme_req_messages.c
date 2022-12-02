@@ -969,45 +969,6 @@ __lim_handle_sme_start_bss_request(struct mac_context *mac_ctx, uint32_t *msg_bu
 #ifdef FEATURE_WLAN_MCC_TO_SCC_SWITCH
 		lim_fill_cc_mode(mac_ctx, session);
 #endif
-		session->htCapability =
-			IS_DOT11_MODE_HT(session->dot11mode);
-		session->vhtCapability =
-			IS_DOT11_MODE_VHT(session->dot11mode);
-
-		if (IS_DOT11_MODE_HE(session->dot11mode)) {
-			lim_update_session_he_capable(mac_ctx, session);
-			lim_copy_bss_he_cap(session);
-		} else if (wlan_reg_is_6ghz_chan_freq(session->curr_op_freq)) {
-			pe_err("Invalid oper_ch_freq %d for dot11mode %d",
-			       session->curr_op_freq, session->dot11mode);
-			ret_code = eSIR_SME_INVALID_PARAMETERS;
-			goto free;
-		} else {
-			lim_strip_he_ies_from_add_ies(mac_ctx, session);
-		}
-
-		if (IS_DOT11_MODE_EHT(session->dot11mode)) {
-			lim_update_session_eht_capable(mac_ctx, session);
-			lim_copy_bss_eht_cap(session);
-		} else {
-			lim_strip_eht_ies_from_add_ies(mac_ctx, session);
-		}
-
-		session->txLdpcIniFeatureEnabled =
-				mac_ctx->mlme_cfg->ht_caps.tx_ldpc_enable;
-		rsn_caps = wlan_crypto_get_param(session->vdev,
-						 WLAN_CRYPTO_PARAM_RSN_CAP);
-		session->limRmfEnabled =
-			rsn_caps & WLAN_CRYPTO_RSN_CAP_MFP_ENABLED ? 1 : 0;
-		pe_debug("RMF enabled: %d rsn_caps 0x%x",
-			 session->limRmfEnabled, rsn_caps);
-
-		qdf_mem_copy((void *)&session->rateSet,
-			     (void *)&sme_start_bss_req->operationalRateSet,
-			     sizeof(tSirMacRateSet));
-		qdf_mem_copy((void *)&session->extRateSet,
-			     (void *)&sme_start_bss_req->extendedRateSet,
-			     sizeof(tSirMacRateSet));
 
 		if (!wlan_reg_is_24ghz_ch_freq(session->curr_op_freq)) {
 			vdev_type_nss = &mac_ctx->vdev_type_nss_5g;
@@ -1049,6 +1010,46 @@ __lim_handle_sme_start_bss_request(struct mac_context *mac_ctx, uint32_t *msg_bu
 		session->nss = session->vdev_nss;
 		if (!mac_ctx->mlme_cfg->vht_caps.vht_cap_info.enable2x2)
 			session->nss = 1;
+
+		session->htCapability =
+			IS_DOT11_MODE_HT(session->dot11mode);
+		session->vhtCapability =
+			IS_DOT11_MODE_VHT(session->dot11mode);
+
+		if (IS_DOT11_MODE_HE(session->dot11mode)) {
+			lim_update_session_he_capable(mac_ctx, session);
+			lim_copy_bss_he_cap(session);
+		} else if (wlan_reg_is_6ghz_chan_freq(session->curr_op_freq)) {
+			pe_err("Invalid oper_ch_freq %d for dot11mode %d",
+			       session->curr_op_freq, session->dot11mode);
+			ret_code = eSIR_SME_INVALID_PARAMETERS;
+			goto free;
+		} else {
+			lim_strip_he_ies_from_add_ies(mac_ctx, session);
+		}
+
+		if (IS_DOT11_MODE_EHT(session->dot11mode)) {
+			lim_update_session_eht_capable(mac_ctx, session);
+			lim_copy_bss_eht_cap(session);
+		} else {
+			lim_strip_eht_ies_from_add_ies(mac_ctx, session);
+		}
+
+		session->txLdpcIniFeatureEnabled =
+				mac_ctx->mlme_cfg->ht_caps.tx_ldpc_enable;
+		rsn_caps = wlan_crypto_get_param(session->vdev,
+						 WLAN_CRYPTO_PARAM_RSN_CAP);
+		session->limRmfEnabled =
+			rsn_caps & WLAN_CRYPTO_RSN_CAP_MFP_ENABLED ? 1 : 0;
+		pe_debug("RMF enabled: %d rsn_caps 0x%x",
+			 session->limRmfEnabled, rsn_caps);
+
+		qdf_mem_copy((void *)&session->rateSet,
+			     (void *)&sme_start_bss_req->operationalRateSet,
+			     sizeof(tSirMacRateSet));
+		qdf_mem_copy((void *)&session->extRateSet,
+			     (void *)&sme_start_bss_req->extendedRateSet,
+			     sizeof(tSirMacRateSet));
 		/*
 		 * Allocate memory for the array of
 		 * parsed (Re)Assoc request structure
@@ -1677,36 +1678,6 @@ static void lim_handle_iot_ap_no_common_he_rates(struct mac_context *mac,
 #endif
 
 #ifdef WLAN_FEATURE_11AX
-static void
-lim_update_he_caps_mcs(struct mac_context *mac, struct pe_session *session)
-{
-	uint32_t tx_mcs_map = 0;
-	uint32_t rx_mcs_map = 0;
-	uint32_t mcs_map = 0;
-	struct wlan_objmgr_vdev *vdev = session->vdev;
-	struct mlme_legacy_priv *mlme_priv;
-	struct wlan_mlme_cfg *mlme_cfg = mac->mlme_cfg;
-
-	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
-	if (!mlme_priv)
-		return;
-
-	rx_mcs_map = mlme_cfg->he_caps.dot11_he_cap.rx_he_mcs_map_lt_80;
-	tx_mcs_map = mlme_cfg->he_caps.dot11_he_cap.tx_he_mcs_map_lt_80;
-	mcs_map = rx_mcs_map & 0x3;
-
-	if (session->nss == 1) {
-		tx_mcs_map = HE_SET_MCS_4_NSS(tx_mcs_map, HE_MCS_DISABLE, 2);
-		rx_mcs_map = HE_SET_MCS_4_NSS(rx_mcs_map, HE_MCS_DISABLE, 2);
-	} else {
-		tx_mcs_map = HE_SET_MCS_4_NSS(tx_mcs_map, mcs_map, 2);
-		rx_mcs_map = HE_SET_MCS_4_NSS(rx_mcs_map, mcs_map, 2);
-	}
-	pe_debug("new HE Nss MCS MAP: Rx 0x%0X, Tx: 0x%0X",
-		  rx_mcs_map, tx_mcs_map);
-	mlme_priv->he_config.tx_he_mcs_map_lt_80 = tx_mcs_map;
-	mlme_priv->he_config.rx_he_mcs_map_lt_80 = rx_mcs_map;
-}
 
 /**
  * lim_update_he_caps_htc() - Update htc in he caps
@@ -1729,10 +1700,6 @@ lim_update_he_caps_htc(struct pe_session *session, bool val)
 	mlme_priv->he_config.htc_he = val;
 }
 #else
-static void
-lim_update_he_caps_mcs(struct mac_context *mac, struct pe_session *session)
-{
-}
 
 static void
 lim_update_he_caps_htc(struct pe_session *session,  bool val)

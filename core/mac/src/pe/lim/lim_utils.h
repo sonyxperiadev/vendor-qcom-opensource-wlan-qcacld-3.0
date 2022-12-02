@@ -1270,6 +1270,17 @@ void lim_add_bss_he_cfg(struct bss_params *add_bss, struct pe_session *session);
 void lim_copy_bss_he_cap(struct pe_session *session);
 
 /**
+ * lim_update_he_caps_mcs() - Update he caps MCS
+ * @mac: MAC context
+ * @session: pointer to PE session
+ *
+ * Return: None
+ */
+void lim_update_he_caps_mcs(struct mac_context *mac,
+			    struct pe_session *session);
+
+
+/**
  * lim_update_he_6gop_assoc_resp() - Update HE 6GHz op info to BSS params
  * @add_bss: pointer to add bss params
  * @he_op: Pointer to HE operation info IE
@@ -1648,6 +1659,11 @@ static inline void lim_decide_he_op(struct mac_context *mac_ctx,
 
 static inline
 void lim_copy_bss_he_cap(struct pe_session *session)
+{
+}
+
+static inline
+void lim_update_he_caps_mcs(struct mac_context *mac, struct pe_session *session)
 {
 }
 
