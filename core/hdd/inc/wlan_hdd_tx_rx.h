@@ -365,4 +365,19 @@ void hdd_print_netdev_txq_status(struct net_device *dev);
 uint32_t
 wlan_hdd_dump_queue_history_state(struct hdd_netif_queue_history *q_hist,
 				  char *buf, uint32_t size);
+
+#ifdef QCA_LL_LEGACY_TX_FLOW_CONTROL
+/**
+ * wlan_hdd_set_tx_flow_info() - To set TX flow info
+ *
+ * This routine is called to set TX flow info
+ *
+ * Return: None
+ */
+void wlan_hdd_set_tx_flow_info(void);
+#else
+static inline void wlan_hdd_set_tx_flow_info(void)
+{
+}
+#endif
 #endif /* end #if !defined(WLAN_HDD_TX_RX_H) */

@@ -2184,7 +2184,7 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 		wrqu.data.length = strlen(startBssEvent);
 		we_event = IWEVCUSTOM;
 		we_custom_event_generic = we_custom_start_event;
-		hdd_ipa_set_tx_flow_info();
+		wlan_hdd_set_tx_flow_info();
 		sap_ctx = WLAN_HDD_GET_SAP_CTX_PTR(adapter);
 		if (!sap_ctx) {
 			hdd_err("sap ctx is null");
@@ -3095,7 +3095,7 @@ stopbss:
 			ucfg_dp_bus_bw_compute_timer_try_stop(hdd_ctx->psoc);
 		}
 
-		hdd_ipa_set_tx_flow_info();
+		wlan_hdd_set_tx_flow_info();
 	}
 	return QDF_STATUS_SUCCESS;
 }
