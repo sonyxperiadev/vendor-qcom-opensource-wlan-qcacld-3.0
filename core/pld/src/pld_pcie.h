@@ -438,6 +438,18 @@ static inline bool pld_pcie_is_direct_link_supported(struct device *dev)
 {
 	return false;
 }
+
+static inline
+int pld_pcie_audio_smmu_map(struct device *dev, phys_addr_t paddr,
+			    dma_addr_t iova, size_t size)
+{
+	return 0;
+}
+
+static inline
+void pld_pcie_audio_smmu_unmap(struct device *dev, dma_addr_t iova, size_t size)
+{
+}
 #else
 int pld_pcie_get_fw_files_for_target(struct device *dev,
 				     struct pld_fw_files *pfw_files,
@@ -746,10 +758,35 @@ static inline bool pld_pcie_is_direct_link_supported(struct device *dev)
 {
 	return cnss_get_fw_cap(dev, CNSS_FW_CAP_DIRECT_LINK_SUPPORT);
 }
+
+static inline
+int pld_pcie_audio_smmu_map(struct device *dev, phys_addr_t paddr,
+			    dma_addr_t iova, size_t size)
+{
+	return cnss_audio_smmu_map(dev, paddr, iova, size);
+}
+
+static inline
+void pld_pcie_audio_smmu_unmap(struct device *dev, dma_addr_t iova, size_t size)
+{
+	cnss_audio_smmu_unmap(dev, iova, size);
+}
 #else
 static inline bool pld_pcie_is_direct_link_supported(struct device *dev)
 {
 	return false;
+}
+
+static inline
+int pld_pcie_audio_smmu_map(struct device *dev, phys_addr_t paddr,
+			    dma_addr_t iova, size_t size)
+{
+	return 0;
+}
+
+static inline
+void pld_pcie_audio_smmu_unmap(struct device *dev, dma_addr_t iova, size_t size)
+{
 }
 #endif
 #endif

@@ -3436,3 +3436,33 @@ bool pld_is_one_msi(struct device *dev)
 
 	return ret;
 }
+
+#ifdef FEATURE_DIRECT_LINK
+int pld_audio_smmu_map(struct device *dev, phys_addr_t paddr, dma_addr_t iova,
+		       size_t size)
+{
+	int ret;
+
+	switch (pld_get_bus_type(dev)) {
+	case PLD_BUS_TYPE_PCIE:
+		ret = pld_pcie_audio_smmu_map(dev, paddr, iova, size);
+		break;
+	default:
+		ret = -EINVAL;
+		break;
+	}
+
+	return ret;
+}
+
+void pld_audio_smmu_unmap(struct device *dev, dma_addr_t iova, size_t size)
+{
+	switch (pld_get_bus_type(dev)) {
+	case PLD_BUS_TYPE_PCIE:
+		pld_pcie_audio_smmu_unmap(dev, iova, size);
+		break;
+	default:
+		break;
+	}
+}
+#endif
