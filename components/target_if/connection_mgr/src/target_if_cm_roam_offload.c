@@ -387,6 +387,40 @@ target_if_cm_exclude_rm_partial_scan_freq(struct wlan_objmgr_vdev *vdev,
 	return status;
 }
 
+/**
+ * target_if_cm_roam_full_scan_6ghz_on_disc() - Indicate to FW whether to
+ * include the 6 GHz channels in roam full scan only on prior discovery of any
+ * 6 GHz support in the environment or by default.
+ * @vdev: vdev object
+ * @roam_full_scan_6ghz_on_disc: Include the 6 GHz channels in roam full scan:
+ * 1 - Include only on prior discovery of any 6 GHz support in the environment
+ * 0 - Include all the supported 6 GHz channels by default
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+target_if_cm_roam_full_scan_6ghz_on_disc(struct wlan_objmgr_vdev *vdev,
+					 uint8_t roam_full_scan_6ghz_on_disc)
+{
+	QDF_STATUS status = QDF_STATUS_E_FAILURE;
+	uint8_t vdev_id;
+	wmi_unified_t wmi_handle;
+
+	wmi_handle = target_if_cm_roam_get_wmi_handle_from_vdev(vdev);
+	if (!wmi_handle)
+		return status;
+
+	vdev_id = wlan_vdev_get_id(vdev);
+	status = target_if_roam_set_param(wmi_handle, vdev_id,
+					  WMI_ROAM_PARAM_ROAM_CONTROL_FULL_SCAN_6GHZ_PSC_ONLY_WITH_RNR,
+					  roam_full_scan_6ghz_on_disc);
+
+	if (QDF_IS_STATUS_ERROR(status))
+		target_if_err("Failed to set WMI_ROAM_PARAM_ROAM_CONTROL_FULL_SCAN_6GHZ_PSC_ONLY_WITH_RNR");
+
+	return status;
+}
+
 static void
 target_if_cm_roam_register_lfr3_ops(struct wlan_cm_roam_tx_ops *tx_ops)
 {
@@ -398,6 +432,8 @@ target_if_cm_roam_register_lfr3_ops(struct wlan_cm_roam_tx_ops *tx_ops)
 	tx_ops->send_roam_mcc_disallow = target_if_cm_roam_mcc_disallow;
 	tx_ops->send_exclude_rm_partial_scan_freq =
 				target_if_cm_exclude_rm_partial_scan_freq;
+	tx_ops->send_roam_full_scan_6ghz_on_disc =
+				target_if_cm_roam_full_scan_6ghz_on_disc;
 	target_if_cm_roam_register_vendor_handoff_ops(tx_ops);
 	target_if_cm_roam_register_linkspeed_state(tx_ops);
 }
@@ -430,6 +466,13 @@ target_if_cm_roam_mcc_disallow(struct wlan_objmgr_vdev *vdev,
 static QDF_STATUS
 target_if_cm_exclude_rm_partial_scan_freq(struct wlan_objmgr_vdev *vdev,
 					  uint8_t exclude_rm_partial_scan_freq)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static QDF_STATUS
+target_if_cm_roam_full_scan_6ghz_on_disc(struct wlan_objmgr_vdev *vdev,
+					 uint8_t roam_full_scan_6ghz_on_disc)
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }
@@ -1441,6 +1484,10 @@ target_if_cm_roam_send_start(struct wlan_objmgr_vdev *vdev,
 		target_if_cm_exclude_rm_partial_scan_freq(
 				vdev, req->wlan_exclude_rm_partial_scan_freq);
 
+	if (req->wlan_roam_full_scan_6ghz_on_disc)
+		target_if_cm_roam_full_scan_6ghz_on_disc(
+				vdev, req->wlan_roam_full_scan_6ghz_on_disc);
+
 	is_mcc_disallowed = !wlan_cm_same_band_sta_allowed(psoc);
 	target_if_cm_roam_mcc_disallow(vdev, vdev_id, is_mcc_disallowed);
 	/* add other wmi commands */
@@ -1831,6 +1878,10 @@ target_if_cm_roam_send_update_config(struct wlan_objmgr_vdev *vdev,
 		if (req->wlan_exclude_rm_partial_scan_freq)
 			target_if_cm_exclude_rm_partial_scan_freq(
 				vdev, req->wlan_exclude_rm_partial_scan_freq);
+
+		if (req->wlan_roam_full_scan_6ghz_on_disc)
+			target_if_cm_roam_full_scan_6ghz_on_disc(
+				vdev, req->wlan_roam_full_scan_6ghz_on_disc);
 
 		is_mcc_disallowed = !wlan_cm_same_band_sta_allowed(psoc);
 		target_if_cm_roam_mcc_disallow(vdev, vdev_id,

@@ -1909,6 +1909,8 @@ struct fw_scan_channels {
  * @roam_ho_delay_config: Roam HO delay value
  * @exclude_rm_partial_scan_freq: Exclude the channels in roam full scan that
  * are already scanned as part of partial scan.
+ * @roam_full_scan_6ghz_on_disc: Include the 6 GHz channels in roam full scan
+ * only on prior discovery of any 6 GHz support in the environment.
  */
 struct wlan_mlme_lfr_cfg {
 	bool mawc_roam_enabled;
@@ -2033,6 +2035,7 @@ struct wlan_mlme_lfr_cfg {
 	uint8_t beaconloss_timeout_onsleep;
 	uint16_t roam_ho_delay_config;
 	uint8_t exclude_rm_partial_scan_freq;
+	uint8_t roam_full_scan_6ghz_on_disc;
 };
 
 /**
