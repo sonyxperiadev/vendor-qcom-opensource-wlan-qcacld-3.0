@@ -19924,7 +19924,7 @@ hdd_adapter_update_mac_on_mode_change(struct hdd_adapter *adapter,
 		return;
 
 	assoc_adapter = hdd_get_assoc_link_adapter(adapter);
-	if (!assoc_adapter)
+	if (!assoc_adapter || qdf_is_macaddr_zero(&assoc_adapter->mld_addr))
 		return;
 
 	is_mac_equal = qdf_is_macaddr_equal(&assoc_adapter->mac_addr,

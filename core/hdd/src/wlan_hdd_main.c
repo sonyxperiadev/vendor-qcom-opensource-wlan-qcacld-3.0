@@ -7531,7 +7531,7 @@ struct hdd_adapter *hdd_open_adapter(struct hdd_context *hdd_ctx,
 	struct hdd_adapter *adapter = NULL, *sta_adapter = NULL;
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
 	uint32_t i;
-	bool eht_capab;
+	bool eht_capab = 0;
 
 	status = wlan_hdd_validate_mac_address((struct qdf_mac_addr *)mac_addr);
 	if (QDF_IS_STATUS_ERROR(status)) {
@@ -7727,16 +7727,12 @@ struct hdd_adapter *hdd_open_adapter(struct hdd_context *hdd_ctx,
 		return NULL;
 	}
 
-	if (params->is_ml_adapter) {
+	ucfg_psoc_mlme_get_11be_capab(hdd_ctx->psoc, &eht_capab);
+	if (params->is_ml_adapter && eht_capab) {
 		hdd_adapter_set_ml_adapter(adapter);
-		ucfg_psoc_mlme_get_11be_capab(hdd_ctx->psoc, &eht_capab);
-		if (eht_capab) {
-			qdf_mem_copy(adapter->mld_addr.bytes,
-				     adapter->mac_addr.bytes,
-				     QDF_MAC_ADDR_SIZE);
-			if (params->is_single_link)
-				hdd_adapter_set_sl_ml_adapter(adapter);
-		}
+		qdf_copy_macaddr(&adapter->mld_addr, &adapter->mac_addr);
+		if (params->is_single_link)
+			hdd_adapter_set_sl_ml_adapter(adapter);
 	}
 
 	status = hdd_adapter_feature_update_work_init(adapter);
@@ -15346,7 +15342,7 @@ hdd_open_adapters_for_mission_mode(struct hdd_context *hdd_ctx)
 	QDF_STATUS status;
 	uint8_t *mac_addr;
 	struct hdd_adapter_create_param params = {0};
-	bool eht_capab;
+	bool eht_capab = 0;
 
 	ucfg_mlme_get_dot11p_mode(hdd_ctx->psoc, &dot11p_mode);
 	ucfg_psoc_mlme_get_11be_capab(hdd_ctx->psoc, &eht_capab);
@@ -15359,7 +15355,8 @@ hdd_open_adapters_for_mission_mode(struct hdd_context *hdd_ctx)
 	if (!mac_addr)
 		return QDF_STATUS_E_INVAL;
 
-	params.is_ml_adapter = true;
+	if (eht_capab)
+		params.is_ml_adapter = true;
 	status = hdd_open_adapter_no_trans(hdd_ctx, QDF_STA_MODE,
 					   "wlan%d", mac_addr,
 					   &params);
