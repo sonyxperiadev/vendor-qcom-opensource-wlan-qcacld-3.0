@@ -585,13 +585,10 @@ static inline int hdd_tsf_reg_is_details_valid(struct hdd_adapter *adapter)
 static inline void
 wlan_hdd_tsf_reg_update_details(struct hdd_adapter *adapter, struct stsf *ptsf)
 {
-	if (adapter->tsf_id != ptsf->tsf_id ||
-	    adapter->tsf_mac_id != ptsf->mac_id) {
-		if (ptsf->tsf_id_valid) {
-			adapter->tsf_id = ptsf->tsf_id;
-			adapter->tsf_mac_id = ptsf->mac_id;
-			qdf_atomic_set(&adapter->tsf_details_valid, 1);
-		}
+	if (ptsf->tsf_id_valid) {
+		adapter->tsf_id = ptsf->tsf_id;
+		adapter->tsf_mac_id = ptsf->mac_id;
+		qdf_atomic_set(&adapter->tsf_details_valid, 1);
 	}
 	hdd_info("vdev_id %u tsf_id %u tsf_id_valid %u mac_id %u",
 		 adapter->vdev_id, ptsf->tsf_id, ptsf->tsf_id_valid,
