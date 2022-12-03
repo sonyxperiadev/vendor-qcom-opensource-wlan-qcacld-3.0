@@ -143,25 +143,16 @@ struct wlan_dp_psoc_cfg {
 	uint32_t rx_hp_oos_update_limit;
 	uint64_t rx_softirq_max_yield_duration_ns;
 #ifdef WLAN_FEATURE_PERIODIC_STA_STATS
-	/* Periodicity of logging */
 	uint32_t periodic_stats_timer_interval;
-	/* Duration for which periodic logging should be done */
 	uint32_t periodic_stats_timer_duration;
 #endif /* WLAN_FEATURE_PERIODIC_STA_STATS */
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
-	/* bandwidth threshold for super high bandwidth */
 	uint32_t bus_bw_super_high_threshold;
-	/* bandwidth threshold for ultra high bandwidth */
 	uint32_t bus_bw_ultra_high_threshold;
-	/* bandwidth threshold for very high bandwidth */
 	uint32_t bus_bw_very_high_threshold;
-	/* bandwidth threshold for DBS mode bandwidth */
 	uint32_t bus_bw_dbs_threshold;
-	/* bandwidth threshold for high bandwidth */
 	uint32_t bus_bw_high_threshold;
-	/* bandwidth threshold for medium bandwidth */
 	uint32_t bus_bw_medium_threshold;
-	/* bandwidth threshold for low bandwidth */
 	uint32_t bus_bw_low_threshold;
 	uint32_t bus_bw_compute_interval;
 	uint32_t enable_tcp_delack;
@@ -183,7 +174,6 @@ struct wlan_dp_psoc_cfg {
 	uint16_t del_ack_timer_value;
 	uint16_t del_ack_pkt_count;
 #endif
-	/* CPU affinity mask for rx_thread */
 	uint32_t rx_thread_ul_affinity_mask;
 	uint32_t rx_thread_affinity_mask;
 	uint8_t cpu_map_list[CFG_DP_RPS_RX_QUEUE_CPU_MAP_LIST_LEN];
@@ -328,6 +318,11 @@ struct link_monitoring {
 	uint8_t is_rx_linkspeed_good;
 };
 
+/**
+ * struct direct_link_info - direct link configuration items
+ * @config_set: is the direct link config active
+ * @low_latency: is low latency enabled
+ */
 struct direct_link_info {
 	bool config_set;
 	bool low_latency;
@@ -378,6 +373,7 @@ struct direct_link_info {
  * @bss_state: AP BSS state
  * @qdf_sta_eap_frm_done_event: EAP frame event management
  * @traffic_end_ind: store traffic end indication info
+ * @direct_link_config: direct link configuration parameters
  */
 struct wlan_dp_intf {
 	struct wlan_dp_psoc_context *dp_ctx;
@@ -395,10 +391,8 @@ struct wlan_dp_intf {
 	struct wlan_objmgr_vdev *vdev;
 	qdf_spinlock_t vdev_lock;
 	qdf_netdev_t dev;
-	/**Device TX/RX statistics*/
 	struct dp_stats dp_stats;
 #ifdef WLAN_FEATURE_PERIODIC_STA_STATS
-	/* Indicate whether to display sta periodic stats */
 	bool is_sta_periodic_stats_enabled;
 	uint16_t periodic_stats_timer_count;
 	uint32_t periodic_stats_timer_counter;
@@ -512,6 +506,10 @@ struct dp_direct_link_context {
  * @rx_high_ind_cnt: rx high_ind count
  * @receive_offload_cb: receive offload cb
  * @dp_agg_param: DP aggregation parameter
+ * @dp_agg_param.rx_aggregation:
+ * @dp_agg_param.gro_force_flush:
+ * @dp_agg_param.tc_based_dyn_gro:
+ * @dp_agg_param.tc_ingress_prio:
  * @rtpm_tput_policy_ctx: Runtime Tput policy context
  * @txrx_hist: TxRx histogram
  * @bbm_ctx: bus bandwidth manager context
@@ -524,9 +522,7 @@ struct dp_direct_link_context {
 struct wlan_dp_psoc_context {
 	struct wlan_objmgr_psoc *psoc;
 	struct wlan_objmgr_pdev *pdev;
-	/** Pointer to the qdf device */
 	qdf_device_t qdf_dev;
-	/** Config values read from ini file */
 	struct wlan_dp_psoc_cfg dp_cfg;
 
 	qdf_spinlock_t intf_list_lock;
@@ -535,7 +531,6 @@ struct wlan_dp_psoc_context {
 	bool rps;
 	bool dynamic_rps;
 	bool enable_rxthread;
-	/* support for DP RX threads */
 	bool enable_dp_rx_threads;
 	bool napi_enable;
 
@@ -544,14 +539,10 @@ struct wlan_dp_psoc_context {
 	struct wlan_dp_psoc_nb_ops nb_ops;
 
 	bool en_tcp_delack_no_lro;
-	/* For Rx thread non GRO/LRO packet accounting */
 	uint64_t no_rx_offload_pkt_cnt;
 	uint64_t no_tx_offload_pkt_cnt;
-
 	bool is_suspend;
-	/* Flag keeps track of wiphy suspend/resume */
 	bool is_wiphy_suspended;
-
 	qdf_atomic_t num_latency_critical_clients;
 	uint8_t high_bus_bw_request;
 	uint64_t bw_vote_time;
@@ -562,9 +553,7 @@ struct wlan_dp_psoc_context {
 	int cur_rx_level;
 	uint64_t prev_no_rx_offload_pkts;
 	uint64_t prev_rx_offload_pkts;
-	/* Count of non TSO packets in previous bus bw delta time */
 	uint64_t prev_no_tx_offload_pkts;
-	/* Count of TSO packets in previous bus bw delta time */
 	uint64_t prev_tx_offload_pkts;
 	int cur_tx_level;
 	uint64_t prev_tx;
@@ -574,9 +563,7 @@ struct wlan_dp_psoc_context {
 	struct dp_rtpm_tput_policy_context rtpm_tput_policy_ctx;
 #endif
 #endif /*WLAN_FEATURE_DP_BUS_BANDWIDTH*/
-	/* disable RX offload (GRO/LRO) in concurrency scenarios */
 	qdf_atomic_t disable_rx_ol_in_concurrency;
-	/* disable RX offload (GRO/LRO) in low throughput scenarios */
 	qdf_atomic_t disable_rx_ol_in_low_tput;
 
 	uint16_t txrx_hist_idx;
