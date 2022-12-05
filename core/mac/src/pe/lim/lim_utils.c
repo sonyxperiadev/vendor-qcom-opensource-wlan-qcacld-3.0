@@ -7369,6 +7369,15 @@ void lim_update_he_caps_mcs(struct mac_context *mac, struct pe_session *session)
 	mlme_priv->he_config.rx_he_mcs_map_lt_80 = rx_mcs_map;
 	*((uint16_t *)mlme_priv->he_config.tx_he_mcs_map_160) = tx_mcs_map;
 	*((uint16_t *)mlme_priv->he_config.rx_he_mcs_map_160) = rx_mcs_map;
+	qdf_mem_copy(mlme_priv->he_config.tx_he_mcs_map_160, &tx_mcs_map,
+		     sizeof(u_int16_t));
+	qdf_mem_copy(mlme_priv->he_config.rx_he_mcs_map_160, &rx_mcs_map,
+		     sizeof(u_int16_t));
+
+	pe_debug("new HE80 mcs map tx: 0x%x, rx: 0x%x", tx_mcs_map, rx_mcs_map);
+	pe_debug("new HE160 mcs map tx: 0x%x, rx: 0x%x",
+		 *(uint16_t *)mlme_priv->he_config.tx_he_mcs_map_160,
+		 *(uint16_t *)mlme_priv->he_config.rx_he_mcs_map_160);
 }
 
 static void

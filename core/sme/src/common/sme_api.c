@@ -10580,6 +10580,25 @@ void sme_update_he_cap_nss(mac_handle_t mac_handle, uint8_t session_id,
 	if (cfg_in_range(CFG_HE_TX_MCS_MAP_LT_80, tx_mcs_map))
 		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.tx_he_mcs_map_lt_80 =
 		tx_mcs_map;
+	if (cfg_in_range(CFG_HE_RX_MCS_MAP_160, rx_mcs_map))
+		qdf_mem_copy(mac_ctx->mlme_cfg->he_caps.dot11_he_cap.
+			     rx_he_mcs_map_160,
+			     &rx_mcs_map, sizeof(uint16_t));
+	if (cfg_in_range(CFG_HE_TX_MCS_MAP_160, tx_mcs_map))
+		qdf_mem_copy(mac_ctx->mlme_cfg->he_caps.dot11_he_cap.
+			     tx_he_mcs_map_160,
+			     &tx_mcs_map, sizeof(uint16_t));
+
+	mac_ctx->he_cap_2g.rx_he_mcs_map_lt_80 = rx_mcs_map;
+	mac_ctx->he_cap_2g.tx_he_mcs_map_lt_80 = tx_mcs_map;
+	mac_ctx->he_cap_5g.rx_he_mcs_map_lt_80 = rx_mcs_map;
+	mac_ctx->he_cap_5g.tx_he_mcs_map_lt_80 = tx_mcs_map;
+	qdf_mem_copy(mac_ctx->he_cap_5g.rx_he_mcs_map_160,
+		     mac_ctx->mlme_cfg->he_caps.dot11_he_cap.rx_he_mcs_map_160,
+		     sizeof(uint16_t));
+	qdf_mem_copy(mac_ctx->he_cap_5g.tx_he_mcs_map_160,
+		     mac_ctx->mlme_cfg->he_caps.dot11_he_cap.tx_he_mcs_map_160,
+		     sizeof(uint16_t));
 	csr_update_session_he_cap(mac_ctx, csr_session);
 
 }
@@ -10591,12 +10610,26 @@ int sme_update_he_mcs(mac_handle_t mac_handle, uint8_t session_id,
 	struct csr_roam_session *csr_session;
 	uint16_t mcs_val = 0;
 	uint16_t mcs_map = HE_MCS_ALL_DISABLED;
+	uint16_t mcs_map_cfg;
+	uint8_t nss = 0, i;
+	uint16_t mcs_mask = 0x3;
 
 	csr_session = CSR_GET_SESSION(mac_ctx, session_id);
 	if (!csr_session) {
 		sme_err("No session for id %d", session_id);
 		return -EINVAL;
 	}
+
+	mcs_map_cfg =
+		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.rx_he_mcs_map_lt_80;
+	for (nss = 0; nss < VHT_MAX_NSS; nss++) {
+		if ((mcs_map_cfg & mcs_mask) ==  mcs_mask)
+			break;
+		mcs_mask = (mcs_mask << 2);
+	}
+	if (nss > 2)
+		nss = 2;
+
 	if ((he_mcs & 0x3) == HE_MCS_DISABLE) {
 		sme_err("Invalid HE MCS 0x%0x, can't disable 0-7 for 1ss",
 			he_mcs);
@@ -10607,24 +10640,29 @@ int sme_update_he_mcs(mac_handle_t mac_handle, uint8_t session_id,
 	case HE_80_MCS0_7:
 	case HE_80_MCS0_9:
 	case HE_80_MCS0_11:
-		if (mac_ctx->mlme_cfg->vht_caps.vht_cap_info.enable2x2) {
-			mcs_map = HE_SET_MCS_4_NSS(mcs_map, mcs_val, 1);
-			mcs_map = HE_SET_MCS_4_NSS(mcs_map, mcs_val, 2);
-		} else {
-			mcs_map = HE_SET_MCS_4_NSS(mcs_map, mcs_val, 1);
-		}
+		for (i = 1; i <= nss; i++)
+			mcs_map = HE_SET_MCS_4_NSS(mcs_map, mcs_val, i);
+
+		sme_debug("HE 80 nss: %d, mcs: 0x%0X", nss, mcs_map);
 		if (cfg_in_range(CFG_HE_TX_MCS_MAP_LT_80, mcs_map))
 			mac_ctx->mlme_cfg->he_caps.dot11_he_cap.
 			tx_he_mcs_map_lt_80 = mcs_map;
 		if (cfg_in_range(CFG_HE_RX_MCS_MAP_LT_80, mcs_map))
 			mac_ctx->mlme_cfg->he_caps.dot11_he_cap.
 			rx_he_mcs_map_lt_80 = mcs_map;
+		mac_ctx->he_cap_2g.tx_he_mcs_map_lt_80 = mcs_map;
+		mac_ctx->he_cap_2g.rx_he_mcs_map_lt_80 = mcs_map;
+		mac_ctx->he_cap_5g.tx_he_mcs_map_lt_80 = mcs_map;
+		mac_ctx->he_cap_5g.rx_he_mcs_map_lt_80 = mcs_map;
 		break;
 
 	case HE_160_MCS0_7:
 	case HE_160_MCS0_9:
 	case HE_160_MCS0_11:
-		mcs_map = HE_SET_MCS_4_NSS(mcs_map, mcs_val, 1);
+		for (i = 1; i <= nss; i++)
+			mcs_map = HE_SET_MCS_4_NSS(mcs_map, mcs_val, i);
+
+		sme_debug("HE 160 nss: %d, mcs: 0x%0X", nss, mcs_map);
 		if (cfg_in_range(CFG_HE_TX_MCS_MAP_160, mcs_map))
 			qdf_mem_copy(mac_ctx->mlme_cfg->he_caps.dot11_he_cap.
 				     tx_he_mcs_map_160, &mcs_map,
@@ -10633,6 +10671,14 @@ int sme_update_he_mcs(mac_handle_t mac_handle, uint8_t session_id,
 			qdf_mem_copy(mac_ctx->mlme_cfg->he_caps.dot11_he_cap.
 				     rx_he_mcs_map_160, &mcs_map,
 				     sizeof(uint16_t));
+		qdf_mem_copy(mac_ctx->he_cap_5g.tx_he_mcs_map_160,
+			     mac_ctx->mlme_cfg->he_caps.dot11_he_cap.
+			     tx_he_mcs_map_160,
+			     sizeof(uint16_t));
+		qdf_mem_copy(mac_ctx->he_cap_5g.rx_he_mcs_map_160,
+			     mac_ctx->mlme_cfg->he_caps.dot11_he_cap.
+			     rx_he_mcs_map_160,
+			     sizeof(uint16_t));
 		break;
 
 	case HE_80p80_MCS0_7:
@@ -10654,6 +10700,7 @@ int sme_update_he_mcs(mac_handle_t mac_handle, uint8_t session_id,
 		return -EINVAL;
 	}
 	sme_debug("new HE MCS 0x%0x", mcs_map);
+	sme_set_vdev_ies_per_band(mac_handle, session_id, QDF_STA_MODE);
 	csr_update_session_he_cap(mac_ctx, csr_session);
 
 	return 0;
