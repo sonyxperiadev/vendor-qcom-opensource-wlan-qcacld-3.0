@@ -3802,6 +3802,7 @@ wlan_cm_set_sae_auth_ta(struct wlan_objmgr_pdev *pdev,
 	}
 	qdf_mem_copy(mlme_priv->mlme_roam.sae_auth_ta.bytes, sae_auth_ta.bytes,
 		     QDF_MAC_ADDR_SIZE);
+	mlme_priv->mlme_roam.sae_auth_pending = true;
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_CM_ID);
 
 	return QDF_STATUS_SUCCESS;
@@ -3829,9 +3830,17 @@ wlan_cm_get_sae_auth_ta(struct wlan_objmgr_pdev *pdev,
 		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_CM_ID);
 		return QDF_STATUS_E_INVAL;
 	}
-	qdf_mem_copy(sae_auth_ta->bytes, mlme_priv->mlme_roam.sae_auth_ta.bytes,
-		     QDF_MAC_ADDR_SIZE);
+
+	if (mlme_priv->mlme_roam.sae_auth_pending) {
+		qdf_mem_copy(sae_auth_ta->bytes,
+			     mlme_priv->mlme_roam.sae_auth_ta.bytes,
+			     QDF_MAC_ADDR_SIZE);
+		mlme_priv->mlme_roam.sae_auth_pending = false;
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_CM_ID);
+		return QDF_STATUS_SUCCESS;
+	}
+
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_CM_ID);
 
-	return QDF_STATUS_SUCCESS;
+	return QDF_STATUS_E_ALREADY;
 }

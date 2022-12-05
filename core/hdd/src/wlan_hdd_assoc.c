@@ -237,14 +237,12 @@ void wlan_hdd_sae_copy_ta_addr(struct cfg80211_external_auth_params *params,
 			       struct sir_sae_info *sae_info)
 {
 	struct qdf_mac_addr ta = QDF_MAC_ADDR_ZERO_INIT;
-	bool roaming;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
 
-	roaming = wlan_cm_roaming_in_progress(adapter->hdd_ctx->pdev,
-					      sae_info->vdev_id);
-	if (roaming) {
-		ucfg_cm_get_sae_auth_ta(adapter->hdd_ctx->pdev,
-					sae_info->vdev_id,
-					&ta);
+	status = ucfg_cm_get_sae_auth_ta(adapter->hdd_ctx->pdev,
+					 sae_info->vdev_id,
+					 &ta);
+	if (QDF_IS_STATUS_SUCCESS(status)) {
 		qdf_mem_copy(params->tx_addr, ta.bytes, QDF_MAC_ADDR_SIZE);
 		hdd_debug("ta:" QDF_MAC_ADDR_FMT,
 			  QDF_MAC_ADDR_REF(params->tx_addr));
