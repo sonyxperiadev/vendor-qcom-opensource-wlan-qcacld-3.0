@@ -1908,13 +1908,16 @@ static void pe_update_crypto_params(struct mac_context *mac_ctx,
 		lim_get_connected_akm(ft_session, crypto_params->ucastcipherset,
 				      crypto_params->authmodeset,
 				      crypto_params->key_mgmt);
-	pe_nofl_debug("vdev %d roam auth 0x%x akm 0x%0x rsn_caps 0x%x ucastcipher 0x%x akm %d",
+	ft_session->encryptType =
+		lim_get_encrypt_ed_type(crypto_params->ucastcipherset);
+	pe_nofl_debug("vdev %d roam auth 0x%x akm 0x%0x rsn_caps 0x%x ucastcipher 0x%x akm %d enc: %d",
 		      ft_session->vdev_id,
 		      crypto_params->authmodeset,
 		      crypto_params->key_mgmt,
 		      crypto_params->rsn_caps,
 		      crypto_params->ucastcipherset,
-		      ft_session->connected_akm);
+		      ft_session->connected_akm,
+		      ft_session->encryptType);
 }
 
 /**

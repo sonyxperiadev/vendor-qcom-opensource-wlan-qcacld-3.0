@@ -3517,7 +3517,7 @@ lim_is_rsn_profile(struct pe_session *session)
 	return false;
 }
 
-static tAniEdType lim_get_encrypt_ed_type(int32_t ucast_cipher)
+tAniEdType lim_get_encrypt_ed_type(int32_t ucast_cipher)
 {
 	if (ucast_cipher == -1)
 		return eSIR_ED_NONE;

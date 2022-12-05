@@ -814,5 +814,13 @@ lim_mlo_roam_delete_link_peer(struct pe_session *pe_session,
 enum ani_akm_type
 lim_get_connected_akm(struct pe_session *session, int32_t ucast_cipher,
 		      int32_t auth_mode, int32_t akm);
+
+/**
+ * lim_get_encrypt_ed_type() - Get encrypt type
+ * @ucast_cipher: Ucast cipher
+ *
+ * Return: Encryption type enum
+ */
+tAniEdType lim_get_encrypt_ed_type(int32_t ucast_cipher);
 /************************************************************/
 #endif /* __LIM_API_H */
