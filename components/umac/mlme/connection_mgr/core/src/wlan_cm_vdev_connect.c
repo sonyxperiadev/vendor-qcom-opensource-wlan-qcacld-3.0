@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2015, 2020-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -40,6 +40,8 @@
 #include "wlan_mlme_api.h"
 #include "wlan_reg_services_api.h"
 #include "wlan_psoc_mlme_api.h"
+#include "wlan_t2lm_api.h"
+#include "wlan_mlo_t2lm.h"
 
 #ifdef WLAN_FEATURE_FILS_SK
 void cm_update_hlp_info(struct wlan_objmgr_vdev *vdev,
@@ -1511,6 +1513,35 @@ static void cm_process_connect_complete(struct wlan_objmgr_psoc *psoc,
 
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static QDF_STATUS
+cm_update_tid_mapping(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_t2lm_context *t2lm_ctx;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+
+	if (!vdev || !vdev->mlo_dev_ctx)
+		return QDF_STATUS_E_NULL_VALUE;
+
+	if (!mlo_check_if_all_links_up(vdev))
+		return QDF_STATUS_E_FAILURE;
+
+	t2lm_ctx = &vdev->mlo_dev_ctx->t2lm_ctx;
+	status = wlan_process_bcn_prbrsp_t2lm_ie(vdev, t2lm_ctx, t2lm_ctx->tsf);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		mlme_err("T2LM IE beacon process failed");
+		return status;
+	}
+
+	return status;
+}
+#else
+static inline QDF_STATUS
+cm_update_tid_mapping(struct wlan_objmgr_vdev *vdev)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 static void
 cm_install_link_vdev_keys(struct wlan_objmgr_vdev *vdev)
 {
@@ -1611,6 +1642,7 @@ cm_connect_complete_ind(struct wlan_objmgr_vdev *vdev,
 					     mlme_get_tdls_prohibited(vdev),
 					     vdev);
 		wlan_p2p_status_connect(vdev);
+		cm_update_tid_mapping(vdev);
 	}
 
 	if (op_mode == QDF_STA_MODE &&

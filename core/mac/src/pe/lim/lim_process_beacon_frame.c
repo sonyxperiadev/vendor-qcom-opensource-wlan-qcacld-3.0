@@ -51,7 +51,7 @@ void lim_process_bcn_prb_rsp_t2lm(struct mac_context *mac_ctx,
 				  tpSirProbeRespBeacon bcn_ptr)
 {
 	struct wlan_objmgr_vdev *vdev;
-	uint64_t tsf;
+	struct wlan_t2lm_context *t2lm_ctx;
 
 	if (!session || !bcn_ptr || !mac_ctx) {
 		pe_err("invalid input parameters");
@@ -73,9 +73,11 @@ void lim_process_bcn_prb_rsp_t2lm(struct mac_context *mac_ctx,
 		return;
 	}
 
-	qdf_mem_copy((uint8_t *)&tsf, (uint8_t *)bcn_ptr->timeStamp,
+	t2lm_ctx = &vdev->mlo_dev_ctx->t2lm_ctx;
+	qdf_mem_copy((uint8_t *)&t2lm_ctx->tsf, (uint8_t *)bcn_ptr->timeStamp,
 		     sizeof(uint64_t));
-	wlan_process_bcn_prbrsp_t2lm_ie(vdev, &bcn_ptr->t2lm_ctx, tsf);
+	wlan_process_bcn_prbrsp_t2lm_ie(vdev, &bcn_ptr->t2lm_ctx,
+					t2lm_ctx->tsf);
 }
 
 void lim_process_beacon_mlo(struct mac_context *mac_ctx,

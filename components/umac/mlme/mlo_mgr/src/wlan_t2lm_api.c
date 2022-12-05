@@ -280,7 +280,7 @@ QDF_STATUS
 wlan_t2lm_validate_candidate(struct cnx_mgr *cm_ctx,
 			     struct scan_cache_entry *scan_entry)
 {
-	QDF_STATUS status;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	struct wlan_objmgr_vdev *vdev;
 	struct wlan_t2lm_context t2lm_ctx;
 	uint16_t tid_map_link_id;
@@ -295,11 +295,14 @@ wlan_t2lm_validate_candidate(struct cnx_mgr *cm_ctx,
 
 	vdev = cm_ctx->vdev;
 
-	if (scan_entry->ie_list.t2lm[0]) {
-		if (!vdev || !vdev->mlo_dev_ctx) {
-			status = QDF_STATUS_E_NULL_VALUE;
-			goto end;
-		}
+	if (wlan_vdev_mlme_is_mlo_link_vdev(vdev)) {
+		mlme_debug("Skip t2lm validation for link vdev");
+		return QDF_STATUS_SUCCESS;
+	}
+
+	if (wlan_vdev_mlme_get_opmode(vdev) == QDF_STA_MODE &&
+	    wlan_vdev_mlme_is_mlo_vdev(vdev) &&
+	    scan_entry->ie_list.t2lm[0]) {
 
 		status = wlan_mlo_parse_bcn_prbresp_t2lm_ie(&t2lm_ctx,
 						scan_entry->ie_list.t2lm[0]);
@@ -327,10 +330,15 @@ wlan_t2lm_validate_candidate(struct cnx_mgr *cm_ctx,
 			tid_map_link_id = established_tid_mapped_link_id;
 
 		if (tid_map_link_id == scan_entry->ml_info.self_link_id) {
-			t2lm_debug("self link id %d, tid map link id %d",
+			t2lm_debug("self link id %d, tid map link id %d match",
 				   scan_entry->ml_info.self_link_id,
 				   tid_map_link_id);
 			status = QDF_STATUS_SUCCESS;
+		} else {
+			t2lm_debug("self link id %d, tid map link id %d do not match",
+				   scan_entry->ml_info.self_link_id,
+				   tid_map_link_id);
+			status = QDF_STATUS_E_FAILURE;
 		}
 	} else {
 		t2lm_debug("T2LM IE is not present in scan entry");
