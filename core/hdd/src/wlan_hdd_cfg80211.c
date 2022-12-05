@@ -7244,7 +7244,7 @@ static int __wlan_hdd_cfg80211_keymgmt_set_key(struct wiphy *wiphy,
 	}
 
 	if ((!data) || (data_len <= 0) ||
-	    (data_len > ROAM_SCAN_PSK_SIZE)) {
+	    (data_len > MAX_PMK_LEN)) {
 		hdd_err("Invalid data");
 		return -EINVAL;
 	}
@@ -22871,11 +22871,11 @@ static void hdd_fill_pmksa_info(struct hdd_adapter *adapter,
 		return;
 
 	qdf_mem_copy(pmk_cache->pmkid, pmksa->pmkid, PMKID_LEN);
-	if (pmksa->pmk_len && (pmksa->pmk_len <= CSR_RSN_MAX_PMK_LEN)) {
+	if (pmksa->pmk_len && (pmksa->pmk_len <= MAX_PMK_LEN)) {
 		qdf_mem_copy(pmk_cache->pmk, pmksa->pmk, pmksa->pmk_len);
 		pmk_cache->pmk_len = pmksa->pmk_len;
 	} else
-		hdd_debug("pmk len is %zu", pmksa->pmk_len);
+		hdd_err("Invalid pmk len is %zu", pmksa->pmk_len);
 }
 #else
 /*

@@ -130,7 +130,6 @@
 #define ROAM_REASON_MASK 0x0F
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
-#define ROAM_SCAN_PSK_SIZE    48
 #define ROAM_R0KH_ID_MAX_LEN  48
 /* connected but not authenticated */
 #define ROAM_AUTH_STATUS_CONNECTED      0x1
@@ -541,7 +540,7 @@ struct rso_config {
 #endif
 #endif
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
-	uint8_t psk_pmk[ROAM_SCAN_PSK_SIZE];
+	uint8_t psk_pmk[MAX_PMK_LEN];
 	uint8_t pmk_len;
 #endif
 	struct owe_transition_mode_info owe_info;
@@ -1454,7 +1453,7 @@ struct wlan_rso_11i_params {
 	bool fw_okc;
 	bool fw_pmksa_cache;
 	bool is_sae_same_pmk;
-	uint8_t psk_pmk[WMI_ROAM_SCAN_PSK_SIZE];
+	uint8_t psk_pmk[MAX_PMK_LEN];
 	uint8_t pmk_len;
 };
 
@@ -1472,7 +1471,7 @@ struct wlan_rso_11r_params {
 	bool is_11r_assoc;
 	bool is_adaptive_11r;
 	bool enable_ft_im_roaming;
-	uint8_t psk_pmk[WMI_ROAM_SCAN_PSK_SIZE];
+	uint8_t psk_pmk[MAX_PMK_LEN];
 	uint8_t pmk_len;
 	uint32_t r0kh_id_length;
 	uint8_t r0kh_id[WMI_ROAM_R0KH_ID_MAX_LEN];

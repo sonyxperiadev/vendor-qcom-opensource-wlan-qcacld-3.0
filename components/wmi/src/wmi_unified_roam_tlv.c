@@ -3669,8 +3669,6 @@ extract_roam_event(wmi_unified_t wmi_handle, void *evt_buf, uint32_t len,
 }
 #endif /* WLAN_FEATURE_ROAM_OFFLOAD */
 
-#define ROAM_OFFLOAD_PMK_EXT_BYTES 16
-
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 /**
  * wmi_fill_roam_offload_11r_params() - Fill roam scan params to send it to fw
@@ -4173,9 +4171,13 @@ wmi_fill_rso_tlvs(wmi_unified_t wmi_handle, uint8_t *buf,
 				     src_11i_info->psk_pmk,
 				     roam_offload_11i->pmk_len);
 
-			roam_offload_11i->pmk_ext_len =
-			    src_11i_info->pmk_len > ROAM_OFFLOAD_PMK_BYTES ?
-			    ROAM_OFFLOAD_PMK_EXT_BYTES : 0;
+			roam_offload_11i->pmk_ext_len = 0;
+			if (src_11i_info->pmk_len > ROAM_OFFLOAD_PMK_BYTES) {
+				roam_offload_11i->pmk_ext_len =
+					QDF_MIN(src_11i_info->pmk_len -
+						ROAM_OFFLOAD_PMK_BYTES,
+						ROAM_OFFLOAD_PMK_BYTES);
+			}
 			qdf_mem_copy(
 				roam_offload_11i->pmk_ext,
 				&src_11i_info->psk_pmk[ROAM_OFFLOAD_PMK_BYTES],
@@ -4211,6 +4213,11 @@ wmi_fill_rso_tlvs(wmi_unified_t wmi_handle, uint8_t *buf,
 				QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_WMI,
 						   QDF_TRACE_LEVEL_DEBUG,
 						   roam_offload_11i->pmk,
+						   WLAN_MAX_PMK_DUMP_BYTES);
+			if (roam_offload_11i->pmk_ext_len)
+				QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_WMI,
+						   QDF_TRACE_LEVEL_DEBUG,
+						   roam_offload_11i->pmk_ext,
 						   WLAN_MAX_PMK_DUMP_BYTES);
 		}
 	} else {

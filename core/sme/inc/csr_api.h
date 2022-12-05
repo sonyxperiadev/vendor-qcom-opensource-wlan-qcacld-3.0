@@ -184,8 +184,6 @@ typedef enum {
 	eCSR_INI_CHANNEL_BONDING_STATE_MAX = 11
 } eIniChanBondState;
 
-#define CSR_RSN_MAX_PMK_LEN         48
-
 typedef struct tagCsrChannelInfo {
 	uint8_t numOfChannels;
 	uint32_t *freq_list;
