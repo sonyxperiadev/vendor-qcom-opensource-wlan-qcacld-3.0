@@ -3314,6 +3314,7 @@ extract_auth_offload_event_tlv(wmi_unified_t wmi_handle,
 	}
 
 	auth_event->vdev_id = rso_auth_start_ev->vdev_id;
+	auth_event->akm = rso_auth_start_ev->akm_suite_type;
 
 	WMI_MAC_ADDR_TO_CHAR_ARRAY(&rso_auth_start_ev->candidate_ap_bssid,
 				   auth_event->ap_bssid.bytes);
@@ -3327,10 +3328,10 @@ extract_auth_offload_event_tlv(wmi_unified_t wmi_handle,
 	}
 
 	wmi_debug("Received Roam auth offload event for bss:"
-		  QDF_MAC_ADDR_FMT " ta:" QDF_MAC_ADDR_FMT " vdev_id: %d",
+		  QDF_MAC_ADDR_FMT " ta:" QDF_MAC_ADDR_FMT " vdev_id: %d akm: %d",
 		  QDF_MAC_ADDR_REF(auth_event->ap_bssid.bytes),
 		  QDF_MAC_ADDR_REF(auth_event->ta.bytes),
-		  auth_event->vdev_id);
+		  auth_event->vdev_id, auth_event->akm);
 
 	return QDF_STATUS_SUCCESS;
 }

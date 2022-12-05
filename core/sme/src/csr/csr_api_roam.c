@@ -7626,6 +7626,7 @@ fail:
  * @mac_ctx: Global mac context pointer
  * @vdev_id: vdev id
  * @roam_bssid: Candidate BSSID to roam
+ * @akm: Candidate AKM
  *
  * This function calls the hdd_sme_roam_callback with reason
  * eCSR_ROAM_SAE_COMPUTE to trigger SAE auth to supplicant.
@@ -7633,7 +7634,8 @@ fail:
 static QDF_STATUS
 csr_process_roam_auth_sae_callback(struct mac_context *mac_ctx,
 				   uint8_t vdev_id,
-				   struct qdf_mac_addr roam_bssid)
+				   struct qdf_mac_addr roam_bssid,
+				   uint32_t akm)
 {
 	struct csr_roam_info *roam_info;
 	struct sir_sae_info sae_info;
@@ -7651,6 +7653,7 @@ csr_process_roam_auth_sae_callback(struct mac_context *mac_ctx,
 
 	sae_info.msg_len = sizeof(sae_info);
 	sae_info.vdev_id = vdev_id;
+	sae_info.akm = akm;
 	wlan_cm_get_roam_offload_ssid(mac_ctx->psoc, vdev_id,
 				      sae_info.ssid.ssId,
 				      &sae_info.ssid.length);
@@ -7670,15 +7673,16 @@ csr_process_roam_auth_sae_callback(struct mac_context *mac_ctx,
 static inline QDF_STATUS
 csr_process_roam_auth_sae_callback(struct mac_context *mac_ctx,
 				   uint8_t vdev_id,
-				   struct qdf_mac_addr roam_bssid)
+				   struct qdf_mac_addr roam_bssid,
+				   uint32_t akm)
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }
 #endif
 
 QDF_STATUS
-csr_roam_auth_offload_callback(struct mac_context *mac_ctx,
-			       uint8_t vdev_id, struct qdf_mac_addr bssid)
+csr_roam_auth_offload_callback(struct mac_context *mac_ctx, uint8_t vdev_id,
+			       struct qdf_mac_addr bssid, uint32_t akm)
 {
 	QDF_STATUS status;
 
@@ -7686,7 +7690,8 @@ csr_roam_auth_offload_callback(struct mac_context *mac_ctx,
 	if (!QDF_IS_STATUS_SUCCESS(status))
 		return status;
 
-	status = csr_process_roam_auth_sae_callback(mac_ctx, vdev_id, bssid);
+	status = csr_process_roam_auth_sae_callback(mac_ctx, vdev_id,
+						    bssid, akm);
 
 	sme_release_global_lock(&mac_ctx->sme);
 

@@ -2325,11 +2325,13 @@ struct roam_stats_event {
  * @vdev_id: vdev id
  * @ap_bssid: SAE authentication offload AP MAC Address
  * @ta: SAE authentication offload Tx MAC Address
+ * @akm: SAE AKM type
  */
 struct auth_offload_event {
 	uint8_t vdev_id;
 	struct qdf_mac_addr ap_bssid;
 	struct qdf_mac_addr ta;
+	uint32_t akm;
 };
 
 /*
