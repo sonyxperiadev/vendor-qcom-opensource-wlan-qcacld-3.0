@@ -319,6 +319,11 @@ csr_get_vdev_dot11_mode(struct mac_context *mac,
 		return curr_dot11_mode;
 
 	vdev_mlme = wlan_vdev_mlme_get_cmpt_obj(vdev);
+	if (!vdev_mlme) {
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
+		return curr_dot11_mode;
+	}
+
 	vdev_dot11_mode = vdev_mlme->proto.vdev_dot11_mode;
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
 
