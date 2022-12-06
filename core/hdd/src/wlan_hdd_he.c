@@ -817,15 +817,18 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 		if (hdd_get_sr_stats(hdd_ctx, mac_id, &stats))
 			return -EINVAL;
 		nl_buf_len = hdd_get_srp_stats_len();
-		skb = cfg80211_vendor_cmd_alloc_reply_skb(hdd_ctx->wiphy,
-							  nl_buf_len);
+		skb = wlan_cfg80211_vendor_cmd_alloc_reply_skb(hdd_ctx->wiphy,
+							       nl_buf_len);
 		if (!skb) {
 			hdd_err("cfg80211_vendor_cmd_alloc_reply_skb failed");
 			return -ENOMEM;
 		}
-		if (hdd_add_stats_info(skb, &stats))
+		if (hdd_add_stats_info(skb, &stats)) {
+			wlan_cfg80211_vendor_free_skb(skb);
 			return -EINVAL;
-		ret = cfg80211_vendor_cmd_reply(skb);
+		}
+
+		ret = wlan_cfg80211_vendor_cmd_reply(skb);
 		break;
 	case QCA_WLAN_SR_OPERATION_CLEAR_STATS:
 		status = policy_mgr_get_mac_id_by_session_id(hdd_ctx->psoc,
@@ -870,8 +873,8 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 			wlan_vdev_mlme_get_non_srg_pd_offset(adapter->vdev);
 		sr_ctrl = wlan_vdev_mlme_get_sr_ctrl(adapter->vdev);
 		nl_buf_len = hdd_get_srp_param_len();
-		skb = cfg80211_vendor_cmd_alloc_reply_skb(hdd_ctx->wiphy,
-							  nl_buf_len);
+		skb = wlan_cfg80211_vendor_cmd_alloc_reply_skb(hdd_ctx->wiphy,
+							       nl_buf_len);
 		if (!skb) {
 			hdd_err("cfg80211_vendor_cmd_alloc_reply_skb failed");
 			return -ENOMEM;
@@ -879,9 +882,12 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 		if (hdd_add_param_info(skb, srg_max_pd_offset,
 				       srg_min_pd_offset, non_srg_max_pd_offset,
 				       sr_ctrl,
-				       QCA_WLAN_VENDOR_ATTR_SR_PARAMS))
+				       QCA_WLAN_VENDOR_ATTR_SR_PARAMS)) {
+			wlan_cfg80211_vendor_free_skb(skb);
 			return -EINVAL;
-		ret = cfg80211_vendor_cmd_reply(skb);
+		}
+
+		ret = wlan_cfg80211_vendor_cmd_reply(skb);
 		break;
 	default:
 		hdd_err("Invalid SR Operation");
