@@ -2767,10 +2767,12 @@ QDF_STATUS wma_process_ll_stats_get_req(tp_wma_handle wma,
 	}
 	qdf_mem_copy(cmd.peer_macaddr.bytes, addr, QDF_MAC_ADDR_SIZE);
 
-	status = wma_update_params_for_mlo_stats(wma, getReq, &cmd);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		wma_err("Failed to update params for mlo_stats");
-		return status;
+	if (getReq->mlo_vdev_id_bitmap) {
+		status = wma_update_params_for_mlo_stats(wma, getReq, &cmd);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			wma_err("Failed to update params for mlo_stats");
+			return status;
+		}
 	}
 
 	ret = wma_send_ll_stats_get_cmd(wma, &cmd);

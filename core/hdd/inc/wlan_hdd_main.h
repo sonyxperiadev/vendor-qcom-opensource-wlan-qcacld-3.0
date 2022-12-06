@@ -611,10 +611,10 @@ struct hdd_stats {
 	struct hdd_peer_stats peer_stats;
 	struct hdd_pmf_stats hdd_pmf_stats;
 	struct pmf_bcn_protect_stats bcn_protect_stats;
+	qdf_atomic_t is_ll_stats_req_pending;
 
 #ifdef FEATURE_CLUB_LL_STATS_AND_GET_STATION
 	uint32_t sta_stats_cached_timestamp;
-	bool is_ll_stats_req_in_progress;
 #endif
 };
 
