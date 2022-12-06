@@ -6028,10 +6028,6 @@ hdd_alloc_station_adapter(struct hdd_context *hdd_ctx, tSirMacAddr mac_addr,
 	adapter->magic = WLAN_HDD_ADAPTER_MAGIC;
 	adapter->vdev_id = WLAN_UMAC_VDEV_ID_MAX;
 
-	qdf_status = qdf_event_create(&adapter->qdf_session_open_event);
-	if (QDF_IS_STATUS_ERROR(qdf_status))
-		goto free_net_dev;
-
 	qdf_status = hdd_monitor_mode_qdf_create_event(adapter, session_type);
 	if (QDF_IS_STATUS_ERROR(qdf_status)) {
 		hdd_err_rl("create monitor mode vdve up event failed");

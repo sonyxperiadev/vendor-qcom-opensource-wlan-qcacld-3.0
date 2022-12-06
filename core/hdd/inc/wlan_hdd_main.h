@@ -1052,7 +1052,6 @@ enum udp_qos_upgrade {
  *                      sap_ctx would be freed.  During the SSR if the
  *                      same sap context is used it would result in
  *                      null pointer de-reference.
- * @qdf_session_open_event: QDF event for session open
  * @qdf_monitor_mode_vdev_up_event: QDF event for monitor mode vdev up
  * @disconnect_comp_var: completion variable for disconnect callback
  * @linkup_event_var: completion variable for Linkup Event
@@ -1217,8 +1216,6 @@ struct hdd_adapter {
 	uint32_t estimated_linkspeed;
 
 	struct completion vdev_destroy_event;
-
-	qdf_event_t qdf_session_open_event;
 
 #ifdef FEATURE_MONITOR_MODE_SUPPORT
 	qdf_event_t qdf_monitor_mode_vdev_up_event;
