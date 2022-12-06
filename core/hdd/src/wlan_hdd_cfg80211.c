@@ -23995,6 +23995,7 @@ static int __wlan_hdd_cfg80211_channel_switch(struct wiphy *wiphy,
 	int ret;
 	enum phy_ch_width ch_width;
 	bool status;
+	struct hdd_hostapd_state *hostapd_state;
 
 	if (wlan_hdd_validate_vdev_id(adapter->vdev_id))
 		return -EINVAL;
@@ -24023,11 +24024,26 @@ static int __wlan_hdd_cfg80211_channel_switch(struct wiphy *wiphy,
 	hdd_debug("Freq %d width %d ch_width %d",
 		  csa_params->chandef.chan->center_freq,
 		  csa_params->chandef.width, ch_width);
+	hostapd_state = WLAN_HDD_GET_HOSTAP_STATE_PTR(adapter);
+	qdf_event_reset(&hostapd_state->qdf_event);
 
 	ret =
 	    hdd_softap_set_channel_change(dev,
 					  csa_params->chandef.chan->center_freq,
 					  ch_width, false);
+	if (ret) {
+		hdd_err("CSA failed to %d, ret %d",
+			csa_params->chandef.chan->center_freq, ret);
+		return ret;
+	}
+
+	status = qdf_wait_for_event_completion(&hostapd_state->qdf_event,
+					       SME_CMD_START_BSS_TIMEOUT);
+	if (QDF_IS_STATUS_ERROR(status))
+		hdd_err("wait for qdf_event failed!!");
+	else
+		hdd_debug("csa done");
+
 	return ret;
 }
 
