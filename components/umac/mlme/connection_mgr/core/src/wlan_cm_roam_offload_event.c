@@ -347,6 +347,10 @@ QDF_STATUS cm_fw_roam_abort_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
 		status = wlan_cm_roam_state_change(pdev, vdev_id,
 						   WLAN_ROAM_RSO_ENABLED,
 						   REASON_ROAM_ABORT);
+	else if (MLME_IS_MLO_ROAM_SYNCH_IN_PROGRESS(psoc, vdev_id))
+		status = wlan_cm_roam_state_change(pdev, vdev_id,
+						   WLAN_ROAM_DEINIT,
+						   REASON_ROAM_ABORT);
 
 	cm_abort_fw_roam(cm_ctx, cm_id);
 rel_ref:

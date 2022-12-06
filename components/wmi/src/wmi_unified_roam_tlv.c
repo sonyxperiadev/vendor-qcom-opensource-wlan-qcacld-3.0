@@ -2263,6 +2263,13 @@ wmi_fill_roam_mlo_info(wmi_unified_t wmi_handle,
 
 			WMI_MAC_ADDR_TO_CHAR_ARRAY(&setup_links->link_addr,
 						   link->link_addr.bytes);
+			wmi_debug("link_id: %u vdev_id: %u flags: 0x%x addr:" QDF_MAC_ADDR_FMT,
+				  link->link_id, link->vdev_id,
+				  link->flags, link->link_addr.bytes);
+			wmi_debug("channel: %u mhz center_freq1: %u center_freq2: %u",
+				  link->channel.mhz,
+				  link->channel.band_center_freq1,
+				  link->channel.band_center_freq2);
 			setup_links++;
 		}
 	}
@@ -2280,6 +2287,8 @@ wmi_fill_roam_mlo_info(wmi_unified_t wmi_handle,
 				     WMI_MAX_PN_LEN);
 			qdf_mem_copy(key->key_buff, ml_key_param->key_buff,
 				     WMI_MAX_KEY_LEN);
+			wmi_debug("link_id: %u key_idx: %u key_cipher: %u",
+				  key->link_id, key->key_idx, key->key_cipher);
 			ml_key_param++;
 		}
 	}

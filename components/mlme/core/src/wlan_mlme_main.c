@@ -3891,6 +3891,8 @@ const char *mlme_roam_state_to_string(enum roam_offload_state state)
 		return "ROAMING_IN_PROG";
 	case WLAN_ROAM_SYNCH_IN_PROG:
 		return "ROAM_SYNCH_IN_PROG";
+	case WLAN_MLO_ROAM_SYNCH_IN_PROG:
+		return "MLO_ROAM_SYNCH_IN_PROG";
 	default:
 		return "";
 	}

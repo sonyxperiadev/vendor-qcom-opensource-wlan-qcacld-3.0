@@ -4471,7 +4471,8 @@ cm_mlo_roam_switch_for_link(struct wlan_objmgr_pdev *pdev,
 	struct wlan_objmgr_psoc *psoc = wlan_pdev_get_psoc(pdev);
 	enum roam_offload_state cur_state = mlme_get_roam_state(psoc, vdev_id);
 
-	if (reason != REASON_ROAM_HANDOFF_DONE)
+	if (reason != REASON_ROAM_HANDOFF_DONE &&
+	    reason != REASON_ROAM_ABORT)
 		return QDF_STATUS_E_FAILURE;
 
 	switch (cur_state) {
@@ -4530,7 +4531,8 @@ cm_handle_mlo_rso_state_change(struct wlan_objmgr_pdev *pdev,
 
 	if (wlan_vdev_mlme_get_is_mlo_link(wlan_pdev_get_psoc(pdev),
 					   *vdev_id)) {
-		if (reason == REASON_ROAM_HANDOFF_DONE) {
+		if (reason == REASON_ROAM_HANDOFF_DONE ||
+		    reason == REASON_ROAM_ABORT) {
 			status = cm_mlo_roam_switch_for_link(pdev, *vdev_id,
 							     reason);
 			mlme_debug("MLO ROAM: update rso state on link vdev %d",
