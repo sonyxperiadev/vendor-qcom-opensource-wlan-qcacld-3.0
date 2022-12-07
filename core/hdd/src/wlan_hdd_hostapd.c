@@ -3762,6 +3762,7 @@ QDF_STATUS wlan_hdd_get_channel_for_sap_restart(
 	    !policy_mgr_is_go_scc_strict(psoc) &&
 	    (wlan_vdev_get_peer_count(sap_context->vdev) == 1)) {
 		hdd_debug("p2p go liberal mode enabled. Skipping CSA");
+		wlansap_context_put(sap_context);
 		return QDF_STATUS_E_FAILURE;
 	}
 
