@@ -4823,8 +4823,8 @@ policy_mgr_handle_ml_sta_link_state_allowed(struct wlan_objmgr_psoc *psoc)
 	policy_mgr_get_ml_sta_info(pm_ctx, &num_ml_sta, &num_disabled_ml_sta,
 				   ml_sta_vdev_lst, ml_freq_lst, &num_non_ml,
 				   NULL, NULL);
-	if (!num_ml_sta) {
-		policy_mgr_debug("ml sta num is zero");
+	if (!num_ml_sta || num_ml_sta > MAX_NUMBER_OF_CONC_CONNECTIONS) {
+		policy_mgr_debug("ml sta num is %d", num_ml_sta);
 		return QDF_STATUS_E_INVAL;
 	}
 
