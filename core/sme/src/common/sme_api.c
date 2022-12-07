@@ -8812,6 +8812,7 @@ QDF_STATUS sme_update_dsc_pto_up_mapping(mac_handle_t mac_handle,
 	uint8_t i, j;
 	struct csr_roam_session *pCsrSession = NULL;
 	struct pe_session *pSession = NULL;
+	struct qos_map_set *pqosmapset;
 
 	pCsrSession = CSR_GET_SESSION(mac, sessionId);
 	if (!pCsrSession) {
@@ -8830,21 +8831,23 @@ QDF_STATUS sme_update_dsc_pto_up_mapping(mac_handle_t mac_handle,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	if (!pSession->QosMapSet.present) {
+	pqosmapset = &pSession->QosMapSet;
+	if (!pqosmapset->present) {
 		sme_debug("QOS Mapping IE not present");
 		return QDF_STATUS_E_FAILURE;
 	}
 
 	for (i = 0; i < SME_QOS_WMM_UP_MAX; i++) {
-		for (j = pSession->QosMapSet.dscp_range[i][0];
-			j <= pSession->QosMapSet.dscp_range[i][1] &&
-			j <= WLAN_MAX_DSCP; j++)
-				dscpmapping[j] = i;
+		for (j = pqosmapset->dscp_range[i][0];
+		     j <= pqosmapset->dscp_range[i][1] && j <= WLAN_MAX_DSCP;
+		     j++)
+			dscpmapping[j] = i;
 	}
-	for (i = 0; i < pSession->QosMapSet.num_dscp_exceptions; i++)
-		if (pSession->QosMapSet.dscp_exceptions[i][0] <= WLAN_MAX_DSCP)
-			dscpmapping[pSession->QosMapSet.dscp_exceptions[i][0]] =
-				pSession->QosMapSet.dscp_exceptions[i][1];
+	for (i = 0; i < pqosmapset->num_dscp_exceptions; i++)
+		if (pqosmapset->dscp_exceptions[i][0] <= WLAN_MAX_DSCP &&
+		    pqosmapset->dscp_exceptions[i][1] < SME_QOS_WMM_UP_MAX)
+			dscpmapping[pqosmapset->dscp_exceptions[i][0]] =
+					pqosmapset->dscp_exceptions[i][1];
 
 	return status;
 }
