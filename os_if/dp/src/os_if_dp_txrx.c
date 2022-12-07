@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -106,6 +106,39 @@ static void osif_dp_mark_critical_pkt(struct sk_buff *skb)
 	QDF_NBUF_CB_TX_EXTRA_IS_CRITICAL(skb) = true;
 }
 
+#ifdef DP_TX_PACKET_INSPECT_FOR_ILP
+/**
+ * osif_dp_mark_pkt_type_by_priority() - mark packet type to skb->cb
+ *                                       by type from priority of skb
+ * @skb: network buffer
+ *
+ * Return: true - packet type marked, false - not marked
+ */
+static inline
+bool osif_dp_mark_pkt_type_by_priority(struct sk_buff *skb)
+{
+	bool type_marked = false;
+	uint32_t pkt_type =
+		qdf_nbuf_get_priority_pkt_type(skb);
+
+	if (qdf_unlikely(pkt_type == QDF_NBUF_PRIORITY_PKT_TCP_ACK)) {
+		QDF_NBUF_CB_GET_PACKET_TYPE(skb) =
+					QDF_NBUF_CB_PACKET_TYPE_TCP_ACK;
+		type_marked = true;
+	}
+	/* cleanup the packet type in priority */
+	qdf_nbuf_remove_priority_pkt_type(skb);
+
+	return type_marked;
+}
+#else
+static inline
+bool osif_dp_mark_pkt_type_by_priority(struct sk_buff *skb)
+{
+	return false;
+}
+#endif
+
 /**
  * osif_dp_mark_non_critical_pkt() - Identify and mark non-critical packets
  * @skb: skb ptr
@@ -114,6 +147,10 @@ static void osif_dp_mark_critical_pkt(struct sk_buff *skb)
  */
 static void osif_dp_mark_non_critical_pkt(struct sk_buff *skb)
 {
+	/* check if packet type is marked from skb->priority already */
+	if (osif_dp_mark_pkt_type_by_priority(skb))
+		return;
+
 	if (qdf_nbuf_is_icmp_pkt(skb))
 		QDF_NBUF_CB_GET_PACKET_TYPE(skb) =
 				QDF_NBUF_CB_PACKET_TYPE_ICMP;

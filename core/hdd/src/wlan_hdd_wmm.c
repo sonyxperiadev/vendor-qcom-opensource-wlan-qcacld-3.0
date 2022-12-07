@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2169,6 +2169,36 @@ uint16_t hdd_get_queue_index(uint16_t up, bool is_critical)
 }
 #endif
 
+#ifdef DP_TX_PACKET_INSPECT_FOR_ILP
+/**
+ * hdd_update_pkt_priority_with_inspection() - update TX packets priority
+ * @skb: network buffer
+ * @up: user priority
+ *
+ * Update TX packets priority, if some special TX packets like TCP ack,
+ * reuse skb->priority upper 8 bits(bit24 ~ 31) to mark them.
+ *
+ * Return: None
+ */
+static inline
+void hdd_update_pkt_priority_with_inspection(struct sk_buff *skb,
+					     enum sme_qos_wmmuptype up)
+{
+	skb->priority = up;
+
+	if (qdf_unlikely(qdf_nbuf_is_ipv4_v6_pure_tcp_ack(skb)))
+		qdf_nbuf_set_priority_pkt_type(
+				skb, QDF_NBUF_PRIORITY_PKT_TCP_ACK);
+}
+#else
+static inline
+void hdd_update_pkt_priority_with_inspection(struct sk_buff *skb,
+					     enum sme_qos_wmmuptype up)
+{
+	skb->priority = up;
+}
+#endif
+
 static uint16_t __hdd_wmm_select_queue(struct net_device *dev,
 				       struct sk_buff *skb)
 {
@@ -2187,7 +2217,7 @@ static uint16_t __hdd_wmm_select_queue(struct net_device *dev,
 	/* Get the user priority from IP header */
 	hdd_wmm_classify_pkt(adapter, skb, &up, &is_critical);
 
-	skb->priority = up;
+	hdd_update_pkt_priority_with_inspection(skb, up);
 
 	index = hdd_get_queue_index(skb->priority, is_critical);
 
