@@ -4881,12 +4881,12 @@ lim_get_update_bw_allow(struct pe_session *session,
 	enum wlan_phymode phy_mode;
 	QDF_STATUS status = QDF_STATUS_E_INVAL;
 
-	*update_allow = false;
-
 	if (!session || !update_allow) {
 		pe_err("invalid input");
 		return status;
 	}
+	*update_allow = false;
+
 	psoc = wlan_vdev_get_psoc(session->vdev);
 	if (!psoc) {
 		pe_err("psoc object invalid");
