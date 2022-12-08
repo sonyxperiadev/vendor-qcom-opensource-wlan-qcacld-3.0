@@ -77,6 +77,28 @@ struct dp_wfds_event {
 };
 
 /**
+ * struct dp_direct_link_iommu_config - Direct link related IOMMU configuration
+ * @shadow_rdptr_paddr: shadow read pointer dma address
+ * @shadow_rdptr_map_size: shadow read pointer memory size
+ * @shadow_wrptr_paddr: shadow write pointer dma address
+ * @shadow_wrptr_map_size: shadow write pointer memory size
+ * @direct_link_srng_ring_base_paddr: SRNG ring base dma address
+ * @direct_link_srng_ring_map_size: SRNG ring memory size
+ * @direct_link_refill_ring_base_paddr: refill SRNG ring base dma address
+ * @direct_link_refill_ring_map_size: refill SRNG ring memory size
+ */
+struct dp_direct_link_iommu_config {
+	qdf_dma_addr_t shadow_rdptr_paddr;
+	uint16_t shadow_rdptr_map_size;
+	qdf_dma_addr_t shadow_wrptr_paddr;
+	uint16_t shadow_wrptr_map_size;
+	qdf_dma_addr_t direct_link_srng_ring_base_paddr[QMI_WFDS_CE_MAX_SRNG];
+	uint16_t direct_link_srng_ring_map_size[QMI_WFDS_CE_MAX_SRNG];
+	qdf_dma_addr_t direct_link_refill_ring_base_paddr;
+	uint16_t direct_link_refill_ring_map_size;
+};
+
+/**
  * struct dp_direct_link_wfds_context - DP Direct Link WFDS context structure
  * @direct_link_ctx: direct link context
  * @wfds_work: work to be scheduled on QMI event
@@ -87,6 +109,7 @@ struct dp_wfds_event {
  * @num_mem_arenas: Number of memory arenas requested by QMI server
  * @mem_arena_pages: Pointer to array of mem multi page structure for arenas
  * @ipcc_dma_addr: ipcc dma address
+ * @iommu_cfg: direct link iommu configuration
  */
 struct dp_direct_link_wfds_context {
 	struct dp_direct_link_context *direct_link_ctx;
@@ -98,6 +121,7 @@ struct dp_direct_link_wfds_context {
 	uint32_t num_mem_arenas;
 	struct qdf_mem_multi_page_t *mem_arena_pages;
 	uint32_t ipcc_dma_addr;
+	struct dp_direct_link_iommu_config iommu_cfg;
 };
 
 /**

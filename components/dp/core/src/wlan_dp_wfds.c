@@ -20,6 +20,7 @@
 #include "dp_rx.h"
 #include "pld_common.h"
 #include "wlan_objmgr_psoc_obj.h"
+#include <qdf_mem.h>
 
 static struct dp_direct_link_wfds_context *gp_dl_wfds_ctx;
 
@@ -73,6 +74,22 @@ dp_wfds_send_config_msg(struct dp_direct_link_wfds_context *dl_wfds)
 	info->shadow_wrptr_mem_size = sizeof(uint32_t) * HAL_MAX_LMAC_RINGS;
 	info->pcie_bar_pa = (uint64_t)mem_info.dev_base_paddr;
 
+	dl_wfds->iommu_cfg.shadow_rdptr_paddr = info->shadow_rdptr_mem_paddr;
+	dl_wfds->iommu_cfg.shadow_rdptr_map_size = info->shadow_rdptr_mem_size;
+	dl_wfds->iommu_cfg.shadow_wrptr_paddr = info->shadow_wrptr_mem_paddr;
+	dl_wfds->iommu_cfg.shadow_wrptr_map_size = info->shadow_wrptr_mem_size;
+
+	pld_audio_smmu_map(qdf_dev->dev,
+			   qdf_mem_paddr_from_dmaaddr(qdf_dev,
+						      info->shadow_rdptr_mem_paddr),
+			   info->shadow_rdptr_mem_paddr,
+			   info->shadow_rdptr_mem_size);
+	pld_audio_smmu_map(qdf_dev->dev,
+			   qdf_mem_paddr_from_dmaaddr(qdf_dev,
+						      info->shadow_wrptr_mem_paddr),
+			   info->shadow_wrptr_mem_paddr,
+			   info->shadow_wrptr_mem_size);
+
 	info->ce_info_len = QMI_WFDS_CE_MAX_SRNG;
 	status = hif_get_direct_link_ce_srng_info(hif_ctx, ce_info,
 						  QMI_WFDS_CE_MAX_SRNG);
@@ -95,6 +112,17 @@ dp_wfds_send_config_msg(struct dp_direct_link_wfds_context *dl_wfds)
 						     srng_info->ring_base_paddr;
 		info->ce_info[i].srng_info.hp_paddr = srng_info->hp_paddr;
 		info->ce_info[i].srng_info.tp_paddr = srng_info->tp_paddr;
+
+		dl_wfds->iommu_cfg.direct_link_srng_ring_base_paddr[i] =
+			srng_info->ring_base_paddr;
+		dl_wfds->iommu_cfg.direct_link_srng_ring_map_size[i] =
+			srng_info->entry_size * srng_info->num_entries * 4;
+
+		pld_audio_smmu_map(qdf_dev->dev,
+				   qdf_mem_paddr_from_dmaaddr(qdf_dev,
+							      srng_info->ring_base_paddr),
+				   srng_info->ring_base_paddr,
+				   dl_wfds->iommu_cfg.direct_link_srng_ring_map_size[i]);
 	}
 
 	refill_ring = direct_link_ctx->direct_link_refill_ring_hdl->hal_srng;
@@ -106,6 +134,16 @@ dp_wfds_send_config_msg(struct dp_direct_link_wfds_context *dl_wfds)
 	info->rx_refill_ring.num_entries = srng_params.num_entries;
 	info->rx_refill_ring.entry_size = srng_params.entry_size;
 	info->rx_refill_ring.ring_base_paddr = srng_params.ring_base_paddr;
+
+	dl_wfds->iommu_cfg.direct_link_refill_ring_base_paddr = srng_params.ring_base_paddr;
+	dl_wfds->iommu_cfg.direct_link_refill_ring_map_size =
+		srng_params.entry_size * srng_params.num_entries * 4;
+
+	pld_audio_smmu_map(qdf_dev->dev,
+			   qdf_mem_paddr_from_dmaaddr(qdf_dev,
+						      srng_params.ring_base_paddr),
+			   srng_params.ring_base_paddr,
+			   dl_wfds->iommu_cfg.direct_link_refill_ring_map_size);
 
 	info->rx_refill_ring.hp_paddr =
 				hal_srng_get_hp_addr(hal_soc, refill_ring);
@@ -146,12 +184,15 @@ dp_wfds_req_mem_msg(struct dp_direct_link_wfds_context *dl_wfds)
 	struct dp_soc *dp_soc =
 		wlan_psoc_get_dp_handle(dl_wfds->direct_link_ctx->dp_ctx->psoc);
 	struct hif_opaque_softc *hif_ctx;
+	qdf_device_t qdf_dev;
 	QDF_STATUS status;
 	struct qdf_mem_multi_page_t *pages;
 	uint16_t num_pages;
 	uint8_t i;
 
-	if (!dl_wfds || !dp_soc || !dp_soc->hif_handle)
+	qdf_dev = dl_wfds->direct_link_ctx->dp_ctx->qdf_dev;
+
+	if (!dl_wfds || !dp_soc || !dp_soc->hif_handle || !qdf_dev)
 		return QDF_STATUS_E_NOSUPPORT;
 
 	hif_ctx = dp_soc->hif_handle;
@@ -164,18 +205,25 @@ dp_wfds_req_mem_msg(struct dp_direct_link_wfds_context *dl_wfds)
 	for (i = 0; i < dl_wfds->num_mem_arenas; i++) {
 		if (i == QMI_WFDS_MEM_ARENA_CE_RX_MSG_BUFFERS) {
 			uint64_t *dma_addr = NULL;
+			uint32_t buf_size;
 
 			num_pages =
 			    hif_get_direct_link_ce_dest_srng_buffers(hif_ctx,
-								     &dma_addr);
+								     &dma_addr,
+								     &buf_size);
 			qdf_assert(dma_addr);
 
 			info->mem_arena_page_info[i].num_entries_per_page = 1;
 			info->mem_arena_page_info[i].page_dma_addr_len =
 								      num_pages;
-			while (num_pages--)
+			while (num_pages--) {
 				info->mem_arena_page_info[i].page_dma_addr[num_pages] =
 							dma_addr[num_pages];
+				pld_audio_smmu_map(qdf_dev->dev,
+						   qdf_mem_paddr_from_dmaaddr(qdf_dev, dma_addr[num_pages]),
+						   dma_addr[num_pages],
+						   buf_size);
+			}
 
 			qdf_mem_free(dma_addr);
 			continue;
@@ -188,9 +236,15 @@ dp_wfds_req_mem_msg(struct dp_direct_link_wfds_context *dl_wfds)
 		       dl_wfds->mem_arena_pages[i].num_element_per_page;
 		info->mem_arena_page_info[i].page_dma_addr_len = num_pages;
 
-		while (num_pages--)
+		while (num_pages--) {
 			info->mem_arena_page_info[i].page_dma_addr[num_pages] =
 					pages->dma_pages[num_pages].page_p_addr;
+
+			pld_audio_smmu_map(qdf_dev->dev,
+					qdf_mem_paddr_from_dmaaddr(qdf_dev, pages->dma_pages[num_pages].page_p_addr),
+					pages->dma_pages[num_pages].page_p_addr,
+					pages->page_size);
+		}
 	}
 
 	status = wlan_qmi_wfds_send_req_mem_msg(
@@ -412,10 +466,12 @@ void dp_wfds_del_server(void)
 {
 	struct dp_direct_link_wfds_context *dl_wfds = gp_dl_wfds_ctx;
 	qdf_device_t qdf_ctx = dl_wfds->direct_link_ctx->dp_ctx->qdf_dev;
+	void *hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
 	enum dp_wfds_state dl_wfds_state;
 	uint8_t i;
+	uint16_t page_idx;
 
-	if (!dl_wfds || !qdf_ctx)
+	if (!dl_wfds || !qdf_ctx || !hif_ctx)
 		return;
 
 	dp_debug("WFDS QMI server exiting");
@@ -430,18 +486,58 @@ void dp_wfds_del_server(void)
 			       sizeof(uint32_t));
 
 	if (dl_wfds_state >= DP_WFDS_SVC_MEM_CONFIG_DONE) {
+		uint64_t *dma_addr = NULL;
+		uint16_t num_pages;
+		uint32_t buf_size;
+
 		for (i = 0; i < dl_wfds->num_mem_arenas; i++) {
+			struct qdf_mem_multi_page_t *mp_info;
+
 			if (!dl_wfds->mem_arena_pages[i].num_pages)
 				continue;
 
-			qdf_mem_multi_pages_free(qdf_ctx,
-					&dl_wfds->mem_arena_pages[i],
-					0, false);
+			mp_info = &dl_wfds->mem_arena_pages[i];
+			for (page_idx = 0; page_idx < mp_info->num_pages;
+			     page_idx++)
+				pld_audio_smmu_unmap(qdf_ctx->dev,
+				       mp_info->dma_pages[page_idx].page_p_addr,
+				       mp_info->page_size);
+
+			qdf_mem_multi_pages_free(qdf_ctx, mp_info, 0, false);
 		}
 
 		qdf_mem_free(dl_wfds->mem_arena_pages);
 		dl_wfds->mem_arena_pages = NULL;
 		dl_wfds->num_mem_arenas = 0;
+
+		num_pages = hif_get_direct_link_ce_dest_srng_buffers(hif_ctx,
+								     &dma_addr,
+								     &buf_size);
+		qdf_assert(dma_addr);
+
+		while (num_pages--)
+			pld_audio_smmu_unmap(qdf_ctx->dev, dma_addr[num_pages],
+					     buf_size);
+
+		qdf_mem_free(dma_addr);
+	}
+
+	if (dl_wfds_state >= DP_WFDS_SVC_CONFIG_DONE) {
+		pld_audio_smmu_unmap(qdf_ctx->dev,
+				     dl_wfds->iommu_cfg.shadow_rdptr_paddr,
+				     dl_wfds->iommu_cfg.shadow_rdptr_map_size);
+		pld_audio_smmu_unmap(qdf_ctx->dev,
+				     dl_wfds->iommu_cfg.shadow_wrptr_paddr,
+				     dl_wfds->iommu_cfg.shadow_wrptr_map_size);
+
+		for (i = 0; i < QMI_WFDS_CE_MAX_SRNG; i++)
+			pld_audio_smmu_unmap(qdf_ctx->dev,
+				dl_wfds->iommu_cfg.direct_link_srng_ring_base_paddr[i],
+				dl_wfds->iommu_cfg.direct_link_srng_ring_map_size[i]);
+
+		pld_audio_smmu_unmap(qdf_ctx->dev,
+			dl_wfds->iommu_cfg.direct_link_refill_ring_base_paddr,
+			dl_wfds->iommu_cfg.direct_link_refill_ring_map_size);
 	}
 }
 
