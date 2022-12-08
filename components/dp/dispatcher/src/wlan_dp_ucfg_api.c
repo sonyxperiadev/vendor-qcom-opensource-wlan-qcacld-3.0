@@ -337,20 +337,18 @@ ucfg_dp_suspend_handler(struct wlan_objmgr_psoc *psoc, void *arg)
 		dp_err("DP context not found");
 		return QDF_STATUS_E_FAILURE;
 	}
-
-	dp_ctx->is_suspend = true;
-	cdp_set_tx_pause(soc, true);
-	dp_for_each_intf_held_safe(dp_ctx, dp_intf, dp_intf_next) {
-		dp_intf->sap_tx_block_mask |= WLAN_DP_SUSPEND;
-	}
 	if (dp_ctx->enable_dp_rx_threads) {
 		status = dp_txrx_suspend(cds_get_context(QDF_MODULE_ID_SOC));
 
 		if (status != QDF_STATUS_SUCCESS) {
-			dp_intf->sap_tx_block_mask &= ~WLAN_DP_SUSPEND;
 			dp_txrx_resume(cds_get_context(QDF_MODULE_ID_SOC));
 			return status;
 			}
+	}
+	dp_ctx->is_suspend = true;
+	cdp_set_tx_pause(soc, true);
+	dp_for_each_intf_held_safe(dp_ctx, dp_intf, dp_intf_next) {
+		dp_intf->sap_tx_block_mask |= WLAN_DP_SUSPEND;
 	}
 	return QDF_STATUS_SUCCESS;
 }
