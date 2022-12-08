@@ -31,8 +31,10 @@ QDF_STATUS os_if_qmi_handle_init(struct qmi_handle *qmi_hdl,
 	int ret;
 
 	ret = qmi_handle_init(qmi_hdl, recv_buf_size, ops, qmi_msg_handlers);
-	if (ret < 0)
-		return QDF_STATUS_QMI_HANDLE_INIT_FAILED;
+	if (ret < 0) {
+		osif_err("QMI handle initialization failed %d", ret);
+		return qdf_status_from_os_return(ret);
+	}
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -49,8 +51,10 @@ QDF_STATUS os_if_qmi_add_lookup(struct qmi_handle *qmi_hdl,
 	int ret;
 
 	ret = qmi_add_lookup(qmi_hdl, service, version, instance);
-	if (ret < 0)
-		return QDF_STATUS_QMI_ADD_LOOKUP_FAILED;
+	if (ret < 0) {
+		osif_err("QMI add lookup failed %d", ret);
+		return qdf_status_from_os_return(ret);
+	}
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -71,8 +75,8 @@ QDF_STATUS os_if_qmi_connect_to_svc(struct qmi_handle *qmi_hdl,
 	ret = kernel_connect(qmi_hdl->sock, (struct sockaddr *)&sq,
 			     sizeof(sq), 0);
 	if (ret < 0) {
-		osif_err("Failed to connect to QMI remote service");
-		return QDF_STATUS_QMI_SVC_CONNECT_FAILED;
+		osif_err("Failed to connect to QMI remote service %d", ret);
+		return qdf_status_from_os_return(ret);
 	}
 
 	return QDF_STATUS_SUCCESS;
@@ -86,8 +90,8 @@ QDF_STATUS os_if_qmi_txn_init(struct qmi_handle *qmi_hdl,
 
 	ret = qmi_txn_init(qmi_hdl, qmi_txn, qmi_ei, resp);
 	if (ret < 0) {
-		osif_info("QMI transaction init failed");
-		return QDF_STATUS_QMI_TXN_INIT_FAILED;
+		osif_info("QMI transaction init failed %d", ret);
+		return qdf_status_from_os_return(ret);
 	}
 
 	return QDF_STATUS_SUCCESS;
@@ -103,8 +107,8 @@ QDF_STATUS os_if_qmi_send_request(struct qmi_handle *qmi_hdl,
 
 	ret = qmi_send_request(qmi_hdl, sq, qmi_txn, msg_id, len, ei, req);
 	if (ret < 0) {
-		osif_info("QMI send request failed");
-		return QDF_STATUS_QMI_SEND_REQ_FAILED;
+		osif_info("QMI send request failed %d", ret);
+		return qdf_status_from_os_return(ret);
 	}
 
 	return QDF_STATUS_SUCCESS;
@@ -116,8 +120,8 @@ QDF_STATUS os_if_qmi_txn_wait(struct qmi_txn *qmi_txn, unsigned long timeout)
 
 	ret = qmi_txn_wait(qmi_txn, timeout);
 	if (ret < 0) {
-		osif_info("QMI Failed to wait for response");
-		return QDF_STATUS_QMI_TXN_WAIT_FAILED;
+		osif_info("QMI Failed to wait for response %d", ret);
+		return qdf_status_from_os_return(ret);
 	}
 
 	return QDF_STATUS_SUCCESS;
