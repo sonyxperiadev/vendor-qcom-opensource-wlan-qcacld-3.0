@@ -214,11 +214,13 @@ __wlan_hdd_enter_sap_low_pwr_mode(struct wiphy *wiphy,
 				  struct wireless_dev *wdev,
 				  const void *data, int data_len)
 {
-	uint8_t lp_flags;
+	uint8_t lp_flags, len;
+	uint64_t cookie_id;
 	QDF_STATUS status;
 	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(wdev->netdev);
 	struct nlattr *tb[QCA_WLAN_VENDOR_ATTR_DOZED_AP_MAX + 1];
+	struct sk_buff *skb;
 
 	hdd_enter_dev(wdev->netdev);
 
@@ -247,14 +249,38 @@ __wlan_hdd_enter_sap_low_pwr_mode(struct wiphy *wiphy,
 		  lp_flags == QCA_WLAN_DOZED_AP_ENABLE ? "ENABLE" : "DISABLE");
 
 	status = ucfg_green_ap_ll_ps(hdd_ctx->pdev, adapter->vdev, lp_flags,
-				     adapter->session.ap.sap_config.beacon_int);
+				     adapter->session.ap.sap_config.beacon_int,
+				     &cookie_id);
 	if (status != QDF_STATUS_SUCCESS) {
 		hdd_err("unable to send low latency power save cmd");
 		return -EINVAL;
 	}
 
+	hdd_debug("Cookie id received : %u", cookie_id);
+
+	len = NLMSG_HDRLEN;
+	/*QCA_WLAN_VENDOR_ATTR_DOZED_AP_COOKIE*/
+	len += nla_total_size(sizeof(u64));
+
+	skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy, len);
+	if (!skb) {
+		hdd_err("skb allocation failed");
+		return -ENOMEM;
+	}
+
+	if (wlan_cfg80211_nla_put_u64(skb, QCA_WLAN_VENDOR_ATTR_DOZED_AP_COOKIE,
+				      cookie_id)) {
+		hdd_err("nla_put for cookie id failed");
+		goto fail;
+	}
+
+	cfg80211_vendor_cmd_reply(skb);
+
 	hdd_exit();
 
+	return 0;
+fail:
+	wlan_cfg80211_vendor_free_skb(skb);
 	return 0;
 }
 
