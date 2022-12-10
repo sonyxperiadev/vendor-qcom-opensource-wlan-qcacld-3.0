@@ -462,6 +462,8 @@ void pmo_set_sap_wow_bitmask(uint32_t *bitmask, uint32_t wow_bitmap_size)
 				 bitmask);
 	pmo_set_wow_event_bitmap(WOW_RTT_11AZ_EVENT,
 				 wow_bitmap_size, bitmask);
+	pmo_set_wow_event_bitmap(WOW_XGAP_EVENT,
+				 wow_bitmap_size, bitmask);
 }
 
 uint8_t pmo_get_num_wow_filters(struct wlan_objmgr_psoc *psoc)

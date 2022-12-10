@@ -5756,9 +5756,11 @@ static void wma_green_ap_register_handlers(tp_wma_handle wma_handle)
 		target_if_green_ap_register_egap_event_handler(
 					wma_handle->pdev);
 
+	target_if_green_ap_register_ll_ps_event_handler(wma_handle->pdev);
+
 }
 #else
-static void wma_green_ap_register_handlers(tp_wma_handle wma_handle)
+static inline void wma_green_ap_register_handlers(tp_wma_handle wma_handle)
 {
 }
 #endif

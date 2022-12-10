@@ -3641,6 +3641,25 @@ static void hdd_register_policy_manager_callback(
 }
 #endif
 
+#ifdef WLAN_SUPPORT_GAP_LL_PS_MODE
+static void hdd_register_green_ap_callback(struct wlan_objmgr_pdev *pdev)
+{
+	struct green_ap_hdd_callback hdd_cback;
+	qdf_mem_zero(&hdd_cback, sizeof(hdd_cback));
+
+	hdd_cback.send_event = wlan_hdd_send_green_ap_ll_ps_event;
+
+	if (QDF_STATUS_SUCCESS !=
+			green_ap_register_hdd_callback(pdev, &hdd_cback)) {
+		hdd_err("HDD callback registration for Green AP failed");
+	}
+}
+#else
+static inline void hdd_register_green_ap_callback(struct wlan_objmgr_pdev *pdev)
+{
+}
+#endif
+
 #ifdef WLAN_FEATURE_NAN
 #ifdef WLAN_FEATURE_SR
 static void hdd_register_sr_concurrency_cb(struct nan_callbacks *cb_obj)
@@ -14837,6 +14856,8 @@ int hdd_configure_cds(struct hdd_context *hdd_ctx)
 
 	if (hdd_green_ap_enable_egap(hdd_ctx))
 		hdd_debug("enhance green ap is not enabled");
+
+	hdd_register_green_ap_callback(hdd_ctx->pdev);
 
 	if (0 != wlan_hdd_set_wow_pulse(hdd_ctx, true))
 		hdd_debug("Failed to set wow pulse");

@@ -31,6 +31,8 @@
 #include <wlan_green_ap_ucfg_api.h>
 #include "wlan_mlme_ucfg_api.h"
 #include <osif_vdev_sync.h>
+#include "wlan_osif_priv.h"
+#include "wlan_lmac_if_def.h"
 
 /**
  * hdd_green_ap_check_enable() - to check whether to enable green ap or not
@@ -274,5 +276,94 @@ wlan_hdd_enter_sap_low_pwr_mode(struct wiphy *wiphy,
 	osif_vdev_sync_op_stop(vdev_sync);
 
 	return 0;
+}
+
+QDF_STATUS wlan_hdd_send_green_ap_ll_ps_event(
+					struct wlan_objmgr_vdev *vdev,
+					struct wlan_green_ap_ll_ps_event_param
+					*ll_ps_param)
+{
+	int index = QCA_NL80211_VENDOR_SUBCMD_DOZED_AP_INDEX;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	uint32_t len;
+	struct vdev_osif_priv *osif_priv;
+	struct sk_buff *skb;
+
+	osif_priv = wlan_vdev_get_ospriv(vdev);
+	if (!osif_priv) {
+		hdd_err("OSIF priv is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	hdd_enter_dev(osif_priv->wdev->netdev);
+
+	len = NLMSG_HDRLEN;
+	/*QCA_WLAN_VENDOR_ATTR_DOZED_AP_NEXT_TSF*/
+	len += nla_total_size(sizeof(u64));
+	/*QCA_WLAN_VENDOR_ATTR_DOZED_AP_COOKIE*/
+	len += nla_total_size(sizeof(u64));
+	/*QCA_WLAN_VENDOR_ATTR_DOZED_AP_BI_MULTIPLIER*/
+	len += nla_total_size(sizeof(u16));
+
+	skb = wlan_cfg80211_vendor_event_alloc(osif_priv->wdev->wiphy,
+					       osif_priv->wdev, len,
+					       index, qdf_mem_malloc_flags());
+	if (!skb) {
+		hdd_err("skb allocation failed");
+		return QDF_STATUS_E_NOMEM;
+	}
+
+	if (wlan_cfg80211_nla_put_u64(skb, QCA_WLAN_VENDOR_ATTR_DOZED_AP_COOKIE,
+				      ll_ps_param->dialog_token)) {
+		hdd_err("nla_put failed");
+		status = QDF_STATUS_E_FAILURE;
+		goto nla_put_failure;
+	}
+
+	if (wlan_cfg80211_nla_put_u64(skb, QCA_WLAN_VENDOR_ATTR_DOZED_AP_NEXT_TSF,
+				      ll_ps_param->next_tsf)) {
+		hdd_err("nla_put failed for next tsf");
+		status = QDF_STATUS_E_FAILURE;
+		goto nla_put_failure;
+	}
+
+	if (nla_put_u16(skb, QCA_WLAN_VENDOR_ATTR_DOZED_AP_BI_MULTIPLIER,
+			ll_ps_param->bcn_mult)) {
+		hdd_err("nla_put for BI multiplier failed");
+		status = QDF_STATUS_E_FAILURE;
+		goto nla_put_failure;
+	}
+
+	hdd_debug("next_tsf : %llu, cookie: %llu beacon multiplier: %u",
+		  ll_ps_param->next_tsf, ll_ps_param->dialog_token,
+		  ll_ps_param->bcn_mult);
+
+	wlan_cfg80211_vendor_event(skb, qdf_mem_malloc_flags());
+
+	hdd_exit();
+
+	return status;
+
+nla_put_failure:
+	wlan_cfg80211_vendor_free_skb(skb);
+	return status;
+}
+
+QDF_STATUS green_ap_register_hdd_callback(struct wlan_objmgr_pdev *pdev,
+					  struct green_ap_hdd_callback *hdd_cback)
+{
+	struct wlan_pdev_green_ap_ctx *green_ap_ctx;
+
+	green_ap_ctx = wlan_objmgr_pdev_get_comp_private_obj(
+			pdev, WLAN_UMAC_COMP_GREEN_AP);
+
+	if (!green_ap_ctx) {
+		hdd_err("green ap context obtained is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	green_ap_ctx->hdd_cback = *hdd_cback;
+
+	return QDF_STATUS_SUCCESS;
 }
 #endif

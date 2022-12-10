@@ -1858,6 +1858,7 @@ static const struct nl80211_vendor_cmd_info wlan_hdd_cfg80211_vendor_events[] = 
 		.subcmd = QCA_NL80211_VENDOR_SUBCMD_SR,
 	},
 #endif
+	FEATURE_GREEN_AP_LOW_LATENCY_PWR_SAVE_EVENT
 };
 
 /**

@@ -1821,6 +1821,10 @@ static const uint8_t *wma_wow_wake_reason_str(A_INT32 wake_reason)
 		return "DELAYED_WAKEUP_TIMER_ELAPSED";
 	case WOW_REASON_DELAYED_WAKEUP_DATA_STORE_LIST_FULL:
 		return "DELAYED_WAKEUP_DATA_STORE_LIST_FULL";
+#ifndef WLAN_SUPPORT_GAP_LL_PS_MODE
+	case WOW_REASON_XGAP:
+		return "XGAP";
+#endif
 	default:
 		return "unknown";
 	}
