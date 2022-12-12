@@ -242,15 +242,16 @@ void wlan_hdd_sae_copy_ta_addr(struct cfg80211_external_auth_params *params,
 	status = ucfg_cm_get_sae_auth_ta(adapter->hdd_ctx->pdev,
 					 sae_info->vdev_id,
 					 &ta);
-	if (QDF_IS_STATUS_SUCCESS(status)) {
+	if (QDF_IS_STATUS_SUCCESS(status))
 		qdf_mem_copy(params->tx_addr, ta.bytes, QDF_MAC_ADDR_SIZE);
-		hdd_debug("ta:" QDF_MAC_ADDR_FMT,
-			  QDF_MAC_ADDR_REF(params->tx_addr));
-	} else if (wlan_vdev_mlme_is_mlo_vdev(adapter->vdev)) {
+	else if (wlan_vdev_mlme_is_mlo_vdev(adapter->vdev))
 		qdf_mem_copy(params->tx_addr,
 			     wlan_vdev_mlme_get_linkaddr(adapter->vdev),
 			     QDF_MAC_ADDR_SIZE);
-	}
+
+	hdd_debug("status:%d ta:" QDF_MAC_ADDR_FMT, status,
+		  QDF_MAC_ADDR_REF(params->tx_addr));
+
 }
 #else
 static inline
