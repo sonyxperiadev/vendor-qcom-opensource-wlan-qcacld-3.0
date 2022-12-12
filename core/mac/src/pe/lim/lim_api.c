@@ -4035,11 +4035,31 @@ end:
 #endif
 
 #ifdef WLAN_FEATURE_SR
+static
+void lim_store_array_to_bit_map(uint64_t *val, uint8_t array[8])
+{
+	uint32_t bit_map_0 = 0;
+	uint32_t bit_map_1 = 0;
+
+	QDF_SET_BITS(bit_map_0, 0, SR_PADDING_BYTE, array[0]);
+	QDF_SET_BITS(bit_map_0, 8, SR_PADDING_BYTE, array[1]);
+	QDF_SET_BITS(bit_map_0, 16, SR_PADDING_BYTE, array[2]);
+	QDF_SET_BITS(bit_map_0, 24, SR_PADDING_BYTE, array[3]);
+	QDF_SET_BITS(bit_map_1, 0, SR_PADDING_BYTE, array[4]);
+	QDF_SET_BITS(bit_map_1, 8, SR_PADDING_BYTE, array[5]);
+	QDF_SET_BITS(bit_map_1, 16, SR_PADDING_BYTE, array[6]);
+	QDF_SET_BITS(bit_map_1, 24, SR_PADDING_BYTE, array[7]);
+	*val = (uint64_t) bit_map_0 |
+	       (((uint64_t)bit_map_1) << 32);
+}
+
 void lim_update_vdev_sr_elements(struct pe_session *session_entry,
 				 tpDphHashNode sta_ds)
 {
 	uint8_t sr_ctrl;
 	uint8_t non_srg_max_pd_offset, srg_min_pd_offset, srg_max_pd_offset;
+	uint64_t srg_color_bit_map = 0;
+	uint64_t srg_partial_bssid_bit_map = 0;
 	tDot11fIEspatial_reuse *srp_ie = &sta_ds->parsed_ies.srp_ie;
 
 	sr_ctrl = srp_ie->sr_value15_allow << 4 |
@@ -4051,14 +4071,23 @@ void lim_update_vdev_sr_elements(struct pe_session *session_entry,
 		srp_ie->non_srg_offset.info.non_srg_pd_max_offset;
 	srg_min_pd_offset = srp_ie->srg_info.info.srg_pd_min_offset;
 	srg_max_pd_offset = srp_ie->srg_info.info.srg_pd_max_offset;
-	pe_debug("Spatial Reuse Control field: %x Non-SRG Max PD Offset: %x SRG range %d - %d",
+	lim_store_array_to_bit_map(&srg_color_bit_map,
+				   srp_ie->srg_info.info.srg_color);
+	lim_store_array_to_bit_map(&srg_partial_bssid_bit_map,
+				   srp_ie->srg_info.info.srg_partial_bssid);
+	pe_debug("Spatial Reuse Control field: %x Non-SRG Max PD Offset: %x SRG range %d - %d srg_color_bit_map:%lu srg_partial_bssid_bit_map: %lu",
 		 sr_ctrl, non_srg_max_pd_offset, srg_min_pd_offset,
-		 srg_max_pd_offset);
-
+		 srg_max_pd_offset, srg_color_bit_map,
+		 srg_partial_bssid_bit_map);
+	wlan_vdev_mlme_set_srg_partial_bssid_bit_map(session_entry->vdev,
+						     srg_partial_bssid_bit_map);
+	wlan_vdev_mlme_set_srg_bss_color_bit_map(session_entry->vdev,
+						 srg_color_bit_map);
 	wlan_vdev_mlme_set_sr_ctrl(session_entry->vdev, sr_ctrl);
 	wlan_vdev_mlme_set_non_srg_pd_offset(session_entry->vdev,
 					     non_srg_max_pd_offset);
 	wlan_vdev_mlme_set_srg_pd_offset(session_entry->vdev, srg_max_pd_offset,
 					 srg_min_pd_offset);
+
 }
 #endif
