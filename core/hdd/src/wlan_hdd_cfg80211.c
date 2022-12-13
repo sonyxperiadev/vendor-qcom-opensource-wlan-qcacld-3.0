@@ -20686,7 +20686,7 @@ wlan_hdd_mlo_set_keys_saved(struct hdd_adapter *adapter,
 #endif
 
 #ifdef WLAN_FEATURE_11BE_MLO
-static QDF_STATUS
+QDF_STATUS
 wlan_hdd_mlo_copy_partner_addr_from_mlie(struct wlan_objmgr_vdev *vdev,
 					 struct qdf_mac_addr *partner_mac)
 {
@@ -20756,13 +20756,6 @@ wlan_hdd_mlo_copy_partner_addr_from_mlie(struct wlan_objmgr_vdev *vdev,
 		status = QDF_STATUS_E_NOENT;
 
 	return status;
-}
-#else
-static inline QDF_STATUS
-wlan_hdd_mlo_copy_partner_addr_from_mlie(struct wlan_objmgr_vdev *vdev,
-					 struct qdf_mac_addr *partner_mac)
-{
-	return QDF_STATUS_E_NOSUPPORT;
 }
 #endif
 
@@ -20940,7 +20933,7 @@ QDF_STATUS wlan_hdd_send_key_vdev(struct wlan_objmgr_vdev *vdev,
 
 #if defined(WLAN_FEATURE_11BE_MLO) && \
 defined(CFG80211_SINGLE_NETDEV_MULTI_LINK_SUPPORT)
-static struct wlan_objmgr_peer *
+struct wlan_objmgr_peer *
 wlan_hdd_ml_sap_get_peer(struct wlan_objmgr_vdev *vdev,
 			 uint8_t *peer_mld)
 {
