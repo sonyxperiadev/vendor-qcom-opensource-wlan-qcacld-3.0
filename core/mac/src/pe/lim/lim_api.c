@@ -3954,7 +3954,7 @@ lim_gen_link_probe_rsp_roam(struct mac_context *mac_ctx,
 	struct qdf_mac_addr sta_link_addr;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	tSirProbeRespBeacon *probe_rsp;
-	uint8_t *frame;
+	uint8_t *frame, *src_addr;
 	uint32_t frame_len;
 	struct wlan_frame_hdr *hdr;
 
@@ -4016,10 +4016,16 @@ lim_gen_link_probe_rsp_roam(struct mac_context *mac_ctx,
 			goto end;
 		}
 
+		src_addr = lim_get_src_addr_from_frame(&link_probe_rsp);
+		if (!src_addr) {
+			pe_err("MLO: Failed to fetch src address");
+			status = QDF_STATUS_E_FAILURE;
+			goto end;
+		}
 		lim_add_bcn_probe(session->vdev, link_probe_rsp.ptr,
 				  link_probe_rsp.len,
-				  mlo_roam_get_link_freq(session->vdev_id,
-							 roam_sync_ind),
+				  mlo_roam_get_link_freq_from_mac_addr(
+						 roam_sync_ind, src_addr),
 				  roam_sync_ind->rssi);
 	} else {
 		qdf_mem_free(probe_rsp);

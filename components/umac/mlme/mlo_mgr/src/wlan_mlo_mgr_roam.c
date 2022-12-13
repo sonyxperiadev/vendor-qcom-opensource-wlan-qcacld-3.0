@@ -426,18 +426,19 @@ bool is_multi_link_roam(struct roam_offload_synch_ind *sync_ind)
 }
 
 uint32_t
-mlo_roam_get_link_freq(uint8_t vdev_id,
-		       struct roam_offload_synch_ind *sync_ind)
+mlo_roam_get_link_freq_from_mac_addr(struct roam_offload_synch_ind *sync_ind,
+				     uint8_t *link_mac_addr)
 {
 	uint8_t i;
 
-	if (!sync_ind || !sync_ind->num_setup_links)
+	if (!sync_ind || !sync_ind->num_setup_links || !link_mac_addr)
 		return 0;
 
-	for (i = 0; i < sync_ind->num_setup_links; i++) {
-		if (sync_ind->ml_link[i].vdev_id != vdev_id)
+	for (i = 0; i < sync_ind->num_setup_links; i++)
+		if (!qdf_mem_cmp(sync_ind->ml_link[i].link_addr.bytes,
+				 link_mac_addr,
+				 QDF_MAC_ADDR_SIZE))
 			return sync_ind->ml_link[i].channel.mhz;
-	}
 
 	return 0;
 }
