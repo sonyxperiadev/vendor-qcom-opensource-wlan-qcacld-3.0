@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -748,6 +748,8 @@ sch_set_fixed_beacon_fields(struct mac_context *mac_ctx, struct pe_session *sess
 					     session->curr_op_freq,
 					     &bcn_2->num_transmit_power_env,
 					     false);
+		populate_dot11f_qcn_ie(mac_ctx, session, &bcn_2->qcn_ie,
+				       QCN_IE_ATTR_ID_ALL);
 	}
 
 	if (lim_is_session_he_capable(session)) {
