@@ -3625,6 +3625,14 @@ QDF_STATUS mlme_set_ext_opr_rate(struct wlan_objmgr_vdev *vdev, uint8_t *src,
 				 qdf_size_t len);
 
 /**
+ * mlme_clear_ext_opr_rate() - clear extended operational rate
+ * @vdev: vdev pointer
+ *
+ * Return: QDF_SUCCESS if success
+ */
+QDF_STATUS mlme_clear_ext_opr_rate(struct wlan_objmgr_vdev *vdev);
+
+/**
  * mlme_get_mcs_rate() - get MCS based rate
  * @vdev: vdev pointer
  * @dst: buffer to get rates set
@@ -3645,6 +3653,14 @@ qdf_size_t mlme_get_mcs_rate(struct wlan_objmgr_vdev *vdev, uint8_t *dst,
  */
 QDF_STATUS mlme_set_mcs_rate(struct wlan_objmgr_vdev *vdev, uint8_t *src,
 			     qdf_size_t len);
+
+/**
+ * mlme_clear_mcs_rate() - clear MCS based rate
+ * @vdev: vdev pointer
+ *
+ * Return: QDF_SUCCESS if success
+ */
+QDF_STATUS mlme_clear_mcs_rate(struct wlan_objmgr_vdev *vdev);
 
 /**
  * wlan_mlme_is_sta_mon_conc_supported() - Check if STA + Monitor mode
