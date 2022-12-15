@@ -2515,10 +2515,10 @@ lim_process_beacon_tx_success_ind(struct mac_context *mac_ctx, uint16_t msgType,
 		return;
 	csa_tx_offload = wlan_psoc_nif_fw_ext_cap_get(mac_ctx->psoc,
 						WLAN_SOC_CEXT_CSA_TX_OFFLOAD);
-	if (session->dfsIncludeChanSwIe &&
-	    (session->gLimChannelSwitch.switchCount ==
-	    mac_ctx->sap.SapDfsInfo.sap_ch_switch_beacon_cnt) &&
-	    !csa_tx_offload)
+	if (session->dfsIncludeChanSwIe && !csa_tx_offload &&
+	    ((session->gLimChannelSwitch.switchCount ==
+	      mac_ctx->sap.SapDfsInfo.sap_ch_switch_beacon_cnt) ||
+	     (session->gLimChannelSwitch.switchCount == 1)))
 		lim_process_ap_ecsa_timeout(session);
 
 
