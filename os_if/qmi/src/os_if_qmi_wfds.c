@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -408,6 +408,66 @@ static void os_if_wfds_ipcc_map_n_cfg_ind_cb(struct qmi_handle *qmi_hdl,
 	}
 
 	ucfg_dp_wfds_handle_ipcc_map_n_cfg_ind(&ipcc_ind_msg);
+}
+
+QDF_STATUS
+os_if_qmi_wfds_send_ut_cmd_req_msg(struct os_if_qmi_wfds_ut_cmd_info *cmd_info)
+{
+	struct wfds_ut_cmd_req_msg_v01 *req;
+	struct wfds_gen_resp_msg_v01 *resp;
+	struct qmi_txn txn;
+	QDF_STATUS status;
+	int i;
+
+	req = qdf_mem_malloc(sizeof(*req));
+	if (!req)
+		return QDF_STATUS_E_NOMEM;
+
+	resp = qdf_mem_malloc(sizeof(*resp));
+	if (!resp) {
+		qdf_mem_free(req);
+		return QDF_STATUS_E_NOMEM;
+	}
+
+	req->cmd = cmd_info->cmd;
+	req->duration = cmd_info->duration;
+	req->flush_period = cmd_info->flush_period;
+	req->num_pkts = cmd_info->num_pkts;
+	req->buf_size = cmd_info->buf_size;
+	req->ether_type = cmd_info->ether_type;
+	for (i = 0; i < QDF_MAC_ADDR_SIZE; i++) {
+		req->src_mac[i] = cmd_info->src_mac.bytes[i];
+		req->dest_mac[i] = cmd_info->dest_mac.bytes[i];
+	}
+
+	osif_debug("cmd: %u for duration: %u s, flush period: %u ms",
+		  req->cmd, req->duration, req->flush_period);
+
+	status = os_if_qmi_txn_init(&qmi_wfds, &txn, wfds_gen_resp_msg_v01_ei,
+				    resp);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		osif_info("QMI transaction for WFDS unit test cmd init failed");
+		goto out;
+	}
+
+	status = os_if_qmi_send_request(&qmi_wfds, NULL, &txn,
+					QMI_WFDS_UT_CMD_REQ_V01,
+					WFDS_UT_CMD_REQ_MSG_V01_MAX_MSG_LEN,
+					wfds_ut_cmd_req_msg_v01_ei, req);
+
+	status = os_if_qmi_txn_wait(&txn, QMI_WFDS_TIMEOUT_JF);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		osif_info("Failed to wait for unit test cmd response");
+		goto out;
+	}
+
+	qdf_assert(resp->resp.result == QMI_RESULT_SUCCESS_V01);
+
+out:
+	qdf_mem_free(resp);
+	qdf_mem_free(req);
+
+	return status;
 }
 
 /**
