@@ -7704,6 +7704,11 @@ struct hdd_adapter *hdd_open_adapter(struct hdd_context *hdd_ctx,
 		INIT_WORK(&adapter->ipv6_notifier_work,
 			  hdd_ipv6_notifier_work_queue);
 #endif
+		if (session_type == QDF_SAP_MODE) {
+			/* Create all SAP mode adapters as ML type */
+			params->is_ml_adapter = true;
+			params->is_single_link = true;
+		}
 
 		break;
 	case QDF_FTM_MODE:
