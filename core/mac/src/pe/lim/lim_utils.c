@@ -10419,6 +10419,7 @@ QDF_STATUS lim_set_ch_phy_mode(struct wlan_objmgr_vdev *vdev, uint8_t dot11mode)
 	uint8_t band_mask;
 	enum channel_state ch_state;
 	uint32_t start_ch_freq;
+	struct ch_params ch_params = {0};
 
 	if (!mac_ctx)
 		return QDF_STATUS_E_FAILURE;
@@ -10515,9 +10516,14 @@ QDF_STATUS lim_set_ch_phy_mode(struct wlan_objmgr_vdev *vdev, uint8_t dot11mode)
 		else
 			start_ch_freq = des_chan->ch_freq;
 
-		ch_state = wlan_reg_get_5g_bonded_channel_state_for_freq(
-					mac_ctx->pdev, start_ch_freq,
-					des_chan->ch_width);
+		if (IS_DOT11_MODE_EHT(dot11mode))
+			wlan_reg_set_create_punc_bitmap(&ch_params, true);
+		ch_params.ch_width = des_chan->ch_width;
+		ch_state =
+		wlan_reg_get_5g_bonded_channel_state_for_pwrmode(mac_ctx->pdev,
+								 start_ch_freq,
+								 &ch_params,
+								 REG_CURRENT_PWR_MODE);
 		if (CHANNEL_STATE_DFS == ch_state)
 			des_chan->ch_flagext |= IEEE80211_CHAN_DFS_CFREQ2;
 	}

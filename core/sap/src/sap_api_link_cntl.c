@@ -470,9 +470,15 @@ wlansap_roam_process_ch_change_success(struct mac_context *mac_ctx,
 	}
 
 	if (sap_ctx->ch_params.ch_width == CH_WIDTH_160MHZ) {
-		if (wlan_reg_get_bonded_channel_state_for_freq(
-		    mac_ctx->pdev, target_chan_freq,
-		    sap_ctx->ch_params.ch_width, 0) == CHANNEL_STATE_DFS)
+		struct ch_params ch_params = {0};
+
+		wlan_reg_set_create_punc_bitmap(&ch_params, true);
+		ch_params.ch_width = sap_ctx->ch_params.ch_width;
+		if (wlan_reg_get_5g_bonded_channel_state_for_pwrmode(mac_ctx->pdev,
+								     target_chan_freq,
+								     &ch_params,
+								     REG_CURRENT_PWR_MODE) ==
+		    CHANNEL_STATE_DFS)
 			is_ch_dfs = true;
 	} else if (sap_ctx->ch_params.ch_width == CH_WIDTH_80P80MHZ) {
 		if (wlan_reg_get_channel_state_for_pwrmode(

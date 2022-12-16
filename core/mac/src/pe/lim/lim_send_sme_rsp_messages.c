@@ -2319,9 +2319,16 @@ lim_send_sme_ap_channel_switch_resp(struct mac_context *mac,
 				BIT(band));
 
 	if (ch_width == CH_WIDTH_160MHZ) {
-		if (wlan_reg_get_bonded_channel_state_for_freq(
-		    mac->pdev, pe_session->curr_op_freq,
-		    ch_width, 0) == CHANNEL_STATE_DFS)
+		struct ch_params ch_params = {0};
+
+		if (IS_DOT11_MODE_EHT(pe_session->dot11mode))
+			wlan_reg_set_create_punc_bitmap(&ch_params, true);
+		ch_params.ch_width = ch_width;
+		if (wlan_reg_get_5g_bonded_channel_state_for_pwrmode(mac->pdev,
+								     pe_session->curr_op_freq,
+								     &ch_params,
+								     REG_CURRENT_PWR_MODE) ==
+		    CHANNEL_STATE_DFS)
 			is_ch_dfs = true;
 	} else if (ch_width == CH_WIDTH_80P80MHZ) {
 		if (wlan_reg_get_channel_state_for_pwrmode(
