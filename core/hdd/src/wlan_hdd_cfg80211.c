@@ -3411,10 +3411,11 @@ static bool wlan_hdd_check_is_acs_request_same(struct hdd_adapter *adapter,
 	struct nlattr *tb[QCA_WLAN_VENDOR_ATTR_ACS_MAX + 1];
 	uint8_t hw_mode, ht_enabled, ht40_enabled, vht_enabled, eht_enabled;
 	struct sap_config *sap_config;
-	uint32_t last_scan_ageout_time;
+	uint32_t last_scan_ageout_time = 0;
 	uint8_t ch_list_count;
 	uint16_t ch_width;
 	int ret, i, j;
+	struct wlan_objmgr_psoc *psoc;
 
 	ret = wlan_cfg80211_nla_parse(tb, QCA_WLAN_VENDOR_ATTR_ACS_MAX, data,
 				      data_len,
@@ -3456,11 +3457,16 @@ static bool wlan_hdd_check_is_acs_request_same(struct hdd_adapter *adapter,
 	if (sap_config->acs_cfg.master_acs_cfg.ch_width != ch_width)
 		return false;
 
-	if (nla_get_u32(tb[QCA_WLAN_VENDOR_ATTR_ACS_LAST_SCAN_AGEOUT_TIME]))
+	if (nla_get_u32(tb[QCA_WLAN_VENDOR_ATTR_ACS_LAST_SCAN_AGEOUT_TIME])) {
 		last_scan_ageout_time =
 		nla_get_u32(tb[QCA_WLAN_VENDOR_ATTR_ACS_LAST_SCAN_AGEOUT_TIME]);
-	else
-		last_scan_ageout_time = 0;
+	} else {
+		psoc = wlan_vdev_get_psoc(adapter->vdev);
+		if (psoc)
+			wlan_scan_get_last_scan_ageout_time(
+							psoc,
+							&last_scan_ageout_time);
+	}
 	if (sap_config->acs_cfg.last_scan_ageout_time != last_scan_ageout_time)
 		return false;
 
@@ -3715,7 +3721,8 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 		last_scan_ageout_time =
 		nla_get_u32(tb[QCA_WLAN_VENDOR_ATTR_ACS_LAST_SCAN_AGEOUT_TIME]);
 	else
-		last_scan_ageout_time = 0;
+		wlan_scan_get_last_scan_ageout_time(hdd_ctx->psoc,
+						    &last_scan_ageout_time);
 
 	if (ch_width == 320)
 		wlan_hdd_set_sap_acs_ch_width_320(sap_config);
