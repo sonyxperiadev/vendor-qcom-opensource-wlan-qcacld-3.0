@@ -532,8 +532,26 @@ QDF_STATUS cm_roam_sync_event_handler_cb(struct wlan_objmgr_vdev *vdev,
 		}
 	} else if (sync_ind->beaconProbeRespLength >
 			(QDF_IEEE80211_3ADDR_HDR_LEN + MAC_B_PR_SSID_OFFSET)) {
-		ie_len = sync_ind->beaconProbeRespLength -
+		/*
+		 * When STA roams to an MLO AP, non-assoc link might be superior
+		 * in features compared to  assoc link and the per-STA profile
+		 * info may carry corresponding IEs. These IEs are extracted
+		 * and added to IE list of link probe response while generating
+		 * it. So, the link probe response generated from assoc link
+		 * probe response might be of more size than assoc link probe
+		 * rsp. Allocate buffer for the bss descriptor to accommodate
+		 * all of the IEs got generated as part of link probe rsp
+		 * generation. Allocate MAX_MGMT_MPDU_LEN bytes for IEs as the
+		 * max frame size that can be received from AP is
+		 * MAX_MGMT_MPDU_LEN bytes.
+		 */
+		if (is_multi_link_roam(sync_ind))
+			ie_len = MAX_MGMT_MPDU_LEN -
 			(QDF_IEEE80211_3ADDR_HDR_LEN + MAC_B_PR_SSID_OFFSET);
+		else
+			ie_len = sync_ind->beaconProbeRespLength -
+			(QDF_IEEE80211_3ADDR_HDR_LEN + MAC_B_PR_SSID_OFFSET);
+
 	} else {
 		mlme_err("LFR3: Invalid Beacon Length");
 		goto err;

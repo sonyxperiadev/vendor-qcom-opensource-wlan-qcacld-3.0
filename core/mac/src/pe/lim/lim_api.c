@@ -3861,7 +3861,7 @@ lim_gen_link_specific_probe_rsp(struct mac_context *mac_ctx,
 	struct mlo_partner_info *partner_info;
 	uint8_t chan;
 	uint8_t op_class;
-	uint16_t chan_freq;
+	uint16_t chan_freq, gen_frame_len;
 
 	if (!session_entry)
 		return QDF_STATUS_E_NULL_VALUE;
@@ -3889,20 +3889,33 @@ lim_gen_link_specific_probe_rsp(struct mac_context *mac_ctx,
 			goto end;
 		}
 
-		link_probe_rsp.ptr = qdf_mem_malloc(probe_rsp_len);
+		/*
+		 * When an MLO probe response is received from a link,
+		 * the other link might be superior in features compared to the
+		 * link that sent ML probe rsp and the per-STA profile
+		 * info may carry corresponding IEs. These IEs are extracted
+		 * and added to IE list of link probe response while generating
+		 * it. So, the new link probe response generated might be of
+		 * more size than the original link probe rsp. Allocate buffer
+		 * for the scan entry to accommodate all of the IEs got
+		 * generated as part of link probe rsp generation. Allocate
+		 * MAX_MGMT_MPDU_LEN bytes for IEs as the max frame size that
+		 * can be received from AP is MAX_MGMT_MPDU_LEN bytes.
+		 */
+		gen_frame_len = MAX_MGMT_MPDU_LEN;
+
+		link_probe_rsp.ptr = qdf_mem_malloc(gen_frame_len);
 		if (!link_probe_rsp.ptr)
 			return QDF_STATUS_E_NOMEM;
 
 		qdf_mem_copy(&sta_link_addr, session_entry->self_mac_addr,
 			     QDF_MAC_ADDR_SIZE);
 
-		link_probe_rsp.len = probe_rsp_len;
+		link_probe_rsp.len = gen_frame_len;
 		status = util_gen_link_probe_rsp(probe_rsp,
-						 probe_rsp_len,
-						 sta_link_addr,
-						 link_probe_rsp.ptr,
-						 probe_rsp_len,
-						 (qdf_size_t *)&link_probe_rsp.len);
+				probe_rsp_len, sta_link_addr,
+				link_probe_rsp.ptr, gen_frame_len,
+				(qdf_size_t *)&link_probe_rsp.len);
 
 		if (QDF_IS_STATUS_ERROR(status)) {
 			pe_err("MLO: Link probe response generation failed %d", status);
@@ -3910,6 +3923,8 @@ lim_gen_link_specific_probe_rsp(struct mac_context *mac_ctx,
 			status = QDF_STATUS_E_FAILURE;
 			goto end;
 		}
+		pe_debug("MLO: link probe rsp size:%u original probe rsp :%u",
+			 link_probe_rsp.len, probe_rsp_len);
 
 		/* Currently only 2 link mlo is supported */
 		link_info = &partner_info->partner_link_info[0];
@@ -3957,6 +3972,7 @@ lim_gen_link_probe_rsp_roam(struct mac_context *mac_ctx,
 	uint8_t *frame, *src_addr;
 	uint32_t frame_len;
 	struct wlan_frame_hdr *hdr;
+	uint16_t gen_frame_len;
 
 	if (!session || !roam_sync_ind)
 		return QDF_STATUS_E_NULL_VALUE;
@@ -3993,7 +4009,22 @@ lim_gen_link_probe_rsp_roam(struct mac_context *mac_ctx,
 	}
 
 	if (probe_rsp->mlo_ie.mlo_ie_present) {
-		link_probe_rsp.ptr = qdf_mem_malloc(frame_len);
+		/*
+		 * When STA roams to an MLO AP, non-assoc link might be superior
+		 * in features compared to  assoc link and the per-STA profile
+		 * info may carry corresponding IEs. These IEs are extracted
+		 * and added to IE list of link probe response while generating
+		 * it. So, the link probe response generated from assoc link
+		 * probe response might be of more size than assoc link probe
+		 * rsp. Allocate buffer for the bss descriptor to accommodate
+		 * all of the IEs got generated as part of link probe rsp
+		 * generation. Allocate MAX_MGMT_MPDU_LEN bytes for IEs as the
+		 * max frame size that can be received from AP is
+		 * MAX_MGMT_MPDU_LEN bytes.
+		 */
+		gen_frame_len = MAX_MGMT_MPDU_LEN;
+
+		link_probe_rsp.ptr = qdf_mem_malloc(gen_frame_len);
 		if (!link_probe_rsp.ptr)
 			return QDF_STATUS_E_NOMEM;
 
@@ -4005,16 +4036,19 @@ lim_gen_link_probe_rsp_roam(struct mac_context *mac_ctx,
 		qdf_mem_copy(&sta_link_addr, session->self_mac_addr,
 			     QDF_MAC_ADDR_SIZE);
 
-		link_probe_rsp.len = frame_len;
+		link_probe_rsp.len = gen_frame_len;
 		status = util_gen_link_probe_rsp(frame, frame_len,
 				sta_link_addr, link_probe_rsp.ptr,
-				frame_len, (qdf_size_t *)&link_probe_rsp.len);
+				gen_frame_len,
+				(qdf_size_t *)&link_probe_rsp.len);
 		if (QDF_IS_STATUS_ERROR(status)) {
 			pe_err("MLO: Link probe response generation failed %d",
 			       status);
 			status = QDF_STATUS_E_FAILURE;
 			goto end;
 		}
+		pe_debug("MLO: link probe rsp size:%u original probe rsp :%u",
+			 link_probe_rsp.len, frame_len);
 
 		src_addr = lim_get_src_addr_from_frame(&link_probe_rsp);
 		if (!src_addr) {
