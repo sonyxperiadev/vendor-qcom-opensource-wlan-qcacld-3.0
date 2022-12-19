@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -3481,18 +3481,10 @@ lim_cm_fill_link_session(struct mac_context *mac_ctx,
 	pe_join_req = pe_session->lim_join_req;
 	bss_desc = &pe_session->lim_join_req->bssDescription;
 
-	bss_desc = qdf_mem_malloc(sizeof(struct bss_description) + ie_len);
-	if (!bss_desc) {
-		QDF_ASSERT(bss_desc);
-		status = -QDF_STATUS_E_NOMEM;
-		goto end;
-	}
-
 	status = lim_roam_fill_bss_descr(mac_ctx, sync_ind, bss_desc,
 					 pe_session);
 	if (!QDF_IS_STATUS_SUCCESS(status)) {
 		pe_err("LFR3:Failed to fill Bss Descr");
-		qdf_mem_free(bss_desc);
 		goto end;
 	}
 
@@ -3500,7 +3492,6 @@ lim_cm_fill_link_session(struct mac_context *mac_ctx,
 	if (QDF_IS_STATUS_ERROR(status)) {
 		pe_err("Failed to fill pe session vdev id %d",
 		       pe_session->vdev_id);
-		qdf_mem_free(bss_desc);
 		goto end;
 	}
 
