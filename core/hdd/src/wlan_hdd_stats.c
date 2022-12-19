@@ -6077,6 +6077,72 @@ wlan_hdd_refill_actual_rate(struct rate_info *os_rate,
 }
 #endif
 
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(CFG80211_11BE_BASIC)
+static inline void wlan_hdd_populate_mlo_rssi(int8_t *rssi, int8_t *link_rssi)
+{
+	if (!(*rssi) || !(*link_rssi))
+		*rssi = QDF_MIN(*rssi, *link_rssi);
+	else
+		*rssi = QDF_MAX(*rssi, *link_rssi);
+}
+
+static inline void wlan_hdd_populate_mlo_snr(int32_t *snr, int32_t *link_snr)
+{
+	*snr = QDF_MAX(*snr, *link_snr);
+}
+
+static inline void wlan_hdd_mlo_update_stats_info(struct hdd_adapter *adapter)
+{
+	int8_t *rssi, *link_rssi;
+	uint32_t *snr, *link_snr;
+	uint8_t iter;
+	struct hdd_mlo_adapter_info *mlo_adapter_info;
+	struct hdd_adapter *link_adapter;
+	struct wlan_objmgr_vdev *vdev;
+
+	rssi = &adapter->hdd_stats.summary_stat.rssi;
+	snr = &adapter->hdd_stats.summary_stat.snr;
+
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_CP_STATS_ID);
+	if (!vdev)
+		return;
+
+	/* For non ML connection just
+	 * update the values in the adapter
+	 */
+	if (!wlan_vdev_mlme_is_mlo_vdev(vdev)) {
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_CP_STATS_ID);
+		goto stat_update;
+	}
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_CP_STATS_ID);
+
+	hdd_debug("Link0: RSSI: %d, SNR: %d", *rssi, *snr);
+	mlo_adapter_info = &adapter->mlo_adapter_info;
+	for (iter = 0; iter < WLAN_MAX_MLD; iter++) {
+		link_adapter = mlo_adapter_info->link_adapter[iter];
+		if (!link_adapter ||
+		    link_adapter->mlo_adapter_info.associate_with_ml_adapter)
+			continue;
+
+		link_rssi = &link_adapter->hdd_stats.summary_stat.rssi;
+		wlan_hdd_populate_mlo_rssi(rssi, link_rssi);
+
+		link_snr = &link_adapter->hdd_stats.summary_stat.snr;
+		wlan_hdd_populate_mlo_snr(snr, link_snr);
+		hdd_debug("Partner Link: RSSI: %d, SNR: %d",
+			  *link_rssi, *link_snr);
+	}
+
+stat_update:
+	adapter->rssi = *rssi;
+	adapter->snr = *snr;
+}
+#else
+static inline void wlan_hdd_mlo_update_stats_info(struct hdd_adapter *adapter)
+{
+}
+#endif
+
 /**
  * wlan_hdd_get_sta_stats() - get aggregate STA stats
  * @wiphy: wireless phy
@@ -6147,8 +6213,7 @@ static int wlan_hdd_get_sta_stats(struct wiphy *wiphy,
 
 	wlan_hdd_get_peer_rx_rate_stats(adapter);
 
-	adapter->rssi = adapter->hdd_stats.summary_stat.rssi;
-	snr = adapter->hdd_stats.summary_stat.snr;
+	wlan_hdd_mlo_update_stats_info(adapter);
 
 	/* for new connection there might be no valid previous RSSI */
 	if (!adapter->rssi) {
