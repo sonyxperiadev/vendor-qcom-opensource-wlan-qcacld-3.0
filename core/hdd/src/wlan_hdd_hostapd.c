@@ -2255,15 +2255,6 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 		hdd_nofl_info("Ap stopped vid %d reason=%d", adapter->vdev_id,
 			      ap_ctx->bss_stop_reason);
 
-		qdf_status =
-			policy_mgr_get_mac_id_by_session_id(hdd_ctx->psoc,
-							    adapter->vdev_id,
-							    &pdev_id);
-		if (QDF_IS_STATUS_SUCCESS(qdf_status))
-			hdd_medium_assess_stop_timer(pdev_id, hdd_ctx);
-
-		hdd_medium_assess_deinit();
-
 		/* clear the reason code in case BSS is stopped
 		 * in another place
 		 */
@@ -3029,6 +3020,15 @@ stopbss:
 		hdd_debug("BSS stop status = %s",
 		       sap_event->sapevt.sapStopBssCompleteEvent.status ?
 		       "eSAP_STATUS_FAILURE" : "eSAP_STATUS_SUCCESS");
+
+		qdf_status =
+			policy_mgr_get_mac_id_by_session_id(hdd_ctx->psoc,
+							    adapter->vdev_id,
+							    &pdev_id);
+		if (QDF_IS_STATUS_SUCCESS(qdf_status))
+			hdd_medium_assess_stop_timer(pdev_id, hdd_ctx);
+
+		hdd_medium_assess_deinit();
 
 		/* Change the BSS state now since, as we are shutting
 		 * things down, we don't want interfaces to become
