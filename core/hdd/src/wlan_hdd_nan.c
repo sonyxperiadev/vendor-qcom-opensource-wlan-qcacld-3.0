@@ -236,7 +236,7 @@ void hdd_nan_sr_concurrency_update(struct nan_event_params *nan_evt)
 		}
 	}
 exit:
-	if (sta_vdev)
+	if (sta_vdev && is_sr_enabled)
 		wlan_objmgr_vdev_release_ref(sta_vdev, WLAN_OSIF_ID);
 }
 #endif
