@@ -34,6 +34,12 @@
 
 struct hdd_context;
 
+#ifdef WLAN_FEATURE_11BE_MLO
+#define EHT_OPMODE_SUPPORTED 2
+#else
+#define EHT_OPMODE_SUPPORTED 1
+#endif
+
 /* QCA_NL80211_VENDOR_SUBCMD_ROAM policy */
 extern const struct nla_policy wlan_hdd_set_roam_param_policy[
 			QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_MAX + 1];
