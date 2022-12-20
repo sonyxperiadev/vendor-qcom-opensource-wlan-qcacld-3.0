@@ -12821,12 +12821,18 @@ static void hdd_cfg_params_init(struct hdd_context *hdd_ctx)
 #ifdef CONNECTION_ROAMING_CFG
 static QDF_STATUS hdd_cfg_parse_connection_roaming_cfg(void)
 {
-	QDF_STATUS status;
+	QDF_STATUS status = QDF_STATUS_E_INVAL;
+	bool is_valid;
 
-	status = cfg_parse(WLAN_CONNECTION_ROAMING_INI_FILE);
-	if (QDF_IS_STATUS_ERROR(status))
-		status = cfg_parse(WLAN_CONNECTION_ROAMING_BACKUP_INI_FILE);
+	is_valid = cfg_valid_ini_check(WLAN_CONNECTION_ROAMING_INI_FILE);
 
+	if (is_valid)
+		status = cfg_parse(WLAN_CONNECTION_ROAMING_INI_FILE);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		is_valid = cfg_valid_ini_check(WLAN_CONNECTION_ROAMING_BACKUP_INI_FILE);
+		if (is_valid)
+			status = cfg_parse(WLAN_CONNECTION_ROAMING_BACKUP_INI_FILE);
+	}
 	return status;
 }
 #else
