@@ -6696,6 +6696,53 @@ cm_roam_btm_query_event(struct wmi_neighbor_report_data *btm_data,
 	return status;
 }
 
+void
+cm_roam_neigh_rpt_req_event(struct wmi_neighbor_report_data *neigh_rpt,
+			    struct wlan_objmgr_vdev *vdev)
+{
+	WLAN_HOST_DIAG_EVENT_DEF(wlan_diag_event, struct wlan_diag_nbr_rpt);
+
+	qdf_mem_zero(&wlan_diag_event, sizeof(wlan_diag_event));
+
+	populate_diag_cmn(&wlan_diag_event.diag_cmn, wlan_vdev_get_id(vdev),
+			  (uint64_t)neigh_rpt->timestamp, NULL);
+
+	wlan_diag_event.subtype = WLAN_CONN_DIAG_NBR_RPT_REQ_EVENT;
+	wlan_diag_event.version = DIAG_NBR_RPT_VERSION;
+	wlan_diag_event.token = neigh_rpt->req_token;
+
+	wlan_vdev_mlme_get_ssid(vdev, wlan_diag_event.ssid,
+				(uint8_t *)&wlan_diag_event.ssid_len);
+
+	WLAN_HOST_DIAG_EVENT_REPORT(&wlan_diag_event, EVENT_WLAN_NBR_RPT);
+}
+
+void
+cm_roam_neigh_rpt_resp_event(struct wmi_neighbor_report_data *neigh_rpt,
+			     uint8_t vdev_id)
+{
+	uint8_t i;
+
+	WLAN_HOST_DIAG_EVENT_DEF(wlan_diag_event, struct wlan_diag_nbr_rpt);
+
+	qdf_mem_zero(&wlan_diag_event, sizeof(wlan_diag_event));
+
+	populate_diag_cmn(&wlan_diag_event.diag_cmn, vdev_id,
+			  (uint64_t)neigh_rpt->timestamp, NULL);
+
+	wlan_diag_event.subtype = WLAN_CONN_DIAG_NBR_RPT_RESP_EVENT;
+	wlan_diag_event.version = DIAG_NBR_RPT_VERSION;
+	wlan_diag_event.token = neigh_rpt->resp_token;
+	wlan_diag_event.num_freq = neigh_rpt->num_freq;
+
+	for (i = 0; i < neigh_rpt->num_freq; i++)
+		wlan_diag_event.freq[i] = neigh_rpt->freq[i];
+
+	wlan_diag_event.num_rpt = neigh_rpt->num_rpt;
+
+	WLAN_HOST_DIAG_EVENT_REPORT(&wlan_diag_event, EVENT_WLAN_NBR_RPT);
+}
+
 #define WTC_BTM_RESPONSE_SUBCODE 0xFF
 static void
 cm_roam_wtc_btm_event(struct wmi_roam_trigger_info *trigger_info,

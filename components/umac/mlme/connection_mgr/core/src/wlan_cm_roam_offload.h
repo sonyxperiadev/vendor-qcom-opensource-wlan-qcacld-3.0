@@ -624,6 +624,26 @@ QDF_STATUS
 cm_roam_beacon_loss_disconnect_event(struct wlan_objmgr_psoc *psoc,
 				     struct qdf_mac_addr bssid,
 				     uint8_t vdev_id);
+
+/**
+ * cm_roam_neigh_rpt_req_event() - Send Neighbor Report request logging
+ * event
+ * @neigh_rpt: Neighbor Report parameter
+ * @vdev: vdev pointer
+ */
+void
+cm_roam_neigh_rpt_req_event(struct wmi_neighbor_report_data *neigh_rpt,
+			    struct wlan_objmgr_vdev *vdev);
+
+/**
+ * cm_roam_neigh_rpt_resp_event() - Send Neighbor Report response logging
+ * event
+ * @neigh_rpt: Neighbor Report parameter
+ * @vdev_id: vdev id
+ */
+void
+cm_roam_neigh_rpt_resp_event(struct wmi_neighbor_report_data *neigh_rpt,
+			     uint8_t vdev_id);
 #else
 static inline QDF_STATUS
 cm_roam_mgmt_frame_event(struct roam_frame_info *frame_data,
@@ -661,6 +681,18 @@ cm_roam_beacon_loss_disconnect_event(struct wlan_objmgr_psoc *psoc,
 				     uint8_t vdev_id)
 {
 	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline void
+cm_roam_neigh_rpt_req_event(struct wmi_neighbor_report_data *neigh_rpt,
+			    struct wlan_objmgr_vdev *vdev)
+{
+}
+
+static inline void
+cm_roam_neigh_rpt_resp_event(struct wmi_neighbor_report_data *neigh_rpt,
+			     uint8_t vdev_id)
+{
 }
 #endif /* FEATURE_CONNECTIVITY_LOGGING */
 #endif /* _WLAN_CM_ROAM_OFFLOAD_H_ */
