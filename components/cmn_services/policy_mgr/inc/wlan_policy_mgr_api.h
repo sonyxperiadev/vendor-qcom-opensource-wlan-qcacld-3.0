@@ -4598,19 +4598,25 @@ void policy_mgr_handle_ml_sta_links_on_vdev_down(struct wlan_objmgr_psoc *psoc,
 						 uint8_t vdev_id);
 
 /**
- * policy_mgr_handle_emlsr_sta_concurrency() - Handle EMLSR STA concurrency
- * cases
- *
+ * policy_mgr_handle_emlsr_sta_concurrency() - Handle concurrency scenarios with
+ * EMLSR STA.
  * @psoc: objmgr psoc
- * @vdev: pointer to vdev on which new connection is coming up
- * @is_ap_up: flag to check if new connection is SAP/P2P GO
- * @sta_coming_up: flag to check if new connection is STA/P2P client
+ * @vdev: pointer to vdev
+ * @ap_coming_up: Check if the new connection request is SAP/P2P GO/NAN
+ * @sta_coming_up: Check if the new connection request is STA/P2P Client
+ * @emlsr_sta_coming_up: Check if the new connection request is EMLSR STA
  *
- * Return: void
+ * The API handles concurrency scenarios with existing EMLSR connection when a
+ * new connection request is received OR with an existing legacy connection when
+ * an EMLSR sta comes up.
+ *
+ * Return: none
  */
 void policy_mgr_handle_emlsr_sta_concurrency(struct wlan_objmgr_psoc *psoc,
 					     struct wlan_objmgr_vdev *vdev,
-					     bool is_ap_up, bool sta_coming_up);
+					     bool ap_coming_up,
+					     bool sta_coming_up,
+					     bool emlsr_sta_coming_up);
 
 /**
  * policy_mgr_activate_mlo_links() - Force active ML links based on user

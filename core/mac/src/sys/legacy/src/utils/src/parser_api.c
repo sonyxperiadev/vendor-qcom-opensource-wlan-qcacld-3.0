@@ -11363,12 +11363,8 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 		mlo_ie->mld_capab_and_op_info.aar_support = 0;
 	}
 
-	/*
-	 * Check if STA supports eMLSR and vendor command prefers eMLSR mode.
-	 * Also, if there is an existing connection, then do not allow eMLSR.
-	 */
-	if (wlan_vdev_mlme_cap_get(pe_session->vdev, WLAN_VDEV_C_EMLSR_CAP) &&
-	    !policy_mgr_get_connection_count(psoc)) {
+	/* Check if STA supports EMLSR and vendor command prefers EMLSR mode */
+	if (wlan_vdev_mlme_cap_get(pe_session->vdev, WLAN_VDEV_C_EMLSR_CAP)) {
 		wlan_mlme_get_eml_params(psoc, &eml_cap);
 		mlo_ie->eml_capab_present = 1;
 		presence_bitmap |= WLAN_ML_BV_CTRL_PBM_EMLCAP_P;

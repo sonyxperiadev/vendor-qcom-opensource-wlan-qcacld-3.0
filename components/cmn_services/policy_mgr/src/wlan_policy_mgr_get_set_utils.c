@@ -5546,36 +5546,37 @@ end:
 void policy_mgr_handle_emlsr_sta_concurrency(struct wlan_objmgr_psoc *psoc,
 					     struct wlan_objmgr_vdev *vdev,
 					     bool ap_coming_up,
-					     bool sta_coming_up)
+					     bool sta_coming_up,
+					     bool emlsr_sta_coming_up)
 {
 	uint8_t num_mlo = 0;
 	uint8_t mlo_vdev_lst[MAX_NUMBER_OF_CONC_CONNECTIONS] = {0};
-	bool is_mlo_emlsr;
-	struct mac_context *mac_ctx = cds_get_context(QDF_MODULE_ID_SME);
-
-	if (!mac_ctx)
-		return;
+	bool is_mlo_emlsr = false;
 
 	is_mlo_emlsr = policy_mgr_is_mlo_in_mode_emlsr(psoc, mlo_vdev_lst,
 						       &num_mlo);
 
 	if (num_mlo < 2) {
-		policy_mgr_debug("vdev %d AP_state %d MLO Sta links %d",
+		policy_mgr_debug("vdev %d ap state %d num mlo sta links %d",
 				 wlan_vdev_get_id(vdev), ap_coming_up, num_mlo);
 		return;
 	}
 
-	policy_mgr_debug("vdev %d: AP coming up %d STA coming up %d num_mlo %d is_mlo_emlsr %d",
-			 wlan_vdev_get_id(vdev), ap_coming_up, sta_coming_up,
-			 num_mlo, is_mlo_emlsr);
+	policy_mgr_debug("vdev %d num_mlo %d is_mlo_emlsr %d",
+			 wlan_vdev_get_id(vdev), num_mlo, is_mlo_emlsr);
+	policy_mgr_debug("ap state %d legacy sta state %d emlsr sta state %d",
+			 ap_coming_up, sta_coming_up, emlsr_sta_coming_up);
 
 	if (!is_mlo_emlsr)
 		return;
 
-	if (ap_coming_up || sta_coming_up) {
+	if (ap_coming_up || sta_coming_up || (emlsr_sta_coming_up &&
+	    policy_mgr_get_connection_count(psoc) > 2)) {
 		/*
-		 * During SAP/STA up, If eMLSR STA is present,
-		 * then Disable one of the links. FW will decide which link.
+		 * Force disable one of the links (FW will decide which link) if
+		 * 1) EMLSR STA is present and new SAP/STA connection comes up.
+		 * 2) There is a legacy connection (SAP/P2P) and a STA comes
+		 * up in EMLSR mode.
 		 */
 		policy_mgr_mlo_sta_set_link(psoc, MLO_LINK_FORCE_REASON_CONNECT,
 					    MLO_LINK_FORCE_MODE_INACTIVE_NUM,
@@ -5583,13 +5584,19 @@ void policy_mgr_handle_emlsr_sta_concurrency(struct wlan_objmgr_psoc *psoc,
 		return;
 	}
 
-	/*
-	 * During SAP/STA down, if eMLSR STA is present, re-enable both the
-	 * links, as one of them was disabled during up.
-	 */
-	policy_mgr_mlo_sta_set_link(psoc, MLO_LINK_FORCE_REASON_DISCONNECT,
-				    MLO_LINK_FORCE_MODE_NO_FORCE,
-				    num_mlo, mlo_vdev_lst);
+	if (!(ap_coming_up || sta_coming_up) && emlsr_sta_coming_up)
+		/*
+		 * No force i.e. Re-enable the disabled link if-
+		 * 1) EMLSR STA is present and new SAP/STA connection goes down.
+		 * One of the links was disabled while a new connection came up.
+		 * 2) Legacy connection (SAP/P2P) goes down and if STA is EMLSR
+		 * capable. One of the links was disabled after EMLSR
+		 * association.
+		 */
+		policy_mgr_mlo_sta_set_link(psoc,
+					    MLO_LINK_FORCE_REASON_DISCONNECT,
+					    MLO_LINK_FORCE_MODE_NO_FORCE,
+					    num_mlo, mlo_vdev_lst);
 }
 
 static uint8_t
