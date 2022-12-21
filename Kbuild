@@ -462,6 +462,10 @@ endif
 ifeq ($(CONFIG_WLAN_SYSFS_EHT_RATE), y)
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_eht_rate.o
 endif
+
+ifeq ($(CONFIG_FEATURE_DIRECT_LINK), y)
+HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_direct_link_ut_cmd.o
+endif
 endif # CONFIG_WLAN_SYSFS
 
 ifeq ($(CONFIG_QCACLD_FEATURE_FW_STATE), y)

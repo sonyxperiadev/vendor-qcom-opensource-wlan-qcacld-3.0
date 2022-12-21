@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1174,6 +1174,25 @@
 		    CFG_VALUE_OR_DEFAULT, \
 		    "Interval to mark ICMP Request packets to be sent to FW")
 
+/*
+ * <ini>
+ * enable_direct_link_ut_cmd - Enable direct link unit testing
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This ini is used to enable direct link unit test
+ *
+ * Supported feature: Direct link
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
+#define CFG_ENABLE_DIRECT_LINK_UT_CMD \
+	CFG_INI_BOOL("enable_direct_link_ut_cmd", false, \
+		     "enable/disable direct link unit test")
+
 /*TODO Flow control part to be moved to DP later*/
 
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
@@ -1238,6 +1257,7 @@
 	CFG(CFG_DP_RX_WAKELOCK_TIMEOUT) \
 	CFG(CFG_DP_NUM_DP_RX_THREADS) \
 	CFG(CFG_DP_ICMP_REQ_TO_FW_MARK_INTERVAL) \
+	CFG(CFG_ENABLE_DIRECT_LINK_UT_CMD) \
 	CFG_DP_ENABLE_FASTPATH_ALL \
 	CFG_DP_BUS_BANDWIDTH \
 	CFG_DP_DRIVER_TCP_DELACK \
