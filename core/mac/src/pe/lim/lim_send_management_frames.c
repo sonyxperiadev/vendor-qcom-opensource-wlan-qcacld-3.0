@@ -5580,6 +5580,41 @@ returnAfterError:
 	return status_code;
 } /* End lim_send_link_report_action_frame. */
 
+#ifdef CONNECTIVITY_DIAG_EVENT
+/**
+ * lim_beacon_report_response_event() - Send Beacon Report Response log
+ * event
+ * @token: Dialog token
+ * @num_rpt: Number of Report element
+ * @vdev_id: vdev Id
+ */
+static void
+lim_beacon_report_response_event(uint8_t token, uint8_t num_rpt,
+				 uint8_t vdev_id)
+{
+	WLAN_HOST_DIAG_EVENT_DEF(wlan_diag_event, struct wlan_diag_bcn_rpt);
+
+	qdf_mem_zero(&wlan_diag_event, sizeof(wlan_diag_event));
+
+	wlan_diag_event.diag_cmn.vdev_id = vdev_id;
+	wlan_diag_event.diag_cmn.timestamp_us = qdf_get_time_of_the_day_us();
+	wlan_diag_event.diag_cmn.ktime_us =  qdf_ktime_to_us(qdf_ktime_get());
+
+	wlan_diag_event.version = DIAG_BCN_RPT_VERSION;
+	wlan_diag_event.subtype = WLAN_CONN_DIAG_BCN_RPT_RESP_EVENT;
+	wlan_diag_event.meas_token = token;
+	wlan_diag_event.num_rpt = num_rpt;
+
+	WLAN_HOST_DIAG_EVENT_REPORT(&wlan_diag_event, EVENT_WLAN_BCN_RPT);
+}
+#else
+static void
+lim_beacon_report_response_event(uint8_t token, uint8_t num_rpt,
+				 uint8_t vdev_id)
+{
+}
+#endif
+
 QDF_STATUS
 lim_send_radio_measure_report_action_frame(struct mac_context *mac,
 				uint8_t dialog_token,
@@ -5715,6 +5750,12 @@ lim_send_radio_measure_report_action_frame(struct mac_context *mac,
 	} else if (DOT11F_WARNED(nStatus)) {
 		pe_warn("Warnings while packing Radio Measure Report (0x%08x)",
 			nStatus);
+	}
+
+	if (frm->MeasurementReport[0].type == SIR_MAC_RRM_BEACON_TYPE) {
+		lim_beacon_report_response_event(frm->MeasurementReport[0].token,
+						 num_report,
+						 wlan_vdev_get_id(pe_session->vdev));
 	}
 
 	pe_nofl_info("TX: %s seq_no:%d dialog_token:%d no. of APs:%d is_last_rpt:%d num_report: %d peer:"QDF_MAC_ADDR_FMT,
