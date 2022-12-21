@@ -3420,7 +3420,7 @@ wlan_mlme_set_eml_params(struct wlan_objmgr_psoc *psoc,
 	struct wlan_mlme_psoc_ext_obj *mlme_obj;
 
 	if (!cap->emlcap.emlsr_supp) {
-		mlme_legacy_debug("No EMLSR supp: %d", cap->emlcap.emlsr_supp);
+		mlme_legacy_debug("EMLSR supp: %d", cap->emlcap.emlsr_supp);
 		return;
 	}
 
@@ -3450,6 +3450,24 @@ wlan_mlme_get_eml_params(struct wlan_objmgr_psoc *psoc,
 	cap->emlsr_pad_delay = mlme_obj->cfg.eml_cap.emlsr_pad_delay;
 	cap->emlsr_trans_delay = mlme_obj->cfg.eml_cap.emlsr_trans_delay;
 	cap->emlmr_supp = mlme_obj->cfg.eml_cap.emlmr_supp;
+}
+
+void
+wlan_mlme_cfg_set_emlsr_pad_delay(struct wlan_objmgr_psoc *psoc, uint8_t val)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj) {
+		mlme_legacy_err("No psoc object");
+		return;
+	}
+
+	if (val > mlme_obj->cfg.eml_cap.emlsr_pad_delay &&
+	    val <= WLAN_ML_BV_CINFO_EMLCAP_EMLSRDELAY_256US) {
+		mlme_obj->cfg.eml_cap.emlsr_pad_delay = val;
+		mlme_debug("EMLSR padding delay configured to %d", val);
+	}
 }
 
 enum t2lm_negotiation_support

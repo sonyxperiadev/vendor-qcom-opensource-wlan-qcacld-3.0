@@ -2574,6 +2574,19 @@ wlan_mlme_get_eml_params(struct wlan_objmgr_psoc *psoc,
 			 struct wlan_mlo_eml_cap *cap);
 
 /**
+ * wlan_mlme_cfg_set_emlsr_pad_delay() - Configure EMLSR padding delay subfield
+ * @psoc: psoc context
+ * @val: EMLSR padding delay subfield value
+ *
+ * API to configure EMLSR padding delay subfield in psoc mlme obj with user
+ * requested value if it greater than the value configured by FW during boot-up.
+ *
+ * Return: none
+ */
+void
+wlan_mlme_cfg_set_emlsr_pad_delay(struct wlan_objmgr_psoc *psoc, uint8_t val);
+
+/**
  * wlan_mlme_get_t2lm_negotiation_supported() - Get the T2LM
  * negotiation supported value
  * @psoc: psoc context
@@ -2630,6 +2643,11 @@ wlan_mlme_set_eml_params(struct wlan_objmgr_psoc *psoc,
 static inline void
 wlan_mlme_get_eml_params(struct wlan_objmgr_psoc *psoc,
 			 struct wlan_mlo_eml_cap *cap)
+{
+}
+
+static inline void
+wlan_mlme_cfg_set_emlsr_pad_delay(struct wlan_objmgr_psoc *psoc, uint8_t val)
 {
 }
 
