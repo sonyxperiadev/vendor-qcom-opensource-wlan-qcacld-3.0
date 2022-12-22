@@ -230,10 +230,16 @@ void lim_process_mlm_start_cnf(struct mac_context *mac, uint32_t *msg_buf)
 		if (!LIM_IS_AP_ROLE(pe_session))
 			return;
 		if (pe_session->ch_width == CH_WIDTH_160MHZ) {
-			if (wlan_reg_get_bonded_channel_state_for_freq(
-					mac->pdev, chan_freq,
-					pe_session->ch_width, 0) !=
-					CHANNEL_STATE_DFS)
+			struct ch_params ch_params = {0};
+
+			if (IS_DOT11_MODE_EHT(pe_session->dot11mode))
+				wlan_reg_set_create_punc_bitmap(&ch_params, true);
+			ch_params.ch_width = pe_session->ch_width;
+			if (wlan_reg_get_5g_bonded_channel_state_for_pwrmode(mac->pdev,
+									     chan_freq,
+									     &ch_params,
+									     REG_CURRENT_PWR_MODE)  !=
+			    CHANNEL_STATE_DFS)
 				send_bcon_ind = true;
 		} else if (pe_session->ch_width == CH_WIDTH_80P80MHZ) {
 			if ((wlan_reg_get_channel_state_for_pwrmode(

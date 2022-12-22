@@ -674,6 +674,7 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 	uint8_t srg_min_pd_offset = 0, srg_max_pd_offset = 0;
 	uint32_t nl_buf_len;
 	int ret;
+	uint32_t conc_vdev_id;
 	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(wdev->netdev);
 	struct nlattr *tb[QCA_WLAN_VENDOR_ATTR_SR_MAX + 1];
@@ -701,7 +702,16 @@ static int __wlan_hdd_cfg80211_sr_operations(struct wiphy *wiphy,
 		hdd_err("station is not connected to AP that supports SR");
 		return -EPERM;
 	}
-
+	policy_mgr_get_mac_id_by_session_id(hdd_ctx->psoc, adapter->vdev_id,
+					    &mac_id);
+	conc_vdev_id = policy_mgr_get_conc_vdev_on_same_mac(hdd_ctx->psoc,
+							    adapter->vdev_id,
+							    mac_id);
+	if (conc_vdev_id != WLAN_INVALID_VDEV_ID &&
+	    !policy_mgr_sr_same_mac_conc_enabled(hdd_ctx->psoc)) {
+		hdd_err("don't allow SR in SCC/MCC");
+		return -EPERM;
+	}
 	/**
 	 * Reject command if SR concurrency is not allowed and
 	 * only STA mode is set in ini to enable SR.

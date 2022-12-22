@@ -36,8 +36,6 @@
 
 #include "parser_api.h"
 
-#define TIM_IE_SIZE 0xB
-
 /* ----------------------- Beacon processing ------------------------ */
 
 /* / Beacon structure */

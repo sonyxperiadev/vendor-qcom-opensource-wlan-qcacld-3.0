@@ -2418,6 +2418,10 @@ wmi_fill_roam_sync_buffer(wmi_unified_t wmi_handle,
 			     REPLAY_CTR_LEN);
 	}
 
+	wmi_debug("ROAM_SYNC kek_len %d kck_len %d",
+		  roam_sync_ind->kek_len,
+		  roam_sync_ind->kck_len);
+
 	if (param_buf->hw_mode_transition_fixed_param) {
 		wmi_extract_pdev_hw_mode_trans_ind(
 		    param_buf->hw_mode_transition_fixed_param,
@@ -2455,9 +2459,10 @@ wmi_fill_roam_sync_buffer(wmi_unified_t wmi_handle,
 		roam_sync_ind->next_erp_seq_num =
 				fils_info->next_erp_seq_num;
 
-		wmi_debug("Update ERP Seq Num %d, Next ERP Seq Num %d",
+		wmi_debug("Update ERP Seq Num %d, Next ERP Seq Num %d KEK len %d",
 			  roam_sync_ind->update_erp_next_seq_num,
-			  roam_sync_ind->next_erp_seq_num);
+			  roam_sync_ind->next_erp_seq_num,
+			  roam_sync_ind->kek_len);
 	}
 
 	pmk_cache_info = param_buf->roam_pmk_cache_synch_info;

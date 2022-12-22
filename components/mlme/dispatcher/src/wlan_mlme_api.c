@@ -5451,9 +5451,12 @@ wlan_mlme_check_chan_param_has_dfs(struct wlan_objmgr_pdev *pdev,
 	bool is_dfs = false;
 
 	if (ch_params->ch_width == CH_WIDTH_160MHZ) {
-		if (wlan_reg_get_bonded_channel_state_for_freq(
-		    pdev, chan_freq, ch_params->ch_width, 0) ==
-				CHANNEL_STATE_DFS)
+		wlan_reg_set_create_punc_bitmap(ch_params, true);
+		if (wlan_reg_get_5g_bonded_channel_state_for_pwrmode(pdev,
+								     chan_freq,
+								     ch_params,
+								     REG_CURRENT_PWR_MODE) ==
+		    CHANNEL_STATE_DFS)
 			is_dfs = true;
 	} else if (ch_params->ch_width == CH_WIDTH_80P80MHZ) {
 		if (wlan_reg_get_channel_state_for_pwrmode(
@@ -6469,4 +6472,23 @@ wlan_mlme_set_edca_pifs_param(struct wlan_edca_pifs_param_ie *ep,
 		ep->edca_pifs_param.pparam.reb_pifs_offset =
 						CFG_PIFS_PARAM_REB_OFFSET;
 	}
+}
+
+QDF_STATUS
+wlan_mlme_stats_get_periodic_display_time(struct wlan_objmgr_psoc *psoc,
+					  uint32_t *periodic_display_time)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj) {
+		*periodic_display_time =
+			cfg_default(CFG_PERIODIC_STATS_DISPLAY_TIME);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	*periodic_display_time =
+		mlme_obj->cfg.stats.stats_periodic_display_time;
+
+	return QDF_STATUS_SUCCESS;
 }

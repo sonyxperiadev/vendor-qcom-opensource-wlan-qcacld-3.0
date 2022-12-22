@@ -3647,6 +3647,15 @@ static void hdd_register_policy_manager_callback(
 #endif
 
 #ifdef WLAN_FEATURE_NAN
+#ifdef WLAN_FEATURE_SR
+static void hdd_register_sr_concurrency_cb(struct nan_callbacks *cb_obj)
+{
+	cb_obj->nan_sr_concurrency_update = hdd_nan_sr_concurrency_update;
+}
+#else
+static void hdd_register_sr_concurrency_cb(struct nan_callbacks *cb_obj)
+{}
+#endif
 static void hdd_nan_register_callbacks(struct hdd_context *hdd_ctx)
 {
 	struct nan_callbacks cb_obj = {0};
@@ -3663,6 +3672,7 @@ static void hdd_nan_register_callbacks(struct hdd_context *hdd_ctx)
 	cb_obj.peer_departed_ind = hdd_ndp_peer_departed_handler;
 
 	cb_obj.nan_concurrency_update = hdd_nan_concurrency_update;
+	hdd_register_sr_concurrency_cb(&cb_obj);
 
 	os_if_nan_register_hdd_callbacks(hdd_ctx->psoc, &cb_obj);
 }
@@ -19106,9 +19116,14 @@ void hdd_restart_sap(struct hdd_adapter *ap_adapter)
 
 		if (0 != wlan_hdd_cfg80211_update_apies(ap_adapter)) {
 			hdd_err("SAP Not able to set AP IEs");
-			wlansap_reset_sap_config_add_ie(sap_config,
-					eUPDATE_IE_ALL);
 			goto end;
+		}
+
+		qdf_status = wlan_hdd_mlo_sap_reinit(hdd_ctx, sap_config,
+						     ap_adapter);
+		if (QDF_IS_STATUS_ERROR(qdf_status)) {
+			hdd_err("SAP Not able to do mlo attach");
+			goto deinit_mlo;
 		}
 
 		qdf_event_reset(&hostapd_state->qdf_event);
@@ -19116,21 +19131,19 @@ void hdd_restart_sap(struct hdd_adapter *ap_adapter)
 				      sap_config,
 				      ap_adapter->dev) != QDF_STATUS_SUCCESS) {
 			hdd_err("SAP Start Bss fail");
-			wlansap_reset_sap_config_add_ie(sap_config,
-					eUPDATE_IE_ALL);
-			goto end;
+			goto deinit_mlo;
 		}
 
 		hdd_info("Waiting for SAP to start");
 		qdf_status =
 			qdf_wait_single_event(&hostapd_state->qdf_event,
 					SME_CMD_START_BSS_TIMEOUT);
-		wlansap_reset_sap_config_add_ie(sap_config,
-				eUPDATE_IE_ALL);
 		if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 			hdd_err("SAP Start failed");
-			goto end;
+			goto deinit_mlo;
 		}
+		wlansap_reset_sap_config_add_ie(sap_config,
+						eUPDATE_IE_ALL);
 		hdd_err("SAP Start Success");
 		set_bit(SOFTAP_BSS_STARTED, &ap_adapter->event_flags);
 		if (hostapd_state->bss_state == BSS_START) {
@@ -19142,7 +19155,13 @@ void hdd_restart_sap(struct hdd_adapter *ap_adapter)
 						    true);
 		}
 	}
+	mutex_unlock(&hdd_ctx->sap_lock);
+	return;
+
+deinit_mlo:
+	wlan_hdd_mlo_reset(ap_adapter);
 end:
+	wlansap_reset_sap_config_add_ie(sap_config, eUPDATE_IE_ALL);
 	mutex_unlock(&hdd_ctx->sap_lock);
 }
 

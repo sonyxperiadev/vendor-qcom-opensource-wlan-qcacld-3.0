@@ -22,6 +22,16 @@
 
 #include "wlan_pmo_common_public_struct.h"
 
+#ifdef CONNECTION_ROAMING_CFG
+# define CONDTIMSKIPPING_NUMBER_MIN 0
+# define CONDTIMSKIPPING_NUMBER_MAX 10
+# define CONDTIMSKIPPING_NUMBER_DEFAULT 3
+#else
+# define CONDTIMSKIPPING_NUMBER_MIN 0
+# define CONDTIMSKIPPING_NUMBER_MAX 10
+# define CONDTIMSKIPPING_NUMBER_DEFAULT 0
+#endif
+
 /*
  * <ini>
  * hostArpOffload - Enable/disable host ARP offload
@@ -180,11 +190,36 @@
  *
  * </ini>
  */
+
+/*
+ * <ini>
+ * gEnableModulatedDTIM/ConDTIMSkipping_Number - Enable/Disable modulated DTIM
+ * feature
+ * @Min: 0
+ * @Max: 10
+ * @Default: 0
+ *
+ * This ini is used to enable/disable modulated DTIM feature.
+ *
+ * 0 - Disable modulated DTIM.
+ * 1 to 10 - The maximum No. of modulated DTIM period used for calculating the
+ * target listen interval.
+ *
+ * The target listen interval will be updated to firmware when host driver is
+ * setting the suspend DTIM parameters.
+ *
+ * This configuration will be ignored when dynamic DTIM is enabled(by
+ * gEnableDynamicDTIM).
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
 #define CFG_PMO_ENABLE_MODULATED_DTIM CFG_INI_UINT( \
 	"gEnableModulatedDTIM ConDTIMSkipping_Number", \
-	0, \
-	10, \
-	0, \
+	CONDTIMSKIPPING_NUMBER_MIN, \
+	CONDTIMSKIPPING_NUMBER_MAX, \
+	CONDTIMSKIPPING_NUMBER_DEFAULT, \
 	CFG_VALUE_OR_DEFAULT, \
 	"Enable/disable modulated DTIM feature")
 

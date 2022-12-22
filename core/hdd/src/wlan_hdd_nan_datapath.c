@@ -659,18 +659,23 @@ error_init_txrx:
 	return ret_val;
 }
 
-int hdd_ndi_open(const char *iface_name, bool is_add_virtual_iface)
+/**
+ * hdd_is_max_ndi_count_reached() - Check the NDI max limit
+ * @hdd_ctx: Pointer to HDD context
+ *
+ * This function does not allow to create more than ndi_max_support
+ *
+ * Return: false if max value not reached otherwise true
+ */
+static bool hdd_is_max_ndi_count_reached(struct hdd_context *hdd_ctx)
 {
 	struct hdd_adapter *adapter, *next_adapter = NULL;
-	struct qdf_mac_addr random_ndi_mac;
-	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
 	uint8_t ndi_adapter_count = 0;
-	uint8_t *ndi_mac_addr;
-	struct hdd_adapter_create_param params = {0};
+	QDF_STATUS status;
+	uint32_t max_ndi;
 
-	hdd_enter();
 	if (!hdd_ctx)
-		return -EINVAL;
+		return true;
 
 	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter,
 					   NET_DEV_HOLD_NDI_OPEN) {
@@ -678,11 +683,34 @@ int hdd_ndi_open(const char *iface_name, bool is_add_virtual_iface)
 			ndi_adapter_count++;
 		hdd_adapter_dev_put_debug(adapter, NET_DEV_HOLD_NDI_OPEN);
 	}
-	if (ndi_adapter_count >= MAX_NDI_ADAPTERS) {
-		hdd_err("Can't allow more than %d NDI adapters",
-			MAX_NDI_ADAPTERS);
-		return -EINVAL;
+
+	status = cfg_nan_get_max_ndi(hdd_ctx->psoc, &max_ndi);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		hdd_err(" Unable to fetch Max NDI");
+		return true;
 	}
+
+	if (ndi_adapter_count >= max_ndi) {
+		hdd_err("Can't allow more than %d NDI adapters",
+			max_ndi);
+		return true;
+	}
+
+	return false;
+}
+
+int hdd_ndi_open(const char *iface_name, bool is_add_virtual_iface)
+{
+	struct hdd_adapter *adapter;
+	struct qdf_mac_addr random_ndi_mac;
+	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
+	uint8_t *ndi_mac_addr;
+	struct hdd_adapter_create_param params = {0};
+
+	hdd_enter();
+
+	if (hdd_is_max_ndi_count_reached(hdd_ctx))
+		return -EINVAL;
 
 	params.is_add_virtual_iface = is_add_virtual_iface;
 
@@ -726,7 +754,7 @@ int hdd_ndi_set_mode(const char *iface_name)
 	uint8_t *ndi_mac_addr = NULL;
 
 	hdd_enter();
-	if (!hdd_ctx)
+	if (hdd_is_max_ndi_count_reached(hdd_ctx))
 		return -EINVAL;
 
 	adapter = hdd_get_adapter_by_iface_name(hdd_ctx, iface_name);

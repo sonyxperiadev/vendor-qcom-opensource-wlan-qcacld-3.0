@@ -7872,6 +7872,8 @@ const struct nla_policy wlan_hdd_wifi_config_policy[
 		.type = NLA_U8 },
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_BEAMFORMER_PERIODIC_SOUNDING] = {
 		.type = NLA_U8 },
+	[QCA_WLAN_VENDOR_ATTR_CONFIG_WFC_STATE] = {
+		.type = NLA_U8 },
 };
 
 static const struct nla_policy
@@ -10462,6 +10464,39 @@ static int hdd_set_beamformer_periodic_sounding(struct hdd_adapter *adapter,
 }
 
 /**
+ * hdd_set_wfc_state() - Set wfc state
+ * @adapter: hdd adapter
+ * @attr: pointer to nla attr
+ *
+ * Return: 0 on success, negative on failure
+ */
+static int hdd_set_wfc_state(struct hdd_adapter *adapter,
+			     const struct nlattr *attr)
+{
+	uint8_t cfg_val;
+	enum pld_wfc_mode set_val;
+	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	int errno;
+
+	errno = wlan_hdd_validate_context(hdd_ctx);
+	if (errno)
+		return errno;
+
+	cfg_val = nla_get_u8(attr);
+
+	hdd_debug_rl("set wfc state %d", cfg_val);
+	if (cfg_val == 0)
+		set_val = PLD_WFC_MODE_OFF;
+	else if (cfg_val == 1)
+		set_val = PLD_WFC_MODE_ON;
+	else
+		return -EINVAL;
+
+	return pld_set_wfc_mode(hdd_ctx->parent_dev, set_val);
+
+}
+
+/**
  * typedef independent_setter_fn - independent attribute handler
  * @adapter: The adapter being configured
  * @attr: The nl80211 attribute being applied
@@ -10587,6 +10622,9 @@ static const struct independent_setters independent_setters[] = {
 	 hdd_config_udp_qos_upgrade_be_bk},
 	{QCA_WLAN_VENDOR_ATTR_CONFIG_BEAMFORMER_PERIODIC_SOUNDING,
 	 hdd_set_beamformer_periodic_sounding},
+
+	{QCA_WLAN_VENDOR_ATTR_CONFIG_WFC_STATE,
+	 hdd_set_wfc_state},
 };
 
 #ifdef WLAN_FEATURE_ELNA
@@ -20648,7 +20686,7 @@ wlan_hdd_mlo_set_keys_saved(struct hdd_adapter *adapter,
 #endif
 
 #ifdef WLAN_FEATURE_11BE_MLO
-static QDF_STATUS
+QDF_STATUS
 wlan_hdd_mlo_copy_partner_addr_from_mlie(struct wlan_objmgr_vdev *vdev,
 					 struct qdf_mac_addr *partner_mac)
 {
@@ -20718,13 +20756,6 @@ wlan_hdd_mlo_copy_partner_addr_from_mlie(struct wlan_objmgr_vdev *vdev,
 		status = QDF_STATUS_E_NOENT;
 
 	return status;
-}
-#else
-static inline QDF_STATUS
-wlan_hdd_mlo_copy_partner_addr_from_mlie(struct wlan_objmgr_vdev *vdev,
-					 struct qdf_mac_addr *partner_mac)
-{
-	return QDF_STATUS_E_NOSUPPORT;
 }
 #endif
 
@@ -20902,7 +20933,7 @@ QDF_STATUS wlan_hdd_send_key_vdev(struct wlan_objmgr_vdev *vdev,
 
 #if defined(WLAN_FEATURE_11BE_MLO) && \
 defined(CFG80211_SINGLE_NETDEV_MULTI_LINK_SUPPORT)
-static struct wlan_objmgr_peer *
+struct wlan_objmgr_peer *
 wlan_hdd_ml_sap_get_peer(struct wlan_objmgr_vdev *vdev,
 			 uint8_t *peer_mld)
 {
@@ -25651,37 +25682,8 @@ static int _wlan_hdd_cfg80211_tx_control_port(struct wiphy *wiphy,
 	return errno;
 }
 
-#if defined(CFG80211_CTRL_FRAME_SRC_ADDR_TA_ADDR)
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
-static int wlan_hdd_cfg80211_tx_control_port(struct wiphy *wiphy,
-					     struct net_device *dev,
-					     const u8 *buf,
-					     size_t len,
-					     const u8 *dest, const __be16 proto,
-					     bool unencrypted, int link_id,
-					     u64 *cookie)
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0))
-static int wlan_hdd_cfg80211_tx_control_port(struct wiphy *wiphy,
-					     struct net_device *dev,
-					     const u8 *buf,
-					     size_t len, const u8 *src,
-					     const u8 *dest, __be16 proto,
-					     bool unencrypted, u64 *cookie)
-#else
-static int wlan_hdd_cfg80211_tx_control_port(struct wiphy *wiphy,
-					     struct net_device *dev,
-					     const u8 *buf,
-					     size_t len, const u8 *src,
-					     const u8 *dest, __be16 proto,
-					     bool unencrypted)
-#endif
-{
-	return _wlan_hdd_cfg80211_tx_control_port(wiphy, dev, buf, len, src,
-						  dest, proto, unencrypted);
-}
-
-#else
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0) || \
+	defined(CFG80211_TX_CONTROL_PORT_LINK_SUPPORT))
 static int wlan_hdd_cfg80211_tx_control_port(struct wiphy *wiphy,
 					     struct net_device *dev,
 					     const u8 *buf,
@@ -25709,7 +25711,6 @@ static int wlan_hdd_cfg80211_tx_control_port(struct wiphy *wiphy,
 						  adapter->mac_addr.bytes,
 						  dest, proto, unencrypted);
 }
-#endif
 
 #if defined(CFG80211_CTRL_FRAME_SRC_ADDR_TA_ADDR)
 bool wlan_hdd_cfg80211_rx_control_port(struct net_device *dev,

@@ -34,7 +34,7 @@
 #include "wlan_dp_nud_tracking.h"
 #include "wlan_dp_txrx.h"
 #include "wlan_nlink_common.h"
-#include "wlan_pkt_capture_ucfg_api.h"
+#include "wlan_pkt_capture_api.h"
 #include <cdp_txrx_ctrl.h>
 #include <qdf_net_stats.h>
 #include "wlan_dp_prealloc.h"
@@ -332,6 +332,7 @@ ucfg_dp_suspend_handler(struct wlan_objmgr_psoc *psoc, void *arg)
 	struct wlan_dp_intf *dp_intf, *dp_intf_next = NULL;
 	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
 	QDF_STATUS status;
+
 	dp_ctx = dp_psoc_get_priv(psoc);
 	if (!dp_ctx) {
 		dp_err("DP context not found");
@@ -1144,7 +1145,7 @@ QDF_STATUS ucfg_dp_register_pkt_capture_callbacks(struct wlan_objmgr_vdev *vdev)
 		return QDF_STATUS_E_INVAL;
 	}
 
-	return ucfg_pkt_capture_register_callbacks(vdev,
+	return wlan_pkt_capture_register_callbacks(vdev,
 						   dp_mon_rx_packet_cbk,
 						   dp_intf);
 }

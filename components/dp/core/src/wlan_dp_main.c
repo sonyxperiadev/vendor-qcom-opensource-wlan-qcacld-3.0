@@ -29,7 +29,7 @@
 #include <wlan_nlink_common.h>
 #include <qdf_net_types.h>
 #include "wlan_objmgr_vdev_obj.h"
-#include <wlan_cm_ucfg_api.h>
+#include "wlan_cm_api.h"
 #include "wlan_dp_nud_tracking.h"
 #include "target_if_dp_comp.h"
 #include "wlan_dp_txrx.h"
@@ -672,7 +672,7 @@ __dp_process_mic_error(struct wlan_dp_intf *dp_intf)
 
 	if ((dp_intf->device_mode == QDF_STA_MODE ||
 	     dp_intf->device_mode == QDF_P2P_CLIENT_MODE) &&
-	    ucfg_cm_is_vdev_active(vdev))
+	    wlan_cm_is_vdev_active(vdev))
 		ops->osif_dp_process_mic_error(dp_intf->mic_work.info,
 						   vdev);
 	else if (dp_intf->device_mode == QDF_SAP_MODE ||

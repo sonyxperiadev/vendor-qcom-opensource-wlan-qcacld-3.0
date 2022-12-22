@@ -39,8 +39,6 @@ struct wireless_dev;
 
 #ifdef WLAN_FEATURE_NAN
 
-#define MAX_NDI_ADAPTERS 2
-
 #define WLAN_HDD_IS_NDI(adapter) ((adapter)->device_mode == QDF_NDI_MODE)
 
 #define WLAN_HDD_IS_NDI_CONNECTED(adapter) ( \

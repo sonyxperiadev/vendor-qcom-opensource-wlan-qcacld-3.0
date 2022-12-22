@@ -499,9 +499,12 @@ is_wlansap_cac_required_for_chan(struct mac_context *mac_ctx,
 	uint8_t sta_cnt, i;
 
 	if (ch_params->ch_width == CH_WIDTH_160MHZ) {
-		if (wlan_reg_get_bonded_channel_state_for_freq(
-		    mac_ctx->pdev, chan_freq,
-		    ch_params->ch_width, 0) == CHANNEL_STATE_DFS)
+		wlan_reg_set_create_punc_bitmap(ch_params, true);
+		if (wlan_reg_get_5g_bonded_channel_state_for_pwrmode(mac_ctx->pdev,
+								     chan_freq,
+								     ch_params,
+								     REG_CURRENT_PWR_MODE) ==
+		    CHANNEL_STATE_DFS)
 			is_ch_dfs = true;
 	} else if (ch_params->ch_width == CH_WIDTH_80P80MHZ) {
 		if (wlan_reg_get_channel_state_for_pwrmode(
@@ -3682,9 +3685,16 @@ static QDF_STATUS sap_fsm_state_starting(struct sap_context *sap_ctx,
 		 * CAC is done if the operating channel is DFS
 		 */
 		if (sap_ctx->ch_params.ch_width == CH_WIDTH_160MHZ) {
-			is_dfs = wlan_reg_get_5g_bonded_channel_state_for_freq(
-					mac_ctx->pdev, sap_chan_freq,
-					CH_WIDTH_160MHZ) == CHANNEL_STATE_DFS;
+			struct ch_params ch_params = {0};
+
+			wlan_reg_set_create_punc_bitmap(&ch_params, true);
+			ch_params.ch_width = CH_WIDTH_160MHZ;
+			is_dfs =
+			wlan_reg_get_5g_bonded_channel_state_for_pwrmode(mac_ctx->pdev,
+									 sap_chan_freq,
+									 &ch_params,
+									 REG_CURRENT_PWR_MODE) ==
+			CHANNEL_STATE_DFS;
 		} else if (sap_ctx->ch_params.ch_width == CH_WIDTH_80P80MHZ) {
 			if (wlan_reg_get_channel_state_for_pwrmode(
 							mac_ctx->pdev,

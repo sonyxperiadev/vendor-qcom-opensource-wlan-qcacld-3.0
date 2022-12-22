@@ -4097,4 +4097,15 @@ wlan_mlme_get_sr_enable_modes(struct wlan_objmgr_psoc *psoc, uint8_t *val);
 void
 wlan_mlme_set_edca_pifs_param(struct wlan_edca_pifs_param_ie *ep,
 			      enum host_edca_param_type type);
+/**
+ * wlan_mlme_stats_get_periodic_display_time() - get display time
+ * @psoc: pointer to psoc object
+ * @periodic_display_time: buffer to hold value
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+wlan_mlme_stats_get_periodic_display_time(struct wlan_objmgr_psoc *psoc,
+					  uint32_t *periodic_display_time);
+
 #endif /* _WLAN_MLME_API_H_ */
