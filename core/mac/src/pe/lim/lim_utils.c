@@ -6074,11 +6074,46 @@ void lim_update_ext_cap_he_params(struct mac_context *mac_ctx,
 
 	ext_cap_data->num_bytes = lim_compute_ext_cap_ie_length(ext_cap_data);
 }
+
+/**
+ * lim_update_ap_he_op() - update ap he op
+ * @session: session
+ * @ch_params: pointer to ch_params
+ *
+ * Return: void
+ */
+static void lim_update_ap_he_op(struct pe_session *session,
+				struct ch_params *ch_params)
+{
+	pe_debug("freq0: %d, freq1: %d, width: %d",
+		 ch_params->center_freq_seg0, ch_params->center_freq_seg1,
+		 ch_params->ch_width);
+	if (session->he_op.vht_oper_present) {
+		session->he_op.vht_oper.info.center_freq_seg0 =
+					ch_params->center_freq_seg0;
+		session->he_op.vht_oper.info.center_freq_seg1 =
+					ch_params->center_freq_seg1;
+		session->he_op.vht_oper.info.chan_width =
+					ch_params->ch_width;
+	} else if (session->he_6ghz_band) {
+		session->he_op.oper_info_6g_present = 1;
+		session->he_op.oper_info_6g.info.center_freq_seg0 =
+						ch_params->center_freq_seg0;
+		session->he_op.oper_info_6g.info.center_freq_seg1 =
+						ch_params->center_freq_seg1;
+		session->he_op.oper_info_6g.info.ch_width =
+						ch_params->ch_width;
+	}
+}
 #else
 static inline void
 lim_update_ext_cap_he_params(struct mac_context *mac_ctx,
 			     tDot11fIEExtCap *ext_cap_data,
 			     uint8_t vdev_id)
+{}
+
+static void lim_update_ap_he_op(struct pe_session *session,
+				struct ch_params *ch_params)
 {}
 #endif
 
@@ -8709,31 +8744,51 @@ void lim_add_bss_eht_cfg(struct bss_params *add_bss, struct pe_session *session)
 {
 }
 
+#define EHT_OP_LEN (DOT11F_IE_EHT_OP_MAX_LEN + EHT_OP_OUI_SIZE * 2 + ONE_BYTE)
 void lim_decide_eht_op(struct mac_context *mac_ctx, uint32_t *mlme_eht_ops,
 		       struct pe_session *session)
 {
-	struct eht_ops_network_endian *eht_ops_from_ie;
-	tDot11fIEeht_op eht_ops = {0};
 	struct add_ie_params *add_ie = &session->add_ie_params;
-	uint8_t extracted_buff[DOT11F_IE_EHT_OP_MAX_LEN + 2];
+	uint8_t extracted_buff[EHT_OP_LEN + 2];
 	QDF_STATUS status;
+	uint16_t ori_puncture_bitmap;
+	uint8_t len;
+
+	pe_debug("beacon ie:");
+	qdf_trace_hex_dump(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
+			   add_ie->probeRespBCNData_buff,
+			   add_ie->probeRespBCNDataLen);
 
 	qdf_mem_zero(extracted_buff, sizeof(extracted_buff));
 	status = lim_strip_ie(mac_ctx, add_ie->probeRespBCNData_buff,
 			      &add_ie->probeRespBCNDataLen,
 			      DOT11F_EID_EHT_OP, ONE_BYTE,
 			      EHT_OP_OUI_TYPE, (uint8_t)EHT_OP_OUI_SIZE,
-			      extracted_buff, DOT11F_IE_EHT_OP_MAX_LEN);
+			      extracted_buff, EHT_OP_LEN);
 	if (QDF_STATUS_SUCCESS != status) {
 		pe_debug("Failed to strip EHT OP IE status: %d", status);
 		return;
 	}
-	eht_ops_from_ie = (struct eht_ops_network_endian *)
-					&extracted_buff[EHT_OP_OUI_SIZE + 2];
 
-	qdf_mem_copy(&session->eht_op, &eht_ops, sizeof(tDot11fIEeht_op));
+	pe_debug("eht op:");
+	qdf_trace_hex_dump(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
+			   extracted_buff, EHT_OP_LEN);
 
-	wma_update_vdev_eht_ops(mlme_eht_ops, &eht_ops);
+	session->eht_op.present = 1;
+
+	len = qdf_min((uint8_t)(sizeof(tDot11fIEeht_op) - 1),
+		      (uint8_t)(DOT11F_IE_EHT_OP_MAX_LEN));
+	qdf_mem_copy((uint8_t *)(&session->eht_op) + 1,
+		     &extracted_buff[EHT_OP_OUI_SIZE  * 2 + ONE_BYTE],
+		     len);
+
+	ori_puncture_bitmap =
+		*(uint16_t *)session->eht_op.disabled_sub_chan_bitmap;
+	pe_debug("puncture bitmap: %d, ch width: %d, ccfs0: %d, ccfs1: %d",
+		 ori_puncture_bitmap, session->eht_op.channel_width,
+		 session->eht_op.ccfs0, session->eht_op.ccfs1);
+
+	wma_update_vdev_eht_ops(mlme_eht_ops, &session->eht_op);
 }
 
 void lim_update_stads_eht_capable(tpDphHashNode sta_ds, tpSirAssocReq assoc_req)
@@ -10168,16 +10223,73 @@ QDF_STATUS lim_ap_mlme_vdev_disconnect_peers(struct vdev_mlme_obj *vdev_mlme,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef WLAN_FEATURE_11BE
+static
+void lim_apply_puncture(struct mac_context *mac,
+			struct pe_session *session,
+			qdf_freq_t sec_chan_freq)
+{
+	uint16_t puncture_bitmap;
+
+	puncture_bitmap =
+		*(uint16_t *)session->eht_op.disabled_sub_chan_bitmap;
+
+	if (puncture_bitmap) {
+		pe_debug("Apply puncture to reg: bitmap 0x%x, freq: %d, bw %d, mhz_freq_seg1: %d",
+			 puncture_bitmap,
+			 session->curr_op_freq,
+			 session->ch_width,
+			 sec_chan_freq);
+		wlan_reg_apply_puncture(mac->pdev,
+					puncture_bitmap,
+					session->curr_op_freq,
+					session->ch_width,
+					sec_chan_freq);
+	}
+}
+
+static
+void lim_remove_puncture(struct mac_context *mac,
+			 struct pe_session *session)
+{
+	uint16_t puncture_bitmap;
+
+	puncture_bitmap =
+		*(uint16_t *)session->eht_op.disabled_sub_chan_bitmap;
+	if (puncture_bitmap) {
+		pe_debug("Remove puncture from reg: bitmap 0x%x",
+			 puncture_bitmap);
+		wlan_reg_remove_puncture(mac->pdev);
+	}
+}
+#else
+static inline
+void lim_apply_puncture(struct mac_context *mac,
+			struct pe_session *session,
+			qdf_freq_t sec_chan_freq)
+{
+}
+
+static inline
+void lim_remove_puncture(struct mac_context *mac,
+			 struct pe_session *session)
+{
+}
+#endif
+
 QDF_STATUS lim_ap_mlme_vdev_stop_send(struct vdev_mlme_obj *vdev_mlme,
 				      uint16_t data_len, void *data)
 {
 	struct pe_session *session = (struct pe_session *)data;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	struct mac_context *mac_ctx = session->mac_ctx;
 
 	if (!data) {
 		pe_err("data is NULL");
 		return QDF_STATUS_E_INVAL;
 	}
+
+	lim_remove_puncture(mac_ctx, session);
 
 	if (!wlan_vdev_mlme_is_mlo_ap(vdev_mlme->vdev)) {
 		mlme_set_notify_co_located_ap_update_rnr(vdev_mlme->vdev, true);
@@ -10658,6 +10770,8 @@ QDF_STATUS lim_pre_vdev_start(struct mac_context *mac,
 		if (ch_params.mhz_freq_seg0 ==  session->curr_op_freq - 10)
 			sec_chan_freq = session->curr_op_freq - 20;
 	}
+	if (LIM_IS_AP_ROLE(session))
+		lim_apply_puncture(mac, session, ch_params.mhz_freq_seg1);
 
 	if (IS_DOT11_MODE_EHT(session->dot11mode))
 		wlan_reg_set_create_punc_bitmap(&ch_params, true);
@@ -10678,6 +10792,7 @@ QDF_STATUS lim_pre_vdev_start(struct mac_context *mac,
 		 session->beacon_tx_rate,
 		 ch_params.mhz_freq_seg0,
 		 ch_params.mhz_freq_seg1);
+
 	/* Invalid channel width means no suitable channel bonding in current
 	 * regdomain for requested channel frequency. Abort vdev start.
 	 */
@@ -10701,7 +10816,16 @@ QDF_STATUS lim_pre_vdev_start(struct mac_context *mac,
 	session->ch_width = ch_params.ch_width;
 	session->ch_center_freq_seg0 = ch_params.center_freq_seg0;
 	session->ch_center_freq_seg1 = ch_params.center_freq_seg1;
-
+	if (LIM_IS_AP_ROLE(session)) {
+		/* Update he ops for puncture */
+		wlan_reg_set_create_punc_bitmap(&ch_params, false);
+		wlan_reg_set_channel_params_for_pwrmode(mac->pdev,
+							session->curr_op_freq,
+							sec_chan_freq,
+							&ch_params,
+							REG_CURRENT_PWR_MODE);
+		lim_update_ap_he_op(session, &ch_params);
+	}
 	mlme_obj->mgmt.generic.maxregpower = session->maxTxPower;
 	mlme_obj->proto.generic.beacon_interval =
 				session->beaconParams.beaconInterval;

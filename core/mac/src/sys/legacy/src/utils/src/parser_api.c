@@ -1520,20 +1520,51 @@ populate_dot11f_vht_operation(struct mac_context *mac,
 {
 	uint32_t mcs_set;
 	struct mlme_vht_capabilities_info *vht_cap_info;
+	enum reg_wifi_band band;
+	uint8_t band_mask;
+	struct ch_params ch_params = {0};
+	qdf_freq_t sec_chan_freq = 0;
 
 	if (!pe_session || !pe_session->vhtCapability)
 		return QDF_STATUS_SUCCESS;
+
+	band = wlan_reg_freq_to_band(pe_session->curr_op_freq);
+	band_mask = 1 << band;
+
+	ch_params.ch_width = pe_session->ch_width;
+	ch_params.mhz_freq_seg0 =
+		wlan_reg_chan_band_to_freq(mac->pdev,
+					   pe_session->ch_center_freq_seg0,
+					   band_mask);
+
+	if (pe_session->ch_center_freq_seg1)
+		ch_params.mhz_freq_seg1 =
+			wlan_reg_chan_band_to_freq(mac->pdev,
+						   pe_session->ch_center_freq_seg1,
+						   band_mask);
+
+	if (band == (REG_BAND_2G) && ch_params.ch_width == CH_WIDTH_40MHZ) {
+		if (ch_params.mhz_freq_seg0 ==  pe_session->curr_op_freq + 10)
+			sec_chan_freq = pe_session->curr_op_freq + 20;
+		if (ch_params.mhz_freq_seg0 ==  pe_session->curr_op_freq - 10)
+			sec_chan_freq = pe_session->curr_op_freq - 20;
+	}
+
+	wlan_reg_set_channel_params_for_pwrmode(mac->pdev,
+						pe_session->curr_op_freq,
+						sec_chan_freq, &ch_params,
+						REG_CURRENT_PWR_MODE);
 
 	pDot11f->present = 1;
 
 	if (pe_session->ch_width > CH_WIDTH_40MHZ) {
 		pDot11f->chanWidth = 1;
 		pDot11f->chan_center_freq_seg0 =
-			pe_session->ch_center_freq_seg0;
+			ch_params.center_freq_seg0;
 		if (pe_session->ch_width == CH_WIDTH_80P80MHZ ||
 				pe_session->ch_width == CH_WIDTH_160MHZ)
 			pDot11f->chan_center_freq_seg1 =
-				pe_session->ch_center_freq_seg1;
+				ch_params.center_freq_seg1;
 		else
 			pDot11f->chan_center_freq_seg1 = 0;
 	} else {
@@ -7237,16 +7268,19 @@ populate_dot11f_he_operation(struct mac_context *mac_ctx,
 	he_op->vht_oper_present = 0;
 	if (session->he_6ghz_band) {
 		he_op->oper_info_6g_present = 1;
-		he_op->oper_info_6g.info.ch_width = session->ch_width;
-		he_op->oper_info_6g.info.center_freq_seg0 =
-					session->ch_center_freq_seg0;
-		if (session->ch_width == CH_WIDTH_80P80MHZ ||
-		    session->ch_width == CH_WIDTH_160MHZ) {
-			he_op->oper_info_6g.info.center_freq_seg1 =
-				session->ch_center_freq_seg1;
-			he_op->oper_info_6g.info.ch_width = CH_WIDTH_160MHZ;
-		} else {
-			he_op->oper_info_6g.info.center_freq_seg1 = 0;
+		if (session->bssType != eSIR_INFRA_AP_MODE) {
+			he_op->oper_info_6g.info.ch_width = session->ch_width;
+			he_op->oper_info_6g.info.center_freq_seg0 =
+						session->ch_center_freq_seg0;
+			if (session->ch_width == CH_WIDTH_80P80MHZ ||
+			    session->ch_width == CH_WIDTH_160MHZ) {
+				he_op->oper_info_6g.info.center_freq_seg1 =
+					session->ch_center_freq_seg1;
+				he_op->oper_info_6g.info.ch_width =
+							CH_WIDTH_160MHZ;
+			} else {
+				he_op->oper_info_6g.info.center_freq_seg1 = 0;
+			}
 		}
 		he_op->oper_info_6g.info.primary_ch =
 			wlan_reg_freq_to_chan(mac_ctx->pdev,
