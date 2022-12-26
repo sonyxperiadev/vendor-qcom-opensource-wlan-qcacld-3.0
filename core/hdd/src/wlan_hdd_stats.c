@@ -6224,8 +6224,10 @@ static int wlan_hdd_get_sta_stats(struct wiphy *wiphy,
 
 		if (tx_mcs_index == INVALID_MCS_IDX)
 			tx_mcs_index = 0;
-		if (rx_mcs_index == INVALID_MCS_IDX)
+		if (rx_mcs_index == INVALID_MCS_IDX) {
 			rx_mcs_index = 0;
+			adapter->hdd_stats.class_a_stat.rx_mcs_index = 0;
+		}
 	}
 
 	hdd_debug("[RSSI %d, RLMS %u, rssi high %d, rssi mid %d, rssi low %d]-"
