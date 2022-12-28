@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2767,6 +2767,12 @@ cm_update_btm_offload_config(struct wlan_objmgr_psoc *psoc,
 	/* Return if INI is disabled */
 	if (!(*btm_offload_config))
 		return;
+
+	if (!wlan_cm_get_assoc_btm_cap(vdev)) {
+		mlme_debug("BTM not supported, disable BTM offload");
+		*btm_offload_config = 0;
+		return;
+	}
 
 	vdev_id = wlan_vdev_get_id(vdev);
 	wlan_cm_roam_cfg_get_value(psoc, vdev_id, HS_20_AP, &temp);

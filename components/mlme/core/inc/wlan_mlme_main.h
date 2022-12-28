@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -376,6 +376,7 @@ struct ft_context {
  * @cckm_ie_len: cckm_ie len
  * @ese_tspec_info: ese tspec info
  * @ext_cap_ie: Ext CAP IE
+ * @assoc_btm_cap: BSS transition management cap used in (re)assoc req
  */
 struct mlme_connect_info {
 	uint8_t timing_meas_cap;
@@ -400,6 +401,7 @@ struct mlme_connect_info {
 #endif
 #endif
 	uint8_t ext_cap_ie[DOT11F_IE_EXTCAP_MAX_LEN + 2];
+	bool assoc_btm_cap;
 };
 
 /** struct wait_for_key_timer - wait for key timer object

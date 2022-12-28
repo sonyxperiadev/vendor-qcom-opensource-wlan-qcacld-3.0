@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -11010,6 +11010,7 @@ QDF_STATUS populate_dot11f_btm_extended_caps(struct mac_context *mac_ctx,
 		pe_debug("ext ie length become 0, disable the ext caps");
 	}
 
+	wlan_cm_set_assoc_btm_cap(pe_session->vdev, p_ext_cap->bss_transition);
 	return QDF_STATUS_SUCCESS;
 }
 

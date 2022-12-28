@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -3819,4 +3819,34 @@ wlan_cm_get_sae_auth_ta(struct wlan_objmgr_pdev *pdev,
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_CM_ID);
 
 	return QDF_STATUS_E_ALREADY;
+}
+
+void
+wlan_cm_set_assoc_btm_cap(struct wlan_objmgr_vdev *vdev, bool val)
+{
+	struct mlme_legacy_priv *mlme_priv;
+
+	if (!vdev)
+		return;
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv)
+		return;
+
+	mlme_priv->connect_info.assoc_btm_cap = val;
+}
+
+bool
+wlan_cm_get_assoc_btm_cap(struct wlan_objmgr_vdev *vdev)
+{
+	struct mlme_legacy_priv *mlme_priv;
+
+	if (!vdev)
+		return true;
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv)
+		return true;
+
+	return mlme_priv->connect_info.assoc_btm_cap;
 }
