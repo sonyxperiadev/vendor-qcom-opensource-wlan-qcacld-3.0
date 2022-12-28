@@ -207,6 +207,7 @@ static void mlo_roam_update_vdev_macaddr(struct wlan_objmgr_psoc *psoc,
 					 bool is_non_ml_connection)
 {
 	struct wlan_objmgr_vdev *vdev;
+	struct qdf_mac_addr *mld_mac;
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc,
 						    vdev_id,
@@ -216,14 +217,18 @@ static void mlo_roam_update_vdev_macaddr(struct wlan_objmgr_psoc *psoc,
 		return;
 	}
 
-	mlme_debug("Update vdev self mac");
-	if (is_non_ml_connection)
-		wlan_vdev_mlme_set_macaddr(vdev,
-					   wlan_vdev_mlme_get_mldaddr(vdev));
-	else
+	if (is_non_ml_connection) {
+		mld_mac = (struct qdf_mac_addr *)wlan_vdev_mlme_get_mldaddr(vdev);
+		if (!qdf_is_macaddr_zero(mld_mac))
+			wlan_vdev_mlme_set_macaddr(vdev, mld_mac->bytes);
+	} else {
 		wlan_vdev_mlme_set_macaddr(vdev,
 					   wlan_vdev_mlme_get_linkaddr(vdev));
+	}
 
+	mlme_debug("vdev_id %d self mac " QDF_MAC_ADDR_FMT,
+		   vdev_id,
+		   QDF_MAC_ADDR_REF(wlan_vdev_mlme_get_macaddr(vdev)));
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLO_MGR_ID);
 }
 
