@@ -14173,19 +14173,50 @@ uint8_t hdd_get_sap_operating_band(struct hdd_context *hdd_ctx)
 	return operating_band;
 }
 
-static inline
-QDF_STATUS wlan_hdd_config_dp_direct_link_profile(struct wlan_objmgr_vdev *vdev,
-						  uint8_t ap_config)
+static inline QDF_STATUS
+wlan_hdd_config_dp_direct_link_profile(struct wlan_objmgr_vdev *vdev,
+				       enum host_concurrent_ap_policy ap_policy)
 {
-	switch (ap_config) {
-	case QCA_WLAN_CONCURRENT_AP_POLICY_GAMING_AUDIO:
-		return ucfg_dp_config_direct_link(vdev, true, true);
-	case QCA_WLAN_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING:
-		return ucfg_dp_config_direct_link(vdev, true, false);
-	case QCA_WLAN_CONCURRENT_AP_POLICY_UNSPECIFIED:
+	enum host_concurrent_ap_policy prev_ap_policy;
+
+	prev_ap_policy = ucfg_mlme_get_ap_policy(vdev);
+
+	hdd_debug("Current AP policy %d prev AP policy %d", ap_policy,
+		  prev_ap_policy);
+
+	switch (prev_ap_policy) {
+	case HOST_CONCURRENT_AP_POLICY_UNSPECIFIED:
+		switch (ap_policy) {
+		case HOST_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING:
+			return ucfg_dp_config_direct_link(vdev, true, false);
+		case HOST_CONCURRENT_AP_POLICY_GAMING_AUDIO:
+			return ucfg_dp_config_direct_link(vdev, true, true);
+		default:
+			break;
+		}
+		break;
+	case HOST_CONCURRENT_AP_POLICY_GAMING_AUDIO:
+		switch (ap_policy) {
+		case HOST_CONCURRENT_AP_POLICY_UNSPECIFIED:
+		case HOST_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING:
+			return ucfg_dp_config_direct_link(vdev, true, false);
+		default:
+			break;
+		}
+		break;
+	case HOST_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING:
+		switch (ap_policy) {
+		case HOST_CONCURRENT_AP_POLICY_GAMING_AUDIO:
+			return ucfg_dp_config_direct_link(vdev, true, true);
+		default:
+			break;
+		}
+		break;
 	default:
-		return ucfg_dp_config_direct_link(vdev, false, false);
+		break;
 	}
+
+	return QDF_STATUS_SUCCESS;
 }
 
 const struct nla_policy
@@ -14381,13 +14412,14 @@ static int __wlan_hdd_cfg80211_ap_policy(struct wlan_objmgr_vdev *vdev,
 		return -EINVAL;
 	}
 
-	status = wlan_hdd_config_dp_direct_link_profile(vdev, ap_config);
+	ap_cfg_policy = wlan_mlme_convert_ap_policy_config(ap_config);
+
+	status = wlan_hdd_config_dp_direct_link_profile(vdev, ap_cfg_policy);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		hdd_err("failed to set DP ap config");
 		return -EINVAL;
 	}
 
-	ap_cfg_policy = wlan_mlme_convert_ap_policy_config(ap_config);
 	status = ucfg_mlme_set_ap_policy(vdev, ap_cfg_policy);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		hdd_err("failed to set MLME ap config");
