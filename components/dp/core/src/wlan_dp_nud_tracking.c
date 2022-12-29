@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -349,17 +349,28 @@ static void dp_nud_filter_netevent(struct qdf_mac_addr *netdev_addr,
 	struct wlan_dp_psoc_context *dp_ctx;
 	struct wlan_objmgr_vdev *vdev;
 
+	dp_enter();
 	dp_ctx = dp_get_context();
-	if (!dp_ctx)
+	if (!dp_ctx) {
+		dp_err("unable to get DP context");
 		return;
+	}
 
 	dp_intf = dp_get_intf_by_macaddr(dp_ctx, netdev_addr);
 
-	if (!dp_intf)
+	if (!dp_intf) {
+		dp_err("Unable to get DP intf for MAC " QDF_MAC_ADDR_FMT,
+		       QDF_MAC_ADDR_REF(netdev_addr->bytes));
 		return;
+	}
 
 	status = is_dp_intf_valid(dp_intf);
-	if (status)
+	if (status) {
+		dp_err("invalid dp_intf");
+		return;
+	}
+
+	if (dp_intf->device_mode != QDF_STA_MODE)
 		return;
 
 	if (dp_intf->nud_tracking.ignore_nud_tracking) {
@@ -367,11 +378,10 @@ static void dp_nud_filter_netevent(struct qdf_mac_addr *netdev_addr,
 		return;
 	}
 
-	if (!dp_intf->nud_tracking.is_gw_updated)
+	if (!dp_intf->nud_tracking.is_gw_updated) {
+		dp_info("GW is not updated");
 		return;
-
-	if (dp_intf->device_mode != QDF_STA_MODE)
-		return;
+	}
 
 	vdev = dp_objmgr_get_vdev_by_user(dp_intf, WLAN_DP_ID);
 	if (!vdev)
@@ -391,8 +401,14 @@ static void dp_nud_filter_netevent(struct qdf_mac_addr *netdev_addr,
 	}
 
 	if (!qdf_is_macaddr_equal(&dp_intf->nud_tracking.gw_mac_addr,
-				  gw_mac_addr))
+				  gw_mac_addr)) {
+		dp_info("MAC mismatch NUD state %d GW MAC "
+			 QDF_MAC_ADDR_FMT " Event MAC " QDF_MAC_ADDR_FMT,
+			nud_state,
+			QDF_MAC_ADDR_REF(dp_intf->nud_tracking.gw_mac_addr.bytes),
+			QDF_MAC_ADDR_REF(gw_mac_addr->bytes));
 		return;
+	}
 
 	if (dp_ctx->is_wiphy_suspended) {
 		dp_info("wlan is suspended, ignore NUD event");
@@ -434,6 +450,7 @@ static void dp_nud_filter_netevent(struct qdf_mac_addr *netdev_addr,
 			nud_state);
 		break;
 	}
+	dp_exit();
 }
 
 void dp_nud_netevent_cb(struct qdf_mac_addr *netdev_addr,
