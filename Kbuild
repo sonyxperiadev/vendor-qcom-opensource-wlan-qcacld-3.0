@@ -50,6 +50,11 @@ ifeq ($(findstring yes, $(found)), yes)
 cppflags-y += -DCFG80211_LINK_STA_PARAMS_PRESENT
 endif
 
+found = $(shell if grep -qF "nl80211_put_ru_punct_supp_bw" $(srctree)/net/wireless/nl80211.c; then echo "yes" ;else echo "no" ;fi;)
+ifeq ($(findstring yes, $(found)), yes)
+cppflags-y += -DCFG80211_RU_PUNCT_SUPPORT
+endif
+
 include $(WLAN_ROOT)/configs/$(CONFIG_QCA_CLD_WLAN_PROFILE)_defconfig
 
 # add configurations in WLAN_CFG_OVERRIDE
