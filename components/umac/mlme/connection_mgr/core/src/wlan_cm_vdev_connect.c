@@ -1622,26 +1622,6 @@ cm_connect_complete_ind(struct wlan_objmgr_vdev *vdev,
 	return QDF_STATUS_SUCCESS;
 }
 
-#ifdef WLAN_FEATURE_FILS_SK
-static inline void cm_free_fils_ie(struct wlan_connect_rsp_ies *connect_ie)
-{
-	if (!connect_ie->fils_ie)
-		return;
-
-	if (connect_ie->fils_ie->fils_pmk) {
-		qdf_mem_zero(connect_ie->fils_ie->fils_pmk,
-			     connect_ie->fils_ie->fils_pmk_len);
-		qdf_mem_free(connect_ie->fils_ie->fils_pmk);
-	}
-	qdf_mem_zero(connect_ie->fils_ie, sizeof(*connect_ie->fils_ie));
-	qdf_mem_free(connect_ie->fils_ie);
-}
-#else
-static inline void cm_free_fils_ie(struct wlan_connect_rsp_ies *connect_ie)
-{
-}
-#endif
-
 #ifdef FEATURE_WLAN_ESE
 static void cm_free_tspec_ie(struct cm_vdev_join_rsp *rsp)
 {
@@ -1655,31 +1635,11 @@ static void cm_free_tspec_ie(struct cm_vdev_join_rsp *rsp)
 {}
 #endif
 
-#ifdef WLAN_FEATURE_ROAM_OFFLOAD
-static void cm_free_roaming_info(struct wlan_cm_connect_resp *connect_rsp)
-{
-	qdf_mem_free(connect_rsp->roaming_info);
-	connect_rsp->roaming_info = NULL;
-}
-#else
-static inline void
-cm_free_roaming_info(struct wlan_cm_connect_resp *connect_rsp)
-{}
-#endif
-
 void wlan_cm_free_connect_rsp(struct cm_vdev_join_rsp *rsp)
 {
-	struct wlan_connect_rsp_ies *connect_ie =
-						&rsp->connect_rsp.connect_ies;
-
-	qdf_mem_free(connect_ie->assoc_req.ptr);
-	qdf_mem_free(connect_ie->bcn_probe_rsp.ptr);
-	qdf_mem_free(connect_ie->link_bcn_probe_rsp.ptr);
-	qdf_mem_free(connect_ie->assoc_rsp.ptr);
-	cm_free_fils_ie(connect_ie);
 	cm_free_tspec_ie(rsp);
 	qdf_mem_free(rsp->ric_resp_ie.ptr);
-	cm_free_roaming_info(&rsp->connect_rsp);
+	cm_free_connect_rsp_ies(&rsp->connect_rsp);
 	qdf_mem_zero(rsp, sizeof(*rsp));
 	qdf_mem_free(rsp);
 }
