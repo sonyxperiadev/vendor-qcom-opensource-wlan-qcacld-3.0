@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2042,6 +2042,7 @@ lim_handle_11a_dot11_mode(enum mlme_dot11_mode bss_dot11_mode,
 	case MLME_DOT11_MODE_11N:
 	case MLME_DOT11_MODE_11AC:
 	case MLME_DOT11_MODE_11AX:
+	case MLME_DOT11_MODE_11BE:
 		*intersected_mode = MLME_DOT11_MODE_11A;
 		break;
 	default:
@@ -2069,6 +2070,7 @@ lim_handle_11b_dot11_mode(enum mlme_dot11_mode bss_dot11_mode,
 	case MLME_DOT11_MODE_11AX:
 	case MLME_DOT11_MODE_11B:
 	case MLME_DOT11_MODE_11G:
+	case MLME_DOT11_MODE_11BE:
 		/* Self 11B and BSS 11A cannot connect */
 		*intersected_mode = MLME_DOT11_MODE_11B;
 		break;
@@ -2100,6 +2102,7 @@ lim_handle_11g_dot11_mode(enum mlme_dot11_mode bss_dot11_mode,
 	case MLME_DOT11_MODE_11AC:
 	case MLME_DOT11_MODE_11AX:
 	case MLME_DOT11_MODE_11G:
+	case MLME_DOT11_MODE_11BE:
 		/* Self 11B and BSS 11A cannot connect */
 		*intersected_mode = MLME_DOT11_MODE_11G;
 		break;
@@ -2189,6 +2192,7 @@ lim_handle_11ac_dot11_mode(enum mlme_dot11_mode bss_dot11_mode,
 		*intersected_mode = MLME_DOT11_MODE_11AC;
 		break;
 	case MLME_DOT11_MODE_11AX:
+	case MLME_DOT11_MODE_11BE:
 		if (vht_capable) {
 			*intersected_mode = MLME_DOT11_MODE_11AC;
 			break;
@@ -2331,6 +2335,7 @@ lim_handle_11g_only_dot11_mode(enum mlme_dot11_mode bss_dot11_mode,
 	case MLME_DOT11_MODE_11AC:
 	case MLME_DOT11_MODE_11AX:
 	case MLME_DOT11_MODE_11G:
+	case MLME_DOT11_MODE_11BE:
 		/* Self 11B and BSS 11A cannot connect */
 		*intersected_mode = MLME_DOT11_MODE_11G;
 		break;
@@ -2365,6 +2370,7 @@ lim_handle_11n_only_dot11_mode(enum mlme_dot11_mode bss_dot11_mode,
 		break;
 	case MLME_DOT11_MODE_11AC:
 	case MLME_DOT11_MODE_11AX:
+	case MLME_DOT11_MODE_11BE:
 		if (ie_struct->HTCaps.present) {
 			*intersected_mode = MLME_DOT11_MODE_11N;
 			break;
@@ -2408,6 +2414,7 @@ lim_handle_11ac_only_dot11_mode(enum mlme_dot11_mode bss_dot11_mode,
 		*intersected_mode = MLME_DOT11_MODE_11AC;
 		break;
 	case MLME_DOT11_MODE_11AX:
+	case MLME_DOT11_MODE_11BE:
 		if (vht_capable) {
 			*intersected_mode = MLME_DOT11_MODE_11AC;
 			break;
