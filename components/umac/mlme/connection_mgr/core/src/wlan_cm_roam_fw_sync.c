@@ -61,7 +61,9 @@ QDF_STATUS cm_fw_roam_sync_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
-	if (cm_is_vdev_connecting(vdev) || cm_is_vdev_disconnecting(vdev)) {
+	if (mlo_is_mld_disconnecting_connecting(vdev) ||
+	    cm_is_vdev_connecting(vdev) ||
+	    cm_is_vdev_disconnecting(vdev)) {
 		mlme_err("vdev %d Roam sync not handled in connecting/disconnecting state",
 			 vdev_id);
 		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_SB_ID);
