@@ -1221,6 +1221,7 @@ wlan_hdd_fill_connectivity_logging_data(struct sk_buff *skb,
  * wlan_hdd_send_connectivity_log_to_user  - Send the connectivity log buffer
  * to userspace
  * @rec: Pointer to the log record
+ * @hdd_context: HDD global context
  * @num_records: Number of records
  *
  * Return: QDF_STATUS

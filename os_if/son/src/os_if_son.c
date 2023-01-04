@@ -16,7 +16,7 @@
  */
 
 /**
- * DOC : os_if_son.c
+ * DOC: os_if_son.c
  *
  * WLAN Host Device Driver file for son (Self Organizing Network)
  * support.

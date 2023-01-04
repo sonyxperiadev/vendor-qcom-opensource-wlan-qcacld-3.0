@@ -162,8 +162,8 @@ __osif_vdev_sync_op_start(struct net_device *net_dev,
  *
  * Return: none
  */
-#define osif_vdev_sync_op_stop(net_dev) \
-	__osif_vdev_sync_op_stop(net_dev, __func__)
+#define osif_vdev_sync_op_stop(vdev_sync) \
+	__osif_vdev_sync_op_stop(vdev_sync, __func__)
 
 void __osif_vdev_sync_op_stop(struct osif_vdev_sync *vdev_sync,
 			      const char *func);

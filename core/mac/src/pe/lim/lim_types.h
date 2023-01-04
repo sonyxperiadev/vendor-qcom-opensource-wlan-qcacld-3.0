@@ -428,6 +428,19 @@ void lim_cleanup_mlm(struct mac_context *);
 
 #ifdef WLAN_FEATURE_11BE
 /**
+ * lim_process_bcn_prb_rsp_t2lm() - process beacon/probe response
+ * 11be t2lm IE
+ * @mac_ctx: global mac context
+ * @session: pe session
+ * @bcn_ptr: pointer to tpSirProbeRespBeacon
+ *
+ * Return none
+ */
+void lim_process_bcn_prb_rsp_t2lm(struct mac_context *mac_ctx,
+				  struct pe_session *session,
+				  tpSirProbeRespBeacon bcn_ptr);
+
+/**
  * lim_process_beacon_eht() - process beacon 11be IE
  * @mac_ctx: global mac context
  * @session: pe session
@@ -459,6 +472,13 @@ void lim_process_beacon_eht(struct mac_context *mac_ctx,
 static inline
 void lim_process_beacon_eht_op(struct pe_session *session,
 			       tDot11fIEeht_op *eht_op)
+{
+}
+
+static inline
+void lim_process_bcn_prb_rsp_t2lm(struct mac_context *mac_ctx,
+				  struct pe_session *session,
+				  tpSirProbeRespBeacon bcn_ptr)
 {
 }
 #endif
@@ -742,6 +762,17 @@ static inline void lim_process_rx_scan_handler(struct wlan_objmgr_vdev *vdev,
 void lim_process_set_he_bss_color(struct mac_context *mac_ctx, uint32_t *msg_buf);
 
 /**
+ * lim_reconfig_obss_scan_param() - reconfig the obss scan params
+ *
+ * @mac_ctx: global mac context pointer
+ * @msg_buf: message buffer pointer
+ *
+ * Return: void
+ */
+void lim_reconfig_obss_scan_param(struct mac_context *mac_ctx,
+				  uint32_t *msg_buf);
+
+/**
  * lim_process_obss_color_collision_info() - Process the obss color collision
  *  request.
  * @mac_ctx: global mac context pointer
@@ -768,6 +799,11 @@ void lim_send_obss_color_collision_cfg(struct mac_context *mac_ctx,
 static inline void lim_process_set_he_bss_color(struct mac_context *mac_ctx,
 		uint32_t *msg_buf)
 {}
+
+static inline void lim_reconfig_obss_scan_param(struct mac_context *mac_ctx,
+						uint32_t *msg_buf)
+{
+}
 static inline void lim_process_obss_color_collision_info(struct mac_context *mac_ctx,
 							 uint32_t *msg_buf)
 {}

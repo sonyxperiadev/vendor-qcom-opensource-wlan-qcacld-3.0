@@ -361,15 +361,34 @@ static void lim_extract_eht_op(struct pe_session *session,
 
 	max_eht_bw = wma_get_eht_ch_width();
 
-	if (beacon_struct->eht_op.channel_width < WLAN_EHT_CHWIDTH_320 ||
-	    max_eht_bw < WNI_CFG_EHT_CHANNEL_WIDTH_320MHZ) {
-		pe_debug("AP supported BW: %d, STA supported BW: %d",
-			 beacon_struct->eht_op.channel_width, max_eht_bw);
-		return;
+	if (session->eht_op.channel_width == WLAN_EHT_CHWIDTH_320) {
+		if (max_eht_bw == WNI_CFG_EHT_CHANNEL_WIDTH_320MHZ) {
+			session->ch_width = CH_WIDTH_320MHZ;
+		} else if (max_eht_bw == WNI_CFG_VHT_CHANNEL_WIDTH_160MHZ) {
+			session->ch_width = CH_WIDTH_160MHZ;
+		} else {
+			session->ch_width = CH_WIDTH_80MHZ;
+			session->ch_center_freq_seg1 = 0;
+		}
+	} else if (session->eht_op.channel_width == WLAN_EHT_CHWIDTH_160) {
+		if (max_eht_bw >= WNI_CFG_VHT_CHANNEL_WIDTH_160MHZ) {
+			session->ch_width = CH_WIDTH_160MHZ;
+		} else {
+			session->ch_width = CH_WIDTH_80MHZ;
+			session->ch_center_freq_seg1 = 0;
+		}
+	} else if (session->eht_op.channel_width == WLAN_EHT_CHWIDTH_80) {
+		session->ch_width = CH_WIDTH_80MHZ;
+		session->ch_center_freq_seg1 = 0;
+	} else if (session->eht_op.channel_width == WLAN_EHT_CHWIDTH_40) {
+		session->ch_width = CH_WIDTH_40MHZ;
+		session->ch_center_freq_seg1 = 0;
+	} else {
+		session->ch_width = CH_WIDTH_20MHZ;
+		session->ch_center_freq_seg1 = 0;
 	}
 
-	session->ch_width = CH_WIDTH_320MHZ;
-	session->ch_center_freq_seg0 = session->ch_center_freq_seg1;
+	session->ch_center_freq_seg0 = session->eht_op.ccfs0;
 	session->ch_center_freq_seg1 = session->eht_op.ccfs1;
 
 	pe_debug("session ch_width %d ccfs0 %d ccfs1 %d", session->ch_width,

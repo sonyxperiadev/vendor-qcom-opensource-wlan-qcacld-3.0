@@ -16,7 +16,7 @@
  */
 
 /**
- * DOC : wlan_hdd_mlo.c
+ * DOC: wlan_hdd_mlo.c
  *
  * WLAN Host Device Driver file for 802.11be (Extremely High Throughput)
  * support.
@@ -215,7 +215,7 @@ hdd_adapter_set_sl_ml_adapter(struct hdd_adapter *adapter)
 	adapter->mlo_adapter_info.is_single_link_ml = true;
 }
 
-struct hdd_adapter *hdd_get_ml_adater(struct hdd_context *hdd_ctx)
+struct hdd_adapter *hdd_get_ml_adapter(struct hdd_context *hdd_ctx)
 {
 	struct hdd_adapter *adapter, *next_adapter = NULL;
 	wlan_net_dev_ref_dbgid dbgid = NET_DEV_HOLD_GET_ADAPTER_BY_VDEV;

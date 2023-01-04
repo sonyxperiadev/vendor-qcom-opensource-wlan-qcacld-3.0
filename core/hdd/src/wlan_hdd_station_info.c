@@ -194,7 +194,7 @@ static int hdd_get_sta_congestion(struct hdd_adapter *adapter,
 /**
  * hdd_get_station_assoc_fail() - Handle get station assoc fail
  * @hdd_ctx: HDD context within host driver
- * @wdev: wireless device
+ * @adapter: pointer to adapter
  *
  * Handles QCA_NL80211_VENDOR_SUBCMD_GET_STATION_ASSOC_FAIL.
  * Validate cmd attributes and send the station info to upper layers.
@@ -244,11 +244,11 @@ fail:
 }
 
 /**
- * hdd_map_auth_type() - transform auth type specific to
+ * hdd_convert_auth_type() - transform auth type specific to
  * vendor command
  * @auth_type: csr auth type
  *
- * Return: Success(0) or reason code for failure
+ * Return: vendor command auth type
  */
 static int hdd_convert_auth_type(uint32_t auth_type)
 {
@@ -347,11 +347,11 @@ static int hdd_convert_auth_type(uint32_t auth_type)
 }
 
 /**
- * hdd_map_dot_11_mode() - transform dot11mode type specific to
+ * hdd_convert_dot11mode() - transform dot11mode type specific to
  * vendor command
- * @dot11mode: dot11mode
+ * @dot11mode: CSR dot11 mode
  *
- * Return: Success(0) or reason code for failure
+ * Return: vendor command dot11 mode
  */
 static int hdd_convert_dot11mode(uint32_t dot11mode)
 {
@@ -373,6 +373,12 @@ static int hdd_convert_dot11mode(uint32_t dot11mode)
 	case eCSR_CFG_DOT11_MODE_11AC:
 		ret_val = QCA_WLAN_802_11_MODE_11AC;
 		break;
+	case eCSR_CFG_DOT11_MODE_11AX:
+		ret_val = QCA_WLAN_802_11_MODE_11AX;
+		break;
+	case eCSR_CFG_DOT11_MODE_11BE:
+		ret_val = QCA_WLAN_802_11_MODE_11BE;
+		break;
 	case eCSR_CFG_DOT11_MODE_AUTO:
 	case eCSR_CFG_DOT11_MODE_ABG:
 	default:
@@ -384,7 +390,7 @@ static int hdd_convert_dot11mode(uint32_t dot11mode)
 /**
  * hdd_add_tx_bitrate() - add tx bitrate attribute
  * @skb: pointer to sk buff
- * @hdd_sta_ctx: pointer to hdd station context
+ * @adapter: pointer to adapter
  * @idx: attribute index
  *
  * Return: Success(0) or reason code for failure
@@ -452,7 +458,8 @@ fail:
 /**
  * hdd_add_sta_info() - add station info attribute
  * @skb: pointer to sk buff
- * @hdd_sta_ctx: pointer to hdd station context
+ * @hdd_ctx: pointer to hdd station context
+ * @adapter: pointer to adapter
  * @idx: attribute index
  *
  * Return: Success(0) or reason code for failure
@@ -529,7 +536,8 @@ fail:
 /**
  * hdd_add_link_standard_info() - add link info attribute
  * @skb: pointer to sk buff
- * @hdd_sta_ctx: pointer to hdd station context
+ * @hdd_ctx: pointer to hdd context
+ * @adapter: pointer to adapter
  * @idx: attribute index
  *
  * Return: Success(0) or reason code for failure
@@ -850,7 +858,7 @@ static uint32_t hdd_add_survey_info_sap_get_len(void)
 }
 
 /**
- * hdd_add_survey_info - add survey info attribute
+ * hdd_add_survey_info_sap() - add survey info attribute
  * @skb: pointer to response skb buffer
  * @stainfo: station information
  * @idx: attribute type index for nla_next_start()
@@ -948,6 +956,7 @@ static uint32_t hdd_add_sta_info_sap_get_len(void)
 /**
  * hdd_add_sta_info_sap - add sta signal info attribute
  * @skb: pointer to response skb buffer
+ * @rssi: station RSSI
  * @stainfo: station information
  * @idx: attribute type index for nla_next_start()
  *
@@ -999,6 +1008,7 @@ static uint32_t hdd_add_link_standard_info_sap_get_len(void)
 /**
  * hdd_add_link_standard_info_sap - add add link info attribute
  * @skb: pointer to response skb buffer
+ * @rssi: station RSSI
  * @stainfo: station information
  * @idx: attribute type index for nla_next_start()
  *
@@ -1282,10 +1292,11 @@ fail:
 }
 
 /**
- * hdd_get_cached_station_remote() - get connected peer's info
+ * hdd_get_connected_station_info() - get connected peer's info
  * @hdd_ctx: hdd context
  * @adapter: hostapd interface
  * @mac_addr: mac address of requested peer
+ * @stainfo: location to store peer info
  *
  * This function collect and indicate the connected peer's info
  *

@@ -1677,13 +1677,15 @@ QDF_STATUS wma_create_peer(tp_wma_handle wma,
  * @vdev_id: vdev id
  * @peer_addr: peer mac address
  * @wma_peer_type: peer type of enum wmi_peer_type
+ * @peer_mld: peer mld address
  *
  * Return: Pointer to objmgr_peer
  */
 struct wlan_objmgr_peer *wma_create_objmgr_peer(tp_wma_handle wma,
 						uint8_t vdev_id,
 						uint8_t *peer_addr,
-						uint32_t wma_peer_type);
+						uint32_t wma_peer_type,
+						uint8_t *peer_mld);
 
 /**
  * wma_remove_objmgr_peer() - Remove Object manager peer

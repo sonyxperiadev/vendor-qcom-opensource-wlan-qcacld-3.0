@@ -34,6 +34,9 @@
 #include "wlan_connectivity_logging.h"
 
 #define MAC_MAX_ADD_IE_LENGTH       2048
+/* Join probe request Retry  timer default (200)ms */
+#define JOIN_PROBE_REQ_TIMER_MS              200
+#define MAX_JOIN_PROBE_REQ                   5
 
 /*
  * Following time is used to program WOW_TIMER_PATTERN to FW so that FW will
@@ -226,6 +229,7 @@ struct wlan_mlme_roaming_config {
  * @sae_single_pmk: Details for sae roaming using single pmk
  * @set_pmk_pending: RSO update status of PMK from set_key
  * @sae_auth_ta: SAE pre-auth tx address
+ * @sae_auth_pending:  Roaming SAE auth pending
  */
 struct wlan_mlme_roam {
 	struct wlan_mlme_roam_state_info roam_sm;
@@ -235,6 +239,7 @@ struct wlan_mlme_roam {
 #endif
 	bool set_pmk_pending;
 	struct qdf_mac_addr sae_auth_ta;
+	uint8_t sae_auth_pending;
 };
 
 #ifdef WLAN_FEATURE_MSCS
@@ -850,6 +855,22 @@ qdf_freq_t wlan_get_operation_chan_freq_vdev_id(struct wlan_objmgr_pdev *pdev,
  */
 enum QDF_OPMODE wlan_get_opmode_vdev_id(struct wlan_objmgr_pdev *pdev,
 					uint8_t vdev_id);
+
+/**
+ * wlan_vdev_set_dot11mode - Set the dot11mode of the vdev
+ * @mac_mlme_cfg: MAC's MLME config pointer
+ * @device_mode: OPMODE of the vdev
+ * @vdev_mlme: MLME component of the vdev
+ *
+ * Use this API to set the dot11mode of the vdev.
+ * For non-ML type vdev, this API restricts the connection
+ * of vdev to 11ax on 11be capable operation.
+ *
+ * Return: void
+ */
+void wlan_vdev_set_dot11mode(struct wlan_mlme_cfg *mac_mlme_cfg,
+			     enum QDF_OPMODE device_mode,
+			     struct vdev_mlme_obj *vdev_mlme);
 
 /**
  * wlan_is_open_wep_cipher() - check if cipher is open or WEP

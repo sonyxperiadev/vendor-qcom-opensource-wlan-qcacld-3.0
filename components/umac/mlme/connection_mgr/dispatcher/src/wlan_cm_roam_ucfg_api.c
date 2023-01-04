@@ -487,6 +487,32 @@ ucfg_cm_roam_send_rt_stats_config(struct wlan_objmgr_pdev *pdev,
 	return cm_roam_send_rt_stats_config(psoc, vdev_id, param_value);
 }
 
+QDF_STATUS
+ucfg_cm_roam_send_ho_delay_config(struct wlan_objmgr_pdev *pdev,
+				  uint8_t vdev_id, uint16_t param_value)
+{
+	struct wlan_objmgr_psoc *psoc = wlan_pdev_get_psoc(pdev);
+
+	return cm_roam_send_ho_delay_config(psoc, vdev_id, param_value);
+}
+
+QDF_STATUS
+ucfg_cm_exclude_rm_partial_scan_freq(struct wlan_objmgr_pdev *pdev,
+				     uint8_t vdev_id, uint8_t param_value)
+{
+	struct wlan_objmgr_psoc *psoc = wlan_pdev_get_psoc(pdev);
+
+	return cm_exclude_rm_partial_scan_freq(psoc, vdev_id, param_value);
+}
+
+QDF_STATUS ucfg_cm_roam_full_scan_6ghz_on_disc(struct wlan_objmgr_pdev *pdev,
+					       uint8_t vdev_id,
+					       uint8_t param_value)
+{
+	struct wlan_objmgr_psoc *psoc = wlan_pdev_get_psoc(pdev);
+
+	return cm_roam_full_scan_6ghz_on_disc(psoc, vdev_id, param_value);
+}
 #ifdef WLAN_VENDOR_HANDOFF_CONTROL
 QDF_STATUS
 ucfg_cm_roam_send_vendor_handoff_param_req(struct wlan_objmgr_psoc *psoc,
@@ -506,3 +532,214 @@ ucfg_cm_roam_is_vendor_handoff_control_enable(struct wlan_objmgr_psoc *psoc)
 
 #endif
 #endif /* WLAN_FEATURE_ROAM_OFFLOAD */
+
+QDF_STATUS
+ucfg_cm_get_roam_intra_band(struct wlan_objmgr_psoc *psoc, uint16_t *val)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_INVAL;
+
+	*val = mlme_obj->cfg.lfr.roam_intra_band;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+ucfg_cm_get_roam_rescan_rssi_diff(struct wlan_objmgr_psoc *psoc, uint8_t *val)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_INVAL;
+
+	*val = mlme_obj->cfg.lfr.roam_rescan_rssi_diff;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+ucfg_cm_get_neighbor_lookup_rssi_threshold(struct wlan_objmgr_psoc *psoc,
+					   uint8_t vdev_id,
+					   uint8_t *lookup_threshold)
+{
+	struct cm_roam_values_copy temp;
+
+	wlan_cm_roam_cfg_get_value(psoc, vdev_id,
+				   NEIGHBOUR_LOOKUP_THRESHOLD, &temp);
+	*lookup_threshold = temp.uint_value;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+ucfg_cm_get_empty_scan_refresh_period(struct wlan_objmgr_psoc *psoc,
+				      uint8_t vdev_id,
+				      uint16_t *refresh_threshold)
+{
+	struct cm_roam_values_copy temp;
+
+	wlan_cm_roam_cfg_get_value(psoc, vdev_id,
+				   EMPTY_SCAN_REFRESH_PERIOD, &temp);
+	*refresh_threshold = temp.uint_value;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+uint16_t
+ucfg_cm_get_neighbor_scan_min_chan_time(struct wlan_objmgr_psoc *psoc,
+					uint8_t vdev_id)
+{
+	struct cm_roam_values_copy temp;
+
+	wlan_cm_roam_cfg_get_value(psoc, vdev_id,
+				   SCAN_MIN_CHAN_TIME, &temp);
+
+	return temp.uint_value;
+}
+
+QDF_STATUS
+ucfg_cm_get_roam_rssi_diff(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
+			   uint8_t *rssi_diff)
+{
+	struct cm_roam_values_copy temp;
+
+	wlan_cm_roam_cfg_get_value(psoc, vdev_id,
+				   ROAM_RSSI_DIFF, &temp);
+	*rssi_diff = temp.uint_value;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+#ifdef FEATURE_WLAN_ESE
+bool ucfg_cm_get_is_ese_feature_enabled(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return false;
+
+	return mlme_obj->cfg.lfr.ese_enabled;
+}
+#endif
+
+uint16_t
+ucfg_cm_get_neighbor_scan_max_chan_time(struct wlan_objmgr_psoc *psoc,
+					uint8_t vdev_id)
+{
+	struct cm_roam_values_copy temp;
+
+	wlan_cm_roam_cfg_get_value(psoc, vdev_id,
+				   SCAN_MAX_CHAN_TIME, &temp);
+
+	return temp.uint_value;
+}
+
+uint16_t
+ucfg_cm_get_neighbor_scan_period(struct wlan_objmgr_psoc *psoc,
+				 uint8_t vdev_id)
+{
+	struct cm_roam_values_copy temp;
+
+	wlan_cm_roam_cfg_get_value(psoc, vdev_id,
+				   NEIGHBOR_SCAN_PERIOD, &temp);
+	return temp.uint_value;
+}
+
+bool ucfg_cm_get_wes_mode(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return false;
+
+	return mlme_obj->cfg.lfr.wes_mode_enabled;
+}
+
+bool ucfg_cm_get_is_lfr_feature_enabled(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return false;
+
+	return mlme_obj->cfg.lfr.lfr_enabled;
+}
+
+bool ucfg_cm_get_is_ft_feature_enabled(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return false;
+
+	return mlme_obj->cfg.lfr.fast_transition_enabled;
+}
+
+QDF_STATUS
+ucfg_cm_get_roam_scan_home_away_time(struct wlan_objmgr_psoc *psoc,
+				     uint8_t vdev_id,
+				     uint16_t *roam_scan_home_away_time)
+{
+	struct cm_roam_values_copy temp;
+
+	wlan_cm_roam_cfg_get_value(psoc, vdev_id, SCAN_HOME_AWAY, &temp);
+
+	*roam_scan_home_away_time = temp.uint_value;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+ucfg_cm_get_roam_opportunistic_scan_threshold_diff(
+						struct wlan_objmgr_psoc *psoc,
+						int8_t *val)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_INVAL;
+
+	*val = mlme_obj->cfg.lfr.opportunistic_scan_threshold_diff;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+ucfg_cm_get_neighbor_scan_refresh_period(struct wlan_objmgr_psoc *psoc,
+					 uint16_t *value)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_INVAL;
+
+	*value = mlme_obj->cfg.lfr.neighbor_scan_results_refresh_period;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+ucfg_cm_get_empty_scan_refresh_period_global(struct wlan_objmgr_psoc *psoc,
+					     uint16_t *roam_scan_period_global)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_INVAL;
+
+	*roam_scan_period_global =
+			mlme_obj->cfg.lfr.empty_scan_refresh_period;
+
+	return QDF_STATUS_SUCCESS;
+}

@@ -230,10 +230,16 @@ void lim_process_mlm_start_cnf(struct mac_context *mac, uint32_t *msg_buf)
 		if (!LIM_IS_AP_ROLE(pe_session))
 			return;
 		if (pe_session->ch_width == CH_WIDTH_160MHZ) {
-			if (wlan_reg_get_bonded_channel_state_for_freq(
-					mac->pdev, chan_freq,
-					pe_session->ch_width, 0) !=
-					CHANNEL_STATE_DFS)
+			struct ch_params ch_params = {0};
+
+			if (IS_DOT11_MODE_EHT(pe_session->dot11mode))
+				wlan_reg_set_create_punc_bitmap(&ch_params, true);
+			ch_params.ch_width = pe_session->ch_width;
+			if (wlan_reg_get_5g_bonded_channel_state_for_pwrmode(mac->pdev,
+									     chan_freq,
+									     &ch_params,
+									     REG_CURRENT_PWR_MODE)  !=
+			    CHANNEL_STATE_DFS)
 				send_bcon_ind = true;
 		} else if (pe_session->ch_width == CH_WIDTH_80P80MHZ) {
 			if ((wlan_reg_get_channel_state_for_pwrmode(
@@ -3170,9 +3176,12 @@ void lim_process_switch_channel_rsp(struct mac_context *mac,
 
 		/* If MCC upgrade/DBS downgrade happened during channel switch,
 		 * the policy manager connection table needs to be updated.
+		 * STA PCL to F/W need update after sta channel switch.
 		 */
 		policy_mgr_update_connection_info(mac->psoc,
 			pe_session->smeSessionId);
+		wlan_cm_handle_sta_sta_roaming_enablement(mac->psoc,
+							  pe_session->smeSessionId);
 		if (pe_session->opmode == QDF_P2P_CLIENT_MODE) {
 			pe_debug("Send p2p operating channel change conf action frame once first beacon is received on new channel");
 			pe_session->send_p2p_conf_frame = true;
@@ -3182,6 +3191,9 @@ void lim_process_switch_channel_rsp(struct mac_context *mac,
 			ucfg_pkt_capture_record_channel(pe_session->vdev);
 		break;
 	case LIM_SWITCH_CHANNEL_SAP_DFS:
+		if (QDF_IS_STATUS_SUCCESS(status))
+			lim_set_tpc_power(mac, pe_session);
+
 		/* Note: This event code specific to SAP mode
 		 * When SAP session issues channel change as performing
 		 * DFS, we will come here. Other sessions, for e.g. P2P

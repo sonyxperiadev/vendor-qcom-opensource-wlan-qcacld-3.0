@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,7 +16,7 @@
  */
 
 /**
- * DOC : wlan_hdd_medium_assess.h
+ * DOC: wlan_hdd_medium_assess.h
  *
  * WLAN Host Device Driver medium assess related implementation
  *
@@ -110,12 +111,19 @@ int hdd_cfg80211_medium_assess(struct wiphy *wiphy,
 void hdd_medium_assess_init(void);
 
 /**
- * hdd_cfg80211_medium_deinit() - medium assess deinit timer
+ * hdd_medium_assess_deinit() - medium assess deinit timer
  *
  * Return: none
  */
 void hdd_medium_assess_deinit(void);
 
+/**
+ * hdd_medium_access_state() - medium assess timer state
+ *
+ * Return: true if timer not initialized else false
+ */
+
+bool hdd_medium_access_state(void);
 /**
  * hdd_medium_assess_stop_timer() - medium assess reset and stop timer
  * @pdev_id: pdev id
@@ -136,6 +144,10 @@ void hdd_medium_assess_ssr_enable_flag(void);
 #define FEATURE_MEDIUM_ASSESS_VENDOR_EVENTS
 static inline void hdd_medium_assess_init(void) {}
 static inline void hdd_medium_assess_deinit(void) {}
+static inline bool hdd_medium_access_state(void)
+{
+	return false;
+}
 static inline void hdd_medium_assess_stop_timer(uint8_t pdev_id,
 						struct hdd_context *hdd_ctx) {}
 static inline void hdd_medium_assess_ssr_enable_flag(void) {}

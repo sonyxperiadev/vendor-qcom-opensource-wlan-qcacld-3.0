@@ -1726,45 +1726,6 @@ void policy_mgr_dump_current_concurrency(struct wlan_objmgr_psoc *psoc)
 	return;
 }
 
-QDF_STATUS policy_mgr_pdev_get_pcl(struct wlan_objmgr_psoc *psoc,
-				   enum QDF_OPMODE mode,
-				   struct policy_mgr_pcl_list *pcl)
-{
-	QDF_STATUS status;
-	enum policy_mgr_con_mode con_mode;
-
-	pcl->pcl_len = 0;
-
-	switch (mode) {
-	case QDF_STA_MODE:
-		con_mode = PM_STA_MODE;
-		break;
-	case QDF_P2P_CLIENT_MODE:
-		con_mode = PM_P2P_CLIENT_MODE;
-		break;
-	case QDF_P2P_GO_MODE:
-		con_mode = PM_P2P_GO_MODE;
-		break;
-	case QDF_SAP_MODE:
-		con_mode = PM_SAP_MODE;
-		break;
-	default:
-		policy_mgr_err("Unable to set PCL to FW: %d", mode);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	policy_mgr_debug("get pcl to set it to the FW");
-
-	status = policy_mgr_get_pcl(psoc, con_mode,
-				    pcl->pcl_list, &pcl->pcl_len,
-				    pcl->weight_list,
-				    QDF_ARRAY_SIZE(pcl->weight_list));
-	if (status != QDF_STATUS_SUCCESS)
-		policy_mgr_err("Unable to set PCL to FW, Get PCL failed");
-
-	return status;
-}
-
 /**
  * policy_mgr_set_pcl_for_existing_combo() - Set PCL for existing connection
  * @mode: Connection mode of type 'policy_mgr_con_mode'
@@ -1800,7 +1761,7 @@ void policy_mgr_set_pcl_for_connected_vdev(struct wlan_objmgr_psoc *psoc,
 	struct policy_mgr_pcl_list msg = { {0} };
 	struct wlan_objmgr_vdev *vdev;
 	uint8_t roam_enabled_vdev_id;
-	bool sta_concurrency_is_dbs, dual_sta_roam_enabled;
+	bool sta_concurrency_is_with_different_mac, dual_sta_roam_enabled;
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
 						    WLAN_POLICY_MGR_ID);
@@ -1825,10 +1786,12 @@ void policy_mgr_set_pcl_for_connected_vdev(struct wlan_objmgr_psoc *psoc,
 	if (roam_enabled_vdev_id == WLAN_UMAC_VDEV_ID_MAX)
 		return;
 
-	sta_concurrency_is_dbs = policy_mgr_concurrent_sta_doing_dbs(psoc);
+	sta_concurrency_is_with_different_mac =
+		policy_mgr_concurrent_sta_on_different_mac(psoc);
 	dual_sta_roam_enabled = wlan_mlme_get_dual_sta_roaming_enabled(psoc);
-	policy_mgr_debug("dual_sta_roam:%d, is_dbs:%d, clear_pcl:%d",
-			 dual_sta_roam_enabled, sta_concurrency_is_dbs,
+	policy_mgr_debug("dual_sta_roam:%d, sta concurrency on different mac:%d, clear_pcl:%d",
+			 dual_sta_roam_enabled,
+			 sta_concurrency_is_with_different_mac,
 			 clear_pcl);
 
 	if (dual_sta_roam_enabled) {
@@ -1844,7 +1807,7 @@ void policy_mgr_set_pcl_for_connected_vdev(struct wlan_objmgr_psoc *psoc,
 			wlan_cm_roam_activate_pcl_per_vdev(psoc,
 							   roam_enabled_vdev_id,
 							   false);
-		} else if (sta_concurrency_is_dbs) {
+		} else if (sta_concurrency_is_with_different_mac) {
 			wlan_cm_roam_activate_pcl_per_vdev(psoc,
 							   roam_enabled_vdev_id,
 							   true);
@@ -1942,6 +1905,10 @@ policy_mgr_get_connected_roaming_vdev_band_mask(struct wlan_objmgr_psoc *psoc,
 	uint32_t band_mask = 0, roam_band_mask, band_mask_for_vdev;
 	struct wlan_objmgr_vdev *vdev;
 	bool dual_sta_roam_active, is_pcl_per_vdev;
+	bool is_sbs_capable = false;
+
+	is_sbs_capable =
+		policy_mgr_is_hw_sbs_capable(psoc);
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
 						    WLAN_POLICY_MGR_ID);
@@ -1950,6 +1917,16 @@ policy_mgr_get_connected_roaming_vdev_band_mask(struct wlan_objmgr_psoc *psoc,
 		return 0;
 	}
 
+	roam_band_mask = wlan_cm_get_roam_band_value(psoc, vdev);
+
+	/*
+	 * If sbs is enabled, just send PCL to F/W directly,  allow SBS<->DBS
+	 * roaming,  not just limit intra band.
+	 */
+	if (is_sbs_capable) {
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
+		return roam_band_mask;
+	}
 	band_mask_for_vdev = policy_mgr_get_connected_vdev_band_mask(vdev);
 
 	is_pcl_per_vdev = wlan_cm_roam_is_pcl_per_vdev_active(psoc, vdev_id);
@@ -1972,7 +1949,6 @@ policy_mgr_get_connected_roaming_vdev_band_mask(struct wlan_objmgr_psoc *psoc,
 	 * active connection band.
 	 */
 	ucfg_reg_get_band(wlan_vdev_get_pdev(vdev), &band_mask);
-	roam_band_mask = wlan_cm_get_roam_band_value(psoc, vdev);
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
 
 	if (roam_band_mask != band_mask) {
@@ -4530,7 +4506,7 @@ void policy_mgr_check_scc_sbs_channel(struct wlan_objmgr_psoc *psoc,
 			*intf_ch_freq = 0;
 			return;
 		}
-	} else if (sta_count &&
+	} else if (sta_count && sta_count < 2 &&
 		   policy_mgr_is_hw_dbs_capable(psoc) &&
 		   cc_mode == QDF_MCC_TO_SCC_SWITCH_WITH_FAVORITE_CHANNEL) {
 		/* Same band with Fav channel if STA is present */

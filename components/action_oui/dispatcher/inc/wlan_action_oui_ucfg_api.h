@@ -100,14 +100,11 @@ QDF_STATUS ucfg_action_oui_send(struct wlan_objmgr_psoc *psoc);
 
 /**
  * ucfg_action_oui_enabled() - State of action_oui component
+ * @psoc: psoc object
  *
- * Return: When action_oui component is present return true
- *	   else return false.
+ * Return: True if action oui is enabled
  */
-static inline bool ucfg_action_oui_enabled(void)
-{
-	return true;
-}
+bool ucfg_action_oui_enabled(struct wlan_objmgr_psoc *psoc);
 
 /**
  * ucfg_action_oui_search() - Check for OUIs and related info in IE data.
@@ -149,9 +146,19 @@ ucfg_action_oui_cleanup(struct wlan_objmgr_psoc *psoc,
  *
  * Return: QDF_STATUS_SUCCESS If sending is successful.
  */
-
 QDF_STATUS ucfg_action_oui_send_by_id(struct wlan_objmgr_psoc *psoc,
 				      enum action_oui_id id);
+
+/**
+ * ucfg_action_oui_get_config() - Get current action INI config
+ * @psoc: objmgr psoc object
+ * @action_id: type of action to get
+ *
+ * Return: config string.
+ */
+uint8_t *
+ucfg_action_oui_get_config(struct wlan_objmgr_psoc *psoc,
+			   enum action_oui_id action_id);
 #else
 
 /**
@@ -304,6 +311,20 @@ QDF_STATUS ucfg_action_oui_send_by_id(struct wlan_objmgr_psoc *psoc,
 				      enum action_oui_id id)
 {
 	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * ucfg_action_oui_get_config() - Get current action INI config
+ * @psoc: objmgr psoc object
+ * @action_id: type of action to get
+ *
+ * Return: config string.
+ */
+static inline uint8_t *
+ucfg_action_oui_get_config(struct wlan_objmgr_psoc *psoc,
+			   enum action_oui_id action_id)
+{
+	return "";
 }
 #endif /* WLAN_FEATURE_ACTION_OUI */
 

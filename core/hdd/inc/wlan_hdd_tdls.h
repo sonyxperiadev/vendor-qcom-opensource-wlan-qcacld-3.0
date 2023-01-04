@@ -157,7 +157,7 @@ int hdd_set_tdls_offchannel(struct hdd_context *hdd_ctx,
 			    int offchannel);
 
 /**
- * hdd_check_and_set_tdls_conn_params() - Gets connected TDLS peer count.
+ * hdd_get_tdls_connected_peer_count() - Gets connected TDLS peer count.
  * @adapter: Pointer to adapter
  *
  * This function return number of connected peer.

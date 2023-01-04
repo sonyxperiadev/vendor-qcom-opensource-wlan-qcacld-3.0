@@ -1522,17 +1522,6 @@ bool csr_roam_is_ese_assoc(struct mac_context *mac_ctx, uint32_t session_id)
 
 
 /**
- * csr_roam_is_ese_ini_feature_enabled() - is ese feature enabled
- * @mac_ctx: Global MAC context
- *
- * Return: true if ese feature is enabled; false otherwise
- */
-bool csr_roam_is_ese_ini_feature_enabled(struct mac_context *mac)
-{
-	return mac->mlme_cfg->lfr.ese_enabled;
-}
-
-/**
  * csr_tsm_stats_rsp_processor() - tsm stats response processor
  * @mac: Global MAC context
  * @pMsg: Message pointer
@@ -4028,6 +4017,9 @@ csr_roam_chk_lnk_assoc_ind(struct mac_context *mac_ctx, tSirSmeRsp *msg_ptr)
 			if (roam_info->owe_pending_assoc_ind) {
 				qdf_mem_free(roam_info->owe_pending_assoc_ind);
 				roam_info->owe_pending_assoc_ind = NULL;
+			} else if (roam_info->ft_pending_assoc_ind) {
+				qdf_mem_free(roam_info->ft_pending_assoc_ind);
+				roam_info->ft_pending_assoc_ind = NULL;
 			}
 			roam_info->status_code = eSIR_SME_ASSOC_REFUSED;
 		} else if (pAssocInd->rsnIE.length && WLAN_ELEMID_RSN ==
@@ -7866,7 +7858,7 @@ QDF_STATUS csr_roam_issue_stop_bss_cmd(struct mac_context *mac,
 	sme_debug("Stop BSS vdev_id: %d bss_type %d", vdev_id, bss_type);
 	stop_bss_req = qdf_mem_malloc(sizeof(*stop_bss_req));
 	if (!stop_bss_req)
-		return QDF_STATUS_E_FAILURE;
+		goto error;
 
 	stop_bss_req->vdev_id = vdev_id;
 	stop_bss_req->cmd_id = csr_get_monotonous_number(mac);

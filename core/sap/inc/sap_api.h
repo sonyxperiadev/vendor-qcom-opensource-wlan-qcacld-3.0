@@ -1795,6 +1795,24 @@ void sap_dump_acs_channel(struct sap_acs_cfg *acs_cfg);
  */
 void sap_release_vdev_ref(struct sap_context *sap_ctx);
 
+#ifdef CONFIG_AFC_SUPPORT
+/**
+ * sap_afc_dcs_sel_chan() - API to select best SAP best channel/bandwidth with
+ *                          channel ACS weighted algorithm
+ * @sap_ctx: SAP context handle
+ * @cur_freq: SAP current home channel frequency
+ * @cur_bw: SAP current channel bandwidth
+ * @pref_bw: pointer to channel bandwidth prefer to set as input, and target
+ *           channel bandwidth can set as output
+ *
+ * Return: target home channel frequency selected
+ */
+qdf_freq_t sap_afc_dcs_sel_chan(struct sap_context *sap_ctx,
+				qdf_freq_t cur_freq,
+				enum phy_ch_width cur_bw,
+				enum phy_ch_width *pref_bw);
+#endif
+
 #ifdef WLAN_FEATURE_11BE
 /**
  * sap_phymode_is_eht() - Is sap phymode EHT

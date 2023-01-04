@@ -2523,6 +2523,26 @@ ucfg_mlme_get_vht_tx_mcs_2x2(struct wlan_objmgr_psoc *psoc, uint8_t *value)
 }
 
 /**
+ * ucfg_mlme_peer_get_assoc_rsp_ies() - Get assoc response sent to peer
+ * @peer: WLAN peer objmgr
+ * @ie_buf: Pointer to IE buffer
+ * @ie_len: Length of the IE buffer
+ *
+ * This API is used to get the assoc response sent to peer
+ * as part of association.
+ * Caller to hold reference for peer.
+ *
+ * Return: QDF_STATUS
+ */
+static inline QDF_STATUS
+ucfg_mlme_peer_get_assoc_rsp_ies(struct wlan_objmgr_peer *peer,
+				 const uint8_t **ie_buf,
+				 size_t *ie_len)
+{
+	return wlan_mlme_peer_get_assoc_rsp_ies(peer, ie_buf, ie_len);
+}
+
+/**
  * ucfg_mlme_get_ini_vdev_config() - get the ini capability of vdev
  * @vdev: pointer to the vdev obj
  *
@@ -2583,6 +2603,25 @@ ucfg_mlme_get_enable_dynamic_nss_chains_cfg(struct wlan_objmgr_psoc *psoc,
 					    bool *value)
 {
 	return wlan_mlme_get_enable_dynamic_nss_chains_cfg(psoc, value);
+}
+
+/**
+ * ucfg_mlme_get_restart_sap_on_dynamic_nss_chains_cfg() - API to get whether
+ * SAP needs to be restarted or not on dynamic nss chain config
+ * @psoc: psoc context
+ * @value: data to be set
+ *
+ * API to get whether SAP needs to be restarted or not on dynamic nss chain
+ * config
+ *
+ * Return: QDF_STATUS_SUCCESS or QDF_STATUS_FAILURE
+ */
+static inline QDF_STATUS
+ucfg_mlme_get_restart_sap_on_dynamic_nss_chains_cfg(
+					struct wlan_objmgr_psoc *psoc,
+					bool *value)
+{
+	return wlan_mlme_get_restart_sap_on_dynamic_nss_chains_cfg(psoc, value);
 }
 
 /**
@@ -4724,6 +4763,77 @@ ucfg_mlme_get_vdev_max_mcs_idx(struct wlan_objmgr_vdev *vdev)
 }
 #endif /* WLAN_FEATURE_SON */
 
+#if defined(CONFIG_AFC_SUPPORT) && defined(CONFIG_BAND_6GHZ)
+/**
+ * ucfg_mlme_get_enable_6ghz_sp_mode_support() - Get 6 GHz SP mode support cfg
+ * @psoc: pointer to psoc object
+ * @value: value to be set
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+ucfg_mlme_get_enable_6ghz_sp_mode_support(struct wlan_objmgr_psoc *psoc,
+					  bool *value);
+
+/**
+ * ucfg_mlme_get_afc_disable_timer_check() - Get AFC timer check cfg
+ * @psoc: pointer to psoc object
+ * @value: value to be set
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+ucfg_mlme_get_afc_disable_timer_check(struct wlan_objmgr_psoc *psoc,
+				      bool *value);
+/**
+ * ucfg_mlme_get_afc_disable_request_id_check() - Get AFC request id check cfg
+ * @psoc: pointer to psoc object
+ * @value: value to be set
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+ucfg_mlme_get_afc_disable_request_id_check(struct wlan_objmgr_psoc *psoc,
+					   bool *value);
+
+/**
+ * ucfg_mlme_get_afc_reg_noaction() - Get AFC no action cfg
+ * @psoc: pointer to psoc object
+ * @value: value to be set
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+ucfg_mlme_get_afc_reg_noaction(struct wlan_objmgr_psoc *psoc, bool *value);
+#else
+static inline QDF_STATUS
+ucfg_mlme_get_enable_6ghz_sp_mode_support(struct wlan_objmgr_psoc *psoc,
+					  bool *value)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline QDF_STATUS
+ucfg_mlme_get_afc_disable_timer_check(struct wlan_objmgr_psoc *psoc,
+				      bool *value)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline QDF_STATUS
+ucfg_mlme_get_afc_disable_request_id_check(struct wlan_objmgr_psoc *psoc,
+					   bool *value)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline QDF_STATUS
+ucfg_mlme_get_afc_reg_noaction(struct wlan_objmgr_psoc *psoc, bool *value)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+#endif
+
 #ifdef CONNECTION_ROAMING_CFG
 /**
  * ucfg_mlme_set_connection_roaming_ini_present() - Set connection roaming ini
@@ -4822,4 +4932,19 @@ ucfg_mlme_get_sr_enable_modes(struct wlan_objmgr_psoc *psoc,
 	*val = 0;
 }
 #endif
+
+/**
+ * ucfg_mlme_get_valid_channels  - get valid channels for
+ * current regulatory domain
+ * @psoc: pointer to psoc object
+ * @ch_freq_list: list of the valid channel frequencies
+ * @list_len: length of the channel list
+ *
+ * This function will get valid channels for current regulatory domain
+ *
+ * Return: QDF_STATUS_SUCCESS or non-zero on failure
+ */
+QDF_STATUS
+ucfg_mlme_get_valid_channels(struct wlan_objmgr_psoc *psoc,
+			     uint32_t *ch_freq_list, uint32_t *list_len);
 #endif /* _WLAN_MLME_UCFG_API_H_ */

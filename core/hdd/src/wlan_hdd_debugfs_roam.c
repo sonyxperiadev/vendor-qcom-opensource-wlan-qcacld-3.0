@@ -214,10 +214,10 @@ static char *hdd_roam_scan_trigger_to_str(uint32_t roam_scan_trigger)
 }
 
 /**
- * hdd_roam_scan_trigger_value_to_str() - Get trigger value string for
+ * hdd_roam_scan_trigger_value() - Get trigger value string for
  * enum WMI_ROAM_TRIGGER_REASON_ID
  * @roam_scan_trigger: roam scan trigger ID
- * @bool: output pointer to hold whether to print trigger value
+ * @print: output pointer to hold whether to print trigger value
  *
  * Return: Meaningful string from trigger value
  */
@@ -372,7 +372,7 @@ hdd_roam_scan_chan(struct wmi_roam_scan_stats_params *scan,
  * @hdd_ctx: hdd context
  * @adapter: pointer to adapter
  * @buf: buffer to hold the stats
- * @len: maximum available length in response buffer
+ * @buf_avail_len: maximum available length in response buffer
  *
  * Return: Size of formatted roam scan response stats
  */

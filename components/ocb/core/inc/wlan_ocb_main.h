@@ -105,6 +105,7 @@ struct ocb_pdev_obj {
  * @psoc: psoc handle
  * @vdev: vdev handle
  * @evt_id: event ID
+ * @rsp: Union of response structs, @evt_id is the selector
  * @channel_cfg_rsp: set channel config status
  * @tsf_timer: get TSF timer response
  * @ndl: NDL DCC response

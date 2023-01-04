@@ -1182,19 +1182,8 @@ QDF_STATUS
 ucfg_mlme_stats_get_periodic_display_time(struct wlan_objmgr_psoc *psoc,
 					  uint32_t *periodic_display_time)
 {
-	struct wlan_mlme_psoc_ext_obj *mlme_obj;
-
-	mlme_obj = mlme_get_psoc_ext_obj(psoc);
-	if (!mlme_obj) {
-		*periodic_display_time =
-			cfg_default(CFG_PERIODIC_STATS_DISPLAY_TIME);
-		return QDF_STATUS_E_INVAL;
-	}
-
-	*periodic_display_time =
-		mlme_obj->cfg.stats.stats_periodic_display_time;
-
-	return QDF_STATUS_SUCCESS;
+	return wlan_mlme_stats_get_periodic_display_time(psoc,
+							 periodic_display_time);
 }
 
 QDF_STATUS
@@ -1835,6 +1824,67 @@ bool ucfg_mlme_get_coex_unsafe_chan_reg_disable(
 }
 #endif
 
+#if defined(CONFIG_AFC_SUPPORT) && defined(CONFIG_BAND_6GHZ)
+QDF_STATUS
+ucfg_mlme_get_enable_6ghz_sp_mode_support(struct wlan_objmgr_psoc *psoc,
+					  bool *value)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_INVAL;
+
+	*value = mlme_obj->cfg.reg.enable_6ghz_sp_pwrmode_supp;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+ucfg_mlme_get_afc_disable_timer_check(struct wlan_objmgr_psoc *psoc,
+				      bool *value)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_INVAL;
+
+	*value = mlme_obj->cfg.reg.afc_disable_timer_check;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+ucfg_mlme_get_afc_disable_request_id_check(struct wlan_objmgr_psoc *psoc,
+					   bool *value)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_INVAL;
+
+	*value = mlme_obj->cfg.reg.afc_disable_request_id_check;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+ucfg_mlme_get_afc_reg_noaction(struct wlan_objmgr_psoc *psoc, bool *value)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_INVAL;
+
+	*value = mlme_obj->cfg.reg.is_afc_reg_noaction;
+
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 #ifdef CONNECTION_ROAMING_CFG
 QDF_STATUS
 ucfg_mlme_set_connection_roaming_ini_present(struct wlan_objmgr_psoc *psoc,
@@ -1894,4 +1944,32 @@ done:
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
 
 	return phymode;
+}
+
+QDF_STATUS
+ucfg_mlme_get_valid_channels(struct wlan_objmgr_psoc *psoc,
+			     uint32_t *ch_freq_list, uint32_t *list_len)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+	uint32_t num_valid_chan;
+	uint8_t i;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj) {
+		*list_len = 0;
+		mlme_legacy_err("Failed to get MLME Obj");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	num_valid_chan =  mlme_obj->cfg.reg.valid_channel_list_num;
+	if (num_valid_chan > *list_len) {
+		mlme_err("list len size %d less than expected %d", *list_len,
+			 num_valid_chan);
+		num_valid_chan = *list_len;
+	}
+	*list_len = num_valid_chan;
+	for (i = 0; i < *list_len; i++)
+		ch_freq_list[i] = mlme_obj->cfg.reg.valid_channel_freq_list[i];
+
+	return QDF_STATUS_SUCCESS;
 }

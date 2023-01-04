@@ -1807,4 +1807,17 @@ uint16_t wma_mcs_rate_match(uint16_t raw_rate, bool is_he,
 			    const uint16_t *nss1_rate,
 			    const uint16_t *nss2_rate,
 			    uint8_t *nss, enum txrate_gi *guard_interval);
+
+/**
+ * wma_update_edca_pifs_param() - Update edca/pifs param
+ * @handle: wma handle
+ * @edca_pifs_param: pointer to edca_pifs_vparam struct
+ *
+ * This is a helper function to update edca/pifs param for ll sap
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wma_update_edca_pifs_param(WMA_HANDLE handle,
+			   struct edca_pifs_vparam *edca_pifs_param);
 #endif

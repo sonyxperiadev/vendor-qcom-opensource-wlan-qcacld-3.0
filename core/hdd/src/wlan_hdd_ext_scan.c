@@ -1135,7 +1135,7 @@ fail:
 
 /**
  * wlan_hdd_cfg80211_passpoint_match_found() - passpoint match found
- * @hddctx: HDD context
+ * @ctx: HDD context
  * @data: matched network data
  *
  * This function reads the match network %data and fill in the skb with
@@ -1255,7 +1255,7 @@ fail:
 /**
  * wlan_hdd_cfg80211_extscan_generic_rsp() -
  *	Handle a generic ExtScan Response message
- * @ctx: HDD context registered with SME
+ * @hdd_ctx: HDD context registered with SME
  * @response: The ExtScan response from firmware
  *
  * This function will handle a generic ExtScan response message from

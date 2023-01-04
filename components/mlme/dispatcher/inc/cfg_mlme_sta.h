@@ -24,6 +24,15 @@
 
 #include "wlan_mlme_public_struct.h"
 
+#ifdef CONNECTION_ROAMING_CFG
+# define CONKEEPALIVE_INTERVAL_MIN 0
+# define CONKEEPALIVE_INTERVAL_MAX 120
+# define CONKEEPALIVE_INTERVAL_DEFAULT 30
+#else
+# define CONKEEPALIVE_INTERVAL_MIN 0
+# define CONKEEPALIVE_INTERVAL_MAX 1000
+# define CONKEEPALIVE_INTERVAL_DEFAULT 30
+#endif
 /*
  * <ini>
  * gStaKeepAlivePeriod/ConKeepAlive_Interval - STA keep alive period
@@ -44,11 +53,32 @@
  *
  * </ini>
  */
+
+/*
+ * <ini>
+ * gStaKeepAlivePeriod/ConKeepAlive_Interval - STA keep alive period
+ *
+ *
+ * @Min: 0
+ * @Max: 120
+ * @Default: 30
+ *
+ * This ini is used to control how frequently STA should send NULL frames to AP
+ * (period in seconds) to notify AP of its existence.
+ *
+ * Related: None
+ *
+ * Supported Feature: STA
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
 #define CFG_INFRA_STA_KEEP_ALIVE_PERIOD CFG_INI_UINT( \
 	"gStaKeepAlivePeriod ConKeepAlive_Interval", \
-	0, \
-	1000, \
-	30, \
+	CONKEEPALIVE_INTERVAL_MIN, \
+	CONKEEPALIVE_INTERVAL_MAX, \
+	CONKEEPALIVE_INTERVAL_DEFAULT, \
 	CFG_VALUE_OR_DEFAULT, \
 	"send default NULL frame to AP")
 

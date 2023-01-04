@@ -18,9 +18,9 @@
  */
 
 /**
- * @file wlan_hdd_wowl.c
+ * DOC: wlan_hdd_wowl.c
  *
- * @brief wake up on WLAN API file
+ * wake up on WLAN API file
  */
 
 /* Include Files */

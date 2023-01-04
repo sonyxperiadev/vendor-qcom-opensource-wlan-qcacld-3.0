@@ -1101,6 +1101,18 @@ bool wlan_mlme_get_usr_disable_sta_eht(struct wlan_objmgr_psoc *psoc);
  */
 void wlan_mlme_set_usr_disable_sta_eht(struct wlan_objmgr_psoc *psoc,
 				       bool disable);
+#else
+static inline
+bool wlan_mlme_get_usr_disable_sta_eht(struct wlan_objmgr_psoc *psoc)
+{
+	return true;
+}
+
+static inline
+void wlan_mlme_set_usr_disable_sta_eht(struct wlan_objmgr_psoc *psoc,
+				       bool disable)
+{
+}
 #endif
 
 /**
@@ -1227,6 +1239,21 @@ QDF_STATUS wlan_mlme_set_default_primary_iface(struct wlan_objmgr_psoc *psoc);
  * Return: True or False
  */
 bool wlan_mlme_is_primary_interface_configured(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * wlan_mlme_peer_get_assoc_rsp_ies() - Get the assoc response IEs of peer
+ * @peer: WLAN peer objmgr
+ * @ie_buf: Pointer to IE buffer
+ * @ie_len: Length of the IE buffer
+ *
+ * Get the pointer to assoc response IEs of the peer from MLME
+ * and length of the IE buffer.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS wlan_mlme_peer_get_assoc_rsp_ies(struct wlan_objmgr_peer *peer,
+					    const uint8_t **ie_buf,
+					    size_t *ie_len);
 
 /**
  * wlan_mlme_get_mcc_duty_cycle_percentage() - Get primary STA iface duty
@@ -2216,6 +2243,22 @@ wlan_mlme_get_enable_dynamic_nss_chains_cfg(struct wlan_objmgr_psoc *psoc,
 					    bool *value);
 
 /**
+ * wlan_mlme_get_restart_sap_on_dynamic_nss_chains_cfg() - API to get whether
+ * SAP needs to be restarted or not on dynamic nss chain config
+ * @psoc: psoc context
+ * @value: data to be set
+ *
+ * API to get whether SAP needs to be restarted or not on dynamic nss chain
+ * config
+ *
+ * Return: QDF_STATUS_SUCCESS or QDF_STATUS_FAILURE
+ */
+QDF_STATUS
+wlan_mlme_get_restart_sap_on_dynamic_nss_chains_cfg(
+						struct wlan_objmgr_psoc *psoc,
+						bool *value);
+
+/**
  * wlan_mlme_get_vht_enable2x2() - Enables/disables VHT Tx/Rx MCS values for 2x2
  * @psoc: psoc context
  * @value: data to be set
@@ -2488,6 +2531,28 @@ wlan_mlme_set_eml_params(struct wlan_objmgr_psoc *psoc,
 void
 wlan_mlme_get_eml_params(struct wlan_objmgr_psoc *psoc,
 			 struct wlan_mlo_eml_cap *cap);
+
+/**
+ * wlan_mlme_get_t2lm_negotiation_supported() - Get the T2LM
+ * negotiation supported value
+ * @psoc: psoc context
+ *
+ * Return: t2lm negotiation supported value
+ */
+enum t2lm_negotiation_support
+wlan_mlme_get_t2lm_negotiation_supported(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * wlan_mlme_set_t2lm_negotiation_supported() - Set the T2LM
+ * negotiation supported value
+ * @psoc: psoc context
+ * @value: t2lm negotiation supported value
+ *
+ * Return: qdf status
+ */
+QDF_STATUS
+wlan_mlme_set_t2lm_negotiation_supported(struct wlan_objmgr_psoc *psoc,
+					 uint8_t value);
 #else
 static inline QDF_STATUS
 wlan_mlme_get_emlsr_mode_enabled(struct wlan_objmgr_psoc *psoc, bool *value)
@@ -2512,6 +2577,19 @@ static inline void
 wlan_mlme_get_eml_params(struct wlan_objmgr_psoc *psoc,
 			 struct wlan_mlo_eml_cap *cap)
 {
+}
+
+static inline enum t2lm_negotiation_support
+wlan_mlme_get_t2lm_negotiation_supported(struct wlan_objmgr_psoc *psoc)
+{
+	return T2LM_NEGOTIATION_DISABLED;
+}
+
+static inline QDF_STATUS
+wlan_mlme_set_t2lm_negotiation_supported(struct wlan_objmgr_psoc *psoc,
+					 uint8_t value)
+{
+	return QDF_STATUS_E_NOSUPPORT;
 }
 #endif
 
@@ -4008,4 +4086,26 @@ wlan_mlme_get_peer_ch_width(struct wlan_objmgr_psoc *psoc, uint8_t *mac);
 void
 wlan_mlme_get_sr_enable_modes(struct wlan_objmgr_psoc *psoc, uint8_t *val);
 #endif
+
+/**
+ * wlan_mlme_set_edca_pifs_param() - set edca/pifs param for ll sap
+ * @ep: pointer to wlan_edca_pifs_param_ie
+ * @type: edca_param_type
+ *
+ * Return: None
+ */
+void
+wlan_mlme_set_edca_pifs_param(struct wlan_edca_pifs_param_ie *ep,
+			      enum host_edca_param_type type);
+/**
+ * wlan_mlme_stats_get_periodic_display_time() - get display time
+ * @psoc: pointer to psoc object
+ * @periodic_display_time: buffer to hold value
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+wlan_mlme_stats_get_periodic_display_time(struct wlan_objmgr_psoc *psoc,
+					  uint32_t *periodic_display_time);
+
 #endif /* _WLAN_MLME_API_H_ */

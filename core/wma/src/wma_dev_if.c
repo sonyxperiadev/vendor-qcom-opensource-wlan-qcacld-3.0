@@ -415,7 +415,7 @@ QDF_STATUS wma_vdev_detach_callback(struct vdev_delete_response *rsp)
 
 	iface = &wma->interfaces[rsp->vdev_id];
 
-	wma_err("vdev del response received for VDEV_%d", rsp->vdev_id);
+	wma_info("vdev del response received for VDEV_%d", rsp->vdev_id);
 	iface->del_staself_req = NULL;
 
 	if (iface->roam_scan_stats_req) {
@@ -508,7 +508,7 @@ static QDF_STATUS wma_handle_vdev_detach(tp_wma_handle wma_handle,
 	uint8_t vdev_id = del_vdev_req_param->vdev_id;
 	struct wma_txrx_node *iface = &wma_handle->interfaces[vdev_id];
 	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
-	int i;
+	struct wmi_mgmt_params mgmt_params = {};
 
 	if (!soc) {
 		status = QDF_STATUS_E_FAILURE;
@@ -524,7 +524,8 @@ rel_ref:
 	wma_cdp_vdev_detach(soc, wma_handle, vdev_id);
 	if (qdf_is_recovering())
 		wlan_mgmt_txrx_vdev_drain(iface->vdev,
-					  wma_mgmt_frame_fill_peer_cb, &i);
+					  wma_mgmt_frame_fill_peer_cb,
+					  &mgmt_params);
 	wma_debug("Releasing wma reference for vdev:%d", vdev_id);
 	wma_release_vdev_ref(iface);
 	return status;
@@ -1567,6 +1568,10 @@ bool wma_objmgr_peer_exist(tp_wma_handle wma,
 {
 	struct wlan_objmgr_peer *peer;
 
+	if (!peer_addr ||
+	    qdf_is_macaddr_zero((struct qdf_mac_addr *)peer_addr))
+		return false;
+
 	peer = wlan_objmgr_get_peer_by_mac(wma->psoc, peer_addr,
 					   WLAN_LEGACY_WMA_ID);
 	if (!peer)
@@ -1762,7 +1767,8 @@ static int wma_get_obj_mgr_peer_type(tp_wma_handle wma, uint8_t vdev_id,
 struct wlan_objmgr_peer *wma_create_objmgr_peer(tp_wma_handle wma,
 						uint8_t vdev_id,
 						uint8_t *peer_addr,
-						uint32_t wma_peer_type)
+						uint32_t wma_peer_type,
+						uint8_t *peer_mld_addr)
 {
 	uint32_t obj_peer_type = 0;
 	struct wlan_objmgr_peer *obj_peer = NULL;
@@ -1775,11 +1781,16 @@ struct wlan_objmgr_peer *wma_create_objmgr_peer(tp_wma_handle wma,
 	 * adding this peer.
 	 */
 	if (wma_objmgr_peer_exist(wma, peer_addr, &peer_vdev_id)) {
-		wma_info("Peer "QDF_MAC_ADDR_FMT" already exist on vdev %d, current vdev %d",
-			  QDF_MAC_ADDR_REF(peer_addr), peer_vdev_id, vdev_id);
+		wma_info("Peer " QDF_MAC_ADDR_FMT " already exist on vdev %d, current vdev %d",
+			 QDF_MAC_ADDR_REF(peer_addr), peer_vdev_id, vdev_id);
 		return NULL;
 	}
 
+	if (wma_objmgr_peer_exist(wma, peer_mld_addr, &peer_vdev_id)) {
+		wma_info("Peer " QDF_MAC_ADDR_FMT " already exist on vdev %d, current vdev %d",
+			 QDF_MAC_ADDR_REF(peer_mld_addr), peer_vdev_id, vdev_id);
+		return NULL;
+	}
 	obj_peer_type = wma_get_obj_mgr_peer_type(wma, vdev_id, peer_addr,
 						  wma_peer_type);
 	if (!obj_peer_type) {
@@ -1892,7 +1903,8 @@ QDF_STATUS wma_add_peer(tp_wma_handle wma,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	obj_peer = wma_create_objmgr_peer(wma, vdev_id, peer_addr, peer_type);
+	obj_peer = wma_create_objmgr_peer(wma, vdev_id, peer_addr, peer_type,
+					  peer_mld_addr);
 	if (!obj_peer)
 		return QDF_STATUS_E_FAILURE;
 
@@ -2680,7 +2692,8 @@ QDF_STATUS wma_vdev_self_peer_create(struct vdev_mlme_obj *vdev_mlme)
 		obj_peer = wma_create_objmgr_peer(wma_handle,
 						  wlan_vdev_get_id(vdev),
 						  self_peer_macaddr,
-						  WMI_PEER_TYPE_DEFAULT);
+						  WMI_PEER_TYPE_DEFAULT,
+						  vdev->vdev_mlme.macaddr);
 		if (!obj_peer) {
 			wma_err("Failed to create obj mgr peer for self");
 			status = QDF_STATUS_E_INVAL;

@@ -24,7 +24,7 @@
 #include "wlan_dsc_driver.h"
 #include "qdf_types.h"
 
-/**
+/*
  * struct osif_psoc_sync - opaque synchronization handle for a psoc
  */
 struct osif_psoc_sync;

@@ -2811,6 +2811,30 @@ bool wlan_mlme_is_primary_interface_configured(struct wlan_objmgr_psoc *psoc)
 		QCA_WLAN_CONCURRENT_STA_POLICY_PREFER_PRIMARY);
 }
 
+QDF_STATUS wlan_mlme_peer_get_assoc_rsp_ies(struct wlan_objmgr_peer *peer,
+					    const uint8_t **ie_buf,
+					    size_t *ie_len)
+{
+	struct peer_mlme_priv_obj *peer_priv;
+
+	if (!peer || !ie_buf || !ie_len)
+		return QDF_STATUS_E_INVAL;
+
+	*ie_buf = NULL;
+	*ie_len = 0;
+
+	peer_priv = wlan_objmgr_peer_get_comp_private_obj(peer,
+							  WLAN_UMAC_COMP_MLME);
+
+	if (!peer_priv || peer_priv->assoc_rsp.len == 0)
+		return QDF_STATUS_SUCCESS;
+
+	*ie_buf = peer_priv->assoc_rsp.ptr;
+	*ie_len = peer_priv->assoc_rsp.len;
+
+	return QDF_STATUS_SUCCESS;
+}
+
 int wlan_mlme_get_mcc_duty_cycle_percentage(struct wlan_objmgr_pdev *pdev)
 {
 	struct wlan_objmgr_psoc *psoc = NULL;
@@ -3385,6 +3409,38 @@ wlan_mlme_get_eml_params(struct wlan_objmgr_psoc *psoc,
 	cap->emlsr_trans_delay = mlme_obj->cfg.eml_cap.emlsr_trans_delay;
 	cap->emlmr_supp = mlme_obj->cfg.eml_cap.emlmr_supp;
 }
+
+enum t2lm_negotiation_support
+wlan_mlme_get_t2lm_negotiation_supported(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return T2LM_NEGOTIATION_DISABLED;
+
+	return mlme_obj->cfg.gen.t2lm_negotiation_support;
+}
+
+QDF_STATUS
+wlan_mlme_set_t2lm_negotiation_supported(struct wlan_objmgr_psoc *psoc,
+					 uint8_t value)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_FAILURE;
+
+	if (value > T2LM_NEGOTIATION_MAX) {
+		mlme_err("Invalid value %d", value);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	mlme_obj->cfg.gen.t2lm_negotiation_support = value;
+
+	return QDF_STATUS_SUCCESS;
+}
 #endif
 
 QDF_STATUS
@@ -3814,6 +3870,23 @@ wlan_mlme_get_enable_dynamic_nss_chains_cfg(struct wlan_objmgr_psoc *psoc,
 		return QDF_STATUS_E_FAILURE;
 
 	*value = mlme_obj->cfg.nss_chains_ini_cfg.enable_dynamic_nss_chains_cfg;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+wlan_mlme_get_restart_sap_on_dynamic_nss_chains_cfg(
+						struct wlan_objmgr_psoc *psoc,
+						bool *value)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_FAILURE;
+
+	*value =
+	mlme_obj->cfg.nss_chains_ini_cfg.restart_sap_on_dyn_nss_chains_cfg;
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -5378,9 +5451,12 @@ wlan_mlme_check_chan_param_has_dfs(struct wlan_objmgr_pdev *pdev,
 	bool is_dfs = false;
 
 	if (ch_params->ch_width == CH_WIDTH_160MHZ) {
-		if (wlan_reg_get_bonded_channel_state_for_freq(
-		    pdev, chan_freq, ch_params->ch_width, 0) ==
-				CHANNEL_STATE_DFS)
+		wlan_reg_set_create_punc_bitmap(ch_params, true);
+		if (wlan_reg_get_5g_bonded_channel_state_for_pwrmode(pdev,
+								     chan_freq,
+								     ch_params,
+								     REG_CURRENT_PWR_MODE) ==
+		    CHANNEL_STATE_DFS)
 			is_dfs = true;
 	} else if (ch_params->ch_width == CH_WIDTH_80P80MHZ) {
 		if (wlan_reg_get_channel_state_for_pwrmode(
@@ -6312,7 +6388,7 @@ void wlan_mlme_get_feature_info(struct wlan_objmgr_psoc *psoc,
 				struct wlan_mlme_features *mlme_feature_set)
 {
 	uint32_t roam_triggers;
-	int sap_max_num_clients;
+	int sap_max_num_clients = 0;
 	bool is_enable_idle_roam = false, is_bss_load_enabled = false;
 
 	wlan_mlme_get_latency_enable(psoc,
@@ -6373,4 +6449,46 @@ enum phy_ch_width wlan_mlme_convert_vht_op_bw_to_phy_ch_width(
 		phy_bw = CH_WIDTH_80P80MHZ;
 
 	return phy_bw;
+}
+
+void
+wlan_mlme_set_edca_pifs_param(struct wlan_edca_pifs_param_ie *ep,
+			      enum host_edca_param_type type)
+{
+	ep->edca_param_type = type;
+
+	if (type == HOST_EDCA_PARAM_TYPE_AGGRESSIVE) {
+		ep->edca_pifs_param.eparam.acvo_aifsn = CFG_EDCA_PARAM_AIFSN;
+		ep->edca_pifs_param.eparam.acvo_acm = CFG_EDCA_PARAM_ACM;
+		ep->edca_pifs_param.eparam.acvo_aci = CFG_EDCA_PARAM_ACI;
+		ep->edca_pifs_param.eparam.acvo_cwmin = CFG_EDCA_PARAM_CWMIN;
+		ep->edca_pifs_param.eparam.acvo_cwmax = CFG_EDCA_PARAM_CWMAX;
+		ep->edca_pifs_param.eparam.acvo_txoplimit = CFG_EDCA_PARAM_TXOP;
+	} else if (type == HOST_EDCA_PARAM_TYPE_PIFS) {
+		ep->edca_pifs_param.pparam.sap_pifs_offset =
+						CFG_PIFS_PARAM_SAP_OFFSET;
+		ep->edca_pifs_param.pparam.leb_pifs_offset =
+						CFG_PIFS_PARAM_LEB_OFFSET;
+		ep->edca_pifs_param.pparam.reb_pifs_offset =
+						CFG_PIFS_PARAM_REB_OFFSET;
+	}
+}
+
+QDF_STATUS
+wlan_mlme_stats_get_periodic_display_time(struct wlan_objmgr_psoc *psoc,
+					  uint32_t *periodic_display_time)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj) {
+		*periodic_display_time =
+			cfg_default(CFG_PERIODIC_STATS_DISPLAY_TIME);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	*periodic_display_time =
+		mlme_obj->cfg.stats.stats_periodic_display_time;
+
+	return QDF_STATUS_SUCCESS;
 }

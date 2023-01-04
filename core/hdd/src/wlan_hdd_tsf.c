@@ -18,7 +18,7 @@
  */
 
 /**
- * wlan_hdd_tsf.c - WLAN Host Device Driver tsf related implementation
+ * DOC: wlan_hdd_tsf.c - WLAN Host Device Driver tsf related implementation
  */
 
 #include "osif_sync.h"
@@ -94,9 +94,8 @@ struct hdd_tsf_report {
 
 /**
  * enum hdd_tsf_op_result - result of tsf operation
- *
- * HDD_TSF_OP_SUCC:  succeed
- * HDD_TSF_OP_FAIL:  fail
+ * @HDD_TSF_OP_SUCC:  succeed
+ * @HDD_TSF_OP_FAIL:  fail
  */
 enum hdd_tsf_op_result {
 	HDD_TSF_OP_SUCC,
@@ -586,16 +585,14 @@ static inline int hdd_tsf_reg_is_details_valid(struct hdd_adapter *adapter)
 static inline void
 wlan_hdd_tsf_reg_update_details(struct hdd_adapter *adapter, struct stsf *ptsf)
 {
-	if (!qdf_atomic_read(&adapter->tsf_details_valid)) {
-		if (ptsf->tsf_id_valid) {
-			adapter->tsf_id = ptsf->tsf_id;
-			adapter->tsf_mac_id = ptsf->mac_id;
-			qdf_atomic_set(&adapter->tsf_details_valid, 1);
-		}
+	if (ptsf->tsf_id_valid) {
+		adapter->tsf_id = ptsf->tsf_id;
+		adapter->tsf_mac_id = ptsf->mac_id;
+		qdf_atomic_set(&adapter->tsf_details_valid, 1);
 	}
-	hdd_info("tsf_id %u tsf_id_valid %u mac_id %u mac_id_valid %u",
-		 ptsf->tsf_id, ptsf->tsf_id_valid, ptsf->mac_id,
-		 ptsf->mac_id_valid);
+	hdd_info("vdev_id %u tsf_id %u tsf_id_valid %u mac_id %u",
+		 adapter->vdev_id, ptsf->tsf_id, ptsf->tsf_id_valid,
+		 ptsf->mac_id);
 }
 
 static inline
@@ -852,12 +849,10 @@ static enum hdd_tsf_op_result hdd_indicate_tsf_internal(
 #define CAP_TSF_TIMER_FIX_SEC 1
 
 /**
- * TS_STATUS - timestamp status
- *
- * HDD_TS_STATUS_WAITING:  one of the stamp-pair
- *    is not updated
- * HDD_TS_STATUS_READY:  valid tstamp-pair
- * HDD_TS_STATUS_INVALID: invalid tstamp-pair
+ * enum hdd_ts_status - timestamp status
+ * @HDD_TS_STATUS_WAITING:  one of the stamp-pair is not updated
+ * @HDD_TS_STATUS_READY:  valid tstamp-pair
+ * @HDD_TS_STATUS_INVALID: invalid tstamp-pair
  */
 enum hdd_ts_status {
 	HDD_TS_STATUS_WAITING,
@@ -2377,7 +2372,7 @@ enum hdd_tsf_op_result hdd_netbuf_timestamp(qdf_nbuf_t netbuf,
 
 /**
  * hdd_tx_timestamp() - time stamp TX netbuf
- *
+ * @status: TX status
  * @netbuf: pointer to a TX netbuf
  * @target_time: TX time for the netbuf
  *
@@ -3162,6 +3157,8 @@ int hdd_get_tsf_cb(void *pcb_cxt, struct stsf *ptsf)
 	hdd_info("tsf cb handle event, device_mode is %d",
 		adapter->device_mode);
 
+	wlan_hdd_tsf_reg_update_details(adapter, ptsf);
+
 	capture_timer = &adapter->host_capture_req_timer;
 	capture_req_timer_status =
 		qdf_mc_timer_get_current_state(capture_timer);
@@ -3185,8 +3182,6 @@ int hdd_get_tsf_cb(void *pcb_cxt, struct stsf *ptsf)
 			ptsf->soc_timer_low);
 	adapter->cur_tsf_sync_soc_time =
 		hdd_convert_qtime_to_us(tsf_sync_soc_time) * NSEC_PER_USEC;
-
-	wlan_hdd_tsf_reg_update_details(adapter, ptsf);
 
 	qdf_event_set(&tsf_sync_get_completion_evt);
 	hdd_update_tsf(adapter, adapter->cur_target_time);
@@ -3286,6 +3281,8 @@ static int __wlan_hdd_cfg80211_handle_tsf_cmd(struct wiphy *wiphy,
 		status = hdd_handle_tsf_dynamic_start(adapter, attr);
 	} else if (tsf_cmd == QCA_TSF_SYNC_STOP) {
 		status = hdd_handle_tsf_dynamic_stop(adapter);
+	} else {
+		status = 0;
 	}
 
 	if (status < 0)

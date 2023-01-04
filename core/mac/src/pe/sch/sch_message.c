@@ -508,6 +508,18 @@ void sch_qos_concurrency_update(void)
 	lim_send_conc_params_update();
 }
 
+static void sch_qos_update_edca_pifs_param_for_ll_sap(struct mac_context *mac,
+						      uint8_t vdev_id)
+{
+	struct wlan_edca_pifs_param_ie param = {0};
+	enum host_edca_param_type edca_param_type =
+					HOST_EDCA_PARAM_TYPE_AGGRESSIVE;
+
+	edca_param_type = mac->mlme_cfg->edca_params.edca_param_type;
+	wlan_mlme_set_edca_pifs_param(&param, edca_param_type);
+	lim_send_edca_pifs_param(mac, &param, vdev_id);
+}
+
 /**
  * sch_edca_profile_update() - This function updates the local and broadcast
  * EDCA params in the gLimEdcaParams structure. It also updates the
@@ -523,6 +535,14 @@ void sch_edca_profile_update(struct mac_context *mac, struct pe_session *pe_sess
 		sch_qos_update_local(mac, pe_session);
 		sch_qos_update_broadcast(mac, pe_session);
 		sch_qos_concurrency_update();
+
+		if (policy_mgr_is_ll_sap_present(
+				mac->psoc,
+				policy_mgr_convert_device_mode_to_qdf_type(
+				pe_session->opmode), pe_session->vdev_id))
+			sch_qos_update_edca_pifs_param_for_ll_sap(
+							mac,
+							pe_session->vdev_id);
 	}
 }
 

@@ -2737,6 +2737,10 @@ IE TimeAdvertisement (EID_TIME_ADVERTISEMENT)   // 8.4.2.63
     time_error[5];
 }
 
+/**
+ * This all attributes are defined under qcn_attribute_id enum of
+ * cmn code in wlan_cmn_ieee80211.h file.
+ */
 const TLV_VERSION_ATTR_ID                 = 1;
 const TLV_VHT_MCS_10_11_ATTR_ID           = 2;
 const TLV_HE_400NS_SGI_SUPP_ATTR_ID       = 3;
@@ -2746,6 +2750,7 @@ const TLV_TRANSITION_REASONP_ATTR_ID      = 6;
 const TLV_TRANSITION_REJECTIONP_ATTR_ID   = 7;
 const TLV_HE_DL_MUMIMO_SUPPP_ATTR_ID      = 8;
 const TLV_HE_MCS_11_12_ATTR_ID            = 9;
+const TLV_EDCA_PIFS_PARAM_ATTR_ID         = 13;
 
 TLV qcn_version(TLV_VERSION_ATTR_ID) ( 1 : 1 ) LSB
 {
@@ -2794,6 +2799,13 @@ TLV he_mcs13_attr (TLV_HE_MCS_11_12_ATTR_ID) ( 1 : 1 ) LSB
    he_mcs_12_13_supp_160, 1;
 }
 
+TLV edca_pifs_param_attr (TLV_EDCA_PIFS_PARAM_ATTR_ID) ( 1 : 1 ) LSB
+{
+   // Configure EDCA or PIFS param based on edca_param_type
+   edca_param_type, 1;
+   data[3..4];
+}
+
 MULTIIE qcn_ie (EID_VENDOR_SPECIFIC) OUI ( 0x8C, 0xFD, 0xF0, 0x01 )
 {
    OPTIONALTLV qcn_version;
@@ -2805,6 +2817,7 @@ MULTIIE qcn_ie (EID_VENDOR_SPECIFIC) OUI ( 0x8C, 0xFD, 0xF0, 0x01 )
    OPTIONALTLV trans_rejectp_attr;
    OPTIONALTLV he_dl_mumimo_attr;
    OPTIONALTLV he_mcs13_attr;
+   OPTIONALTLV edca_pifs_param_attr;
 }
 
 IE esp_information (EID_EXTN_ID_ELEMENT) OUI ( 0x0B )

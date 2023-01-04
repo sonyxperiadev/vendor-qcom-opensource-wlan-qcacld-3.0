@@ -308,9 +308,9 @@ static bool hdd_check_and_fill_freq(uint32_t in_chan, qdf_freq_t *freq,
 
 /**
  * _hdd_parse_bssid_and_chan() - helper function to parse bssid and channel
- * @data:            input data
- * @target_ap_bssid: pointer to bssid (output parameter)
- * @freq:         pointer to freq (output parameter)
+ * @data: input data
+ * @bssid: pointer to bssid (output parameter)
+ * @freq: pointer to freq (output parameter)
  * @pdev: pdev object
  *
  * Return: 0 if parsing is successful; -EINVAL otherwise
@@ -403,8 +403,8 @@ error:
 /**
  * hdd_parse_send_action_frame_v1_data() - HDD Parse send action frame data
  * @command: Pointer to input data
- * @bssid: Pointer to target Ap bssid
- * @channel: Pointer to the Target AP channel
+ * @bssid: Pointer to target AP BSSID
+ * @freq: Pointer to the Target AP channel frequency
  * @dwell_time: Pointer to the time to stay off-channel
  *              after transmitting action frame
  * @buf: Pointer to data
@@ -515,7 +515,7 @@ hdd_parse_send_action_frame_v1_data(const uint8_t *command,
 }
 
 /**
- * hdd_parse_reassoc_command_data() - HDD Parse reassoc command data
+ * hdd_parse_reassoc_command_v1_data() - HDD Parse reassoc command data
  * @command: Pointer to input data (its a NULL terminated string)
  * @bssid: Pointer to target Ap bssid
  * @freq: Pointer to the Target AP frequency
@@ -888,6 +888,7 @@ hdd_parse_sendactionframe_v1(struct hdd_adapter *adapter, const char *command)
  * @adapter:	Adapter upon which the command was received
  * @command:	Command that was received, ASCII command
  *		followed by binary data
+ * @total_len:  Length of @command
  *
  * This function parses the v2 SENDACTIONFRAME command with the format
  *
@@ -953,6 +954,7 @@ hdd_parse_sendactionframe_v2(struct hdd_adapter *adapter,
  * hdd_parse_sendactionframe() - parse the SENDACTIONFRAME command
  * @adapter:	Adapter upon which the command was received
  * @command:	Command that was received
+ * @total_len:  Length of @command
  *
  * There are two different versions of the SENDACTIONFRAME command.
  * Version 1 of the command contains a parameter list that is ASCII
@@ -2264,6 +2266,7 @@ static int wlan_hdd_get_link_status(struct hdd_adapter *adapter)
 #ifdef FEATURE_WLAN_ESE
 /**
  * hdd_parse_ese_beacon_req() - Parse ese beacon request
+ * @pdev: pdev object
  * @command: Pointer to data
  * @req:	Output pointer to store parsed ie information
  *
@@ -2773,9 +2776,9 @@ static int drv_cmd_get_roam_trigger(struct hdd_adapter *adapter,
 	uint8_t len = 0;
 	QDF_STATUS status;
 
-	status = sme_get_neighbor_lookup_rssi_threshold(hdd_ctx->mac_handle,
-							adapter->vdev_id,
-							&lookup_threshold);
+	status = ucfg_cm_get_neighbor_lookup_rssi_threshold(hdd_ctx->psoc,
+							    adapter->vdev_id,
+							    &lookup_threshold);
 	if (QDF_IS_STATUS_ERROR(status))
 		return qdf_status_to_os_return(status);
 
@@ -2879,9 +2882,9 @@ static int drv_cmd_get_roam_scan_period(struct hdd_adapter *adapter,
 	uint8_t len;
 	QDF_STATUS status;
 
-	status = sme_get_empty_scan_refresh_period(hdd_ctx->mac_handle,
-						   adapter->vdev_id,
-						   &empty_scan_refresh_period);
+	status = ucfg_cm_get_empty_scan_refresh_period(
+						hdd_ctx->psoc, adapter->vdev_id,
+						&empty_scan_refresh_period);
 	if (QDF_IS_STATUS_ERROR(status))
 		return qdf_status_to_os_return(status);
 
@@ -2969,11 +2972,11 @@ static int drv_cmd_get_roam_scan_refresh_period(struct hdd_adapter *adapter,
 						struct hdd_priv_data *priv_data)
 {
 	int ret = 0;
-	uint16_t value =
-		sme_get_neighbor_scan_refresh_period(hdd_ctx->mac_handle);
+	uint16_t value = 0;
 	char extra[32];
 	uint8_t len;
 
+	ucfg_cm_get_neighbor_scan_refresh_period(hdd_ctx->psoc, &value);
 	len = scnprintf(extra, sizeof(extra), "%s %d",
 			"GETROAMSCANREFRESHPERIOD",
 			(value / 1000));
@@ -3099,7 +3102,7 @@ static int drv_cmd_get_roam_mode(struct hdd_adapter *adapter,
 				 struct hdd_priv_data *priv_data)
 {
 	int ret = 0;
-	bool roam_mode = sme_get_is_lfr_feature_enabled(hdd_ctx->mac_handle);
+	bool roam_mode = ucfg_cm_get_is_lfr_feature_enabled(hdd_ctx->psoc);
 	char extra[32];
 	uint8_t len;
 
@@ -3180,8 +3183,8 @@ static int drv_cmd_get_roam_delta(struct hdd_adapter *adapter,
 	uint8_t len;
 	QDF_STATUS status;
 
-	status = sme_get_roam_rssi_diff(hdd_ctx->mac_handle, adapter->vdev_id,
-					&rssi_diff);
+	status = ucfg_cm_get_roam_rssi_diff(hdd_ctx->psoc, adapter->vdev_id,
+					    &rssi_diff);
 	if (QDF_IS_STATUS_ERROR(status))
 		return qdf_status_to_os_return(status);
 
@@ -3451,8 +3454,7 @@ static int drv_cmd_get_ccx_mode(struct hdd_adapter *adapter,
 				struct hdd_priv_data *priv_data)
 {
 	int ret = 0;
-	mac_handle_t mac_handle = hdd_ctx->mac_handle;
-	bool ese_mode = sme_get_is_ese_feature_enabled(mac_handle);
+	bool ese_mode = ucfg_cm_get_is_ese_feature_enabled(hdd_ctx->psoc);
 	char extra[32];
 	uint8_t len = 0;
 	struct pmkid_mode_bits pmkid_modes;
@@ -3464,7 +3466,7 @@ static int drv_cmd_get_ccx_mode(struct hdd_adapter *adapter,
 	 */
 	if (ese_mode &&
 	    (pmkid_modes.fw_okc || pmkid_modes.fw_pmksa_cache) &&
-	    sme_get_is_ft_feature_enabled(mac_handle)) {
+	    ucfg_cm_get_is_ft_feature_enabled(hdd_ctx->psoc)) {
 		hdd_warn("PMKID/ESE/11R are supported simultaneously hence this operation is not permitted!");
 		ret = -EPERM;
 		goto exit;
@@ -3493,7 +3495,6 @@ static int drv_cmd_get_okc_mode(struct hdd_adapter *adapter,
 	struct pmkid_mode_bits pmkid_modes;
 	char extra[32];
 	uint8_t len = 0;
-	mac_handle_t mac_handle = hdd_ctx->mac_handle;
 
 	hdd_get_pmkid_modes(hdd_ctx, &pmkid_modes);
 	/*
@@ -3501,8 +3502,8 @@ static int drv_cmd_get_okc_mode(struct hdd_adapter *adapter,
 	 * then this operation is not permitted (return FAILURE)
 	 */
 	if (pmkid_modes.fw_okc &&
-	    sme_get_is_ese_feature_enabled(mac_handle) &&
-	    sme_get_is_ft_feature_enabled(mac_handle)) {
+	    ucfg_cm_get_is_ese_feature_enabled(hdd_ctx->psoc) &&
+	    ucfg_cm_get_is_ft_feature_enabled(hdd_ctx->psoc)) {
 		hdd_warn("PMKID/ESE/11R are supported simultaneously hence this operation is not permitted!");
 		ret = -EPERM;
 		goto exit;
@@ -3529,7 +3530,7 @@ static int drv_cmd_get_fast_roam(struct hdd_adapter *adapter,
 				 struct hdd_priv_data *priv_data)
 {
 	int ret = 0;
-	bool lfr_mode = sme_get_is_lfr_feature_enabled(hdd_ctx->mac_handle);
+	bool lfr_mode = ucfg_cm_get_is_lfr_feature_enabled(hdd_ctx->psoc);
 	char extra[32];
 	uint8_t len = 0;
 
@@ -3552,7 +3553,7 @@ static int drv_cmd_get_fast_transition(struct hdd_adapter *adapter,
 				       struct hdd_priv_data *priv_data)
 {
 	int ret = 0;
-	bool ft = sme_get_is_ft_feature_enabled(hdd_ctx->mac_handle);
+	bool ft = ucfg_cm_get_is_ft_feature_enabled(hdd_ctx->psoc);
 	char extra[32];
 	uint8_t len = 0;
 
@@ -3636,8 +3637,9 @@ static int drv_cmd_get_roam_scan_channel_min_time(struct hdd_adapter *adapter,
 						  struct hdd_priv_data *priv_data)
 {
 	int ret = 0;
-	uint16_t val = sme_get_neighbor_scan_min_chan_time(hdd_ctx->mac_handle,
-							   adapter->vdev_id);
+	uint16_t val = ucfg_cm_get_neighbor_scan_min_chan_time(
+							hdd_ctx->psoc,
+							adapter->vdev_id);
 	char extra[32];
 	uint8_t len = 0;
 
@@ -3712,8 +3714,9 @@ static int drv_cmd_get_scan_channel_time(struct hdd_adapter *adapter,
 					 struct hdd_priv_data *priv_data)
 {
 	int ret = 0;
-	uint16_t val = sme_get_neighbor_scan_max_chan_time(hdd_ctx->mac_handle,
-							   adapter->vdev_id);
+	uint16_t val = ucfg_cm_get_neighbor_scan_max_chan_time(
+							hdd_ctx->psoc,
+							adapter->vdev_id);
 	char extra[32];
 	uint8_t len = 0;
 
@@ -3785,8 +3788,8 @@ static int drv_cmd_get_scan_home_time(struct hdd_adapter *adapter,
 				      struct hdd_priv_data *priv_data)
 {
 	int ret = 0;
-	uint16_t val = sme_get_neighbor_scan_period(hdd_ctx->mac_handle,
-						    adapter->vdev_id);
+	uint16_t val = ucfg_cm_get_neighbor_scan_period(hdd_ctx->psoc,
+							adapter->vdev_id);
 	char extra[32];
 	uint8_t len = 0;
 
@@ -3861,10 +3864,11 @@ static int drv_cmd_get_roam_intra_band(struct hdd_adapter *adapter,
 				       struct hdd_priv_data *priv_data)
 {
 	int ret = 0;
-	uint16_t val = sme_get_roam_intra_band(hdd_ctx->mac_handle);
+	uint16_t val = 0;
 	char extra[32];
 	uint8_t len = 0;
 
+	ucfg_cm_get_roam_intra_band(hdd_ctx->psoc, &val);
 	/* value is interms of msec */
 	len = scnprintf(extra, sizeof(extra), "%s %d",
 			"GETROAMINTRABAND", val);
@@ -4016,9 +4020,9 @@ static int drv_cmd_get_scan_home_away_time(struct hdd_adapter *adapter,
 	uint8_t len = 0;
 	QDF_STATUS status;
 
-	status = sme_get_roam_scan_home_away_time(hdd_ctx->mac_handle,
-						  adapter->vdev_id,
-						  &val);
+	status = ucfg_cm_get_roam_scan_home_away_time(hdd_ctx->psoc,
+						      adapter->vdev_id,
+						      &val);
 	if (QDF_IS_STATUS_ERROR(status))
 		return qdf_status_to_os_return(status);
 
@@ -4087,7 +4091,7 @@ static int drv_cmd_get_wes_mode(struct hdd_adapter *adapter,
 				struct hdd_priv_data *priv_data)
 {
 	int ret = 0;
-	bool wes_mode = sme_get_wes_mode(hdd_ctx->mac_handle);
+	bool wes_mode = ucfg_cm_get_wes_mode(hdd_ctx->psoc);
 	char extra[32];
 	uint8_t len = 0;
 
@@ -4145,11 +4149,11 @@ static int drv_cmd_get_opportunistic_rssi_diff(struct hdd_adapter *adapter,
 					       struct hdd_priv_data *priv_data)
 {
 	int ret = 0;
-	mac_handle_t mac_handle = hdd_ctx->mac_handle;
-	int8_t val = sme_get_roam_opportunistic_scan_threshold_diff(mac_handle);
+	int8_t val = 0;
 	char extra[32];
 	uint8_t len = 0;
 
+	ucfg_cm_get_roam_opportunistic_scan_threshold_diff(hdd_ctx->psoc, &val);
 	len = scnprintf(extra, sizeof(extra), "%s %d", command, val);
 	len = QDF_MIN(priv_data->total_len, len + 1);
 	if (copy_to_user(priv_data->buf, &extra, len)) {
@@ -4203,10 +4207,11 @@ static int drv_cmd_get_roam_rescan_rssi_diff(struct hdd_adapter *adapter,
 					     struct hdd_priv_data *priv_data)
 {
 	int ret = 0;
-	uint8_t val = sme_get_roam_rescan_rssi_diff(hdd_ctx->mac_handle);
+	uint8_t val = 0;
 	char extra[32];
 	uint8_t len = 0;
 
+	ucfg_cm_get_roam_rescan_rssi_diff(hdd_ctx->psoc, &val);
 	len = scnprintf(extra, sizeof(extra), "%s %d", command, val);
 	len = QDF_MIN(priv_data->total_len, len + 1);
 	if (copy_to_user(priv_data->buf, &extra, len)) {
@@ -4344,7 +4349,6 @@ static int drv_cmd_set_okc_mode(struct hdd_adapter *adapter,
 	uint8_t *value = command;
 	uint32_t okc_mode;
 	struct pmkid_mode_bits pmkid_modes;
-	mac_handle_t mac_handle;
 	uint32_t cur_pmkid_modes;
 	QDF_STATUS status;
 
@@ -4354,10 +4358,9 @@ static int drv_cmd_set_okc_mode(struct hdd_adapter *adapter,
 	 * Check if the features PMKID/ESE/11R are supported simultaneously,
 	 * then this operation is not permitted (return FAILURE)
 	 */
-	mac_handle = hdd_ctx->mac_handle;
-	if (sme_get_is_ese_feature_enabled(mac_handle) &&
+	if (ucfg_cm_get_is_ese_feature_enabled(hdd_ctx->psoc) &&
 	    pmkid_modes.fw_okc &&
-	    sme_get_is_ft_feature_enabled(mac_handle)) {
+	    ucfg_cm_get_is_ft_feature_enabled(hdd_ctx->psoc)) {
 		hdd_warn("PMKID/ESE/11R are supported simultaneously hence this operation is not permitted!");
 		ret = -EPERM;
 		goto exit;
@@ -4535,16 +4538,11 @@ static int drv_cmd_miracast(struct hdd_adapter *adapter,
 	case MIRACAST_CONN_OPT_ENABLED:
 	case MIRACAST_CONN_OPT_DISABLED:
 		{
-			bool is_imps_enabled = true;
-
-			ucfg_mlme_is_imps_enabled(hdd_ctx->psoc,
-						  &is_imps_enabled);
-			if (!is_imps_enabled)
-				return 0;
-			hdd_set_idle_ps_config(
-				hdd_ctx,
-				filter_type ==
-				MIRACAST_CONN_OPT_ENABLED ? false : true);
+			wma_cli_set_command(
+				adapter->vdev_id,
+				WMI_PDEV_PARAM_POWER_COLLAPSE_ENABLE,
+				(filter_type == MIRACAST_CONN_OPT_ENABLED ?
+				 0 : 1), PDEV_CMD);
 			return 0;
 		}
 	default:
@@ -4916,9 +4914,9 @@ static int drv_cmd_set_ccx_mode(struct hdd_adapter *adapter,
 	 * Check if the features OKC/ESE/11R are supported simultaneously,
 	 * then this operation is not permitted (return FAILURE)
 	 */
-	if (sme_get_is_ese_feature_enabled(mac_handle) &&
+	if (ucfg_cm_get_is_ese_feature_enabled(hdd_ctx->psoc) &&
 	    pmkid_modes.fw_okc &&
-	    sme_get_is_ft_feature_enabled(mac_handle)) {
+	    ucfg_cm_get_is_ft_feature_enabled(hdd_ctx->psoc)) {
 		hdd_warn("OKC/ESE/11R are supported simultaneously hence this operation is not permitted!");
 		ret = -EPERM;
 		goto exit;
@@ -5589,13 +5587,11 @@ static int drv_cmd_rx_filter_add(struct hdd_adapter *adapter,
  * hdd_parse_setantennamode_command() - HDD Parse SETANTENNAMODE
  * command
  * @value: Pointer to SETANTENNAMODE command
- * @mode: Pointer to antenna mode
- * @reason: Pointer to reason for set antenna mode
  *
  * This function parses the SETANTENNAMODE command passed in the format
  * SETANTENNAMODE<space>mode
  *
- * Return: 0 for success non-zero for failure
+ * Return: parsed antenna mode
  */
 static int hdd_parse_setantennamode_command(const uint8_t *value)
 {

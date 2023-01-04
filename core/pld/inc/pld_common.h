@@ -165,6 +165,16 @@ enum pld_platform_cap_flag {
 };
 
 /**
+ * enum pld_wfc_mode - WFC Mode
+ * @PLD_WFC_MODE_OFF: WFC Inactive
+ * @PLD_WFC_MODE_ON: WFC Active
+ */
+enum pld_wfc_mode {
+	PLD_WFC_MODE_OFF,
+	PLD_WFC_MODE_ON,
+};
+
+/**
  * struct pld_platform_cap - platform capabilities
  * @cap_flag: capabilities flag
  *
@@ -826,6 +836,16 @@ int pld_auto_resume(struct device *dev);
 int pld_force_wake_request(struct device *dev);
 
 /**
+ * pld_is_direct_link_supported() - Get whether direct_link is supported
+ *                                  by FW or not
+ * @dev: device
+ *
+ * Return: true if supported
+ *         false on failure or if not supported
+ */
+bool pld_is_direct_link_supported(struct device *dev);
+
+/**
  * pld_force_wake_request_sync() - Request to awake MHI synchronously
  * @dev: device
  * @timeout_us: timeout in micro-sec request to wake
@@ -1105,6 +1125,15 @@ int pld_thermal_register(struct device *dev, unsigned long state, int mon_id);
 void pld_thermal_unregister(struct device *dev, int mon_id);
 
 /**
+ * pld_set_wfc_mode() - Sent WFC mode to FW via platform driver
+ * @dev: The device structure
+ * @wfc_mode: WFC Modes (0 => Inactive, 1 => Active)
+ *
+ * Return: Error code on error
+ */
+int pld_set_wfc_mode(struct device *dev, enum pld_wfc_mode wfc_mode);
+
+/**
  * pld_bus_width_type_to_str() - Helper function to convert PLD bandwidth level
  *				 to string
  * @level: PLD bus width level
@@ -1257,4 +1286,40 @@ static inline bool pld_get_enable_intx(struct device *dev)
  * Return: true if it is one MSI
  */
 bool pld_is_one_msi(struct device *dev);
+
+#ifdef FEATURE_DIRECT_LINK
+/**
+ * pld_audio_smmu_map()- Map memory region into Audio SMMU CB
+ * @dev: pointer to device structure
+ * @paddr: physical address
+ * @iova: DMA address
+ * @size: memory region size
+ *
+ * Return: 0 on success else failure code
+ */
+int pld_audio_smmu_map(struct device *dev, phys_addr_t paddr, dma_addr_t iova,
+		       size_t size);
+
+/**
+ * pld_audio_smmu_unmap()- Remove memory region mapping from Audio SMMU CB
+ * @dev: pointer to device structure
+ * @iova: DMA address
+ * @size: memory region size
+ *
+ * Return: None
+ */
+void pld_audio_smmu_unmap(struct device *dev, dma_addr_t iova, size_t size);
+#else
+static inline
+int pld_audio_smmu_map(struct device *dev, phys_addr_t paddr, dma_addr_t iova,
+		       size_t size)
+{
+	return 0;
+}
+
+static inline
+void pld_audio_smmu_unmap(struct device *dev, dma_addr_t iova, size_t size)
+{
+}
+#endif
 #endif

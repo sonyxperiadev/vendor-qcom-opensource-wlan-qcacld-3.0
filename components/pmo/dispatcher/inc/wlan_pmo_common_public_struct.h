@@ -55,6 +55,8 @@
 #define MAX_MC_IP_ADDR 10
 #define IGMP_QUERY_ADDRESS 0x10000e0
 
+#define WOW_LARGE_RX_RTPM_DELAY 1200
+
 /**
  * enum pmo_vdev_param_id: tell vdev param id
  * @pmo_vdev_param_listen_interval: vdev listen interval param id

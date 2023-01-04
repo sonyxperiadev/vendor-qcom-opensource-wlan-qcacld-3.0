@@ -69,6 +69,22 @@
 /*mac->lim.gLimProcessDefdMsgs*/
 #define GET_LIM_PROCESS_DEFD_MESGS(mac) (mac->lim.gLimProcessDefdMsgs)
 
+#ifdef WLAN_FEATURE_SR
+/**
+ * enum sr_status_of_roamed_ap - SR(Spatial Reuse) status of roamed AP
+ * SR_DISALLOW: SR not supported by roamed AP
+ * SR_THRESHOLD_IN_RANGE_OF_PREVIOUS_AP: SR supported by roamed AP
+ * and configured threshold is in range.
+ * SR_THRESHOLD_NOT_IN_RANGE_OF_PREVIOUS_AP: SR supported by roamed AP
+ * and configured threshold is not in range.
+ */
+enum sr_status_of_roamed_ap {
+	SR_DISALLOW,
+	SR_THRESHOLD_IN_RANGE_OF_ROAMED_AP,
+	SR_THRESHOLD_NOT_IN_RANGE_OF_ROAMED_AP,
+};
+#endif
+
 /**
  * lim_post_msg_api() - post normal priority PE message
  * @mac: mac context
@@ -595,6 +611,19 @@ lim_gen_link_specific_probe_rsp(struct mac_context *mac_ctx,
  * Return qdf status
  */
 QDF_STATUS lim_check_for_ml_probe_req(struct pe_session *session);
+
+/**
+ * lim_gen_link_probe_rsp_roam() - Generate link prb rsp from assoc link prb rsp
+ * @mac_ctx: Pointer to mac context
+ * @session_entry: pe session
+ * @roam_sync_ind_ptr: Roam synch parameters
+ *
+ * Return qdf status
+ */
+QDF_STATUS
+lim_gen_link_probe_rsp_roam(struct mac_context *mac_ctx,
+			    struct pe_session *session_entry,
+			    struct roam_offload_synch_ind *roam_sync_ind);
 #else
 static inline QDF_STATUS
 lim_gen_link_specific_probe_rsp(struct mac_context *mac_ctx,
@@ -612,6 +641,14 @@ lim_check_for_ml_probe_req(struct pe_session *session)
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }
+
+static inline QDF_STATUS
+lim_gen_link_probe_rsp_roam(struct mac_context *mac_ctx,
+			    struct pe_session *session_entry,
+			    struct roam_offload_synch_ind *roam_sync_ind)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
 #endif
 
 #ifdef WLAN_FEATURE_SR
@@ -626,11 +663,26 @@ lim_check_for_ml_probe_req(struct pe_session *session)
  */
 void lim_update_vdev_sr_elements(struct pe_session *session_entry,
 				 tpDphHashNode sta_ds);
+
+/**
+ * lim_process_srp_ie() - process srp ie during re/association
+ * @tpSirAssocRsp: assoc response
+ * @tpDphHashNode: sta node
+ *
+ * Return: success/failure
+ */
+QDF_STATUS lim_process_srp_ie(tpSirAssocRsp ar, tpDphHashNode sta_ds);
 #else
 static inline void
 lim_update_vdev_sr_elements(struct pe_session *session_entry,
 			    tpDphHashNode sta_ds)
 {
+}
+
+static inline
+QDF_STATUS lim_process_srp_ie(tpSirAssocRsp ar, tpDphHashNode sta_ds)
+{
+	return QDF_STATUS_SUCCESS;
 }
 #endif
 
@@ -762,5 +814,13 @@ lim_mlo_roam_delete_link_peer(struct pe_session *pe_session,
 enum ani_akm_type
 lim_get_connected_akm(struct pe_session *session, int32_t ucast_cipher,
 		      int32_t auth_mode, int32_t akm);
+
+/**
+ * lim_get_encrypt_ed_type() - Get encrypt type
+ * @ucast_cipher: Ucast cipher
+ *
+ * Return: Encryption type enum
+ */
+tAniEdType lim_get_encrypt_ed_type(int32_t ucast_cipher);
 /************************************************************/
 #endif /* __LIM_API_H */

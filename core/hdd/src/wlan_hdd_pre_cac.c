@@ -26,7 +26,7 @@
 #include "wlan_dp_ucfg_api.h"
 
 /**
- * __wlan_hdd_sap_pre_cac_failure() - Process the pre cac failure
+ * wlan_hdd_pre_cac_failure() - Process the pre cac failure
  * @adapter: AP adapter
  *
  * Deletes the pre cac adapter
@@ -49,7 +49,7 @@ static void wlan_hdd_pre_cac_failure(struct hdd_adapter *adapter)
 }
 
 /**
- * __wlan_hdd_sap_pre_cac_success() - Process the pre cac result
+ * wlan_hdd_pre_cac_success() - Process the pre cac result
  * @adapter: AP adapter
  *
  * Stops the pre cac adapter and moves the existing SAP to the pre cac

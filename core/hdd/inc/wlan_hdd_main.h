@@ -104,7 +104,6 @@
 #include "wma_sar_public_structs.h"
 #include "wlan_mlme_ucfg_api.h"
 #include "pld_common.h"
-#include <dp_txrx.h>
 #include "wlan_cm_roam_public_struct.h"
 
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
@@ -286,8 +285,8 @@ enum hdd_adapter_flags {
 
 /**
  * enum hdd_nb_cmd_id - North bound command IDs received during SSR
- * @NO_COMMAND - No NB command received during SSR
- * @INTERFACE_DOWN - Received interface down during SSR
+ * @NO_COMMAND: No NB command received during SSR
+ * @INTERFACE_DOWN: Received interface down during SSR
  */
 enum hdd_nb_cmd_id {
 	NO_COMMAND,
@@ -480,11 +479,10 @@ enum hdd_auth_key_mgmt {
 };
 
 /**
- * wlan_net_dev_ref_dbgid - Debug IDs to detect net device reference leaks
- */
-/*
- * New value added to the enum must also be reflected in function
- *  net_dev_ref_debug_string_from_id()
+ * typedef wlan_net_dev_ref_dbgid - Debug IDs to detect net device reference
+ *                                  leaks.
+ * NOTE: New values added to the enum must also be reflected in function
+ * net_dev_ref_debug_string_from_id()
  */
 typedef enum {
 	NET_DEV_HOLD_ID_RESERVED = 0,
@@ -613,10 +611,10 @@ struct hdd_stats {
 	struct hdd_peer_stats peer_stats;
 	struct hdd_pmf_stats hdd_pmf_stats;
 	struct pmf_bcn_protect_stats bcn_protect_stats;
+	qdf_atomic_t is_ll_stats_req_pending;
 
 #ifdef FEATURE_CLUB_LL_STATS_AND_GET_STATION
 	uint32_t sta_stats_cached_timestamp;
-	bool is_ll_stats_req_in_progress;
 #endif
 };
 
@@ -888,8 +886,9 @@ struct hdd_multicast_addr_list {
 
 /**
  * struct hdd_netif_queue_stats - netif queue operation statistics
- * @pause_count - pause counter
- * @unpause_count - unpause counter
+ * @pause_count: pause counter
+ * @unpause_count: unpause counter
+ * @total_pause_time: amount of time in paused state
  */
 struct hdd_netif_queue_stats {
 	u32 pause_count;
@@ -1000,55 +999,191 @@ struct wlm_multi_client_info_table {
 #endif
 
 /**
+ * enum udp_qos_upgrade - Enumeration of the various User priority (UP) types
+ *			  UDP QoS upgrade request
+ * @UDP_QOS_UPGRADE_NONE: Do not upgrade UDP QoS AC
+ * @UDP_QOS_UPGRADE_BK_BE: Upgrade UDP QoS for BK/BE only
+ * @UDP_QOS_UPGRADE_ALL: Upgrade UDP QoS for all packets
+ * @UDP_QOS_UPGRADE_MAX: Max enum limit, not to add new beyond this
+ */
+enum udp_qos_upgrade {
+	UDP_QOS_UPGRADE_NONE,
+	UDP_QOS_UPGRADE_BK_BE,
+	UDP_QOS_UPGRADE_ALL,
+	UDP_QOS_UPGRADE_MAX
+};
+
+/**
  * struct hdd_adapter - hdd vdev/net_device context
+ * @magic: Magic cookie for adapter sanity verification.  Note that this
+ *         needs to be at the beginning of the private data structure so
+ *         that it will exist at the beginning of dev->priv and hence
+ *         will always be in mapped memory
+ * @node: list node for membership in the adapter list
+ * @hdd_ctx:
  * @vdev: object manager vdev context
  * @vdev_lock: lock to protect vdev context access
  * @vdev_id: Unique identifier assigned to the vdev
+ * @dev: Handle to the network device
+ * @device_mode:
+ * @ipv4_notifier_work: IPv4 notifier callback for handling ARP offload on
+ *                      change in IP
+ * @ipv6_notifier_work: IPv6 notifier callback for handling NS offload on
+ *                      change in IP
+ * @wdev: TODO Move this to sta Ctx
+ * @ops: ops checks if Opportunistic Power Save is Enable or Not
+ * @ctw: stores CT Window value once we receive Opps command from
+ *       wpa_supplicant then using CT Window value we need to Enable
+ *       Opportunistic Power Save
+ * @mac_addr: Current MAC Address for the adapter
+ * @mld_addr: MLD address for adapter
  * @event_flags: a bitmap of hdd_adapter_flags
+ * @hdd_stats: HDD statistics
+ * @estimated_linkspeed: estimated link speed
+ * @vdev_destroy_event: vdev_destroy_event is moved from the qdf_event
+ *                      to linux event consciously, Lets take example
+ *                      when sap interface is waiting on the
+ *                      session_close event and then there is a SSR
+ *                      the wait event is completed the interface down
+ *                      is returned and the next command to the driver
+ *                      will be hdd_hostapd_uinit-->
+ *                      hdd_deinit_ap_mode-->
+ *                      hdd_hostapd_deinit_sap_session where in the
+ *                      sap_ctx would be freed.  During the SSR if the
+ *                      same sap context is used it would result in
+ *                      null pointer de-reference.
+ * @qdf_monitor_mode_vdev_up_event: QDF event for monitor mode vdev up
+ * @disconnect_comp_var: completion variable for disconnect callback
+ * @linkup_event_var: completion variable for Linkup Event
+ * @sta_authorized_event:
+ * @is_link_up_service_needed: Track whether the linkup handling is needed
+ * @hdd_wmm_status: WMM Status
+ * @sta_info:
+ * @cache_sta_info:
+ * @sta_info_list:
+ * @cache_sta_info_list:
+ * @cache_sta_count: number of currently cached stations
+ * @wapi_info:
+ * @rssi:
+ * @rssi_on_disconnect:
+ * @rssi_send:
+ * @snr:
+ * @sap_stop_bss_work:
+ * @session: union of @ap and @station specific structs
+ * @session.station: station mode information
+ * @session.ap: ap mode specific information
+ * @ch_switch_in_progress:
+ * @acs_complete_event: acs complete event
+ * @cur_target_time: tsf value received from firmware
+ * @cur_tsf_sync_soc_time:
+ * @last_tsf_sync_soc_time:
+ * @cur_target_global_tsf_time:
+ * @last_target_global_tsf_time:
+ * @host_capture_req_timer:
+ * @tsf_id: TSF id as obtained from FW report
+ * @tsf_mac_id: mac_id as obtained from FW report
+ * @tsf_details_valid: flag indicating whether tsf details are valid
+ * @host_target_sync_lock: spin lock for read/write timestamps
+ * @host_target_sync_timer:
+ * @host_trigger_gpio_timer: A hrtimer used for TSF Accuracy Feature to
+ *                           indicate TSF cycle complete
  * @enable_dynamic_tsf_sync: Enable/Disable TSF sync through NL interface
  * @host_target_sync_force: Force update host to TSF mapping
  * @dynamic_tsf_sync_interval: TSF sync interval configure through NL interface
+ * @cur_host_time:
+ * @last_host_time:
+ * @last_target_time:
+ * @continuous_error_count: to store the count of continuous invalid tstamp-pair
+ * @continuous_cap_retry_count: to store the count of continuous capture retry
+ * @tsf_sync_ready_flag: to indicate whether tsf_sync has been initialized
  * @gpio_tsf_sync_work: work to sync send TSF CAP WMI command
- * @cache_sta_count: number of currently cached stations
- * @acs_complete_event: acs complete event
- * @host_trigger_gpio_timer: A hrtimer used for TSF Accuracy Feature to
- *                           indicate TSF cycle complete
+ * @tsf_auto_report: to indicate if TSF auto report is enabled or not
+ * @mc_addr_list:
+ * @addr_filter_pattern:
+ * @scan_info:
+ * @psb_changed: Flag to ensure PSB is configured through framework
+ * @configured_psb: UAPSD psb value configured through framework
+ * @scan_block_work:
+ * @blocked_scan_request_q:
+ * @blocked_scan_request_q_lock:
+ * @mscs_prev_tx_vo_pkts:
+ * @mscs_counter:
+ * @tx_flow_control_timer:
+ * @tx_flow_timer_initialized:
+ * @tx_flow_low_watermark:
+ * @tx_flow_hi_watermark_offset:
+ * @dscp_to_up_map: DSCP to UP QoS Mapping
+ * @is_link_layer_stats_set:
+ * @ll_stats_failure_count:
+ * @link_status:
+ * @upgrade_udp_qos_threshold: The threshold for user priority upgrade for
+ *			       any UDP packet.
+ * @udp_qos_upgrade_type: UDP QoS packet upgrade request type
+ * @temperature: variable for temperature in Celsius
+ * @ocb_mac_address: MAC addresses used for OCB interfaces
+ * @ocb_mac_addr_count:
+ * @pause_map: BITMAP indicating pause reason
+ * @subqueue_pause_map:
+ * @pause_map_lock:
+ * @start_time:
+ * @last_time:
+ * @total_pause_time:
+ * @total_unpause_time:
+ * @history_index:
+ * @queue_oper_history:
+ * @queue_oper_stats:
+ * @debugfs_phy: debugfs entry
+ * @lfr_fw_status:
+ * @active_ac:
+ * @mon_chan_freq:
+ * @mon_bandwidth:
  * @latency_level: 0 - normal, 1 - xr, 2 - low, 3 - ultralow
  * @multi_client_ll_support: to check multi client ll support in driver
  * @client_info: To store multi client id information
  * @multi_ll_response_cookie: cookie for multi client ll command
  * @multi_ll_req_in_progress: to check multi client ll request in progress
  * @multi_ll_resp_expected: to decide whether host will wait for multi client
- * event or not
+ *                          event or not
+ * @monitor_mode_vdev_up_in_progress:
+ * @rcpi: rcpi information
+ * @send_mode_change:
+ * @apf_context:
+ * @csr_file:
+ * @motion_detection_mode:
+ * @motion_det_cfg:
+ * @motion_det_in_progress:
+ * @motion_det_baseline_value:
  * @last_disconnect_reason: Last disconnected internal reason code
- *                          as per enum qca_disconnect_reason_codes
+ * as per enum qca_disconnect_reason_codes
  * @connect_req_status: Last disconnected internal status code
  *                          as per enum qca_sta_connect_fail_reason_codes
- * @upgrade_udp_qos_threshold: The threshold for user priority upgrade for
-			       any UDP packet.
+ * @peer_cleanup_done:
+ * @oem_data_in_progress:
+ * @cookie:
+ * @response_expected:
  * @handle_feature_update: Handle feature update only if it is triggered
  *			   by hdd_netdev_feature_update
+ * @tso_csum_feature_enabled: Indicate if TSO and checksum offload features
+ *                            are enabled or not
  * @netdev_features_update_work: work for handling the netdev features update
- *				 for the adapter.
+ * for the adapter.
  * @netdev_features_update_work_status: status for netdev_features_update_work
+ * @net_dev_hold_ref_count:
  * @delete_in_progress: Flag to indicate that the adapter delete is in
- *			progress, and any operation using rtnl lock inside
- *			the driver can be avoided/skipped.
+ * progress, and any operation using rtnl lock inside
+ * the driver can be avoided/skipped.
  * @is_virtual_iface: Indicates that netdev is called from virtual interface
+ * @big_data_stats:
  * @mon_adapter: hdd_adapter of monitor mode.
+ * @mlo_adapter_info:
+ * @ll_iface_stats:
  * @set_mac_addr_req_ctx: Set MAC address command request context
  * @delta_qtime: delta between host qtime and monotonic time
  * @traffic_end_ind_en: traffic end indication feature enable/disable
+ * @is_dbam_configured:
  */
 struct hdd_adapter {
-	/* Magic cookie for adapter sanity verification.  Note that this
-	 * needs to be at the beginning of the private data structure so
-	 * that it will exist at the beginning of dev->priv and hence
-	 * will always be in mapped memory
-	 */
 	uint32_t magic;
-
-	/* list node for membership in the adapter list */
 	qdf_list_node_t node;
 
 	struct hdd_context *hdd_ctx;
@@ -1056,78 +1191,45 @@ struct hdd_adapter {
 	qdf_spinlock_t vdev_lock;
 	uint8_t vdev_id;
 
-	/** Handle to the network device */
 	struct net_device *dev;
 
 	enum QDF_OPMODE device_mode;
 
-	/** IPv4 notifier callback for handling ARP offload on change in IP */
 	struct work_struct ipv4_notifier_work;
 #ifdef WLAN_NS_OFFLOAD
-	/** IPv6 notifier callback for handling NS offload on change in IP */
+	/* IPv6 notifier callback for handling NS offload on change in IP */
 	struct work_struct ipv6_notifier_work;
 #endif
 
 	/* TODO Move this to sta Ctx */
 	struct wireless_dev wdev;
 
-	/** ops checks if Opportunistic Power Save is Enable or Not
-	 * ctw stores CT Window value once we receive Opps command from
-	 * wpa_supplicant then using CT Window value we need to Enable
-	 * Opportunistic Power Save
-	 */
 	uint8_t ops;
 	uint32_t ctw;
 
-	/** Current MAC Address for the adapter  */
 	struct qdf_mac_addr mac_addr;
-	/* MLD address for adapter */
 	struct qdf_mac_addr mld_addr;
-
 	unsigned long event_flags;
 
-	/** HDD statistics*/
 	struct hdd_stats hdd_stats;
 
-	/* estimated link speed */
 	uint32_t estimated_linkspeed;
 
-	/**
-	 * vdev_destroy_event is moved from the qdf_event to linux event
-	 * consciously, Lets take example when sap interface is waiting on the
-	 * session_close event and then there is a SSR the wait event is
-	 * completed the interface down is returned and the next command to the
-	 * driver will  hdd_hostapd_uinit-->vhdd_deinit_ap_mode-->
-	 * hdd_hostapd_deinit_sap_session where in the sap_ctx would be freed.
-	 * During the SSR if the same sap context is used it would result
-	 * in null pointer de-reference.
-	 */
 	struct completion vdev_destroy_event;
 
-	/* QDF event for session open */
-	qdf_event_t qdf_session_open_event;
-
 #ifdef FEATURE_MONITOR_MODE_SUPPORT
-	/* QDF event for monitor mode vdev up */
 	qdf_event_t qdf_monitor_mode_vdev_up_event;
 #endif
 
 	/* TODO: move these to sta ctx. These may not be used in AP */
-	/** completion variable for disconnect callback */
 	struct completion disconnect_comp_var;
-	/* completion variable for Linkup Event */
 	struct completion linkup_event_var;
 
 	struct completion sta_authorized_event;
 
-	/* Track whether the linkup handling is needed  */
 	bool is_link_up_service_needed;
 
-	/* WMM Status */
 	struct hdd_wmm_status hdd_wmm_status;
-
-	/** Multiple station supports */
-	/** Per-station structure */
 
 	/* TODO: Will be removed as a part of next phase of clean up */
 	struct hdd_station_info sta_info[WLAN_MAX_STA_COUNT];
@@ -1161,7 +1263,6 @@ struct hdd_adapter {
 	qdf_event_t acs_complete_event;
 
 #ifdef WLAN_FEATURE_TSF
-	/* tsf value received from firmware */
 	uint64_t cur_target_time;
 	uint64_t cur_tsf_sync_soc_time;
 	uint64_t last_tsf_sync_soc_time;
@@ -1169,15 +1270,11 @@ struct hdd_adapter {
 	uint64_t last_target_global_tsf_time;
 	qdf_mc_timer_t host_capture_req_timer;
 #ifdef QCA_GET_TSF_VIA_REG
-	/* TSF id as obtained from FW report */
 	int tsf_id;
-	/* mac_id as obtained from FW report */
 	int tsf_mac_id;
-	/* flag indicating whether tsf details are valid */
 	qdf_atomic_t tsf_details_valid;
 #endif
 #ifdef WLAN_FEATURE_TSF_PLUS
-	/* spin lock for read/write timestamps */
 	qdf_spinlock_t host_target_sync_lock;
 	qdf_mc_timer_t host_target_sync_timer;
 #ifdef WLAN_FEATURE_TSF_ACCURACY
@@ -1189,18 +1286,14 @@ struct hdd_adapter {
 	uint64_t cur_host_time;
 	uint64_t last_host_time;
 	uint64_t last_target_time;
-	/* to store the count of continuous invalid tstamp-pair */
 	int continuous_error_count;
-	/* to store the count of continuous capture retry */
 	int continuous_cap_retry_count;
-	/* to indicate whether tsf_sync has been initialized */
 	qdf_atomic_t tsf_sync_ready_flag;
 #ifdef WLAN_FEATURE_TSF_PLUS_EXT_GPIO_SYNC
 	qdf_work_t gpio_tsf_sync_work;
 #endif
 #endif /* WLAN_FEATURE_TSF_PLUS */
 #ifdef WLAN_FEATURE_TSF_UPLINK_DELAY
-	/* to indicate if TSF auto report is enabled or not */
 	qdf_atomic_t tsf_auto_report;
 #endif /* WLAN_FEATURE_TSF_UPLINK_DELAY */
 #endif
@@ -1210,9 +1303,7 @@ struct hdd_adapter {
 
 	struct hdd_scan_info scan_info;
 
-	/* Flag to ensure PSB is configured through framework */
 	uint8_t psb_changed;
-	/* UAPSD psb value configured through framework */
 	uint8_t configured_psb;
 
 	struct work_struct scan_block_work;
@@ -1235,7 +1326,6 @@ struct hdd_adapter {
 	unsigned int tx_flow_hi_watermark_offset;
 #endif /* QCA_LL_LEGACY_TX_FLOW_CONTROL */
 
-	/* DSCP to UP QoS Mapping */
 	enum sme_qos_wmmuptype dscp_to_up_map[WLAN_MAX_DSCP + 1];
 
 #ifdef WLAN_FEATURE_LINK_LAYER_STATS
@@ -1244,17 +1334,15 @@ struct hdd_adapter {
 #endif
 	uint8_t link_status;
 	uint8_t upgrade_udp_qos_threshold;
+	enum udp_qos_upgrade udp_qos_upgrade_type;
 
-	/* variable for temperature in Celsius */
 	int temperature;
 
 #ifdef WLAN_FEATURE_DSRC
-	/* MAC addresses used for OCB interfaces */
 	struct qdf_mac_addr ocb_mac_address[QDF_MAX_CONCURRENCY_PERSONA];
 	int ocb_mac_addr_count;
 #endif
 
-	/* BITMAP indicating pause reason */
 	uint32_t pause_map;
 	uint32_t subqueue_pause_map;
 	spinlock_t pause_map_lock;
@@ -1266,7 +1354,7 @@ struct hdd_adapter {
 	struct hdd_netif_queue_history
 		 queue_oper_history[WLAN_HDD_MAX_HISTORY_ENTRY];
 	struct hdd_netif_queue_stats queue_oper_stats[WLAN_REASON_TYPE_MAX];
-	/* debugfs entry */
+
 	struct dentry *debugfs_phy;
 	struct lfr_firmware_status lfr_fw_status;
 	uint8_t active_ac;
@@ -1283,7 +1371,7 @@ struct hdd_adapter {
 #ifdef FEATURE_MONITOR_MODE_SUPPORT
 	bool monitor_mode_vdev_up_in_progress;
 #endif
-	/* rcpi information */
+
 	struct rcpi_info rcpi;
 	bool send_mode_change;
 #ifdef FEATURE_WLAN_APF
@@ -1309,7 +1397,7 @@ struct hdd_adapter {
 	bool response_expected;
 #endif
 	bool handle_feature_update;
-	/* Indicate if TSO and checksum offload features are enabled or not */
+
 	bool tso_csum_feature_enabled;
 
 	qdf_work_t netdev_features_update_work;
@@ -1456,7 +1544,7 @@ struct hdd_offloaded_packets_ctx {
 #endif
 
 /**
- * enum driver_status: Driver Modules status
+ * enum driver_modules_status - Driver Modules status
  * @DRIVER_MODULES_UNINITIALIZED: Driver CDS modules uninitialized
  * @DRIVER_MODULES_ENABLED: Driver CDS modules opened
  * @DRIVER_MODULES_CLOSED: Driver CDS modules closed
@@ -1478,13 +1566,13 @@ struct acs_dfs_policy {
 };
 
 /**
- * enum suspend_fail_reason: Reasons a WLAN suspend might fail
- * SUSPEND_FAIL_IPA: IPA in progress
- * SUSPEND_FAIL_RADAR: radar scan in progress
- * SUSPEND_FAIL_ROAM: roaming in progress
- * SUSPEND_FAIL_SCAN: scan in progress
- * SUSPEND_FAIL_INITIAL_WAKEUP: received initial wakeup from firmware
- * SUSPEND_FAIL_MAX_COUNT: the number of wakeup reasons, always at the end
+ * enum suspend_fail_reason - Reasons a WLAN suspend might fail
+ * @SUSPEND_FAIL_IPA: IPA in progress
+ * @SUSPEND_FAIL_RADAR: radar scan in progress
+ * @SUSPEND_FAIL_ROAM: roaming in progress
+ * @SUSPEND_FAIL_SCAN: scan in progress
+ * @SUSPEND_FAIL_INITIAL_WAKEUP: received initial wakeup from firmware
+ * @SUSPEND_FAIL_MAX_COUNT: the number of wakeup reasons, always at the end
  */
 enum suspend_fail_reason {
 	SUSPEND_FAIL_IPA,
@@ -1496,7 +1584,7 @@ enum suspend_fail_reason {
 };
 
 /**
- * suspend_resume_stats - Collection of counters for suspend/resume events
+ * struct suspend_resume_stats - counters for suspend/resume events
  * @suspends: number of suspends completed
  * @resumes: number of resumes completed
  * @suspend_fail: counters for failed suspend reasons
@@ -1508,18 +1596,18 @@ struct suspend_resume_stats {
 };
 
 /**
- * hdd_sta_smps_param  - SMPS parameters to configure from hdd
- * HDD_STA_SMPS_PARAM_UPPER_RSSI_THRESH: RSSI threshold to enter Dynamic SMPS
+ * enum hdd_sta_smps_param - SMPS parameters to configure from hdd
+ * @HDD_STA_SMPS_PARAM_UPPER_RSSI_THRESH: RSSI threshold to enter Dynamic SMPS
  * mode from inactive mode
- * HDD_STA_SMPS_PARAM_STALL_RSSI_THRESH:  RSSI threshold to enter
+ * @HDD_STA_SMPS_PARAM_STALL_RSSI_THRESH:  RSSI threshold to enter
  * Stalled-D-SMPS mode from D-SMPS mode or to enter D-SMPS mode from
  * Stalled-D-SMPS mode
- * HDD_STA_SMPS_PARAM_LOWER_RSSI_THRESH:  RSSI threshold to disable SMPS modes
- * HDD_STA_SMPS_PARAM_UPPER_BRSSI_THRESH: Upper threshold for beacon-RSSI.
+ * @HDD_STA_SMPS_PARAM_LOWER_RSSI_THRESH:  RSSI threshold to disable SMPS modes
+ * @HDD_STA_SMPS_PARAM_UPPER_BRSSI_THRESH: Upper threshold for beacon-RSSI.
  * Used to reduce RX chainmask.
- * HDD_STA_SMPS_PARAM_LOWER_BRSSI_THRESH:  Lower threshold for beacon-RSSI.
+ * @HDD_STA_SMPS_PARAM_LOWER_BRSSI_THRESH:  Lower threshold for beacon-RSSI.
  * Used to increase RX chainmask.
- * HDD_STA_SMPS_PARAM_DTIM_1CHRX_ENABLE: Enable/Disable DTIM 1chRx feature
+ * @HDD_STA_SMPS_PARAM_DTIM_1CHRX_ENABLE: Enable/Disable DTIM 1chRx feature
  */
 enum hdd_sta_smps_param {
 	HDD_STA_SMPS_PARAM_UPPER_RSSI_THRESH = 0,
@@ -1592,7 +1680,7 @@ struct hdd_dynamic_mac {
 };
 
 /**
- * hdd_fw_ver_info - FW version info structure
+ * struct hdd_fw_ver_info - FW version info structure
  * @major_spid: FW version - major spid.
  * @minor_spid: FW version - minor spid
  * @siid:       FW version - siid
@@ -1610,7 +1698,7 @@ struct hdd_fw_ver_info {
 	uint32_t crmid;
 };
 
-/**
+/*
  * The logic for get current index of history is dependent on this
  * value being power of 2.
  */
@@ -1701,34 +1789,197 @@ enum wlan_state_ctrl_str_id {
  * struct hdd_context - hdd shared driver and psoc/device context
  * @psoc: object manager psoc context
  * @pdev: object manager pdev context
- * @iftype_data_2g: Interface data for 2g band
- * @iftype_data_5g: Interface data for 5g band
- * @num_latency_critical_clients: Number of latency critical clients connected
- * @bus_bw_work: work for periodically computing DDR bus bandwidth requirements
- * @g_event_flags: a bitmap of hdd_driver_flags
- * @psoc_idle_timeout_work: delayed work for psoc idle shutdown
- * @tsf_accuracy_context: Holds TSF Accuracy feature activated vdev adapter.
- * @dynamic_nss_chains_support: Per vdev dynamic nss chains update capability
- * @sar_cmd_params: SAR command params to be configured to the FW
- * @country_change_work: work for updating vdev when country changes
- * @rx_aggregation: rx aggregation enable or disable state
- * @gro_force_flush: gro force flushed indication flag
- * @tc_based_dyn_gro: TC based dynamic GRO enable/disable flag
- * @tc_ingress_prio: TC ingress priority
- * @current_pcie_gen_speed: current pcie gen speed
- * @pm_qos_req: pm_qos request for all cpu cores
- * @qos_cpu_mask: voted cpu core mask
- * @adapter_ops_wq: High priority workqueue for handling adapter operations
- * @multi_client_thermal_mitigation: Multi client thermal mitigation by fw
+ * @mac_handle: opaque handle to MAC context
+ * @wiphy: Linux wiphy
+ * @hdd_adapter_lock: lock for @hdd_adapters
+ * @hdd_adapters: list of all instantiated adapters
  * @is_therm_cmd_supp: get temperature command enable or disable
- * @disconnect_for_sta_mon_conc: disconnect if sta monitor intf concurrency
- * @bbm_ctx: bus bandwidth manager context
- * @is_dual_mac_cfg_updated: indicate whether dual mac cfg has been updated
- * @twt_en_dis_work: work to send twt enable/disable cmd on MCC/SCC concurrency
- * @dump_in_progress: Stores value of dump in progress
- * @hdd_dual_sta_policy: Concurrent STA policy configuration
- * @is_wlan_disabled: if wlan is disabled by userspace
+ * @fw: pointer to firmware image data
+ * @cfg: pointer to configuration data
+ * @parent_dev: pointer to parent device
+ * @config: Config values read from qcom_cfg.ini file
+ * @channels_2ghz: pointer for wiphy 2 GHz channels
+ * @channels_5ghz: pointer for wiphy 5 GHz channels
+ * @iftype_data_2g: Interface data for 2 GHz band
+ * @iftype_data_5g: Interface data for 5 GHz band
+ * @iftype_data_6g: Interface data for 6 GHz band
+ * @mc_sus_event_var: Completion variable to indicate Mc Thread Suspended
+ * @is_scheduler_suspended: true if the MC Thread is suspended
+ * @is_ol_rx_thread_suspended: true if the RX Thread is suspended
+ * @hdd_wlan_suspended: true if the HDD is suspended
+ * @suspended: unused???
+ * @is_pktlog_enabled: true if pktlog is enabled, used to start pktlog after
+ *                     SSR/PDR if previously enabled
+ * @sap_lock: Lock to avoid race condition during start/stop bss
+ * @oem_app_registered: OEM App registered or not
+ * @oem_pid: OEM App Process ID when registered
+ * @concurrency_mode: Concurrency Parameters
+ * @no_of_open_sessions: number of open sessions per operating mode
+ * @no_of_active_sessions: number of active sessions per operating mode
+ * @p2p_device_address: P2P Device MAC Address for the adapter
+ * @sap_wake_lock: Soft AP wakelock
+ * @is_wiphy_suspended: Flag keeps track of wiphy suspend/resume
+ * @ready_to_suspend: completed when ready to suspend
+ * @target_type: defining the solution type
+ * @target_fw_version: firmware version
+ * @target_fw_vers_ext: firmware version extension
+ * @fw_version_info: detailed firmware version information
+ * @target_hw_version:  the chip/rom version
+ * @target_hw_revision: the chip/rom revision
+ * @target_hw_name: chip/rom name
+ * @reg: regulatory information
+ * @unsafe_channel_count: number of unsafe channels
+ * @unsafe_channel_list: list of unsafe channels
+ * @restriction_mask: channel avoidance restrictions mask
+ * @max_intf_count: maximum number of supported interfaces
+ * @lpss_support: Is LPSS offload supported
+ * @ap_arpns_support: Is AP ARP/NS offload supported
+ * @ioctl_scan_mode: scan mode
+ * @sta_ap_intf_check_work: workqueue for interface check
+ * @dev_dfs_cac_status: DFS CAC status
+ * @bt_coex_mode_set: Has BT coex mode been set
+ * @skip_acs_scan_timer: timer used to skip ACS scan
+ * @skip_acs_scan_status: status of skip ACS scan
+ * @last_acs_freq_list: ACS frequency list
+ * @num_of_channels: number of channels in @last_acs_freq_list
+ * @acs_skip_lock: use to synchronize "skip ACS scan" feature
+ * @sap_dfs_wakelock : SAP DFS wakelock
+ * @sap_dfs_ref_cnt: SAP DFS reference count
+ * @is_extwow_app_type1_param_set: is extwow app type1 param set
+ * @is_extwow_app_type2_param_set: is extwow app type2 param set
+ * @ext_scan_start_since_boot: Time since boot up to extscan start (in micro
+ *                             seconds)
+ * @g_event_flags: a bitmap of hdd_driver_flags (unused??)
+ * @miracast_value: value of driver miracast command
+ * @ipv6_notifier: IPv6 notifier callback for handling NS offload on change
+ *                 in IP
+ * @ns_offload_enable: Is NS offload enabled
+ * @ipv4_notifier: IPv4 notifier callback for handling ARP offload on change
+ *                 in IP
+ * @pm_qos_notifier: Device PM QoS notifier
+ * @runtime_pm_prevented: Is PM prevented
+ * @pm_qos_lock: Lock for PM QoS data
+ * @num_rf_chains: number of rf chains supported by target
+ * @ht_tx_stbc_supported: Is HT Tx STBC supported by target
+ * @op_ctx: Offloaded packets context
+ * @mcc_mode: Is Multi-channel Concurrency enabled
+ * @memdump_lock: Lock for memdump data
+ * @driver_dump_size: Size of the memdump data buffer
+ * @driver_dump_mem: memdump data buffer
+ * @connection_in_progress: Is connection in progress
+ * @connection_status_lock: Lock for connection status
+ * @fine_time_meas_cap_target: place to store FTM capab of target. This
+ *                             allows changing of FTM capab at runtime
+ *                             and intersecting it with target capab before
+ *                             updating.
+ * @current_antenna_mode: Current number of TX X RX chains being used
+ * @radio_index: the radio index assigned by cnss_logger
+ * @hbw_requested: Has high bandwidth been requested
+ * @pm_qos_request: Is PM QoS requested
+ * @nan_datapath_enabled: Is NAN datapath enabled
+ * @driver_status: Present state of driver cds modules
+ * @psoc_idle_timeout_work: delayed work for psoc idle shutdown
  * @pm_notifier: PM notifier of hdd modules
+ * @acs_policy: ACS DFS policy
+ * @wmi_max_len: MTU of the WMI interface
+ * @suspend_resume_stats: Suspend/Resume statistics
+ * @runtime_context: Runtime PM context
+ * @chan_info: scan channel information
+ * @chan_info_lock: lock for @chan_info
+ * @tdls_source_bitmap: bit map to set/reset TDLS by different sources
+ * @tdls_umac_comp_active: Is the TDLS component active
+ * @tdls_nap_active: Is napier specific tdls data path enabled
+ * @beacon_probe_rsp_cnt_per_scan:
+ * @last_scan_reject_vdev_id:
+ * @last_scan_reject_reason:
+ * @last_scan_reject_timestamp:
+ * @scan_reject_cnt:
+ * @dfs_cac_offload:
+ * @reg_offload:
+ * @rcpi_enabled:
+ * @coex_avoid_freq_list:
+ * @dnbs_avoid_freq_list:
+ * @avoid_freq_lock:  Lock to control access to dnbs and coex avoid freq list
+ * @tsf_ready_flag: indicate whether tsf has been initialized
+ * @cap_tsf_flag: indicate whether it's now capturing tsf(updating tstamp-pair)
+ * @cap_tsf_context: the context that is capturing tsf
+ * @tsf_accuracy_context: Holds TSF Accuracy feature activated vdev adapter.
+ * @ptp_cinfo:
+ * @ptp_clock:
+ * @bt_a2dp_active:
+ * @bt_vo_active:
+ * @bt_profile_con:
+ * @curr_band:
+ * @imps_enabled:
+ * @user_configured_pkt_filter_rules:
+ * @is_fils_roaming_supported:
+ * @receive_offload_cb:
+ * @vendor_disable_lro_flag:
+ * @force_rsne_override:
+ * @monitor_mode_wakelock:
+ * @lte_coex_ant_share:
+ * @obss_scan_offload:
+ * @sscan_pid:
+ * @track_arp_ip:
+ * @hw_bd_id: defining the board related information
+ * @hw_bd_info:
+ * @twt_state:
+ * @twt_disable_comp_evt:
+ * @twt_enable_comp_evt:
+ * @apf_version:
+ * @apf_enabled_v2:
+ * @original_channels:
+ * @cache_channel_lock:
+ * @sar_version:
+ * @dynamic_mac_list:
+ * @dynamic_nss_chains_support: Per vdev dynamic nss chains update capability
+ * @hw_macaddr:
+ * @provisioned_mac_addr:
+ * @derived_mac_addr:
+ * @num_provisioned_addr:
+ * @num_derived_addr:
+ * @provisioned_intf_addr_mask:
+ * @derived_intf_addr_mask:
+ * @sar_cmd_params: SAR command params to be configured to the FW
+ * @sar_safety_timer:
+ * @sar_safety_unsolicited_work:
+ * @sar_safety_req_resp_event:
+ * @sar_safety_req_resp_event_in_progress:
+ * @runtime_resume_start_time_stamp:
+ * @runtime_suspend_done_time_stamp:
+ * @pm_qos_req:
+ * @qos_cpu_mask: voted cpu core mask
+ * @pm_qos_req: pm_qos request for all cpu cores
+ * @enable_pkt_capture_support: enable packet capture support
+ * @val_pkt_capture_mode: value for packet capturte mode
+ * @roam_ch_from_fw_supported:
+ * @dutycycle_off_percent:
+ * @pm_qos_request_flags:
+ * @country_change_work: work for updating vdev when country changes
+ * @current_pcie_gen_speed: current pcie gen speed
+ * @adapter_ops_wq: High priority workqueue for handling adapter operations
+ * @adapter_ops_history:
+ * @ll_stats_per_chan_rx_tx_time:
+ * @is_get_station_clubbed_in_ll_stats_req:
+ * @multi_client_thermal_mitigation: Multi client thermal mitigation by fw
+ * @disconnect_for_sta_mon_conc: disconnect if sta monitor intf concurrency
+ * @is_dual_mac_cfg_updated: indicate whether dual mac cfg has been updated
+ * @is_regulatory_update_in_progress:
+ * @regulatory_update_event:
+ * @regulatory_status_lock:
+ * @is_fw_dbg_log_levels_configured:
+ * @twt_en_dis_work: work to send twt enable/disable cmd on MCC/SCC concurrency
+ * @is_wifi3_0_target:
+ * @dump_in_progress: Stores value of dump in progress
+ * @dual_sta_policy: Concurrent STA policy configuration
+ * @is_therm_stats_in_progress:
+ * @is_vdev_macaddr_dynamic_update_supported:
+ * @power_type:
+ * @is_wlan_disabled: if wlan is disabled by userspace
+ * @oem_data:
+ * @oem_data_len:
+ * @file_name:
+ * @dbam_mode:
  */
 struct hdd_context {
 	struct wlan_objmgr_psoc *psoc;
@@ -1736,18 +1987,11 @@ struct hdd_context {
 	mac_handle_t mac_handle;
 	struct wiphy *wiphy;
 	qdf_spinlock_t hdd_adapter_lock;
-	qdf_list_t hdd_adapters; /* List of adapters */
+	qdf_list_t hdd_adapters;
 	bool is_therm_cmd_supp;
-	/** Pointer for firmware image data */
 	const struct firmware *fw;
-
-	/** Pointer for configuration data */
 	const struct firmware *cfg;
-
-	/** Pointer to the parent device */
 	struct device *parent_dev;
-
-	/** Config values read from qcom_cfg.ini file */
 	struct hdd_config *config;
 
 	/* Pointer for wiphy 2G/5G band channels */
@@ -1764,9 +2008,7 @@ struct hdd_context {
 	struct ieee80211_sband_iftype_data *iftype_data_6g;
 #endif
 #endif
-	/* Completion  variable to indicate Mc Thread Suspended */
 	struct completion mc_sus_event_var;
-
 	bool is_scheduler_suspended;
 
 #ifdef QCA_CONFIG_SMP
@@ -1775,48 +2017,28 @@ struct hdd_context {
 
 	bool hdd_wlan_suspended;
 	bool suspended;
-	/* flag to start pktlog after SSR/PDR if previously enabled */
 	bool is_pktlog_enabled;
-
-	/* Lock to avoid race condition during start/stop bss */
 	struct mutex sap_lock;
 
 #ifdef FEATURE_OEM_DATA_SUPPORT
-	/* OEM App registered or not */
 	bool oem_app_registered;
-
-	/* OEM App Process ID */
 	int32_t oem_pid;
 #endif
 
-	/** Concurrency Parameters*/
 	uint32_t concurrency_mode;
 
 	uint8_t no_of_open_sessions[QDF_MAX_NO_OF_MODE];
 	uint8_t no_of_active_sessions[QDF_MAX_NO_OF_MODE];
-
-	/** P2P Device MAC Address for the adapter  */
 	struct qdf_mac_addr p2p_device_address;
-
 	qdf_wake_lock_t sap_wake_lock;
-
-	/* Flag keeps track of wiphy suspend/resume */
 	bool is_wiphy_suspended;
-
 	struct completion ready_to_suspend;
-	/* defining the solution type */
 	uint32_t target_type;
-
-	/* defining the firmware version */
 	uint32_t target_fw_version;
 	uint32_t target_fw_vers_ext;
 	struct hdd_fw_ver_info fw_version_info;
-
-	/* defining the chip/rom version */
 	uint32_t target_hw_version;
-	/* defining the chip/rom revision */
 	uint32_t target_hw_revision;
-	/* chip/rom name */
 	char target_hw_name[MAX_TGT_HW_NAME_LEN];
 	struct regulatory reg;
 #ifdef FEATURE_WLAN_CH_AVOID
@@ -1857,7 +2079,6 @@ struct hdd_context {
 	bool is_extwow_app_type2_param_set;
 #endif
 
-	/* Time since boot up to extscan start (in micro seconds) */
 	uint64_t ext_scan_start_since_boot;
 	unsigned long g_event_flags;
 	uint8_t miracast_value;
@@ -1875,9 +2096,7 @@ struct hdd_context {
 	bool runtime_pm_prevented;
 	qdf_spinlock_t pm_qos_lock;
 #endif
-	/* number of rf chains supported by target */
 	uint32_t  num_rf_chains;
-	/* Is htTxSTBC supported by target */
 	uint8_t   ht_tx_stbc_supported;
 #ifdef WLAN_FEATURE_OFFLOAD_PACKETS
 	struct hdd_offloaded_packets_ctx op_ctx;
@@ -1890,22 +2109,15 @@ struct hdd_context {
 	bool connection_in_progress;
 	qdf_spinlock_t connection_status_lock;
 
-	/*
-	 * place to store FTM capab of target. This allows changing of FTM capab
-	 * at runtime and intersecting it with target capab before updating.
-	 */
 	uint32_t fine_time_meas_cap_target;
-	/* Current number of TX X RX chains being used */
 	enum antenna_mode current_antenna_mode;
 
-	/* the radio index assigned by cnss_logger */
 	int radio_index;
 	bool hbw_requested;
 	bool pm_qos_request;
 #ifdef WLAN_FEATURE_NAN
 	bool nan_datapath_enabled;
 #endif
-	/* Present state of driver cds modules */
 	enum driver_modules_status driver_status;
 	struct qdf_delayed_work psoc_idle_timeout_work;
 	struct notifier_block pm_notifier;
@@ -1915,7 +2127,6 @@ struct hdd_context {
 	struct hdd_runtime_pm_context runtime_context;
 	struct scan_chan_info *chan_info;
 	struct mutex chan_info_lock;
-	/* bit map to set/reset TDLS by different sources */
 	unsigned long tdls_source_bitmap;
 	bool tdls_umac_comp_active;
 	bool tdls_nap_active;
@@ -2139,7 +2350,7 @@ struct hdd_channel_info {
  * @ch_bw: enum hw_mode_bandwidth
  * @ch_bw_str: ch_bw in string format
  * @phy_chwidth: enum phy_ch_width
- * @bonding mode: WNI_CFG_CHANNEL_BONDING_MODE_DISABLE or
+ * @bonding_mode: WNI_CFG_CHANNEL_BONDING_MODE_DISABLE or
  *		  WNI_CFG_CHANNEL_BONDING_MODE_ENABLE
  */
 struct hdd_chwidth_info {
@@ -2157,7 +2368,7 @@ struct hdd_chwidth_info {
 
 /**
  * wlan_hdd_history_get_next_index() - get next index to store the history
-				       entry
+ *				       entry
  * @curr_idx: current index
  * @max_entries: max entries in the history
  *
@@ -2216,7 +2427,6 @@ int hdd_validate_channel_and_bandwidth(struct hdd_adapter *adapter,
 /**
  * hdd_get_front_adapter() - Get the first adapter from the adapter list
  * @hdd_ctx: pointer to the HDD context
- * @current_adapter: pointer to the current adapter
  * @out_adapter: double pointer to pass the next adapter
  *
  * Return: QDF_STATUS
@@ -2303,7 +2513,7 @@ QDF_STATUS hdd_add_adapter_front(struct hdd_context *hdd_ctx,
 				 struct hdd_adapter *adapter);
 
 /**
- * typedef hdd_adapter_iterate_cb() – Iteration callback function
+ * typedef hdd_adapter_iterate_cb() - Iteration callback function
  * @adapter: current adapter of interest
  * @context: user context supplied to the iterator
  *
@@ -2318,7 +2528,7 @@ typedef QDF_STATUS (*hdd_adapter_iterate_cb)(struct hdd_adapter *adapter,
 					     void *context);
 
 /**
- * hdd_adapter_iterate() – Safely iterate over all adapters
+ * hdd_adapter_iterate() - Safely iterate over all adapters
  * @cb: callback function to invoke for each adapter
  * @context: user-supplied context to pass to @cb
  *
@@ -2397,7 +2607,7 @@ void hdd_adapter_dev_put_debug(struct hdd_adapter *adapter,
 
 /**
  * __hdd_is_adapter_valid - Helper macro to return true/false for valid adapter.
- * @adapter: an hdd_adapter pointer to use as a cursor
+ * @_adapter: an hdd_adapter pointer to use as a cursor
  */
 #define __hdd_is_adapter_valid(_adapter) !!_adapter
 
@@ -2407,6 +2617,7 @@ void hdd_adapter_dev_put_debug(struct hdd_adapter *adapter,
  * @hdd_ctx: the global HDD context
  * @adapter: an hdd_adapter pointer to use as a cursor
  * @next_adapter: hdd_adapter pointer to the next adapter
+ * @dbgid: reference count debugging id
  *
  * This iterator will take the reference of the netdev associated with the
  * given adapter so as to prevent it from being removed in other context. It
@@ -2794,7 +3005,7 @@ void hdd_deinit(void);
 
 /**
  * hdd_wlan_startup() - HDD init function
- * hdd_ctx: the HDD context corresponding to the psoc to startup
+ * @hdd_ctx: the HDD context corresponding to the psoc to startup
  *
  * Return: Errno
  */
@@ -2996,7 +3207,7 @@ int wlan_hdd_cfg80211_start_acs(struct hdd_adapter *adapter);
  * intersection of PCL
  * @pcl: preferred channel list
  * @pcl_count: Preferred channel list count
- * @org_ch_list: ACS channel list from user space
+ * @org_freq_list: ACS channel list from user space
  * @org_ch_list_count: ACS channel count from user space
  *
  * Return: None
@@ -3006,20 +3217,23 @@ void wlan_hdd_trim_acs_channel_list(uint32_t *pcl, uint8_t pcl_count,
 				    uint8_t *org_ch_list_count);
 
 /**
- * wlan_hdd_handle_zero_acs_list() - Handle worst case of acs channel
+ * wlan_hdd_handle_zero_acs_list() - Handle worst case of ACS channel
  * trimmed to zero
  * @hdd_ctx: struct hdd_context
- * @org_ch_list: ACS channel list from user space
+ * @acs_freq_list: Calculated ACS channel list
+ * @acs_ch_list_count: Calculated ACS channel count
+ * @org_freq_list: ACS channel list from user space
  * @org_ch_list_count: ACS channel count from user space
  *
- * When all chan in ACS freq list is filtered out
- * by wlan_hdd_trim_acs_channel_list, the hostapd start will fail.
- * This happens when PCL is PM_24G_SCC_CH_SBS_CH, and SAP acs range includes
- * 5G channel list. One example is STA active on 6Ghz chan. Hostapd
- * start SAP on 5G ACS range. The intersection of PCL and ACS range is zero.
- * Instead of ACS failure, this API selects one channel from ACS range
- * and report to Hostapd. When hostapd do start_ap, the driver will
- * force SCC to 6G or move SAP to 2G based on SAP's configuration.
+ * When all channels in the ACS freq list is filtered out by
+ * wlan_hdd_trim_acs_channel_list(), the hostapd start will fail.
+ * This happens when PCL is PM_24G_SCC_CH_SBS_CH, and SAP ACS range
+ * includes 5 GHz channel list. One example is STA active on 6 GHz
+ * chan. Hostapd start SAP on 5 GHz ACS range. The intersection of PCL
+ * and ACS range is zero.  Instead of ACS failure, this API selects
+ * one channel from ACS range and report to Hostapd. When hostapd do
+ * start_ap, the driver will force SCC to 6 GHz or move SAP to 2 GHz
+ * based on SAP's configuration.
  *
  * Return: None
  */
@@ -3317,7 +3531,7 @@ int hdd_update_components_config(struct hdd_context *hdd_ctx);
 
 /**
  * hdd_chan_change_notify() - Function to notify hostapd about channel change
- * @hostapd_adapter:	hostapd adapter
+ * @adapter:		hostapd adapter
  * @dev:		Net device structure
  * @chan_change:	New channel change parameters
  * @legacy_phymode:	is the phymode legacy
@@ -3602,13 +3816,12 @@ int hdd_trigger_psoc_idle_restart(struct hdd_context *hdd_ctx);
 int hdd_start_adapter(struct hdd_adapter *adapter);
 void hdd_populate_random_mac_addr(struct hdd_context *hdd_ctx, uint32_t num);
 /**
- * hdd_is_interface_up()- Checkfor interface up before ssr
- * @hdd_ctx: HDD context
+ * hdd_is_interface_up()- Check if the given interface is up
+ * @adapter: interface to check
  *
- * check  if there are any wlan interfaces before SSR accordingly start
- * the interface.
+ * Checks whether the given interface was brought up by userspace.
  *
- * Return: 0 if interface was opened else false
+ * Return: true if interface was opened else false
  */
 bool hdd_is_interface_up(struct hdd_adapter *adapter);
 
@@ -3714,7 +3927,7 @@ struct csr_roam_profile *hdd_roam_profile(struct hdd_adapter *adapter)
 
 /**
  * hdd_is_roaming_in_progress() - check if roaming is in progress
- * @hdd_ctx - Global HDD context
+ * @hdd_ctx: Global HDD context
  *
  * Checks if roaming is in progress on any of the adapters
  *
@@ -3841,7 +4054,7 @@ static inline void hdd_send_peer_status_ind_to_app(
 int wlan_hdd_send_mcc_vdev_quota(struct hdd_adapter *adapter, int sval);
 
 /**
- * wlan_hdd_send_p2p_quota()- Send MCC latency to FW
+ * wlan_hdd_send_mcc_latency()- Send MCC latency to FW
  * @adapter: Adapter data
  * @sval:    MCC latency value
  *
@@ -3945,7 +4158,7 @@ int hdd_get_rssi_snr_by_bssid(struct hdd_adapter *adapter, const uint8_t *bssid,
 
 /**
  * hdd_reset_limit_off_chan() - reset limit off-channel command parameters
- * @adapter - HDD adapter
+ * @adapter: HDD adapter
  *
  * Return: 0 on success and non zero value on failure
  */
@@ -4009,6 +4222,7 @@ void hdd_component_psoc_close(struct wlan_objmgr_psoc *psoc);
 
 /**
  * hdd_component_psoc_enable() - Trigger psoc enable for CLD Components
+ * @psoc: Pointer to psoc object
  *
  * Return: None
  */
@@ -4016,6 +4230,7 @@ void hdd_component_psoc_enable(struct wlan_objmgr_psoc *psoc);
 
 /**
  * hdd_component_psoc_disable() - Trigger psoc disable for CLD Components
+ * @psoc: Pointer to psoc object
  *
  * Return: None
  */
@@ -4023,6 +4238,7 @@ void hdd_component_psoc_disable(struct wlan_objmgr_psoc *psoc);
 
 /**
  * hdd_component_pdev_open() - Trigger pdev open for CLD Components
+ * @pdev: Pointer to pdev object
  *
  * Return: QDF_STATUS
  */
@@ -4030,6 +4246,7 @@ QDF_STATUS hdd_component_pdev_open(struct wlan_objmgr_pdev *pdev);
 
 /**
  * hdd_component_pdev_close() - Trigger pdev close for CLD Components
+ * @pdev: Pointer to pdev object
  *
  * Return: None
  */
@@ -4239,7 +4456,7 @@ void hdd_update_dynamic_mac(struct hdd_context *hdd_ctx,
 /**
  * hdd_md_host_evt_cb - Callback for Motion Detection Event
  * @ctx: HDD context
- * @sir_md_evt: motion detect event
+ * @event: motion detect event
  *
  * Callback for Motion Detection Event. Re-enables Motion
  * Detection again upon event
@@ -4252,7 +4469,7 @@ QDF_STATUS hdd_md_host_evt_cb(void *ctx, struct sir_md_evt *event);
 /**
  * hdd_md_bl_evt_cb - Callback for Motion Detection Baseline Event
  * @ctx: HDD context
- * @sir_md_bl_evt: motion detect baseline event
+ * @event: motion detect baseline event
  *
  * Callback for Motion Detection Baseline Event
  *
@@ -4275,7 +4492,7 @@ void hdd_hidden_ssid_enable_roaming(hdd_handle_t hdd_handle, uint8_t vdev_id);
 /**
  * hdd_psoc_idle_shutdown - perform idle shutdown after interface inactivity
  *                          timeout
- * @device: pointer to struct device
+ * @dev: pointer to struct device
  *
  * Return: 0 for success non-zero error code for failure
  */
@@ -4283,7 +4500,7 @@ int hdd_psoc_idle_shutdown(struct device *dev);
 
 /**
  * hdd_psoc_idle_restart - perform idle restart after idle shutdown
- * @device: pointer to struct device
+ * @dev: pointer to struct device
  *
  * Return: 0 for success non-zero error code for failure
  */
@@ -4584,8 +4801,8 @@ static inline unsigned long wlan_hdd_get_default_pm_qos_cpu_latency(void)
 bool hdd_is_runtime_pm_enabled(struct hdd_context *hdd_ctx);
 
 /**
- * hdd_netdev_feature_update - Update the netdev features
- * @net_dev: Handle to net_device
+ * hdd_netdev_update_features() - Update the netdev features
+ * @adapter: adapter associated with the net_device
  *
  * This func holds the rtnl_lock. Do not call with rtnl_lock held.
  *
@@ -4666,7 +4883,7 @@ int hdd_we_set_ch_width(struct hdd_adapter *adapter, int ch_width);
 
 /**
  * hdd_stop_adapter_ext: close/delete the vdev session in host/fw.
- * @hdd_context: HDD context
+ * @hdd_ctx: HDD context
  * @adapter: Pointer to hdd_adapter
  *
  * Close/delete the vdev session in host/firmware.
@@ -4707,7 +4924,7 @@ static inline void hdd_dp_ssr_unprotect(void)
 /**
  * hdd_dynamic_mac_address_set(): API to set MAC address, when interface
  *                                is up.
- * @hdd_context: Pointer to HDD context
+ * @hdd_ctx: Pointer to HDD context
  * @adapter: Pointer to hdd_adapter
  * @mac_addr: MAC address to set
  *

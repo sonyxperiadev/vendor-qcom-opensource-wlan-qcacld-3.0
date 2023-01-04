@@ -113,18 +113,19 @@ void ucfg_spatial_reuse_set_sr_enable(struct wlan_objmgr_vdev *vdev,
  * @vdev: object manager vdev
  * @enable_he_siga_val15_prohibit: enable/disable he_siga_val15_allowed
  *
- * Return: void
+ * Return: success/failure
  */
-void ucfg_spatial_reuse_send_sr_prohibit(struct wlan_objmgr_vdev *vdev,
-					 bool enable_he_siga_val15_prohibit);
+QDF_STATUS
+ucfg_spatial_reuse_send_sr_prohibit(struct wlan_objmgr_vdev *vdev,
+				    bool enable_he_siga_val15_prohibit);
 
 /**
  * ucfg_spatial_reuse_setup_req() - To enable/disable SR (Spatial Reuse)
- * vdev: object manager vdev
- * pdev: object manager pdev
- * is_sr_enable: SR enable/disable
- * srg_pd_threshold: SRG pd threshold
- * non_srg_pd_threshold: NON SRG pd threshold
+ * @vdev: object manager vdev
+ * @pdev: object manager pdev
+ * @is_sr_enable: SR enable/disable
+ * @srg_pd_threshold: SRG pd threshold
+ * @non_srg_pd_threshold: NON SRG pd threshold
  *
  * Return: Success/Failure
  */
@@ -134,6 +135,16 @@ ucfg_spatial_reuse_setup_req(struct wlan_objmgr_vdev *vdev,
 			     bool is_sr_enable, int32_t srg_pd_threshold,
 			     int32_t non_srg_pd_threshold);
 
+/**
+ * ucfg_spatial_reuse_operation_allowed() - Checks whether SR is allowed or not
+ * @psoc: Object manager psoc
+ * @vdev: object manager vdev
+ *
+ * Return: QDF_STATUS_SUCCESS when SR is allowed else Failure
+ */
+QDF_STATUS
+ucfg_spatial_reuse_operation_allowed(struct wlan_objmgr_psoc *psoc,
+				     struct wlan_objmgr_vdev *vdev);
 #else
 static inline
 void ucfg_spatial_reuse_register_cb(struct wlan_objmgr_psoc *psoc,

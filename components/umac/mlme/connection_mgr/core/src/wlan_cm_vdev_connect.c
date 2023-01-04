@@ -395,6 +395,8 @@ static const uint8_t *cm_diag_get_akm_str(enum mgmt_auth_type auth_type,
 		return "FILS-SHA256";
 	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_SAE))
 		return "FT-SAE";
+	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_SAE_EXT_KEY))
+		return "SAE-EXT-KEY";
 	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_SAE))
 		return "SAE";
 	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_DPP))
@@ -1514,7 +1516,7 @@ cm_install_link_vdev_keys(struct wlan_objmgr_vdev *vdev)
 {
 	struct wlan_objmgr_peer *peer;
 	struct wlan_crypto_key *crypto_key;
-	enum QDF_OPMODE op_mode = wlan_vdev_mlme_get_opmode(vdev);
+	enum QDF_OPMODE op_mode;
 	uint16_t i;
 	bool pairwise;
 	uint8_t vdev_id;
@@ -1526,6 +1528,7 @@ cm_install_link_vdev_keys(struct wlan_objmgr_vdev *vdev)
 		return;
 
 	vdev_id = wlan_vdev_get_id(vdev);
+	op_mode = wlan_vdev_mlme_get_opmode(vdev);
 	if (op_mode != QDF_STA_MODE ||
 	    !wlan_vdev_mlme_is_mlo_link_vdev(vdev))
 		return;
@@ -1671,6 +1674,7 @@ void wlan_cm_free_connect_rsp(struct cm_vdev_join_rsp *rsp)
 
 	qdf_mem_free(connect_ie->assoc_req.ptr);
 	qdf_mem_free(connect_ie->bcn_probe_rsp.ptr);
+	qdf_mem_free(connect_ie->link_bcn_probe_rsp.ptr);
 	qdf_mem_free(connect_ie->assoc_rsp.ptr);
 	cm_free_fils_ie(connect_ie);
 	cm_free_tspec_ie(rsp);

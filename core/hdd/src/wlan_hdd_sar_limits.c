@@ -35,7 +35,7 @@
 
 #define WLAN_WAIT_TIME_SAR 5000
 /**
- * hdd_sar_context - hdd sar context
+ * struct hdd_sar_context - hdd sar context
  * @event: sar limit event
  */
 struct hdd_sar_context {
@@ -308,7 +308,7 @@ cleanup:
 
 /**
  * hdd_to_nl_sar_version - Map SAR version enum from hdd to nl
- * @cur_sar_version - Current SAR version stored in hdd_ctx
+ * @hdd_sar_version: Current SAR version stored in hdd_ctx
  *
  * This function is used to map SAR version enum stored in hdd_ctx to
  * nl
@@ -333,8 +333,8 @@ static u32 hdd_to_nl_sar_version(enum sar_version hdd_sar_version)
 
 /**
  * hdd_sar_fill_capability_response - Fill SAR capability
- * @skb - Pointer to socket buffer
- * @hdd_ctx - pointer to hdd context
+ * @skb: Pointer to socket buffer
+ * @hdd_ctx: pointer to hdd context
  *
  * This function fills SAR Capability in the socket buffer
  *

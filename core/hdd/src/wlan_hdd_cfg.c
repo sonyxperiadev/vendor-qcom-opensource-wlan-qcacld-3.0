@@ -385,7 +385,7 @@ static void hdd_disable_runtime_pm(struct hdd_config *cfg_ini)
 
 /**
  * hdd_restore_runtime_pm() - Restore runtime_pm configuration.
- * @cfg_ini: Handle to struct hdd_config
+ * @hdd_ctx: HDD context
  *
  * Return: None
  */
@@ -419,7 +419,7 @@ static void hdd_disable_auto_shutdown(struct hdd_config *cfg_ini)
 
 /**
  * hdd_restore_auto_shutdown() - Restore auto_shutdown configuration.
- * @cfg_ini: Handle to struct hdd_config
+ * @hdd_ctx: HDD context
  *
  * Return: None
  */
@@ -603,9 +603,9 @@ static void hdd_set_oem_6g_supported(struct hdd_context *hdd_ctx)
 }
 
 /**
- * hdd_convert_string_to_u8_array() - used to convert string into u8 array
+ * hdd_convert_string_to_array() - used to convert string into u8 array
  * @str: String to be converted
- * @hex_array: Array where converted value is stored
+ * @array: Array where converted value is stored
  * @len: Length of the populated array
  * @array_max_len: Maximum length of the array
  * @to_hex: true, if conversion required for hex string
@@ -1059,6 +1059,7 @@ void hdd_cfg_print_global_config(struct hdd_context *hdd_ctx)
 /**
  * hdd_get_pmkid_modes() - returns PMKID mode bits
  * @hdd_ctx: the pointer to hdd context
+ * @pmkid_modes: struct to update with current PMKID modes
  *
  * Return: value of pmkid_modes
  */
@@ -1124,6 +1125,40 @@ hdd_set_nss_params(struct hdd_adapter *adapter,
 	return QDF_STATUS_SUCCESS;
 }
 
+static void
+hdd_update_nss_in_vdev(struct hdd_adapter *adapter, mac_handle_t mac_handle,
+		       uint8_t tx_nss, uint8_t rx_nss)
+{
+	uint8_t band, max_supp_nss = MAX_VDEV_NSS;
+
+	for (band = NSS_CHAINS_BAND_2GHZ; band < NSS_CHAINS_BAND_MAX;
+	     band++) {
+		/* This API will change the global ini in mlme cfg */
+		sme_update_nss_in_mlme_cfg(mac_handle, rx_nss, tx_nss,
+					   adapter->device_mode, band);
+		/*
+		 * This API will change the vdev nss params in mac
+		 * context
+		 */
+		sme_update_vdev_type_nss(mac_handle, max_supp_nss,
+					 band);
+	}
+	/*
+	 * This API will change the ini and dynamic nss params in
+	 * mlme vdev priv obj.
+	 */
+	hdd_store_nss_chains_cfg_in_vdev(adapter);
+}
+
+static void hdd_set_sap_nss_params(struct hdd_context *hdd_ctx,
+				   struct hdd_adapter *adapter,
+				   mac_handle_t mac_handle,
+				   uint8_t tx_nss, uint8_t rx_nss)
+{
+	hdd_update_nss_in_vdev(adapter, mac_handle, tx_nss, rx_nss);
+	hdd_restart_sap(adapter);
+}
+
 QDF_STATUS hdd_update_nss(struct hdd_adapter *adapter, uint8_t tx_nss,
 			  uint8_t rx_nss)
 {
@@ -1138,7 +1173,7 @@ QDF_STATUS hdd_update_nss(struct hdd_adapter *adapter, uint8_t tx_nss,
 	uint8_t enable2x2;
 	mac_handle_t mac_handle;
 	bool bval = 0;
-	uint8_t band, max_supp_nss;
+	bool restart_sap = 0;
 
 	if ((tx_nss == 2 || rx_nss == 2) && (hdd_ctx->num_rf_chains != 2)) {
 		hdd_err("No support for 2 spatial streams");
@@ -1162,7 +1197,6 @@ QDF_STATUS hdd_update_nss(struct hdd_adapter *adapter, uint8_t tx_nss,
 		hdd_err("NULL MAC handle");
 		return QDF_STATUS_E_INVAL;
 	}
-	max_supp_nss = MAX_VDEV_NSS;
 
 	/*
 	 * If FW is supporting the dynamic nss update, this command is meant to
@@ -1170,6 +1204,23 @@ QDF_STATUS hdd_update_nss(struct hdd_adapter *adapter, uint8_t tx_nss,
 	 * and not the global param enable2x2
 	 */
 	if (hdd_ctx->dynamic_nss_chains_support) {
+		ucfg_mlme_get_restart_sap_on_dynamic_nss_chains_cfg(
+								hdd_ctx->psoc,
+								&restart_sap);
+		if ((adapter->device_mode == QDF_SAP_MODE ||
+		     adapter->device_mode == QDF_P2P_GO_MODE) && restart_sap) {
+			if ((tx_nss == 2 && rx_nss == 2) ||
+			    (tx_nss == 1 && rx_nss == 1)) {
+				hdd_set_sap_nss_params(hdd_ctx, adapter,
+						       mac_handle, tx_nss,
+						       rx_nss);
+				return QDF_STATUS_SUCCESS;
+			}
+			hdd_err("tx_nss %d rx_nss %d not supported ",
+				tx_nss, rx_nss);
+			return QDF_STATUS_E_FAILURE;
+		}
+
 		if (hdd_is_vdev_in_conn_state(adapter))
 			return hdd_set_nss_params(adapter, tx_nss, rx_nss);
 		hdd_debug("Vdev %d in disconnect state, changing ini nss params",
@@ -1179,23 +1230,7 @@ QDF_STATUS hdd_update_nss(struct hdd_adapter *adapter, uint8_t tx_nss,
 			return QDF_STATUS_SUCCESS;
 		}
 
-		for (band = NSS_CHAINS_BAND_2GHZ; band < NSS_CHAINS_BAND_MAX;
-		     band++) {
-			/* This API will change the global ini in mlme cfg */
-			sme_update_nss_in_mlme_cfg(mac_handle, rx_nss, tx_nss,
-						   adapter->device_mode, band);
-			/*
-			 * This API will change the vdev nss params in mac
-			 * context
-			 */
-			sme_update_vdev_type_nss(mac_handle, max_supp_nss,
-						 band);
-		}
-		/*
-		 * This API will change the ini and dynamic nss params in
-		 * mlme vdev priv obj.
-		 */
-		hdd_store_nss_chains_cfg_in_vdev(adapter);
+		hdd_update_nss_in_vdev(adapter, mac_handle, tx_nss, rx_nss);
 
 		return QDF_STATUS_SUCCESS;
 	}
@@ -1526,15 +1561,16 @@ static QDF_STATUS hdd_get_sap_rx_nss(struct hdd_adapter *adapter,
 }
 
 /**
- * hdd_get_sta_tx_nss() - get the sta tx nss
+ * hdd_get_sta_rx_nss() - get the sta rx nss
  * @hdd_ctx: Pointer to hdd context
  * @adapter: Pointer to adapter
  * @vdev: Pointer to vdev
- * @tx_nss: pointer to tx_nss
+ * @rx_nss: pointer to rx_nss
  *
- * get the STA tx nss
+ * get the STA rx nss
  *
- * Return: None
+ * Return: QDF_STATUS_SUCCESS if the RX NSS is returned, otherwise a suitable
+ *         QDF_STATUS_E_* error code
  */
 static QDF_STATUS hdd_get_sta_rx_nss(struct hdd_adapter *adapter,
 				     struct hdd_context *hdd_ctx,

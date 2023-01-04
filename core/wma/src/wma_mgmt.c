@@ -3475,7 +3475,7 @@ int wma_process_rmf_frame(tp_wma_handle wma_handle,
 				return -EINVAL;
 			}
 		} else {
-			wma_err("Rx unprotected unicast mgmt frame");
+			wma_err_rl("Rx unprotected unicast mgmt frame");
 			rx_pkt->pkt_meta.dpuFeedback =
 				DPU_FEEDBACK_UNPROTECTED_ERROR;
 		}
@@ -4169,5 +4169,21 @@ QDF_STATUS wma_mgmt_frame_fill_peer_cb(struct wlan_objmgr_peer *peer,
 	wlan_objmgr_pdev_release_ref(pdev, WLAN_LEGACY_WMA_ID);
 
 	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+wma_update_edca_pifs_param(WMA_HANDLE handle,
+			   struct edca_pifs_vparam *edca_pifs_param)
+{
+	tp_wma_handle wma_handle = (tp_wma_handle) handle;
+	QDF_STATUS status;
+
+	status = wmi_unified_update_edca_pifs_param(wma_handle->wmi_handle,
+						    edca_pifs_param);
+
+	if (QDF_IS_STATUS_ERROR(status))
+		wma_err("Failed to set EDCA/PIFS Parameters");
+
+	return status;
 }
 #endif

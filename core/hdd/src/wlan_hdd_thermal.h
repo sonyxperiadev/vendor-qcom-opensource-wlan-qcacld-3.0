@@ -30,19 +30,20 @@
 
 
 /**
- * enum hdd_thermal_states   - The various thermal states as supported by WLAN
- * @HDD_THERMAL_STATE_NONE   - The normal working state
- * @HDD_THERMAL_STATE_LIGHT  - Intermediate states, WLAN must perform partial
- *                             mitigation
- * @HDD_THERMAL_STATE_MODERATE - Intermediate states, WLAN must perform partial
- *                               mitigation
- * @HDD_THERMAL_STATE_SEVERE - Intermediate states, WLAN must perform partial
- *                             mitigation
- * @HDD_THERMAL_STATE_CRITICAL - Intermediate states, WLAN must perform partial
- *                               mitigation
- * @HDD_THERMAL_STATE_EMERGENCY - The highest state, WLAN must enter forced
- *                                IMPS and will disconnect any active STA
- *                                connection
+ * enum hdd_thermal_states - The various thermal states as supported by WLAN
+ * @HDD_THERMAL_STATE_NONE: The normal working state
+ * @HDD_THERMAL_STATE_LIGHT: Intermediate states, WLAN must perform partial
+ *                           mitigation
+ * @HDD_THERMAL_STATE_MODERATE: Intermediate states, WLAN must perform partial
+ *                              mitigation
+ * @HDD_THERMAL_STATE_SEVERE: Intermediate states, WLAN must perform partial
+ *                            mitigation
+ * @HDD_THERMAL_STATE_CRITICAL: Intermediate states, WLAN must perform partial
+ *                              mitigation
+ * @HDD_THERMAL_STATE_EMERGENCY: The highest state, WLAN must enter forced
+ *                               IMPS and will disconnect any active STA
+ *                               connection
+ * @HDD_THERMAL_STATE_INVAL: Placeholder for invalid/unknown state
  */
 enum hdd_thermal_states {
 	HDD_THERMAL_STATE_NONE = 0,

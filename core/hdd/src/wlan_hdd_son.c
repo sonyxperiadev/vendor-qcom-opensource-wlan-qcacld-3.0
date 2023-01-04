@@ -16,7 +16,7 @@
  */
 
 /**
- * DOC : contains son hdd API implementation
+ * DOC: contains son hdd API implementation
  */
 
 #include <qdf_types.h>
@@ -1114,7 +1114,7 @@ static uint32_t hdd_son_get_sta_space(struct wlan_objmgr_vdev *vdev)
 }
 
 /**
- * hdd_son_get_stalist() - get connected station list
+ * hdd_son_get_sta_list() - get connected station list
  * @vdev: vdev
  * @si: pointer to ieee80211req_sta_info
  * @space: space left
@@ -1408,7 +1408,7 @@ static int hdd_son_del_acl_mac(struct wlan_objmgr_vdev *vdev,
 /**
  * hdd_son_kickout_mac() - kickout sta with given mac
  * @vdev: vdev
- * @acl_mac: sta mac to kickout
+ * @mac: sta mac to kickout
  *
  * Return: 0 on success, negative errno on failure
  */
@@ -2519,7 +2519,7 @@ uint32_t hdd_son_get_peer_max_mcs_idx(struct wlan_objmgr_vdev *vdev,
 }
 
 /**
- * hdd_son_sta_stats() - get connected sta rssi and estimated data rate
+ * hdd_son_get_sta_stats() - get connected sta rssi and estimated data rate
  * @vdev: pointer to vdev
  * @mac_addr: connected sta mac addr
  * @stats: pointer to ieee80211_nodestats

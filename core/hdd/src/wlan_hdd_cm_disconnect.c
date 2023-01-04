@@ -354,7 +354,7 @@ hdd_cm_disconnect_complete_pre_user_update(struct wlan_objmgr_vdev *vdev,
 			   rsp->req.cm_id,
 			   rsp->req.req.reason_code << 16 |
 			   rsp->req.req.source);
-	hdd_ipa_set_tx_flow_info();
+	wlan_hdd_set_tx_flow_info();
 	/*
 	 * Convert and cache internal reason code in adapter. This can be
 	 * sent to userspace with a vendor event.

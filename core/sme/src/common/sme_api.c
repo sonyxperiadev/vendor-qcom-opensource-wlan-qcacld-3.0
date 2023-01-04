@@ -1156,34 +1156,6 @@ sme_register_bcn_report_pe_cb(mac_handle_t mac_handle, beacon_report_cb cb)
 }
 #endif
 
-QDF_STATUS sme_get_valid_channels(uint32_t *ch_freq_list, uint32_t *list_len)
-{
-	struct mac_context *mac_ctx = sme_get_mac_context();
-	uint32_t num_valid_chan;
-	uint8_t i;
-
-	if (!mac_ctx) {
-		sme_err("Invalid MAC context");
-		*list_len = 0;
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	num_valid_chan = mac_ctx->mlme_cfg->reg.valid_channel_list_num;
-
-	if (num_valid_chan > *list_len) {
-		sme_err("list len size %d less than expected %d", *list_len,
-			num_valid_chan);
-		num_valid_chan = *list_len;
-	}
-	*list_len = num_valid_chan;
-	for (i = 0; i < *list_len; i++) {
-		ch_freq_list[i] =
-			mac_ctx->mlme_cfg->reg.valid_channel_freq_list[i];
-	}
-
-	return QDF_STATUS_SUCCESS;
-}
-
 #ifdef WLAN_CONV_SPECTRAL_ENABLE
 static QDF_STATUS sme_register_spectral_cb(struct mac_context *mac_ctx)
 {
@@ -4767,6 +4739,9 @@ QDF_STATUS sme_vdev_post_vdev_create_setup(mac_handle_t mac_handle,
 		goto cleanup_wma;
 	}
 
+	wlan_vdev_set_dot11mode(mac_ctx->mlme_cfg, vdev->vdev_mlme.vdev_opmode,
+				vdev_mlme);
+
 	status = mlme_vdev_self_peer_create(vdev);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		sme_err("Failed to create vdev selfpeer for vdev:%d", vdev_id);
@@ -6097,23 +6072,6 @@ QDF_STATUS sme_ext_change_freq(mac_handle_t mac_handle, qdf_freq_t ch_freq,
 	return status;
 }
 
-/*
- * sme_get_roam_intra_band() -
- * get Intra band roaming
- *
- * mac_handle: Opaque handle to the global MAC context
- * Return Success or failure
- */
-bool sme_get_roam_intra_band(mac_handle_t mac_handle)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-
-	MTRACE(qdf_trace(QDF_MODULE_ID_SME,
-			 TRACE_CODE_SME_RX_HDD_GET_ROAMIBAND, NO_SESSION, 0));
-
-	return mac->mlme_cfg->lfr.roam_intra_band;
-}
-
 QDF_STATUS sme_get_roam_scan_n_probes(mac_handle_t mac_handle, uint8_t vdev_id,
 				      uint8_t *roam_scan_n_probes)
 {
@@ -6122,19 +6080,6 @@ QDF_STATUS sme_get_roam_scan_n_probes(mac_handle_t mac_handle, uint8_t vdev_id,
 
 	wlan_cm_roam_cfg_get_value(mac->psoc, vdev_id, SCAN_N_PROBE, &temp);
 	*roam_scan_n_probes = temp.uint_value;
-
-	return QDF_STATUS_SUCCESS;
-}
-
-QDF_STATUS sme_get_roam_scan_home_away_time(mac_handle_t mac_handle,
-					    uint8_t vdev_id,
-					    uint16_t *roam_scan_home_away_time)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-	struct cm_roam_values_copy temp;
-
-	wlan_cm_roam_cfg_get_value(mac->psoc, vdev_id, SCAN_HOME_AWAY, &temp);
-	*roam_scan_home_away_time = temp.uint_value;
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -6513,21 +6458,6 @@ QDF_STATUS sme_set_roam_opportunistic_scan_threshold_diff(
 }
 
 /*
- * sme_get_roam_opportunistic_scan_threshold_diff()
- * gets Opportunistic Scan threshold diff
- * This is a synchronous call
- *
- * mac_handle - The handle returned by mac_open
- * Return uint8_t - nOpportunisticThresholdDiff
- */
-uint8_t sme_get_roam_opportunistic_scan_threshold_diff(mac_handle_t mac_handle)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-
-	return mac->mlme_cfg->lfr.opportunistic_scan_threshold_diff;
-}
-
-/*
  * sme_set_roam_rescan_rssi_diff() - Update roam rescan rssi diff
  * This function is called through dynamic setConfig callback function
  * to configure  nRoamRescanRssiDiff
@@ -6558,21 +6488,6 @@ QDF_STATUS sme_set_roam_rescan_rssi_diff(mac_handle_t mac_handle,
 		sme_release_global_lock(&mac->sme);
 	}
 	return status;
-}
-
-/*
- * sme_get_roam_rescan_rssi_diff()
- * gets roam rescan rssi diff
- *	  This is a synchronous call
- *
- * mac_handle - The handle returned by mac_open
- * Return int8_t - nRoamRescanRssiDiff
- */
-uint8_t sme_get_roam_rescan_rssi_diff(mac_handle_t mac_handle)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-
-	return mac->mlme_cfg->lfr.roam_rescan_rssi_diff;
 }
 
 /*
@@ -6664,20 +6579,6 @@ sme_set_neighbor_lookup_rssi_threshold(mac_handle_t mac_handle,
 	return status;
 }
 
-QDF_STATUS sme_get_neighbor_lookup_rssi_threshold(mac_handle_t mac_handle,
-						  uint8_t vdev_id,
-						  uint8_t *lookup_threshold)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-	struct cm_roam_values_copy temp;
-
-	wlan_cm_roam_cfg_get_value(mac->psoc, vdev_id,
-				   NEIGHBOUR_LOOKUP_THRESHOLD, &temp);
-	*lookup_threshold = temp.uint_value;
-
-	return QDF_STATUS_SUCCESS;
-}
-
 /*
  * sme_set_neighbor_scan_refresh_period() - set neighbor scan results
  *	refresh period
@@ -6698,42 +6599,6 @@ QDF_STATUS sme_set_neighbor_scan_refresh_period(mac_handle_t mac_handle,
 	return wlan_cm_roam_cfg_set_value(mac->psoc, sessionId,
 					  NEIGHBOUR_SCAN_REFRESH_PERIOD,
 					  &src_config);
-}
-
-/*
- * sme_get_neighbor_scan_refresh_period() - get neighbor scan results
- *	refresh period
- *  This is a synchronous call
- *
- *  \param mac_handle - The handle returned by mac_open.
- *  \return uint16_t - Neighbor scan results refresh period value
- */
-uint16_t sme_get_neighbor_scan_refresh_period(mac_handle_t mac_handle)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-
-	return mac->mlme_cfg->lfr.neighbor_scan_results_refresh_period;
-}
-
-uint16_t sme_get_empty_scan_refresh_period_global(mac_handle_t mac_handle)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-
-	return mac->mlme_cfg->lfr.empty_scan_refresh_period;
-}
-
-QDF_STATUS sme_get_empty_scan_refresh_period(mac_handle_t mac_handle,
-					     uint8_t vdev_id,
-					     uint16_t *refresh_threshold)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-	struct cm_roam_values_copy temp;
-
-	wlan_cm_roam_cfg_get_value(mac->psoc, vdev_id,
-				   EMPTY_SCAN_REFRESH_PERIOD, &temp);
-	*refresh_threshold = temp.uint_value;
-
-	return QDF_STATUS_SUCCESS;
 }
 
 /*
@@ -6854,25 +6719,6 @@ QDF_STATUS sme_set_neighbor_scan_max_chan_time(mac_handle_t mac_handle,
 }
 
 /*
- * sme_get_neighbor_scan_min_chan_time() -
- * get neighbor scan min channel time
- *
- * mac_handle - The handle returned by mac_open.
- * sessionId - Session Identifier
- * Return uint16_t - channel min time value
- */
-uint16_t sme_get_neighbor_scan_min_chan_time(mac_handle_t mac_handle,
-					     uint8_t sessionId)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-	struct cm_roam_values_copy temp;
-
-	wlan_cm_roam_cfg_get_value(mac->psoc, sessionId,
-				   SCAN_MIN_CHAN_TIME, &temp);
-	return temp.uint_value;
-}
-
-/*
  * sme_get_current_roam_state() -
  * get current roam state
  *
@@ -6982,26 +6828,6 @@ uint32_t sme_get_lim_mlm_session_state(mac_handle_t mac_handle,
 }
 
 /*
- * sme_get_neighbor_scan_max_chan_time() -
- *   get neighbor scan max channel time
- *
- * mac_handle - The handle returned by mac_open.
- * sessionId - Session Identifier
- * Return uint16_t - channel max time value
- */
-uint16_t sme_get_neighbor_scan_max_chan_time(mac_handle_t mac_handle,
-					     uint8_t sessionId)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-	struct cm_roam_values_copy temp;
-
-	wlan_cm_roam_cfg_get_value(mac->psoc, sessionId,
-				   SCAN_MAX_CHAN_TIME, &temp);
-	return temp.uint_value;
-
-}
-
-/*
  * sme_set_neighbor_scan_period() -
  *  Update nNeighborScanPeriod
  *	    This function is called through dynamic setConfig callback function
@@ -7025,38 +6851,6 @@ QDF_STATUS sme_set_neighbor_scan_period(mac_handle_t mac_handle,
 	return wlan_cm_roam_cfg_set_value(mac->psoc, sessionId,
 					  NEIGHBOR_SCAN_PERIOD,
 					  &src_config);
-}
-
-/*
- * sme_get_neighbor_scan_period() -
- *   get neighbor scan period
- *
- * mac_handle - The handle returned by mac_open.
- * sessionId - Session Identifier
- * Return uint16_t - neighbor scan period
- */
-uint16_t sme_get_neighbor_scan_period(mac_handle_t mac_handle,
-				      uint8_t sessionId)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-	struct cm_roam_values_copy temp;
-
-	wlan_cm_roam_cfg_get_value(mac->psoc, sessionId,
-				   NEIGHBOR_SCAN_PERIOD, &temp);
-	return temp.uint_value;
-}
-
-QDF_STATUS sme_get_roam_rssi_diff(mac_handle_t mac_handle, uint8_t vdev_id,
-				  uint8_t *rssi_diff)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-	struct cm_roam_values_copy temp;
-
-	wlan_cm_roam_cfg_get_value(mac->psoc, vdev_id,
-				   ROAM_RSSI_DIFF, &temp);
-	*rssi_diff = temp.uint_value;
-
-	return QDF_STATUS_SUCCESS;
 }
 
 static bool sme_validate_freq_list(mac_handle_t mac_handle,
@@ -7223,68 +7017,6 @@ QDF_STATUS sme_get_roam_scan_channel_list(mac_handle_t mac_handle,
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
 	sme_release_global_lock(&mac->sme);
 	return status;
-}
-
-/*
- * sme_get_is_ese_feature_enabled() - get ESE feature enabled or not
- *  This is a synchronous call
- *
- * mac_handle - The handle returned by mac_open.
- * Return true (1) - if the ESE feature is enabled
- *	  false (0) - if feature is disabled (compile or runtime)
- */
-bool sme_get_is_ese_feature_enabled(mac_handle_t mac_handle)
-{
-#ifdef FEATURE_WLAN_ESE
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-
-	return csr_roam_is_ese_ini_feature_enabled(mac);
-#else
-	return false;
-#endif
-}
-
-/*
- * sme_get_wes_mode() - get WES Mode
- *  This is a synchronous call
- *
- * mac_handle - The handle returned by mac_open
- * Return uint8_t - WES Mode Enabled(1)/Disabled(0)
- */
-bool sme_get_wes_mode(mac_handle_t mac_handle)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-
-	return mac->mlme_cfg->lfr.wes_mode_enabled;
-}
-
-/*
- * sme_get_is_lfr_feature_enabled() - get LFR feature enabled or not
- *  This is a synchronous call
- * mac_handle - The handle returned by mac_open.
- * Return true (1) - if the feature is enabled
- *	  false (0) - if feature is disabled (compile or runtime)
- */
-bool sme_get_is_lfr_feature_enabled(mac_handle_t mac_handle)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-
-	return mac->mlme_cfg->lfr.lfr_enabled;
-}
-
-/*
- * sme_get_is_ft_feature_enabled() - get FT feature enabled or not
- *  This is a synchronous call
- *
- * mac_handle - The handle returned by mac_open.
- * Return true (1) - if the feature is enabled
- *	   false (0) - if feature is disabled (compile or runtime)
- */
-bool sme_get_is_ft_feature_enabled(mac_handle_t mac_handle)
-{
-	struct mac_context *mac = MAC_CONTEXT(mac_handle);
-
-	return mac->mlme_cfg->lfr.fast_transition_enabled;
 }
 
 /**
@@ -9080,6 +8812,7 @@ QDF_STATUS sme_update_dsc_pto_up_mapping(mac_handle_t mac_handle,
 	uint8_t i, j;
 	struct csr_roam_session *pCsrSession = NULL;
 	struct pe_session *pSession = NULL;
+	struct qos_map_set *pqosmapset;
 
 	pCsrSession = CSR_GET_SESSION(mac, sessionId);
 	if (!pCsrSession) {
@@ -9098,21 +8831,23 @@ QDF_STATUS sme_update_dsc_pto_up_mapping(mac_handle_t mac_handle,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	if (!pSession->QosMapSet.present) {
+	pqosmapset = &pSession->QosMapSet;
+	if (!pqosmapset->present) {
 		sme_debug("QOS Mapping IE not present");
 		return QDF_STATUS_E_FAILURE;
 	}
 
 	for (i = 0; i < SME_QOS_WMM_UP_MAX; i++) {
-		for (j = pSession->QosMapSet.dscp_range[i][0];
-			j <= pSession->QosMapSet.dscp_range[i][1] &&
-			j <= WLAN_MAX_DSCP; j++)
-				dscpmapping[j] = i;
+		for (j = pqosmapset->dscp_range[i][0];
+		     j <= pqosmapset->dscp_range[i][1] && j <= WLAN_MAX_DSCP;
+		     j++)
+			dscpmapping[j] = i;
 	}
-	for (i = 0; i < pSession->QosMapSet.num_dscp_exceptions; i++)
-		if (pSession->QosMapSet.dscp_exceptions[i][0] <= WLAN_MAX_DSCP)
-			dscpmapping[pSession->QosMapSet.dscp_exceptions[i][0]] =
-				pSession->QosMapSet.dscp_exceptions[i][1];
+	for (i = 0; i < pqosmapset->num_dscp_exceptions; i++)
+		if (pqosmapset->dscp_exceptions[i][0] <= WLAN_MAX_DSCP &&
+		    pqosmapset->dscp_exceptions[i][1] < SME_QOS_WMM_UP_MAX)
+			dscpmapping[pqosmapset->dscp_exceptions[i][0]] =
+					pqosmapset->dscp_exceptions[i][1];
 
 	return status;
 }
@@ -12612,7 +12347,7 @@ void sme_set_vdev_ies_per_band(mac_handle_t mac_handle, uint8_t vdev_id,
 
 	p_msg->vdev_id = vdev_id;
 	p_msg->device_mode = device_mode;
-	p_msg->dot11_mode = csr_get_vdev_dot11_mode(mac_ctx, device_mode,
+	p_msg->dot11_mode = csr_get_vdev_dot11_mode(mac_ctx, vdev_id,
 						    curr_dot11_mode);
 	p_msg->msg_type = eWNI_SME_SET_VDEV_IES_PER_BAND;
 	p_msg->len = sizeof(*p_msg);
@@ -12784,6 +12519,30 @@ QDF_STATUS sme_set_he_bss_color(mac_handle_t mac_handle, uint8_t session_id,
 	bss_color_msg->vdev_id = session_id;
 	bss_color_msg->bss_color = bss_color;
 	return umac_send_mb_message_to_mac(bss_color_msg);
+}
+
+QDF_STATUS sme_reconfig_obss_scan_param(mac_handle_t mac_handle,
+					uint8_t session_id,
+					bool is_scan_reconfig)
+{
+	struct sir_cfg_obss_scan *obss_scan_msg;
+	uint8_t len;
+
+	if (!mac_handle) {
+		sme_err("Invalid mac_handle pointer");
+		return QDF_STATUS_E_FAULT;
+	}
+
+	len = sizeof(*obss_scan_msg);
+	obss_scan_msg = qdf_mem_malloc(len);
+	if (!obss_scan_msg)
+		return QDF_STATUS_E_NOMEM;
+
+	obss_scan_msg->message_type = eWNI_SME_RECONFIG_OBSS_SCAN_PARAM;
+	obss_scan_msg->length = len;
+	obss_scan_msg->vdev_id = session_id;
+	obss_scan_msg->is_scan_reconfig = is_scan_reconfig;
+	return umac_send_mb_message_to_mac(obss_scan_msg);
 }
 #endif
 

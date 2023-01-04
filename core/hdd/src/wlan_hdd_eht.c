@@ -16,7 +16,7 @@
  */
 
 /**
- * DOC : wlan_hdd_eht.c
+ * DOC: wlan_hdd_eht.c
  *
  * WLAN Host Device Driver file for 802.11be (Extremely High Throughput)
  * support.
@@ -112,6 +112,8 @@ hdd_update_wiphy_eht_caps_6ghz(struct hdd_context *hdd_ctx,
 		   hdd_ctx->wiphy->bands[HDD_NL80211_BAND_6GHZ];
 	uint8_t *phy_info =
 		    hdd_ctx->iftype_data_6g->eht_cap.eht_cap_elem.phy_cap_info;
+	struct ieee80211_sband_iftype_data *iftype_sta;
+	struct ieee80211_sband_iftype_data *iftype_ap;
 
 	if (!band_6g || !phy_info) {
 		hdd_debug("6ghz not supported in wiphy");
@@ -120,14 +122,18 @@ hdd_update_wiphy_eht_caps_6ghz(struct hdd_context *hdd_ctx,
 
 	hdd_ctx->iftype_data_6g->types_mask =
 		(BIT(NL80211_IFTYPE_STATION) | BIT(NL80211_IFTYPE_AP));
-	band_6g->n_iftype_data = 1;
+	band_6g->n_iftype_data = EHT_OPMODE_SUPPORTED;
 	band_6g->iftype_data = hdd_ctx->iftype_data_6g;
+	iftype_sta = hdd_ctx->iftype_data_6g;
+	iftype_ap = hdd_ctx->iftype_data_6g + 1;
+
 
 	hdd_ctx->iftype_data_6g->eht_cap.has_eht = eht_cap.present;
 	if (hdd_ctx->iftype_data_6g->eht_cap.has_eht &&
 	    !hdd_ctx->iftype_data_6g->he_cap.has_he) {
 		hdd_debug("6 GHz HE caps not present");
 		hdd_ctx->iftype_data_6g->eht_cap.has_eht = false;
+		band_6g->n_iftype_data = 1;
 		return;
 	}
 
@@ -139,6 +145,12 @@ hdd_update_wiphy_eht_caps_6ghz(struct hdd_context *hdd_ctx,
 
 	if (eht_cap.su_beamformee)
 		phy_info[0] |= IEEE80211_EHT_PHY_CAP0_SU_BEAMFORMEE;
+
+	qdf_mem_copy(iftype_ap, hdd_ctx->iftype_data_6g,
+		     sizeof(struct ieee80211_supported_band));
+
+	iftype_sta->types_mask = BIT(NL80211_IFTYPE_STATION);
+	iftype_ap->types_mask = BIT(NL80211_IFTYPE_AP);
 }
 
 #ifdef CFG80211_RU_PUNCT_SUPPORT
@@ -171,6 +183,8 @@ void hdd_update_wiphy_eht_cap(struct hdd_context *hdd_ctx)
 	uint8_t *phy_info_2g =
 		    hdd_ctx->iftype_data_2g->eht_cap.eht_cap_elem.phy_cap_info;
 	bool eht_capab;
+	struct ieee80211_sband_iftype_data *iftype_sta;
+	struct ieee80211_sband_iftype_data *iftype_ap;
 
 	hdd_enter();
 
@@ -186,9 +200,11 @@ void hdd_update_wiphy_eht_cap(struct hdd_context *hdd_ctx)
 		hdd_update_wiphy_punct_support(hdd_ctx);
 
 	if (band_2g) {
+		iftype_sta = hdd_ctx->iftype_data_2g;
+		iftype_ap = hdd_ctx->iftype_data_2g + 1;
 		hdd_ctx->iftype_data_2g->types_mask =
 			(BIT(NL80211_IFTYPE_STATION) | BIT(NL80211_IFTYPE_AP));
-		band_2g->n_iftype_data = 1;
+		band_2g->n_iftype_data = EHT_OPMODE_SUPPORTED;
 		band_2g->iftype_data = hdd_ctx->iftype_data_2g;
 
 		hdd_ctx->iftype_data_2g->eht_cap.has_eht = eht_cap_cfg.present;
@@ -196,6 +212,7 @@ void hdd_update_wiphy_eht_cap(struct hdd_context *hdd_ctx)
 		    !hdd_ctx->iftype_data_2g->he_cap.has_he) {
 			hdd_debug("2.4 GHz HE caps not present");
 			hdd_ctx->iftype_data_2g->eht_cap.has_eht = false;
+			band_2g->n_iftype_data = 1;
 			goto band_5ghz;
 		}
 
@@ -204,13 +221,21 @@ void hdd_update_wiphy_eht_cap(struct hdd_context *hdd_ctx)
 
 		if (eht_cap_cfg.su_beamformee)
 			phy_info_2g[0] |= IEEE80211_EHT_PHY_CAP0_SU_BEAMFORMEE;
+
+		qdf_mem_copy(iftype_ap, hdd_ctx->iftype_data_2g,
+			     sizeof(struct ieee80211_supported_band));
+
+		iftype_sta->types_mask = BIT(NL80211_IFTYPE_STATION);
+		iftype_ap->types_mask = BIT(NL80211_IFTYPE_AP);
 	}
 
 band_5ghz:
 	if (band_5g) {
+		iftype_sta = hdd_ctx->iftype_data_5g;
+		iftype_ap = hdd_ctx->iftype_data_5g + 1;
 		hdd_ctx->iftype_data_5g->types_mask =
 			(BIT(NL80211_IFTYPE_STATION) | BIT(NL80211_IFTYPE_AP));
-		band_5g->n_iftype_data = 1;
+		band_5g->n_iftype_data = EHT_OPMODE_SUPPORTED;
 		band_5g->iftype_data = hdd_ctx->iftype_data_5g;
 
 		hdd_ctx->iftype_data_5g->eht_cap.has_eht = eht_cap_cfg.present;
@@ -218,6 +243,7 @@ band_5ghz:
 		    !hdd_ctx->iftype_data_5g->he_cap.has_he) {
 			hdd_debug("5 GHz HE caps not present");
 			hdd_ctx->iftype_data_5g->eht_cap.has_eht = false;
+			band_5g->n_iftype_data = 1;
 			goto band_6ghz;
 		}
 
@@ -226,6 +252,12 @@ band_5ghz:
 
 		if (eht_cap_cfg.su_beamformee)
 			phy_info_5g[0] |= IEEE80211_EHT_PHY_CAP0_SU_BEAMFORMEE;
+
+		qdf_mem_copy(iftype_ap, hdd_ctx->iftype_data_5g,
+			     sizeof(struct ieee80211_supported_band));
+
+		iftype_sta->types_mask = BIT(NL80211_IFTYPE_STATION);
+		iftype_ap->types_mask = BIT(NL80211_IFTYPE_AP);
 	}
 
 band_6ghz:

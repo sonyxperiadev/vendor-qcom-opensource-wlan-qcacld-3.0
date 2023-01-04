@@ -17,7 +17,7 @@
  */
 
 /**
- * DOC : osif_dp_lro.h
+ * DOC: osif_dp_lro.h
  *
  * WLAN Host Device Driver file for DP LRO support.
  *
@@ -32,7 +32,7 @@
 #if defined(FEATURE_LRO)
 /**
  * osif_dp_lro_rx() - Handle Rx processing via LRO
- * @vdev: Vdev obj mgr
+ * @dev: netdev
  * @nbuf: network buffer
  *
  * Return: QDF_STATUS_SUCCESS if processed via LRO or non zero return code

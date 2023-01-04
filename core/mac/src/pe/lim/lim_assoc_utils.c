@@ -3347,8 +3347,8 @@ lim_check_and_announce_join_success(struct mac_context *mac_ctx,
 					&aid,
 					&session_entry->dph.dphHashTable);
 
-	if (QDF_IS_STATUS_SUCCESS(lim_update_srp_ie(beacon_probe_rsp,
-						    sta_ds))) {
+	if (sta_ds && QDF_IS_STATUS_SUCCESS(lim_update_srp_ie(beacon_probe_rsp,
+							      sta_ds))) {
 		/* update the SR parameters */
 		lim_update_vdev_sr_elements(session_entry, sta_ds);
 		/* TODO: Need to send SRP IE update event to userspace */
@@ -4680,3 +4680,14 @@ void lim_extract_ies_from_deauth_disassoc(struct pe_session *session,
 	mlme_set_peer_disconnect_ies(session->vdev, &ie);
 }
 
+uint8_t *lim_get_src_addr_from_frame(struct element_info *frame)
+{
+	struct wlan_frame_hdr *hdr;
+
+	if (!frame || !frame->len || frame->len < WLAN_MAC_HDR_LEN_3A)
+		return NULL;
+
+	hdr = (struct wlan_frame_hdr *)frame->ptr;
+
+	return hdr->i_addr2;
+}

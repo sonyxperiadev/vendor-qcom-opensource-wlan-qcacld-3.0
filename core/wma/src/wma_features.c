@@ -75,6 +75,7 @@
 #include "cdp_txrx_host_stats.h"
 #include "target_if_cm_roam_event.h"
 #include <wlan_mlo_mgr_cmn.h>
+#include "hif.h"
 
 /**
  * WMA_SET_VDEV_IE_SOURCE_HOST - Flag to identify the source of VDEV SET IE
@@ -762,7 +763,7 @@ QDF_STATUS wma_sr_update(tp_wma_handle wma, uint8_t vdev_id, bool enable)
 		} else {
 			/* VDEV down, disable SR */
 			wlan_vdev_mlme_set_sr_ctrl(vdev, 0);
-			wlan_vdev_mlme_set_pd_offset(vdev, 0);
+			wlan_vdev_mlme_set_non_srg_pd_offset(vdev, 0);
 		}
 
 		wma_debug("SR param val: %x, Enable: %x", val, enable);
@@ -2040,16 +2041,13 @@ static int wow_get_wmi_eventid(int32_t reason, uint32_t tag)
 		event_id = wma_ndp_get_eventid_from_tlvtag(tag);
 		break;
 	case WOW_REASON_TDLS_CONN_TRACKER_EVENT:
-		event_id = WOW_TDLS_CONN_TRACKER_EVENT;
+		event_id = WMI_TDLS_PEER_EVENTID;
 		break;
 	case WOW_REASON_ROAM_HO:
 		event_id = WMI_ROAM_EVENTID;
 		break;
 	case WOW_REASON_11D_SCAN:
 		event_id = WMI_11D_NEW_COUNTRY_EVENTID;
-		break;
-	case WOW_ROAM_PREAUTH_START_EVENT:
-		event_id = WMI_ROAM_PREAUTH_STATUS_CMDID;
 		break;
 	case WOW_REASON_ROAM_PMKID_REQUEST:
 		event_id = WMI_ROAM_PMKID_REQUEST_EVENTID;
@@ -3078,6 +3076,9 @@ int wma_wow_wakeup_host_event(void *handle, uint8_t *event, uint32_t len)
 	}
 
 	wma_wake_event_log_reason(wma, wake_info);
+
+	if (wake_info->wake_reason == WOW_REASON_LOCAL_DATA_UC_DROP)
+		hif_rtpm_set_autosuspend_delay(WOW_LARGE_RX_RTPM_DELAY);
 
 	ucfg_pmo_psoc_wakeup_host_event_received(wma->psoc);
 

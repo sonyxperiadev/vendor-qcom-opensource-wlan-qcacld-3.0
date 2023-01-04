@@ -32,7 +32,7 @@
 /**
  * wlan_hdd_cm_connect() - cfg80211 connect api
  * @wiphy: Pointer to wiphy
- * @dev: Pointer to network device
+ * @ndev: Pointer to network device
  * @req: Pointer to cfg80211 connect request
  *
  * This function is used to issue connect request to connection manager
@@ -105,7 +105,7 @@ QDF_STATUS hdd_cm_send_vdev_keys(struct wlan_objmgr_vdev *vdev,
 /**
  * hdd_cm_get_vendor_handoff_params() - to get vendor handoff params from fw
  * @psoc: Pointer to psoc object
- * @event_data: Pointer to vendor handoff event rsp
+ * @vendor_handoff_context: Pointer to vendor handoff event rsp
  *
  * Return: QDF_STATUS
  */
@@ -115,7 +115,7 @@ hdd_cm_get_vendor_handoff_params(struct wlan_objmgr_psoc *psoc,
 
 /**
  * hdd_cm_get_handoff_param() - send get vendor handoff param request to fw
- * @pdev: pdev common object
+ * @psoc: psoc common object
  * @hdd_adapter: adapter context
  * @vdev_id: vdev id
  * @param_id: Param ID from enum WMI_ROAM_GET_VENDOR_CONTROL_PARAM_ID

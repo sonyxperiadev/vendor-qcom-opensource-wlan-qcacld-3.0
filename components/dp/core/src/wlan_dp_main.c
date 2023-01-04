@@ -29,11 +29,13 @@
 #include <wlan_nlink_common.h>
 #include <qdf_net_types.h>
 #include "wlan_objmgr_vdev_obj.h"
-#include <wlan_cm_ucfg_api.h>
+#include "wlan_cm_api.h"
 #include "wlan_dp_nud_tracking.h"
 #include "target_if_dp_comp.h"
 #include "wlan_dp_txrx.h"
-
+#include "init_deinit_lmac.h"
+#include <hif.h>
+#include <htc_api.h>
 #ifdef FEATURE_DIRECT_LINK
 #include "dp_internal.h"
 #endif
@@ -670,7 +672,7 @@ __dp_process_mic_error(struct wlan_dp_intf *dp_intf)
 
 	if ((dp_intf->device_mode == QDF_STA_MODE ||
 	     dp_intf->device_mode == QDF_P2P_CLIENT_MODE) &&
-	    ucfg_cm_is_vdev_active(vdev))
+	    wlan_cm_is_vdev_active(vdev))
 		ops->osif_dp_process_mic_error(dp_intf->mic_work.info,
 						   vdev);
 	else if (dp_intf->device_mode == QDF_SAP_MODE ||
@@ -1693,6 +1695,14 @@ QDF_STATUS dp_direct_link_init(struct wlan_dp_psoc_context *dp_ctx)
 		return status;
 	}
 
+	status = dp_wfds_init(dp_direct_link_ctx);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		dp_err("Failed to initialize QMI for Direct Link");
+		dp_direct_link_refill_ring_deinit(dp_ctx->dp_direct_link_ctx);
+		qdf_mem_free(dp_direct_link_ctx);
+		return status;
+	}
+
 	dp_ctx->dp_direct_link_ctx = dp_direct_link_ctx;
 
 	return status;
@@ -1706,9 +1716,63 @@ void dp_direct_link_deinit(struct wlan_dp_psoc_context *dp_ctx)
 	if (!dp_ctx->dp_direct_link_ctx)
 		return;
 
+	dp_wfds_deinit(dp_ctx->dp_direct_link_ctx);
 	dp_direct_link_refill_ring_deinit(dp_ctx->dp_direct_link_ctx);
 
 	qdf_mem_free(dp_ctx->dp_direct_link_ctx);
 	dp_ctx->dp_direct_link_ctx = NULL;
+}
+
+QDF_STATUS dp_config_direct_link(struct wlan_dp_intf *dp_intf,
+				 bool config_direct_link,
+				 bool enable_low_latency)
+{
+	struct wlan_dp_psoc_context *dp_ctx = dp_intf->dp_ctx;
+	struct direct_link_info *config = &dp_intf->direct_link_config;
+	void *htc_handle;
+	bool prev_ll, update_ll;
+
+	if (!dp_ctx || !dp_ctx->psoc) {
+		dp_err("DP Handle is NULL");
+		return QDF_STATUS_E_CANCELED;
+	}
+
+	if (!dp_ctx->dp_direct_link_ctx) {
+		dp_err("Direct link not enabled");
+		return QDF_STATUS_E_NOSUPPORT;
+	}
+
+	htc_handle = lmac_get_htc_hdl(dp_ctx->psoc);
+	if (!htc_handle) {
+		dp_err("HTC handle is NULL");
+		return QDF_STATUS_E_EMPTY;
+	}
+
+	qdf_spin_lock(&dp_intf->vdev_lock);
+	prev_ll = config->low_latency;
+	update_ll = config_direct_link ? enable_low_latency : prev_ll;
+	config->config_set = config_direct_link;
+	config->low_latency = enable_low_latency;
+	qdf_spin_unlock(&dp_intf->vdev_lock);
+
+	if (config_direct_link) {
+		htc_vote_link_up(htc_handle, HTC_LINK_VOTE_SAP_USER_ID);
+		if (update_ll)
+			hif_prevent_link_low_power_states(
+						htc_get_hif_device(htc_handle));
+		else if (prev_ll)
+			hif_allow_link_low_power_states(
+						htc_get_hif_device(htc_handle));
+		dp_info("Direct link config set. Low link latency enabled: %d",
+			enable_low_latency);
+	} else {
+		htc_vote_link_down(htc_handle, HTC_LINK_VOTE_SAP_USER_ID);
+		if (update_ll)
+			hif_allow_link_low_power_states(
+						htc_get_hif_device(htc_handle));
+		dp_info("Direct link config cleared.");
+	}
+
+	return QDF_STATUS_SUCCESS;
 }
 #endif

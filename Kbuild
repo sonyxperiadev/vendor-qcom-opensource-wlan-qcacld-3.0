@@ -1379,6 +1379,7 @@ UMAC_MLO_MGR_OBJS := $(UMAC_MLO_MGR_CMN_DIR)/src/wlan_mlo_mgr_main.o \
 			  $(MLO_MGR_TARGET_IF_DIR)/src/target_if_mlo_mgr.o \
 			  $(UMAC_MLO_MGR_CLD_DIR)/src/wlan_mlo_mgr_roam.o \
 			  $(UMAC_MLO_MGR_CLD_DIR)/src/wlan_t2lm_api.o \
+			  $(UMAC_MLO_MGR_CMN_DIR)/src/wlan_mlo_t2lm.o \
 
 $(call add-wlan-objs,umac_mlomgr,$(UMAC_MLO_MGR_OBJS))
 endif
@@ -2119,21 +2120,6 @@ endif #LITHIUM/BERYLLIUM
 
 $(call add-wlan-objs,txrx,$(TXRX_OBJS))
 
-############ TXRX 3.0 ############
-TXRX3.0_DIR :=     core/dp/txrx3.0
-TXRX3.0_INC :=     -I$(WLAN_ROOT)/$(TXRX3.0_DIR)
-
-ifeq (y,$(filter y,$(CONFIG_LITHIUM) $(CONFIG_BERYLLIUM)))
-TXRX3.0_OBJS := $(TXRX3.0_DIR)/dp_txrx.o
-
-ifeq ($(CONFIG_WLAN_FEATURE_DP_RX_THREADS), y)
-TXRX3.0_OBJS += $(TXRX3.0_DIR)/dp_rx_thread.o
-endif
-
-endif #LITHIUM
-
-$(call add-wlan-objs,txrx30,$(TXRX3.0_OBJS))
-
 ifeq (y,$(filter y,$(CONFIG_LITHIUM) $(CONFIG_BERYLLIUM)))
 ############ DP 3.0 ############
 DP_INC := -I$(WLAN_COMMON_INC)/dp/inc \
@@ -2298,6 +2284,7 @@ REG_CORE_OBJ_DIR := $(WLAN_COMMON_ROOT)/$(REGULATORY_CORE_SRC_DIR)
 REG_DISPATCHER_OBJ_DIR := $(WLAN_COMMON_ROOT)/$(REG_DISPATCHER_SRC_DIR)
 REGULATORY_INC := -I$(WLAN_COMMON_INC)/$(REGULATORY_CORE_INC_DIR)
 REGULATORY_INC += -I$(WLAN_COMMON_INC)/$(REG_DISPATCHER_INC_DIR)
+REGULATORY_INC += -I$(WLAN_COMMON_INC)/umac/cmn_services/regulatory/inc
 REGULATORY_OBJS := $(REG_CORE_OBJ_DIR)/reg_build_chan_list.o \
 		    $(REG_CORE_OBJ_DIR)/reg_callbacks.o \
 		    $(REG_CORE_OBJ_DIR)/reg_db.o \
@@ -2569,12 +2556,46 @@ ifeq (y,$(filter y,$(CONFIG_LITHIUM) $(CONFIG_BERYLLIUM)))
 WLAN_DP_COMP_OBJS += $(DP_COMP_CORE_DIR)/wlan_dp_prealloc.o
 endif
 
+ifeq ($(CONFIG_WLAN_FEATURE_DP_RX_THREADS), y)
+WLAN_DP_COMP_OBJS += $(DP_COMP_CORE_DIR)/wlan_dp_rx_thread.o
+endif
+
 ifeq ($(CONFIG_RX_FISA), y)
 WLAN_DP_COMP_OBJS += $(DP_COMP_CORE_DIR)/wlan_dp_fisa_rx.o
 WLAN_DP_COMP_OBJS += $(DP_COMP_CORE_DIR)/wlan_dp_rx_fst.o
 endif
 
+ifeq ($(CONFIG_FEATURE_DIRECT_LINK), y)
+WLAN_DP_COMP_OBJS += $(DP_COMP_CORE_DIR)/wlan_dp_wfds.o
+endif
+
 $(call add-wlan-objs,dp_comp,$(WLAN_DP_COMP_OBJS))
+
+#######################################################
+
+######################### QMI_COMPONENT #########################
+QMI_COMP_CORE_DIR := components/qmi/core/src
+QMI_COMP_UCFG_DIR := components/qmi/dispatcher/src
+QMI_COMP_OS_IF_DIR := os_if/qmi/src
+
+QMI_COMP_INC := -I$(WLAN_ROOT)/components/qmi/core/inc       \
+		-I$(WLAN_ROOT)/components/qmi/core/src       \
+		-I$(WLAN_ROOT)/components/qmi/dispatcher/inc \
+		-I$(WLAN_ROOT)/os_if/qmi/inc
+
+ifeq ($(CONFIG_QMI_COMPONENT_ENABLE), y)
+WLAN_QMI_COMP_OBJS := $(QMI_COMP_CORE_DIR)/wlan_qmi_main.o \
+		 $(QMI_COMP_UCFG_DIR)/wlan_qmi_ucfg_api.o  \
+		 $(QMI_COMP_OS_IF_DIR)/os_if_qmi.o
+
+ifeq ($(CONFIG_QMI_WFDS), y)
+WLAN_QMI_COMP_OBJS += $(QMI_COMP_OS_IF_DIR)/os_if_qmi_wifi_driver_service_v01.o
+WLAN_QMI_COMP_OBJS += $(QMI_COMP_OS_IF_DIR)/os_if_qmi_wfds.o
+WLAN_QMI_COMP_OBJS += $(QMI_COMP_UCFG_DIR)/wlan_qmi_wfds_api.o
+endif
+endif
+
+$(call add-wlan-objs,qmi_comp,$(WLAN_QMI_COMP_OBJS))
 
 #######################################################
 
@@ -3089,8 +3110,7 @@ INCS +=		$(WMA_INC) \
 		$(REGULATORY_INC) \
 		$(HTC_INC) \
 		$(DFS_INC) \
-		$(WCFG_INC) \
-		$(TXRX3.0_INC)
+		$(WCFG_INC)
 
 INCS +=		$(HIF_INC) \
 		$(BMI_INC) \
@@ -3129,6 +3149,8 @@ INCS +=		$(NAN_TGT_INC)
 INCS +=		$(NAN_OS_IF_INC)
 ###########DP_COMPONENT ####################
 INCS +=		$(DP_COMP_INC)
+###########QMI_COMPONENT ####################
+INCS +=		$(QMI_COMP_INC)
 ################ SON ################
 INCS +=		$(SON_CORE_INC)
 INCS +=		$(SON_UCFG_INC)
@@ -3604,6 +3626,10 @@ cppflags-$(CONFIG_MULTI_IF_LOG) += -DMULTI_IF_LOG
 #Set SLUB_MEM_OPTIMIZE
 cppflags-$(CONFIG_SLUB_MEM_OPTIMIZE) += -DSLUB_MEM_OPTIMIZE
 
+ifeq ($(CONFIG_ARCH_SDXBAAGHA), y)
+cppflags-$(CONFIG_WLAN_MEMORY_OPT) += -DWLAN_MEMORY_OPT
+endif
+
 #Set DFS_PRI_MULTIPLIER
 cppflags-$(CONFIG_DFS_PRI_MULTIPLIER) += -DDFS_PRI_MULTIPLIER
 
@@ -4010,6 +4036,7 @@ cppflags-$(CONFIG_DP_HW_COOKIE_CONVERT_EXCEPTION) += -DDP_HW_COOKIE_CONVERT_EXCE
 cppflags-$(CONFIG_TX_ADDR_INDEX_SEARCH) += -DTX_ADDR_INDEX_SEARCH
 cppflags-$(CONFIG_QCA_SUPPORT_TX_MIN_RATES_FOR_SPECIAL_FRAMES) += -DQCA_SUPPORT_TX_MIN_RATES_FOR_SPECIAL_FRAMES
 cppflags-$(CONFIG_QCA_GET_TSF_VIA_REG) += -DQCA_GET_TSF_VIA_REG
+cppflags-$(CONFIG_DP_TX_COMP_RING_DESC_SANITY_CHECK) += -DDP_TX_COMP_RING_DESC_SANITY_CHECK
 
 cppflags-$(CONFIG_RX_HASH_DEBUG) += -DRX_HASH_DEBUG
 cppflags-$(CONFIG_DP_PKT_STATS_PER_LMAC) += -DDP_PKT_STATS_PER_LMAC
@@ -4029,6 +4056,7 @@ cppflags-$(CONFIG_ENABLE_HAL_REG_WR_HISTORY) += -DCONFIG_ENABLE_HAL_REG_WR_HISTO
 cppflags-$(CONFIG_DP_RX_DESC_COOKIE_INVALIDATE) += -DDP_RX_DESC_COOKIE_INVALIDATE
 cppflags-$(CONFIG_MON_ENABLE_DROP_FOR_MAC) += -DMON_ENABLE_DROP_FOR_MAC
 cppflags-$(CONFIG_MON_ENABLE_DROP_FOR_NON_MON_PMAC) += -DMON_ENABLE_DROP_FOR_NON_MON_PMAC
+cppflags-$(CONFIG_DP_WAR_INVALID_FIRST_MSDU_FLAG) += -DDP_WAR_INVALID_FIRST_MSDU_FLAG
 cppflags-$(CONFIG_LITHIUM) += -DDISABLE_MON_RING_MSI_CFG
 cppflags-$(CONFIG_LITHIUM) += -DFEATURE_IRQ_AFFINITY
 cppflags-$(CONFIG_BERYLLIUM) += -DFEATURE_IRQ_AFFINITY
@@ -4261,6 +4289,13 @@ cppflags-$(CONFIG_WLAN_TRACEPOINTS) += -DWLAN_TRACEPOINTS
 
 cppflags-$(CONFIG_QCACLD_FEATURE_SON) += -DFEATURE_PERPKT_INFO
 cppflags-$(CONFIG_QCACLD_FEATURE_SON) += -DQCA_ENHANCED_STATS_SUPPORT
+
+ifeq ($(CONFIG_QMI_COMPONENT_ENABLE), y)
+cppflags-y += -DQMI_COMPONENT_ENABLE
+ifeq ($(CONFIG_QMI_WFDS), y)
+cppflags-y += -DQMI_WFDS
+endif
+endif
 
 ifdef CONFIG_MAX_LOGS_PER_SEC
 ccflags-y += -DWLAN_MAX_LOGS_PER_SEC=$(CONFIG_MAX_LOGS_PER_SEC)
@@ -4504,6 +4539,8 @@ ccflags-y += -DALL_POSSIBLE_RATES_SUPPORTED=1
 cppflags-$(CONFIG_BAND_6GHZ) += -DCONFIG_BAND_6GHZ
 cppflags-$(CONFIG_6G_SCAN_CHAN_SORT_ALGO) += -DFEATURE_6G_SCAN_CHAN_SORT_ALGO
 cppflags-y += -DCONFIG_REG_6G_PWRMODE
+cppflags-$(CONFIG_AFC_SUPPORT) += -DCONFIG_AFC_SUPPORT
+cppflags-$(CONFIG_WLAN_FEATURE_AFC_DCS_SKIP_ACS_RANGE) += -DWLAN_FEATURE_AFC_DCS_SKIP_ACS_RANGE
 
 cppflags-$(CONFIG_RX_FISA) += -DWLAN_SUPPORT_RX_FISA
 cppflags-$(CONFIG_RX_FISA_HISTORY) += -DWLAN_SUPPORT_RX_FISA_HIST
@@ -4703,6 +4740,8 @@ ccflags-y += -DWLAN_OBJMGR_RATELIMIT_THRESH=0
 #then WLAN_SCHED_REDUCTION_LIMIT will be 32 for
 # WIN.
 ccflags-y += -DWLAN_SCHED_REDUCTION_LIMIT=0
+
+ccflags-y += -DIRQ_DISABLED_MAX_DURATION_NS=100000000
 
 # Determine if we are building against an arm architecture host
 ifeq ($(findstring arm, $(ARCH)),)

@@ -340,7 +340,7 @@ static void wma_set_feature_set_info(tp_wma_handle wma_handle,
 	struct wlan_scan_features scan_feature_set;
 	struct wlan_twt_features twt_feature_set;
 	struct wlan_mlme_features mlme_feature_set;
-	struct wlan_tdls_features tdls_feature_set;
+	struct wlan_tdls_features tdls_feature_set = {0};
 
 	psoc = wma_handle->psoc;
 	if (!psoc) {
@@ -479,7 +479,7 @@ static void wma_set_feature_set_info(tp_wma_handle wma_handle,
 	feature_set->peer_bigdata_getbssinfo_support = true;
 	feature_set->peer_bigdata_assocreject_info_support = true;
 	feature_set->peer_getstainfo_support = true;
-	feature_set->feature_set_version = 1;
+	feature_set->feature_set_version = 2;
 }
 
 /**
@@ -4174,8 +4174,8 @@ void wma_process_pdev_hw_mode_trans_ind(void *handle,
 		fixed_param->num_vdev_mac_entries);
 
 	if (!vdev_mac_entry) {
-		wma_err("Invalid vdev_mac_entry");
-		return;
+		wma_debug("null vdev_mac_entry");
+		goto update_hw_mode;
 	}
 
 	/* Store the vdev-mac map in WMA and send to policy manager */
@@ -4204,6 +4204,7 @@ void wma_process_pdev_hw_mode_trans_ind(void *handle,
 		wma_update_intf_hw_mode_params(vdev_id, mac_id,
 				fixed_param->new_hw_mode_index);
 	}
+update_hw_mode:
 	wma->old_hw_mode_index = fixed_param->old_hw_mode_index;
 	wma->new_hw_mode_index = fixed_param->new_hw_mode_index;
 	policy_mgr_update_new_hw_mode_index(wma->psoc,
@@ -6176,6 +6177,11 @@ static void wma_set_mlme_caps(struct wlan_objmgr_psoc *psoc)
 				      wmi_service_suiteb_roam_support);
 	if (tgt_cap)
 		akm_bitmap |= (1 << AKM_SUITEB);
+
+	tgt_cap = wmi_service_enabled(wma->wmi_handle,
+				      wmi_service_wpa3_sha384_roam_support);
+	if (tgt_cap)
+		akm_bitmap |= (1 << AKM_SAE_EXT);
 
 	status = mlme_set_tgt_wpa3_roam_cap(psoc, akm_bitmap);
 	if (QDF_IS_STATUS_ERROR(status))
@@ -9402,6 +9408,12 @@ static QDF_STATUS wma_mc_process_msg(struct scheduler_msg *msg)
 		break;
 	case WMA_TWT_NUDGE_DIALOG_REQUEST:
 		wma_twt_process_nudge_dialog(wma_handle, msg->bodyptr);
+		qdf_mem_free(msg->bodyptr);
+		break;
+	case WMA_UPDATE_EDCA_PIFS_PARAM_IND:
+		wma_update_edca_pifs_param(
+				wma_handle,
+				(struct edca_pifs_vparam *)msg->bodyptr);
 		qdf_mem_free(msg->bodyptr);
 		break;
 	default:

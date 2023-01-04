@@ -28,7 +28,7 @@ extern struct sock *cesium_nl_srv_sock;
 
 /**
  * hdd_ioctl() - ioctl handler (wrapper) for wlan network interfaces
- * @net_dev: device upon which the ioctl was received
+ * @dev: device upon which the ioctl was received
  * @ifr: ioctl request information
  * @cmd: ioctl command
  *
@@ -41,7 +41,7 @@ int hdd_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd);
 
 /**
  * hdd_dev_private_ioctl() - private ioctl handler for wlan network interfaces
- * @net_dev: device upon which the ioctl was received
+ * @dev: device upon which the ioctl was received
  * @ifr: ioctl request information
  * @data: pointer to the raw command data in the ioctl request
  * @cmd: ioctl command

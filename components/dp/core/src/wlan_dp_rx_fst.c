@@ -25,7 +25,7 @@
 #include "dp_htt.h"
 #include "dp_internal.h"
 #include "hif.h"
-#include "dp_txrx.h"
+#include "wlan_dp_rx_thread.h"
 
 /* Timeout in milliseconds to wait for CMEM FST HTT response */
 #define DP_RX_FST_CMEM_RESP_TIMEOUT 2000
