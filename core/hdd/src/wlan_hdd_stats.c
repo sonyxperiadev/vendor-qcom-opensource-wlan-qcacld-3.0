@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -6103,7 +6103,7 @@ static inline void wlan_hdd_mlo_update_stats_info(struct hdd_adapter *adapter)
 	rssi = &adapter->hdd_stats.summary_stat.rssi;
 	snr = &adapter->hdd_stats.summary_stat.snr;
 
-	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_CP_STATS_ID);
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_STATS_ID);
 	if (!vdev)
 		return;
 
@@ -6111,10 +6111,10 @@ static inline void wlan_hdd_mlo_update_stats_info(struct hdd_adapter *adapter)
 	 * update the values in the adapter
 	 */
 	if (!wlan_vdev_mlme_is_mlo_vdev(vdev)) {
-		hdd_objmgr_put_vdev_by_user(vdev, WLAN_CP_STATS_ID);
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_STATS_ID);
 		goto stat_update;
 	}
-	hdd_objmgr_put_vdev_by_user(vdev, WLAN_CP_STATS_ID);
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_STATS_ID);
 
 	hdd_debug("Link0: RSSI: %d, SNR: %d", *rssi, *snr);
 	mlo_adapter_info = &adapter->mlo_adapter_info;
@@ -6140,6 +6140,8 @@ stat_update:
 #else
 static inline void wlan_hdd_mlo_update_stats_info(struct hdd_adapter *adapter)
 {
+	adapter->rssi = adapter->hdd_stats.summary_stat.rssi;
+	adapter->snr = adapter->hdd_stats.summary_stat.snr;
 }
 #endif
 
@@ -6165,7 +6167,7 @@ static int wlan_hdd_get_sta_stats(struct wiphy *wiphy,
 	uint8_t tx_mcs_index, rx_mcs_index;
 	struct hdd_context *hdd_ctx = (struct hdd_context *) wiphy_priv(wiphy);
 	mac_handle_t mac_handle;
-	int8_t snr = 0;
+	int8_t snr;
 	uint16_t my_tx_rate, my_rx_rate;
 	uint8_t tx_nss = 1, rx_nss = 1, tx_dcm, rx_dcm;
 	enum txrate_gi tx_gi, rx_gi;
@@ -6214,6 +6216,7 @@ static int wlan_hdd_get_sta_stats(struct wiphy *wiphy,
 	wlan_hdd_get_peer_rx_rate_stats(adapter);
 
 	wlan_hdd_mlo_update_stats_info(adapter);
+	snr = adapter->snr;
 
 	/* for new connection there might be no valid previous RSSI */
 	if (!adapter->rssi) {
