@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -283,9 +283,9 @@ wlan_t2lm_validate_candidate(struct cnx_mgr *cm_ctx,
 	QDF_STATUS status;
 	struct wlan_objmgr_vdev *vdev;
 	struct wlan_t2lm_context t2lm_ctx;
-	uint8_t tid_map_link_id = 0;
-	uint16_t tid_mapped_link_id[WLAN_MAX_T2LM_IE];
-	uint8_t i;
+	uint16_t tid_map_link_id;
+	uint16_t established_tid_mapped_link_id = 0;
+	uint16_t upcoming_tid_mapped_link_id = 0;
 
 	if (!scan_entry)
 		return QDF_STATUS_E_NULL_VALUE;
@@ -301,32 +301,30 @@ wlan_t2lm_validate_candidate(struct cnx_mgr *cm_ctx,
 			goto end;
 		}
 
-		t2lm_ctx = vdev->mlo_dev_ctx->t2lm_ctx;
 		status = wlan_mlo_parse_bcn_prbresp_t2lm_ie(&t2lm_ctx,
-							    scan_entry->ie_list.t2lm[0]);
+						scan_entry->ie_list.t2lm[0]);
 		if (QDF_IS_STATUS_ERROR(status))
 			goto end;
 
-		if (!t2lm_ctx.num_of_t2lm_ie) {
-			t2lm_debug("T2LM IE parsing failed");
-			status = QDF_STATUS_E_FAILURE;
+		status =
+		   t2lm_find_tid_mapped_link_id(&t2lm_ctx.established_t2lm.t2lm,
+					       &established_tid_mapped_link_id);
+		if (QDF_IS_STATUS_ERROR(status))
 			goto end;
-		}
 
-		for (i = 0; i < t2lm_ctx.num_of_t2lm_ie; i++) {
-			status = t2lm_find_tid_mapped_link_id(&t2lm_ctx.t2lm_ie[i].t2lm,
-							      &tid_mapped_link_id[i]);
-			if (QDF_IS_STATUS_ERROR(status))
-				goto end;
-		}
+		status =
+		      t2lm_find_tid_mapped_link_id(&t2lm_ctx.upcoming_t2lm.t2lm,
+						  &upcoming_tid_mapped_link_id);
+		if (QDF_IS_STATUS_ERROR(status))
+			goto end;
+		t2lm_debug("established_tid_mapped_link_id %x, upcoming_tid_mapped_link_id %x",
+			   established_tid_mapped_link_id,
+			   upcoming_tid_mapped_link_id);
 
-		if (t2lm_ctx.num_of_t2lm_ie == WLAN_MAX_T2LM_IE) {
-			tid_map_link_id = tid_mapped_link_id[0] & tid_mapped_link_id[1];
-			if (!tid_map_link_id)
-				tid_map_link_id = tid_mapped_link_id[0];
-		} else {
-			tid_map_link_id = tid_mapped_link_id[0];
-		}
+		tid_map_link_id =
+		   established_tid_mapped_link_id & upcoming_tid_mapped_link_id;
+		if (!tid_map_link_id)
+			tid_map_link_id = established_tid_mapped_link_id;
 
 		if (tid_map_link_id == scan_entry->ml_info.self_link_id) {
 			t2lm_debug("self link id %d, tid map link id %d",

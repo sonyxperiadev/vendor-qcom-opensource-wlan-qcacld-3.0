@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -428,19 +428,6 @@ void lim_cleanup_mlm(struct mac_context *);
 
 #ifdef WLAN_FEATURE_11BE
 /**
- * lim_process_bcn_prb_rsp_t2lm() - process beacon/probe response
- * 11be t2lm IE
- * @mac_ctx: global mac context
- * @session: pe session
- * @bcn_ptr: pointer to tpSirProbeRespBeacon
- *
- * Return none
- */
-void lim_process_bcn_prb_rsp_t2lm(struct mac_context *mac_ctx,
-				  struct pe_session *session,
-				  tpSirProbeRespBeacon bcn_ptr);
-
-/**
  * lim_process_beacon_eht() - process beacon 11be IE
  * @mac_ctx: global mac context
  * @session: pe session
@@ -474,16 +461,22 @@ void lim_process_beacon_eht_op(struct pe_session *session,
 			       tDot11fIEeht_op *eht_op)
 {
 }
-
-static inline
-void lim_process_bcn_prb_rsp_t2lm(struct mac_context *mac_ctx,
-				  struct pe_session *session,
-				  tpSirProbeRespBeacon bcn_ptr)
-{
-}
 #endif
 
 #ifdef WLAN_FEATURE_11BE_MLO
+/**
+ * lim_process_bcn_prb_rsp_t2lm() - process beacon/probe response
+ * 11be t2lm IE
+ * @mac_ctx: global mac context
+ * @session: pe session
+ * @bcn_ptr: pointer to tpSirProbeRespBeacon
+ *
+ * Return none
+ */
+void lim_process_bcn_prb_rsp_t2lm(struct mac_context *mac_ctx,
+				  struct pe_session *session,
+				  tpSirProbeRespBeacon bcn_ptr);
+
 /**
  * lim_process_beacon_mlo() - process beacon mlo IE
  * @mac_ctx: global mac context
@@ -500,6 +493,13 @@ static inline
 void lim_process_beacon_mlo(struct mac_context *mac_ctx,
 			    struct pe_session *session,
 			    tSchBeaconStruct *bcn_ptr)
+{
+}
+
+static inline
+void lim_process_bcn_prb_rsp_t2lm(struct mac_context *mac_ctx,
+				  struct pe_session *session,
+				  tpSirProbeRespBeacon bcn_ptr)
 {
 }
 #endif
