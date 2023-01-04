@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -7333,6 +7333,8 @@ void lim_update_he_caps_mcs(struct mac_context *mac, struct pe_session *session)
 		 rx_mcs_map, tx_mcs_map);
 	mlme_priv->he_config.tx_he_mcs_map_lt_80 = tx_mcs_map;
 	mlme_priv->he_config.rx_he_mcs_map_lt_80 = rx_mcs_map;
+	*((uint16_t *)mlme_priv->he_config.tx_he_mcs_map_160) = tx_mcs_map;
+	*((uint16_t *)mlme_priv->he_config.rx_he_mcs_map_160) = rx_mcs_map;
 }
 
 static void
