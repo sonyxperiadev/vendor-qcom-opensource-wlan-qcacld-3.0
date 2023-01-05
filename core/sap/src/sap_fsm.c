@@ -3620,8 +3620,12 @@ static void sap_fsm_handle_check_safe_channel(struct mac_context *mac_ctx,
 	QDF_STATUS status;
 	enum phy_ch_width target_bw = sap_ctx->ch_params.ch_width;
 
-	if (policy_mgr_is_sap_freq_allowed(mac_ctx->psoc, sap_ctx->chan_freq))
+	if (((!sap_ctx->acs_cfg || !sap_ctx->acs_cfg->acs_mode) &&
+	     target_psoc_get_sap_coex_fixed_chan_cap(
+				wlan_psoc_get_tgt_if_handle(mac_ctx->psoc))) ||
+	    policy_mgr_is_sap_freq_allowed(mac_ctx->psoc, sap_ctx->chan_freq))
 		return;
+
 	/*
 	 * The selected channel is not safe channel. Hence,
 	 * change the sap channel to a safe channel.

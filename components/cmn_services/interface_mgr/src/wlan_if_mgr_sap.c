@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2020, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -30,6 +30,7 @@
 #include "wlan_p2p_api.h"
 #include "wlan_mlme_vdev_mgr_interface.h"
 #include "wlan_p2p_ucfg_api.h"
+#include "wlan_vdev_mgr_utils_api.h"
 
 QDF_STATUS if_mgr_ap_start_bss(struct wlan_objmgr_vdev *vdev,
 			       struct if_mgr_event_data *event_data)
@@ -102,7 +103,8 @@ if_mgr_ap_start_bss_complete(struct wlan_objmgr_vdev *vdev,
 		policy_mgr_check_sap_go_force_scc(psoc, vdev,
 						  CSA_REASON_GO_BSS_STARTED);
 	ifmgr_debug("check for SAP restart");
-	policy_mgr_check_concurrent_intf_and_restart_sap(psoc);
+	policy_mgr_check_concurrent_intf_and_restart_sap(psoc,
+				wlan_util_vdev_mgr_get_acs_mode_for_vdev(vdev));
 
 	return QDF_STATUS_SUCCESS;
 }

@@ -117,6 +117,7 @@
 #include <wlan_dp_ucfg_api.h>
 #include "wlan_twt_ucfg_ext_api.h"
 #include "wlan_twt_ucfg_api.h"
+#include "wlan_vdev_mgr_ucfg_api.h"
 
 #define ACS_SCAN_EXPIRY_TIMEOUT_S 4
 
@@ -3647,7 +3648,8 @@ QDF_STATUS wlan_hdd_get_channel_for_sap_restart(
 	 * as soon as STA gets disconnect.
 	 */
 	if (policy_mgr_is_sap_restart_required_after_sta_disconnect(
-	    psoc, vdev_id, &intf_ch_freq)) {
+	    psoc, vdev_id, &intf_ch_freq,
+	    !!ap_adapter->session.ap.sap_config.acs_cfg.acs_mode)) {
 		hdd_debug("Move the sap (vdev %d) to user configured channel %u",
 			  vdev_id, intf_ch_freq);
 		goto sap_restart;
@@ -6135,6 +6137,8 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 		mode = hdd_ctx->acs_policy.acs_dfs_mode;
 		config->acs_dfs_mode = wlan_hdd_get_dfs_mode(mode);
 	}
+	ucfg_util_vdev_mgr_set_acs_mode_for_vdev(vdev,
+						 config->acs_cfg.acs_mode);
 
 	ucfg_policy_mgr_get_mcc_scc_switch(hdd_ctx->psoc, &mcc_to_scc_switch);
 
