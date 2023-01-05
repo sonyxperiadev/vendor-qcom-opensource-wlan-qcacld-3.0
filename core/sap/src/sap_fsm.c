@@ -62,6 +62,7 @@
 #include "wlan_vdev_mgr_utils_api.h"
 #include "wlan_pre_cac_api.h"
 #include <wlan_cmn_ieee80211.h>
+#include <target_if.h>
 
 /*----------------------------------------------------------------------------
  * Preprocessor Definitions and Constants
@@ -1179,7 +1180,15 @@ validation_done:
 	sap_debug("for configured channel, Ch_freq = %d",
 		  sap_context->chan_freq);
 
-	if (!policy_mgr_is_sap_freq_allowed(mac_ctx->psoc,
+	/*
+	 * Don't check if the frequency is allowed or not if SAP is started
+	 * in fixed channel and coex fixed channel SAP is supported.
+	 */
+
+	if ((sap_context->acs_cfg->acs_mode ||
+	     !target_psoc_get_sap_coex_fixed_chan_cap(
+			wlan_psoc_get_tgt_if_handle(mac_ctx->psoc))) &&
+	    !policy_mgr_is_sap_freq_allowed(mac_ctx->psoc,
 					    sap_context->chan_freq)) {
 		sap_warn("Abort SAP start due to unsafe channel");
 		return QDF_STATUS_E_ABORTED;
