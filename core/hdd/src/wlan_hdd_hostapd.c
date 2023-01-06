@@ -1564,6 +1564,8 @@ static void hdd_fill_station_info(struct hdd_adapter *adapter,
 					    cache_sta_info);
 		}
 	} else {
+		qdf_copy_macaddr(&cache_sta_info->sta_mac, &event->staMac);
+		qdf_copy_macaddr(&cache_sta_info->mld_addr, &event->sta_mld);
 		hdd_put_sta_info_ref(&adapter->cache_sta_info_list,
 				     &cache_sta_info, true,
 				     STA_INFO_FILL_STATION_INFO);
@@ -1743,74 +1745,6 @@ static QDF_STATUS hdd_hostapd_chan_change(struct hdd_adapter *adapter,
 				      chan_change, legacy_phymode);
 }
 
-#ifdef WLAN_FEATURE_11BE_MLO
-static inline QDF_STATUS
-hdd_hostapd_sap_register_mlo_sta(struct hdd_adapter *adapter,
-				 struct hdd_ap_ctx *ap_ctx,
-				 struct hdd_context *hdd_ctx,
-				 tSap_StationAssocReassocCompleteEvent *event,
-				 bool bAuthRequired,
-				 uint8_t *notify_new_sta)
-{
-	uint8_t *mld;
-	QDF_STATUS qdf_status;
-	struct wlan_objmgr_peer *peer;
-
-	hdd_debug("Registering STA MLD :" QDF_MAC_ADDR_FMT,
-		  QDF_MAC_ADDR_REF(event->sta_mld.bytes));
-	qdf_status = hdd_softap_register_sta(adapter,
-					     bAuthRequired,
-					     ap_ctx->privacy,
-					     (struct qdf_mac_addr *)
-					     &event->sta_mld,
-					     event);
-
-	if (!QDF_IS_STATUS_SUCCESS(qdf_status))
-		hdd_err("Failed to register STA MLD %d "
-			QDF_MAC_ADDR_FMT, qdf_status,
-			QDF_MAC_ADDR_REF(event->sta_mld.bytes));
-
-	peer = wlan_objmgr_get_peer_by_mac(hdd_ctx->psoc,
-					   event->staMac.bytes,
-					   WLAN_OSIF_ID);
-	if (!peer) {
-		hdd_err("Peer object not found");
-		return QDF_STATUS_E_INVAL;
-	}
-
-	if (bAuthRequired) {
-		mld = wlan_peer_mlme_get_mldaddr(peer);
-		if (!wlan_peer_mlme_is_assoc_peer(peer) &&
-		    !qdf_is_macaddr_zero((struct qdf_mac_addr *)mld)) {
-			hdd_err("skip userspace notification");
-			*notify_new_sta = 0;
-		}
-	} else {
-		if (!qdf_is_macaddr_zero((struct qdf_mac_addr *)
-				peer->mldaddr) &&
-		    !wlan_peer_mlme_is_assoc_peer(peer)) {
-			wlan_objmgr_peer_release_ref(peer, WLAN_OSIF_ID);
-			return QDF_STATUS_E_NOSUPPORT;
-		}
-	}
-
-	wlan_objmgr_peer_release_ref(peer, WLAN_OSIF_ID);
-
-	return QDF_STATUS_SUCCESS;
-}
-#else /* WLAN_FEATURE_11BE_MLO */
-static inline QDF_STATUS
-hdd_hostapd_sap_register_mlo_sta(struct hdd_adapter *adapter,
-				 struct hdd_ap_ctx *ap_ctx,
-				 struct hdd_context *hdd_ctx,
-				 tSap_StationAssocReassocCompleteEvent *event,
-				 bool bAuthRequired,
-				 uint8_t *notify_new_sta)
-{
-	return QDF_STATUS_SUCCESS;
-}
-#endif /* WLAN_FEATURE_11BE_MLO */
-
 static inline void
 hdd_hostapd_update_beacon_country_ie(struct hdd_adapter *adapter)
 {
@@ -1967,8 +1901,7 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 	tSap_StationSetKeyCompleteEvent *key_complete;
 	int ret = 0;
 	tSap_StationDisassocCompleteEvent *disassoc_comp;
-	struct hdd_station_info *stainfo, *cache_stainfo, *tmp = NULL,
-				*mld_sta_info;
+	struct hdd_station_info *stainfo, *cache_stainfo, *tmp = NULL;
 	mac_handle_t mac_handle;
 	struct sap_config *sap_config;
 	struct sap_context *sap_ctx = NULL;
@@ -2472,18 +2405,6 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 				hdd_err("Failed to register STA %d "
 					QDF_MAC_ADDR_FMT, qdf_status,
 					QDF_MAC_ADDR_REF(wrqu.addr.sa_data));
-			qdf_status = hdd_hostapd_sap_register_mlo_sta(adapter,
-								      ap_ctx,
-								      hdd_ctx,
-								      event,
-								      bAuthRequired,
-								      (uint8_t *)&notify_new_sta);
-
-			if (qdf_status == QDF_STATUS_E_NOSUPPORT)
-				goto skip_reassoc;
-			else if (qdf_status == QDF_STATUS_E_INVAL)
-				return QDF_STATUS_E_INVAL;
-
 		} else {
 			qdf_status = hdd_softap_register_sta(
 						adapter,
@@ -2498,17 +2419,6 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 				hdd_err("Failed to register STA %d "
 					QDF_MAC_ADDR_FMT, qdf_status,
 					QDF_MAC_ADDR_REF(wrqu.addr.sa_data));
-			qdf_status = hdd_hostapd_sap_register_mlo_sta(adapter,
-								      ap_ctx,
-								      hdd_ctx,
-								      event,
-								      bAuthRequired,
-								      (uint8_t *)&notify_new_sta);
-
-			if (qdf_status == QDF_STATUS_E_NOSUPPORT)
-				goto skip_reassoc;
-			else if (qdf_status == QDF_STATUS_E_INVAL)
-				return QDF_STATUS_E_INVAL;
 		}
 
 		sta_id = event->staId;
@@ -2678,20 +2588,7 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 
 		if (wlan_vdev_mlme_is_mlo_vdev(adapter->vdev) &&
 		    !qdf_is_macaddr_zero(&stainfo->mld_addr)) {
-			mld_sta_info = hdd_get_sta_info_by_mac(
-						&adapter->sta_info_list,
-						stainfo->mld_addr.bytes,
-						STA_INFO_HOSTAPD_SAP_EVENT_CB);
-			if (!mld_sta_info) {
-				hdd_debug("Failed to find the MLD station");
-			} else {
-				hdd_softap_deregister_sta(adapter,
-							  &mld_sta_info);
-				hdd_put_sta_info_ref(&adapter->sta_info_list,
-						&mld_sta_info, true,
-						STA_INFO_HOSTAPD_SAP_EVENT_CB);
-				qdf_copy_macaddr(&sta_addr, &stainfo->mld_addr);
-			}
+			qdf_copy_macaddr(&sta_addr, &stainfo->mld_addr);
 		} else {
 			/* Copy legacy MAC address on
 			 * non-ML type client disassoc.
@@ -3013,7 +2910,6 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 		return QDF_STATUS_SUCCESS;
 	}
 
-skip_reassoc:
 	hdd_wext_send_event(dev, we_event, &wrqu,
 			    (char *)we_custom_event_generic);
 	qdf_mem_free(we_custom_start_event);
