@@ -17,8 +17,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/**
- * ===========================================================================
+/*
  *                     sap_module.c
  *  OVERVIEW:
  *  This software unit holds the implementation of the WLAN SAP modules
@@ -26,7 +25,6 @@
  *  context gets initialised
  *  DEPENDENCIES:
  *  Are listed for each API below.
- * ===========================================================================
  */
 
 /* $Header$ */
@@ -58,6 +56,7 @@
 #include "wlan_mlme_vdev_mgr_interface.h"
 #include "pld_common.h"
 #include "wlan_pre_cac_api.h"
+#include "target_if.h"
 
 #define SAP_DEBUG
 static struct sap_context *gp_sap_ctx[SAP_MAX_NUM_SESSION];
@@ -736,7 +735,7 @@ bool wlan_sap_get_ch_params(struct sap_context *sap_ctx,
  * wlan_sap_validate_channel_switch() - validate target channel switch w.r.t
  *      concurreny rules set to avoid channel interference.
  * @mac_handle: Opaque handle to the global MAC context
- * @sap_ch: channel to switch
+ * @sap_ch_freq: channel to switch
  * @sap_context: sap session context
  *
  * Return: true if there is no channel interference else return false
@@ -1416,7 +1415,7 @@ wlansap_get_csa_chanwidth_from_phymode(struct sap_context *sap_context,
 
 /**
  * sap_start_csa_restart() - send csa start event
- * @mac_ctx: mac ctx
+ * @mac: mac ctx
  * @sap_ctx: SAP context
  *
  * Return: QDF_STATUS
@@ -1601,7 +1600,11 @@ QDF_STATUS wlansap_set_channel_change_with_csa(struct sap_context *sap_ctx,
 	}
 	mac_handle = MAC_HANDLE(mac);
 
-	if (!policy_mgr_is_sap_freq_allowed(mac->psoc, target_chan_freq)) {
+	if (((sap_ctx->acs_cfg && sap_ctx->acs_cfg->acs_mode) ||
+	     !target_psoc_get_sap_coex_fixed_chan_cap(
+			wlan_psoc_get_tgt_if_handle(mac->psoc)) ||
+	     sap_ctx->csa_reason != CSA_REASON_USER_INITIATED) &&
+	    !policy_mgr_is_sap_freq_allowed(mac->psoc, target_chan_freq)) {
 		sap_err("%u is unsafe channel freq", target_chan_freq);
 		return QDF_STATUS_E_FAULT;
 	}
