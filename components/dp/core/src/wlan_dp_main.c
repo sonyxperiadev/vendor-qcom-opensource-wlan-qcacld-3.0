@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1730,7 +1730,7 @@ QDF_STATUS dp_config_direct_link(struct wlan_dp_intf *dp_intf,
 	struct wlan_dp_psoc_context *dp_ctx = dp_intf->dp_ctx;
 	struct direct_link_info *config = &dp_intf->direct_link_config;
 	void *htc_handle;
-	bool prev_ll, update_ll;
+	bool prev_ll, update_ll, vote_link;
 
 	if (!dp_ctx || !dp_ctx->psoc) {
 		dp_err("DP Handle is NULL");
@@ -1739,7 +1739,7 @@ QDF_STATUS dp_config_direct_link(struct wlan_dp_intf *dp_intf,
 
 	if (!dp_ctx->dp_direct_link_ctx) {
 		dp_err("Direct link not enabled");
-		return QDF_STATUS_E_NOSUPPORT;
+		return QDF_STATUS_SUCCESS;
 	}
 
 	htc_handle = lmac_get_htc_hdl(dp_ctx->psoc);
@@ -1751,12 +1751,14 @@ QDF_STATUS dp_config_direct_link(struct wlan_dp_intf *dp_intf,
 	qdf_spin_lock(&dp_intf->vdev_lock);
 	prev_ll = config->low_latency;
 	update_ll = config_direct_link ? enable_low_latency : prev_ll;
+	vote_link = config->config_set ^ config_direct_link;
 	config->config_set = config_direct_link;
 	config->low_latency = enable_low_latency;
 	qdf_spin_unlock(&dp_intf->vdev_lock);
 
 	if (config_direct_link) {
-		htc_vote_link_up(htc_handle, HTC_LINK_VOTE_SAP_USER_ID);
+		if (vote_link)
+			htc_vote_link_up(htc_handle, HTC_LINK_VOTE_SAP_USER_ID);
 		if (update_ll)
 			hif_prevent_link_low_power_states(
 						htc_get_hif_device(htc_handle));
@@ -1766,7 +1768,9 @@ QDF_STATUS dp_config_direct_link(struct wlan_dp_intf *dp_intf,
 		dp_info("Direct link config set. Low link latency enabled: %d",
 			enable_low_latency);
 	} else {
-		htc_vote_link_down(htc_handle, HTC_LINK_VOTE_SAP_USER_ID);
+		if (vote_link)
+			htc_vote_link_down(htc_handle,
+					   HTC_LINK_VOTE_SAP_USER_ID);
 		if (update_ll)
 			hif_allow_link_low_power_states(
 						htc_get_hif_device(htc_handle));
