@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -57,10 +57,10 @@
 # define RoamIdle_TriggerBand_default 3
 # define RoamIdle_MinRSSI_min -70
 # define RoamIdle_MinRSSI_max -50
-# define RoamIdle_MinRSSI_default -60
+# define RoamIdle_MinRSSI_default -65
 # define RoamIdle_RSSIVariation_min 0
 # define RoamIdle_RSSIVariation_max 10
-# define RoamIdle_RSSIVariation_default 5
+# define RoamIdle_RSSIVariation_default 8
 # define RoamIdle_InactivePacketCount_min 0
 # define RoamIdle_InactivePacketCount_max 20
 # define RoamIdle_InactivePacketCount_default 5
@@ -73,6 +73,7 @@
 # define ROAMCU_6GRSSIRANGE_MIN -70
 # define ROAMCU_6GRSSIRANGE_MAX -50
 # define ROAMCU_6GRSSIRANGE_DEFAULT -70
+# define RoamIdle_InactiveTime_default 5
 #else
 # define RoamScan_ActiveCH_DwellTime_min 3
 # define RoamScan_ActiveCH_DwellTime_max 300
@@ -122,6 +123,7 @@
 # define ROAMCU_6GRSSIRANGE_MIN -120
 # define ROAMCU_6GRSSIRANGE_MAX 0
 # define ROAMCU_6GRSSIRANGE_DEFAULT -70
+# define RoamIdle_InactiveTime_default 10
 #endif
 
 /*
@@ -2721,7 +2723,7 @@
 	"RoamIdle_InactiveTime", \
 	0, \
 	20, \
-	10, \
+	RoamIdle_InactiveTime_default, \
 	CFG_VALUE_OR_DEFAULT, \
 	"Configure RSSI delta to start idle roam")
 
