@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -9415,10 +9415,8 @@ qdf_freq_t policy_mgr_get_ll_sap_freq(struct wlan_objmgr_psoc *psoc)
 	}
 	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
 
-	if (!is_ll_sap_present) {
-		policy_mgr_debug("LL SAP not present");
+	if (!is_ll_sap_present)
 		return 0;
-	}
 
 	policy_mgr_debug("LL SAP present with vdev_id %d and freq %d",
 			 vdev_id, freq);
