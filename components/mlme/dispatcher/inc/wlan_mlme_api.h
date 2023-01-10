@@ -3655,6 +3655,23 @@ QDF_STATUS mlme_set_mcs_rate(struct wlan_objmgr_vdev *vdev, uint8_t *src,
  */
 bool wlan_mlme_is_sta_mon_conc_supported(struct wlan_objmgr_psoc *psoc);
 
+/**
+ * wlan_mlme_get_phy_max_freq_range() - Get phy supported max channel
+ * frequency range
+ * @psoc: psoc for country information
+ * @low_2ghz_chan: 2.4 GHz low channel frequency
+ * @high_2ghz_chan: 2.4 GHz high channel frequency
+ * @low_5ghz_chan: 5 GHz low channel frequency
+ * @high_5ghz_chan: 5 GHz high channel frequency
+ *
+ * Return: QDF status
+ */
+QDF_STATUS wlan_mlme_get_phy_max_freq_range(struct wlan_objmgr_psoc *psoc,
+					    uint32_t *low_2ghz_chan,
+					    uint32_t *high_2ghz_chan,
+					    uint32_t *low_5ghz_chan,
+					    uint32_t *high_5ghz_chan);
+
 #ifdef FEATURE_WDS
 /**
  * wlan_mlme_get_wds_mode() - Check wds mode supported

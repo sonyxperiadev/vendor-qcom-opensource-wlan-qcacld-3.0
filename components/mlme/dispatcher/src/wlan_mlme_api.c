@@ -34,6 +34,7 @@
 #include <../../core/src/wlan_cm_vdev_api.h>
 #include "wlan_psoc_mlme_api.h"
 #include "wlan_action_oui_main.h"
+#include "target_if.h"
 
 /* quota in milliseconds */
 #define MCC_DUTY_CYCLE 70
@@ -5854,6 +5855,86 @@ bool mlme_get_user_ps(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
 
 	return usr_ps_enable;
+}
+
+QDF_STATUS wlan_mlme_get_phy_max_freq_range(struct wlan_objmgr_psoc *psoc,
+					    uint32_t *low_2ghz_chan,
+					    uint32_t *high_2ghz_chan,
+					    uint32_t *low_5ghz_chan,
+					    uint32_t *high_5ghz_chan)
+{
+	uint32_t i;
+	uint32_t reg_low_2ghz_chan;
+	uint32_t reg_high_2ghz_chan;
+	uint32_t reg_low_5ghz_chan;
+	uint32_t reg_high_5ghz_chan;
+	struct target_psoc_info *info;
+	struct wlan_psoc_host_mac_phy_caps *mac_phy_cap;
+	struct wlan_psoc_host_hal_reg_cap_ext *reg_cap_ext;
+
+	info = wlan_psoc_get_tgt_if_handle(psoc);
+	if (!info) {
+		mlme_legacy_err("target_psoc_info is null");
+		return QDF_STATUS_E_FAILURE;
+	}
+	mac_phy_cap = info->info.mac_phy_cap;
+	reg_cap_ext = &mac_phy_cap->reg_cap_ext;
+	reg_low_2ghz_chan = reg_cap_ext->low_2ghz_chan;
+	reg_high_2ghz_chan = reg_cap_ext->high_2ghz_chan;
+	reg_low_5ghz_chan = reg_cap_ext->low_5ghz_chan;
+	reg_high_5ghz_chan = reg_cap_ext->high_5ghz_chan;
+	for (i = 1; i < PSOC_MAX_MAC_PHY_CAP; i++) {
+		mac_phy_cap = &info->info.mac_phy_cap[i];
+		reg_cap_ext = &mac_phy_cap->reg_cap_ext;
+
+		if (reg_cap_ext->low_2ghz_chan) {
+			reg_low_2ghz_chan = reg_low_2ghz_chan ?
+				QDF_MIN(reg_cap_ext->low_2ghz_chan,
+					reg_low_2ghz_chan) :
+				reg_cap_ext->low_2ghz_chan;
+		}
+		if (reg_cap_ext->high_2ghz_chan) {
+			reg_high_2ghz_chan = reg_high_2ghz_chan ?
+				QDF_MAX(reg_cap_ext->high_2ghz_chan,
+					reg_high_2ghz_chan) :
+				reg_cap_ext->high_2ghz_chan;
+		}
+		if (reg_cap_ext->low_5ghz_chan) {
+			reg_low_5ghz_chan = reg_low_5ghz_chan ?
+				QDF_MIN(reg_cap_ext->low_5ghz_chan,
+					reg_low_5ghz_chan) :
+				reg_cap_ext->low_5ghz_chan;
+		}
+		if (reg_cap_ext->high_5ghz_chan) {
+			reg_high_5ghz_chan = reg_high_5ghz_chan ?
+				QDF_MAX(reg_cap_ext->high_5ghz_chan,
+					reg_high_5ghz_chan) :
+				reg_cap_ext->high_5ghz_chan;
+		}
+	}
+	/* For old hw, no reg_cap_ext reported from service ready ext,
+	 * fill the low/high with default of regulatory.
+	 */
+	if (!reg_low_2ghz_chan && !reg_high_2ghz_chan &&
+	    !reg_low_5ghz_chan && !reg_high_5ghz_chan) {
+		mlme_legacy_debug("no reg_cap_ext in mac_phy_cap");
+		reg_low_2ghz_chan = TWOG_STARTING_FREQ - 10;
+		reg_high_2ghz_chan = TWOG_CHAN_14_IN_MHZ + 10;
+		reg_low_5ghz_chan = FIVEG_STARTING_FREQ - 10;
+		reg_high_5ghz_chan = SIXG_CHAN_233_IN_MHZ + 10;
+	}
+	if (!wlan_reg_is_6ghz_supported(psoc)) {
+		mlme_legacy_debug("disabling 6ghz channels");
+		reg_high_5ghz_chan = FIVEG_CHAN_177_IN_MHZ + 10;
+	}
+	mlme_legacy_debug("%d %d %d %d", reg_low_2ghz_chan, reg_high_2ghz_chan,
+			  reg_low_5ghz_chan, reg_high_5ghz_chan);
+	*low_2ghz_chan = reg_low_2ghz_chan;
+	*high_2ghz_chan = reg_high_2ghz_chan;
+	*low_5ghz_chan = reg_low_5ghz_chan;
+	*high_5ghz_chan = reg_high_5ghz_chan;
+
+	return QDF_STATUS_SUCCESS;
 }
 
 #ifdef WLAN_FEATURE_P2P_P2P_STA

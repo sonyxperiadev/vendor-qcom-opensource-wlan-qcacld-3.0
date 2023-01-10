@@ -139,6 +139,31 @@ uint8_t ucfg_get_tx_power(struct wlan_objmgr_psoc *psoc, uint8_t band)
 }
 
 /**
+ * ucfg_mlme_get_phy_max_freq_range() - Get phy supported max channel
+ * frequency range
+ * @psoc: psoc for country information
+ * @low_2ghz_chan: 2.4 GHz low channel frequency
+ * @high_2ghz_chan: 2.4 GHz high channel frequency
+ * @low_5ghz_chan: 5 GHz low channel frequency
+ * @high_5ghz_chan: 5 GHz high channel frequency
+ *
+ * Return: QDF status
+ */
+static inline
+QDF_STATUS ucfg_mlme_get_phy_max_freq_range(struct wlan_objmgr_psoc *psoc,
+					    uint32_t *low_2ghz_chan,
+					    uint32_t *high_2ghz_chan,
+					    uint32_t *low_5ghz_chan,
+					    uint32_t *high_5ghz_chan)
+{
+	return wlan_mlme_get_phy_max_freq_range(psoc,
+						low_2ghz_chan,
+						high_2ghz_chan,
+						low_5ghz_chan,
+						high_5ghz_chan);
+}
+
+/**
  * ucfg_mlme_get_ht_cap_info() - Get the HT cap info config
  * @psoc: pointer to psoc object
  * @value: pointer to the value which will be filled for the caller
