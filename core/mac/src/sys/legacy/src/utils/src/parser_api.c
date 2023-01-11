@@ -11310,11 +11310,17 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 	mlo_ie->mld_capab_and_op_present = 1;
 	mlo_ie->mld_id_present = 0;
 
+	if (!pe_session->lim_join_req)
+		return QDF_STATUS_E_FAILURE;
+
+	partner_info = &pe_session->lim_join_req->partner_info;
+
 	if (mlo_ie->mld_capab_and_op_present) {
 		presence_bitmap |= WLAN_ML_BV_CTRL_PBM_MLDCAPANDOP_P;
 		mlo_ie->common_info_length += WLAN_ML_BV_CINFO_MLDCAPANDOP_SIZE;
 		mlo_ie->mld_capab_and_op_info.max_simultaneous_link_num =
-			wlan_mlme_get_sta_mlo_simultaneous_links(psoc);
+			QDF_MIN(partner_info->num_partner_links,
+				wlan_mlme_get_sta_mlo_simultaneous_links(psoc));
 		pe_debug("max_simultaneous_link_num %d",
 			 mlo_ie->mld_capab_and_op_info.max_simultaneous_link_num);
 		mlo_ie->mld_capab_and_op_info.srs_support = 0;
@@ -11422,7 +11428,6 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 	mlo_ie->num_data = p_ml_ie - mlo_ie->data;
 
 	/* find out number of links from bcn or prb rsp */
-	partner_info = &pe_session->lim_join_req->partner_info;
 	total_sta_prof = partner_info->num_partner_links;
 
 	mlo_dev_ctx = pe_session->vdev->mlo_dev_ctx;
