@@ -3068,6 +3068,17 @@ void sme_set_eht_bw_cap(mac_handle_t mac_handle, uint8_t vdev_id,
  */
 void sme_update_eht_cap_mcs(mac_handle_t mac_handle, uint8_t session_id,
 			    uint8_t mcs);
+
+/**
+ * sme_update_eht_om_ctrl_supp() - sets the EHT OM control capability
+ * @mac_handle: Opaque handle to the global MAC context
+ * @session_id: SME session id
+ * @cfg_val: EHT OM control config
+ *
+ * Return: 0 on success else err code
+ */
+int sme_update_eht_om_ctrl_supp(mac_handle_t mac_handle, uint8_t session_id,
+				uint8_t cfg_val);
 #else
 static inline void sme_update_tgt_eht_cap(mac_handle_t mac_handle,
 					  struct wma_tgt_cfg *cfg,
@@ -3086,6 +3097,13 @@ static inline void sme_update_eht_cap_mcs(mac_handle_t mac_handle,
 					  uint8_t session_id,
 					  uint8_t mcs)
 {}
+
+static inline
+int sme_update_eht_om_ctrl_supp(mac_handle_t mac_handle, uint8_t session_id,
+				uint8_t cfg_val)
+{
+	return 0;
+}
 #endif
 
 #ifdef WLAN_FEATURE_11AX
