@@ -654,10 +654,11 @@ lim_validate_mac_address_in_auth_frame(struct mac_context *mac_ctx,
 		return QDF_STATUS_E_ALREADY;
 	}
 
-	if (mlo_mgr_ml_peer_exist(mac_hdr->sa))
+	if (mlo_mgr_ml_peer_exist_on_diff_ml_ctx(mac_hdr->sa, NULL))
 		return QDF_STATUS_E_ALREADY;
 
-	if (mlo_mgr_ml_peer_exist(rx_auth_frm_body->peer_mld.bytes))
+	if (mlo_mgr_ml_peer_exist_on_diff_ml_ctx(
+				rx_auth_frm_body->peer_mld.bytes, NULL))
 		return QDF_STATUS_E_ALREADY;
 
 	return QDF_STATUS_SUCCESS;
