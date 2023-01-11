@@ -3927,6 +3927,7 @@ static int __wlan_hdd_cfg80211_stats_ext_request(struct wiphy *wiphy,
 	QDF_STATUS status;
 	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
 	ol_txrx_soc_handle soc = cds_get_context(QDF_MODULE_ID_SOC);
+	struct cdp_txrx_stats_req txrx_req = {0};
 
 	hdd_enter_dev(dev);
 
@@ -3937,6 +3938,18 @@ static int __wlan_hdd_cfg80211_stats_ext_request(struct wiphy *wiphy,
 	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
 		hdd_err("Command not allowed in FTM mode");
 		return -EPERM;
+	}
+
+	/**
+	 * HTT_DBG_EXT_STATS_PDEV_RX
+	 */
+	txrx_req.stats = 2;
+	/* default value of secondary parameter is 0(mac_id) */
+	txrx_req.mac_id = 0;
+	status = cdp_txrx_stats_request(soc, adapter->vdev_id, &txrx_req);
+	if (QDF_STATUS_SUCCESS != status) {
+		hdd_err_rl("Failed to get hw stats: %u", status);
+		ret_val = -EINVAL;
 	}
 
 	stats_ext_req.request_data_len = data_len;
