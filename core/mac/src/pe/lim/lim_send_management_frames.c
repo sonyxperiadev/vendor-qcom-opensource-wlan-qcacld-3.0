@@ -4232,6 +4232,17 @@ lim_send_disassoc_mgmt_frame(struct mac_context *mac,
 		if (waitForAck)
 			lim_send_disassoc_cnf(mac);
 		return;
+	} else if (lim_is_ml_peer_state_disconn(mac, pe_session, peer)) {
+		/**
+		 * Check if disassoc is already sent on link vdev and ML peer
+		 * state is moved to ML_PEER_DISCONN_INITIATED. In which case,
+		 * do not send disassoc on assoc vdev, issue disassoc only if
+		 * this check fails.
+		 */
+		pe_debug("disassoc tx not required for vdev id %d",
+			 pe_session->vdev_id);
+		lim_send_disassoc_cnf(mac);
+		return;
 	}
 	smeSessionId = pe_session->smeSessionId;
 
