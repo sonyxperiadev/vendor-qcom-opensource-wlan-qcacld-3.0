@@ -38,6 +38,12 @@
 #define JOIN_PROBE_REQ_TIMER_MS              200
 #define MAX_JOIN_PROBE_REQ                   5
 
+/* If AP reported link delete timer less than such value,
+ * host will do link removel directly without wait for the
+ * timer timeout.
+ */
+#define LINK_REMOVAL_MIN_TIMEOUT_MS 1000
+
 /*
  * Following time is used to program WOW_TIMER_PATTERN to FW so that FW will
  * wake host up to do graceful disconnect in case PEER remains un-authorized
