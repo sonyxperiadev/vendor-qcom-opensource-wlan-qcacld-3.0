@@ -3494,6 +3494,51 @@ static bool wlan_hdd_check_is_acs_request_same(struct hdd_adapter *adapter,
 }
 
 /**
+ * hdd_remove_passive_dfs_acs_channel_for_ll_sap(): Remove passive/dfs channel
+ * for LL SAP
+ * @sap_config: Pointer to sap_config
+ * @psoc: Pointer to psoc
+ * @pdev: Pointer to pdev
+ * @curr_mode: Current mode
+ * @vdev_id: Vdev Id
+ *
+ * This function will remove passive/dfs acs channel for low latency SAP
+ * which are configured through userspace.
+ *
+ * Return: void
+ */
+static void hdd_remove_passive_dfs_acs_channel_for_ll_sap(
+					struct sap_config *sap_config,
+					struct wlan_objmgr_psoc *psoc,
+					struct wlan_objmgr_pdev *pdev,
+					enum policy_mgr_con_mode curr_mode,
+					uint8_t vdev_id)
+{
+	uint32_t i, ch_cnt = 0;
+	uint32_t freq = 0;
+
+	if (!policy_mgr_is_ll_sap_present(psoc, curr_mode, vdev_id))
+		return;
+
+	for (i = 0; i < sap_config->acs_cfg.ch_list_count; i++) {
+		freq = sap_config->acs_cfg.freq_list[i];
+
+		/* Remove passive/dfs channel for LL SAP */
+		if (wlan_reg_is_passive_for_freq(pdev, freq) ||
+		    wlan_reg_is_dfs_for_freq(pdev, freq))
+			continue;
+
+		sap_config->acs_cfg.freq_list[ch_cnt++] = freq;
+	}
+
+	if (ch_cnt != sap_config->acs_cfg.ch_list_count) {
+		hdd_debug("New count after modification %d", ch_cnt);
+		sap_config->acs_cfg.ch_list_count = ch_cnt;
+		sap_dump_acs_channel(&sap_config->acs_cfg);
+	}
+}
+
+/**
  * __wlan_hdd_cfg80211_do_acs(): CFG80211 handler function for DO_ACS Vendor CMD
  * @wiphy:  Linux wiphy struct pointer
  * @wdev:   Linux wireless device struct pointer
@@ -3750,6 +3795,14 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 
 	pm_mode =
 	      policy_mgr_convert_device_mode_to_qdf_type(adapter->device_mode);
+
+	/* Remove passive/dfs acs channel for ll sap */
+	hdd_remove_passive_dfs_acs_channel_for_ll_sap(sap_config,
+						      hdd_ctx->psoc,
+						      hdd_ctx->pdev,
+						      pm_mode,
+						      adapter->vdev_id);
+
 	/* consult policy manager to get PCL */
 	qdf_status = policy_mgr_get_pcl(hdd_ctx->psoc, pm_mode,
 					sap_config->acs_cfg.pcl_chan_freq,
