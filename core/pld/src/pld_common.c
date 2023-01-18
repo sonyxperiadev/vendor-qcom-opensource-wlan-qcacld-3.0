@@ -3205,7 +3205,10 @@ int pld_thermal_register(struct device *dev,
 	case PLD_BUS_TYPE_SDIO:
 	case PLD_BUS_TYPE_USB:
 	case PLD_BUS_TYPE_SNOC:
+		break;
 	case PLD_BUS_TYPE_PCIE:
+		errno = pld_pci_thermal_register(dev, max_state, mon_id);
+		break;
 	case PLD_BUS_TYPE_PCIE_FW_SIM:
 		break;
 	case PLD_BUS_TYPE_IPCI_FW_SIM:
@@ -3234,7 +3237,10 @@ void pld_thermal_unregister(struct device *dev, int mon_id)
 	case PLD_BUS_TYPE_SDIO:
 	case PLD_BUS_TYPE_USB:
 	case PLD_BUS_TYPE_SNOC:
+		break;
 	case PLD_BUS_TYPE_PCIE:
+		pld_pci_thermal_unregister(dev, mon_id);
+		break;
 	case PLD_BUS_TYPE_PCIE_FW_SIM:
 		break;
 	case PLD_BUS_TYPE_IPCI_FW_SIM:
@@ -3317,7 +3323,10 @@ int pld_get_thermal_state(struct device *dev, unsigned long *thermal_state,
 	case PLD_BUS_TYPE_SDIO:
 	case PLD_BUS_TYPE_USB:
 	case PLD_BUS_TYPE_SNOC:
+		break;
 	case PLD_BUS_TYPE_PCIE:
+		errno = pld_pci_get_thermal_state(dev, thermal_state, mon_id);
+		break;
 	case PLD_BUS_TYPE_PCIE_FW_SIM:
 		break;
 	case PLD_BUS_TYPE_IPCI_FW_SIM:

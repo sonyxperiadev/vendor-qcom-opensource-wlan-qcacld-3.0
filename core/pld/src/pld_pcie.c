@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -118,6 +118,36 @@ static void pld_pcie_remove(struct pci_dev *pdev)
 out:
 	osif_psoc_sync_trans_stop(psoc_sync);
 	osif_psoc_sync_destroy(psoc_sync);
+}
+
+/**
+ * pld_pcie_set_thermal_state() - Set thermal state for thermal mitigation
+ * @pdev: PCIE device
+ * @thermal_state: Thermal state set by thermal subsystem
+ * @mon_id: Thermal cooling device ID
+ *
+ * This function will be called when thermal subsystem notifies platform
+ * driver about change in thermal state.
+ *
+ * Return: 0 for success
+ * Non zero failure code for errors
+ */
+static int pld_pcie_set_thermal_state(struct pci_dev *pdev,
+				      unsigned long thermal_state,
+				      int mon_id)
+{
+	struct pld_context *pld_context;
+
+	pld_context = pld_get_global_context();
+	if (!pld_context)
+		return -EINVAL;
+
+	if (pld_context->ops->set_curr_therm_cdev_state)
+		return pld_context->ops->set_curr_therm_cdev_state(&pdev->dev,
+								thermal_state,
+								mon_id);
+
+	return -ENOTSUPP;
 }
 
 #ifdef CONFIG_PLD_PCIE_CNSS
@@ -701,6 +731,7 @@ struct cnss_wlan_driver pld_pcie_ops = {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0))
 	.chip_version = CHIP_VERSION,
 #endif
+	.set_therm_cdev_state = pld_pcie_set_thermal_state,
 };
 
 /**
