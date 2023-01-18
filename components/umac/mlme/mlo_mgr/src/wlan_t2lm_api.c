@@ -300,10 +300,8 @@ wlan_t2lm_validate_candidate(struct cnx_mgr *cm_ctx,
 		return QDF_STATUS_SUCCESS;
 	}
 
-	if (wlan_vdev_mlme_get_opmode(vdev) == QDF_STA_MODE &&
-	    wlan_vdev_mlme_is_mlo_vdev(vdev) &&
+	if ((wlan_vdev_mlme_get_opmode(vdev) == QDF_STA_MODE) &&
 	    scan_entry->ie_list.t2lm[0]) {
-
 		status = wlan_mlo_parse_bcn_prbresp_t2lm_ie(&t2lm_ctx,
 						scan_entry->ie_list.t2lm[0]);
 		if (QDF_IS_STATUS_ERROR(status))
