@@ -2938,6 +2938,31 @@ cm_stats_log_roam_scan_candidates(struct wmi_roam_candidate_info *ap,
 }
 
 /**
+ * cm_get_roam_scan_type_str() - Get the string for roam scan type
+ * @roam_scan_type: roam scan type coming from fw via
+ * wmi_roam_scan_info tlv
+ *
+ *  Return: Meaningful string for roam scan type
+ */
+static char *cm_get_roam_scan_type_str(uint32_t roam_scan_type)
+{
+	switch (roam_scan_type) {
+	case ROAM_STATS_SCAN_TYPE_PARTIAL:
+		return "PARTIAL";
+	case ROAM_STATS_SCAN_TYPE_FULL:
+		return "FULL";
+	case ROAM_STATS_SCAN_TYPE_NO_SCAN:
+		return "NO SCAN";
+	case ROAM_STATS_SCAN_TYPE_HIGHER_BAND_5GHZ_6GHZ:
+		return "Higher Band: 5 GHz + 6 GHz";
+	case ROAM_STATS_SCAN_TYPE_HIGHER_BAND_6GHZ:
+		return "Higher Band : 6 GHz";
+	default:
+		return "UNKNOWN";
+	}
+}
+
+/**
  * cm_roam_stats_print_scan_info  - Print the roam scan details and candidate AP
  * details
  * @psoc:      psoc common object
@@ -2971,7 +2996,7 @@ cm_roam_stats_print_scan_info(struct wlan_objmgr_psoc *psoc,
 
 	tmp = buf;
 	/* For partial scans, print the channel info */
-	if (!scan->type) {
+	if (scan->type == ROAM_STATS_SCAN_TYPE_PARTIAL) {
 		buf_cons = qdf_snprint(tmp, buf_left, "{");
 		buf_left -= buf_cons;
 		tmp += buf_cons;
@@ -3001,7 +3026,7 @@ cm_roam_stats_print_scan_info(struct wlan_objmgr_psoc *psoc,
 
 	mlme_get_converted_timestamp(timestamp, time);
 	mlme_nofl_info("%s [ROAM_SCAN]: VDEV[%d] Scan_type: %s %s %s",
-		       time, vdev_id, mlme_get_roam_scan_type_str(scan->type),
+		       time, vdev_id, cm_get_roam_scan_type_str(scan->type),
 		       buf1, buf);
 	cm_stats_log_roam_scan_candidates(scan->ap, scan->num_ap);
 

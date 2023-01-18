@@ -4448,22 +4448,6 @@ char *mlme_get_roam_status_str(uint32_t roam_status)
 	}
 }
 
-char *mlme_get_roam_scan_type_str(uint32_t roam_scan_type)
-{
-	switch (roam_scan_type) {
-	case 0:
-		return "PARTIAL";
-	case 1:
-		return "FULL";
-	case 2:
-		return "NO SCAN";
-	case 3:
-		return "Higher Band";
-	default:
-		return "UNKNOWN";
-	}
-}
-
 char *mlme_get_roam_trigger_str(uint32_t roam_scan_trigger)
 {
 	switch (roam_scan_trigger) {
