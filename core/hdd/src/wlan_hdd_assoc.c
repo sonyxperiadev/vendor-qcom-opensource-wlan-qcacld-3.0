@@ -231,16 +231,24 @@ static const int beacon_filter_extn_table[] = {
 		(defined(CFG80211_EXTERNAL_AUTH_SUPPORT) || \
 		LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0))
 #if defined (CFG80211_SAE_AUTH_TA_ADDR_SUPPORT)
+/**
+ * wlan_hdd_sae_copy_ta_addr() - Send TA address to supplicant
+ * @params: pointer to external auth params
+ * @adapter: pointer adapter context
+ *
+ * This API is used to copy TA address info in supplicant structure.
+ *
+ * Return: None
+ */
 static inline
 void wlan_hdd_sae_copy_ta_addr(struct cfg80211_external_auth_params *params,
-			       struct hdd_adapter *adapter,
-			       struct sir_sae_info *sae_info)
+			       struct hdd_adapter *adapter)
 {
 	struct qdf_mac_addr ta = QDF_MAC_ADDR_ZERO_INIT;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 
 	status = ucfg_cm_get_sae_auth_ta(adapter->hdd_ctx->pdev,
-					 sae_info->vdev_id,
+					 adapter->vdev_id,
 					 &ta);
 	if (QDF_IS_STATUS_SUCCESS(status))
 		qdf_mem_copy(params->tx_addr, ta.bytes, QDF_MAC_ADDR_SIZE);
@@ -256,9 +264,46 @@ void wlan_hdd_sae_copy_ta_addr(struct cfg80211_external_auth_params *params,
 #else
 static inline
 void wlan_hdd_sae_copy_ta_addr(struct cfg80211_external_auth_params *params,
-			       struct hdd_adapter *adapter,
-			       struct sir_sae_info *sae_info)
+			       struct hdd_adapter *adapter)
 {
+}
+#endif
+
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_EXTERNAL_AUTH_MLO_SUPPORT)
+/**
+ * wlan_hdd_sae_update_mld_addr() - Send mld address to supplicant
+ * @params: pointer to external auth params
+ * @adapter: pointer adapter context
+ *
+ * This API is used to copy MLD address info in supplicant structure.
+ *
+ * Return: QDF_STATUS
+ */
+static inline QDF_STATUS
+wlan_hdd_sae_update_mld_addr(struct cfg80211_external_auth_params *params,
+			     struct hdd_adapter *adapter)
+{
+	struct qdf_mac_addr mld_addr;
+	QDF_STATUS status;
+
+	if (!wlan_vdev_mlme_is_mlo_vdev(adapter->vdev))
+		return QDF_STATUS_SUCCESS;
+
+	status = wlan_vdev_get_bss_peer_mld_mac(adapter->vdev, &mld_addr);
+	if (QDF_IS_STATUS_ERROR(status))
+		return QDF_STATUS_E_INVAL;
+
+	qdf_mem_copy(params->mld_addr, mld_addr.bytes,
+		     QDF_MAC_ADDR_SIZE);
+
+	return QDF_STATUS_SUCCESS;
+}
+#else
+static inline QDF_STATUS
+wlan_hdd_sae_update_mld_addr(struct cfg80211_external_auth_params *params,
+			     struct hdd_adapter *adapter)
+{
+	return QDF_STATUS_SUCCESS;
 }
 #endif
 
@@ -305,6 +350,7 @@ static void wlan_hdd_sae_callback(struct hdd_adapter *adapter,
 	int flags;
 	struct sir_sae_info *sae_info = roam_info->sae_info;
 	struct cfg80211_external_auth_params params = {0};
+	QDF_STATUS status;
 
 	if (wlan_hdd_validate_context(hdd_ctx))
 		return;
@@ -322,7 +368,10 @@ static void wlan_hdd_sae_callback(struct hdd_adapter *adapter,
 	params.action = NL80211_EXTERNAL_AUTH_START;
 	qdf_mem_copy(params.bssid, sae_info->peer_mac_addr.bytes,
 		     QDF_MAC_ADDR_SIZE);
-	wlan_hdd_sae_copy_ta_addr(&params, adapter, sae_info);
+	wlan_hdd_sae_copy_ta_addr(&params, adapter);
+	status = wlan_hdd_sae_update_mld_addr(&params, adapter);
+	if (QDF_IS_STATUS_ERROR(status))
+		return;
 
 	qdf_mem_copy(params.ssid.ssid, sae_info->ssid.ssId,
 		     sae_info->ssid.length);
