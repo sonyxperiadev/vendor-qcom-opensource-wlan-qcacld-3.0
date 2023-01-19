@@ -1433,12 +1433,15 @@ hdd_cm_connect_success_pre_user_update(struct wlan_objmgr_vdev *vdev,
 	if (is_roam_offload || !is_roam) {
 		/* For FW_ROAM/LFR3 OR connect */
 		/* for LFR 3 get authenticated info from resp */
-		if (is_roam)
+		if (is_roam) {
 			is_auth_required =
 				hdd_cm_is_roam_auth_required(sta_ctx, rsp);
-		if (is_auth_required)
-			wlan_acquire_peer_key_wakelock(hdd_ctx->pdev,
-						       rsp->bssid.bytes);
+			if (is_auth_required)
+				wlan_acquire_peer_key_wakelock(hdd_ctx->pdev,
+							      rsp->bssid.bytes);
+		}
+		hdd_debug("is_roam_offload %d, is_roam %d, is_auth_required %d",
+			  is_roam_offload, is_roam, is_auth_required);
 		hdd_roam_register_sta(adapter, &rsp->bssid, is_auth_required);
 	} else {
 		/* for host roam/LFR2 */
