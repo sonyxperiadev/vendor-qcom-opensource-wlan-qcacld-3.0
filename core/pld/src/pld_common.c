@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -3290,6 +3290,8 @@ const char *pld_bus_width_type_to_str(enum pld_bus_width_type level)
 		return "MEDIUM";
 	case PLD_BUS_WIDTH_HIGH:
 		return "HIGH";
+	case PLD_BUS_WIDTH_MID_HIGH:
+		return "MID_HIGH";
 	case PLD_BUS_WIDTH_VERY_HIGH:
 		return "VERY_HIGH";
 	case PLD_BUS_WIDTH_ULTRA_HIGH:

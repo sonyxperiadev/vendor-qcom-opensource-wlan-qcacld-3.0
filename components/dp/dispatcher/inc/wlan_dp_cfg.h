@@ -176,6 +176,30 @@
 		10000, \
 		CFG_VALUE_OR_DEFAULT, \
 		"Bus bandwidth very high threshold")
+
+/*
+ * <ini>
+ * gBusBandwidthMidHighThreshold - bus bandwidth high HE cases threshold
+ *
+ * @Min: 0
+ * @Max: 4294967295UL
+ * @Default: 0
+ *
+ * This ini specifies the bus bandwidth high HE cases threshold
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
+#define CFG_DP_BUS_BANDWIDTH_MID_HIGH_THRESHOLD \
+		CFG_INI_UINT( \
+		"gBusBandwidthMidHighThreshold", \
+		0, \
+		4294967295UL, \
+		0, \
+		CFG_VALUE_OR_DEFAULT, \
+		"Bus bandwidth high threshold")
+
 /*
  * <ini>
  * gBusBandwidthDBSThreshold - bus bandwidth for DBS mode threshold
@@ -1200,6 +1224,7 @@
 	CFG(CFG_DP_BUS_BANDWIDTH_SUPER_HIGH_THRESHOLD) \
 	CFG(CFG_DP_BUS_BANDWIDTH_ULTRA_HIGH_THRESHOLD) \
 	CFG(CFG_DP_BUS_BANDWIDTH_VERY_HIGH_THRESHOLD) \
+	CFG(CFG_DP_BUS_BANDWIDTH_MID_HIGH_THRESHOLD) \
 	CFG(CFG_DP_BUS_BANDWIDTH_DBS_THRESHOLD) \
 	CFG(CFG_DP_BUS_BANDWIDTH_HIGH_THRESHOLD) \
 	CFG(CFG_DP_BUS_BANDWIDTH_MEDIUM_THRESHOLD) \

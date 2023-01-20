@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -435,6 +435,7 @@ typedef struct opaque_hdd_callback_handle *hdd_cb_handle;
  * @BUS_BW_LEVEL_6: vote for level-6 bus bandwidth
  * @BUS_BW_LEVEL_7: vote for level-7 bus bandwidth
  * @BUS_BW_LEVEL_8: vote for level-8 bus bandwidth
+ * @BUS_BW_LEVEL_9: vote for level-9 bus bandwidth
  * @BUS_BW_LEVEL_MAX: vote for max level bus bandwidth
  */
 enum bus_bw_level {
@@ -447,6 +448,7 @@ enum bus_bw_level {
 	BUS_BW_LEVEL_6,
 	BUS_BW_LEVEL_7,
 	BUS_BW_LEVEL_8,
+	BUS_BW_LEVEL_9,
 	BUS_BW_LEVEL_MAX,
 };
 
@@ -460,6 +462,7 @@ enum bus_bw_level {
  * @TPUT_LEVEL_LOW: low throughput level
  * @TPUT_LEVEL_MEDIUM: medium throughtput level
  * @TPUT_LEVEL_HIGH: high throughput level
+ * @TPUT_LEVEL_MID_HIGH: mid high throughput level
  * @TPUT_LEVEL_VERY_HIGH: very high throughput level
  * @TPUT_LEVEL_ULTRA_HIGH: ultra high throughput level
  * @TPUT_LEVEL_SUPER_HIGH: super high throughput level
@@ -471,6 +474,7 @@ enum tput_level {
 	TPUT_LEVEL_LOW,
 	TPUT_LEVEL_MEDIUM,
 	TPUT_LEVEL_HIGH,
+	TPUT_LEVEL_MID_HIGH,
 	TPUT_LEVEL_VERY_HIGH,
 	TPUT_LEVEL_ULTRA_HIGH,
 	TPUT_LEVEL_SUPER_HIGH,
