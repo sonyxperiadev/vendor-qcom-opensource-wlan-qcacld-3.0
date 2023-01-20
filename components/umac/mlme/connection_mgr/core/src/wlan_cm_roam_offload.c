@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2768,6 +2768,12 @@ cm_update_btm_offload_config(struct wlan_objmgr_psoc *psoc,
 	if (!(*btm_offload_config))
 		return;
 
+	if (!wlan_cm_get_assoc_btm_cap(vdev)) {
+		mlme_debug("BTM not supported, disable BTM offload");
+		*btm_offload_config = 0;
+		return;
+	}
+
 	vdev_id = wlan_vdev_get_id(vdev);
 	wlan_cm_roam_cfg_get_value(psoc, vdev_id, HS_20_AP, &temp);
 	is_hs_20_ap = temp.bool_value;
@@ -4643,6 +4649,18 @@ cm_roam_state_change(struct wlan_objmgr_pdev *pdev,
 	if (is_rso_skip)
 		return status;
 
+	vdev = wlan_objmgr_get_vdev_by_id_from_pdev(pdev, vdev_id,
+						    WLAN_MLME_CM_ID);
+	if (!vdev) {
+		mlme_err("Invalid vdev");
+		goto end;
+	}
+	status = cm_roam_acquire_lock(vdev);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		mlme_err("Fail to acquire lock, status: %d", status);
+		goto release_ref;
+	}
+
 	switch (requested_state) {
 	case WLAN_ROAM_DEINIT:
 		status = cm_roam_switch_to_deinit(pdev, vdev_id, reason);
@@ -4667,9 +4685,15 @@ cm_roam_state_change(struct wlan_objmgr_pdev *pdev,
 		mlme_debug("ROAM: Invalid roam state %d", requested_state);
 		break;
 	}
+
+	cm_roam_release_lock(vdev);
+
+release_ref:
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_CM_ID);
 end:
 	cm_record_state_change(pdev, vdev_id, cur_state, requested_state,
 			       reason, is_up, status);
+
 	return status;
 }
 

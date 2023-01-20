@@ -188,6 +188,10 @@ extern const struct nla_policy wlan_hdd_wisa_cmd_policy[
 #define WLAN_AKM_SUITE_FT_EAP_SHA_384 0x000FAC0D
 #endif
 
+#ifndef WLAN_AKM_SUITE_SAE_EXT_KEY
+#define WLAN_AKM_SUITE_SAE_EXT_KEY 0x000FAC18
+#endif
+
 #ifdef FEATURE_WLAN_TDLS
 #define WLAN_IS_TDLS_SETUP_ACTION(action) \
 	((TDLS_SETUP_REQUEST <= action) && \

@@ -744,7 +744,8 @@ static int __hdd_netdev_notifier_call(struct net_device *net_dev,
 		return NOTIFY_DONE;
 	}
 
-	hdd_debug("%s New Net Device State = %lu", net_dev->name, state);
+	hdd_debug("%s New Net Device State = %lu, flags 0x%x",
+		  net_dev->name, state, net_dev->flags);
 
 	switch (state) {
 	case NETDEV_REGISTER:
@@ -6610,14 +6611,6 @@ QDF_STATUS hdd_init_station_mode(struct hdd_adapter *adapter)
 	hdd_vdev_set_ht_vht_ies(mac_handle, vdev);
 	hdd_roam_profile_init(adapter);
 	hdd_register_wext(adapter->dev);
-
-	/* set fast roaming capability in sme session */
-	status = ucfg_user_space_enable_disable_rso(hdd_ctx->pdev,
-						    adapter->vdev_id,
-						    true);
-	if (QDF_IS_STATUS_ERROR(status))
-		hdd_err("ROAM_CONFIG: sme_config_fast_roaming failed with status=%d",
-			status);
 
 	/* Set the default operation channel freq*/
 	sta_ctx->conn_info.chan_freq = hdd_ctx->config->operating_chan_freq;

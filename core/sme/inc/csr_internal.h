@@ -597,16 +597,19 @@ bool csr_is_mcc_channel(struct mac_context *mac_ctx, uint32_t chan_freq);
  * @mac_ctx: Global mac context pointer
  * @vdev_id: Vdev id
  * @bssid: candidate AP bssid
+ * @akm: candidate AKM
  */
 QDF_STATUS
 csr_roam_auth_offload_callback(struct mac_context *mac_ctx,
 			       uint8_t vdev_id,
-			       struct qdf_mac_addr bssid);
+			       struct qdf_mac_addr bssid,
+			       uint32_t akm);
 #else
 static inline QDF_STATUS
 csr_roam_auth_offload_callback(struct mac_context *mac_ctx,
 			       uint8_t vdev_id,
-			       struct qdf_mac_addr bssid)
+			       struct qdf_mac_addr bssid,
+			       uint32_t akm)
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }
