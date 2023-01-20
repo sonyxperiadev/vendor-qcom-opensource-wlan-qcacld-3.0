@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1822,4 +1822,20 @@ void populate_dot11f_rnr_tbtt_info_7(struct mac_context *mac_ctx,
 void populate_dot11f_edca_pifs_param_set(
 				struct mac_context *mac,
 				tDot11fIEqcn_ie *qcn_ie);
+
+/**
+ * populate_dot11f_bcn_prot_caps() - populate Beacon protection extended caps
+ *
+ * @mac_ctx: Global MAC context.
+ * @pe_session: Pointer to the PE session.
+ * @dot11f: Pointer to the extended capabilities of the session.
+ *
+ * Populate the Beacon protection extended capabilities based on the target and
+ * INI support.
+ *
+ * Return: QDF_STATUS Success or Failure
+ */
+QDF_STATUS populate_dot11f_bcn_prot_extcaps(struct mac_context *mac_ctx,
+					    struct pe_session *pe_session,
+					    tDot11fIEExtCap *dot11f);
 #endif /* __PARSE_H__ */

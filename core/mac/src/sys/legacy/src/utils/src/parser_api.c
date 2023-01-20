@@ -11896,4 +11896,34 @@ void populate_dot11f_6g_rnr(struct mac_context *mac_ctx,
 		 wlan_vdev_get_id(co_session->vdev),
 		 dot11f->op_class, dot11f->channel_num);
 }
+
+QDF_STATUS populate_dot11f_bcn_prot_extcaps(struct mac_context *mac_ctx,
+					    struct pe_session *pe_session,
+					    tDot11fIEExtCap *dot11f)
+{
+	struct s_ext_cap *p_ext_cap;
+
+	/*
+	 * Some legacy STA might not connect with SAP broadcasting
+	 * EXTCAP with size greater than 8bytes.
+	 * In such cases, disable the beacon protection only if
+	 * a) disable_sap_bcn_prot ini is set
+	 * b) The SAP is not operating in 6 GHz or 11be profile
+	 * where BP is mandatory.
+	 */
+	if (pe_session->opmode != QDF_SAP_MODE ||
+	    !wlan_mlme_is_bcn_prot_disabled_for_sap(mac_ctx->psoc) ||
+	    WLAN_REG_IS_6GHZ_CHAN_FREQ(pe_session->curr_op_freq) ||
+	    pe_session->dot11mode > MLME_DOT11_MODE_11AX_ONLY)
+		return QDF_STATUS_SUCCESS;
+
+	p_ext_cap = (struct s_ext_cap *)dot11f->bytes;
+	if (!dot11f->present || !p_ext_cap->beacon_protection_enable)
+		return QDF_STATUS_SUCCESS;
+
+	p_ext_cap->beacon_protection_enable = 0;
+	dot11f->num_bytes = lim_compute_ext_cap_ie_length(dot11f);
+
+	return QDF_STATUS_SUCCESS;
+}
 /* parser_api.c ends here. */

@@ -894,10 +894,13 @@ sch_set_fixed_beacon_fields(struct mac_context *mac_ctx, struct pe_session *sess
 			pe_debug("extcap not extracted");
 		}
 		/* merge extcap IE */
-		if (extcap_present)
+		if (extcap_present) {
 			lim_merge_extcap_struct(&bcn_2->ExtCap,
 						&extracted_extcap,
 						true);
+			populate_dot11f_bcn_prot_extcaps(mac_ctx, session,
+							 &bcn_2->ExtCap);
+		}
 	}
 
 	if (session->vhtCapability && session->gLimOperatingMode.present) {

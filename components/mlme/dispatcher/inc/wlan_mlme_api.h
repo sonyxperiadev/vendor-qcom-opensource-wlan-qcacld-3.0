@@ -4119,4 +4119,14 @@ QDF_STATUS
 wlan_mlme_stats_get_periodic_display_time(struct wlan_objmgr_psoc *psoc,
 					  uint32_t *periodic_display_time);
 
+/**
+ * wlan_mlme_is_bcn_prot_disabled_for_sap() - Is beacon protection config
+ * disabled for SAP interface
+ *
+ * @psoc: pointer to psoc object
+ *
+ * Return: is beacon protection disabled
+ */
+bool
+wlan_mlme_is_bcn_prot_disabled_for_sap(struct wlan_objmgr_psoc *psoc);
 #endif /* _WLAN_MLME_API_H_ */
