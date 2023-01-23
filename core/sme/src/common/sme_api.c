@@ -10924,11 +10924,11 @@ sme_validate_session_for_cap_update(struct mac_context *mac_ctx,
 	return QDF_STATUS_SUCCESS;
 }
 
-int sme_send_he_om_ctrl_update(mac_handle_t mac_handle, uint8_t session_id)
+int sme_send_he_om_ctrl_update(mac_handle_t mac_handle, uint8_t session_id,
+			       struct omi_ctrl_tx *omi_data)
 {
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	struct mac_context *mac_ctx = MAC_CONTEXT(mac_handle);
-	struct omi_ctrl_tx omi_data = {0};
 	void *wma_handle;
 	struct csr_roam_session *session = CSR_GET_SESSION(mac_ctx, session_id);
 	uint32_t param_val = 0;
@@ -10950,32 +10950,41 @@ int sme_send_he_om_ctrl_update(mac_handle_t mac_handle, uint8_t session_id)
 					   &op_chan_freq, &freq_seg_0,
 					   &ch_width);
 
-	omi_data.a_ctrl_id = A_CTRL_ID_OMI;
+	if (!omi_data) {
+		sme_err("OMI data is NULL");
+		return -EIO;
+	}
+
+	omi_data->a_ctrl_id = A_CTRL_ID_OMI;
 
 	if (mac_ctx->he_om_ctrl_cfg_nss_set)
-		omi_data.rx_nss = mac_ctx->he_om_ctrl_cfg_nss;
+		omi_data->rx_nss = mac_ctx->he_om_ctrl_cfg_nss;
 	else
-		omi_data.rx_nss = session->nss - 1;
+		omi_data->rx_nss = session->nss - 1;
 
 	if (mac_ctx->he_om_ctrl_cfg_tx_nsts_set)
-		omi_data.tx_nsts = mac_ctx->he_om_ctrl_cfg_tx_nsts;
+		omi_data->tx_nsts = mac_ctx->he_om_ctrl_cfg_tx_nsts;
 	else
-		omi_data.tx_nsts = session->nss - 1;
+		omi_data->tx_nsts = session->nss - 1;
 
 	if (mac_ctx->he_om_ctrl_cfg_bw_set)
-		omi_data.ch_bw = mac_ctx->he_om_ctrl_cfg_bw;
+		omi_data->ch_bw = mac_ctx->he_om_ctrl_cfg_bw;
 	else
-		omi_data.ch_bw = ch_width;
+		omi_data->ch_bw = ch_width;
 
-	omi_data.ul_mu_dis = mac_ctx->he_om_ctrl_cfg_ul_mu_dis;
-	omi_data.ul_mu_data_dis = mac_ctx->he_om_ctrl_ul_mu_data_dis;
-	omi_data.omi_in_vht = 0x1;
-	omi_data.omi_in_he = 0x1;
+	omi_data->ul_mu_dis = mac_ctx->he_om_ctrl_cfg_ul_mu_dis;
+	omi_data->ul_mu_data_dis = mac_ctx->he_om_ctrl_ul_mu_data_dis;
+	omi_data->omi_in_vht = 0x1;
+	omi_data->omi_in_he = 0x1;
 
 	sme_debug("OMI: BW %d TxNSTS %d RxNSS %d ULMU %d, OMI_VHT %d, OMI_HE %d",
-		  omi_data.ch_bw, omi_data.tx_nsts, omi_data.rx_nss,
-		  omi_data.ul_mu_dis, omi_data.omi_in_vht, omi_data.omi_in_he);
-	qdf_mem_copy(&param_val, &omi_data, sizeof(omi_data));
+		  omi_data->ch_bw, omi_data->tx_nsts, omi_data->rx_nss,
+		  omi_data->ul_mu_dis, omi_data->omi_in_vht,
+		  omi_data->omi_in_he);
+	sme_debug("EHT OMI: BW %d rx nss %d tx nss %d", omi_data->eht_ch_bw_ext,
+		  omi_data->eht_rx_nss_ext, omi_data->eht_tx_nss_ext);
+
+	qdf_mem_copy(&param_val, omi_data, sizeof(omi_data));
 	wlan_mlme_get_bssid_vdev_id(mac_ctx->pdev, session_id,
 				    &connected_bssid);
 	sme_debug("param val %08X, bssid:"QDF_MAC_ADDR_FMT, param_val,

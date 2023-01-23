@@ -3106,6 +3106,23 @@ int sme_update_eht_om_ctrl_supp(mac_handle_t mac_handle, uint8_t session_id,
 }
 #endif
 
+struct omi_ctrl_tx {
+	uint32_t omi_in_vht:1;
+	uint32_t omi_in_he:1;
+	uint32_t a_ctrl_id:4;
+	uint32_t rx_nss:3;
+	uint32_t ch_bw:2;
+	uint32_t ul_mu_dis:1;
+	uint32_t tx_nsts:3;
+	uint32_t er_su_dis:1;
+	uint32_t dl_mu_mimo_resound:1;
+	uint32_t ul_mu_data_dis:1;
+	uint32_t eht_rx_nss_ext:1;
+	uint32_t eht_ch_bw_ext:1;
+	uint32_t eht_tx_nss_ext:1;
+	uint32_t reserved:11;
+};
+
 #ifdef WLAN_FEATURE_11AX
 /**
  * sme_update_tgt_he_cap() - sets the HE caps to pmac
@@ -3204,19 +3221,6 @@ int sme_update_he_om_ctrl_supp(mac_handle_t mac_handle, uint8_t session_id,
 			       uint8_t cfg_val);
 
 #define A_CTRL_ID_OMI 0x1
-struct omi_ctrl_tx {
-	uint32_t omi_in_vht:1;
-	uint32_t omi_in_he:1;
-	uint32_t a_ctrl_id:4;
-	uint32_t rx_nss:3;
-	uint32_t ch_bw:2;
-	uint32_t ul_mu_dis:1;
-	uint32_t tx_nsts:3;
-	uint32_t er_su_dis:1;
-	uint32_t dl_mu_mimo_resound:1;
-	uint32_t ul_mu_data_dis:1;
-	uint32_t reserved:14;
-};
 
 int sme_send_he_om_ctrl_bw_update(mac_handle_t mac_handle, uint8_t session_id,
 				  uint8_t cfg_val);
@@ -3241,10 +3245,12 @@ int sme_config_action_tx_in_tb_ppdu(mac_handle_t mac_handle, uint8_t session_id,
  * sme_send_he_om_ctrl_update() - Send HE OM ctrl Tx cmd to FW
  * @mac_handle: Pointer to mac handle
  * @session_id: SME session id
+ * @omi_data: OMI control data
  *
  * Return: 0 on success else err code
  */
-int sme_send_he_om_ctrl_update(mac_handle_t mac_handle, uint8_t session_id);
+int sme_send_he_om_ctrl_update(mac_handle_t mac_handle, uint8_t session_id,
+			       struct omi_ctrl_tx *omi_data);
 
 /**
  * sme_set_he_om_ctrl_param() - Update HE OM control params for OMI Tx
@@ -3440,7 +3446,8 @@ static inline int sme_update_he_htc_he_supp(mac_handle_t mac_handle,
 }
 
 static inline int
-sme_send_he_om_ctrl_update(mac_handle_t mac_handle, uint8_t session_id)
+sme_send_he_om_ctrl_update(mac_handle_t mac_handle, uint8_t session_id,
+			   struct omi_ctrl_tx *omi_data)
 {
 	return 0;
 }
