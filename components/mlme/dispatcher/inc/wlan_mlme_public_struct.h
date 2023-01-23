@@ -1631,13 +1631,15 @@ struct wlan_mlme_nss_chains {
 
 /**
  * enum station_keepalive_method - available keepalive methods for stations
+ * @MLME_STA_KEEPALIVE_MIN: ensure KEEPALIVE_NULL or ARP are not values of 0
  * @MLME_STA_KEEPALIVE_NULL_DATA: null data packet
  * @MLME_STA_KEEPALIVE_GRAT_ARP: gratuitous ARP packet
  * @MLME_STA_KEEPALIVE_COUNT: number of method options available
  */
 enum station_keepalive_method {
-	MLME_STA_KEEPALIVE_NULL_DATA,
-	MLME_STA_KEEPALIVE_GRAT_ARP,
+	MLME_STA_KEEPALIVE_MIN,
+	MLME_STA_KEEPALIVE_NULL_DATA = 1,
+	MLME_STA_KEEPALIVE_GRAT_ARP = 2,
 	/* keep at the end */
 	MLME_STA_KEEPALIVE_COUNT
 };
