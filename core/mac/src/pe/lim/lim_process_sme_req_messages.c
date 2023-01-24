@@ -4570,8 +4570,10 @@ struct pe_session *lim_get_disconnect_session(struct mac_context *mac_ctx,
 	uint8_t pe_session_id;
 
 	/* Try to find pe session with bssid */
-	session = pe_find_session_by_bssid(mac_ctx, req->req.bssid.bytes,
-					   &pe_session_id);
+	session = pe_find_session_by_bssid_and_vdev_id(mac_ctx,
+						       req->req.bssid.bytes,
+						       req->req.vdev_id,
+						       &pe_session_id);
 	/*
 	 * If bssid search fail try to find by vdev id, this can happen if
 	 * Roaming change the BSSID during disconnect was getting processed.
@@ -5909,8 +5911,9 @@ static void __lim_process_sme_disassoc_req(struct mac_context *mac,
 		return;
 	}
 
-	pe_session = pe_find_session_by_bssid(mac,
+	pe_session = pe_find_session_by_bssid_and_vdev_id(mac,
 				smeDisassocReq.bssid.bytes,
+				smeDisassocReq.sessionId,
 				&sessionId);
 	if (!pe_session) {
 		pe_err("session does not exist for bssid " QDF_MAC_ADDR_FMT,
@@ -6090,8 +6093,9 @@ void __lim_process_sme_disassoc_cnf(struct mac_context *mac, uint32_t *msg_buf)
 
 	qdf_mem_copy(&smeDisassocCnf, msg_buf, sizeof(smeDisassocCnf));
 
-	pe_session = pe_find_session_by_bssid(mac,
+	pe_session = pe_find_session_by_bssid_and_vdev_id(mac,
 				smeDisassocCnf.bssid.bytes,
+				smeDisassocCnf.vdev_id,
 				&sessionId);
 	if (!pe_session) {
 		pe_err("session does not exist for bssid " QDF_MAC_ADDR_FMT,
@@ -6259,8 +6263,9 @@ static void __lim_process_sme_deauth_req(struct mac_context *mac_ctx,
 	 * We need to get a session first but we don't even know
 	 * if the message is correct.
 	 */
-	session_entry = pe_find_session_by_bssid(mac_ctx,
+	session_entry = pe_find_session_by_bssid_and_vdev_id(mac_ctx,
 					sme_deauth_req.bssid.bytes,
+					sme_deauth_req.vdev_id,
 					&session_id);
 	if (!session_entry) {
 		pe_err("session does not exist for bssid " QDF_MAC_ADDR_FMT,
