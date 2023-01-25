@@ -796,7 +796,8 @@ void dp_sta_notify_tx_comp_cb(qdf_nbuf_t nbuf, void *ctx, uint16_t flag)
 	case QDF_NBUF_CB_PACKET_TYPE_EAPOL:
 		subtype = qdf_nbuf_get_eapol_subtype(nbuf);
 		if (!(flag & BIT(QDF_TX_RX_STATUS_OK)) &&
-		    subtype != QDF_PROTO_INVALID)
+		    subtype != QDF_PROTO_INVALID &&
+		    subtype <= QDF_PROTO_EAPOL_M4)
 			++dp_intf->dp_stats.eapol_stats.
 				tx_noack_cnt[subtype - QDF_PROTO_EAPOL_M1];
 		break;
