@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1440,4 +1440,92 @@ bool wlan_nan_get_sap_conc_support(struct wlan_objmgr_psoc *psoc)
 bool wlan_nan_is_beamforming_supported(struct wlan_objmgr_psoc *psoc)
 {
 	return ucfg_nan_is_beamforming_supported(psoc);
+}
+
+/*
+ * The NAN Cluster ID is a MAC address that takes a value from
+ * 50-6F-9A-01-00-00 to 50-6F-9A-01-FF-FF and is carried in the A3 field of
+ * some of the NAN frames. The NAN Cluster ID is randomly chosen by the device
+ * that initiates the NAN Cluster.
+ */
+#define NAN_CLUSTER_MATCH      "\x50\x6F\x9A\x01"
+#define NAN_CLUSTER_MATCH_SIZE 4
+
+/**
+ * wlan_nan_is_bssid_in_cluster() - to check whether BSSID is a part of NAN
+ * cluster
+ * @bssid: BSSID present in mgmt frame
+ *
+ * Return: true if BSSID is part of NAN cluster
+ */
+static
+bool wlan_nan_is_bssid_in_cluster(tSirMacAddr bssid)
+{
+	if (qdf_mem_cmp(bssid, NAN_CLUSTER_MATCH, NAN_CLUSTER_MATCH_SIZE) == 0)
+		return true;
+
+	return false;
+}
+
+/**
+ * wlan_nan_extract_vdev_id_from_vdev_list() -retrieve vdev from vdev list in
+ * pdev and check for nan vdev_id
+ * @pdev: PDEV object
+ * @dbg_id: Object Manager ref debug id
+ *
+ * API to get NAN vdev_id for only NAN BSSID.
+ *
+ * Return: NAN vdev_id
+ */
+static
+uint8_t wlan_nan_extract_vdev_id_from_vdev_list(struct wlan_objmgr_pdev *pdev,
+						wlan_objmgr_ref_dbgid dbg_id)
+{
+	struct wlan_objmgr_pdev_objmgr *objmgr = &pdev->pdev_objmgr;
+	qdf_list_t *vdev_list = NULL;
+	struct wlan_objmgr_vdev *vdev;
+	qdf_list_node_t *node = NULL;
+	qdf_list_node_t *prev_node = NULL;
+	uint8_t vdev_id = WLAN_UMAC_VDEV_ID_MAX;
+
+	wlan_pdev_obj_lock(pdev);
+
+	vdev_list = &objmgr->wlan_vdev_list;
+	if (qdf_list_peek_front(vdev_list, &node) != QDF_STATUS_SUCCESS)
+		goto end;
+
+	do {
+		vdev = qdf_container_of(node, struct wlan_objmgr_vdev,
+					vdev_node);
+		if (wlan_objmgr_vdev_try_get_ref(vdev, dbg_id) ==
+		    QDF_STATUS_SUCCESS) {
+			if (wlan_vdev_mlme_get_opmode(vdev) ==
+			    QDF_NAN_DISC_MODE) {
+				vdev_id = wlan_vdev_get_id(vdev);
+				wlan_objmgr_vdev_release_ref(vdev, dbg_id);
+				goto end;
+			}
+
+			wlan_objmgr_vdev_release_ref(vdev, dbg_id);
+		}
+
+		prev_node = node;
+	} while (qdf_list_peek_next(vdev_list, prev_node, &node) ==
+		 QDF_STATUS_SUCCESS);
+end:
+	wlan_pdev_obj_unlock(pdev);
+
+	return vdev_id;
+}
+
+uint8_t nan_get_vdev_id_from_bssid(struct wlan_objmgr_pdev *pdev,
+				   tSirMacAddr bssid,
+				   wlan_objmgr_ref_dbgid dbg_id)
+{
+	uint8_t vdev_id = WLAN_UMAC_VDEV_ID_MAX;
+
+	if (wlan_nan_is_bssid_in_cluster(bssid))
+		vdev_id = wlan_nan_extract_vdev_id_from_vdev_list(pdev, dbg_id);
+
+	return vdev_id;
 }

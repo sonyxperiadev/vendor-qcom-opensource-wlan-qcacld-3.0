@@ -41,3 +41,10 @@ inline enum nan_datapath_state wlan_nan_get_ndi_state(
 
 	return val;
 }
+
+uint8_t wlan_nan_get_vdev_id_from_bssid(struct wlan_objmgr_pdev *pdev,
+					tSirMacAddr bssid,
+					wlan_objmgr_ref_dbgid dbg_id)
+{
+	return nan_get_vdev_id_from_bssid(pdev, bssid, dbg_id);
+}
