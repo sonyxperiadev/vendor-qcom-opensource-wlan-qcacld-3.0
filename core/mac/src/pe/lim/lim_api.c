@@ -4063,6 +4063,124 @@ end:
 	qdf_mem_free(probe_rsp);
 	return status;
 }
+
+QDF_STATUS
+lim_process_cu_for_probe_rsp(struct mac_context *mac_ctx,
+			     struct pe_session *session,
+			     uint8_t *probe_rsp,
+			     uint32_t probe_rsp_len)
+{
+	struct element_info link_probe_rsp;
+	struct qdf_mac_addr sta_link_addr;
+	struct wlan_objmgr_vdev *vdev;
+	struct wlan_objmgr_vdev *partner_vdev;
+	uint8_t *ml_ie = NULL;
+	qdf_size_t ml_ie_total_len = 0;
+	struct mlo_partner_info partner_info;
+	uint8_t i, link_id, vdev_id;
+	uint8_t bpcc, aui;
+	bool cu_flag = false;
+	const uint8_t *rnr;
+	QDF_STATUS status = QDF_STATUS_E_INVAL;
+
+	vdev = session->vdev;
+	if (!vdev || !wlan_vdev_mlme_is_mlo_vdev(vdev))
+		return status;
+
+	rnr = wlan_get_ie_ptr_from_eid(WLAN_ELEMID_REDUCED_NEIGHBOR_REPORT,
+				   probe_rsp + WLAN_PROBE_RESP_IES_OFFSET,
+				   probe_rsp_len - WLAN_PROBE_RESP_IES_OFFSET);
+	if (!rnr)
+		return status;
+
+	status = util_find_mlie(probe_rsp + WLAN_PROBE_RESP_IES_OFFSET,
+				probe_rsp_len - WLAN_PROBE_RESP_IES_OFFSET,
+				&ml_ie, &ml_ie_total_len);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		pe_err("Mlo ie not found in Probe response");
+		return status;
+	}
+
+	status = util_get_bvmlie_persta_partner_info(ml_ie,
+						     ml_ie_total_len,
+						     &partner_info);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		pe_err("Per STA profile parsing failed");
+		return status;
+	}
+
+	link_probe_rsp.ptr = qdf_mem_malloc(probe_rsp_len);
+	if (!link_probe_rsp.ptr)
+		return QDF_STATUS_E_NOMEM;
+
+	for (i = 0; i < partner_info.num_partner_links; i++) {
+		link_id = partner_info.partner_link_info[i].link_id;
+		partner_vdev = mlo_get_vdev_by_link_id(vdev, link_id);
+		if (!partner_vdev) {
+			pe_debug("No partner vdev for link id %d", link_id);
+			continue;
+		}
+
+		status = lim_cu_info_from_rnr_per_link_id(rnr, link_id,
+							  &bpcc, &aui);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			wlan_objmgr_vdev_release_ref(partner_vdev,
+						     WLAN_MLO_MGR_ID);
+			pe_debug("no cu info in rnr for link id %d", link_id);
+			continue;
+		}
+
+		cu_flag = lim_check_cu_happens(partner_vdev, bpcc);
+		if (!cu_flag) {
+			wlan_objmgr_vdev_release_ref(partner_vdev,
+						     WLAN_MLO_MGR_ID);
+			continue;
+		}
+
+		vdev_id = wlan_vdev_get_id(partner_vdev);
+		session = pe_find_session_by_vdev_id(mac_ctx, vdev_id);
+		if (!session) {
+			wlan_objmgr_vdev_release_ref(partner_vdev,
+						     WLAN_MLO_MGR_ID);
+			pe_debug("session is null for vdev id %d", vdev_id);
+			continue;
+		}
+
+		qdf_mem_copy(&sta_link_addr, session->self_mac_addr,
+			     QDF_MAC_ADDR_SIZE);
+
+		link_probe_rsp.len = probe_rsp_len;
+		/* Todo:
+		 * it needs to use link_id as parameter to generate
+		 * specific probe rsp frame when api util_gen_link_probe_rsp
+		 * updated.
+		 */
+		status =
+		     util_gen_link_probe_rsp(probe_rsp, probe_rsp_len,
+					     sta_link_addr, link_probe_rsp.ptr,
+					     probe_rsp_len,
+					     (qdf_size_t *)&link_probe_rsp.len);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			pe_err("MLO: Link probe response generation failed %d",
+			       status);
+			wlan_objmgr_vdev_release_ref(partner_vdev,
+						     WLAN_MLO_MGR_ID);
+			continue;
+		}
+
+		lim_process_gen_probe_rsp_frame(mac_ctx, session,
+						link_probe_rsp.ptr,
+						link_probe_rsp.len);
+
+		wlan_objmgr_vdev_release_ref(partner_vdev,
+					     WLAN_MLO_MGR_ID);
+	}
+
+	qdf_mem_free(link_probe_rsp.ptr);
+	link_probe_rsp.ptr = NULL;
+	link_probe_rsp.len = 0;
+	return status;
+}
 #endif
 
 #ifdef WLAN_FEATURE_SR

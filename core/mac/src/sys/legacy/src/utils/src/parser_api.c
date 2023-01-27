@@ -5144,6 +5144,8 @@ sir_convert_beacon_frame2_mlo_struct(uint8_t *pframe, uint32_t nframe,
 	uint8_t common_info_len = 0;
 	struct mlo_partner_info partner_info;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	uint8_t bpcc;
+	bool bpcc_found;
 
 	if (bcn_frm->mlo_ie.present) {
 		status = util_find_mlie(pframe + WLAN_BEACON_IES_OFFSET,
@@ -5163,6 +5165,14 @@ sir_convert_beacon_frame2_mlo_struct(uint8_t *pframe, uint32_t nframe,
 			lim_store_mlo_ie_raw_info(ml_ie, sta_prof,
 						  ml_ie_total_len,
 						  &bcn_struct->mlo_ie.mlo_ie);
+
+			util_get_bvmlie_bssparamchangecnt(ml_ie,
+							  ml_ie_total_len,
+							  &bpcc_found, &bpcc);
+			bcn_struct->mlo_ie.mlo_ie.bss_param_change_cnt_present =
+						bpcc_found;
+			bcn_struct->mlo_ie.mlo_ie.bss_param_change_count = bpcc;
+			bcn_struct->mlo_ie.mlo_ie_present = true;
 		}
 	}
 
@@ -10257,6 +10267,7 @@ sir_convert_mlo_probe_rsp_frame2_struct(uint8_t *ml_ie,
 	bool bss_param_change_cnt_found;
 	uint8_t bss_param_change_cnt;
 	struct qdf_mac_addr mld_mac_addr;
+	uint8_t *sta_prof;
 
 	if (!ml_ie)
 		return QDF_STATUS_E_NULL_VALUE;
@@ -10285,6 +10296,10 @@ sir_convert_mlo_probe_rsp_frame2_struct(uint8_t *ml_ie,
 						bss_param_change_cnt_found;
 	mlo_ie_ptr->mlo_ie.bss_param_change_count = bss_param_change_cnt;
 	mlo_ie_ptr->mlo_ie_present = true;
+	sta_prof = ml_ie + sizeof(struct wlan_ie_multilink) +
+		   mlo_ie_ptr->mlo_ie.common_info_length;
+	lim_store_mlo_ie_raw_info(ml_ie, sta_prof,
+				  ml_ie_total_len, &mlo_ie_ptr->mlo_ie);
 
 	return QDF_STATUS_SUCCESS;
 }

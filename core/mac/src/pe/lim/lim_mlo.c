@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -27,14 +27,122 @@
 #include "sch_api.h"
 #include "lim_types.h"
 #include "wlan_mlo_mgr_ap.h"
+#include "wlan_mlo_mgr_op.h"
 #include <wlan_mlo_mgr_peer.h>
 #include <lim_assoc_utils.h>
 #include <wlan_mlo_mgr_peer.h>
 #include <lim_utils.h>
 #include <utils_mlo.h>
 
+QDF_STATUS lim_cu_info_from_rnr_per_link_id(const uint8_t *rnr,
+					    uint8_t linkid, uint8_t *bpcc,
+					    uint8_t *aui)
+{
+	const uint8_t *data, *rnr_end;
+	struct neighbor_ap_info_field *neighbor_ap_info;
+	uint8_t tbtt_type, tbtt_len, tbtt_count;
+	uint8_t mld_pos, mld_id, link_id;
+	struct rnr_mld_info *mld_param;
+	int32_t i, len;
+	uint8_t nbr_ap_info_len = sizeof(struct neighbor_ap_info_field);
+
+	if (!rnr)
+		return QDF_STATUS_E_INVAL;
+
+	rnr_end = rnr + rnr[TAG_LEN_POS] + MIN_IE_LEN;
+	data = rnr + PAYLOAD_START_POS;
+	while (data < rnr_end) {
+		neighbor_ap_info = (struct neighbor_ap_info_field *)data;
+		tbtt_count = neighbor_ap_info->tbtt_header.tbtt_info_count;
+		tbtt_len = neighbor_ap_info->tbtt_header.tbtt_info_length;
+		tbtt_type = neighbor_ap_info->tbtt_header.tbbt_info_fieldtype;
+		len = tbtt_len * (tbtt_count + 1) + nbr_ap_info_len;
+		if (data + len > rnr_end)
+			return QDF_STATUS_E_INVAL;
+
+		if (tbtt_len >=
+		    TBTT_NEIGHBOR_AP_BSSID_S_SSID_BSS_PARAM_20MHZ_PSD_MLD_PARAM)
+			mld_pos =
+			      TBTT_NEIGHBOR_AP_BSSID_S_SSID_BSS_PARAM_20MHZ_PSD;
+		else
+			mld_pos = 0;
+
+		if (mld_pos == 0 || tbtt_type != 0) {
+			data += len;
+			continue;
+		}
+
+		data += nbr_ap_info_len;
+		for (i = 0; i < tbtt_count + 1; i++) {
+			mld_param = (struct rnr_mld_info *)&data[mld_pos];
+			mld_id = mld_param->mld_id;
+			if (mld_id == 0) {
+				link_id = mld_param->link_id;
+				if (linkid == link_id) {
+					*bpcc = mld_param->bss_param_change_cnt;
+					*aui = mld_param->all_updates_included;
+					pe_debug("rnr bpcc %d, aui %d, linkid %d",
+						 *bpcc, *aui, linkid);
+					return QDF_STATUS_SUCCESS;
+				}
+			}
+			data += tbtt_len;
+		}
+	}
+
+	return QDF_STATUS_E_INVAL;
+}
+
+QDF_STATUS lim_get_bpcc_from_mlo_ie(tSchBeaconStruct *bcn, uint8_t *bpcc)
+{
+	struct sir_multi_link_ie *mlo_ie;
+	QDF_STATUS status = QDF_STATUS_E_INVAL;
+
+	if (!bcn)
+		return status;
+
+	mlo_ie = &bcn->mlo_ie;
+	if (mlo_ie->mlo_ie_present &&
+	    mlo_ie->mlo_ie.bss_param_change_cnt_present) {
+		*bpcc = mlo_ie->mlo_ie.bss_param_change_count;
+		status = QDF_STATUS_SUCCESS;
+	} else {
+		*bpcc = 0;
+	}
+
+	return status;
+}
+
+bool lim_check_cu_happens(struct wlan_objmgr_vdev *vdev, uint8_t new_bpcc)
+{
+	uint8_t bpcc;
+	uint8_t vdev_id;
+	QDF_STATUS status;
+
+	if (!vdev || !wlan_vdev_mlme_is_mlo_vdev(vdev))
+		return false;
+
+	vdev_id = wlan_vdev_get_id(vdev);
+
+	status = wlan_mlo_get_cu_bpcc(vdev, &bpcc);
+	if (QDF_IS_STATUS_ERROR(status))
+		return false;
+
+	if (new_bpcc == 0 && bpcc == 0)
+		return false;
+
+	pe_debug("new bpcc %d, old bpcc %d, vdev id %d",
+		 new_bpcc, bpcc, vdev_id);
+	if (new_bpcc && new_bpcc < bpcc)
+		return false;
+
+	wlan_mlo_set_cu_bpcc(vdev, new_bpcc);
+
+	return true;
+}
+
 /**
- * lim_send_mlo_ie_update - mlo ie is changed, populate new beacon template
+ * lim_send_mlo_ie_update() - mlo ie is changed, populate new beacon template
  * @session: pe session
  *
  * Return: void
@@ -903,8 +1011,8 @@ QDF_STATUS lim_fill_complete_mlo_ie(struct pe_session *session,
 	mlo_ie_total_len = pbuf - buf - MIN_IE_LEN;
 
 	for (i = 0; i < mlo_ie_total_len; i++) {
-		if (i && i % WLAN_MAX_IE_LEN == 0) {
-			/* add flagmentation IE and length */
+		if (i && (i % WLAN_MAX_IE_LEN) == 0) {
+			/* add fragmentation IE and length */
 			target[consumed++] = WLAN_ELEMID_FRAGMENT;
 			if ((mlo_ie_total_len - i) > WLAN_MAX_IE_LEN)
 				target[consumed++] = WLAN_MAX_IE_LEN;
@@ -952,7 +1060,7 @@ QDF_STATUS lim_store_mlo_ie_raw_info(uint8_t *ie, uint8_t *sta_prof_ie,
 				     uint32_t total_len,
 				     struct wlan_mlo_ie *mlo_ie)
 {
-	uint8_t i, frag_num = 0, sta_index;
+	uint32_t i, frag_num = 0, sta_index;
 	/* ml_ie_len = total_len - 2 * frag_num, does not include
 	 * WLAN_ELEMID_FRAGMENT IE and LEN
 	 */
@@ -990,6 +1098,9 @@ QDF_STATUS lim_store_mlo_ie_raw_info(uint8_t *ie, uint8_t *sta_prof_ie,
 	}
 	ml_ie_len = total_len - frag_num * MIN_IE_LEN;
 
+	pe_debug("ml_ie_len: %d, total_len: %d, frag_num: %d", ml_ie_len,
+		 total_len, frag_num);
+
 	buf = qdf_mem_malloc(total_len);
 	if (!buf)
 		return QDF_STATUS_E_NOMEM;
@@ -1001,20 +1112,20 @@ QDF_STATUS lim_store_mlo_ie_raw_info(uint8_t *ie, uint8_t *sta_prof_ie,
 	buf[index++] = ie[copied++];
 	for (i = 0; i < ml_ie_len - MIN_IE_LEN; i++) {
 		/* skip the frag IE */
-		if (i && i % WLAN_MAX_IE_LEN == 0)
+		if (i && (i % WLAN_MAX_IE_LEN) == 0)
 			copied += MIN_IE_LEN;
 		buf[index++] = ie[copied++];
 	}
 
 	/* copy sta profile from buf, it has copied the common info */
-	index = 0;
 	sta_index = 0;
 	copied = mlo_ie->num_data;
 	pfrm = buf + copied;
 	while (copied < ml_ie_len && sta_index < WLAN_MLO_MAX_VDEVS &&
 	       pfrm[ID_POS] == WLAN_ML_LINFO_SUBELEMID_PERSTAPROFILE) {
-		sta_prof = &mlo_ie->sta_profile[sta_index++];
+		sta_prof = &mlo_ie->sta_profile[sta_index];
 		sta_data = sta_prof->data;
+		index = 0;
 
 		sta_data[index++] = buf[copied++];
 		sta_data[index++] = buf[copied++];
@@ -1042,6 +1153,9 @@ QDF_STATUS lim_store_mlo_ie_raw_info(uint8_t *ie, uint8_t *sta_prof_ie,
 			}
 			pfrm += pfrm[TAG_LEN_POS] + MIN_IE_LEN;
 		} while (frag);
+		pe_debug("sta index: %d, sta_data len: %d, copied: %d",
+			 sta_index, index, copied);
+		sta_index++;
 	}
 
 	mlo_ie->num_sta_profile = sta_index;
@@ -1080,7 +1194,7 @@ QDF_STATUS lim_add_frag_ie_for_sta_profile(uint8_t *data, uint16_t *len)
 	data[consumed++] = buf[index++];
 	for (i = 0; i < (*len - MIN_IE_LEN); i++) {
 		data[consumed++] = buf[index++];
-		if (i && i % WLAN_MAX_IE_LEN == 0) {
+		if (i && (i % WLAN_MAX_IE_LEN) == 0) {
 			data[consumed++] = WLAN_ML_LINFO_SUBELEMID_FRAGMENT;
 			if ((*len - MIN_IE_LEN - i) > WLAN_MAX_IE_LEN)
 				data[consumed++] = WLAN_MAX_IE_LEN;

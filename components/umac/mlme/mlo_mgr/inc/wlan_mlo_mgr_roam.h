@@ -160,6 +160,18 @@ void mlo_roam_copy_partner_info(struct wlan_cm_connect_resp *connect_rsp,
 				struct roam_offload_synch_ind *sync_ind);
 
 /**
+ * mlo_roam_init_cu_bpcc() - init cu bpcc per roam sync data
+ * @vdev: vdev object
+ * @sync_ind: roam sync ind pointer
+ *
+ * This api will be called to init cu bpcc from connect response.
+ *
+ * Return: none
+ */
+void mlo_roam_init_cu_bpcc(struct wlan_objmgr_vdev *vdev,
+			   struct roam_offload_synch_ind *sync_ind);
+
+/**
  * mlo_roam_update_connected_links - update connected links bitmap after roaming
  *
  * @vdev: vdev pointer
@@ -410,6 +422,11 @@ QDF_STATUS mlo_enable_rso(struct wlan_objmgr_pdev *pdev,
 
 static inline void
 mlo_roam_copy_partner_info(struct wlan_cm_connect_resp *connect_rsp,
+			   struct roam_offload_synch_ind *sync_ind)
+{}
+
+static inline
+void mlo_roam_init_cu_bpcc(struct wlan_objmgr_vdev *vdev,
 			   struct roam_offload_synch_ind *sync_ind)
 {}
 

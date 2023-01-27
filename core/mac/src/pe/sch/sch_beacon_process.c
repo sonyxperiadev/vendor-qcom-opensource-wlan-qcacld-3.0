@@ -40,6 +40,7 @@
 #include "lim_utils.h"
 #include "lim_send_messages.h"
 #include "rrm_api.h"
+#include "lim_mlo.h"
 
 #ifdef FEATURE_WLAN_DIAG_SUPPORT
 #include "host_diag_core_log.h"
@@ -49,6 +50,7 @@
 
 #include "wlan_lmac_if_def.h"
 #include "wlan_reg_services_api.h"
+#include "wlan_mlo_mgr_sta.h"
 
 static void
 ap_beacon_process_5_ghz(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
@@ -616,6 +618,18 @@ static void __sch_beacon_process_for_session(struct mac_context *mac_ctx,
 	uint8_t programmed_country[REG_ALPHA2_LEN + 1];
 	enum reg_6g_ap_type pwr_type_6g = REG_INDOOR_AP;
 	bool ctry_code_match = false;
+	uint8_t bpcc;
+	bool cu_flag = true;
+
+	if (mlo_is_mld_sta(session->vdev)) {
+		cu_flag = false;
+		status = lim_get_bpcc_from_mlo_ie(bcn, &bpcc);
+		if (QDF_IS_STATUS_SUCCESS(status))
+			cu_flag = lim_check_cu_happens(session->vdev, bpcc);
+	}
+
+	if (!cu_flag)
+		return;
 
 	qdf_mem_zero(&beaconParams, sizeof(tUpdateBeaconParams));
 	beaconParams.paramChangeBitmap = 0;
@@ -772,6 +786,7 @@ static void __sch_beacon_process_for_session(struct mac_context *mac_ctx,
 							      session);
 		session->send_p2p_conf_frame = false;
 	}
+
 	lim_process_beacon_eht(mac_ctx, session, bcn);
 }
 

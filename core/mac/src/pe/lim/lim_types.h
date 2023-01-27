@@ -510,6 +510,19 @@ void lim_process_probe_rsp_frame(struct mac_context *, uint8_t *, struct pe_sess
 void lim_process_probe_req_frame_multiple_bss(struct mac_context *, uint8_t *,
 					      struct pe_session *);
 
+/**
+ * lim_process_gen_probe_rsp_frame() - process generate probe rsp frame
+ * @mac_ctx: pointer to global mac context
+ * @session_entry: pointer to pe session
+ * @bcn_probe: pointer to the data frame
+ * @len: the length of data frame
+ *
+ * Return: void
+ */
+void lim_process_gen_probe_rsp_frame(struct mac_context *mac_ctx,
+				     struct pe_session *session_entry,
+				     uint8_t *bcn_probe, uint32_t len);
+
 /* Process Auth frame when we have a session in progress. */
 void lim_process_auth_frame(struct mac_context *, uint8_t *, struct pe_session *);
 

@@ -528,6 +528,30 @@ mlo_roam_copy_partner_info(struct wlan_cm_connect_resp *connect_rsp,
 	mlo_debug("num_setup_links %d", sync_ind->num_setup_links);
 }
 
+void mlo_roam_init_cu_bpcc(struct wlan_objmgr_vdev *vdev,
+			   struct roam_offload_synch_ind *sync_ind)
+{
+	uint8_t i;
+	struct wlan_mlo_dev_context *mlo_dev_ctx;
+
+	if (!vdev) {
+		mlo_err("vdev is NULL");
+		return;
+	}
+
+	mlo_dev_ctx = vdev->mlo_dev_ctx;
+	if (!mlo_dev_ctx) {
+		mlo_err("ML dev ctx is NULL");
+		return;
+	}
+
+	mlo_clear_cu_bpcc(vdev);
+	for (i = 0; i < sync_ind->num_setup_links; i++)
+		mlo_init_cu_bpcc(mlo_dev_ctx, sync_ind->ml_link[i].vdev_id);
+
+	mlo_debug("update cu info from roam sync");
+}
+
 void
 mlo_roam_update_connected_links(struct wlan_objmgr_vdev *vdev,
 				struct wlan_cm_connect_resp *connect_rsp)
