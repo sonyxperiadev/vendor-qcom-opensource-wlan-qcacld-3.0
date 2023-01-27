@@ -132,6 +132,17 @@ bool
 is_multi_link_roam(struct roam_offload_synch_ind *sync_ind);
 
 /**
+ * mlo_roam_get_num_of_setup_links - get number of setup links
+ * @sync_ind: roam sync ind pointer
+ *
+ * This api will be called to get number of setup links after roaming
+ *
+ * Return: true/false
+ */
+uint8_t
+mlo_roam_get_num_of_setup_links(struct roam_offload_synch_ind *sync_ind);
+
+/**
  * mlo_enable_rso - Enable rso on assoc vdev
  *
  * @pdev: pdev pointer
@@ -369,6 +380,19 @@ void
 mlo_roam_set_link_id(struct wlan_objmgr_vdev *vdev,
 		     struct roam_offload_synch_ind *sync_ind);
 
+/**
+ * mlo_is_roaming_in_progress - check if roaming is in progress
+ * @psoc: psoc pointer
+ * @vdev_id: vdev id
+ *
+ * This api will be called to check if roaming in progress on any
+ * of the mlo links.
+ *
+ * Return: boolean (true or false)
+ */
+bool
+mlo_is_roaming_in_progress(struct wlan_objmgr_psoc *psoc,
+			   uint8_t vdev_id);
 #else /* WLAN_FEATURE_11BE_MLO */
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 static inline
@@ -417,6 +441,12 @@ static inline bool
 is_multi_link_roam(struct roam_offload_synch_ind *sync_ind)
 {
 	return false;
+}
+
+static inline uint8_t
+mlo_roam_get_num_of_setup_links(struct roam_offload_synch_ind *sync_ind)
+{
+	return 0;
 }
 
 static inline
@@ -517,5 +547,18 @@ mlo_get_link_mac_addr_from_reassoc_rsp(struct wlan_objmgr_vdev *vdev,
 	return QDF_STATUS_E_NOSUPPORT;
 }
 
+static inline uint32_t
+mlo_roam_get_link_freq_from_mac_addr(struct roam_offload_synch_ind *sync_ind,
+				     uint8_t *link_mac_addr)
+{
+	return 0;
+}
+
+static inline bool
+mlo_is_roaming_in_progress(struct wlan_objmgr_psoc *psoc,
+			   uint8_t vdev_id)
+{
+	return false;
+}
 #endif /* WLAN_FEATURE_11BE_MLO */
 #endif

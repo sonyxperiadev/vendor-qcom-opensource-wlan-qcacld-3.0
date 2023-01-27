@@ -5632,7 +5632,8 @@ void wma_delete_sta(tp_wma_handle wma, tpDeleteStaParams del_sta)
 	switch (oper_mode) {
 	case BSS_OPERATIONAL_MODE_STA:
 		if (wlan_cm_is_roam_sync_in_progress(wma->psoc, vdev_id) ||
-		    MLME_IS_MLO_ROAM_SYNCH_IN_PROGRESS(wma->psoc, vdev_id)) {
+		    MLME_IS_MLO_ROAM_SYNCH_IN_PROGRESS(wma->psoc, vdev_id) ||
+		    mlo_is_roaming_in_progress(wma->psoc, vdev_id)) {
 			wma_debug("LFR3: Del STA on vdev_id %d", vdev_id);
 			qdf_mem_free(del_sta);
 			return;
@@ -5911,7 +5912,8 @@ void wma_delete_bss(tp_wma_handle wma, uint8_t vdev_id)
 	}
 
 	if (wlan_cm_is_roam_sync_in_progress(wma->psoc, vdev_id) ||
-	    MLME_IS_MLO_ROAM_SYNCH_IN_PROGRESS(wma->psoc, vdev_id)) {
+	    MLME_IS_MLO_ROAM_SYNCH_IN_PROGRESS(wma->psoc, vdev_id) ||
+	    mlo_is_roaming_in_progress(wma->psoc, vdev_id)) {
 		roam_synch_in_progress = true;
 		wma_debug("LFR3: Setting vdev_up to FALSE for vdev:%d",
 			  vdev_id);
