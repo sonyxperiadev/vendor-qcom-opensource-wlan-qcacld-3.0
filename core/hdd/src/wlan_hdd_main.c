@@ -5518,8 +5518,8 @@ void wlan_hdd_release_intf_addr(struct hdd_context *hdd_ctx,
 
 	}
 	if (i == QDF_MAX_CONCURRENCY_PERSONA)
-		hdd_err("Releasing non existing MAC "QDF_MAC_ADDR_FMT,
-			QDF_MAC_ADDR_REF(releaseAddr));
+		hdd_debug("Releasing non existing MAC " QDF_MAC_ADDR_FMT,
+			  QDF_MAC_ADDR_REF(releaseAddr));
 }
 
 /**
@@ -6316,7 +6316,7 @@ static int hdd_vdev_destroy_event_wait(struct hdd_context *hdd_ctx,
 		return -EINVAL;
 	}
 
-	hdd_nofl_debug("vdev %d destroyed successfully", vdev_id);
+	hdd_nofl_info("vdev %d destroyed successfully", vdev_id);
 	return 0;
 }
 

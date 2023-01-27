@@ -895,7 +895,7 @@ enum hdd_tsf_op_result __hdd_stop_tsf_sync(struct hdd_adapter *adapter)
 	}
 
 	if (!hdd_get_th_sync_status(adapter)) {
-		hdd_err("Host Target sync has not initialized");
+		hdd_debug("Host Target sync has not initialized");
 		return HDD_TSF_OP_SUCC;
 	}
 
