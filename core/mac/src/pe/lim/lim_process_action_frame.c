@@ -2274,8 +2274,8 @@ void lim_process_action_frame_no_session(struct mac_context *mac, uint8_t *pBd)
 					RXMGMT_FLAG_NONE);
 			break;
 		default:
-			pe_warn("Unhandled public action frame: %x",
-				       action_hdr->actionID);
+			pe_info_rl("Unhandled public action frame: %x",
+				   action_hdr->actionID);
 			break;
 		}
 		break;
