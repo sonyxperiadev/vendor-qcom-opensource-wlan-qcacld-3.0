@@ -1735,7 +1735,9 @@ bool policy_mgr_is_sap_restart_required_after_sta_disconnect(
 		 * 2. The frequency is not allowed in the indoor
 		 * channel.
 		 */
-		if (sta_sap_scc_on_indoor_channel &&
+		if (!policy_mgr_sap_allowed_on_indoor_freq(
+			pm_ctx->psoc, pm_ctx->pdev, op_ch_freq_list[i]) &&
+		    sta_sap_scc_on_indoor_channel &&
 		    wlan_reg_is_freq_indoor(pm_ctx->pdev, op_ch_freq_list[i]) &&
 		    pm_ctx->last_disconn_sta_freq == op_ch_freq_list[i]) {
 			curr_sap_freq = op_ch_freq_list[i];
