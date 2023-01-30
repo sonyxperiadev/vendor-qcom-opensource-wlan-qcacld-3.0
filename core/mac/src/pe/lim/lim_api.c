@@ -86,7 +86,6 @@
 #include "wlan_mlo_mgr_sta.h"
 #include "wlan_mlo_mgr_peer.h"
 #include <wlan_twt_api.h>
-#include "spatial_reuse_api.h"
 
 struct pe_hang_event_fixed_param {
 	uint16_t tlv_header;
@@ -2705,17 +2704,8 @@ static inline void pe_roam_fill_obss_scan_param(struct pe_session *src_session,
 #endif
 
 #ifdef WLAN_FEATURE_SR
-/**
- * lim_handle_sr_cap() - To handle SR(Spatial Reuse) capability
- * of roamed AP
- * @vdev: objmgr vdev
- *
- * This function is to check and compare SR cap of previous and
- * roamed AP and takes decision to send event to userspace.
- *
- * Return: None
- */
-static void lim_handle_sr_cap(struct wlan_objmgr_vdev *vdev)
+void lim_handle_sr_cap(struct wlan_objmgr_vdev *vdev,
+		       enum sr_osif_reason_code reason)
 {
 	int32_t non_srg_pd_threshold = 0;
 	int32_t srg_pd_threshold = 0;
@@ -2726,6 +2716,7 @@ static void lim_handle_sr_cap(struct wlan_objmgr_vdev *vdev)
 	bool is_pd_threshold_present = false;
 	struct wlan_objmgr_pdev *pdev;
 	enum sr_status_of_roamed_ap sr_status;
+	enum sr_osif_operation sr_op;
 
 	pdev = wlan_vdev_get_pdev(vdev);
 	if (!pdev) {
@@ -2753,12 +2744,12 @@ static void lim_handle_sr_cap(struct wlan_objmgr_vdev *vdev)
 		     SR_PD_THRESHOLD_MIN) ||
 		      (srg_pd_threshold < srg_min_pd_offset +
 		       SR_PD_THRESHOLD_MIN))))
-			sr_status = SR_THRESHOLD_NOT_IN_RANGE_OF_ROAMED_AP;
+			sr_status = SR_THRESHOLD_NOT_IN_RANGE;
 		else
-			sr_status = SR_THRESHOLD_IN_RANGE_OF_ROAMED_AP;
+			sr_status = SR_THRESHOLD_IN_RANGE;
 	}
-	pe_debug("sr status of roamed AP %d existing thresholds srg: %d non-srg: %d roamed AP sr offset srg: max %d min %d non-srg: %d",
-		 sr_status, srg_pd_threshold, non_srg_pd_threshold,
+	pe_debug("sr status %d reason %d existing thresholds srg: %d non-srg: %d New: sr offset srg: max %d min %d non-srg: %d",
+		 sr_status, reason, srg_pd_threshold, non_srg_pd_threshold,
 		 srg_max_pd_offset, srg_min_pd_offset, non_srg_pd_offset);
 	switch (sr_status) {
 	case SR_DISALLOW:
@@ -2767,9 +2758,15 @@ static void lim_handle_sr_cap(struct wlan_objmgr_vdev *vdev)
 		wlan_vdev_mlme_set_current_srg_pd_threshold(vdev, 0);
 		wlan_spatial_reuse_osif_event(vdev,
 					      SR_OPERATION_SUSPEND,
-					      SR_REASON_CODE_ROAMING);
+					      reason);
+		/*
+		 * If SR is disabled due to beacon update,
+		 * notify the firmware to disable SR
+		 */
+		if (reason == SR_REASON_CODE_BCN_IE_CHANGE)
+			wlan_sr_setup_req(vdev, pdev, false, 0, 0);
 	break;
-	case SR_THRESHOLD_NOT_IN_RANGE_OF_ROAMED_AP:
+	case SR_THRESHOLD_NOT_IN_RANGE:
 		wlan_vdev_mlme_get_pd_threshold_present(
 						vdev, &is_pd_threshold_present);
 		/*
@@ -2785,27 +2782,25 @@ static void lim_handle_sr_cap(struct wlan_objmgr_vdev *vdev)
 			wlan_vdev_mlme_set_current_srg_pd_threshold(vdev, 0);
 			wlan_spatial_reuse_osif_event(vdev,
 						      SR_OPERATION_SUSPEND,
-						      SR_REASON_CODE_ROAMING);
+						      reason);
 		} else {
+			sr_op = (reason == SR_REASON_CODE_ROAMING) ?
+				SR_OPERATION_RESUME :
+				SR_OPERATION_UPDATE_PARAMS;
 			wlan_sr_setup_req(
 				vdev, pdev, true,
 				srg_max_pd_offset + SR_PD_THRESHOLD_MIN,
 				non_srg_pd_threshold + SR_PD_THRESHOLD_MIN);
-			wlan_spatial_reuse_osif_event(vdev,
-						      SR_OPERATION_RESUME,
-						      SR_REASON_CODE_ROAMING);
+			wlan_spatial_reuse_osif_event(vdev, sr_op, reason);
 		}
 	break;
-	case SR_THRESHOLD_IN_RANGE_OF_ROAMED_AP:
+	case SR_THRESHOLD_IN_RANGE:
 		/* Send enable command to fw, as fw disables SR on roaming */
 		wlan_sr_setup_req(vdev, pdev, true, srg_pd_threshold,
 				  non_srg_pd_threshold);
 	break;
 	}
 }
-#else
-static void lim_handle_sr_cap(struct wlan_objmgr_vdev *vdev)
-{}
 #endif
 
 QDF_STATUS
@@ -3020,7 +3015,7 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 	lim_init_tdls_data(mac_ctx, ft_session_ptr);
 	ric_tspec_len = ft_session_ptr->RICDataLen;
 	pe_debug("LFR3: Session RicLength: %d", ft_session_ptr->RICDataLen);
-	lim_handle_sr_cap(ft_session_ptr->vdev);
+	lim_handle_sr_cap(ft_session_ptr->vdev, SR_REASON_CODE_ROAMING);
 #ifdef FEATURE_WLAN_ESE
 	ric_tspec_len += ft_session_ptr->tspecLen;
 	pe_debug("LFR3: tspecLen: %d", ft_session_ptr->tspecLen);

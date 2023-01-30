@@ -42,6 +42,7 @@
 #include "wma_if.h"
 #include "wma_types.h"
 #include "scheduler_api.h"
+#include "spatial_reuse_api.h"
 
 /* Macro to count heartbeat */
 #define limResetHBPktCount(pe_session)   (pe_session->LimRxedBeaconCntDuringHB = 0)
@@ -73,15 +74,15 @@
 /**
  * enum sr_status_of_roamed_ap - SR(Spatial Reuse) status of roamed AP
  * SR_DISALLOW: SR not supported by roamed AP
- * SR_THRESHOLD_IN_RANGE_OF_PREVIOUS_AP: SR supported by roamed AP
- * and configured threshold is in range.
- * SR_THRESHOLD_NOT_IN_RANGE_OF_PREVIOUS_AP: SR supported by roamed AP
- * and configured threshold is not in range.
+ * SR_THRESHOLD_IN_RANGE: SR is supported by roamed AP/after param change
+ * in beacon/probe resp and the configured threshold is in range.
+ * SR_THRESHOLD_NOT_IN_RANGE: SR is supported by roamed AP/after param change
+ * in beacon/probe resp and configured threshold is not in range.
  */
 enum sr_status_of_roamed_ap {
 	SR_DISALLOW,
-	SR_THRESHOLD_IN_RANGE_OF_ROAMED_AP,
-	SR_THRESHOLD_NOT_IN_RANGE_OF_ROAMED_AP,
+	SR_THRESHOLD_IN_RANGE,
+	SR_THRESHOLD_NOT_IN_RANGE,
 };
 #endif
 
@@ -699,6 +700,21 @@ void lim_update_vdev_sr_elements(struct pe_session *session_entry,
  * Return: success/failure
  */
 QDF_STATUS lim_process_srp_ie(tpSirAssocRsp ar, tpDphHashNode sta_ds);
+
+/**
+ * lim_handle_sr_cap() - To handle SR(Spatial Reuse) capability
+ * of roamed AP
+ * @vdev: objmgr vdev
+ * @reason: reason for the update
+ *
+ * This function is to check and compare SR cap of previous and
+ * roamed AP and takes decision to send event to userspace.
+ *
+ * Return: None
+ */
+void lim_handle_sr_cap(struct wlan_objmgr_vdev *vdev,
+		       enum sr_osif_reason_code reason);
+
 #else
 static inline void
 lim_update_vdev_sr_elements(struct pe_session *session_entry,
@@ -710,6 +726,12 @@ static inline
 QDF_STATUS lim_process_srp_ie(tpSirAssocRsp ar, tpDphHashNode sta_ds)
 {
 	return QDF_STATUS_SUCCESS;
+}
+
+static inline void
+lim_handle_sr_cap(struct wlan_objmgr_vdev *vdev,
+		  enum sr_osif_reason_code reason)
+{
 }
 #endif
 
