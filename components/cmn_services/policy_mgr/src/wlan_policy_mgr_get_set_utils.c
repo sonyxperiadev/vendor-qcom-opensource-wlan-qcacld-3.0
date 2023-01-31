@@ -9408,7 +9408,9 @@ qdf_freq_t policy_mgr_get_ll_sap_freq(struct wlan_objmgr_psoc *psoc)
 		wlan_objmgr_vdev_release_ref(sap_vdev, WLAN_POLICY_MGR_ID);
 
 		if (profile == HOST_CONCURRENT_AP_POLICY_GAMING_AUDIO ||
-		    profile == HOST_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING) {
+		    profile ==
+		    HOST_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING ||
+		    profile == HOST_CONCURRENT_AP_POLICY_XR) {
 			is_ll_sap_present = true;
 			break;
 		}
@@ -9436,7 +9438,7 @@ bool policy_mgr_is_ll_sap_concurrency_valid(struct wlan_objmgr_psoc *psoc,
 
 	/*
 	 * Scenario: When low latency SAP with 5GHz channel(whose
-	 * profile is set as gaming or lossless audio) is present
+	 * profile is set as gaming or lossless audio or XR) is present
 	 * on SBS/DBS hardware and the other interface like
 	 * STA/SAP/GC/GO trying to form connection.
 	 * Allow connection on those freq which are mutually exclusive
