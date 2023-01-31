@@ -14478,7 +14478,7 @@ static int __wlan_hdd_cfg80211_ap_policy(struct wlan_objmgr_vdev *vdev,
 		tb[QCA_WLAN_VENDOR_ATTR_CONCURRENT_POLICY_AP_CONFIG]);
 	hdd_debug("AP policy : %d", ap_config);
 
-	if (ap_config > QCA_WLAN_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING) {
+	if (ap_config > QCA_WLAN_CONCURRENT_AP_POLICY_XR) {
 		hdd_err_rl("Invalid concurrent policy ap config %d", ap_config);
 		return -EINVAL;
 	}

@@ -2859,10 +2859,12 @@ struct wlan_mlme_features {
  * @HOST_CONCURRENT_AP_POLICY_GAMING_AUDIO: Gaming audio concurrent policy value
  * @HOST_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING: Lossless audio
  * concurrent streaming policy value
+ * @HOST_CONCURRENT_AP_POLICY_XR: Concurrent policy to meet AR/VR requirements.
  */
 enum host_concurrent_ap_policy {
 	HOST_CONCURRENT_AP_POLICY_UNSPECIFIED = 0,
 	HOST_CONCURRENT_AP_POLICY_GAMING_AUDIO = 1,
-	HOST_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING = 2
+	HOST_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING = 2,
+	HOST_CONCURRENT_AP_POLICY_XR = 3
 };
 #endif
