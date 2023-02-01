@@ -1983,7 +1983,8 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 			      ap_ctx->operating_chan_freq,
 			      sap_config->ch_params.ch_width);
 
-		hdd_medium_assess_init();
+		if (hdd_medium_access_state() == true)
+			hdd_medium_assess_init();
 
 		sap_config->ch_params = ap_ctx->sap_context->ch_params;
 		sap_config->sec_ch_freq = ap_ctx->sap_context->sec_ch_freq;
