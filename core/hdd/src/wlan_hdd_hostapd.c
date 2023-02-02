@@ -918,6 +918,12 @@ static inline bool wlan_hdd_is_chwidth_320mhz(enum phy_ch_width ch_width)
 {
 	return ch_width == CH_WIDTH_320MHZ;
 }
+
+static uint16_t
+wlan_hdd_get_puncture_bitmap(struct hdd_chan_change_params chan_change)
+{
+	return chan_change.chan_params.reg_punc_bitmap;
+}
 #else /* !WLAN_FEATURE_11BE */
 static inline
 void wlan_hdd_set_chandef_320mhz(struct cfg80211_chan_def *chandef,
@@ -934,6 +940,12 @@ static inline bool wlan_hdd_is_chwidth_320mhz(enum phy_ch_width ch_width)
 {
 	return false;
 }
+
+static inline uint16_t
+wlan_hdd_get_puncture_bitmap(struct hdd_chan_change_params chan_change)
+{
+	return 0;
+}
 #endif /* WLAN_FEATURE_11BE */
 
 QDF_STATUS hdd_chan_change_notify(struct hdd_adapter *adapter,
@@ -948,6 +960,7 @@ QDF_STATUS hdd_chan_change_notify(struct hdd_adapter *adapter,
 	mac_handle_t mac_handle = adapter->hdd_ctx->mac_handle;
 	struct wlan_objmgr_vdev *vdev;
 	uint16_t link_id = 0;
+	uint16_t puncture_bitmap = 0;
 
 	if (!mac_handle) {
 		hdd_err("mac_handle is NULL");
@@ -1024,14 +1037,16 @@ QDF_STATUS hdd_chan_change_notify(struct hdd_adapter *adapter,
 
 	if (wlan_vdev_mlme_is_mlo_vdev(vdev))
 		link_id = wlan_vdev_get_link_id(vdev);
-
 	hdd_debug("link_id is %d", link_id);
+
+	puncture_bitmap = wlan_hdd_get_puncture_bitmap(chan_change);
 
 	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_ID);
 	hdd_debug("notify: chan:%d width:%d freq1:%d freq2:%d",
 		  chandef.chan->center_freq, chandef.width,
 		  chandef.center_freq1, chandef.center_freq2);
-	wlan_cfg80211_ch_switch_notify(dev, &chandef, link_id);
+	wlan_cfg80211_ch_switch_notify(dev, &chandef, link_id,
+				       puncture_bitmap);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -1686,6 +1701,22 @@ static void hdd_hostapd_set_sap_key(struct hdd_adapter *adapter)
 	}
 }
 
+#ifdef WLAN_FEATURE_11BE
+static void
+hdd_fill_channel_change_puncture(struct hdd_chan_change_params *chan_change,
+				 struct ch_params *sap_ch_param)
+{
+	chan_change->chan_params.reg_punc_bitmap =
+			sap_ch_param->reg_punc_bitmap;
+}
+#else
+static void
+hdd_fill_channel_change_puncture(struct hdd_chan_change_params *chan_change,
+				 struct ch_params *sap_ch_param)
+{
+}
+#endif
+
 /**
  * hdd_hostapd_chan_change() - prepare new operation chan info to kernel
  * @adapter: pointre to hdd_adapter
@@ -1741,6 +1772,7 @@ static QDF_STATUS hdd_hostapd_chan_change(struct hdd_adapter *adapter,
 			sap_chan_selected->vht_seg0_center_ch_freq;
 	chan_change.chan_params.mhz_freq_seg1 =
 			sap_chan_selected->vht_seg1_center_ch_freq;
+	hdd_fill_channel_change_puncture(&chan_change, &sap_ch_param);
 
 	return hdd_chan_change_notify(adapter, adapter->dev,
 				      chan_change, legacy_phymode);
