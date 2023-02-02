@@ -1513,6 +1513,27 @@ void wlansap_process_chan_info_event(struct sap_context *sap_ctx,
 
 	if (sap_ctx->optimize_acs_chan_selected)
 		return;
+	/* If chan_info_freq is not preferred band's freq
+	 * do not select it as ACS result.
+	 */
+	if (sap_ctx->acs_cfg->ch_list_count &&
+	    !wlan_reg_is_same_band_freqs(
+			sap_ctx->acs_cfg->freq_list[
+			sap_ctx->acs_cfg->ch_list_count - 1],
+			roam_info->chan_info_freq))
+		return;
+	/* Confirm the freq is in ACS list. */
+	if (!wlansap_is_channel_present_in_acs_list(
+			    roam_info->chan_info_freq,
+			    sap_ctx->acs_cfg->freq_list,
+			    sap_ctx->acs_cfg->ch_list_count))
+		return;
+	/* For 6 GHz, do not select non PSC channel */
+	if (wlan_reg_is_6ghz_chan_freq(
+		    roam_info->chan_info_freq) &&
+	    !wlan_reg_is_6ghz_psc_chan_freq(
+		    roam_info->chan_info_freq))
+		return;
 
 	filter = qdf_mem_malloc(sizeof(*filter));
 	if (!filter)
