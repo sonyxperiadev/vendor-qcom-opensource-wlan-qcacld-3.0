@@ -9591,6 +9591,7 @@ void lim_send_sme_mgmt_frame_ind(struct mac_context *mac_ctx, uint8_t frame_type
 {
 	tpSirSmeMgmtFrameInd sme_mgmt_frame = NULL;
 	uint16_t length;
+	struct wlan_objmgr_vdev *vdev;
 
 	length = sizeof(tSirSmeMgmtFrameInd) + frame_len;
 
@@ -9603,8 +9604,22 @@ void lim_send_sme_mgmt_frame_ind(struct mac_context *mac_ctx, uint8_t frame_type
 		!vdev_id) {
 		pe_debug("Broadcast action frame");
 		vdev_id = SME_SESSION_ID_BROADCAST;
+		goto fill_frame;
 	}
 
+	if (frame_type != SIR_MAC_MGMT_ACTION)
+		goto fill_frame;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac_ctx->psoc, vdev_id,
+						    WLAN_LEGACY_MAC_ID);
+
+	if (!vdev)
+		goto fill_frame;
+
+	wlan_mlo_update_action_frame_to_user(vdev, frame, frame_len);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
+
+fill_frame:
 	sme_mgmt_frame->frame_len = frame_len;
 	sme_mgmt_frame->sessionId = vdev_id;
 	sme_mgmt_frame->frameType = frame_type;
