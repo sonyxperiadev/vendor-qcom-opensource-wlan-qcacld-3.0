@@ -25459,6 +25459,8 @@ static int __wlan_hdd_cfg80211_get_channel(struct wiphy *wiphy,
 	bool is_legacy_phymode = false;
 	struct wlan_objmgr_vdev *vdev;
 	uint32_t chan_freq;
+	struct hdd_adapter *link_adapter;
+	uint8_t vdev_id;
 
 	hdd_enter_dev(wdev->netdev);
 
@@ -25509,6 +25511,13 @@ static int __wlan_hdd_cfg80211_get_channel(struct wiphy *wiphy,
 	vdev = wlan_key_get_link_vdev(adapter, WLAN_OSIF_ID, link_id);
 	if (!vdev)
 		return -EINVAL;
+
+	vdev_id = wlan_vdev_get_id(vdev);
+	link_adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
+	if (link_adapter && !hdd_cm_is_vdev_associated(link_adapter)) {
+		wlan_key_put_link_vdev(vdev, WLAN_OSIF_ID);
+		return -EBUSY;
+	}
 
 	chan_freq = vdev->vdev_mlme.des_chan->ch_freq;
 	chandef->center_freq1 = vdev->vdev_mlme.des_chan->ch_cfreq1;
