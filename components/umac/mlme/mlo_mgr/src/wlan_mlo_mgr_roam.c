@@ -274,8 +274,8 @@ QDF_STATUS mlo_fw_roam_sync_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 }
 
 #ifdef WLAN_FEATURE_11BE_MLO_ADV_FEATURE
-void mlo_cm_roam_sync_cb(struct wlan_objmgr_vdev *vdev,
-			 void *event, uint32_t event_data_len)
+QDF_STATUS mlo_cm_roam_sync_cb(struct wlan_objmgr_vdev *vdev,
+			       void *event, uint32_t event_data_len)
 {
 	QDF_STATUS status;
 	struct roam_offload_synch_ind *sync_ind;
@@ -303,7 +303,7 @@ void mlo_cm_roam_sync_cb(struct wlan_objmgr_vdev *vdev,
 	 * link vdev will be initialized after set key is complete.
 	 */
 	if (sync_ind->auth_status == ROAM_AUTH_STATUS_CONNECTED)
-		return;
+		return QDF_STATUS_SUCCESS;
 
 	for (i = 0; i < sync_ind->num_setup_links; i++) {
 		if (vdev_id == sync_ind->ml_link[i].vdev_id)
@@ -315,7 +315,7 @@ void mlo_cm_roam_sync_cb(struct wlan_objmgr_vdev *vdev,
 
 		if (!link_vdev) {
 			mlo_err("Link vdev is null");
-			return;
+			return QDF_STATUS_E_FAILURE;
 		}
 
 		if (mlo_check_connect_req_bmap(link_vdev)) {
@@ -330,12 +330,14 @@ void mlo_cm_roam_sync_cb(struct wlan_objmgr_vdev *vdev,
 						   sync_ind->ml_link[i].vdev_id);
 				wlan_objmgr_vdev_release_ref(link_vdev,
 							     WLAN_MLME_SB_ID);
-				return;
+				return QDF_STATUS_E_FAILURE;
 			}
 		}
 		wlan_objmgr_vdev_release_ref(link_vdev,
 					     WLAN_MLME_SB_ID);
 	}
+
+	return QDF_STATUS_SUCCESS;
 }
 #endif
 
