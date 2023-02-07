@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -310,7 +310,10 @@ wma_update_eht_cap_support_for_320mhz(struct target_psoc_info *tgt_hdl,
 
 	eht_cap->support_320mhz_6ghz = WMI_EHTCAP_PHY_320MHZIN6GHZ_GET(
 			cap->eht_cap_phy_info_5G);
-	wma_debug("Support for 320MHz 0x%01x", eht_cap->support_320mhz_6ghz);
+	eht_cap->max_num_eht_ltf =
+		     WMI_EHTCAP_PHY_MAXNUMEHTLTF_GET(cap->eht_cap_phy_info_5G);
+	wma_debug("Support for 320MHz 0x%01x, max_num_eht_ltf %d",
+		  eht_cap->support_320mhz_6ghz, eht_cap->max_num_eht_ltf);
 }
 
 static void
