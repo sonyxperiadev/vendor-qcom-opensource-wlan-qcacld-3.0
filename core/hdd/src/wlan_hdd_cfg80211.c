@@ -9980,7 +9980,7 @@ static int hdd_set_primary_interface(struct hdd_adapter *adapter,
 	 * If dual sta roaming NOT enabled then need to enable roaming on
 	 * primary vdev for sta concurrency on different mac.
 	 */
-	if (primary_vdev_id !=  WLAN_UMAC_VDEV_ID_MAX)
+	if (wlan_mlme_is_primary_interface_configured(hdd_ctx->psoc))
 		if ((ucfg_mlme_get_dual_sta_roaming_enabled(hdd_ctx->psoc) &&
 		     !policy_mgr_concurrent_sta_on_different_mac(hdd_ctx->psoc)) ||
 		    !ucfg_mlme_get_dual_sta_roaming_enabled(hdd_ctx->psoc)) {
