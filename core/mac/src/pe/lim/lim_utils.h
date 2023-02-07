@@ -201,8 +201,6 @@ uint8_t lim_get_max_tx_power(struct mac_context *mac,
  * @session: PE Session Entry
  * @is_pwr_constraint_absolute: If local power constraint is an absolute
  * value or an offset value.
- * @ap_pwr_type: Ap power type for 6G
- * @ctry_code_match: check for country IE and sta programmed ctry match
  *
  * This function is used to get the maximum possible tx power from the list
  * of tx powers mentioned in @attr.
@@ -211,9 +209,7 @@ uint8_t lim_get_max_tx_power(struct mac_context *mac,
  */
 void lim_calculate_tpc(struct mac_context *mac,
 		       struct pe_session *session,
-		       bool is_pwr_constraint_absolute,
-		       uint8_t ap_pwr_type,
-		       bool ctry_code_match);
+		       bool is_pwr_constraint_absolute);
 
 /* AID pool management functions */
 

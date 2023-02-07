@@ -653,10 +653,8 @@ struct wlan_mlo_ie_info {
  * @prot_status_code:
  * @result_code:
  * @dfs_regdomain:
- * @ap_power_type: AP power type
- * @same_ctry_code: If AP Country IE has same country code as STA programmed
- *                  country
- * @ap_power_type_6g: AP power type for 6G (LPI, SP, or VLP)
+ * @ap_defined_power_type_6g: 6 GHz power type advertised by AP
+ * @best_6g_power_type: best 6 GHz power type
  * @sta_follows_sap_power:
  * @eht_capable:
  * @eht_config:
@@ -985,9 +983,8 @@ struct pe_session {
 	uint16_t prot_status_code;
 	tSirResultCodes result_code;
 	uint32_t dfs_regdomain;
-	uint8_t ap_power_type;
-	bool same_ctry_code;
-	uint8_t ap_power_type_6g;
+	uint8_t ap_defined_power_type_6g;
+	uint8_t best_6g_power_type;
 	bool sta_follows_sap_power;
 #ifdef WLAN_FEATURE_11BE
 	bool eht_capable;
