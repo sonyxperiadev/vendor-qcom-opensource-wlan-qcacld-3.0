@@ -212,6 +212,16 @@
 
 #define WLAN_WAIT_WLM_LATENCY_LEVEL 1000
 
+/*
+ * BIT map values for vdev_param_set_profile
+ * bit 0: 0 - XR SAP profile disabled
+ *        1 - XR SAP profile enabled
+ * bit 1: 0 - XPAN profile disabled
+ *        1 - XPAN profile enabled
+ */
+#define AP_PROFILE_XR_ENABLE 0x1
+#define AP_PROFILE_XPAN_ENABLE 0x2
+
 /**
  * rtt_is_enabled - Macro to check if the bitmap has any RTT roles set
  * @bitmap: The bitmap to be checked
@@ -14470,9 +14480,21 @@ static int __wlan_hdd_cfg80211_ap_policy(struct wlan_objmgr_vdev *vdev,
 					 struct nlattr **tb)
 {
 	QDF_STATUS status;
+	uint8_t vdev_id;
+	int ret;
 	uint8_t ap_cfg_policy;
+	uint32_t profile = 0;
+	enum QDF_OPMODE device_mode;
 	uint8_t ap_config =
-			QCA_WLAN_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING;
+		QCA_WLAN_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING;
+
+	vdev_id = wlan_vdev_get_id(vdev);
+	device_mode = hdd_get_device_mode(vdev_id);
+	if (device_mode != QDF_SAP_MODE) {
+		hdd_err_rl("command not allowed in %d mode, vdev_id: %d",
+			   device_mode, vdev_id);
+		return -EINVAL;
+	}
 
 	ap_config = nla_get_u8(
 		tb[QCA_WLAN_VENDOR_ATTR_CONCURRENT_POLICY_AP_CONFIG]);
@@ -14484,19 +14506,28 @@ static int __wlan_hdd_cfg80211_ap_policy(struct wlan_objmgr_vdev *vdev,
 	}
 
 	ap_cfg_policy = wlan_mlme_convert_ap_policy_config(ap_config);
-
+	if (ap_cfg_policy == HOST_CONCURRENT_AP_POLICY_XR)
+		profile = AP_PROFILE_XR_ENABLE;
+	else if (ap_cfg_policy == HOST_CONCURRENT_AP_POLICY_GAMING_AUDIO ||
+		 ap_cfg_policy ==
+		 HOST_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING)
+		profile = AP_PROFILE_XPAN_ENABLE;
+	ret = wma_cli_set_command(vdev_id, wmi_vdev_param_set_profile,
+				  profile, VDEV_CMD);
+	if (ret) {
+		hdd_err("Failed to set profile %d", profile);
+		return -EINVAL;
+	}
 	status = wlan_hdd_config_dp_direct_link_profile(vdev, ap_cfg_policy);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		hdd_err("failed to set DP ap config");
 		return -EINVAL;
 	}
-
 	status = ucfg_mlme_set_ap_policy(vdev, ap_cfg_policy);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		hdd_err("failed to set MLME ap config");
 		return -EINVAL;
 	}
-
 	return 0;
 }
 
