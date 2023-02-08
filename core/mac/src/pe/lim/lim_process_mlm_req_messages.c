@@ -594,7 +594,9 @@ static inline
 uint32_t lim_get_sae_keymgmt_suite(uint32_t keymgmt)
 {
 	/* Select the best SAE AKM suite supported */
-	if (QDF_HAS_PARAM(keymgmt, WLAN_CRYPTO_KEY_MGMT_SAE_EXT_KEY))
+	if (QDF_HAS_PARAM(keymgmt, WLAN_CRYPTO_KEY_MGMT_FT_SAE_EXT_KEY))
+		return WLAN_AKM_FT_SAE_EXT_KEY;
+	else if (QDF_HAS_PARAM(keymgmt, WLAN_CRYPTO_KEY_MGMT_SAE_EXT_KEY))
 		return WLAN_AKM_SAE_EXT_KEY;
 	else if (QDF_HAS_PARAM(keymgmt, WLAN_CRYPTO_KEY_MGMT_FT_SAE))
 		return WLAN_AKM_FT_SAE;

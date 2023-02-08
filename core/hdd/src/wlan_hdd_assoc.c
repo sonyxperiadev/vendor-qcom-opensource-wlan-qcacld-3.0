@@ -324,6 +324,8 @@ wlan_hdd_get_keymgmt_for_sae_akm(uint32_t akm)
 		return WLAN_AKM_SUITE_FT_OVER_SAE;
 	else if (akm == WLAN_AKM_SAE_EXT_KEY)
 		return WLAN_AKM_SUITE_SAE_EXT_KEY;
+	else if (akm == WLAN_AKM_FT_SAE_EXT_KEY)
+		return WLAN_AKM_SUITE_FT_SAE_EXT_KEY;
 	/**
 	 * Legacy FW doesn't support SAE-EXK-KEY or
 	 * Cross-SAE_AKM roaming. In such cases, send

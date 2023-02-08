@@ -1560,6 +1560,10 @@ static uint32_t cm_get_rsn_wmi_auth_type(int32_t akm)
 		return WMI_AUTH_RSNA_FILS_SHA384;
 	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FILS_SHA256))
 		return WMI_AUTH_RSNA_FILS_SHA256;
+	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_SAE_EXT_KEY))
+		return WMI_AUTH_FT_RSNA_SAE_SHA384;
+	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_SAE_EXT_KEY))
+		return WMI_AUTH_WPA3_SAE_SHA384;
 	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_SAE))
 		return WMI_AUTH_FT_RSNA_SAE;
 	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_SAE))
@@ -1586,8 +1590,6 @@ static uint32_t cm_get_rsn_wmi_auth_type(int32_t akm)
 		return WMI_AUTH_RSNA_SUITE_B_8021X_SHA384;
 	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_IEEE8021X_SHA384))
 		return WMI_AUTH_FT_RSNA_SUITE_B_8021X_SHA384;
-	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_SAE_EXT_KEY))
-		return WMI_AUTH_WPA3_SAE_SHA384;
 	else
 		return WMI_AUTH_NONE;
 }
@@ -3501,7 +3503,8 @@ cm_akm_roam_allowed(struct wlan_objmgr_psoc *psoc,
 		return QDF_STATUS_E_NOSUPPORT;
 	}
 
-	if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_SAE_EXT_KEY) &&
+	if ((QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_SAE_EXT_KEY) ||
+	     QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_SAE_EXT_KEY)) &&
 	    !CM_IS_FW_SAE_EXT_ROAM_SUPPORTED(fw_akm_bitmap)) {
 		mlme_info("Roaming not supported for SAE EXT akm");
 		return QDF_STATUS_E_NOSUPPORT;
@@ -5399,7 +5402,8 @@ bool cm_is_auth_type_11r(struct wlan_mlme_psoc_ext_obj *mlme_obj,
 		   QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_IEEE8021X) ||
 		   QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_PSK) ||
 		   QDF_HAS_PARAM(akm,
-				 WLAN_CRYPTO_KEY_MGMT_FT_IEEE8021X_SHA384)) {
+				 WLAN_CRYPTO_KEY_MGMT_FT_IEEE8021X_SHA384) ||
+		   QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_SAE_EXT_KEY)) {
 		return true;
 	}
 
