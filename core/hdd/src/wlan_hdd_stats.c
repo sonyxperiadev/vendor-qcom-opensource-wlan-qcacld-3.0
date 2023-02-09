@@ -6112,11 +6112,17 @@ static inline void wlan_hdd_mlo_update_stats_info(struct hdd_adapter *adapter)
 	uint32_t *snr, *link_snr;
 	uint8_t iter;
 	struct hdd_mlo_adapter_info *mlo_adapter_info;
-	struct hdd_adapter *link_adapter;
+	struct hdd_adapter *link_adapter, *ml_adapter;
 	struct wlan_objmgr_vdev *vdev;
 
-	rssi = &adapter->hdd_stats.summary_stat.rssi;
-	snr = &adapter->hdd_stats.summary_stat.snr;
+	if (hdd_adapter_is_link_adapter(adapter))
+		ml_adapter = hdd_adapter_get_mlo_adapter_from_link(adapter);
+	else
+		ml_adapter = adapter;
+
+
+	rssi = &ml_adapter->hdd_stats.summary_stat.rssi;
+	snr = &ml_adapter->hdd_stats.summary_stat.snr;
 
 	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_STATS_ID);
 	if (!vdev)
@@ -6132,11 +6138,12 @@ static inline void wlan_hdd_mlo_update_stats_info(struct hdd_adapter *adapter)
 	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_STATS_ID);
 
 	hdd_debug("Link0: RSSI: %d, SNR: %d", *rssi, *snr);
-	mlo_adapter_info = &adapter->mlo_adapter_info;
+
+	mlo_adapter_info = &ml_adapter->mlo_adapter_info;
 	for (iter = 0; iter < WLAN_MAX_MLD; iter++) {
 		link_adapter = mlo_adapter_info->link_adapter[iter];
 		if (!link_adapter ||
-		    link_adapter->mlo_adapter_info.associate_with_ml_adapter)
+		    hdd_adapter_is_associated_with_ml_adapter(link_adapter))
 			continue;
 
 		link_rssi = &link_adapter->hdd_stats.summary_stat.rssi;
