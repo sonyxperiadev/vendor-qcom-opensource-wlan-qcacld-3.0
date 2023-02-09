@@ -3809,7 +3809,10 @@ alloc_packet:
 	MTRACE(qdf_trace(QDF_MODULE_ID_PE, TRACE_CODE_TX_MGMT,
 			 session->peSessionId, mac_hdr->fc.subType));
 
-	mac_ctx->auth_ack_status = LIM_ACK_NOT_RCD;
+	if (mac_ctx->auth_ack_status != LIM_ACK_RCD_FAILURE &&
+	    mac_ctx->auth_ack_status != LIM_TX_FAILED)
+		mac_ctx->auth_ack_status = LIM_ACK_NOT_RCD;
+
 	min_rid = lim_get_min_session_txrate(session);
 	peer_rssi = mac_ctx->lim.bss_rssi;
 	lim_diag_mgmt_tx_event_report(mac_ctx, mac_hdr,
