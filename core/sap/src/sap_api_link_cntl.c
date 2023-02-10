@@ -1556,21 +1556,44 @@ bool sap_is_prev_n_freqs_free(bool *clean_channel_array, uint32_t curr_index,
  * @clean_channel_array: array of chan enum containing that chan free or not
  * @freq: Scanned frequency
  * @ch_width: phy channel width
+ * @vdev: object manager vdev
  *
  * Return: true if frequency is allowed based on BW else false.
  */
 static
 bool is_freq_allowed_for_sap(struct wlan_objmgr_pdev *pdev,
 			     bool *clean_channel_array,
-			     qdf_freq_t freq, enum phy_ch_width ch_width) {
+			     qdf_freq_t freq, enum phy_ch_width ch_width,
+			     struct wlan_objmgr_vdev *vdev) {
 	uint16_t min_bw = 0;
 	uint16_t max_bw = 0;
 	uint16_t curr_bw;
+	struct wlan_objmgr_psoc *psoc;
 	QDF_STATUS status;
 	const struct bonded_channel_freq *range = NULL;
 	uint32_t curr_index = wlan_reg_get_chan_enum_for_freq(freq);
 	if (curr_index >= INVALID_CHANNEL)
 		return false;
+	psoc = wlan_pdev_get_psoc(pdev);
+	if (!psoc) {
+		sap_err("invalid psoc");
+		return false;
+	}
+	if (wlan_mlme_get_ap_policy(vdev) ==
+	    HOST_CONCURRENT_AP_POLICY_UNSPECIFIED) {
+		sap_debug("low latency sap is not present");
+		return false;
+	}
+	/*
+	 * Don't allow frequency that can be shared with 2 GHz frequency
+	 * on same MAC.
+	 */
+	if (policy_mgr_2_freq_always_on_same_mac
+			(psoc, wlan_reg_min_24ghz_chan_freq(), freq)) {
+		sap_debug("frequency can be shared by 2G MAC");
+		return false;
+	}
+
 	status =
 	wlan_reg_get_min_max_bw_for_chan_index(pdev, curr_index, &min_bw,
 					       &max_bw);
@@ -1687,7 +1710,8 @@ void wlansap_process_chan_info_event(struct sap_context *sap_ctx,
 		if (!is_freq_allowed_for_sap(mac->pdev,
 					     sap_ctx->clean_channel_array,
 					     roam_info->chan_info_freq,
-					     sap_ctx->acs_cfg->ch_width)) {
+					     sap_ctx->acs_cfg->ch_width,
+					     sap_ctx->vdev)) {
 			goto exit;
 		}
 	}
