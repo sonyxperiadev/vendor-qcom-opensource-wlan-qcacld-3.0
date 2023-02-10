@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -359,7 +359,7 @@ static void hdd_dcs_hostapd_enable_wlan_interference_mitigation(
 
 	if (wlansap_dcs_is_wlan_interference_mitigation_enabled(
 			WLAN_HDD_GET_SAP_CTX_PTR(adapter)) &&
-	    wlan_reg_is_5ghz_ch_freq(adapter->session.ap.operating_chan_freq))
+	    !WLAN_REG_IS_24GHZ_CH_FREQ(adapter->session.ap.operating_chan_freq))
 		ucfg_config_dcs_event_data(hdd_ctx->psoc, mac_id, true);
 }
 

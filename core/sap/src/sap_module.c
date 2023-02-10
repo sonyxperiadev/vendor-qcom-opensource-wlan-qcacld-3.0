@@ -3737,7 +3737,7 @@ QDF_STATUS wlansap_dcs_set_wlan_interference_mitigation_on_band(
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	bool wlan_interference_mitigation_enable = false;
 
-	if (WLAN_REG_IS_5GHZ_CH_FREQ(sap_cfg->acs_cfg.pri_ch_freq))
+	if (!WLAN_REG_IS_24GHZ_CH_FREQ(sap_cfg->acs_cfg.pri_ch_freq))
 		wlan_interference_mitigation_enable = true;
 
 	status = wlansap_dcs_set_vdev_wlan_interference_mitigation(
