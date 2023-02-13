@@ -3163,8 +3163,9 @@ void wlan_hdd_handle_zero_acs_list(struct hdd_context *hdd_ctx,
 				   uint8_t org_ch_list_count)
 {
 	uint16_t i, sta_count;
-	uint32_t acs_chan_default = 0;
+	uint32_t acs_chan_default = 0, acs_dfs_chan = 0;
 	bool force_sap_allowed = false;
+	enum channel_state state;
 
 	if (!acs_ch_list_count || *acs_ch_list_count > 0 ||
 	    !acs_freq_list) {
@@ -3187,8 +3188,11 @@ void wlan_hdd_handle_zero_acs_list(struct hdd_context *hdd_ctx,
 	wlan_hdd_dump_freq_list(org_freq_list, org_ch_list_count);
 
 	for (i = 0; i < org_ch_list_count; i++) {
-		if (wlan_reg_is_dfs_for_freq(hdd_ctx->pdev,
-					     org_freq_list[i]))
+		state = wlan_reg_get_channel_state_for_pwrmode(
+				hdd_ctx->pdev, org_freq_list[i],
+				REG_CURRENT_PWR_MODE);
+		if (state == CHANNEL_STATE_DISABLE ||
+		    state == CHANNEL_STATE_INVALID)
 			continue;
 
 		if (wlan_reg_is_6ghz_chan_freq(org_freq_list[i]) &&
@@ -3198,11 +3202,21 @@ void wlan_hdd_handle_zero_acs_list(struct hdd_context *hdd_ctx,
 		if (!policy_mgr_is_safe_channel(hdd_ctx->psoc,
 						org_freq_list[i]))
 			continue;
+		/* Make dfs channel as last choice */
+		if (state == CHANNEL_STATE_DFS ||
+		    state == CHANNEL_STATE_PASSIVE) {
+			acs_dfs_chan = org_freq_list[i];
+			continue;
+		}
 		acs_chan_default = org_freq_list[i];
 		break;
 	}
-	if (!acs_chan_default)
-		acs_chan_default = org_freq_list[0];
+	if (!acs_chan_default) {
+		if (acs_dfs_chan)
+			acs_chan_default = acs_dfs_chan;
+		else
+			acs_chan_default = org_freq_list[0];
+	}
 
 	acs_freq_list[0] = acs_chan_default;
 	*acs_ch_list_count = 1;
