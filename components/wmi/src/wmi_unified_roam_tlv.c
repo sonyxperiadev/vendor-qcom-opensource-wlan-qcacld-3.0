@@ -2315,7 +2315,7 @@ wmi_fill_roam_sync_buffer(wmi_unified_t wmi_handle,
 	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
 	wmi_channel *chan = NULL;
 	wmi_key_material *key;
-	wmi_key_material_ext *key_ft;
+	wmi_key_material_ext *key_ext;
 	wmi_roam_fils_synch_tlv_param *fils_info;
 	wmi_roam_pmk_cache_synch_tlv_param *pmk_cache_info;
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
@@ -2383,7 +2383,7 @@ wmi_fill_roam_sync_buffer(wmi_unified_t wmi_handle,
 	}
 
 	key = param_buf->key;
-	key_ft = param_buf->key_ext;
+	key_ext = param_buf->key_ext;
 	if (key) {
 		roam_sync_ind->kck_len = KCK_KEY_LEN;
 		qdf_mem_copy(roam_sync_ind->kck, key->kck,
@@ -2393,29 +2393,27 @@ wmi_fill_roam_sync_buffer(wmi_unified_t wmi_handle,
 			     KEK_KEY_LEN);
 		qdf_mem_copy(roam_sync_ind->replay_ctr,
 			     key->replay_counter, REPLAY_CTR_LEN);
-	} else if (key_ft) {
+	} else if (key_ext) {
 		/*
-		 * For AKM 00:0F:AC (FT suite-B-SHA384)
-		 * KCK-bits:192 KEK-bits:256
-		 * Firmware sends wmi_key_material_ext tlv now only if
-		 * auth is FT Suite-B SHA-384 auth. If further new suites
-		 * are added, add logic to get kck, kek bits based on
-		 * akm protocol
+		 * key_ext carries key materials whose size
+		 * is greater than conventional 16bytes.
 		 */
-		kck_len = KCK_192BIT_KEY_LEN;
-		kek_len = KEK_256BIT_KEY_LEN;
+		kck_len = key_ext->kck_len ?
+				key_ext->kck_len : KCK_192BIT_KEY_LEN;
+		kek_len = key_ext->kek_len ?
+				key_ext->kek_len : KEK_256BIT_KEY_LEN;
 
 		roam_sync_ind->kck_len = kck_len;
 		qdf_mem_copy(roam_sync_ind->kck,
-			     key_ft->key_buffer, kck_len);
+			     key_ext->key_buffer, kck_len);
 
 		roam_sync_ind->kek_len = kek_len;
 		qdf_mem_copy(roam_sync_ind->kek,
-			     (key_ft->key_buffer + kck_len),
+			     (key_ext->key_buffer + kck_len),
 			     kek_len);
 
 		qdf_mem_copy(roam_sync_ind->replay_ctr,
-			     (key_ft->key_buffer + kek_len + kck_len),
+			     (key_ext->key_buffer + kek_len + kck_len),
 			     REPLAY_CTR_LEN);
 	}
 
