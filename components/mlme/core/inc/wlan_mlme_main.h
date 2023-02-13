@@ -1321,4 +1321,17 @@ wlan_mlme_is_pmk_set_deferred(struct wlan_objmgr_psoc *psoc,
  */
 bool wlan_vdev_is_sae_auth_type(struct wlan_objmgr_vdev *vdev);
 #endif /* WLAN_FEATURE_SAE */
+
+/**
+ * wlan_get_rand_from_lst_for_freq()- Get random channel from a given channel
+ * list.
+ * @freq_lst: Frequency list
+ * @num_chan: number of channels
+ *
+ * Get random channel from given channel list.
+ *
+ * Return: channel frequency.
+ */
+uint16_t wlan_get_rand_from_lst_for_freq(uint16_t *freq_lst,
+					 uint8_t num_chan);
 #endif

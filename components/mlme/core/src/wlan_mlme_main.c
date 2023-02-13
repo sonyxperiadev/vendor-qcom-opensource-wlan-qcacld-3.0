@@ -1537,6 +1537,23 @@ static bool is_sae_sap_enabled(struct wlan_objmgr_psoc *psoc)
 	return false;
 }
 #endif
+uint16_t wlan_get_rand_from_lst_for_freq(uint16_t *freq_lst,
+					 uint8_t num_chan)
+{
+	uint8_t i;
+	uint32_t rand_byte = 0;
+
+	if (!num_chan || !freq_lst) {
+		mlme_legacy_debug("invalid param freq_lst %pK, num_chan = %d",
+				  freq_lst, num_chan);
+		return 0;
+	}
+
+	get_random_bytes((uint8_t *)&rand_byte, 1);
+	i = (rand_byte + qdf_mc_timer_get_system_ticks()) % num_chan;
+
+	return freq_lst[i];
+}
 
 static void mlme_init_sap_cfg(struct wlan_objmgr_psoc *psoc,
 			      struct wlan_mlme_cfg_sap *sap_cfg)
