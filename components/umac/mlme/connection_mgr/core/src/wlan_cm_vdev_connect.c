@@ -1645,7 +1645,7 @@ cm_connect_complete_ind(struct wlan_objmgr_vdev *vdev,
 		cm_update_tid_mapping(vdev);
 	}
 
-	mlo_roam_connect_complete(psoc, pdev, vdev, rsp);
+	mlo_roam_connect_complete(vdev);
 
 	if (op_mode == QDF_STA_MODE &&
 		(wlan_vdev_mlme_is_mlo_link_vdev(vdev) ||

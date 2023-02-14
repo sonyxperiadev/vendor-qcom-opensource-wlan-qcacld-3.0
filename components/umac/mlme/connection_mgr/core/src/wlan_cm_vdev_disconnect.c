@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2015, 2020-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -33,6 +33,7 @@
 #include "wni_api.h"
 #include "connection_mgr/core/src/wlan_cm_roam.h"
 #include <wlan_mlo_mgr_sta.h>
+#include "wlan_mlo_mgr_roam.h"
 
 static void cm_abort_connect_request_timers(struct wlan_objmgr_vdev *vdev)
 {
@@ -85,6 +86,11 @@ QDF_STATUS cm_disconnect_start_ind(struct wlan_objmgr_vdev *vdev,
 						user_disconnect, vdev);
 	}
 	cm_abort_connect_request_timers(vdev);
+
+	if (req->source != CM_MLO_ROAM_INTERNAL_DISCONNECT) {
+		mlme_debug("Free copied reassoc rsp");
+		mlo_roam_free_copied_reassoc_rsp(vdev);
+	}
 
 	return QDF_STATUS_SUCCESS;
 }

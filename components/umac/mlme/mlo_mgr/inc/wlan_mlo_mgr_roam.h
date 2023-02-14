@@ -291,19 +291,23 @@ mlo_roam_is_auth_status_connected(struct wlan_objmgr_psoc *psoc,
 
 /**
  * mlo_roam_connect_complete - roam connect complete api
- * @psoc: psoc pointer
- * @pdev: pdev pointer
  * @vdev: vdev pointer
- * @rsp: connect rsp pointer
  *
  * This api will be called after connect complete for roam 1x case.
  *
  * Return: none
  */
-void mlo_roam_connect_complete(struct wlan_objmgr_psoc *psoc,
-			       struct wlan_objmgr_pdev *pdev,
-			       struct wlan_objmgr_vdev *vdev,
-			       struct wlan_cm_connect_resp *rsp);
+void mlo_roam_connect_complete(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * mlo_roam_free_copied_reassoc_rsp - roam free copied reassoc rsp
+ * @vdev: vdev pointer
+ *
+ * This api will be called to free copied reassoc rsp.
+ *
+ * Return: none
+ */
+void mlo_roam_free_copied_reassoc_rsp(struct wlan_objmgr_vdev *vdev);
 
 #ifdef WLAN_FEATURE_11BE_MLO_ADV_FEATURE
 /**
@@ -499,10 +503,11 @@ mlo_roam_is_auth_status_connected(struct wlan_objmgr_psoc *psoc,
 }
 
 static inline void
-mlo_roam_connect_complete(struct wlan_objmgr_psoc *psoc,
-			  struct wlan_objmgr_pdev *pdev,
-			  struct wlan_objmgr_vdev *vdev,
-			  struct wlan_cm_connect_resp *rsp)
+mlo_roam_connect_complete(struct wlan_objmgr_vdev *vdev)
+{}
+
+static inline void
+mlo_roam_free_copied_reassoc_rsp(struct wlan_objmgr_vdev *vdev)
 {}
 
 static inline QDF_STATUS
