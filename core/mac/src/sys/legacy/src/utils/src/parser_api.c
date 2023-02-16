@@ -1520,20 +1520,51 @@ populate_dot11f_vht_operation(struct mac_context *mac,
 {
 	uint32_t mcs_set;
 	struct mlme_vht_capabilities_info *vht_cap_info;
+	enum reg_wifi_band band;
+	uint8_t band_mask;
+	struct ch_params ch_params = {0};
+	qdf_freq_t sec_chan_freq = 0;
 
 	if (!pe_session || !pe_session->vhtCapability)
 		return QDF_STATUS_SUCCESS;
+
+	band = wlan_reg_freq_to_band(pe_session->curr_op_freq);
+	band_mask = 1 << band;
+
+	ch_params.ch_width = pe_session->ch_width;
+	ch_params.mhz_freq_seg0 =
+		wlan_reg_chan_band_to_freq(mac->pdev,
+					   pe_session->ch_center_freq_seg0,
+					   band_mask);
+
+	if (pe_session->ch_center_freq_seg1)
+		ch_params.mhz_freq_seg1 =
+			wlan_reg_chan_band_to_freq(mac->pdev,
+						   pe_session->ch_center_freq_seg1,
+						   band_mask);
+
+	if (band == (REG_BAND_2G) && ch_params.ch_width == CH_WIDTH_40MHZ) {
+		if (ch_params.mhz_freq_seg0 ==  pe_session->curr_op_freq + 10)
+			sec_chan_freq = pe_session->curr_op_freq + 20;
+		if (ch_params.mhz_freq_seg0 ==  pe_session->curr_op_freq - 10)
+			sec_chan_freq = pe_session->curr_op_freq - 20;
+	}
+
+	wlan_reg_set_channel_params_for_pwrmode(mac->pdev,
+						pe_session->curr_op_freq,
+						sec_chan_freq, &ch_params,
+						REG_CURRENT_PWR_MODE);
 
 	pDot11f->present = 1;
 
 	if (pe_session->ch_width > CH_WIDTH_40MHZ) {
 		pDot11f->chanWidth = 1;
 		pDot11f->chan_center_freq_seg0 =
-			pe_session->ch_center_freq_seg0;
+			ch_params.center_freq_seg0;
 		if (pe_session->ch_width == CH_WIDTH_80P80MHZ ||
 				pe_session->ch_width == CH_WIDTH_160MHZ)
 			pDot11f->chan_center_freq_seg1 =
-				pe_session->ch_center_freq_seg1;
+				ch_params.center_freq_seg1;
 		else
 			pDot11f->chan_center_freq_seg1 = 0;
 	} else {
@@ -2861,19 +2892,56 @@ sir_convert_probe_frame2_t2lm_struct(tDot11fProbeResponse *pr,
 				     tpSirProbeRespBeacon bcn_struct)
 {
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	struct wlan_t2lm_context *t2lm_ctx;
+	/* add 3 bytes for extn_ie_header */
+	uint8_t ie[DOT11F_IE_T2LM_IE_MAX_LEN + 3];
+	struct wlan_t2lm_info t2lm;
 	uint8_t i;
+
+	t2lm_ctx = &bcn_struct->t2lm_ctx;
+	qdf_mem_zero(&t2lm_ctx->established_t2lm.t2lm,
+		     sizeof(struct wlan_t2lm_info));
+	t2lm_ctx->established_t2lm.t2lm.direction = WLAN_T2LM_INVALID_DIRECTION;
+
+	qdf_mem_zero(&t2lm_ctx->upcoming_t2lm.t2lm,
+		     sizeof(struct wlan_t2lm_info));
+	t2lm_ctx->upcoming_t2lm.t2lm.direction = WLAN_T2LM_INVALID_DIRECTION;
 
 	if (!pr->num_t2lm_ie) {
 		pe_debug("T2LM IEs not present");
 		return status;
 	}
-	bcn_struct->t2lm_ctx.num_of_t2lm_ie = pr->num_t2lm_ie;
+
 	pe_debug("Number of T2LM IEs in probe rsp %d", pr->num_t2lm_ie);
 	for (i = 0; i < pr->num_t2lm_ie; i++) {
-		status = wlan_mlo_parse_bcn_prbresp_t2lm_ie(&bcn_struct->t2lm_ctx,
-							    &pr->t2lm_ie[i].data[0]);
-		if (QDF_IS_STATUS_ERROR(status))
+		qdf_mem_zero(&ie[0], DOT11F_IE_T2LM_IE_MAX_LEN + 3);
+		qdf_mem_zero(&t2lm, sizeof(struct wlan_t2lm_info));
+		ie[ID_POS] = WLAN_ELEMID_EXTN_ELEM;
+		ie[TAG_LEN_POS] = pr->t2lm_ie[i].num_data + 1;
+		ie[IDEXT_POS] = WLAN_EXTN_ELEMID_T2LM;
+		qdf_mem_copy(&ie[3], &pr->t2lm_ie[i].data[0],
+			     pr->t2lm_ie[i].num_data);
+
+		qdf_trace_hex_dump(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
+				   &ie[0], pr->t2lm_ie[i].num_data + 3);
+
+		status = wlan_mlo_parse_t2lm_info(&ie[0], &t2lm);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			pe_debug("Parse T2LM IE fail");
 			return status;
+		}
+
+		if (!t2lm.mapping_switch_time_present &&
+		    t2lm.expected_duration_present) {
+			qdf_mem_copy(&t2lm_ctx->established_t2lm.t2lm, &t2lm,
+				     sizeof(struct wlan_t2lm_info));
+			pe_debug("Parse established T2LM IE success");
+		} else if (t2lm.mapping_switch_time_present) {
+			qdf_mem_copy(&t2lm_ctx->upcoming_t2lm.t2lm, &t2lm,
+				     sizeof(struct wlan_t2lm_info));
+			pe_debug("Parse upcoming T2LM IE success");
+		}
+		pe_debug("Parse T2LM IE success");
 	}
 	return status;
 }
@@ -5005,20 +5073,54 @@ sir_convert_beacon_frame2_t2lm_struct(tDot11fBeacon *bcn_frm,
 				      tpSirProbeRespBeacon bcn_struct)
 {
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	struct wlan_t2lm_context *t2lm_ctx;
+	/* add 3 bytes for extn_ie_header */
+	uint8_t ie[DOT11F_IE_T2LM_IE_MAX_LEN + 3];
+	struct wlan_t2lm_info t2lm;
 	uint8_t i;
+
+	t2lm_ctx = &bcn_struct->t2lm_ctx;
+	qdf_mem_zero(&t2lm_ctx->established_t2lm.t2lm,
+		     sizeof(struct wlan_t2lm_info));
+	t2lm_ctx->established_t2lm.t2lm.direction = WLAN_T2LM_INVALID_DIRECTION;
+
+	qdf_mem_zero(&t2lm_ctx->upcoming_t2lm.t2lm,
+		     sizeof(struct wlan_t2lm_info));
+	t2lm_ctx->upcoming_t2lm.t2lm.direction = WLAN_T2LM_INVALID_DIRECTION;
 
 	if (!bcn_frm->num_t2lm_ie) {
 		pe_debug("T2LM IEs not present");
 		return status;
 	}
 
-	bcn_struct->t2lm_ctx.num_of_t2lm_ie = bcn_frm->num_t2lm_ie;
-	pe_debug("Number of T2LM IEs in probe rsp %d", bcn_frm->num_t2lm_ie);
+	pe_debug("Number of T2LM IEs in beacon %d", bcn_frm->num_t2lm_ie);
 	for (i = 0; i < bcn_frm->num_t2lm_ie; i++) {
-		status = wlan_mlo_parse_bcn_prbresp_t2lm_ie(&bcn_struct->t2lm_ctx,
-							    &bcn_frm->t2lm_ie[i].data[0]);
-		if (QDF_IS_STATUS_ERROR(status))
+		qdf_mem_zero(&ie[0], DOT11F_IE_T2LM_IE_MAX_LEN + 3);
+		qdf_mem_zero(&t2lm, sizeof(struct wlan_t2lm_info));
+		ie[ID_POS] = WLAN_ELEMID_EXTN_ELEM;
+		ie[TAG_LEN_POS] = bcn_frm->t2lm_ie[i].num_data + 1;
+		ie[IDEXT_POS] = WLAN_EXTN_ELEMID_T2LM;
+		qdf_mem_copy(&ie[3], &bcn_frm->t2lm_ie[i].data[0],
+			     bcn_frm->t2lm_ie[i].num_data + 3);
+		qdf_trace_hex_dump(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
+				   &ie[0], bcn_frm->t2lm_ie[i].num_data + 3);
+		status = wlan_mlo_parse_t2lm_info(&ie[0], &t2lm);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			pe_debug("Parse T2LM IE fail");
 			return status;
+		}
+
+		if (!t2lm.mapping_switch_time_present &&
+		    t2lm.expected_duration_present) {
+			qdf_mem_copy(&t2lm_ctx->established_t2lm.t2lm, &t2lm,
+				     sizeof(struct wlan_t2lm_info));
+			pe_debug("Parse established T2LM IE success");
+		} else if (t2lm.mapping_switch_time_present) {
+			qdf_mem_copy(&t2lm_ctx->upcoming_t2lm.t2lm, &t2lm,
+				     sizeof(struct wlan_t2lm_info));
+			pe_debug("Parse upcoming T2LM IE success");
+		}
+		pe_debug("Parse T2LM IE success");
 	}
 	return status;
 }
@@ -7237,16 +7339,19 @@ populate_dot11f_he_operation(struct mac_context *mac_ctx,
 	he_op->vht_oper_present = 0;
 	if (session->he_6ghz_band) {
 		he_op->oper_info_6g_present = 1;
-		he_op->oper_info_6g.info.ch_width = session->ch_width;
-		he_op->oper_info_6g.info.center_freq_seg0 =
-					session->ch_center_freq_seg0;
-		if (session->ch_width == CH_WIDTH_80P80MHZ ||
-		    session->ch_width == CH_WIDTH_160MHZ) {
-			he_op->oper_info_6g.info.center_freq_seg1 =
-				session->ch_center_freq_seg1;
-			he_op->oper_info_6g.info.ch_width = CH_WIDTH_160MHZ;
-		} else {
-			he_op->oper_info_6g.info.center_freq_seg1 = 0;
+		if (session->bssType != eSIR_INFRA_AP_MODE) {
+			he_op->oper_info_6g.info.ch_width = session->ch_width;
+			he_op->oper_info_6g.info.center_freq_seg0 =
+						session->ch_center_freq_seg0;
+			if (session->ch_width == CH_WIDTH_80P80MHZ ||
+			    session->ch_width == CH_WIDTH_160MHZ) {
+				he_op->oper_info_6g.info.center_freq_seg1 =
+					session->ch_center_freq_seg1;
+				he_op->oper_info_6g.info.ch_width =
+							CH_WIDTH_160MHZ;
+			} else {
+				he_op->oper_info_6g.info.center_freq_seg1 = 0;
+			}
 		}
 		he_op->oper_info_6g.info.primary_ch =
 			wlan_reg_freq_to_chan(mac_ctx->pdev,
@@ -11205,11 +11310,17 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 	mlo_ie->mld_capab_and_op_present = 1;
 	mlo_ie->mld_id_present = 0;
 
+	if (!pe_session->lim_join_req)
+		return QDF_STATUS_E_FAILURE;
+
+	partner_info = &pe_session->lim_join_req->partner_info;
+
 	if (mlo_ie->mld_capab_and_op_present) {
 		presence_bitmap |= WLAN_ML_BV_CTRL_PBM_MLDCAPANDOP_P;
 		mlo_ie->common_info_length += WLAN_ML_BV_CINFO_MLDCAPANDOP_SIZE;
 		mlo_ie->mld_capab_and_op_info.max_simultaneous_link_num =
-			wlan_mlme_get_sta_mlo_simultaneous_links(psoc);
+			QDF_MIN(partner_info->num_partner_links,
+				wlan_mlme_get_sta_mlo_simultaneous_links(psoc));
 		pe_debug("max_simultaneous_link_num %d",
 			 mlo_ie->mld_capab_and_op_info.max_simultaneous_link_num);
 		mlo_ie->mld_capab_and_op_info.srs_support = 0;
@@ -11317,7 +11428,6 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 	mlo_ie->num_data = p_ml_ie - mlo_ie->data;
 
 	/* find out number of links from bcn or prb rsp */
-	partner_info = &pe_session->lim_join_req->partner_info;
 	total_sta_prof = partner_info->num_partner_links;
 
 	mlo_dev_ctx = pe_session->vdev->mlo_dev_ctx;

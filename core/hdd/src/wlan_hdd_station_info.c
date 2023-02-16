@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -46,9 +46,6 @@
 #include <cdp_txrx_host_stats.h>
 #include <osif_cm_util.h>
 
-#ifdef WLAN_FEATURE_TSF_UPLINK_DELAY
-#include <cdp_txrx_ctrl.h>
-#endif
 #include "wlan_hdd_stats.h"
 
 /*
@@ -1442,7 +1439,6 @@ static int hdd_get_station_remote(struct hdd_context *hdd_ctx,
 				  struct qdf_mac_addr mac_addr)
 {
 	int status = 0;
-	bool is_associated = false;
 	struct hdd_station_info *stainfo =
 			hdd_get_sta_info_by_mac(
 					&adapter->sta_info_list,
@@ -1452,15 +1448,6 @@ static int hdd_get_station_remote(struct hdd_context *hdd_ctx,
 	if (!stainfo) {
 		status = hdd_get_cached_station_remote(hdd_ctx, adapter,
 						       mac_addr);
-		return status;
-	}
-
-	is_associated = hdd_is_peer_associated(adapter, &mac_addr);
-	if (!is_associated) {
-		status = hdd_get_cached_station_remote(hdd_ctx, adapter,
-						       mac_addr);
-		hdd_put_sta_info_ref(&adapter->sta_info_list, &stainfo, true,
-				     STA_INFO_HDD_GET_STATION_REMOTE);
 		return status;
 	}
 
@@ -2094,52 +2081,6 @@ fail:
 	return -EINVAL;
 }
 
-#ifdef WLAN_FEATURE_TSF_UPLINK_DELAY
-static uint32_t hdd_get_uplink_delay_len(struct hdd_adapter *adapter)
-{
-	if (adapter->device_mode != QDF_STA_MODE)
-		return 0;
-
-	return nla_total_size(sizeof(uint32_t));
-}
-
-static QDF_STATUS hdd_add_uplink_delay(struct hdd_adapter *adapter,
-				       struct sk_buff *skb)
-{
-	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
-	QDF_STATUS status;
-	uint32_t ul_delay;
-
-	if (adapter->device_mode != QDF_STA_MODE)
-		return QDF_STATUS_SUCCESS;
-
-	if (qdf_atomic_read(&adapter->tsf_auto_report)) {
-		status = cdp_get_uplink_delay(soc, adapter->vdev_id, &ul_delay);
-		if (QDF_IS_STATUS_ERROR(status))
-			ul_delay = 0;
-	} else {
-		ul_delay = 0;
-	}
-
-	if (nla_put_u32(skb, QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_UPLINK_DELAY,
-			ul_delay))
-		return QDF_STATUS_E_FAILURE;
-
-	return QDF_STATUS_SUCCESS;
-}
-#else /* !WLAN_FEATURE_TSF_UPLINK_DELAY */
-static inline uint32_t hdd_get_uplink_delay_len(struct hdd_adapter *adapter)
-{
-	return 0;
-}
-
-static inline QDF_STATUS hdd_add_uplink_delay(struct hdd_adapter *adapter,
-					      struct sk_buff *skb)
-{
-	return QDF_STATUS_SUCCESS;
-}
-#endif /* WLAN_FEATURE_TSF_UPLINK_DELAY */
-
 /**
  * hdd_get_connected_station_info_ex() - get connected peer's info
  * @hdd_ctx: hdd context
@@ -2158,6 +2099,7 @@ static int hdd_get_connected_station_info_ex(struct hdd_context *hdd_ctx,
 	uint32_t nl_buf_len, guard_interval;
 	bool sap_get_peer_info;
 	struct nl80211_sta_flag_update sta_flags = {0};
+	const uint8_t *mac_addr;
 	QDF_STATUS status;
 
 	if (hdd_get_peer_stats(adapter, stainfo)) {
@@ -2186,8 +2128,13 @@ static int hdd_get_connected_station_info_ex(struct hdd_context *hdd_ctx,
 		goto fail;
 	}
 
+	if (qdf_is_macaddr_zero(&stainfo->mld_addr))
+		mac_addr = &stainfo->sta_mac.bytes[0];
+	else
+		mac_addr = &stainfo->mld_addr.bytes[0];
+
 	if (nla_put(skb, QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_MAC,
-		    QDF_MAC_ADDR_SIZE, stainfo->sta_mac.bytes)) {
+		    QDF_MAC_ADDR_SIZE, mac_addr)) {
 		hdd_err_rl("Failed to put MAC address");
 		goto fail;
 	}
@@ -2265,7 +2212,6 @@ static int hdd_get_station_remote_ex(struct hdd_context *hdd_ctx,
 				     struct hdd_adapter *adapter,
 				     struct qdf_mac_addr mac_addr)
 {
-	bool is_associated = false;
 	struct hdd_station_info *stainfo =
 				hdd_get_sta_info_by_mac(&adapter->sta_info_list,
 					       mac_addr.bytes,
@@ -2277,15 +2223,6 @@ static int hdd_get_station_remote_ex(struct hdd_context *hdd_ctx,
 		hdd_err_rl("Failed to get peer STA " QDF_MAC_ADDR_FMT,
 			   QDF_MAC_ADDR_REF(mac_addr.bytes));
 		return -ENXIO;
-	}
-
-	is_associated = hdd_is_peer_associated(adapter, &mac_addr);
-	if (!is_associated) {
-		hdd_err_rl("Peer STA is not associated " QDF_MAC_ADDR_FMT,
-			   QDF_MAC_ADDR_REF(mac_addr.bytes));
-		hdd_put_sta_info_ref(&adapter->sta_info_list, &stainfo, true,
-				     STA_INFO_HDD_GET_STATION_REMOTE);
-		return -EINVAL;
 	}
 
 	status = hdd_get_connected_station_info_ex(hdd_ctx, adapter, stainfo);

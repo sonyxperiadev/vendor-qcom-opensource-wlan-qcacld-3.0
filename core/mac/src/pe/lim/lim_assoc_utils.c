@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -3564,6 +3564,47 @@ static void lim_update_vht_oper_assoc_resp(struct mac_context *mac_ctx,
 	pAddBssParams->staContext.ch_width = ch_width;
 }
 
+#ifdef WLAN_FEATURE_11BE
+/**
+ * lim_update_eht_oper_assoc_resp : Update BW based on EHT operation IE.
+ * @pe_session : session entry.
+ * @pAddBssParams: parameters required for add bss params.
+ * @eht_op: EHT Oper IE to update.
+ *
+ * Return : void
+ */
+static void lim_update_eht_oper_assoc_resp(struct pe_session *pe_session,
+					   struct bss_params *pAddBssParams,
+					   tDot11fIEeht_op *eht_op)
+{
+	enum phy_ch_width ch_width;
+
+	ch_width = wlan_mlme_convert_eht_op_bw_to_phy_ch_width(
+						eht_op->channel_width);
+
+	/* Due to puncturing, EHT AP's send seg1 in VHT IE as zero which causes
+	 * downgrade to 80 MHz, check EHT IE and if EHT IE supports 160MHz
+	 * then stick to 160MHz only
+	 */
+
+	if (ch_width > pAddBssParams->ch_width &&
+	    ch_width >= pe_session->ch_width) {
+		pe_debug("eht ch_width %d and ch_width of add bss param %d",
+			 ch_width, pAddBssParams->ch_width);
+		ch_width = pe_session->ch_width;
+	}
+
+	pAddBssParams->ch_width = ch_width;
+	pAddBssParams->staContext.ch_width = ch_width;
+}
+#else
+static void lim_update_eht_oper_assoc_resp(struct pe_session *pe_session,
+					   struct bss_params *pAddBssParams,
+					   tDot11fIEeht_op *eht_op)
+{
+}
+#endif
+
 #ifdef WLAN_SUPPORT_TWT
 /**
  * lim_set_sta_ctx_twt() - Save the TWT settings in STA context
@@ -3722,6 +3763,12 @@ QDF_STATUS lim_sta_send_add_bss(struct mac_context *mac, tpSirAssocRsp pAssocRsp
 		lim_add_bss_eht_cap(pAddBssParams, pAssocRsp);
 		lim_add_bss_eht_cfg(pAddBssParams, pe_session);
 	}
+
+	if (lim_is_session_eht_capable(pe_session) &&
+	    pAssocRsp->eht_op.present &&
+	    pAssocRsp->eht_op.eht_op_information_present)
+		lim_update_eht_oper_assoc_resp(pe_session, pAddBssParams,
+					       &pAssocRsp->eht_op);
 
 	if (pAssocRsp->bss_max_idle_period.present) {
 		pAddBssParams->bss_max_idle_period =

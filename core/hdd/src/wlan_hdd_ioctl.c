@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -101,6 +101,12 @@ enum miracast_param {
  * we will split the printing.
  */
 #define NUM_OF_STA_DATA_TO_PRINT 16
+
+/*
+ * The host sends the maximum channel count in RCL(Roam channel list) via a
+ * supplicant vendor event to notify RCL on disconnection.
+ */
+#define MAX_RCL_CHANNEL_COUNT 30
 
 #ifdef WLAN_FEATURE_EXTWOW_SUPPORT
 /**
@@ -3272,7 +3278,7 @@ hdd_dump_roam_scan_ch_list(uint32_t *chan_list, uint16_t num_channels)
 
 /**
  * hdd_sort_roam_scan_ch_list() - Function to sort roam scan channel list in
- * ascending order before sending it to supplicant
+ * descending order before sending it to supplicant
  * @chan_list: pointer to channel list received from FW via an event
  * WMI_ROAM_SCAN_CHANNEL_LIST_EVENTID
  * @num_channels: Number of channels
@@ -3287,7 +3293,7 @@ hdd_sort_roam_scan_ch_list(uint32_t *chan_list, uint16_t num_channels)
 	for (i = 0; i < (num_channels - 1) &&
 	     i < WNI_CFG_VALID_CHANNEL_LIST_LEN; i++) {
 		for (j = 0; j < (num_channels - i - 1); j++) {
-			if (chan_list[j] > chan_list[j + 1]) {
+			if (chan_list[j] < chan_list[j + 1]) {
 				swap = chan_list[j];
 				chan_list[j] = chan_list[j + 1];
 				chan_list[j + 1] = swap;
@@ -3314,6 +3320,15 @@ void hdd_get_roam_scan_ch_cb(hdd_handle_t hdd_handle,
 	 * event raised by firmware.
 	 */
 	if (!roam_ch->command_resp) {
+		/*
+		 * Maximum allowed channel count is 30 in supplicant vendor
+		 * event of RCL list. So if number of channels present in
+		 * channel list received from FW is more than 30 channels then
+		 * restrict it to 30 channels only.
+		 */
+		if (roam_ch->num_channels > MAX_RCL_CHANNEL_COUNT)
+			roam_ch->num_channels =  MAX_RCL_CHANNEL_COUNT;
+
 		len = roam_ch->num_channels * sizeof(roam_ch->chan_list[0]);
 		if (!len) {
 			hdd_err("Invalid len");

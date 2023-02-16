@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -40,6 +40,39 @@
 #include "wlan_dp_prealloc.h"
 #include "wlan_dp_rx_thread.h"
 
+#ifdef FEATURE_DIRECT_LINK
+/**
+ * wlan_dp_set_vdev_direct_link_cfg() - Set direct link config in DP vdev
+ * @psoc: objmgr psoc handle
+ * @dp_intf: pointer to DP component interface handle
+ *
+ * Return: direct link configuration
+ */
+static inline
+QDF_STATUS wlan_dp_set_vdev_direct_link_cfg(struct wlan_objmgr_psoc *psoc,
+					    struct wlan_dp_intf *dp_intf)
+{
+	cdp_config_param_type vdev_param = {0};
+
+	if (dp_intf->device_mode != QDF_SAP_MODE ||
+	    !dp_intf->dp_ctx->dp_direct_link_ctx)
+		return QDF_STATUS_SUCCESS;
+
+	vdev_param.cdp_vdev_tx_to_fw = dp_intf->direct_link_config.config_set;
+
+	return cdp_txrx_set_vdev_param(wlan_psoc_get_dp_handle(psoc),
+				       dp_intf->intf_id, CDP_VDEV_TX_TO_FW,
+				       vdev_param);
+}
+#else
+static inline
+QDF_STATUS wlan_dp_set_vdev_direct_link_cfg(struct wlan_objmgr_psoc *psoc,
+					    struct wlan_dp_intf *dp_intf)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 void ucfg_dp_update_inf_mac(struct wlan_objmgr_psoc *psoc,
 			    struct qdf_mac_addr *cur_mac,
 			    struct qdf_mac_addr *new_mac)
@@ -62,6 +95,8 @@ void ucfg_dp_update_inf_mac(struct wlan_objmgr_psoc *psoc,
 		QDF_MAC_ADDR_REF(new_mac->bytes));
 
 	qdf_copy_macaddr(&dp_intf->mac_addr, new_mac);
+
+	wlan_dp_set_vdev_direct_link_cfg(psoc, dp_intf);
 }
 
 QDF_STATUS

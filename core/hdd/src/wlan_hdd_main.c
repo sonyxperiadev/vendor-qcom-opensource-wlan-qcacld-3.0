@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -444,6 +444,7 @@ static const struct category_info cinfo[MAX_SUPPORTED_CATEGORY] = {
 	[QDF_MODULE_ID_CFR] = {QDF_TRACE_LEVEL_ALL},
 	[QDF_MODULE_ID_IFMGR] = {QDF_TRACE_LEVEL_ALL},
 	[QDF_MODULE_ID_GPIO] = {QDF_TRACE_LEVEL_ALL},
+	[QDF_MODULE_ID_T2LM] = {QDF_TRACE_LEVEL_ALL},
 	[QDF_MODULE_ID_MLO] = {QDF_TRACE_LEVEL_ALL},
 	[QDF_MODULE_ID_SON] = {QDF_TRACE_LEVEL_ALL},
 	[QDF_MODULE_ID_TWT] = {QDF_TRACE_LEVEL_ALL},
@@ -3637,6 +3638,25 @@ static void hdd_register_policy_manager_callback(
 #else
 static void hdd_register_policy_manager_callback(
 			struct wlan_objmgr_psoc *psoc)
+{
+}
+#endif
+
+#ifdef WLAN_SUPPORT_GAP_LL_PS_MODE
+static void hdd_register_green_ap_callback(struct wlan_objmgr_pdev *pdev)
+{
+	struct green_ap_hdd_callback hdd_cback;
+	qdf_mem_zero(&hdd_cback, sizeof(hdd_cback));
+
+	hdd_cback.send_event = wlan_hdd_send_green_ap_ll_ps_event;
+
+	if (QDF_STATUS_SUCCESS !=
+			green_ap_register_hdd_callback(pdev, &hdd_cback)) {
+		hdd_err("HDD callback registration for Green AP failed");
+	}
+}
+#else
+static inline void hdd_register_green_ap_callback(struct wlan_objmgr_pdev *pdev)
 {
 }
 #endif
@@ -7698,6 +7718,11 @@ struct hdd_adapter *hdd_open_adapter(struct hdd_context *hdd_ctx,
 		INIT_WORK(&adapter->ipv6_notifier_work,
 			  hdd_ipv6_notifier_work_queue);
 #endif
+		if (session_type == QDF_SAP_MODE) {
+			/* Create all SAP mode adapters as ML type */
+			params->is_ml_adapter = true;
+			params->is_single_link = true;
+		}
 
 		break;
 	case QDF_FTM_MODE:
@@ -12816,12 +12841,18 @@ static void hdd_cfg_params_init(struct hdd_context *hdd_ctx)
 #ifdef CONNECTION_ROAMING_CFG
 static QDF_STATUS hdd_cfg_parse_connection_roaming_cfg(void)
 {
-	QDF_STATUS status;
+	QDF_STATUS status = QDF_STATUS_E_INVAL;
+	bool is_valid;
 
-	status = cfg_parse(WLAN_CONNECTION_ROAMING_INI_FILE);
-	if (QDF_IS_STATUS_ERROR(status))
-		status = cfg_parse(WLAN_CONNECTION_ROAMING_BACKUP_INI_FILE);
+	is_valid = cfg_valid_ini_check(WLAN_CONNECTION_ROAMING_INI_FILE);
 
+	if (is_valid)
+		status = cfg_parse(WLAN_CONNECTION_ROAMING_INI_FILE);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		is_valid = cfg_valid_ini_check(WLAN_CONNECTION_ROAMING_BACKUP_INI_FILE);
+		if (is_valid)
+			status = cfg_parse(WLAN_CONNECTION_ROAMING_BACKUP_INI_FILE);
+	}
 	return status;
 }
 #else
@@ -14454,6 +14485,7 @@ static int hdd_features_init(struct hdd_context *hdd_ctx)
 	bool b_cts2self, is_imps_enabled;
 	bool rf_test_mode;
 	bool conn_policy;
+	bool std_6ghz_conn_policy;
 	uint32_t fw_data_stall_evt;
 
 	hdd_enter();
@@ -14559,6 +14591,16 @@ static int hdd_features_init(struct hdd_context *hdd_ctx)
 	}
 	if (conn_policy)
 		wlan_cm_set_relaxed_6ghz_conn_policy(hdd_ctx->psoc, true);
+
+	status = ucfg_mlme_is_standard_6ghz_conn_policy_enabled(hdd_ctx->psoc,
+							&std_6ghz_conn_policy);
+
+	if (!QDF_IS_STATUS_SUCCESS(status)) {
+		hdd_err("Get 6ghz standard connection policy failed");
+		return QDF_STATUS_E_FAILURE;
+	}
+	if (std_6ghz_conn_policy)
+		wlan_cm_set_standard_6ghz_conn_policy(hdd_ctx->psoc, true);
 
 	hdd_thermal_stats_cmd_init(hdd_ctx);
 	sme_set_cal_failure_event_cb(hdd_ctx->mac_handle,
@@ -14826,6 +14868,8 @@ int hdd_configure_cds(struct hdd_context *hdd_ctx)
 
 	if (hdd_green_ap_enable_egap(hdd_ctx))
 		hdd_debug("enhance green ap is not enabled");
+
+	hdd_register_green_ap_callback(hdd_ctx->pdev);
 
 	if (0 != wlan_hdd_set_wow_pulse(hdd_ctx, true))
 		hdd_debug("Failed to set wow pulse");

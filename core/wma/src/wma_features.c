@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1821,6 +1821,10 @@ static const uint8_t *wma_wow_wake_reason_str(A_INT32 wake_reason)
 		return "DELAYED_WAKEUP_TIMER_ELAPSED";
 	case WOW_REASON_DELAYED_WAKEUP_DATA_STORE_LIST_FULL:
 		return "DELAYED_WAKEUP_DATA_STORE_LIST_FULL";
+#ifndef WLAN_SUPPORT_GAP_LL_PS_MODE
+	case WOW_REASON_XGAP:
+		return "XGAP";
+#endif
 	default:
 		return "unknown";
 	}
@@ -2748,6 +2752,9 @@ static int wma_wake_event_packet(
 	}
 
 	wake_info = event_param->fixed_param;
+
+	wma_debug("Number of delayed packets received = %d",
+		  wake_info->delayed_pkt_count);
 
 	switch (wake_info->wake_reason) {
 	case WOW_REASON_AUTH_REQ_RECV:

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -119,10 +119,6 @@
 #include "wlan_hdd_mlo.h"
 #include "wlan_osif_features.h"
 #include "wlan_dp_public_struct.h"
-
-#ifdef WLAN_FEATURE_TSF_ACCURACY
-#include "qdf_hrtimer.h"
-#endif
 
 /*
  * Preprocessor definitions and constants
@@ -1074,30 +1070,7 @@ enum udp_qos_upgrade {
  * @session.ap: ap mode specific information
  * @ch_switch_in_progress:
  * @acs_complete_event: acs complete event
- * @cur_target_time: tsf value received from firmware
- * @cur_tsf_sync_soc_time:
- * @last_tsf_sync_soc_time:
- * @cur_target_global_tsf_time:
- * @last_target_global_tsf_time:
- * @host_capture_req_timer:
- * @tsf_id: TSF id as obtained from FW report
- * @tsf_mac_id: mac_id as obtained from FW report
- * @tsf_details_valid: flag indicating whether tsf details are valid
- * @host_target_sync_lock: spin lock for read/write timestamps
- * @host_target_sync_timer:
- * @host_trigger_gpio_timer: A hrtimer used for TSF Accuracy Feature to
- *                           indicate TSF cycle complete
- * @enable_dynamic_tsf_sync: Enable/Disable TSF sync through NL interface
- * @host_target_sync_force: Force update host to TSF mapping
- * @dynamic_tsf_sync_interval: TSF sync interval configure through NL interface
- * @cur_host_time:
- * @last_host_time:
- * @last_target_time:
- * @continuous_error_count: to store the count of continuous invalid tstamp-pair
- * @continuous_cap_retry_count: to store the count of continuous capture retry
- * @tsf_sync_ready_flag: to indicate whether tsf_sync has been initialized
- * @gpio_tsf_sync_work: work to sync send TSF CAP WMI command
- * @tsf_auto_report: to indicate if TSF auto report is enabled or not
+ * @tsf: structure containing tsf related information
  * @mc_addr_list:
  * @addr_filter_pattern:
  * @scan_info:
@@ -1263,41 +1236,8 @@ struct hdd_adapter {
 	qdf_event_t acs_complete_event;
 
 #ifdef WLAN_FEATURE_TSF
-	uint64_t cur_target_time;
-	uint64_t cur_tsf_sync_soc_time;
-	uint64_t last_tsf_sync_soc_time;
-	uint64_t cur_target_global_tsf_time;
-	uint64_t last_target_global_tsf_time;
-	qdf_mc_timer_t host_capture_req_timer;
-#ifdef QCA_GET_TSF_VIA_REG
-	int tsf_id;
-	int tsf_mac_id;
-	qdf_atomic_t tsf_details_valid;
+	struct hdd_vdev_tsf tsf;
 #endif
-#ifdef WLAN_FEATURE_TSF_PLUS
-	qdf_spinlock_t host_target_sync_lock;
-	qdf_mc_timer_t host_target_sync_timer;
-#ifdef WLAN_FEATURE_TSF_ACCURACY
-	qdf_hrtimer_data_t host_trigger_gpio_timer;
-#endif
-	bool enable_dynamic_tsf_sync;
-	bool host_target_sync_force;
-	uint32_t dynamic_tsf_sync_interval;
-	uint64_t cur_host_time;
-	uint64_t last_host_time;
-	uint64_t last_target_time;
-	int continuous_error_count;
-	int continuous_cap_retry_count;
-	qdf_atomic_t tsf_sync_ready_flag;
-#ifdef WLAN_FEATURE_TSF_PLUS_EXT_GPIO_SYNC
-	qdf_work_t gpio_tsf_sync_work;
-#endif
-#endif /* WLAN_FEATURE_TSF_PLUS */
-#ifdef WLAN_FEATURE_TSF_UPLINK_DELAY
-	qdf_atomic_t tsf_auto_report;
-#endif /* WLAN_FEATURE_TSF_UPLINK_DELAY */
-#endif
-
 	struct hdd_multicast_addr_list mc_addr_list;
 	uint8_t addr_filter_pattern;
 
@@ -1900,12 +1840,7 @@ enum wlan_state_ctrl_str_id {
  * @coex_avoid_freq_list:
  * @dnbs_avoid_freq_list:
  * @avoid_freq_lock:  Lock to control access to dnbs and coex avoid freq list
- * @tsf_ready_flag: indicate whether tsf has been initialized
- * @cap_tsf_flag: indicate whether it's now capturing tsf(updating tstamp-pair)
- * @cap_tsf_context: the context that is capturing tsf
- * @tsf_accuracy_context: Holds TSF Accuracy feature activated vdev adapter.
- * @ptp_cinfo:
- * @ptp_clock:
+ * @tsf: structure containing tsf related information
  * @bt_a2dp_active:
  * @bt_vo_active:
  * @bt_profile_con:
@@ -2145,20 +2080,9 @@ struct hdd_context {
 	struct mutex avoid_freq_lock;
 #endif
 #ifdef WLAN_FEATURE_TSF
-	/* indicate whether tsf has been initialized */
-	qdf_atomic_t tsf_ready_flag;
-	/* indicate whether it's now capturing tsf(updating tstamp-pair) */
-	qdf_atomic_t cap_tsf_flag;
-	/* the context that is capturing tsf */
-	struct hdd_adapter *cap_tsf_context;
-#ifdef WLAN_FEATURE_TSF_ACCURACY
-	struct hdd_adapter *tsf_accuracy_context;
+	struct hdd_ctx_tsf tsf;
 #endif
-#endif
-#ifdef WLAN_FEATURE_TSF_PTP
-	struct ptp_clock_info ptp_cinfo;
-	struct ptp_clock *ptp_clock;
-#endif
+
 	uint8_t bt_a2dp_active:1;
 	uint8_t bt_vo_active:1;
 	uint8_t bt_profile_con:1;

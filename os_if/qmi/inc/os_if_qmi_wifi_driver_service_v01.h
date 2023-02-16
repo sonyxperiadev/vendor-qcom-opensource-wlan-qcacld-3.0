@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -23,11 +23,13 @@
 #define WFDS_SERVICE_VERS_V01 0x01
 
 #define QMI_WFDS_IPCC_MAP_N_CFG_RESP_V01 0x0003
+#define QMI_WFDS_UT_CMD_RESP_V01 0x0005
 #define QMI_WFDS_MISC_REQ_V01 0x0004
 #define QMI_WFDS_MISC_RESP_V01 0x0004
 #define QMI_WFDS_MEM_RESP_V01 0x0002
 #define QMI_WFDS_IPCC_MAP_N_CFG_REQ_V01 0x0003
 #define QMI_WFDS_MISC_IND_V01 0x0004
+#define QMI_WFDS_UT_CMD_REQ_V01 0x0005
 #define QMI_WFDS_CONFIG_REQ_V01 0x0001
 #define QMI_WFDS_IPCC_MAP_N_CFG_IND_V01 0x0003
 #define QMI_WFDS_CONFIG_RESP_V01 0x0001
@@ -288,5 +290,46 @@ struct wfds_misc_ind_msg_v01 {
 
 #define WFDS_MISC_IND_MSG_V01_MAX_MSG_LEN 7
 extern struct qmi_elem_info wfds_misc_ind_msg_v01_ei[];
+
+/**
+ * enum wifi_drv_qmi_ut_cmd_v01 - driver event
+ * @WIFI_DRV_QMI_UT_CMD_MIN_VAL_V01: event enum min value
+ * @WFDS_UT_CMD_STOP_V01: Stop WFDS traffic
+ * @WFDS_UT_CMD_START_V01: Start WFDS Traffic
+ * @WFDS_UT_CMD_STATS_V01: Get WFDS traffic stats
+ * @WIFI_DRV_QMI_UT_CMD_MAX_VAL_V01: event enum max value
+ */
+enum wifi_drv_qmi_ut_cmd_v01 {
+	WIFI_DRV_QMI_UT_CMD_MIN_VAL_V01 = INT_MIN,
+	WFDS_UT_CMD_STOP_V01 = 0,
+	WFDS_UT_CMD_START_V01 = 1,
+	WFDS_UT_CMD_STATS_V01 = 2,
+	WIFI_DRV_QMI_UT_CMD_MAX_VAL_V01 = INT_MAX,
+};
+
+/**
+ * struct wfds_ut_cmd_req_msg_v01 - WFDS QMI UT cmd info structure
+ * @cmd: Command type
+ * @duration: Traffic duration
+ * @flush_period: Buffer flushing periodicity
+ * @num_pkts: Number of packets per flush
+ * @buf_size: Buffer size
+ * @ether_type: ether_type of packet
+ * @src_mac: Source MAC address
+ * @dest_mac: Destination MAC address
+ */
+struct wfds_ut_cmd_req_msg_v01 {
+	enum wifi_drv_qmi_ut_cmd_v01 cmd;
+	u32 duration;
+	u32 flush_period;
+	u32 num_pkts;
+	u32 buf_size;
+	u16 ether_type;
+	u8 src_mac[6];
+	u8 dest_mac[6];
+};
+
+#define WFDS_UT_CMD_REQ_MSG_V01_MAX_MSG_LEN 58
+extern struct qmi_elem_info wfds_ut_cmd_req_msg_v01_ei[];
 
 #endif

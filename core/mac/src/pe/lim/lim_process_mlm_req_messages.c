@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1389,7 +1389,7 @@ lim_process_mlm_deauth_req_ntf(struct mac_context *mac_ctx,
 				sme_deauth_rsp->status_code =
 						eSIR_SME_DEAUTH_STATUS;
 				sme_deauth_rsp->sessionId =
-						mlm_deauth_req->sessionId;
+						session->vdev_id;
 
 				qdf_mem_copy(sme_deauth_rsp->peer_macaddr.bytes,
 					     mlm_deauth_req->peer_macaddr.bytes,

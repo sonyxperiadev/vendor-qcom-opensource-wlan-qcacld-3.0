@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -350,6 +350,18 @@ QDF_STATUS ucfg_mlme_set_ap_policy(struct wlan_objmgr_vdev *vdev,
 				   enum host_concurrent_ap_policy ap_cfg_policy)
 {
 	return wlan_mlme_set_ap_policy(vdev, ap_cfg_policy);
+}
+
+/**
+ * ucfg_mlme_get_ap_policy() - Get the AP policy value
+ * @vdev: pointer to vdev object
+ *
+ * Return: enum host_concurrent_ap_policy
+ */
+static inline enum host_concurrent_ap_policy
+ucfg_mlme_get_ap_policy(struct wlan_objmgr_vdev *vdev)
+{
+	return wlan_mlme_get_ap_policy(vdev);
 }
 
 /**
@@ -2881,6 +2893,23 @@ ucfg_mlme_is_relaxed_6ghz_conn_policy_enabled(struct wlan_objmgr_psoc *psoc,
 					      bool *value)
 {
 	return wlan_mlme_is_relaxed_6ghz_conn_policy_enabled(psoc, value);
+}
+
+/**
+ * ucfg_mlme_is_standard_6ghz_conn_policy_enabled() - Get 6ghz standard
+ *                                                    connection policy flag
+ * @psoc: pointer to psoc object
+ * @value: pointer to hold the value of flag
+ *
+ * Inline UCFG API to be used by HDD/OSIF callers
+ *
+ * Return: QDF Status
+ */
+static inline QDF_STATUS
+ucfg_mlme_is_standard_6ghz_conn_policy_enabled(struct wlan_objmgr_psoc *psoc,
+					       bool *value)
+{
+	return wlan_mlme_is_standard_6ghz_conn_policy_enabled(psoc, value);
 }
 
 /**

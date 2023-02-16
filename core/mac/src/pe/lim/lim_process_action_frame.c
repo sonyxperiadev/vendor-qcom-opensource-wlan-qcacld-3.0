@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -54,6 +54,8 @@
 #include "dot11f.h"
 #include "wlan_p2p_cfg_api.h"
 #include "son_api.h"
+#include "wlan_t2lm_api.h"
+#include "wlan_mlo_mgr_public_structs.h"
 
 #define SA_QUERY_REQ_MIN_LEN \
 (DOT11F_FF_CATEGORY_LEN + DOT11F_FF_ACTION_LEN + DOT11F_FF_TRANSACTIONID_LEN)
@@ -1702,6 +1704,9 @@ void lim_process_action_frame(struct mac_context *mac_ctx,
 	tpSirMacVendorSpecificFrameHdr vendor_specific;
 	uint8_t dpp_oui[] = { 0x50, 0x6F, 0x9A, 0x1A };
 	tpSirMacVendorSpecificPublicActionFrameHdr pub_action;
+	enum wlan_t2lm_resp_frm_type status_code;
+	uint8_t token = 0;
+	struct wlan_objmgr_peer *peer = NULL;
 
 	if (frame_len < sizeof(*action_hdr)) {
 		pe_debug("frame_len %d less than Action Frame Hdr size",
@@ -2133,6 +2138,53 @@ void lim_process_action_frame(struct mac_context *mac_ctx,
 			break;
 		default:
 			pe_err("Unhandle BA action frame");
+			break;
+		}
+		break;
+	case ACTION_CATEGORY_PROTECTED_EHT:
+		pe_debug("EHT T2LM action category: %d action: %d",
+			 action_hdr->category, action_hdr->actionID);
+		switch (action_hdr->actionID) {
+		case EHT_T2LM_REQUEST:
+			mac_hdr = WMA_GET_RX_MAC_HEADER(rx_pkt_info);
+			body_ptr = WMA_GET_RX_MPDU_DATA(rx_pkt_info);
+			frame_len = WMA_GET_RX_PAYLOAD_LEN(rx_pkt_info);
+
+			peer = wlan_objmgr_get_peer_by_mac(mac_ctx->psoc,
+							   mac_hdr->sa,
+							   WLAN_LEGACY_MAC_ID);
+			if (!peer) {
+				pe_err("Peer is null");
+				break;
+			}
+			if (wlan_t2lm_deliver_event(
+				session->vdev, peer,
+				WLAN_T2LM_EV_ACTION_FRAME_RX_REQ,
+				(void *)body_ptr, &token) == QDF_STATUS_SUCCESS)
+				status_code = WLAN_T2LM_RESP_TYPE_SUCCESS;
+			else
+				status_code =
+				WLAN_T2LM_RESP_TYPE_DENIED_TID_TO_LINK_MAPPING;
+
+			if (lim_send_t2lm_action_rsp_frame(
+					mac_ctx, mac_hdr->sa, session, token,
+					status_code) != QDF_STATUS_SUCCESS)
+				pe_err("T2LM action response frame not sent");
+			break;
+		case EHT_T2LM_RESPONSE:
+			wlan_t2lm_deliver_event(
+					session->vdev, peer,
+					WLAN_T2LM_EV_ACTION_FRAME_RX_RESP,
+					(void *)rx_pkt_info, &token);
+			break;
+		case EHT_T2LM_TEARDOWN:
+			wlan_t2lm_deliver_event(
+					session->vdev, peer,
+					WLAN_T2LM_EV_ACTION_FRAME_RX_TEARDOWN,
+					(void *)rx_pkt_info, NULL);
+			break;
+		default:
+			pe_err("Unhandled T2LM action frame");
 			break;
 		}
 		break;

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022, Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -237,6 +237,32 @@ static struct dp_prealloc_context g_dp_context_allocs[] = {
 #endif
 #ifdef WIFI_MONITOR_SUPPORT
 	{DP_MON_PDEV_TYPE, sizeof(struct dp_mon_pdev),
+	 false, false, NULL},
+#endif
+#ifdef WLAN_FEATURE_DP_CFG_EVENT_HISTORY
+	{DP_CFG_EVENT_HIST_TYPE,
+	 DP_CFG_EVT_HIST_PER_SLOT_MAX * sizeof(struct dp_cfg_event),
+	 false, false, NULL},
+	{DP_CFG_EVENT_HIST_TYPE,
+	 DP_CFG_EVT_HIST_PER_SLOT_MAX * sizeof(struct dp_cfg_event),
+	 false, false, NULL},
+	{DP_CFG_EVENT_HIST_TYPE,
+	 DP_CFG_EVT_HIST_PER_SLOT_MAX * sizeof(struct dp_cfg_event),
+	 false, false, NULL},
+	{DP_CFG_EVENT_HIST_TYPE,
+	 DP_CFG_EVT_HIST_PER_SLOT_MAX * sizeof(struct dp_cfg_event),
+	 false, false, NULL},
+	{DP_CFG_EVENT_HIST_TYPE,
+	 DP_CFG_EVT_HIST_PER_SLOT_MAX * sizeof(struct dp_cfg_event),
+	 false, false, NULL},
+	{DP_CFG_EVENT_HIST_TYPE,
+	 DP_CFG_EVT_HIST_PER_SLOT_MAX * sizeof(struct dp_cfg_event),
+	 false, false, NULL},
+	{DP_CFG_EVENT_HIST_TYPE,
+	 DP_CFG_EVT_HIST_PER_SLOT_MAX * sizeof(struct dp_cfg_event),
+	 false, false, NULL},
+	{DP_CFG_EVENT_HIST_TYPE,
+	 DP_CFG_EVT_HIST_PER_SLOT_MAX * sizeof(struct dp_cfg_event),
 	 false, false, NULL},
 #endif
 };

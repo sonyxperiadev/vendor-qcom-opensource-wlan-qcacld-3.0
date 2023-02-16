@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -610,20 +610,6 @@ dp_softap_inspect_traffic_end_indication_pkt(struct wlan_dp_intf *dp_intf,
 {}
 #endif
 
-#ifdef FEATURE_DIRECT_LINK
-static inline void dp_intf_tx_to_fw(struct wlan_dp_intf *dp_intf,
-				    qdf_nbuf_t nbuf)
-{
-	if (qdf_unlikely(dp_intf->direct_link_config.config_set))
-		QDF_NBUF_CB_TX_PACKET_TO_FW(nbuf) = 1;
-}
-#else
-static inline void dp_intf_tx_to_fw(struct wlan_dp_intf *dp_intf,
-				    qdf_nbuf_t nbuf)
-{
-}
-#endif
-
 /**
  * dp_softap_start_xmit() - Transmit a frame
  * @nbuf: pointer to Network buffer
@@ -685,8 +671,6 @@ QDF_STATUS dp_softap_start_xmit(qdf_nbuf_t nbuf, struct wlan_dp_intf *dp_intf)
 
 	if (dp_softap_traffic_end_indication_enabled(dp_intf))
 		dp_softap_inspect_traffic_end_indication_pkt(dp_intf, nbuf);
-
-	dp_intf_tx_to_fw(dp_intf, nbuf);
 
 	dp_softap_config_tx_pkt_tracing(dp_intf, nbuf);
 

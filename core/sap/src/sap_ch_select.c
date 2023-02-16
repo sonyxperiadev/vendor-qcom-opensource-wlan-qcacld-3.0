@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1999,7 +1999,7 @@ sap_sort_chl_weight_320_mhz(struct mac_context *mac_ctx,
 	tSapSpectChInfo *pSpectInfo;
 	uint8_t minIdx;
 	struct ch_params acs_ch_params;
-	int8_t center_freq_diff;
+	int32_t center_freq_diff;
 	uint32_t combined_weight;
 	uint32_t min_ch_weight;
 	uint32_t valid_chans = 0;
@@ -2010,6 +2010,7 @@ sap_sort_chl_weight_320_mhz(struct mac_context *mac_ctx,
 		if (pSpectInfo[j].weight_calc_done)
 			continue;
 
+		qdf_mem_zero(&acs_ch_params, sizeof(acs_ch_params));
 		acs_ch_params.ch_width = CH_WIDTH_320MHZ;
 		sap_acs_set_puncture_support(sap_ctx, &acs_ch_params);
 

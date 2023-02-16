@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2006-2007, 2014-2018, 2020-2021 The Linux Foundation.
  * All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -4873,6 +4873,28 @@ FRAME delba_req
     FF    Action;
     FF    delba_param_set;
     FF    Reason;
+}
+
+FRAME t2lm_neg_req
+{
+    FF    Category;
+    FF    Action;
+    FF    DialogToken;
+    OPTIE t2lm_ie[0..2];
+}
+
+FRAME t2lm_neg_rsp
+{
+    FF    Category;
+    FF    Action;
+    FF    DialogToken;
+    FF    Status;
+}
+
+FRAME t2lm_teardown
+{
+    FF    Category;
+    FF    Action;
 }
 
 FRAME vendor_action_frame

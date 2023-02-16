@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -71,6 +71,9 @@
 #include "wlan_twt_cfg_ext_api.h"
 #include <spatial_reuse_api.h>
 #include "wlan_psoc_mlme_api.h"
+#ifdef WLAN_FEATURE_11BE_MLO
+#include <wlan_mlo_mgr_peer.h>
+#endif
 
 /* SME REQ processing function templates */
 static bool __lim_process_sme_sys_ready_ind(struct mac_context *, uint32_t *);
@@ -111,6 +114,8 @@ static void lim_process_update_add_ies(struct mac_context *mac, uint32_t *pMsg);
 static void lim_process_ext_change_channel(struct mac_context *mac_ctx,
 						uint32_t *msg);
 
+static void lim_mlo_sap_validate_and_update_ra(struct pe_session *session,
+					       struct qdf_mac_addr *peer_addr);
 /**
  * enum get_next_lower_bw - Get next higher bandwidth for a given BW.
  * This enum is used in conjunction with
@@ -2037,6 +2042,7 @@ lim_handle_11a_dot11_mode(enum mlme_dot11_mode bss_dot11_mode,
 	case MLME_DOT11_MODE_11N:
 	case MLME_DOT11_MODE_11AC:
 	case MLME_DOT11_MODE_11AX:
+	case MLME_DOT11_MODE_11BE:
 		*intersected_mode = MLME_DOT11_MODE_11A;
 		break;
 	default:
@@ -2064,6 +2070,7 @@ lim_handle_11b_dot11_mode(enum mlme_dot11_mode bss_dot11_mode,
 	case MLME_DOT11_MODE_11AX:
 	case MLME_DOT11_MODE_11B:
 	case MLME_DOT11_MODE_11G:
+	case MLME_DOT11_MODE_11BE:
 		/* Self 11B and BSS 11A cannot connect */
 		*intersected_mode = MLME_DOT11_MODE_11B;
 		break;
@@ -2095,6 +2102,7 @@ lim_handle_11g_dot11_mode(enum mlme_dot11_mode bss_dot11_mode,
 	case MLME_DOT11_MODE_11AC:
 	case MLME_DOT11_MODE_11AX:
 	case MLME_DOT11_MODE_11G:
+	case MLME_DOT11_MODE_11BE:
 		/* Self 11B and BSS 11A cannot connect */
 		*intersected_mode = MLME_DOT11_MODE_11G;
 		break;
@@ -2184,6 +2192,7 @@ lim_handle_11ac_dot11_mode(enum mlme_dot11_mode bss_dot11_mode,
 		*intersected_mode = MLME_DOT11_MODE_11AC;
 		break;
 	case MLME_DOT11_MODE_11AX:
+	case MLME_DOT11_MODE_11BE:
 		if (vht_capable) {
 			*intersected_mode = MLME_DOT11_MODE_11AC;
 			break;
@@ -2326,6 +2335,7 @@ lim_handle_11g_only_dot11_mode(enum mlme_dot11_mode bss_dot11_mode,
 	case MLME_DOT11_MODE_11AC:
 	case MLME_DOT11_MODE_11AX:
 	case MLME_DOT11_MODE_11G:
+	case MLME_DOT11_MODE_11BE:
 		/* Self 11B and BSS 11A cannot connect */
 		*intersected_mode = MLME_DOT11_MODE_11G;
 		break;
@@ -2360,6 +2370,7 @@ lim_handle_11n_only_dot11_mode(enum mlme_dot11_mode bss_dot11_mode,
 		break;
 	case MLME_DOT11_MODE_11AC:
 	case MLME_DOT11_MODE_11AX:
+	case MLME_DOT11_MODE_11BE:
 		if (ie_struct->HTCaps.present) {
 			*intersected_mode = MLME_DOT11_MODE_11N;
 			break;
@@ -2403,6 +2414,7 @@ lim_handle_11ac_only_dot11_mode(enum mlme_dot11_mode bss_dot11_mode,
 		*intersected_mode = MLME_DOT11_MODE_11AC;
 		break;
 	case MLME_DOT11_MODE_11AX:
+	case MLME_DOT11_MODE_11BE:
 		if (vht_capable) {
 			*intersected_mode = MLME_DOT11_MODE_11AC;
 			break;
@@ -3219,7 +3231,8 @@ lim_fill_pe_session(struct mac_context *mac_ctx, struct pe_session *session,
 		wlan_reg_read_current_country(mac_ctx->psoc,
 					      programmed_country);
 		status = wlan_reg_get_6g_power_type_for_ctry(
-				mac_ctx->psoc, ie_struct->Country.country,
+				mac_ctx->psoc, mac_ctx->pdev,
+				ie_struct->Country.country,
 				programmed_country, &power_type_6g,
 				&ctry_code_match, session->ap_power_type);
 		if (QDF_IS_STATUS_ERROR(status)) {
@@ -5701,6 +5714,59 @@ void lim_calculate_tpc(struct mac_context *mac,
 		 num_pwr_levels, is_psd_power, reg_max, ap_power_type_6g);
 }
 
+/**
+ * lim_mlo_sap_validate_and_update_ra() - Validate peer address for ML SAP
+ * management frames.
+ * @session: pe_session
+ * @peer_addr: address of the peer
+ *
+ * Check if address pointed by @peer_addr is MLD of the client,
+ * if so, replace the address with link address of the client
+ * to send the management packet over the air.
+ *
+ * Return: void
+ */
+#ifdef WLAN_FEATURE_11BE_MLO
+static void lim_mlo_sap_validate_and_update_ra(struct pe_session *session,
+					       struct qdf_mac_addr *peer_addr)
+{
+	uint8_t i;
+	struct wlan_mlo_dev_context *ml_ctx;
+	struct wlan_mlo_peer_list *mlo_peer_list;
+	struct wlan_mlo_peer_context *ml_peer;
+	struct wlan_mlo_link_peer_entry *link_peer;
+
+	if (!wlan_vdev_mlme_is_mlo_ap(session->vdev))
+		return;
+
+	ml_ctx = session->vdev->mlo_dev_ctx;
+	mlo_peer_list = &ml_ctx->mlo_peer_list;
+
+	ml_peerlist_lock_acquire(mlo_peer_list);
+	ml_peer = mlo_get_mlpeer(ml_ctx, peer_addr);
+	if (!ml_peer) {
+		ml_peerlist_lock_release(mlo_peer_list);
+		return;
+	}
+
+	for (i = 0; i < MAX_MLO_LINK_PEERS; i++) {
+		link_peer = &ml_peer->peer_list[i];
+		if (link_peer->is_primary &&
+		    !qdf_is_macaddr_equal(peer_addr, &link_peer->link_addr)) {
+			qdf_copy_macaddr(peer_addr, &link_peer->link_addr);
+			break;
+		}
+	}
+	ml_peerlist_lock_release(mlo_peer_list);
+}
+#else
+static inline void
+lim_mlo_sap_validate_and_update_ra(struct pe_session *session,
+				   struct qdf_mac_addr *peer_addr)
+{
+}
+#endif
+
 bool send_disassoc_frame = 1;
 /**
  * __lim_process_sme_disassoc_req()
@@ -5855,6 +5921,11 @@ static void __lim_process_sme_disassoc_req(struct mac_context *mac,
 		break;
 
 	case eLIM_AP_ROLE:
+		/* Check if MAC address is MLD of the client and
+		 * change it to primary link address to send OTA.
+		 */
+		lim_mlo_sap_validate_and_update_ra(
+				pe_session, &smeDisassocReq.peer_macaddr);
 		break;
 
 	default:
@@ -6203,6 +6274,11 @@ static void __lim_process_sme_deauth_req(struct mac_context *mac_ctx,
 		}
 		break;
 	case eLIM_AP_ROLE:
+		/* Check if MAC address is MLD of the client and
+		 * change it to primary link address to send OTA.
+		 */
+		lim_mlo_sap_validate_and_update_ra(
+				session_entry, &sme_deauth_req.peer_macaddr);
 		break;
 	default:
 		pe_err("received unexpected SME_DEAUTH_REQ for role %X",
@@ -7765,6 +7841,12 @@ static void __lim_process_send_disassoc_frame(struct mac_context *mac_ctx,
 		       QDF_MAC_ADDR_FMT, QDF_MAC_ADDR_REF(req->peer_mac));
 		return;
 	}
+
+	/* Check if MAC address is MLD of the client and
+	 * change it to primary link address to send OTA.
+	 */
+	lim_mlo_sap_validate_and_update_ra(
+			session_entry, (struct qdf_mac_addr *)req->peer_mac);
 
 	pe_debug("msg_type %d len %d vdev_id %d mac: " QDF_MAC_ADDR_FMT " reason %d wait_for_ack %d",
 		 req->msg_type, req->length,  req->vdev_id,

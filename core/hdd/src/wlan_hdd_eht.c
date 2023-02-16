@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -163,6 +163,7 @@ static void hdd_update_wiphy_punct_support(struct hdd_context *hdd_ctx)
 	 * If it is set to 320, then only 320 puncture bandwidth is supported.
 	 */
 	hdd_ctx->wiphy->ru_punct_supp_bw = NL80211_RU_PUNCT_SUPP_BW_80;
+	hdd_debug("ru_punct_supp_bw: %d", hdd_ctx->wiphy->ru_punct_supp_bw);
 }
 #else
 static void hdd_update_wiphy_punct_support(struct hdd_context *hdd_ctx)

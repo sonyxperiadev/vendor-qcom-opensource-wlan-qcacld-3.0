@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -38,6 +38,39 @@
 #define QMI_WFDS_TIMEOUT_JF         \
 	qdf_system_msecs_to_ticks(QMI_WFDS_TIMEOUT_MS)
 
+/**
+ * enum os_if_qmi_wfds_ut_cmd_type - WFDS unit test command type
+ * @WFDS_STOP_TRAFFIC: Stop WFDS traffic
+ * @WFDS_START_TRAFFIC: Start WFDS Traffic
+ * @WFDS_GET_STATS: Get WFDS traffic stats
+ */
+enum os_if_qmi_wfds_ut_cmd_type {
+	WFDS_STOP_TRAFFIC,
+	WFDS_START_TRAFFIC,
+	WFDS_GET_STATS
+};
+
+/**
+ * struct os_if_qmi_wfds_ut_cmd_info - WFDS UT cmd info structure
+ * @cmd: Command type
+ * @duration: Traffic duration
+ * @num_pkts: Buffers per flush
+ * @flush_period: Buffer flushing periodicity
+ * @buf_size: Buffer size
+ * @ether_type: ether_type of packet
+ * @dest_mac: Destination MAC address
+ * @src_mac: Source MAC address
+ */
+struct os_if_qmi_wfds_ut_cmd_info {
+	enum os_if_qmi_wfds_ut_cmd_type cmd;
+	uint32_t duration;
+	uint32_t flush_period;
+	uint32_t num_pkts;
+	uint32_t buf_size;
+	uint16_t ether_type;
+	struct qdf_mac_addr src_mac;
+	struct qdf_mac_addr dest_mac;
+};
 
 #ifdef QMI_COMPONENT_ENABLE
 /**
@@ -151,9 +184,24 @@ void os_if_qmi_register_callbacks(struct wlan_objmgr_psoc *psoc,
  * Return: None
  */
 void os_if_qmi_wfds_register_callbacks(struct wlan_qmi_psoc_callbacks *cb_obj);
+
+/**
+ * os_if_qmi_wfds_send_ut_cmd_req_msg() - Send WFDS unit test command
+ * @cmd_info: Unit test command info
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+os_if_qmi_wfds_send_ut_cmd_req_msg(struct os_if_qmi_wfds_ut_cmd_info *cmd_info);
+
 #else
 static inline
 void os_if_qmi_wfds_register_callbacks(struct wlan_qmi_psoc_callbacks *cb_obj)
+{
+}
+
+static inline QDF_STATUS
+os_if_qmi_wfds_send_ut_cmd_req_msg(struct os_if_qmi_wfds_ut_cmd_info *cmd_info)
 {
 }
 #endif
