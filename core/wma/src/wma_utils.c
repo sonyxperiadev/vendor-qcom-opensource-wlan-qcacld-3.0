@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -4431,6 +4431,8 @@ QDF_STATUS wma_remove_bss_peer_before_join(
 		return qdf_status;
 	}
 	mac_addr = bssid.bytes;
+
+	wma_delete_peer_mlo(wma->psoc, mac_addr);
 
 	qdf_status = wma_remove_peer(wma, mac_addr, vdev_id, false);
 
