@@ -2696,6 +2696,29 @@ lim_check_ft_initial_im_association(struct roam_offload_synch_ind *roam_synch,
 	}
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static void
+lim_mlo_roam_copy_partner_info_to_session(struct pe_session *session,
+					  struct roam_offload_synch_ind *sync_ind)
+{
+	uint8_t i;
+	struct mlo_partner_info partner_info;
+
+	if (!sync_ind)
+		return;
+
+	for (i = 0; i < sync_ind->num_setup_links; i++) {
+		partner_info.partner_link_info[i].link_id =
+			sync_ind->ml_link[i].link_id;
+		qdf_copy_macaddr(
+			&partner_info.partner_link_info[i].link_addr,
+			&sync_ind->ml_link[i].link_addr);
+	}
+
+	session->ml_partner_info = partner_info;
+	session->ml_partner_info.num_partner_links = sync_ind->num_setup_links;
+}
+
 static QDF_STATUS
 lim_gen_link_specific_assoc_rsp(struct mac_context *mac_ctx,
 				struct pe_session *session_entry,
@@ -2705,6 +2728,8 @@ lim_gen_link_specific_assoc_rsp(struct mac_context *mac_ctx,
 	struct element_info link_reassoc_rsp;
 	struct qdf_mac_addr sta_link_addr;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	uint8_t idx = 0;
+	uint8_t link_id;
 
 	link_reassoc_rsp.ptr = qdf_mem_malloc(reassoc_rsp_len);
 	if (!link_reassoc_rsp.ptr)
@@ -2715,27 +2740,52 @@ lim_gen_link_specific_assoc_rsp(struct mac_context *mac_ctx,
 
 	link_reassoc_rsp.len = reassoc_rsp_len;
 
-	status = util_gen_link_assoc_rsp(reassoc_rsp + WLAN_MAC_HDR_LEN_3A,
+	for (idx = 0;
+	     idx < session_entry->ml_partner_info.num_partner_links;
+	     idx++) {
+		link_id =
+		 session_entry->ml_partner_info.partner_link_info[idx].link_id;
+		status =
+		 util_gen_link_assoc_rsp(reassoc_rsp + WLAN_MAC_HDR_LEN_3A,
 					 reassoc_rsp_len - WLAN_MAC_HDR_LEN_3A,
 					 true,
+					 link_id,
 					 sta_link_addr,
 					 link_reassoc_rsp.ptr,
 					 reassoc_rsp_len,
 					 (qdf_size_t *)&link_reassoc_rsp.len);
 
-	if (QDF_IS_STATUS_ERROR(status)) {
-		pe_err("MLO ROAM: Link reassoc generation failed %d", status);
-		goto end;
-	}
+		if (QDF_IS_STATUS_ERROR(status)) {
+			pe_err("MLO ROAM: Link reassoc generation failed %d",
+			       status);
+			goto end;
+		}
 
-	lim_process_assoc_rsp_frame(mac_ctx, link_reassoc_rsp.ptr,
+		lim_process_assoc_rsp_frame(mac_ctx, link_reassoc_rsp.ptr,
 				    link_reassoc_rsp.len - SIR_MAC_HDR_LEN_3A,
 				    LIM_REASSOC, session_entry);
+	}
 end:
 	qdf_mem_free(link_reassoc_rsp.ptr);
 	link_reassoc_rsp.len = 0;
 	return status;
 }
+
+#else
+static inline void
+lim_mlo_roam_copy_partner_info_to_session(struct pe_session *session,
+					struct roam_offload_synch_ind *sync_ind)
+{}
+
+static QDF_STATUS
+lim_gen_link_specific_assoc_rsp(struct mac_context *mac_ctx,
+				struct pe_session *session_entry,
+				uint8_t *reassoc_rsp,
+				uint32_t reassoc_rsp_len)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+#endif
 
 #ifdef WLAN_FEATURE_11AX
 static void pe_roam_fill_obss_scan_param(struct pe_session *src_session,
@@ -3029,6 +3079,9 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 
 	if (roam_sync_ind_ptr->auth_status == ROAM_AUTH_STATUS_AUTHENTICATED)
 		curr_sta_ds->is_key_installed = true;
+
+	lim_mlo_roam_copy_partner_info_to_session(ft_session_ptr,
+						  roam_sync_ind_ptr);
 
 	reassoc_resp = (uint8_t *)roam_sync_ind_ptr +
 			roam_sync_ind_ptr->reassocRespOffset;
@@ -3816,24 +3869,6 @@ lim_validate_probe_rsp_link_info(struct pe_session *session_entry,
 		}
 	}
 
-	/* WAR: currently util_gen_link_reqrsp_cmn generates only the first
-	 * partner link and DUT only 2 mlo link is supported, so let's just
-	 * comparing the first partner info to check whether mlo is possible.
-	 */
-	if (ml_partner_info.num_partner_links == 1) {
-		if (partner_info.partner_link_info[0].link_id ==
-		    ml_partner_info.partner_link_info[0].link_id &&
-		    (qdf_is_macaddr_equal(&ml_partner_info.partner_link_info[0].link_addr,
-					  &partner_info.partner_link_info[0].link_addr)))
-			status = QDF_STATUS_SUCCESS;
-		else
-			status = QDF_STATUS_E_PROTO;
-
-		pe_debug("DUT num partner: %d, AP num partner: %d, status: %d",
-			 ml_partner_info.num_partner_links,
-			 partner_info.num_partner_links, status);
-	}
-
 	return status;
 }
 
@@ -4021,6 +4056,8 @@ lim_gen_link_specific_probe_rsp(struct mac_context *mac_ctx,
 	uint8_t chan;
 	uint8_t op_class;
 	uint16_t chan_freq, gen_frame_len;
+	uint8_t idx;
+	uint8_t req_link_id;
 
 	if (!session_entry)
 		return QDF_STATUS_E_NULL_VALUE;
@@ -4036,13 +4073,17 @@ lim_gen_link_specific_probe_rsp(struct mac_context *mac_ctx,
 
 	if (session_entry->lim_join_req->is_ml_probe_req_sent &&
 	    rcvd_probe_resp->mlo_ie.mlo_ie_present) {
-
 		session_entry->lim_join_req->is_ml_probe_req_sent = false;
+
+		partner_info = &session_entry->lim_join_req->partner_info;
+		if (!partner_info->num_partner_links) {
+			pe_err("STA doesn't have any partner link information");
+			return QDF_STATUS_E_FAILURE;
+		}
 
 		status = lim_validate_probe_rsp_link_info(session_entry,
 							  probe_rsp,
 							  probe_rsp_len);
-
 		if (QDF_IS_STATUS_ERROR(status)) {
 			if(QDF_IS_STATUS_ERROR(
 				lim_check_scan_db_for_join_req_partner_info(
@@ -4077,77 +4118,83 @@ lim_gen_link_specific_probe_rsp(struct mac_context *mac_ctx,
 			return QDF_STATUS_E_NOMEM;
 		}
 
+		link_probe_rsp.len = gen_frame_len;
 		qdf_mem_copy(&sta_link_addr, session_entry->self_mac_addr,
 			     QDF_MAC_ADDR_SIZE);
 
-		link_probe_rsp.len = gen_frame_len;
-		status = util_gen_link_probe_rsp(probe_rsp,
-				probe_rsp_len, sta_link_addr,
-				link_probe_rsp.ptr, gen_frame_len,
-				(qdf_size_t *)&link_probe_rsp.len);
+		for (idx = 0; idx < partner_info->num_partner_links; idx++) {
+			req_link_id =
+				partner_info->partner_link_info[idx].link_id;
+			status = util_gen_link_probe_rsp(probe_rsp,
+					probe_rsp_len, req_link_id,
+					sta_link_addr, link_probe_rsp.ptr,
+					gen_frame_len,
+					(qdf_size_t *)&link_probe_rsp.len);
 
-		if (QDF_IS_STATUS_ERROR(status)) {
-			pe_err("MLO: Link probe response generation failed %d",
-					status);
-			if(QDF_IS_STATUS_ERROR(
-				lim_check_scan_db_for_join_req_partner_info(
-					session_entry,
-					mac_ctx)))
-				lim_clear_ml_partner_info(session_entry);
+			if (QDF_IS_STATUS_ERROR(status)) {
+				pe_err("MLO: Link %d probe resp gen failed %d",
+				       req_link_id, status);
+				status =
+				   lim_check_scan_db_for_join_req_partner_info(
+							session_entry, mac_ctx);
+				if (QDF_IS_STATUS_ERROR(status))
+				       lim_clear_ml_partner_info(session_entry);
 
-			goto end;
-		}
+				goto end;
+			}
+			pe_debug("MLO:link probe rsp size:%u orig probe rsp:%u",
+				 link_probe_rsp.len, probe_rsp_len);
 
-		pe_debug("MLO: link probe rsp size:%u original probe rsp :%u",
-			 link_probe_rsp.len, probe_rsp_len);
+			link_info = &partner_info->partner_link_info[idx];
+			wlan_get_chan_by_bssid_from_rnr(session_entry->vdev,
+							session_entry->cm_id,
+							&link_info->link_addr,
+							&chan, &op_class);
+			if (!chan)
+				wlan_get_chan_by_link_id_from_rnr(
+							session_entry->vdev,
+							session_entry->cm_id,
+							link_info->link_id,
+							&chan, &op_class);
+			if (!chan) {
+				pe_err("Invalid link id %d link mac: " QDF_MAC_ADDR_FMT,
+				  link_info->link_id,
+				  QDF_MAC_ADDR_REF(link_info->link_addr.bytes));
+				status =
+				   lim_check_scan_db_for_join_req_partner_info(
+					session_entry, mac_ctx);
+				if (QDF_IS_STATUS_ERROR(status))
+				       lim_clear_ml_partner_info(session_entry);
 
-		/* Currently only 2 link mlo is supported */
-		link_info = &partner_info->partner_link_info[0];
-		wlan_get_chan_by_bssid_from_rnr(session_entry->vdev,
-						session_entry->cm_id,
-						&link_info->link_addr,
-						&chan, &op_class);
-		if (!chan)
-			wlan_get_chan_by_link_id_from_rnr(session_entry->vdev,
-							  session_entry->cm_id,
-							  link_info->link_id,
-							  &chan, &op_class);
-		if (!chan) {
-			pe_err("Invalid link id %d link mac: " QDF_MAC_ADDR_FMT,
-			       link_info->link_id,
-			       QDF_MAC_ADDR_REF(link_info->link_addr.bytes));
-			if(QDF_IS_STATUS_ERROR(
-				lim_check_scan_db_for_join_req_partner_info(
-					session_entry,
-					mac_ctx)))
-				lim_clear_ml_partner_info(session_entry);
+				status = QDF_STATUS_E_FAILURE;
+				goto end;
+			}
+			chan_freq =
+				wlan_reg_chan_opclass_to_freq(chan, op_class,
+							      true);
 
-			status = QDF_STATUS_E_FAILURE;
-			goto end;
-		}
-		chan_freq = wlan_reg_chan_opclass_to_freq(chan, op_class,
-							  true);
+			status = lim_add_bcn_probe(session_entry->vdev,
+						   link_probe_rsp.ptr,
+						   link_probe_rsp.len,
+						   chan_freq, rssi);
+			if (QDF_IS_STATUS_ERROR(status)) {
+				pe_err("failed to add bcn probe %d", status);
+				status =
+				   lim_check_scan_db_for_join_req_partner_info(
+					session_entry, mac_ctx);
+				if (QDF_IS_STATUS_ERROR(status))
+				       lim_clear_ml_partner_info(session_entry);
 
-		status = lim_add_bcn_probe(session_entry->vdev,
-				link_probe_rsp.ptr,
-				link_probe_rsp.len,
-				chan_freq, rssi);
-		if (QDF_IS_STATUS_ERROR(status)) {
-			pe_err("failed to add bcn probe %d", status);
-			if(QDF_IS_STATUS_ERROR(
-				lim_check_scan_db_for_join_req_partner_info(
-					session_entry,
-					mac_ctx)))
-				lim_clear_ml_partner_info(session_entry);
-
-			goto end;
+				goto end;
+			}
 		}
 	} else if (session_entry->lim_join_req->is_ml_probe_req_sent &&
-			!rcvd_probe_resp->mlo_ie.mlo_ie_present) {
-		if(QDF_IS_STATUS_ERROR(lim_check_scan_db_for_join_req_partner_info(
-						session_entry,
-						mac_ctx)))
-				lim_clear_ml_partner_info(session_entry);
+		   !rcvd_probe_resp->mlo_ie.mlo_ie_present) {
+		status =
+			lim_check_scan_db_for_join_req_partner_info(
+						session_entry, mac_ctx);
+		if (QDF_IS_STATUS_ERROR(status))
+			lim_clear_ml_partner_info(session_entry);
 
 		status = QDF_STATUS_E_FAILURE;
 		return status;
@@ -4157,6 +4204,7 @@ lim_gen_link_specific_probe_rsp(struct mac_context *mac_ctx,
 end:
 	if (link_probe_rsp.ptr)
 		qdf_mem_free(link_probe_rsp.ptr);
+	link_probe_rsp.ptr = NULL;
 	link_probe_rsp.len = 0;
 	return status;
 }
@@ -4174,6 +4222,7 @@ lim_gen_link_probe_rsp_roam(struct mac_context *mac_ctx,
 	uint32_t frame_len;
 	struct wlan_frame_hdr *hdr;
 	uint16_t gen_frame_len;
+	uint32_t idx, link_id;
 
 	if (!session || !roam_sync_ind)
 		return QDF_STATUS_E_NULL_VALUE;
@@ -4238,37 +4287,41 @@ lim_gen_link_probe_rsp_roam(struct mac_context *mac_ctx,
 			     QDF_MAC_ADDR_SIZE);
 
 		link_probe_rsp.len = gen_frame_len;
-		status = util_gen_link_probe_rsp(frame, frame_len,
-				sta_link_addr, link_probe_rsp.ptr,
-				gen_frame_len,
-				(qdf_size_t *)&link_probe_rsp.len);
-		if (QDF_IS_STATUS_ERROR(status)) {
-			pe_err("MLO: Link probe response generation failed %d",
-			       status);
-			status = QDF_STATUS_E_FAILURE;
-			goto end;
-		}
-		pe_debug("MLO: link probe rsp size:%u original probe rsp :%u",
-			 link_probe_rsp.len, frame_len);
+		for (idx = 0; idx < roam_sync_ind->num_setup_links; idx++) {
+			link_id =  roam_sync_ind->ml_link[idx].link_id;
+			status = util_gen_link_probe_rsp(frame, frame_len,
+					     link_id, sta_link_addr,
+					     link_probe_rsp.ptr, gen_frame_len,
+					     (qdf_size_t *)&link_probe_rsp.len);
+			if (QDF_IS_STATUS_ERROR(status)) {
+				pe_err("MLO: Link %d probe resp gen failed %d",
+				       link_id, status);
+				status = QDF_STATUS_E_FAILURE;
+				continue;
+			}
+			pe_debug("MLO: link probe rsp size:%u orig probe rsp :%u",
+				 link_probe_rsp.len, frame_len);
 
-		src_addr = wlan_mlme_get_src_addr_from_frame(&link_probe_rsp);
-		if (!src_addr) {
-			pe_err("MLO: Failed to fetch src address");
-			status = QDF_STATUS_E_FAILURE;
-			goto end;
+			src_addr = wlan_mlme_get_src_addr_from_frame(&link_probe_rsp);
+			if (!src_addr) {
+				pe_err("MLO: Failed to fetch src address");
+				status = QDF_STATUS_E_FAILURE;
+				continue;
+			}
+			lim_add_bcn_probe(session->vdev, link_probe_rsp.ptr,
+					  link_probe_rsp.len,
+					  mlo_roam_get_link_freq_from_mac_addr(
+						       roam_sync_ind, src_addr),
+					  roam_sync_ind->rssi);
 		}
-		lim_add_bcn_probe(session->vdev, link_probe_rsp.ptr,
-				  link_probe_rsp.len,
-				  mlo_roam_get_link_freq_from_mac_addr(
-						 roam_sync_ind, src_addr),
-				  roam_sync_ind->rssi);
 	} else {
 		qdf_mem_free(probe_rsp);
 		return status;
 	}
-end:
+
 	if (link_probe_rsp.ptr)
 		qdf_mem_free(link_probe_rsp.ptr);
+	link_probe_rsp.ptr = NULL;
 	link_probe_rsp.len = 0;
 	qdf_mem_free(probe_rsp);
 	return status;
@@ -4366,7 +4419,7 @@ lim_process_cu_for_probe_rsp(struct mac_context *mac_ctx,
 		 * updated.
 		 */
 		status =
-		     util_gen_link_probe_rsp(probe_rsp, probe_rsp_len,
+		     util_gen_link_probe_rsp(probe_rsp, probe_rsp_len, link_id,
 					     sta_link_addr, link_probe_rsp.ptr,
 					     probe_rsp_len,
 					     (qdf_size_t *)&link_probe_rsp.len);

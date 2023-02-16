@@ -9300,6 +9300,104 @@ QDF_STATUS populate_dot11f_eht_operation(struct mac_context *mac_ctx,
 #endif /* WLAN_FEATURE_11BE */
 
 #ifdef WLAN_FEATURE_11BE_MLO
+QDF_STATUS
+populate_dot11f_probe_req_mlo_ie(struct mac_context *mac,
+				 struct pe_session *session)
+{
+	struct wlan_mlo_ie *mlo_ie;
+	uint8_t *p_ml_ie, *sta_data;
+	uint16_t len_remaining, sta_len_left;
+	struct wlan_mlo_sta_profile *sta_pro;
+	int num_sta_pro = 0;
+	struct mlo_partner_info partner_info;
+	uint8_t link;
+
+	if (!session || !session->vdev || !session->vdev->mlo_dev_ctx) {
+		pe_err("Null value");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	mlo_ie = &session->mlo_ie;
+	p_ml_ie = mlo_ie->data;
+	len_remaining = sizeof(mlo_ie->data);
+
+	*p_ml_ie++ = WLAN_ELEMID_EXTN_ELEM;
+	len_remaining--;
+
+	/* set length later */
+	*p_ml_ie++ = 0;
+	len_remaining--;
+
+	*p_ml_ie++ = WLAN_EXTN_ELEMID_MULTI_LINK;
+	len_remaining--;
+
+	/* Set ML IE multi link control bitmap:
+	 * ML probe variant type = 1
+	 * In presence bitmap, set MLD ID presence bit = 1
+	 */
+	mlo_ie->type = WLAN_ML_VARIANT_PROBEREQ;
+	QDF_SET_BITS(*(uint16_t *)p_ml_ie, WLAN_ML_CTRL_TYPE_IDX,
+		     WLAN_ML_CTRL_TYPE_BITS, mlo_ie->type);
+	QDF_SET_BITS(*(uint16_t *)p_ml_ie, WLAN_ML_CTRL_PBM_IDX,
+		     WLAN_ML_CTRL_PBM_BITS, 1);
+
+	p_ml_ie += WLAN_ML_CTRL_SIZE;
+	len_remaining -= WLAN_ML_CTRL_SIZE;
+
+	/* common info length is 2 */
+	*p_ml_ie++ = 2;
+	len_remaining--;
+
+	/* mld id is always 0 for tx link for SAP or AP */
+	*p_ml_ie++ = 0;
+	len_remaining--;
+
+	mlo_ie->num_data = p_ml_ie - mlo_ie->data;
+
+	if (wlan_vdev_mlme_cap_get(session->vdev,
+				   WLAN_VDEV_C_EXCL_STA_PROF_PRB_REQ)) {
+		pe_debug("Do not populate sta profile in MLO IE");
+		goto no_sta_prof;
+	}
+	pe_debug("Populate sta profile in MLO IE");
+
+	partner_info = session->lim_join_req->partner_info;
+	for (link = 0; link < partner_info.num_partner_links; link++) {
+		sta_pro = &mlo_ie->sta_profile[num_sta_pro];
+		sta_data = sta_pro->data;
+		sta_len_left = sizeof(sta_pro->data);
+
+		*sta_data++ = WLAN_ML_LINFO_SUBELEMID_PERSTAPROFILE;
+		sta_len_left--;
+		/* length of subelement, filled at last */
+		*sta_data++ = 0;
+		sta_len_left--;
+
+		QDF_SET_BITS(*(uint16_t *)sta_data,
+			     WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_LINKID_IDX,
+			     WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_LINKID_BITS,
+			     partner_info.partner_link_info[link].link_id);
+
+		QDF_SET_BITS(*(uint16_t *)sta_data,
+			     WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_CMPLTPROF_IDX,
+			     WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_CMPLTPROF_BITS,
+			     1);
+		sta_data += WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_SIZE;
+		sta_len_left -= WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_SIZE;
+
+		sta_pro->num_data = sta_data - sta_pro->data;
+		sta_pro->data[TAG_LEN_POS] = sta_pro->num_data - MIN_IE_LEN;
+
+		num_sta_pro++;
+	}
+
+no_sta_prof:
+	mlo_ie->num_sta_profile = num_sta_pro;
+	session->lim_join_req->is_ml_probe_req_sent = true;
+
+	return QDF_STATUS_SUCCESS;
+}
+
 QDF_STATUS populate_dot11f_assoc_rsp_mlo_ie(struct mac_context *mac_ctx,
 					    struct pe_session *session,
 					    tpDphHashNode sta,

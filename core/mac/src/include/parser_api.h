@@ -1436,6 +1436,16 @@ QDF_STATUS populate_dot11f_bcn_mlo_ie(struct mac_context *mac_ctx,
 				      struct pe_session *session);
 
 /**
+ * populate_dot11f_probe_req_mlo_ie() - populate mlo ie for probe req
+ * @mac_ctx: Global MAC context
+ * @session: PE session
+ *
+ * Return: QDF_STATUS_SUCCESS of no error
+ */
+QDF_STATUS populate_dot11f_probe_req_mlo_ie(struct mac_context *mac_ctx,
+					    struct pe_session *session);
+
+/**
  * populate_dot11f_mlo_rnr() - populate rnr for mlo
  * @mac_ctx: Global MAC context
  * @session: PE session

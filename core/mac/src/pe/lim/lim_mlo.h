@@ -312,6 +312,17 @@ uint16_t
 lim_send_bcn_frame_mlo(struct mac_context *mac_ctx, struct pe_session *session);
 
 /**
+ * lim_send_probe_req_frame_mlo() - Prepare ML IE for probe req frame
+ * @mac_ctx: pointer to mac_context
+ * @session: pointer to pe_session
+ *
+ * Return: the actual ML IE length
+ */
+uint16_t
+lim_send_probe_req_frame_mlo(struct mac_context *mac_ctx,
+			     struct pe_session *session);
+
+/**
  * lim_get_frame_mlo_ie_len() - get ML IE length
  * @session: pointer to pe_session
  *
@@ -478,6 +489,13 @@ lim_send_assoc_rsp_mgmt_frame_mlo(struct mac_context *mac_ctx,
 				  struct pe_session *session,
 				  tpDphHashNode sta,
 				  tDot11fAssocResponse *frm)
+{
+	return 0;
+}
+
+static inline uint16_t
+lim_send_probe_req_frame_mlo(struct mac_context *mac_ctx,
+			     struct pe_session *session)
 {
 	return 0;
 }

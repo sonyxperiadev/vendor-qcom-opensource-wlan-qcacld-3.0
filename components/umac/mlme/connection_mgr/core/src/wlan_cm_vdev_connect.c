@@ -1124,7 +1124,7 @@ cm_get_ml_partner_info(struct scan_cache_entry *scan_entry,
 		return QDF_STATUS_E_INVAL;
 	}
 	mlo_support_link_num = wlan_mlme_get_sta_mlo_conn_max_num(psoc);
-	mlme_debug("mlo support link num: %d", mlo_support_link_num);
+	mlme_debug("sta mlo support link num: %d", mlo_support_link_num);
 
 	/* TODO: Make sure that scan_entry->ml_info->link_info is a sorted
 	 * list.
@@ -1134,9 +1134,10 @@ cm_get_ml_partner_info(struct scan_cache_entry *scan_entry,
 	 * entry should be cleared to not affect next connect request.
 	 */
 	for (i = 0; i < scan_entry->ml_info.num_links; i++) {
-		mlme_debug("freq: %d, link id: %d "QDF_MAC_ADDR_FMT,
+		mlme_debug("freq: %d, link id: %d is valid %d "QDF_MAC_ADDR_FMT,
 			   scan_entry->ml_info.link_info[i].freq,
 			   scan_entry->ml_info.link_info[i].link_id,
+			   scan_entry->ml_info.link_info[i].is_valid_link,
 			   QDF_MAC_ADDR_REF(
 			   scan_entry->ml_info.link_info[i].link_addr.bytes));
 		if (j >= mlo_support_link_num - 1)
@@ -1154,7 +1155,7 @@ cm_get_ml_partner_info(struct scan_cache_entry *scan_entry,
 		}
 	}
 	partner_info->num_partner_links = j;
-	mlme_debug("partner link num: %d", j);
+	mlme_debug("sta and ap integrate link num: %d", j);
 
 	wlan_objmgr_psoc_release_ref(psoc, WLAN_MLME_CM_ID);
 

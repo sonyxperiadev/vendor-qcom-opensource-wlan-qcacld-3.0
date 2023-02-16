@@ -144,111 +144,6 @@ void lim_populate_mac_header(struct mac_context *mac_ctx, uint8_t *buf,
 		mac_hdr->seqControl.seqNumHi, mac_ctx->mgmtSeqNum);
 }
 
-#ifdef WLAN_FEATURE_11BE_MLO
-static QDF_STATUS
-lim_populate_ml_probe_req(struct mac_context *mac,
-			  struct pe_session *session,
-			  uint8_t **ml_prb_req_ie,
-			  uint16_t *ml_probe_req_len)
-{
-	qdf_size_t ml_probe_len = 0;
-	struct wlan_ml_probe_req *ml_prb_req = NULL;
-	uint8_t *ml_probe = NULL;
-	uint8_t link = 0;
-	uint16_t stacontrol = 0;
-	struct mlo_partner_info partner_info;
-
-	if (!session || !session->vdev || !session->vdev->mlo_dev_ctx) {
-		pe_err("Null value");
-		return QDF_STATUS_E_NULL_VALUE;
-	}
-
-	ml_prb_req = qdf_mem_malloc(sizeof(struct wlan_ml_probe_req));
-	if (!ml_prb_req)
-		return QDF_STATUS_E_NULL_VALUE;
-
-	qdf_mem_zero(ml_prb_req, sizeof(struct wlan_ml_probe_req));
-
-	ml_probe = (uint8_t *)ml_prb_req;
-	*ml_prb_req_ie = (uint8_t *)ml_prb_req;
-	/* Fill the Element ID IE Type (0xFF) */
-	ml_prb_req->ml_ie_ff.elem_id = WLAN_ELEMID_EXTN_ELEM;
-	/* Fill the Multi link extn Element ID IE Type (0x6B) */
-	ml_prb_req->ml_ie_ff.elem_id_ext = WLAN_EXTN_ELEMID_MULTI_LINK;
-	ml_probe_len++;
-
-	/* Set ML IE multi link control bitmap:
-	 * ML probe variant type = 1
-	 * In presence bitmap, set MLD ID presence bit = 1
-	 */
-	QDF_SET_BITS(ml_prb_req->ml_ie_ff.mlcontrol,
-		     WLAN_ML_CTRL_TYPE_IDX,
-		     WLAN_ML_CTRL_TYPE_BITS,
-		     WLAN_ML_VARIANT_PROBEREQ);
-
-	QDF_SET_BITS(ml_prb_req->ml_ie_ff.mlcontrol,
-		     WLAN_ML_CTRL_PBM_IDX,
-		     WLAN_ML_CTRL_PBM_BITS,
-		     1);
-	ml_probe_len += WLAN_ML_CTRL_SIZE;
-	ml_prb_req->common_info_len = 2;
-	ml_probe_len += ml_prb_req->common_info_len;
-	/* mld id is always 0 for tx link for SAP or AP */
-	ml_prb_req->mld_id = 0;
-
-	if (wlan_vdev_mlme_cap_get(session->vdev,
-				   WLAN_VDEV_C_EXCL_STA_PROF_PRB_REQ)) {
-		pe_debug("Do not populate sta profile in MLO IE");
-		goto no_sta_prof;
-	}
-	pe_debug("Populate sta profile in MLO IE");
-
-	stacontrol = htole16(stacontrol);
-	partner_info = session->lim_join_req->partner_info;
-
-	for (link = 0;
-	     link < partner_info.num_partner_links;
-	     link++) {
-		ml_prb_req->sta_profile[link].sub_elem_id = 0;
-		ml_prb_req->sta_profile[link].per_sta_len =
-			WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_SIZE;
-		ml_probe_len += 2;
-
-		QDF_SET_BITS(stacontrol,
-			     WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_LINKID_IDX,
-			     WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_LINKID_BITS,
-			     partner_info.partner_link_info[link].link_id);
-
-		QDF_SET_BITS(stacontrol,
-			     WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_CMPLTPROF_IDX,
-			     WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_CMPLTPROF_BITS,
-			     1);
-		ml_prb_req->sta_profile[link].sta_control = stacontrol;
-		ml_probe_len += WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_SIZE;
-	}
-no_sta_prof:
-	ml_prb_req->ml_ie_ff.elem_len = ml_probe_len;
-	*ml_probe_req_len = ml_probe_len + MIN_IE_LEN;
-
-	pe_nofl_debug("Send ML probe req %zu", ml_probe_len);
-	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-			   ml_probe, ml_probe_len + MIN_IE_LEN);
-
-	session->lim_join_req->is_ml_probe_req_sent = true;
-
-	return QDF_STATUS_SUCCESS;
-}
-#else
-static QDF_STATUS
-lim_populate_ml_probe_req(struct mac_context *mac,
-			  struct pe_session *session,
-			  uint8_t **ml_prb_req_ie,
-			  uint16_t *ml_probe_req_len)
-{
-	return QDF_STATUS_E_NOSUPPORT;
-}
-#endif
-
 /**
  * lim_send_probe_req_mgmt_frame() - send probe request management frame
  * @mac_ctx: Pointer to Global MAC structure
@@ -301,12 +196,10 @@ lim_send_probe_req_mgmt_frame(struct mac_context *mac_ctx,
 	QDF_STATUS sir_status;
 	const uint8_t *qcn_ie = NULL;
 	uint8_t channel;
-	uint8_t *ml_probe_req_ie = NULL;
-	uint16_t ml_probe_req_ie_len = 0;
-	int ret;
 	uint8_t *eht_cap_ie = NULL, eht_cap_ie_len = 0;
 	bool is_band_2g;
 	uint16_t ie_buf_size;
+	uint16_t mlo_ie_len = 0;
 
 	if (additional_ielen)
 		addn_ielen = *additional_ielen;
@@ -446,10 +339,9 @@ lim_send_probe_req_mgmt_frame(struct mac_context *mac_ctx,
 	if (IS_DOT11_MODE_EHT(dot11mode) && pesession &&
 			pesession->lim_join_req) {
 		lim_update_session_eht_capable(mac_ctx, pesession);
-		lim_populate_ml_probe_req(mac_ctx, pesession,
-					  &ml_probe_req_ie,
-					  &ml_probe_req_ie_len);
+		mlo_ie_len = lim_send_probe_req_frame_mlo(mac_ctx, pesession);
 	}
+
 	populate_dot11f_eht_caps(mac_ctx, pesession, &pr->eht_cap);
 
 	if (addn_ielen && additional_ie) {
@@ -500,20 +392,6 @@ lim_send_probe_req_mgmt_frame(struct mac_context *mac_ctx,
 	if (extracted_ext_cap_flag)
 		lim_merge_extcap_struct(&pr->ExtCap, &extracted_ext_cap, true);
 
-	/*
-	 * Do unpack to populate the add_ie buffer to frm structure
-	 * before packing the frm structure. In this way, the IE ordering
-	 * which the latest 802.11 spec mandates is maintained.
-	 */
-	if (ml_probe_req_ie_len) {
-		ret = dot11f_unpack_probe_request(mac_ctx, ml_probe_req_ie,
-						  ml_probe_req_ie_len,
-						  pr, true);
-		if (DOT11F_FAILED(ret)) {
-			pe_err("unpack failed, ret: 0x%x", ret);
-			goto end;
-		}
-	}
 
 	/* That's it-- now we pack it.  First, how much space are we going to */
 	status = dot11f_get_packed_probe_request_size(mac_ctx, pr, &payload);
@@ -527,8 +405,7 @@ lim_send_probe_req_mgmt_frame(struct mac_context *mac_ctx,
 			status);
 	}
 
-	bytes = payload + sizeof(tSirMacMgmtHdr) + addn_ielen +
-		ml_probe_req_ie_len;
+	bytes = payload + sizeof(tSirMacMgmtHdr) + addn_ielen + mlo_ie_len;
 
 	/* Ok-- try to allocate some memory: */
 	qdf_status = cds_packet_alloc((uint16_t) bytes, (void **)&frame,
@@ -600,10 +477,15 @@ skip_eht_ie_update:
 		payload += addn_ielen;
 	}
 
-	if (ml_probe_req_ie_len) {
-		qdf_mem_copy(frame + sizeof(tSirMacMgmtHdr) + payload,
-			     ml_probe_req_ie, ml_probe_req_ie_len);
-		payload += ml_probe_req_ie_len;
+	if (mlo_ie_len) {
+		qdf_status = lim_fill_complete_mlo_ie(pesession, mlo_ie_len,
+				      frame + sizeof(tSirMacMgmtHdr) + payload);
+		if (QDF_IS_STATUS_ERROR(qdf_status)) {
+			pe_debug("assemble ml ie error, status %d", qdf_status);
+			mlo_ie_len = 0;
+		}
+
+		payload += mlo_ie_len;
 	}
 
 	pe_nofl_debug("Probe req TX: vdev %d seq num %d to " QDF_MAC_ADDR_FMT " len %d",
@@ -637,8 +519,6 @@ skip_eht_ie_update:
 		return QDF_STATUS_E_FAILURE;
 	}
 
-end:
-	qdf_mem_free(ml_probe_req_ie);
 	return QDF_STATUS_SUCCESS;
 } /* End lim_send_probe_req_mgmt_frame. */
 
