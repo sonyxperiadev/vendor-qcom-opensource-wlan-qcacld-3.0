@@ -626,6 +626,7 @@ static void __sch_beacon_process_for_session(struct mac_context *mac_ctx,
 		status = lim_get_bpcc_from_mlo_ie(bcn, &bpcc);
 		if (QDF_IS_STATUS_SUCCESS(status))
 			cu_flag = lim_check_cu_happens(session->vdev, bpcc);
+		lim_process_ml_reconfig(mac_ctx, session, rx_pkt_info);
 	}
 
 	if (!cu_flag)

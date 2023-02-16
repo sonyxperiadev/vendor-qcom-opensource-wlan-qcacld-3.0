@@ -354,6 +354,27 @@ void lim_process_beacon_eht(struct mac_context *mac_ctx,
 		/* handle beacon IE for 802.11be mlo case */
 		lim_process_beacon_mlo(mac_ctx, session, bcn_ptr);
 }
+
+void
+lim_process_ml_reconfig(struct mac_context *mac_ctx,
+			struct pe_session *session,
+			uint8_t *rx_pkt_info)
+{
+	uint8_t *frame;
+	uint16_t frame_len;
+
+	if (!session->vdev)
+		return;
+
+	frame = WMA_GET_RX_MPDU_DATA(rx_pkt_info);
+	frame_len = WMA_GET_RX_PAYLOAD_LEN(rx_pkt_info);
+	if (frame_len < SIR_MAC_B_PR_SSID_OFFSET)
+		return;
+
+	mlo_process_ml_reconfig_ie(session->vdev, NULL,
+				   frame + SIR_MAC_B_PR_SSID_OFFSET,
+				   frame_len - SIR_MAC_B_PR_SSID_OFFSET, NULL);
+}
 #endif
 
 /**
@@ -433,6 +454,7 @@ lim_process_beacon_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 		status = lim_get_bpcc_from_mlo_ie(bcn_ptr, &bpcc);
 		if (QDF_IS_STATUS_SUCCESS(status))
 			cu_flag = lim_check_cu_happens(session->vdev, bpcc);
+		lim_process_ml_reconfig(mac_ctx, session, rx_pkt_info);
 	}
 
 	lim_process_bcn_prb_rsp_t2lm(mac_ctx, session, bcn_ptr);

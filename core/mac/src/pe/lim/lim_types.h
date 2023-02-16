@@ -488,6 +488,22 @@ void lim_process_bcn_prb_rsp_t2lm(struct mac_context *mac_ctx,
 void lim_process_beacon_mlo(struct mac_context *mac_ctx,
 			    struct pe_session *session,
 			    tSchBeaconStruct *bcn_ptr);
+
+/**
+ * lim_process_ml_reconfig() - to process beacon frames with reconfig IE
+ * @mac_ctx: Pointer to Global MAC structure
+ * @session: A pointer to session
+ * @rx_pkt_info: A pointer to RX packet info structure
+ *
+ * This function will process ml reconfig beacon frames. If reconfig ie
+ * is present for link removal, link reconfig timer will start.
+ *
+ * Return: none
+ */
+void
+lim_process_ml_reconfig(struct mac_context *mac_ctx,
+			struct pe_session *session,
+			uint8_t *rx_pkt_info);
 #else
 static inline
 void lim_process_beacon_mlo(struct mac_context *mac_ctx,
@@ -500,6 +516,13 @@ static inline
 void lim_process_bcn_prb_rsp_t2lm(struct mac_context *mac_ctx,
 				  struct pe_session *session,
 				  tpSirProbeRespBeacon bcn_ptr)
+{
+}
+
+static inline void
+lim_process_ml_reconfig(struct mac_context *mac_ctx,
+			struct pe_session *session,
+			uint8_t *rx_pkt_info)
 {
 }
 #endif
