@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2015-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -952,6 +952,7 @@ static void hdd_send_hang_data(uint8_t *data, size_t data_len)
  */
 static void hdd_psoc_shutdown_notify(struct hdd_context *hdd_ctx)
 {
+	hdd_enter();
 	wlan_cfg80211_cleanup_scan_queue(hdd_ctx->pdev, NULL);
 
 	if (ucfg_ipa_is_enabled()) {
@@ -966,6 +967,7 @@ static void hdd_psoc_shutdown_notify(struct hdd_context *hdd_ctx)
 	cds_shutdown_notifier_purge();
 
 	hdd_wlan_ssr_shutdown_event();
+	hdd_exit();
 }
 
 /**
@@ -981,6 +983,7 @@ static void hdd_soc_recovery_cleanup(void)
 {
 	struct hdd_context *hdd_ctx;
 
+	hdd_enter();
 	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
 	if (!hdd_ctx)
 		return;
@@ -1001,6 +1004,7 @@ static void hdd_soc_recovery_cleanup(void)
 	}
 
 	hdd_psoc_shutdown_notify(hdd_ctx);
+	hdd_exit();
 }
 
 static void __hdd_soc_recovery_shutdown(void)
