@@ -1539,10 +1539,12 @@ bool sap_is_prev_n_freqs_free(bool *clean_channel_array, uint32_t curr_index,
 	 */
 	for (index = min_index; index > 0 && index <= max_index;
 	     index++) {
-		if (!clean_channel_array[index])
+		if (!clean_channel_array[index]) {
+			sap_debug("chan_index %d not free", index);
 			return false;
+		}
 	}
-	if ((index - min_index) != prev_n_freq_count) {
+	if ((index - min_index) < prev_n_freq_count) {
 		sap_debug("previous %d are not validated", prev_n_freq_count);
 		return false;
 	}
@@ -1618,19 +1620,19 @@ bool is_freq_allowed_for_sap(struct wlan_objmgr_pdev *pdev,
 	switch (ch_width) {
 	case CH_WIDTH_40MHZ:
 		return sap_is_prev_n_freqs_free(clean_channel_array,
-						curr_index, 40/20 - 1,
+						curr_index, 40/20,
 						range);
 	case CH_WIDTH_80MHZ:
 		return sap_is_prev_n_freqs_free(clean_channel_array,
-						curr_index, 80/20 - 1,
+						curr_index, 80/20,
 						range);
 	case CH_WIDTH_160MHZ:
 		return sap_is_prev_n_freqs_free(clean_channel_array,
-						curr_index, 160/20 - 1,
+						curr_index, 160/20,
 						range);
 	case CH_WIDTH_320MHZ:
 		return sap_is_prev_n_freqs_free(clean_channel_array,
-						curr_index, 320/20 - 1,
+						curr_index, 320/20,
 						range);
 	default:
 		return false;
