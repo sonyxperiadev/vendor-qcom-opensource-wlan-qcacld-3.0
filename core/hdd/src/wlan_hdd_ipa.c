@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -168,7 +168,7 @@ void hdd_ipa_send_nbuf_to_network(qdf_nbuf_t nbuf, qdf_netdev_t dev)
 	struct wlan_objmgr_vdev *vdev;
 	int result;
 	bool delivered = false;
-	uint32_t enabled;
+	uint32_t enabled, len = 0;
 	struct hdd_tx_rx_stats *stats;
 	struct hdd_station_ctx *sta_ctx;
 	bool is_eapol;
@@ -224,6 +224,7 @@ void hdd_ipa_send_nbuf_to_network(qdf_nbuf_t nbuf, qdf_netdev_t dev)
 	nbuf->dev = adapter->dev;
 	nbuf->protocol = eth_type_trans(nbuf, nbuf->dev);
 	nbuf->ip_summed = CHECKSUM_NONE;
+	len = nbuf->len;
 
 	/*
 	 * Update STA RX exception packet stats.
@@ -264,7 +265,7 @@ void hdd_ipa_send_nbuf_to_network(qdf_nbuf_t nbuf, qdf_netdev_t dev)
 	 * and also DP internally maintaining vdev ref count
 	 */
 	ucfg_dp_inc_rx_pkt_stats(adapter->vdev,
-				 nbuf->len,
+				 len,
 				 delivered);
 	/*
 	 * Restore PF_WAKE_UP_IDLE flag in the task structure
