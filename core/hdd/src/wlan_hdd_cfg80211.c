@@ -25550,11 +25550,14 @@ static int __wlan_hdd_cfg80211_get_channel(struct wiphy *wiphy,
 	if (!vdev)
 		return -EINVAL;
 
-	vdev_id = wlan_vdev_get_id(vdev);
-	link_adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
-	if (link_adapter && !hdd_cm_is_vdev_associated(link_adapter)) {
-		wlan_key_put_link_vdev(vdev, WLAN_OSIF_ID);
-		return -EBUSY;
+	if (adapter->device_mode == QDF_STA_MODE) {
+		vdev_id = wlan_vdev_get_id(vdev);
+		link_adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
+		if (link_adapter &&
+		    !hdd_cm_is_vdev_associated(link_adapter)) {
+			wlan_key_put_link_vdev(vdev, WLAN_OSIF_ID);
+			return -EBUSY;
+		}
 	}
 
 	chan_freq = vdev->vdev_mlme.des_chan->ch_freq;
