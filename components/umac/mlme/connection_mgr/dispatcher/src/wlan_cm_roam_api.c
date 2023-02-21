@@ -278,7 +278,9 @@ bool wlan_cm_same_band_sta_allowed(struct wlan_objmgr_psoc *psoc)
 		return true;
 
 	dual_sta_policy = &mlme_obj->cfg.gen.dual_sta_policy;
-	if (dual_sta_policy->primary_vdev_id != WLAN_UMAC_VDEV_ID_MAX)
+	if (dual_sta_policy->primary_vdev_id != WLAN_UMAC_VDEV_ID_MAX &&
+	    dual_sta_policy->concurrent_sta_policy ==
+	    QCA_WLAN_CONCURRENT_STA_POLICY_PREFER_PRIMARY)
 		return true;
 
 	return false;
@@ -496,7 +498,7 @@ wlan_cm_dual_sta_roam_update_connect_channels(struct wlan_objmgr_psoc *psoc,
 	 * environment, so that user can switch to second
 	 * connection and mark it as primary.
 	 */
-	if (dual_sta_policy->primary_vdev_id != WLAN_UMAC_VDEV_ID_MAX)
+	if (wlan_mlme_is_primary_interface_configured(psoc))
 		return;
 
 	/*
