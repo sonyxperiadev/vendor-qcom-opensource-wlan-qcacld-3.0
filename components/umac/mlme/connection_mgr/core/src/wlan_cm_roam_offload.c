@@ -3294,7 +3294,7 @@ cm_roam_stop_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 
 	if (wlan_vdev_mlme_get_is_mlo_link(psoc, vdev_id)) {
 		mlme_debug("MLO ROAM: skip RSO cmd for link vdev %d", vdev_id);
-		return QDF_STATUS_SUCCESS;
+		goto rel_vdev_ref;
 	}
 
 	rso_cfg = wlan_cm_get_rso_config(vdev);

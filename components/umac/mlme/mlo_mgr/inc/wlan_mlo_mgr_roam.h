@@ -306,8 +306,9 @@ void mlo_roam_connect_complete(struct wlan_objmgr_psoc *psoc,
  *
  * Return: qdf status
  */
-void mlo_cm_roam_sync_cb(struct wlan_objmgr_vdev *vdev,
-			 void *event, uint32_t event_data_len);
+QDF_STATUS
+mlo_cm_roam_sync_cb(struct wlan_objmgr_vdev *vdev,
+		    void *event, uint32_t event_data_len);
 #endif /* WLAN_FEATURE_11BE_MLO_ADV_FEATURE */
 
 /**
@@ -385,13 +386,15 @@ mlo_roam_get_link_id(uint8_t vdev_id,
 }
 
 #ifdef WLAN_FEATURE_11BE_MLO_ADV_FEATURE
-void mlo_cm_roam_sync_cb(struct wlan_objmgr_vdev *vdev,
-			 void *event, uint32_t event_data_len);
+QDF_STATUS mlo_cm_roam_sync_cb(struct wlan_objmgr_vdev *vdev,
+			       void *event, uint32_t event_data_len);
 #else
-static inline void
+static inline QDF_STATUS
 mlo_cm_roam_sync_cb(struct wlan_objmgr_vdev *vdev,
 		    void *event, uint32_t event_data_len)
-{}
+{
+	return QDF_STATUS_SUCCESS;
+}
 #endif
 
 static inline bool

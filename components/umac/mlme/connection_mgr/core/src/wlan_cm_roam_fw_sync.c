@@ -76,7 +76,7 @@ QDF_STATUS cm_fw_roam_sync_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 				     event_data_len, event);
 
 	if (QDF_IS_STATUS_ERROR(status)) {
-		mlme_err("EV ROAM SYNC REQ not handled");
+		mlme_err("Roam sync was not handled");
 		cm_fw_roam_abort_req(psoc, vdev_id);
 		cm_roam_stop_req(psoc, vdev_id, REASON_ROAM_SYNCH_FAILED,
 				 NULL, false);
