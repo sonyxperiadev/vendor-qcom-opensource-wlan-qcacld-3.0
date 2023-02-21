@@ -921,9 +921,13 @@ lim_update_vdev_rate_set(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 		mlme_set_ext_opr_rate(vdev,
 				      assoc_resp->extendedRates.rate,
 				      assoc_resp->extendedRates.numRates);
+	else
+		mlme_clear_ext_opr_rate(vdev);
 
 	if (assoc_resp->HTCaps.present)
 		lim_update_mcs_rate_set(vdev, &assoc_resp->HTCaps);
+	else
+		mlme_clear_mcs_rate(vdev);
 
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
 }
