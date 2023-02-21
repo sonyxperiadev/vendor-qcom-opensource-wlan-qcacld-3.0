@@ -2620,6 +2620,7 @@ struct osif_cm_ops osif_ops = {
 	.vendor_handoff_params_cb = hdd_cm_get_vendor_handoff_params,
 #endif
 	.send_vdev_keys_cb = hdd_cm_send_vdev_keys,
+	.get_scan_ie_params_cb = hdd_cm_get_scan_ie_params,
 };
 
 QDF_STATUS hdd_cm_register_cb(void)

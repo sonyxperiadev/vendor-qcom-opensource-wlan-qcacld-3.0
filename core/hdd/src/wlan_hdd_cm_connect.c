@@ -1567,7 +1567,6 @@ QDF_STATUS hdd_cm_send_vdev_keys(struct wlan_objmgr_vdev *vdev,
 
 #ifdef WLAN_VENDOR_HANDOFF_CONTROL
 #define WLAN_WAIT_TIME_HANDOFF_PARAMS 1000
-
 QDF_STATUS hdd_cm_get_handoff_param(struct wlan_objmgr_psoc *psoc,
 				    struct hdd_adapter *adapter,
 				    uint8_t vdev_id, uint32_t param_id)
@@ -1633,6 +1632,42 @@ hdd_cm_get_vendor_handoff_params(struct wlan_objmgr_psoc *psoc,
 	return QDF_STATUS_SUCCESS;
 }
 #endif
+
+QDF_STATUS
+hdd_cm_get_scan_ie_params(struct wlan_objmgr_vdev *vdev,
+			  struct element_info *scan_ie,
+			  enum dot11_mode_filter *dot11mode_filter)
+{
+	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
+	struct hdd_adapter *adapter;
+
+	if (!hdd_ctx) {
+		hdd_err("hdd_ctx is NULL");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	adapter = hdd_get_adapter_by_vdev(hdd_ctx, wlan_vdev_get_id(vdev));
+	if (!adapter) {
+		hdd_err("adapter is NULL for vdev %d", wlan_vdev_get_id(vdev));
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (adapter->device_mode == QDF_P2P_CLIENT_MODE) {
+		scan_ie->ptr =
+			&adapter->scan_info.scan_add_ie.addIEdata[0];
+		scan_ie->len = adapter->scan_info.scan_add_ie.length;
+	} else if (adapter->scan_info.default_scan_ies) {
+		scan_ie->ptr = adapter->scan_info.default_scan_ies;
+		scan_ie->len = adapter->scan_info.default_scan_ies_len;
+	} else if (adapter->scan_info.scan_add_ie.length) {
+		scan_ie->ptr = adapter->scan_info.scan_add_ie.addIEdata;
+		scan_ie->len = adapter->scan_info.scan_add_ie.length;
+	}
+
+	*dot11mode_filter = hdd_get_dot11mode_filter(hdd_ctx);
+
+	return QDF_STATUS_SUCCESS;
+}
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 #ifdef WLAN_FEATURE_FILS_SK
