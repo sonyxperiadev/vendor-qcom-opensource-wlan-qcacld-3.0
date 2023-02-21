@@ -4036,7 +4036,7 @@ lim_gen_link_probe_rsp_roam(struct mac_context *mac_ctx,
 		pe_debug("MLO: link probe rsp size:%u original probe rsp :%u",
 			 link_probe_rsp.len, frame_len);
 
-		src_addr = lim_get_src_addr_from_frame(&link_probe_rsp);
+		src_addr = wlan_mlme_get_src_addr_from_frame(&link_probe_rsp);
 		if (!src_addr) {
 			pe_err("MLO: Failed to fetch src address");
 			status = QDF_STATUS_E_FAILURE;

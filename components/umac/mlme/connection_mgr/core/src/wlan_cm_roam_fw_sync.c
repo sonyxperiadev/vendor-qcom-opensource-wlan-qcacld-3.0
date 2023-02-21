@@ -856,37 +856,50 @@ cm_update_scan_db_on_roam_success(struct wlan_objmgr_vdev *vdev,
 				  wlan_cm_id cm_id)
 {
 	struct cnx_mgr *cm_ctx;
-	qdf_freq_t link_freq;
+	qdf_freq_t frame_freq;
 	struct wlan_connect_rsp_ies *ies = &resp->connect_ies;
 
 	cm_ctx = cm_get_cm_ctx(vdev);
 	if (!cm_ctx)
 		return;
 
-	link_freq = mlo_roam_get_chan_freq(wlan_vdev_get_id(vdev),
-					   roam_synch_ind);
 	if (roam_synch_ind->auth_status == ROAM_AUTH_STATUS_CONNECTED) {
-		if (ies->link_bcn_probe_rsp.len)
+		if (ies->link_bcn_probe_rsp.len) {
+			frame_freq = mlo_roam_get_link_freq_from_mac_addr(
+					roam_synch_ind,
+					wlan_mlme_get_src_addr_from_frame(
+					&ies->link_bcn_probe_rsp));
 			cm_inform_bcn_probe(cm_ctx,
 					    ies->link_bcn_probe_rsp.ptr,
 					    ies->link_bcn_probe_rsp.len,
-					    link_freq,
+					    frame_freq,
 					    roam_synch_ind->rssi,
 					    cm_id);
+		}
+
+		frame_freq = mlo_roam_get_link_freq_from_mac_addr(
+					roam_synch_ind,
+					wlan_mlme_get_src_addr_from_frame(
+					&ies->bcn_probe_rsp));
 		cm_inform_bcn_probe(cm_ctx,
 				    ies->bcn_probe_rsp.ptr,
 				    ies->bcn_probe_rsp.len,
-				    resp->freq,
+				    frame_freq,
 				    roam_synch_ind->rssi,
 				    cm_id);
 	} else if (wlan_vdev_mlme_is_mlo_link_vdev(vdev)) {
-		if (ies->link_bcn_probe_rsp.len)
+		if (ies->link_bcn_probe_rsp.len) {
+			frame_freq = mlo_roam_get_link_freq_from_mac_addr(
+					roam_synch_ind,
+					wlan_mlme_get_src_addr_from_frame(
+					&ies->link_bcn_probe_rsp));
 			cm_inform_bcn_probe(cm_ctx,
 					    ies->link_bcn_probe_rsp.ptr,
 					    ies->link_bcn_probe_rsp.len,
-					    link_freq,
+					    frame_freq,
 					    roam_synch_ind->rssi,
 					    cm_id);
+		}
 	} else {
 		cm_inform_bcn_probe(cm_ctx,
 				    ies->bcn_probe_rsp.ptr,
