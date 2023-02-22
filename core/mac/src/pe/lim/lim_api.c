@@ -2705,22 +2705,8 @@ static void
 lim_mlo_roam_copy_partner_info_to_session(struct pe_session *session,
 					  struct roam_offload_synch_ind *sync_ind)
 {
-	uint8_t i;
-	struct mlo_partner_info partner_info;
-
-	if (!sync_ind)
-		return;
-
-	for (i = 0; i < sync_ind->num_setup_links; i++) {
-		partner_info.partner_link_info[i].link_id =
-			sync_ind->ml_link[i].link_id;
-		qdf_copy_macaddr(
-			&partner_info.partner_link_info[i].link_addr,
-			&sync_ind->ml_link[i].link_addr);
-	}
-
-	session->ml_partner_info = partner_info;
-	session->ml_partner_info.num_partner_links = sync_ind->num_setup_links;
+	mlo_roam_copy_partner_info(&session->ml_partner_info,
+				   sync_ind, sync_ind->roamed_vdev_id);
 }
 
 static QDF_STATUS

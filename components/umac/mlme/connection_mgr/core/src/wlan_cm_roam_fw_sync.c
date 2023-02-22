@@ -449,6 +449,14 @@ cm_fill_bssid_freq_info(uint8_t vdev_id,
 
 	return QDF_STATUS_SUCCESS;
 }
+
+static void
+cm_mlo_roam_copy_partner_info(struct wlan_cm_connect_resp *connect_rsp,
+			      struct roam_offload_synch_ind *roam_synch_data)
+{
+	mlo_roam_copy_partner_info(&connect_rsp->ml_parnter_info,
+				   roam_synch_data, WLAN_INVALID_VDEV_ID);
+}
 #else
 static QDF_STATUS
 cm_fill_bssid_freq_info(uint8_t vdev_id,
@@ -459,6 +467,12 @@ cm_fill_bssid_freq_info(uint8_t vdev_id,
 	rsp->connect_rsp.freq = roam_synch_data->chan_freq;
 
 	return QDF_STATUS_SUCCESS;
+}
+
+static void
+cm_mlo_roam_copy_partner_info(struct wlan_cm_connect_resp *connect_rsp,
+			      struct roam_offload_synch_ind *roam_synch_data)
+{
 }
 #endif
 
@@ -966,7 +980,7 @@ cm_fw_roam_sync_propagation(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 	if (wlan_vdev_mlme_is_mlo_vdev(vdev))
 		policy_mgr_move_vdev_from_disabled_to_connection_tbl(psoc,
 								     vdev_id);
-	mlo_roam_copy_partner_info(connect_rsp, roam_synch_data);
+	cm_mlo_roam_copy_partner_info(connect_rsp, roam_synch_data);
 	mlo_roam_init_cu_bpcc(vdev, roam_synch_data);
 	mlo_roam_set_link_id(vdev, roam_synch_data);
 

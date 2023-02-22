@@ -544,36 +544,33 @@ QDF_STATUS mlo_enable_rso(struct wlan_objmgr_pdev *pdev,
 }
 
 void
-mlo_roam_copy_partner_info(struct wlan_cm_connect_resp *connect_rsp,
-			   struct roam_offload_synch_ind *sync_ind)
+mlo_roam_copy_partner_info(struct mlo_partner_info *partner_info,
+			   struct roam_offload_synch_ind *sync_ind,
+			   uint8_t skip_vdev_id)
 {
-	uint8_t i;
-	struct mlo_partner_info *partner_info;
+	uint8_t i, j;
+	struct mlo_link_info *link;
 
 	if (!sync_ind)
 		return;
 
-	partner_info = &connect_rsp->ml_parnter_info;
+	for (i = 0, j = 0; i < sync_ind->num_setup_links; i++) {
+		if (sync_ind->ml_link[i].vdev_id == skip_vdev_id)
+			continue;
+		link = &partner_info->partner_link_info[j];
+		link->link_id = sync_ind->ml_link[i].link_id;
+		link->vdev_id = sync_ind->ml_link[i].vdev_id;
 
-	for (i = 0; i < sync_ind->num_setup_links; i++) {
-		partner_info->partner_link_info[i].link_id =
-			sync_ind->ml_link[i].link_id;
-		partner_info->partner_link_info[i].vdev_id =
-			sync_ind->ml_link[i].vdev_id;
-
-		qdf_copy_macaddr(
-			&partner_info->partner_link_info[i].link_addr,
-			&sync_ind->ml_link[i].link_addr);
-		partner_info->partner_link_info[i].chan_freq =
-				sync_ind->ml_link[i].channel.mhz;
+		qdf_copy_macaddr(&link->link_addr,
+				 &sync_ind->ml_link[i].link_addr);
+		link->chan_freq = sync_ind->ml_link[i].channel.mhz;
 		mlo_debug("vdev_id %d link_id %d freq %d bssid" QDF_MAC_ADDR_FMT,
-			  sync_ind->ml_link[i].vdev_id,
-			  sync_ind->ml_link[i].link_id,
-			  sync_ind->ml_link[i].channel.mhz,
-			  QDF_MAC_ADDR_REF(sync_ind->ml_link[i].link_addr.bytes));
+			  link->vdev_id, link->link_id, link->chan_freq,
+			  QDF_MAC_ADDR_REF(link->link_addr.bytes));
+		j++;
 	}
-	partner_info->num_partner_links = sync_ind->num_setup_links;
-	mlo_debug("num_setup_links %d", sync_ind->num_setup_links);
+	partner_info->num_partner_links = j;
+	mlo_debug("num_setup_links %d", partner_info->num_partner_links);
 }
 
 void mlo_roam_init_cu_bpcc(struct wlan_objmgr_vdev *vdev,
