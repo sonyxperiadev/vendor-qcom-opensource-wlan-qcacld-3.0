@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1533,6 +1533,9 @@ QDF_STATUS dp_txrx_init(ol_txrx_soc_handle soc, uint8_t pdev_id,
 		qdf_status = dp_rx_tm_init(&dp_ext_hdl->rx_tm_hdl,
 					   num_dp_rx_threads);
 	}
+
+	if (QDF_IS_STATUS_ERROR(qdf_status))
+		dp_txrx_deinit(soc);
 
 	return qdf_status;
 }
