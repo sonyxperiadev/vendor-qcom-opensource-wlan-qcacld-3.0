@@ -439,8 +439,6 @@ lim_process_beacon_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 	if (QDF_IS_STATUS_SUCCESS(lim_check_for_ml_probe_req(session)))
 		goto end;
 
-	lim_process_beacon_eht(mac_ctx, session, bcn_ptr);
-
 	/*
 	 * during scanning, when any session is active, and
 	 * beacon/Pr belongs to one of the session, fill up the

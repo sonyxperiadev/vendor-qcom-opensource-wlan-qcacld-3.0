@@ -165,7 +165,7 @@ void lim_process_gen_probe_rsp_frame(struct mac_context *mac_ctx,
 				     uint8_t *bcn_probe, uint32_t len)
 {
 	tSirProbeRespBeacon *probe_rsp;
-	tpSirMacMgmtHdr header;
+	struct wlan_frame_hdr *header;
 	QDF_STATUS status;
 
 	if (!bcn_probe || !len) {
@@ -184,9 +184,15 @@ void lim_process_gen_probe_rsp_frame(struct mac_context *mac_ctx,
 		return;
 	}
 
-	header = (tpSirMacMgmtHdr)(bcn_probe);
-	pe_debug("Generate Probe Resp(len %d): " QDF_MAC_ADDR_FMT,
-		 len, QDF_MAC_ADDR_REF(header->bssId));
+	header = (struct wlan_frame_hdr *)(bcn_probe);
+	pe_debug("Generate Probe Resp for cu (len %d): " QDF_MAC_ADDR_FMT,
+		 len, QDF_MAC_ADDR_REF(header->i_addr3));
+
+	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
+			   bcn_probe, len);
+
+	bcn_probe = (uint8_t *)(bcn_probe + sizeof(*header));
+	len -= sizeof(*header);
 
 	status = sir_convert_probe_frame2_struct(mac_ctx,
 						 bcn_probe, len, probe_rsp);
@@ -258,7 +264,7 @@ lim_process_probe_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_Packet_info
 
 	frame_len = WMA_GET_RX_PAYLOAD_LEN(rx_Packet_info);
 	pe_debug("Probe Resp(len %d): " QDF_MAC_ADDR_FMT " RSSI %d",
-		 WMA_GET_RX_MPDU_LEN(rx_Packet_info),
+		 WMA_GET_RX_PAYLOAD_LEN(rx_Packet_info),
 		 QDF_MAC_ADDR_REF(header->bssId),
 		 (uint)abs(mac_ctx->lim.bss_rssi));
 	/* Get pointer to Probe Response frame body */
@@ -284,12 +290,11 @@ lim_process_probe_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_Packet_info
 	if (mlo_is_mld_sta(session_entry->vdev)) {
 		cu_flag = false;
 		status = lim_get_bpcc_from_mlo_ie(probe_rsp, &bpcc);
-		if (QDF_IS_STATUS_SUCCESS(status)) {
+		if (QDF_IS_STATUS_SUCCESS(status))
 			cu_flag = lim_check_cu_happens(session_entry->vdev,
 						       bpcc);
-			lim_process_cu_for_probe_rsp(mac_ctx, session_entry,
-						     body, frame_len);
-		}
+		lim_process_cu_for_probe_rsp(mac_ctx, session_entry,
+					     body, frame_len);
 	}
 
 	if (session_entry->limMlmState ==
