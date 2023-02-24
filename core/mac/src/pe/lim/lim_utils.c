@@ -9274,6 +9274,8 @@ void lim_intersect_ap_emlsr_caps(struct mac_context *mac_ctx,
 		 add_bss->staContext.emlsr_trans_timeout);
 }
 
+#define MAX_MSD_OFDM_ED_THRESHOLD 10
+
 void lim_extract_msd_caps(struct mac_context *mac_ctx,
 			  struct pe_session *session,
 			  struct bss_params *add_bss,
@@ -9313,11 +9315,20 @@ void lim_extract_msd_caps(struct mac_context *mac_ctx,
 				assoc_rsp->mlo_ie.mlo_ie.medium_sync_delay_info.medium_sync_duration;
 			add_bss->staContext.msd_caps.med_sync_ofdm_ed_thresh =
 				assoc_rsp->mlo_ie.mlo_ie.medium_sync_delay_info.medium_sync_ofdm_ed_thresh;
+			if (add_bss->staContext.msd_caps.med_sync_ofdm_ed_thresh >
+			    MAX_MSD_OFDM_ED_THRESHOLD)
+				add_bss->staContext.msd_caps.med_sync_ofdm_ed_thresh = 0;
 			add_bss->staContext.msd_caps.med_sync_max_txop_num =
 				assoc_rsp->mlo_ie.mlo_ie.medium_sync_delay_info.medium_sync_max_txop_num;
 		} else {
-			/* Fill MSD params with zeroes if MSD caps are absent */
-			add_bss->staContext.msd_caps.med_sync_duration = 0;
+			/**
+			 * Fill MSD params with default values if MSD caps are
+			 * absent.
+			 * MSD duration = 5484usec / 32 = 171.
+			 * OFDM ED threshold = 0. FW adds -72 to Host value.
+			 * Maximum number of TXOPs = AP value (default = 0).
+			 */
+			add_bss->staContext.msd_caps.med_sync_duration = 171;
 			add_bss->staContext.msd_caps.med_sync_ofdm_ed_thresh = 0;
 			add_bss->staContext.msd_caps.med_sync_max_txop_num = 0;
 		}

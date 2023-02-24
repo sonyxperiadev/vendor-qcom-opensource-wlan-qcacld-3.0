@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1386,14 +1386,12 @@ static void wma_set_mlo_capability(tp_wma_handle wma,
 					params->emlsr_trans_timeout;
 		}
 		req->mlo_params.msd_cap_support = params->msd_caps_present;
-		if (req->mlo_params.msd_cap_support) {
-			req->mlo_params.medium_sync_duration =
+		req->mlo_params.medium_sync_duration =
 				params->msd_caps.med_sync_duration;
-			req->mlo_params.medium_sync_ofdm_ed_thresh =
+		req->mlo_params.medium_sync_ofdm_ed_thresh =
 				params->msd_caps.med_sync_ofdm_ed_thresh;
-			req->mlo_params.medium_sync_max_txop_num =
+		req->mlo_params.medium_sync_max_txop_num =
 				params->msd_caps.med_sync_max_txop_num;
-		}
 	} else {
 		wma_debug("Peer MLO context is NULL");
 		req->mlo_params.mlo_enabled = false;
