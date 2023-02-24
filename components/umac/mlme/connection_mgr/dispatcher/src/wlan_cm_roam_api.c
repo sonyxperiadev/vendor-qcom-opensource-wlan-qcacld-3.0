@@ -3898,3 +3898,17 @@ wlan_cm_get_assoc_btm_cap(struct wlan_objmgr_vdev *vdev)
 
 	return mlme_priv->connect_info.assoc_btm_cap;
 }
+
+bool wlan_cm_is_self_mld_roam_supported(struct wlan_objmgr_psoc *psoc)
+{
+	struct wmi_unified *wmi_handle;
+
+	wmi_handle = get_wmi_unified_hdl_from_psoc(psoc);
+	if (!wmi_handle) {
+		mlme_debug("Invalid WMI handle");
+		return false;
+	}
+
+	return wmi_service_enabled(wmi_handle,
+				   wmi_service_self_mld_roam_between_dbs_and_hbs);
+}

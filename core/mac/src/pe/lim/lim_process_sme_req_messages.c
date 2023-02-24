@@ -3136,7 +3136,15 @@ lim_fill_pe_session(struct mac_context *mac_ctx, struct pe_session *session,
 				   HI_RSSI_SCAN_RSSI_DELTA, &temp);
 	hi_rssi_scan_rssi_delta = temp.uint_value;
 
-	if (WLAN_REG_IS_24GHZ_CH_FREQ(bss_desc->chan_freq) &&
+	/*
+	 * Firmware will take care of checking hi_scan rssi delta, take care of
+	 * legacy -> legacy hi-rssi roam also if this feature flag is
+	 * advertised.
+	 */
+	if (wlan_cm_is_self_mld_roam_supported(mac_ctx->psoc)) {
+		wlan_cm_set_disable_hi_rssi(mac_ctx->pdev, session->vdev_id,
+					    false);
+	} else if (WLAN_REG_IS_24GHZ_CH_FREQ(bss_desc->chan_freq) &&
 	    (abs(bss_desc->rssi) >
 	     (neighbor_lookup_threshold - hi_rssi_scan_rssi_delta))) {
 		pe_debug("Enabling HI_RSSI, rssi: %d lookup_th: %d, delta:%d",

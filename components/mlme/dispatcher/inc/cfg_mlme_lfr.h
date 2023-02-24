@@ -1996,8 +1996,8 @@
  * <ini>
  * gRoamScanHiRssiDelta - Sets RSSI Delta for scan trigger
  * @Min: 0
- * @Max: 16
- * @Default: 10
+ * @Max: 40
+ * @Default: 23
  *
  * This INI is used to set change in RSSI at which scan is triggered
  * in 5GHz.
@@ -2013,8 +2013,8 @@
 #define CFG_LFR_ROAM_SCAN_HI_RSSI_DELTA CFG_INI_UINT( \
 	"gRoamScanHiRssiDelta", \
 	0, \
-	16, \
-	10, \
+	40, \
+	23, \
 	CFG_VALUE_OR_DEFAULT, \
 	"RSSI Delta for scan trigger")
 

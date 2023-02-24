@@ -1830,4 +1830,11 @@ wlan_cm_set_assoc_btm_cap(struct wlan_objmgr_vdev *vdev, bool val);
 bool
 wlan_cm_get_assoc_btm_cap(struct wlan_objmgr_vdev *vdev);
 
+/**
+ * wlan_cm_is_self_mld_roam_supported() - Is self mld roam supported
+ * @psoc: pointer to psoc object
+ *
+ * Return: bool, true: self mld roam supported
+ */
+bool wlan_cm_is_self_mld_roam_supported(struct wlan_objmgr_psoc *psoc);
 #endif  /* WLAN_CM_ROAM_API_H__ */
