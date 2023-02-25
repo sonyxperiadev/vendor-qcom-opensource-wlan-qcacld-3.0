@@ -51,6 +51,7 @@
 #include "hdd_dp_cfg.h"
 #include <wma_api.h>
 #include "wlan_hdd_object_manager.h"
+#include "wlan_dp_ucfg_api.h"
 
 #ifndef WLAN_MAC_ADDR_UPDATE_DISABLE
 /**
@@ -927,6 +928,7 @@ QDF_STATUS hdd_set_sme_config(struct hdd_context *hdd_ctx)
 	mac_handle_t mac_handle = hdd_ctx->mac_handle;
 	bool roam_scan_enabled;
 	bool enable_dfs_scan = true;
+	bool disconnect_nud;
 	uint32_t channel_bonding_mode;
 
 #ifdef FEATURE_WLAN_ESE
@@ -1007,6 +1009,9 @@ QDF_STATUS hdd_set_sme_config(struct hdd_context *hdd_ctx)
 	mlme_obj->cfg.lfr.rso_user_config.policy_params.dfs_mode =
 		STA_ROAM_POLICY_DFS_ENABLED;
 	mlme_obj->cfg.lfr.rso_user_config.policy_params.skip_unsafe_channels = 0;
+
+	disconnect_nud = ucfg_dp_is_disconect_after_roam_fail(hdd_ctx->psoc);
+	mlme_obj->cfg.lfr.disconnect_on_nud_roam_invoke_fail = disconnect_nud;
 
 	status = hdd_set_sme_cfgs_related_to_mlme(hdd_ctx, sme_config);
 	if (!QDF_IS_STATUS_SUCCESS(status))

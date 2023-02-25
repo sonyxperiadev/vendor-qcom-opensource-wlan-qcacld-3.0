@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -91,14 +91,24 @@ QDF_STATUS cm_abort_fw_roam(struct cnx_mgr *cm_ctx,
 			    wlan_cm_id cm_id)
 {
 	QDF_STATUS status;
+	enum wlan_cm_source source = CM_SOURCE_INVALID;
+	struct cm_roam_req *roam_req;
+	struct qdf_mac_addr bssid = QDF_MAC_ADDR_ZERO_INIT;
+
+	roam_req = cm_get_first_roam_command(cm_ctx->vdev);
+	if (roam_req) {
+		source = roam_req->req.source;
+		bssid = roam_req->req.bssid;
+	}
 
 	mlme_cm_osif_roam_abort_ind(cm_ctx->vdev);
 	status = cm_sm_deliver_event(cm_ctx->vdev,
 				     WLAN_CM_SM_EV_ROAM_ABORT,
 				     sizeof(wlan_cm_id), &cm_id);
-
 	if (QDF_IS_STATUS_ERROR(status))
 		cm_remove_cmd(cm_ctx, &cm_id);
+
+	cm_disconnect_roam_abort_fail(cm_ctx->vdev, source, &bssid, cm_id);
 
 	return status;
 }
