@@ -604,6 +604,7 @@ void wma_lost_link_info_handler(tp_wma_handle wma, uint32_t vdev_id,
 	if (wma_is_vdev_up(vdev_id) &&
 	    (WMI_VDEV_TYPE_STA == wma->interfaces[vdev_id].type) &&
 	    (0 == wma->interfaces[vdev_id].sub_type)) {
+		lim_update_lost_link_rssi(wma->mac_context, rssi);
 		lost_link_info = qdf_mem_malloc(sizeof(*lost_link_info));
 		if (!lost_link_info)
 			return;
