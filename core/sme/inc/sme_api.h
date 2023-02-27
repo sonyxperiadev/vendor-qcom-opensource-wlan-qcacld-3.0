@@ -3820,6 +3820,13 @@ int sme_send_vdev_pause_for_bcn_period(mac_handle_t mac_handle,
 {
 	return 0;
 }
+
+static inline
+void sme_activate_mlo_links(mac_handle_t mac_handle, uint8_t session_id,
+			    uint8_t num_links,
+			    struct qdf_mac_addr active_link_addr[2])
+{
+}
 #endif
 
 /**
