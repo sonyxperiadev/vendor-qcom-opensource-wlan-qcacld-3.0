@@ -48,3 +48,8 @@ uint8_t wlan_nan_get_vdev_id_from_bssid(struct wlan_objmgr_pdev *pdev,
 {
 	return nan_get_vdev_id_from_bssid(pdev, bssid, dbg_id);
 }
+
+bool wlan_nan_is_disc_active(struct wlan_objmgr_psoc *psoc)
+{
+	return nan_is_disc_active(psoc);
+}
