@@ -37,6 +37,7 @@ QDF_STATUS if_mgr_ap_start_bss(struct wlan_objmgr_vdev *vdev,
 {
 	struct wlan_objmgr_psoc *psoc;
 	struct wlan_objmgr_pdev *pdev;
+	QDF_STATUS status;
 
 	pdev = wlan_vdev_get_pdev(vdev);
 	if (!pdev)
@@ -56,6 +57,13 @@ QDF_STATUS if_mgr_ap_start_bss(struct wlan_objmgr_vdev *vdev,
 		if (!QDF_IS_STATUS_SUCCESS(
 		    policy_mgr_wait_for_connection_update(psoc))) {
 			ifmgr_err("qdf wait for event failed!!");
+			return QDF_STATUS_E_FAILURE;
+		}
+	}
+	if (policy_mgr_is_chan_switch_in_progress(psoc)) {
+		status = policy_mgr_wait_chan_switch_complete_evt(psoc);
+		if (!QDF_IS_STATUS_SUCCESS(status)) {
+			ifmgr_err("qdf wait for csa event failed!!");
 			return QDF_STATUS_E_FAILURE;
 		}
 	}

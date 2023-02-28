@@ -702,6 +702,34 @@ void policy_mgr_check_concurrent_intf_and_restart_sap(
 #endif /* FEATURE_WLAN_MCC_TO_SCC_SWITCH */
 
 /**
+ * policy_mgr_is_chan_switch_in_progress() - Check if any SAP/GO
+ * CSA is in progress or not
+ * @psoc: PSOC object information
+ *
+ * Return: true if AP CSA is in progress
+ */
+bool policy_mgr_is_chan_switch_in_progress(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * policy_mgr_wait_chan_switch_complete_evt() - Wait for SAP/GO CSA complete
+ * event
+ * @psoc: PSOC object information
+ *
+ * Return: QDF_STATUS_SUCCESS if CSA complete
+ */
+QDF_STATUS policy_mgr_wait_chan_switch_complete_evt(
+		struct wlan_objmgr_psoc *psoc);
+
+/**
+ * policy_mgr_is_ap_start_in_progress() - Check if any SAP/GO
+ * start is in progress or not
+ * @psoc: PSOC object information
+ *
+ * Return: true if AP starting is in progress
+ */
+bool policy_mgr_is_ap_start_in_progress(struct wlan_objmgr_psoc *psoc);
+
+/**
  * policy_mgr_get_conc_vdev_on_same_mac() - Function to get concurrent
  *                                          vdev on same mac
  * @psoc: PSOC object information
