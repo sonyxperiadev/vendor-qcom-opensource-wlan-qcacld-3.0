@@ -313,6 +313,29 @@ static void lim_process_auth_open_system_algo(struct mac_context *mac_ctx,
 }
 
 #ifdef WLAN_FEATURE_SAE
+#ifdef WLAN_FEATURE_11BE_MLO
+/**
+ * lim_external_auth_update_pre_auth_node_mld() - Update preauth node mld addr
+ * for the peer performing external authentication
+ * @auth_node: Pointer to pre-auth node to be added to the list
+ * @peer_mld: Peer MLD address
+ *
+ * Return: None
+ */
+static void
+lim_external_auth_update_pre_auth_node_mld(struct tLimPreAuthNode *auth_node,
+					   struct qdf_mac_addr *peer_mld)
+{
+	qdf_mem_copy((uint8_t *)auth_node->peer_mld, peer_mld->bytes,
+		     QDF_MAC_ADDR_SIZE);
+}
+#else
+static void
+lim_external_auth_update_pre_auth_node_mld(struct tLimPreAuthNode *auth_node,
+					   struct qdf_mac_addr *peer_mld)
+{
+}
+#endif
 
 /**
  * lim_external_auth_add_pre_auth_node()- Add preauth node for the peer
@@ -344,10 +367,8 @@ static void lim_external_auth_add_pre_auth_node(struct mac_context *mac_ctx,
 		 QDF_MAC_ADDR_REF(mac_hdr->sa));
 	qdf_mem_copy((uint8_t *)auth_node->peerMacAddr,
 		     mac_hdr->sa, sizeof(tSirMacAddr));
-#ifdef WLAN_FEATURE_11BE_MLO
-	qdf_mem_copy((uint8_t *)auth_node->peer_mld, peer_mld->bytes,
-		     QDF_MAC_ADDR_SIZE);
-#endif
+	lim_external_auth_update_pre_auth_node_mld(auth_node, peer_mld);
+
 	auth_node->mlmState = mlm_state;
 	auth_node->authType = eSIR_AUTH_TYPE_SAE;
 	auth_node->timestamp = qdf_mc_timer_get_system_ticks();
