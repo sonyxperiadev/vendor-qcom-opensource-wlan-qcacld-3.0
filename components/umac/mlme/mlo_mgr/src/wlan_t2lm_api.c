@@ -147,14 +147,12 @@ QDF_STATUS t2lm_handle_rx_req(struct wlan_objmgr_vdev *vdev,
 
 	if (QDF_IS_STATUS_SUCCESS(status) &&
 	    t2lm_req.t2lm_info[dir].direction != WLAN_T2LM_INVALID_DIRECTION) {
-		/* Apply T2LM config to peer T2LM ctx and send it to FW */
-		t2lm_info = &ml_peer->t2lm_policy.ongoing_tid_to_link_mapping.t2lm_info[dir];
+		/* Apply T2LM config to peer T2LM ctx */
+		t2lm_info = &ml_peer->t2lm_policy.t2lm_negotiated_info.t2lm_info[dir];
 		qdf_mem_copy(t2lm_info, &t2lm_req.t2lm_info[dir],
 			     sizeof(struct wlan_t2lm_info));
-		status = wlan_send_tid_to_link_mapping(vdev, t2lm_info);
-		if (!QDF_IS_STATUS_SUCCESS(status))
-			mlme_err("Could not send updated T2LM config to FW");
 	}
+
 	*token = t2lm_req.dialog_token;
 
 	return status;
