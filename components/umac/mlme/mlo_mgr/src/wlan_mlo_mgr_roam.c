@@ -146,10 +146,6 @@ mlo_clear_link_bmap(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
 	}
 
 	mlo_clear_connect_req_links_bmap(vdev);
-	wlan_vdev_mlme_clear_mlo_vdev(vdev);
-	if (wlan_vdev_mlme_is_mlo_link_vdev(vdev))
-		wlan_vdev_mlme_clear_mlo_link_vdev(vdev);
-
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_SB_ID);
 }
 
