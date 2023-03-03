@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -246,6 +246,7 @@ struct medium_assess_data {
  * @pdev_id: pdev_id of request
  * @peer_mac_addr: peer mac address
  * @ml_vdev_info: mlo_stats_vdev_params structure
+ * @ml_peer_mac_addr: Array of ml peer mac addresses
  */
 struct request_info {
 	void *cookie;
@@ -271,6 +272,7 @@ struct request_info {
 	uint8_t peer_mac_addr[QDF_MAC_ADDR_SIZE];
 #ifdef WLAN_FEATURE_11BE_MLO
 	struct mlo_stats_vdev_params ml_vdev_info;
+	uint8_t ml_peer_mac_addr[WLAN_UMAC_MLO_MAX_VDEVS][QDF_MAC_ADDR_SIZE];
 #endif
 };
 

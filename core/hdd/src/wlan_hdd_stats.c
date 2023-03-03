@@ -2100,6 +2100,8 @@ wlan_hdd_get_mlo_vdev_params(struct hdd_adapter *adapter,
 			     struct request_info *req_info,
 			     tSirLLStatsGetReq *req)
 {
+	struct wlan_objmgr_peer *peer;
+	struct wlan_objmgr_vdev *vdev;
 	struct wlan_objmgr_psoc *psoc = adapter->hdd_ctx->psoc;
 	struct mlo_stats_vdev_params *info = &req_info->ml_vdev_info;
 	int i;
@@ -2111,8 +2113,32 @@ wlan_hdd_get_mlo_vdev_params(struct hdd_adapter *adapter,
 	status = mlo_get_mlstats_vdev_params(psoc, info, adapter->vdev_id);
 	if (QDF_IS_STATUS_ERROR(status))
 		return status;
-	for (i = 0; i < info->ml_vdev_count; i++)
+	for (i = 0; i < info->ml_vdev_count; i++) {
 		bmap |= (1 << info->ml_vdev_id[i]);
+
+		vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc,
+							    info->ml_vdev_id[i],
+							    WLAN_OSIF_STATS_ID);
+		if (!vdev) {
+			hdd_err("vdev object is NULL for vdev %d",
+				info->ml_vdev_id[i]);
+			return QDF_STATUS_E_INVAL;
+		}
+
+		peer = wlan_objmgr_vdev_try_get_bsspeer(vdev,
+							WLAN_OSIF_STATS_ID);
+		if (!peer) {
+			hdd_err("peer is null");
+			hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_STATS_ID);
+			return QDF_STATUS_E_INVAL;
+		}
+
+		qdf_mem_copy(&(req_info->ml_peer_mac_addr[i][0]), peer->macaddr,
+			     QDF_MAC_ADDR_SIZE);
+
+		wlan_objmgr_peer_release_ref(peer, WLAN_OSIF_STATS_ID);
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_STATS_ID);
+	}
 	req->mlo_vdev_id_bitmap = bmap;
 	return QDF_STATUS_SUCCESS;
 }
