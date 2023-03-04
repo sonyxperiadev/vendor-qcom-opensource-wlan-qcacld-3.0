@@ -2152,6 +2152,7 @@ wlan_hdd_set_station_stats_request_pending(struct hdd_adapter *adapter,
 		status = wlan_hdd_get_mlo_vdev_params(adapter, &info, req);
 		if (QDF_IS_STATUS_ERROR(status)) {
 			hdd_err("unable to get vdev params for mlo stats");
+			hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_STATS_ID);
 			return status;
 		}
 	}
