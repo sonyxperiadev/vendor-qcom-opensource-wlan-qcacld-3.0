@@ -54,6 +54,18 @@ struct hdd_adapter_create_param {
 			   ((x)->mlo_adapter_info.associate_with_ml_adapter)
 #define hdd_adapter_get_mlo_adapter_from_link(x) \
 			   ((x)->mlo_adapter_info.ml_adapter)
+/* MLO_STATE_COMMANDS */
+#define FEATURE_ML_LINK_STATE_COMMANDS					\
+	{								\
+		.info.vendor_id = QCA_NL80211_VENDOR_ID,		\
+		.info.subcmd = QCA_NL80211_VENDOR_SUBCMD_MLO_LINK_STATE,\
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |			\
+			 WIPHY_VENDOR_CMD_NEED_NETDEV |			\
+			 WIPHY_VENDOR_CMD_NEED_RUNNING,			\
+		.doit = wlan_hdd_cfg80211_process_ml_link_state,	\
+		vendor_command_policy(ml_link_state_event_policy,	\
+				QCA_WLAN_VENDOR_ATTR_LINK_STATE_MAX)	\
+	},
 #else
 #define hdd_adapter_is_link_adapter(x) (0)
 #define hdd_adapter_is_ml_adapter(x)   (0)
@@ -175,6 +187,38 @@ void hdd_mlo_t2lm_register_callback(struct wlan_objmgr_vdev *vdev);
  */
 void hdd_mlo_t2lm_unregister_callback(struct wlan_objmgr_vdev *vdev);
 
+/**
+ * wlan_handle_mlo_link_state_operation() - mlo link state operation
+ * @wiphy: wiphy pointer
+ * @vdev: vdev handler
+ * @data: pointer to incoming NL vendor data
+ * @data_len: length of @data
+ *
+ * Based on the data get or set the mlo link state
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_handle_mlo_link_state_operation(struct wiphy *wiphy,
+				     struct wlan_objmgr_vdev *vdev,
+				     const void *data, int data_len);
+
+extern const struct
+nla_policy ml_link_state_event_policy[QCA_WLAN_VENDOR_ATTR_LINK_STATE_MAX + 1];
+
+/**
+ * wlan_hdd_cfg80211_process_ml_link_state() - process ml link state
+ * @wiphy: wiphy pointer
+ * @wdev: pointer to struct wireless_dev
+ * @data: pointer to incoming NL vendor data
+ * @data_len: length of @data
+ *
+ * Set (or) get the ml link state.
+ *
+ * Return:  0 on success; error number otherwise.
+ */
+int wlan_hdd_cfg80211_process_ml_link_state(struct wiphy *wiphy,
+					    struct wireless_dev *wdev,
+					    const void *data, int data_len);
 #else
 static inline
 QDF_STATUS hdd_wlan_unregister_mlo_interfaces(struct hdd_adapter *adapter,
@@ -226,5 +270,23 @@ static inline
 void hdd_mlo_t2lm_unregister_callback(struct wlan_objmgr_vdev *vdev)
 {
 }
+
+static inline QDF_STATUS
+wlan_handle_mlo_link_state_operation(struct wiphy *wiphy,
+				     struct wlan_objmgr_vdev *vdev,
+				     const void *data, int data_len)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+int wlan_hdd_cfg80211_process_ml_link_state(struct wiphy *wiphy,
+					    struct wireless_dev *wdev,
+					    const void *data, int data_len)
+{
+	return -ENOTSUPP;
+}
+
+#define FEATURE_ML_LINK_STATE_COMMANDS
 #endif
 #endif
