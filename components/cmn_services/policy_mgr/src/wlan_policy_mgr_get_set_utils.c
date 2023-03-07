@@ -6224,6 +6224,16 @@ policy_mgr_handle_mcc_ml_sta(struct wlan_objmgr_psoc *psoc,
 					       ml_sta_vdev_lst, num_ml_sta))
 		return QDF_STATUS_E_FAILURE;
 
+	/*
+	 * eMLSR is allowed in MCC mode also. So, don't disable any links
+	 * if current connection happens in eMLSR mode.
+	 */
+	if (policy_mgr_is_mlo_in_mode_emlsr(psoc, ml_sta_vdev_lst,
+					    &num_ml_sta)) {
+		policy_mgr_debug("Don't disable eMLSR links");
+		return QDF_STATUS_E_FAILURE;
+	}
+
 	policy_mgr_mlo_sta_set_link(psoc, MLO_LINK_FORCE_REASON_CONNECT,
 				    MLO_LINK_FORCE_MODE_ACTIVE_NUM,
 				    num_ml_sta, ml_sta_vdev_lst);
