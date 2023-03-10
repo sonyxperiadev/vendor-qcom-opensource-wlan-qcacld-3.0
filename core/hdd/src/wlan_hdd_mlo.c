@@ -138,7 +138,8 @@ QDF_STATUS hdd_wlan_unregister_mlo_interfaces(struct hdd_adapter *adapter,
 	mlo_adapter_info = &adapter->mlo_adapter_info;
 
 	if (mlo_adapter_info->is_link_adapter) {
-		if (adapter->device_mode == QDF_STA_MODE) {
+		if (!qdf_is_macaddr_equal(&adapter->mac_addr,
+					  &adapter->mld_addr)) {
 			ucfg_dp_destroy_intf(adapter->hdd_ctx->psoc,
 					     &adapter->mac_addr);
 		}
@@ -150,7 +151,8 @@ QDF_STATUS hdd_wlan_unregister_mlo_interfaces(struct hdd_adapter *adapter,
 		link_adapter = mlo_adapter_info->link_adapter[i];
 		if (!link_adapter)
 			continue;
-		if (adapter->device_mode == QDF_STA_MODE) {
+		if (!qdf_is_macaddr_equal(&link_adapter->mac_addr,
+					  &link_adapter->mld_addr)) {
 			ucfg_dp_destroy_intf(link_adapter->hdd_ctx->psoc,
 					     &link_adapter->mac_addr);
 		}
