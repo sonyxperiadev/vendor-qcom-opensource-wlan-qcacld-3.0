@@ -240,6 +240,24 @@ struct hdd_adapter *hdd_get_ml_adapter(struct hdd_context *hdd_ctx)
 	return NULL;
 }
 
+void hdd_mlo_t2lm_register_callback(struct wlan_objmgr_vdev *vdev)
+{
+	if (!vdev || !vdev->mlo_dev_ctx)
+		return;
+
+	wlan_register_t2lm_link_update_notify_handler(
+			hdd_mlo_dev_t2lm_notify_link_update,
+			vdev->mlo_dev_ctx);
+}
+
+void hdd_mlo_t2lm_unregister_callback(struct wlan_objmgr_vdev *vdev)
+{
+	if (!vdev || !vdev->mlo_dev_ctx)
+		return;
+
+	wlan_unregister_t2lm_link_update_notify_handler(vdev->mlo_dev_ctx, 0);
+}
+
 #ifdef WLAN_FEATURE_DYNAMIC_MAC_ADDR_UPDATE
 int hdd_update_vdev_mac_address(struct hdd_context *hdd_ctx,
 				struct hdd_adapter *adapter,

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -158,6 +158,23 @@ struct hdd_adapter *hdd_get_ml_adapter(struct hdd_context *hdd_ctx);
  * Return: adapter or NULL
  */
 struct hdd_adapter *hdd_get_assoc_link_adapter(struct hdd_adapter *ml_adapter);
+
+/**
+ * hdd_mlo_t2lm_register_callback() - Register T2LM callback
+ * @vdev: Pointer to vdev
+ *
+ * Return: None
+ */
+void hdd_mlo_t2lm_register_callback(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * hdd_mlo_t2lm_unregister_callback() - Unregister T2LM callback
+ * @vdev: Pointer to vdev
+ *
+ * Return: None
+ */
+void hdd_mlo_t2lm_unregister_callback(struct wlan_objmgr_vdev *vdev);
+
 #else
 static inline
 QDF_STATUS hdd_wlan_unregister_mlo_interfaces(struct hdd_adapter *adapter,
@@ -198,6 +215,16 @@ static inline
 struct hdd_adapter *hdd_get_assoc_link_adapter(struct hdd_adapter *ml_adapter)
 {
 	return NULL;
+}
+
+static inline
+void hdd_mlo_t2lm_register_callback(struct wlan_objmgr_vdev *vdev)
+{
+}
+
+static inline
+void hdd_mlo_t2lm_unregister_callback(struct wlan_objmgr_vdev *vdev)
+{
 }
 #endif
 #endif

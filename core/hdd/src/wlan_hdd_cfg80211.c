@@ -26375,6 +26375,39 @@ wlan_hdd_cfg80211_get_t2lm_mapping_status(struct wiphy *wiphy,
 
 	return errno;
 }
+
+QDF_STATUS hdd_mlo_dev_t2lm_notify_link_update(struct wlan_objmgr_vdev *vdev,
+					       struct wlan_t2lm_info *t2lm)
+{
+	struct cfg80211_mlo_tid_map map;
+	struct hdd_adapter *adapter;
+	struct net_device *dev;
+	bool found = false;
+
+	adapter = wlan_hdd_get_adapter_from_objmgr(vdev);
+	if (!adapter) {
+		hdd_err("null adapter");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	dev = adapter->dev;
+	hdd_enter_dev(dev);
+
+	qdf_mem_zero(&map, sizeof(map));
+
+	wlan_hdd_fill_map(t2lm, &map, &found);
+	if (!found) {
+		hdd_debug("Failed to get t2lm info");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	wlan_hdd_print_t2lm_info(&map);
+	cfg80211_tid_to_link_map_change(dev, &map);
+
+	hdd_exit();
+
+	return QDF_STATUS_SUCCESS;
+}
 #endif
 
 static struct cfg80211_ops wlan_hdd_cfg80211_ops = {

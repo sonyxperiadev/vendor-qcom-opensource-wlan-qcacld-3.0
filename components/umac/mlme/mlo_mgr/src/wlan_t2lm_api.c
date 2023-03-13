@@ -206,6 +206,10 @@ QDF_STATUS t2lm_handle_rx_teardown(struct wlan_objmgr_vdev *vdev,
 	}
 
 	wlan_t2lm_clear_peer_negotiation(peer);
+
+	/* Notify the registered caller about the link update*/
+	wlan_mlo_dev_t2lm_notify_link_update(vdev,
+					     &t2lm_ctx->established_t2lm.t2lm);
 	wlan_send_tid_to_link_mapping(vdev,
 				      &t2lm_ctx->established_t2lm.t2lm);
 
