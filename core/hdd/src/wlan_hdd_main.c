@@ -8232,13 +8232,7 @@ QDF_STATUS hdd_stop_adapter_ext(struct hdd_context *hdd_ctx,
 		ucfg_ipa_flush(hdd_ctx->pdev);
 
 		if (!ucfg_pre_cac_adapter_is_active(adapter->vdev)) {
-			/**
-			 * don't flush pre-cac destroy if we are destroying
-			 * pre-cac adapter
-			 */
-			if (!ucfg_pre_cac_is_active(hdd_ctx->psoc))
-				ucfg_pre_cac_stop(hdd_ctx->psoc);
-
+			ucfg_pre_cac_stop(hdd_ctx->psoc);
 			hdd_close_pre_cac_adapter(hdd_ctx);
 		} else {
 			if (ucfg_pre_cac_set_status(adapter->vdev, false))
