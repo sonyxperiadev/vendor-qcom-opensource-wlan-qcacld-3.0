@@ -778,10 +778,3 @@ void hdd_medium_assess_deinit(void)
 		qdf_mc_timer_destroy(&hdd_medium_assess_timer);
 	}
 }
-
-bool hdd_medium_access_state(void)
-{
-	if (!timer_enable)
-		return true;
-	return false;
-}

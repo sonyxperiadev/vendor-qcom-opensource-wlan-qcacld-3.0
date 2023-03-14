@@ -16538,6 +16538,8 @@ void wlan_hdd_start_sap(struct hdd_adapter *ap_adapter, bool reinit)
 	}
 	hdd_info("SAP Start Success");
 
+	if (reinit)
+		hdd_medium_assess_init();
 	wlansap_reset_sap_config_add_ie(sap_config, eUPDATE_IE_ALL);
 	set_bit(SOFTAP_BSS_STARTED, &ap_adapter->event_flags);
 	if (hostapd_state->bss_state == BSS_START) {
@@ -19197,6 +19199,7 @@ void hdd_restart_sap(struct hdd_adapter *ap_adapter)
 		wlansap_reset_sap_config_add_ie(sap_config,
 						eUPDATE_IE_ALL);
 		hdd_err("SAP Start Success");
+		hdd_medium_assess_init();
 		set_bit(SOFTAP_BSS_STARTED, &ap_adapter->event_flags);
 		if (hostapd_state->bss_state == BSS_START) {
 			policy_mgr_incr_active_session(hdd_ctx->psoc,
