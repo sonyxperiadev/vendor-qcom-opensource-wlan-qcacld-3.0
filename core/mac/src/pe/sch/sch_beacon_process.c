@@ -844,6 +844,7 @@ static void __sch_beacon_process_for_session(struct mac_context *mac_ctx,
 	}
 
 	lim_process_beacon_eht(mac_ctx, session, bcn);
+	lim_process_bcn_prb_rsp_t2lm(mac_ctx, session, bcn);
 }
 
 #ifdef WLAN_FEATURE_11AX_BSS_COLOR
@@ -1069,7 +1070,7 @@ sch_beacon_process(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 		pe_err_rl("beacon parsing failed");
 		return;
 	}
-	lim_process_bcn_prb_rsp_t2lm(mac_ctx, session, &bcn);
+
 	sch_send_beacon_report(mac_ctx, &bcn, session);
 	__sch_beacon_process_for_session(mac_ctx, &bcn, rx_pkt_info, session);
 }
