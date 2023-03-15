@@ -48,6 +48,7 @@
 #include "lim_types.h"
 #include <wlan_mlo_mgr_main.h>
 #include "wlan_nan_api_i.h"
+#include <utils_mlo.h>
 /**
  * is_auth_valid
  *
