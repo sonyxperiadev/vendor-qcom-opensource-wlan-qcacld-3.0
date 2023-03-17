@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1506,6 +1506,46 @@ end:
 		     (void *)limMsg->bodyptr);
 	return;
 } /*** end lim_handle80211_frames() ***/
+
+QDF_STATUS lim_handle_frame_genby_mbssid(uint8_t *frame, uint32_t frame_len,
+					 uint8_t frm_subtype, char *bssid)
+{
+	struct mac_context *mac_ctx;
+	struct pe_session *session;
+	uint8_t sessionid;
+	t_packetmeta meta_data;
+
+	mac_ctx = cds_get_context(QDF_MODULE_ID_PE);
+	if (!mac_ctx) {
+		pe_err("mac ctx is null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	session = pe_find_session_by_bssid(mac_ctx, bssid, &sessionid);
+	if (!session)
+		return QDF_STATUS_E_INVAL;
+
+	meta_data.mpdu_hdr_ptr = frame;
+	meta_data.mpdu_data_ptr = frame + sizeof(struct wlan_frame_hdr);
+	meta_data.mpdu_data_len = frame_len - sizeof(struct wlan_frame_hdr);
+
+	if (frm_subtype == MGMT_SUBTYPE_BEACON) {
+		pe_debug("Gen beacon frame for critical update feature");
+		if (session->limSmeState == eLIM_SME_LINK_EST_STATE ||
+		    session->limSmeState == eLIM_SME_NORMAL_STATE)
+			sch_beacon_process(mac_ctx, (uint8_t *)&meta_data,
+					   session);
+		else
+			lim_process_beacon_frame(mac_ctx, (uint8_t *)&meta_data,
+						 session);
+	} else if (frm_subtype == MGMT_SUBTYPE_PROBE_RESP) {
+		pe_debug("Gen Probe rsp frame for critical update feature");
+		lim_process_probe_rsp_frame(mac_ctx, (uint8_t *)&meta_data,
+						      session);
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
 
 void lim_process_abort_scan_ind(struct mac_context *mac_ctx,
 	uint8_t vdev_id, uint32_t scan_id, uint32_t scan_requestor_id)

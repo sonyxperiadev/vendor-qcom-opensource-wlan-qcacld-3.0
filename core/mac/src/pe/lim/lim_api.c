@@ -725,6 +725,53 @@ static QDF_STATUS lim_unregister_sap_bcn_callback(struct mac_context *mac_ctx)
 	return status;
 }
 
+/*
+ * lim_register_scan_mbssid_callback(): Register callback with scan module
+ * @mac_ctx: pointer to the global mac context
+ *
+ * Registers the function lim_register_scan_mbssid_callback as callback
+ * with the Scan module to handle generated frames by MBSSID IE
+ *
+ * Return: QDF Status
+ */
+static QDF_STATUS
+lim_register_scan_mbssid_callback(struct mac_context *mac_ctx)
+{
+	QDF_STATUS status;
+
+	status = wlan_scan_register_mbssid_cb(mac_ctx->psoc,
+					      lim_handle_frame_genby_mbssid);
+	if (!QDF_IS_STATUS_SUCCESS(status)) {
+		pe_err("failed with status code %08d [x%08x]",
+		       status, status);
+	}
+
+	return status;
+}
+
+/*
+ * lim_unregister_scan_mbssid_callback(): Unregister callback with scan module
+ * @mac_ctx: pointer to the global mac context
+ *
+ * Unregisters the callback registered with the Scan module to handle
+ * generated frames by MBSSID IE
+ *
+ * Return: QDF Status
+ */
+static QDF_STATUS
+lim_unregister_scan_mbssid_callback(struct mac_context *mac_ctx)
+{
+	QDF_STATUS status;
+
+	status = wlan_scan_register_mbssid_cb(mac_ctx->psoc, NULL);
+	if (!QDF_IS_STATUS_SUCCESS(status)) {
+		pe_err("failed with status code %08d [x%08x]",
+		       status, status);
+	}
+
+	return status;
+}
+
 static void lim_register_policy_mgr_callback(struct wlan_objmgr_psoc *psoc)
 {
 	struct policy_mgr_conc_cbacks conc_cbacks;
@@ -850,6 +897,7 @@ QDF_STATUS pe_open(struct mac_context *mac, struct cds_config_info *cds_cfg)
 	lim_register_debug_callback();
 	lim_nan_register_callbacks(mac);
 	p2p_register_callbacks(mac);
+	lim_register_scan_mbssid_callback(mac);
 	lim_register_sap_bcn_callback(mac);
 	wlan_reg_register_ctry_change_callback(
 					mac->psoc,
@@ -896,6 +944,7 @@ QDF_STATUS pe_close(struct mac_context *mac)
 
 	qdf_hang_event_unregister_notifier(&pe_hang_event_notifier);
 	lim_cleanup(mac);
+	lim_unregister_scan_mbssid_callback(mac);
 	lim_unregister_sap_bcn_callback(mac);
 	wlan_reg_unregister_ctry_change_callback(
 					mac->psoc,
