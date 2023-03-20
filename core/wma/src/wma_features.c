@@ -748,7 +748,7 @@ QDF_STATUS wma_sr_update(tp_wma_handle wma, uint8_t vdev_id, bool enable)
 	}
 
 	if (!wlan_vdev_mlme_get_he_spr_enabled(vdev)) {
-		wma_err("Spatial Reuse disabled for vdev_id: %u", vdev_id);
+		wma_debug("Spatial Reuse disabled for vdev_id: %u", vdev_id);
 		status = QDF_STATUS_E_NOSUPPORT;
 		goto release_ref;
 	}

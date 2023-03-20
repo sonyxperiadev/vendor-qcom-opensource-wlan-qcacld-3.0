@@ -1813,6 +1813,7 @@ static QDF_STATUS p2p_execute_tx_action_frame(
 	uint32_t nbytes_copy;
 	uint32_t buf_len = tx_ctx->buf_len;
 	struct p2p_frame_info *frame_info;
+	struct wlan_objmgr_vdev *vdev;
 
 	frame_info = &(tx_ctx->frame_info);
 	if (frame_info->sub_type == P2P_MGMT_PROBE_RSP) {
@@ -1831,6 +1832,18 @@ static QDF_STATUS p2p_execute_tx_action_frame(
 			ie_len = p2p_ie[1];
 			presence_noa_attr = p2p_get_presence_noa_attr(
 						ie, ie_len);
+		}
+	} else if (frame_info->type == P2P_FRAME_MGMT &&
+		   frame_info->sub_type == P2P_MGMT_ACTION) {
+		vdev = wlan_objmgr_get_vdev_by_id_from_psoc(
+				tx_ctx->p2p_soc_obj->soc, tx_ctx->vdev_id,
+				WLAN_P2P_ID);
+
+		if (vdev) {
+			wlan_mlo_update_action_frame_from_user(vdev,
+							       tx_ctx->buf,
+							       tx_ctx->buf_len);
+			wlan_objmgr_vdev_release_ref(vdev, WLAN_P2P_ID);
 		}
 	}
 
@@ -1882,6 +1895,7 @@ static QDF_STATUS p2p_execute_tx_action_frame(
 		qdf_nbuf_free(packet);
 		return status;
 	}
+
 	status = p2p_mgmt_tx(tx_ctx, buf_len, packet, frame);
 	if (status == QDF_STATUS_SUCCESS) {
 		if (tx_ctx->no_ack) {

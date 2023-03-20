@@ -513,7 +513,7 @@ os_if_qmi_wfds_del_server(struct qmi_handle *qmi_hdl,
 static struct qmi_msg_handler qmi_wfds_msg_handler[] = {
 	{
 		.type = QMI_INDICATION,
-		.msg_id = QMI_WFDS_MEM_REQ_V01,
+		.msg_id = QMI_WFDS_MEM_IND_V01,
 		.ei = wfds_mem_ind_msg_v01_ei,
 		.decoded_size = sizeof(struct wfds_mem_ind_msg_v01),
 		.fn = os_if_qmi_wfds_request_mem_ind_cb

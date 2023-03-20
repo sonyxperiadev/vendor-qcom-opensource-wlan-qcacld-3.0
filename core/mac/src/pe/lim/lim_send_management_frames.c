@@ -196,6 +196,13 @@ lim_populate_ml_probe_req(struct mac_context *mac,
 	/* mld id is always 0 for tx link for SAP or AP */
 	ml_prb_req->mld_id = 0;
 
+	if (wlan_vdev_mlme_cap_get(session->vdev,
+				   WLAN_VDEV_C_EXCL_STA_PROF_PRB_REQ)) {
+		pe_debug("Do not populate sta profile in MLO IE");
+		goto no_sta_prof;
+	}
+	pe_debug("Populate sta profile in MLO IE");
+
 	stacontrol = htole16(stacontrol);
 	partner_info = session->lim_join_req->partner_info;
 
@@ -219,6 +226,7 @@ lim_populate_ml_probe_req(struct mac_context *mac,
 		ml_prb_req->sta_profile[link].sta_control = stacontrol;
 		ml_probe_len += WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_SIZE;
 	}
+no_sta_prof:
 	ml_prb_req->ml_ie_ff.elem_len = ml_probe_len;
 	*ml_probe_req_len = ml_probe_len + MIN_IE_LEN;
 
@@ -1037,6 +1045,7 @@ lim_send_probe_rsp_mgmt_frame(struct mac_context *mac_ctx,
 	if (extracted_ext_cap_flag)
 		lim_merge_extcap_struct(&frm->ExtCap, &extracted_ext_cap,
 					true);
+	populate_dot11f_bcn_prot_extcaps(mac_ctx, pe_session, &frm->ExtCap);
 
 	status = dot11f_get_packed_probe_response_size(mac_ctx, frm, &payload);
 	if (DOT11F_FAILED(status)) {
@@ -1900,7 +1909,7 @@ lim_send_assoc_rsp_mgmt_frame(struct mac_context *mac_ctx,
 	if (extracted_flag)
 		lim_merge_extcap_struct(&(frm.ExtCap), &extracted_ext_cap,
 					true);
-
+	populate_dot11f_bcn_prot_extcaps(mac_ctx, pe_session, &(frm.ExtCap));
 	if (sta && lim_is_sta_eht_capable(sta) &&
 	    lim_is_mlo_conn(pe_session, sta) &&
 	    lim_is_session_eht_capable(pe_session) &&

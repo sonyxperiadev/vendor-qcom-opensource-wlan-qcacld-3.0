@@ -4865,12 +4865,11 @@ int hdd_stop_no_trans(struct net_device *dev)
 	/* DeInit the adapter. This ensures datapath cleanup as well */
 	hdd_deinit_adapter(hdd_ctx, adapter, true);
 
-	if (!hdd_is_any_interface_open(hdd_ctx))
-		hdd_psoc_idle_timer_start(hdd_ctx);
-
 reset_iface_opened:
 	/* Make sure the interface is marked as closed */
 	clear_bit(DEVICE_IFACE_OPENED, &adapter->event_flags);
+	if (!hdd_is_any_interface_open(hdd_ctx))
+		hdd_psoc_idle_timer_start(hdd_ctx);
 	hdd_exit();
 
 	return 0;
@@ -5518,8 +5517,8 @@ void wlan_hdd_release_intf_addr(struct hdd_context *hdd_ctx,
 
 	}
 	if (i == QDF_MAX_CONCURRENCY_PERSONA)
-		hdd_err("Releasing non existing MAC "QDF_MAC_ADDR_FMT,
-			QDF_MAC_ADDR_REF(releaseAddr));
+		hdd_debug("Releasing non existing MAC " QDF_MAC_ADDR_FMT,
+			  QDF_MAC_ADDR_REF(releaseAddr));
 }
 
 /**
@@ -6316,7 +6315,7 @@ static int hdd_vdev_destroy_event_wait(struct hdd_context *hdd_ctx,
 		return -EINVAL;
 	}
 
-	hdd_nofl_debug("vdev %d destroyed successfully", vdev_id);
+	hdd_nofl_info("vdev %d destroyed successfully", vdev_id);
 	return 0;
 }
 

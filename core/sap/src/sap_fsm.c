@@ -1292,6 +1292,25 @@ static void sap_acs_scan_freq_list_optimize(struct sap_context *sap_ctx,
 }
 #endif
 
+#ifdef WLAN_FEATURE_SAP_ACS_OPTIMIZE
+/**
+ * sap_reset_clean_freq_array(): clear freq array that contains info
+ * channel is free or not
+ * @sap_context: sap context
+ *
+ * Return: void
+ */
+static
+void sap_reset_clean_freq_array(struct sap_context *sap_context)
+{
+	memset(sap_context->clean_channel_array, 0, NUM_CHANNELS);
+}
+#else
+static inline
+void sap_reset_clean_freq_array(struct sap_context *sap_context)
+{}
+#endif
+
 QDF_STATUS sap_channel_sel(struct sap_context *sap_context)
 {
 	QDF_STATUS qdf_ret_status;
@@ -1400,6 +1419,7 @@ QDF_STATUS sap_channel_sel(struct sap_context *sap_context)
 		sap_context->freq_list = freq_list;
 		sap_context->num_of_channel = num_of_channels;
 		sap_context->optimize_acs_chan_selected = false;
+		sap_reset_clean_freq_array(sap_context);
 		/* Set requestType to Full scan */
 
 		/*

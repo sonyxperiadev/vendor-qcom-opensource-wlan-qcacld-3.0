@@ -2738,6 +2738,30 @@ lim_update_sae_single_pmk_ap_cap(struct mac_context *mac,
 }
 #endif
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static void lim_get_mld_peer(struct wlan_objmgr_vdev *vdev,
+			     struct qdf_mac_addr *bssid)
+{
+	struct wlan_objmgr_peer *peer;
+
+	if (!vdev || !wlan_vdev_mlme_is_mlo_vdev(vdev))
+		return;
+
+	peer = wlan_vdev_get_bsspeer(vdev);
+	if (!peer)
+		return;
+
+	qdf_mem_copy(bssid->bytes, peer->mldaddr, QDF_MAC_ADDR_SIZE);
+	pe_debug("Retrieve PMKSA for peer MLD: " QDF_MAC_ADDR_FMT,
+		 QDF_MAC_ADDR_REF(bssid->bytes));
+}
+#else
+static void lim_get_mld_peer(struct wlan_objmgr_vdev *vdev,
+			     struct qdf_mac_addr *bssid)
+{
+}
+#endif
+
 #ifdef WLAN_FEATURE_SAE
 static void lim_update_sae_config(struct mac_context *mac,
 				  struct pe_session *session)
@@ -2748,15 +2772,16 @@ static void lim_update_sae_config(struct mac_context *mac,
 	qdf_mem_copy(bssid.bytes, session->bssId,
 		     QDF_MAC_ADDR_SIZE);
 
-
+	/* For MLO connection, override BSSID with peer mldaddr */
+	lim_get_mld_peer(session->vdev, &bssid);
 
 	pmksa = wlan_crypto_get_pmksa(session->vdev, &bssid);
 	if (!pmksa)
 		return;
 
 	session->sae_pmk_cached = true;
-	pe_debug("Found for BSSID=" QDF_MAC_ADDR_FMT,
-		 QDF_MAC_ADDR_REF(session->bssId));
+	pe_debug("PMKSA Found for BSSID=" QDF_MAC_ADDR_FMT,
+		 QDF_MAC_ADDR_REF(bssid.bytes));
 }
 #else
 static inline void lim_update_sae_config(struct mac_context *mac,
@@ -3726,7 +3751,7 @@ lim_is_rsnxe_cap_set(struct mac_context *mac_ctx,
 		     WLAN_CRYPTO_RSNX_CAP_SAE_PK |
 		     WLAN_CRYPTO_RSNX_CAP_SECURE_LTF |
 		     WLAN_CRYPTO_RSNX_CAP_SECURE_RTT |
-		     WLAN_CRYPTO_RSNX_CAP_PROT_RANGE_NEG);
+		     WLAN_CRYPTO_RSNX_CAP_URNM_MFPR);
 
 	/* Check if any other bits are set than cap_mask */
 	for (cap_index = 0; cap_index <= cap_len; cap_index++) {
@@ -3865,18 +3890,18 @@ lim_fill_rsn_ie(struct mac_context *mac_ctx, struct pe_session *session,
 		qdf_mem_copy(pmksa.cache_id,
 			     bss_desc->fils_info_element.cache_id,
 			     CACHE_ID_LEN);
-		pe_debug("FILS: Cache id =0x%x 0x%x", pmksa.cache_id[0],
-			 pmksa.cache_id[1]);
+		pe_debug("FILS: vdev %d Cache id =0x%x 0x%x ssid: " QDF_SSID_FMT,
+			 session->vdev_id, pmksa.cache_id[0], pmksa.cache_id[1],
+			 QDF_SSID_REF(pmksa.ssid_len, pmksa.ssid));
 	} else {
 		qdf_mem_copy(&pmksa.bssid, session->bssId, QDF_MAC_ADDR_SIZE);
+		/* For MLO connection, override BSSID with peer mldaddr */
+		lim_get_mld_peer(session->vdev, &pmksa.bssid);
 	}
 
 	pmksa_peer = wlan_crypto_get_peer_pmksa(session->vdev, &pmksa);
-	if (!pmksa_peer)
-		pe_debug("FILS: vdev:%d Peer PMKSA not found ssid:" QDF_SSID_FMT " cache_id_present:%d",
-			 session->vdev_id,
-			 QDF_SSID_REF(pmksa.ssid_len, pmksa.ssid),
-			 bss_desc->fils_info_element.is_cache_id_present);
+	if (pmksa_peer)
+		pe_debug("PMKSA found");
 
 	lim_update_connect_rsn_ie(session, rsn_ie, pmksa_peer);
 	qdf_mem_free(rsn_ie);

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -493,8 +493,8 @@
 /*
  * <ini>
  * gStaKeepAliveMethod - Which keepalive method to use
- * @Min: 0
- * @Max: 1
+ * @Min: 1
+ * @Max: 2
  * @Default: 1
  *
  * This ini determines which keepalive method to use for station interfaces
@@ -512,8 +512,8 @@
 #define CFG_STA_KEEPALIVE_METHOD CFG_INI_INT( \
 			"gStaKeepAliveMethod", \
 			MLME_STA_KEEPALIVE_NULL_DATA, \
-			MLME_STA_KEEPALIVE_COUNT - 1, \
 			MLME_STA_KEEPALIVE_GRAT_ARP, \
+			MLME_STA_KEEPALIVE_NULL_DATA, \
 			CFG_VALUE_OR_DEFAULT, \
 			"Which keepalive method to use")
 

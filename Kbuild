@@ -1378,6 +1378,7 @@ ifeq ($(CONFIG_WLAN_FEATURE_11BE_MLO), y)
 UMAC_MLO_MGR_OBJS := $(UMAC_MLO_MGR_CMN_DIR)/src/wlan_mlo_mgr_main.o \
 			  $(UMAC_MLO_MGR_CMN_DIR)/src/wlan_mlo_mgr_cmn.o \
 			  $(UMAC_MLO_MGR_CMN_DIR)/src/wlan_mlo_mgr_sta.o \
+			  $(UMAC_MLO_MGR_CMN_DIR)/src/wlan_mlo_mgr_op.o \
 			  $(UMAC_MLO_MGR_CMN_DIR)/src/utils_mlo.o \
 			  $(UMAC_MLO_MGR_CMN_DIR)/src/wlan_mlo_mgr_ap.o \
 			  $(UMAC_MLO_MGR_CMN_DIR)/src/wlan_mlo_mgr_peer_list.o \
@@ -1540,6 +1541,7 @@ UMAC_MLME_OBJS := $(WLAN_COMMON_ROOT)/umac/mlme/mlme_objmgr/dispatcher/src/wlan_
 		$(WLAN_COMMON_ROOT)/umac/mlme/vdev_mgr/dispatcher/src/wlan_vdev_mgr_tgt_if_rx_api.o \
 		$(WLAN_COMMON_ROOT)/umac/mlme/vdev_mgr/dispatcher/src/wlan_vdev_mgr_tgt_if_tx_api.o \
 		$(WLAN_COMMON_ROOT)/umac/mlme/vdev_mgr/dispatcher/src/wlan_vdev_mgr_ucfg_api.o \
+		$(WLAN_COMMON_ROOT)/umac/mlme/vdev_mgr/dispatcher/src/wlan_vdev_mgr_api.o \
 		$(WLAN_COMMON_ROOT)/umac/mlme/vdev_mgr/dispatcher/src/wlan_vdev_mgr_utils_api.o \
 		$(WLAN_COMMON_ROOT)/umac/mlme/mlme_objmgr/dispatcher/src/wlan_cmn_mlme_main.o \
 		$(WLAN_COMMON_ROOT)/umac/mlme/mlme_objmgr/dispatcher/src/wlan_pdev_mlme_main.o \
@@ -2515,6 +2517,7 @@ ifeq ($(CONFIG_QCACLD_FEATURE_NAN), y)
 WLAN_NAN_OBJS := $(NAN_CORE_DIR)/nan_main.o \
 		 $(NAN_CORE_DIR)/nan_api.o \
 		 $(NAN_UCFG_DIR)/nan_ucfg_api.o \
+		 $(NAN_UCFG_DIR)/wlan_nan_api.o \
 		 $(NAN_UCFG_DIR)/cfg_nan.o \
 		 $(NAN_TGT_DIR)/target_if_nan.o \
 		 $(NAN_OS_IF_DIR)/os_if_nan.o
@@ -3245,7 +3248,6 @@ cppflags-$(CONFIG_THERMAL_STATS_SUPPORT) += -DTHERMAL_STATS_SUPPORT
 cppflags-$(CONFIG_PTT_SOCK_SVC_ENABLE) += -DPTT_SOCK_SVC_ENABLE
 cppflags-$(CONFIG_FEATURE_WLAN_WAPI) += -DFEATURE_WLAN_WAPI
 cppflags-$(CONFIG_FEATURE_WLAN_WAPI) += -DATH_SUPPORT_WAPI
-cppflags-$(CONFIG_AGEIE_ON_SCAN_RESULTS) += -DWLAN_ENABLE_AGEIE_ON_SCAN_RESULTS
 cppflags-$(CONFIG_SOFTAP_CHANNEL_RANGE) += -DSOFTAP_CHANNEL_RANGE
 cppflags-$(CONFIG_FEATURE_WLAN_SCAN_PNO) += -DFEATURE_WLAN_SCAN_PNO
 cppflags-$(CONFIG_WLAN_FEATURE_PACKET_FILTERING) += -DWLAN_FEATURE_PACKET_FILTERING
@@ -4472,7 +4474,7 @@ ccflags-y += -DWLAN_PDEV_MAX_VDEVS=$(CONFIG_WLAN_PDEV_MAX_VDEVS)
 CONFIG_WLAN_PSOC_MAX_VDEVS ?= $(CONFIG_WLAN_MAX_VDEVS)
 ccflags-y += -DWLAN_PSOC_MAX_VDEVS=$(CONFIG_WLAN_PSOC_MAX_VDEVS)
 
-CONFIG_MAX_SCAN_CACHE_SIZE ?= 300
+CONFIG_MAX_SCAN_CACHE_SIZE ?= 500
 ccflags-y += -DMAX_SCAN_CACHE_SIZE=$(CONFIG_MAX_SCAN_CACHE_SIZE)
 CONFIG_SCAN_MAX_REST_TIME ?= 0
 ccflags-y += -DSCAN_MAX_REST_TIME=$(CONFIG_SCAN_MAX_REST_TIME)

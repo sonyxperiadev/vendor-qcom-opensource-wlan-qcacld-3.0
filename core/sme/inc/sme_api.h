@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -3057,6 +3057,28 @@ void sme_update_eht_cap_nss(mac_handle_t mac_handle, uint8_t session_id,
  */
 void sme_set_eht_bw_cap(mac_handle_t mac_handle, uint8_t vdev_id,
 			enum eSirMacHTChannelWidth chwidth);
+
+/**
+ * sme_update_eht_cap_mcs() - updates EHT MCS capability based on user request
+ * @mac_handle: Opaque handle to the global MAC context
+ * @session_id: SME session id
+ * @mcs: MCS value
+ *
+ * Return: None
+ */
+void sme_update_eht_cap_mcs(mac_handle_t mac_handle, uint8_t session_id,
+			    uint8_t mcs);
+
+/**
+ * sme_update_eht_om_ctrl_supp() - sets the EHT OM control capability
+ * @mac_handle: Opaque handle to the global MAC context
+ * @session_id: SME session id
+ * @cfg_val: EHT OM control config
+ *
+ * Return: 0 on success else err code
+ */
+int sme_update_eht_om_ctrl_supp(mac_handle_t mac_handle, uint8_t session_id,
+				uint8_t cfg_val);
 #else
 static inline void sme_update_tgt_eht_cap(mac_handle_t mac_handle,
 					  struct wma_tgt_cfg *cfg,
@@ -3071,6 +3093,17 @@ static inline void sme_update_eht_cap_nss(mac_handle_t mac_handle,
 static inline void sme_set_eht_bw_cap(mac_handle_t mac_handle, uint8_t vdev_id,
 				      enum eSirMacHTChannelWidth chwidth)
 {}
+static inline void sme_update_eht_cap_mcs(mac_handle_t mac_handle,
+					  uint8_t session_id,
+					  uint8_t mcs)
+{}
+
+static inline
+int sme_update_eht_om_ctrl_supp(mac_handle_t mac_handle, uint8_t session_id,
+				uint8_t cfg_val)
+{
+	return 0;
+}
 #endif
 
 #ifdef WLAN_FEATURE_11AX
@@ -3613,7 +3646,38 @@ static inline void sme_set_ru_242_tone_tx_cfg(mac_handle_t mac_handle,
 }
 #endif
 
+/**
+ * sme_set_nss_capability() - sets HE, EHT NSS capability based on user request
+ * @mac_handle: Opaque handle to the global MAC context
+ * @vdev_id: VDEV id
+ * @nss: Number of spatial streams value
+ * @op_mode: Operation mode of the vdev
+ *
+ * Return: None
+ */
+void sme_set_nss_capability(mac_handle_t mac_handle, uint8_t vdev_id,
+			    uint8_t nss, enum QDF_OPMODE op_mode);
+
+/**
+ * enum sme_eht_tx_bfee_cap_type - EHT TX Beamformee capability type
+ * @EHT_TX_BFEE_ENABLE: TX beamformee enable
+ * @EHT_TX_BFEE_SS_80MHZ: TX beamformee for 80 MHz
+ * @EHT_TX_BFEE_SS_160MHZ: TX beamformee for 160 MHz
+ * @EHT_TX_BFEE_SS_320MHZ: TX beamformee for 320 MHz
+ * @EHT_TX_BFEE_SOUNDING_FEEDBACK_RATELIMIT: TX beamformee sounding feedback
+ * ratelimit
+ */
+enum sme_eht_tx_bfee_cap_type {
+	EHT_TX_BFEE_ENABLE = 1,
+	EHT_TX_BFEE_SS_80MHZ = 2,
+	EHT_TX_BFEE_SS_160MHZ = 3,
+	EHT_TX_BFEE_SS_320MHZ = 4,
+	EHT_TX_BFEE_SOUNDING_FEEDBACK_RATELIMIT = 5,
+};
+
 #ifdef WLAN_FEATURE_11BE
+#define MAX_SIMULTANEOUS_STA_ML_LINKS 1
+#define MAX_NUM_STA_ML_lINKS 3
 
 /**
  * sme_set_eht_testbed_def() - set eht testbed default
@@ -3665,6 +3729,35 @@ void sme_set_mlo_max_simultaneous_links(mac_handle_t mac_handle,
  */
 void sme_set_mlo_assoc_link_band(mac_handle_t mac_handle, uint8_t vdev_id,
 				 uint8_t val);
+
+/**
+ * sme_activate_mlo_links() - Force active ML links based on user
+ * requested link mac address
+ *
+ * @mac_handle: Opaque handle to the global MAC context
+ * @session_id: session id
+ * @num_links: number of links to be forced active
+ * @active_link_addr: link mac address of (up to 2) links to be forced active
+ *
+ * Return: void
+ */
+void sme_activate_mlo_links(mac_handle_t mac_handle, uint8_t session_id,
+			    uint8_t num_links,
+			    struct qdf_mac_addr active_link_addr[2]);
+
+/*
+ * sme_update_eht_caps() - Update the session EHT caps
+ * @mac_handle: Opaque handle to the global MAC context
+ * @session_id: SME session id
+ * @cfg_val: set value
+ * @cap_type: EHT TX beamformee capability type
+ * @op_mode: Operation mode of the vdev
+ *
+ * Return: 0 on success otherwise error code
+ */
+int sme_update_eht_caps(mac_handle_t mac_handle, uint8_t session_id,
+			uint8_t cfg_val, enum sme_eht_tx_bfee_cap_type cap_type,
+			enum QDF_OPMODE op_mode);
 #else
 static inline void sme_set_eht_testbed_def(mac_handle_t mac_handle,
 					   uint8_t vdev_id)
@@ -3692,6 +3785,14 @@ static inline
 void sme_set_mlo_max_simultaneous_links(mac_handle_t mac_handle,
 					uint8_t vdev_id, uint8_t val)
 {
+}
+
+static inline
+int sme_update_eht_caps(mac_handle_t mac_handle, uint8_t session_id,
+			uint8_t cfg_val, enum sme_eht_tx_bfee_cap_type cap_type,
+			enum QDF_OPMODE op_mode)
+{
+	return 0;
 }
 #endif
 

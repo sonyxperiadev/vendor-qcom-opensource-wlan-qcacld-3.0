@@ -294,9 +294,11 @@ QDF_STATUS mlo_cm_roam_sync_cb(struct wlan_objmgr_vdev *vdev,
 	 * 3. Roamed to AP with auth_status = ROAMED_AUTH_STATUS_CONNECTED
 	 */
 	if (sync_ind->num_setup_links < 2 ||
-	    sync_ind->auth_status == ROAM_AUTH_STATUS_CONNECTED)
+	    sync_ind->auth_status == ROAM_AUTH_STATUS_CONNECTED) {
+		mlme_debug("Roam auth status %d", sync_ind->auth_status);
 		mlo_update_vdev_after_roam(psoc, vdev_id,
 					   sync_ind->num_setup_links);
+	}
 
 	/* If EAPOL is offloaded to supplicant, link vdev/s are not up
 	 * at FW, in that case complete roam sync on assoc vdev
@@ -528,6 +530,30 @@ mlo_roam_copy_partner_info(struct wlan_cm_connect_resp *connect_rsp,
 	}
 	partner_info->num_partner_links = sync_ind->num_setup_links;
 	mlo_debug("num_setup_links %d", sync_ind->num_setup_links);
+}
+
+void mlo_roam_init_cu_bpcc(struct wlan_objmgr_vdev *vdev,
+			   struct roam_offload_synch_ind *sync_ind)
+{
+	uint8_t i;
+	struct wlan_mlo_dev_context *mlo_dev_ctx;
+
+	if (!vdev) {
+		mlo_err("vdev is NULL");
+		return;
+	}
+
+	mlo_dev_ctx = vdev->mlo_dev_ctx;
+	if (!mlo_dev_ctx) {
+		mlo_err("ML dev ctx is NULL");
+		return;
+	}
+
+	mlo_clear_cu_bpcc(vdev);
+	for (i = 0; i < sync_ind->num_setup_links; i++)
+		mlo_init_cu_bpcc(mlo_dev_ctx, sync_ind->ml_link[i].vdev_id);
+
+	mlo_debug("update cu info from roam sync");
 }
 
 void
@@ -1085,10 +1111,26 @@ mlo_roam_prepare_and_send_link_connect_req(struct wlan_objmgr_vdev *assoc_vdev,
 	return status;
 }
 
-void mlo_roam_connect_complete(struct wlan_objmgr_psoc *psoc,
-			       struct wlan_objmgr_pdev *pdev,
-			       struct wlan_objmgr_vdev *vdev,
-			       struct wlan_cm_connect_resp *rsp)
+void mlo_roam_free_copied_reassoc_rsp(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_mlo_sta *sta_ctx;
+
+	if (!vdev)
+		return;
+
+	if (!vdev->mlo_dev_ctx)
+		return;
+
+	sta_ctx = vdev->mlo_dev_ctx->sta_ctx;
+	if (!sta_ctx || !sta_ctx->copied_reassoc_rsp ||
+	    !sta_ctx->copied_reassoc_rsp->roaming_info)
+		return;
+
+	mlo_roam_free_connect_rsp(sta_ctx->copied_reassoc_rsp);
+	sta_ctx->copied_reassoc_rsp = NULL;
+}
+
+void mlo_roam_connect_complete(struct wlan_objmgr_vdev *vdev)
 {
 	struct wlan_mlo_sta *sta_ctx;
 	uint8_t auth_status;

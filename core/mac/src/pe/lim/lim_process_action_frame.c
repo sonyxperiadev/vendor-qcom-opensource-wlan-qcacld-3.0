@@ -2193,6 +2193,9 @@ void lim_process_action_frame(struct mac_context *mac_ctx,
 			action_hdr->category);
 		break;
 	}
+
+	if (peer)
+		wlan_objmgr_peer_release_ref(peer, WLAN_LEGACY_MAC_ID);
 }
 
 /**

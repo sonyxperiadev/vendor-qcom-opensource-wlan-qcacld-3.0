@@ -313,6 +313,8 @@ wlan_mlme_convert_ap_policy_config(
 		return HOST_CONCURRENT_AP_POLICY_GAMING_AUDIO;
 	case QCA_WLAN_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING:
 		return HOST_CONCURRENT_AP_POLICY_LOSSLESS_AUDIO_STREAMING;
+	case QCA_WLAN_CONCURRENT_AP_POLICY_XR:
+		return HOST_CONCURRENT_AP_POLICY_XR;
 	default:
 		return HOST_CONCURRENT_AP_POLICY_UNSPECIFIED;
 	}
@@ -3356,6 +3358,20 @@ wlan_mlme_set_relaxed_6ghz_conn_policy(struct wlan_objmgr_psoc *psoc,
 
 #ifdef WLAN_FEATURE_11BE_MLO
 QDF_STATUS
+wlan_mlme_get_eht_mode(struct wlan_objmgr_psoc *psoc, enum wlan_eht_mode *value)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_FAILURE;
+
+	*value = mlme_obj->cfg.gen.eht_mode;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
 wlan_mlme_get_emlsr_mode_enabled(struct wlan_objmgr_psoc *psoc, bool *value)
 {
 	struct wlan_mlme_psoc_ext_obj *mlme_obj;
@@ -3365,6 +3381,20 @@ wlan_mlme_get_emlsr_mode_enabled(struct wlan_objmgr_psoc *psoc, bool *value)
 		return QDF_STATUS_E_FAILURE;
 
 	*value = mlme_obj->cfg.gen.enable_emlsr_mode;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+wlan_mlme_set_eht_mode(struct wlan_objmgr_psoc *psoc, enum wlan_eht_mode value)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_FAILURE;
+
+	mlme_obj->cfg.gen.eht_mode = value;
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -3390,7 +3420,7 @@ wlan_mlme_set_eml_params(struct wlan_objmgr_psoc *psoc,
 	struct wlan_mlme_psoc_ext_obj *mlme_obj;
 
 	if (!cap->emlcap.emlsr_supp) {
-		mlme_legacy_debug("No EMLSR supp: %d", cap->emlcap.emlsr_supp);
+		mlme_legacy_debug("EMLSR supp: %d", cap->emlcap.emlsr_supp);
 		return;
 	}
 
@@ -3420,6 +3450,24 @@ wlan_mlme_get_eml_params(struct wlan_objmgr_psoc *psoc,
 	cap->emlsr_pad_delay = mlme_obj->cfg.eml_cap.emlsr_pad_delay;
 	cap->emlsr_trans_delay = mlme_obj->cfg.eml_cap.emlsr_trans_delay;
 	cap->emlmr_supp = mlme_obj->cfg.eml_cap.emlmr_supp;
+}
+
+void
+wlan_mlme_cfg_set_emlsr_pad_delay(struct wlan_objmgr_psoc *psoc, uint8_t val)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj) {
+		mlme_legacy_err("No psoc object");
+		return;
+	}
+
+	if (val > mlme_obj->cfg.eml_cap.emlsr_pad_delay &&
+	    val <= WLAN_ML_BV_CINFO_EMLCAP_EMLSRDELAY_256US) {
+		mlme_obj->cfg.eml_cap.emlsr_pad_delay = val;
+		mlme_debug("EMLSR padding delay configured to %d", val);
+	}
 }
 
 enum t2lm_negotiation_support
@@ -6609,4 +6657,16 @@ wlan_mlme_stats_get_periodic_display_time(struct wlan_objmgr_psoc *psoc,
 		mlme_obj->cfg.stats.stats_periodic_display_time;
 
 	return QDF_STATUS_SUCCESS;
+}
+
+bool
+wlan_mlme_is_bcn_prot_disabled_for_sap(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return cfg_default(CFG_DISABLE_SAP_BCN_PROT);
+
+	return mlme_obj->cfg.sap_cfg.disable_bcn_prot;
 }

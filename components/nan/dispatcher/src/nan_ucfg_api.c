@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -36,6 +36,7 @@
 #include "wlan_mlme_api.h"
 #include "cfg_nan_api.h"
 #include "wlan_tdls_ucfg_api.h"
+#include "wlan_nan_api_i.h"
 
 struct wlan_objmgr_psoc;
 struct wlan_objmgr_vdev;
@@ -154,19 +155,7 @@ inline QDF_STATUS __ucfg_nan_set_ndi_state(struct wlan_objmgr_vdev *vdev,
 inline enum nan_datapath_state ucfg_nan_get_ndi_state(
 					struct wlan_objmgr_vdev *vdev)
 {
-	enum nan_datapath_state val;
-	struct nan_vdev_priv_obj *priv_obj = nan_get_vdev_priv_obj(vdev);
-
-	if (!priv_obj) {
-		nan_err("priv_obj is null");
-		return NAN_DATA_INVALID_STATE;
-	}
-
-	qdf_spin_lock_bh(&priv_obj->lock);
-	val = priv_obj->state;
-	qdf_spin_unlock_bh(&priv_obj->lock);
-
-	return val;
+	return wlan_nan_get_ndi_state(vdev);
 }
 
 inline QDF_STATUS ucfg_nan_set_active_peers(struct wlan_objmgr_vdev *vdev,

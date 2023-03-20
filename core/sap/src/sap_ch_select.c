@@ -1675,6 +1675,37 @@ static void sap_sort_chl_weight(tSapChSelSpectInfo *pSpectInfoParams)
 }
 
 /**
+ * sap_override_6ghz_psc_minidx() - override mindex to 6 GHz PSC channel's idx
+ * @mac_ctx: pointer to max context
+ * @spectinfo: Pointer to array of tSapSpectChInfo
+ * @count: number of tSapSpectChInfo element to search
+ * @minidx: index to be overridden
+ *
+ * Return: QDF STATUS
+ */
+static void
+sap_override_6ghz_psc_minidx(struct mac_context *mac_ctx,
+			     tSapSpectChInfo *spectinfo,
+			     uint8_t count,
+			     uint8_t *minidx)
+{
+	uint8_t i;
+
+	if (!mac_ctx->mlme_cfg->acs.acs_prefer_6ghz_psc)
+		return;
+
+	for (i = 0; i < count; i++) {
+		if (wlan_reg_is_6ghz_chan_freq(
+				spectinfo[i].chan_freq) &&
+		    wlan_reg_is_6ghz_psc_chan_freq(
+				spectinfo[i].chan_freq)) {
+			*minidx = i;
+			return;
+		}
+	}
+}
+
+/**
  * sap_sort_chl_weight_80_mhz() - to sort the channels with the least weight
  * @mac_ctx: pointer to max context
  * @sap_ctx: Pointer to the struct sap_context *structure
@@ -1787,6 +1818,8 @@ sap_sort_chl_weight_80_mhz(struct mac_context *mac_ctx,
 			pSpectInfo[j + i].weight = SAP_ACS_WEIGHT_MAX * 4;
 			pSpectInfo[j + i].weight_calc_done = true;
 		}
+		sap_override_6ghz_psc_minidx(mac_ctx, &pSpectInfo[j], 4,
+					     &minIdx);
 
 		pSpectInfo[j + minIdx].weight = combined_weight;
 
@@ -1958,6 +1991,8 @@ sap_sort_chl_weight_160_mhz(struct mac_context *mac_ctx,
 			pSpectInfo[j + i].weight = SAP_ACS_WEIGHT_MAX * 8;
 			pSpectInfo[j + i].weight_calc_done = true;
 		}
+		sap_override_6ghz_psc_minidx(mac_ctx, &pSpectInfo[j], 8,
+					     &minIdx);
 
 		pSpectInfo[j + minIdx].weight = combined_weight;
 
@@ -2201,6 +2236,8 @@ sap_sort_chl_weight_320_mhz(struct mac_context *mac_ctx,
 			pSpectInfo[j + i].weight = SAP_ACS_WEIGHT_MAX * 16;
 			pSpectInfo[j + i].weight_calc_done = true;
 		}
+		sap_override_6ghz_psc_minidx(mac_ctx, &pSpectInfo[j], 16,
+					     &minIdx);
 
 		pSpectInfo[j + minIdx].weight = combined_weight;
 
@@ -2516,6 +2553,8 @@ sap_sort_chl_weight_40_mhz(struct mac_context *mac_ctx,
 			pSpectInfo[j + i].weight = SAP_ACS_WEIGHT_MAX * 2;
 			pSpectInfo[j + i].weight_calc_done = true;
 		}
+		sap_override_6ghz_psc_minidx(mac_ctx, &pSpectInfo[j], 2,
+					     &minIdx);
 
 		pSpectInfo[j + minIdx].weight = combined_weight;
 

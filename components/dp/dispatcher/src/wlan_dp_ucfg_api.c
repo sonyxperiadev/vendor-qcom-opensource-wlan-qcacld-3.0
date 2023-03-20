@@ -1380,6 +1380,18 @@ ucfg_dp_is_roam_after_nud_enabled(struct wlan_objmgr_psoc *psoc)
 
 	return false;
 }
+
+bool
+ucfg_dp_is_disconect_after_roam_fail(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_dp_psoc_context *dp_ctx = dp_psoc_get_priv(psoc);
+	struct wlan_dp_psoc_cfg *dp_cfg = &dp_ctx->dp_cfg;
+
+	if (dp_cfg->enable_nud_tracking == DP_DISCONNECT_AFTER_ROAM_FAIL)
+		return true;
+
+	return false;
+}
 #endif
 
 int ucfg_dp_bbm_context_init(struct wlan_objmgr_psoc *psoc)

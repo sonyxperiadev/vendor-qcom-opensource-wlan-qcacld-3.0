@@ -3288,7 +3288,8 @@ hdd_dump_roam_scan_ch_list(uint32_t *chan_list, uint16_t num_channels)
 static void
 hdd_sort_roam_scan_ch_list(uint32_t *chan_list, uint16_t num_channels)
 {
-	uint8_t i, j, swap = 0;
+	uint8_t i, j;
+	uint32_t swap = 0;
 
 	for (i = 0; i < (num_channels - 1) &&
 	     i < WNI_CFG_VALID_CHANNEL_LIST_LEN; i++) {

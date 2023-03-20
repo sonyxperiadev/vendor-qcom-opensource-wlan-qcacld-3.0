@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2508,8 +2508,18 @@ void os_if_nan_ndi_session_end(struct wlan_objmgr_vdev *vdev)
 	 * to be informed in that case (response is not expected)
 	 */
 	state = ucfg_nan_get_ndi_state(vdev);
-	if (state != NAN_DATA_NDI_DELETING_STATE &&
-	    state != NAN_DATA_DISCONNECTED_STATE) {
+
+	/*
+	 * With NDP Delete Vendor command, hdd_ndi_delete function modifies NDI
+	 * state to delete "NAN_DATA_NDI_DELETING_STATE".
+	 * But when user issues DEL Virtual Intf cmd, hdd_ndi_delete does not
+	 * call and NDI state remains to created "NAN_DATA_NDI_CREATED_STATE".
+	 */
+	if (state == NAN_DATA_NDI_CREATED_STATE) {
+		osif_err("NDI interface is just created: %u", state);
+		return;
+	} else if (state != NAN_DATA_NDI_DELETING_STATE &&
+		   state != NAN_DATA_DISCONNECTED_STATE) {
 		osif_err("NDI interface deleted: state: %u", state);
 		return;
 	}

@@ -488,6 +488,22 @@ void lim_process_bcn_prb_rsp_t2lm(struct mac_context *mac_ctx,
 void lim_process_beacon_mlo(struct mac_context *mac_ctx,
 			    struct pe_session *session,
 			    tSchBeaconStruct *bcn_ptr);
+
+/**
+ * lim_process_ml_reconfig() - to process beacon frames with reconfig IE
+ * @mac_ctx: Pointer to Global MAC structure
+ * @session: A pointer to session
+ * @rx_pkt_info: A pointer to RX packet info structure
+ *
+ * This function will process ml reconfig beacon frames. If reconfig ie
+ * is present for link removal, link reconfig timer will start.
+ *
+ * Return: none
+ */
+void
+lim_process_ml_reconfig(struct mac_context *mac_ctx,
+			struct pe_session *session,
+			uint8_t *rx_pkt_info);
 #else
 static inline
 void lim_process_beacon_mlo(struct mac_context *mac_ctx,
@@ -502,6 +518,13 @@ void lim_process_bcn_prb_rsp_t2lm(struct mac_context *mac_ctx,
 				  tpSirProbeRespBeacon bcn_ptr)
 {
 }
+
+static inline void
+lim_process_ml_reconfig(struct mac_context *mac_ctx,
+			struct pe_session *session,
+			uint8_t *rx_pkt_info)
+{
+}
 #endif
 
 void lim_process_beacon_frame(struct mac_context *, uint8_t *, struct pe_session *);
@@ -509,6 +532,19 @@ void lim_process_probe_req_frame(struct mac_context *, uint8_t *, struct pe_sess
 void lim_process_probe_rsp_frame(struct mac_context *, uint8_t *, struct pe_session *);
 void lim_process_probe_req_frame_multiple_bss(struct mac_context *, uint8_t *,
 					      struct pe_session *);
+
+/**
+ * lim_process_gen_probe_rsp_frame() - process generate probe rsp frame
+ * @mac_ctx: pointer to global mac context
+ * @session_entry: pointer to pe session
+ * @bcn_probe: pointer to the data frame
+ * @len: the length of data frame
+ *
+ * Return: void
+ */
+void lim_process_gen_probe_rsp_frame(struct mac_context *mac_ctx,
+				     struct pe_session *session_entry,
+				     uint8_t *bcn_probe, uint32_t len);
 
 /* Process Auth frame when we have a session in progress. */
 void lim_process_auth_frame(struct mac_context *, uint8_t *, struct pe_session *);

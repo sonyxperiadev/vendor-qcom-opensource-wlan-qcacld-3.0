@@ -2955,18 +2955,33 @@ ucfg_mlme_set_relaxed_6ghz_conn_policy(struct wlan_objmgr_psoc *psoc,
 }
 
 /**
- * ucfg_mlme_get_emlsr_mode_enabled() - Get eMLSR mode flag
+ * ucfg_mlme_set_eht_mode() - Set EHT mode of operation
  * @psoc: pointer to psoc object
- * @value: Value that needs to be set from the caller
+ * @value: EHT mode value that needs to be set from the caller
  *
  * Inline UCFG API to be used by HDD/OSIF callers
  *
  * Return: QDF Status
  */
 static inline QDF_STATUS
-ucfg_mlme_get_emlsr_mode_enabled(struct wlan_objmgr_psoc *psoc, bool *value)
+ucfg_mlme_set_eht_mode(struct wlan_objmgr_psoc *psoc, enum wlan_eht_mode value)
 {
-	return wlan_mlme_get_emlsr_mode_enabled(psoc, value);
+	return wlan_mlme_set_eht_mode(psoc, value);
+}
+
+/**
+ * ucfg_mlme_get_eht_mode() - Get EHT mode of operation
+ * @psoc: pointer to psoc object
+ * @value: EHT mode value that is set by the user
+ *
+ * Inline UCFG API to be used by HDD/OSIF callers
+ *
+ * Return: QDF Status
+ */
+static inline QDF_STATUS
+ucfg_mlme_get_eht_mode(struct wlan_objmgr_psoc *psoc, enum wlan_eht_mode *value)
+{
+	return wlan_mlme_get_eht_mode(psoc, value);
 }
 
 /**
@@ -2982,6 +2997,21 @@ static inline QDF_STATUS
 ucfg_mlme_set_emlsr_mode_enabled(struct wlan_objmgr_psoc *psoc, bool value)
 {
 	return wlan_mlme_set_emlsr_mode_enabled(psoc, value);
+}
+
+/**
+ * ucfg_mlme_get_emlsr_mode_enabled() - Get eMLSR mode flag
+ * @psoc: pointer to psoc object
+ * @value: Value that is set by the user
+ *
+ * Inline UCFG API to be used by HDD/OSIF callers
+ *
+ * Return: QDF Status
+ */
+static inline QDF_STATUS
+ucfg_mlme_get_emlsr_mode_enabled(struct wlan_objmgr_psoc *psoc, bool *value)
+{
+	return wlan_mlme_get_emlsr_mode_enabled(psoc, value);
 }
 
 /**

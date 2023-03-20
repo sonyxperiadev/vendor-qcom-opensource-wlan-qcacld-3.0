@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -124,10 +124,8 @@ void wlan_hdd_cleanup_remain_on_channel_ctx(struct hdd_adapter *adapter)
 	}
 
 	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_P2P_ID);
-	if (!vdev) {
-		hdd_err("vdev is NULL");
+	if (!vdev)
 		return;
-	}
 
 	ucfg_p2p_cleanup_roc_by_vdev(vdev);
 	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_P2P_ID);
@@ -143,10 +141,8 @@ void wlan_hdd_cleanup_actionframe(struct hdd_adapter *adapter)
 	}
 
 	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_P2P_ID);
-	if (!vdev) {
-		hdd_err("vdev is NULL");
+	if (!vdev)
 		return;
-	}
 	ucfg_p2p_cleanup_tx_by_vdev(vdev);
 	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_P2P_ID);
 }

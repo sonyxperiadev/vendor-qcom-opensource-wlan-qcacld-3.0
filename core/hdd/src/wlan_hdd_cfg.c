@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -51,6 +51,7 @@
 #include "hdd_dp_cfg.h"
 #include <wma_api.h>
 #include "wlan_hdd_object_manager.h"
+#include "wlan_dp_ucfg_api.h"
 
 #ifndef WLAN_MAC_ADDR_UPDATE_DISABLE
 /**
@@ -927,6 +928,7 @@ QDF_STATUS hdd_set_sme_config(struct hdd_context *hdd_ctx)
 	mac_handle_t mac_handle = hdd_ctx->mac_handle;
 	bool roam_scan_enabled;
 	bool enable_dfs_scan = true;
+	bool disconnect_nud;
 	uint32_t channel_bonding_mode;
 
 #ifdef FEATURE_WLAN_ESE
@@ -1007,6 +1009,9 @@ QDF_STATUS hdd_set_sme_config(struct hdd_context *hdd_ctx)
 	mlme_obj->cfg.lfr.rso_user_config.policy_params.dfs_mode =
 		STA_ROAM_POLICY_DFS_ENABLED;
 	mlme_obj->cfg.lfr.rso_user_config.policy_params.skip_unsafe_channels = 0;
+
+	disconnect_nud = ucfg_dp_is_disconect_after_roam_fail(hdd_ctx->psoc);
+	mlme_obj->cfg.lfr.disconnect_on_nud_roam_invoke_fail = disconnect_nud;
 
 	status = hdd_set_sme_cfgs_related_to_mlme(hdd_ctx, sme_config);
 	if (!QDF_IS_STATUS_SUCCESS(status))
@@ -1231,6 +1236,8 @@ QDF_STATUS hdd_update_nss(struct hdd_adapter *adapter, uint8_t tx_nss,
 		}
 
 		hdd_update_nss_in_vdev(adapter, mac_handle, tx_nss, rx_nss);
+		sme_set_nss_capability(mac_handle, adapter->vdev_id, rx_nss,
+				       adapter->device_mode);
 
 		return QDF_STATUS_SUCCESS;
 	}
@@ -1339,7 +1346,8 @@ skip_ht_cap_update:
 		status = false;
 		hdd_err("Could not get MCS SET from CFG");
 	}
-	sme_update_he_cap_nss(mac_handle, adapter->vdev_id, rx_nss);
+	sme_set_nss_capability(mac_handle, adapter->vdev_id, rx_nss,
+			       adapter->device_mode);
 #undef WLAN_HDD_RX_MCS_ALL_NSTREAM_RATES
 
 	if (QDF_STATUS_SUCCESS != sme_update_nss(mac_handle, rx_nss))

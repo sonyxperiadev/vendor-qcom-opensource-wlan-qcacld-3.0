@@ -40,8 +40,9 @@
 #include "lim_ser_des_utils.h"
 #include "wlan_mlo_t2lm.h"
 #include "wlan_mlo_mgr_roam.h"
+#include "lim_mlo.h"
+#include "wlan_mlo_mgr_sta.h"
 #ifdef WLAN_FEATURE_11BE_MLO
-#include <wlan_mlo_mgr_sta.h>
 #include <cds_ieee80211_common.h>
 #endif
 
@@ -132,6 +133,7 @@ void lim_process_beacon_mlo(struct mac_context *mac_ctx,
 			    stacontrol,
 			    WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_LINKID_IDX,
 			    WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_LINKID_BITS);
+
 		if (!mlo_is_sta_csa_synced(mlo_ctx, link_id)) {
 			csa_ie = (struct ieee80211_channelswitch_ie *)
 					wlan_get_ie_ptr_from_eid(
@@ -352,6 +354,27 @@ void lim_process_beacon_eht(struct mac_context *mac_ctx,
 		/* handle beacon IE for 802.11be mlo case */
 		lim_process_beacon_mlo(mac_ctx, session, bcn_ptr);
 }
+
+void
+lim_process_ml_reconfig(struct mac_context *mac_ctx,
+			struct pe_session *session,
+			uint8_t *rx_pkt_info)
+{
+	uint8_t *frame;
+	uint16_t frame_len;
+
+	if (!session->vdev)
+		return;
+
+	frame = WMA_GET_RX_MPDU_DATA(rx_pkt_info);
+	frame_len = WMA_GET_RX_PAYLOAD_LEN(rx_pkt_info);
+	if (frame_len < SIR_MAC_B_PR_SSID_OFFSET)
+		return;
+
+	mlo_process_ml_reconfig_ie(session->vdev, NULL,
+				   frame + SIR_MAC_B_PR_SSID_OFFSET,
+				   frame_len - SIR_MAC_B_PR_SSID_OFFSET, NULL);
+}
 #endif
 
 /**
@@ -378,6 +401,9 @@ lim_process_beacon_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 	uint8_t *frame;
 	const uint8_t *owe_transition_ie;
 	uint16_t frame_len;
+	uint8_t bpcc;
+	bool cu_flag = true;
+	QDF_STATUS status;
 
 	mac_ctx->lim.gLimNumBeaconsRcvd++;
 
@@ -423,11 +449,17 @@ lim_process_beacon_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 		return;
 	}
 
+	if (mlo_is_mld_sta(session->vdev)) {
+		cu_flag = false;
+		status = lim_get_bpcc_from_mlo_ie(bcn_ptr, &bpcc);
+		if (QDF_IS_STATUS_SUCCESS(status))
+			cu_flag = lim_check_cu_happens(session->vdev, bpcc);
+		lim_process_ml_reconfig(mac_ctx, session, rx_pkt_info);
+	}
+
 	lim_process_bcn_prb_rsp_t2lm(mac_ctx, session, bcn_ptr);
 	if (QDF_IS_STATUS_SUCCESS(lim_check_for_ml_probe_req(session)))
 		goto end;
-
-	lim_process_beacon_eht(mac_ctx, session, bcn_ptr);
 
 	/*
 	 * during scanning, when any session is active, and
@@ -483,6 +515,9 @@ lim_process_beacon_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 		lim_check_and_announce_join_success(mac_ctx, bcn_ptr,
 				mac_hdr, session);
 	}
+
+	if (cu_flag)
+		lim_process_beacon_eht(mac_ctx, session, bcn_ptr);
 end:
 	qdf_mem_free(bcn_ptr);
 	return;

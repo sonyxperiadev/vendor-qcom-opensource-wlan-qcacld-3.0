@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -415,7 +415,7 @@ QDF_STATUS wma_vdev_detach_callback(struct vdev_delete_response *rsp)
 
 	iface = &wma->interfaces[rsp->vdev_id];
 
-	wma_info("vdev del response received for VDEV_%d", rsp->vdev_id);
+	wma_debug("vdev del response received for VDEV_%d", rsp->vdev_id);
 	iface->del_staself_req = NULL;
 
 	if (iface->roam_scan_stats_req) {
