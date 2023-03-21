@@ -1367,8 +1367,10 @@ populate_dot11f_vht_caps(struct mac_context *mac,
 
 		pDot11f->shortGI80MHz =
 			pe_session->vht_config.shortgi80;
-		pDot11f->shortGI160and80plus80MHz =
-			pe_session->vht_config.shortgi160and80plus80;
+
+		if (pDot11f->supportedChannelWidthSet)
+			pDot11f->shortGI160and80plus80MHz =
+				pe_session->vht_config.shortgi160and80plus80;
 
 		if (pe_session->ht_config.tx_stbc)
 			pDot11f->txSTBC = pe_session->vht_config.tx_stbc;
@@ -1414,8 +1416,10 @@ populate_dot11f_vht_caps(struct mac_context *mac,
 		nCfgValue = vht_cap_info->short_gi_80mhz;
 		pDot11f->shortGI80MHz = (nCfgValue & 0x0001);
 
-		nCfgValue = vht_cap_info->short_gi_160mhz;
-		pDot11f->shortGI160and80plus80MHz = (nCfgValue & 0x0001);
+		if (pDot11f->supportedChannelWidthSet) {
+			nCfgValue = vht_cap_info->short_gi_160mhz;
+			pDot11f->shortGI160and80plus80MHz = (nCfgValue & 0x0001);
+		}
 
 		nCfgValue = vht_cap_info->tx_stbc;
 		pDot11f->txSTBC = (nCfgValue & 0x0001);
