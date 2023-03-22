@@ -4392,7 +4392,7 @@ lim_cm_handle_join_req(struct cm_vdev_join_req *req)
 	}
 
 	if (!wlan_vdev_mlme_is_mlo_link_vdev(pe_session->vdev))
-		lim_send_mlo_caps_ie(mac_ctx, pe_session,
+		lim_send_mlo_caps_ie(mac_ctx, pe_session->vdev,
 				     QDF_STA_MODE,
 				     pe_session->vdev_id);
 

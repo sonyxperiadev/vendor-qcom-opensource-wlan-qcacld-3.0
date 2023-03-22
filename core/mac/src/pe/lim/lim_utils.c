@@ -80,6 +80,7 @@
 #include "wlan_cmn_ieee80211.h"
 #include <wlan_cm_api.h>
 #include <wlan_vdev_mgr_utils_api.h>
+#include "parser_api.h"
 
 /** -------------------------------------------------------------
    \fn lim_delete_dialogue_token_list
@@ -8233,29 +8234,22 @@ void lim_set_mlo_caps(struct mac_context *mac, struct pe_session *session,
 }
 
 QDF_STATUS lim_send_mlo_caps_ie(struct mac_context *mac_ctx,
-				struct pe_session *session,
+				struct wlan_objmgr_vdev *vdev,
 				enum QDF_OPMODE device_mode,
 				uint8_t vdev_id)
 {
-	uint8_t mlo_cap_total_len = DOT11F_IE_MLO_IE_MIN_LEN +
-				    EHT_CAP_OUI_LEN + QDF_MAC_ADDR_SIZE;
+
 	QDF_STATUS status_2g, status_5g;
-	uint8_t mlo_caps[DOT11F_IE_MLO_IE_MIN_LEN +
-			 EHT_CAP_OUI_LEN + QDF_MAC_ADDR_SIZE] = {0};
+	struct wlan_mlo_ie mlo_ie;
 
-	mlo_caps[0] = DOT11F_EID_MLO_IE;
-	mlo_caps[1] = DOT11F_IE_MLO_IE_MIN_LEN + 1;
-
-	qdf_mem_copy(&mlo_caps[2], MLO_IE_OUI_TYPE, MLO_IE_OUI_SIZE);
-	lim_set_mlo_caps(mac_ctx, session, mlo_caps, mlo_cap_total_len);
-
+	populate_dot11f_mlo_ie(mac_ctx, vdev, &mlo_ie);
 	status_2g = lim_send_ie(mac_ctx, vdev_id, DOT11F_EID_MLO_IE,
-				CDS_BAND_2GHZ, &mlo_caps[2],
-				EHT_CAP_OUI_LEN + QDF_MAC_ADDR_SIZE);
+				CDS_BAND_2GHZ, &mlo_ie.data[2],
+				mlo_ie.num_data - 2);
 
 	status_5g = lim_send_ie(mac_ctx, vdev_id, DOT11F_EID_MLO_IE,
-				CDS_BAND_5GHZ, &mlo_caps[2],
-				EHT_CAP_OUI_LEN + QDF_MAC_ADDR_SIZE);
+				CDS_BAND_5GHZ, &mlo_ie.data[2],
+				mlo_ie.num_data - 2);
 
 	if (QDF_IS_STATUS_SUCCESS(status_2g) &&
 	    QDF_IS_STATUS_SUCCESS(status_5g)) {

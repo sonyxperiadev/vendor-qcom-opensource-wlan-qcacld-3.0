@@ -11410,7 +11410,7 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 	tDot11fIEeht_cap eht_caps;
 	tDot11fIESuppRates supp_rates;
 	tDot11fIEExtSuppRates ext_supp_rates;
-	struct wlan_mlo_eml_cap eml_cap;
+	struct wlan_mlo_eml_cap eml_cap = {0};
 	uint16_t presence_bitmap = 0;
 	bool is_2g;
 	uint32_t value = 0;
@@ -11907,6 +11907,158 @@ QDF_STATUS populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 		num_sta_prof++;
 	}
 	mlo_ie->num_sta_profile = num_sta_prof;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS populate_dot11f_mlo_ie(struct mac_context *mac_ctx,
+				  struct wlan_objmgr_vdev *vdev,
+				  struct wlan_mlo_ie *mlo_ie)
+{
+	struct qdf_mac_addr *mld_addr;
+	uint8_t *p_ml_ie;
+	uint16_t len_remaining;
+	struct wlan_objmgr_psoc *psoc;
+	struct wlan_mlo_eml_cap eml_cap = {0};
+	uint16_t presence_bitmap = 0;
+	bool emlsr_cap,  emlsr_enabled = false;
+
+	if (!mac_ctx || !mlo_ie)
+		return QDF_STATUS_E_NULL_VALUE;
+
+	psoc = wlan_vdev_get_psoc(vdev);
+	if (!psoc) {
+		pe_err("Invalid psoc");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	pe_debug("Populate MLO common IEs");
+
+	mlo_ie->type = 0;
+	mlo_ie->common_info_length = WLAN_ML_BV_CINFO_LENGTH_SIZE;
+	mld_addr =
+	    (struct qdf_mac_addr *)wlan_vdev_mlme_get_mldaddr(vdev);
+	qdf_mem_copy(&mlo_ie->mld_mac_addr, mld_addr, QDF_MAC_ADDR_SIZE);
+	mlo_ie->common_info_length += QDF_MAC_ADDR_SIZE;
+
+	mlo_ie->link_id_info_present = 0;
+	mlo_ie->bss_param_change_cnt_present = 0;
+	mlo_ie->medium_sync_delay_info_present = 0;
+	mlo_ie->eml_capab_present = 0;
+	mlo_ie->mld_capab_and_op_present = 1;
+	mlo_ie->mld_id_present = 0;
+
+	if (mlo_ie->mld_capab_and_op_present) {
+		presence_bitmap |= WLAN_ML_BV_CTRL_PBM_MLDCAPANDOP_P;
+		mlo_ie->common_info_length += WLAN_ML_BV_CINFO_MLDCAPANDOP_SIZE;
+		mlo_ie->mld_capab_and_op_info.max_simultaneous_link_num =
+				wlan_mlme_get_sta_mlo_simultaneous_links(psoc);
+		mlo_ie->mld_capab_and_op_info.srs_support = 0;
+		mlo_ie->mld_capab_and_op_info.tid_link_map_supported =
+			wlan_mlme_get_t2lm_negotiation_supported(mac_ctx->psoc);
+		mlo_ie->mld_capab_and_op_info.str_freq_separation = 0;
+		mlo_ie->mld_capab_and_op_info.aar_support = 0;
+	}
+
+	/* Check if HW supports eMLSR mode */
+	emlsr_cap = policy_mgr_is_hw_emlsr_capable(mac_ctx->psoc);
+
+	/* Check if vendor command chooses eMLSR mode */
+	wlan_mlme_get_emlsr_mode_enabled(mac_ctx->psoc, &emlsr_enabled);
+
+	/* Check if STA supports EMLSR and vendor command prefers EMLSR mode */
+	if (emlsr_cap && emlsr_enabled) {
+		wlan_mlme_get_eml_params(psoc, &eml_cap);
+		mlo_ie->eml_capab_present = 1;
+		presence_bitmap |= WLAN_ML_BV_CTRL_PBM_EMLCAP_P;
+		mlo_ie->common_info_length += WLAN_ML_BV_CINFO_EMLCAP_SIZE;
+		mlo_ie->eml_capabilities_info.emlsr_support =
+						eml_cap.emlsr_supp;
+		mlo_ie->eml_capabilities_info.emlmr_support =
+						eml_cap.emlmr_supp;
+		mlo_ie->eml_capabilities_info.transition_timeout = 0;
+		mlo_ie->eml_capabilities_info.emlsr_padding_delay =
+						eml_cap.emlsr_pad_delay;
+		mlo_ie->eml_capabilities_info.emlsr_transition_delay =
+						eml_cap.emlsr_trans_delay;
+	}
+
+	p_ml_ie = mlo_ie->data;
+	len_remaining = sizeof(mlo_ie->data);
+
+	/* element ID, length and extension element ID */
+	*p_ml_ie++ = WLAN_ELEMID_EXTN_ELEM;
+	len_remaining--;
+	/* length will set later */
+	*p_ml_ie++ = 0;
+	len_remaining--;
+	*p_ml_ie++ = WLAN_EXTN_ELEMID_MULTI_LINK;
+	len_remaining--;
+
+	QDF_SET_BITS(*(uint16_t *)p_ml_ie, WLAN_ML_CTRL_TYPE_IDX,
+		     WLAN_ML_CTRL_TYPE_BITS, mlo_ie->type);
+	QDF_SET_BITS(*(uint16_t *)p_ml_ie, WLAN_ML_CTRL_PBM_IDX,
+		     WLAN_ML_CTRL_PBM_BITS, presence_bitmap);
+	p_ml_ie += WLAN_ML_CTRL_SIZE;
+	len_remaining -= WLAN_ML_CTRL_SIZE;
+
+	*p_ml_ie++ = mlo_ie->common_info_length;
+	len_remaining--;
+
+	qdf_mem_copy(p_ml_ie, mld_addr, QDF_MAC_ADDR_SIZE);
+	p_ml_ie += QDF_MAC_ADDR_SIZE;
+	len_remaining -= QDF_MAC_ADDR_SIZE;
+
+	if (mlo_ie->eml_capab_present) {
+		QDF_SET_BITS(*(uint16_t *)p_ml_ie,
+			     WLAN_ML_BV_CINFO_EMLCAP_EMLSRSUPPORT_IDX,
+			     WLAN_ML_BV_CINFO_EMLCAP_EMLSRSUPPORT_BITS,
+			     mlo_ie->eml_capabilities_info.emlsr_support);
+		QDF_SET_BITS(*(uint16_t *)p_ml_ie,
+			     WLAN_ML_BV_CINFO_EMLCAP_EMLSR_PADDINGDELAY_IDX,
+			     WLAN_ML_BV_CINFO_EMLCAP_EMLSR_PADDINGDELAY_BITS,
+			     mlo_ie->eml_capabilities_info.emlsr_padding_delay);
+		QDF_SET_BITS(*(uint16_t *)p_ml_ie,
+			     WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_IDX,
+			     WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_BITS,
+			     mlo_ie->eml_capabilities_info.emlsr_transition_delay);
+		QDF_SET_BITS(*(uint16_t *)p_ml_ie,
+			     WLAN_ML_BV_CINFO_EMLCAP_EMLMRSUPPORT_IDX,
+			     WLAN_ML_BV_CINFO_EMLCAP_EMLMRSUPPORT_BITS,
+			     mlo_ie->eml_capabilities_info.emlmr_support);
+		QDF_SET_BITS(*(uint16_t *)p_ml_ie,
+			     WLAN_ML_BV_CINFO_EMLCAP_EMLMRDELAY_IDX,
+			     WLAN_ML_BV_CINFO_EMLCAP_EMLMRDELAY_BITS,
+			     mlo_ie->eml_capabilities_info.emlmr_delay);
+		QDF_SET_BITS(*(uint16_t *)p_ml_ie,
+			     WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_IDX,
+			     WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_BITS,
+			     mlo_ie->eml_capabilities_info.transition_timeout);
+
+		p_ml_ie += WLAN_ML_BV_CINFO_EMLCAP_SIZE;
+		len_remaining -= WLAN_ML_BV_CINFO_EMLCAP_SIZE;
+	}
+
+	pe_debug("EMLSR support: %d, padding delay: %d, transition delay: %d",
+		 mlo_ie->eml_capabilities_info.emlsr_support,
+		 mlo_ie->eml_capabilities_info.emlsr_padding_delay,
+		 mlo_ie->eml_capabilities_info.emlsr_transition_delay);
+
+	if (mlo_ie->mld_capab_and_op_present) {
+		QDF_SET_BITS(*(uint16_t *)p_ml_ie,
+			     WLAN_ML_BV_CINFO_MLDCAPANDOP_MAXSIMULLINKS_IDX,
+			     WLAN_ML_BV_CINFO_MLDCAPANDOP_MAXSIMULLINKS_BITS,
+			     mlo_ie->mld_capab_and_op_info.max_simultaneous_link_num);
+		QDF_SET_BITS(*(uint16_t *)p_ml_ie,
+			     WLAN_ML_BV_CINFO_MLDCAPANDOP_TIDTOLINKMAPNEGSUPPORT_IDX,
+			     WLAN_ML_BV_CINFO_MLDCAPANDOP_TIDTOLINKMAPNEGSUPPORT_BITS,
+			     mlo_ie->mld_capab_and_op_info.tid_link_map_supported);
+		p_ml_ie += WLAN_ML_BV_CINFO_MLDCAPANDOP_SIZE;
+		len_remaining -= WLAN_ML_BV_CINFO_MLDCAPANDOP_SIZE;
+	}
+
+	mlo_ie->num_data = p_ml_ie - mlo_ie->data;
+	pe_debug("MLO common IEs total len: %d", mlo_ie->num_data);
 
 	return QDF_STATUS_SUCCESS;
 }
