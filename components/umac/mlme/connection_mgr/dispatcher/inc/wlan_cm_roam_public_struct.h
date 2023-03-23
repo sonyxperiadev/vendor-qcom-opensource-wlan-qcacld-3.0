@@ -2607,7 +2607,6 @@ struct roam_offload_synch_ind {
 	uint8_t roamed_vdev_id;
 	struct qdf_mac_addr bssid;
 	struct wlan_ssid ssid;
-	struct qdf_mac_addr self_mac;
 	int8_t txMgmtPower;
 	uint32_t auth_status;
 	uint8_t rssi;

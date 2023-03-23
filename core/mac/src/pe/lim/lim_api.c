@@ -2962,11 +2962,6 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 	}
 	/* Update the beacon/probe filter in mac_ctx */
 	lim_set_bcn_probe_filter(mac_ctx, ft_session_ptr, 0);
-
-	sir_copy_mac_addr(ft_session_ptr->self_mac_addr,
-			  session_ptr->self_mac_addr);
-	sir_copy_mac_addr(roam_sync_ind_ptr->self_mac.bytes,
-			session_ptr->self_mac_addr);
 	sir_copy_mac_addr(ft_session_ptr->limReAssocbssId, bss_desc->bssId);
 	session_ptr->bRoamSynchInProgress = true;
 	ft_session_ptr->bRoamSynchInProgress = true;

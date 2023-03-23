@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -675,7 +675,7 @@ void lim_fill_ft_session(struct mac_context *mac,
 	}
 
 	sir_copy_mac_addr(ft_session->self_mac_addr,
-			  pe_session->self_mac_addr);
+			  wlan_vdev_mlme_get_macaddr(pe_session->vdev));
 	sir_copy_mac_addr(ft_session->limReAssocbssId,
 			  pbssDescription->bssId);
 	sir_copy_mac_addr(ft_session->prev_ap_bssid, pe_session->bssId);
