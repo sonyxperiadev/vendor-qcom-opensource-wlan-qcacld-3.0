@@ -52,44 +52,62 @@ void hdd_update_tgt_eht_cap(struct hdd_context *hdd_ctx,
 	sme_update_tgt_eht_cap(hdd_ctx->mac_handle, cfg, &eht_cap_ini);
 }
 
+/*
+ * Typical 802.11 Multi-Link element
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * | Elem ID | Elem Len |Elem ID Extn | MLink Ctrl | Common Info | Link Info |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *      1          1           1           2        Variable Len  Variable Len
+ */
 void wlan_hdd_get_mlo_link_id(struct hdd_beacon_data *beacon,
 			      uint8_t *link_id, uint8_t *num_link)
 {
-	const uint8_t *ie;
-	uint8_t len;
+	const uint8_t *mlie, *cmn_info_ie, *link_info_ie;
+	uint8_t total_len, cmn_info_len, link_info_len;
 	uint8_t link_len;
-	*num_link = 0;
 
-	ie = wlan_get_ext_ie_ptr_from_ext_id(MLO_IE_OUI_TYPE, MLO_IE_OUI_SIZE,
-					     beacon->tail, beacon->tail_len);
-	if (ie) {
-		hdd_debug("find a mlo ie in beacon data");
+	mlie = wlan_get_ext_ie_ptr_from_ext_id(MLO_IE_OUI_TYPE, MLO_IE_OUI_SIZE,
+					       beacon->tail, beacon->tail_len);
+	if (mlie) {
+		hdd_debug("ML IE found in beacon data");
 		*num_link = 1;
-		ie++; /* WLAN_MAC_EID_EXT */
-		len = *ie++; /* length */
-		ie++; /* MLO_IE_OUI_TYPE */
-		len--;
-		ie++; /* Multi-Link Control field 2octets */
-		ie++;
-		len--;
-		len--;
-		ie++; /* Common Info Length */
-		len--;
-		ie += QDF_MAC_ADDR_SIZE; /* mld mac addr */
-		len -= QDF_MAC_ADDR_SIZE;
-		*link_id = *ie++; /* link id */
-		len--;
-		while (len > 0) {
-			ie++; /* sub element ID */
-			len--;
-			link_len = *ie++; /* length of sub element ID */
-			len--;
-			ie += link_len;
-			len -= link_len;
+
+		mlie++; /* WLAN_MAC_EID_EXT */
+		total_len = *mlie++; /* length */
+
+		cmn_info_ie = mlie + 3;
+		cmn_info_len = *cmn_info_ie;
+
+		/* 802.11 Common info sub-element in Multi-link element
+		 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+		 * |Cmn info Len |MLD MAC| Link ID | .....
+		 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+		 *        1          6        0/1
+		 */
+
+		*link_id = *(cmn_info_ie + 1 + QDF_MAC_ADDR_SIZE);
+
+		/* Length of link info equal total length minus below:
+		 * 1-Byte Extn Ele ID
+		 * 2-Byte Multi link control
+		 * Length of Common info sub-element
+		 */
+
+		link_info_ie = cmn_info_ie + cmn_info_len;
+		link_info_len = total_len - cmn_info_len - 3;
+		while (link_info_len > 0) {
+			link_info_ie++;
+			link_info_len--;
+			/* length of sub element ID */
+			link_len = *link_info_ie++;
+			link_info_len--;
+			link_info_ie += link_len;
+			link_info_len -= link_len;
 			(*num_link)++;
 		}
 	} else {
-		hdd_debug("there is no mlo ie in beacon data");
+		*num_link = 0;
+		hdd_debug("ML IE not found in beacon data");
 	}
 }
 
