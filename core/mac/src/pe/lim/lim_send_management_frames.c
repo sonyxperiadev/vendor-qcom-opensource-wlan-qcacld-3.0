@@ -6814,11 +6814,11 @@ static QDF_STATUS lim_update_mld_to_link_address(struct mac_context *mac_ctx,
 	struct qdf_mac_addr *self_link_addr;
 	struct tLimPreAuthNode *pre_auth_node;
 	struct qdf_mac_addr peer_link_addr;
+	struct qdf_mac_addr *peer_roaming_link_addr;
 	enum QDF_OPMODE opmode;
 	QDF_STATUS status;
 
-	if (!wlan_vdev_mlme_is_mlo_vdev(vdev) ||
-	    !wlan_vdev_get_mlo_external_sae_auth_conversion(vdev))
+	if (!wlan_cm_is_sae_auth_addr_conversion_required(vdev))
 		return QDF_STATUS_SUCCESS;
 
 	opmode = wlan_vdev_mlme_get_opmode(vdev);
@@ -6839,9 +6839,18 @@ static QDF_STATUS lim_update_mld_to_link_address(struct mac_context *mac_ctx,
 			     QDF_MAC_ADDR_SIZE);
 		break;
 	case QDF_STA_MODE:
-		status = wlan_vdev_get_bss_peer_mac(vdev, &peer_link_addr);
-		if (QDF_IS_STATUS_ERROR(status))
-			return status;
+		if (!wlan_cm_is_vdev_roaming(vdev)) {
+			status = wlan_vdev_get_bss_peer_mac(vdev,
+							    &peer_link_addr);
+			if (QDF_IS_STATUS_ERROR(status))
+				return status;
+		} else {
+			peer_roaming_link_addr =
+				wlan_cm_roaming_get_peer_link_addr(vdev);
+			if (!peer_roaming_link_addr)
+				return QDF_STATUS_E_FAILURE;
+			peer_link_addr = *peer_roaming_link_addr;
+		}
 
 		qdf_mem_copy(mac_hdr->da, peer_link_addr.bytes,
 			     QDF_MAC_ADDR_SIZE);

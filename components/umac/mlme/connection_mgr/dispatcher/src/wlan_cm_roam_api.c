@@ -3913,3 +3913,137 @@ bool wlan_cm_is_self_mld_roam_supported(struct wlan_objmgr_psoc *psoc)
 	return wmi_service_enabled(wmi_handle,
 				   wmi_service_self_mld_roam_between_dbs_and_hbs);
 }
+
+#ifdef WLAN_FEATURE_11BE_MLO
+bool wlan_cm_is_sae_auth_addr_conversion_required(struct wlan_objmgr_vdev *vdev)
+{
+	if (!wlan_vdev_get_mlo_external_sae_auth_conversion(vdev))
+		return false;
+
+	if (wlan_cm_is_vdev_roaming(vdev)) {
+		if (!wlan_cm_roam_is_mlo_ap(vdev))
+			return false;
+	} else if (!wlan_vdev_mlme_is_mlo_vdev(vdev)) {
+		return false;
+	}
+
+	return true;
+}
+#endif /* WLAN_FEATURE_11BE_MLO */
+
+#if defined(WLAN_FEATURE_ROAM_OFFLOAD) && defined(WLAN_FEATURE_11BE_MLO)
+/**
+ * wlan_cm_reset_mlo_roam_peer_address() - this API reset the sae_roam_auth
+ * structure values to zero.
+ * @rso_config: pointer to struct rso_config
+ *
+ * Return: void
+ */
+static void wlan_cm_reset_mlo_roam_peer_address(struct rso_config *rso_config)
+{
+	qdf_mem_zero(&rso_config->sae_roam_auth.peer_mldaddr,
+		     QDF_MAC_ADDR_SIZE);
+	qdf_mem_zero(&rso_config->sae_roam_auth.peer_linkaddr,
+		     QDF_MAC_ADDR_SIZE);
+}
+
+void wlan_cm_store_mlo_roam_peer_address(struct wlan_objmgr_pdev *pdev,
+					 struct auth_offload_event *auth_event)
+{
+	struct wlan_objmgr_vdev *vdev;
+	struct rso_config *rso_config;
+	struct qdf_mac_addr mld_addr;
+	QDF_STATUS status;
+
+	if (!pdev) {
+		mlme_err("pdev is NULL");
+		return;
+	}
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_pdev(pdev, auth_event->vdev_id,
+						    WLAN_LEGACY_MAC_ID);
+	if (!vdev) {
+		mlme_err("vdev %d not found", auth_event->vdev_id);
+		return;
+	}
+
+	if (!wlan_vdev_get_mlo_external_sae_auth_conversion(vdev))
+		goto rel_ref;
+
+	if (!wlan_cm_is_vdev_roaming(vdev))
+		goto rel_ref;
+
+	rso_config = wlan_cm_get_rso_config(vdev);
+	if (!rso_config)
+		goto rel_ref;
+
+	if (qdf_is_macaddr_zero(&auth_event->ta)) {
+		/* ta have zero value for non-ML AP */
+		rso_config->sae_roam_auth.is_mlo_ap = false;
+		wlan_cm_reset_mlo_roam_peer_address(rso_config);
+		goto rel_ref;
+	}
+
+	status = scm_get_mld_addr_by_link_addr(pdev, &auth_event->ap_bssid,
+					       &mld_addr);
+
+	rso_config->sae_roam_auth.is_mlo_ap = true;
+
+	if (QDF_IS_STATUS_ERROR(status)) {
+		wlan_cm_reset_mlo_roam_peer_address(rso_config);
+		goto rel_ref;
+	}
+
+	qdf_mem_copy(rso_config->sae_roam_auth.peer_mldaddr.bytes,
+		     mld_addr.bytes, QDF_MAC_ADDR_SIZE);
+	qdf_mem_copy(rso_config->sae_roam_auth.peer_linkaddr.bytes,
+		     &auth_event->ap_bssid, QDF_MAC_ADDR_SIZE);
+
+	mlme_debug("mld addr " QDF_MAC_ADDR_FMT "link addr " QDF_MAC_ADDR_FMT,
+		   QDF_MAC_ADDR_REF(rso_config->sae_roam_auth.peer_mldaddr.bytes),
+		   QDF_MAC_ADDR_REF(rso_config->sae_roam_auth.peer_linkaddr.bytes));
+rel_ref:
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
+}
+
+struct qdf_mac_addr *
+wlan_cm_roaming_get_peer_mld_addr(struct wlan_objmgr_vdev *vdev)
+{
+	struct rso_config *rso_config;
+
+	rso_config = wlan_cm_get_rso_config(vdev);
+	if (!rso_config)
+		return NULL;
+
+	if (qdf_is_macaddr_zero(&rso_config->sae_roam_auth.peer_mldaddr))
+		return NULL;
+
+	return &rso_config->sae_roam_auth.peer_mldaddr;
+}
+
+struct qdf_mac_addr *
+wlan_cm_roaming_get_peer_link_addr(struct wlan_objmgr_vdev *vdev)
+{
+	struct rso_config *rso_config;
+
+	rso_config = wlan_cm_get_rso_config(vdev);
+	if (!rso_config)
+		return NULL;
+
+	if (qdf_is_macaddr_zero(&rso_config->sae_roam_auth.peer_linkaddr))
+		return NULL;
+
+	return &rso_config->sae_roam_auth.peer_linkaddr;
+}
+
+bool wlan_cm_roam_is_mlo_ap(struct wlan_objmgr_vdev *vdev)
+{
+	struct rso_config *rso_config;
+
+	rso_config = wlan_cm_get_rso_config(vdev);
+	if (!rso_config)
+		return false;
+
+	return rso_config->sae_roam_auth.is_mlo_ap;
+}
+#endif /* WLAN_FEATURE_ROAM_OFFLOAD && WLAN_FEATURE_11BE_MLO */
