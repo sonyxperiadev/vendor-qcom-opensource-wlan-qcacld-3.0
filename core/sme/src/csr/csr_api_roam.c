@@ -915,6 +915,40 @@ static void csr_scan_event_handler(struct wlan_objmgr_vdev *vdev,
 	sme_release_global_lock(&mac->sme);
 }
 
+/**
+ * csr_update_roam_pcl_per_connected_sta_vdev() - Update roam pcl per connected
+ *                                                STA
+ * @psoc: pointer to psoc object
+ *
+ * Return: None
+ */
+static void csr_update_roam_pcl_per_connected_sta_vdev(
+						struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_objmgr_vdev *vdev;
+	uint32_t vdev_id;
+
+	for (vdev_id = 0; vdev_id < WLAN_UMAC_PSOC_MAX_VDEVS; vdev_id++) {
+		vdev =
+		wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						     WLAN_LEGACY_SME_ID);
+
+		if (!vdev)
+			continue;
+
+		if (vdev->vdev_mlme.vdev_opmode != QDF_STA_MODE)
+			goto next;
+
+		if (!wlan_cm_is_vdev_connected(vdev))
+			goto next;
+
+		policy_mgr_set_pcl_for_existing_combo(psoc, PM_STA_MODE,
+						      vdev_id);
+next:
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
+	}
+}
+
 QDF_STATUS csr_update_channel_list(struct mac_context *mac)
 {
 	tSirUpdateChanList *pChanList;
@@ -1137,6 +1171,7 @@ QDF_STATUS csr_update_channel_list(struct mac_context *mac)
 		return QDF_STATUS_E_FAILURE;
 	}
 
+	csr_update_roam_pcl_per_connected_sta_vdev(mac->psoc);
 	return QDF_STATUS_SUCCESS;
 }
 
