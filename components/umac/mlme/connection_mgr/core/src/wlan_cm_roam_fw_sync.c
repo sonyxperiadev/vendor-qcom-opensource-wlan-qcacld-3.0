@@ -79,7 +79,6 @@ QDF_STATUS cm_fw_roam_sync_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 
 	if (QDF_IS_STATUS_ERROR(status)) {
 		mlme_err("Roam sync was not handled");
-		cm_fw_roam_abort_req(psoc, vdev_id);
 		cm_roam_stop_req(psoc, vdev_id, REASON_ROAM_SYNCH_FAILED,
 				 NULL, false);
 	}
@@ -121,14 +120,7 @@ cm_fw_send_vdev_roam_event(struct cnx_mgr *cm_ctx, uint16_t data_len,
 					       data_len,
 					       data);
 
-	if (QDF_IS_STATUS_ERROR(status))
-		cm_roam_stop_req(psoc, roam_req->req.vdev_id,
-				 REASON_ROAM_SYNCH_FAILED,
-				 NULL, false);
-
 error:
-	if (QDF_IS_STATUS_ERROR(status))
-		cm_abort_fw_roam(cm_ctx, cm_id);
 
 	return status;
 }
@@ -1038,12 +1030,8 @@ error:
 	if (rsp)
 		wlan_cm_free_connect_rsp(rsp);
 
-	if (QDF_IS_STATUS_ERROR(status)) {
-		cm_roam_stop_req(psoc, vdev_id, REASON_ROAM_SYNCH_FAILED,
-				 NULL, false);
-		cm_abort_fw_roam(cm_ctx, cm_id);
+	if (QDF_IS_STATUS_ERROR(status))
 		mlo_update_connected_links(vdev, 0);
-	}
 rel_ref:
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_SB_ID);
 

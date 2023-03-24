@@ -162,10 +162,7 @@ mlo_roam_abort_req(struct wlan_objmgr_psoc *psoc,
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
-	wlan_mlo_roam_abort_on_link(psoc, event, vdev_id);
-	cm_roam_stop_req(psoc, sync_ind->roamed_vdev_id,
-			 REASON_ROAM_SYNCH_FAILED,
-			 NULL, false);
+	wlan_mlo_roam_abort_on_link(psoc, event, sync_ind->roamed_vdev_id);
 
 	return QDF_STATUS_SUCCESS;
 }

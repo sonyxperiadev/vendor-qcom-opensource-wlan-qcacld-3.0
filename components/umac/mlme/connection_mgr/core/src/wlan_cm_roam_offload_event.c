@@ -584,19 +584,11 @@ QDF_STATUS cm_roam_sync_event_handler_cb(struct wlan_objmgr_vdev *vdev,
 	 */
 	cm_update_phymode_on_roam(vdev_id,
 				  sync_ind);
-	cm_fw_roam_sync_propagation(psoc,
-				    vdev_id,
-				    sync_ind);
+	status = cm_fw_roam_sync_propagation(psoc,
+					     vdev_id,
+					     sync_ind);
 
 err:
-	if (QDF_IS_STATUS_ERROR(status)) {
-		wlan_mlo_roam_abort_on_link(psoc, event,
-					    sync_ind->roamed_vdev_id);
-		cm_fw_roam_abort_req(psoc, sync_ind->roamed_vdev_id);
-		cm_roam_stop_req(psoc, sync_ind->roamed_vdev_id,
-				 REASON_ROAM_SYNCH_FAILED,
-				 NULL, false);
-	}
 	return status;
 }
 

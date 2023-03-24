@@ -2664,7 +2664,6 @@ end:
 abort_roam:
 	if (QDF_IS_STATUS_ERROR(status)) {
 		wmi_err("%d Failed to extract roam sync ind", status);
-		wlan_cm_fw_roam_abort_req(psoc, synch_event->vdev_id);
 		wlan_cm_roam_stop_req(psoc, synch_event->vdev_id,
 				      REASON_ROAM_SYNCH_FAILED);
 	}
