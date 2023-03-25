@@ -59,11 +59,6 @@
 #include <wlan_mlo_t2lm.h>
 #endif
 
-#if defined(WLAN_SUPPORT_TWT) && defined(WLAN_FEATURE_11AX) && \
-	defined(WLAN_TWT_CONV_SUPPORTED)
-#include "wlan_twt_cfg_ext_api.h"
-#endif
-
 #define RSN_OUI_SIZE 4
 /* ////////////////////////////////////////////////////////////////////// */
 void swap_bit_field16(uint16_t in, uint16_t *out)
@@ -9170,6 +9165,27 @@ void lim_ieee80211_pack_ehtcap(uint8_t *ie, tDot11fIEeht_cap dot11f_eht_cap,
 	ehtcaplen = ehtcap->elem_len + WLAN_IE_HDR_LEN;
 }
 
+#ifdef WLAN_SUPPORT_TWT
+static void
+populate_dot11f_twt_eht_cap(struct mac_context *mac,
+			    tDot11fIEeht_cap *eht_cap)
+{
+	bool restricted_support = false;
+
+	wlan_twt_get_rtwt_support(mac->psoc, &restricted_support);
+
+	pe_debug("rTWT support: %d", restricted_support);
+
+	eht_cap->restricted_twt = restricted_support;
+}
+#else
+static inline void
+populate_dot11f_twt_eht_cap(struct mac_context *mac_ctx,
+			    tDot11fIEhe_cap *eht_cap)
+{
+	eht_cap->restricted_twt = false;
+}
+#endif
 QDF_STATUS populate_dot11f_eht_caps(struct mac_context *mac_ctx,
 				    struct pe_session *session,
 				    tDot11fIEeht_cap *eht_cap)
@@ -9188,6 +9204,7 @@ QDF_STATUS populate_dot11f_eht_caps(struct mac_context *mac_ctx,
 	if (session->ch_width != CH_WIDTH_320MHZ)
 		eht_cap->support_320mhz_6ghz = 0;
 
+	populate_dot11f_twt_eht_cap(mac_ctx, eht_cap);
 	return QDF_STATUS_SUCCESS;
 }
 
