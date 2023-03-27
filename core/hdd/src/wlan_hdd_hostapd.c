@@ -3089,7 +3089,7 @@ static int hdd_softap_unpack_ie(mac_handle_t mac_handle,
 		memset(&dot11_rsn_ie, 0, sizeof(tDot11fIERSN));
 		ret = sme_unpack_rsn_ie(mac_handle, rsn_ie, rsn_ie_len,
 					&dot11_rsn_ie, false);
-		if (DOT11F_FAILED(ret)) {
+		if (!DOT11F_SUCCEEDED(ret)) {
 			hdd_err("unpack failed, 0x%x", ret);
 			return -EINVAL;
 		}
@@ -3130,7 +3130,7 @@ static int hdd_softap_unpack_ie(mac_handle_t mac_handle,
 		ret = dot11f_unpack_ie_wpa(MAC_CONTEXT(mac_handle),
 					   rsn_ie, rsn_ie_len,
 					   &dot11_wpa_ie, false);
-		if (DOT11F_FAILED(ret)) {
+		if (!DOT11F_SUCCEEDED(ret)) {
 			hdd_err("unpack failed, 0x%x", ret);
 			return -EINVAL;
 		}
@@ -3170,7 +3170,7 @@ static int hdd_softap_unpack_ie(mac_handle_t mac_handle,
 		ret = dot11f_unpack_ie_wapi(MAC_CONTEXT(mac_handle),
 					    rsn_ie, rsn_ie_len,
 					    &dot11_wapi_ie, false);
-		if (DOT11F_FAILED(ret)) {
+		if (!DOT11F_SUCCEEDED(ret)) {
 			hdd_err("unpack failed, 0x%x", ret);
 			return -EINVAL;
 		}
@@ -6337,8 +6337,10 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 					     &mfp_required,
 					     config->RSNWPAReqIE[1] + 2,
 					     config->RSNWPAReqIE);
-
-		if (QDF_STATUS_SUCCESS == status) {
+		if (status != QDF_STATUS_SUCCESS) {
+			ret = -EINVAL;
+			goto error;
+		} else {
 			/* Now copy over all the security attributes you have
 			 * parsed out. Use the cipher type in the RSN IE
 			 */
@@ -6393,7 +6395,10 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 					 config->RSNWPAReqIE[1] + 2,
 					 config->RSNWPAReqIE);
 
-			if (QDF_STATUS_SUCCESS == status) {
+			if (status != QDF_STATUS_SUCCESS) {
+				ret = -EINVAL;
+				goto error;
+			} else {
 				(WLAN_HDD_GET_AP_CTX_PTR(adapter))->
 				encryption_type = rsn_encrypt_type;
 				hdd_debug("CSR Encryption: %d mcEncryption: %d num_akm_suites:%d",
