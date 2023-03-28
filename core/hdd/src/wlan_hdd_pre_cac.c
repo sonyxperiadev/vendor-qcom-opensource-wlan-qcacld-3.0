@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022, Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -43,6 +43,7 @@ static void wlan_hdd_pre_cac_failure(struct hdd_adapter *adapter)
 	if (wlan_hdd_validate_context(hdd_ctx))
 		return;
 
+	wlan_hdd_stop_sap(adapter);
 	hdd_stop_adapter(hdd_ctx, adapter);
 
 	hdd_exit();
