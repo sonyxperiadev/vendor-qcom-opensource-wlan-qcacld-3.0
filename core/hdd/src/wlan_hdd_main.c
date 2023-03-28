@@ -19519,10 +19519,6 @@ wlan_hdd_add_monitor_check(struct hdd_context *hdd_ctx,
 	QDF_STATUS status;
 	struct hdd_adapter_create_param params = {0};
 
-	/* if no interface is up do not add monitor mode */
-	if (!hdd_is_any_interface_open(hdd_ctx))
-		return -EINVAL;
-
 	sta_adapter = hdd_get_adapter(hdd_ctx, QDF_STA_MODE);
 	if (!sta_adapter) {
 		hdd_err("No station adapter");

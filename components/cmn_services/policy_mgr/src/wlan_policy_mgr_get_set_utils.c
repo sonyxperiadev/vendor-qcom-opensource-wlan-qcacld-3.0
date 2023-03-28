@@ -9710,52 +9710,9 @@ bool policy_mgr_is_sta_mon_concurrency(struct wlan_objmgr_psoc *psoc)
 	return false;
 }
 
-#ifdef WLAN_FEATURE_11BE_MLO
-static QDF_STATUS
-policy_mgr_check_num_of_sta_sessions(struct wlan_objmgr_psoc *psoc) {
-	uint8_t num_open_session = 0;
-
-	/* Ensure there are only 3 station interface when 11be mlo is enabled */
-	if (policy_mgr_mode_specific_num_open_sessions(
-				psoc,
-				QDF_STA_MODE,
-				&num_open_session) != QDF_STATUS_SUCCESS)
-		return QDF_STATUS_E_INVAL;
-
-	if (num_open_session > 3) {
-		policy_mgr_err("cannot add monitor mode, due to %u sta interfaces",
-			       num_open_session);
-		return QDF_STATUS_E_INVAL;
-	}
-
-	return QDF_STATUS_SUCCESS;
-}
-#else
-static QDF_STATUS
-policy_mgr_check_num_of_sta_sessions(struct wlan_objmgr_psoc *psoc) {
-	uint8_t num_open_session = 0;
-
-	/* Ensure there is only one station interface for legacy mode */
-	if (policy_mgr_mode_specific_num_open_sessions(
-				psoc,
-				QDF_STA_MODE,
-				&num_open_session) != QDF_STATUS_SUCCESS)
-		return QDF_STATUS_E_INVAL;
-
-	if (num_open_session > 1) {
-		policy_mgr_err("cannot add monitor mode, due to %u sta interfaces",
-			       num_open_session);
-		return QDF_STATUS_E_INVAL;
-	}
-
-	return QDF_STATUS_SUCCESS;
-}
-#endif
-
 QDF_STATUS policy_mgr_check_mon_concurrency(struct wlan_objmgr_psoc *psoc)
 {
 	uint8_t num_open_session = 0;
-	QDF_STATUS status = QDF_STATUS_SUCCESS;
 
 	if (policy_mgr_mode_specific_num_open_sessions(
 				psoc,
@@ -9777,10 +9734,6 @@ QDF_STATUS policy_mgr_check_mon_concurrency(struct wlan_objmgr_psoc *psoc)
 		policy_mgr_err("cannot add monitor mode, due to SAP concurrency");
 		return QDF_STATUS_E_INVAL;
 	}
-
-	status = policy_mgr_check_num_of_sta_sessions(psoc);
-	if (QDF_IS_STATUS_ERROR(status))
-		return status;
 
 	num_open_session = policy_mgr_mode_specific_connection_count(
 					psoc,
