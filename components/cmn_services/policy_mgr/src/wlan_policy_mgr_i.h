@@ -437,7 +437,6 @@ struct policy_mgr_mac_ss_bw_info {
 	bool support_6ghz_band;
 };
 
-#ifdef WLAN_FEATURE_11BE_MLO
 /**
  * union conc_ext_flag - extended flags for concurrency check
  *
@@ -454,7 +453,6 @@ union conc_ext_flag {
 
 	uint32_t value;
 };
-#endif
 
 #ifdef WLAN_FEATURE_SR
 /**
@@ -678,6 +676,7 @@ QDF_STATUS policy_mgr_get_channel_list(struct wlan_objmgr_psoc *psoc,
  * @ch_freq: channel frequency on which new connection is coming up
  * @num_connections: number of current connections
  * @is_dfs_ch: DFS channel or not
+ * @ext_flags: extended flags for concurrency check
  *
  * When a new connection is about to come up check if current
  * concurrency combination including the new connection is
@@ -687,7 +686,8 @@ QDF_STATUS policy_mgr_get_channel_list(struct wlan_objmgr_psoc *psoc,
  */
 bool policy_mgr_allow_new_home_channel(
 	struct wlan_objmgr_psoc *psoc, enum policy_mgr_con_mode mode,
-	uint32_t ch_freq, uint32_t num_connections, bool is_dfs_ch);
+	uint32_t ch_freq, uint32_t num_connections, bool is_dfs_ch,
+	uint32_t ext_flags);
 
 /**
  * policy_mgr_is_5g_channel_allowed() - check if 5g channel is allowed

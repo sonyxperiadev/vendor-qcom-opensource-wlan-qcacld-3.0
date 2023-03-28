@@ -3078,26 +3078,26 @@ policy_mgr_are_3_freq_on_same_mac(struct wlan_objmgr_psoc *psoc,
 
 /**
  * policy_mgr_allow_4th_new_freq() - Function to check whether 4th freq can
- * be allowed wthout leading to 3 home freq on same mac
+ * be allowed with existing 3 vifs
  * @psoc: Pointer to Psoc
- * @freq1: Frequency 1
- * @freq2: Frequency 2
- * @freq3: Frequency 3
- * @new_ch_freq: freq to check with reference to freq1 freq2 and freq3
+ * @ch_freq: new channel frequency
+ * @mode: new device mode
+ * @ext_flags: extended flags for concurrency check
  *
- * Return:True if all 4 freq can be allowed without causing 3 home frequency
- * on same mac
+ * Return:True if 4th freq can be allowed with existing 3 vifs
  */
 #ifdef FEATURE_FOURTH_CONNECTION
 bool
 policy_mgr_allow_4th_new_freq(struct wlan_objmgr_psoc *psoc,
-			      qdf_freq_t freq1, qdf_freq_t freq2,
-			      qdf_freq_t freq3, qdf_freq_t new_ch_freq);
+			      qdf_freq_t ch_freq,
+			      enum policy_mgr_con_mode mode,
+			      uint32_t ext_flags);
 #else
 static inline bool
 policy_mgr_allow_4th_new_freq(struct wlan_objmgr_psoc *psoc,
-			      qdf_freq_t freq1, qdf_freq_t freq2,
-			      qdf_freq_t freq3, qdf_freq_t new_ch_freq)
+			      qdf_freq_t ch_freq,
+			      enum policy_mgr_con_mode mode,
+			      uint32_t ext_flags)
 {
 	return false;
 }
@@ -4459,6 +4459,30 @@ bool policy_mgr_is_mlo_sta_disconnected(struct wlan_objmgr_psoc *psoc,
 					uint8_t vdev_id);
 
 #ifdef WLAN_FEATURE_11BE_MLO
+/*
+ * policy_mgr_get_ml_sta_info_psoc() - Get number of ML STA vdev ids and
+ * freq list
+ * @pm_ctx: pm_ctx ctx
+ * @num_ml_sta: Return number of ML STA present
+ * @num_disabled_ml_sta: Return number of disabled ML STA links
+ * @ml_vdev_lst: Return ML STA vdev id list
+ * @ml_freq_lst: Return ML STA freq list
+ * @num_non_ml: Return number of non-ML STA present
+ * @non_ml_vdev_lst: Return non-ML STA vdev id list
+ * @non_ml_freq_lst: Return non-ML STA freq list
+ *
+ * Return: void
+ */
+void
+policy_mgr_get_ml_sta_info_psoc(struct wlan_objmgr_psoc *psoc,
+				uint8_t *num_ml_sta,
+				uint8_t *num_disabled_ml_sta,
+				uint8_t *ml_vdev_lst,
+				qdf_freq_t *ml_freq_lst,
+				uint8_t *num_non_ml,
+				uint8_t *non_ml_vdev_lst,
+				qdf_freq_t *non_ml_freq_lst);
+
 /**
  * policy_mgr_handle_link_removal_on_vdev() - Handle AP link removal for
  * MLO STA
