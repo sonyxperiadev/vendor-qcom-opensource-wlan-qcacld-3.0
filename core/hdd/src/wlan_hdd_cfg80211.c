@@ -21232,6 +21232,7 @@ static int wlan_hdd_add_key_vdev(mac_handle_t mac_handle,
 				hdd_err("Failed to get peer address from ML IEs");
 				return qdf_status_to_os_return(status);
 			}
+			goto done;
 		} else {
 			hdd_err("Peer is null return");
 			return -EINVAL;
@@ -21257,6 +21258,7 @@ static int wlan_hdd_add_key_vdev(mac_handle_t mac_handle,
 				     QDF_MAC_ADDR_SIZE);
 	}
 
+done:
 	wlan_hdd_mlo_link_free_keys(adapter, vdev, pairwise);
 
 	errno = wlan_cfg80211_store_key(vdev, key_index,
