@@ -15264,6 +15264,36 @@ int sme_update_eht_caps(mac_handle_t mac_handle, uint8_t session_id,
 
 	return 0;
 }
+
+int
+sme_send_vdev_pause_for_bcn_period(mac_handle_t mac_handle, uint8_t session_id,
+				   uint8_t cfg_val)
+{
+	struct sme_vdev_pause *vdev_pause;
+	struct scheduler_msg msg = {0};
+	QDF_STATUS status;
+
+	vdev_pause = qdf_mem_malloc(sizeof(*vdev_pause));
+	if (!vdev_pause)
+		return -EIO;
+
+	vdev_pause->session_id = session_id;
+	vdev_pause->vdev_pause_duration = cfg_val;
+	qdf_mem_zero(&msg, sizeof(msg));
+	msg.type = eWNI_SME_VDEV_PAUSE_IND;
+	msg.reserved = 0;
+	msg.bodyptr = vdev_pause;
+	status = scheduler_post_message(QDF_MODULE_ID_SME,
+					QDF_MODULE_ID_PE,
+					QDF_MODULE_ID_PE, &msg);
+	if (status != QDF_STATUS_SUCCESS) {
+		sme_err("Not able to post vdev pause indication");
+		qdf_mem_free(vdev_pause);
+		return -EIO;
+	}
+
+	return 0;
+}
 #endif
 
 void sme_set_nss_capability(mac_handle_t mac_handle, uint8_t vdev_id,

@@ -3765,6 +3765,17 @@ void sme_activate_mlo_links(mac_handle_t mac_handle, uint8_t session_id,
 int sme_update_eht_caps(mac_handle_t mac_handle, uint8_t session_id,
 			uint8_t cfg_val, enum sme_eht_tx_bfee_cap_type cap_type,
 			enum QDF_OPMODE op_mode);
+/**
+ * sme_send_vdev_pause_for_bcn_period() - Send vdev pause indication to FW
+ * @mac_handle: Opaque handle to the global MAC context
+ * @session_id: SME session id
+ * @cfg_val: Set vdev pause duration
+ *
+ * Return: 0 on success otherwise error code
+ */
+int sme_send_vdev_pause_for_bcn_period(mac_handle_t mac_handle,
+				       uint8_t session_id,
+				       uint8_t cfg_val);
 #else
 static inline void sme_set_eht_testbed_def(mac_handle_t mac_handle,
 					   uint8_t vdev_id)
@@ -3798,6 +3809,14 @@ static inline
 int sme_update_eht_caps(mac_handle_t mac_handle, uint8_t session_id,
 			uint8_t cfg_val, enum sme_eht_tx_bfee_cap_type cap_type,
 			enum QDF_OPMODE op_mode)
+{
+	return 0;
+}
+
+static inline
+int sme_send_vdev_pause_for_bcn_period(mac_handle_t mac_handle,
+				       uint8_t session_id,
+				       uint8_t cfg_val)
 {
 	return 0;
 }

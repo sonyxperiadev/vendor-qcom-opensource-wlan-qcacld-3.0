@@ -5282,6 +5282,23 @@ policy_mgr_validate_set_mlo_link_cb(struct wlan_objmgr_psoc *psoc,
 							   param->reason);
 }
 
+uint32_t
+policy_mgr_get_active_vdev_bitmap(struct wlan_objmgr_psoc *psoc)
+{
+	struct policy_mgr_psoc_priv_obj *pm_ctx;
+
+	pm_ctx = policy_mgr_get_context(psoc);
+	if (!pm_ctx) {
+		policy_mgr_err("Invalid Context");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	policy_mgr_debug("active link bitmap value: %d",
+			 pm_ctx->active_vdev_bitmap);
+
+	return pm_ctx->active_vdev_bitmap;
+}
+
 /**
  * policy_mgr_mlo_sta_set_link_ext() - Set links for MLO STA
  * @psoc: psoc object
@@ -5353,6 +5370,9 @@ policy_mgr_mlo_sta_set_link_ext(struct wlan_objmgr_psoc *psoc,
 	/* set MLO vdev bit mask for all case */
 	policy_mgr_fill_ml_active_link_vdev_bitmap(req, mlo_vdev_lst,
 						   num_mlo_vdev);
+
+	pm_ctx->active_vdev_bitmap = req->param.vdev_bitmap[0];
+	pm_ctx->inactive_vdev_bitmap = req->param.vdev_bitmap[1];
 
 	if (mode == MLO_LINK_FORCE_MODE_ACTIVE_INACTIVE)
 		policy_mgr_fill_ml_inactive_link_vdev_bitmap(
