@@ -669,7 +669,7 @@ wma_roam_update_vdev(tp_wma_handle wma,
 	 */
 	if (is_multi_link_roam(roam_synch_ind_ptr)) {
 		if (wlan_vdev_mlme_get_is_mlo_link(wma->psoc, vdev_id) ||
-		    mlo_roam_get_num_of_setup_links(roam_synch_ind_ptr) == 1) {
+		    mlo_get_single_link_ml_roaming(wma->psoc, vdev_id)) {
 			status = wma_delete_all_peers(wma, vdev_id);
 			if (QDF_IS_STATUS_ERROR(status))
 				goto end;
