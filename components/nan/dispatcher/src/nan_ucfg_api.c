@@ -887,6 +887,7 @@ post_msg:
 							NAN_DISC_DISABLED);
 				if (ucfg_is_nan_dbs_supported(psoc))
 					policy_mgr_check_n_start_opportunistic_timer(psoc);
+				nan_handle_emlsr_concurrency(psoc, false);
 
 				/*
 				 * If FW respond with NAN enable failure, then

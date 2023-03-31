@@ -1146,6 +1146,14 @@ void policy_mgr_move_vdev_from_connection_to_disabled_tbl(
 bool
 policy_mgr_ml_link_vdev_need_to_be_disabled(struct wlan_objmgr_psoc *psoc,
 					    struct wlan_objmgr_vdev *vdev);
+
+/**
+ * policy_mgr_wait_for_set_link_update() - Wait for set/clear link response
+ * @psoc: psoc pointer
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS policy_mgr_wait_for_set_link_update(struct wlan_objmgr_psoc *psoc);
 #else
 static inline bool
 policy_mgr_is_ml_vdev_id(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
@@ -1175,6 +1183,12 @@ static inline void
 policy_mgr_move_vdev_from_connection_to_disabled_tbl(
 						struct wlan_objmgr_psoc *psoc,
 						uint8_t vdev_id) {}
+
+static inline QDF_STATUS
+policy_mgr_wait_for_set_link_update(struct wlan_objmgr_psoc *psoc)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
 #endif
 
 /**
@@ -4643,10 +4657,10 @@ void policy_mgr_handle_ml_sta_links_on_vdev_down(struct wlan_objmgr_psoc *psoc,
  * policy_mgr_handle_emlsr_sta_concurrency() - Handle concurrency scenarios with
  * EMLSR STA.
  * @psoc: objmgr psoc
- * @vdev: pointer to vdev
- * @ap_coming_up: Check if the new connection request is SAP/P2P GO/NAN
- * @sta_coming_up: Check if the new connection request is STA/P2P Client
- * @emlsr_sta_coming_up: Check if the new connection request is EMLSR STA
+ * @conc_con_coming_up: Indicates if any concurrent connection is coming up
+ * @emlsr_sta_coming_up: Carries true when eMLSR STA is coming up.
+ *			 Carries true when an unsupported concurrency is
+ *			 gone, so that host can let firmware go to eMLSR mode.
  *
  * The API handles concurrency scenarios with existing EMLSR connection when a
  * new connection request is received OR with an existing legacy connection when
@@ -4655,9 +4669,7 @@ void policy_mgr_handle_ml_sta_links_on_vdev_down(struct wlan_objmgr_psoc *psoc,
  * Return: none
  */
 void policy_mgr_handle_emlsr_sta_concurrency(struct wlan_objmgr_psoc *psoc,
-					     struct wlan_objmgr_vdev *vdev,
-					     bool ap_coming_up,
-					     bool sta_coming_up,
+					     bool conc_con_coming_up,
 					     bool emlsr_sta_coming_up);
 
 /**

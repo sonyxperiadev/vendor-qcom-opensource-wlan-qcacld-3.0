@@ -38,6 +38,7 @@
 #include "qdf_platform.h"
 #include "wlan_osif_request_manager.h"
 #include "wlan_p2p_api.h"
+#include "wlan_mlme_vdev_mgr_interface.h"
 
 QDF_STATUS nan_set_discovery_state(struct wlan_objmgr_psoc *psoc,
 				   enum nan_disc_state new_state)
@@ -942,6 +943,7 @@ QDF_STATUS nan_disable_cleanup(struct wlan_objmgr_psoc *psoc)
 		if (psoc_nan_obj->is_explicit_disable && call_back)
 			call_back(psoc_nan_obj->nan_disc_request_ctx);
 
+		nan_handle_emlsr_concurrency(psoc, false);
 		policy_mgr_nan_sap_post_disable_conc_check(psoc);
 	} else {
 		/* Should not happen, NAN state can always be disabled */
@@ -1192,6 +1194,25 @@ pre_enable_failure:
 	return status;
 }
 
+void nan_handle_emlsr_concurrency(struct wlan_objmgr_psoc *psoc,
+				  bool nan_enable)
+{
+	if (nan_enable) {
+		/*
+		 * Check if any set link is already progress,
+		 * wait for it to complete
+		 */
+		policy_mgr_wait_for_set_link_update(psoc);
+
+		wlan_handle_emlsr_sta_concurrency(psoc, true, false);
+
+		/* Wait till rsp is received if NAN enable causes a set link */
+		policy_mgr_wait_for_set_link_update(psoc);
+	} else {
+		wlan_handle_emlsr_sta_concurrency(psoc, false, true);
+	}
+}
+
 QDF_STATUS nan_discovery_pre_enable(struct wlan_objmgr_pdev *pdev,
 				    uint32_t nan_ch_freq)
 {
@@ -1221,6 +1242,8 @@ QDF_STATUS nan_discovery_pre_enable(struct wlan_objmgr_pdev *pdev,
 		if (QDF_IS_STATUS_ERROR(status))
 			goto pre_enable_failure;
 	}
+
+	nan_handle_emlsr_concurrency(psoc, true);
 
 	/* Try to teardown TDLS links, but do not wait */
 	status = ucfg_tdls_teardown_links(psoc);

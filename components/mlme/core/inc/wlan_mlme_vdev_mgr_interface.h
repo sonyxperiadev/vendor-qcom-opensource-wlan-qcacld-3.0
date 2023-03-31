@@ -552,9 +552,9 @@ qdf_freq_t wlan_get_conc_freq(void);
 /**
  * wlan_handle_emlsr_sta_concurrency() - Handle concurrency scenarios with
  * EMLSR STA.
- * @vdev: pointer to vdev
- * @ap_coming_up: Check if the new connection request is SAP/P2P GO/NAN
- * @sta_coming_up: Check if the new connection request is STA/P2P Client
+ * @psoc: pointer to psoc
+ * @conc_con_coming_up: Carries true if any concurrent connection(STA/SAP/NAN)
+ *			is comng up
  * @emlsr_sta_coming_up: Check if the new connection request is EMLSR STA
  *
  * The API handles concurrency scenarios with existing EMLSR connection when a
@@ -564,13 +564,13 @@ qdf_freq_t wlan_get_conc_freq(void);
  * Return: none
  */
 void
-wlan_handle_emlsr_sta_concurrency(struct wlan_objmgr_vdev *vdev,
-				  bool ap_coming_up, bool sta_coming_up,
+wlan_handle_emlsr_sta_concurrency(struct wlan_objmgr_psoc *psoc,
+				  bool conc_con_coming_up,
 				  bool emlsr_sta_coming_up);
 #else
 static inline void
-wlan_handle_emlsr_sta_concurrency(struct wlan_objmgr_vdev *vdev,
-				  bool ap_coming_up, bool sta_coming_up,
+wlan_handle_emlsr_sta_concurrency(struct wlan_objmgr_psoc *psoc,
+				  bool conc_con_coming_up,
 				  bool emlsr_sta_coming_up)
 {
 }
