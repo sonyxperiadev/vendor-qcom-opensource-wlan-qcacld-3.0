@@ -3508,8 +3508,6 @@ lim_cm_fill_link_session(struct mac_context *mac_ctx,
 		goto end;
 	}
 
-	sir_copy_mac_addr(pe_session->bssId, sync_ind->bssid.bytes);
-
 	pe_session->lim_join_req =
 		qdf_mem_malloc(sizeof(*pe_session->lim_join_req) + bss_len);
 	if (!pe_session->lim_join_req) {
