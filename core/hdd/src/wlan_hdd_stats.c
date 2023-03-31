@@ -2085,6 +2085,7 @@ static void cache_station_stats_cb(struct stats_event *ev, void *cookie)
 			continue;
 		}
 		copy_station_stats_to_adapter(adapter, ev);
+		wlan_hdd_get_peer_rx_rate_stats(adapter);
 		/* dev_put has to be done here */
 		hdd_adapter_dev_put_debug(adapter, dbgid);
 		if (next_adapter)
@@ -7551,13 +7552,6 @@ void wlan_hdd_get_peer_rx_rate_stats(struct hdd_adapter *adapter)
 		return;
 
 	soc = cds_get_context(QDF_MODULE_ID_SOC);
-
-	/*
-	 *  If througput is high, do not get rx rate
-	 *  info to avoid the performance penalty
-	 */
-	if (cdp_get_bus_lvl_high(soc))
-		return;
 
 	peer_stats = qdf_mem_malloc(sizeof(*peer_stats));
 	if (!peer_stats)
