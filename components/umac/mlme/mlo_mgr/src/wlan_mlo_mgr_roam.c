@@ -469,14 +469,26 @@ mlo_roam_get_link_freq_from_mac_addr(struct roam_offload_synch_ind *sync_ind,
 {
 	uint8_t i;
 
-	if (!sync_ind || !sync_ind->num_setup_links || !link_mac_addr)
+	if (!sync_ind)
 		return 0;
+
+	/* Non-MLO roaming */
+	if (!sync_ind->num_setup_links)
+		return sync_ind->chan_freq;
+
+	if (!link_mac_addr) {
+		mlo_debug("link_mac_addr is NULL");
+		return 0;
+	}
 
 	for (i = 0; i < sync_ind->num_setup_links; i++)
 		if (!qdf_mem_cmp(sync_ind->ml_link[i].link_addr.bytes,
 				 link_mac_addr,
 				 QDF_MAC_ADDR_SIZE))
 			return sync_ind->ml_link[i].channel.mhz;
+
+	mlo_debug("Mac address not found in ml_link info" QDF_MAC_ADDR_FMT,
+		  QDF_MAC_ADDR_REF(link_mac_addr));
 
 	return 0;
 }

@@ -855,51 +855,29 @@ cm_update_scan_db_on_roam_success(struct wlan_objmgr_vdev *vdev,
 	if (!cm_ctx)
 		return;
 
-	if (roam_synch_ind->auth_status == ROAM_AUTH_STATUS_CONNECTED) {
-		if (ies->link_bcn_probe_rsp.len) {
-			frame_freq = mlo_roam_get_link_freq_from_mac_addr(
-					roam_synch_ind,
-					wlan_mlme_get_src_addr_from_frame(
-					&ies->link_bcn_probe_rsp));
-			cm_inform_bcn_probe(cm_ctx,
-					    ies->link_bcn_probe_rsp.ptr,
-					    ies->link_bcn_probe_rsp.len,
-					    frame_freq,
-					    roam_synch_ind->rssi,
-					    cm_id);
-		}
-
+	if (ies->link_bcn_probe_rsp.len) {
 		frame_freq = mlo_roam_get_link_freq_from_mac_addr(
-					roam_synch_ind,
-					wlan_mlme_get_src_addr_from_frame(
-					&ies->bcn_probe_rsp));
+				roam_synch_ind,
+				wlan_mlme_get_src_addr_from_frame(
+				&ies->link_bcn_probe_rsp));
 		cm_inform_bcn_probe(cm_ctx,
-				    ies->bcn_probe_rsp.ptr,
-				    ies->bcn_probe_rsp.len,
+				    ies->link_bcn_probe_rsp.ptr,
+				    ies->link_bcn_probe_rsp.len,
 				    frame_freq,
 				    roam_synch_ind->rssi,
 				    cm_id);
-	} else if (wlan_vdev_mlme_is_mlo_link_vdev(vdev)) {
-		if (ies->link_bcn_probe_rsp.len) {
-			frame_freq = mlo_roam_get_link_freq_from_mac_addr(
-					roam_synch_ind,
-					wlan_mlme_get_src_addr_from_frame(
-					&ies->link_bcn_probe_rsp));
-			cm_inform_bcn_probe(cm_ctx,
-					    ies->link_bcn_probe_rsp.ptr,
-					    ies->link_bcn_probe_rsp.len,
-					    frame_freq,
-					    roam_synch_ind->rssi,
-					    cm_id);
-		}
-	} else {
-		cm_inform_bcn_probe(cm_ctx,
-				    ies->bcn_probe_rsp.ptr,
-				    ies->bcn_probe_rsp.len,
-				    resp->freq,
-				    roam_synch_ind->rssi,
-				    cm_id);
 	}
+
+	frame_freq = mlo_roam_get_link_freq_from_mac_addr(
+				roam_synch_ind,
+				wlan_mlme_get_src_addr_from_frame(
+				&ies->bcn_probe_rsp));
+	cm_inform_bcn_probe(cm_ctx,
+			    ies->bcn_probe_rsp.ptr,
+			    ies->bcn_probe_rsp.len,
+			    frame_freq,
+			    roam_synch_ind->rssi,
+			    cm_id);
 
 	cm_update_scan_mlme_on_roam(vdev, &resp->bssid,
 				    SCAN_ENTRY_CON_STATE_ASSOC);
