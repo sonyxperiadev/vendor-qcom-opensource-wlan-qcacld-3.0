@@ -1974,9 +1974,23 @@ lim_get_bss_11be_mode_allowed(struct mac_context *mac_ctx,
 			      struct bss_description *bss_desc,
 			      tDot11fBeaconIEs *ie_struct)
 {
+	struct scan_cache_entry *scan_entry;
+	bool is_eht_allowed;
+
 	if (!ie_struct->eht_cap.present)
 		return false;
 
+	scan_entry = scm_scan_get_entry_by_bssid(mac_ctx->pdev,
+						 (struct qdf_mac_addr *)
+						 bss_desc->bssId);
+
+	if (scan_entry) {
+		is_eht_allowed =
+			cm_is_eht_allowed_for_current_security(scan_entry);
+		util_scan_free_cache_entry(scan_entry);
+		if (!is_eht_allowed)
+			return false;
+	}
 	return mlme_get_bss_11be_allowed(
 			mac_ctx->psoc,
 			(struct qdf_mac_addr *)&bss_desc->bssId,
