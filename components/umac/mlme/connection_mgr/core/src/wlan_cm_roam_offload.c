@@ -5137,7 +5137,7 @@ void cm_update_pmk_cache_ft(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 	 * the newly added entry to avoid multiple PMK cache entries for the
 	 * same MDID.
 	 */
-	wlan_vdev_get_bss_peer_mac(vdev, &pmksa.bssid);
+	wlan_vdev_get_bss_peer_mac_for_pmksa(vdev, &pmksa.bssid);
 	wlan_vdev_mlme_get_ssid(vdev, pmksa.ssid, &pmksa.ssid_len);
 	wlan_cm_roam_cfg_get_value(psoc, vdev_id, MOBILITY_DOMAIN, &src_cfg);
 
@@ -5250,7 +5250,7 @@ cm_store_sae_single_pmk_to_global_cache(struct wlan_objmgr_psoc *psoc,
 	/*
 	 * Mark the AP as single PMK capable in Crypto Table
 	 */
-	wlan_vdev_get_bss_peer_mac(vdev, &bssid);
+	wlan_vdev_get_bss_peer_mac_for_pmksa(vdev, &bssid);
 	wlan_crypto_set_sae_single_pmk_bss_cap(vdev, &bssid, true);
 
 	pmk_info = qdf_mem_malloc(sizeof(*pmk_info));
@@ -5297,7 +5297,7 @@ void cm_check_and_set_sae_single_pmk_cap(struct wlan_objmgr_psoc *psoc,
 		mlme_err("get vdev failed");
 		return;
 	}
-	status = wlan_vdev_get_bss_peer_mac(vdev, &bssid);
+	status = wlan_vdev_get_bss_peer_mac_for_pmksa(vdev, &bssid);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		mlme_err("Failed to find connected bssid");
 		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_CM_ID);

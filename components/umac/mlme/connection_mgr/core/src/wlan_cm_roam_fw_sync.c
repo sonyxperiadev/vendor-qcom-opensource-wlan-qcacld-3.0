@@ -433,6 +433,17 @@ cm_fill_bssid_freq_info(uint8_t vdev_id,
 	uint8_t i;
 	struct ml_setup_link_param *ml_link;
 
+	/* The @bssid field in roam synch indication will
+	 * contain MLD address in case of roaming to ML
+	 * candidate or else legacy MAC address for non-ML
+	 * roaming.
+	 */
+	if (is_multi_link_roam(roam_synch_data))
+		qdf_copy_macaddr(&rsp->connect_rsp.mld_addr,
+				 &roam_synch_data->bssid);
+	else
+		qdf_zero_macaddr(&rsp->connect_rsp.mld_addr);
+
 	for (i = 0; i < roam_synch_data->num_setup_links; i++) {
 		ml_link = &roam_synch_data->ml_link[i];
 		if (vdev_id == ml_link->vdev_id) {
@@ -691,7 +702,7 @@ static QDF_STATUS cm_process_roam_keys(struct wlan_objmgr_vdev *vdev,
 				 CM_PREFIX_REF(vdev_id, cm_id));
 			goto end;
 		}
-		wlan_vdev_get_bss_peer_mac(vdev, &pmkid_cache->bssid);
+		wlan_vdev_get_bss_peer_mac_for_pmksa(vdev, &pmkid_cache->bssid);
 		mlme_debug(CM_PREFIX_FMT "Trying to find PMKID for "
 			   QDF_MAC_ADDR_FMT " AKM Type:%d",
 			   CM_PREFIX_REF(vdev_id, cm_id),
@@ -763,7 +774,8 @@ static QDF_STATUS cm_process_roam_keys(struct wlan_objmgr_vdev *vdev,
 				 * This pmksa buffer is to update the
 				 * crypto table
 				 */
-				wlan_vdev_get_bss_peer_mac(vdev, &pmksa->bssid);
+				wlan_vdev_get_bss_peer_mac_for_pmksa(vdev,
+								     &pmksa->bssid);
 				qdf_mem_copy(pmksa->pmkid,
 					     roaming_info->pmkid, PMKID_LEN);
 				qdf_mem_copy(pmksa->pmk, roaming_info->pmk,
@@ -826,8 +838,8 @@ static QDF_STATUS cm_process_roam_keys(struct wlan_objmgr_vdev *vdev,
 				wlan_cm_set_psk_pmk(pdev, vdev_id,
 						    roaming_info->pmk,
 						    roaming_info->pmk_len);
-				wlan_vdev_get_bss_peer_mac(vdev,
-							   &pmksa->bssid);
+				wlan_vdev_get_bss_peer_mac_for_pmksa(vdev,
+								     &pmksa->bssid);
 				qdf_mem_copy(pmksa->pmkid,
 					     roaming_info->pmkid, PMKID_LEN);
 				qdf_mem_copy(pmksa->pmk,
