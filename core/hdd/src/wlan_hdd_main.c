@@ -15132,7 +15132,8 @@ int hdd_wlan_stop_modules(struct hdd_context *hdd_ctx, bool ftm_mode)
 		hdd_disable_power_management(hdd_ctx);
 
 		if (hdd_get_conparam() == QDF_GLOBAL_MISSION_MODE)
-			ucfg_dp_direct_link_deinit(hdd_ctx->psoc);
+			ucfg_dp_direct_link_deinit(hdd_ctx->psoc,
+						   is_recovery_stop);
 
 		if (hdd_deconfigure_cds(hdd_ctx)) {
 			hdd_err("Failed to de-configure CDS");
