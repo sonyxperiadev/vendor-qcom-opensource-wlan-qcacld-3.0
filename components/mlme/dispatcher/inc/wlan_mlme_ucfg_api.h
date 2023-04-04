@@ -267,6 +267,21 @@ QDF_STATUS ucfg_mlme_get_band_capability(struct wlan_objmgr_psoc *psoc,
 	return wlan_mlme_get_band_capability(psoc, band_capability);
 }
 
+/**
+ * ucfg_mlme_peer_config_vlan() - Send VLAN id to FW for
+ * RX packet
+ * @vdev: vdev pointer
+ * @macaddr: Peer mac address
+ *
+ * Return: QDF_STATUS
+ */
+static inline QDF_STATUS
+ucfg_mlme_peer_config_vlan(struct wlan_objmgr_vdev *vdev,
+			   uint8_t *macaddr)
+{
+	return wlan_mlme_peer_config_vlan(vdev, macaddr);
+}
+
 #ifdef MULTI_CLIENT_LL_SUPPORT
 /**
  * ucfg_mlme_get_wlm_multi_client_ll_caps() - Get multi client latency level

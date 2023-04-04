@@ -36,6 +36,7 @@
 #include "wlan_action_oui_main.h"
 #include "target_if.h"
 #include "wlan_vdev_mgr_tgt_if_tx_api.h"
+#include "wmi_unified_vdev_api.h"
 
 /* quota in milliseconds */
 #define MCC_DUTY_CYCLE 70
@@ -246,6 +247,36 @@ QDF_STATUS wlan_mlme_get_band_capability(struct wlan_objmgr_psoc *psoc,
 
 	return QDF_STATUS_SUCCESS;
 }
+
+#ifdef QCA_MULTIPASS_SUPPORT
+QDF_STATUS
+wlan_mlme_peer_config_vlan(struct wlan_objmgr_vdev *vdev,
+			   uint8_t *mac_addr)
+{
+	QDF_STATUS status;
+	wmi_unified_t wmi_handle;
+	struct peer_vlan_config_param param;
+
+	wmi_handle = get_wmi_unified_hdl_from_pdev(wlan_vdev_get_pdev(vdev));
+	if (!wmi_handle) {
+		mlme_err("unable to get wmi_handle");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	qdf_mem_set(&param, sizeof(param), 0);
+
+	param.rx_cmd = 1;
+	/* Enabling Rx_insert_inner_vlan_tag */
+	param.rx_insert_c_tag = 1;
+	param.vdev_id = wlan_vdev_get_id(vdev);
+
+	status = wmi_send_peer_vlan_config(wmi_handle, mac_addr, param);
+	if (QDF_IS_STATUS_ERROR(status))
+		return status;
+
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 
 QDF_STATUS wlan_mlme_set_band_capability(struct wlan_objmgr_psoc *psoc,
 					 uint32_t band_capability)

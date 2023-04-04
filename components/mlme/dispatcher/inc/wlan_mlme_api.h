@@ -274,6 +274,25 @@ QDF_STATUS wlan_mlme_set_ht_mpdu_density(struct wlan_objmgr_psoc *psoc,
 QDF_STATUS wlan_mlme_get_band_capability(struct wlan_objmgr_psoc *psoc,
 					 uint32_t *band_capability);
 
+#ifdef QCA_MULTIPASS_SUPPORT
+/**
+ * wlan_mlme_peer_config_vlan() - send vlan id to FW for RX path
+ * @vdev: vdev pointer
+ * @mac_addr: mac address of the peer
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_mlme_peer_config_vlan(struct wlan_objmgr_vdev *vdev,
+			   uint8_t *mac_addr);
+#else
+static inline QDF_STATUS
+wlan_mlme_peer_config_vlan(struct wlan_objmgr_vdev *vdev,
+			   uint8_t *mac_addr)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 #ifdef MULTI_CLIENT_LL_SUPPORT
 /**
  * wlan_mlme_get_wlm_multi_client_ll_caps() - Get the wlm multi client latency

@@ -20847,6 +20847,131 @@ QDF_STATUS wlan_hdd_send_sta_authorized_event(
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef QCA_MULTIPASS_SUPPORT
+static int
+wlan_hdd_set_peer_vlan_config(struct hdd_adapter *adapter,
+			      struct wlan_objmgr_vdev *vdev,
+			      uint8_t *mac_addr,
+			      uint8_t vlan_id)
+{
+	ol_txrx_soc_handle soc_txrx_handle;
+	cdp_config_param_type val;
+	QDF_STATUS status;
+
+	soc_txrx_handle = wlan_psoc_get_dp_handle(wlan_vdev_get_psoc(vdev));
+
+	cdp_peer_set_vlan_id(soc_txrx_handle,
+			     wlan_vdev_get_id(vdev),
+			     mac_addr, vlan_id);
+
+	val.cdp_peer_param_isolation = true;
+
+	cdp_txrx_set_peer_param(soc_txrx_handle,
+				wlan_vdev_get_id(vdev),
+				mac_addr,
+				CDP_CONFIG_ISOLATION,
+				val);
+
+	status = ucfg_mlme_peer_config_vlan(vdev, mac_addr);
+	if (QDF_IS_STATUS_ERROR(status))
+		return -EINVAL;
+
+	return 0;
+}
+
+static void
+wlan_hdd_set_vlan_id(struct hdd_sta_info_obj *sta_info_list,
+		     uint8_t *mac, struct station_parameters *params)
+{
+	struct hdd_station_info *sta_info;
+
+	if (!params->vlan_id)
+		return;
+
+	sta_info =
+	hdd_get_sta_info_by_mac(sta_info_list,
+				mac,
+				STA_INFO_SOFTAP_GET_STA_INFO);
+	if (!sta_info) {
+		hdd_err("Failed to find right station MAC: "
+			  QDF_MAC_ADDR_FMT,
+			  QDF_MAC_ADDR_REF(uint8_t *)mac);
+		return;
+	}
+
+	sta_info->vlan_id = params->vlan_id;
+
+	hdd_put_sta_info_ref(sta_info_list, &sta_info, true,
+			     STA_INFO_SOFTAP_GET_STA_INFO);
+}
+
+static QDF_STATUS
+wlan_hdd_set_vlan_config(struct hdd_adapter *adapter,
+			 uint8_t *mac)
+{
+	int ret;
+	struct hdd_station_info *sta_info;
+	struct wlan_objmgr_vdev *vdev;
+
+	sta_info = hdd_get_sta_info_by_mac(&adapter->sta_info_list,
+					   (uint8_t *)mac,
+					   STA_INFO_SOFTAP_GET_STA_INFO);
+
+	if (!sta_info) {
+		hdd_err("Failed to find right station MAC:",
+			QDF_MAC_ADDR_FMT,
+			QDF_MAC_ADDR_REF((uint8_t *)mac));
+			return QDF_STATUS_E_INVAL;
+	}
+
+	if (!sta_info->vlan_id) {
+		hdd_put_sta_info_ref(&adapter->sta_info_list, &sta_info,
+				     true,
+				     STA_INFO_SOFTAP_GET_STA_INFO);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_LEGACY_SAP_ID);
+	if (!vdev) {
+		hdd_err("Unable to get vdev");
+		hdd_put_sta_info_ref(&adapter->sta_info_list, &sta_info,
+				     true,
+				     STA_INFO_SOFTAP_GET_STA_INFO);
+	}
+
+	ret = wlan_hdd_set_peer_vlan_config(adapter,
+					    vdev,
+					    mac,
+					    sta_info->vlan_id);
+	if (ret < 0) {
+		hdd_err("Unable to send peer vlan config");
+		hdd_put_sta_info_ref(&adapter->sta_info_list, &sta_info,
+				     true,
+				     STA_INFO_SOFTAP_GET_STA_INFO);
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_LEGACY_SAP_ID);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_LEGACY_SAP_ID);
+	hdd_put_sta_info_ref(&adapter->sta_info_list, &sta_info,
+			     true,  STA_INFO_SOFTAP_GET_STA_INFO);
+
+	return QDF_STATUS_SUCCESS;
+}
+#else
+static inline void
+wlan_hdd_set_vlan_id(struct hdd_sta_info_obj *sta_info_list,
+		     uint8_t *mac, struct station_parameters *params)
+{
+}
+
+static inline QDF_STATUS
+wlan_hdd_set_vlan_config(struct hdd_adapter *adapter,
+			 uint8_t *mac)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 /**
  * __wlan_hdd_change_station() - change station
  * @wiphy: Pointer to the wiphy structure
@@ -20899,6 +21024,8 @@ static int __wlan_hdd_change_station(struct wiphy *wiphy,
 
 	qdf_mem_copy(sta_macaddr.bytes, mac, QDF_MAC_ADDR_SIZE);
 
+	wlan_hdd_set_vlan_id(&adapter->sta_info_list, (uint8_t *)mac, params);
+
 	if ((adapter->device_mode == QDF_SAP_MODE) ||
 	    (adapter->device_mode == QDF_P2P_GO_MODE)) {
 		if (params->sta_flags_set & BIT(NL80211_STA_FLAG_AUTHORIZED)) {
@@ -20907,6 +21034,11 @@ static int __wlan_hdd_change_station(struct wiphy *wiphy,
 			 * For Encrypted SAP session, this will be done as
 			 * part of eSAP_STA_SET_KEY_EVENT
 			 */
+			status = wlan_hdd_set_vlan_config(adapter,
+							  (uint8_t *)mac);
+			if (QDF_IS_STATUS_ERROR(status))
+				return 0;
+
 			if (ap_ctx->encryption_type !=
 			    eCSR_ENCRYPT_TYPE_NONE) {
 				hdd_debug("Encrypt type %d, not setting peer authorized now",
@@ -21280,6 +21412,24 @@ wlan_hdd_mlo_copy_partner_addr_from_mlie(struct wlan_objmgr_vdev *vdev,
 }
 #endif
 
+#if defined(QCA_MULTIPASS_SUPPORT) && \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 5, 0))
+static void
+wlan_hdd_set_vlan_groupkey(ol_txrx_soc_handle soc_txrx_handle, uint16_t vdev_id,
+			   struct key_params *params, uint8_t key_index)
+{
+	if (params->vlan_id)
+		cdp_set_vlan_groupkey(soc_txrx_handle, vdev_id,
+				      params->vlan_id, key_index);
+}
+#else
+static void
+wlan_hdd_set_vlan_groupkey(ol_txrx_soc_handle soc_txrx_handle, uint16_t vdev_id,
+			   struct key_params *params, uint8_t key_index)
+{
+}
+#endif
+
 static int wlan_hdd_add_key_vdev(mac_handle_t mac_handle,
 				 struct wlan_objmgr_vdev *vdev,
 				 u8 key_index, bool pairwise,
@@ -21295,6 +21445,7 @@ static int wlan_hdd_add_key_vdev(mac_handle_t mac_handle,
 	enum wlan_crypto_cipher_type cipher;
 	bool ft_mode = false;
 	struct hdd_ap_ctx *hdd_ap_ctx;
+	ol_txrx_soc_handle soc_txrx_handle;
 
 	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 
@@ -21388,6 +21539,15 @@ done:
 		}
 		errno = wlan_hdd_add_key_sap(adapter, pairwise,
 					     key_index, cipher);
+
+		if (!pairwise) {
+			soc_txrx_handle =
+					wlan_psoc_get_dp_handle(hdd_ctx->psoc);
+			 wlan_hdd_set_vlan_groupkey(soc_txrx_handle,
+						    wlan_vdev_get_id(vdev),
+						    params, key_index);
+		}
+
 		break;
 	case QDF_STA_MODE:
 	case QDF_P2P_CLIENT_MODE:
