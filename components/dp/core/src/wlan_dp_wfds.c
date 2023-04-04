@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -456,7 +456,7 @@ QDF_STATUS dp_wfds_new_server(void)
 
 	qdf_atomic_set(&dl_wfds->wfds_state, DP_WFDS_SVC_CONNECTED);
 
-	dp_debug("Connected to WFDS QMI service, state: 0x%lx",
+	dp_debug("Connected to WFDS QMI service, state: 0x%x",
 		 qdf_atomic_read(&dl_wfds->wfds_state));
 
 	return dp_wfds_event_post(dl_wfds, DP_WFDS_NEW_SERVER, NULL);
@@ -601,7 +601,8 @@ out:
 	return status;
 }
 
-void dp_wfds_deinit(struct dp_direct_link_context *dp_direct_link_ctx)
+void dp_wfds_deinit(struct dp_direct_link_context *dp_direct_link_ctx,
+		    bool is_ssr)
 {
 	struct dp_direct_link_wfds_context *dl_wfds;
 
@@ -620,6 +621,11 @@ void dp_wfds_deinit(struct dp_direct_link_context *dp_direct_link_ctx)
 
 	qdf_spinlock_destroy(&dl_wfds->wfds_event_list_lock);
 	qdf_list_destroy(&dl_wfds->wfds_event_list);
+
+	if (qdf_atomic_read(&dl_wfds->wfds_state) !=
+	    DP_WFDS_SVC_DISCONNECTED)
+		wlan_qmi_wfds_send_misc_req_msg(dp_direct_link_ctx->dp_ctx->psoc,
+						is_ssr);
 
 	wlan_qmi_wfds_deinit(dp_direct_link_ctx->dp_ctx->psoc);
 	gp_dl_wfds_ctx = NULL;
