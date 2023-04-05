@@ -330,9 +330,9 @@ struct wlan_chan_list {
 	qdf_freq_t freq_list[CFG_VALID_CHANNEL_LIST_LEN];
 };
 
-/*
- * roam_fail_params: different types of params to set or get roam fail states
- * for the vdev
+/**
+ * enum roam_fail_params: different types of params to set or get
+ * roam fail states for the vdev
  * @ROAM_TRIGGER_REASON: Roam trigger reason(enum WMI_ROAM_TRIGGER_REASON_ID)
  * @ROAM_INVOKE_FAIL_REASON: One of WMI_ROAM_FAIL_REASON_ID for roam failure
  * in case of forced roam
@@ -460,7 +460,8 @@ struct roam_synch_frame_ind {
 	uint8_t vdev_id;
 };
 
-/* struct owe_transition_mode_info - structure containing owe transition mode
+/**
+ * struct owe_transition_mode_info - structure containing owe transition mode
  * element info
  * @is_owe_transition_conn: Current connection is in owe transition mode or not
  * @ssid: ssid
@@ -1772,7 +1773,7 @@ enum roam_rt_stats_params {
 	ROAM_RT_STATS_SUSPEND_MODE_ENABLE,
 };
 
-/*
+/**
  * struct wlan_roam_mlo_config - Roam MLO config parameters
  * @vdev_id: VDEV id
  * @partner_link_addr: Assigned link address which can be used as self
@@ -2222,7 +2223,7 @@ struct roam_denylist_timeout {
 	enum dlm_reject_ap_source source;
 };
 
-/*
+/**
  * struct roam_denylist_event - Denylist event entries destination structure
  * @vdev_id: vdev id
  * @num_entries: total entries sent over the event
@@ -2234,7 +2235,7 @@ struct roam_denylist_event {
 	struct roam_denylist_timeout roam_denylist[];
 };
 
-/*
+/**
  * enum cm_vdev_disconnect_reason - Roam disconnect reason
  * @CM_DISCONNECT_REASON_CSA_SA_QUERY_TIMEOUT: Disconnect due to SA query
  *  timeout after moving to new channel due to CSA in OCV enabled case.
@@ -2246,7 +2247,7 @@ enum cm_vdev_disconnect_reason {
 	CM_DISCONNECT_REASON_MOVE_TO_CELLULAR,
 };
 
-/*
+/**
  * struct vdev_disconnect_event_data - Roam disconnect event data
  * @vdev_id: vdev id
  * @psoc: psoc object
@@ -2352,7 +2353,7 @@ struct roam_stats_event {
 	struct roam_event_rt_info roam_event_param;
 };
 
-/*
+/**
  * struct auth_offload_event - offload data carried by roam event
  * @vdev_id: vdev id
  * @ap_bssid: SAE authentication offload AP MAC Address
@@ -2366,7 +2367,7 @@ struct auth_offload_event {
 	uint32_t akm;
 };
 
-/*
+/**
  * struct roam_pmkid_req_event - Pmkid event with entries destination structure
  * @vdev_id: VDEV id
  * @psoc: psoc object
@@ -2585,7 +2586,7 @@ struct cm_hw_mode_trans_ind {
 /* If link is disabled, during roam sync */
 #define CM_ROAM_LINK_FLAG_DISABLE    0x1
 
-/*
+/**
  * struct ml_setup_link_param - MLO setup link param
  * @vdev_id: vdev id of the link
  * @link_id: link id of the link
@@ -2601,7 +2602,7 @@ struct ml_setup_link_param {
 	struct qdf_mac_addr link_addr;
 };
 
-/*
+/**
  * struct ml_key_material_param - MLO key material param
  * @link_id: key is for which link, when link_id is 0xf,
  * means the key is used for all links, like PTK
@@ -2619,17 +2620,17 @@ struct ml_key_material_param {
 };
 
 struct roam_offload_synch_ind {
-	uint16_t beaconProbeRespOffset;
-	uint16_t beaconProbeRespLength;
-	uint16_t reassocRespOffset;
-	uint16_t reassocRespLength;
+	uint16_t beacon_probe_resp_offset;
+	uint16_t beacon_probe_resp_length;
+	uint16_t reassoc_resp_offset;
+	uint16_t reassoc_resp_length;
 	uint16_t reassoc_req_offset;
 	uint16_t reassoc_req_length;
-	uint8_t isBeacon;
+	uint8_t is_beacon;
 	uint8_t roamed_vdev_id;
 	struct qdf_mac_addr bssid;
 	struct wlan_ssid ssid;
-	int8_t txMgmtPower;
+	int8_t tx_mgmt_power;
 	uint32_t auth_status;
 	uint8_t rssi;
 	uint8_t roam_reason;
@@ -2675,11 +2676,11 @@ struct roam_offload_synch_ind {
 #endif
 };
 
-/*
+/**
  * struct roam_scan_candidate_frame Roam candidate scan entry
- * vdev_id : vdev id
- * frame_len : Length of the beacon/probe rsp frame
- * frame : Pointer to the frame
+ * @vdev_id : vdev id
+ * @frame_length : Length of the beacon/probe rsp frame
+ * @frame : Pointer to the frame
  */
 struct roam_scan_candidate_frame {
 	uint8_t vdev_id;

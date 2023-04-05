@@ -2013,7 +2013,7 @@ lim_roam_gen_mbssid_beacon(struct mac_context *mac,
 
 	ie_offset = SIR_MAC_HDR_LEN_3A + SIR_MAC_B_PR_SSID_OFFSET;
 	bcn_prb_ptr = (uint8_t *)roam_ind +
-				roam_ind->beaconProbeRespOffset;
+				roam_ind->beacon_probe_resp_offset;
 
 	rx_param.chan_freq = roam_ind->chan_freq;
 	rx_param.pdev_id = wlan_objmgr_pdev_get_pdev_id(mac->pdev);
@@ -2024,7 +2024,7 @@ lim_roam_gen_mbssid_beacon(struct mac_context *mac,
 		rx_param.rssi_ctl[i] = WLAN_INVALID_PER_CHAIN_RSSI;
 
 	scan_list = util_scan_unpack_beacon_frame(mac->pdev, bcn_prb_ptr,
-						  roam_ind->beaconProbeRespLength,
+						  roam_ind->beacon_probe_resp_length,
 						  MGMT_SUBTYPE_BEACON, &rx_param);
 	if (!scan_list) {
 		pe_err("failed to parse");
@@ -2070,7 +2070,7 @@ lim_roam_gen_mbssid_beacon(struct mac_context *mac,
 		goto error;
 	}
 
-	if (roam_ind->isBeacon) {
+	if (roam_ind->is_beacon) {
 		offset = SIR_MAC_HDR_LEN_3A + SIR_MAC_B_PR_SSID_OFFSET;
 		length = nontx_bcn_prbrsp_len - SIR_MAC_HDR_LEN_3A;
 		if (sir_parse_beacon_ie(mac, parsed_frm,
@@ -2078,7 +2078,7 @@ lim_roam_gen_mbssid_beacon(struct mac_context *mac,
 					length) != QDF_STATUS_SUCCESS ||
 			!parsed_frm->ssidPresent) {
 			pe_err("Parse error Beacon, length: %d",
-			       roam_ind->beaconProbeRespLength);
+			       roam_ind->beacon_probe_resp_length);
 			status =  QDF_STATUS_E_FAILURE;
 			goto error;
 		}
@@ -2091,7 +2091,7 @@ lim_roam_gen_mbssid_beacon(struct mac_context *mac,
 					    parsed_frm) != QDF_STATUS_SUCCESS ||
 			!parsed_frm->ssidPresent) {
 			pe_err("Parse error ProbeResponse, length: %d",
-			       roam_ind->beaconProbeRespLength);
+			       roam_ind->beacon_probe_resp_length);
 			status = QDF_STATUS_E_FAILURE;
 			goto error;
 		}
@@ -2148,14 +2148,14 @@ lim_roam_gen_beacon_descr(struct mac_context *mac,
 			     sizeof(tSirMacAddr));
 	}
 
-	is_beacon = is_mlo_link ? roam_ind->is_link_beacon : roam_ind->isBeacon;
+	is_beacon = is_mlo_link ? roam_ind->is_link_beacon : roam_ind->is_beacon;
 
 	if ((!is_multi_link_roam(roam_ind)) &&
 	    (qdf_mem_cmp(bssid->bytes,
 			 &mac_hdr->bssId, QDF_MAC_ADDR_SIZE) != 0)) {
 		pe_debug("LFR3:MBSSID Beacon/Prb Rsp: %d bssid "
 			 QDF_MAC_ADDR_FMT,
-			 roam_ind->isBeacon,
+			 roam_ind->is_beacon,
 			 QDF_MAC_ADDR_REF(mac_hdr->bssId));
 		/*
 		 * Its a MBSSID non-tx BSS roaming scenario.
@@ -2266,8 +2266,8 @@ lim_roam_fill_bss_descr(struct mac_context *mac,
 		is_mlo_link = true;
 	} else {
 		bcn_proberesp_ptr = (uint8_t *)roam_synch_ind_ptr +
-			roam_synch_ind_ptr->beaconProbeRespOffset;
-		bcn_proberesp_len = roam_synch_ind_ptr->beaconProbeRespLength;
+			roam_synch_ind_ptr->beacon_probe_resp_offset;
+		bcn_proberesp_len = roam_synch_ind_ptr->beacon_probe_resp_length;
 	}
 
 	mac_hdr = (tpSirMacMgmtHdr)bcn_proberesp_ptr;
@@ -2292,7 +2292,7 @@ lim_roam_fill_bss_descr(struct mac_context *mac,
 	pe_debug("LFR3:Beacon/Prb Rsp: %d bssid " QDF_MAC_ADDR_FMT
 		 " beacon " QDF_MAC_ADDR_FMT,
 		 is_mlo_link ? roam_synch_ind_ptr->is_link_beacon :
-			roam_synch_ind_ptr->isBeacon,
+			roam_synch_ind_ptr->is_beacon,
 		 QDF_MAC_ADDR_REF(bssid.bytes),
 		 QDF_MAC_ADDR_REF(mac_hdr->bssId));
 
@@ -2329,7 +2329,7 @@ lim_roam_fill_bss_descr(struct mac_context *mac,
 
 	bss_desc_ptr->fProbeRsp = !(is_mlo_link ?
 					roam_synch_ind_ptr->is_link_beacon :
-					roam_synch_ind_ptr->isBeacon);
+					roam_synch_ind_ptr->is_beacon);
 	bss_desc_ptr->rssi = roam_synch_ind_ptr->rssi;
 	/* Copy Timestamp */
 	bss_desc_ptr->scansystimensec = qdf_get_monotonic_boottime_ns();
@@ -2637,9 +2637,9 @@ lim_fill_roamed_peer_twt_caps(struct mac_context *mac_ctx,
 	if (!reassoc_rsp)
 		return;
 
-	len = roam_synch->reassocRespLength - sizeof(tSirMacMgmtHdr);
+	len = roam_synch->reassoc_resp_length - sizeof(tSirMacMgmtHdr);
 	reassoc_body = (uint8_t *)roam_synch + sizeof(tSirMacMgmtHdr) +
-			roam_synch->reassocRespOffset;
+			roam_synch->reassoc_resp_offset;
 
 	status = dot11f_unpack_re_assoc_response(mac_ctx, reassoc_body, len,
 						 reassoc_rsp, false);
@@ -3084,19 +3084,19 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 						  roam_sync_ind_ptr);
 
 	reassoc_resp = (uint8_t *)roam_sync_ind_ptr +
-			roam_sync_ind_ptr->reassocRespOffset;
+			roam_sync_ind_ptr->reassoc_resp_offset;
 
 	if (wlan_vdev_mlme_get_is_mlo_link(mac_ctx->psoc, vdev_id)) {
 		status = lim_gen_link_specific_assoc_rsp(mac_ctx,
 						ft_session_ptr,
 						reassoc_resp,
-						roam_sync_ind_ptr->reassocRespLength);
+						roam_sync_ind_ptr->reassoc_resp_length);
 		if (QDF_IS_STATUS_ERROR(status))
 			return status;
 	}
 	else
 		lim_process_assoc_rsp_frame(mac_ctx, reassoc_resp,
-					    roam_sync_ind_ptr->reassocRespLength - SIR_MAC_HDR_LEN_3A,
+					    roam_sync_ind_ptr->reassoc_resp_length - SIR_MAC_HDR_LEN_3A,
 					    LIM_REASSOC, ft_session_ptr);
 
 	lim_check_ft_initial_im_association(roam_sync_ind_ptr, ft_session_ptr);
@@ -4234,9 +4234,9 @@ lim_gen_link_probe_rsp_roam(struct mac_context *mac_ctx,
 		pe_debug("Firmware sent link beacon also. No need to generate a new one from assoc bcn/prb rsp");
 		return QDF_STATUS_SUCCESS;
 	}
-	frame_len = roam_sync_ind->beaconProbeRespLength;
+	frame_len = roam_sync_ind->beacon_probe_resp_length;
 	frame = (uint8_t *)roam_sync_ind +
-			roam_sync_ind->beaconProbeRespOffset;
+			roam_sync_ind->beacon_probe_resp_offset;
 
 	frame = (uint8_t *)(frame + sizeof(*hdr));
 	frame_len -= sizeof(*hdr);

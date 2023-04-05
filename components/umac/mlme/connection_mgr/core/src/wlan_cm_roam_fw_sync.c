@@ -281,11 +281,11 @@ cm_populate_connect_ies(struct roam_offload_synch_ind *roam_synch_data,
 	connect_ies = &rsp->connect_rsp.connect_ies;
 
 	/* Beacon/Probe Rsp frame */
-	if (roam_synch_data->beaconProbeRespLength) {
+	if (roam_synch_data->beacon_probe_resp_length) {
 		connect_ies->bcn_probe_rsp.len =
-			roam_synch_data->beaconProbeRespLength;
+			roam_synch_data->beacon_probe_resp_length;
 		bcn_probe_rsp_ptr = (uint8_t *)roam_synch_data +
-					roam_synch_data->beaconProbeRespOffset;
+					roam_synch_data->beacon_probe_resp_offset;
 
 		connect_ies->bcn_probe_rsp.ptr =
 			qdf_mem_malloc(connect_ies->bcn_probe_rsp.len);
@@ -312,13 +312,13 @@ cm_populate_connect_ies(struct roam_offload_synch_ind *roam_synch_data,
 	}
 
 	/* ReAssoc Rsp IE data */
-	if (roam_synch_data->reassocRespLength >
+	if (roam_synch_data->reassoc_resp_length >
 	    sizeof(struct wlan_frame_hdr)) {
 		connect_ies->assoc_rsp.len =
-				roam_synch_data->reassocRespLength -
+				roam_synch_data->reassoc_resp_length -
 				sizeof(struct wlan_frame_hdr);
 		reassoc_rsp_ptr = (uint8_t *)roam_synch_data +
-				  roam_synch_data->reassocRespOffset +
+				  roam_synch_data->reassoc_resp_offset +
 				  sizeof(struct wlan_frame_hdr);
 		connect_ies->assoc_rsp.ptr =
 			qdf_mem_malloc(connect_ies->assoc_rsp.len);
