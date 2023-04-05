@@ -4214,15 +4214,14 @@ lim_gen_link_probe_rsp_roam(struct mac_context *mac_ctx,
 			    struct pe_session *session,
 			    struct roam_offload_synch_ind *roam_sync_ind)
 {
-	struct element_info link_probe_rsp;
+	struct element_info rcvd_probe_rsp, gen_probe_rsp = {0, NULL}, frame;
 	struct qdf_mac_addr sta_link_addr;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	tSirProbeRespBeacon *probe_rsp;
-	uint8_t *frame, *src_addr;
-	uint32_t frame_len;
+	uint8_t *src_addr;
 	struct wlan_frame_hdr *hdr;
 	uint16_t gen_frame_len;
-	uint32_t idx, link_id;
+	uint32_t idx, link_id, ml_probe_link_id;
 
 	if (!session || !roam_sync_ind)
 		return QDF_STATUS_E_NULL_VALUE;
@@ -4234,14 +4233,16 @@ lim_gen_link_probe_rsp_roam(struct mac_context *mac_ctx,
 		pe_debug("Firmware sent link beacon also. No need to generate a new one from assoc bcn/prb rsp");
 		return QDF_STATUS_SUCCESS;
 	}
-	frame_len = roam_sync_ind->beacon_probe_resp_length;
-	frame = (uint8_t *)roam_sync_ind +
-			roam_sync_ind->beacon_probe_resp_offset;
+	frame.ptr = (uint8_t *)roam_sync_ind +
+				roam_sync_ind->beacon_probe_resp_offset;
+	frame.len = roam_sync_ind->beacon_probe_resp_length;
 
-	frame = (uint8_t *)(frame + sizeof(*hdr));
-	frame_len -= sizeof(*hdr);
 	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
-			   frame, frame_len);
+			   frame.ptr, frame.len);
+
+	/* Strip the header */
+	rcvd_probe_rsp.ptr = frame.ptr + sizeof(*hdr);
+	rcvd_probe_rsp.len = frame.len - sizeof(*hdr);
 
 	probe_rsp = qdf_mem_malloc(sizeof(tSirProbeRespBeacon));
 	if (!probe_rsp)
@@ -4250,10 +4251,12 @@ lim_gen_link_probe_rsp_roam(struct mac_context *mac_ctx,
 	probe_rsp->ssId.length = 0;
 	probe_rsp->wpa.length = 0;
 	/* Enforce Mandatory IEs */
-	if ((sir_convert_probe_frame2_struct(mac_ctx,
-		frame, frame_len, probe_rsp) == QDF_STATUS_E_FAILURE) ||
+	status = sir_convert_probe_frame2_struct(mac_ctx, rcvd_probe_rsp.ptr,
+						 rcvd_probe_rsp.len, probe_rsp);
+	if (status == QDF_STATUS_E_FAILURE ||
 	    !probe_rsp->ssidPresent) {
-		pe_err("Parse error ProbeResponse, length=%d", frame_len);
+		pe_err("Parse error ProbeResponse, length=%d",
+		       rcvd_probe_rsp.len);
 		qdf_mem_free(probe_rsp);
 		return QDF_STATUS_E_INVAL;
 	}
@@ -4274,9 +4277,11 @@ lim_gen_link_probe_rsp_roam(struct mac_context *mac_ctx,
 		 */
 		gen_frame_len = MAX_MGMT_MPDU_LEN;
 
-		link_probe_rsp.ptr = qdf_mem_malloc(gen_frame_len);
-		if (!link_probe_rsp.ptr)
+		gen_probe_rsp.ptr = qdf_mem_malloc(gen_frame_len);
+		if (!gen_probe_rsp.ptr) {
+			qdf_mem_free(probe_rsp);
 			return QDF_STATUS_E_NOMEM;
+		}
 
 		/*
 		 * It's ok to keep assoc vdev mac address as DA as link vdev
@@ -4286,43 +4291,55 @@ lim_gen_link_probe_rsp_roam(struct mac_context *mac_ctx,
 		qdf_mem_copy(&sta_link_addr, session->self_mac_addr,
 			     QDF_MAC_ADDR_SIZE);
 
-		link_probe_rsp.len = gen_frame_len;
+		gen_probe_rsp.len = gen_frame_len;
+		src_addr = wlan_mlme_get_src_addr_from_frame(&frame);
+		status = mlo_roam_get_link_id_from_mac_addr(roam_sync_ind,
+							    src_addr,
+							    &ml_probe_link_id);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			pe_debug("Invalid link id for mac_addr: " QDF_MAC_ADDR_FMT,
+				 src_addr);
+			goto done;
+		}
 		for (idx = 0; idx < roam_sync_ind->num_setup_links; idx++) {
 			link_id =  roam_sync_ind->ml_link[idx].link_id;
-			status = util_gen_link_probe_rsp(frame, frame_len,
-					     link_id, sta_link_addr,
-					     link_probe_rsp.ptr, gen_frame_len,
-					     (qdf_size_t *)&link_probe_rsp.len);
+			if (link_id == ml_probe_link_id)
+				continue;
+			status = util_gen_link_probe_rsp(rcvd_probe_rsp.ptr,
+					rcvd_probe_rsp.len,
+					link_id,
+					sta_link_addr,
+					gen_probe_rsp.ptr,
+					gen_frame_len,
+					(qdf_size_t *)&gen_probe_rsp.len);
 			if (QDF_IS_STATUS_ERROR(status)) {
 				pe_err("MLO: Link %d probe resp gen failed %d",
 				       link_id, status);
 				status = QDF_STATUS_E_FAILURE;
-				continue;
+				goto done;
 			}
-			pe_debug("MLO: link probe rsp size:%u orig probe rsp :%u",
-				 link_probe_rsp.len, frame_len);
 
-			src_addr = wlan_mlme_get_src_addr_from_frame(&link_probe_rsp);
+			pe_debug("MLO: link probe rsp size:%u orig probe rsp :%u",
+				 gen_probe_rsp.len, rcvd_probe_rsp.len);
+
+			src_addr = wlan_mlme_get_src_addr_from_frame(
+							&gen_probe_rsp);
 			if (!src_addr) {
 				pe_err("MLO: Failed to fetch src address");
 				status = QDF_STATUS_E_FAILURE;
-				continue;
+				goto done;
 			}
-			lim_add_bcn_probe(session->vdev, link_probe_rsp.ptr,
-					  link_probe_rsp.len,
+			lim_add_bcn_probe(session->vdev, gen_probe_rsp.ptr,
+					  gen_probe_rsp.len,
 					  mlo_roam_get_link_freq_from_mac_addr(
 						       roam_sync_ind, src_addr),
 					  roam_sync_ind->rssi);
 		}
-	} else {
-		qdf_mem_free(probe_rsp);
-		return status;
 	}
 
-	if (link_probe_rsp.ptr)
-		qdf_mem_free(link_probe_rsp.ptr);
-	link_probe_rsp.ptr = NULL;
-	link_probe_rsp.len = 0;
+done:
+	if (gen_probe_rsp.ptr)
+		qdf_mem_free(gen_probe_rsp.ptr);
 	qdf_mem_free(probe_rsp);
 	return status;
 }

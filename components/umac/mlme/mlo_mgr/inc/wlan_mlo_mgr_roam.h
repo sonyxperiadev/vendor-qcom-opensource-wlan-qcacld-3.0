@@ -106,6 +106,19 @@ mlo_roam_get_link_freq_from_mac_addr(struct roam_offload_synch_ind *sync_ind,
 				     uint8_t *link_mac_addr);
 
 /**
+ * mlo_roam_get_link_id_from_mac_addr - get link id of given link addr
+ * @sync_ind: roam sync ind pointer
+ * @link_mac_addr: Link mac address
+ * @link_id: Buffer to fill link corresponds to link mac address
+ *
+ * This api will be called to get the link id
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+mlo_roam_get_link_id_from_mac_addr(struct roam_offload_synch_ind *sync_ind,
+				   uint8_t *link_mac_addr, uint32_t *link_id);
+/**
  * mlo_roam_get_link_id - get link id
  *
  * @vdev_id: vdev id

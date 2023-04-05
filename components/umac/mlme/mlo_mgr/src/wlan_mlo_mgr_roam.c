@@ -481,6 +481,26 @@ mlo_roam_get_link_freq_from_mac_addr(struct roam_offload_synch_ind *sync_ind,
 	return 0;
 }
 
+QDF_STATUS
+mlo_roam_get_link_id_from_mac_addr(struct roam_offload_synch_ind *sync_ind,
+				   uint8_t *link_mac_addr, uint32_t *link_id)
+{
+	uint8_t i;
+
+	if (!sync_ind || !sync_ind->num_setup_links || !link_mac_addr)
+		return QDF_STATUS_E_INVAL;
+
+	for (i = 0; i < sync_ind->num_setup_links; i++)
+		if (!qdf_mem_cmp(sync_ind->ml_link[i].link_addr.bytes,
+				 link_mac_addr,
+				 QDF_MAC_ADDR_SIZE)) {
+			*link_id = sync_ind->ml_link[i].link_id;
+			return QDF_STATUS_SUCCESS;
+		}
+
+	return QDF_STATUS_E_INVAL;
+}
+
 QDF_STATUS mlo_enable_rso(struct wlan_objmgr_pdev *pdev,
 			  struct wlan_objmgr_vdev *vdev,
 			  struct wlan_cm_connect_resp *rsp)
