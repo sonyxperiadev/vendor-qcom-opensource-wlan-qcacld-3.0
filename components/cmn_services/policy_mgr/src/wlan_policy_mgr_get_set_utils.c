@@ -7208,21 +7208,22 @@ void policy_mgr_activate_mlo_links(struct wlan_objmgr_psoc *psoc,
 	}
 
 	/*
-	 * Invoke Force active link cmd first, followed by Force inactive link
-	 * cmd. This ensures that there is atleast 1 link active at any given
-	 * time.
+	 * If there are both active and inactive vdev count, then issue a
+	 * single WMI with force mode MLO_LINK_FORCE_MODE_ACTIVE_INACTIVE,
+	 * else if there is only active vdev count, send single WMI for
+	 * all active vdevs with force mode MLO_LINK_FORCE_MODE_ACTIVE.
 	 */
-	if (active_vdev_cnt)
+	if (active_vdev_cnt && inactive_vdev_cnt)
+		policy_mgr_mlo_sta_set_link_ext(
+					psoc, MLO_LINK_FORCE_REASON_CONNECT,
+					MLO_LINK_FORCE_MODE_ACTIVE_INACTIVE,
+					active_vdev_cnt, active_vdev_lst,
+					inactive_vdev_cnt, inactive_vdev_lst);
+	else if (active_vdev_cnt && !inactive_vdev_cnt)
 		policy_mgr_mlo_sta_set_link(psoc,
 					    MLO_LINK_FORCE_REASON_DISCONNECT,
 					    MLO_LINK_FORCE_MODE_ACTIVE,
-					    active_vdev_cnt,
-					    active_vdev_lst);
-	if (inactive_vdev_cnt)
-		policy_mgr_mlo_sta_set_link(psoc, MLO_LINK_FORCE_REASON_CONNECT,
-					    MLO_LINK_FORCE_MODE_INACTIVE,
-					    inactive_vdev_cnt,
-					    inactive_vdev_lst);
+					    active_vdev_cnt, active_vdev_lst);
 
 	for (idx = 0; idx < ml_vdev_cnt; idx++)
 		mlo_release_vdev_ref(tmp_vdev_lst[idx]);
