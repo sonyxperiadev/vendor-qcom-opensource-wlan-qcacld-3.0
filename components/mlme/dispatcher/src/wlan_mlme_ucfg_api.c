@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -365,6 +365,12 @@ ucfg_mlme_set_vdev_traffic_type(struct wlan_objmgr_psoc *psoc,
 	policy_mgr_handle_ml_sta_link_on_traffic_type_change(psoc, vdev);
 
 	return status;
+}
+
+void ucfg_mlme_connected_chan_stats_request(struct wlan_objmgr_psoc *psoc,
+					    uint8_t vdev_id)
+{
+	mlme_connected_chan_stats_request(psoc, vdev_id);
 }
 
 QDF_STATUS

@@ -123,6 +123,7 @@ struct peer_disconnect_stats_param {
  * @rso_rx_ops: Roam Rx ops to receive roam offload events from firmware
  * @wfa_testcmd: WFA config tx ops to send to FW
  * @disconnect_stats_param: Peer disconnect stats related params for SAP case
+ * @scan_requester_id: mlme scan requester id
  */
 struct wlan_mlme_psoc_ext_obj {
 	struct wlan_mlme_cfg cfg;
@@ -130,6 +131,7 @@ struct wlan_mlme_psoc_ext_obj {
 	struct wlan_cm_roam_rx_ops rso_rx_ops;
 	struct wlan_mlme_wfa_cmd wfa_testcmd;
 	struct peer_disconnect_stats_param disconnect_stats_param;
+	wlan_scan_requester scan_requester_id;
 };
 
 /**
@@ -633,6 +635,17 @@ struct wlan_mlme_nss_chains *mlme_get_dynamic_vdev_config(
  * Return: HE ops IE
  */
 uint32_t mlme_get_vdev_he_ops(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id);
+
+/**
+ * mlme_connected_chan_stats_request() - process connected channel stats
+ * request
+ * @psoc: pointer to psoc object
+ * @vdev_id: Vdev id
+ *
+ * Return: none
+ */
+void mlme_connected_chan_stats_request(struct wlan_objmgr_psoc *psoc,
+				       uint8_t vdev_id);
 
 /**
  * mlme_get_ini_vdev_config() - get the vdev ini config params

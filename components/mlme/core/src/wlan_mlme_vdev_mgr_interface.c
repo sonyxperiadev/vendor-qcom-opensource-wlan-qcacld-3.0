@@ -1663,6 +1663,47 @@ vdevmgr_vdev_stop_rsp_handle(struct vdev_mlme_obj *vdev_mlme,
 }
 
 /**
+ * psoc_mlme_ext_hdl_enable() - to enable mlme ext param handler
+ * @psoc: psoc object
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS psoc_mlme_ext_hdl_enable(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_FAILURE;
+
+	mlme_obj->scan_requester_id =
+		wlan_scan_register_requester(psoc, "MLME_EXT",
+					     wlan_mlme_chan_stats_scan_event_cb,
+					     NULL);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * psoc_mlme_ext_hdl_disable() - to disable mlme ext param handler
+ * @psoc: psoc object
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS psoc_mlme_ext_hdl_disable(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return QDF_STATUS_E_FAILURE;
+
+	wlan_scan_unregister_requester(psoc, mlme_obj->scan_requester_id);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
  * psoc_mlme_ext_hdl_create() - Create mlme legacy priv object
  * @psoc_mlme: psoc mlme object
  *
@@ -2129,6 +2170,8 @@ static struct mlme_ext_ops ext_ops = {
 	.mlme_cm_ext_vdev_down_req_cb = cm_send_vdev_down_req,
 	.mlme_cm_ext_reassoc_req_cb = cm_handle_reassoc_req,
 	.mlme_cm_ext_roam_start_ind_cb = cm_handle_roam_start,
+	.mlme_psoc_ext_hdl_enable = psoc_mlme_ext_hdl_enable,
+	.mlme_psoc_ext_hdl_disable = psoc_mlme_ext_hdl_disable,
 #ifdef WLAN_FEATURE_DYNAMIC_MAC_ADDR_UPDATE
 	.mlme_vdev_send_set_mac_addr = vdevmgr_mlme_vdev_send_set_mac_addr,
 #endif

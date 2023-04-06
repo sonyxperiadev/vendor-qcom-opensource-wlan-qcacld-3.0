@@ -4613,6 +4613,17 @@ ucfg_mlme_set_vdev_traffic_low_latency(struct wlan_objmgr_psoc *psoc,
 				       uint8_t vdev_id, bool set);
 
 /**
+ * ucfg_mlme_connected_chan_stats_request() - process connected channel stats
+ * request
+ * @psoc: pointer to psoc object
+ * @vdev_id: Vdev id
+ *
+ * Return: none
+ */
+void ucfg_mlme_connected_chan_stats_request(struct wlan_objmgr_psoc *psoc,
+					    uint8_t vdev_id);
+
+/**
  * ucfg_mlme_set_vdev_traffic_high_throughput()  - Set/clear vdev high
  * throughput config
  * @psoc: pointer to psoc object

@@ -6606,6 +6606,17 @@ void wlan_mlme_get_feature_info(struct wlan_objmgr_psoc *psoc,
 }
 #endif
 
+void wlan_mlme_chan_stats_scan_event_cb(struct wlan_objmgr_vdev *vdev,
+					struct scan_event *event, void *arg)
+{
+	bool success = false;
+
+	if (!util_is_scan_completed(event, &success))
+		return;
+
+	mlme_send_scan_done_complete_cb(event->vdev_id);
+}
+
 enum phy_ch_width wlan_mlme_convert_vht_op_bw_to_phy_ch_width(
 						uint8_t channel_width)
 {
