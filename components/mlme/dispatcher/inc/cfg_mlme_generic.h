@@ -267,30 +267,6 @@ enum t2lm_negotiation_support {
 #define CFG_6GHZ_STD_CONN_POLICY
 #endif
 
-#ifdef CONFIG_BAND_6GHZ
-/**
- * relaxed_6ghz_conn_policy - Enable 6ghz relaxed connection policy
- * @Min: 0
- * @Max: 1
- * @Default: 0
- *
- * This cfg is used to set 6Ghz relaxed connection policies where STA
- * will be allowed to operate in VLP mode and scan/connect to 6 GHz BSS
- * with unmatching country code.
- *
- * Related: None
- *
- * Supported Feature: STA
- */
-#define CFG_RELAXED_6GHZ_CONN_POLICY CFG_BOOL( \
-		"relaxed_6ghz_conn_policy", \
-		0, \
-		"6ghz relaxed connection policy")
-#define CFG_RELAX_6GHZ_CONN_POLICY	CFG(CFG_RELAXED_6GHZ_CONN_POLICY)
-#else
-#define CFG_RELAX_6GHZ_CONN_POLICY
-#endif
-
 #ifdef WLAN_FEATURE_11BE_MLO
 /*
  * emlsr_mode_enable - Enable eMLSR mode support
@@ -1196,7 +1172,6 @@ enum t2lm_negotiation_support {
 	CFG_WDS_MODE_ALL \
 	CFG(CFG_TX_RETRY_MULTIPLIER) \
 	CFG(CFG_MGMT_FRAME_HW_TX_RETRY_COUNT) \
-	CFG_RELAX_6GHZ_CONN_POLICY \
 	CFG_6GHZ_STD_CONN_POLICY \
 	CFG_EMLSR_MODE_ENABLED \
 	CFG_SR_ENABLE_MODES_ALL \
