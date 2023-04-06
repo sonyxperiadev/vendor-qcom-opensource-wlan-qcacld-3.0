@@ -206,6 +206,8 @@ struct mld_capab_and_op {
  * @eml_capab_present: the present flag of EML capability
  * @mld_capab_and_op_present: the present flag of MLD capability and operation
  * @mld_id_present: the present flag of MLD ID
+ * @ext_mld_capab_and_op_present: Extended MLD Capabilities And
+ *                                Operations Present
  * @reserved_1: reserved
  * @common_info_length: common info length
  * @mld_mac_addr: MLD mac address
@@ -230,7 +232,8 @@ struct wlan_mlo_ie {
 	uint16_t eml_capab_present:1;
 	uint16_t mld_capab_and_op_present: 1;
 	uint16_t mld_id_present: 1;
-	uint16_t reserved_1:6;
+	uint16_t ext_mld_capab_and_op_present: 1;
+	uint16_t reserved_1:5;
 	uint8_t common_info_length;
 	uint8_t mld_mac_addr[6];
 	uint8_t link_id;
@@ -320,6 +323,8 @@ struct mlo_link_ie_info {
  * @medium_sync_delay_info_present: Medium sync delay information present
  * @bss_param_change_cnt_present: BSS parameter change count present
  * @link_id_info_present: Link ID information present
+ * @ext_mld_capab_and_op_present: Extended MLD Capabilities And
+ *                                Operations Present
  * @reserved: reserved bit
  * @type: Type bits
  */
@@ -327,7 +332,8 @@ struct wlan_mlo_ie_info {
 #ifndef ANI_LITTLE_BIT_ENDIAN
 	uint8_t mld_mac_addr[6];
 	uint8_t common_info_length;
-	uint16_t reserved_1:6;
+	uint16_t reserved_1:5;
+	uint16_t ext_mld_capab_and_op_present:1;
 	uint16_t mld_id_present:1;
 	uint16_t mld_capab_and_op_present:1;
 	uint16_t eml_capab_present:1;
@@ -345,7 +351,8 @@ struct wlan_mlo_ie_info {
 	uint16_t eml_capab_present:1;
 	uint16_t mld_capab_and_op_present:1;
 	uint16_t mld_id_present:1;
-	uint16_t reserved_1:6;
+	uint16_t ext_mld_capab_and_op_present:1;
+	uint16_t reserved_1:5;
 	uint8_t common_info_length;
 	uint8_t mld_mac_addr[6];
 #endif
