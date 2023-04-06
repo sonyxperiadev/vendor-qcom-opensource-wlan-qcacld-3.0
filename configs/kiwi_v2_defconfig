@@ -10,6 +10,17 @@ include $(WLAN_ROOT)/configs/default_defconfig
 #Enable 11BE EHT
 CONFIG_WLAN_FEATURE_11BE := y
 
+#Enable IPA Optional wifi datapath feature
+CONFIG_IPA_OPT_WIFI_DP := y
+
+ifeq ($(CONFIG_ARCH_KALAMA), y)
+ifeq ($(CONFIG_IPA_OPT_WIFI_DP), y)
+CONFIG_IPA_OFFLOAD := y
+CONFIG_ENABLE_SMMU_S1_TRANSLATION := y
+CONFIG_SMMU_S1_UNMAP := y
+endif
+endif
+
 # Enable EHT rate sysfs entry
 ifeq ($(CONFIG_WLAN_SYSFS), y)
 CONFIG_WLAN_SYSFS_EHT_RATE := y

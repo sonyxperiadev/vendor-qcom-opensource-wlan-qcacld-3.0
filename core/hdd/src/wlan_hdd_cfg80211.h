@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1036,6 +1036,27 @@ wlan_hdd_mlo_copy_partner_addr_from_mlie(struct wlan_objmgr_vdev *vdev,
 	return QDF_STATUS_E_NOSUPPORT;
 }
 #endif /* WLAN_FEATURE_11BE_MLO */
+
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_TID_LINK_MAP_SUPPORT)
+/**
+ * hdd_mlo_dev_t2lm_notify_link_update() - Send update T2LM info event
+ * @vdev: Pointer to vdev
+ * @t2lm: T2LM info
+ *
+ * Send update T2LM info event to userspace
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS hdd_mlo_dev_t2lm_notify_link_update(struct wlan_objmgr_vdev *vdev,
+					       struct wlan_t2lm_info *t2lm);
+#else
+static inline
+QDF_STATUS hdd_mlo_dev_t2lm_notify_link_update(struct wlan_objmgr_vdev *vdev,
+					       struct wlan_t2lm_info *t2lm)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 
 #if defined(WLAN_FEATURE_11BE_MLO) && \
 	defined(CFG80211_SINGLE_NETDEV_MULTI_LINK_SUPPORT)

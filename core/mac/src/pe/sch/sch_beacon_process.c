@@ -543,6 +543,60 @@ sch_bcn_update_opmode_change(struct mac_context *mac_ctx, tpDphHashNode sta_ds,
 	}
 }
 
+#ifdef WLAN_FEATURE_SR
+/**
+ * lim_detect_change_in_srp() - Detect change in SRP IE
+ * of the beacon
+ *
+ * @mac_ctx: global mac context
+ * @sta: pointer to sta node
+ * @session: pointer to LIM session
+ * @bcn: beacon from associated AP
+ *
+ * Detect change in SRP IE of the beacon and update the params
+ * accordingly.
+ *
+ * Return: None
+ */
+static void lim_detect_change_in_srp(struct mac_context *mac_ctx,
+				     tpDphHashNode sta,
+				     struct pe_session *session,
+				     tpSchBeaconStruct bcn)
+{
+	tDot11fIEspatial_reuse sr_ie;
+
+	sr_ie = sta->parsed_ies.srp_ie;
+	if (!sr_ie.present) {
+		return;
+	} else if (!bcn->srp_ie.present) {
+		pe_err_rl("SRP IE is missing in beacon, disable SR");
+	} else if (!qdf_mem_cmp(&sr_ie, &bcn->srp_ie,
+				sizeof(tDot11fIEspatial_reuse))) {
+		/* No change in beacon SRP IE */
+		return;
+	}
+
+	/*
+	 * If SRP IE has changes, update the new params.
+	 * Else if the SRP IE is missing, disable SR
+	 */
+	sta->parsed_ies.srp_ie = bcn->srp_ie;
+	if (bcn->srp_ie.present)
+		lim_update_vdev_sr_elements(session, sta);
+	else
+		wlan_vdev_mlme_set_sr_ctrl(session->vdev, SR_DISABLE);
+
+	lim_handle_sr_cap(session->vdev, SR_REASON_CODE_BCN_IE_CHANGE);
+}
+#else
+static void lim_detect_change_in_srp(struct mac_context *mac_ctx,
+				     tpDphHashNode sta,
+				     struct pe_session *session,
+				     tpSchBeaconStruct bcn)
+{
+}
+#endif
+
 static void
 sch_bcn_process_sta_opmode(struct mac_context *mac_ctx,
 			    tpSchBeaconStruct bcn,
@@ -566,11 +620,12 @@ sch_bcn_process_sta_opmode(struct mac_context *mac_ctx,
 	/* check for VHT capability */
 	sta = dph_lookup_hash_entry(mac_ctx, pMh->sa, &aid,
 			&session->dph.dphHashTable);
-	if ((!sta))
+	if (!sta)
 		return;
 	sch_bcn_update_opmode_change(mac_ctx, sta, session, bcn, pMh,
 				     cb_mode);
 	sch_bcn_update_he_ies(mac_ctx, sta, session, bcn, pMh);
+	lim_detect_change_in_srp(mac_ctx, sta, session, bcn);
 	return;
 }
 
@@ -789,6 +844,7 @@ static void __sch_beacon_process_for_session(struct mac_context *mac_ctx,
 	}
 
 	lim_process_beacon_eht(mac_ctx, session, bcn);
+	lim_process_bcn_prb_rsp_t2lm(mac_ctx, session, bcn);
 }
 
 #ifdef WLAN_FEATURE_11AX_BSS_COLOR
@@ -1014,7 +1070,7 @@ sch_beacon_process(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 		pe_err_rl("beacon parsing failed");
 		return;
 	}
-	lim_process_bcn_prb_rsp_t2lm(mac_ctx, session, &bcn);
+
 	sch_send_beacon_report(mac_ctx, &bcn, session);
 	__sch_beacon_process_for_session(mac_ctx, &bcn, rx_pkt_info, session);
 }

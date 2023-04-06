@@ -2495,6 +2495,19 @@ void hdd_adapter_dev_put_debug(struct hdd_adapter *adapter,
 			       wlan_net_dev_ref_dbgid dbgid);
 
 /**
+ * hdd_validate_next_adapter - API to check for infinite loop
+ *                             in the adapter list traversal
+ * @curr: current adapter pointer
+ * @next: next adapter pointer
+ * @dbg_id: Debug ID corresponding to API that is requesting the dev_put
+ *
+ * Return: None
+ */
+void hdd_validate_next_adapter(struct hdd_adapter **curr,
+			       struct hdd_adapter **next,
+			       wlan_net_dev_ref_dbgid dbg_id);
+
+/**
  * __hdd_take_ref_and_fetch_front_adapter_safe - Helper macro to lock, fetch
  * front and next adapters, take ref and unlock.
  * @hdd_ctx: the global HDD context
@@ -2525,6 +2538,7 @@ void hdd_adapter_dev_put_debug(struct hdd_adapter *adapter,
 	qdf_spin_lock_bh(&hdd_ctx->hdd_adapter_lock), \
 	adapter = next_adapter, \
 	hdd_get_next_adapter_no_lock(hdd_ctx, adapter, &next_adapter), \
+	hdd_validate_next_adapter(&adapter, &next_adapter, dbgid), \
 	(next_adapter) ? hdd_adapter_dev_hold_debug(next_adapter, dbgid) : \
 			 (false), \
 	qdf_spin_unlock_bh(&hdd_ctx->hdd_adapter_lock)

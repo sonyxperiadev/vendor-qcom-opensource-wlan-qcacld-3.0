@@ -39,6 +39,7 @@
 #include "wlan_hdd_object_manager.h"
 #include "wlan_dp_ucfg_api.h"
 
+#ifdef IPA_OFFLOAD
 #if (defined(QCA_CONFIG_SMP) && defined(PF_WAKE_UP_IDLE)) ||\
 	IS_ENABLED(CONFIG_SCHED_WALT)
 /**
@@ -284,3 +285,4 @@ void hdd_ipa_set_mcc_mode(bool mcc_mode)
 
 	ucfg_ipa_set_mcc_mode(hdd_ctx->pdev, mcc_mode);
 }
+#endif

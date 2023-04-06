@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -3107,6 +3107,12 @@ static void lim_tdls_fill_session_vht_width(struct pe_session *pe_session,
 				pe_session->ch_width;
 }
 
+static inline enum phy_ch_width
+lim_reg_bw_to_ht_ch_width(uint16_t reg_max_bw)
+{
+	return reg_max_bw > 20 ? CH_WIDTH_40MHZ : CH_WIDTH_20MHZ;
+}
+
 /*
  * update HASH node entry info
  */
@@ -3122,6 +3128,8 @@ static void lim_tdls_update_hash_node_info(struct mac_context *mac,
 	tDot11fIEVHTCaps vhtCap;
 	uint8_t cbMode, selfDot11Mode;
 	bool wide_band_peer = false;
+	uint16_t reg_max_bw = 0;
+	uint16_t reg_ch_width = 0;
 
 	if (add_sta_req->tdls_oper == TDLS_OPER_ADD) {
 		populate_dot11f_ht_caps(mac, pe_session, &htCap);
@@ -3130,6 +3138,9 @@ static void lim_tdls_update_hash_node_info(struct mac_context *mac,
 						 add_sta_req, &htCap);
 		sta->rmfEnabled = add_sta_req->is_pmf;
 	}
+
+	reg_max_bw = wlan_reg_get_max_chwidth(mac->pdev,
+					      pe_session->curr_op_freq);
 
 	wide_band_peer = lim_is_wide_band_set(add_sta_req->extn_capability) &&
 		    wlan_cfg80211_tdls_is_fw_wideband_capable(pe_session->vdev);
@@ -3149,20 +3160,34 @@ static void lim_tdls_update_hash_node_info(struct mac_context *mac,
 		 * Since, now wideband is supported, bw should be restricted
 		 * only in case of dfs channel
 		 */
-		pe_debug("supportedChannelWidthSet: 0x%x htSupportedChannelWidthSet: 0x%x",
+		pe_debug("peer htSupportedChannelWidthSet: 0x%x "
+				"pe session htSupportedChannelWidthSet: 0x%x",
 				htCaps->supportedChannelWidthSet,
 				pe_session->htSupportedChannelWidthSet);
+
 		if (!wide_band_peer ||
 		    wlan_reg_is_dfs_for_freq(mac->pdev,
-					     pe_session->curr_op_freq))
+					     pe_session->curr_op_freq) ||
+		    wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq)) {
 			sta->htSupportedChannelWidthSet =
 				(htCaps->supportedChannelWidthSet <
 				 pe_session->htSupportedChannelWidthSet) ?
 				htCaps->supportedChannelWidthSet :
 				pe_session->htSupportedChannelWidthSet;
-		else
+		} else {
+			reg_ch_width = lim_reg_bw_to_ht_ch_width(reg_max_bw);
+
+			pe_debug("regulatory max bw %d MHz ch_width 0x%x",
+					reg_max_bw,
+					reg_ch_width);
+
 			sta->htSupportedChannelWidthSet =
-				htCaps->supportedChannelWidthSet;
+				(htCaps->supportedChannelWidthSet <
+				 reg_ch_width) ?
+				htCaps->supportedChannelWidthSet :
+				reg_ch_width;
+		}
+
 		pe_debug("sta->htSupportedChannelWidthSet: 0x%x",
 			 sta->htSupportedChannelWidthSet);
 
@@ -3202,6 +3227,7 @@ static void lim_tdls_update_hash_node_info(struct mac_context *mac,
 			    VHT_CAP_NO_160M_SUPP)
 				sta->vhtSupportedChannelWidthSet =
 						WNI_CFG_VHT_CHANNEL_WIDTH_80MHZ;
+
 			if (wlan_reg_is_dfs_for_freq(mac->pdev,
 						    pe_session->curr_op_freq)) {
 				lim_tdls_fill_session_vht_width(pe_session,

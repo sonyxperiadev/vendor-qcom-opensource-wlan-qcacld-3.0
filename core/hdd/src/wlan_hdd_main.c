@@ -216,6 +216,7 @@
 #ifdef WLAN_FEATURE_11BE_MLO
 #include <wlan_mlo_mgr_ap.h>
 #endif
+#include "wlan_osif_features.h"
 #include "wlan_vdev_mgr_ucfg_api.h"
 #include <wlan_objmgr_psoc_obj_i.h>
 #include <wlan_objmgr_vdev_obj_i.h>
@@ -6355,6 +6356,7 @@ int hdd_vdev_destroy(struct hdd_adapter *adapter)
 	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_ID);
 
 	qdf_spin_lock_bh(&adapter->vdev_lock);
+	hdd_mlo_t2lm_unregister_callback(adapter->vdev);
 	adapter->vdev = NULL;
 	qdf_spin_unlock_bh(&adapter->vdev_lock);
 	osif_cm_osif_priv_deinit(vdev);
@@ -6490,6 +6492,22 @@ hdd_populate_vdev_create_params(struct hdd_adapter *adapter,
 }
 #endif
 
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_EXTERNAL_AUTH_MLO_SUPPORT)
+static void
+hdd_set_vdev_mlo_external_sae_auth_conversion(struct wlan_objmgr_vdev *vdev,
+					      enum QDF_OPMODE mode)
+{
+	if (mode == QDF_STA_MODE || mode == QDF_SAP_MODE)
+		wlan_vdev_set_mlo_external_sae_auth_conversion(vdev, true);
+}
+#else
+static inline void
+hdd_set_vdev_mlo_external_sae_auth_conversion(struct wlan_objmgr_vdev *vdev,
+					      enum QDF_OPMODE mode)
+{
+}
+#endif
+
 int hdd_vdev_create(struct hdd_adapter *adapter)
 {
 	QDF_STATUS status;
@@ -6530,6 +6548,9 @@ int hdd_vdev_create(struct hdd_adapter *adapter)
 
 	hdd_store_vdev_info(adapter, vdev);
 	osif_cm_osif_priv_init(vdev);
+
+	if (hdd_adapter_is_ml_adapter(adapter))
+		hdd_mlo_t2lm_register_callback(vdev);
 
 	set_bit(SME_SESSION_OPENED, &adapter->event_flags);
 	status = sme_vdev_post_vdev_create_setup(hdd_ctx->mac_handle, vdev);
@@ -6588,6 +6609,9 @@ int hdd_vdev_create(struct hdd_adapter *adapter)
 		VDEV_CMD);
 	}
 	hdd_store_nss_chains_cfg_in_vdev(adapter);
+
+	hdd_set_vdev_mlo_external_sae_auth_conversion(vdev,
+						      adapter->device_mode);
 
 	/* Configure vdev params */
 	ucfg_fwol_configure_vdev_params(hdd_ctx->psoc, hdd_ctx->pdev,
@@ -8212,13 +8236,7 @@ QDF_STATUS hdd_stop_adapter_ext(struct hdd_context *hdd_ctx,
 		ucfg_ipa_flush(hdd_ctx->pdev);
 
 		if (!ucfg_pre_cac_adapter_is_active(adapter->vdev)) {
-			/**
-			 * don't flush pre-cac destroy if we are destroying
-			 * pre-cac adapter
-			 */
-			if (!ucfg_pre_cac_is_active(hdd_ctx->psoc))
-				ucfg_pre_cac_stop(hdd_ctx->psoc);
-
+			ucfg_pre_cac_stop(hdd_ctx->psoc);
 			hdd_close_pre_cac_adapter(hdd_ctx);
 		} else {
 			if (ucfg_pre_cac_set_status(adapter->vdev, false))
@@ -9191,6 +9209,19 @@ QDF_STATUS hdd_add_adapter_front(struct hdd_context *hdd_ctx,
 	qdf_spin_unlock_bh(&hdd_ctx->hdd_adapter_lock);
 
 	return status;
+}
+
+void hdd_validate_next_adapter(struct hdd_adapter **curr,
+			       struct hdd_adapter **next,
+			       wlan_net_dev_ref_dbgid dbg_id)
+{
+	if (!*curr || !*next || *curr != *next)
+		return;
+
+	hdd_err("Validation failed");
+	hdd_adapter_dev_put_debug(*curr, dbg_id);
+	*curr = NULL;
+	*next = NULL;
 }
 
 QDF_STATUS hdd_adapter_iterate(hdd_adapter_iterate_cb cb, void *context)
@@ -12541,7 +12572,8 @@ static void hdd_psoc_idle_timeout_callback(void *priv)
 	}
 
 	/* Clear the recovery flag for PCIe discrete soc after idle shutdown*/
-	if (PLD_BUS_TYPE_PCIE == pld_get_bus_type(hdd_ctx->parent_dev))
+	if (PLD_BUS_TYPE_PCIE == pld_get_bus_type(hdd_ctx->parent_dev) &&
+	    -EBUSY != ret)
 		cds_set_recovery_in_progress(false);
 }
 
@@ -16510,6 +16542,8 @@ void wlan_hdd_start_sap(struct hdd_adapter *ap_adapter, bool reinit)
 	}
 	hdd_info("SAP Start Success");
 
+	if (reinit)
+		hdd_medium_assess_init();
 	wlansap_reset_sap_config_add_ie(sap_config, eUPDATE_IE_ALL);
 	set_bit(SOFTAP_BSS_STARTED, &ap_adapter->event_flags);
 	if (hostapd_state->bss_state == BSS_START) {
@@ -19169,6 +19203,7 @@ void hdd_restart_sap(struct hdd_adapter *ap_adapter)
 		wlansap_reset_sap_config_add_ie(sap_config,
 						eUPDATE_IE_ALL);
 		hdd_err("SAP Start Success");
+		hdd_medium_assess_init();
 		set_bit(SOFTAP_BSS_STARTED, &ap_adapter->event_flags);
 		if (hostapd_state->bss_state == BSS_START) {
 			policy_mgr_incr_active_session(hdd_ctx->psoc,

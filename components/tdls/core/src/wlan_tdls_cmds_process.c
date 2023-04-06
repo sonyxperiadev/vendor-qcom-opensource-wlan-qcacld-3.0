@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -868,11 +868,6 @@ int tdls_validate_mgmt_request(struct tdls_action_frame_request *tdls_mgmt_req)
 
 	/* other than teardown frame, mgmt frames are not sent if disabled */
 	if (TDLS_TEARDOWN != tdls_validate->action_code) {
-		if (ucfg_is_nan_disc_active(tdls_soc->soc)) {
-			tdls_err("NAN active. NAN+TDLS not supported");
-			return -EPERM;
-		}
-
 		if (!tdls_check_is_tdls_allowed(vdev)) {
 			tdls_err("TDLS not allowed, reject MGMT, action = %d",
 				tdls_validate->action_code);
@@ -1013,15 +1008,13 @@ QDF_STATUS tdls_process_add_peer(struct tdls_add_peer_request *req)
 			 wlan_vdev_get_id(vdev));
 		goto error;
 	}
+
 	psoc = wlan_vdev_get_psoc(vdev);
 	if (!psoc) {
 		tdls_err("can't get psoc");
 		goto error;
 	}
-	if (ucfg_is_nan_disc_active(psoc)) {
-		tdls_err("NAN active. NAN+TDLS not supported");
-		goto error;
-	}
+
 	status = QDF_STATUS_SUCCESS;
 
 	cmd.cmd_type = WLAN_SER_CMD_TDLS_ADD_PEER;

@@ -4214,4 +4214,16 @@ wlan_mlme_stats_get_periodic_display_time(struct wlan_objmgr_psoc *psoc,
  */
 bool
 wlan_mlme_is_bcn_prot_disabled_for_sap(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * wlan_mlme_get_src_addr_from_frame() - Get source address of the frame
+ * @frame: frame ptr
+ *
+ * Extract source mac address of the frame
+ *
+ * Return: Ptr for extracted src mac address
+ *
+ */
+uint8_t *
+wlan_mlme_get_src_addr_from_frame(struct element_info *frame);
 #endif /* _WLAN_MLME_API_H_ */

@@ -238,16 +238,6 @@ no_sta_prof:
 
 	return QDF_STATUS_SUCCESS;
 }
-
-static bool
-lim_check_join_req_and_num_of_partner_link(struct pe_session *session)
-{
-	if (session && session->lim_join_req &&
-	    session->lim_join_req->partner_info.num_partner_links)
-		return true;
-
-	return false;
-}
 #else
 static QDF_STATUS
 lim_populate_ml_probe_req(struct mac_context *mac,
@@ -256,12 +246,6 @@ lim_populate_ml_probe_req(struct mac_context *mac,
 			  uint16_t *ml_probe_req_len)
 {
 	return QDF_STATUS_E_NOSUPPORT;
-}
-
-static bool
-lim_check_join_req_and_num_of_partner_link(struct pe_session *session)
-{
-	return false;
 }
 #endif
 
@@ -460,7 +444,7 @@ lim_send_probe_req_mgmt_frame(struct mac_context *mac_ctx,
 				    &pr->he_6ghz_band_cap);
 
 	if (IS_DOT11_MODE_EHT(dot11mode) && pesession &&
-	    lim_check_join_req_and_num_of_partner_link(pesession)) {
+			pesession->lim_join_req) {
 		lim_update_session_eht_capable(mac_ctx, pesession);
 		lim_populate_ml_probe_req(mac_ctx, pesession,
 					  &ml_probe_req_ie,
@@ -3825,7 +3809,10 @@ alloc_packet:
 	MTRACE(qdf_trace(QDF_MODULE_ID_PE, TRACE_CODE_TX_MGMT,
 			 session->peSessionId, mac_hdr->fc.subType));
 
-	mac_ctx->auth_ack_status = LIM_ACK_NOT_RCD;
+	if (mac_ctx->auth_ack_status != LIM_ACK_RCD_FAILURE &&
+	    mac_ctx->auth_ack_status != LIM_TX_FAILED)
+		mac_ctx->auth_ack_status = LIM_ACK_NOT_RCD;
+
 	min_rid = lim_get_min_session_txrate(session);
 	peer_rssi = mac_ctx->lim.bss_rssi;
 	lim_diag_mgmt_tx_event_report(mac_ctx, mac_hdr,
@@ -6819,6 +6806,65 @@ lim_handle_sae_auth_retry(struct mac_context *mac_ctx, uint8_t vdev_id,
 	}
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static QDF_STATUS lim_update_mld_to_link_address(struct mac_context *mac_ctx,
+						 struct wlan_objmgr_vdev *vdev,
+						 tpSirMacMgmtHdr mac_hdr)
+{
+	struct qdf_mac_addr *self_link_addr;
+	struct tLimPreAuthNode *pre_auth_node;
+	struct qdf_mac_addr peer_link_addr;
+	enum QDF_OPMODE opmode;
+	QDF_STATUS status;
+
+	if (!wlan_vdev_mlme_is_mlo_vdev(vdev) ||
+	    !wlan_vdev_get_mlo_external_sae_auth_conversion(vdev))
+		return QDF_STATUS_SUCCESS;
+
+	opmode = wlan_vdev_mlme_get_opmode(vdev);
+	self_link_addr = (struct qdf_mac_addr *)
+				wlan_vdev_mlme_get_linkaddr(vdev);
+
+	switch (opmode) {
+	case QDF_SAP_MODE:
+		pre_auth_node =
+			lim_search_pre_auth_list_by_mld_addr(mac_ctx,
+							     mac_hdr->da);
+		if (!pre_auth_node)
+			return QDF_STATUS_E_INVAL;
+
+		qdf_mem_copy(mac_hdr->da, pre_auth_node->peerMacAddr,
+			     QDF_MAC_ADDR_SIZE);
+		qdf_mem_copy(mac_hdr->bssId, self_link_addr->bytes,
+			     QDF_MAC_ADDR_SIZE);
+		break;
+	case QDF_STA_MODE:
+		status = wlan_vdev_get_bss_peer_mac(vdev, &peer_link_addr);
+		if (QDF_IS_STATUS_ERROR(status))
+			return status;
+
+		qdf_mem_copy(mac_hdr->da, peer_link_addr.bytes,
+			     QDF_MAC_ADDR_SIZE);
+		qdf_mem_copy(mac_hdr->bssId, peer_link_addr.bytes,
+			     QDF_MAC_ADDR_SIZE);
+		break;
+	default:
+		return QDF_STATUS_SUCCESS;
+	}
+
+	qdf_mem_copy(mac_hdr->sa, self_link_addr->bytes, QDF_MAC_ADDR_SIZE);
+
+	return QDF_STATUS_SUCCESS;
+}
+#else
+static QDF_STATUS lim_update_mld_to_link_address(struct mac_context *mac_ctx,
+						 struct wlan_objmgr_vdev *vdev,
+						 tpSirMacMgmtHdr mac_hdr)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 void lim_send_frame(struct mac_context *mac_ctx, uint8_t vdev_id, uint8_t *buf,
 		    uint16_t buf_len)
 {
@@ -6827,9 +6873,27 @@ void lim_send_frame(struct mac_context *mac_ctx, uint8_t vdev_id, uint8_t *buf,
 	void *packet;
 	tpSirMacFrameCtl fc = (tpSirMacFrameCtl)buf;
 	tpSirMacMgmtHdr mac_hdr = (tpSirMacMgmtHdr)buf;
+	struct wlan_objmgr_vdev *vdev;
+	QDF_STATUS status;
 
-	pe_debug("sending fc->type: %d fc->subType: %d",
-		 fc->type, fc->subType);
+	pe_debug("sending fc->type: %d fc->subType: %d", fc->type, fc->subType);
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac_ctx->psoc, vdev_id,
+						    WLAN_LEGACY_MAC_ID);
+	if (!vdev)
+		return;
+
+	/* Case:
+	 * 1. In case of SAP, userspace will send MLD addresses in 2nd and 4th
+	 *    SAE auth frames. Driver needs to convert it into link address.
+	 * 2. In case of STA, userspace will send MLD addresses in 1st and 3rd
+	 *    SAE auth frames. Driver needs to convert it into link address.
+	 */
+	status = lim_update_mld_to_link_address(mac_ctx, vdev, mac_hdr);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
+
+	if (QDF_IS_STATUS_ERROR(status))
+		return;
 
 	lim_add_mgmt_seq_num(mac_ctx, mac_hdr);
 	qdf_status = cds_packet_alloc(buf_len, (void **)&frame,

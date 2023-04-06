@@ -200,6 +200,7 @@
 #include "wlan_psoc_mlme_api.h"
 #include <utils_mlo.h>
 #include "wlan_mlo_mgr_roam.h"
+#include "wlan_hdd_mlo.h"
 
 /*
  * A value of 100 (milliseconds) can be sent to FW.
@@ -6677,8 +6678,7 @@ wlan_hdd_cfg80211_set_ext_roam_params(struct wiphy *wiphy,
 #define RATEMASK_PARAMS_MAX QCA_WLAN_VENDOR_ATTR_RATEMASK_PARAMS_MAX
 const struct nla_policy wlan_hdd_set_ratemask_param_policy[
 			RATEMASK_PARAMS_MAX + 1] = {
-	[QCA_WLAN_VENDOR_ATTR_RATEMASK_PARAMS_LIST] =
-		VENDOR_NLA_POLICY_NESTED(wlan_hdd_set_ratemask_param_policy),
+	[QCA_WLAN_VENDOR_ATTR_RATEMASK_PARAMS_LIST] = {.type = NLA_NESTED},
 	[QCA_WLAN_VENDOR_ATTR_RATEMASK_PARAMS_TYPE] = {.type = NLA_U8},
 	[QCA_WLAN_VENDOR_ATTR_RATEMASK_PARAMS_BITMAP] = {.type = NLA_BINARY,
 					.len = RATEMASK_PARAMS_BITMAP_MAX},
@@ -18846,6 +18846,7 @@ const struct wiphy_vendor_command hdd_wiphy_vendor_commands[] = {
 		vendor_command_policy(VENDOR_CMD_RAW_DATA, 0)
 	},
 	FEATURE_COAP_OFFLOAD_COMMANDS
+	FEATURE_ML_LINK_STATE_COMMANDS
 };
 
 struct hdd_context *hdd_cfg80211_wiphy_alloc(void)
@@ -26211,6 +26212,206 @@ wlan_hdd_cfg80211_del_intf_link(struct wiphy *wiphy, struct wireless_dev *wdev,
 }
 #endif
 
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_TID_LINK_MAP_SUPPORT)
+#define MAX_T2LM_INFO 2
+
+static void wlan_hdd_print_t2lm_info(struct cfg80211_mlo_tid_map *map)
+{
+	int i;
+
+	hdd_debug("T2LM info send to userspace");
+	hdd_debug("default mapping: %d", map->default_map);
+	for (i = 0; i < T2LM_MAX_NUM_TIDS; i++)
+		hdd_debug("TID[%d]: Downlink: %d Uplink: %d",
+			  i, map->t2lmap[i].downlink, map->t2lmap[i].uplink);
+}
+
+static void wlan_hdd_fill_bidir_t2lm(struct wlan_t2lm_info *t2lm,
+				     struct tid_link_map *t2lmap)
+{
+	uint8_t tid;
+
+	for (tid = 0; tid < T2LM_MAX_NUM_TIDS; tid++) {
+		t2lmap[tid].downlink = t2lm->ieee_link_map_tid[tid];
+		t2lmap[tid].uplink = t2lm->ieee_link_map_tid[tid];
+	}
+}
+
+static void wlan_hdd_fill_dldir_t2lm(struct wlan_t2lm_info *t2lm,
+				     struct tid_link_map *t2lmap)
+{
+	uint8_t tid;
+
+	for (tid = 0; tid < T2LM_MAX_NUM_TIDS; tid++)
+		t2lmap[tid].downlink = t2lm->ieee_link_map_tid[tid];
+}
+
+static void wlan_hdd_fill_uldir_t2lm(struct wlan_t2lm_info *t2lm,
+				     struct tid_link_map *t2lmap)
+{
+	uint8_t tid;
+
+	for (tid = 0; tid < T2LM_MAX_NUM_TIDS; tid++)
+		t2lmap[tid].uplink = t2lm->ieee_link_map_tid[tid];
+}
+
+static void wlan_hdd_fill_map(struct wlan_t2lm_info *t2lm,
+			      struct cfg80211_mlo_tid_map *map, bool *found)
+{
+	if (t2lm->direction == WLAN_T2LM_INVALID_DIRECTION)
+		return;
+
+	map->default_map = t2lm->default_link_mapping;
+
+	switch (t2lm->direction) {
+	case WLAN_T2LM_BIDI_DIRECTION:
+		wlan_hdd_fill_bidir_t2lm(t2lm, map->t2lmap);
+		*found = true;
+		break;
+	case WLAN_T2LM_DL_DIRECTION:
+		wlan_hdd_fill_dldir_t2lm(t2lm, map->t2lmap);
+		*found = true;
+		break;
+	case WLAN_T2LM_UL_DIRECTION:
+		wlan_hdd_fill_uldir_t2lm(t2lm, map->t2lmap);
+		*found = true;
+		break;
+	default:
+		return;
+	}
+}
+
+static int wlan_hdd_fill_t2lm_response(struct wlan_t2lm_info *t2lm,
+				       struct cfg80211_mlo_tid_map *map)
+{
+	uint8_t i;
+	bool found = false;
+
+	for (i = 0; i < MAX_T2LM_INFO; i++)
+		wlan_hdd_fill_map(&t2lm[i], map, &found);
+
+	if (!found) {
+		hdd_err("T2LM info not found");
+		return -EINVAL;
+	}
+
+	wlan_hdd_print_t2lm_info(map);
+
+	return 0;
+}
+
+static int
+__wlan_hdd_cfg80211_get_t2lm_mapping_status(struct wiphy *wiphy,
+					    struct net_device *net_dev,
+					    struct cfg80211_mlo_tid_map *map)
+{
+	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(net_dev);
+	struct wlan_objmgr_vdev *vdev;
+	struct wlan_t2lm_info *t2lm = NULL;
+	int ret, i;
+
+	hdd_enter();
+
+	if (hdd_validate_adapter(adapter))
+		return -EINVAL;
+
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_ID);
+	if (!vdev) {
+		hdd_err("Vdev is null return");
+		return -EINVAL;
+	}
+
+	if (!wlan_cm_is_vdev_connected(vdev)) {
+		hdd_err("Not associated!, vdev %d", wlan_vdev_get_id(vdev));
+		ret = -EAGAIN;
+		goto vdev_release;
+	}
+
+	if (!wlan_vdev_mlme_is_mlo_vdev(vdev)) {
+		hdd_err("failed due to non-ML connection");
+		ret = -EINVAL;
+		goto vdev_release;
+	}
+
+	t2lm = qdf_mem_malloc(sizeof(*t2lm) * MAX_T2LM_INFO);
+	if (!t2lm) {
+		hdd_err("mem alloc failed for t2lm");
+		ret = -ENOMEM;
+		goto vdev_release;
+	}
+
+	for (i = 0; i < MAX_T2LM_INFO; i++)
+		t2lm[i].direction = WLAN_T2LM_INVALID_DIRECTION;
+
+	ret = wlan_get_t2lm_mapping_status(vdev, t2lm);
+	if (ret != 0)
+		goto t2lm_free;
+
+	ret = wlan_hdd_fill_t2lm_response(t2lm, map);
+
+t2lm_free:
+	qdf_mem_free(t2lm);
+vdev_release:
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_ID);
+
+	hdd_exit();
+
+	return ret;
+}
+
+static int
+wlan_hdd_cfg80211_get_t2lm_mapping_status(struct wiphy *wiphy,
+					  struct net_device *net_dev,
+					  struct cfg80211_mlo_tid_map *map)
+{
+	int errno;
+	struct osif_vdev_sync *vdev_sync;
+
+	errno = osif_vdev_sync_op_start(net_dev, &vdev_sync);
+	if (errno)
+		return errno;
+
+	errno = __wlan_hdd_cfg80211_get_t2lm_mapping_status(wiphy, net_dev, map);
+
+	osif_vdev_sync_op_stop(vdev_sync);
+
+	return errno;
+}
+
+QDF_STATUS hdd_mlo_dev_t2lm_notify_link_update(struct wlan_objmgr_vdev *vdev,
+					       struct wlan_t2lm_info *t2lm)
+{
+	struct cfg80211_mlo_tid_map map;
+	struct hdd_adapter *adapter;
+	struct net_device *dev;
+	bool found = false;
+
+	adapter = wlan_hdd_get_adapter_from_objmgr(vdev);
+	if (!adapter) {
+		hdd_err("null adapter");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	dev = adapter->dev;
+	hdd_enter_dev(dev);
+
+	qdf_mem_zero(&map, sizeof(map));
+
+	wlan_hdd_fill_map(t2lm, &map, &found);
+	if (!found) {
+		hdd_debug("Failed to get t2lm info");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	wlan_hdd_print_t2lm_info(&map);
+	cfg80211_tid_to_link_map_change(dev, &map);
+
+	hdd_exit();
+
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 static struct cfg80211_ops wlan_hdd_cfg80211_ops = {
 	.add_virtual_intf = wlan_hdd_add_virtual_intf,
 	.del_virtual_intf = wlan_hdd_del_virtual_intf,
@@ -26311,5 +26512,8 @@ static struct cfg80211_ops wlan_hdd_cfg80211_ops = {
 #ifdef CFG80211_SINGLE_NETDEV_MULTI_LINK_SUPPORT
 	.add_intf_link = wlan_hdd_cfg80211_add_intf_link,
 	.del_intf_link = wlan_hdd_cfg80211_del_intf_link,
+#endif
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_TID_LINK_MAP_SUPPORT)
+	.get_link_tid_map_status = wlan_hdd_cfg80211_get_t2lm_mapping_status,
 #endif
 };

@@ -1983,9 +1983,6 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 			      ap_ctx->operating_chan_freq,
 			      sap_config->ch_params.ch_width);
 
-		if (hdd_medium_access_state() == true)
-			hdd_medium_assess_init();
-
 		sap_config->ch_params = ap_ctx->sap_context->ch_params;
 		sap_config->sec_ch_freq = ap_ctx->sap_context->sec_ch_freq;
 
@@ -2189,6 +2186,14 @@ QDF_STATUS hdd_hostapd_sap_event_cb(struct sap_event *sap_event,
 		}
 		hdd_nofl_info("Ap stopped vid %d reason=%d", adapter->vdev_id,
 			      ap_ctx->bss_stop_reason);
+		qdf_status =
+			policy_mgr_get_mac_id_by_session_id(hdd_ctx->psoc,
+							    adapter->vdev_id,
+							    &pdev_id);
+		if (QDF_IS_STATUS_SUCCESS(qdf_status))
+			hdd_medium_assess_stop_timer(pdev_id, hdd_ctx);
+
+		hdd_medium_assess_deinit();
 
 		/* clear the reason code in case BSS is stopped
 		 * in another place
@@ -2929,15 +2934,6 @@ stopbss:
 		       sap_event->sapevt.sapStopBssCompleteEvent.status ?
 		       "eSAP_STATUS_FAILURE" : "eSAP_STATUS_SUCCESS");
 
-		qdf_status =
-			policy_mgr_get_mac_id_by_session_id(hdd_ctx->psoc,
-							    adapter->vdev_id,
-							    &pdev_id);
-		if (QDF_IS_STATUS_SUCCESS(qdf_status))
-			hdd_medium_assess_stop_timer(pdev_id, hdd_ctx);
-
-		hdd_medium_assess_deinit();
-
 		/* Change the BSS state now since, as we are shutting
 		 * things down, we don't want interfaces to become
 		 * re-enabled
@@ -3269,6 +3265,14 @@ int hdd_softap_set_channel_change(struct net_device *dev, int target_chan_freq,
 				hdd_ctx->psoc, &sta_sap_scc_on_dfs_chnl);
 	if (QDF_STATUS_SUCCESS != status) {
 		return status;
+	}
+
+	if (!policy_mgr_is_sap_allowed_on_indoor(hdd_ctx->pdev,
+						 adapter->vdev_id,
+						 target_chan_freq)) {
+		hdd_debug("Channel switch is not allowed to indoor frequency %d",
+			  target_chan_freq);
+		return -EINVAL;
 	}
 
 	if (!sta_cnt && !policy_mgr_is_hw_dbs_capable(hdd_ctx->psoc) &&
@@ -6708,6 +6712,7 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 	hdd_set_connection_in_progress(false);
 	policy_mgr_process_force_scc_for_nan(hdd_ctx->psoc);
 	ret = 0;
+	hdd_medium_assess_init();
 	goto free;
 
 error:
@@ -7545,6 +7550,16 @@ static int __wlan_hdd_cfg80211_start_ap(struct wiphy *wiphy,
 						chandef->chan->center_freq);
 	if (!status)
 		return -EINVAL;
+
+	status = policy_mgr_is_sap_allowed_on_indoor(
+						hdd_ctx->pdev,
+						adapter->vdev_id,
+						chandef->chan->center_freq);
+	if (!status) {
+		hdd_debug("SAP start not allowed on indoor channel %d",
+			  chandef->chan->center_freq);
+		return -EINVAL;
+	}
 
 	intf_pm_mode = policy_mgr_convert_device_mode_to_qdf_type(
 							adapter->device_mode);

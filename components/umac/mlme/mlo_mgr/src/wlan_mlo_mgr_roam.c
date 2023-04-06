@@ -146,10 +146,6 @@ mlo_clear_link_bmap(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
 	}
 
 	mlo_clear_connect_req_links_bmap(vdev);
-	wlan_vdev_mlme_clear_mlo_vdev(vdev);
-	if (wlan_vdev_mlme_is_mlo_link_vdev(vdev))
-		wlan_vdev_mlme_clear_mlo_link_vdev(vdev);
-
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_SB_ID);
 }
 
@@ -450,6 +446,17 @@ bool is_multi_link_roam(struct roam_offload_synch_ind *sync_ind)
 		return true;
 
 	return false;
+}
+
+uint8_t
+mlo_roam_get_num_of_setup_links(struct roam_offload_synch_ind *sync_ind)
+{
+	if (!sync_ind) {
+		mlo_err("Roam Sync ind is null");
+		return WLAN_INVALID_VDEV_ID;
+	}
+
+	return sync_ind->num_setup_links;
 }
 
 uint32_t
@@ -1280,3 +1287,47 @@ end:
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_SB_ID);
 	return status;
 }
+
+bool
+mlo_is_roaming_in_progress(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
+{
+	struct wlan_objmgr_vdev *vdev;
+	struct wlan_mlo_dev_context *mlo_dev_ctx;
+	bool is_roaming_in_progress = false;
+	uint8_t link_vdev_id;
+	uint8_t i;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_MLME_OBJMGR_ID);
+	if (!vdev) {
+		mlme_err("vdev object is NULL for vdev %d", vdev_id);
+		return false;
+	}
+
+	mlo_dev_ctx = vdev->mlo_dev_ctx;
+	if (!mlo_dev_ctx) {
+		mlme_err("mlo_dev_ctx object is NULL for vdev %d", vdev_id);
+		goto end;
+	}
+
+	for (i = 0; i < WLAN_UMAC_MLO_MAX_VDEVS; i++) {
+		if (!mlo_dev_ctx->wlan_vdev_list[i])
+			continue;
+
+		link_vdev_id = wlan_vdev_get_id(mlo_dev_ctx->wlan_vdev_list[i]);
+		if (link_vdev_id == WLAN_INVALID_VDEV_ID) {
+			mlme_err("invalid vdev id");
+			goto end;
+		}
+
+		if (wlan_cm_is_roam_sync_in_progress(psoc, link_vdev_id)) {
+			is_roaming_in_progress = true;
+			goto end;
+		}
+	}
+
+end:
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
+	return is_roaming_in_progress;
+}
+

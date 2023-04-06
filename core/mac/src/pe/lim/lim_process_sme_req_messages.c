@@ -3136,7 +3136,15 @@ lim_fill_pe_session(struct mac_context *mac_ctx, struct pe_session *session,
 				   HI_RSSI_SCAN_RSSI_DELTA, &temp);
 	hi_rssi_scan_rssi_delta = temp.uint_value;
 
-	if (WLAN_REG_IS_24GHZ_CH_FREQ(bss_desc->chan_freq) &&
+	/*
+	 * Firmware will take care of checking hi_scan rssi delta, take care of
+	 * legacy -> legacy hi-rssi roam also if this feature flag is
+	 * advertised.
+	 */
+	if (wlan_cm_is_self_mld_roam_supported(mac_ctx->psoc)) {
+		wlan_cm_set_disable_hi_rssi(mac_ctx->pdev, session->vdev_id,
+					    false);
+	} else if (WLAN_REG_IS_24GHZ_CH_FREQ(bss_desc->chan_freq) &&
 	    (abs(bss_desc->rssi) >
 	     (neighbor_lookup_threshold - hi_rssi_scan_rssi_delta))) {
 		pe_debug("Enabling HI_RSSI, rssi: %d lookup_th: %d, delta:%d",
@@ -3763,30 +3771,44 @@ lim_is_rsnxe_cap_set(struct mac_context *mac_ctx,
 	return false;
 }
 
-/**
- * lim_is_akm_wpa_wpa2() - Check if the AKM is legacy than wpa3
+/*
+ * lim_rebuild_rsnxe() - Rebuild the RSNXE for STA
  *
- * @session: PE session
+ * @rsnx_ie: RSNX IE
  *
- * This is to check if the AKM is older than WPA3. This helps to determine if
- * RSNXE needs to be carried or not.
+ * This API is used to construct new RSNX IE for a WPA3
+ * connection where the AP doesn't advertise the RSNX IE,
+ * mask all bits other than WPA3 caps(SAE_H2E and SAE_PK)
  *
- * return true - If AKM is WPA/WPA2 which means it's older than WPA3
- *        false - If AKM is not older than WPA3
+ * Return: Newly constructed RSNX IE
  */
-static inline bool
-lim_is_akm_wpa_wpa2(struct pe_session *session)
+static inline uint8_t *lim_rebuild_rsnxe(uint8_t *rsnx_ie)
 {
-	int32_t akm;
+	const uint8_t *rsnxe_cap;
+	uint16_t cap_mask, capab;
+	uint8_t cap_len;
+	uint8_t *new_rsnxe = NULL;
 
-	akm = wlan_crypto_get_param(session->vdev, WLAN_CRYPTO_PARAM_KEY_MGMT);
-	if (akm == -1)
-		return false;
+	rsnxe_cap = wlan_crypto_parse_rsnxe_ie(rsnx_ie, &cap_len);
+	if (!rsnxe_cap || !cap_len)
+		return NULL;
 
-	if (WLAN_CRYPTO_IS_WPA_WPA2(akm))
-		return true;
+	cap_mask = WLAN_CRYPTO_RSNX_CAP_SAE_H2E | WLAN_CRYPTO_RSNX_CAP_SAE_PK;
+	capab = (rsnxe_cap[RSNXE_CAP_POS_0] & cap_mask);
 
-	return false;
+	if (capab) {
+		cap_len = 1;
+		capab |= cap_len - 1;
+
+		new_rsnxe = qdf_mem_malloc(RSNXE_CAP_FOR_SAE_LEN);
+		if (!new_rsnxe)
+			return NULL;
+		new_rsnxe[0] = WLAN_ELEMID_RSNXE;
+		new_rsnxe[1] = cap_len;
+		new_rsnxe[2] = capab & 0x00ff;
+		return new_rsnxe;
+	}
+	return NULL;
 }
 
 static inline void
@@ -3794,6 +3816,13 @@ lim_strip_rsnx_ie(struct mac_context *mac_ctx,
 		  struct pe_session *session,
 		  struct cm_vdev_join_req *req)
 {
+	int32_t akm;
+	uint8_t *rsnxe = NULL, *new_rsnxe = NULL, *assoc_ie = NULL;
+	uint8_t assoc_ie_len;
+
+	akm = wlan_crypto_get_param(session->vdev, WLAN_CRYPTO_PARAM_KEY_MGMT);
+	if (akm == -1)
+		return;
 	/*
 	 * Userspace may send RSNXE also in connect request irrespective
 	 * of the connecting AP capabilities. This allows the driver to chose
@@ -3804,24 +3833,60 @@ lim_strip_rsnx_ie(struct mac_context *mac_ctx,
 	 * may misbahave due to the new IE. It's observed that few
 	 * legacy APs which don't support the RSNXE reject the
 	 * connection at EAPOL stage.
-	 * So, strip the IE when below conditions are met to avoid
-	 * sending the RSNXE to legacy APs,
+	 * So, modify the IE when below conditions are met to avoid
+	 * the interop issues due to RSNXE,
 	 * 1. If AP doesn't support/advertise the RSNXE
-	 * 2. If the connection is in a older mode than WPA3 i.e. WPA/WPA2 mode
-	 * 3. If no other bits are set than SAE_H2E, SAE_PK, SECURE_LTF,
+	 * 2. If no other bits are set than SAE_H2E, SAE_PK, SECURE_LTF,
 	 * SECURE_RTT, PROT_RANGE_NEGOTIOATION in RSNXE capabilities
 	 * field.
-
+	 *
+	 * For WPA2 and older security - Remove the RSNXE completely.
+	 * For WPA3 security - Mask all caps others than SAE_H2E and SAE_PK.
 	 */
-	if (!util_scan_entry_rsnxe(req->entry) &&
-	    lim_is_akm_wpa_wpa2(session) &&
-	    !lim_is_rsnxe_cap_set(mac_ctx, req)) {
-		mlme_debug("Strip RSNXE as it's not supported by AP");
-		lim_strip_ie(mac_ctx, req->assoc_ie.ptr,
-			     (uint16_t *)&req->assoc_ie.len,
-			     WLAN_ELEMID_RSNXE, ONE_BYTE,
-			     NULL, 0, NULL, WLAN_MAX_IE_LEN);
+
+	if (util_scan_entry_rsnxe(req->entry) ||
+	    lim_is_rsnxe_cap_set(mac_ctx, req)) {
+		return;
 	}
+
+	rsnxe = qdf_mem_malloc(WLAN_MAX_IE_LEN + 2);
+	if (!rsnxe)
+		return;
+
+	lim_strip_ie(mac_ctx, req->assoc_ie.ptr,
+		     (uint16_t *)&req->assoc_ie.len, WLAN_ELEMID_RSNXE,
+		     ONE_BYTE, NULL, 0, rsnxe, WLAN_MAX_IE_LEN);
+
+	if (WLAN_CRYPTO_IS_WPA_WPA2(akm)) {
+		mlme_debug("Strip RSNXE as it is not supported by AP");
+		goto end;
+	} else if (WLAN_CRYPTO_IS_WPA3(akm)) {
+		new_rsnxe = lim_rebuild_rsnxe(rsnxe);
+		if (!new_rsnxe)
+			goto end;
+
+		assoc_ie = qdf_mem_malloc(req->assoc_ie.len + new_rsnxe[1] + 2);
+		if (!assoc_ie) {
+			qdf_mem_free(new_rsnxe);
+			goto end;
+		}
+
+		/* Append the new RSNXE to the assoc ie */
+		qdf_mem_copy(assoc_ie, req->assoc_ie.ptr, req->assoc_ie.len);
+		assoc_ie_len = req->assoc_ie.len;
+		qdf_mem_copy(&assoc_ie[assoc_ie_len], new_rsnxe,
+			     new_rsnxe[1] + 2);
+		assoc_ie_len += new_rsnxe[1] + 2;
+		qdf_mem_free(new_rsnxe);
+
+		/* Replace the assoc ie with new assoc_ie */
+		qdf_mem_free(req->assoc_ie.ptr);
+		req->assoc_ie.ptr = &assoc_ie[0];
+		req->assoc_ie.len = assoc_ie_len;
+		mlme_debug("Update the RSNXE for WPA3 connection");
+	}
+end:
+	qdf_mem_free(rsnxe);
 }
 
 void
@@ -4505,8 +4570,10 @@ struct pe_session *lim_get_disconnect_session(struct mac_context *mac_ctx,
 	uint8_t pe_session_id;
 
 	/* Try to find pe session with bssid */
-	session = pe_find_session_by_bssid(mac_ctx, req->req.bssid.bytes,
-					   &pe_session_id);
+	session = pe_find_session_by_bssid_and_vdev_id(mac_ctx,
+						       req->req.bssid.bytes,
+						       req->req.vdev_id,
+						       &pe_session_id);
 	/*
 	 * If bssid search fail try to find by vdev id, this can happen if
 	 * Roaming change the BSSID during disconnect was getting processed.
@@ -5844,8 +5911,9 @@ static void __lim_process_sme_disassoc_req(struct mac_context *mac,
 		return;
 	}
 
-	pe_session = pe_find_session_by_bssid(mac,
+	pe_session = pe_find_session_by_bssid_and_vdev_id(mac,
 				smeDisassocReq.bssid.bytes,
+				smeDisassocReq.sessionId,
 				&sessionId);
 	if (!pe_session) {
 		pe_err("session does not exist for bssid " QDF_MAC_ADDR_FMT,
@@ -6025,8 +6093,9 @@ void __lim_process_sme_disassoc_cnf(struct mac_context *mac, uint32_t *msg_buf)
 
 	qdf_mem_copy(&smeDisassocCnf, msg_buf, sizeof(smeDisassocCnf));
 
-	pe_session = pe_find_session_by_bssid(mac,
+	pe_session = pe_find_session_by_bssid_and_vdev_id(mac,
 				smeDisassocCnf.bssid.bytes,
+				smeDisassocCnf.vdev_id,
 				&sessionId);
 	if (!pe_session) {
 		pe_err("session does not exist for bssid " QDF_MAC_ADDR_FMT,
@@ -6194,8 +6263,9 @@ static void __lim_process_sme_deauth_req(struct mac_context *mac_ctx,
 	 * We need to get a session first but we don't even know
 	 * if the message is correct.
 	 */
-	session_entry = pe_find_session_by_bssid(mac_ctx,
+	session_entry = pe_find_session_by_bssid_and_vdev_id(mac_ctx,
 					sme_deauth_req.bssid.bytes,
+					sme_deauth_req.vdev_id,
 					&session_id);
 	if (!session_entry) {
 		pe_err("session does not exist for bssid " QDF_MAC_ADDR_FMT,

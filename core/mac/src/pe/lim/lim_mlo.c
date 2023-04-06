@@ -436,6 +436,48 @@ void lim_mlo_sta_notify_peer_disconn(struct pe_session *pe_session)
 	wlan_objmgr_peer_release_ref(peer, WLAN_LEGACY_MAC_ID);
 }
 
+void lim_mlo_roam_peer_disconn_del(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_objmgr_peer *peer;
+	struct wlan_objmgr_psoc *psoc;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	struct qdf_mac_addr bssid;
+
+	if (!vdev) {
+		pe_err("vdev is null");
+		return;
+	}
+
+	psoc = wlan_vdev_get_psoc(vdev);
+	if (!psoc) {
+		pe_err("psoc is null");
+		return;
+	}
+
+	status = wlan_vdev_get_bss_peer_mac(vdev, &bssid);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		pe_err("vdev id %d : failed to get bssid",
+		       wlan_vdev_get_id(vdev));
+		return;
+	}
+
+	peer = wlan_objmgr_get_peer_by_mac(psoc,
+					   bssid.bytes,
+					   WLAN_LEGACY_MAC_ID);
+	if (!peer) {
+		pe_err("peer is null");
+		return;
+	}
+
+	if (wlan_peer_mlme_flag_ext_get(peer, WLAN_PEER_FEXT_MLO)) {
+		pe_debug("vdev id %d disconn del peer", wlan_vdev_get_id(vdev));
+		wlan_mlo_partner_peer_disconnect_notify(peer);
+		wlan_mlo_link_peer_delete(peer);
+	}
+
+	wlan_objmgr_peer_release_ref(peer, WLAN_LEGACY_MAC_ID);
+}
+
 void lim_mlo_cleanup_partner_peer(struct wlan_objmgr_peer *peer)
 {
 	struct mac_context *mac_ctx;

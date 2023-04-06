@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -44,10 +44,13 @@ enum sr_osif_operation {
  * @SR_REASON_CODE_CONCURRENCY: Spatial Reuse reason code is concurrency
  *				 will be set when SR is suspended / resumed
  *				 due to concurrency
+ * @SR_REASON_CODE_BCN_IE_CHANGE: Spatial Reuse reason code is SRP IE change
+ *				  in the beacon/probe rsp of the associated AP
  */
 enum sr_osif_reason_code {
 	SR_REASON_CODE_ROAMING = 0,
 	SR_REASON_CODE_CONCURRENCY = 1,
+	SR_REASON_CODE_BCN_IE_CHANGE = 2,
 };
 
 /**

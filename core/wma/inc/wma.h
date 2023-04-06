@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2539,6 +2539,25 @@ QDF_STATUS wma_post_chan_switch_setup(uint8_t vdev_id);
  * Return: QDF_STATUS
  */
 QDF_STATUS wma_vdev_pre_start(uint8_t vdev_id, bool restart);
+
+#ifdef WLAN_FEATURE_11BE_MLO
+/**
+ * wma_delete_peer_mlo() - Remove the MLO peer and detach link peer
+ * @psoc: PSOC objmgr pointer
+ * @macaddr: MAC address of objmgr peer
+ *
+ * The API will remove the ML peer with objmgr peer fetched from
+ * psoc peer list using the @macaddr.
+ *
+ * Return: void
+ */
+void wma_delete_peer_mlo(struct wlan_objmgr_psoc *psoc, uint8_t *macaddr);
+#else
+static inline
+void wma_delete_peer_mlo(struct wlan_objmgr_psoc *psoc, uint8_t *macaddr)
+{
+}
+#endif
 
 /**
  * wma_remove_bss_peer_on_failure() - remove the bss peers in case of

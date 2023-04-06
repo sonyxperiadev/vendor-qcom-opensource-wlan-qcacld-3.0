@@ -53,6 +53,18 @@
 
 #define SAE_AUTH_SEQ_NUM_OFFSET       2
 #define SAE_AUTH_STATUS_CODE_OFFSET   4
+#define SAE_AUTH_GROUP_ID_OFFSET      6
+
+#define SAE_GROUP_ID_19                    19
+#define SAE_GROUP_ID_20                    20
+#define SAE_GROUP_ID_21                    21
+
+#define SAE_GROUP_19_FIXED_FIELDS_LEN      96
+#define SAE_GROUP_20_FIXED_FIELDS_LEN      144
+#define SAE_GROUP_21_FIXED_FIELDS_LEN      198
+
+#define WLAN_SAE_STATUS_HASH_TO_ELEMENT    126
+#define WLAN_SAE_STATUS_PK                 127
 
 /* MLM message types */
 enum mlmmsgtype {
@@ -1173,6 +1185,15 @@ QDF_STATUS lim_sta_handle_connect_fail(join_params *param);
  */
 void lim_join_result_callback(struct mac_context *mac,
 			      uint8_t vdev_id);
+
+/**
+ * lim_update_lost_link_rssi() - API to update lost link rssi in lim session
+ * @mac: Pointer to Global MAC structure
+ * @rssi: rssi at disconnect time
+ *
+ * Return: None
+ */
+void lim_update_lost_link_rssi(struct mac_context *mac, uint32_t rssi);
 
 #ifdef WLAN_FEATURE_HOST_ROAM
 QDF_STATUS lim_sta_reassoc_error_handler(struct reassoc_params *param);

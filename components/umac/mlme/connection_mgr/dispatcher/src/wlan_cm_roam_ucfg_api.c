@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -25,6 +25,7 @@
 #include "wlan_cm_roam_ucfg_api.h"
 #include "../../core/src/wlan_cm_roam_offload.h"
 #include "wlan_reg_ucfg_api.h"
+#include "wlan_mlo_mgr_sta.h"
 
 bool ucfg_is_rso_enabled(struct wlan_objmgr_pdev *pdev, uint8_t vdev_id)
 {
@@ -88,6 +89,16 @@ ucfg_user_space_enable_disable_rso(struct wlan_objmgr_pdev *pdev,
 
 	mlme_set_supplicant_disabled_roaming(psoc, vdev_id,
 					     !is_fast_roam_enabled);
+
+	/* For mlo connection, before all links are up
+	 * supplicant can enable roaming, to handle this
+	 * drop the enable rso as host will enable roaming
+	 * once all links are up
+	 */
+	if (mlo_is_ml_connection_in_progress(psoc, vdev_id)) {
+		mlme_debug("mlo connection in progress");
+		return QDF_STATUS_SUCCESS;
+	}
 
 	state = (is_fast_roam_enabled) ?
 		WLAN_ROAM_RSO_ENABLED : WLAN_ROAM_RSO_STOPPED;

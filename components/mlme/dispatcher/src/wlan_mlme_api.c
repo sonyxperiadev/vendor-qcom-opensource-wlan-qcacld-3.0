@@ -6670,3 +6670,15 @@ wlan_mlme_is_bcn_prot_disabled_for_sap(struct wlan_objmgr_psoc *psoc)
 
 	return mlme_obj->cfg.sap_cfg.disable_bcn_prot;
 }
+
+uint8_t *wlan_mlme_get_src_addr_from_frame(struct element_info *frame)
+{
+	struct wlan_frame_hdr *hdr;
+
+	if (!frame || !frame->len || frame->len < WLAN_MAC_HDR_LEN_3A)
+		return NULL;
+
+	hdr = (struct wlan_frame_hdr *)frame->ptr;
+
+	return hdr->i_addr2;
+}

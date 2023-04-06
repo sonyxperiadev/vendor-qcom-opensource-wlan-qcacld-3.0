@@ -118,13 +118,6 @@ void hdd_medium_assess_init(void);
 void hdd_medium_assess_deinit(void);
 
 /**
- * hdd_medium_access_state() - medium assess timer state
- *
- * Return: true if timer not initialized else false
- */
-
-bool hdd_medium_access_state(void);
-/**
  * hdd_medium_assess_stop_timer() - medium assess reset and stop timer
  * @pdev_id: pdev id
  * @hdd_ctx: hdd context
@@ -144,10 +137,6 @@ void hdd_medium_assess_ssr_enable_flag(void);
 #define FEATURE_MEDIUM_ASSESS_VENDOR_EVENTS
 static inline void hdd_medium_assess_init(void) {}
 static inline void hdd_medium_assess_deinit(void) {}
-static inline bool hdd_medium_access_state(void)
-{
-	return false;
-}
 static inline void hdd_medium_assess_stop_timer(uint8_t pdev_id,
 						struct hdd_context *hdd_ctx) {}
 static inline void hdd_medium_assess_ssr_enable_flag(void) {}

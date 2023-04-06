@@ -468,7 +468,8 @@ static QDF_STATUS ap_mlme_vdev_up_send(struct vdev_mlme_obj *vdev_mlme,
 
 #ifdef WLAN_FEATURE_11BE_MLO
 void wlan_handle_emlsr_sta_concurrency(struct wlan_objmgr_vdev *vdev,
-				       bool ap_coming_up, bool sta_coming_up)
+				       bool ap_coming_up, bool sta_coming_up,
+				       bool emlsr_sta_coming_up)
 {
 	struct wlan_objmgr_psoc *psoc = wlan_vdev_get_psoc(vdev);
 
@@ -478,7 +479,8 @@ void wlan_handle_emlsr_sta_concurrency(struct wlan_objmgr_vdev *vdev,
 	}
 
 	policy_mgr_handle_emlsr_sta_concurrency(psoc, vdev, ap_coming_up,
-						sta_coming_up);
+						sta_coming_up,
+						emlsr_sta_coming_up);
 }
 #endif
 

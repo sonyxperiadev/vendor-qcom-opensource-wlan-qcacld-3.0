@@ -2504,8 +2504,7 @@ static void wma_send_vdev_down_req(tp_wma_handle wma,
 }
 
 #ifdef WLAN_FEATURE_11BE_MLO
-static void wma_delete_peer_mlo(struct wlan_objmgr_psoc *psoc,
-				uint8_t *macaddr)
+void wma_delete_peer_mlo(struct wlan_objmgr_psoc *psoc, uint8_t *macaddr)
 {
 	struct wlan_objmgr_peer *peer = NULL;
 
@@ -2514,11 +2513,6 @@ static void wma_delete_peer_mlo(struct wlan_objmgr_psoc *psoc,
 		wlan_mlo_link_peer_delete(peer);
 		wlan_objmgr_peer_release_ref(peer, WLAN_LEGACY_WMA_ID);
 	}
-}
-#else /* WLAN_FEATURE_11BE_MLO */
-static inline void wma_delete_peer_mlo(struct wlan_objmgr_psoc *psoc,
-				       uint8_t *macaddr)
-{
 }
 #endif /* WLAN_FEATURE_11BE_MLO */
 
@@ -2648,8 +2642,8 @@ __wma_handle_vdev_stop_rsp(struct vdev_stop_response *resp_event)
 	if (mode == QDF_STA_MODE || mode == QDF_P2P_CLIENT_MODE) {
 		status = wlan_vdev_get_bss_peer_mac(iface->vdev, &bssid);
 		if (QDF_IS_STATUS_ERROR(status)) {
-			wma_err("Failed to get bssid");
-			return QDF_STATUS_E_INVAL;
+			wma_debug("Failed to get bssid, peer might have got deleted already");
+			return wlan_cm_bss_peer_delete_rsp(iface->vdev, status);
 		}
 		/* initiate CM to delete bss peer */
 		return wlan_cm_bss_peer_delete_ind(iface->vdev,  &bssid);
@@ -5638,7 +5632,8 @@ void wma_delete_sta(tp_wma_handle wma, tpDeleteStaParams del_sta)
 	switch (oper_mode) {
 	case BSS_OPERATIONAL_MODE_STA:
 		if (wlan_cm_is_roam_sync_in_progress(wma->psoc, vdev_id) ||
-		    MLME_IS_MLO_ROAM_SYNCH_IN_PROGRESS(wma->psoc, vdev_id)) {
+		    MLME_IS_MLO_ROAM_SYNCH_IN_PROGRESS(wma->psoc, vdev_id) ||
+		    mlo_is_roaming_in_progress(wma->psoc, vdev_id)) {
 			wma_debug("LFR3: Del STA on vdev_id %d", vdev_id);
 			qdf_mem_free(del_sta);
 			return;
@@ -5917,7 +5912,8 @@ void wma_delete_bss(tp_wma_handle wma, uint8_t vdev_id)
 	}
 
 	if (wlan_cm_is_roam_sync_in_progress(wma->psoc, vdev_id) ||
-	    MLME_IS_MLO_ROAM_SYNCH_IN_PROGRESS(wma->psoc, vdev_id)) {
+	    MLME_IS_MLO_ROAM_SYNCH_IN_PROGRESS(wma->psoc, vdev_id) ||
+	    mlo_is_roaming_in_progress(wma->psoc, vdev_id)) {
 		roam_synch_in_progress = true;
 		wma_debug("LFR3: Setting vdev_up to FALSE for vdev:%d",
 			  vdev_id);

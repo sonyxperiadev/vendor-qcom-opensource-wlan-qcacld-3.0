@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -42,6 +42,11 @@
 #define PM_5_GHZ_CH_FREQ_36   (5180)
 #define CHANNEL_SWITCH_COMPLETE_TIMEOUT   (2000)
 #define MAX_NOA_TIME (3000)
+
+/* Defer SAP force SCC check by 2000ms due to another SAP/GO start AP in
+ * progress
+ */
+#define SAP_CONC_CHECK_DEFER_TIMEOUT_MS (2000)
 
 /**
  * Policy Mgr hardware mode list bit-mask definitions.

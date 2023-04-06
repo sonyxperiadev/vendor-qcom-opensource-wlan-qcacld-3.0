@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -604,6 +604,7 @@ void wma_lost_link_info_handler(tp_wma_handle wma, uint32_t vdev_id,
 	if (wma_is_vdev_up(vdev_id) &&
 	    (WMI_VDEV_TYPE_STA == wma->interfaces[vdev_id].type) &&
 	    (0 == wma->interfaces[vdev_id].sub_type)) {
+		lim_update_lost_link_rssi(wma->mac_context, rssi);
 		lost_link_info = qdf_mem_malloc(sizeof(*lost_link_info));
 		if (!lost_link_info)
 			return;
@@ -4431,6 +4432,8 @@ QDF_STATUS wma_remove_bss_peer_before_join(
 		return qdf_status;
 	}
 	mac_addr = bssid.bytes;
+
+	wma_delete_peer_mlo(wma->psoc, mac_addr);
 
 	qdf_status = wma_remove_peer(wma, mac_addr, vdev_id, false);
 

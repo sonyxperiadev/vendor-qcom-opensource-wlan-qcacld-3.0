@@ -73,6 +73,15 @@ void lim_get_mlo_vdev_list(struct pe_session *session, uint16_t *vdev_count,
 			   struct wlan_objmgr_vdev **wlan_vdev_list);
 
 /**
+ * lim_mlo_roam_peer_disconn_del - trigger mlo to delete partner peer
+ *                                 This API is only for MLO STA roam.
+ * @vdev: vdev pointer
+ *
+ * Return: void
+ */
+void lim_mlo_roam_peer_disconn_del(struct wlan_objmgr_vdev *vdev);
+
+/**
  * lim_mlo_notify_peer_disconn - trigger mlo to delete partner peer
  * @pe_session: pe session
  * @sta_ds: Pointer to internal STA Datastructure
@@ -371,6 +380,9 @@ QDF_STATUS lim_get_bpcc_from_mlo_ie(tSchBeaconStruct *bcn,
 bool lim_check_cu_happens(struct wlan_objmgr_vdev *vdev, uint8_t new_bpcc);
 
 #else
+static inline void lim_mlo_roam_peer_disconn_del(struct wlan_objmgr_vdev *vdev)
+{
+}
 static inline void lim_mlo_notify_peer_disconn(struct pe_session *pe_session,
 					       tpDphHashNode sta_ds)
 {
