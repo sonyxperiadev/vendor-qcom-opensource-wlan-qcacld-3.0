@@ -88,16 +88,16 @@ end:
 static void
 mlo_cleanup_link(struct wlan_objmgr_vdev *vdev, uint8_t num_setup_links)
 {
-	if (num_setup_links >= 2 &&
-	    wlan_vdev_mlme_is_mlo_link_vdev(vdev)) {
+	/*
+	 * Cleanup the non-assoc link link in below cases,
+	 * 1. Roamed to single link-MLO AP
+	 * 2. Roamed to an MLO AP but 4-way handshake is offloaded to
+	 *    userspace, i.e.auth_status = ROAM_AUTH_STATUS_CONNECTED
+	 * 3. Roamed to non-MLO AP(num_setup_links = 0)
+	 * This covers all supported combinations. So cleanup the link always.
+	 */
+	if (wlan_vdev_mlme_is_mlo_link_vdev(vdev))
 		cm_cleanup_mlo_link(vdev);
-	} else if (!num_setup_links || wlan_vdev_mlme_is_mlo_link_vdev(vdev)) {
-		wlan_vdev_mlme_clear_mlo_vdev(vdev);
-		if (wlan_vdev_mlme_is_mlo_link_vdev(vdev)) {
-			cm_cleanup_mlo_link(vdev);
-			wlan_vdev_mlme_clear_mlo_link_vdev(vdev);
-		}
-	}
 }
 
 static void
