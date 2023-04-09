@@ -373,6 +373,46 @@ void ucfg_mlme_connected_chan_stats_request(struct wlan_objmgr_psoc *psoc,
 	mlme_connected_chan_stats_request(psoc, vdev_id);
 }
 
+bool
+ucfg_mlme_is_chwidth_with_notify_supported(struct wlan_objmgr_psoc *psoc)
+{
+	return wlan_psoc_nif_fw_ext2_cap_get(psoc,
+				WLAN_VDEV_PARAM_CHWIDTH_WITH_NOTIFY_SUPPORT);
+}
+
+QDF_STATUS
+ucfg_mlme_send_ch_width_update_with_notify(struct wlan_objmgr_psoc *psoc,
+					   uint8_t vdev_id,
+					   enum phy_ch_width ch_width)
+{
+	struct wlan_objmgr_vdev *vdev;
+	QDF_STATUS status;
+	enum QDF_OPMODE mode;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_MLME_OBJMGR_ID);
+	if (!vdev) {
+		mlme_legacy_err("vdev %d: vdev not found", vdev_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	mode = wlan_vdev_mlme_get_opmode(vdev);
+	if (mode != QDF_STA_MODE) {
+		mlme_legacy_debug("vdev %d: mode %d, CW update not supported",
+				  vdev_id, mode);
+		status = QDF_STATUS_E_NOSUPPORT;
+		goto release;
+	}
+
+	status = wlan_mlme_send_ch_width_update_with_notify(psoc, vdev,
+							    vdev_id, ch_width);
+
+release:
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
+
+	return status;
+}
+
 QDF_STATUS
 ucfg_mlme_set_vdev_traffic_low_latency(struct wlan_objmgr_psoc *psoc,
 				       uint8_t vdev_id, bool set)

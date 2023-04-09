@@ -52,6 +52,7 @@
 #include <wma_api.h>
 #include "wlan_hdd_object_manager.h"
 #include "wlan_dp_ucfg_api.h"
+#include "wlan_cmn.h"
 
 #ifndef WLAN_MAC_ADDR_UPDATE_DISABLE
 /**
@@ -2142,6 +2143,45 @@ int hdd_set_rx_stbc(struct hdd_adapter *adapter, int value)
 	return ret;
 }
 
+/**
+ * hdd_convert_chwidth_to_phy_chwidth() - convert channel width of type enum
+ * eSirMacHTChannelWidth to enum phy_ch_width
+ * @chwidth: channel width of type enum eSirMacHTChannelWidth
+ *
+ * Return: channel width of type enum phy_ch_width
+ */
+static enum phy_ch_width
+hdd_convert_chwidth_to_phy_chwidth(enum eSirMacHTChannelWidth chwidth)
+{
+	enum phy_ch_width ch_width = CH_WIDTH_INVALID;
+
+	switch (chwidth) {
+	case eHT_CHANNEL_WIDTH_20MHZ:
+		ch_width = CH_WIDTH_20MHZ;
+		break;
+	case eHT_CHANNEL_WIDTH_40MHZ:
+		ch_width = CH_WIDTH_40MHZ;
+		break;
+	case eHT_CHANNEL_WIDTH_80MHZ:
+		ch_width = CH_WIDTH_80MHZ;
+		break;
+	case eHT_CHANNEL_WIDTH_160MHZ:
+		ch_width = CH_WIDTH_160MHZ;
+		break;
+	case eHT_CHANNEL_WIDTH_80P80MHZ:
+		ch_width = CH_WIDTH_80P80MHZ;
+		break;
+	case eHT_CHANNEL_WIDTH_320MHZ:
+		ch_width = CH_WIDTH_320MHZ;
+		break;
+	default:
+		hdd_debug("Invalid channel width %d", chwidth);
+		break;
+	}
+
+	return ch_width;
+}
+
 int hdd_update_channel_width(struct hdd_adapter *adapter,
 			     enum eSirMacHTChannelWidth chwidth,
 			     uint32_t bonding_mode)
@@ -2149,11 +2189,24 @@ int hdd_update_channel_width(struct hdd_adapter *adapter,
 	struct hdd_context *hdd_ctx;
 	struct sme_config_params *sme_config;
 	int ret;
+	enum phy_ch_width ch_width;
+	QDF_STATUS status;
 
 	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	if (!hdd_ctx) {
 		hdd_err("hdd_ctx failure");
 		return -EINVAL;
+	}
+
+	if (ucfg_mlme_is_chwidth_with_notify_supported(hdd_ctx->psoc)) {
+		ch_width = hdd_convert_chwidth_to_phy_chwidth(chwidth);
+		hdd_debug("vdev %d : process update ch width request to %d",
+			  adapter->vdev_id, ch_width);
+		status =
+		    ucfg_mlme_send_ch_width_update_with_notify(hdd_ctx->psoc,
+					adapter->vdev_id, ch_width);
+		if (QDF_IS_STATUS_ERROR(status))
+			return -EIO;
 	}
 
 	sme_config = qdf_mem_malloc(sizeof(*sme_config));
