@@ -5163,6 +5163,49 @@ wma_vdev_bcn_latency_event_handler(void *handle,
 }
 #endif
 
+static void
+wma_update_sacn_channel_info_buf(wmi_unified_t wmi_handle,
+				 wmi_chan_info_event_fixed_param *event,
+				 struct scan_chan_info *buf,
+				 wmi_cca_busy_subband_info *cca_info,
+				 uint32_t num_tlvs)
+{
+	uint32_t i;
+	bool is_cca_busy_info;
+
+	buf->tx_frame_count = event->tx_frame_cnt;
+	buf->clock_freq = event->mac_clk_mhz;
+	buf->cmd_flag = event->cmd_flags;
+	buf->freq = event->freq;
+	buf->noise_floor = event->noise_floor;
+	buf->cycle_count = event->cycle_count;
+	buf->rx_clear_count = event->rx_clear_count;
+
+	is_cca_busy_info = wmi_service_enabled(wmi_handle,
+				wmi_service_cca_busy_info_for_each_20mhz);
+
+	if (!is_cca_busy_info || num_tlvs == 0)
+		return;
+
+	wma_debug("is_cca_busy_info: %d, num_tlvs:%d", is_cca_busy_info,
+		  num_tlvs);
+
+	if (cca_info && num_tlvs > 0) {
+		buf->subband_info.num_chan = 0;
+		for (i = 0; i < num_tlvs && i < MAX_WIDE_BAND_SCAN_CHAN; i++) {
+			buf->subband_info.cca_busy_subband_info[i] =
+						cca_info->rx_clear_count;
+			wma_debug("cca_info->rx_clear_count:%d",
+				  cca_info->rx_clear_count);
+			buf->subband_info.num_chan++;
+			cca_info++;
+		}
+
+		buf->subband_info.is_wide_band_scan = true;
+		buf->subband_info.vdev_id = event->vdev_id;
+	}
+}
+
 int wma_chan_info_event_handler(void *handle, uint8_t *event_buf,
 				uint32_t len)
 {
@@ -5176,6 +5219,8 @@ int wma_chan_info_event_handler(void *handle, uint8_t *event_buf,
 	struct wlan_objmgr_vdev *vdev;
 	enum QDF_OPMODE mode;
 	struct scheduler_msg sme_msg = {0};
+	wmi_cca_busy_subband_info *cca_info = NULL;
+	uint32_t num_tlvs = 0;
 
 	if (wma && wma->cds_context)
 		mac = (struct mac_context *)cds_get_context(QDF_MODULE_ID_PE);
@@ -5194,24 +5239,21 @@ int wma_chan_info_event_handler(void *handle, uint8_t *event_buf,
 		return -EINVAL;
 	}
 
-	snr_monitor_enabled = wlan_scan_is_snr_monitor_enabled(mac->psoc);
-	if (snr_monitor_enabled && mac->chan_info_cb) {
-		buf.tx_frame_count = event->tx_frame_cnt;
-		buf.clock_freq = event->mac_clk_mhz;
-		buf.cmd_flag = event->cmd_flags;
-		buf.freq = event->freq;
-		buf.noise_floor = event->noise_floor;
-		buf.cycle_count = event->cycle_count;
-		buf.rx_clear_count = event->rx_clear_count;
-		mac->chan_info_cb(&buf);
-	}
-
 	/* Ignore the last channel event data whose command flag is set to 1.
 	 * It’s basically an event with empty data only to indicate scan event
 	 * completion.
 	 */
 	if (event->cmd_flags == WMI_CHAN_INFO_END_RESP)
 		return 0;
+
+	snr_monitor_enabled = wlan_scan_is_snr_monitor_enabled(mac->psoc);
+	if (snr_monitor_enabled && mac->chan_info_cb) {
+		cca_info = param_buf->cca_busy_subband_info;
+		num_tlvs  = param_buf->num_cca_busy_subband_info;
+		wma_update_sacn_channel_info_buf(wma->wmi_handle, event,
+						 &buf, cca_info, num_tlvs);
+		mac->chan_info_cb(&buf);
+	}
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(wma->psoc, event->vdev_id,
 						    WLAN_LEGACY_WMA_ID);

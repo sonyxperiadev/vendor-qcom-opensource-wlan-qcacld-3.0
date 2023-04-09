@@ -735,6 +735,16 @@ static inline QDF_STATUS wlan_cm_host_roam_start(struct scheduler_msg *msg)
 }
 #endif
 
+/**
+ * wlan_cm_get_associated_ch_width() - get associated channel width
+ * @psoc: psoc pointer
+ * @vdev_id: vdev id
+ *
+ * Return: enum phy_ch_width
+ */
+enum phy_ch_width
+wlan_cm_get_associated_ch_width(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id);
+
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 /**
  * wlan_cm_fw_roam_abort_req() - roam abort request handling
