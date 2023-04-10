@@ -1647,6 +1647,7 @@ cm_connect_complete_ind(struct wlan_objmgr_vdev *vdev,
 					     vdev);
 		wlan_p2p_status_connect(vdev);
 		cm_update_tid_mapping(vdev);
+		cm_update_associated_ch_width(vdev, true);
 	}
 
 	mlo_roam_connect_complete(vdev);

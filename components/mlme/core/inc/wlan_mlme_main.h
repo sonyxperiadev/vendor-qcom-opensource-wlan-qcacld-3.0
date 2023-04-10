@@ -383,6 +383,7 @@ struct ft_context {
  * @ese_tspec_info: ese tspec info
  * @ext_cap_ie: Ext CAP IE
  * @assoc_btm_cap: BSS transition management cap used in (re)assoc req
+ * @ch_width_orig: channel width at the time of initial connection
  */
 struct mlme_connect_info {
 	uint8_t timing_meas_cap;
@@ -408,6 +409,7 @@ struct mlme_connect_info {
 #endif
 	uint8_t ext_cap_ie[DOT11F_IE_EXTCAP_MAX_LEN + 2];
 	bool assoc_btm_cap;
+	enum phy_ch_width ch_width_orig;
 };
 
 /** struct wait_for_key_timer - wait for key timer object

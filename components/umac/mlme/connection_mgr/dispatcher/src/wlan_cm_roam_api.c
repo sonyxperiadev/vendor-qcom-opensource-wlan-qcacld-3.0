@@ -128,6 +128,31 @@ wlan_roam_update_cfg(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 
 #endif
 
+void cm_update_associated_ch_width(struct wlan_objmgr_vdev *vdev,
+				   bool is_update)
+{
+	struct mlme_legacy_priv *mlme_priv;
+	struct wlan_channel *des_chan;
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv)
+		return;
+
+	if (!is_update) {
+		mlme_priv->connect_info.ch_width_orig = CH_WIDTH_INVALID;
+		goto print;
+	}
+
+	des_chan = wlan_vdev_mlme_get_des_chan(vdev);
+	if (!des_chan)
+		return;
+	mlme_priv->connect_info.ch_width_orig = des_chan->ch_width;
+
+print:
+	mlme_debug("update associated ch width :%d, is_update:%d",
+		   mlme_priv->connect_info.ch_width_orig, is_update);
+}
+
 char *cm_roam_get_requestor_string(enum wlan_cm_rso_control_requestor requestor)
 {
 	switch (requestor) {

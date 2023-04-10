@@ -249,6 +249,7 @@ cm_disconnect_complete_ind(struct wlan_objmgr_vdev *vdev,
 	wlan_tdls_notify_sta_disconnect(vdev_id, false, false, vdev);
 	policy_mgr_decr_session_set_pcl(psoc, op_mode, vdev_id);
 	wlan_clear_mlo_sta_link_removed_flag(vdev);
+	cm_update_associated_ch_width(vdev, false);
 
 	return QDF_STATUS_SUCCESS;
 }

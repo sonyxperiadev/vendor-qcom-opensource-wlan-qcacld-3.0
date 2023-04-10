@@ -158,6 +158,18 @@ wlan_cm_enable_roaming_on_connected_sta(struct wlan_objmgr_pdev *pdev,
 }
 #endif
 
+/**
+ * cm_update_associated_ch_width() - to save channel width in mlme priv obj at
+ * the time of initial connection
+ * @vdev: Pointer to vdev
+ * @is_update: to distinguish whether update is during connection or
+ * disconnection
+ *
+ * Return: none
+ */
+void cm_update_associated_ch_width(struct wlan_objmgr_vdev *vdev,
+				   bool is_update);
+
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 #define wlan_is_roam_offload_enabled(lfr) \
 	(lfr.lfr3_roaming_offload)
