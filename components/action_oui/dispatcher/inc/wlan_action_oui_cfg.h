@@ -691,8 +691,8 @@
  *
  * OUI 2: 001018
  *   OUI data Len : 06
- *   OUI Data : 0204009C0000
- *   OUI data Mask: FC - 11111100
+ *   OUI Data : 02FF009C0000
+ *   OUI data Mask: BC - 10111100
  *   Info Mask : 01 - only OUI present in Info mask
  * Refer to gEnableActionOUI for more detail about the format.
  *
@@ -708,7 +708,7 @@
 	"gActionOUIDisableDynamicQosNullTxRate", \
 	0, \
 	ACTION_OUI_MAX_STR_LEN, \
-	"00e04c 03 020160 E0 01 001018 06 0204009c0000 FC 01", \
+	"00e04c 03 020160 E0 01 001018 06 02FF009c0000 BC 01", \
 	"Used to turn off FW's dynamic qos null tx rate for specified APs")
 
 #define CFG_ACTION_OUI \
