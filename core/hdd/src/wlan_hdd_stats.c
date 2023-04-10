@@ -6341,10 +6341,8 @@ static int wlan_hdd_get_sta_stats(struct wiphy *wiphy,
 
 		if (tx_mcs_index == INVALID_MCS_IDX)
 			tx_mcs_index = 0;
-		if (rx_mcs_index == INVALID_MCS_IDX) {
+		if (rx_mcs_index == INVALID_MCS_IDX)
 			rx_mcs_index = 0;
-			adapter->hdd_stats.class_a_stat.rx_mcs_index = 0;
-		}
 	}
 
 	hdd_debug("[RSSI %d, RLMS %u, rssi high %d, rssi mid %d, rssi low %d]-"
@@ -7559,31 +7557,28 @@ void wlan_hdd_get_peer_rx_rate_stats(struct hdd_adapter *adapter)
 
 	peer_mac_addr = adapter->session.station.conn_info.bssid.bytes;
 
+	/*
+	 * If failed to get RX rates info, assign an invalid value to the
+	 * preamble, used to tell driver to report max rates. The rx_rate
+	 * and rx_mcs_index are also assigned with tx_rate and tx_mcs_index
+	 * if they are invalid after ASSOC/REASSOC/ROAMING
+	 */
 	status = cdp_host_get_peer_stats(soc,
 					 adapter->vdev_id,
 					 peer_mac_addr,
 					 peer_stats);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		qdf_mem_free(peer_stats);
+	if (qdf_unlikely(QDF_IS_STATUS_ERROR(status)) ||
+	    qdf_unlikely(peer_stats->rx.last_rx_rate == 0)) {
+		hdd_debug("No rates, reporting max rate, rx mcs=%d, status=%d",
+			  adapter->hdd_stats.class_a_stat.rx_mcs_index, status);
 		adapter->hdd_stats.class_a_stat.rx_preamble = INVALID_PREAMBLE;
-		osif_err("cdp_host_get_peer_stats failed. error: %d", status);
-		return;
-	}
-
-	if (qdf_unlikely(peer_stats->rx.last_rx_rate == 0)) {
-		hdd_debug("No rates, mcs=%d, nss=%d, gi=%d, preamble=%d, bw=%d",
-			  peer_stats->rx.mcs_info,
-			  peer_stats->rx.nss_info,
-			  peer_stats->rx.gi_info,
-			  peer_stats->rx.preamble_info,
-			  peer_stats->rx.bw_info);
-
-		/*
-		 * Assign preamble an invalid value used to determine
-		 * whether driver fills in actual rates or max rates
-		 */
-		adapter->hdd_stats.class_a_stat.rx_preamble = INVALID_PREAMBLE;
-
+		if (adapter->hdd_stats.class_a_stat.rx_mcs_index ==
+			INVALID_MCS_IDX) {
+			adapter->hdd_stats.class_a_stat.rx_rate =
+				adapter->hdd_stats.class_a_stat.tx_rate;
+			adapter->hdd_stats.class_a_stat.rx_mcs_index =
+				adapter->hdd_stats.class_a_stat.tx_mcs_index;
+		}
 		qdf_mem_free(peer_stats);
 		return;
 	}
