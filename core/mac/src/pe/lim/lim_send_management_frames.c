@@ -6341,6 +6341,8 @@ lim_send_t2lm_action_rsp_frame(struct mac_context *mac_ctx,
 	mgmt_hdr = (tpSirMacMgmtHdr)frame_ptr;
 	sir_copy_mac_addr(mgmt_hdr->bssId, session->bssId);
 
+	lim_set_protected_bit(mac_ctx, session, peer_mac, mgmt_hdr);
+
 	status = dot11f_pack_t2lm_neg_rsp(mac_ctx, &frm,
 					  frame_ptr + sizeof(tSirMacMgmtHdr),
 					  payload_size, &payload_size);
