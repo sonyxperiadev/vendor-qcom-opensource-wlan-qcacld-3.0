@@ -4226,6 +4226,8 @@ lim_gen_link_probe_rsp_roam(struct mac_context *mac_ctx,
 	struct wlan_frame_hdr *hdr;
 	uint16_t gen_frame_len;
 	uint32_t idx, link_id, ml_probe_link_id;
+	struct roam_scan_candidate_frame rcvd_frame;
+	qdf_freq_t freq;
 
 	if (!session || !roam_sync_ind)
 		return QDF_STATUS_E_NULL_VALUE;
@@ -4265,97 +4267,121 @@ lim_gen_link_probe_rsp_roam(struct mac_context *mac_ctx,
 		return QDF_STATUS_E_INVAL;
 	}
 
-	if (probe_rsp->mlo_ie.mlo_ie_present) {
-		/* Add received ml bcn/probe rsp to scan db */
-		src_addr = wlan_mlme_get_src_addr_from_frame(&frame);
-		if (!src_addr) {
-			pe_err("MLO: Failed to fetch src address");
-			status = QDF_STATUS_E_FAILURE;
-			goto done;
-		}
-		lim_add_bcn_probe(session->vdev, frame.ptr, frame.len,
-				  mlo_roam_get_link_freq_from_mac_addr(
-					       roam_sync_ind, src_addr),
-				  roam_sync_ind->rssi);
-		/*
-		 * When STA roams to an MLO AP, non-assoc link might be superior
-		 * in features compared to  assoc link and the per-STA profile
-		 * info may carry corresponding IEs. These IEs are extracted
-		 * and added to IE list of link probe response while generating
-		 * it. So, the link probe response generated from assoc link
-		 * probe response might be of more size than assoc link probe
-		 * rsp. Allocate buffer for the bss descriptor to accommodate
-		 * all of the IEs got generated as part of link probe rsp
-		 * generation. Allocate MAX_MGMT_MPDU_LEN bytes for IEs as the
-		 * max frame size that can be received from AP is
-		 * MAX_MGMT_MPDU_LEN bytes.
-		 */
-		gen_frame_len = MAX_MGMT_MPDU_LEN;
+	if (!probe_rsp->mlo_ie.mlo_ie_present)
+		goto done;
 
-		gen_probe_rsp.ptr = qdf_mem_malloc(gen_frame_len);
-		if (!gen_probe_rsp.ptr) {
-			qdf_mem_free(probe_rsp);
-			return QDF_STATUS_E_NOMEM;
-		}
+	/* Add received ml bcn/probe rsp to scan db */
+	src_addr = wlan_mlme_get_src_addr_from_frame(&frame);
+	if (!src_addr) {
+		pe_err("MLO: Failed to fetch src address");
+		status = QDF_STATUS_E_FAILURE;
+		goto done;
+	}
+	freq = mlo_roam_get_link_freq_from_mac_addr(roam_sync_ind,
+						    src_addr);
+	/*
+	 * Frequency corresponds to a link mac address might not be
+	 * present in the ml roam info if firmware hadn't roamed to
+	 * the link where ML probe response is received. It might have
+	 * roamed to other links. This happens frequently when roamed
+	 * to a 3-link(2+5+6) AP. As STA can do only 2-link association,
+	 * it chooses best two links(5+6) due to scoring but it might
+	 * have got ML probe response from 2ghz link.
+	 */
+	if (!freq) {
+		pe_debug("MLO: Failed to fetch freq");
+		status = QDF_STATUS_E_FAILURE;
+		goto done;
+	}
+	lim_add_bcn_probe(session->vdev, frame.ptr, frame.len,
+			  freq, roam_sync_ind->rssi);
+	/*
+	 * When STA roams to an MLO AP, non-assoc link might be superior
+	 * in features compared to  assoc link and the per-STA profile
+	 * info may carry corresponding IEs. These IEs are extracted
+	 * and added to IE list of link probe response while generating
+	 * it. So, the link probe response generated from assoc link
+	 * probe response might be of more size than assoc link probe
+	 * rsp. Allocate buffer for the bss descriptor to accommodate
+	 * all of the IEs got generated as part of link probe rsp
+	 * generation. Allocate MAX_MGMT_MPDU_LEN bytes for IEs as the
+	 * max frame size that can be received from AP is
+	 * MAX_MGMT_MPDU_LEN bytes.
+	 */
+	gen_frame_len = MAX_MGMT_MPDU_LEN;
 
-		/*
-		 * It's ok to keep assoc vdev mac address as DA as link vdev
-		 * is just cleanedup and it may not be an ML vdev till the
-		 * flags are set again
-		 */
-		qdf_mem_copy(&sta_link_addr, session->self_mac_addr,
-			     QDF_MAC_ADDR_SIZE);
+	gen_probe_rsp.ptr = qdf_mem_malloc(gen_frame_len);
+	if (!gen_probe_rsp.ptr) {
+		qdf_mem_free(probe_rsp);
+		status = QDF_STATUS_E_NOMEM;
+		goto done;
+	}
 
-		gen_probe_rsp.len = gen_frame_len;
-		src_addr = wlan_mlme_get_src_addr_from_frame(&frame);
-		status = mlo_roam_get_link_id_from_mac_addr(roam_sync_ind,
-							    src_addr,
-							    &ml_probe_link_id);
-		if (QDF_IS_STATUS_ERROR(status)) {
-			pe_debug("Invalid link id for mac_addr: " QDF_MAC_ADDR_FMT,
-				 src_addr);
-			goto done;
-		}
-		for (idx = 0; idx < roam_sync_ind->num_setup_links; idx++) {
-			link_id =  roam_sync_ind->ml_link[idx].link_id;
-			if (link_id == ml_probe_link_id)
-				continue;
-			status = util_gen_link_probe_rsp(rcvd_probe_rsp.ptr,
+	/*
+	 * It's ok to keep assoc vdev mac address as DA as link vdev
+	 * is just cleanedup and it may not be an ML vdev till the
+	 * flags are set again
+	 */
+	qdf_mem_copy(&sta_link_addr, session->self_mac_addr,
+		     QDF_MAC_ADDR_SIZE);
+
+	gen_probe_rsp.len = gen_frame_len;
+	src_addr = wlan_mlme_get_src_addr_from_frame(&frame);
+	status = mlo_roam_get_link_id_from_mac_addr(roam_sync_ind,
+						    src_addr,
+						    &ml_probe_link_id);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		pe_debug("Invalid link id for mac_addr: " QDF_MAC_ADDR_FMT,
+			 src_addr);
+		goto done;
+	}
+	for (idx = 0; idx < roam_sync_ind->num_setup_links; idx++) {
+		link_id =  roam_sync_ind->ml_link[idx].link_id;
+		if (link_id == ml_probe_link_id)
+			continue;
+		status = util_gen_link_probe_rsp(rcvd_probe_rsp.ptr,
 					rcvd_probe_rsp.len,
 					link_id,
 					sta_link_addr,
 					gen_probe_rsp.ptr,
 					gen_frame_len,
 					(qdf_size_t *)&gen_probe_rsp.len);
-			if (QDF_IS_STATUS_ERROR(status)) {
-				pe_err("MLO: Link %d probe resp gen failed %d",
-				       link_id, status);
-				status = QDF_STATUS_E_FAILURE;
-				goto done;
-			}
-
-			pe_debug("MLO: link probe rsp size:%u orig probe rsp :%u",
-				 gen_probe_rsp.len, rcvd_probe_rsp.len);
-
-			src_addr = wlan_mlme_get_src_addr_from_frame(
-							&gen_probe_rsp);
-			if (!src_addr) {
-				pe_err("MLO: Failed to fetch src address");
-				status = QDF_STATUS_E_FAILURE;
-				goto done;
-			}
-			lim_add_bcn_probe(session->vdev, gen_probe_rsp.ptr,
-					  gen_probe_rsp.len,
-					  mlo_roam_get_link_freq_from_mac_addr(
-						       roam_sync_ind, src_addr),
-					  roam_sync_ind->rssi);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			pe_err("MLO: Link %d probe resp gen failed %d",
+			       link_id, status);
+			status = QDF_STATUS_E_FAILURE;
+			goto done;
 		}
+
+		pe_debug("MLO: link probe rsp size:%u orig probe rsp :%u",
+			 gen_probe_rsp.len, rcvd_probe_rsp.len);
+
+		src_addr = wlan_mlme_get_src_addr_from_frame(
+						&gen_probe_rsp);
+		if (!src_addr) {
+			pe_err("MLO: Failed to fetch src address");
+			status = QDF_STATUS_E_FAILURE;
+			goto done;
+		}
+		lim_add_bcn_probe(session->vdev, gen_probe_rsp.ptr,
+				  gen_probe_rsp.len,
+				  mlo_roam_get_link_freq_from_mac_addr(
+					       roam_sync_ind, src_addr),
+				  roam_sync_ind->rssi);
 	}
 
 done:
-	if (gen_probe_rsp.ptr)
-		qdf_mem_free(gen_probe_rsp.ptr);
+	qdf_mem_free(gen_probe_rsp.ptr);
 	qdf_mem_free(probe_rsp);
+
+	if (QDF_IS_STATUS_ERROR(status)) {
+		rcvd_frame.vdev_id = roam_sync_ind->roamed_vdev_id;
+		rcvd_frame.frame = frame.ptr;
+		rcvd_frame.frame_length = frame.len;
+		rcvd_frame.rssi = roam_sync_ind->rssi;
+		status = mlo_add_all_link_probe_rsp_to_scan_db(mac_ctx->psoc,
+							       &rcvd_frame);
+	}
 	return status;
 }
 

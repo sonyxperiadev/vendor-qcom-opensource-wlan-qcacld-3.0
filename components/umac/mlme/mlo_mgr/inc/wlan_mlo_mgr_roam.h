@@ -406,6 +406,21 @@ mlo_roam_set_link_id(struct wlan_objmgr_vdev *vdev,
 bool
 mlo_is_roaming_in_progress(struct wlan_objmgr_psoc *psoc,
 			   uint8_t vdev_id);
+
+/**
+ * mlo_add_all_link_probe_rsp_to_scan_db - Extract and add all ML link probe
+ * rsps to scan db
+ * @psoc: psoc pointer
+ * @rcvd_frame: Received frame from firmware
+ *
+ * This api will be called to generate ML probe responses corresponds to each
+ * link from the received probe response and add them to scan db
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+mlo_add_all_link_probe_rsp_to_scan_db(struct wlan_objmgr_psoc *psoc,
+			      struct roam_scan_candidate_frame *rcvd_frame);
 #else /* WLAN_FEATURE_11BE_MLO */
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 static inline

@@ -872,12 +872,21 @@ cm_update_scan_db_on_roam_success(struct wlan_objmgr_vdev *vdev,
 				roam_synch_ind,
 				wlan_mlme_get_src_addr_from_frame(
 				&ies->bcn_probe_rsp));
-	cm_inform_bcn_probe(cm_ctx,
-			    ies->bcn_probe_rsp.ptr,
-			    ies->bcn_probe_rsp.len,
-			    frame_freq,
-			    roam_synch_ind->rssi,
-			    cm_id);
+	/*
+	 * Firmware might have roamed to a link but got ML probe
+	 * response from the other link. Then the link freq is not
+	 * present in roam link info and it returns 0. No need to add
+	 * the original probe rsp in such cases as roam sync indication
+	 * handling would add it to scan db. Add the entry to scan
+	 * db only if valid link freq is found.
+	 */
+	if (frame_freq)
+		cm_inform_bcn_probe(cm_ctx,
+				    ies->bcn_probe_rsp.ptr,
+				    ies->bcn_probe_rsp.len,
+				    frame_freq,
+				    roam_synch_ind->rssi,
+				    cm_id);
 
 	cm_update_scan_mlme_on_roam(vdev, &resp->bssid,
 				    SCAN_ENTRY_CON_STATE_ASSOC);

@@ -1262,6 +1262,20 @@ QDF_STATUS
 wlan_cm_update_offload_ssid_from_candidate(struct wlan_objmgr_pdev *pdev,
 					   uint8_t vdev_id,
 					   struct qdf_mac_addr *ap_bssid);
+
+/**
+ * wlan_cm_add_frame_to_scan_db() - Add the frame to scan db
+ *
+ * @psoc: PSOC pointer
+ * @frame: frame to be added to scan db
+ *
+ * Fetch the channel from frame and add the frame to scan db
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_cm_add_frame_to_scan_db(struct wlan_objmgr_psoc *psoc,
+			     struct roam_scan_candidate_frame *frame);
 #else
 static inline
 void wlan_cm_roam_activate_pcl_per_vdev(struct wlan_objmgr_psoc *psoc,
@@ -1501,6 +1515,12 @@ wlan_cm_update_offload_ssid_from_candidate(struct wlan_objmgr_pdev *pdev,
 	return QDF_STATUS_SUCCESS;
 }
 
+static inline QDF_STATUS
+wlan_cm_add_frame_to_scan_db(struct wlan_objmgr_psoc *psoc,
+			     struct roam_scan_candidate_frame *frame)
+{
+	return QDF_STATUS_SUCCESS;
+}
 #endif /* WLAN_FEATURE_ROAM_OFFLOAD */
 
 #ifdef WLAN_FEATURE_FIPS

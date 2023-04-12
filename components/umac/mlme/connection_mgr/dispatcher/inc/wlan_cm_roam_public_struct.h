@@ -2691,11 +2691,13 @@ struct roam_offload_synch_ind {
  * @vdev_id : vdev id
  * @frame_length : Length of the beacon/probe rsp frame
  * @frame : Pointer to the frame
+ * @rssi: RSSI of the received frame, 0 if not available
  */
 struct roam_scan_candidate_frame {
 	uint8_t vdev_id;
 	uint32_t frame_length;
 	uint8_t *frame;
+	int32_t rssi;
 };
 
 /**
