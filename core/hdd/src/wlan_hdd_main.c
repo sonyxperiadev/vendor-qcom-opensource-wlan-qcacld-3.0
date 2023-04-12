@@ -802,6 +802,71 @@ static int __hdd_netdev_notifier_call(struct net_device *net_dev,
 	return NOTIFY_DONE;
 }
 
+static int hdd_netdev_notifier_bridge_intf(struct net_device *net_dev,
+					   unsigned long state)
+{
+	struct hdd_adapter *adapter, *next_adapter = NULL;
+	wlan_net_dev_ref_dbgid dbgid = NET_DEV_HOLD_GET_ADAPTER;
+	struct hdd_context *hdd_ctx;
+	QDF_STATUS status;
+
+	hdd_enter_dev(net_dev);
+
+	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
+	if (wlan_hdd_validate_context(hdd_ctx))
+		return NOTIFY_DONE;
+
+	hdd_debug("%s New Net Device State = %lu, flags 0x%x bridge mac address: "QDF_MAC_ADDR_FMT,
+		  net_dev->name, state, net_dev->flags, QDF_MAC_ADDR_REF(net_dev->dev_addr));
+
+	if (!qdf_mem_cmp(hdd_ctx->bridgeaddr, net_dev->dev_addr,
+			 QDF_MAC_ADDR_SIZE))
+		return NOTIFY_DONE;
+
+	switch (state) {
+	case NETDEV_REGISTER:
+	case NETDEV_CHANGEADDR:
+		/* Update FW WoW pattern with new MAC address */
+		qdf_mem_copy(hdd_ctx->bridgeaddr, net_dev->dev_addr,
+			     QDF_MAC_ADDR_SIZE);
+
+		hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter,
+						   dbgid) {
+			if (adapter->device_mode != QDF_SAP_MODE)
+				goto loop_next;
+
+			if (wlan_hdd_validate_vdev_id(adapter->vdev_id))
+				goto loop_next;
+
+			status = wlan_objmgr_vdev_try_get_ref(adapter->vdev,
+							      WLAN_HDD_ID_OBJ_MGR);
+
+			if (QDF_IS_STATUS_ERROR(status))
+				goto loop_next;
+
+			ucfg_pmo_set_vdev_bridge_addr(adapter->vdev,
+				(struct qdf_mac_addr *)hdd_ctx->bridgeaddr);
+			ucfg_pmo_del_wow_pattern(adapter->vdev);
+			ucfg_pmo_register_wow_default_patterns(adapter->vdev);
+
+			wlan_objmgr_vdev_release_ref(adapter->vdev,
+						     WLAN_HDD_ID_OBJ_MGR);
+loop_next:
+			hdd_adapter_dev_put_debug(adapter, dbgid);
+		}
+		break;
+
+	case NETDEV_UNREGISTER:
+		qdf_zero_macaddr((struct qdf_mac_addr *)hdd_ctx->bridgeaddr);
+		break;
+
+	default:
+		break;
+	}
+
+	return NOTIFY_DONE;
+}
+
 /**
  * hdd_netdev_notifier_call() - netdev notifier callback function
  * @nb: pointer to notifier block
@@ -817,6 +882,12 @@ static int hdd_netdev_notifier_call(struct notifier_block *nb,
 	struct net_device *net_dev = hdd_net_dev_from_notifier(context);
 	struct osif_vdev_sync *vdev_sync;
 	int errno;
+
+	if (net_dev->priv_flags & IFF_EBRIDGE) {
+		errno = hdd_netdev_notifier_bridge_intf(net_dev, state);
+		if (errno)
+			return NOTIFY_DONE;
+	}
 
 	errno = osif_vdev_sync_op_start(net_dev, &vdev_sync);
 	if (errno)
@@ -6213,11 +6284,12 @@ QDF_STATUS hdd_sme_close_session_callback(uint8_t vdev_id)
 	return QDF_STATUS_SUCCESS;
 }
 
-int hdd_vdev_ready(struct wlan_objmgr_vdev *vdev)
+int hdd_vdev_ready(struct wlan_objmgr_vdev *vdev,
+		   struct qdf_mac_addr *bridgeaddr)
 {
 	QDF_STATUS status;
 
-	status = pmo_vdev_ready(vdev);
+	status = pmo_vdev_ready(vdev, bridgeaddr);
 	if (QDF_IS_STATUS_ERROR(status))
 		return qdf_status_to_os_return(status);
 
@@ -6561,7 +6633,8 @@ int hdd_vdev_create(struct hdd_adapter *adapter)
 	}
 
 	/* firmware ready for component communication, raise vdev_ready event */
-	errno = hdd_vdev_ready(vdev);
+	errno = hdd_vdev_ready(vdev,
+			       (struct qdf_mac_addr *)hdd_ctx->bridgeaddr);
 	if (errno) {
 		hdd_err("failed to dispatch vdev ready event: %d", errno);
 		goto hdd_vdev_destroy_procedure;

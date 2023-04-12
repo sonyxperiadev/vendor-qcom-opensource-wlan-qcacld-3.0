@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -486,4 +486,38 @@ uint8_t pmo_core_psoc_get_txrx_handle(struct wlan_objmgr_psoc *psoc)
 	}
 
 	return txrx_pdev_id;
+}
+
+QDF_STATUS pmo_get_vdev_bridge_addr(struct wlan_objmgr_vdev *vdev,
+				    struct qdf_mac_addr *bridgeaddr)
+{
+	struct pmo_vdev_priv_obj *vdev_ctx;
+
+	if (!vdev) {
+		pmo_err("vdev is null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	vdev_ctx = pmo_vdev_get_priv(vdev);
+	qdf_mem_copy(bridgeaddr->bytes, vdev_ctx->bridgeaddr,
+		     QDF_MAC_ADDR_SIZE);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS pmo_set_vdev_bridge_addr(struct wlan_objmgr_vdev *vdev,
+				    struct qdf_mac_addr *bridgeaddr)
+{
+	struct pmo_vdev_priv_obj *vdev_ctx;
+
+	if (!vdev) {
+		pmo_err("vdev is null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	vdev_ctx = pmo_vdev_get_priv(vdev);
+	qdf_mem_copy(vdev_ctx->bridgeaddr, bridgeaddr->bytes,
+		     QDF_MAC_ADDR_SIZE);
+
+	return QDF_STATUS_SUCCESS;
 }
