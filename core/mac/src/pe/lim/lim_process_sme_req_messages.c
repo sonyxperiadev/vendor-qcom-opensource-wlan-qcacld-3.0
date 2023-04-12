@@ -1870,6 +1870,13 @@ static void lim_check_oui_and_update_session(struct mac_context *mac_ctx,
 	}
 
 	if (WLAN_REG_IS_24GHZ_CH_FREQ(bss_desc->chan_freq) &&
+		wlan_action_oui_search(mac_ctx->psoc,
+				       &vendor_ap_search_attr,
+				       ACTION_OUI_AUTH_ASSOC_6MBPS_2GHZ)) {
+		session->is_oui_auth_assoc_6mbps_2ghz_enable = true;
+	}
+
+	if (WLAN_REG_IS_24GHZ_CH_FREQ(bss_desc->chan_freq) &&
 	    !mac_ctx->mlme_cfg->vht_caps.vht_cap_info.b24ghz_band &&
 	    session->dot11mode == MLME_DOT11_MODE_11AC) {
 		/* Need to disable VHT operation in 2.4 GHz band */

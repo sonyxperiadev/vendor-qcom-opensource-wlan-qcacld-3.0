@@ -711,6 +711,38 @@
 	"00e04c 03 020160 E0 01 001018 06 02FF009c0000 BC 01", \
 	"Used to turn off FW's dynamic qos null tx rate for specified APs")
 
+/*
+ * <ini>
+ * gActionOUIAuthAssoc6Mbps2GHz - Used to send auth/assoc req with 6 Mbps rate
+ * on 2.4 GHz for specified AP
+ *
+ * Some AP sometimes doesn't honor auth/assoc with CCK rate.
+ * This ini will provide 6 Mbps rate for auth/assoc in 2.4 GHz.
+ *
+ * Example OUIs: (All values in Hex)
+ * OUI 1: 000c43
+ *       OUI data Len: 04
+ *       OUI Data : 03000000
+ *       OUI data Mask: F0 - 11110000
+ *       Info Mask : 01 - only OUI present in Info mask
+ *
+ * Refer to gEnableActionOUI for more detail about the format.
+ *
+ * Related: gEnableActionOUI
+ *
+ * Supported Feature: Action OUIs
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_ACTION_OUI_AUTH_ASSOC_6MBPS_2GHZ CFG_INI_STRING( \
+	"gActionOUIAuthAssoc6Mbps2GHz", \
+	0, \
+	ACTION_OUI_MAX_STR_LEN, \
+	"", \
+	"send auth/assoc req with 6 Mbps rate on 2.4 GHz for specified APs")
+
 #define CFG_ACTION_OUI \
 	CFG(CFG_ACTION_OUI_CCKM_1X1) \
 	CFG(CFG_ACTION_OUI_CONNECT_1X1) \
@@ -727,5 +759,6 @@
 	CFG(CFG_ACTION_OUI_TAKE_ALL_BAND_INFO) \
 	CFG(CFG_ACTION_OUI_11BE_ALLOW_LIST) \
 	CFG(CFG_ACTION_OUI_DISABLE_DYNAMIC_QOS_NULL_TX_RATE) \
+	CFG(CFG_ACTION_OUI_AUTH_ASSOC_6MBPS_2GHZ) \
 	CFG(CFG_ENABLE_ACTION_OUI)
 #endif

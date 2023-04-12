@@ -9545,6 +9545,9 @@ enum rateid lim_get_min_session_txrate(struct pe_session *session)
 	}
 	pe_debug("supported min_rate: %0x(%d)", min_rate, min_rate);
 
+	if (session->is_oui_auth_assoc_6mbps_2ghz_enable)
+		min_rate = SIR_MAC_RATE_6;
+
 	switch (min_rate) {
 	case SIR_MAC_RATE_1:
 		rid = RATEID_1MBPS;
