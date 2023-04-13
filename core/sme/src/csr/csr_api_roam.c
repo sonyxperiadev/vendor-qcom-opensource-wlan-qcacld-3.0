@@ -1001,6 +1001,12 @@ QDF_STATUS csr_update_channel_list(struct mac_context *mac)
 				REG_CURRENT_PWR_MODE);
 		if ((CHANNEL_STATE_ENABLE == channel_state) ||
 		    mac->scan.fEnableDFSChnlScan) {
+			if (wlan_reg_is_6ghz_chan_freq(channel_freq) &&
+			    !wlan_reg_is_6ghz_band_set(mac->pdev)) {
+				sme_debug("skip 6ghz frequency %d",
+					  channel_freq);
+				continue;
+			}
 			if ((roam_policy->dfs_mode ==
 				STA_ROAM_POLICY_DFS_DISABLED) &&
 				(channel_state == CHANNEL_STATE_DFS)) {
