@@ -98,6 +98,13 @@ mlo_cleanup_link(struct wlan_objmgr_vdev *vdev, uint8_t num_setup_links)
 	 */
 	if (wlan_vdev_mlme_is_mlo_link_vdev(vdev))
 		cm_cleanup_mlo_link(vdev);
+	/*
+	 * Clear the MLO vdev flag when roam to a non-MLO AP to prepare the
+	 * roam done indication to userspace in non-MLO format
+	 * i.e. without MLD/link info
+	 */
+	else if (wlan_vdev_mlme_is_mlo_vdev(vdev) && !num_setup_links)
+		wlan_vdev_mlme_clear_mlo_vdev(vdev);
 }
 
 static void
