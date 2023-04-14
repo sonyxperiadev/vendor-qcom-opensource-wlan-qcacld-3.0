@@ -107,6 +107,7 @@ QDF_STATUS t2lm_handle_tx_resp(struct wlan_objmgr_vdev *vdev,
 /**
  * t2lm_handle_tx_req - Handler for populating T2LM action frame
  * @vdev: vdev pointer
+ * @peer: pointer to peer
  * @event_data: T2LM event data pointer
  * @token: Dialog token
  *
@@ -115,7 +116,8 @@ QDF_STATUS t2lm_handle_tx_resp(struct wlan_objmgr_vdev *vdev,
  * Return: qdf_status
  */
 QDF_STATUS t2lm_handle_tx_req(struct wlan_objmgr_vdev *vdev,
-			      void *event_data, uint8_t *token);
+		   struct wlan_objmgr_peer *peer,
+		   void *event_data, uint8_t *token);
 
 /**
  * t2lm_handle_rx_resp - Handler for parsing T2LM action frame
@@ -218,7 +220,24 @@ wlan_t2lm_clear_peer_negotiation(struct wlan_objmgr_peer *peer);
 void
 wlan_t2lm_clear_all_tid_mapping(struct wlan_objmgr_vdev *vdev);
 
+/**
+ * wlan_populate_link_disable_t2lm_frame - Populate link disable t2lm frame
+ * @vdev: pointer to vdev
+ * @params: link disable params
+ *
+ * Return: none
+ */
+QDF_STATUS
+wlan_populate_link_disable_t2lm_frame(struct wlan_objmgr_vdev *vdev,
+				      struct mlo_link_disable_request_evt_params *params);
 #else
+static inline QDF_STATUS
+wlan_populate_link_disable_t2lm_frame(struct wlan_objmgr_vdev *vdev,
+				      struct mlo_link_disable_request_evt_params *params)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
 static inline QDF_STATUS
 t2lm_handle_rx_req(struct wlan_objmgr_vdev *vdev,
 		   struct wlan_objmgr_peer *peer,
@@ -236,6 +255,7 @@ t2lm_handle_tx_resp(struct wlan_objmgr_vdev *vdev,
 
 static inline QDF_STATUS
 t2lm_handle_tx_req(struct wlan_objmgr_vdev *vdev,
+		   struct wlan_objmgr_peer *peer,
 		   void *event_data, uint8_t *token)
 {
 	return QDF_STATUS_E_NOSUPPORT;
