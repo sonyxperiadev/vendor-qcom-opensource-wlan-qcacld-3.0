@@ -650,7 +650,7 @@ cm_roam_candidate_event_handler(struct wlan_objmgr_psoc *psoc,
 			   QDF_SSID_REF(extracted_ie[1], &extracted_ie[2]));
 		wlan_cm_set_roam_offload_ssid(vdev, &extracted_ie[2],
 					      extracted_ie[1]);
-		wlan_cm_get_set_roam_offload_bssid(vdev, &bssid, true);
+		wlan_cm_set_roam_offload_bssid(vdev, &bssid);
 	}
 
 	/* For 2.4GHz,5GHz get channel from DS IE */

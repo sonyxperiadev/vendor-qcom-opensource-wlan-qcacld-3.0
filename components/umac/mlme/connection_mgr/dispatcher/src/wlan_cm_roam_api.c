@@ -3582,9 +3582,8 @@ bool wlan_cm_is_roam_sync_in_progress(struct wlan_objmgr_psoc *psoc,
 }
 
 void
-wlan_cm_get_set_roam_offload_bssid(struct wlan_objmgr_vdev *vdev,
-				   struct qdf_mac_addr *bssid,
-				   bool set)
+wlan_cm_set_roam_offload_bssid(struct wlan_objmgr_vdev *vdev,
+			       struct qdf_mac_addr *bssid)
 {
 	struct mlme_legacy_priv *mlme_priv;
 	struct qdf_mac_addr *mlme_bssid;
@@ -3597,20 +3596,31 @@ wlan_cm_get_set_roam_offload_bssid(struct wlan_objmgr_vdev *vdev,
 
 	mlme_bssid = &(mlme_priv->cm_roam.sae_offload.bssid);
 
-	if (set) {
-		if (!bssid || qdf_is_macaddr_zero(bssid)) {
-			mlme_err("NULL BSSID");
-			return;
-		}
-		qdf_mem_copy(mlme_bssid->bytes, bssid->bytes,
-			     QDF_MAC_ADDR_SIZE);
-	} else {
-		/* Get the BSSID present in sae_offload_param */
-		if (!bssid)
-			return;
-		qdf_mem_copy(bssid->bytes, mlme_bssid->bytes,
-			     QDF_MAC_ADDR_SIZE);
+	if (!bssid || qdf_is_macaddr_zero(bssid)) {
+		mlme_err("NULL BSSID");
+		return;
 	}
+	qdf_mem_copy(mlme_bssid->bytes, bssid->bytes, QDF_MAC_ADDR_SIZE);
+}
+
+void
+wlan_cm_get_roam_offload_bssid(struct wlan_objmgr_vdev *vdev,
+			       struct qdf_mac_addr *bssid)
+{
+	struct mlme_legacy_priv *mlme_priv;
+	struct qdf_mac_addr *mlme_bssid;
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_err("vdev legacy private object is NULL");
+		return;
+	}
+
+	mlme_bssid = &(mlme_priv->cm_roam.sae_offload.bssid);
+
+	if (!bssid)
+		return;
+	qdf_mem_copy(bssid->bytes, mlme_bssid->bytes, QDF_MAC_ADDR_SIZE);
 }
 
 void
@@ -3955,8 +3965,9 @@ bool wlan_cm_is_self_mld_roam_supported(struct wlan_objmgr_psoc *psoc)
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 QDF_STATUS
-wlan_cm_set_offload_ssid(struct wlan_objmgr_pdev *pdev, uint8_t vdev_id,
-			 struct qdf_mac_addr *ap_bssid)
+wlan_cm_update_offload_ssid_from_candidate(struct wlan_objmgr_pdev *pdev,
+					   uint8_t vdev_id,
+					   struct qdf_mac_addr *ap_bssid)
 {
 	struct wlan_objmgr_vdev *vdev;
 	struct wlan_objmgr_psoc *psoc;
@@ -3987,7 +3998,7 @@ wlan_cm_set_offload_ssid(struct wlan_objmgr_pdev *pdev, uint8_t vdev_id,
 	 * get the scan entry from scan table to save the proper
 	 * ssid, bssid.
 	 */
-	wlan_cm_get_set_roam_offload_bssid(vdev, &cache_bssid, false);
+	wlan_cm_get_roam_offload_bssid(vdev, &cache_bssid);
 	if (!qdf_mem_cmp(cache_bssid.bytes, ap_bssid->bytes, QDF_MAC_ADDR_SIZE))
 		goto end;
 
@@ -4007,7 +4018,6 @@ wlan_cm_set_offload_ssid(struct wlan_objmgr_pdev *pdev, uint8_t vdev_id,
 	qdf_mem_free(scan_filter);
 
 	if (!list || !qdf_list_size(list)) {
-		QDF_ASSERT(0);
 		mlme_err("Scan result is empty, candidate entry not found");
 		status = QDF_STATUS_E_FAILURE;
 		goto end;
@@ -4019,7 +4029,7 @@ wlan_cm_set_offload_ssid(struct wlan_objmgr_pdev *pdev, uint8_t vdev_id,
 		wlan_cm_set_roam_offload_ssid(vdev,
 					      &entry->ssid.ssid[0],
 					      entry->ssid.length);
-		wlan_cm_get_set_roam_offload_bssid(vdev, ap_bssid, true);
+		wlan_cm_set_roam_offload_bssid(vdev, ap_bssid);
 	}
 
 end:
