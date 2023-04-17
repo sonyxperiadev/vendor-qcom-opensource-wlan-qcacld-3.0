@@ -297,6 +297,13 @@ cm_handle_auth_offload(struct auth_offload_event *auth_event)
 				auth_event->vdev_id,
 				auth_event->ta);
 
+	status = wlan_cm_set_offload_ssid(mac_ctx->pdev, auth_event->vdev_id,
+					  &auth_event->ap_bssid);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		wma_err_rl("Set offload ssid failed %d", status);
+		return QDF_STATUS_E_FAILURE;
+	}
+
 	wlan_cm_store_mlo_roam_peer_address(mac_ctx->pdev, auth_event);
 
 	status = wma->csr_roam_auth_event_handle_cb(mac_ctx, auth_event->vdev_id,
