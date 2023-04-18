@@ -5287,9 +5287,9 @@ policy_mgr_validate_set_mlo_link_cb(struct wlan_objmgr_psoc *psoc,
  * Interface manager Set links for MLO STA. And it supports to
  * add inactive vdev list.
  *
- * Return: void
+ * Return: QDF_STATUS
  */
-static void
+static QDF_STATUS
 policy_mgr_mlo_sta_set_link_ext(struct wlan_objmgr_psoc *psoc,
 				enum mlo_link_force_reason reason,
 				enum mlo_link_force_mode mode,
@@ -5304,18 +5304,18 @@ policy_mgr_mlo_sta_set_link_ext(struct wlan_objmgr_psoc *psoc,
 
 	if (!num_mlo_vdev) {
 		policy_mgr_err("invalid 0 num_mlo_vdev");
-		return;
+		return QDF_STATUS_E_INVAL;
 	}
 
 	pm_ctx = policy_mgr_get_context(psoc);
 	if (!pm_ctx) {
 		policy_mgr_err("Invalid Context");
-		return;
+		return QDF_STATUS_E_INVAL;
 	}
 
 	req = qdf_mem_malloc(sizeof(*req));
 	if (!req)
-		return;
+		return QDF_STATUS_E_NOMEM;
 
 	/*
 	 * Use one of the ML vdev as, if called from disconnect the caller vdev
@@ -5326,7 +5326,7 @@ policy_mgr_mlo_sta_set_link_ext(struct wlan_objmgr_psoc *psoc,
 	if (!vdev) {
 		policy_mgr_err("vdev %d: invalid vdev", mlo_vdev_lst[0]);
 		qdf_mem_free(req);
-		return;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	policy_mgr_set_link_in_progress(pm_ctx, true);
@@ -5369,28 +5369,17 @@ policy_mgr_mlo_sta_set_link_ext(struct wlan_objmgr_psoc *psoc,
 		policy_mgr_set_link_in_progress(pm_ctx, false);
 	}
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_POLICY_MGR_ID);
+	return status;
 }
 
-/**
- * policy_mgr_mlo_sta_set_link() - Set links for MLO STA
- * @psoc: psoc object
- * @reason: Reason for which link is forced
- * @mode: Force reason
- * @num_mlo_vdev: number of mlo vdev
- * @mlo_vdev_lst: MLO STA vdev list
- *
- * Interface manager Set links for MLO STA
- *
- * Return: void
- */
-static void
+QDF_STATUS
 policy_mgr_mlo_sta_set_link(struct wlan_objmgr_psoc *psoc,
 			    enum mlo_link_force_reason reason,
 			    enum mlo_link_force_mode mode,
 			    uint8_t num_mlo_vdev, uint8_t *mlo_vdev_lst)
 {
-	policy_mgr_mlo_sta_set_link_ext(psoc, reason, mode, num_mlo_vdev,
-					mlo_vdev_lst, 0, NULL);
+	return policy_mgr_mlo_sta_set_link_ext(psoc, reason, mode, num_mlo_vdev,
+					       mlo_vdev_lst, 0, NULL);
 }
 
 uint32_t
@@ -6621,13 +6610,15 @@ policy_mgr_handle_ml_sta_links_on_vdev_up_csa(struct wlan_objmgr_psoc *psoc,
 }
 
 #define SET_LINK_TIMEOUT 6000
-static void
+static QDF_STATUS
 policy_mgr_wait_for_set_link_update(struct policy_mgr_psoc_priv_obj *pm_ctx)
 {
 	QDF_STATUS status;
 
-	if (!policy_mgr_get_link_in_progress(pm_ctx))
-		return;
+	if (!policy_mgr_get_link_in_progress(pm_ctx)) {
+		policy_mgr_err("link is not in progress");
+		return QDF_STATUS_E_FAILURE;
+	}
 
 	status =
 		qdf_wait_for_event_completion(&pm_ctx->set_link_update_done_evt,
@@ -6636,8 +6627,9 @@ policy_mgr_wait_for_set_link_update(struct policy_mgr_psoc_priv_obj *pm_ctx)
 	if (QDF_IS_STATUS_ERROR(status)) {
 		policy_mgr_set_link_in_progress(pm_ctx, false);
 		policy_mgr_err("wait for set_link_in_progress failed");
-		return;
 	}
+
+	return status;
 }
 
 void policy_mgr_handle_ml_sta_link_on_traffic_type_change(

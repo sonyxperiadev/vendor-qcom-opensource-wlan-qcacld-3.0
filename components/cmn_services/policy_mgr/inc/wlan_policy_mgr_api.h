@@ -1074,6 +1074,24 @@ void policy_mgr_decr_session_set_pcl(struct wlan_objmgr_psoc *psoc,
 
 #ifdef WLAN_FEATURE_11BE_MLO
 /**
+ * policy_mgr_mlo_sta_set_link() - Set link mode for MLO STA
+ * @psoc: psoc object
+ * @reason: reason to set
+ * @mode: mode to set
+ * @num_mlo_vdev: number of vdevs
+ * @mlo_vdev_lst: vdev list
+ *
+ * Interface to set link mode for MLO STA
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+policy_mgr_mlo_sta_set_link(struct wlan_objmgr_psoc *psoc,
+			    enum mlo_link_force_reason reason,
+			    enum mlo_link_force_mode mode,
+			    uint8_t num_mlo_vdev, uint8_t *mlo_vdev_lst);
+
+/**
  * policy_mgr_is_mlo_vdev_id() - check if vdev id is part of ML
  * @psoc: PSOC object information
  * @vdev_id: vdev id to check
