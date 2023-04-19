@@ -3740,6 +3740,7 @@ static bool wmi_is_ft_akm(int akm,
 	case WMI_AUTH_FT_RSNA_SUITE_B_8021X_SHA384:
 	case WMI_AUTH_FT_RSNA_FILS_SHA256:
 	case WMI_AUTH_FT_RSNA_FILS_SHA384:
+	case WMI_AUTH_FT_RSNA_SAE_SHA384:
 		return true;
 	case WMI_AUTH_OPEN:
 		if (roam_req->rso_11r_info.mdid.mdie_present &&

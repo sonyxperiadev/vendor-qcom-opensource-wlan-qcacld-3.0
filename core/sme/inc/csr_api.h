@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -73,6 +73,7 @@ enum csr_akm_type {
 	eCSR_AUTH_TYPE_FT_SAE,
 	eCSR_AUTH_TYPE_FT_SUITEB_EAP_SHA384,
 	eCSR_AUTH_TYPE_SAE_EXT_KEY,
+	eCSR_AUTH_TYPE_FT_SAE_EXT_KEY,
 	eCSR_NUM_OF_SUPPORT_AUTH_TYPE,
 	eCSR_AUTH_TYPE_FAILED = 0xff,
 	eCSR_AUTH_TYPE_UNKNOWN = eCSR_AUTH_TYPE_FAILED,

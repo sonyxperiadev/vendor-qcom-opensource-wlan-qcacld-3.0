@@ -4766,6 +4766,10 @@ char *mlme_get_roam_fail_reason_str(enum wlan_roam_failure_reason_code result)
 		return "SAE preauth failed";
 	case ROAM_FAIL_REASON_UNABLE_TO_START_ROAM_HO:
 		return "Start handoff failed- internal error";
+	case ROAM_FAIL_REASON_NO_AP_FOUND_AND_FINAL_BMISS_SENT:
+		return "No AP found on final BMISS";
+	case ROAM_FAIL_REASON_NO_CAND_AP_FOUND_AND_FINAL_BMISS_SENT:
+		return "No Candidate AP found on final BMISS";
 	default:
 		return "UNKNOWN";
 	}

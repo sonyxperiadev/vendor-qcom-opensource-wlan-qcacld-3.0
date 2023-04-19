@@ -540,6 +540,7 @@ static const u32 hdd_sta_akm_suites[] = {
 	WAPI_PSK_AKM_SUITE,
 	WAPI_CERT_AKM_SUITE,
 	WLAN_AKM_SUITE_SAE_EXT_KEY,
+	WLAN_AKM_SUITE_FT_SAE_EXT_KEY,
 };
 
 /*akm suits supported by AP*/

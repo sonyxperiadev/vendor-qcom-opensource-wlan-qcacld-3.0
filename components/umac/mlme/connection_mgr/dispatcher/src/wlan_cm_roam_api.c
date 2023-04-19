@@ -444,7 +444,8 @@ wlan_cm_dual_sta_is_freq_allowed(struct wlan_objmgr_psoc *psoc,
 	if (!connected_sta_freq)
 		return true;
 
-	if (policy_mgr_are_2_freq_on_same_mac(psoc, freq, connected_sta_freq))
+	if (policy_mgr_2_freq_always_on_same_mac(psoc, freq,
+						 connected_sta_freq))
 		return false;
 
 	return true;

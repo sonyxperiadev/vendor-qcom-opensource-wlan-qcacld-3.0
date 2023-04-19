@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -386,6 +386,10 @@ enum roam_fail_params {
  * timedout
  * @ROAM_FAIL_REASON_SAE_PREAUTH_FAIL: SAE preauthentication failure
  * @ROAM_FAIL_REASON_UNABLE_TO_START_ROAM_HO: Start handoff failed
+ * @ROAM_FAIL_REASON_NO_AP_FOUND_AND_FINAL_BMISS_SENT: No AP found after
+ * final BMISS
+ * @ROAM_FAIL_REASON_NO_CAND_AP_FOUND_AND_FINAL_BMISS_SENT: No Candidate AP
+ * found after final BMISS.
  * @ROAM_FAIL_REASON_UNKNOWN: Default reason
  */
 enum wlan_roam_failure_reason_code {
@@ -423,6 +427,8 @@ enum wlan_roam_failure_reason_code {
 	ROAM_FAIL_REASON_SAE_PREAUTH_TIMEOUT,
 	ROAM_FAIL_REASON_SAE_PREAUTH_FAIL,
 	ROAM_FAIL_REASON_UNABLE_TO_START_ROAM_HO,
+	ROAM_FAIL_REASON_NO_AP_FOUND_AND_FINAL_BMISS_SENT,
+	ROAM_FAIL_REASON_NO_CAND_AP_FOUND_AND_FINAL_BMISS_SENT,
 	ROAM_FAIL_REASON_UNKNOWN = 255,
 };
 
@@ -2601,7 +2607,6 @@ struct roam_offload_synch_ind {
 	uint8_t roamed_vdev_id;
 	struct qdf_mac_addr bssid;
 	struct wlan_ssid ssid;
-	struct qdf_mac_addr self_mac;
 	int8_t txMgmtPower;
 	uint32_t auth_status;
 	uint8_t rssi;

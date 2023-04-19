@@ -1560,6 +1560,10 @@ static uint32_t cm_get_rsn_wmi_auth_type(int32_t akm)
 		return WMI_AUTH_RSNA_FILS_SHA384;
 	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FILS_SHA256))
 		return WMI_AUTH_RSNA_FILS_SHA256;
+	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_SAE_EXT_KEY))
+		return WMI_AUTH_FT_RSNA_SAE_SHA384;
+	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_SAE_EXT_KEY))
+		return WMI_AUTH_WPA3_SAE_SHA384;
 	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_SAE))
 		return WMI_AUTH_FT_RSNA_SAE;
 	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_SAE))
@@ -1586,8 +1590,6 @@ static uint32_t cm_get_rsn_wmi_auth_type(int32_t akm)
 		return WMI_AUTH_RSNA_SUITE_B_8021X_SHA384;
 	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_IEEE8021X_SHA384))
 		return WMI_AUTH_FT_RSNA_SUITE_B_8021X_SHA384;
-	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_SAE_EXT_KEY))
-		return WMI_AUTH_WPA3_SAE_SHA384;
 	else
 		return WMI_AUTH_NONE;
 }
@@ -3501,7 +3503,8 @@ cm_akm_roam_allowed(struct wlan_objmgr_psoc *psoc,
 		return QDF_STATUS_E_NOSUPPORT;
 	}
 
-	if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_SAE_EXT_KEY) &&
+	if ((QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_SAE_EXT_KEY) ||
+	     QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_SAE_EXT_KEY)) &&
 	    !CM_IS_FW_SAE_EXT_ROAM_SUPPORTED(fw_akm_bitmap)) {
 		mlme_info("Roaming not supported for SAE EXT akm");
 		return QDF_STATUS_E_NOSUPPORT;
@@ -5413,7 +5416,8 @@ bool cm_is_auth_type_11r(struct wlan_mlme_psoc_ext_obj *mlme_obj,
 		   QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_IEEE8021X) ||
 		   QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_PSK) ||
 		   QDF_HAS_PARAM(akm,
-				 WLAN_CRYPTO_KEY_MGMT_FT_IEEE8021X_SHA384)) {
+				 WLAN_CRYPTO_KEY_MGMT_FT_IEEE8021X_SHA384) ||
+		   QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_SAE_EXT_KEY)) {
 		return true;
 	}
 
@@ -5746,6 +5750,53 @@ bool wlan_is_valid_frequency(uint32_t freq, uint32_t band_capability,
 
 	return true;
 }
+
+static
+void cm_roam_send_beacon_loss_event(struct wlan_objmgr_psoc *psoc,
+				    struct qdf_mac_addr bssid,
+				    uint8_t vdev_id,
+				    uint8_t trig_reason,
+				    uint8_t is_roam_success,
+				    bool is_full_scan,
+				    uint8_t roam_fail_reason)
+{
+	bool bmiss_skip_full_scan = false;
+
+	/*
+	 * When roam trigger reason is Beacon Miss, 2 roam scan
+	 * stats TLV will be received with reason as BMISS.
+	 * 1. First TLV is for partial roam scan data and
+	 * 2. Second TLV is for the full scan data when there is no candidate
+	 * found in the partial scan.
+	 * When bmiss_skip_full_scan flag is disabled, prints for 1 & 2 will be
+	 * seen.
+	 * when bmiss_skip_full_scan flag is enabled, only print for 1st TLV
+	 * will be seen.
+	 *
+	 * 1. BMISS_DISCONN event should be triggered only once for BMISS roam
+	 * trigger if roam result is failure after full scan TLV is received and
+	 * bmiss_skip_full_scan is disabled.
+	 *
+	 * 2. But if bmiss_skip_full_scan is enabled, then trigger
+	 * BMISS_DISCONN event after partial scan TLV is received
+	 *
+	 * 3. In some cases , Keepalive ACK from AP might come after the
+	 * final BMISS and FW can choose to stay connected to the current AP.
+	 * In this case, don't send discon event.
+	 */
+
+	wlan_mlme_get_bmiss_skip_full_scan_value(psoc, &bmiss_skip_full_scan);
+
+	if (trig_reason == ROAM_TRIGGER_REASON_BMISS &&
+	    !is_roam_success &&
+	    ((!bmiss_skip_full_scan && is_full_scan) ||
+	     (bmiss_skip_full_scan && !is_full_scan)) &&
+	    (roam_fail_reason ==
+	     ROAM_FAIL_REASON_NO_AP_FOUND_AND_FINAL_BMISS_SENT ||
+	     roam_fail_reason ==
+	     ROAM_FAIL_REASON_NO_CAND_AP_FOUND_AND_FINAL_BMISS_SENT))
+		cm_roam_beacon_loss_disconnect_event(psoc, bssid, vdev_id);
+}
 #endif
 
 #if defined(CONNECTIVITY_DIAG_EVENT) && \
@@ -6032,7 +6083,7 @@ void cm_roam_result_info_event(struct wlan_objmgr_psoc *psoc,
 {
 	uint8_t i;
 	struct qdf_mac_addr bssid = {0};
-	bool ap_found_in_roam_scan = false, bmiss_skip_full_scan = false;
+	bool ap_found_in_roam_scan = false;
 	bool roam_abort = (res->fail_reason == ROAM_FAIL_REASON_SYNC ||
 			   res->fail_reason == ROAM_FAIL_REASON_DISCONNECT ||
 			   res->fail_reason == ROAM_FAIL_REASON_HOST ||
@@ -6108,30 +6159,10 @@ void cm_roam_result_info_event(struct wlan_objmgr_psoc *psoc,
 					    EVENT_WLAN_ROAM_CANCEL);
 	}
 
-	/*
-	 * When roam trigger reason is Beacon Miss, 2 roam scan
-	 * stats TLV will be received with reason as BMISS.
-	 * 1. First TLV is for partial roam scan data and
-	 * 2. Second TLV is for the full scan data when there is no candidate
-	 * found in the partial scan.
-	 * When bmiss_skip_full_scan flag is disabled, prints for 1 & 2 will be
-	 * seen.
-	 * when bmiss_skip_full_scan flag is enabled, only print for 1st TLV
-	 * will be seen.
-	 *
-	 * 1. BMISS_DISCONN event should be triggered only once for BMISS roam
-	 * trigger if roam result is failure after full scan TLV is received and
-	 * bmiss_skip_full_scan is disabled.
-	 *
-	 * 2. But if bmiss_skip_full_scan is enabled, then trigger
-	 * BMISS_DISCONN event after partial scan TLV is received
-	 */
-	wlan_mlme_get_bmiss_skip_full_scan_value(psoc, &bmiss_skip_full_scan);
-	if (trigger->trigger_reason == ROAM_TRIGGER_REASON_BMISS &&
-	    !wlan_diag_event.is_roam_successful &&
-	    ((!bmiss_skip_full_scan && is_full_scan) ||
-	     (bmiss_skip_full_scan && !is_full_scan)))
-		cm_roam_beacon_loss_disconnect_event(psoc, bssid, vdev_id);
+	cm_roam_send_beacon_loss_event(psoc, bssid, vdev_id,
+				       trigger->trigger_reason,
+				       wlan_diag_event.is_roam_successful,
+				       is_full_scan, res->fail_reason);
 }
 
 #elif defined(WLAN_FEATURE_CONNECTIVITY_LOGGING) && \
@@ -6396,30 +6427,10 @@ void cm_roam_result_info_event(struct wlan_objmgr_psoc *psoc,
 		wlan_connectivity_log_enqueue(log_record);
 	}
 
-	/*
-	 * When roam trigger reason is Beacon Miss, 2 roam scan
-	 * stats TLV will be received with reason as BMISS.
-	 * 1. First TLV is for partial roam scan data and
-	 * 2. Second TLV is for the full scan data when there is no candidate
-	 * found in the partial scan.
-	 * When bmiss_skip_full_scan flag is disabled, prints for 1 & 2 will be
-	 * seen.
-	 * when bmiss_skip_full_scan flag is enabled, only print for 1st TLV
-	 * will be seen.
-	 *
-	 * 1. BMISS_DISCONN event should be triggered only once for BMISS roam
-	 * trigger if roam result is failure after full scan TLV is received and
-	 * bmiss_skip_full_scan is disabled.
-	 *
-	 * 2. But if bmiss_skip_full_scan is enabled, then trigger
-	 * BMISS_DISCONN event after partial scan TLV is received
-	 */
-	wlan_mlme_get_bmiss_skip_full_scan_value(psoc, &bmiss_skip_full_scan);
-	if (trigger->trigger_reason == ROAM_TRIGGER_REASON_BMISS &&
-	    !log_record->roam_result.is_roam_successful &&
-	    ((!bmiss_skip_full_scan && is_full_scan) ||
-	     (bmiss_skip_full_scan && !is_full_scan)))
-		cm_roam_beacon_loss_disconnect_event(psoc, bssid, vdev_id);
+	cm_roam_send_beacon_loss_event(psoc, bssid, vdev_id,
+				       trigger->trigger_reason,
+				       wlan_diag_event.is_roam_successful,
+				       is_full_scan, res->fail_reason);
 
 	qdf_mem_free(log_record);
 }
