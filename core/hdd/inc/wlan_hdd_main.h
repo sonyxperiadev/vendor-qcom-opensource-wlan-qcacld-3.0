@@ -1949,7 +1949,7 @@ struct hdd_context {
 	struct completion mc_sus_event_var;
 	bool is_scheduler_suspended;
 
-#ifdef QCA_CONFIG_SMP
+#ifdef WLAN_DP_LEGACY_OL_RX_THREAD
 	bool is_ol_rx_thread_suspended;
 #endif
 
