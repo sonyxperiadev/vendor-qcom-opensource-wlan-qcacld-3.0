@@ -387,7 +387,8 @@ ucfg_mlme_send_ch_width_update_with_notify(struct wlan_objmgr_psoc *psoc,
 {
 	struct wlan_objmgr_vdev *vdev;
 	QDF_STATUS status;
-	enum QDF_OPMODE mode;
+	enum QDF_OPMODE op_mode;
+	bool is_mlo_vdev;
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
 						    WLAN_MLME_OBJMGR_ID);
@@ -396,10 +397,11 @@ ucfg_mlme_send_ch_width_update_with_notify(struct wlan_objmgr_psoc *psoc,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	mode = wlan_vdev_mlme_get_opmode(vdev);
-	if (mode != QDF_STA_MODE) {
-		mlme_legacy_debug("vdev %d: mode %d, CW update not supported",
-				  vdev_id, mode);
+	op_mode = wlan_vdev_mlme_get_opmode(vdev);
+	is_mlo_vdev = wlan_vdev_mlme_is_mlo_vdev(vdev);
+	if (op_mode != QDF_STA_MODE || is_mlo_vdev) {
+		mlme_legacy_debug("vdev %d: op mode %d, is_mlo_vdev:%d, CW update not supported",
+				  vdev_id, op_mode, is_mlo_vdev);
 		status = QDF_STATUS_E_NOSUPPORT;
 		goto release;
 	}

@@ -17329,10 +17329,9 @@ static void hdd_send_scan_done_complete_cb(uint8_t vdev_id)
 	uint32_t len;
 
 	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
-	if (!hdd_ctx) {
-		hdd_err("Invalid hdd context");
+	if (!hdd_ctx)
 		return;
-	}
+
 	adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
 	if (!adapter) {
 		hdd_err("No adapter found for vdev id:%d", vdev_id);
