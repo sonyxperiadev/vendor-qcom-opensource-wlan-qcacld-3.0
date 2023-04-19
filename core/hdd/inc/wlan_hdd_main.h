@@ -928,6 +928,7 @@ struct hdd_chan_change_params {
  * @wow_unit_test: wow unit test mode context to prevent/allow runtime pm
  * @system_suspend: system suspend context to prevent/allow runtime pm
  * @dyn_mac_addr_update: update mac addr context to prevent/allow runtime pm
+ * @vdev_destroy: vdev destroy context to prevent/allow runtime pm
  *
  * Runtime PM control for underlying activities
  */
@@ -940,6 +941,7 @@ struct hdd_runtime_pm_context {
 	qdf_runtime_lock_t wow_unit_test;
 	qdf_runtime_lock_t system_suspend;
 	qdf_runtime_lock_t dyn_mac_addr_update;
+	qdf_runtime_lock_t vdev_destroy;
 };
 
 /*
