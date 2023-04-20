@@ -3275,6 +3275,12 @@ int hdd_softap_set_channel_change(struct net_device *dev, int target_chan_freq,
 		return -EBUSY;
 	}
 
+	if (wlan_reg_is_6ghz_chan_freq(target_chan_freq) &&
+	    !wlan_reg_is_6ghz_band_set(hdd_ctx->pdev)) {
+		hdd_err("6 GHz band disabled");
+		return -EINVAL;
+	}
+
 	ret = hdd_validate_channel_and_bandwidth(adapter,
 						 target_chan_freq, target_bw);
 	if (ret) {
@@ -7565,6 +7571,12 @@ static int __wlan_hdd_cfg80211_start_ap(struct wiphy *wiphy,
 
 	channel_width = wlan_hdd_get_channel_bw(params->chandef.width);
 	freq = (qdf_freq_t)params->chandef.chan->center_freq;
+
+	if (wlan_reg_is_6ghz_chan_freq(freq) &&
+	    !wlan_reg_is_6ghz_band_set(hdd_ctx->pdev)) {
+		hdd_err("6 GHz band disabled.");
+		return -EINVAL;
+	}
 
 	chandef = &params->chandef;
 	if ((adapter->device_mode == QDF_SAP_MODE ||
