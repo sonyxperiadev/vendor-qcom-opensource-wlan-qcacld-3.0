@@ -288,10 +288,10 @@ wlan_hdd_sae_update_mld_addr(struct cfg80211_external_auth_params *params,
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	struct wlan_objmgr_vdev *vdev;
 
-	if (!adapter->deflink->vdev)
+	if (!adapter->vdev)
 		return QDF_STATUS_E_INVAL;
 
-	vdev = adapter->deflink->vdev;
+	vdev = adapter->vdev;
 	wlan_objmgr_vdev_get_ref(vdev, WLAN_HDD_ID_OBJ_MGR);
 
 	if (!ucfg_cm_is_sae_auth_addr_conversion_required(vdev))
