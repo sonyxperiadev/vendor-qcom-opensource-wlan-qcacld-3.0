@@ -4623,13 +4623,16 @@ cm_roam_state_change(struct wlan_objmgr_pdev *pdev,
 	if (!vdev)
 		return status;
 
-	is_up = QDF_IS_STATUS_SUCCESS(wlan_vdev_is_up(vdev));
+	if (wlan_vdev_mlme_is_mlo_vdev(vdev))
+		is_up = mlo_check_if_all_vdev_up(vdev);
+	else
+		is_up = QDF_IS_STATUS_SUCCESS(wlan_vdev_is_up(vdev));
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_NB_ID);
 
 	cur_state = mlme_get_roam_state(psoc, vdev_id);
 
 	if (requested_state != WLAN_ROAM_DEINIT && !is_up) {
-		mlme_debug("ROAM: roam state change requested in disconnected state");
+		mlme_debug("ROAM: roam state change requested in non-connected state");
 		goto end;
 	}
 
@@ -4644,6 +4647,7 @@ cm_roam_state_change(struct wlan_objmgr_pdev *pdev,
 		mlme_err("Invalid vdev");
 		goto end;
 	}
+
 	status = cm_roam_acquire_lock(vdev);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		mlme_err("Fail to acquire lock, status: %d", status);
