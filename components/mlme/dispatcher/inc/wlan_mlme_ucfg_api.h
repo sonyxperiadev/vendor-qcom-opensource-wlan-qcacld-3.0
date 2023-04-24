@@ -4642,10 +4642,10 @@ ucfg_mlme_is_chwidth_with_notify_supported(struct wlan_objmgr_psoc *psoc);
  * @psoc: pointer to psoc object
  * @vdev_id: Vdev id
  *
- * Return: none
+ * Return: QDF_STATUS
  */
-void ucfg_mlme_connected_chan_stats_request(struct wlan_objmgr_psoc *psoc,
-					    uint8_t vdev_id);
+QDF_STATUS ucfg_mlme_connected_chan_stats_request(struct wlan_objmgr_psoc *psoc,
+						  uint8_t vdev_id);
 
 /**
  * ucfg_mlme_set_vdev_traffic_high_throughput()  - Set/clear vdev high

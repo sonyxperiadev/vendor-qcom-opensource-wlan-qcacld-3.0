@@ -642,10 +642,10 @@ uint32_t mlme_get_vdev_he_ops(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id);
  * @psoc: pointer to psoc object
  * @vdev_id: Vdev id
  *
- * Return: none
+ * Return: QDF_STATUS
  */
-void mlme_connected_chan_stats_request(struct wlan_objmgr_psoc *psoc,
-				       uint8_t vdev_id);
+QDF_STATUS mlme_connected_chan_stats_request(struct wlan_objmgr_psoc *psoc,
+					     uint8_t vdev_id);
 
 /**
  * mlme_get_ini_vdev_config() - get the vdev ini config params

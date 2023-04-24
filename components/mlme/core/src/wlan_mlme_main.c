@@ -244,8 +244,8 @@ mlme_fill_freq_in_wide_scan_start_request(struct wlan_objmgr_vdev *vdev,
 	return QDF_STATUS_SUCCESS;
 }
 
-void mlme_connected_chan_stats_request(struct wlan_objmgr_psoc *psoc,
-				       uint8_t vdev_id)
+QDF_STATUS mlme_connected_chan_stats_request(struct wlan_objmgr_psoc *psoc,
+					     uint8_t vdev_id)
 {
 	struct wlan_mlme_psoc_ext_obj *mlme_obj;
 	QDF_STATUS status;
@@ -255,20 +255,27 @@ void mlme_connected_chan_stats_request(struct wlan_objmgr_psoc *psoc,
 	mlme_obj = mlme_get_psoc_ext_obj(psoc);
 	if (!mlme_obj) {
 		mlme_debug("vdev %d : NULL mlme psoc object", vdev_id);
-		return;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
 						    WLAN_MLME_NB_ID);
 	if (!vdev) {
 		mlme_debug("vdev %d : NULL vdev object", vdev_id);
-		return;
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (wlan_vdev_mlme_is_mlo_vdev(vdev)) {
+		mlme_debug("vdev %d :reject get_cu req for mlo connection",
+			   vdev_id);
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_NB_ID);
+		return QDF_STATUS_E_NOSUPPORT;
 	}
 
 	req = qdf_mem_malloc(sizeof(*req));
 	if (!req) {
 		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_NB_ID);
-		return;
+		return QDF_STATUS_E_NOMEM;
 	}
 
 	status = wlan_scan_init_default_params(vdev, req);
@@ -310,10 +317,11 @@ void mlme_connected_chan_stats_request(struct wlan_objmgr_psoc *psoc,
 	}
 
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_NB_ID);
-	return;
+	return status;
 release:
 	qdf_mem_free(req);
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_NB_ID);
+	return status;
 }
 
 uint32_t mlme_get_vdev_he_ops(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)

@@ -3954,19 +3954,20 @@ __wlan_hdd_cfg80211_connected_chan_stats_request(struct wiphy *wiphy,
 	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
 	bool is_vdev_connected;
 	enum QDF_OPMODE mode;
+	QDF_STATUS status;
 
 	is_vdev_connected = hdd_cm_is_vdev_connected(adapter);
 	mode = adapter->device_mode;
-	if (mode == QDF_STA_MODE && is_vdev_connected) {
-		ucfg_mlme_connected_chan_stats_request(hdd_ctx->psoc,
-						adapter->vdev_id);
-	} else {
+
+	if (mode != QDF_STA_MODE || !is_vdev_connected) {
 		hdd_debug("vdev %d: reject chan stats req, mode:%d, conn:%d",
-			  adapter->vdev_id , mode, is_vdev_connected);
-		return -EINVAL;
+			  adapter->vdev_id, mode, is_vdev_connected);
+		return -EPERM;
 	}
 
-	return 0;
+	status = ucfg_mlme_connected_chan_stats_request(hdd_ctx->psoc,
+					adapter->vdev_id);
+	return qdf_status_to_os_return(status);
 }
 
 int wlan_hdd_cfg80211_connected_chan_stats_req(struct wiphy *wiphy,

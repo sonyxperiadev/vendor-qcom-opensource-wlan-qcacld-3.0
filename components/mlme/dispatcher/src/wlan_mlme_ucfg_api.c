@@ -367,10 +367,10 @@ ucfg_mlme_set_vdev_traffic_type(struct wlan_objmgr_psoc *psoc,
 	return status;
 }
 
-void ucfg_mlme_connected_chan_stats_request(struct wlan_objmgr_psoc *psoc,
-					    uint8_t vdev_id)
+QDF_STATUS ucfg_mlme_connected_chan_stats_request(struct wlan_objmgr_psoc *psoc,
+						  uint8_t vdev_id)
 {
-	mlme_connected_chan_stats_request(psoc, vdev_id);
+	return mlme_connected_chan_stats_request(psoc, vdev_id);
 }
 
 bool
