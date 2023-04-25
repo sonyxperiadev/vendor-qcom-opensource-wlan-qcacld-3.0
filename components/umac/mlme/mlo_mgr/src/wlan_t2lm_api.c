@@ -430,11 +430,42 @@ end:
 }
 
 void
+wlan_t2lm_clear_ongoing_negotiation(struct wlan_objmgr_peer *peer)
+{
+	struct wlan_mlo_peer_context *ml_peer;
+	struct wlan_t2lm_onging_negotiation_info *ongoing_tid_to_link_mapping;
+	uint8_t i;
+
+	ml_peer = peer->mlo_peer_ctx;
+	if (!ml_peer) {
+		t2lm_err("ml peer is null");
+		return;
+	}
+
+	ongoing_tid_to_link_mapping = &ml_peer->t2lm_policy.ongoing_tid_to_link_mapping;
+	if (!ongoing_tid_to_link_mapping) {
+		t2lm_err("ongoing tid mapping is null");
+		return;
+	}
+
+	qdf_mem_zero(&ongoing_tid_to_link_mapping->t2lm_info,
+		     sizeof(struct wlan_t2lm_info) * WLAN_T2LM_MAX_DIRECTION);
+
+	ongoing_tid_to_link_mapping->dialog_token = 0;
+	ongoing_tid_to_link_mapping->category = WLAN_T2LM_CATEGORY_NONE;
+	ongoing_tid_to_link_mapping->t2lm_resp_type = WLAN_T2LM_RESP_TYPE_INVALID;
+	ongoing_tid_to_link_mapping->t2lm_tx_status = WLAN_T2LM_TX_STATUS_NONE;
+
+	for (i = 0; i < WLAN_T2LM_MAX_DIRECTION; i++)
+		ongoing_tid_to_link_mapping->t2lm_info[i].direction =
+				WLAN_T2LM_INVALID_DIRECTION;
+}
+
+void
 wlan_t2lm_clear_peer_negotiation(struct wlan_objmgr_peer *peer)
 {
 	struct wlan_mlo_peer_context *ml_peer;
 	struct wlan_prev_t2lm_negotiated_info *t2lm_negotiated_info;
-
 	uint8_t i;
 
 	ml_peer = peer->mlo_peer_ctx;
@@ -451,6 +482,44 @@ wlan_t2lm_clear_peer_negotiation(struct wlan_objmgr_peer *peer)
 	for (i = 0; i < WLAN_T2LM_MAX_DIRECTION; i++)
 		t2lm_negotiated_info->t2lm_info[i].direction =
 				WLAN_T2LM_INVALID_DIRECTION;
+}
+
+void
+wlan_t2lm_clear_all_tid_mapping(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_objmgr_peer *peer;
+	struct wlan_t2lm_context *t2lm_ctx;
+
+	if (!vdev) {
+		t2lm_err("Vdev is null");
+		return;
+	}
+
+	if (!wlan_vdev_mlme_is_mlo_vdev(vdev))
+		return;
+
+	if (!vdev->mlo_dev_ctx) {
+		t2lm_err("mlo dev ctx is null");
+		return;
+	}
+
+	t2lm_ctx = &vdev->mlo_dev_ctx->t2lm_ctx;
+	peer = wlan_vdev_get_bsspeer(vdev);
+	if (!peer) {
+		t2lm_err("peer is null");
+		return;
+	}
+	qdf_mem_zero(&t2lm_ctx->established_t2lm,
+		     sizeof(struct wlan_mlo_t2lm_ie));
+	t2lm_ctx->established_t2lm.t2lm.direction = WLAN_T2LM_INVALID_DIRECTION;
+
+	qdf_mem_zero(&t2lm_ctx->upcoming_t2lm,
+		     sizeof(struct wlan_mlo_t2lm_ie));
+	t2lm_ctx->upcoming_t2lm.t2lm.direction = WLAN_T2LM_INVALID_DIRECTION;
+
+	wlan_t2lm_clear_peer_negotiation(peer);
+	wlan_t2lm_clear_ongoing_negotiation(peer);
+	wlan_mlo_t2lm_timer_stop(vdev);
 }
 
 QDF_STATUS wlan_t2lm_deliver_event(struct wlan_objmgr_vdev *vdev,

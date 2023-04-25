@@ -189,6 +189,16 @@ QDF_STATUS wlan_t2lm_deliver_event(struct wlan_objmgr_vdev *vdev,
 				   uint8_t *dialog_token);
 
 /**
+ * wlan_t2lm_clear_ongoing_negotiation - Clear ongoing
+ * negotiation peer level TID-to-link-mapping.
+ * @peer: pointer to peer
+ *
+ * Return: none
+ */
+void
+wlan_t2lm_clear_ongoing_negotiation(struct wlan_objmgr_peer *peer);
+
+/**
  * wlan_t2lm_clear_peer_negotiation - Clear previously
  * negotiated peer level TID-to-link-mapping.
  * @peer: pointer to peer
@@ -197,6 +207,17 @@ QDF_STATUS wlan_t2lm_deliver_event(struct wlan_objmgr_vdev *vdev,
  */
 void
 wlan_t2lm_clear_peer_negotiation(struct wlan_objmgr_peer *peer);
+
+/**
+ * wlan_t2lm_clear_all_tid_mapping - Clear all tid mapping
+ * @vdev: pointer to vdev
+ *
+ * This api will clear peer level and beacon t2lm mapping.
+ * Return: none
+ */
+void
+wlan_t2lm_clear_all_tid_mapping(struct wlan_objmgr_vdev *vdev);
+
 #else
 static inline QDF_STATUS
 t2lm_handle_rx_req(struct wlan_objmgr_vdev *vdev,
@@ -251,7 +272,15 @@ wlan_t2lm_validate_candidate(struct cnx_mgr *cm_ctx,
 }
 
 static inline void
+wlan_t2lm_clear_ongoing_negotiation(struct wlan_objmgr_peer *peer)
+{}
+
+static inline void
 wlan_t2lm_clear_peer_negotiation(struct wlan_objmgr_peer *peer)
+{}
+
+static inline void
+wlan_t2lm_clear_all_tid_mapping(struct wlan_objmgr_vdev *vdev)
 {}
 
 static inline
