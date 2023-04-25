@@ -1187,6 +1187,12 @@ static QDF_STATUS nan_set_hw_mode(struct wlan_objmgr_psoc *psoc,
 		goto pre_enable_failure;
 	}
 
+	if (wlan_util_is_vdev_in_cac_wait(pdev, WLAN_NAN_ID)) {
+		nan_err_rl("cac is in progress");
+		status = QDF_STATUS_E_FAILURE;
+		goto pre_enable_failure;
+	}
+
 pre_enable_failure:
 	if (pdev)
 		wlan_objmgr_pdev_release_ref(pdev, WLAN_NAN_ID);
