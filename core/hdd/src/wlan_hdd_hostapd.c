@@ -72,6 +72,7 @@
 #include "wlan_policy_mgr_api.h"
 #include "wlan_hdd_tsf.h"
 #include <cdp_txrx_misc.h>
+#include <cdp_txrx_ctrl.h>
 #include "wlan_hdd_object_manager.h"
 #include <qca_vendor.h>
 #include <cds_api.h>
@@ -6034,6 +6035,25 @@ hdd_softap_update_pasn_vdev_params(struct hdd_context *hdd_ctx,
 				   pasn_vdev_param);
 }
 
+#ifdef QCA_MULTIPASS_SUPPORT
+static void
+wlan_hdd_set_multipass(struct wlan_objmgr_vdev *vdev)
+{
+	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
+	cdp_config_param_type vdev_param;
+	uint8_t vdev_id;
+
+	vdev_id = wlan_vdev_get_id(vdev);
+	vdev_param.cdp_vdev_param_update_multipass = true;
+	cdp_txrx_set_vdev_param(soc, vdev_id, CDP_UPDATE_MULTIPASS, vdev_param);
+}
+#else
+static void
+wlan_hdd_set_multipass(struct wlan_objmgr_vdev *vdev)
+{
+}
+#endif
+
 /**
  * wlan_hdd_cfg80211_start_bss() - start bss
  * @adapter: Pointer to hostapd adapter
@@ -6448,6 +6468,8 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 			break;
 		}
 	}
+
+	wlan_hdd_set_multipass(vdev);
 
 	qdf_mem_copy(config->self_macaddr.bytes,
 		     adapter->mac_addr.bytes,
