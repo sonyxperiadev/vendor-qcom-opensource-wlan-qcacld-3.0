@@ -6712,8 +6712,21 @@ static QDF_STATUS lim_update_mld_to_link_address(struct mac_context *mac_ctx,
 		pre_auth_node =
 			lim_search_pre_auth_list_by_mld_addr(mac_ctx,
 							     mac_hdr->da);
-		if (!pre_auth_node)
-			return QDF_STATUS_E_INVAL;
+		if (!pre_auth_node) {
+			/**
+			 * Using MLD address, if pre_auth_node is not present then
+			 * check for peer mac address due to legacy connection.
+			 */
+			pre_auth_node = lim_search_pre_auth_list(mac_ctx,
+								 mac_hdr->da);
+			if (!pre_auth_node) {
+				pe_err("pre_auth not found by MLD: "QDF_MAC_ADDR_FMT,
+				       QDF_MAC_ADDR_REF(mac_hdr->da));
+				return QDF_STATUS_E_INVAL;
+			} else {
+				return QDF_STATUS_SUCCESS;
+			}
+		}
 
 		qdf_mem_copy(mac_hdr->da, pre_auth_node->peerMacAddr,
 			     QDF_MAC_ADDR_SIZE);
@@ -6783,8 +6796,10 @@ void lim_send_frame(struct mac_context *mac_ctx, uint8_t vdev_id, uint8_t *buf,
 	status = lim_update_mld_to_link_address(mac_ctx, vdev, mac_hdr);
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
 
-	if (QDF_IS_STATUS_ERROR(status))
+	if (QDF_IS_STATUS_ERROR(status)) {
+		pe_err("SAE address conversion failure with status:%d", status);
 		return;
+	}
 
 	lim_add_mgmt_seq_num(mac_ctx, mac_hdr);
 	qdf_status = cds_packet_alloc(buf_len, (void **)&frame,

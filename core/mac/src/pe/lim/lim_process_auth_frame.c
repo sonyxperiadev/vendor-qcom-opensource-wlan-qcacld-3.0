@@ -507,13 +507,15 @@ static QDF_STATUS lim_skip_sae_fixed_field(uint8_t *body_ptr,
 /**
  * lim_get_sta_mld_address: This API is called to get the STA MLD address
  * from SAE 1st auth frame.
+ * @vdev: vdev
  * @body_ptr: Pointer to a SAE auth frame
  * @frame_len: Length of SAE auth frame
  * @peer_mld: fill peer MLD address
  *
  * Return: void
  */
-static void lim_get_sta_mld_address(uint8_t *body_ptr, uint32_t frame_len,
+static void lim_get_sta_mld_address(struct wlan_objmgr_vdev *vdev,
+				    uint8_t *body_ptr, uint32_t frame_len,
 				    struct qdf_mac_addr *peer_mld)
 {
 	uint8_t *ie_ptr = NULL;
@@ -522,14 +524,21 @@ static void lim_get_sta_mld_address(uint8_t *body_ptr, uint32_t frame_len,
 	qdf_size_t ie_len = 0;
 	QDF_STATUS status;
 
-	status = lim_skip_sae_fixed_field(body_ptr, frame_len, &ie_ptr,
-					  &ie_len);
-	if (QDF_IS_STATUS_ERROR(status))
+	if (!wlan_cm_is_sae_auth_addr_conversion_required(vdev))
 		return;
 
-	status = util_find_mlie(ie_ptr, ie_len, &ml_ie, &ml_ie_total_len);
-	if (QDF_IS_STATUS_ERROR(status))
+	status = lim_skip_sae_fixed_field(body_ptr, frame_len, &ie_ptr,
+					  &ie_len);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		pe_debug("Failed in skip SAE field");
 		return;
+	}
+
+	status = util_find_mlie(ie_ptr, ie_len, &ml_ie, &ml_ie_total_len);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		pe_debug("ML IE not found");
+		return;
+	}
 
 	util_get_bvmlie_mldmacaddr(ml_ie, ml_ie_total_len, peer_mld);
 }
@@ -565,6 +574,10 @@ static QDF_STATUS lim_update_link_to_mld_address(struct mac_context *mac_ctx,
 		if (!pre_auth_node)
 			return QDF_STATUS_E_INVAL;
 
+		if (qdf_is_macaddr_zero(
+			(struct qdf_mac_addr *)pre_auth_node->peer_mld))
+			return QDF_STATUS_SUCCESS;
+
 		qdf_mem_copy(mac_hdr->sa, pre_auth_node->peer_mld,
 			     QDF_MAC_ADDR_SIZE);
 		qdf_mem_copy(mac_hdr->bssId, self_mld_addr->bytes,
@@ -599,7 +612,8 @@ static QDF_STATUS lim_update_link_to_mld_address(struct mac_context *mac_ctx,
 	return QDF_STATUS_SUCCESS;
 }
 #else
-static void lim_get_sta_mld_address(uint8_t *body_ptr, uint32_t frame_len,
+static void lim_get_sta_mld_address(struct wlan_objmgr_vdev *vdev,
+				    uint8_t *body_ptr, uint32_t frame_len,
 				    struct qdf_mac_addr *peer_mld)
 {
 }
@@ -647,7 +661,7 @@ static void lim_process_sae_auth_frame(struct mac_context *mac_ctx,
 
 	if (LIM_IS_AP_ROLE(pe_session)) {
 		struct tLimPreAuthNode *pre_auth_node;
-		struct qdf_mac_addr peer_mld;
+		struct qdf_mac_addr peer_mld = {0};
 
 		rx_flags = RXMGMT_FLAG_EXTERNAL_AUTH;
 		/* Add preauth node when the first SAE authentication frame
@@ -674,8 +688,8 @@ static void lim_process_sae_auth_frame(struct mac_context *mac_ctx,
 			 * For the 1st SAE RX frame,
 			 * driver does not need to convert it in mld_address.
 			 */
-			lim_get_sta_mld_address(body_ptr, frame_len,
-						&peer_mld);
+			lim_get_sta_mld_address(pe_session->vdev, body_ptr,
+						frame_len, &peer_mld);
 			lim_external_auth_add_pre_auth_node(mac_ctx, mac_hdr,
 						eLIM_MLM_WT_SAE_AUTH_STATE,
 						&peer_mld);
@@ -687,8 +701,11 @@ static void lim_process_sae_auth_frame(struct mac_context *mac_ctx,
 			status = lim_update_link_to_mld_address(mac_ctx,
 								pe_session->vdev,
 								mac_hdr);
-			if (QDF_IS_STATUS_ERROR(status))
+			if (QDF_IS_STATUS_ERROR(status)) {
+				pe_debug("SAE address conversion failure with status:%d",
+					 status);
 				return;
+			}
 		}
 	}
 
@@ -706,8 +723,11 @@ static void lim_process_sae_auth_frame(struct mac_context *mac_ctx,
 		status = lim_update_link_to_mld_address(mac_ctx,
 							pe_session->vdev,
 							mac_hdr);
-		if (QDF_IS_STATUS_ERROR(status))
+		if (QDF_IS_STATUS_ERROR(status)) {
+			pe_debug("SAE address conversion failure with status:%d",
+				 status);
 			return;
+		}
 
 		auth_algo = *(uint16_t *)body_ptr;
 		if (frame_len >= (SAE_AUTH_STATUS_CODE_OFFSET + 2)) {
@@ -2165,7 +2185,7 @@ bool lim_process_sae_preauth_frame(struct mac_context *mac, uint8_t *rx_pkt)
 	}
 
 	if (QDF_IS_STATUS_ERROR(status)) {
-		pe_err("dropping the auth frame for vdev id: %d and BSSID " QDF_MAC_ADDR_FMT,
+		pe_err("dropping the auth frame for vdev id: %d and BSSID " QDF_MAC_ADDR_FMT ", SAE address conversion failure",
 		       vdev_id, QDF_MAC_ADDR_REF(dot11_hdr->bssId));
 		return false;
 	}

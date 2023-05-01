@@ -318,6 +318,8 @@ wlan_hdd_sae_update_mld_addr(struct cfg80211_external_auth_params *params,
 	}
 
 	qdf_mem_copy(params->mld_addr, mld_addr.bytes, QDF_MAC_ADDR_SIZE);
+	hdd_debug("Sending MLD:" QDF_MAC_ADDR_FMT" to userspace",
+		  QDF_MAC_ADDR_REF(mld_addr.bytes));
 
 end:
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_HDD_ID_OBJ_MGR);
