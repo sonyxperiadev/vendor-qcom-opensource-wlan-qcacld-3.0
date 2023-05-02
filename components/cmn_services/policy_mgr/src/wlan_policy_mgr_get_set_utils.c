@@ -7151,6 +7151,14 @@ void policy_mgr_activate_mlo_links(struct wlan_objmgr_psoc *psoc,
 
 	policy_mgr_debug("active vdev cnt: %d, inactive vdev cnt: %d",
 			 active_vdev_cnt, inactive_vdev_cnt);
+
+	if (policy_mgr_is_mlo_in_mode_emlsr(psoc, NULL, NULL) &&
+	    active_vdev_cnt > 1 &&
+	    policy_mgr_get_connection_count(psoc) > ml_vdev_cnt) {
+		policy_mgr_debug("Concurrency exists, cannot enter EMLSR mode");
+		goto done;
+	}
+
 	/*
 	 * Invoke Force active link cmd first, followed by Force inactive link
 	 * cmd. This ensures that there is atleast 1 link active at any given
