@@ -2542,6 +2542,7 @@ QDF_STATUS wma_set_ap_vdev_up(tp_wma_handle wma, uint8_t vdev_id)
 	}
 	wma_set_sap_keepalive(wma, vdev_id);
 	wma_set_vdev_mgmt_rate(wma, vdev_id);
+	wma_vdev_set_he_bss_params(wma, vdev_id, &mlme_obj->proto.he_ops_info);
 	wma_sr_update(wma, vdev_id, true);
 
 	return status;
