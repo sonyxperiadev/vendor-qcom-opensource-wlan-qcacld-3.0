@@ -8842,8 +8842,10 @@ static int hdd_config_tx_rx_nss(struct hdd_adapter *adapter,
 	struct nlattr *rx_attr =
 		tb[QCA_WLAN_VENDOR_ATTR_CONFIG_RX_NSS];
 
-	if (!tx_attr && !rx_attr)
-		return 0;
+	if (!tx_attr && !rx_attr) {
+		hdd_err("Missing TX and RX attributes");
+		return -EINVAL;
+	}
 
 	/* if one is present, both must be present */
 	if (!tx_attr || !rx_attr) {
@@ -8860,11 +8862,13 @@ static int hdd_config_tx_rx_nss(struct hdd_adapter *adapter,
 	      (tx_nss == 2 && rx_nss == 2))) {
 		hdd_err("Setting tx_nss %d rx_nss %d not allowed", tx_nss,
 			rx_nss);
-		return 0;
+		return -EINVAL;
 	}
 	status = hdd_update_nss(adapter, tx_nss, rx_nss);
-	if (status != QDF_STATUS_SUCCESS)
+	if (status != QDF_STATUS_SUCCESS) {
 		hdd_debug("Can't set tx_nss %d rx_nss %d", tx_nss, rx_nss);
+		return -EINVAL;
+	}
 
 	return 0;
 }

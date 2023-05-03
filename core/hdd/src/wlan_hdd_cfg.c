@@ -1104,6 +1104,7 @@ hdd_set_nss_params(struct hdd_adapter *adapter,
 	struct wlan_mlme_nss_chains user_cfg;
 	mac_handle_t mac_handle;
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	struct wlan_objmgr_vdev *vdev;
 
 	qdf_mem_zero(&user_cfg, sizeof(user_cfg));
 
@@ -1112,6 +1113,23 @@ hdd_set_nss_params(struct hdd_adapter *adapter,
 		hdd_err("NULL MAC handle");
 		return QDF_STATUS_E_INVAL;
 	}
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_pdev(hdd_ctx->pdev,
+						    adapter->vdev_id,
+						    WLAN_HDD_ID_OBJ_MGR);
+	if (!vdev) {
+		hdd_err("vdev is NULL %d", adapter->vdev_id);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (tx_nss > wlan_vdev_mlme_get_nss(vdev) ||
+	    rx_nss > wlan_vdev_mlme_get_nss(vdev)) {
+		hdd_err("Given tx nss/rx nss is greater than intersected nss = %d",
+			wlan_vdev_mlme_get_nss(vdev));
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_HDD_ID_OBJ_MGR);
+		return QDF_STATUS_E_FAILURE;
+	}
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_HDD_ID_OBJ_MGR);
 
 	for (band = NSS_CHAINS_BAND_2GHZ; band < NSS_CHAINS_BAND_MAX; band++)
 		hdd_populate_vdev_nss(&user_cfg, tx_nss,
