@@ -4157,7 +4157,7 @@ FRAME AssocRequest                        // 7.2.3.4
     OPTIE  dh_parameter_element;
     OPTIE  eht_cap;
     OPTIE  mlo_ie;
-    OPTIE  t2lm_ie;
+    OPTIE  t2lm_ie[0..2];
 
     OPTIE  WPAOpaque;
     OPTIE  WMMCaps;
@@ -4215,7 +4215,7 @@ FRAME AssocResponse                       // 7.2.3.5
     OPTIE  eht_cap;
     OPTIE  eht_op;
     OPTIE  mlo_ie;
-    OPTIE  t2lm_ie;
+    OPTIE  t2lm_ie[0..2];
 
     OPTIE  WPA;
     OPTIE  WMMParams;
@@ -4262,7 +4262,7 @@ FRAME ReAssocRequest                      // 7.2.3.6
     OPTIE  ESECckmOpaque;
     OPTIE  eht_cap;
     OPTIE  mlo_ie;
-    OPTIE  t2lm_ie;
+    OPTIE  t2lm_ie[0..2];
 
     OPTIE  WPAOpaque;
     OPTIE  WMMCaps;
@@ -4314,7 +4314,7 @@ FRAME ReAssocResponse                     // 7.2.3.7
     OPTIE  eht_cap;
     OPTIE  eht_op;
     OPTIE  mlo_ie;
-    OPTIE  t2lm_ie;
+    OPTIE  t2lm_ie[0..2];
 
     OPTIE  WPA;
     OPTIE  WMMParams;
