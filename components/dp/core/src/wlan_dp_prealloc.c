@@ -335,6 +335,9 @@ static struct  dp_consistent_prealloc g_dp_consistent_allocs[] = {
 #define NON_CACHEABLE 0
 #define CACHEABLE 1
 
+#define TX_DIRECT_LINK_CE_BUF_PAGES 4
+#define TX_DIRECT_LINK_BUF_PAGES    190
+
 static struct  dp_multi_page_prealloc g_dp_multi_page_allocs[] = {
 	/* 4 TX DESC pools */
 	{DP_TX_DESC_TYPE, TX_DESC_SIZE, 0, 0, CACHEABLE, { 0 } },
@@ -399,6 +402,12 @@ static struct  dp_multi_page_prealloc g_dp_multi_page_allocs[] = {
 	{DP_HW_CC_SPT_PAGE_TYPE, qdf_page_size,
 	 ((DP_TX_RX_DESC_MAX_NUM * sizeof(uint64_t)) / qdf_page_size),
 	 0, NON_CACHEABLE, { 0 } },
+#endif
+#ifdef FEATURE_DIRECT_LINK
+	{DP_TX_DIRECT_LINK_CE_BUF_TYPE, qdf_page_size,
+	 TX_DIRECT_LINK_CE_BUF_PAGES, 0, NON_CACHEABLE, { 0 } },
+	{DP_TX_DIRECT_LINK_BUF_TYPE, qdf_page_size,
+	 TX_DIRECT_LINK_BUF_PAGES, 0, NON_CACHEABLE, { 0 } },
 #endif
 };
 
