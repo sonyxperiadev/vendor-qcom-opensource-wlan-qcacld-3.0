@@ -3299,6 +3299,12 @@ cppflags-$(CONFIG_WLAN_FEATURE_MEDIUM_ASSESS) += -DWLAN_FEATURE_MEDIUM_ASSESS
 cppflags-$(CONFIG_FEATURE_RADAR_HISTORY) += -DFEATURE_RADAR_HISTORY
 cppflags-$(CONFIG_DIRECT_BUF_RX_ENABLE) += -DDIRECT_BUF_RX_ENABLE
 cppflags-$(CONFIG_WMI_DBR_SUPPORT) += -DWMI_DBR_SUPPORT
+
+found = $(shell if grep -qF "NL80211_EXT_FEATURE_AUTH_AND_DEAUTH_RANDOM_TA" $(srctree)/include/uapi/linux/nl80211.h; then echo "yes"; else echo "no"; fi;)
+ifeq ($(findstring yes, $(found)), yes)
+ccflags-y += -DCFG80211_EXT_FEATURE_AUTH_AND_DEAUTH_RANDOM_TA
+endif
+
 ifneq ($(CONFIG_CNSS_QCA6750), y)
 cppflags-$(CONFIG_DIRECT_BUF_RX_ENABLE) += -DDBR_MULTI_SRNG_ENABLE
 endif

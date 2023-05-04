@@ -19376,6 +19376,25 @@ static void wlan_hdd_update_eapol_over_nl80211_flags(struct wiphy *wiphy)
 }
 #endif
 
+#ifdef WLAN_EXT_FEATURE_AUTH_AND_DEAUTH_RANDOM_TA
+/**
+ * wlan_hdd_set_auth_deauth_random_ta_feature_flag() - set feature flag for
+ * random address for auth and deauth frames to the kernel.
+ * @wiphy: wiphy
+ *
+ * Return: void
+ */
+static void wlan_hdd_set_auth_deauth_random_ta_feature_flag(struct wiphy *wiphy)
+{
+	wiphy_ext_feature_set(wiphy,
+			      NL80211_EXT_FEATURE_AUTH_AND_DEAUTH_RANDOM_TA);
+}
+#else
+static void wlan_hdd_set_auth_deauth_random_ta_feature_flag(struct wiphy *wiphy)
+{
+}
+#endif
+
 #ifdef CFG80211_MULTI_AKM_CONNECT_SUPPORT
 static void
 wlan_hdd_update_max_connect_akm(struct wiphy *wiphy)
@@ -19530,6 +19549,8 @@ int wlan_hdd_cfg80211_init(struct device *dev,
 	wlan_hdd_set_nan_supported_bands(wiphy);
 
 	wlan_hdd_update_eapol_over_nl80211_flags(wiphy);
+
+	wlan_hdd_set_auth_deauth_random_ta_feature_flag(wiphy);
 
 	hdd_exit();
 	return 0;
