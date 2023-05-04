@@ -3828,6 +3828,68 @@ sir_convert_assoc_resp_frame2_mlo_struct(struct mac_context *mac,
 	}
 	return status;
 }
+
+static QDF_STATUS
+sir_convert_assoc_resp_frame2_t2lm_struct(struct mac_context *mac,
+					  uint8_t *frame,
+					  uint32_t frame_len,
+					  struct pe_session *session_entry,
+					  tDot11fAssocResponse *ar,
+					  tpSirAssocRsp p_assoc_rsp)
+{
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	struct wlan_t2lm_context *t2lm_ctx;
+	/* add 3 bytes for extn_ie_header */
+	uint8_t ie[DOT11F_IE_T2LM_IE_MAX_LEN + 3];
+	struct wlan_t2lm_info t2lm;
+	uint8_t i;
+
+	t2lm_ctx = &p_assoc_rsp->t2lm_ctx;
+	qdf_mem_zero(&t2lm_ctx->established_t2lm.t2lm,
+		     sizeof(struct wlan_t2lm_info));
+	t2lm_ctx->established_t2lm.t2lm.direction = WLAN_T2LM_INVALID_DIRECTION;
+
+	qdf_mem_zero(&t2lm_ctx->upcoming_t2lm.t2lm,
+		     sizeof(struct wlan_t2lm_info));
+	t2lm_ctx->upcoming_t2lm.t2lm.direction = WLAN_T2LM_INVALID_DIRECTION;
+
+	if (!ar->num_t2lm_ie) {
+		pe_debug("T2LM IEs not present");
+		return status;
+	}
+
+	pe_debug("Number of T2LM IEs in assoc resp %d", ar->num_t2lm_ie);
+	for (i = 0; i < ar->num_t2lm_ie; i++) {
+		qdf_mem_zero(&ie[0], DOT11F_IE_T2LM_IE_MAX_LEN + 3);
+		qdf_mem_zero(&t2lm, sizeof(struct wlan_t2lm_info));
+		ie[ID_POS] = WLAN_ELEMID_EXTN_ELEM;
+		ie[TAG_LEN_POS] = ar->t2lm_ie[i].num_data + 1;
+		ie[IDEXT_POS] = WLAN_EXTN_ELEMID_T2LM;
+		qdf_mem_copy(&ie[3], &ar->t2lm_ie[i].data[0],
+			     ar->t2lm_ie[i].num_data + 3);
+		qdf_trace_hex_dump(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
+				   &ie[0], ar->t2lm_ie[i].num_data + 3);
+		status = wlan_mlo_parse_t2lm_info(&ie[0], &t2lm);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			pe_debug("Parse T2LM IE fail");
+			return status;
+		}
+
+		if (!t2lm.mapping_switch_time_present &&
+		    t2lm.expected_duration_present) {
+			qdf_mem_copy(&t2lm_ctx->established_t2lm.t2lm, &t2lm,
+				     sizeof(struct wlan_t2lm_info));
+			pe_debug("Parse established T2LM IE success");
+		} else if (t2lm.mapping_switch_time_present) {
+			qdf_mem_copy(&t2lm_ctx->upcoming_t2lm.t2lm, &t2lm,
+				     sizeof(struct wlan_t2lm_info));
+			pe_debug("Parse upcoming T2LM IE success");
+		}
+		pe_debug("Parse T2LM IE success");
+	}
+	return status;
+}
+
 #else
 static inline QDF_STATUS
 sir_convert_assoc_resp_frame2_mlo_struct(struct mac_context *mac,
@@ -3836,6 +3898,17 @@ sir_convert_assoc_resp_frame2_mlo_struct(struct mac_context *mac,
 					 struct pe_session *session_entry,
 					 tDot11fAssocResponse *ar,
 					 tpSirAssocRsp p_assoc_rsp)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+sir_convert_assoc_resp_frame2_t2lm_struct(struct mac_context *mac,
+					  uint8_t *frame,
+					  uint32_t frame_len,
+					  struct pe_session *session_entry,
+					  tDot11fAssocResponse *ar,
+					  tpSirAssocRsp p_assoc_rsp)
 {
 	return QDF_STATUS_SUCCESS;
 }
@@ -4142,6 +4215,8 @@ sir_convert_assoc_resp_frame2_struct(struct mac_context *mac,
 	fils_convert_assoc_rsp_frame2_struct(ar, pAssocRsp);
 	sir_convert_assoc_resp_frame2_mlo_struct(mac, frame, frame_len,
 						 session_entry, ar, pAssocRsp);
+	sir_convert_assoc_resp_frame2_t2lm_struct(mac, frame, frame_len,
+						  session_entry, ar, pAssocRsp);
 	pe_debug("ht %d vht %d vendor vht: cap %d op %d, he %d he 6ghband %d eht %d eht320 %d, max idle: present %d val %d, he mu edca %d wmm %d qos %d",
 		 ar->HTCaps.present, ar->VHTCaps.present,
 		 ar->vendor_vht_ie.VHTCaps.present,

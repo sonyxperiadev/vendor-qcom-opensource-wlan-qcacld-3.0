@@ -1524,14 +1524,19 @@ cm_update_tid_mapping(struct wlan_objmgr_vdev *vdev)
 	if (!vdev || !vdev->mlo_dev_ctx)
 		return QDF_STATUS_E_NULL_VALUE;
 
-	if (!mlo_check_if_all_links_up(vdev))
+	if (!wlan_vdev_mlme_is_mlo_link_vdev(vdev) ||
+	    !mlo_check_if_all_links_up(vdev))
 		return QDF_STATUS_E_FAILURE;
 
-	t2lm_ctx = &vdev->mlo_dev_ctx->t2lm_ctx;
+	t2lm_ctx = &vdev->mlo_dev_ctx->sta_ctx->copied_t2lm_ie_assoc_rsp;
+	if (!t2lm_ctx) {
+		mlme_err("T2LM ctx is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
 	status = wlan_process_bcn_prbrsp_t2lm_ie(vdev, t2lm_ctx, t2lm_ctx->tsf);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		mlme_err("T2LM IE beacon process failed");
-		return status;
 	}
 
 	return status;
