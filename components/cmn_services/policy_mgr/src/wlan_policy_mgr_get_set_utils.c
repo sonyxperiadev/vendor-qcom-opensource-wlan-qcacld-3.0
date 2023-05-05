@@ -3929,7 +3929,7 @@ policy_mgr_ml_link_vdev_need_to_be_disabled(struct wlan_objmgr_psoc *psoc,
 	return !policy_mgr_is_concurrency_allowed(psoc, PM_STA_MODE,
 					wlan_get_operation_chan_freq(vdev),
 					HW_MODE_20_MHZ,
-					conc_ext_flags.value);
+					conc_ext_flags.value, NULL);
 }
 
 static void
@@ -6510,7 +6510,7 @@ policy_mgr_sta_ml_link_enable_allowed(struct wlan_objmgr_psoc *psoc,
 
 	return policy_mgr_is_concurrency_allowed(psoc, PM_STA_MODE,
 					disabled_link_freq, HW_MODE_20_MHZ,
-					conc_ext_flags.value);
+					conc_ext_flags.value, NULL);
 }
 
 /*
@@ -6912,7 +6912,8 @@ policy_mgr_pick_link_vdev_from_inactive_list(
 		if (policy_mgr_is_concurrency_allowed(psoc, PM_STA_MODE,
 						      inactive_freq_lst[i],
 						      HW_MODE_20_MHZ,
-						      conc_ext_flags.value)) {
+						      conc_ext_flags.value,
+						      NULL)) {
 			*picked_vdev_id = inactive_vdev_lst[i];
 			wlan_objmgr_vdev_release_ref(partner_vdev,
 						     WLAN_POLICY_MGR_ID);
@@ -7339,9 +7340,10 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 				       enum policy_mgr_con_mode mode,
 				       uint32_t ch_freq,
 				       enum hw_mode_bandwidth bw,
-				       uint32_t ext_flags)
+				       uint32_t ext_flags,
+				       struct policy_mgr_pcl_list *pcl)
 {
-	uint32_t num_connections = 0, count = 0, index = 0;
+	uint32_t num_connections = 0, count = 0, index = 0, i;
 	bool status = false, match = false;
 	uint32_t list[MAX_NUMBER_OF_CONC_CONNECTIONS];
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
@@ -7487,6 +7489,25 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 		policy_mgr_err("LL SAP concurrency is not valid");
 		return status;
 	}
+
+	/*
+	 * Don't allow DFS SAP on non-SCC channels if an ML-STA is already
+	 * present. PCL list returns the SCC channels and all channels from
+	 * other MAC in case of non-ML/single link STA.
+	 */
+	if (mode == PM_SAP_MODE && pcl &&
+	    wlan_reg_is_dfs_for_freq(pm_ctx->pdev, ch_freq)) {
+		for (i = 0; i < pcl->pcl_len; i++)
+			if (pcl->pcl_list[i] == ch_freq) {
+				status = true;
+				break;
+			}
+		if (!status) {
+			policy_mgr_err("SAP channel %d Not present in PCL",
+				       ch_freq);
+			return status;
+		}
+	}
 	status = true;
 
 	return status;
@@ -7512,7 +7533,7 @@ bool policy_mgr_allow_concurrency(struct wlan_objmgr_psoc *psoc,
 	}
 
 	allowed = policy_mgr_is_concurrency_allowed(psoc, mode, ch_freq,
-						    bw, ext_flags);
+						    bw, ext_flags, &pcl);
 
 	/* Fourth connection concurrency check */
 	if (allowed && policy_mgr_get_connection_count(psoc) == 3)

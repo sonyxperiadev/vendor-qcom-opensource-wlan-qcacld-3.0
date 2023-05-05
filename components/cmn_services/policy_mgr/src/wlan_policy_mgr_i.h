@@ -877,6 +877,7 @@ QDF_STATUS policy_mgr_nss_update(struct wlan_objmgr_psoc *psoc,
  * @ch_freq: channel frequency on which new connection is coming up
  * @bw: Bandwidth requested by the connection (optional)
  * @ext_flags: extended flags for concurrency check (union conc_ext_flag)
+ * @pcl: Optional PCL for new connection
  *
  * When a new connection is about to come up check if current
  * concurrency combination including the new connection is
@@ -889,7 +890,8 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 				       enum policy_mgr_con_mode mode,
 				       uint32_t ch_freq,
 				       enum hw_mode_bandwidth bw,
-				       uint32_t ext_flags);
+				       uint32_t ext_flags,
+				       struct policy_mgr_pcl_list *pcl);
 
 /**
  * policy_mgr_can_2ghz_share_low_high_5ghz_sbs() - if SBS mode is dynamic where

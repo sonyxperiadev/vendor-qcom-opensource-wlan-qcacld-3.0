@@ -3697,7 +3697,7 @@ QDF_STATUS policy_mgr_get_valid_chan_weights(struct wlan_objmgr_psoc *psoc,
 			if (!policy_mgr_is_concurrency_allowed
 			    (psoc, mode, weight->saved_chan_list[i],
 			     HW_MODE_20_MHZ,
-			     policy_mgr_get_conc_ext_flags(vdev, false)))
+			     policy_mgr_get_conc_ext_flags(vdev, false), NULL))
 				continue;
 			/*
 			 * Keep weight 0 (WEIGHT_OF_DISALLOWED_CHANNELS) not
