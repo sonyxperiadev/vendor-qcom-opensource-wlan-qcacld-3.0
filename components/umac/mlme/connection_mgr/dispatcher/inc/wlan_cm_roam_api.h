@@ -1837,4 +1837,105 @@ wlan_cm_get_assoc_btm_cap(struct wlan_objmgr_vdev *vdev);
  * Return: bool, true: self mld roam supported
  */
 bool wlan_cm_is_self_mld_roam_supported(struct wlan_objmgr_psoc *psoc);
+
+#ifdef WLAN_FEATURE_11BE_MLO
+/**
+ * wlan_cm_is_sae_auth_addr_conversion_required() - check whether address
+ * conversion is required or not.
+ * @vdev: pointer to vdev
+ *
+ * This API checks the address conversion (mld to link and vice-versa) for sae
+ * auth frames for below listed scenarios when mlo sae auth external conversion
+ * is true.
+ *
+ * Connected AP Roam AP Connection Conversion
+ * (MLO vdev)
+ *	non-ML  non-ML  initial     FALSE
+ *	non-ML  ML      initial     FALSE
+ *	non-ML  non-ML  roam        FALSE
+ *	non-ML  ML      roam        TRUE
+ *	ML      non-ML  initial     TRUE
+ *	ML      ML      initial     TRUE
+ *	ML      non-ML  roam        FALSE
+ *	ML      ML      roam        TRUE
+ *
+ * Return: true if address conversion required, otherwise false.
+ */
+bool
+wlan_cm_is_sae_auth_addr_conversion_required(struct wlan_objmgr_vdev *vdev);
+#else
+static inline bool
+wlan_cm_is_sae_auth_addr_conversion_required(struct wlan_objmgr_vdev *vdev)
+{
+	return false;
+}
+#endif /* WLAN_FEATURE_11BE_MLO */
+
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_FEATURE_ROAM_OFFLOAD)
+/**
+ * wlan_cm_store_mlo_roam_peer_address() - cache peer mld and link address
+ * while roaming
+ * @pdev: pdev object
+ * @auth_event: auth offload event data
+ *
+ * Return: void
+ */
+void
+wlan_cm_store_mlo_roam_peer_address(struct wlan_objmgr_pdev *pdev,
+				    struct auth_offload_event *auth_event);
+
+/**
+ * wlan_cm_roaming_get_peer_mld_addr() - retrieve the peer mld address for
+ * roaming.
+ * @vdev: vdev pointer
+ *
+ * Return: pointer to struct qdf_mac_addr
+ */
+struct qdf_mac_addr *
+wlan_cm_roaming_get_peer_mld_addr(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * wlan_cm_roaming_get_peer_link_addr() - get peer link address for roaming
+ * @vdev: vdev pointer
+ *
+ * Return: pointer to struct qdf_mac_addr
+ */
+struct qdf_mac_addr *
+wlan_cm_roaming_get_peer_link_addr(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * wlan_cm_roam_is_mlo_ap() - to check whether vdev will be roam to ml ap
+ * @vdev: object manager vdev
+ *
+ * this function check whether roaming vdev will be connected to ml ap or not.
+ *
+ * Return: true if roam ap is ml capable otherwise false
+ */
+bool
+wlan_cm_roam_is_mlo_ap(struct wlan_objmgr_vdev *vdev);
+#else
+static inline void
+wlan_cm_store_mlo_roam_peer_address(struct wlan_objmgr_pdev *pdev,
+				    struct auth_offload_event *auth_event)
+{
+}
+
+static inline struct qdf_mac_addr *
+wlan_cm_roaming_get_mld_addr(struct wlan_objmgr_vdev *vdev)
+{
+	return NULL;
+}
+
+static inline struct qdf_mac_addr *
+wlan_cm_roaming_get_peer_link_addr(struct wlan_objmgr_vdev *vdev)
+{
+	return NULL;
+}
+
+static inline bool
+wlan_cm_roam_is_mlo_ap(struct wlan_objmgr_vdev *vdev)
+{
+	return false;
+}
+#endif /* WLAN_FEATURE_11BE_MLO && WLAN_FEATURE_ROAM_OFFLOAD */
 #endif  /* WLAN_CM_ROAM_API_H__ */
