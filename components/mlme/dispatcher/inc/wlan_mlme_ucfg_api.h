@@ -4420,7 +4420,31 @@ ucfg_mlme_set_obss_color_collision_offload_enabled(
  */
 QDF_STATUS
 ucfg_mlme_set_bss_color_collision_det_sta(struct wlan_objmgr_psoc *psoc,
-					  uint8_t value);
+					  bool value);
+
+/**
+ * ucfg_mlme_set_bss_color_collision_det_support() - Set bss color collision
+ * detection offload support from FW for STA mode
+ * @psoc:  pointer to psoc object
+ * @value: enable or disable
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+ucfg_mlme_set_bss_color_collision_det_support(struct wlan_objmgr_psoc *psoc,
+					      bool value);
+
+/**
+ * ucfg_mlme_get_bss_color_collision_det_support() - Get bss color collision
+ * detection offload FW support for STA mode
+ * @psoc:  pointer to psoc object
+ * @value: pointer to the value which will be filled for the caller
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+ucfg_mlme_get_bss_color_collision_det_support(struct wlan_objmgr_psoc *psoc,
+					      bool *value);
 
 /**
  * ucfg_mlme_set_restricted_80p80_bw_supp() - Set the restricted 80p80 support

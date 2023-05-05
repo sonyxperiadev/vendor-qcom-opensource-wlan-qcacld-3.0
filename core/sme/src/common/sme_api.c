@@ -15005,12 +15005,15 @@ void sme_set_eht_testbed_def(mac_handle_t mac_handle, uint8_t vdev_id)
 	mac_ctx->usr_eht_testbed_cfg = true;
 	mac_ctx->roam.configParam.channelBondingMode24GHz = 0;
 	wlan_mlme_set_sta_mlo_conn_max_num(mac_ctx->psoc, 1);
+	ucfg_mlme_set_bss_color_collision_det_sta(mac_ctx->psoc, false);
 }
 
 void sme_reset_eht_caps(mac_handle_t mac_handle, uint8_t vdev_id)
 {
 	struct mac_context *mac_ctx = MAC_CONTEXT(mac_handle);
 	struct csr_roam_session *session;
+	bool val;
+	QDF_STATUS status;
 
 	session = CSR_GET_SESSION(mac_ctx, vdev_id);
 
@@ -15034,6 +15037,10 @@ void sme_reset_eht_caps(mac_handle_t mac_handle, uint8_t vdev_id)
 	mac_ctx->roam.configParam.channelBondingMode24GHz = 1;
 	wlan_mlme_set_sta_mlo_conn_band_bmp(mac_ctx->psoc, 0x77);
 	wlan_mlme_set_sta_mlo_conn_max_num(mac_ctx->psoc, 2);
+	status = ucfg_mlme_get_bss_color_collision_det_support(mac_ctx->psoc,
+							       &val);
+	if (QDF_IS_STATUS_SUCCESS(status))
+		ucfg_mlme_set_bss_color_collision_det_sta(mac_ctx->psoc, val);
 }
 
 void sme_update_eht_cap_nss(mac_handle_t mac_handle, uint8_t vdev_id,
