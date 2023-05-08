@@ -11147,7 +11147,6 @@ uint8_t lim_get_vht_ch_width(tDot11fIEVHTCaps *vht_cap,
 		else if (offset > 16)
 			ch_width = WNI_CFG_VHT_CHANNEL_WIDTH_80_PLUS_80MHZ;
 	}
-	pe_debug("The VHT Operation channel width is %d", ch_width);
 	return ch_width;
 }
 

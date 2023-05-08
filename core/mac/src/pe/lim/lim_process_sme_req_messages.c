@@ -5346,16 +5346,14 @@ void lim_parse_tpe_ie(struct mac_context *mac, struct pe_session *session,
 		}
 	}
 
-	if (!reg_tpe_count && !local_tpe_count) {
-		pe_debug("No TPEs found in beacon IE");
+	if (!reg_tpe_count && !local_tpe_count)
 		return;
-	} else if (!reg_tpe_count) {
+	else if (!reg_tpe_count)
 		use_local_tpe = true;
-	} else if (!local_tpe_count) {
+	else if (!local_tpe_count)
 		use_local_tpe = false;
-	} else {
+	else
 		use_local_tpe = wlan_mlme_is_local_tpe_pref(mac->psoc);
-	}
 
 	for (i = 0; i < num_tpe_ies; i++) {
 		single_tpe = tpe_ies[i];
