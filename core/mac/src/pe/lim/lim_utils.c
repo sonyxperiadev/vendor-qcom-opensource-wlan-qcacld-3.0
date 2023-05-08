@@ -11381,3 +11381,40 @@ lim_update_tx_pwr_on_ctry_change_cb(uint8_t vdev_id)
 
 	lim_set_tpc_power(mac_ctx, session);
 }
+
+bool lim_is_chan_connected_for_mode(struct wlan_objmgr_psoc *psoc,
+				    enum QDF_OPMODE device_mode,
+				    qdf_freq_t chan_freq)
+{
+	struct wlan_channel *des_chan;
+	struct wlan_objmgr_vdev *vdev;
+	uint8_t vdev_id;
+
+	for (vdev_id = 0; vdev_id < WLAN_UMAC_PSOC_MAX_VDEVS; vdev_id++) {
+		vdev =
+		wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						     WLAN_LEGACY_MAC_ID);
+		if (!vdev)
+			continue;
+
+		if (vdev->vdev_mlme.vdev_opmode != device_mode)
+			goto next;
+
+		if (!wlan_cm_is_vdev_connected(vdev))
+			goto next;
+
+		des_chan = vdev->vdev_mlme.des_chan;
+		if (!des_chan)
+			goto next;
+
+		if (des_chan->ch_freq != chan_freq)
+			goto next;
+
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
+		return true;
+next:
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
+	}
+
+	return false;
+}

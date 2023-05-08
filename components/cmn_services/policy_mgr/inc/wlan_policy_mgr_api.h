@@ -4876,9 +4876,9 @@ bool policy_mgr_is_ll_sap_concurrency_valid(struct wlan_objmgr_psoc *psoc,
  * @discon_freq: disconnect frequency
  * @type: enum indoor_conc_update_type
  *
- * Return: None
+ * Return: True if need to compute pdev current channel list
  */
-void
+bool
 policy_mgr_update_indoor_concurrency(struct wlan_objmgr_psoc *psoc,
 				     uint8_t vdev_id,
 				     uint32_t discon_freq,
