@@ -1705,6 +1705,7 @@ QDF_STATUS dp_direct_link_init(struct wlan_dp_psoc_context *dp_ctx)
 		qdf_mem_free(dp_direct_link_ctx);
 		return status;
 	}
+	qdf_mutex_create(&dp_ctx->dp_direct_link_lock);
 
 	dp_ctx->dp_direct_link_ctx = dp_direct_link_ctx;
 
@@ -1721,7 +1722,7 @@ void dp_direct_link_deinit(struct wlan_dp_psoc_context *dp_ctx, bool is_ssr)
 
 	dp_wfds_deinit(dp_ctx->dp_direct_link_ctx, is_ssr);
 	dp_direct_link_refill_ring_deinit(dp_ctx->dp_direct_link_ctx);
-
+	qdf_mutex_destroy(&dp_ctx->dp_direct_link_lock);
 	qdf_mem_free(dp_ctx->dp_direct_link_ctx);
 	dp_ctx->dp_direct_link_ctx = NULL;
 }
@@ -1753,7 +1754,7 @@ QDF_STATUS dp_config_direct_link(struct wlan_dp_intf *dp_intf,
 		return QDF_STATUS_E_EMPTY;
 	}
 
-	qdf_spin_lock(&dp_intf->vdev_lock);
+	qdf_mutex_acquire(&dp_ctx->dp_direct_link_lock);
 	prev_ll = config->low_latency;
 	update_ll = config_direct_link ? enable_low_latency : prev_ll;
 	vote_link = config->config_set ^ config_direct_link;
@@ -1763,7 +1764,6 @@ QDF_STATUS dp_config_direct_link(struct wlan_dp_intf *dp_intf,
 	status = cdp_txrx_set_vdev_param(wlan_psoc_get_dp_handle(dp_ctx->psoc),
 					 dp_intf->intf_id, CDP_VDEV_TX_TO_FW,
 					 vdev_param);
-	qdf_spin_unlock(&dp_intf->vdev_lock);
 
 	if (config_direct_link) {
 		if (vote_link)
@@ -1785,6 +1785,7 @@ QDF_STATUS dp_config_direct_link(struct wlan_dp_intf *dp_intf,
 						htc_get_hif_device(htc_handle));
 		dp_info("Direct link config cleared.");
 	}
+	qdf_mutex_release(&dp_ctx->dp_direct_link_lock);
 
 	return status;
 }
