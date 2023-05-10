@@ -374,7 +374,8 @@ hdd_update_action_oui_for_connect(struct hdd_context *hdd_ctx,
 		return;
 
 	usr_disable_eht = ucfg_mlme_get_usr_disable_sta_eht(hdd_ctx->psoc);
-	if (req->flags & ASSOC_REQ_DISABLE_EHT) {
+	if (req->flags & ASSOC_REQ_DISABLE_EHT ||
+	    !(req->flags & CONNECT_REQ_MLO_SUPPORT)) {
 		if (usr_disable_eht) {
 			hdd_debug("user eht is disabled already");
 			return;
