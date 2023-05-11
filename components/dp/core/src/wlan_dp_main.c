@@ -1714,11 +1714,19 @@ QDF_STATUS dp_direct_link_init(struct wlan_dp_psoc_context *dp_ctx)
 
 void dp_direct_link_deinit(struct wlan_dp_psoc_context *dp_ctx, bool is_ssr)
 {
+	struct wlan_dp_intf *dp_intf;
+
 	if (!pld_is_direct_link_supported(dp_ctx->qdf_dev->dev))
 		return;
 
 	if (!dp_ctx->dp_direct_link_ctx)
 		return;
+
+	for (dp_get_front_intf_no_lock(dp_ctx, &dp_intf); dp_intf;
+	     dp_get_next_intf_no_lock(dp_ctx, dp_intf, &dp_intf)) {
+		if (dp_intf->device_mode == QDF_SAP_MODE)
+			dp_config_direct_link(dp_intf, false, false);
+	}
 
 	dp_wfds_deinit(dp_ctx->dp_direct_link_ctx, is_ssr);
 	dp_direct_link_refill_ring_deinit(dp_ctx->dp_direct_link_ctx);
