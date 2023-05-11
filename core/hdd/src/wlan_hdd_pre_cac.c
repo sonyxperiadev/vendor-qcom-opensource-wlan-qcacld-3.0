@@ -127,6 +127,7 @@ void hdd_close_pre_cac_adapter(struct hdd_context *hdd_ctx)
 	osif_vdev_sync_wait_for_ops(vdev_sync);
 
 	wlan_hdd_release_intf_addr(hdd_ctx, pre_cac_adapter->mac_addr.bytes);
+	pre_cac_adapter->is_virtual_iface = true;
 	hdd_close_adapter(hdd_ctx, pre_cac_adapter, true);
 
 	osif_vdev_sync_trans_stop(vdev_sync);
