@@ -1765,6 +1765,20 @@ static void lim_set_chan_sw_puncture(tLimChannelSwitchInfo *lim_ch_switch,
 {
 	lim_ch_switch->puncture_bitmap = ch_param->reg_punc_bitmap;
 }
+
+/**
+ * lim_is_puncture_same() - Check whether puncture changed
+ * @lim_ch_switch: pointer to tLimChannelSwitchInfo
+ * @session: pe session
+ *
+ * Return: bool, true: puncture changed
+ */
+static bool lim_is_puncture_same(tLimChannelSwitchInfo *lim_ch_switch,
+				 struct pe_session *session)
+{
+	return lim_ch_switch->puncture_bitmap == session->puncture_bitmap;
+}
+
 #else
 static void lim_set_csa_chan_param_11be(struct pe_session *session,
 					struct csa_offload_params *csa_param,
@@ -1775,6 +1789,12 @@ static void lim_set_csa_chan_param_11be(struct pe_session *session,
 static void lim_set_chan_sw_puncture(tLimChannelSwitchInfo *lim_ch_switch,
 				     struct ch_params *ch_param)
 {
+}
+
+static bool lim_is_puncture_same(tLimChannelSwitchInfo *lim_ch_switch,
+				 struct pe_session *session)
+{
+	return true;
 }
 #endif
 
@@ -2076,8 +2096,9 @@ void lim_handle_sta_csa_param(struct mac_context *mac_ctx,
 		 lim_ch_switch->sec_ch_offset);
 
 	if (session_entry->curr_op_freq == csa_params->csa_chan_freq &&
-	    session_entry->ch_width == lim_ch_switch->ch_width) {
-		pe_debug("Ignore CSA, no change in ch and bw");
+	    session_entry->ch_width == lim_ch_switch->ch_width &&
+	    lim_is_puncture_same(lim_ch_switch, session_entry)) {
+		pe_debug("Ignore CSA, no change in ch, bw and puncture");
 		goto err;
 	}
 
