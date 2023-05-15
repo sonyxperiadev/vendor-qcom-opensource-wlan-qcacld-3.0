@@ -3300,11 +3300,6 @@ static QDF_STATUS sap_goto_starting(struct sap_context *sap_ctx,
 			sap_err("rates full, can not add H2E bss membership");
 		}
 	}
-	sap_debug("notify hostapd about chan freq selection: %d",
-		  sap_ctx->chan_freq);
-	sap_signal_hdd_event(sap_ctx, NULL,
-			     eSAP_CHANNEL_CHANGE_EVENT,
-			     (void *)eSAP_STATUS_SUCCESS);
 	sap_dfs_set_current_channel(sap_ctx);
 	/* Reset radar found flag before start sap, the flag will
 	 * be set when radar found in CAC wait.
@@ -3701,6 +3696,12 @@ static QDF_STATUS sap_fsm_state_starting(struct sap_context *sap_ctx,
 						(void *)eSAP_STATUS_SUCCESS);
 			sap_ctx->is_chan_change_inprogress = false;
 		} else {
+			sap_debug("notify hostapd about chan freq selection: %d",
+				  sap_ctx->chan_freq);
+			qdf_status =
+				sap_signal_hdd_event(sap_ctx, roam_info,
+						     eSAP_CHANNEL_CHANGE_EVENT,
+						     (void *)eSAP_STATUS_SUCCESS);
 			/* Action code for transition */
 			qdf_status = sap_signal_hdd_event(sap_ctx, roam_info,
 					eSAP_START_BSS_EVENT,
