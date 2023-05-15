@@ -5713,9 +5713,6 @@ bool policy_mgr_is_mlo_in_mode_emlsr(struct wlan_objmgr_psoc *psoc,
 							  vdev_id_list,
 							  PM_STA_MODE);
 
-	if (!mode_num || mode_num < 2)
-		goto end;
-
 	for (i = 0; i < mode_num; i++) {
 		temp_vdev = wlan_objmgr_get_vdev_by_id_from_psoc(
 							psoc, vdev_id_list[i],
@@ -6434,8 +6431,7 @@ policy_mgr_handle_mcc_ml_sta(struct wlan_objmgr_psoc *psoc,
 	 * eMLSR is allowed in MCC mode also. So, don't disable any links
 	 * if current connection happens in eMLSR mode.
 	 */
-	if (policy_mgr_is_mlo_in_mode_emlsr(psoc, ml_sta_vdev_lst,
-					    &num_ml_sta)) {
+	if (policy_mgr_is_mlo_in_mode_emlsr(psoc, NULL, NULL)) {
 		policy_mgr_debug("Don't disable eMLSR links");
 		return QDF_STATUS_E_FAILURE;
 	}
@@ -6529,6 +6525,18 @@ policy_mgr_handle_sap_cli_go_ml_sta_up_csa(struct wlan_objmgr_psoc *psoc,
 				psoc, MLO_LINK_FORCE_REASON_CONNECT);
 	if (QDF_IS_STATUS_ERROR(status))
 		return;
+
+	/*
+	 * eMLSR API policy_mgr_handle_emlsr_sta_concurrency() takes care of
+	 * eMLSR concurrencies. Currently, eMLSR STA can't operate with any
+	 * cocurrent mode, i.e. one link gets force-disabled when a new
+	 * concurrecy is coming up.
+	 */
+	if (policy_mgr_is_mlo_in_mode_emlsr(psoc, NULL, NULL)) {
+		policy_mgr_debug("STA connected in eMLSR mode, don't enable/disable links");
+		return;
+	}
+
 	if (QDF_IS_STATUS_SUCCESS(policy_mgr_handle_mcc_ml_sta(psoc, vdev)))
 		return;
 
