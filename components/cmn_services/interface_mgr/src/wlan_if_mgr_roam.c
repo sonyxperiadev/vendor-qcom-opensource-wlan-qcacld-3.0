@@ -142,9 +142,7 @@ if_mgr_enable_roaming_on_connected_sta(struct wlan_objmgr_pdev *pdev,
 		vdev_id = wlan_vdev_get_id(vdev);
 		ifmgr_debug("Enable roaming on connected sta for vdev_id %d", vdev_id);
 		wlan_cm_enable_roaming_on_connected_sta(pdev, vdev_id);
-		if (!wlan_vdev_mlme_is_mlo_link_vdev(vdev))
-			policy_mgr_set_pcl_for_connected_vdev(psoc, vdev_id,
-							      true);
+		policy_mgr_set_pcl_for_connected_vdev(psoc, vdev_id, true);
 	}
 
 	return QDF_STATUS_SUCCESS;
