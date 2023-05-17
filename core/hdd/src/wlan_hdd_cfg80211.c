@@ -8842,10 +8842,8 @@ static int hdd_config_tx_rx_nss(struct hdd_adapter *adapter,
 	struct nlattr *rx_attr =
 		tb[QCA_WLAN_VENDOR_ATTR_CONFIG_RX_NSS];
 
-	if (!tx_attr && !rx_attr) {
-		hdd_err("Missing TX and RX attributes");
-		return -EINVAL;
-	}
+	if (!tx_attr && !rx_attr)
+		return 0;
 
 	/* if one is present, both must be present */
 	if (!tx_attr || !rx_attr) {
