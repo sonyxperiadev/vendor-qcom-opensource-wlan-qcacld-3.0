@@ -120,6 +120,7 @@ QDF_STATUS t2lm_handle_tx_req(struct wlan_objmgr_vdev *vdev,
 /**
  * t2lm_handle_rx_resp - Handler for parsing T2LM action frame
  * @vdev: vdev pointer
+ * @peer: peer pointer
  * @event_data: T2LM event data pointer
  * @token: Dialog token
  *
@@ -128,6 +129,7 @@ QDF_STATUS t2lm_handle_tx_req(struct wlan_objmgr_vdev *vdev,
  * Return: qdf_status
  */
 QDF_STATUS t2lm_handle_rx_resp(struct wlan_objmgr_vdev *vdev,
+			       struct wlan_objmgr_peer *peer,
 			       void *event_data, uint8_t *token);
 
 /**
@@ -220,6 +222,7 @@ t2lm_handle_tx_req(struct wlan_objmgr_vdev *vdev,
 
 static inline QDF_STATUS
 t2lm_handle_rx_resp(struct wlan_objmgr_vdev *vdev,
+		    struct wlan_objmgr_peer *peer,
 		    void *event_data, uint8_t *token)
 {
 	return QDF_STATUS_E_NOSUPPORT;

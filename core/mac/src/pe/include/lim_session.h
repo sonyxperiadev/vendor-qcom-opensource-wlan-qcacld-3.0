@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -659,6 +659,8 @@ struct wlan_mlo_ie_info {
  * @mlo_ie_total_len:
  * @mlo_ie:
  * @user_edca_set:
+ * @is_oui_auth_assoc_6mbps_2ghz_enable: send auth/assoc req with 6 Mbps rate
+ * on 2.4 GHz
  */
 struct pe_session {
 	uint8_t available;
@@ -992,6 +994,7 @@ struct pe_session {
 #endif
 #endif /* WLAN_FEATURE_11BE */
 	uint8_t user_edca_set;
+	bool is_oui_auth_assoc_6mbps_2ghz_enable;
 };
 
 /*-------------------------------------------------------------------------

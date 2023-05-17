@@ -1061,6 +1061,34 @@ QDF_STATUS mlme_update_tgt_he_caps_in_cfg(struct wlan_objmgr_psoc *psoc,
 enum phy_ch_width wlan_mlme_convert_vht_op_bw_to_phy_ch_width(
 						uint8_t channel_width);
 
+/**
+ * wlan_mlme_chan_stats_scan_event_cb() - process connected channel stats
+ * scan event
+ * @vdev: pointer to vdev object
+ * @event: scan event definition
+ * @arg: scan argument
+ *
+ * Return: none
+ */
+void wlan_mlme_chan_stats_scan_event_cb(struct wlan_objmgr_vdev *vdev,
+					struct scan_event *event, void *arg);
+
+/**
+ * wlan_mlme_send_ch_width_update_with_notify() - update connected VDEV
+ * channel bandwidth
+ * @psoc: pointer to psoc object
+ * @vdev: pointer to vdev object
+ * @vdev_id: vdev id
+ * @ch_width: channel width to update
+ *
+ * Return: none
+ */
+QDF_STATUS
+wlan_mlme_send_ch_width_update_with_notify(struct wlan_objmgr_psoc *psoc,
+					   struct wlan_objmgr_vdev *vdev,
+					   uint8_t vdev_id,
+					   enum phy_ch_width ch_width);
+
 #ifdef WLAN_FEATURE_11BE
 /**
  * mlme_update_tgt_eht_caps_in_cfg() - Update tgt eht cap in mlme component

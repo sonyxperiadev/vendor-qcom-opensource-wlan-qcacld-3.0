@@ -4613,6 +4613,41 @@ ucfg_mlme_set_vdev_traffic_low_latency(struct wlan_objmgr_psoc *psoc,
 				       uint8_t vdev_id, bool set);
 
 /**
+ * ucfg_mlme_send_ch_width_update_with_notify() - Send chwidth with notify
+ * capability of FW
+ * @psoc: pointer to psoc object
+ * @vdev_id: Vdev id
+ * @ch_width: channel width to update
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+ucfg_mlme_send_ch_width_update_with_notify(struct wlan_objmgr_psoc *psoc,
+					   uint8_t vdev_id,
+					   enum phy_ch_width ch_width);
+
+/**
+ * ucfg_mlme_is_chwidth_with_notify_supported() - Get chwidth with notify
+ * capability of FW
+ * @psoc: pointer to psoc object
+ *
+ * Return: true if chwidth with notify feature supported
+ */
+bool
+ucfg_mlme_is_chwidth_with_notify_supported(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_mlme_connected_chan_stats_request() - process connected channel stats
+ * request
+ * @psoc: pointer to psoc object
+ * @vdev_id: Vdev id
+ *
+ * Return: none
+ */
+void ucfg_mlme_connected_chan_stats_request(struct wlan_objmgr_psoc *psoc,
+					    uint8_t vdev_id);
+
+/**
  * ucfg_mlme_set_vdev_traffic_high_throughput()  - Set/clear vdev high
  * throughput config
  * @psoc: pointer to psoc object

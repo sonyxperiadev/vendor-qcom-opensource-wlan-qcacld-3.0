@@ -4000,7 +4000,8 @@ bool policy_mgr_allow_same_mac_same_freq(struct wlan_objmgr_psoc *psoc,
 
 bool policy_mgr_allow_new_home_channel(
 	struct wlan_objmgr_psoc *psoc, enum policy_mgr_con_mode mode,
-	qdf_freq_t ch_freq, uint32_t num_connections, bool is_dfs_ch)
+	qdf_freq_t ch_freq, uint32_t num_connections, bool is_dfs_ch,
+	uint32_t ext_flags)
 {
 	bool status = true;
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
@@ -4019,10 +4020,8 @@ bool policy_mgr_allow_new_home_channel(
 	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
 	if (num_connections == 3) {
 		status = policy_mgr_allow_4th_new_freq(psoc,
-						pm_conc_connection_list[0].freq,
-						pm_conc_connection_list[1].freq,
-						pm_conc_connection_list[2].freq,
-						ch_freq);
+						       ch_freq, mode,
+						       ext_flags);
 	} else if (num_connections == 2) {
 	/* No SCC or MCC combination is allowed with / on DFS channel */
 		on_same_mac = policy_mgr_2_freq_always_on_same_mac(psoc,

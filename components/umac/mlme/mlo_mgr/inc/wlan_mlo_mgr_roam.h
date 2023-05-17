@@ -106,6 +106,19 @@ mlo_roam_get_link_freq_from_mac_addr(struct roam_offload_synch_ind *sync_ind,
 				     uint8_t *link_mac_addr);
 
 /**
+ * mlo_roam_get_link_id_from_mac_addr - get link id of given link addr
+ * @sync_ind: roam sync ind pointer
+ * @link_mac_addr: Link mac address
+ * @link_id: Buffer to fill link corresponds to link mac address
+ *
+ * This api will be called to get the link id
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+mlo_roam_get_link_id_from_mac_addr(struct roam_offload_synch_ind *sync_ind,
+				   uint8_t *link_mac_addr, uint32_t *link_id);
+/**
  * mlo_roam_get_link_id - get link id
  *
  * @vdev_id: vdev id
@@ -160,15 +173,17 @@ QDF_STATUS mlo_enable_rso(struct wlan_objmgr_pdev *pdev,
 /**
  * mlo_roam_copy_partner_info - copy partner link info to connect response
  *
+ * @partner_info: Destination buffer to fill partner info from roam sync ind
  * @sync_ind: roam sync ind pointer
- * @connect_rsp: connect resp structure pointer
+ * @skip_vdev_id: Skip to copy the link info corresponds to this vdev_id
  *
  * This api will be called to copy partner link info to connect response.
  *
  * Return: none
  */
-void mlo_roam_copy_partner_info(struct wlan_cm_connect_resp *connect_rsp,
-				struct roam_offload_synch_ind *sync_ind);
+void mlo_roam_copy_partner_info(struct mlo_partner_info *partner_info,
+				struct roam_offload_synch_ind *sync_ind,
+				uint8_t skip_vdev_id);
 
 /**
  * mlo_roam_init_cu_bpcc() - init cu bpcc per roam sync data
@@ -393,6 +408,21 @@ mlo_roam_set_link_id(struct wlan_objmgr_vdev *vdev,
 bool
 mlo_is_roaming_in_progress(struct wlan_objmgr_psoc *psoc,
 			   uint8_t vdev_id);
+
+/**
+ * mlo_add_all_link_probe_rsp_to_scan_db - Extract and add all ML link probe
+ * rsps to scan db
+ * @psoc: psoc pointer
+ * @rcvd_frame: Received frame from firmware
+ *
+ * This api will be called to generate ML probe responses corresponds to each
+ * link from the received probe response and add them to scan db
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+mlo_add_all_link_probe_rsp_to_scan_db(struct wlan_objmgr_psoc *psoc,
+			      struct roam_scan_candidate_frame *rcvd_frame);
 #else /* WLAN_FEATURE_11BE_MLO */
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 static inline
@@ -458,8 +488,9 @@ QDF_STATUS mlo_enable_rso(struct wlan_objmgr_pdev *pdev,
 }
 
 static inline void
-mlo_roam_copy_partner_info(struct wlan_cm_connect_resp *connect_rsp,
-			   struct roam_offload_synch_ind *sync_ind)
+mlo_roam_copy_partner_info(struct mlo_partner_info *partner_info,
+			   struct roam_offload_synch_ind *sync_ind,
+			   uint8_t skip_vdev_id)
 {}
 
 static inline

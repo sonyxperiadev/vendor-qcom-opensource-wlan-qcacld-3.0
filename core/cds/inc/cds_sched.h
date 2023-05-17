@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -53,7 +53,7 @@
 #define RX_REFILL_SUSPEND_EVENT        0x002
 #define RX_REFILL_SHUTDOWN_EVENT       0x004
 
-#ifdef QCA_CONFIG_SMP
+#ifdef WLAN_DP_LEGACY_OL_RX_THREAD
 /*
 ** Maximum number of cds messages to be allocated for
 ** OL Rx thread.
@@ -95,7 +95,7 @@ struct cds_ol_rx_pkt {
 **
 */
 typedef struct _cds_sched_context {
-#ifdef QCA_CONFIG_SMP
+#ifdef WLAN_DP_LEGACY_OL_RX_THREAD
 	spinlock_t ol_rx_thread_lock;
 
 	/* OL Rx thread handle */
@@ -230,7 +230,7 @@ struct cds_context {
 /*---------------------------------------------------------------------------
    Function declarations and documentation
    ---------------------------------------------------------------------------*/
-#ifdef QCA_CONFIG_SMP
+#ifdef WLAN_DP_LEGACY_OL_RX_THREAD
 int cds_sched_handle_cpu_hot_plug(void);
 int cds_sched_handle_throughput_req(bool high_tput_required);
 

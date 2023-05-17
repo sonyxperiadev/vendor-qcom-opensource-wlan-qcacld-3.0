@@ -1436,6 +1436,16 @@ QDF_STATUS populate_dot11f_bcn_mlo_ie(struct mac_context *mac_ctx,
 				      struct pe_session *session);
 
 /**
+ * populate_dot11f_probe_req_mlo_ie() - populate mlo ie for probe req
+ * @mac_ctx: Global MAC context
+ * @session: PE session
+ *
+ * Return: QDF_STATUS_SUCCESS of no error
+ */
+QDF_STATUS populate_dot11f_probe_req_mlo_ie(struct mac_context *mac_ctx,
+					    struct pe_session *session);
+
+/**
  * populate_dot11f_mlo_rnr() - populate rnr for mlo
  * @mac_ctx: Global MAC context
  * @session: PE session
@@ -1674,6 +1684,17 @@ populate_dot11f_assoc_req_mlo_ie(struct mac_context *mac_ctx,
 				 struct pe_session *session,
 				 tDot11fAssocRequest *frm);
 
+/**
+ * populate_dot11f_mlo_ie() - populate MLO Operation IE
+ * @mac_ctx: Global MAC context
+ * @vdev: Pointer to vdev
+ * @mlo_ie: Pointer to MLO Operation IE
+ *
+ * Populate mlo IE for vdev by self capability.
+ */
+QDF_STATUS populate_dot11f_mlo_ie(struct mac_context *mac_ctx,
+				  struct wlan_objmgr_vdev *vdev,
+				  struct wlan_mlo_ie *mlo_ie);
 #endif
 
 /**

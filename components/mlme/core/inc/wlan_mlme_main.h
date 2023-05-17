@@ -123,6 +123,7 @@ struct peer_disconnect_stats_param {
  * @rso_rx_ops: Roam Rx ops to receive roam offload events from firmware
  * @wfa_testcmd: WFA config tx ops to send to FW
  * @disconnect_stats_param: Peer disconnect stats related params for SAP case
+ * @scan_requester_id: mlme scan requester id
  */
 struct wlan_mlme_psoc_ext_obj {
 	struct wlan_mlme_cfg cfg;
@@ -130,6 +131,7 @@ struct wlan_mlme_psoc_ext_obj {
 	struct wlan_cm_roam_rx_ops rso_rx_ops;
 	struct wlan_mlme_wfa_cmd wfa_testcmd;
 	struct peer_disconnect_stats_param disconnect_stats_param;
+	wlan_scan_requester scan_requester_id;
 };
 
 /**
@@ -383,6 +385,7 @@ struct ft_context {
  * @ese_tspec_info: ese tspec info
  * @ext_cap_ie: Ext CAP IE
  * @assoc_btm_cap: BSS transition management cap used in (re)assoc req
+ * @ch_width_orig: channel width at the time of initial connection
  */
 struct mlme_connect_info {
 	uint8_t timing_meas_cap;
@@ -408,6 +411,7 @@ struct mlme_connect_info {
 #endif
 	uint8_t ext_cap_ie[DOT11F_IE_EXTCAP_MAX_LEN + 2];
 	bool assoc_btm_cap;
+	enum phy_ch_width ch_width_orig;
 };
 
 /** struct wait_for_key_timer - wait for key timer object
@@ -631,6 +635,17 @@ struct wlan_mlme_nss_chains *mlme_get_dynamic_vdev_config(
  * Return: HE ops IE
  */
 uint32_t mlme_get_vdev_he_ops(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id);
+
+/**
+ * mlme_connected_chan_stats_request() - process connected channel stats
+ * request
+ * @psoc: pointer to psoc object
+ * @vdev_id: Vdev id
+ *
+ * Return: none
+ */
+void mlme_connected_chan_stats_request(struct wlan_objmgr_psoc *psoc,
+				       uint8_t vdev_id);
 
 /**
  * mlme_get_ini_vdev_config() - get the vdev ini config params

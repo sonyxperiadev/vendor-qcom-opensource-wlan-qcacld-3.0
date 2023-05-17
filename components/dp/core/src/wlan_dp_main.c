@@ -1711,7 +1711,7 @@ QDF_STATUS dp_direct_link_init(struct wlan_dp_psoc_context *dp_ctx)
 	return status;
 }
 
-void dp_direct_link_deinit(struct wlan_dp_psoc_context *dp_ctx)
+void dp_direct_link_deinit(struct wlan_dp_psoc_context *dp_ctx, bool is_ssr)
 {
 	if (!pld_is_direct_link_supported(dp_ctx->qdf_dev->dev))
 		return;
@@ -1719,7 +1719,7 @@ void dp_direct_link_deinit(struct wlan_dp_psoc_context *dp_ctx)
 	if (!dp_ctx->dp_direct_link_ctx)
 		return;
 
-	dp_wfds_deinit(dp_ctx->dp_direct_link_ctx);
+	dp_wfds_deinit(dp_ctx->dp_direct_link_ctx, is_ssr);
 	dp_direct_link_refill_ring_deinit(dp_ctx->dp_direct_link_ctx);
 
 	qdf_mem_free(dp_ctx->dp_direct_link_ctx);

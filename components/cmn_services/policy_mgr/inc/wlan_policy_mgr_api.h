@@ -1074,6 +1074,24 @@ void policy_mgr_decr_session_set_pcl(struct wlan_objmgr_psoc *psoc,
 
 #ifdef WLAN_FEATURE_11BE_MLO
 /**
+ * policy_mgr_mlo_sta_set_link() - Set link mode for MLO STA
+ * @psoc: psoc object
+ * @reason: reason to set
+ * @mode: mode to set
+ * @num_mlo_vdev: number of vdevs
+ * @mlo_vdev_lst: vdev list
+ *
+ * Interface to set link mode for MLO STA
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+policy_mgr_mlo_sta_set_link(struct wlan_objmgr_psoc *psoc,
+			    enum mlo_link_force_reason reason,
+			    enum mlo_link_force_mode mode,
+			    uint8_t num_mlo_vdev, uint8_t *mlo_vdev_lst);
+
+/**
  * policy_mgr_is_mlo_vdev_id() - check if vdev id is part of ML
  * @psoc: PSOC object information
  * @vdev_id: vdev id to check
@@ -1128,6 +1146,14 @@ void policy_mgr_move_vdev_from_connection_to_disabled_tbl(
 bool
 policy_mgr_ml_link_vdev_need_to_be_disabled(struct wlan_objmgr_psoc *psoc,
 					    struct wlan_objmgr_vdev *vdev);
+
+/**
+ * policy_mgr_wait_for_set_link_update() - Wait for set/clear link response
+ * @psoc: psoc pointer
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS policy_mgr_wait_for_set_link_update(struct wlan_objmgr_psoc *psoc);
 #else
 static inline bool
 policy_mgr_is_ml_vdev_id(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
@@ -1157,6 +1183,12 @@ static inline void
 policy_mgr_move_vdev_from_connection_to_disabled_tbl(
 						struct wlan_objmgr_psoc *psoc,
 						uint8_t vdev_id) {}
+
+static inline QDF_STATUS
+policy_mgr_wait_for_set_link_update(struct wlan_objmgr_psoc *psoc)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
 #endif
 
 /**
@@ -3078,26 +3110,26 @@ policy_mgr_are_3_freq_on_same_mac(struct wlan_objmgr_psoc *psoc,
 
 /**
  * policy_mgr_allow_4th_new_freq() - Function to check whether 4th freq can
- * be allowed wthout leading to 3 home freq on same mac
+ * be allowed with existing 3 vifs
  * @psoc: Pointer to Psoc
- * @freq1: Frequency 1
- * @freq2: Frequency 2
- * @freq3: Frequency 3
- * @new_ch_freq: freq to check with reference to freq1 freq2 and freq3
+ * @ch_freq: new channel frequency
+ * @mode: new device mode
+ * @ext_flags: extended flags for concurrency check
  *
- * Return:True if all 4 freq can be allowed without causing 3 home frequency
- * on same mac
+ * Return:True if 4th freq can be allowed with existing 3 vifs
  */
 #ifdef FEATURE_FOURTH_CONNECTION
 bool
 policy_mgr_allow_4th_new_freq(struct wlan_objmgr_psoc *psoc,
-			      qdf_freq_t freq1, qdf_freq_t freq2,
-			      qdf_freq_t freq3, qdf_freq_t new_ch_freq);
+			      qdf_freq_t ch_freq,
+			      enum policy_mgr_con_mode mode,
+			      uint32_t ext_flags);
 #else
 static inline bool
 policy_mgr_allow_4th_new_freq(struct wlan_objmgr_psoc *psoc,
-			      qdf_freq_t freq1, qdf_freq_t freq2,
-			      qdf_freq_t freq3, qdf_freq_t new_ch_freq)
+			      qdf_freq_t ch_freq,
+			      enum policy_mgr_con_mode mode,
+			      uint32_t ext_flags)
 {
 	return false;
 }
@@ -4459,6 +4491,30 @@ bool policy_mgr_is_mlo_sta_disconnected(struct wlan_objmgr_psoc *psoc,
 					uint8_t vdev_id);
 
 #ifdef WLAN_FEATURE_11BE_MLO
+/*
+ * policy_mgr_get_ml_sta_info_psoc() - Get number of ML STA vdev ids and
+ * freq list
+ * @pm_ctx: pm_ctx ctx
+ * @num_ml_sta: Return number of ML STA present
+ * @num_disabled_ml_sta: Return number of disabled ML STA links
+ * @ml_vdev_lst: Return ML STA vdev id list
+ * @ml_freq_lst: Return ML STA freq list
+ * @num_non_ml: Return number of non-ML STA present
+ * @non_ml_vdev_lst: Return non-ML STA vdev id list
+ * @non_ml_freq_lst: Return non-ML STA freq list
+ *
+ * Return: void
+ */
+void
+policy_mgr_get_ml_sta_info_psoc(struct wlan_objmgr_psoc *psoc,
+				uint8_t *num_ml_sta,
+				uint8_t *num_disabled_ml_sta,
+				uint8_t *ml_vdev_lst,
+				qdf_freq_t *ml_freq_lst,
+				uint8_t *num_non_ml,
+				uint8_t *non_ml_vdev_lst,
+				qdf_freq_t *non_ml_freq_lst);
+
 /**
  * policy_mgr_handle_link_removal_on_vdev() - Handle AP link removal for
  * MLO STA
@@ -4601,10 +4657,10 @@ void policy_mgr_handle_ml_sta_links_on_vdev_down(struct wlan_objmgr_psoc *psoc,
  * policy_mgr_handle_emlsr_sta_concurrency() - Handle concurrency scenarios with
  * EMLSR STA.
  * @psoc: objmgr psoc
- * @vdev: pointer to vdev
- * @ap_coming_up: Check if the new connection request is SAP/P2P GO/NAN
- * @sta_coming_up: Check if the new connection request is STA/P2P Client
- * @emlsr_sta_coming_up: Check if the new connection request is EMLSR STA
+ * @conc_con_coming_up: Indicates if any concurrent connection is coming up
+ * @emlsr_sta_coming_up: Carries true when eMLSR STA is coming up.
+ *			 Carries true when an unsupported concurrency is
+ *			 gone, so that host can let firmware go to eMLSR mode.
  *
  * The API handles concurrency scenarios with existing EMLSR connection when a
  * new connection request is received OR with an existing legacy connection when
@@ -4613,9 +4669,7 @@ void policy_mgr_handle_ml_sta_links_on_vdev_down(struct wlan_objmgr_psoc *psoc,
  * Return: none
  */
 void policy_mgr_handle_emlsr_sta_concurrency(struct wlan_objmgr_psoc *psoc,
-					     struct wlan_objmgr_vdev *vdev,
-					     bool ap_coming_up,
-					     bool sta_coming_up,
+					     bool conc_con_coming_up,
 					     bool emlsr_sta_coming_up);
 
 /**

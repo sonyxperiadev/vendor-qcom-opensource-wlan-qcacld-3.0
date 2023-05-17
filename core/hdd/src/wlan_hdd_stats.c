@@ -2085,6 +2085,7 @@ static void cache_station_stats_cb(struct stats_event *ev, void *cookie)
 			continue;
 		}
 		copy_station_stats_to_adapter(adapter, ev);
+		wlan_hdd_get_peer_rx_rate_stats(adapter);
 		/* dev_put has to be done here */
 		hdd_adapter_dev_put_debug(adapter, dbgid);
 		if (next_adapter)
@@ -3931,6 +3932,63 @@ static QDF_STATUS wlan_hdd_stats_request_needed(struct hdd_adapter *adapter)
 	return QDF_STATUS_SUCCESS;
 }
 #endif /* WLAN_FEATURE_LINK_LAYER_STATS */
+
+/**
+ * __wlan_hdd_cfg80211_connected_chan_stats_request() - stats request for
+ * currently connected channel
+ * @wiphy: Pointer to wiphy
+ * @wdev: Pointer to wdev
+ * @data: Pointer to data
+ * @data_len: Data length
+ *
+ * Return: int
+ */
+static int
+__wlan_hdd_cfg80211_connected_chan_stats_request(struct wiphy *wiphy,
+						 struct wireless_dev *wdev,
+						 const void *data,
+						 int data_len)
+{
+	struct net_device *dev = wdev->netdev;
+	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
+	struct hdd_context *hdd_ctx = wiphy_priv(wiphy);
+	bool is_vdev_connected;
+	enum QDF_OPMODE mode;
+
+	is_vdev_connected = hdd_cm_is_vdev_connected(adapter);
+	mode = adapter->device_mode;
+	if (mode == QDF_STA_MODE && is_vdev_connected) {
+		ucfg_mlme_connected_chan_stats_request(hdd_ctx->psoc,
+						adapter->vdev_id);
+	} else {
+		hdd_debug("vdev %d: reject chan stats req, mode:%d, conn:%d",
+			  adapter->vdev_id , mode, is_vdev_connected);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+int wlan_hdd_cfg80211_connected_chan_stats_req(struct wiphy *wiphy,
+					       struct wireless_dev *wdev,
+					       const void *data,
+					       int data_len)
+{
+	int errno;
+	struct osif_vdev_sync *vdev_sync;
+
+	errno = osif_vdev_sync_op_start(wdev->netdev, &vdev_sync);
+	if (errno)
+		return errno;
+
+	errno = __wlan_hdd_cfg80211_connected_chan_stats_request(wiphy, wdev,
+								 data,
+								 data_len);
+
+	osif_vdev_sync_op_stop(vdev_sync);
+
+	return errno;
+}
 
 #ifdef WLAN_FEATURE_STATS_EXT
 /**
@@ -6340,10 +6398,8 @@ static int wlan_hdd_get_sta_stats(struct wiphy *wiphy,
 
 		if (tx_mcs_index == INVALID_MCS_IDX)
 			tx_mcs_index = 0;
-		if (rx_mcs_index == INVALID_MCS_IDX) {
+		if (rx_mcs_index == INVALID_MCS_IDX)
 			rx_mcs_index = 0;
-			adapter->hdd_stats.class_a_stat.rx_mcs_index = 0;
-		}
 	}
 
 	hdd_debug("[RSSI %d, RLMS %u, rssi high %d, rssi mid %d, rssi low %d]-"
@@ -7552,44 +7608,34 @@ void wlan_hdd_get_peer_rx_rate_stats(struct hdd_adapter *adapter)
 
 	soc = cds_get_context(QDF_MODULE_ID_SOC);
 
-	/*
-	 *  If througput is high, do not get rx rate
-	 *  info to avoid the performance penalty
-	 */
-	if (cdp_get_bus_lvl_high(soc))
-		return;
-
 	peer_stats = qdf_mem_malloc(sizeof(*peer_stats));
 	if (!peer_stats)
 		return;
 
 	peer_mac_addr = adapter->session.station.conn_info.bssid.bytes;
 
+	/*
+	 * If failed to get RX rates info, assign an invalid value to the
+	 * preamble, used to tell driver to report max rates. The rx_rate
+	 * and rx_mcs_index are also assigned with tx_rate and tx_mcs_index
+	 * if they are invalid after ASSOC/REASSOC/ROAMING
+	 */
 	status = cdp_host_get_peer_stats(soc,
 					 adapter->vdev_id,
 					 peer_mac_addr,
 					 peer_stats);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		qdf_mem_free(peer_stats);
+	if (qdf_unlikely(QDF_IS_STATUS_ERROR(status)) ||
+	    qdf_unlikely(peer_stats->rx.last_rx_rate == 0)) {
+		hdd_debug("No rates, reporting max rate, rx mcs=%d, status=%d",
+			  adapter->hdd_stats.class_a_stat.rx_mcs_index, status);
 		adapter->hdd_stats.class_a_stat.rx_preamble = INVALID_PREAMBLE;
-		osif_err("cdp_host_get_peer_stats failed. error: %d", status);
-		return;
-	}
-
-	if (qdf_unlikely(peer_stats->rx.last_rx_rate == 0)) {
-		hdd_debug("No rates, mcs=%d, nss=%d, gi=%d, preamble=%d, bw=%d",
-			  peer_stats->rx.mcs_info,
-			  peer_stats->rx.nss_info,
-			  peer_stats->rx.gi_info,
-			  peer_stats->rx.preamble_info,
-			  peer_stats->rx.bw_info);
-
-		/*
-		 * Assign preamble an invalid value used to determine
-		 * whether driver fills in actual rates or max rates
-		 */
-		adapter->hdd_stats.class_a_stat.rx_preamble = INVALID_PREAMBLE;
-
+		if (adapter->hdd_stats.class_a_stat.rx_mcs_index ==
+			INVALID_MCS_IDX) {
+			adapter->hdd_stats.class_a_stat.rx_rate =
+				adapter->hdd_stats.class_a_stat.tx_rate;
+			adapter->hdd_stats.class_a_stat.rx_mcs_index =
+				adapter->hdd_stats.class_a_stat.tx_mcs_index;
+		}
 		qdf_mem_free(peer_stats);
 		return;
 	}

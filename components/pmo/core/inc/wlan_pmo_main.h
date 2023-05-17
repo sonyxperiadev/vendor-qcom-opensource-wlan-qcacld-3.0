@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -109,7 +110,7 @@ QDF_STATUS pmo_psoc_close(struct wlan_objmgr_psoc *psoc);
  * pmo_get_vdev_bss_peer_mac_addr() - API to get bss peer mac address
  * @vdev: objmgr vdev
  * @bss_peer_mac_address: bss peer mac address
- *.
+ *
  * Helper function to  get bss peer mac address
  *
  * Return: if success pmo vdev ctx else NULL
@@ -382,6 +383,30 @@ pmo_intersect_packet_filter(struct pmo_psoc_priv_obj *psoc_ctx)
 	return psoc_ctx->psoc_cfg.packet_filter_enabled &&
 		psoc_ctx->caps.packet_filter;
 }
+
+/**
+ * pmo_get_vdev_bridge_addr() - API to get Bridge mac address
+ * @vdev: vdev object
+ * @bridgeaddr: Bridge mac address
+ *
+ * Helper function to get Bridge mac address
+ *
+ * Return: if success pmo vdev ctx else NULL
+ */
+QDF_STATUS pmo_get_vdev_bridge_addr(struct wlan_objmgr_vdev *vdev,
+				    struct qdf_mac_addr *bridgeaddr);
+
+/**
+ * pmo_set_vdev_bridge_addr() - API to set Bridge mac address
+ * @vdev: vdev object
+ * @bridgeaddr: Bridge mac address
+ *
+ * API to set the Bridge MAC address
+ *
+ * Return: if success pmo vdev ctx else NULL
+ */
+QDF_STATUS pmo_set_vdev_bridge_addr(struct wlan_objmgr_vdev *vdev,
+				    struct qdf_mac_addr *bridgeaddr);
 
 #endif /* WLAN_POWER_MANAGEMENT_OFFLOAD */
 

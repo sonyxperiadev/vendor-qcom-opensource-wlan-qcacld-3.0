@@ -961,6 +961,7 @@ QDF_STATUS hdd_chan_change_notify(struct hdd_adapter *adapter,
 	struct wlan_objmgr_vdev *vdev;
 	uint16_t link_id = 0;
 	uint16_t puncture_bitmap = 0;
+	struct hdd_adapter *assoc_adapter;
 
 	if (!mac_handle) {
 		hdd_err("mac_handle is NULL");
@@ -1045,6 +1046,17 @@ QDF_STATUS hdd_chan_change_notify(struct hdd_adapter *adapter,
 	hdd_debug("notify: chan:%d width:%d freq1:%d freq2:%d",
 		  chandef.chan->center_freq, chandef.width,
 		  chandef.center_freq1, chandef.center_freq2);
+
+	if (hdd_adapter_is_link_adapter(adapter)) {
+		hdd_debug("replace link adapter dev with ml adapter dev");
+		assoc_adapter = hdd_adapter_get_mlo_adapter_from_link(adapter);
+		if (!assoc_adapter) {
+			hdd_err("Assoc adapter is NULL");
+			return -EINVAL;
+		}
+		dev = assoc_adapter->dev;
+	}
+
 	wlan_cfg80211_ch_switch_notify(dev, &chandef, link_id,
 				       puncture_bitmap);
 

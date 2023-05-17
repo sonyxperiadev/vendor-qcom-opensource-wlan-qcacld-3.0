@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -109,7 +109,7 @@
 #define PMO_WOW_MAX_EVENT_BM_LEN 4
 
 #define PMO_WOW_FILTERS_ARP_NS		2
-#define PMO_WOW_FILTERS_PKT_OR_APF	5
+#define PMO_WOW_FILTERS_PKT_OR_APF	6
 
 /**
  * pmo_get_and_increment_wow_default_ptrn() -Get and increment wow default ptrn

@@ -2516,7 +2516,7 @@ void os_if_nan_ndi_session_end(struct wlan_objmgr_vdev *vdev)
 	 * call and NDI state remains to created "NAN_DATA_NDI_CREATED_STATE".
 	 */
 	if (state == NAN_DATA_NDI_CREATED_STATE) {
-		osif_err("NDI interface is just created: %u", state);
+		osif_debug("NDI interface is just created: %u", state);
 		return;
 	} else if (state != NAN_DATA_NDI_DELETING_STATE &&
 		   state != NAN_DATA_DISCONNECTED_STATE) {

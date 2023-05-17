@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -170,7 +170,7 @@ void osif_dp_send_tcp_param_update_event(struct wlan_objmgr_psoc *psoc,
 	enum wlan_tp_level next_tp_level = WLAN_SVC_TP_NONE;
 
 	event_len = sizeof(uint8_t) + sizeof(uint8_t) + NLMSG_HDRLEN;
-	pdev = wlan_objmgr_get_pdev_by_id(psoc, 0, WLAN_OSIF_ID);
+	pdev = wlan_objmgr_get_pdev_by_id(psoc, 0, WLAN_DP_ID);
 	if (!pdev)
 		return;
 

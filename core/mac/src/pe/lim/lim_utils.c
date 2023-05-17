@@ -80,6 +80,7 @@
 #include "wlan_cmn_ieee80211.h"
 #include <wlan_cm_api.h>
 #include <wlan_vdev_mgr_utils_api.h>
+#include "parser_api.h"
 
 /** -------------------------------------------------------------
    \fn lim_delete_dialogue_token_list
@@ -8233,29 +8234,22 @@ void lim_set_mlo_caps(struct mac_context *mac, struct pe_session *session,
 }
 
 QDF_STATUS lim_send_mlo_caps_ie(struct mac_context *mac_ctx,
-				struct pe_session *session,
+				struct wlan_objmgr_vdev *vdev,
 				enum QDF_OPMODE device_mode,
 				uint8_t vdev_id)
 {
-	uint8_t mlo_cap_total_len = DOT11F_IE_MLO_IE_MIN_LEN +
-				    EHT_CAP_OUI_LEN + QDF_MAC_ADDR_SIZE;
+
 	QDF_STATUS status_2g, status_5g;
-	uint8_t mlo_caps[DOT11F_IE_MLO_IE_MIN_LEN +
-			 EHT_CAP_OUI_LEN + QDF_MAC_ADDR_SIZE] = {0};
+	struct wlan_mlo_ie mlo_ie;
 
-	mlo_caps[0] = DOT11F_EID_MLO_IE;
-	mlo_caps[1] = DOT11F_IE_MLO_IE_MIN_LEN + 1;
-
-	qdf_mem_copy(&mlo_caps[2], MLO_IE_OUI_TYPE, MLO_IE_OUI_SIZE);
-	lim_set_mlo_caps(mac_ctx, session, mlo_caps, mlo_cap_total_len);
-
+	populate_dot11f_mlo_ie(mac_ctx, vdev, &mlo_ie);
 	status_2g = lim_send_ie(mac_ctx, vdev_id, DOT11F_EID_MLO_IE,
-				CDS_BAND_2GHZ, &mlo_caps[2],
-				EHT_CAP_OUI_LEN + QDF_MAC_ADDR_SIZE);
+				CDS_BAND_2GHZ, &mlo_ie.data[2],
+				mlo_ie.num_data - 2);
 
 	status_5g = lim_send_ie(mac_ctx, vdev_id, DOT11F_EID_MLO_IE,
-				CDS_BAND_5GHZ, &mlo_caps[2],
-				EHT_CAP_OUI_LEN + QDF_MAC_ADDR_SIZE);
+				CDS_BAND_5GHZ, &mlo_ie.data[2],
+				mlo_ie.num_data - 2);
 
 	if (QDF_IS_STATUS_SUCCESS(status_2g) &&
 	    QDF_IS_STATUS_SUCCESS(status_5g)) {
@@ -9280,6 +9274,8 @@ void lim_intersect_ap_emlsr_caps(struct mac_context *mac_ctx,
 		 add_bss->staContext.emlsr_trans_timeout);
 }
 
+#define MAX_MSD_OFDM_ED_THRESHOLD 10
+
 void lim_extract_msd_caps(struct mac_context *mac_ctx,
 			  struct pe_session *session,
 			  struct bss_params *add_bss,
@@ -9319,11 +9315,20 @@ void lim_extract_msd_caps(struct mac_context *mac_ctx,
 				assoc_rsp->mlo_ie.mlo_ie.medium_sync_delay_info.medium_sync_duration;
 			add_bss->staContext.msd_caps.med_sync_ofdm_ed_thresh =
 				assoc_rsp->mlo_ie.mlo_ie.medium_sync_delay_info.medium_sync_ofdm_ed_thresh;
+			if (add_bss->staContext.msd_caps.med_sync_ofdm_ed_thresh >
+			    MAX_MSD_OFDM_ED_THRESHOLD)
+				add_bss->staContext.msd_caps.med_sync_ofdm_ed_thresh = 0;
 			add_bss->staContext.msd_caps.med_sync_max_txop_num =
 				assoc_rsp->mlo_ie.mlo_ie.medium_sync_delay_info.medium_sync_max_txop_num;
 		} else {
-			/* Fill MSD params with zeroes if MSD caps are absent */
-			add_bss->staContext.msd_caps.med_sync_duration = 0;
+			/**
+			 * Fill MSD params with default values if MSD caps are
+			 * absent.
+			 * MSD duration = 5484usec / 32 = 171.
+			 * OFDM ED threshold = 0. FW adds -72 to Host value.
+			 * Maximum number of TXOPs = AP value (default = 0).
+			 */
+			add_bss->staContext.msd_caps.med_sync_duration = 171;
 			add_bss->staContext.msd_caps.med_sync_ofdm_ed_thresh = 0;
 			add_bss->staContext.msd_caps.med_sync_max_txop_num = 0;
 		}
@@ -9550,6 +9555,9 @@ enum rateid lim_get_min_session_txrate(struct pe_session *session)
 		min_rate =  (curr_rate < min_rate) ? curr_rate : min_rate;
 	}
 	pe_debug("supported min_rate: %0x(%d)", min_rate, min_rate);
+
+	if (session->is_oui_auth_assoc_6mbps_2ghz_enable)
+		min_rate = SIR_MAC_RATE_6;
 
 	switch (min_rate) {
 	case SIR_MAC_RATE_1:
