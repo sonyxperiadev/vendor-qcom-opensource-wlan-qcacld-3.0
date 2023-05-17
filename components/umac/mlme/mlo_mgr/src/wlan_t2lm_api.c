@@ -275,7 +275,7 @@ QDF_STATUS t2lm_handle_rx_resp(struct wlan_objmgr_vdev *vdev,
 					break;
 				}
 			} else if (t2lm_rsp.dialog_token == t2lm_req->dialog_token &&
-				   t2lm_rsp.t2lm_resp_type == WLAN_T2LM_RESP_TYPE_DENIED_TID_TO_LINK_MAPPING) {
+				   t2lm_rsp.t2lm_resp_type != WLAN_T2LM_RESP_TYPE_PREFERRED_TID_TO_LINK_MAPPING) {
 				t2lm_debug("T2LM rsp status denied, clear ongoing tid mapping");
 				wlan_t2lm_clear_ongoing_negotiation(peer);
 			}

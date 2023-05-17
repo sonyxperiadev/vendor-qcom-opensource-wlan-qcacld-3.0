@@ -26,6 +26,14 @@
 #include "parser_api.h"
 #include "lim_send_messages.h"
 
+/* T2LM IE Length =
+ * Size of header (2 bytes) +
+ * Length (1 bytes) + t2lm mapping control (2 bytes) +
+ * mapping switch time (2 bytes) + expected duration (3 bytes) +
+ * link mapping of tids (16 bytes)
+ */
+#define T2LM_IE_ACTION_FRAME_MAX_LEN 26
+
 /**
  * struct t2lm_event_data - TID to Link mapping event data
  * @status: qdf status used to indicate if t2lm action frame status

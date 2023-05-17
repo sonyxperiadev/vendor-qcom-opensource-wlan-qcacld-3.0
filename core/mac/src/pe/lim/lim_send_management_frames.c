@@ -60,6 +60,8 @@
 #include "wlan_crypto_global_api.h"
 #include "wlan_connectivity_logging.h"
 #include "lim_mlo.h"
+#include "wlan_mlo_mgr_sta.h"
+#include "wlan_t2lm_api.h"
 
 /**
  *
@@ -6403,7 +6405,7 @@ lim_send_t2lm_action_req_frame(struct wlan_objmgr_vdev *vdev,
 	uint8_t vdev_id = 0;
 	uint8_t tx_flag = 0;
 	struct wlan_ie_tid_to_link_mapping *t2lm_ie;
-	struct wlan_ie_tid_to_link_mapping ie_buf = {0};
+	struct wlan_ie_tid_to_link_mapping *ie_buf;
 	uint8_t *t2lm_frame;
 
 	mac_ctx = cds_get_context(QDF_MODULE_ID_PE);
@@ -6420,23 +6422,33 @@ lim_send_t2lm_action_req_frame(struct wlan_objmgr_vdev *vdev,
 
 	qdf_mem_zero((uint8_t *)&frm, sizeof(frm));
 
+	ie_buf = qdf_mem_malloc(sizeof(uint8_t) * T2LM_IE_ACTION_FRAME_MAX_LEN);
+
+	if (!ie_buf) {
+		pe_err("Malloc failed");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
 	t2lm_ie = (struct wlan_ie_tid_to_link_mapping *)&frm.t2lm_ie[0].data;
-	t2lm_frame = wlan_mlo_add_t2lm_ie((uint8_t *)&ie_buf,
+	t2lm_frame = wlan_mlo_add_t2lm_ie((uint8_t *)ie_buf,
 					  t2lm_neg,
 					  vdev);
 	if (!t2lm_frame) {
 		pe_debug("Failed to populate T2LM IE");
+		qdf_mem_free(ie_buf);
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	frm.t2lm_ie[0].num_data = ie_buf.elem_len - 1;
+	frm.t2lm_ie[0].num_data = ie_buf->elem_len - 1;
 
-	pe_debug("Dump T2LM IE buff len %d", ie_buf.elem_len);
-	qdf_trace_hex_dump(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG, &ie_buf,
-			   ie_buf.elem_len +  sizeof(struct ie_header));
+	pe_debug("Dump T2LM IE buff len %d", ie_buf->elem_len);
+	qdf_trace_hex_dump(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG, ie_buf,
+			   ie_buf->elem_len +  sizeof(struct ie_header));
 
-	qdf_mem_copy(&frm.t2lm_ie[0].data, &ie_buf.data,
+	qdf_mem_copy(&frm.t2lm_ie[0].data, ie_buf->data,
 		     frm.t2lm_ie[0].num_data);
+
+	qdf_mem_free(ie_buf);
 
 	frm.Category.category = args->category;
 	frm.Action.action = args->action;
