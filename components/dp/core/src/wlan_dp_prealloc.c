@@ -335,8 +335,11 @@ static struct  dp_consistent_prealloc g_dp_consistent_allocs[] = {
 #define NON_CACHEABLE 0
 #define CACHEABLE 1
 
-#define TX_DIRECT_LINK_CE_BUF_PAGES 4
-#define TX_DIRECT_LINK_BUF_PAGES    190
+#define DIRECT_LINK_CE_RX_BUF_SIZE  256
+#define DIRECT_LINK_DEFAULT_BUF_SZ  2048
+#define TX_DIRECT_LINK_BUF_NUM      380
+#define TX_DIRECT_LINK_CE_BUF_NUM   8
+#define RX_DIRECT_LINK_CE_BUF_NUM   30
 
 static struct  dp_multi_page_prealloc g_dp_multi_page_allocs[] = {
 	/* 4 TX DESC pools */
@@ -404,10 +407,12 @@ static struct  dp_multi_page_prealloc g_dp_multi_page_allocs[] = {
 	 0, NON_CACHEABLE, { 0 } },
 #endif
 #ifdef FEATURE_DIRECT_LINK
-	{QDF_DP_TX_DIRECT_LINK_CE_BUF_TYPE, qdf_page_size,
-	 TX_DIRECT_LINK_CE_BUF_PAGES, 0, NON_CACHEABLE, { 0 } },
-	{QDF_DP_TX_DIRECT_LINK_BUF_TYPE, qdf_page_size,
-	 TX_DIRECT_LINK_BUF_PAGES, 0, NON_CACHEABLE, { 0 } },
+	{QDF_DP_TX_DIRECT_LINK_CE_BUF_TYPE, DIRECT_LINK_DEFAULT_BUF_SZ,
+	 TX_DIRECT_LINK_CE_BUF_NUM, 0, NON_CACHEABLE, { 0 } },
+	{QDF_DP_TX_DIRECT_LINK_BUF_TYPE, DIRECT_LINK_DEFAULT_BUF_SZ,
+	 TX_DIRECT_LINK_BUF_NUM, 0, NON_CACHEABLE, { 0 } },
+	{QDF_DP_RX_DIRECT_LINK_CE_BUF_TYPE, DIRECT_LINK_CE_RX_BUF_SIZE,
+	 RX_DIRECT_LINK_CE_BUF_NUM, 0, NON_CACHEABLE, { 0 } },
 #endif
 };
 
