@@ -382,13 +382,13 @@ dp_wfds_get_desc_type_from_mem_arena(enum wlan_qmi_wfds_mem_arenas mem_arena)
 {
 	switch (mem_arena) {
 	case QMI_WFDS_MEM_ARENA_TX_BUFFERS:
-		return DP_TX_DIRECT_LINK_BUF_TYPE;
+		return QDF_DP_TX_DIRECT_LINK_BUF_TYPE;
 	case QMI_WFDS_MEM_ARENA_CE_TX_MSG_BUFFERS:
-		return DP_TX_DIRECT_LINK_CE_BUF_TYPE;
+		return QDF_DP_TX_DIRECT_LINK_CE_BUF_TYPE;
 	default:
 		dp_debug("No desc type for mem arena %d", mem_arena);
 		qdf_assert(0);
-		return DP_DESC_TYPE_MAX;
+		return QDF_DP_DESC_TYPE_MAX;
 	}
 }
 
@@ -413,7 +413,7 @@ dp_wfds_alloc_mem_arena(struct dp_direct_link_wfds_context *dl_wfds,
 
 	desc_type = dp_wfds_get_desc_type_from_mem_arena(mem_arena);
 
-	if (desc_type != DP_DESC_TYPE_MAX) {
+	if (desc_type != QDF_DP_DESC_TYPE_MAX) {
 		elem_per_page = qdf_page_size / entry_size;
 		num_pages = num_entries / elem_per_page;
 		if (num_entries % elem_per_page)
