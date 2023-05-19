@@ -5795,6 +5795,18 @@ void policy_mgr_handle_emlsr_sta_concurrency(struct wlan_objmgr_psoc *psoc,
 					    num_mlo, mlo_vdev_lst);
 }
 
+static bool
+policy_mgr_is_emlsr_sta_concurrency_present(struct wlan_objmgr_psoc *psoc)
+{
+	uint8_t num_mlo = 0;
+
+	if (policy_mgr_is_mlo_in_mode_emlsr(psoc, NULL, &num_mlo) &&
+	    num_mlo < policy_mgr_get_connection_count(psoc))
+		return true;
+
+	return false;
+}
+
 static uint8_t
 policy_mgr_get_affected_links_for_sta_sta(struct wlan_objmgr_psoc *psoc,
 					  uint8_t num_ml, qdf_freq_t *freq_list,
@@ -7160,9 +7172,8 @@ void policy_mgr_activate_mlo_links(struct wlan_objmgr_psoc *psoc,
 	policy_mgr_debug("active vdev cnt: %d, inactive vdev cnt: %d",
 			 active_vdev_cnt, inactive_vdev_cnt);
 
-	if (policy_mgr_is_mlo_in_mode_emlsr(psoc, NULL, NULL) &&
-	    active_vdev_cnt > 1 &&
-	    policy_mgr_get_connection_count(psoc) > ml_vdev_cnt) {
+	if (active_vdev_cnt &&
+	    policy_mgr_is_emlsr_sta_concurrency_present(psoc)) {
 		policy_mgr_debug("Concurrency exists, cannot enter EMLSR mode");
 		goto done;
 	}
