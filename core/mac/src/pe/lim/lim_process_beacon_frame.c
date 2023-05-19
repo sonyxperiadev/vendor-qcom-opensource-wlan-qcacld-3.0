@@ -42,6 +42,7 @@
 #include "wlan_mlo_mgr_roam.h"
 #include "lim_mlo.h"
 #include "wlan_mlo_mgr_sta.h"
+#include "wlan_cm_api.h"
 #ifdef WLAN_FEATURE_11BE_MLO
 #include <cds_ieee80211_common.h>
 #endif
@@ -379,7 +380,8 @@ void lim_process_beacon_eht(struct mac_context *mac_ctx,
 	if (!des_chan || !IS_WLAN_PHYMODE_EHT(des_chan->ch_phymode))
 		return;
 
-	lim_process_beacon_eht_op(session, bcn_ptr);
+	if (wlan_cm_is_vdev_connected(vdev))
+		lim_process_beacon_eht_op(session, bcn_ptr);
 
 	if (mlo_is_mld_sta(vdev))
 		/* handle beacon IE for 802.11be mlo case */
