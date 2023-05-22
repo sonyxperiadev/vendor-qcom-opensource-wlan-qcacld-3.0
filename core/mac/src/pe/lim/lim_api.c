@@ -2883,7 +2883,7 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 	struct pe_session *ft_session_ptr;
 	uint8_t session_id;
 	uint8_t *reassoc_resp;
-	tpDphHashNode curr_sta_ds;
+	tpDphHashNode curr_sta_ds = NULL, sta_ds = NULL;
 	uint16_t aid;
 	struct bss_params *add_bss_params;
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
@@ -3014,28 +3014,17 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 		(struct bss_params *) ft_session_ptr->ftPEContext.pAddBssReq;
 	add_bss_params = ft_session_ptr->ftPEContext.pAddBssReq;
 	lim_delete_tdls_peers(mac_ctx, session_ptr);
-	curr_sta_ds = dph_lookup_hash_entry(mac_ctx, session_ptr->bssId, &aid,
-					    &session_ptr->dph.dphHashTable);
-	if (!curr_sta_ds && !is_multi_link_roam(roam_sync_ind_ptr)) {
+	sta_ds = dph_lookup_hash_entry(mac_ctx, session_ptr->bssId, &aid,
+				       &session_ptr->dph.dphHashTable);
+	if (!sta_ds && !is_multi_link_roam(roam_sync_ind_ptr)) {
 		pe_err("LFR3:failed to lookup hash entry");
 		ft_session_ptr->bRoamSynchInProgress = false;
-		return status;
-	}
-
-	session_ptr->limSmeState = eLIM_SME_IDLE_STATE;
-	if (curr_sta_ds) {
-		lim_mlo_notify_peer_disconn(session_ptr, curr_sta_ds);
-		lim_mlo_roam_delete_link_peer(session_ptr, curr_sta_ds);
-		lim_cleanup_rx_path(mac_ctx, curr_sta_ds, session_ptr, false);
-		lim_delete_dph_hash_entry(mac_ctx, curr_sta_ds->staAddr, aid,
-					  session_ptr);
+		goto roam_sync_fail;
 	}
 
 	/* update OBSS scan param */
 	pe_roam_fill_obss_scan_param(session_ptr, ft_session_ptr);
 
-	pe_delete_session(mac_ctx, session_ptr);
-	session_ptr = NULL;
 	curr_sta_ds = dph_add_hash_entry(mac_ctx,
 					 bssid.bytes,
 					 DPH_STA_HASH_INDEX_PEER,
@@ -3044,7 +3033,7 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 		pe_err("LFR3:failed to add hash entry for "QDF_MAC_ADDR_FMT,
 		       QDF_MAC_ADDR_REF(add_bss_params->staContext.staMac));
 		ft_session_ptr->bRoamSynchInProgress = false;
-		return status;
+		goto roam_sync_fail;
 	}
 
 	if (roam_sync_ind_ptr->auth_status == ROAM_AUTH_STATUS_AUTHENTICATED)
@@ -3062,7 +3051,7 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 						reassoc_resp,
 						roam_sync_ind_ptr->reassoc_resp_length);
 		if (QDF_IS_STATUS_ERROR(status))
-			return status;
+			goto roam_sync_fail;
 	}
 	else
 		lim_process_assoc_rsp_frame(mac_ctx, reassoc_resp,
@@ -3092,7 +3081,8 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 				qdf_mem_malloc(ric_tspec_len);
 		if (!roam_sync_ind_ptr->ric_tspec_data) {
 			ft_session_ptr->bRoamSynchInProgress = false;
-			return QDF_STATUS_E_NOMEM;
+			status = QDF_STATUS_E_NOMEM;
+			goto roam_sync_fail;
 		}
 
 		if (ft_session_ptr->ricData) {
@@ -3124,7 +3114,34 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 	ft_session_ptr->limSmeState = eLIM_SME_LINK_EST_STATE;
 	ft_session_ptr->limPrevSmeState = ft_session_ptr->limSmeState;
 	ft_session_ptr->bRoamSynchInProgress = false;
+
+	/* Cleanup the old session */
+	session_ptr->limSmeState = eLIM_SME_IDLE_STATE;
+	if (sta_ds) {
+		lim_mlo_notify_peer_disconn(session_ptr, sta_ds);
+		lim_mlo_roam_delete_link_peer(session_ptr, sta_ds);
+		lim_cleanup_rx_path(mac_ctx, sta_ds, session_ptr, false);
+		lim_delete_dph_hash_entry(mac_ctx, sta_ds->staAddr, aid,
+					  session_ptr);
+	}
+	pe_delete_session(mac_ctx, session_ptr);
 	return QDF_STATUS_SUCCESS;
+
+roam_sync_fail:
+	pe_err("Roam sync failure status %d session vdev %d", status,
+	       session_ptr->vdev_id);
+	/*
+	 * Cleanup the new session upon roam sync failure.
+	 * Retain the old session for graceful HO failure handling.
+	 */
+	if (curr_sta_ds) {
+		lim_cleanup_rx_path(mac_ctx, curr_sta_ds, ft_session_ptr,
+				    false);
+		lim_delete_dph_hash_entry(mac_ctx, curr_sta_ds->staAddr,
+					  curr_sta_ds->assocId, ft_session_ptr);
+	}
+	pe_delete_session(mac_ctx, ft_session_ptr);
+	return status;
 }
 #endif
 
