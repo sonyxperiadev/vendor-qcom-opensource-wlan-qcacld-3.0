@@ -1871,8 +1871,8 @@ wma_create_peer_validate_mld_address(tp_wma_handle wma,
 				status = QDF_STATUS_SUCCESS;
 			}
 		} else {
-			wma_debug("Allow ML peer on same ML dev context");
-			status = QDF_STATUS_SUCCESS;
+			wma_debug("ML Peer exists on same VDEV %d", vdev_id);
+			status = QDF_STATUS_E_ALREADY;
 		}
 	} else if (mlo_mgr_ml_peer_exist_on_diff_ml_ctx(peer_mld_addr,
 							&vdev_id)) {
