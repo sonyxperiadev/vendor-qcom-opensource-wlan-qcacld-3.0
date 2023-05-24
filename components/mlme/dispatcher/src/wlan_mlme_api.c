@@ -6779,8 +6779,9 @@ enum phy_ch_width wlan_mlme_convert_vht_op_bw_to_phy_ch_width(
 		phy_bw = CH_WIDTH_80MHZ;
 	else if (channel_width == WLAN_VHTOP_CHWIDTH_160)
 		phy_bw = CH_WIDTH_160MHZ;
+	/* 80 + 80 not supported */
 	else if (channel_width == WLAN_VHTOP_CHWIDTH_80_80)
-		phy_bw = CH_WIDTH_80P80MHZ;
+		phy_bw = CH_WIDTH_80MHZ;
 
 	return phy_bw;
 }
