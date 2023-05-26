@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -83,7 +83,6 @@ enum nan_discovery_msg_type {
  * @NDP_PEER_DEPARTED: ndp peer departed/deleted
  * @NDP_SCHEDULE_UPDATE: ndp schedule update
  * @NDP_END_ALL: end all NDPs request
- * @NDP_HOST_UPDATE: update host about ndp status
  */
 enum nan_datapath_msg_type {
 	NAN_DATAPATH_INF_CREATE_REQ  = 0,
@@ -103,7 +102,6 @@ enum nan_datapath_msg_type {
 	NDP_PEER_DEPARTED            = 14,
 	NDP_SCHEDULE_UPDATE          = 15,
 	NDP_END_ALL                  = 16,
-	NDP_HOST_UPDATE              = 17,
 };
 
 /**
@@ -763,17 +761,6 @@ struct nan_datapath_sch_update_event {
 	uint32_t num_ndp_instances;
 	struct nan_datapath_channel_info ch[NAN_CH_INFO_MAX_CHANNELS];
 	uint32_t ndp_instances[NDP_NUM_INSTANCE_ID];
-};
-
-/**
- * struct nan_datapath_host_event - ndp host event parameters
- * @vdev: vdev obj associated with the ndp
- * @ndp_termination_in_progress: flag that indicates whether NDPs associated
- * with the given vdev are being terminated
- */
-struct nan_datapath_host_event {
-	struct wlan_objmgr_vdev *vdev;
-	bool ndp_termination_in_progress;
 };
 
 /**
