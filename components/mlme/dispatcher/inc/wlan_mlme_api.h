@@ -1072,13 +1072,34 @@ QDF_STATUS mlme_update_tgt_he_caps_in_cfg(struct wlan_objmgr_psoc *psoc,
 /**
  * wlan_mlme_convert_vht_op_bw_to_phy_ch_width() - convert channel width in VHT
  *                                                 operation IE to phy_ch_width
- * @channel_width: channel width in VHT operation IE. If it is 0, please use HT
- *                 information IE to check whether it is 20MHz or 40MHz.
+ * @channel_width: channel width in VHT operation IE.
+ * @chan_id: channel id
+ * @ccfs0: channel center frequency segment 0
+ * @ccfs0: channel center frequency segment 1
  *
  * Return: phy_ch_width
  */
-enum phy_ch_width wlan_mlme_convert_vht_op_bw_to_phy_ch_width(
-						uint8_t channel_width);
+enum phy_ch_width
+wlan_mlme_convert_vht_op_bw_to_phy_ch_width(uint8_t channel_width,
+					    uint8_t chan_id,
+					    uint8_t ccfs0,
+					    uint8_t ccfs1);
+
+/**
+ * wlan_mlme_convert_he_6ghz_op_bw_to_phy_ch_width() - convert channel width in
+ *                                          he 6ghz peration IE to phy_ch_width
+ * @channel_width: channel width in HE operation IE.
+ * @chan_id: channel id
+ * @ccfs0: channel center frequency segment 0
+ * @ccfs0: channel center frequency segment 1
+ *
+ * Return: phy_ch_width
+ */
+enum phy_ch_width
+wlan_mlme_convert_he_6ghz_op_bw_to_phy_ch_width(uint8_t channel_width,
+						uint8_t chan_id,
+						uint8_t ccfs0,
+						uint8_t ccfs1);
 
 /**
  * wlan_mlme_chan_stats_scan_event_cb() - process connected channel stats

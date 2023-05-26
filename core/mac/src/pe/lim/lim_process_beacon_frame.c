@@ -44,6 +44,8 @@
 #include "wlan_mlo_mgr_sta.h"
 #include "wlan_cm_api.h"
 #include "wlan_mlme_api.h"
+#include "wlan_objmgr_vdev_obj.h"
+#include "wlan_reg_services_api.h"
 #ifdef WLAN_FEATURE_11BE_MLO
 #include <cds_ieee80211_common.h>
 #endif
@@ -267,7 +269,7 @@ void lim_process_beacon_eht_op(struct pe_session *session,
 	tDot11fIEeht_op *eht_op;
 	tDot11fIEhe_op *he_op;
 	uint8_t  ch_width;
-	uint8_t center_freq_diff;
+	uint8_t chan_id;
 
 	if (!bcn_ptr || !session || !session->mac_ctx || !session->vdev) {
 		pe_err("invalid input parameters");
@@ -278,6 +280,9 @@ void lim_process_beacon_eht_op(struct pe_session *session,
 	he_op = &bcn_ptr->he_op;
 	mac_ctx = session->mac_ctx;
 	vdev = session->vdev;
+
+	chan_id = wlan_reg_freq_to_chan(wlan_vdev_get_pdev(vdev),
+					bcn_ptr->chan_freq);
 
 	if (wlan_reg_is_24ghz_ch_freq(session->curr_op_freq)) {
 		if (session->force_24ghz_in_ht20)
@@ -312,30 +317,33 @@ void lim_process_beacon_eht_op(struct pe_session *session,
 		ccfs1 = eht_op->ccfs1;
 	} else if (he_op->vht_oper_present) {
 		ch_width = he_op->vht_oper.info.chan_width;
-		ori_bw = wlan_mlme_convert_vht_op_bw_to_phy_ch_width(ch_width);
 		ccfs0 = he_op->vht_oper.info.center_freq_seg0;
 		ccfs1 = he_op->vht_oper.info.center_freq_seg1;
+		ori_bw = wlan_mlme_convert_vht_op_bw_to_phy_ch_width(ch_width,
+								     chan_id,
+								     ccfs0,
+								     ccfs1);
 	} else if (he_op->oper_info_6g_present) {
 		ch_width = he_op->oper_info_6g.info.ch_width;
-		ori_bw = wlan_mlme_convert_eht_op_bw_to_phy_ch_width(ch_width);
 		ccfs0 = he_op->oper_info_6g.info.center_freq_seg0;
 		ccfs1 = he_op->oper_info_6g.info.center_freq_seg1;
+		ori_bw = wlan_mlme_convert_he_6ghz_op_bw_to_phy_ch_width(ch_width,
+									 chan_id,
+									 ccfs0,
+									 ccfs1);
 	} else if (bcn_ptr->VHTOperation.present) {
 		ch_width = bcn_ptr->VHTOperation.chanWidth;
-		ori_bw = wlan_mlme_convert_vht_op_bw_to_phy_ch_width(ch_width);
 		ccfs0 = bcn_ptr->VHTOperation.chan_center_freq_seg0;
 		ccfs1 = bcn_ptr->VHTOperation.chan_center_freq_seg1;
-
+		ori_bw = wlan_mlme_convert_vht_op_bw_to_phy_ch_width(ch_width,
+								     chan_id,
+								     ccfs0,
+								     ccfs1);
 	} else {
 		pe_err("Invalid operation");
 		return;
 	}
 
-	if (!eht_op->eht_op_information_present) {
-		center_freq_diff = abs(ccfs0 - ccfs1);
-		if (center_freq_diff == 8)
-			ori_bw = CH_WIDTH_160MHZ;
-	}
 	status = lim_get_update_eht_bw_puncture_allow(session, ori_bw,
 						      &new_bw,
 						      &update_allow);
