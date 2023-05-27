@@ -1752,6 +1752,17 @@ static void lim_set_chan_sw_puncture(tLimChannelSwitchInfo *lim_ch_switch,
 }
 
 /**
+ * lim_reset_csa_puncture() - reset puncture of channel switch
+ * @lim_ch_switch: pointer to tLimChannelSwitchInfo
+ *
+ * Return: void
+ */
+static void lim_reset_csa_puncture(tLimChannelSwitchInfo *lim_ch_switch)
+{
+	lim_ch_switch->puncture_bitmap = 0;
+}
+
+/**
  * lim_is_puncture_same() - Check whether puncture changed
  * @lim_ch_switch: pointer to tLimChannelSwitchInfo
  * @session: pe session
@@ -1761,6 +1772,9 @@ static void lim_set_chan_sw_puncture(tLimChannelSwitchInfo *lim_ch_switch,
 static bool lim_is_puncture_same(tLimChannelSwitchInfo *lim_ch_switch,
 				 struct pe_session *session)
 {
+	pe_debug("vdevid %d puncture, old: 0x%x, new: 0x%x", session->vdev_id,
+		 session->puncture_bitmap,
+		 lim_ch_switch->puncture_bitmap);
 	return lim_ch_switch->puncture_bitmap == session->puncture_bitmap;
 }
 
@@ -1773,6 +1787,10 @@ static void lim_set_csa_chan_param_11be(struct pe_session *session,
 
 static void lim_set_chan_sw_puncture(tLimChannelSwitchInfo *lim_ch_switch,
 				     struct ch_params *ch_param)
+{
+}
+
+static void lim_reset_csa_puncture(tLimChannelSwitchInfo *lim_ch_switch)
 {
 }
 
@@ -1848,6 +1866,8 @@ void lim_handle_sta_csa_param(struct mac_context *mac_ctx,
 	lim_ch_switch->state =
 		eLIM_CHANNEL_SWITCH_PRIMARY_ONLY;
 	lim_ch_switch->ch_width = CH_WIDTH_20MHZ;
+	lim_reset_csa_puncture(lim_ch_switch);
+
 	lim_ch_switch->sec_ch_offset =
 		session_entry->htSecondaryChannelOffset;
 	lim_ch_switch->ch_center_freq_seg0 = 0;
