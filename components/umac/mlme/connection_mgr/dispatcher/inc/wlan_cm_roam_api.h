@@ -159,7 +159,7 @@ wlan_cm_enable_roaming_on_connected_sta(struct wlan_objmgr_pdev *pdev,
 #endif
 
 /**
- * cm_update_associated_ch_width() - to save channel width in mlme priv obj at
+ * cm_update_associated_ch_info() - to save channel info in mlme priv obj at
  * the time of initial connection
  * @vdev: Pointer to vdev
  * @is_update: to distinguish whether update is during connection or
@@ -167,8 +167,8 @@ wlan_cm_enable_roaming_on_connected_sta(struct wlan_objmgr_pdev *pdev,
  *
  * Return: none
  */
-void cm_update_associated_ch_width(struct wlan_objmgr_vdev *vdev,
-				   bool is_update);
+void
+cm_update_associated_ch_info(struct wlan_objmgr_vdev *vdev, bool is_update);
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 #define wlan_is_roam_offload_enabled(lfr) \
@@ -736,14 +736,16 @@ static inline QDF_STATUS wlan_cm_host_roam_start(struct scheduler_msg *msg)
 #endif
 
 /**
- * wlan_cm_get_associated_ch_width() - get associated channel width
+ * wlan_cm_get_associated_ch_info() - get associated channel info
  * @psoc: psoc pointer
  * @vdev_id: vdev id
+ * @chan_info: channel info to get
  *
- * Return: enum phy_ch_width
+ * Return: none
  */
-enum phy_ch_width
-wlan_cm_get_associated_ch_width(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id);
+void wlan_cm_get_associated_ch_info(struct wlan_objmgr_psoc *psoc,
+				    uint8_t vdev_id,
+				    struct connect_chan_info *chan_info);
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 /**

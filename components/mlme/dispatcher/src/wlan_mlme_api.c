@@ -6714,6 +6714,11 @@ wlan_mlme_send_ch_width_update_with_notify(struct wlan_objmgr_psoc *psoc,
 	QDF_STATUS status;
 	enum phy_ch_width associated_ch_width;
 	struct wlan_channel *des_chan;
+	struct mlme_legacy_priv *mlme_priv;
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv)
+		return QDF_STATUS_E_INVAL;
 
 	des_chan = wlan_vdev_mlme_get_des_chan(vdev);
 	if (!des_chan)
@@ -6725,8 +6730,10 @@ wlan_mlme_send_ch_width_update_with_notify(struct wlan_objmgr_psoc *psoc,
 		return QDF_STATUS_E_NOSUPPORT;
 	}
 
-	associated_ch_width = wlan_cm_get_associated_ch_width(psoc, vdev_id);
-	if (ch_width > associated_ch_width) {
+	associated_ch_width =
+		mlme_priv->connect_info.chan_info_orig.ch_width_orig;
+	if (associated_ch_width == CH_WIDTH_INVALID ||
+	    ch_width > associated_ch_width) {
 		mlme_debug("vdev %d: Invalid new chwidth:%d, assoc ch_width:%d",
 			   vdev_id, ch_width, associated_ch_width);
 		return QDF_STATUS_E_INVAL;

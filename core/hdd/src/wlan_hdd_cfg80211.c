@@ -25609,25 +25609,44 @@ static void wlan_hdd_fill_subband_scan_info(struct hdd_context *hdd_ctx,
 	uint8_t idx, info_index, freq_info_num;
 	enum phy_ch_width ch_width;
 	const struct bonded_channel_freq *range = NULL;
-	uint32_t start_freq, end_freq;
+	qdf_freq_t start_freq, end_freq, sec_2g_freq;
+	uint8_t vdev_id = info->subband_info.vdev_id;
+	struct connect_chan_info chan_info_orig;
 
-	ch_width = ucfg_cm_get_associated_ch_width(hdd_ctx->psoc,
-						   info->subband_info.vdev_id);
+	ucfg_cm_get_associated_ch_info(hdd_ctx->psoc, vdev_id, &chan_info_orig);
+	ch_width = chan_info_orig.ch_width_orig;
 	if (ch_width == CH_WIDTH_INVALID) {
-		hdd_debug("vdev %d: Invalid ch width",
-			  info->subband_info.vdev_id);
+		hdd_debug("vdev %d: Invalid ch width", vdev_id);
 		return;
 	}
 
 	if (ch_width == CH_WIDTH_20MHZ) {
 		start_freq = info->freq;
 		end_freq = info->freq;
+	} else if (wlan_reg_is_24ghz_ch_freq(info->freq) &&
+		   ch_width == CH_WIDTH_40MHZ) {
+		sec_2g_freq = chan_info_orig.sec_2g_freq;
+		if (!sec_2g_freq) {
+			mlme_debug("vdev %d : Invalid sec 2g freq for freq:%d",
+				   info->subband_info.vdev_id, info->freq);
+			return;
+		}
+
+		hdd_debug("vdev %d :assoc freq %d sec_2g_freq:%d, bw %d",
+			  info->subband_info.vdev_id, info->freq,
+			  sec_2g_freq, ch_width);
+		if (info->freq > sec_2g_freq) {
+			start_freq = sec_2g_freq;
+			end_freq = info->freq;
+		} else {
+			start_freq = info->freq;
+			end_freq = sec_2g_freq;
+		}
 	} else {
 		range = wlan_reg_get_bonded_chan_entry(info->freq, ch_width, 0);
 		if (!range) {
 			hdd_err("vdev %d: bonded_chan_array is NULL for freq %d, ch_width %d",
-				info->subband_info.vdev_id, info->freq,
-				ch_width);
+				vdev_id, info->freq, ch_width);
 			return;
 		}
 		start_freq = range->start_freq;
@@ -25638,7 +25657,7 @@ static void wlan_hdd_fill_subband_scan_info(struct hdd_context *hdd_ctx,
 	info_index = 0;
 
 	hdd_debug("vdev %d: freq :%d bw %d, range [%d-%d], num_freq:%d",
-		  info->subband_info.vdev_id, info->freq, ch_width, start_freq,
+		  vdev_id, info->freq, ch_width, start_freq,
 		  end_freq, freq_info_num);
 
 	for (idx = 0; idx < NUM_CHANNELS; idx++) {
