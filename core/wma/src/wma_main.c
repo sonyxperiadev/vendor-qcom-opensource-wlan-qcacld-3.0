@@ -1172,6 +1172,18 @@ static inline bool wma_is_tx_chainmask_valid(int value,
 	return false;
 }
 
+#ifdef QCA_MULTIPASS_SUPPORT
+inline bool wma_is_multipass_sap(struct target_psoc_info *tgt_hdl)
+{
+	return tgt_hdl->info.service_ext2_param.is_multipass_sap;
+}
+#else
+inline bool wma_is_multipass_sap(struct target_psoc_info *tgt_hdl)
+{
+	return false;
+}
+#endif
+
 /**
  * wma_convert_ac_value() - map ac setting to the value to be used in FW.
  * @ac_value: ac value to be mapped.

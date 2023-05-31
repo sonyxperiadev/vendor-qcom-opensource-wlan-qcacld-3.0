@@ -5965,6 +5965,19 @@ bool mlme_get_user_ps(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
 	return usr_ps_enable;
 }
 
+bool wlan_mlme_is_multipass_sap(struct wlan_objmgr_psoc *psoc)
+{
+	struct target_psoc_info *info;
+
+	info = wlan_psoc_get_tgt_if_handle(psoc);
+	if (!info) {
+		mlme_legacy_err("target_psoc_info is null");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return wma_is_multipass_sap(info);
+}
+
 QDF_STATUS wlan_mlme_get_phy_max_freq_range(struct wlan_objmgr_psoc *psoc,
 					    uint32_t *low_2ghz_chan,
 					    uint32_t *high_2ghz_chan,

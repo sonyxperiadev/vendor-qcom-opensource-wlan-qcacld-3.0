@@ -2984,6 +2984,21 @@ ucfg_mlme_get_eht_mode(struct wlan_objmgr_psoc *psoc, enum wlan_eht_mode *value)
 }
 
 /**
+ * ucfg_mlme_is_multipass_sap() - check whether FW supports
+ * multipass sap capabilites
+ * @psoc: pointer to psoc object
+ *
+ * Inline UCFG API to be used by HDD/OSIF callers
+ *
+ * Return: True if FW support mulitpass sap
+ */
+static inline bool
+ucfg_mlme_is_multipass_sap(struct wlan_objmgr_psoc *psoc)
+{
+	return  wlan_mlme_is_multipass_sap(psoc);
+}
+
+/**
  * ucfg_mlme_set_emlsr_mode_enabled() - Set eMLSR mode flag
  * @psoc: pointer to psoc object
  * @value: Value that needs to be set from the caller

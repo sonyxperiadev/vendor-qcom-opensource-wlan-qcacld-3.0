@@ -19878,12 +19878,14 @@ void wlan_hdd_set_32bytes_kck_support(struct wiphy *wiphy)
 #endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 5, 0))
-static void wlan_hdd_set_vlan_offload(struct wiphy *wiphy)
+static void wlan_hdd_set_vlan_offload(struct hdd_context *hdd_ctx)
 {
-	wiphy_ext_feature_set(wiphy, NL80211_EXT_FEATURE_VLAN_OFFLOAD);
+	if (ucfg_mlme_is_multipass_sap(hdd_ctx->psoc))
+		wiphy_ext_feature_set(hdd_ctx->wiphy,
+				      NL80211_EXT_FEATURE_VLAN_OFFLOAD);
 }
 #else
-static void wlan_hdd_set_vlan_offload(struct wiphy *wiphy)
+static void wlan_hdd_set_vlan_offload(struct hdd_context *hdd_ctx)
 {
 }
 #endif
@@ -19985,7 +19987,7 @@ void wlan_hdd_update_wiphy(struct hdd_context *hdd_ctx)
 	wlan_hdd_set_ext_kek_kck_support(wiphy);
 	wlan_hdd_set_32bytes_kck_support(wiphy);
 	wlan_hdd_set_nan_secure_mode(wiphy);
-	wlan_hdd_set_vlan_offload(wiphy);
+	wlan_hdd_set_vlan_offload(hdd_ctx);
 }
 
 /**
@@ -21047,10 +21049,14 @@ static int __wlan_hdd_change_station(struct wiphy *wiphy,
 			 * For Encrypted SAP session, this will be done as
 			 * part of eSAP_STA_SET_KEY_EVENT
 			 */
-			status = wlan_hdd_set_vlan_config(adapter,
-							  (uint8_t *)mac);
-			if (QDF_IS_STATUS_ERROR(status))
-				return 0;
+
+			if (ucfg_mlme_is_multipass_sap(hdd_ctx->psoc)) {
+				status =
+				wlan_hdd_set_vlan_config(adapter,
+							 (uint8_t *)mac);
+				if (QDF_IS_STATUS_ERROR(status))
+					return 0;
+			}
 
 			if (ap_ctx->encryption_type !=
 			    eCSR_ENCRYPT_TYPE_NONE) {
@@ -21554,11 +21560,13 @@ done:
 					     key_index, cipher);
 
 		if (!pairwise) {
-			soc_txrx_handle =
+			if (ucfg_mlme_is_multipass_sap(hdd_ctx->psoc)) {
+				soc_txrx_handle =
 					wlan_psoc_get_dp_handle(hdd_ctx->psoc);
-			 wlan_hdd_set_vlan_groupkey(soc_txrx_handle,
-						    wlan_vdev_get_id(vdev),
-						    params, key_index);
+				 wlan_hdd_set_vlan_groupkey(soc_txrx_handle,
+							    wlan_vdev_get_id(vdev),
+							    params, key_index);
+			}
 		}
 
 		break;
