@@ -20931,7 +20931,7 @@ wlan_hdd_set_vlan_config(struct hdd_adapter *adapter,
 					   STA_INFO_SOFTAP_GET_STA_INFO);
 
 	if (!sta_info) {
-		hdd_err("Failed to find right station MAC:",
+		hdd_err("Failed to find right station MAC:"
 			QDF_MAC_ADDR_FMT,
 			QDF_MAC_ADDR_REF((uint8_t *)mac));
 			return QDF_STATUS_E_INVAL;
