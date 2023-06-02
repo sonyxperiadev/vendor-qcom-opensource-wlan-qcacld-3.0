@@ -99,6 +99,19 @@ QDF_STATUS if_mgr_connect_start(struct wlan_objmgr_vdev *vdev,
 	if (!ucfg_nan_is_sta_nan_ndi_4_port_allowed(psoc))
 		ucfg_nan_check_and_disable_unsupported_ndi(psoc,
 							   false);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS if_mgr_connect_active(struct wlan_objmgr_vdev *vdev,
+				 struct if_mgr_event_data *event_data)
+{
+	struct wlan_objmgr_pdev *pdev;
+
+	pdev = wlan_vdev_get_pdev(vdev);
+	if (!pdev)
+		return QDF_STATUS_E_FAILURE;
+
 	if (!wlan_vdev_mlme_is_mlo_link_vdev(vdev)) {
 		/*
 		 * In case of STA+STA concurrency, firmware might try to roam
