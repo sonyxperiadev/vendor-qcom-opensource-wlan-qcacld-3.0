@@ -14709,32 +14709,34 @@ void sme_set_he_bw_cap(mac_handle_t mac_handle, uint8_t vdev_id,
 	mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_5 = 0;
 	mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_6 = 0;
 
+	mac_ctx->he_cap_2g.chan_width_0 = 0;
+	mac_ctx->he_cap_2g.chan_width_1 = 0;
+	mac_ctx->he_cap_2g.chan_width_2 = 0;
+	mac_ctx->he_cap_2g.chan_width_3 = 0;
+	mac_ctx->he_cap_2g.chan_width_4 = 0;
+	mac_ctx->he_cap_2g.chan_width_5 = 0;
+	mac_ctx->he_cap_2g.chan_width_6 = 0;
+
+	mac_ctx->he_cap_5g.chan_width_0 = 0;
+	mac_ctx->he_cap_5g.chan_width_1 = 0;
+	mac_ctx->he_cap_5g.chan_width_2 = 0;
+	mac_ctx->he_cap_5g.chan_width_3 = 0;
+	mac_ctx->he_cap_5g.chan_width_4 = 0;
+	mac_ctx->he_cap_5g.chan_width_5 = 0;
+	mac_ctx->he_cap_5g.chan_width_6 = 0;
+
 	switch (chwidth) {
 	case eHT_CHANNEL_WIDTH_20MHZ:
-		qdf_mem_copy(&mac_ctx->he_cap_2g,
-			     &mac_ctx->mlme_cfg->he_caps.dot11_he_cap,
-			     sizeof(tDot11fIEhe_cap));
-		qdf_mem_copy(&mac_ctx->he_cap_5g,
-			     &mac_ctx->mlme_cfg->he_caps.dot11_he_cap,
-			     sizeof(tDot11fIEhe_cap));
 		break;
 	case eHT_CHANNEL_WIDTH_40MHZ:
 		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_0 = 1;
-		qdf_mem_copy(&mac_ctx->he_cap_2g,
-			     &mac_ctx->mlme_cfg->he_caps.dot11_he_cap,
-			     sizeof(tDot11fIEhe_cap));
-		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_0 = 0;
 		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_1 = 1;
-		qdf_mem_copy(&mac_ctx->he_cap_5g,
-			     &mac_ctx->mlme_cfg->he_caps.dot11_he_cap,
-			     sizeof(tDot11fIEhe_cap));
-		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_0 = 1;
+		mac_ctx->he_cap_2g.chan_width_0 = 1;
+		mac_ctx->he_cap_5g.chan_width_1 = 1;
 		break;
 	case eHT_CHANNEL_WIDTH_80MHZ:
 		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_1 = 1;
-		qdf_mem_copy(&mac_ctx->he_cap_5g,
-			     &mac_ctx->mlme_cfg->he_caps.dot11_he_cap,
-			     sizeof(tDot11fIEhe_cap));
+		mac_ctx->he_cap_5g.chan_width_1 = 1;
 		break;
 	case eHT_CHANNEL_WIDTH_160MHZ:
 	case eHT_CHANNEL_WIDTH_320MHZ:
@@ -14744,11 +14746,16 @@ void sme_set_he_bw_cap(mac_handle_t mac_handle, uint8_t vdev_id,
 		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.rx_he_mcs_map_160) =
 		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.rx_he_mcs_map_lt_80;
 		*((uint16_t *)
+		mac_ctx->he_cap_5g.rx_he_mcs_map_160) =
+		mac_ctx->he_cap_5g.rx_he_mcs_map_lt_80;
+		*((uint16_t *)
 		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.tx_he_mcs_map_160) =
 		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.tx_he_mcs_map_lt_80;
-		qdf_mem_copy(&mac_ctx->he_cap_5g,
-			     &mac_ctx->mlme_cfg->he_caps.dot11_he_cap,
-			     sizeof(tDot11fIEhe_cap));
+		*((uint16_t *)
+		mac_ctx->he_cap_5g.tx_he_mcs_map_160) =
+		mac_ctx->he_cap_5g.tx_he_mcs_map_lt_80;
+		mac_ctx->he_cap_5g.chan_width_1 = 1;
+		mac_ctx->he_cap_5g.chan_width_2 = 1;
 		break;
 	default:
 		sme_debug("Config BW %d not handled", chwidth);
