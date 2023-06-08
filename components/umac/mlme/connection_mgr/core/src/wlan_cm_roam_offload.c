@@ -7326,7 +7326,7 @@ cm_send_rso_stop(struct wlan_objmgr_vdev *vdev)
 	start_timer = cm_roam_offload_enabled(wlan_vdev_get_psoc(vdev));
 
 	cm_roam_state_change(wlan_vdev_get_pdev(vdev), wlan_vdev_get_id(vdev),
-			     WLAN_ROAM_RSO_STOPPED, REASON_DRIVER_DISABLED,
+			     WLAN_ROAM_RSO_STOPPED, REASON_DISCONNECTED,
 			     &send_resp, start_timer);
 	/*
 	 * RSO stop resp is not supported or RSO STOP timer/req failed,
