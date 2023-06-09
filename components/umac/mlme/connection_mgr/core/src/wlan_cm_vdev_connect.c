@@ -1498,9 +1498,9 @@ static void cm_process_connect_complete(struct wlan_objmgr_psoc *psoc,
 	    QDF_HAS_PARAM(ucast_cipher, WLAN_CRYPTO_CIPHER_WEP_104) ||
 	    QDF_HAS_PARAM(ucast_cipher, WLAN_CRYPTO_CIPHER_WEP))) {
 		cm_csr_set_ss_none(vdev_id);
-		if (wlan_vdev_mlme_is_mlo_link_vdev(vdev))
+		if (wlan_vdev_mlme_is_mlo_vdev(vdev))
 			mlo_enable_rso(pdev, vdev, rsp);
-		else if (!wlan_vdev_mlme_is_mlo_vdev(vdev))
+		else
 			cm_roam_start_init_on_connect(pdev, vdev_id);
 	} else {
 		if (rsp->is_wps_connection)
