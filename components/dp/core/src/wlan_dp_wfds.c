@@ -21,6 +21,7 @@
 #include "pld_common.h"
 #include "wlan_objmgr_psoc_obj.h"
 #include <qdf_mem.h>
+#include "wlan_dp_prealloc.h"
 
 static struct dp_direct_link_wfds_context *gp_dl_wfds_ctx;
 
@@ -368,14 +369,124 @@ dp_wfds_event_post(struct dp_direct_link_wfds_context *dl_wfds,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef DP_MEM_PRE_ALLOC
+/**
+ * dp_wfds_get_desc_type_from_mem_arena() - Get descriptor type for the memory
+ *  arena
+ * @mem_arena: memory arena
+ *
+ * Return: DP descriptor type
+ */
+static uint32_t
+dp_wfds_get_desc_type_from_mem_arena(enum wlan_qmi_wfds_mem_arenas mem_arena)
+{
+	switch (mem_arena) {
+	case QMI_WFDS_MEM_ARENA_TX_BUFFERS:
+		return DP_TX_DIRECT_LINK_BUF_TYPE;
+	case QMI_WFDS_MEM_ARENA_CE_TX_MSG_BUFFERS:
+		return DP_TX_DIRECT_LINK_CE_BUF_TYPE;
+	default:
+		dp_debug("No desc type for mem arena %d", mem_arena);
+		qdf_assert(0);
+		return DP_DESC_TYPE_MAX;
+	}
+}
+
+/**
+ * dp_wfds_alloc_mem_arena() - Allocate memory for the arena
+ * @dl_wfds: Direct Link QMI context
+ * @mem_arena: memory arena
+ * @entry_size: element size
+ * @num_entries: number of elements
+ *
+ * Return: None
+ */
+static void
+dp_wfds_alloc_mem_arena(struct dp_direct_link_wfds_context *dl_wfds,
+			enum wlan_qmi_wfds_mem_arenas mem_arena,
+			uint16_t entry_size, uint16_t num_entries)
+{
+	qdf_device_t qdf_ctx = dl_wfds->direct_link_ctx->dp_ctx->qdf_dev;
+	uint32_t desc_type;
+	uint32_t elem_per_page;
+	uint32_t num_pages;
+
+	desc_type = dp_wfds_get_desc_type_from_mem_arena(mem_arena);
+
+	if (desc_type != DP_DESC_TYPE_MAX) {
+		elem_per_page = qdf_page_size / entry_size;
+		num_pages = num_entries / elem_per_page;
+		if (num_entries % elem_per_page)
+			num_pages++;
+
+		dp_prealloc_get_multi_pages(desc_type, qdf_page_size,
+					    num_pages,
+					    &dl_wfds->mem_arena_pages[mem_arena],
+					    false);
+	}
+
+	if (!dl_wfds->mem_arena_pages[mem_arena].num_pages)
+		qdf_mem_multi_pages_alloc(qdf_ctx,
+					  &dl_wfds->mem_arena_pages[mem_arena],
+					  entry_size, num_entries, 0, false);
+}
+
+/**
+ * dp_wfds_free_mem_arena() - Free memory for the arena
+ * @dl_wfds: Direct Link QMI context
+ * @mem_arena: memory arena
+ *
+ * Return: None
+ */
+static void
+dp_wfds_free_mem_arena(struct dp_direct_link_wfds_context *dl_wfds,
+		       enum wlan_qmi_wfds_mem_arenas mem_arena)
+{
+	qdf_device_t qdf_ctx = dl_wfds->direct_link_ctx->dp_ctx->qdf_dev;
+	uint32_t desc_type;
+
+	if (dl_wfds->mem_arena_pages[mem_arena].is_mem_prealloc) {
+		desc_type = dp_wfds_get_desc_type_from_mem_arena(mem_arena);
+		dp_prealloc_put_multi_pages(desc_type,
+					  &dl_wfds->mem_arena_pages[mem_arena]);
+	} else {
+		qdf_mem_multi_pages_free(qdf_ctx,
+					 &dl_wfds->mem_arena_pages[mem_arena],
+					 0, false);
+	}
+}
+#else
+static void
+dp_wfds_alloc_mem_arena(struct dp_direct_link_wfds_context *dl_wfds,
+			enum wlan_qmi_wfds_mem_arenas mem_arena,
+			uint16_t entry_size, uint16_t num_entries)
+{
+	qdf_device_t qdf_ctx = dl_wfds->direct_link_ctx->dp_ctx->qdf_dev;
+
+	qdf_mem_multi_pages_alloc(qdf_ctx,
+				  &dl_wfds->mem_arena_pages[mem_arena],
+				  entry_size, num_entries, 0, false);
+}
+
+static void
+dp_wfds_free_mem_arena(struct dp_direct_link_wfds_context *dl_wfds,
+		       enum wlan_qmi_wfds_mem_arenas mem_arena)
+{
+	qdf_device_t qdf_ctx = dl_wfds->direct_link_ctx->dp_ctx->qdf_dev;
+
+	qdf_mem_multi_pages_free(qdf_ctx,
+				 &dl_wfds->mem_arena_pages[mem_arena],
+				 0, false);
+}
+#endif
+
 void
 dp_wfds_handle_request_mem_ind(struct wlan_qmi_wfds_mem_ind_msg *mem_msg)
 {
 	struct dp_direct_link_wfds_context *dl_wfds = gp_dl_wfds_ctx;
-	qdf_device_t qdf_ctx = dl_wfds->direct_link_ctx->dp_ctx->qdf_dev;
 	uint8_t i;
 
-	if (!dl_wfds || !qdf_ctx)
+	if (!dl_wfds)
 		return;
 
 	dp_debug("Received request mem indication from QMI server");
@@ -391,17 +502,14 @@ dp_wfds_handle_request_mem_ind(struct wlan_qmi_wfds_mem_ind_msg *mem_msg)
 		if (i == QMI_WFDS_MEM_ARENA_CE_RX_MSG_BUFFERS)
 			continue;
 
-		qdf_mem_multi_pages_alloc(qdf_ctx,
-					 &dl_wfds->mem_arena_pages[i],
-					 mem_msg->mem_arena_info[i].entry_size,
-					 mem_msg->mem_arena_info[i].num_entries,
-					 0, false);
+		dp_wfds_alloc_mem_arena(dl_wfds, i,
+					mem_msg->mem_arena_info[i].entry_size,
+					mem_msg->mem_arena_info[i].num_entries);
+
 		if (!dl_wfds->mem_arena_pages[i].num_pages) {
 			while (--i >= 0 &&
 			       dl_wfds->mem_arena_pages[i].num_pages)
-				qdf_mem_multi_pages_free(qdf_ctx,
-					&dl_wfds->mem_arena_pages[i],
-					0, false);
+				dp_wfds_free_mem_arena(dl_wfds, i);
 
 			qdf_mem_free(dl_wfds->mem_arena_pages);
 			dl_wfds->mem_arena_pages = NULL;
@@ -503,7 +611,7 @@ void dp_wfds_del_server(void)
 				       mp_info->dma_pages[page_idx].page_p_addr,
 				       mp_info->page_size);
 
-			qdf_mem_multi_pages_free(qdf_ctx, mp_info, 0, false);
+			dp_wfds_free_mem_arena(dl_wfds, i);
 		}
 
 		qdf_mem_free(dl_wfds->mem_arena_pages);

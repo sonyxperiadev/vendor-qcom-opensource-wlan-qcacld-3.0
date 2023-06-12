@@ -318,6 +318,8 @@ wlan_hdd_sae_update_mld_addr(struct cfg80211_external_auth_params *params,
 	}
 
 	qdf_mem_copy(params->mld_addr, mld_addr.bytes, QDF_MAC_ADDR_SIZE);
+	hdd_debug("Sending MLD:" QDF_MAC_ADDR_FMT" to userspace",
+		  QDF_MAC_ADDR_REF(mld_addr.bytes));
 
 end:
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_HDD_ID_OBJ_MGR);
@@ -2205,7 +2207,8 @@ static void hdd_roam_channel_switch_handler(struct hdd_adapter *adapter,
 				hdd_ctx->pdev, sta_ctx->conn_info.bssid.bytes,
 				&connected_vdev))
 			notify = false;
-		else if (adapter->vdev_id != connected_vdev)
+		else if (adapter->vdev_id != connected_vdev ||
+			 !hdd_cm_is_vdev_connected(adapter))
 			notify = false;
 	}
 	if (notify) {

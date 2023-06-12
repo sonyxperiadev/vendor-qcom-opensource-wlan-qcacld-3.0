@@ -186,6 +186,7 @@ endif
 
 ifeq ($(CONFIG_BERYLLIUM), y)
 	CONFIG_FEATURE_AST := n
+	CONFIG_DP_TX_PACKET_INSPECT_FOR_ILP := y
 endif
 
 ifeq ($(CONFIG_CLD_HL_SDIO_CORE), y)

@@ -3760,15 +3760,22 @@ static bool csr_is_sae_akm_present(tDot11fIERSN * const rsn_ie)
 static bool csr_is_sae_peer_allowed(struct mac_context *mac_ctx,
 				    struct assoc_ind *assoc_ind,
 				    struct csr_roam_session *session,
-				    tSirMacAddr peer_mac_addr,
 				    tDot11fIERSN *rsn_ie,
 				    enum wlan_status_code *mac_status_code)
 {
 	bool is_allowed = false;
+	uint8_t *peer_mac_addr;
 
 	/* Allow the peer if it's SAE authenticated */
 	if (assoc_ind->is_sae_authenticated)
 		return true;
+
+	/* Use peer MLD address to find PMKID
+	 * if MLD address is valid
+	 */
+	peer_mac_addr = assoc_ind->peer_mld_addr;
+	if (qdf_is_macaddr_zero((struct qdf_mac_addr *)peer_mac_addr))
+		peer_mac_addr = assoc_ind->peerMacAddr;
 
 	/* Allow the peer with valid PMKID */
 	if (!rsn_ie->pmkid_count) {
@@ -4033,7 +4040,6 @@ csr_roam_chk_lnk_assoc_ind(struct mac_context *mac_ctx, tSirSmeRsp *msg_ptr)
 			    (csr_is_sae_akm_present(&rsn_ie) &&
 			     !csr_is_sae_peer_allowed(mac_ctx, pAssocInd,
 						      session,
-						      pAssocInd->peerMacAddr,
 						      &rsn_ie,
 						      &mac_status_code))) {
 				status = QDF_STATUS_E_INVAL;

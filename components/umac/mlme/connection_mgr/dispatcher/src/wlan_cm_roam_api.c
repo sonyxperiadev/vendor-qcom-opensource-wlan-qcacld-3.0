@@ -2130,7 +2130,7 @@ wlan_cm_get_associated_ch_width(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
 
 	if (!vdev) {
 		mlme_err("vdev%d: vdev object is NULL", vdev_id);
-		goto release;
+		goto ret;
 	}
 
 	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
@@ -2141,6 +2141,7 @@ wlan_cm_get_associated_ch_width(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
 	mlme_debug("vdev %d: associated_ch_width:%d", vdev_id, ch_width);
 release:
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_NB_ID);
+ret:
 	return ch_width;
 }
 

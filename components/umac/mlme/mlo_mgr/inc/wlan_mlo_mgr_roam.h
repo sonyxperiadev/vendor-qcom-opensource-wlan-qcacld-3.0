@@ -376,10 +376,22 @@ wlan_mlo_roam_abort_on_link(struct wlan_objmgr_psoc *psoc,
  * This api will check if all the requested links are  in CM connected
  * state.
  *
- * Return: QDF_STATUS
+ * Return: bool, true: all links of mld connected
  */
 bool
 mlo_check_if_all_links_up(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * mlo_check_if_all_vdev_up - Check if all vdev are up
+ * @vdev: vdev pointer
+ *
+ * This api will check if all the requested vdev are  in up
+ * state.
+ *
+ * Return: bool, true: all assoc/link vdevs of mld in UP state
+ */
+bool
+mlo_check_if_all_vdev_up(struct wlan_objmgr_vdev *vdev);
 
 /**
  * mlo_roam_set_link_id - set link id post roaming
@@ -423,6 +435,17 @@ mlo_is_roaming_in_progress(struct wlan_objmgr_psoc *psoc,
 QDF_STATUS
 mlo_add_all_link_probe_rsp_to_scan_db(struct wlan_objmgr_psoc *psoc,
 			      struct roam_scan_candidate_frame *rcvd_frame);
+
+/**
+ * mlo_is_enable_roaming_on_connected_sta_allowed() - whether connected STA is
+ *                                                    allowed to enable roaming
+ *                                                    if link vdev disconnects
+ * @vdev: vdev object
+ *
+ * Return true if connected STA is allowed to enable roaming, false otherwise.
+ */
+bool
+mlo_is_enable_roaming_on_connected_sta_allowed(struct wlan_objmgr_vdev *vdev);
 #else /* WLAN_FEATURE_11BE_MLO */
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 static inline
@@ -538,6 +561,12 @@ mlo_check_if_all_links_up(struct wlan_objmgr_vdev *vdev)
 	return false;
 }
 
+static inline bool
+mlo_check_if_all_vdev_up(struct wlan_objmgr_vdev *vdev)
+{
+	return false;
+}
+
 static inline void
 mlo_roam_set_link_id(struct wlan_objmgr_vdev *vdev,
 		     struct roam_offload_synch_ind *sync_ind)
@@ -582,6 +611,9 @@ static inline uint32_t
 mlo_roam_get_link_freq_from_mac_addr(struct roam_offload_synch_ind *sync_ind,
 				     uint8_t *link_mac_addr)
 {
+	if (sync_ind)
+		return sync_ind->chan_freq;
+
 	return 0;
 }
 
@@ -590,6 +622,12 @@ mlo_is_roaming_in_progress(struct wlan_objmgr_psoc *psoc,
 			   uint8_t vdev_id)
 {
 	return false;
+}
+
+static inline bool
+mlo_is_enable_roaming_on_connected_sta_allowed(struct wlan_objmgr_vdev *vdev)
+{
+	return true;
 }
 #endif /* WLAN_FEATURE_11BE_MLO */
 #endif

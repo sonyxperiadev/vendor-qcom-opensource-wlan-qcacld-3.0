@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -537,4 +538,11 @@ target_if_pmo_send_icmp_offload_req(struct wlan_objmgr_psoc *psoc,
 				    struct pmo_icmp_offload *pmo_icmp_req);
 #endif
 
+/**
+ * target_if_pmo_set_wow_enable_ack_failed() - set wow enable ack failure status
+ * @psoc: objmgr psoc
+ *
+ * Return: none
+ */
+void target_if_pmo_set_wow_enable_ack_failed(struct wlan_objmgr_psoc *psoc);
 #endif

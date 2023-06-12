@@ -2477,6 +2477,19 @@ wlan_mlme_set_rf_test_mode_enabled(struct wlan_objmgr_psoc *psoc, bool value);
 
 #ifdef CONFIG_BAND_6GHZ
 /**
+ * wlan_mlme_is_disable_vlp_sta_conn_to_sp_ap_enabled() - Get the disable vlp
+ *                                                       STA conn to SP AP flag
+ * @psoc: psoc context
+ * @value: Enable/Disable value ptr.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_mlme_is_disable_vlp_sta_conn_to_sp_ap_enabled(
+						struct wlan_objmgr_psoc *psoc,
+						bool *value);
+
+/**
  * wlan_mlme_is_standard_6ghz_conn_policy_enabled() - Get the 6 GHz standard
  *                                                    connection policy flag
  * @psoc: psoc context
@@ -2488,50 +2501,21 @@ QDF_STATUS
 wlan_mlme_is_standard_6ghz_conn_policy_enabled(struct wlan_objmgr_psoc *psoc,
 					       bool *value);
 
-/**
- * wlan_mlme_is_relaxed_6ghz_conn_policy_enabled() - Get the 6ghz relaxed
- *                                                   connection policy flag
- * @psoc: psoc context
- * @value: Enable/Disable value ptr.
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS
-wlan_mlme_is_relaxed_6ghz_conn_policy_enabled(struct wlan_objmgr_psoc *psoc,
-					      bool *value);
-
-/**
- * wlan_mlme_set_relaxed_6ghz_conn_policy_enabled() - Set the 6ghz relaxed
- *                                                    connection policy flag
- * @psoc: psoc context
- * @value: True/False
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS
-wlan_mlme_set_relaxed_6ghz_conn_policy(struct wlan_objmgr_psoc *psoc,
-				       bool value);
 #else
+static inline QDF_STATUS
+wlan_mlme_is_disable_vlp_sta_conn_to_sp_ap_enabled(
+						struct wlan_objmgr_psoc *psoc,
+						bool *value)
+{
+	*value = false;
+	return QDF_STATUS_SUCCESS;
+}
+
 static inline QDF_STATUS
 wlan_mlme_is_standard_6ghz_conn_policy_enabled(struct wlan_objmgr_psoc *psoc,
 					       bool *value)
 {
 	*value = false;
-	return QDF_STATUS_SUCCESS;
-}
-
-static inline QDF_STATUS
-wlan_mlme_is_relaxed_6ghz_conn_policy_enabled(struct wlan_objmgr_psoc *psoc,
-					      bool *value)
-{
-	*value = false;
-	return QDF_STATUS_SUCCESS;
-}
-
-static inline QDF_STATUS
-wlan_mlme_set_relaxed_6ghz_conn_policy(struct wlan_objmgr_psoc *psoc,
-				       bool value)
-{
 	return QDF_STATUS_SUCCESS;
 }
 #endif

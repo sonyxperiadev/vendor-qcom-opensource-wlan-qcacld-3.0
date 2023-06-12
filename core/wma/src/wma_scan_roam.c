@@ -158,7 +158,7 @@ QDF_STATUS wma_update_channel_list(WMA_HANDLE handle,
 	int i, len;
 	struct scan_chan_list_params *scan_ch_param;
 	struct channel_param *chan_p;
-	struct ch_params ch_params;
+	struct ch_params ch_params = {0};
 
 	len = sizeof(struct channel_param) * chan_list->numChan +
 		offsetof(struct scan_chan_list_params, ch_param[0]);

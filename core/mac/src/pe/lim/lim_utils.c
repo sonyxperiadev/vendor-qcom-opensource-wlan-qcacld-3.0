@@ -8224,6 +8224,8 @@ void lim_set_mlo_caps(struct mac_context *mac, struct pe_session *session,
 		mlo_ie_info->eml_capab_present = dot11_cap.eml_capab_present;
 		mlo_ie_info->mld_capab_and_op_present = dot11_cap.mld_capab_and_op_present;
 		mlo_ie_info->mld_id_present = dot11_cap.mld_id_present;
+		mlo_ie_info->ext_mld_capab_and_op_present =
+				dot11_cap.ext_mld_capab_and_op_present;
 		mlo_ie_info->reserved_1 = dot11_cap.reserved_1;
 		mlo_ie_info->common_info_length = dot11_cap.common_info_length;
 		qdf_mem_copy(&mlo_ie_info->mld_mac_addr,
@@ -8936,6 +8938,10 @@ void lim_set_eht_caps(struct mac_context *mac, struct pe_session *session,
 		eht_cap->eht_trs_support = dot11_cap.eht_trs_support;
 		eht_cap->txop_return_support_txop_share_m2 =
 			dot11_cap.txop_return_support_txop_share_m2;
+		eht_cap->two_bqrs_support =
+			dot11_cap.two_bqrs_support;
+		eht_cap->eht_link_adaptation_support =
+			dot11_cap.eht_link_adaptation_support;
 		eht_cap->support_320mhz_6ghz = dot11_cap.support_320mhz_6ghz;
 		eht_cap->ru_242tone_wt_20mhz = dot11_cap.ru_242tone_wt_20mhz;
 		eht_cap->ndp_4x_eht_ltf_3dot2_us_gi =
@@ -9001,6 +9007,12 @@ void lim_set_eht_caps(struct mac_context *mac, struct pe_session *session,
 			dot11_cap.rx_1k_qam_in_wider_bw_dl_ofdma;
 		eht_cap->rx_4k_qam_in_wider_bw_dl_ofdma =
 			dot11_cap.rx_4k_qam_in_wider_bw_dl_ofdma;
+		eht_cap->limited_cap_support_20mhz =
+			dot11_cap.limited_cap_support_20mhz;
+		eht_cap->triggered_mu_bf_full_bw_fb_and_dl_mumimo =
+			dot11_cap.triggered_mu_bf_full_bw_fb_and_dl_mumimo;
+		eht_cap->mru_support_20mhz =
+			dot11_cap.mru_support_20mhz;
 
 		if ((is_band_2g && !dot11_he_cap.chan_width_0) ||
 			(!is_band_2g && !dot11_he_cap.chan_width_1 &&
@@ -11122,7 +11134,7 @@ lim_set_tpc_power(struct mac_context *mac_ctx, struct pe_session *session)
 	    session->opmode == QDF_P2P_GO_MODE)
 		mlme_obj->reg_tpc_obj.num_pwr_levels = 0;
 
-	lim_calculate_tpc(mac_ctx, session, false, 0, false);
+	lim_calculate_tpc(mac_ctx, session, false);
 
 	tx_ops->set_tpc_power(mac_ctx->psoc, session->vdev_id,
 			      &mlme_obj->reg_tpc_obj);
@@ -11265,7 +11277,7 @@ lim_is_power_change_required_for_sta(struct mac_context *mac_ctx,
 
 	wlan_reg_get_cur_6g_ap_pwr_type(mac_ctx->pdev, &ap_power_type_6g);
 
-	if (sta_session->ap_power_type_6g == REG_INDOOR_AP &&
+	if (sta_session->best_6g_power_type == REG_INDOOR_AP &&
 	    channel_state & CHANNEL_STATE_ENABLE &&
 	    ap_power_type_6g == REG_VERY_LOW_POWER_AP) {
 		pe_debug("Change the power type of STA from LPI to VLP");

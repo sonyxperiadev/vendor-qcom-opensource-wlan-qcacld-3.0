@@ -733,6 +733,7 @@ struct wireless_dev *__wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
 	int ret;
 	bool eht_capab;
 	struct hdd_adapter_create_param create_params = {0};
+	uint8_t *device_address = NULL;
 
 	hdd_enter();
 
@@ -835,7 +836,6 @@ struct wireless_dev *__wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
 					   name_assign_type, true,
 					   &create_params);
 	} else {
-		uint8_t *device_address;
 		if (strnstr(name, "p2p", 3) && mode == QDF_STA_MODE) {
 			hdd_debug("change mode to p2p device");
 			mode = QDF_P2P_DEVICE_MODE;
@@ -878,6 +878,8 @@ struct wireless_dev *__wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
 	return adapter->dev->ieee80211_ptr;
 
 close_adapter:
+	if (device_address)
+		wlan_hdd_release_intf_addr(hdd_ctx, device_address);
 	hdd_close_adapter(hdd_ctx, adapter, true);
 
 	return ERR_PTR(-EINVAL);

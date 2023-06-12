@@ -34,6 +34,7 @@
 #include "connection_mgr/core/src/wlan_cm_roam.h"
 #include <wlan_mlo_mgr_sta.h>
 #include "wlan_mlo_mgr_roam.h"
+#include "wlan_t2lm_api.h"
 
 static void cm_abort_connect_request_timers(struct wlan_objmgr_vdev *vdev)
 {
@@ -91,6 +92,8 @@ QDF_STATUS cm_disconnect_start_ind(struct wlan_objmgr_vdev *vdev,
 		mlme_debug("Free copied reassoc rsp");
 		mlo_roam_free_copied_reassoc_rsp(vdev);
 	}
+
+	wlan_t2lm_clear_all_tid_mapping(vdev);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -249,7 +252,6 @@ cm_disconnect_complete_ind(struct wlan_objmgr_vdev *vdev,
 	wlan_tdls_notify_sta_disconnect(vdev_id, false, false, vdev);
 	policy_mgr_decr_session_set_pcl(psoc, op_mode, vdev_id);
 	wlan_clear_mlo_sta_link_removed_flag(vdev);
-	cm_update_associated_ch_width(vdev, false);
 
 	return QDF_STATUS_SUCCESS;
 }
