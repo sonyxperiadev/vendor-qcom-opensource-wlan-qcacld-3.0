@@ -1072,6 +1072,21 @@ QDF_STATUS policy_mgr_decr_active_session(struct wlan_objmgr_psoc *psoc,
 void policy_mgr_decr_session_set_pcl(struct wlan_objmgr_psoc *psoc,
 		enum QDF_OPMODE mode, uint8_t session_id);
 
+/**
+ * polic_mgr_send_pcl_to_fw() - Send PCL to fw
+ * @psoc: PSOC object information
+ * @mode: Adapter mode
+ *
+ * Loop through all existing connections, stop RSO, send PCL to firmware
+ * and start RSO. If Roaming is in progress on any of the interface,
+ * avoid PCL updation as PCL gets updated post roaming.
+ *
+ * Return: None
+ */
+void
+polic_mgr_send_pcl_to_fw(struct wlan_objmgr_psoc *psoc,
+			 enum QDF_OPMODE mode);
+
 #ifdef WLAN_FEATURE_11BE_MLO
 /**
  * policy_mgr_mlo_sta_set_link() - Set link mode for MLO STA
