@@ -86,6 +86,8 @@
 #include "wlan_hdd_ocb.h"
 #include "wlan_hdd_tsf.h"
 
+#include "sap_internal.h"
+
 #include "wlan_hdd_green_ap.h"
 
 #include "wlan_hdd_subnet_detect.h"
@@ -21704,11 +21706,59 @@ wlan_hdd_set_vlan_groupkey(ol_txrx_soc_handle soc_txrx_handle, uint16_t vdev_id,
 		cdp_set_vlan_groupkey(soc_txrx_handle, vdev_id,
 				      params->vlan_id, key_index);
 }
-#else
-static void
-wlan_hdd_set_vlan_groupkey(ol_txrx_soc_handle soc_txrx_handle, uint16_t vdev_id,
-			   struct key_params *params, uint8_t key_index)
+
+static int
+wlan_hdd_add_vlan(struct wlan_objmgr_vdev *vdev, struct sap_context *sap_ctx,
+		  struct key_params *params, uint8_t key_index,
+		  uint8_t *vlan_key_idx)
 {
+	struct wlan_objmgr_psoc *psoc = NULL;
+	ol_txrx_soc_handle soc_txrx_handle;
+	uint16_t *vlan_map = sap_ctx->vlan_map;
+	uint8_t found = 0;
+	int i = 0;
+
+	psoc = wlan_vdev_get_psoc(vdev);
+	if (!psoc) {
+		hdd_err("Unable to get psoc");
+		return -EINVAL;
+	}
+
+	for (i = 0; i < (2 * MAX_VLAN); i += 2) {
+		if (!vlan_map[i] || !vlan_map[i + 1]) {
+			found = 1;
+			break;
+		} else if ((vlan_map[i] == params->vlan_id) ||
+			   (vlan_map[i + 1] == params->vlan_id)) {
+			vlan_map[i] = 0;
+			vlan_map[i + 1] = 0;
+			found = 1;
+			break;
+		}
+	}
+
+	if (found) {
+		soc_txrx_handle = wlan_psoc_get_dp_handle(psoc);
+		vlan_map[i + key_index - 1] = params->vlan_id;
+		wlan_hdd_set_vlan_groupkey(soc_txrx_handle,
+					   wlan_vdev_get_id(vdev),
+					   params,
+					   (i / 2) + 1);
+		*vlan_key_idx = (i + key_index - 1 + 8);
+		return 0;
+	}
+
+	hdd_err("Unable to find group key mapping for vlan_id: %d",
+		params->vlan_id);
+	return -EINVAL;
+}
+#else
+static int
+wlan_hdd_add_vlan(struct wlan_objmgr_vdev *vdev, struct sap_context *sap_ctx,
+		  struct key_params *params, uint8_t key_index,
+		  uint8_t *vlan_key_idx)
+{
+	return key_index;
 }
 #endif
 
@@ -21726,8 +21776,9 @@ static int wlan_hdd_add_key_vdev(mac_handle_t mac_handle,
 	int errno;
 	enum wlan_crypto_cipher_type cipher;
 	bool ft_mode = false;
+	uint8_t keyidx;
 	struct hdd_ap_ctx *hdd_ap_ctx;
-	ol_txrx_soc_handle soc_txrx_handle;
+	struct sap_context *sap_ctx;
 
 	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 
@@ -21819,18 +21870,20 @@ done:
 			hdd_err("don't need install key during auth");
 			return -EINVAL;
 		}
-		errno = wlan_hdd_add_key_sap(adapter, pairwise,
-					     key_index, cipher);
 
-		if (!pairwise) {
-			if (ucfg_mlme_is_multipass_sap(hdd_ctx->psoc)) {
-				soc_txrx_handle =
-					wlan_psoc_get_dp_handle(hdd_ctx->psoc);
-				 wlan_hdd_set_vlan_groupkey(soc_txrx_handle,
-							    wlan_vdev_get_id(vdev),
-							    params, key_index);
-			}
+		keyidx = key_index;
+
+		if (ucfg_mlme_is_multipass_sap(hdd_ctx->psoc) &&
+		    params->vlan_id) {
+			sap_ctx = hdd_ap_ctx->sap_context;
+			errno = wlan_hdd_add_vlan(vdev, sap_ctx, params,
+						  key_index, &keyidx);
+			if (errno < 0)
+				return errno;
 		}
+
+		errno = wlan_hdd_add_key_sap(adapter, pairwise,
+					     keyidx, cipher);
 
 		break;
 	case QDF_STA_MODE:

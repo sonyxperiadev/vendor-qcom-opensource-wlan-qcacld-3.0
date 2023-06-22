@@ -121,6 +121,7 @@ struct sap_avoid_channels_info {
 };
 #endif /* FEATURE_AP_MCC_CH_AVOIDANCE */
 
+#define MAX_VLAN 4
 struct sap_context {
 
 	/* Include the current channel frequency of AP */
@@ -253,6 +254,9 @@ struct sap_context {
  * is no AP found on these channels
  */
 	bool clean_channel_array[NUM_CHANNELS];
+#endif
+#ifdef QCA_MULTIPASS_SUPPORT
+	uint16_t vlan_map[MAX_VLAN];
 #endif
 };
 
