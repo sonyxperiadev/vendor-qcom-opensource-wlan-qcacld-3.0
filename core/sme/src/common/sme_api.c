@@ -14726,18 +14726,6 @@ void sme_set_he_bw_cap(mac_handle_t mac_handle, uint8_t vdev_id,
 	mac_ctx->he_cap_5g.chan_width_6 = 0;
 
 	switch (chwidth) {
-	case eHT_CHANNEL_WIDTH_20MHZ:
-		break;
-	case eHT_CHANNEL_WIDTH_40MHZ:
-		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_0 = 1;
-		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_1 = 1;
-		mac_ctx->he_cap_2g.chan_width_0 = 1;
-		mac_ctx->he_cap_5g.chan_width_1 = 1;
-		break;
-	case eHT_CHANNEL_WIDTH_80MHZ:
-		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_1 = 1;
-		mac_ctx->he_cap_5g.chan_width_1 = 1;
-		break;
 	case eHT_CHANNEL_WIDTH_160MHZ:
 	case eHT_CHANNEL_WIDTH_320MHZ:
 		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_1 = 1;
@@ -14756,6 +14744,18 @@ void sme_set_he_bw_cap(mac_handle_t mac_handle, uint8_t vdev_id,
 		mac_ctx->he_cap_5g.tx_he_mcs_map_lt_80;
 		mac_ctx->he_cap_5g.chan_width_1 = 1;
 		mac_ctx->he_cap_5g.chan_width_2 = 1;
+		fallthrough;
+	case eHT_CHANNEL_WIDTH_80MHZ:
+		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_1 = 1;
+		mac_ctx->he_cap_5g.chan_width_1 = 1;
+		fallthrough;
+	case eHT_CHANNEL_WIDTH_40MHZ:
+		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_0 = 1;
+		mac_ctx->mlme_cfg->he_caps.dot11_he_cap.chan_width_1 = 1;
+		mac_ctx->he_cap_2g.chan_width_0 = 1;
+		mac_ctx->he_cap_5g.chan_width_1 = 1;
+		fallthrough;
+	case eHT_CHANNEL_WIDTH_20MHZ:
 		break;
 	default:
 		sme_debug("Config BW %d not handled", chwidth);
