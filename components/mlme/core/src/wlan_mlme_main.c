@@ -84,7 +84,7 @@ mlme_fill_freq_in_scan_start_request(struct wlan_objmgr_vdev *vdev,
 	enum phy_ch_width associated_ch_width;
 	uint8_t i;
 	struct chan_list *scan_chan_list;
-	uint16_t first_freq, operation_chan_freq;
+	qdf_freq_t first_freq, operation_chan_freq, sec_2g_freq;
 	char *chan_buff = NULL;
 	uint32_t buff_len, buff_num = 0, chan_count = 0;
 
@@ -93,7 +93,8 @@ mlme_fill_freq_in_scan_start_request(struct wlan_objmgr_vdev *vdev,
 		return QDF_STATUS_E_FAILURE;
 
 	operation_chan_freq = wlan_get_operation_chan_freq(vdev);
-	associated_ch_width = mlme_priv->connect_info.ch_width_orig;
+	associated_ch_width =
+			mlme_priv->connect_info.chan_info_orig.ch_width_orig;
 	if (associated_ch_width == CH_WIDTH_INVALID) {
 		mlme_debug("vdev %d : Invalid associated ch width for freq %d",
 			   req->scan_req.vdev_id, operation_chan_freq);
@@ -111,6 +112,30 @@ mlme_fill_freq_in_scan_start_request(struct wlan_objmgr_vdev *vdev,
 			   associated_ch_width);
 		req->scan_req.chan_list.num_chan = 1;
 		req->scan_req.chan_list.chan[0].freq = operation_chan_freq;
+		return QDF_STATUS_SUCCESS;
+	}
+
+	if (wlan_reg_is_24ghz_ch_freq(operation_chan_freq) &&
+	    associated_ch_width == CH_WIDTH_40MHZ) {
+		sec_2g_freq =
+			mlme_priv->connect_info.chan_info_orig.sec_2g_freq;
+		if (!sec_2g_freq) {
+			mlme_debug("vdev %d : Invalid sec 2g freq for freq: %d",
+				   req->scan_req.vdev_id, operation_chan_freq);
+			return QDF_STATUS_E_FAILURE;
+		}
+
+		if (operation_chan_freq > sec_2g_freq) {
+			req->scan_req.chan_list.chan[0].freq = sec_2g_freq;
+			req->scan_req.chan_list.chan[1].freq =
+							operation_chan_freq;
+		} else {
+			req->scan_req.chan_list.chan[0].freq =
+							operation_chan_freq;
+			req->scan_req.chan_list.chan[1].freq = sec_2g_freq;
+		}
+
+		req->scan_req.chan_list.num_chan = 2;
 		return QDF_STATUS_SUCCESS;
 	}
 
@@ -427,7 +452,8 @@ mlme_fill_freq_in_wide_scan_start_request(struct wlan_objmgr_vdev *vdev,
 	if (!mlme_priv)
 		return QDF_STATUS_E_FAILURE;
 
-	associated_ch_width = mlme_priv->connect_info.ch_width_orig;
+	associated_ch_width =
+		mlme_priv->connect_info.chan_info_orig.ch_width_orig;
 	if (associated_ch_width == CH_WIDTH_INVALID) {
 		mlme_debug("vdev %d :Invalid associated ch_width",
 			   req->scan_req.vdev_id);
@@ -599,6 +625,22 @@ QDF_STATUS mlme_init_rate_config(struct vdev_mlme_obj *vdev_mlme)
 	mlme_priv->mcs_rate_set.max_len =
 		QDF_MIN(CFG_SUPPORTED_MCS_SET_LEN, CFG_STR_DATA_LEN);
 	mlme_priv->mcs_rate_set.len = 0;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS mlme_init_connect_chan_info_config(struct vdev_mlme_obj *vdev_mlme)
+{
+	struct mlme_legacy_priv *mlme_priv;
+
+	mlme_priv = vdev_mlme->ext_vdev_ptr;
+	if (!mlme_priv) {
+		mlme_legacy_err("vdev legacy private object is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	mlme_priv->connect_info.chan_info_orig.ch_width_orig = CH_WIDTH_INVALID;
+	mlme_priv->connect_info.chan_info_orig.sec_2g_freq = 0;
 
 	return QDF_STATUS_SUCCESS;
 }

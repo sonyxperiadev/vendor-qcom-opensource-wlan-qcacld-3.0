@@ -544,7 +544,9 @@ QDF_STATUS policy_mgr_get_hw_mode_from_idx(
 	for (i = 0; i < pm_ctx->num_dbs_hw_modes; i++) {
 		param = pm_ctx->hw_mode.hw_mode_list[i];
 		hw_mode_id = POLICY_MGR_HW_MODE_ID_GET(param);
-		if (hw_mode_id == idx)
+		hw_mode->emlsr_cap = POLICY_MGR_HW_MODE_EMLSR_MODE_GET(param);
+
+		if (hw_mode_id == idx || hw_mode->emlsr_cap)
 			break;
 	}
 	if (i >= pm_ctx->num_dbs_hw_modes) {
@@ -564,7 +566,6 @@ QDF_STATUS policy_mgr_get_hw_mode_from_idx(
 	hw_mode->dbs_cap = POLICY_MGR_HW_MODE_DBS_MODE_GET(param);
 	hw_mode->agile_dfs_cap = POLICY_MGR_HW_MODE_AGILE_DFS_GET(param);
 	hw_mode->sbs_cap = POLICY_MGR_HW_MODE_SBS_MODE_GET(param);
-	hw_mode->emlsr_cap = POLICY_MGR_HW_MODE_EMLSR_MODE_GET(param);
 	if (hw_mode->dbs_cap) {
 		mac0_min_ss = QDF_MIN(hw_mode->mac0_tx_ss, hw_mode->mac0_rx_ss);
 		mac1_min_ss = QDF_MIN(hw_mode->mac1_tx_ss, hw_mode->mac1_rx_ss);
@@ -2937,25 +2938,23 @@ policy_mgr_get_connection_channels(struct wlan_objmgr_psoc *psoc,
 }
 
 /**
- * policy_mgr_set_weight_of_dfs_passive_channels_to_zero() - set weight of dfs
- * and passive channels to 0
+ * policy_mgr_set_weight_of_disabled_inactive_channels_to_zero() - set weight
+ * of disabled and inactive channels to 0
  * @psoc: pointer to soc
- * @pcl_channels: preferred channel list
+ * @pcl_channels: preferred channel freq list
  * @len: length of preferred channel list
  * @weight_list: preferred channel weight list
  * @weight_len: length of weight list
- * This function set the weight of dfs and passive channels to 0
+ * This function set the weight of disabled and inactive channels to 0
  *
  * Return: None
  */
-void policy_mgr_set_weight_of_dfs_passive_channels_to_zero(
+void policy_mgr_set_weight_of_disabled_inactive_channels_to_zero(
 		struct wlan_objmgr_psoc *psoc, uint32_t *pcl_channels,
 		uint32_t *len, uint8_t *weight_list, uint32_t weight_len)
 {
 	uint8_t i;
 	uint32_t orig_channel_count = 0;
-	bool sta_sap_scc_on_dfs_chan;
-	uint32_t sap_count;
 	enum channel_state channel_state;
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
 
@@ -2965,16 +2964,6 @@ void policy_mgr_set_weight_of_dfs_passive_channels_to_zero(
 		return;
 	}
 
-	sta_sap_scc_on_dfs_chan =
-		policy_mgr_is_sta_sap_scc_allowed_on_dfs_chan(psoc);
-	sap_count = policy_mgr_mode_specific_connection_count(psoc,
-			PM_SAP_MODE, NULL);
-	policy_mgr_debug("sta_sap_scc_on_dfs_chan %u, sap_count %u",
-			 sta_sap_scc_on_dfs_chan, sap_count);
-
-	if (!sta_sap_scc_on_dfs_chan || !sap_count)
-		return;
-
 	if (len)
 		orig_channel_count = QDF_MIN(*len, NUM_CHANNELS);
 	else {
@@ -2982,16 +2971,20 @@ void policy_mgr_set_weight_of_dfs_passive_channels_to_zero(
 		return;
 	}
 
-	policy_mgr_debug("Set weight of DFS/passive channels to 0");
+	policy_mgr_debug("Set weight of disabled, inactive channels to 0");
 
 	for (i = 0; i < orig_channel_count; i++) {
-		channel_state = wlan_reg_get_channel_state_for_pwrmode(
+		if (wlan_reg_is_6ghz_chan_freq(pcl_channels[i]) &&
+		    !wlan_reg_is_6ghz_band_set(pm_ctx->pdev)) {
+			weight_list[i] = 0;
+		} else {
+			channel_state = wlan_reg_get_channel_state_for_pwrmode(
 						pm_ctx->pdev, pcl_channels[i],
 						REG_CURRENT_PWR_MODE);
-		if ((channel_state == CHANNEL_STATE_DISABLE) ||
-				(channel_state == CHANNEL_STATE_INVALID))
-			/* Set weight of inactive channels to 0 */
-			weight_list[i] = 0;
+			if (channel_state == CHANNEL_STATE_DISABLE ||
+			    channel_state == CHANNEL_STATE_INVALID)
+				weight_list[i] = 0;
+		}
 	}
 
 	return;
@@ -3861,8 +3854,9 @@ QDF_STATUS policy_mgr_get_channel_list(struct wlan_objmgr_psoc *psoc,
 							 len, pcl_weights,
 							 pcl_sz);
 
-	policy_mgr_set_weight_of_dfs_passive_channels_to_zero(psoc,
+	policy_mgr_set_weight_of_disabled_inactive_channels_to_zero(psoc,
 			pcl_channels, len, pcl_weights, pcl_sz);
+
 end:
 	qdf_mem_free(channel_list);
 	qdf_mem_free(channel_list_24);

@@ -175,6 +175,37 @@ inline QDF_STATUS ucfg_nan_set_active_peers(struct wlan_objmgr_vdev *vdev,
 	return QDF_STATUS_SUCCESS;
 }
 
+/**
+ * ucfg_nan_update_mc_list() - update the multicast list
+ * @vdev: Pointer to VDEV Object
+ *
+ * This function will update the multicast list for NDP peer
+ */
+static void ucfg_nan_update_mc_list(struct wlan_objmgr_vdev *vdev)
+{
+	struct nan_callbacks cb_obj;
+	QDF_STATUS status;
+	struct wlan_objmgr_psoc *psoc = wlan_vdev_get_psoc(vdev);
+
+	if (!psoc) {
+		nan_err("psoc is null");
+		return;
+	}
+
+	status = ucfg_nan_get_callbacks(psoc, &cb_obj);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		nan_err("Couldn't get callback object");
+		return;
+	}
+
+	if (!cb_obj.set_mc_list) {
+		nan_err("set_mc_list callback not registered");
+		return;
+	}
+
+	cb_obj.set_mc_list(vdev);
+}
+
 inline void ucfg_nan_set_peer_mc_list(struct wlan_objmgr_vdev *vdev,
 				      struct qdf_mac_addr peer_mac_addr)
 {
@@ -204,7 +235,7 @@ inline void ucfg_nan_set_peer_mc_list(struct wlan_objmgr_vdev *vdev,
 	}
 	if (list_idx == max_ndp_sessions) {
 		nan_err("Peer multicast address list is full");
-		goto end;
+		qdf_spin_unlock_bh(&priv_obj->lock);
 	}
 	/* Derive peer multicast addr */
 	peer_mac_addr.bytes[0] = 0x33;
@@ -212,8 +243,9 @@ inline void ucfg_nan_set_peer_mc_list(struct wlan_objmgr_vdev *vdev,
 	peer_mac_addr.bytes[2] = 0xff;
 	priv_obj->peer_mc_addr_list[list_idx] = peer_mac_addr;
 
-end:
 	qdf_spin_unlock_bh(&priv_obj->lock);
+
+	ucfg_nan_update_mc_list(vdev);
 }
 
 inline void ucfg_nan_get_peer_mc_list(
@@ -258,7 +290,10 @@ inline void ucfg_nan_clear_peer_mc_list(struct wlan_objmgr_psoc *psoc,
 			break;
 		}
 	}
+
 	qdf_spin_unlock_bh(&priv_obj->lock);
+
+	ucfg_nan_update_mc_list(vdev);
 }
 
 inline uint32_t ucfg_nan_get_active_peers(struct wlan_objmgr_vdev *vdev)
@@ -628,6 +663,8 @@ int ucfg_nan_register_hdd_callbacks(struct wlan_objmgr_psoc *psoc,
 				ucfg_nan_request_process_cb;
 	psoc_obj->cb_obj.nan_concurrency_update =
 				cb_obj->nan_concurrency_update;
+	psoc_obj->cb_obj.set_mc_list = cb_obj->set_mc_list;
+
 	nan_register_sr_concurrency_callback(psoc_obj, cb_obj);
 	return 0;
 }
@@ -956,7 +993,6 @@ QDF_STATUS
 ucfg_nan_disable_ndi(struct wlan_objmgr_psoc *psoc, uint32_t ndi_vdev_id)
 {
 	enum nan_datapath_state curr_ndi_state;
-	struct nan_datapath_host_event *event;
 	struct nan_vdev_priv_obj *ndi_vdev_priv;
 	struct nan_datapath_end_all_ndps req = {0};
 	struct wlan_objmgr_vdev *ndi_vdev;
@@ -964,7 +1000,7 @@ ucfg_nan_disable_ndi(struct wlan_objmgr_psoc *psoc, uint32_t ndi_vdev_id)
 	QDF_STATUS status;
 	int err;
 	static const struct osif_request_params params = {
-		.priv_size = sizeof(struct nan_datapath_host_event),
+		.priv_size = 0,
 		.timeout_ms = 1000,
 	};
 
@@ -1023,18 +1059,11 @@ ucfg_nan_disable_ndi(struct wlan_objmgr_psoc *psoc, uint32_t ndi_vdev_id)
 		goto cleanup;
 	}
 
-	event = osif_request_priv(request);
-	if (!event->ndp_termination_in_progress) {
-		nan_err("Failed to terminate NDP's on NDI");
-		status = QDF_STATUS_E_FAILURE;
-	} else {
-		/*
-		 * Host can assume NDP delete is successful and
-		 * remove policy mgr entry
-		 */
-		policy_mgr_decr_session_set_pcl(psoc, QDF_NDI_MODE,
-						ndi_vdev_id);
-	}
+	/*
+	 * Host can assume NDP delete is successful and
+	 * remove policy mgr entry
+	 */
+	policy_mgr_decr_session_set_pcl(psoc, QDF_NDI_MODE, ndi_vdev_id);
 
 cleanup:
 	/* Restore original NDI state in case of failure */

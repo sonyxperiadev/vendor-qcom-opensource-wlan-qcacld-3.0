@@ -3080,7 +3080,7 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 		     pe_session->vdev_id, QDF_MAC_ADDR_REF(pe_session->bssId),
 		     mac_ctx->mgmtSeqNum);
 
-	min_rid = lim_get_min_session_txrate(pe_session);
+	min_rid = lim_get_min_session_txrate(pe_session, NULL);
 	lim_diag_event_report(mac_ctx, WLAN_PE_DIAG_ASSOC_START_EVENT,
 			      pe_session, QDF_STATUS_SUCCESS, QDF_STATUS_SUCCESS);
 	lim_diag_mgmt_tx_event_report(mac_ctx, mac_hdr,
@@ -3695,7 +3695,7 @@ alloc_packet:
 	    mac_ctx->auth_ack_status != LIM_TX_FAILED)
 		mac_ctx->auth_ack_status = LIM_ACK_NOT_RCD;
 
-	min_rid = lim_get_min_session_txrate(session);
+	min_rid = lim_get_min_session_txrate(session, NULL);
 	peer_rssi = mac_ctx->lim.bss_rssi;
 	lim_diag_mgmt_tx_event_report(mac_ctx, mac_hdr,
 				      session, QDF_STATUS_SUCCESS, QDF_STATUS_SUCCESS);
@@ -6718,7 +6718,8 @@ static void lim_tx_mgmt_frame(struct mac_context *mac_ctx, uint8_t vdev_id,
 	enum rateid min_rid = RATEID_DEFAULT;
 	enum QDF_OPMODE opmode;
 	uint16_t session_id;
-	uint16_t channel_freq = 0;
+	qdf_freq_t channel_freq = 0;
+	qdf_freq_t *pre_auth_freq = NULL;
 
 	opmode = wlan_get_opmode_from_vdev_id(mac_ctx->pdev, vdev_id);
 	if (opmode != QDF_NAN_DISC_MODE) {
@@ -6738,22 +6739,24 @@ static void lim_tx_mgmt_frame(struct mac_context *mac_ctx, uint8_t vdev_id,
 		   session_id, 0);
 
 	if (opmode != QDF_NAN_DISC_MODE) {
-		min_rid = lim_get_min_session_txrate(session);
 		if (fc->subType == SIR_MAC_MGMT_AUTH) {
 			tpSirFTPreAuthReq pre_auth_req;
 			uint16_t auth_algo = *(uint16_t *)(frame +
 						sizeof(tSirMacMgmtHdr));
 
-			if ((auth_algo == eSIR_AUTH_TYPE_SAE) &&
-			    (session->ftPEContext.pFTPreAuthReq)) {
-				pre_auth_req =
-					session->ftPEContext.pFTPreAuthReq;
-				channel_freq =
-					pre_auth_req->pre_auth_channel_freq;
+			if (auth_algo == eSIR_AUTH_TYPE_SAE) {
+				if (session->ftPEContext.pFTPreAuthReq) {
+					pre_auth_req =
+					     session->ftPEContext.pFTPreAuthReq;
+					channel_freq =
+					    pre_auth_req->pre_auth_channel_freq;
+				}
+				pre_auth_freq = &channel_freq;
 			}
 			pe_debug("TX SAE pre-auth frame on freq %d",
 				 channel_freq);
 		}
+		min_rid = lim_get_min_session_txrate(session, pre_auth_freq);
 	}
 
 	qdf_status = wma_tx_frameWithTxComplete(mac_ctx, packet,

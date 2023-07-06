@@ -3910,18 +3910,18 @@ void policy_mgr_check_and_stop_opportunistic_timer(
 	struct wlan_objmgr_psoc *psoc, uint8_t id);
 
 /**
- * policy_mgr_set_weight_of_dfs_passive_channels_to_zero() - set weight of dfs
- * and passive channels to 0
+ * policy_mgr_set_weight_of_disabled_inactive_channels_to_zero() - set weight
+ * of disabled and inactive channels to 0
  * @psoc: pointer to soc
  * @pcl: preferred channel freq list
  * @len: length of preferred channel list
  * @weight_list: preferred channel weight list
  * @weight_len: length of weight list
- * This function set the weight of dfs and passive channels to 0
+ * This function set the weight of disabled and inactive channels to 0
  *
  * Return: None
  */
-void policy_mgr_set_weight_of_dfs_passive_channels_to_zero(
+void policy_mgr_set_weight_of_disabled_inactive_channels_to_zero(
 		struct wlan_objmgr_psoc *psoc, uint32_t *pcl,
 		uint32_t *len, uint8_t *weight_list, uint32_t weight_len);
 /**
@@ -4876,9 +4876,9 @@ bool policy_mgr_is_ll_sap_concurrency_valid(struct wlan_objmgr_psoc *psoc,
  * @discon_freq: disconnect frequency
  * @type: enum indoor_conc_update_type
  *
- * Return: None
+ * Return: True if need to compute pdev current channel list
  */
-void
+bool
 policy_mgr_update_indoor_concurrency(struct wlan_objmgr_psoc *psoc,
 				     uint8_t vdev_id,
 				     uint32_t discon_freq,

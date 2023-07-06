@@ -36,6 +36,38 @@
 #include "wlan_cm_api.h"
 #include "wlan_scan_api.h"
 #include "wlan_mlo_mgr_roam.h"
+#include "wlan_mlo_mgr_sta.h"
+
+#ifdef WLAN_FEATURE_11BE_MLO
+static inline bool
+if_mgr_is_assoc_link_of_vdev(struct wlan_objmgr_pdev *pdev,
+			     struct wlan_objmgr_vdev *vdev,
+			     uint8_t cur_vdev_id)
+{
+	struct wlan_objmgr_vdev *cur_vdev, *assoc_vdev;
+
+	cur_vdev = wlan_objmgr_get_vdev_by_id_from_pdev(pdev, cur_vdev_id,
+							WLAN_IF_MGR_ID);
+	if (!cur_vdev)
+		return false;
+
+	assoc_vdev = wlan_mlo_get_assoc_link_vdev(cur_vdev);
+
+	wlan_objmgr_vdev_release_ref(cur_vdev, WLAN_IF_MGR_ID);
+	if (vdev == assoc_vdev)
+		return true;
+
+	return false;
+}
+#else
+static inline bool
+if_mgr_is_assoc_link_of_vdev(struct wlan_objmgr_pdev *pdev,
+			     struct wlan_objmgr_vdev *vdev,
+			     uint8_t cur_vdev_id)
+{
+	return true;
+}
+#endif
 
 static void if_mgr_enable_roaming_on_vdev(struct wlan_objmgr_pdev *pdev,
 					  void *object, void *arg)
@@ -47,13 +79,16 @@ static void if_mgr_enable_roaming_on_vdev(struct wlan_objmgr_pdev *pdev,
 	vdev_id = wlan_vdev_get_id(vdev);
 	curr_vdev_id = roam_arg->curr_vdev_id;
 
-	if (wlan_vdev_mlme_is_mlo_vdev(vdev))
+	if (wlan_vdev_mlme_get_opmode(vdev) != QDF_STA_MODE)
+		return;
+
+	if (wlan_vdev_mlme_is_mlo_link_vdev(vdev) ||
+	    if_mgr_is_assoc_link_of_vdev(pdev, vdev, curr_vdev_id))
 		return;
 
 	if (curr_vdev_id != vdev_id &&
-	    vdev->vdev_mlme.vdev_opmode == QDF_STA_MODE &&
 	    vdev->vdev_mlme.mlme_state == WLAN_VDEV_S_UP) {
-		ifmgr_debug("Roaming enabled on vdev_id %d", vdev_id);
+		ifmgr_debug("Enable roaming for vdev_id %d", vdev_id);
 		wlan_cm_enable_rso(pdev, vdev_id,
 				   roam_arg->requestor,
 				   REASON_DRIVER_ENABLED);

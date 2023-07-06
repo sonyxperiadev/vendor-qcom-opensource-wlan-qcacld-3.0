@@ -128,29 +128,41 @@ wlan_roam_update_cfg(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 
 #endif
 
-void cm_update_associated_ch_width(struct wlan_objmgr_vdev *vdev,
-				   bool is_update)
+void
+cm_update_associated_ch_info(struct wlan_objmgr_vdev *vdev, bool is_update)
 {
 	struct mlme_legacy_priv *mlme_priv;
 	struct wlan_channel *des_chan;
+	struct connect_chan_info *chan_info_orig;
 
 	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
 	if (!mlme_priv)
 		return;
 
+	chan_info_orig = &mlme_priv->connect_info.chan_info_orig;
 	if (!is_update) {
-		mlme_priv->connect_info.ch_width_orig = CH_WIDTH_INVALID;
-		goto print;
+		chan_info_orig->ch_width_orig = CH_WIDTH_INVALID;
+		return;
 	}
 
 	des_chan = wlan_vdev_mlme_get_des_chan(vdev);
 	if (!des_chan)
 		return;
-	mlme_priv->connect_info.ch_width_orig = des_chan->ch_width;
+	chan_info_orig->ch_width_orig = des_chan->ch_width;
 
-print:
-	mlme_debug("update associated ch width :%d, is_update:%d",
-		   mlme_priv->connect_info.ch_width_orig, is_update);
+	if (WLAN_REG_IS_24GHZ_CH_FREQ(des_chan->ch_freq) &&
+	    des_chan->ch_width == CH_WIDTH_40MHZ) {
+		if (des_chan->ch_cfreq1 == des_chan->ch_freq + BW_10_MHZ)
+			chan_info_orig->sec_2g_freq =
+					des_chan->ch_freq + BW_20_MHZ;
+		if (des_chan->ch_cfreq1 == des_chan->ch_freq - BW_10_MHZ)
+			chan_info_orig->sec_2g_freq =
+					des_chan->ch_freq - BW_20_MHZ;
+	}
+
+	mlme_debug("ch width :%d, ch_freq:%d, ch_cfreq1:%d, sec_2g_freq:%d",
+		   chan_info_orig->ch_width_orig, des_chan->ch_freq,
+		   des_chan->ch_cfreq1, chan_info_orig->sec_2g_freq);
 }
 
 char *cm_roam_get_requestor_string(enum wlan_cm_rso_control_requestor requestor)
@@ -2118,31 +2130,37 @@ QDF_STATUS wlan_cm_update_fils_ft(struct wlan_objmgr_psoc *psoc,
 }
 #endif
 
-enum phy_ch_width
-wlan_cm_get_associated_ch_width(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
+void wlan_cm_get_associated_ch_info(struct wlan_objmgr_psoc *psoc,
+				    uint8_t vdev_id,
+				    struct connect_chan_info *chan_info)
 {
 	struct wlan_objmgr_vdev *vdev;
 	struct mlme_legacy_priv *mlme_priv;
-	enum phy_ch_width ch_width = CH_WIDTH_INVALID;
+
+	chan_info->ch_width_orig = CH_WIDTH_INVALID;
+	chan_info->sec_2g_freq = 0;
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
 						    WLAN_MLME_NB_ID);
 
 	if (!vdev) {
 		mlme_err("vdev%d: vdev object is NULL", vdev_id);
-		goto ret;
+		return;
 	}
 
 	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
 	if (!mlme_priv)
 		goto release;
 
-	ch_width = mlme_priv->connect_info.ch_width_orig;
-	mlme_debug("vdev %d: associated_ch_width:%d", vdev_id, ch_width);
+	chan_info->ch_width_orig =
+			mlme_priv->connect_info.chan_info_orig.ch_width_orig;
+	chan_info->sec_2g_freq =
+			mlme_priv->connect_info.chan_info_orig.sec_2g_freq;
+
+	mlme_debug("vdev %d: associated_ch_width:%d, sec_2g_freq:%d", vdev_id,
+		   chan_info->ch_width_orig, chan_info->sec_2g_freq);
 release:
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_NB_ID);
-ret:
-	return ch_width;
 }
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD

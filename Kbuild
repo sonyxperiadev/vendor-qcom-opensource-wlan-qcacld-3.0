@@ -3310,6 +3310,12 @@ ifeq ($(findstring yes, $(found)), yes)
 ccflags-y += -DCFG80211_EXT_FEATURE_SECURE_NAN
 endif
 
+
+found = $(shell if grep -qF "bool mlo_params_valid;" $(srctree)/include/net/cfg80211.h; then echo "yes" ;else echo "no" ;fi;)
+ifeq ($(findstring yes, $(found)), yes)
+ccflags-y += -DCFG80211_MLD_AP_STA_CONNECT_UPSTREAM_SUPPORT
+endif
+
 ifneq ($(CONFIG_CNSS_QCA6750), y)
 cppflags-$(CONFIG_DIRECT_BUF_RX_ENABLE) += -DDBR_MULTI_SRNG_ENABLE
 endif
@@ -3320,6 +3326,9 @@ ifeq ($(CONFIG_DP_USE_REDUCED_PEER_ID_FIELD_WIDTH), y)
 cppflags-y += -DDP_USE_REDUCED_PEER_ID_FIELD_WIDTH
 endif
 endif
+ccflags-$(CONFIG_DP_MULTIPASS_SUPPORT) += -DQCA_MULTIPASS_SUPPORT
+ccflags-$(CONFIG_DP_MULTIPASS_SUPPORT) += -DWLAN_REPEATER_NOT_SUPPORTED
+ccflags-$(CONFIG_DP_MULTIPASS_SUPPORT) += -DQCA_SUPPORT_PEER_ISOLATION
 
 ifdef CONFIG_WLAN_TWT_SAP_STA_COUNT
 WLAN_TWT_SAP_STA_COUNT ?= 32

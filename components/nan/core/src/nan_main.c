@@ -988,35 +988,16 @@ static QDF_STATUS nan_handle_schedule_update(
 }
 
 /**
- * nan_handle_host_update() - Updates Host about NAN Datapath status
+ * nan_handle_host_update() - extract the vdev from host event
  * @evt: Event data received from firmware
  * @vdev: pointer to vdev
  *
- * Return: status of operation
+ * Return: none
  */
-static QDF_STATUS nan_handle_host_update(struct nan_datapath_host_event *evt,
+static void nan_handle_host_update(struct nan_datapath_host_event *evt,
 					 struct wlan_objmgr_vdev **vdev)
 {
-	struct wlan_objmgr_psoc *psoc;
-	struct nan_psoc_priv_obj *psoc_nan_obj;
-
 	*vdev = evt->vdev;
-	psoc = wlan_vdev_get_psoc(evt->vdev);
-	if (!psoc) {
-		nan_err("psoc is NULL");
-		return QDF_STATUS_E_NULL_VALUE;
-	}
-
-	psoc_nan_obj = nan_get_psoc_priv_obj(psoc);
-	if (!psoc_nan_obj) {
-		nan_err("psoc_nan_obj is NULL");
-		return QDF_STATUS_E_NULL_VALUE;
-	}
-
-	psoc_nan_obj->cb_obj.os_if_ndp_event_handler(psoc, evt->vdev,
-						     NDP_HOST_UPDATE, evt);
-
-	return QDF_STATUS_SUCCESS;
 }
 
 QDF_STATUS nan_discovery_event_handler(struct scheduler_msg *msg)
@@ -1184,6 +1165,12 @@ static QDF_STATUS nan_set_hw_mode(struct wlan_objmgr_psoc *psoc,
 					POLICY_MGR_UPDATE_REASON_NAN_DISCOVERY);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		nan_err("Failed to set or wait for HW mode change");
+		goto pre_enable_failure;
+	}
+
+	if (wlan_util_is_vdev_in_cac_wait(pdev, WLAN_NAN_ID)) {
+		nan_err_rl("cac is in progress");
+		status = QDF_STATUS_E_FAILURE;
 		goto pre_enable_failure;
 	}
 

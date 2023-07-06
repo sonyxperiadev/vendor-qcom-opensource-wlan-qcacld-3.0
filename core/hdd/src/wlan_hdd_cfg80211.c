@@ -19876,6 +19876,20 @@ void wlan_hdd_set_32bytes_kck_support(struct wiphy *wiphy)
 {
 }
 #endif
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 5, 0))
+static void wlan_hdd_set_vlan_offload(struct hdd_context *hdd_ctx)
+{
+	if (ucfg_mlme_is_multipass_sap(hdd_ctx->psoc))
+		wiphy_ext_feature_set(hdd_ctx->wiphy,
+				      NL80211_EXT_FEATURE_VLAN_OFFLOAD);
+}
+#else
+static void wlan_hdd_set_vlan_offload(struct hdd_context *hdd_ctx)
+{
+}
+#endif
+
 /*
  * In this function, wiphy structure is updated after QDF
  * initialization. In wlan_hdd_cfg80211_init, only the
@@ -19973,6 +19987,7 @@ void wlan_hdd_update_wiphy(struct hdd_context *hdd_ctx)
 	wlan_hdd_set_ext_kek_kck_support(wiphy);
 	wlan_hdd_set_32bytes_kck_support(wiphy);
 	wlan_hdd_set_nan_secure_mode(wiphy);
+	wlan_hdd_set_vlan_offload(hdd_ctx);
 }
 
 /**
@@ -20847,6 +20862,131 @@ QDF_STATUS wlan_hdd_send_sta_authorized_event(
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef QCA_MULTIPASS_SUPPORT
+static int
+wlan_hdd_set_peer_vlan_config(struct hdd_adapter *adapter,
+			      struct wlan_objmgr_vdev *vdev,
+			      uint8_t *mac_addr,
+			      uint8_t vlan_id)
+{
+	ol_txrx_soc_handle soc_txrx_handle;
+	cdp_config_param_type val;
+	QDF_STATUS status;
+
+	soc_txrx_handle = wlan_psoc_get_dp_handle(wlan_vdev_get_psoc(vdev));
+
+	cdp_peer_set_vlan_id(soc_txrx_handle,
+			     wlan_vdev_get_id(vdev),
+			     mac_addr, vlan_id);
+
+	val.cdp_peer_param_isolation = true;
+
+	cdp_txrx_set_peer_param(soc_txrx_handle,
+				wlan_vdev_get_id(vdev),
+				mac_addr,
+				CDP_CONFIG_ISOLATION,
+				val);
+
+	status = ucfg_mlme_peer_config_vlan(vdev, mac_addr);
+	if (QDF_IS_STATUS_ERROR(status))
+		return -EINVAL;
+
+	return 0;
+}
+
+static void
+wlan_hdd_set_vlan_id(struct hdd_sta_info_obj *sta_info_list,
+		     uint8_t *mac, struct station_parameters *params)
+{
+	struct hdd_station_info *sta_info;
+
+	if (!params->vlan_id)
+		return;
+
+	sta_info =
+	hdd_get_sta_info_by_mac(sta_info_list,
+				mac,
+				STA_INFO_SOFTAP_GET_STA_INFO);
+	if (!sta_info) {
+		hdd_err("Failed to find right station MAC: "
+			  QDF_MAC_ADDR_FMT,
+			  QDF_MAC_ADDR_REF(uint8_t *)mac);
+		return;
+	}
+
+	sta_info->vlan_id = params->vlan_id;
+
+	hdd_put_sta_info_ref(sta_info_list, &sta_info, true,
+			     STA_INFO_SOFTAP_GET_STA_INFO);
+}
+
+static QDF_STATUS
+wlan_hdd_set_vlan_config(struct hdd_adapter *adapter,
+			 uint8_t *mac)
+{
+	int ret;
+	struct hdd_station_info *sta_info;
+	struct wlan_objmgr_vdev *vdev;
+
+	sta_info = hdd_get_sta_info_by_mac(&adapter->sta_info_list,
+					   (uint8_t *)mac,
+					   STA_INFO_SOFTAP_GET_STA_INFO);
+
+	if (!sta_info) {
+		hdd_err("Failed to find right station MAC:"
+			QDF_MAC_ADDR_FMT,
+			QDF_MAC_ADDR_REF((uint8_t *)mac));
+			return QDF_STATUS_E_INVAL;
+	}
+
+	if (!sta_info->vlan_id) {
+		hdd_put_sta_info_ref(&adapter->sta_info_list, &sta_info,
+				     true,
+				     STA_INFO_SOFTAP_GET_STA_INFO);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_LEGACY_SAP_ID);
+	if (!vdev) {
+		hdd_err("Unable to get vdev");
+		hdd_put_sta_info_ref(&adapter->sta_info_list, &sta_info,
+				     true,
+				     STA_INFO_SOFTAP_GET_STA_INFO);
+	}
+
+	ret = wlan_hdd_set_peer_vlan_config(adapter,
+					    vdev,
+					    mac,
+					    sta_info->vlan_id);
+	if (ret < 0) {
+		hdd_err("Unable to send peer vlan config");
+		hdd_put_sta_info_ref(&adapter->sta_info_list, &sta_info,
+				     true,
+				     STA_INFO_SOFTAP_GET_STA_INFO);
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_LEGACY_SAP_ID);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_LEGACY_SAP_ID);
+	hdd_put_sta_info_ref(&adapter->sta_info_list, &sta_info,
+			     true,  STA_INFO_SOFTAP_GET_STA_INFO);
+
+	return QDF_STATUS_SUCCESS;
+}
+#else
+static inline void
+wlan_hdd_set_vlan_id(struct hdd_sta_info_obj *sta_info_list,
+		     uint8_t *mac, struct station_parameters *params)
+{
+}
+
+static inline QDF_STATUS
+wlan_hdd_set_vlan_config(struct hdd_adapter *adapter,
+			 uint8_t *mac)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 /**
  * __wlan_hdd_change_station() - change station
  * @wiphy: Pointer to the wiphy structure
@@ -20899,6 +21039,8 @@ static int __wlan_hdd_change_station(struct wiphy *wiphy,
 
 	qdf_mem_copy(sta_macaddr.bytes, mac, QDF_MAC_ADDR_SIZE);
 
+	wlan_hdd_set_vlan_id(&adapter->sta_info_list, (uint8_t *)mac, params);
+
 	if ((adapter->device_mode == QDF_SAP_MODE) ||
 	    (adapter->device_mode == QDF_P2P_GO_MODE)) {
 		if (params->sta_flags_set & BIT(NL80211_STA_FLAG_AUTHORIZED)) {
@@ -20907,6 +21049,15 @@ static int __wlan_hdd_change_station(struct wiphy *wiphy,
 			 * For Encrypted SAP session, this will be done as
 			 * part of eSAP_STA_SET_KEY_EVENT
 			 */
+
+			if (ucfg_mlme_is_multipass_sap(hdd_ctx->psoc)) {
+				status =
+				wlan_hdd_set_vlan_config(adapter,
+							 (uint8_t *)mac);
+				if (QDF_IS_STATUS_ERROR(status))
+					return 0;
+			}
+
 			if (ap_ctx->encryption_type !=
 			    eCSR_ENCRYPT_TYPE_NONE) {
 				hdd_debug("Encrypt type %d, not setting peer authorized now",
@@ -21280,6 +21431,24 @@ wlan_hdd_mlo_copy_partner_addr_from_mlie(struct wlan_objmgr_vdev *vdev,
 }
 #endif
 
+#if defined(QCA_MULTIPASS_SUPPORT) && \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 5, 0))
+static void
+wlan_hdd_set_vlan_groupkey(ol_txrx_soc_handle soc_txrx_handle, uint16_t vdev_id,
+			   struct key_params *params, uint8_t key_index)
+{
+	if (params->vlan_id)
+		cdp_set_vlan_groupkey(soc_txrx_handle, vdev_id,
+				      params->vlan_id, key_index);
+}
+#else
+static void
+wlan_hdd_set_vlan_groupkey(ol_txrx_soc_handle soc_txrx_handle, uint16_t vdev_id,
+			   struct key_params *params, uint8_t key_index)
+{
+}
+#endif
+
 static int wlan_hdd_add_key_vdev(mac_handle_t mac_handle,
 				 struct wlan_objmgr_vdev *vdev,
 				 u8 key_index, bool pairwise,
@@ -21295,6 +21464,7 @@ static int wlan_hdd_add_key_vdev(mac_handle_t mac_handle,
 	enum wlan_crypto_cipher_type cipher;
 	bool ft_mode = false;
 	struct hdd_ap_ctx *hdd_ap_ctx;
+	ol_txrx_soc_handle soc_txrx_handle;
 
 	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 
@@ -21388,6 +21558,17 @@ done:
 		}
 		errno = wlan_hdd_add_key_sap(adapter, pairwise,
 					     key_index, cipher);
+
+		if (!pairwise) {
+			if (ucfg_mlme_is_multipass_sap(hdd_ctx->psoc)) {
+				soc_txrx_handle =
+					wlan_psoc_get_dp_handle(hdd_ctx->psoc);
+				 wlan_hdd_set_vlan_groupkey(soc_txrx_handle,
+							    wlan_vdev_get_id(vdev),
+							    params, key_index);
+			}
+		}
+
 		break;
 	case QDF_STA_MODE:
 	case QDF_P2P_CLIENT_MODE:
@@ -25436,25 +25617,44 @@ static void wlan_hdd_fill_subband_scan_info(struct hdd_context *hdd_ctx,
 	uint8_t idx, info_index, freq_info_num;
 	enum phy_ch_width ch_width;
 	const struct bonded_channel_freq *range = NULL;
-	uint32_t start_freq, end_freq;
+	qdf_freq_t start_freq, end_freq, sec_2g_freq;
+	uint8_t vdev_id = info->subband_info.vdev_id;
+	struct connect_chan_info chan_info_orig;
 
-	ch_width = ucfg_cm_get_associated_ch_width(hdd_ctx->psoc,
-						   info->subband_info.vdev_id);
+	ucfg_cm_get_associated_ch_info(hdd_ctx->psoc, vdev_id, &chan_info_orig);
+	ch_width = chan_info_orig.ch_width_orig;
 	if (ch_width == CH_WIDTH_INVALID) {
-		hdd_debug("vdev %d: Invalid ch width",
-			  info->subband_info.vdev_id);
+		hdd_debug("vdev %d: Invalid ch width", vdev_id);
 		return;
 	}
 
 	if (ch_width == CH_WIDTH_20MHZ) {
 		start_freq = info->freq;
 		end_freq = info->freq;
+	} else if (wlan_reg_is_24ghz_ch_freq(info->freq) &&
+		   ch_width == CH_WIDTH_40MHZ) {
+		sec_2g_freq = chan_info_orig.sec_2g_freq;
+		if (!sec_2g_freq) {
+			mlme_debug("vdev %d : Invalid sec 2g freq for freq:%d",
+				   info->subband_info.vdev_id, info->freq);
+			return;
+		}
+
+		hdd_debug("vdev %d :assoc freq %d sec_2g_freq:%d, bw %d",
+			  info->subband_info.vdev_id, info->freq,
+			  sec_2g_freq, ch_width);
+		if (info->freq > sec_2g_freq) {
+			start_freq = sec_2g_freq;
+			end_freq = info->freq;
+		} else {
+			start_freq = info->freq;
+			end_freq = sec_2g_freq;
+		}
 	} else {
 		range = wlan_reg_get_bonded_chan_entry(info->freq, ch_width, 0);
 		if (!range) {
 			hdd_err("vdev %d: bonded_chan_array is NULL for freq %d, ch_width %d",
-				info->subband_info.vdev_id, info->freq,
-				ch_width);
+				vdev_id, info->freq, ch_width);
 			return;
 		}
 		start_freq = range->start_freq;
@@ -25465,7 +25665,7 @@ static void wlan_hdd_fill_subband_scan_info(struct hdd_context *hdd_ctx,
 	info_index = 0;
 
 	hdd_debug("vdev %d: freq :%d bw %d, range [%d-%d], num_freq:%d",
-		  info->subband_info.vdev_id, info->freq, ch_width, start_freq,
+		  vdev_id, info->freq, ch_width, start_freq,
 		  end_freq, freq_info_num);
 
 	for (idx = 0; idx < NUM_CHANNELS; idx++) {
@@ -25524,7 +25724,7 @@ static void wlan_hdd_chan_info_cb(struct scan_chan_info *info)
 		return;
 	}
 
-	for (idx = 0; idx < SIR_MAX_NUM_CHANNELS; idx++) {
+	for (idx = 0; idx < NUM_CHANNELS; idx++) {
 		if (chan[idx].freq == info->freq) {
 			hdd_update_chan_info(hdd_ctx, &chan[idx], info,
 				info->cmd_flag);
@@ -25710,6 +25910,44 @@ hdd_ml_sap_owe_fill_ml_info(struct hdd_adapter *adapter,
 	peer_mld_addr = wlan_peer_mlme_get_mldaddr(peer);
 	qdf_mem_copy(&owe_info->peer_mld_addr[0], peer_mld_addr, ETH_ALEN);
 	wlan_objmgr_peer_release_ref(peer, WLAN_OSIF_ID);
+}
+#elif defined(CFG80211_MLD_AP_STA_CONNECT_UPSTREAM_SUPPORT)
+static void
+hdd_ml_sap_owe_fill_ml_info(struct hdd_adapter *adapter,
+			    struct cfg80211_update_owe_info *owe_info,
+			    uint8_t *peer_mac)
+{
+	bool is_mlo_vdev;
+	struct wlan_objmgr_peer *peer;
+	struct wlan_objmgr_vdev *vdev;
+	uint8_t *peer_mld_addr;
+
+	vdev = hdd_objmgr_get_vdev_by_user(adapter,
+					   WLAN_HDD_ID_OBJ_MGR);
+	if (!vdev)
+		return;
+
+	is_mlo_vdev = wlan_vdev_mlme_is_mlo_vdev(vdev);
+	if (!is_mlo_vdev) {
+		owe_info->assoc_link_id = -1;
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_HDD_ID_OBJ_MGR);
+		return;
+	}
+
+	owe_info->assoc_link_id = wlan_vdev_get_link_id(vdev);
+	hdd_objmgr_put_vdev_by_user(vdev, WLAN_HDD_ID_OBJ_MGR);
+
+	peer = wlan_objmgr_get_peer_by_mac(adapter->hdd_ctx->psoc,
+					   peer_mac, WLAN_HDD_ID_OBJ_MGR);
+	if (!peer) {
+		hdd_err("Peer not found with MAC " QDF_MAC_ADDR_FMT,
+			QDF_MAC_ADDR_REF(peer_mac));
+		return;
+	}
+
+	peer_mld_addr = wlan_peer_mlme_get_mldaddr(peer);
+	qdf_mem_copy(&owe_info->peer_mld_addr[0], peer_mld_addr, ETH_ALEN);
+	wlan_objmgr_peer_release_ref(peer, WLAN_HDD_ID_OBJ_MGR);
 }
 #else
 static void

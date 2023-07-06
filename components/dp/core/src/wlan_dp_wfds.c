@@ -214,7 +214,8 @@ dp_wfds_req_mem_msg(struct dp_direct_link_wfds_context *dl_wfds)
 								     &buf_size);
 			qdf_assert(dma_addr);
 
-			info->mem_arena_page_info[i].num_entries_per_page = 1;
+			info->mem_arena_page_info[i].num_entries_per_page =
+					qdf_page_size / buf_size;
 			info->mem_arena_page_info[i].page_dma_addr_len =
 								      num_pages;
 			while (num_pages--) {
@@ -382,13 +383,13 @@ dp_wfds_get_desc_type_from_mem_arena(enum wlan_qmi_wfds_mem_arenas mem_arena)
 {
 	switch (mem_arena) {
 	case QMI_WFDS_MEM_ARENA_TX_BUFFERS:
-		return DP_TX_DIRECT_LINK_BUF_TYPE;
+		return QDF_DP_TX_DIRECT_LINK_BUF_TYPE;
 	case QMI_WFDS_MEM_ARENA_CE_TX_MSG_BUFFERS:
-		return DP_TX_DIRECT_LINK_CE_BUF_TYPE;
+		return QDF_DP_TX_DIRECT_LINK_CE_BUF_TYPE;
 	default:
 		dp_debug("No desc type for mem arena %d", mem_arena);
 		qdf_assert(0);
-		return DP_DESC_TYPE_MAX;
+		return QDF_DP_DESC_TYPE_MAX;
 	}
 }
 
@@ -408,22 +409,14 @@ dp_wfds_alloc_mem_arena(struct dp_direct_link_wfds_context *dl_wfds,
 {
 	qdf_device_t qdf_ctx = dl_wfds->direct_link_ctx->dp_ctx->qdf_dev;
 	uint32_t desc_type;
-	uint32_t elem_per_page;
-	uint32_t num_pages;
 
 	desc_type = dp_wfds_get_desc_type_from_mem_arena(mem_arena);
 
-	if (desc_type != DP_DESC_TYPE_MAX) {
-		elem_per_page = qdf_page_size / entry_size;
-		num_pages = num_entries / elem_per_page;
-		if (num_entries % elem_per_page)
-			num_pages++;
-
-		dp_prealloc_get_multi_pages(desc_type, qdf_page_size,
-					    num_pages,
+	if (desc_type != QDF_DP_DESC_TYPE_MAX)
+		dp_prealloc_get_multi_pages(desc_type, entry_size,
+					    num_entries,
 					    &dl_wfds->mem_arena_pages[mem_arena],
 					    false);
-	}
 
 	if (!dl_wfds->mem_arena_pages[mem_arena].num_pages)
 		qdf_mem_multi_pages_alloc(qdf_ctx,

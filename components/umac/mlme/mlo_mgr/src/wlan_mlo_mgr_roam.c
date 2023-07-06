@@ -31,6 +31,7 @@
 #include <include/wlan_mlme_cmn.h>
 #include <wlan_cm_api.h>
 #include <utils_mlo.h>
+#include <wlan_mlo_mgr_peer.h>
 
 #ifdef WLAN_FEATURE_11BE_MLO
 static bool
@@ -789,14 +790,30 @@ mlo_roam_set_link_id(struct wlan_objmgr_vdev *vdev,
 		     struct roam_offload_synch_ind *sync_ind)
 {
 	uint8_t i;
+	uint8_t j;
+	struct wlan_mlo_dev_context *mlo_dev_ctx;
 
-	for (i = 0; i < sync_ind->num_setup_links; i++) {
-		if (sync_ind->ml_link[i].vdev_id == wlan_vdev_get_id(vdev)) {
-			wlan_vdev_set_link_id(vdev,
-					      sync_ind->ml_link[i].link_id);
-			mlme_debug("Set link for vdev id %d link id %d",
-				   wlan_vdev_get_id(vdev),
-				   sync_ind->ml_link[i].link_id);
+	if (!vdev || !sync_ind || !vdev->mlo_dev_ctx) {
+		mlo_debug("Invalid input");
+		return;
+	}
+
+	mlo_dev_ctx = vdev->mlo_dev_ctx;
+	for (i = 0; i < WLAN_UMAC_MLO_MAX_VDEVS; i++) {
+		vdev = mlo_dev_ctx->wlan_vdev_list[i];
+		if (!vdev)
+			continue;
+
+		wlan_vdev_set_link_id(vdev, WLAN_LINK_ID_INVALID);
+		for (j = 0; j < sync_ind->num_setup_links; j++) {
+			if (sync_ind->ml_link[j].vdev_id ==
+			    wlan_vdev_get_id(vdev)) {
+				wlan_vdev_set_link_id(
+					vdev, sync_ind->ml_link[j].link_id);
+				mlme_debug("Set link for vdev id %d link id %d",
+					   wlan_vdev_get_id(vdev),
+					   sync_ind->ml_link[j].link_id);
+			}
 		}
 	}
 }

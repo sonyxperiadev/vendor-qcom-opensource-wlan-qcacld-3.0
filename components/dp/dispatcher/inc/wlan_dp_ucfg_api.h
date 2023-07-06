@@ -1358,6 +1358,32 @@ void *ucfg_dp_prealloc_get_consistent_mem_unaligned(qdf_size_t size,
  * Return: None
  */
 void ucfg_dp_prealloc_put_consistent_mem_unaligned(void *va_unaligned);
+
+/**
+ * ucfg_dp_prealloc_get_multi_pages() - gets pre-alloc DP multi-pages memory
+ * @desc_type: descriptor type
+ * @elem_size: single element size
+ * @elem_num: total number of elements should be allocated
+ * @pages: multi page information storage
+ * @cacheable: coherent memory or cacheable memory
+ *
+ * Return: None
+ */
+void ucfg_dp_prealloc_get_multi_pages(uint32_t desc_type, qdf_size_t elem_size,
+				      uint16_t elem_num,
+				      struct qdf_mem_multi_page_t *pages,
+				      bool cacheable);
+
+/**
+ * ucfg_dp_prealloc_put_multi_pages() - puts back pre-alloc DP multi-pages
+ *  memory
+ * @desc_type: descriptor type
+ * @pages: multi page information storage
+ *
+ * Return: None
+ */
+void ucfg_dp_prealloc_put_multi_pages(uint32_t desc_type,
+				      struct qdf_mem_multi_page_t *pages);
 #endif
 
 #ifdef FEATURE_DIRECT_LINK

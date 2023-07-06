@@ -485,11 +485,13 @@ static inline enum eSirMacHTChannelWidth get_max_bw(void)
 static void hdd_cm_restore_ch_width(struct wlan_objmgr_vdev *vdev,
 				    struct hdd_adapter *adapter)
 {
+	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	struct mlme_legacy_priv *mlme_priv;
 	enum eSirMacHTChannelWidth max_bw;
 	struct wlan_channel *des_chan;
 	int ret;
 	uint8_t vdev_id = wlan_vdev_get_id(vdev);
+	enum phy_ch_width ch_width_orig;
 
 	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
 	if (!mlme_priv)
@@ -499,11 +501,12 @@ static void hdd_cm_restore_ch_width(struct wlan_objmgr_vdev *vdev,
 	if (!des_chan)
 		return;
 
-	if (mlme_priv->connect_info.ch_width_orig == CH_WIDTH_INVALID ||
-	    mlme_priv->connect_info.ch_width_orig == des_chan->ch_width)
+	ch_width_orig = mlme_priv->connect_info.chan_info_orig.ch_width_orig;
+	if (!ucfg_mlme_is_chwidth_with_notify_supported(hdd_ctx->psoc) ||
+	    ch_width_orig == CH_WIDTH_INVALID)
 		return;
 
-	cm_update_associated_ch_width(vdev, false);
+	cm_update_associated_ch_info(vdev, false);
 
 	max_bw = get_max_bw();
 	ret = hdd_set_mac_chan_width(adapter, max_bw);

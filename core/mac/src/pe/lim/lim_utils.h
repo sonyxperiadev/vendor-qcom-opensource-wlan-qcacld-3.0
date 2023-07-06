@@ -2390,13 +2390,15 @@ QDF_STATUS lim_util_get_type_subtype(void *pkt, uint8_t *type,
 /**
  * lim_get_min_session_txrate() - Get the minimum rate supported in the session
  * @session: Pointer to PE session
+ * @pre_auth_freq: Pointer to pre_auth_freq
  *
  * This API will find the minimum rate supported by the given PE session and
  * return the enum rateid corresponding to the rate.
  *
  * Return: enum rateid
  */
-enum rateid lim_get_min_session_txrate(struct pe_session *session);
+enum rateid lim_get_min_session_txrate(struct pe_session *session,
+				       qdf_freq_t *pre_auth_freq);
 
 /**
  * lim_send_dfs_chan_sw_ie_update() - updates the channel switch IE in beacon
@@ -3219,4 +3221,18 @@ lim_is_power_change_required_for_sta(struct mac_context *mac_ctx,
  */
 void
 lim_update_tx_pwr_on_ctry_change_cb(uint8_t vdev_id);
+
+/*
+ * lim_is_chan_connected_for_mode() - Check if frequency is connected
+ *                                    for given opmode.
+ * @psoc: Pointer to psoc object
+ * @opmode: Vdev opmode
+ * @freq: Frequency
+ *
+ * Return: Return true if frequency is connected for given opmode.
+ */
+bool
+lim_is_chan_connected_for_mode(struct wlan_objmgr_psoc *psoc,
+			       enum QDF_OPMODE opmode,
+			       qdf_freq_t freq);
 #endif /* __LIM_UTILS_H */

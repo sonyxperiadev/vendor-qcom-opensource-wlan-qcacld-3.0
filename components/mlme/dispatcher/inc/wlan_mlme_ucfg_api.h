@@ -267,6 +267,21 @@ QDF_STATUS ucfg_mlme_get_band_capability(struct wlan_objmgr_psoc *psoc,
 	return wlan_mlme_get_band_capability(psoc, band_capability);
 }
 
+/**
+ * ucfg_mlme_peer_config_vlan() - Send VLAN id to FW for
+ * RX packet
+ * @vdev: vdev pointer
+ * @macaddr: Peer mac address
+ *
+ * Return: QDF_STATUS
+ */
+static inline QDF_STATUS
+ucfg_mlme_peer_config_vlan(struct wlan_objmgr_vdev *vdev,
+			   uint8_t *macaddr)
+{
+	return wlan_mlme_peer_config_vlan(vdev, macaddr);
+}
+
 #ifdef MULTI_CLIENT_LL_SUPPORT
 /**
  * ucfg_mlme_get_wlm_multi_client_ll_caps() - Get multi client latency level
@@ -2966,6 +2981,21 @@ static inline QDF_STATUS
 ucfg_mlme_get_eht_mode(struct wlan_objmgr_psoc *psoc, enum wlan_eht_mode *value)
 {
 	return wlan_mlme_get_eht_mode(psoc, value);
+}
+
+/**
+ * ucfg_mlme_is_multipass_sap() - check whether FW supports
+ * multipass sap capabilites
+ * @psoc: pointer to psoc object
+ *
+ * Inline UCFG API to be used by HDD/OSIF callers
+ *
+ * Return: True if FW support mulitpass sap
+ */
+static inline bool
+ucfg_mlme_is_multipass_sap(struct wlan_objmgr_psoc *psoc)
+{
+	return  wlan_mlme_is_multipass_sap(psoc);
 }
 
 /**

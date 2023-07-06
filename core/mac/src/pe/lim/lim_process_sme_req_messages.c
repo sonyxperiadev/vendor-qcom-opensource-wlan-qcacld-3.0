@@ -2831,7 +2831,7 @@ lim_fill_ese_params(struct mac_context *mac_ctx, struct pe_session *session,
 }
 #endif
 
-static void lim_get_basic_rates(tSirMacRateSet *b_rates, uint32_t chan_freq)
+void lim_get_basic_rates(tSirMacRateSet *b_rates, uint32_t chan_freq)
 {
 	/*
 	 * Some IOT APs don't send supported rates in
@@ -3270,7 +3270,8 @@ lim_fill_pe_session(struct mac_context *mac_ctx, struct pe_session *session,
 		status = wlan_reg_get_best_6g_power_type(
 				mac_ctx->psoc, mac_ctx->pdev,
 				&power_type_6g,
-				session->ap_defined_power_type_6g);
+				session->ap_defined_power_type_6g,
+				bss_desc->chan_freq);
 		if (QDF_IS_STATUS_ERROR(status)) {
 			status = QDF_STATUS_E_NOSUPPORT;
 			goto send;
@@ -5534,6 +5535,9 @@ uint32_t lim_get_num_pwr_levels(bool is_psd,
 		case CH_WIDTH_160MHZ:
 			num_pwr_levels = 8;
 			break;
+		case CH_WIDTH_320MHZ:
+			num_pwr_levels = 16;
+			break;
 		default:
 			pe_err("Invalid channel width");
 			return 0;
@@ -5551,6 +5555,9 @@ uint32_t lim_get_num_pwr_levels(bool is_psd,
 			break;
 		case CH_WIDTH_160MHZ:
 			num_pwr_levels = 4;
+			break;
+		case CH_WIDTH_320MHZ:
+			num_pwr_levels = 5;
 			break;
 		default:
 			pe_err("Invalid channel width");
@@ -7668,7 +7675,7 @@ static void __lim_process_sme_set_ht2040_mode(struct mac_context *mac,
 				eHT_CHANNEL_WIDTH_20MHZ : eHT_CHANNEL_WIDTH_40MHZ;
 			qdf_mem_copy(pHtOpMode->peer_mac, &sta->staAddr,
 				     sizeof(tSirMacAddr));
-			pHtOpMode->smesessionId = sessionId;
+			pHtOpMode->smesessionId = pe_session->smeSessionId;
 
 			msg.type = WMA_UPDATE_OP_MODE;
 			msg.reserved = 0;
