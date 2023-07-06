@@ -104,6 +104,10 @@ static inline bool sap_acs_cfg_is_chwidth_320mhz(uint16_t width)
 static void sap_acs_set_puncture_bitmap(struct sap_context *sap_ctx,
 					struct ch_params *ch_params)
 {
+	sap_debug("ccfs0 %d ch_width %d, punct 0x%x",
+		  ch_params->center_freq_seg0,
+		  ch_params->ch_width,
+		  ch_params->reg_punc_bitmap);
 	sap_ctx->acs_cfg->acs_puncture_bitmap = ch_params->reg_punc_bitmap;
 }
 #else
@@ -134,7 +138,8 @@ void sap_config_acs_result(mac_handle_t mac_handle,
 	enum phy_ch_width new_ch_width;
 
 	ch_params.ch_width = sap_ctx->acs_cfg->ch_width;
-	sap_acs_set_puncture_support(sap_ctx, &ch_params);
+	if (sap_phymode_is_eht(sap_ctx->phyMode))
+		wlan_reg_set_create_punc_bitmap(&ch_params, true);
 
 	new_ch_width =
 		wlan_sap_get_concurrent_bw(mac_ctx->pdev, mac_ctx->psoc,
