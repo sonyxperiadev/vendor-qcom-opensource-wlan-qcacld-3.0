@@ -1795,7 +1795,8 @@ QDF_STATUS dp_config_direct_link(struct wlan_dp_intf *dp_intf,
 
 	if (config_direct_link) {
 		if (vote_link)
-			htc_vote_link_up(htc_handle, HTC_LINK_VOTE_SAP_USER_ID);
+			htc_vote_link_up(htc_handle,
+					 HTC_LINK_VOTE_DIRECT_LINK_USER_ID);
 		if (update_ll)
 			hif_prevent_link_low_power_states(
 						htc_get_hif_device(htc_handle));
@@ -1807,7 +1808,7 @@ QDF_STATUS dp_config_direct_link(struct wlan_dp_intf *dp_intf,
 	} else {
 		if (vote_link)
 			htc_vote_link_down(htc_handle,
-					   HTC_LINK_VOTE_SAP_USER_ID);
+					   HTC_LINK_VOTE_DIRECT_LINK_USER_ID);
 		if (update_ll)
 			hif_allow_link_low_power_states(
 						htc_get_hif_device(htc_handle));
