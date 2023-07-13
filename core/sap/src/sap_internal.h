@@ -131,9 +131,10 @@ struct sap_context {
 #ifdef DCS_INTERFERENCE_DETECTION
 	qdf_freq_t dcs_ch_freq;
 #endif
-
-	/* Include the SME(CSR) sessionId here */
-	uint8_t sessionId;
+	union {
+		uint8_t sessionId;
+		uint8_t vdev_id;
+	};
 	uint8_t sap_radar_found_status;
 
 	/* vdev object corresponding to sessionId */

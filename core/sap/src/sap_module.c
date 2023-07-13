@@ -810,6 +810,7 @@ QDF_STATUS wlansap_start_bss(struct sap_context *sap_ctx,
 	}
 
 	sap_ctx->fsm_state = SAP_INIT;
+	sap_debug("sap_fsm: vdev %d:  => SAP_INIT", sap_ctx->vdev_id);
 
 	qdf_status = wlan_set_vdev_crypto_prarams_from_ie(
 			sap_ctx->vdev,
