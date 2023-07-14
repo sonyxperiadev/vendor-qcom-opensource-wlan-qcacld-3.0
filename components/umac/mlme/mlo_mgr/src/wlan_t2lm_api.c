@@ -570,7 +570,9 @@ wlan_t2lm_clear_all_tid_mapping(struct wlan_objmgr_vdev *vdev)
 	}
 	qdf_mem_zero(&t2lm_ctx->established_t2lm,
 		     sizeof(struct wlan_mlo_t2lm_ie));
-	t2lm_ctx->established_t2lm.t2lm.direction = WLAN_T2LM_INVALID_DIRECTION;
+	t2lm_ctx->established_t2lm.t2lm.direction = WLAN_T2LM_BIDI_DIRECTION;
+	t2lm_ctx->established_t2lm.t2lm.default_link_mapping = 1;
+	t2lm_ctx->established_t2lm.t2lm.link_mapping_size = 0;
 
 	qdf_mem_zero(&t2lm_ctx->upcoming_t2lm,
 		     sizeof(struct wlan_mlo_t2lm_ie));
