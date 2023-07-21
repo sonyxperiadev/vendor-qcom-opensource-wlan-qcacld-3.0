@@ -514,7 +514,7 @@ QDF_STATUS mlme_connected_chan_stats_request(struct wlan_objmgr_psoc *psoc,
 
 	req->scan_req.scan_id = wlan_scan_get_scan_id(psoc);
 	req->scan_req.scan_req_id = mlme_obj->scan_requester_id;
-	req->scan_req.vdev_id = wlan_vdev_get_id(vdev);
+	req->scan_req.vdev_id = vdev_id;
 
 	req->scan_req.scan_type = SCAN_TYPE_DEFAULT;
 
@@ -542,7 +542,7 @@ QDF_STATUS mlme_connected_chan_stats_request(struct wlan_objmgr_psoc *psoc,
 	status = wlan_scan_start(req);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		mlme_debug("vdev %d :Failed to send scan req, status %d",
-			   req->scan_req.vdev_id, status);
+			   vdev_id, status);
 		goto release;
 	}
 

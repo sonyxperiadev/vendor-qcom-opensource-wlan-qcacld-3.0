@@ -520,7 +520,7 @@ wlansap_roam_process_ch_change_success(struct mac_context *mac_ctx,
 		    policy_mgr_get_dfs_master_dynamic_enabled(
 					mac_ctx->psoc,
 					sap_ctx->sessionId)) {
-			sap_ctx->fsm_state = SAP_INIT;
+			sap_ctx->fsm_state = SAP_STARTING;
 			/* DFS Channel */
 			sap_event.event = eSAP_DFS_CHANNEL_CAC_START;
 			sap_event.params = csr_roam_info;

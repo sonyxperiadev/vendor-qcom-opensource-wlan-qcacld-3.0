@@ -3333,9 +3333,6 @@ static QDF_STATUS sap_fsm_cac_start(struct sap_context *sap_ctx,
 				    struct mac_context *mac_ctx,
 				    mac_handle_t mac_handle)
 {
-	sap_ctx->fsm_state = SAP_STARTING;
-
-	sap_debug("Move sap state to SAP_STARTING");
 	if (!mac_ctx->sap.SapDfsInfo.is_dfs_cac_timer_running) {
 		sap_debug("sapdfs: starting dfs cac timer on sapctx[%pK]",
 			  sap_ctx);
@@ -3382,15 +3379,6 @@ static QDF_STATUS sap_fsm_state_init(struct sap_context *sap_ctx,
 					       mac_ctx, mac_handle);
 		if (QDF_IS_STATUS_ERROR(qdf_status))
 			sap_err("sap_goto_starting failed");
-	} else if (msg == eSAP_DFS_CHANNEL_CAC_START) {
-		if (sap_ctx->is_chan_change_inprogress) {
-			sap_signal_hdd_event(sap_ctx,
-					     NULL,
-					     eSAP_CHANNEL_CHANGE_EVENT,
-					     (void *)eSAP_STATUS_SUCCESS);
-			sap_ctx->is_chan_change_inprogress = false;
-		}
-		qdf_status = sap_fsm_cac_start(sap_ctx, mac_ctx, mac_handle);
 	} else {
 		sap_err("in state %s, event msg %d", "SAP_INIT", msg);
 	}
@@ -3828,6 +3816,15 @@ static QDF_STATUS sap_fsm_state_starting(struct sap_context *sap_ctx,
 			sap_debug("cac duration is zero");
 			qdf_status = QDF_STATUS_SUCCESS;
 		}
+	} else if (msg == eSAP_DFS_CHANNEL_CAC_START) {
+		if (sap_ctx->is_chan_change_inprogress) {
+			sap_signal_hdd_event(sap_ctx,
+					     NULL,
+					     eSAP_CHANNEL_CHANGE_EVENT,
+					     (void *)eSAP_STATUS_SUCCESS);
+			sap_ctx->is_chan_change_inprogress = false;
+		}
+		qdf_status = sap_fsm_cac_start(sap_ctx, mac_ctx, mac_handle);
 	} else {
 		sap_err("in state %s, invalid event msg %d", "SAP_STARTING",
 			 msg);
