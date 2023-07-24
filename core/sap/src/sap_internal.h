@@ -257,7 +257,7 @@ struct sap_context {
 	bool clean_channel_array[NUM_CHANNELS];
 #endif
 #ifdef QCA_MULTIPASS_SUPPORT
-	uint16_t vlan_map[MAX_VLAN];
+	uint16_t vlan_map[2 * MAX_VLAN];
 #endif
 };
 
