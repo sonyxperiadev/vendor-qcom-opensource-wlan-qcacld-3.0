@@ -3123,9 +3123,17 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 
 	/* Cleanup the old session */
 	session_ptr->limSmeState = eLIM_SME_IDLE_STATE;
+
+	/*
+	 * Delete the ml_peer only if DUT is roamed to a non-11BE candidate.
+	 * ml_peer is already cleaned up in wma_delete_all_peers() at the
+	 * beginning of roam_sync handling for 11BE candidates.
+	 */
 	if (sta_ds) {
-		lim_mlo_notify_peer_disconn(session_ptr, sta_ds);
-		lim_mlo_roam_delete_link_peer(session_ptr, sta_ds);
+		if (!wlan_vdev_mlme_is_mlo_vdev(session_ptr->vdev)) {
+			lim_mlo_notify_peer_disconn(session_ptr, sta_ds);
+			lim_mlo_roam_delete_link_peer(session_ptr, sta_ds);
+		}
 		lim_cleanup_rx_path(mac_ctx, sta_ds, session_ptr, false);
 		lim_delete_dph_hash_entry(mac_ctx, sta_ds->staAddr, aid,
 					  session_ptr);
