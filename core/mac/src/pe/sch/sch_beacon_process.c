@@ -468,8 +468,8 @@ sch_bcn_update_opmode_change(struct mac_context *mac_ctx, tpDphHashNode sta_ds,
 	      (vht_op && vht_op->present && vht_caps)))
 		return;
 
-	is_40 = bcn->HTCaps.present ?
-			bcn->HTCaps.supportedChannelWidthSet : false;
+	is_40 = bcn->HTInfo.present ?
+			bcn->HTInfo.recommendedTxWidthSet : false;
 
 	if (bcn->OperatingMode.present) {
 		pe_debug("OMN IE is present in the beacon, update NSS/Ch width");
