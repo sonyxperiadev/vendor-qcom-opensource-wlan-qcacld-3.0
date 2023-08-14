@@ -5242,9 +5242,12 @@ sir_convert_beacon_frame2_mlo_struct(uint8_t *pframe, uint32_t nframe,
 					nframe - WLAN_BEACON_IES_OFFSET,
 					&ml_ie, &ml_ie_total_len);
 		if (QDF_IS_STATUS_SUCCESS(status)) {
-			util_get_bvmlie_persta_partner_info(ml_ie,
-							    ml_ie_total_len,
-							    &partner_info);
+			status = util_get_bvmlie_persta_partner_info(
+								ml_ie,
+								ml_ie_total_len,
+								&partner_info);
+			if (QDF_IS_STATUS_ERROR(status))
+				return status;
 			bcn_struct->mlo_ie.mlo_ie.num_sta_profile =
 						partner_info.num_partner_links;
 			util_get_mlie_common_info_len(ml_ie, ml_ie_total_len,
