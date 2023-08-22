@@ -3001,6 +3001,39 @@ static void lim_reset_self_ocv_caps(struct pe_session *session)
 				   self_rsn_cap);
 }
 
+/**
+ * lim_disable_bformee_for_iot_ap() - disable bformee for iot ap
+ *@mac_ctx: mac context
+ *@session: pe session
+ *@bss_desc: bss descriptor
+ *
+ * When connect IoT AP with BW 160MHz and NSS 2, disable Beamformee
+ *
+ * Return: None
+ */
+static void
+lim_disable_bformee_for_iot_ap(struct mac_context *mac_ctx,
+			       struct pe_session *session,
+			       struct bss_description *bss_desc)
+{
+	struct action_oui_search_attr vendor_ap_search_attr;
+	uint16_t ie_len;
+
+	ie_len = wlan_get_ielen_from_bss_description(bss_desc);
+
+	vendor_ap_search_attr.ie_data = (uint8_t *)&bss_desc->ieFields[0];
+	vendor_ap_search_attr.ie_length = ie_len;
+
+	if (wlan_action_oui_search(mac_ctx->psoc,
+				   &vendor_ap_search_attr,
+				   ACTION_OUI_DISABLE_BFORMEE) &&
+	    session->nss == 2 && CH_WIDTH_160MHZ == session->ch_width) {
+		session->vht_config.su_beam_formee = 0;
+		session->vht_config.mu_beam_formee = 0;
+		pe_debug("IoT ap with BW 160 MHz NSS 2, disable Beamformee");
+	}
+}
+
 QDF_STATUS
 lim_fill_pe_session(struct mac_context *mac_ctx, struct pe_session *session,
 		    struct bss_description *bss_desc)
@@ -3282,6 +3315,8 @@ lim_fill_pe_session(struct mac_context *mac_ctx, struct pe_session *session,
 		&session->limCurrentBssQosCaps,
 		&session->gLimCurrentBssUapsd,
 		&local_power_constraint, session, &is_pwr_constraint);
+
+	lim_disable_bformee_for_iot_ap(mac_ctx, session, bss_desc);
 
 	if (wlan_reg_is_6ghz_chan_freq(bss_desc->chan_freq)) {
 		if (!ie_struct->Country.present)
