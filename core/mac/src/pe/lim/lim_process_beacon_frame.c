@@ -282,16 +282,8 @@ void lim_process_beacon_eht_op(struct pe_session *session,
 	chan_id = wlan_reg_freq_to_chan(wlan_vdev_get_pdev(vdev),
 					bcn_ptr->chan_freq);
 
-	if (wlan_reg_is_24ghz_ch_freq(session->curr_op_freq)) {
-		if (session->force_24ghz_in_ht20)
-			cb_mode = WNI_CFG_CHANNEL_BONDING_MODE_DISABLE;
-		else
-			cb_mode =
-			   mac_ctx->roam.configParam.channelBondingMode24GHz;
-	} else {
-		cb_mode = mac_ctx->roam.configParam.channelBondingMode5GHz;
-	}
-
+	cb_mode = lim_get_cb_mode_for_freq(mac_ctx, session,
+					   session->curr_op_freq);
 	if (cb_mode == WNI_CFG_CHANNEL_BONDING_MODE_DISABLE) {
 		/*
 		 * if channel bonding is disabled from INI do not
