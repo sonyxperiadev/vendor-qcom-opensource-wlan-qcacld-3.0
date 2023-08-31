@@ -73,10 +73,8 @@ void lim_process_bcn_prb_rsp_t2lm(struct mac_context *mac_ctx,
 	if (bcn_ptr->t2lm_ctx.upcoming_t2lm.t2lm.direction ==
 	    WLAN_T2LM_INVALID_DIRECTION &&
 	    bcn_ptr->t2lm_ctx.established_t2lm.t2lm.direction ==
-	    WLAN_T2LM_INVALID_DIRECTION) {
-		pe_debug("No t2lm IE");
+	    WLAN_T2LM_INVALID_DIRECTION)
 		return;
-	}
 
 	t2lm_ctx = &vdev->mlo_dev_ctx->t2lm_ctx;
 	qdf_mem_copy((uint8_t *)&t2lm_ctx->tsf, (uint8_t *)bcn_ptr->timeStamp,
@@ -463,11 +461,6 @@ lim_process_beacon_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 	frame = WMA_GET_RX_MPDU_DATA(rx_pkt_info);
 	frame_len = WMA_GET_RX_PAYLOAD_LEN(rx_pkt_info);
 
-	pe_debug("Beacon (len %d): " QDF_MAC_ADDR_FMT " RSSI %d",
-		 WMA_GET_RX_MPDU_LEN(rx_pkt_info),
-		 QDF_MAC_ADDR_REF(mac_hdr->sa),
-		 (uint)abs((int8_t)
-		 WMA_GET_RX_RSSI_NORMALIZED(rx_pkt_info)));
 	if (frame_len < SIR_MAC_B_PR_SSID_OFFSET) {
 		pe_debug_rl("payload invalid len %d", frame_len);
 		return;

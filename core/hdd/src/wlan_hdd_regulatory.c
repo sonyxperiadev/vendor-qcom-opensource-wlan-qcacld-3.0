@@ -891,6 +891,8 @@ int hdd_reg_set_country(struct hdd_context *hdd_ctx, char *country_code)
 		qdf_mutex_release(&hdd_ctx->regulatory_status_lock);
 	}
 
+	hdd_reg_wait_for_country_change(hdd_ctx);
+
 	return qdf_status_to_os_return(status);
 }
 
@@ -1850,7 +1852,7 @@ static void __hdd_country_change_work_handle(struct hdd_context *hdd_ctx)
 	sme_generic_change_country_code(hdd_ctx->mac_handle,
 					hdd_ctx->reg.alpha2);
 
-	qdf_event_set(&hdd_ctx->regulatory_update_event);
+	qdf_event_set_all(&hdd_ctx->regulatory_update_event);
 	qdf_mutex_acquire(&hdd_ctx->regulatory_status_lock);
 	hdd_ctx->is_regulatory_update_in_progress = false;
 	qdf_mutex_release(&hdd_ctx->regulatory_status_lock);

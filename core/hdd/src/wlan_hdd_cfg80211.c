@@ -5305,12 +5305,13 @@ hdd_send_roam_scan_channel_freq_list_to_sme(struct hdd_context *hdd_ctx,
 		return QDF_STATUS_E_INVAL;
 	}
 
-	nla_for_each_nested(curr_attr, tb2[PARAM_SCAN_FREQ_LIST], rem)
+	nla_for_each_nested(curr_attr, tb2[PARAM_SCAN_FREQ_LIST], rem) {
+		if (num_chan > SIR_MAX_SUPPORTED_CHANNEL_LIST) {
+			hdd_err("number of channels (%d) supported exceeded max (%d)",
+				num_chan, SIR_MAX_SUPPORTED_CHANNEL_LIST);
+			return QDF_STATUS_E_INVAL;
+		}
 		num_chan++;
-	if (num_chan > SIR_MAX_SUPPORTED_CHANNEL_LIST) {
-		hdd_err("number of channels (%d) supported exceeded max (%d)",
-			num_chan, SIR_MAX_SUPPORTED_CHANNEL_LIST);
-		return QDF_STATUS_E_INVAL;
 	}
 	num_chan = 0;
 
@@ -21243,6 +21244,7 @@ wlan_hdd_set_vlan_config(struct hdd_adapter *adapter,
 		hdd_put_sta_info_ref(&adapter->sta_info_list, &sta_info,
 				     true,
 				     STA_INFO_SOFTAP_GET_STA_INFO);
+		return QDF_STATUS_E_INVAL;
 	}
 
 	ret = wlan_hdd_set_peer_vlan_config(adapter,
@@ -21742,6 +21744,7 @@ wlan_hdd_add_vlan(struct wlan_objmgr_vdev *vdev, struct sap_context *sap_ctx,
 	ol_txrx_soc_handle soc_txrx_handle;
 	uint16_t *vlan_map = sap_ctx->vlan_map;
 	uint8_t found = 0;
+	bool keyindex_valid;
 	int i = 0;
 
 	psoc = wlan_vdev_get_psoc(vdev);
@@ -21763,7 +21766,9 @@ wlan_hdd_add_vlan(struct wlan_objmgr_vdev *vdev, struct sap_context *sap_ctx,
 		}
 	}
 
-	if (found) {
+	keyindex_valid = (i + key_index - 1) < (2 * MAX_VLAN) ? true : false;
+
+	if (found && keyindex_valid) {
 		soc_txrx_handle = wlan_psoc_get_dp_handle(psoc);
 		vlan_map[i + key_index - 1] = params->vlan_id;
 		wlan_hdd_set_vlan_groupkey(soc_txrx_handle,

@@ -69,6 +69,7 @@
 #include <cdp_txrx_misc.h>
 #include <cdp_txrx_stats.h>
 #include "cdp_txrx_flow_ctrl_legacy.h"
+#include "qdf_ssr_driver_dump.h"
 
 #include <net/addrconf.h>
 #include <linux/wireless.h>
@@ -4505,7 +4506,6 @@ int hdd_wlan_start_modules(struct hdd_context *hdd_ctx, bool reinit)
 	void *hif_ctx;
 	struct target_psoc_info *tgt_hdl;
 	unsigned long thermal_state = 0;
-	bool is_sched_disabled = false;
 
 	hdd_enter();
 	qdf_dev = cds_get_context(QDF_MODULE_ID_QDF_DEVICE);
@@ -4778,16 +4778,15 @@ int hdd_wlan_start_modules(struct hdd_context *hdd_ctx, bool reinit)
 	hdd_exit();
 
 	return 0;
-/*
- * Disable scheduler 1st so that scheduler thread doesn't send messages to fw
- * in parallel to the cleanup
- */
+
 deconfigure_cds:
-	is_sched_disabled = !dispatcher_disable();
 	hdd_deconfigure_cds(hdd_ctx);
 sched_disable:
-	if (!is_sched_disabled)
-		dispatcher_disable();
+	/*
+	 * Disable scheduler 1st so that scheduler thread doesn't send messages
+	 * to fw in parallel to the cleanup
+	 */
+	dispatcher_disable();
 	hdd_destroy_sysfs_files();
 	cds_post_disable();
 unregister_notifiers:
@@ -12753,6 +12752,8 @@ static int __hdd_psoc_idle_shutdown(struct hdd_context *hdd_ctx)
 
 	hdd_enter();
 
+	hdd_reg_wait_for_country_change(hdd_ctx);
+
 	errno = osif_psoc_sync_trans_start(hdd_ctx->parent_dev, &psoc_sync);
 	if (errno) {
 		hdd_info("psoc busy, abort idle shutdown; errno:%d", errno);
@@ -17890,6 +17891,7 @@ static QDF_STATUS hdd_qdf_init(void)
 
 	qdf_trace_init();
 	qdf_minidump_init();
+	qdf_ssr_driver_dump_init();
 	qdf_register_debugcb_init();
 
 	return QDF_STATUS_SUCCESS;
@@ -17917,6 +17919,7 @@ exit:
 static void hdd_qdf_deinit(void)
 {
 	/* currently, no debugcb deinit */
+	qdf_ssr_driver_dump_deinit();
 	qdf_minidump_deinit();
 	qdf_trace_deinit();
 
