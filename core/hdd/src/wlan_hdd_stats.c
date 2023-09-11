@@ -6136,6 +6136,8 @@ wlan_hdd_refill_actual_rate(struct station_info *sinfo,
 	preamble = adapter->hdd_stats.class_a_stat.rx_preamble;
 
 	if (preamble == DOT11_A || preamble == DOT11_B) {
+		/* Clear rxrate which may have been set previously */
+		qdf_mem_zero(&sinfo->rxrate, sizeof(sinfo->rxrate));
 		sinfo->rxrate.legacy = adapter->hdd_stats.class_a_stat.rx_rate;
 		hdd_debug("Reporting legacy rate %d", sinfo->rxrate.legacy);
 		return;
