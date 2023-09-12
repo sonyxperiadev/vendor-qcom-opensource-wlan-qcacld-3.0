@@ -764,38 +764,26 @@ tgt_mc_cp_stats_extract_congestion_stats(struct wlan_objmgr_psoc *psoc,
 
 #ifdef WLAN_FEATURE_11BE_MLO
 static void
-update_ml_vdev_id_from_stats_event(struct wlan_objmgr_psoc *psoc,
-				   struct request_info *req,
+update_ml_vdev_id_from_stats_event(struct request_info *req,
 				   uint8_t *vdev_id)
 {
-	uint8_t j, t_vdev_id;
-
-	if ((!wlan_vdev_mlme_get_is_mlo_vdev(psoc, req->vdev_id) &&
-	    !wlan_vdev_mlme_get_is_mlo_link(psoc, req->vdev_id)) ||
-	    !req->ml_vdev_info.ml_vdev_count) {
+	if (!req->ml_vdev_info.ml_vdev_count) {
 		*vdev_id = req->vdev_id;
 		return;
 	}
 
-	t_vdev_id = *vdev_id;
-	for (j = 0; j < req->ml_vdev_info.ml_vdev_count; j++) {
-		if (t_vdev_id == req->ml_vdev_info.ml_vdev_id[j]) {
-			*vdev_id = req->ml_vdev_info.ml_vdev_id[j];
-			return;
-		}
-	}
-
-	if (j == req->ml_vdev_info.ml_vdev_count) {
-		cp_stats_err("vdev[%u] not found", t_vdev_id);
+	if (*vdev_id == WLAN_UMAC_VDEV_ID_MAX ||
+	    *vdev_id >= WLAN_MAX_VDEVS) {
+		cp_stats_err("Invalid vdev[%u] sent by firmware", *vdev_id);
 		*vdev_id = WLAN_UMAC_VDEV_ID_MAX;
 	}
 }
 #else
-static void
-update_ml_vdev_id_from_stats_event(struct wlan_objmgr_psoc *psoc,
-				   struct request_info *req,
+static inline void
+update_ml_vdev_id_from_stats_event(struct request_info *req,
 				   uint8_t *vdev_id)
 {
+	*vdev_id = req->vdev_id;
 }
 #endif
 
@@ -899,10 +887,9 @@ static void tgt_mc_cp_stats_extract_vdev_summary_stats(
 		return;
 	}
 
-	vdev_id = last_req.vdev_id;
 	for (i = 0; i < ev->num_summary_stats; i++) {
 		vdev_id = ev->vdev_summary_stats[i].vdev_id;
-		update_ml_vdev_id_from_stats_event(psoc, &last_req, &vdev_id);
+		update_ml_vdev_id_from_stats_event(&last_req, &vdev_id);
 		if (ev->vdev_summary_stats[i].vdev_id == vdev_id)
 			break;
 	}
@@ -982,7 +969,7 @@ static void tgt_mc_cp_stats_extract_vdev_chain_rssi_stats(
 
 	for (i = 0; i < ev->num_chain_rssi_stats; i++) {
 		vdev_id = ev->vdev_chain_rssi[i].vdev_id;
-		update_ml_vdev_id_from_stats_event(psoc, &last_req, &vdev_id);
+		update_ml_vdev_id_from_stats_event(&last_req, &vdev_id);
 		if (ev->vdev_chain_rssi[i].vdev_id != vdev_id)
 			continue;
 
