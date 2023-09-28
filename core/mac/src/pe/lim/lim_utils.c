@@ -9680,25 +9680,8 @@ void lim_send_sme_mgmt_frame_ind(struct mac_context *mac_ctx, uint8_t frame_type
 		!vdev_id) {
 		pe_debug("Broadcast action frame");
 		vdev_id = SME_SESSION_ID_BROADCAST;
-		goto fill_frame;
 	}
 
-	if (frame_type != SIR_MAC_MGMT_ACTION)
-		goto fill_frame;
-
-	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac_ctx->psoc, vdev_id,
-						    WLAN_LEGACY_MAC_ID);
-
-	if (!vdev) {
-		pe_debug("Action frame received with invalid vdev id:%d",
-			 vdev_id);
-		goto fill_frame;
-	}
-
-	wlan_mlo_update_action_frame_to_user(vdev, frame, frame_len);
-	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
-
-fill_frame:
 	sme_mgmt_frame->frame_len = frame_len;
 	sme_mgmt_frame->sessionId = vdev_id;
 	sme_mgmt_frame->frameType = frame_type;
@@ -9709,6 +9692,23 @@ fill_frame:
 	qdf_mem_zero(sme_mgmt_frame->frameBuf, frame_len);
 	qdf_mem_copy(sme_mgmt_frame->frameBuf, frame, frame_len);
 
+	if (vdev_id != SME_SESSION_ID_BROADCAST &&
+	    frame_type == SIR_MAC_MGMT_ACTION) {
+		vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac_ctx->psoc,
+							    vdev_id,
+							    WLAN_LEGACY_MAC_ID);
+		if (!vdev) {
+			pe_debug("Invalid VDEV %d", vdev_id);
+			goto send_frame;
+		}
+
+		wlan_mlo_update_action_frame_to_user(vdev,
+						     sme_mgmt_frame->frameBuf,
+						     sme_mgmt_frame->frame_len);
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
+	}
+
+send_frame:
 	if (mac_ctx->mgmt_frame_ind_cb)
 		mac_ctx->mgmt_frame_ind_cb(sme_mgmt_frame);
 	else
