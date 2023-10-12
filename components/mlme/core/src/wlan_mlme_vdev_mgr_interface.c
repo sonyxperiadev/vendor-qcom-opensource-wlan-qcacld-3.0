@@ -669,6 +669,8 @@ QDF_STATUS mlme_set_chan_switch_in_progress(struct wlan_objmgr_vdev *vdev,
 	}
 
 	mlme_priv->chan_switch_in_progress = val;
+	mlme_legacy_info("Set chan_switch_in_progress: %d vdev %d",
+			 val, wlan_vdev_get_id(vdev));
 
 	return QDF_STATUS_SUCCESS;
 }

@@ -2718,6 +2718,31 @@ wlan_mlme_set_t2lm_negotiation_supported(struct wlan_objmgr_psoc *psoc,
 #endif
 
 /**
+ * wlan_mlme_set_btm_abridge_flag() - Set BTM abridge flag
+ * @psoc: psoc context
+ * @value: abridge flag
+ *
+ * Return: qdf status
+ *
+ * BTM abridge flag indicates whether to select candidates
+ * for BTM roam based on score.
+ */
+QDF_STATUS
+wlan_mlme_set_btm_abridge_flag(struct wlan_objmgr_psoc *psoc, bool value);
+
+/**
+ * wlan_mlme_get_btm_abridge_flag() - Get BTM abridge flag
+ * @psoc: psoc context
+ *
+ * Return: abridge flag
+ *
+ * BTM abridge flag indicates whether to select candidates
+ * for BTM roam based on score.
+ */
+bool
+wlan_mlme_get_btm_abridge_flag(struct wlan_objmgr_psoc *psoc);
+
+/**
  * wlan_mlme_get_sta_miracast_mcc_rest_time() - Get STA/MIRACAST MCC rest time
  * @psoc: pointer to psoc object
  * @value: value which needs to filled by API

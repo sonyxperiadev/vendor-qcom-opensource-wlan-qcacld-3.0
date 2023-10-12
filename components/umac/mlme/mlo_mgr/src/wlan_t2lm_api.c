@@ -48,7 +48,7 @@ const char *t2lm_get_event_str(enum wlan_t2lm_evt event)
 static
 bool t2lm_is_valid_t2lm_link_map(struct wlan_objmgr_vdev *vdev,
 				 struct wlan_t2lm_onging_negotiation_info *t2lm,
-				 uint8_t *valid_dir)
+				 enum wlan_t2lm_direction *valid_dir)
 {
 	uint8_t i, tid = 0;
 	enum wlan_t2lm_direction dir = WLAN_T2LM_INVALID_DIRECTION;
@@ -139,7 +139,7 @@ QDF_STATUS t2lm_handle_rx_req(struct wlan_objmgr_vdev *vdev,
 {
 	struct wlan_t2lm_onging_negotiation_info t2lm_req = {0};
 	struct wlan_t2lm_info *t2lm_info;
-	uint8_t dir = WLAN_T2LM_MAX_DIRECTION;
+	enum wlan_t2lm_direction dir = WLAN_T2LM_MAX_DIRECTION;
 	bool valid_map = false;
 	QDF_STATUS status;
 	struct wlan_mlo_peer_context *ml_peer;
@@ -167,6 +167,11 @@ QDF_STATUS t2lm_handle_rx_req(struct wlan_objmgr_vdev *vdev,
 	} else {
 		status = QDF_STATUS_E_FAILURE;
 		mlme_err("reject t2lm conf");
+	}
+
+	if (dir >= WLAN_T2LM_MAX_DIRECTION) {
+		mlme_err("Received T2LM IE has invalid direction");
+		status = QDF_STATUS_E_INVAL;
 	}
 
 	if (QDF_IS_STATUS_SUCCESS(status) &&

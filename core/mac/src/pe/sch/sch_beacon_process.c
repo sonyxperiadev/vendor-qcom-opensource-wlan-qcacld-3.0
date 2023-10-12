@@ -433,8 +433,8 @@ sch_bcn_update_he_ies(struct mac_context *mac_ctx, tpDphHashNode sta_ds,
 
 static void
 sch_bcn_update_opmode_change(struct mac_context *mac_ctx, tpDphHashNode sta_ds,
-				struct pe_session *session, tpSchBeaconStruct bcn,
-				tpSirMacMgmtHdr mac_hdr, uint8_t cb_mode)
+			     struct pe_session *session, tpSchBeaconStruct bcn,
+			     tpSirMacMgmtHdr mac_hdr)
 {
 	enum phy_ch_width ch_bw;
 	enum phy_ch_width ch_width = CH_WIDTH_20MHZ;
@@ -550,23 +550,13 @@ sch_bcn_process_sta_opmode(struct mac_context *mac_ctx,
 {
 	tpDphHashNode sta = NULL;
 	uint16_t aid;
-	uint8_t cb_mode;
 
-	if (wlan_reg_is_24ghz_ch_freq(session->curr_op_freq)) {
-		if (session->force_24ghz_in_ht20)
-			cb_mode = WNI_CFG_CHANNEL_BONDING_MODE_DISABLE;
-		else
-			cb_mode =
-			   mac_ctx->roam.configParam.channelBondingMode24GHz;
-	} else
-		cb_mode = mac_ctx->roam.configParam.channelBondingMode5GHz;
 	/* check for VHT capability */
 	sta = dph_lookup_hash_entry(mac_ctx, pMh->sa, &aid,
 			&session->dph.dphHashTable);
 	if (!sta)
 		return;
-	sch_bcn_update_opmode_change(mac_ctx, sta, session, bcn, pMh,
-				     cb_mode);
+	sch_bcn_update_opmode_change(mac_ctx, sta, session, bcn, pMh);
 	sch_bcn_update_he_ies(mac_ctx, sta, session, bcn, pMh);
 	lim_detect_change_in_srp(mac_ctx, sta, session, bcn);
 	return;
