@@ -8140,6 +8140,7 @@ const struct nla_policy wlan_hdd_wifi_config_policy[
 		.type = NLA_NESTED},
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_EMLSR_MODE_SWITCH] = {
 		.type = NLA_U8},
+	[QCA_WLAN_VENDOR_ATTR_CONFIG_PEER_AMPDU_CNT] = {.type = NLA_U16},
 };
 
 static const struct nla_policy
@@ -8494,12 +8495,10 @@ static int wlan_hdd_cfg80211_wifi_set_rx_blocksize(struct hdd_adapter *adapter,
 #define WINDOW_SIZE_VAL_MIN 1
 #define WINDOW_SIZE_VAL_MAX 64
 
-	if (tb[RX_BLOCKSIZE_PEER_MAC] ||
-	    tb[RX_BLOCKSIZE_WINLIMIT]) {
+	if (tb[RX_BLOCKSIZE_WINLIMIT]) {
 
 		/* if one is specified, both must be specified */
-		if (!tb[RX_BLOCKSIZE_PEER_MAC] ||
-		    !tb[RX_BLOCKSIZE_WINLIMIT]) {
+		if (!tb[RX_BLOCKSIZE_PEER_MAC]) {
 			hdd_err("Both Peer MAC and windows limit required");
 			return -EINVAL;
 		}
@@ -8578,6 +8577,67 @@ static int hdd_config_phy_mode(struct hdd_adapter *adapter,
 	vendor_phy_mode = nla_get_u32(attr);
 
 	return hdd_set_phy_mode(adapter, vendor_phy_mode);
+}
+
+/**
+ * hdd_config_peer_ampdu() - Configure peer A-MPDU count
+ * @adapter: HDD adapter
+ * @tb: nla attr sent from userspace
+ *
+ * Return: 0 on success; error number otherwise
+ */
+static int hdd_config_peer_ampdu(struct hdd_adapter *adapter,
+				 struct nlattr *tb[])
+{
+	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	struct nlattr *ampdu_cnt_attr =
+		tb[QCA_WLAN_VENDOR_ATTR_CONFIG_PEER_AMPDU_CNT];
+	struct nlattr *ampdu_mac_attr =
+		tb[QCA_WLAN_VENDOR_ATTR_CONFIG_PEER_MAC];
+	struct qdf_mac_addr peer_macaddr;
+	struct wlan_objmgr_vdev *vdev;
+	QDF_STATUS status;
+	bool is_sap;
+	uint16_t cfg_val;
+
+	if (!ampdu_cnt_attr)
+		return 0;
+
+	if (adapter->device_mode == QDF_SAP_MODE ||
+	    adapter->device_mode == QDF_P2P_GO_MODE)
+		is_sap = true;
+	else if (adapter->device_mode == QDF_STA_MODE ||
+		 adapter->device_mode == QDF_P2P_CLIENT_MODE)
+		is_sap = false;
+	else {
+		hdd_debug("mode not support");
+		return -EINVAL;
+	}
+
+	if (is_sap) {
+		if (!ampdu_mac_attr) {
+			hdd_debug("sap must provide peer mac attr");
+			return -EINVAL;
+		}
+		nla_memcpy(&peer_macaddr, ampdu_mac_attr, QDF_MAC_ADDR_SIZE);
+	} else {
+		vdev = hdd_objmgr_get_vdev_by_user(adapter, WLAN_OSIF_ID);
+		if (!vdev) {
+			hdd_debug("vdev is null");
+			return -EINVAL;
+		}
+		status = wlan_vdev_get_bss_peer_mac(vdev, &peer_macaddr);
+		hdd_objmgr_put_vdev_by_user(vdev, WLAN_OSIF_ID);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			hdd_debug("fail to get bss peer mac");
+			return -EINVAL;
+		}
+	}
+	cfg_val = nla_get_u16(ampdu_cnt_attr);
+	return sme_set_peer_ampdu(hdd_ctx->mac_handle,
+				  adapter->vdev_id,
+				  &peer_macaddr,
+				  cfg_val);
 }
 
 /**
@@ -11883,6 +11943,7 @@ static const interdependent_setter_fn interdependent_setters[] = {
 	hdd_config_ani,
 	hdd_config_tx_rx_nss,
 	hdd_process_generic_set_cmd,
+	hdd_config_peer_ampdu,
 };
 
 /**
