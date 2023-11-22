@@ -49,7 +49,7 @@ uint32_t wlan_dp_intf_get_pkt_type_bitmap_value(void *intf_ctx)
 	struct wlan_dp_intf *dp_intf = (struct wlan_dp_intf *)intf_ctx;
 
 	if (!dp_intf) {
-		dp_err("DP Context is NULL");
+		dp_err_rl("DP Context is NULL");
 		return 0;
 	}
 
@@ -420,6 +420,17 @@ void dp_get_transmit_mac_addr(struct wlan_dp_intf *dp_intf,
 	bool is_mc_bc_addr = false;
 	enum nan_datapath_state state;
 
+	/* Check for VDEV validity before accessing it. Since VDEV references
+	 * are not taken in the per packet path, there is a change for VDEV
+	 * getting deleted in a parallel context. Because DP VDEV object is
+	 * protected by dp_intf::num_active_task, the chance of VDEV object
+	 * getting deleted while executing dp_start_xmit() is sparse. So, a
+	 * simple VDEV NULL check should be sufficient to handle the case of
+	 * VDEV getting destroyed first followed by dp_start_xmit().
+	 */
+	if (!dp_intf->vdev)
+		return;
+
 	switch (dp_intf->device_mode) {
 	case QDF_NDI_MODE:
 		state = wlan_nan_get_ndi_state(dp_intf->vdev);
@@ -672,7 +683,7 @@ dp_start_xmit(struct wlan_dp_intf *dp_intf, qdf_nbuf_t nbuf)
 
 	/* check whether need to linearize nbuf, like non-linear udp data */
 	if (dp_nbuf_nontso_linearize(nbuf) != QDF_STATUS_SUCCESS) {
-		dp_err(" nbuf %pK linearize failed. drop the pkt", nbuf);
+		dp_err_rl(" nbuf %pK linearize failed. drop the pkt", nbuf);
 		goto drop_pkt_and_release_nbuf;
 	}
 
@@ -680,7 +691,7 @@ dp_start_xmit(struct wlan_dp_intf *dp_intf, qdf_nbuf_t nbuf)
 	 * If a transmit function is not registered, drop packet
 	 */
 	if (!dp_intf->tx_fn) {
-		dp_err("TX function not registered by the data path");
+		dp_err_rl("TX function not registered by the data path");
 		goto drop_pkt_and_release_nbuf;
 	}
 
@@ -833,7 +844,7 @@ QDF_STATUS dp_mon_rx_packet_cbk(void *context, qdf_nbuf_t rxbuf)
 
 	/* Sanity check on inputs */
 	if ((!context) || (!rxbuf)) {
-		dp_err("Null params being passed");
+		dp_err_rl("Null params being passed");
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -1348,7 +1359,7 @@ QDF_STATUS dp_rx_pkt_thread_enqueue_cbk(void *intf_ctx,
 	qdf_nbuf_t head_ptr;
 
 	if (qdf_unlikely(!intf_ctx || !nbuf_list)) {
-		dp_err("Null params being passed");
+		dp_err_rl("Null params being passed");
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -1632,7 +1643,7 @@ QDF_STATUS dp_rx_packet_cbk(void *dp_intf_context,
 
 	/* Sanity check on inputs */
 	if (qdf_unlikely((!dp_intf_context) || (!rxBuf))) {
-		dp_err("Null params being passed");
+		dp_err_rl("Null params being passed");
 		return QDF_STATUS_E_FAILURE;
 	}
 
