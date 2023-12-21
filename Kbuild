@@ -15,6 +15,7 @@ ifeq ($(KERNEL_BUILD), y)
 	WLAN_COMMON_INC := $(WLAN_ROOT)/$(WLAN_COMMON_ROOT)
 	WLAN_FW_API := $(WLAN_ROOT)/../fw-api/
 	WLAN_PROFILE := default
+	WLAN_CTRL_NAME := wlan
 endif
 
 WLAN_COMMON_ROOT ?= cmn
