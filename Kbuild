@@ -25,6 +25,16 @@ CONFIG_QCA_CLD_WLAN_PROFILE ?= $(WLAN_PROFILE)
 DEVNAME ?= wlan
 WLAN_PLATFORM_INC ?= $(srctree)/techpack/wlan/inc
 
+ifeq ($(CONFIG_ARCH_WAIPIO), y)
+include $(srctree)/techpack/wlan/config/gki_waipiowlan.conf
+WLAN_PROFILE := qca6490
+endif
+
+ifeq ($(CONFIG_ARCH_KALAMA), y)
+include $(srctree)/techpack/wlan/config/gki_kalamawlan.conf
+WLAN_PROFILE := kiwi_v2
+endif
+
 ifeq ($(KERNEL_BUILD), n)
 ifneq ($(ANDROID_BUILD_TOP),)
       ANDROID_BUILD_TOP_REL := $(shell python -c "import os.path; print(os.path.relpath('$(ANDROID_BUILD_TOP)'))")
