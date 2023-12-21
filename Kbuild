@@ -23,7 +23,7 @@ WLAN_FW_API ?= $(WLAN_ROOT)/../fw-api/
 WLAN_PROFILE ?= default
 CONFIG_QCA_CLD_WLAN_PROFILE ?= $(WLAN_PROFILE)
 DEVNAME ?= wlan
-WLAN_PLATFORM_INC ?= $(WLAN_ROOT)/../platform/inc
+WLAN_PLATFORM_INC ?= $(srctree)/techpack/wlan/inc
 
 ifeq ($(KERNEL_BUILD), n)
 ifneq ($(ANDROID_BUILD_TOP),)
