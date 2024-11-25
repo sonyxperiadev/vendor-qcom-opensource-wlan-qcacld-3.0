@@ -25,6 +25,14 @@ CONFIG_QCA_CLD_WLAN_PROFILE ?= $(WLAN_PROFILE)
 DEVNAME ?= wlan
 WLAN_PLATFORM_INC ?= $(WLAN_ROOT)/../platform/inc
 
+ifeq ($(CONFIG_ARCH_BLAIR), y)
+WLAN_PROFILE := blair_gki_wlan
+endif
+
+ifeq ($(CONFIG_ARCH_PARROT), y)
+WLAN_PROFILE := parrot_gki_adrastea
+endif
+
 ifeq ($(KERNEL_BUILD), n)
 ifneq ($(ANDROID_BUILD_TOP),)
       ANDROID_BUILD_TOP_REL := $(shell python -c "import os.path; print(os.path.relpath('$(ANDROID_BUILD_TOP)'))")
