@@ -138,7 +138,7 @@ static void pkt_capture_wdi_event_unsubscribe(struct wlan_objmgr_psoc *psoc)
 }
 
 enum pkt_capture_mode
-pkt_capture_get_pktcap_mode_v2(void)
+pkt_capture_get_pktcap_mode_v2()
 {
 	enum pkt_capture_mode mode = PACKET_CAPTURE_MODE_DISABLE;
 	struct pkt_capture_vdev_priv *vdev_priv;
@@ -639,7 +639,7 @@ static void pkt_capture_wdi_event_unsubscribe(struct wlan_objmgr_psoc *psoc)
 }
 #endif
 
-struct wlan_objmgr_vdev *pkt_capture_get_vdev(void)
+struct wlan_objmgr_vdev *pkt_capture_get_vdev()
 {
 	return gp_pkt_capture_vdev;
 }
