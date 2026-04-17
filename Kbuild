@@ -18,6 +18,14 @@ ifeq ($(KERNEL_BUILD), y)
 	WLAN_CTRL_NAME := wlan
 endif
 
+ifeq ($(CONFIG_ARCH_PARROT), y)
+ifeq ($(CONFIG_ARCH_SONY_COLUMBIA), y)
+WLAN_PROFILE := parrot_gki_adrastea
+else ifeq ($(CONFIG_ARCH_SONY_ELBE), y)
+WLAN_PROFILE := parrot_gki_qca6750
+endif
+endif
+
 WLAN_COMMON_ROOT ?= cmn
 WLAN_COMMON_INC ?= $(WLAN_ROOT)/$(WLAN_COMMON_ROOT)
 WLAN_FW_API ?= $(WLAN_ROOT)/../fw-api/
