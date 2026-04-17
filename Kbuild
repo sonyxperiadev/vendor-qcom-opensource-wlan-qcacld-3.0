@@ -23,8 +23,8 @@ WLAN_FW_API ?= $(WLAN_ROOT)/../fw-api/
 WLAN_PROFILE ?= default
 CONFIG_QCA_CLD_WLAN_PROFILE ?= $(WLAN_PROFILE)
 DEVNAME ?= wlan
-WLAN_PLATFORM_INC ?= $(WLAN_ROOT)/../platform/inc
-DATA_IPA_INC ?= $(WLAN_ROOT)/../dataipa/drivers/platform/msm/include
+WLAN_PLATFORM_INC ?= $(srctree)/techpack/wlan/inc
+DATA_IPA_INC ?= $(srctree)/techpack/dataipa/drivers/platform/msm/include
 DATA_IPA_UAPI_INC ?= $(DATA_IPA_INC)/uapi
 
 ifeq ($(KERNEL_BUILD), n)
