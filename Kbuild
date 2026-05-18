@@ -26,6 +26,10 @@ WLAN_PROFILE := parrot_gki_qca6750
 endif
 endif
 
+ifeq ($(CONFIG_ARCH_WAIPIO), y)
+WLAN_PROFILE := waipio_gki_qca6490
+endif
+
 WLAN_COMMON_ROOT ?= cmn
 WLAN_COMMON_INC ?= $(WLAN_ROOT)/$(WLAN_COMMON_ROOT)
 WLAN_FW_API ?= $(WLAN_ROOT)/../fw-api/
