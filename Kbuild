@@ -30,6 +30,10 @@ ifeq ($(CONFIG_ARCH_WAIPIO), y)
 WLAN_PROFILE := waipio_gki_qca6490
 endif
 
+ifeq ($(CONFIG_ARCH_KALAMA), y)
+WLAN_PROFILE := kalama_gki_kiwi_v2
+endif
+
 WLAN_COMMON_ROOT ?= cmn
 WLAN_COMMON_INC ?= $(WLAN_ROOT)/$(WLAN_COMMON_ROOT)
 WLAN_FW_API ?= $(WLAN_ROOT)/../fw-api/
